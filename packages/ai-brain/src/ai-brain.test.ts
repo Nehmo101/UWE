@@ -7,6 +7,7 @@ import {
   createWorld,
   seedTerraWorld,
 } from "@uwe/database/server";
+import { createGameSessionService } from "@uwe/database/server";
 import {
   AiPrivacyError,
   buildAiContext,
@@ -15,9 +16,13 @@ import {
   InMemoryApiKeyStore,
   saveAiResultAsContentBlock,
   saveAiResultAsIdea,
+  saveAiResultAsPlayerRecap,
   sanitizeContextForCloud,
+  validatePlayerRecapContent,
   validateProviderForContext,
 } from "./index";
+
+const GM_SECRET_PHRASE = "Geheime Information: Unter Arbor schlummert ein Portal";
 
 describe("AI Brain — buildAiContext", () => {
   let databaseUrl: string;
@@ -124,7 +129,7 @@ describe("AI Brain — buildAiContext", () => {
 
     const context = await buildAiContext(
       repo,
-      "generate_dm_notes",
+      "find_open_threads",
       seeded.world.id,
       seeded.pages.validori.id,
       { allowDmOnly: true },
@@ -137,6 +142,56 @@ describe("AI Brain — buildAiContext", () => {
       "expected dm_only gm_note block in Validori context",
     );
     assert.ok(contextContainsDmOnly(context));
+  });
+
+  it("excludes GM secrets from player recap context", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+
+    const context = await buildAiContext(
+      repo,
+      "generate_player_recap",
+      seeded.world.id,
+      seeded.pages.arbor.id,
+      { allowDmOnly: true },
+    );
+
+    assert.equal(context.allowDmOnly, false);
+    assert.ok(!context.promptContext.includes(GM_SECRET_PHRASE));
+    assert.ok(
+      context.pages.every((page) =>
+        page.contentBlocks.every((block) => block.visibility !== "dm_only"),
+      ),
+    );
+  });
+
+  it("includes session context for summarize_session", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const sessions = createGameSessionService(databaseUrl);
+
+    const session = await sessions.create({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Testsession",
+      sessionNumber: 1,
+      summaryDm: "DM wusste vom Portal.",
+      notes: "Spieler trafen Validori.",
+      linkedPageIds: [seeded.pages.validori.id],
+    });
+
+    const context = await buildAiContext(
+      repo,
+      "summarize_session",
+      seeded.world.id,
+      seeded.pages.validori.id,
+      { allowDmOnly: true, sessionId: session.id },
+    );
+
+    assert.equal(context.sessionId, session.id);
+    assert.ok(context.session);
+    assert.ok(context.promptContext.includes("Testsession"));
+    assert.ok(context.promptContext.includes("DM wusste vom Portal"));
   });
 });
 
@@ -212,7 +267,7 @@ describe("AI Brain — privacy mode", () => {
 
   it("allows local provider with DM-only context in datenschutz mode", () => {
     const context = {
-      taskType: "generate_dm_notes" as const,
+      taskType: "find_open_threads" as const,
       worldId: "w1",
       primaryPageId: "p1",
       pages: [
@@ -250,6 +305,13 @@ describe("AI Brain — privacy mode", () => {
       }),
     );
   });
+
+  it("rejects player recap content that leaks GM secrets", () => {
+    assert.throws(
+      () => validatePlayerRecapContent(`Die Spieler fanden ${GM_SECRET_PHRASE}.`, [GM_SECRET_PHRASE]),
+      AiPrivacyError,
+    );
+  });
 });
 
 describe("AI Brain — saving results", () => {
@@ -274,12 +336,22 @@ describe("AI Brain — saving results", () => {
       title: "Neuer Plot-Hook",
       content: "Die Feen könnten einen Pakt anbieten.",
       taskType: "create_npc",
+      sources: [{ pageId: seeded.pages.arbor.id, blockIds: ["block-1"] }],
+      providerId: "ollama",
+      model: "mock-model",
     });
 
     assert.equal(idea.canonicalStatus, "idea");
     assert.notEqual(idea.canonicalStatus, "canon");
     assert.equal(idea.publishStatus, "draft");
     assert.ok(idea.contentBlocks.length > 0);
+
+    const metadata = idea.contentBlocks[0]?.metadata as {
+      contextSources?: Array<{ pageId: string }>;
+      isCanon?: boolean;
+    };
+    assert.equal(metadata.isCanon, false);
+    assert.ok(metadata.contextSources?.some((s) => s.pageId === seeded.pages.arbor.id));
   });
 
   it("saves AI output as content block without promoting to canon", async () => {
@@ -293,6 +365,7 @@ describe("AI Brain — saving results", () => {
       taskType: "summarize_page",
       providerId: "ollama",
       model: "mock-model",
+      sources: [{ pageId: seeded.pages.arbor.id, blockIds: ["b1", "b2"] }],
     });
 
     const pageAfter = await repo.getPageById(seeded.pages.arbor.id);
@@ -300,7 +373,44 @@ describe("AI Brain — saving results", () => {
     assert.equal(block.type, "ai_summary");
     assert.equal(block.visibility, "dm_only");
     assert.equal(pageAfter?.canonicalStatus, pageBefore?.canonicalStatus);
-    assert.equal((block.metadata as { isCanon?: boolean }).isCanon, false);
+    const metadata = block.metadata as {
+      isCanon?: boolean;
+      contextSources?: Array<{ pageId: string; blockIds?: string[] }>;
+    };
+    assert.equal(metadata.isCanon, false);
+    assert.equal(metadata.contextSources?.[0]?.pageId, seeded.pages.arbor.id);
+    assert.deepEqual(metadata.contextSources?.[0]?.blockIds, ["b1", "b2"]);
+  });
+
+  it("saves player recap without GM secrets", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const sessions = createGameSessionService(databaseUrl);
+
+    const session = await sessions.create({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Recap-Session",
+      sessionNumber: 2,
+      linkedPageIds: [seeded.pages.arbor.id],
+    });
+
+    const playerRecap =
+      "Die Helden erkundeten den Wald Arbor und trafen freundliche Feen am Waldrand.";
+
+    const saved = await saveAiResultAsPlayerRecap(repo, {
+      sessionId: session.id,
+      content: playerRecap,
+      taskType: "generate_player_recap",
+      providerId: "ollama",
+      model: "mock-model",
+      sources: [{ pageId: seeded.pages.arbor.id, blockIds: [] }],
+      sourcePageId: seeded.pages.arbor.id,
+    });
+
+    assert.equal(saved.session.summaryPlayer, playerRecap);
+    assert.ok(!saved.session.summaryPlayer?.includes(GM_SECRET_PHRASE));
+    assert.ok(saved.metadata.contextSources?.some((s) => s.pageId === seeded.pages.arbor.id));
   });
 });
 

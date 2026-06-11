@@ -611,8 +611,16 @@ export class UweRepository {
     sourcePageId?: string;
     taskType?: string;
     visibility?: Visibility;
+    metadata?: Record<string, unknown>;
   }) {
     const defaults = await this.getSettingsService().getWorldDefaults();
+
+    const blockMetadata = {
+      source: "ai_brain",
+      sourcePageId: input.sourcePageId ?? null,
+      taskType: input.taskType ?? null,
+      ...input.metadata,
+    };
 
     return this.db.page.create({
       data: {
@@ -631,11 +639,7 @@ export class UweRepository {
               sortOrder: 0,
               content: input.content,
               visibility: input.visibility ?? "dm_only",
-              metadata: {
-                source: "ai_brain",
-                sourcePageId: input.sourcePageId ?? null,
-                taskType: input.taskType ?? null,
-              },
+              metadata: blockMetadata,
             },
           ],
         },
@@ -716,6 +720,57 @@ export class UweRepository {
 
   async listAssetsForPage(pageId: string) {
     return listAssetsForPage(this.db, pageId);
+  }
+
+  private gameSessionInclude() {
+    return {
+      linkedPages: {
+        include: { page: true },
+        orderBy: { createdAt: "asc" as const },
+      },
+    };
+  }
+
+  async getGameSessionById(sessionId: string) {
+    return this.db.gameSession.findUnique({
+      where: { id: sessionId },
+      include: this.gameSessionInclude(),
+    });
+  }
+
+  async findGameSessionsForPage(worldId: string, pageId: string) {
+    return this.db.gameSession.findMany({
+      where: {
+        worldId,
+        linkedPages: { some: { pageId } },
+      },
+      include: this.gameSessionInclude(),
+      orderBy: [{ sessionNumber: "desc" }],
+    });
+  }
+
+  async listGameSessionsByWorldId(worldId: string) {
+    return this.db.gameSession.findMany({
+      where: { worldId },
+      include: this.gameSessionInclude(),
+      orderBy: [{ sessionNumber: "desc" }, { date: "desc" }],
+    });
+  }
+
+  async updateGameSessionPlayerRecap(sessionId: string, summaryPlayer: string) {
+    const session = await this.getGameSessionById(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} nicht gefunden.`);
+    }
+
+    return this.db.gameSession.update({
+      where: { id: sessionId },
+      data: {
+        summaryPlayer,
+        status: session.status === "planned" ? "played" : session.status,
+      },
+      include: this.gameSessionInclude(),
+    });
   }
 }
 

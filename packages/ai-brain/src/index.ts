@@ -1,6 +1,11 @@
 import type { UweRepository } from "@uwe/database/server";
-import { buildAiContext, buildAiContextBySlug } from "./context/buildAiContext";
-import { sanitizeContextForCloud, validateProviderForContext } from "./privacy";
+import { buildAiContext, buildAiContextBySlug, listSessionsForBrain } from "./context/buildAiContext";
+import {
+  extractDmOnlyPhrases,
+  sanitizeContextForCloud,
+  validatePlayerRecapContent,
+  validateProviderForContext,
+} from "./privacy";
 import { createProvider, runAiTask } from "./providers/registry";
 import {
   createApiKeyStoreFromEnv,
@@ -12,22 +17,30 @@ import { buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
 import type {
   AiBrainSettings,
   AiContext,
+  AiContextSource,
   AiProviderId,
   AiTaskType,
   ApiKeyStore,
   BuildAiContextOptions,
   GenerateTextResult,
 } from "./types";
+import { PLAYER_SAFE_TASKS } from "./types";
 
 export * from "./types";
-export { buildAiContext, buildAiContextBySlug } from "./context/buildAiContext";
+export { buildAiContext, buildAiContextBySlug, listSessionsForBrain } from "./context/buildAiContext";
 export {
   createApiKeyStoreFromEnv,
   InMemoryApiKeyStore,
   isCloudProvider,
   resolveAiBrainSettings,
 } from "./settings";
-export { sanitizeContextForCloud, validateProviderForContext, contextContainsDmOnly } from "./privacy";
+export {
+  sanitizeContextForCloud,
+  validateProviderForContext,
+  contextContainsDmOnly,
+  validatePlayerRecapContent,
+  extractDmOnlyPhrases,
+} from "./privacy";
 export { AI_TASK_LABELS, buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
 export { createProvider, MockAiProvider, runAiTask } from "./providers/registry";
 
@@ -84,6 +97,11 @@ export async function generateAiTask(
     systemPrompt,
   });
 
+  if (PLAYER_SAFE_TASKS.includes(input.taskType)) {
+    const forbidden = extractDmOnlyPhrases(context);
+    validatePlayerRecapContent(result.text, forbidden);
+  }
+
   return { context: safeContext, result };
 }
 
@@ -111,6 +129,32 @@ export function getAiBrainSettings(apiKeyStore?: ApiKeyStore): AiBrainSettings {
   return resolveAiBrainSettings(apiKeyStore ?? createApiKeyStoreFromEnv());
 }
 
+export interface SaveAiMetadata {
+  taskType: AiTaskType;
+  providerId: AiProviderId;
+  model: string;
+  sources: AiContextSource[];
+  sessionId?: string;
+  sourcePageId?: string;
+}
+
+function buildSaveMetadata(input: SaveAiMetadata): Record<string, unknown> {
+  return {
+    source: "ai_brain",
+    taskType: input.taskType,
+    provider: input.providerId,
+    model: input.model,
+    generatedAt: new Date().toISOString(),
+    isCanon: false,
+    contextSources: input.sources.map((source) => ({
+      pageId: source.pageId,
+      blockIds: source.blockIds ?? [],
+    })),
+    sessionId: input.sessionId ?? null,
+    sourcePageId: input.sourcePageId ?? null,
+  };
+}
+
 export async function saveAiResultAsIdea(
   repo: UweRepository,
   input: {
@@ -120,6 +164,10 @@ export async function saveAiResultAsIdea(
     content: string;
     taskType: AiTaskType;
     pageType?: "note" | "lore" | "npc" | "location" | "encounter";
+    sources?: AiContextSource[];
+    sessionId?: string;
+    providerId?: AiProviderId;
+    model?: string;
   },
 ) {
   const slugBase = input.title
@@ -138,6 +186,14 @@ export async function saveAiResultAsIdea(
     sourcePageId: input.sourcePageId,
     taskType: input.taskType,
     visibility: "dm_only",
+    metadata: buildSaveMetadata({
+      taskType: input.taskType,
+      providerId: input.providerId ?? "ollama",
+      model: input.model ?? "unknown",
+      sources: input.sources ?? [],
+      sessionId: input.sessionId,
+      sourcePageId: input.sourcePageId,
+    }),
   });
 }
 
@@ -149,6 +205,9 @@ export async function saveAiResultAsContentBlock(
     taskType: AiTaskType;
     providerId: AiProviderId;
     model: string;
+    sources?: AiContextSource[];
+    sessionId?: string;
+    sourcePageId?: string;
   },
 ) {
   const sortOrder = await repo.getNextContentBlockSortOrder(input.pageId);
@@ -157,13 +216,50 @@ export async function saveAiResultAsContentBlock(
     sortOrder,
     content: input.content,
     visibility: "dm_only",
-    metadata: {
-      source: "ai_brain",
-      taskType: input.taskType,
-      provider: input.providerId,
-      model: input.model,
-      generatedAt: new Date().toISOString(),
-      isCanon: false,
-    },
+    metadata: JSON.parse(
+      JSON.stringify(
+        buildSaveMetadata({
+          taskType: input.taskType,
+          providerId: input.providerId,
+          model: input.model,
+          sources: input.sources ?? [],
+          sessionId: input.sessionId,
+          sourcePageId: input.sourcePageId ?? input.pageId,
+        }),
+      ),
+    ),
   });
+}
+
+export async function saveAiResultAsPlayerRecap(
+  repo: UweRepository,
+  input: {
+    sessionId: string;
+    content: string;
+    taskType: AiTaskType;
+    providerId: AiProviderId;
+    model: string;
+    sources?: AiContextSource[];
+    sourcePageId?: string;
+    context?: AiContext;
+  },
+) {
+  if (input.context) {
+    const forbidden = extractDmOnlyPhrases(input.context);
+    validatePlayerRecapContent(input.content, forbidden);
+  }
+
+  const updated = await repo.updateGameSessionPlayerRecap(input.sessionId, input.content);
+
+  return {
+    session: updated,
+    metadata: buildSaveMetadata({
+      taskType: input.taskType,
+      providerId: input.providerId,
+      model: input.model,
+      sources: input.sources ?? [],
+      sessionId: input.sessionId,
+      sourcePageId: input.sourcePageId,
+    }),
+  };
 }

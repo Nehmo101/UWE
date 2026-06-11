@@ -1,6 +1,6 @@
 {
   "name": "@uwe/ai-brain",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "description": "AI brain for campaign assistance — local models and optional API keys",
   "main": "./src/index.ts",

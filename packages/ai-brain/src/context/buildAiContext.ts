@@ -7,6 +7,8 @@ import type {
   AiTaskType,
   BuildAiContextOptions,
 } from "../types";
+import { PLAYER_SAFE_TASKS, SESSION_AWARE_TASKS } from "../types";
+import { loadSessionContext, serializeSession } from "./sessionContext";
 
 const DEFAULT_MAX_CHARS = 24_000;
 const DM_ONLY_VISIBILITIES = new Set(["dm_only"]);
@@ -17,6 +19,14 @@ function parseStringArray(value: unknown): string[] {
     return value.filter((item): item is string => typeof item === "string");
   }
   return [];
+}
+
+function isSessionAwareTask(taskType: AiTaskType): boolean {
+  return SESSION_AWARE_TASKS.includes(taskType);
+}
+
+function isPlayerSafeTask(taskType: AiTaskType): boolean {
+  return PLAYER_SAFE_TASKS.includes(taskType);
 }
 
 function shouldIncludePageVisibility(
@@ -163,6 +173,25 @@ async function buildContextPage(
   };
 }
 
+async function resolveSessionId(
+  repo: UweRepository,
+  worldId: string,
+  pageId: string,
+  taskType: AiTaskType,
+  explicitSessionId?: string,
+): Promise<string | undefined> {
+  if (explicitSessionId) {
+    return explicitSessionId;
+  }
+
+  if (!isSessionAwareTask(taskType)) {
+    return undefined;
+  }
+
+  const linked = await repo.findGameSessionsForPage(worldId, pageId);
+  return linked[0]?.id;
+}
+
 export async function buildAiContext(
   repo: UweRepository,
   taskType: AiTaskType,
@@ -172,7 +201,12 @@ export async function buildAiContext(
 ): Promise<AiContext> {
   const datenschutzMode = options.datenschutzMode ?? false;
   const localOnly = options.localOnly ?? datenschutzMode;
-  const allowDmOnly = options.allowDmOnly ?? localOnly;
+  let allowDmOnly = options.allowDmOnly ?? localOnly;
+
+  if (isPlayerSafeTask(taskType)) {
+    allowDmOnly = false;
+  }
+
   const maxChars = options.maxChars ?? DEFAULT_MAX_CHARS;
 
   const primaryPage = await repo.getPageById(pageId);
@@ -180,9 +214,20 @@ export async function buildAiContext(
     throw new Error(`Seite ${pageId} gehört nicht zur Welt ${worldId} oder existiert nicht.`);
   }
 
+  const sessionId = await resolveSessionId(repo, worldId, pageId, taskType, options.sessionId);
+  const session = sessionId
+    ? await loadSessionContext(repo, sessionId, { allowDmOnly })
+    : null;
+
   const pageIds = new Set<string>([pageId]);
   for (const relatedId of options.includeRelatedPageIds ?? []) {
     pageIds.add(relatedId);
+  }
+
+  if (session) {
+    for (const linkedPageId of session.linkedPageIds) {
+      pageIds.add(linkedPageId);
+    }
   }
 
   const primaryWithLinks = await repo.getPageWithLinks(pageId);
@@ -220,13 +265,19 @@ export async function buildAiContext(
     blockIds: page.contentBlocks.map((block) => block.blockId),
   }));
 
+  const sessionBlock = session ? serializeSession(session, { allowDmOnly }) : "";
+  const pageContext = limitedPages.map(serializePage).join("\n\n");
+  const promptContext = [sessionBlock, pageContext].filter(Boolean).join("\n\n");
+
   return {
     taskType,
     worldId,
     primaryPageId: pageId,
+    sessionId,
+    session: session ?? undefined,
     pages: limitedPages,
     sources,
-    promptContext: limitedPages.map(serializePage).join("\n\n"),
+    promptContext,
     truncated,
     datenschutzMode,
     allowDmOnly,
@@ -251,4 +302,23 @@ export async function buildAiContextBySlug(
   }
 
   return buildAiContext(repo, taskType, world.id, page.id, options);
+}
+
+export async function listSessionsForBrain(
+  repo: UweRepository,
+  worldSlug: string,
+  pageId?: string,
+): Promise<Array<{ id: string; title: string; sessionNumber: number }>> {
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) return [];
+
+  const list = pageId
+    ? await repo.findGameSessionsForPage(world.id, pageId)
+    : await repo.listGameSessionsByWorldId(world.id);
+
+  return list.map((session) => ({
+    id: session.id,
+    title: session.title,
+    sessionNumber: session.sessionNumber,
+  }));
 }

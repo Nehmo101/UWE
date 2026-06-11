@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     model: string;
     userPrompt?: string;
     allowDmOnly?: boolean;
+    sessionId?: string;
     useMock?: boolean;
   };
 
@@ -20,13 +21,5 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    return await postGenerate(body);
-  } catch (error) {
-    const status = error instanceof Error && error.name === "AiPrivacyError" ? 403 : 500;
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Generierung fehlgeschlagen." },
-      { status },
-    );
-  }
+  return postGenerate(body);
 }

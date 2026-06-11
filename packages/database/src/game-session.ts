@@ -158,6 +158,34 @@ export class GameSessionService {
     };
   }
 
+  async listByWorldId(
+    worldId: string,
+    options?: { campaignId?: string | null },
+  ): Promise<GameSessionWithLinks[]> {
+    return this.db.gameSession.findMany({
+      where: {
+        worldId,
+        ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+      },
+      include: this.sessionInclude(),
+      orderBy: [{ sessionNumber: "desc" }, { date: "desc" }],
+    });
+  }
+
+  async findSessionsForPage(
+    worldId: string,
+    pageId: string,
+  ): Promise<GameSessionWithLinks[]> {
+    return this.db.gameSession.findMany({
+      where: {
+        worldId,
+        linkedPages: { some: { pageId } },
+      },
+      include: this.sessionInclude(),
+      orderBy: [{ sessionNumber: "desc" }],
+    });
+  }
+
   async listByWorld(
     worldSlug: string,
     options?: { campaignId?: string | null },

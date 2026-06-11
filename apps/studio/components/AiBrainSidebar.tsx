@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AiBrainSettings, AiContext, AiProviderId, AiTaskType } from "@uwe/ai-brain";
-import { AI_TASK_LABELS } from "@uwe/ai-brain";
+import { AI_TASK_LABELS, SESSION_AWARE_TASKS } from "@uwe/ai-brain";
 
 interface Props {
   worldSlug: string;
   pageSlug: string;
+}
+
+interface SessionOption {
+  id: string;
+  title: string;
+  sessionNumber: number;
 }
 
 const TASK_TYPES = Object.keys(AI_TASK_LABELS) as AiTaskType[];
@@ -18,12 +24,17 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
   const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
   const [taskType, setTaskType] = useState<AiTaskType>("summarize_page");
   const [context, setContext] = useState<AiContext | null>(null);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
+  const [sessionId, setSessionId] = useState("");
   const [userPrompt, setUserPrompt] = useState("");
   const [result, setResult] = useState("");
   const [ideaTitle, setIdeaTitle] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [allowDmOnly, setAllowDmOnly] = useState(false);
+
+  const needsSession = SESSION_AWARE_TASKS.includes(taskType);
+  const canSavePlayerRecap = taskType === "generate_player_recap" && Boolean(sessionId);
 
   const availableProviders = useMemo(() => {
     if (!settings) return [];
@@ -38,12 +49,25 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
     const data = (await response.json()) as { settings: AiBrainSettings };
     setSettings(data.settings);
     setAllowDmOnly(data.settings.localOnly);
-    const initialProvider = data.settings.providers.find((p) => p.id === data.settings.defaultProvider)
-      ?? data.settings.providers.find((p) => p.isLocal);
+    const initialProvider =
+      data.settings.providers.find((p) => p.id === data.settings.defaultProvider) ??
+      data.settings.providers.find((p) => p.isLocal);
     if (initialProvider) {
       setProviderId(initialProvider.id);
     }
   }, []);
+
+  const loadSessions = useCallback(async () => {
+    const response = await fetch(
+      `/api/ai/sessions?worldSlug=${encodeURIComponent(worldSlug)}&pageSlug=${encodeURIComponent(pageSlug)}`,
+    );
+    if (!response.ok) return;
+    const data = (await response.json()) as { sessions: SessionOption[] };
+    setSessions(data.sessions);
+    if (data.sessions.length > 0) {
+      setSessionId((prev) => prev || data.sessions[0].id);
+    }
+  }, [worldSlug, pageSlug]);
 
   const loadModels = useCallback(async (selectedProvider: AiProviderId) => {
     const useMock = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
@@ -68,13 +92,20 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
 
   useEffect(() => {
     void loadSettings();
-  }, [loadSettings]);
+    void loadSessions();
+  }, [loadSettings, loadSessions]);
 
   useEffect(() => {
     if (providerId) {
       void loadModels(providerId);
     }
   }, [providerId, loadModels]);
+
+  function handleDiscard() {
+    setResult("");
+    setIdeaTitle("");
+    setStatus("Ergebnis verworfen.");
+  }
 
   async function handleLoadContext() {
     setLoading(true);
@@ -88,6 +119,7 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
           worldSlug,
           pageSlug,
           allowDmOnly,
+          sessionId: needsSession ? sessionId || undefined : undefined,
         }),
       });
       const data = await response.json();
@@ -96,7 +128,7 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
       }
       setContext(data.context as AiContext);
       setStatus(
-        `Kontext geladen: ${data.context.pages.length} Seite(n)${data.context.truncated ? " (gekürzt)" : ""}.`,
+        `Kontext geladen: ${data.context.pages.length} Seite(n)${data.context.truncated ? " (gekürzt)" : ""}${data.context.sessionId ? ` · Session ${data.context.sessionId}` : ""}.`,
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Kontext konnte nicht geladen werden.");
@@ -111,8 +143,7 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
     setResult("");
     try {
       const useMock =
-        process.env.NEXT_PUBLIC_AI_USE_MOCK === "true" ||
-        model === "mock-model";
+        process.env.NEXT_PUBLIC_AI_USE_MOCK === "true" || model === "mock-model";
       const response = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,6 +155,7 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
           model,
           userPrompt,
           allowDmOnly,
+          sessionId: needsSession ? sessionId || undefined : undefined,
           useMock,
         }),
       });
@@ -141,9 +173,14 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
     }
   }
 
-  async function handleSave(mode: "idea" | "content_block") {
+  async function handleSave(mode: "idea" | "content_block" | "player_recap") {
     if (!result.trim()) {
       setStatus("Kein Ergebnis zum Speichern vorhanden.");
+      return;
+    }
+
+    if (mode === "player_recap" && !sessionId) {
+      setStatus("Bitte eine Session für den Spieler-Recap auswählen.");
       return;
     }
 
@@ -162,17 +199,22 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
           content: result,
           providerId,
           model,
+          sessionId: sessionId || undefined,
+          sources: context?.sources ?? [],
         }),
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error ?? "Speichern fehlgeschlagen");
       }
-      setStatus(
-        mode === "idea"
-          ? `Als Idee gespeichert (${data.saved.canonicalStatus}).`
-          : "Als ContentBlock (ai_summary, DM-only) gespeichert — nicht als Kanon.",
-      );
+
+      if (mode === "idea") {
+        setStatus(`Als Idee gespeichert (${data.saved.canonicalStatus}).`);
+      } else if (mode === "player_recap") {
+        setStatus("Spieler-Recap in Session gespeichert — noch nicht automatisch veröffentlicht.");
+      } else {
+        setStatus("Als ContentBlock (ai_summary, DM-only) gespeichert — nicht als Kanon.");
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Speichern fehlgeschlagen.");
     } finally {
@@ -182,13 +224,41 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
 
   return (
     <section className="ai-brain-panel">
-      <h3>AI Brain</h3>
+      <h3>UWE Brain</h3>
 
       {settings && (
         <p className="ai-brain-meta">
           {settings.datenschutzMode ? "Datenschutzmodus aktiv" : "Cloud optional"}
           {settings.localOnly ? " · Nur lokal" : ""}
         </p>
+      )}
+
+      <label className="ai-brain-field">
+        <span>Aufgabe</span>
+        <select
+          value={taskType}
+          onChange={(event) => setTaskType(event.target.value as AiTaskType)}
+        >
+          {TASK_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {AI_TASK_LABELS[type]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {needsSession && (
+        <label className="ai-brain-field">
+          <span>Session</span>
+          <select value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
+            {sessions.length === 0 && <option value="">Keine Session verknüpft</option>}
+            {sessions.map((session) => (
+              <option key={session.id} value={session.id}>
+                #{session.sessionNumber} — {session.title}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       <label className="ai-brain-field">
@@ -216,29 +286,19 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
         </select>
       </label>
 
-      <label className="ai-brain-field">
-        <span>Aufgabe</span>
-        <select
-          value={taskType}
-          onChange={(event) => setTaskType(event.target.value as AiTaskType)}
-        >
-          {TASK_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {AI_TASK_LABELS[type]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {!settings?.localOnly && (
+      {!settings?.localOnly && taskType !== "generate_player_recap" && (
         <label className="ai-brain-checkbox">
           <input
             type="checkbox"
             checked={allowDmOnly}
             onChange={(event) => setAllowDmOnly(event.target.checked)}
           />
-          DM-only-Inhalte einschließen (Cloud-Risiko)
+          DM-only-Inhalte einschließen (nur mit ausdrücklicher Erlaubnis)
         </label>
+      )}
+
+      {taskType === "generate_player_recap" && (
+        <p className="ai-brain-meta">Spieler-Recap nutzt nur spieler-sicheren Kontext.</p>
       )}
 
       <label className="ai-brain-field">
@@ -262,12 +322,15 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
 
       {context && (
         <details className="ai-brain-context">
-          <summary>Kontext ({context.pages.length} Seiten)</summary>
+          <summary>
+            Kontext ({context.pages.length} Seiten
+            {context.sessionId ? `, Session ${context.sessionId}` : ""})
+          </summary>
           <pre>{context.promptContext}</pre>
           <ul>
             {context.sources.map((source) => (
               <li key={source.pageId}>
-                {source.pageId}
+                Seite {source.pageId}
                 {source.blockIds?.length ? ` · ${source.blockIds.length} Blöcke` : ""}
               </li>
             ))}
@@ -297,6 +360,18 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
               disabled={loading}
             >
               Als ContentBlock speichern
+            </button>
+            {canSavePlayerRecap && (
+              <button
+                type="button"
+                onClick={() => void handleSave("player_recap")}
+                disabled={loading}
+              >
+                Als Spieler-Recap speichern
+              </button>
+            )}
+            <button type="button" onClick={handleDiscard} disabled={loading}>
+              Verwerfen
             </button>
           </div>
         </div>

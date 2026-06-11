@@ -1,4 +1,4 @@
-export const AI_BRAIN_VERSION = "0.2.0";
+export const AI_BRAIN_VERSION = "1.0.0";
 
 export type AiProviderId =
   | "ollama"
@@ -11,14 +11,26 @@ export type AiProviderId =
 export type AiTaskType =
   | "summarize_page"
   | "summarize_session"
-  | "suggest_links"
-  | "detect_contradictions"
   | "generate_player_recap"
-  | "generate_dm_notes"
+  | "suggest_links"
+  | "suggest_backlinks"
+  | "detect_contradictions"
+  | "find_open_threads"
   | "create_npc"
   | "create_location"
   | "create_encounter"
-  | "improve_lore_text";
+  | "improve_lore_text"
+  | "prepare_canon_check";
+
+/** Tasks that require or benefit from session context. */
+export const SESSION_AWARE_TASKS: AiTaskType[] = [
+  "summarize_session",
+  "generate_player_recap",
+  "find_open_threads",
+];
+
+/** Tasks that must never receive DM-only context (output is player-facing). */
+export const PLAYER_SAFE_TASKS: AiTaskType[] = ["generate_player_recap"];
 
 export interface AiModel {
   id: string;
@@ -106,10 +118,26 @@ export interface AiContextSource {
   blockIds?: string[];
 }
 
+export interface AiContextSession {
+  sessionId: string;
+  title: string;
+  sessionNumber: number;
+  date?: string | null;
+  status: string;
+  summaryDm?: string | null;
+  summaryPlayer?: string | null;
+  notes?: string | null;
+  openPlots?: string | null;
+  playerDecisions?: string | null;
+  linkedPageIds: string[];
+}
+
 export interface AiContext {
   taskType: AiTaskType;
   worldId: string;
   primaryPageId: string;
+  sessionId?: string;
+  session?: AiContextSession;
   pages: AiContextPage[];
   sources: AiContextSource[];
   promptContext: string;
@@ -124,6 +152,7 @@ export interface BuildAiContextOptions {
   includeRelatedPageIds?: string[];
   datenschutzMode?: boolean;
   localOnly?: boolean;
+  sessionId?: string;
 }
 
 export interface ApiKeyStore {
