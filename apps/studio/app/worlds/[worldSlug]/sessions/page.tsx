@@ -51,6 +51,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
                 { label: "← Dashboard", href: "/" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Sessions", href: `/worlds/${worldSlug}/sessions`, active: true },
+                { label: "Soundboard", href: `/worlds/${worldSlug}/soundboard` },
                 { label: "Neue Session", href: `/worlds/${worldSlug}/sessions/new` },
               ]}
             />

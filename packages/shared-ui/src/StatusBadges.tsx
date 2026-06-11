@@ -121,6 +121,10 @@ export function PageTypeBadge({ type }: { type: PageType }) {
   return <span className="uwe-badge uwe-badge-type">{PAGE_TYPE_LABELS[type]}</span>;
 }
 
+export function AssetTypeBadge({ type }: { type: AssetType }) {
+  return <span className="uwe-badge uwe-badge-type">{ASSET_TYPE_LABELS[type]}</span>;
+}
+
 export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }) {
   const className =
     status === "summarized"

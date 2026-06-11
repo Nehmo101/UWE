@@ -17,6 +17,7 @@
     "@uwe/database": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
+    "@uwe/soundboard": "workspace:*",
     "@uwe/static-export": "workspace:*",
     "@uwe/wiki-engine": "workspace:*",
     "next": "^15.3.4",

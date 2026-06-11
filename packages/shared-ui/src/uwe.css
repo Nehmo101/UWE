@@ -679,6 +679,89 @@
   text-align: center;
 }
 
+.uwe-soundboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.uwe-soundboard-button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.uwe-soundboard-button:hover {
+  border-color: rgba(129, 140, 248, 0.5);
+}
+
+.uwe-soundboard-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.35rem;
+}
+
+.uwe-soundboard-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(51, 65, 85, 0.6);
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.uwe-soundboard-button-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.uwe-soundboard-tags {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.uwe-soundboard-active-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.uwe-soundboard-active-item {
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.5rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.uwe-soundboard-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.uwe-soundboard-youtube iframe {
+  width: 100%;
+  max-width: 320px;
+  height: 180px;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: 0.35rem;
+}
+
 @media (max-width: 960px) {
   .uwe-shell-body {
     grid-template-columns: 1fr;

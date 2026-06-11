@@ -143,3 +143,23 @@ export type {
   GameSessionWithLinks,
   GameSessionStatus,
 } from "./game-session";
+
+export {
+  createSoundboardService,
+  SoundboardService,
+  extractYouTubeVideoId,
+  isSoundboardButtonVisibleInPortal,
+  resolveThumbnail,
+  toDmSoundboardButtonView,
+  toPortalSoundboardButtonView,
+  SoundSourceTypeEnum,
+} from "./soundboard";
+
+export type {
+  CreateSoundboardButtonInput,
+  UpdateSoundboardButtonInput,
+  DmSoundboardButtonView,
+  PortalSoundboardButtonView,
+  SoundboardButtonWithLinks,
+  SoundSourceType,
+} from "./soundboard";

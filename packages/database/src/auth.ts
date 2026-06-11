@@ -22,6 +22,14 @@ import {
   type DmGameSessionView,
   type PortalGameSessionView,
 } from "./game-session";
+import {
+  SoundboardService,
+  isSoundboardButtonVisibleInPortal,
+  toDmSoundboardButtonView,
+  toPortalSoundboardButtonView,
+  type DmSoundboardButtonView,
+  type PortalSoundboardButtonView,
+} from "./soundboard";
 
 export interface CreateUserInput {
   displayName: string;
@@ -39,9 +47,11 @@ export interface CreateWorldMembershipInput {
 
 export class AuthService {
   private readonly gameSessions: GameSessionService;
+  private readonly soundboard: SoundboardService;
 
   constructor(private readonly db: PrismaClient) {
     this.gameSessions = new GameSessionService(db);
+    this.soundboard = new SoundboardService(db);
   }
 
   async createUser(input: CreateUserInput) {
@@ -409,6 +419,72 @@ export class AuthService {
     }
 
     return asset;
+  }
+
+  async listSoundboardForDm(
+    worldSlug: string,
+    campaignId?: string | null,
+  ): Promise<DmSoundboardButtonView[]> {
+    const buttons = await this.soundboard.listByWorld(worldSlug, { campaignId });
+    return buttons.map(toDmSoundboardButtonView);
+  }
+
+  async getSoundboardButtonForDm(
+    worldSlug: string,
+    buttonId: string,
+  ): Promise<DmSoundboardButtonView | null> {
+    const button = await this.soundboard.getByIdForWorld(worldSlug, buttonId);
+    return button ? toDmSoundboardButtonView(button) : null;
+  }
+
+  async listSoundboardForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: { campaignId?: string | null },
+  ): Promise<PortalSoundboardButtonView[]> {
+    const buttons = await this.soundboard.listByWorld(worldSlug, options);
+
+    return buttons
+      .filter((button) => {
+        if (!isSoundboardButtonVisibleInPortal(button.visibility)) {
+          return false;
+        }
+
+        if (button.assetId && button.asset) {
+          return canViewAsset(ctx, {
+            id: button.asset.id,
+            visibility: button.asset.visibility,
+            linkedPageIds: [],
+          });
+        }
+
+        return true;
+      })
+      .map(toPortalSoundboardButtonView);
+  }
+
+  async getSoundboardButtonForViewer(
+    worldSlug: string,
+    buttonId: string,
+    ctx: AccessContext,
+  ): Promise<PortalSoundboardButtonView | null> {
+    const button = await this.soundboard.getByIdForWorld(worldSlug, buttonId);
+    if (!button || !isSoundboardButtonVisibleInPortal(button.visibility)) {
+      return null;
+    }
+
+    if (button.asset) {
+      const allowed = canViewAsset(ctx, {
+        id: button.asset.id,
+        visibility: button.asset.visibility,
+        linkedPageIds: [],
+      });
+      if (!allowed) {
+        return null;
+      }
+    }
+
+    return toPortalSoundboardButtonView(button);
   }
 }
 

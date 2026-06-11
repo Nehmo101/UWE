@@ -90,6 +90,20 @@ Only **published** pages with visibility `public` or `player_visible` appear in 
 
 ---
 
+## Soundboard (Studio)
+
+UWE Studio includes a per-world/campaign **Soundboard** at `/worlds/[worldSlug]/soundboard`:
+
+- **Local audio** via the asset library (`AssetType.audio`)
+- **YouTube links** stored as URLs (embedded playback in Studio)
+- **Spotify links** stored and prepared for future playback
+
+**Spotify note:** Full Spotify playback control requires **Spotify Premium** and the **Spotify Web API** (OAuth + `PUT /v1/me/player/play`). OAuth is intentionally not implemented yet; see `packages/soundboard/src/spotify.ts` for the prepared adapter.
+
+DM-only soundboard buttons are filtered for the Player Portal via the same visibility rules as assets.
+
+---
+
 ## Static Export
 
 Export a world as static HTML for hosting on webspace, NAS, GitHub Pages, or any static file server.
@@ -143,6 +157,7 @@ Erledigt:
 - [x] Static HTML Export für player-sichere Wiki-Seiten
 - [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung
 - [x] Session Management für Welten und Kampagnen
+- [x] Soundboard (lokale Sounds, YouTube, Spotify vorbereitet)
 
 Geplant:
 
@@ -168,7 +183,8 @@ packages/
   static-export/   # Static HTML export generator
   wiki-engine/     # Wikilink parsing
   auth/            # Roles and permissions
-  assets/          # Asset helpers (future)
+  assets/          # Asset upload paths and MIME helpers
+  soundboard/      # Active sound state + Spotify adapter (OAuth later)
   ai-brain/        # Local AI integration (Studio)
 ```
 

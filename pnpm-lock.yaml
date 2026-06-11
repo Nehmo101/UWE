@@ -81,6 +81,9 @@ importers:
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      '@uwe/soundboard':
+        specifier: workspace:*
+        version: link:../../packages/soundboard
       '@uwe/static-export':
         specifier: workspace:*
         version: link:../../packages/static-export
@@ -181,6 +184,9 @@ importers:
       '@uwe/auth':
         specifier: workspace:*
         version: link:../auth
+      '@uwe/soundboard':
+        specifier: workspace:*
+        version: link:../soundboard
     devDependencies:
       '@types/node':
         specifier: ^22.19.21
@@ -241,6 +247,21 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.7(react@19.2.7)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/soundboard:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

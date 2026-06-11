@@ -103,6 +103,12 @@ enum GameSessionStatus {
   archived
 }
 
+enum SoundSourceType {
+  local
+  youtube
+  spotify
+}
+
 model User {
   id           String   @id @default(cuid())
   displayName  String   @map("display_name")
@@ -189,6 +195,7 @@ model World {
   assets           Asset[]
   worldMemberships WorldMembership[]
   gameSessions     GameSession[]
+  soundboardButtons SoundboardButton[]
 
   @@map("worlds")
 }
@@ -203,8 +210,10 @@ model Campaign {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   world        World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  pages        Page[]
-  gameSessions GameSession[]
+  pages             Page[]
+  assets            Asset[]
+  gameSessions      GameSession[]
+  soundboardButtons SoundboardButton[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -233,7 +242,9 @@ model Page {
   incomingLinks    PageLink[]         @relation("TargetPage")
   playerAccess       PagePlayerAccess[]
   sessionUnlocks     SessionUnlock[]
-  gameSessionLinks   GameSessionPageLink[]
+  gameSessionLinks       GameSessionPageLink[]
+  soundboardButtonLinks  SoundboardButtonPageLink[]
+  assetPageLinks         AssetPageLink[]
 
   @@unique([worldId, slug])
   @@map("pages")
@@ -315,8 +326,9 @@ model Asset {
 
   world         World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  pageLinks     AssetPageLink[]
-  contentBlocks ContentBlock[]
+  pageLinks         AssetPageLink[]
+  contentBlocks     ContentBlock[]
+  soundboardButtons SoundboardButton[]
 
   @@index([worldId, type])
   @@map("assets")
@@ -350,4 +362,45 @@ model PageLink {
   @@index([sourcePageId])
   @@index([targetPageId])
   @@map("page_links")
+}
+
+model SoundboardButton {
+  id          String           @id @default(cuid())
+  worldId     String           @map("world_id")
+  campaignId  String?          @map("campaign_id")
+  title       String
+  sourceType  SoundSourceType  @map("source_type")
+  sourceUrl   String?          @map("source_url")
+  assetId     String?          @map("asset_id")
+  thumbnail   String?
+  volume      Float            @default(1.0)
+  loop        Boolean          @default(false)
+  tags        Json?
+  visibility  Visibility       @default(dm_only)
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  world        World                       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign?                   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  asset        Asset?                      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  linkedPages  SoundboardButtonPageLink[]
+
+  @@index([worldId, campaignId])
+  @@index([assetId])
+  @@map("soundboard_buttons")
+}
+
+model SoundboardButtonPageLink {
+  id                 String   @id @default(cuid())
+  soundboardButtonId String   @map("soundboard_button_id")
+  pageId             String   @map("page_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  soundboardButton SoundboardButton @relation(fields: [soundboardButtonId], references: [id], onDelete: Cascade)
+  page             Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([soundboardButtonId, pageId])
+  @@index([pageId])
+  @@map("soundboard_button_page_links")
 }
