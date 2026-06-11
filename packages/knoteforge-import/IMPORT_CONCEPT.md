@@ -62,6 +62,7 @@ Unbekannte Typen werden als `note` importiert und in der Vorschau gemeldet.
 | `duplicate` | Gleicher Titel/Slug/Alias, aber keine sichere Zuordnung|
 | `conflict`  | Slug/Titel/Asset-Kollision, manuelle Entscheidung nötig|
 | `skipped`   | Ungültige oder leere Daten, wird nicht importiert     |
+| `error`     | Fehler beim Import (z. B. DB-Fehler, fehlende Vorschau) |
 
 ## Duplikaterkennung
 

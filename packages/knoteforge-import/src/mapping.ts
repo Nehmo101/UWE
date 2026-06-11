@@ -125,6 +125,8 @@ function buildContentBlocks(
         ...(buildProvenanceMetadata(entity, importedAt) as Record<string, unknown>),
         printable: true,
         assetType: "label",
+        labelTemplate: true,
+        labelDraft: true,
       } as Prisma.InputJsonValue,
     });
     return blocks;

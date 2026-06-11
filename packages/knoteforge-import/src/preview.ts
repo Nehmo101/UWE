@@ -22,6 +22,7 @@ function emptySummary(): Record<ImportStatus, number> {
     duplicate: 0,
     conflict: 0,
     skipped: 0,
+    error: 0,
   };
 }
 

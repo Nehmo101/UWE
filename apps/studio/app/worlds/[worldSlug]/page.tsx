@@ -93,6 +93,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
               items={[
                 { label: "← Dashboard", href: "/" },
                 { label: "Seiten", href: `/worlds/${worldSlug}`, active: true },
+                { label: "Import", href: `/worlds/${worldSlug}/import` },
                 { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
                 { label: "Assets", href: `/worlds/${worldSlug}/assets` },
                 { label: "Labels", href: `/worlds/${worldSlug}/labels` },

@@ -7,7 +7,13 @@ import type {
 } from "@uwe/database/server";
 
 /** Lifecycle status for each import candidate. */
-export type ImportStatus = "new" | "update" | "duplicate" | "conflict" | "skipped";
+export type ImportStatus =
+  | "new"
+  | "update"
+  | "duplicate"
+  | "conflict"
+  | "skipped"
+  | "error";
 
 export type ImportFormat = "json" | "markdown" | "html";
 
@@ -160,6 +166,14 @@ export interface ImportExecuteOptions {
   allowUpdates?: boolean;
 }
 
+export interface ImportLogEntry {
+  timestamp: string;
+  itemId?: string;
+  title?: string;
+  status: ImportStatus;
+  message: string;
+}
+
 export interface ImportExecuteResult {
   worldSlug: string;
   created: number;
@@ -173,6 +187,7 @@ export interface ImportExecuteResult {
     slug?: string;
     error?: string;
   }>;
+  log: ImportLogEntry[];
 }
 
 export interface ImportOptions {

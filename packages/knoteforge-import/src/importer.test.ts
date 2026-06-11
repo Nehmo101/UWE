@@ -221,6 +221,8 @@ describe("KnoteForge import", () => {
 
     assert.equal(result.created, 1);
     assert.equal(result.failed, 0);
+    assert.ok(result.log.length >= 2);
+    assert.ok(result.log.some((entry) => entry.status === "new" && entry.message.includes("erstellt")));
 
     const page = await repo.getPageBySlug("execute-test", "import-dungeon");
     assert.ok(page);
@@ -317,5 +319,44 @@ describe("KnoteForge import", () => {
 
     const preview = await previewFromContent(repo, "json", SAMPLE_EXPORT, "asset-test");
     assert.ok(preview.errors.some((e) => e.includes("map.png")));
+  });
+
+  it("records error status for failed items without crashing", async () => {
+    const repo = createUweRepository(databaseUrl);
+    await repo.createWorld({
+      name: "Error Test",
+      slug: "error-test",
+      description: "Test",
+    });
+
+    const bundle = buildBundle({
+      entities: [
+        {
+          id: "bad-page",
+          type: "dungeon",
+          title: "Bad Page",
+          slug: "bad-page",
+          content: "x",
+        },
+      ],
+    });
+
+    const originalCreate = repo.createPage.bind(repo);
+    repo.createPage = async () => {
+      throw new Error("Simulierter DB-Fehler");
+    };
+
+    const result = await executeImport(repo, bundle, "error-test", "json", {
+      confirmed: true,
+    });
+
+    repo.createPage = originalCreate;
+
+    assert.equal(result.failed, 1);
+    assert.equal(result.items[0]?.status, "error");
+    assert.equal(result.log.some((entry) => entry.status === "error"), true);
+
+    const pages = await repo.listPagesByWorld("error-test");
+    assert.equal(pages.length, 0);
   });
 });

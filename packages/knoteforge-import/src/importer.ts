@@ -8,8 +8,16 @@ import type {
   ImportExecuteResult,
   ImportFormat,
   ImportItemPreview,
+  ImportLogEntry,
   NormalizedImportBundle,
 } from "./types";
+
+function appendLog(
+  log: ImportLogEntry[],
+  entry: Omit<ImportLogEntry, "timestamp">,
+): void {
+  log.push({ ...entry, timestamp: new Date().toISOString() });
+}
 
 function makeItemId(index: number, knoteforgeId?: string): string {
   return knoteforgeId ? `kf:${knoteforgeId}` : `idx:${index}`;
@@ -66,7 +74,13 @@ async function executeFromBundle(
     skipped: 0,
     failed: 0,
     items: [],
+    log: [],
   };
+
+  appendLog(result.log, {
+    status: "new",
+    message: `Import gestartet: ${bundle.entities.length} Einträge, Format ${format}.`,
+  });
 
   for (let index = 0; index < bundle.entities.length; index++) {
     const entity = bundle.entities[index]!;
@@ -77,8 +91,13 @@ async function executeFromBundle(
       result.failed++;
       result.items.push({
         itemId,
-        status: "skipped",
+        status: "error",
         error: "Vorschau-Eintrag fehlt.",
+      });
+      appendLog(result.log, {
+        itemId,
+        status: "error",
+        message: "Vorschau-Eintrag fehlt.",
       });
       continue;
     }
@@ -89,6 +108,12 @@ async function executeFromBundle(
         itemId,
         status: itemPreview.status,
         slug: itemPreview.resolvedSlug,
+      });
+      appendLog(result.log, {
+        itemId,
+        title: itemPreview.title,
+        status: itemPreview.status,
+        message: `Übersprungen (${itemPreview.status}).`,
       });
       continue;
     }
@@ -129,6 +154,12 @@ async function executeFromBundle(
           pageId: updated.id,
           slug: updated.slug,
         });
+        appendLog(result.log, {
+          itemId,
+          title: draft.title,
+          status: "update",
+          message: `Seite aktualisiert: ${updated.slug}`,
+        });
         continue;
       }
 
@@ -159,15 +190,33 @@ async function executeFromBundle(
         pageId: page.id,
         slug: page.slug,
       });
+      appendLog(result.log, {
+        itemId,
+        title: draft.title,
+        status: "new",
+        message: `Seite erstellt: ${page.slug}`,
+      });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler.";
       result.failed++;
       result.items.push({
         itemId,
-        status: itemPreview.status,
-        error: error instanceof Error ? error.message : "Unbekannter Fehler.",
+        status: "error",
+        error: message,
+      });
+      appendLog(result.log, {
+        itemId,
+        title: itemPreview.title,
+        status: "error",
+        message,
       });
     }
   }
+
+  appendLog(result.log, {
+    status: "new",
+    message: `Import abgeschlossen: ${result.created} erstellt, ${result.updated} aktualisiert, ${result.skipped} übersprungen, ${result.failed} fehlgeschlagen.`,
+  });
 
   return result;
 }
