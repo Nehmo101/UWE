@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { databaseHealthCheck } from "@uwe/database";
 
 export async function GET() {
-  const db = databaseHealthCheck();
+  const db = await databaseHealthCheck();
 
   return NextResponse.json({
     status: "ok",

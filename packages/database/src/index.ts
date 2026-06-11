@@ -1,9 +1,13 @@
 /**
- * UWE Core database layer — in-memory wiki store for Phase 1 wiki engine.
- * Prisma + SQLite/PostgreSQL planned for Phase 2.
+ * UWE Core database layer.
+ *
+ * Phase 1: in-memory wiki store (Studio/Portal UI + wiki-engine)
+ * Phase 2: Prisma repository (structured source of truth)
  */
 
 export const DATABASE_PACKAGE_VERSION = "0.2.0";
+
+// --- Phase 1: in-memory wiki store ---
 
 export type {
   Page,
@@ -41,20 +45,49 @@ export {
 
 export { SEED_PAGES, SEED_WORLDS } from "./seed";
 
-import { getWikiStore } from "./store";
+// --- Phase 2: Prisma repository ---
 
-export interface HealthCheckResult {
-  status: "ok" | "degraded" | "error";
-  message: string;
-}
+export { createPrismaClient, prisma, resolveDatabaseUrl } from "./client";
+export type { PrismaClient } from "./client";
 
-export function databaseHealthCheck(): HealthCheckResult {
-  const store = getWikiStore();
-  const worldCount = store.worlds.size;
-  const pageCount = store.pages.size;
+export { databaseHealthCheck } from "./health";
+export type { HealthCheckResult } from "./health";
 
-  return {
-    status: "ok",
-    message: `Wiki store active (${worldCount} worlds, ${pageCount} pages)`,
-  };
-}
+export {
+  createUweRepository,
+  createWorld,
+  createPage,
+  getPageBySlug,
+  listPagesByWorld,
+  getPublicPageForPortal,
+  getDmPage,
+  UweRepository,
+} from "./repository";
+
+export type {
+  Campaign as DbCampaign,
+  CanonicalStatus,
+  ContentBlock as DbContentBlock,
+  ContentBlockType,
+  Page as DbPage,
+  PageLink as DbPageLink,
+  PageType,
+  PublishStatus,
+  Visibility,
+  World as DbWorld,
+  CreateWorldInput,
+  CreatePageInput,
+  CreateContentBlockInput,
+  PageWithBlocks,
+  PublicPage,
+} from "./repository";
+
+export {
+  CanonicalStatusEnum,
+  ContentBlockTypeEnum,
+  PageTypeEnum,
+  PublishStatusEnum,
+  VisibilityEnum,
+} from "./repository";
+
+export { seedTerraWorld } from "./terra-seed";

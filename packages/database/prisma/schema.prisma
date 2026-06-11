@@ -1,0 +1,162 @@
+// UWE Core data model — structured world knowledge (Source of Truth)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum PageType {
+  lore
+  location
+  region
+  npc
+  faction
+  item
+  dungeon
+  dungeon_level
+  room
+  encounter
+  session
+  quest
+  handout
+  rule
+  player_character
+  monster
+  sound
+  map
+  note
+}
+
+enum Visibility {
+  dm_only
+  player_visible
+  public
+  specific_players
+  unlock_after_session
+  archived
+}
+
+enum PublishStatus {
+  draft
+  internal
+  published
+  archived
+}
+
+enum CanonicalStatus {
+  idea
+  draft
+  canon
+  deprecated
+  contradictory
+  non_canon
+}
+
+enum ContentBlockType {
+  rich_text
+  html
+  image
+  gallery
+  map
+  handout
+  sound
+  relation
+  timeline
+  statblock
+  gm_note
+  player_text
+  ai_summary
+}
+
+model World {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  campaigns Campaign[]
+  pages     Page[]
+
+  @@map("worlds")
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world World  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  pages Page[]
+
+  @@unique([worldId, slug])
+  @@map("campaigns")
+}
+
+model Page {
+  id              String          @id @default(cuid())
+  worldId         String          @map("world_id")
+  campaignId      String?         @map("campaign_id")
+  title           String
+  slug            String
+  type            PageType
+  summary         String?
+  visibility      Visibility      @default(dm_only)
+  publishStatus   PublishStatus   @default(draft) @map("publish_status")
+  canonicalStatus CanonicalStatus @default(draft) @map("canonical_status")
+  tags            Json?
+  aliases         Json?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  world            World          @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign         Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  contentBlocks    ContentBlock[]
+  outgoingLinks    PageLink[]     @relation("SourcePage")
+  incomingLinks    PageLink[]     @relation("TargetPage")
+
+  @@unique([worldId, slug])
+  @@map("pages")
+}
+
+model ContentBlock {
+  id         String           @id @default(cuid())
+  pageId     String           @map("page_id")
+  type       ContentBlockType
+  sortOrder  Int              @map("sort_order")
+  content    String           @default("")
+  visibility Visibility       @default(dm_only)
+  metadata   Json?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, sortOrder])
+  @@map("content_blocks")
+}
+
+model PageLink {
+  id           String   @id @default(cuid())
+  sourcePageId String   @map("source_page_id")
+  targetPageId String   @map("target_page_id")
+  relationType String   @map("relation_type")
+  label        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sourcePage Page @relation("SourcePage", fields: [sourcePageId], references: [id], onDelete: Cascade)
+  targetPage Page @relation("TargetPage", fields: [targetPageId], references: [id], onDelete: Cascade)
+
+  @@index([sourcePageId])
+  @@index([targetPageId])
+  @@map("page_links")
+}
