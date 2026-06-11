@@ -22,6 +22,12 @@ export {
 } from "./AppShell";
 
 export {
+  ErrorAlert,
+  LoadingPage,
+  LoadingSpinner,
+} from "./Feedback";
+
+export {
   GlobalSearchForm,
   SearchFilterBar,
   SearchResultsList,

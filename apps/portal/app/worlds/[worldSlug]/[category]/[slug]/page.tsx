@@ -61,7 +61,7 @@ export default async function PortalPageView({ params }: Props) {
       sidebar={
         <>
           <SidebarSection title="Navigation">
-            <Link href={`/worlds/${worldSlug}`} style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+            <Link href={`/worlds/${worldSlug}`} className="uwe-sidebar-back-link">
               ← {world.name}
             </Link>
             <PortalNavByType worldSlug={worldSlug} items={navItems} activeCategory={category as NavCategory} />

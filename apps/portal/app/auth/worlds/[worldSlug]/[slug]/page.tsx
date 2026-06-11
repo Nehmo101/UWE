@@ -2,6 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
+import {
+  BLOCK_TYPE_LABELS,
+  PageTypeBadge,
+  VisibilityBadge,
+} from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 
 interface Props {
@@ -40,16 +45,23 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           <Link href={`/auth/worlds/${worldSlug}`}>{worldSlug}</Link> / {page.title}
         </div>
 
-        <header>
+        <header className="auth-page-header">
           <h1>{page.title}</h1>
+          <div className="auth-page-list-badges">
+            <PageTypeBadge type={page.type} />
+            <VisibilityBadge visibility={page.visibility} />
+          </div>
           {page.summary && <p className="auth-lead">{page.summary}</p>}
         </header>
 
         <div className="auth-blocks">
           {page.contentBlocks.map((block) => (
             <section key={block.id} className="auth-block">
-              <p className="auth-block-meta">{block.type} · {block.visibility}</p>
-              <div>{block.content}</div>
+              <div className="auth-block-meta">
+                <span className="uwe-badge uwe-badge-type">{BLOCK_TYPE_LABELS[block.type]}</span>
+                <VisibilityBadge visibility={block.visibility} />
+              </div>
+              <div className="auth-block-content wiki-content">{block.content}</div>
             </section>
           ))}
         </div>

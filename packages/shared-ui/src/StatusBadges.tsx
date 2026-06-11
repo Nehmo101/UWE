@@ -8,6 +8,7 @@ import type {
   PublishStatus,
   Visibility,
 } from "@uwe/database/enums";
+import { EmptyState } from "./AppShell";
 
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
   dm_only: "Nur GM",
@@ -181,7 +182,12 @@ export function ContentBlockList({
   showVisibility?: boolean;
 }) {
   if (blocks.length === 0) {
-    return <p className="uwe-empty">Keine Inhaltsblöcke.</p>;
+    return (
+      <EmptyState
+        title="Keine Inhaltsblöcke"
+        description="Diese Seite hat noch keine Inhaltsblöcke."
+      />
+    );
   }
 
   return (

@@ -10,9 +10,12 @@ import {
   getWorldPlayers,
 } from "@/src/lib/auth";
 import {
+  EmptyState,
   GlobalSearchForm,
+  PageTypeBadge,
   SearchFilterBar,
   SearchResultsList,
+  VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
   createAuthService,
@@ -83,9 +86,10 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
           placeholder="Erlaubte Inhalte durchsuchen…"
         />
 
-        <p>
-          <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps anzeigen →</Link>
-        </p>
+        <div className="auth-quick-links">
+          <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps</Link>
+          <Link href={`/auth/worlds/${worldSlug}/assets`}>Assets</Link>
+        </div>
 
         {previewEnabled && (
           <PreviewAsPlayerForm
@@ -124,7 +128,10 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
               <li key={page.id}>
                 <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
                   <strong>{page.title}</strong>
-                  <span>{page.visibility}</span>
+                  <div className="auth-page-list-badges">
+                    <PageTypeBadge type={page.type} />
+                    <VisibilityBadge visibility={page.visibility} />
+                  </div>
                 </Link>
               </li>
             ))}
@@ -132,7 +139,10 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
         )}
 
         {!isSearching && pages.length === 0 && (
-          <p>Für deine Rolle sind derzeit keine Inhalte freigegeben.</p>
+          <EmptyState
+            title="Keine Inhalte freigegeben"
+            description="Für deine Rolle sind derzeit keine Seiten sichtbar. Wende dich an deinen Spielleiter."
+          />
         )}
       </section>
     </main>

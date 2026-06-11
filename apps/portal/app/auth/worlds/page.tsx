@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthHeader } from "@/src/components/AuthHeader";
 import { getCurrentUser, listAuthWorlds } from "@/src/lib/auth";
+import { EmptyState } from "@uwe/shared-ui";
 
 export default async function AuthWorldsPage() {
   const user = await getCurrentUser();
@@ -10,10 +11,16 @@ export default async function AuthWorldsPage() {
     return (
       <main className="auth-page">
         <AuthHeader user={user} />
-        <section className="auth-card">
-          <h1>Keine Welten gefunden</h1>
-          <p>Führe zuerst <code>pnpm --filter @uwe/database db:seed</code> aus.</p>
-          <p><Link href="/login">Zur Anmeldung</Link></p>
+        <section className="auth-card auth-card-wide">
+          <EmptyState
+            title="Keine Welten gefunden"
+            description="Führe zuerst pnpm --filter @uwe/database db:seed aus, um Demo-Inhalte zu laden."
+            action={
+              <Link className="uwe-btn uwe-btn-primary" href="/login">
+                Zur Anmeldung
+              </Link>
+            }
+          />
         </section>
       </main>
     );

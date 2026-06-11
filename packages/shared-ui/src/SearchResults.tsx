@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EmptyState } from "./AppShell";
 import { PageTypeBadge, VisibilityBadge } from "./StatusBadges";
 import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 
@@ -32,17 +33,19 @@ export function SearchResultsList({
 }) {
   if (!query?.trim()) {
     return (
-      <p className="uwe-search-hint">
-        Gib einen Suchbegriff ein, um Seiten, Inhalte, Tags und Aliase zu finden.
-      </p>
+      <EmptyState
+        title="Suche starten"
+        description="Gib einen Suchbegriff ein, um Seiten, Inhalte, Tags und Aliase zu finden."
+      />
     );
   }
 
   if (results.length === 0) {
     return (
-      <p className="uwe-empty">
-        Keine Treffer für „{query}".
-      </p>
+      <EmptyState
+        title="Keine Treffer"
+        description={`Für „${query}" wurden keine passenden Seiten gefunden.`}
+      />
     );
   }
 

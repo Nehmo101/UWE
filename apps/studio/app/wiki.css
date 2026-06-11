@@ -68,9 +68,53 @@
 }
 
 .wiki-content {
-  line-height: 1.75;
+  line-height: 1.85;
   color: #cbd5e1;
-  max-width: 42rem;
+  max-width: 46rem;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+}
+
+.wiki-content p {
+  margin: 0 0 1.15rem;
+}
+
+.wiki-content h2,
+.wiki-content h3,
+.wiki-content h4 {
+  color: #f1f5f9;
+  margin: 2rem 0 0.75rem;
+  line-height: 1.35;
+}
+
+.wiki-content h2 {
+  font-size: 1.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.wiki-content h3 {
+  font-size: 1.15rem;
+}
+
+.wiki-content ul,
+.wiki-content ol {
+  margin: 0 0 1.15rem;
+  padding-left: 1.35rem;
+}
+
+.wiki-content li {
+  margin-bottom: 0.4rem;
+}
+
+.wiki-content blockquote {
+  margin: 1.25rem 0;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid rgba(129, 140, 248, 0.5);
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #94a3b8;
+  font-style: italic;
 }
 
 .wiki-content a.wiki-link {

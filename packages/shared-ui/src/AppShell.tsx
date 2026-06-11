@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 export interface AppShellProps {
   sidebar?: ReactNode;
@@ -8,18 +10,61 @@ export interface AppShellProps {
 }
 
 export function AppShell({ sidebar, main, context, topBar }: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasSidebar = Boolean(sidebar);
   const hasContext = Boolean(context);
 
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeSidebar();
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen, closeSidebar]);
+
   return (
-    <div className="uwe-shell">
-      {topBar && <header className="uwe-topbar">{topBar}</header>}
+    <div className="uwe-shell" data-sidebar-open={sidebarOpen ? "true" : "false"}>
+      {topBar && (
+        <header className="uwe-topbar">
+          {hasSidebar && (
+            <button
+              type="button"
+              className="uwe-mobile-nav-toggle"
+              aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
+              aria-expanded={sidebarOpen}
+              aria-controls="uwe-sidebar"
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              <span className="uwe-mobile-nav-icon" aria-hidden />
+            </button>
+          )}
+          <div className="uwe-topbar-inner">{topBar}</div>
+        </header>
+      )}
       <div
         className="uwe-shell-body"
         data-has-sidebar={hasSidebar ? "true" : "false"}
         data-has-context={hasContext ? "true" : "false"}
       >
-        {hasSidebar && <aside className="uwe-sidebar">{sidebar}</aside>}
+        {hasSidebar && (
+          <>
+            <button
+              type="button"
+              className="uwe-sidebar-backdrop"
+              aria-label="Navigation schließen"
+              tabIndex={sidebarOpen ? 0 : -1}
+              onClick={closeSidebar}
+            />
+            <aside id="uwe-sidebar" className="uwe-sidebar">
+              {sidebar}
+            </aside>
+          </>
+        )}
         <main className="uwe-main">{main}</main>
         {hasContext && <aside className="uwe-context">{context}</aside>}
       </div>
@@ -48,7 +93,7 @@ export function SidebarNav({
   items: { label: string; href: string; active?: boolean; badge?: string }[];
 }) {
   return (
-    <nav className="uwe-sidebar-nav">
+    <nav className="uwe-sidebar-nav" aria-label="Seitennavigation">
       <ul>
         {items.map((item) => (
           <li key={item.href}>
@@ -129,16 +174,19 @@ export function EmptyState({
   title,
   description,
   action,
+  icon,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="uwe-empty-state">
+      {icon && <div className="uwe-empty-icon">{icon}</div>}
       <h3>{title}</h3>
       {description && <p>{description}</p>}
-      {action}
+      {action && <div className="uwe-empty-action">{action}</div>}
     </div>
   );
 }

@@ -17,13 +17,16 @@ export default function PortalHome() {
             Lore, Orte, NPCs und Handouts — alles was deine Gruppe wissen darf,
             schön aufbereitet und mobil optimiert.
           </p>
-          <Link className="uwe-btn uwe-btn-primary" href="/auth/worlds" style={{ marginTop: "1.25rem" }}>
-            Mit Anmeldung öffnen
-          </Link>
-          <p className="uwe-portal-hero-meta" style={{ marginTop: "1rem" }}>
-            <Link href="/login">Anmelden</Link>
-            {" · "}
-            <Link href="/worlds">Demo-Wiki (legacy)</Link>
+          <div className="uwe-portal-hero-actions">
+            <Link className="uwe-btn uwe-btn-primary" href="/auth/worlds">
+              Mit Anmeldung öffnen
+            </Link>
+            <Link className="uwe-btn uwe-btn-ghost" href="/login">
+              Anmelden
+            </Link>
+          </div>
+          <p className="uwe-portal-hero-meta">
+            <Link href="/worlds">Demo-Wiki</Link>
             {" · "}
             <Link href="/api/health">Health check</Link>
           </p>

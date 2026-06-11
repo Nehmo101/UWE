@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   AppShell,
-  Breadcrumb,
+  EmptyState,
   PageHeader,
   SearchField,
   SidebarNav,
@@ -54,29 +54,41 @@ export default async function StudioDashboard() {
             ]}
           />
 
-          <section style={{ marginTop: "2rem" }}>
-            <h2 style={{ fontSize: "1rem", color: "#94a3b8", marginBottom: "1rem" }}>
-              Deine Welten
-            </h2>
-            <div className="wiki-world-grid">
-              {worlds.map((world) => (
-                <article key={world.id} className="wiki-world-card">
-                  <h2>{world.name}</h2>
-                  {world.description && <p>{world.description}</p>}
-                  <Link href={`/worlds/${world.slug}`}>Welt öffnen →</Link>
-                </article>
-              ))}
-            </div>
+          <section className="uwe-section">
+            <h2 className="uwe-section-title">Deine Welten</h2>
+            {worlds.length === 0 ? (
+              <EmptyState
+                title="Noch keine Welten"
+                description="Erstelle deine erste Kampagne oder führe db:seed aus, um Demo-Inhalte zu laden."
+                action={
+                  <Link className="uwe-btn uwe-btn-primary" href="/worlds">
+                    Welten verwalten
+                  </Link>
+                }
+              />
+            ) : (
+              <div className="wiki-world-grid">
+                {worlds.map((world) => (
+                  <article key={world.id} className="wiki-world-card uwe-card">
+                    <h2>{world.name}</h2>
+                    {world.description && <p>{world.description}</p>}
+                    <Link className="uwe-card-link" href={`/worlds/${world.slug}`}>
+                      Welt öffnen →
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </>
       }
       context={
         <SidebarSection title="Schnellstart">
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.875rem" }}>
-            <li style={{ marginBottom: "0.5rem" }}>
+          <ul className="uwe-sidebar-links">
+            <li>
               <Link href="/worlds">Welten auswählen</Link>
             </li>
-            <li style={{ marginBottom: "0.5rem" }}>Kampagne wählen & Seiten bearbeiten</li>
+            <li>Kampagne wählen & Seiten bearbeiten</li>
             <li>Vorschau als Spieler testen</li>
           </ul>
         </SidebarSection>

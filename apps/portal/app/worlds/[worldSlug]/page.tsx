@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   AppShell,
+  EmptyState,
   GlobalSearchForm,
   PortalNavByType,
   PortalWorldHero,
@@ -70,7 +71,7 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
       }
       sidebar={
         <SidebarSection title="Navigation">
-          <Link href="/worlds" style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+          <Link href="/worlds" className="uwe-sidebar-back-link">
             ← Alle Welten
           </Link>
           {!isSearching && (
@@ -123,7 +124,10 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
               ))}
 
               {pages.length === 0 && (
-                <p className="uwe-empty">Keine veröffentlichten Seiten gefunden.</p>
+                <EmptyState
+                  title="Keine veröffentlichten Seiten"
+                  description="In dieser Welt sind noch keine Inhalte für Spieler freigegeben."
+                />
               )}
             </div>
           )}

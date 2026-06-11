@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AppShell,
   Breadcrumb,
+  EmptyState,
   GlobalSearchForm,
   PageHeader,
   PageTypeBadge,
@@ -215,7 +216,15 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
           </table>
 
           {pages.length === 0 && (
-            <p className="uwe-empty">Keine Seiten für diesen Filter.</p>
+            <EmptyState
+              title="Keine Seiten"
+              description="Für diesen Filter gibt es noch keine Einträge. Erstelle eine neue Seite oder passe den Filter an."
+              action={
+                <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+                  Seite erstellen
+                </Link>
+              }
+            />
           )}
             </>
           )}
