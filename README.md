@@ -148,8 +148,10 @@ pnpm typecheck
 
 ### Phase 8 — KnoteForge import
 
-- [ ] One-way import from KnoteForge Local
-- [ ] Migration mapping and validation
+- [x] One-way import from KnoteForge Local (JSON export)
+- [x] Migration mapping and validation (preview, duplicate detection, conflict resolution)
+- [ ] Markdown/HTML export formats
+- [ ] Asset file import (maps, sounds, handouts)
 
 ### Future
 

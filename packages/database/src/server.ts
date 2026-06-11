@@ -5,6 +5,7 @@
 
 export { createPrismaClient, prisma, resolveDatabaseUrl } from "./client";
 export type { PrismaClient } from "./client";
+export type { Prisma } from "./generated/prisma/client";
 
 export { databaseHealthCheck, type HealthCheckResult } from "./health-server";
 
