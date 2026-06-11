@@ -17,6 +17,11 @@ export function resolveUploadsRoot(baseDir?: string, overridePath?: string): str
   if (process.env.UWE_UPLOADS_ROOT) {
     return process.env.UWE_UPLOADS_ROOT;
   }
+  if (process.env.UPLOADS_DIR) {
+    return path.isAbsolute(process.env.UPLOADS_DIR)
+      ? process.env.UPLOADS_DIR
+      : path.resolve(baseDir ?? process.cwd(), process.env.UPLOADS_DIR);
+  }
   const root = baseDir ?? process.cwd();
   return path.join(root, UPLOADS_DIR_NAME);
 }

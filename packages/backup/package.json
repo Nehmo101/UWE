@@ -1,0 +1,29 @@
+{
+  "name": "@uwe/backup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backup and restore for UWE worlds, campaigns, and full instance data",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"No lint configured yet\"",
+    "test": "prisma generate --schema ../database/prisma/schema.prisma && node --import tsx --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@uwe/assets": "workspace:*",
+    "@uwe/database": "workspace:*",
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

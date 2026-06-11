@@ -33,6 +33,7 @@ export default async function StudioDashboard() {
               items={[
                 { label: "Dashboard", href: "/", active: true },
                 { label: "Welten", href: "/worlds" },
+                { label: "Backup", href: "/backup" },
                 { label: "Einstellungen", href: "/settings" },
               ]}
             />
