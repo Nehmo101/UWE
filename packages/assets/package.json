@@ -13,6 +13,7 @@
     "lint": "echo \"No lint configured yet\""
   },
   "devDependencies": {
+    "@types/node": "^22.19.21",
     "@uwe/config": "workspace:*",
     "typescript": "^5.8.3"
   }

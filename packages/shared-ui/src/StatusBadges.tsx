@@ -1,4 +1,5 @@
 import type {
+  AssetType,
   CanonicalStatus,
   ContentBlockType,
   PageType,
@@ -69,6 +70,16 @@ export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   ai_summary: "KI-Zusammenfassung",
 };
 
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  image: "Bild",
+  map: "Karte",
+  handout: "Handout",
+  document: "Dokument",
+  audio: "Audio",
+  video: "Video",
+  other: "Sonstiges",
+};
+
 export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
   const className =
     visibility === "dm_only"
@@ -99,6 +110,10 @@ export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
 
 export function PageTypeBadge({ type }: { type: PageType }) {
   return <span className="uwe-badge uwe-badge-type">{PAGE_TYPE_LABELS[type]}</span>;
+}
+
+export function AssetTypeBadge({ type }: { type: AssetType }) {
+  return <span className="uwe-badge uwe-badge-type">{ASSET_TYPE_LABELS[type]}</span>;
 }
 
 export interface ContentBlockViewModel {

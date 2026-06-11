@@ -1,5 +1,6 @@
 export type {
   AccessContext,
+  AssetAccessInfo,
   AuthUser,
   ContentBlockAccessInfo,
   PageAccessInfo,
@@ -16,8 +17,10 @@ export {
   canEditContent,
   canPreviewAsPlayer,
   canPublishContent,
+  canViewAsset,
   canViewContentBlock,
   canViewPage,
+  filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
   isDmOrOwner,

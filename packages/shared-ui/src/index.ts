@@ -22,6 +22,7 @@ export {
 } from "./AppShell";
 
 export {
+  ASSET_TYPE_LABELS,
   BLOCK_TYPE_LABELS,
   CANONICAL_LABELS,
   ContentBlockList,
@@ -29,6 +30,7 @@ export {
   PAGE_TYPE_LABELS,
   PUBLISH_LABELS,
   VISIBILITY_LABELS,
+  AssetTypeBadge,
   CanonicalBadge,
   PageTypeBadge,
   PublishBadge,

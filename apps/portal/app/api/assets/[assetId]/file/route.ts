@@ -1,0 +1,60 @@
+import fs from "node:fs";
+import { NextResponse } from "next/server";
+import { resolveAssetFilePath } from "@uwe/assets";
+import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { getAccessContextForWorld, getSessionToken } from "@/src/lib/auth";
+
+interface RouteContext {
+  params: Promise<{ assetId: string }>;
+}
+
+export async function GET(request: Request, context: RouteContext) {
+  const { assetId } = await context.params;
+  const worldSlug = new URL(request.url).searchParams.get("world");
+
+  if (!worldSlug) {
+    return NextResponse.json({ error: "world query parameter required" }, { status: 400 });
+  }
+
+  const ctx = await getAccessContextForWorld(worldSlug);
+  if (!ctx) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const token = await getSessionToken();
+  if (!token && ctx.effectiveRole !== "guest") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const db = createPrismaClient();
+  const auth = createAuthService(db);
+
+  try {
+    const asset = await auth.getAssetForViewer(worldSlug, assetId, ctx);
+    if (!asset) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    let filePath: string;
+    try {
+      filePath = resolveAssetFilePath(asset.storageKey);
+    } catch {
+      return NextResponse.json({ error: "Invalid storage key" }, { status: 400 });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ error: "File missing on disk" }, { status: 404 });
+    }
+
+    const data = fs.readFileSync(filePath);
+    return new NextResponse(data, {
+      headers: {
+        "Content-Type": asset.mimeType ?? "application/octet-stream",
+        "Content-Length": String(asset.size),
+        "Content-Disposition": `inline; filename="${encodeURIComponent(asset.title)}"`,
+      },
+    });
+  } finally {
+    await db.$disconnect();
+  }
+}

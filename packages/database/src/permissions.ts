@@ -47,6 +47,35 @@ export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility"
   return blocks.filter((block) => isPortalBlockVisibility(block.visibility));
 }
 
+/** Asset visibilities exposed to the player portal API and UI. */
+export const PORTAL_ASSET_VISIBILITIES: Visibility[] = ["public", "player_visible"];
+
+export function isPortalAssetVisibility(visibility: Visibility): boolean {
+  return PORTAL_ASSET_VISIBILITIES.includes(visibility);
+}
+
+export function isAssetAccessible(
+  asset: Pick<{ visibility: Visibility }, "visibility">,
+  context: AccessContext,
+): boolean {
+  if (context === "dm") {
+    return true;
+  }
+
+  return isPortalAssetVisibility(asset.visibility);
+}
+
+export function filterAssetsForContext<T extends Pick<{ visibility: Visibility }, "visibility">>(
+  assets: T[],
+  context: AccessContext,
+): T[] {
+  if (context === "dm") {
+    return assets;
+  }
+
+  return assets.filter((asset) => isPortalAssetVisibility(asset.visibility));
+}
+
 export function shouldHidePageTitle(
   page: Pick<Page, "visibility" | "publishStatus">,
   context: AccessContext,

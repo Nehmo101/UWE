@@ -33,6 +33,8 @@ export {
 
 export type {
   Campaign as DbCampaign,
+  Asset as DbAsset,
+  AssetType,
   CanonicalStatus,
   ContentBlock as DbContentBlock,
   ContentBlockType,
@@ -48,6 +50,8 @@ export type {
   UpdatePageInput,
   UpdateContentBlockInput,
   CreateContentBlockInput,
+  CreateAssetInput,
+  UpdateAssetInput,
   PageWithBlocks,
   PageSummary,
   PublicPage,
@@ -56,6 +60,7 @@ export type {
 export {
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
+  AssetTypeEnum,
   PageTypeEnum,
   PublishStatusEnum,
   VisibilityEnum,
@@ -63,9 +68,13 @@ export {
 
 export {
   filterBlocksForContext,
+  filterAssetsForContext,
   isPageAccessible,
+  isPortalAssetVisibility,
   isPortalBlockVisibility,
+  isAssetAccessible,
   shouldHidePageTitle,
+  PORTAL_ASSET_VISIBILITIES,
   type AccessContext,
 } from "./permissions";
 

@@ -1,5 +1,6 @@
 import type {
   AccessContext,
+  AssetAccessInfo,
   AuthUser,
   ContentBlockAccessInfo,
   PageAccessInfo,
@@ -178,6 +179,45 @@ export function filterBlocksForViewer<T extends ContentBlockAccessInfo>(
   page: PageAccessInfo,
 ): T[] {
   return blocks.filter((block) => canViewContentBlock(ctx, block, page));
+}
+
+export function canViewAsset(ctx: AccessContext, asset: AssetAccessInfo): boolean {
+  if (asset.visibility === "archived") {
+    return isDmOrOwner(ctx);
+  }
+
+  if (isDmOrOwner(ctx)) {
+    return true;
+  }
+
+  switch (asset.visibility) {
+    case "dm_only":
+      return false;
+    case "player_visible":
+      return ctx.effectiveRole === "player";
+    case "public":
+      if (ctx.effectiveRole === "player") return true;
+      return ctx.effectiveRole === "guest" && ctx.guestModeEnabled;
+    case "specific_players":
+      return (
+        ctx.effectiveRole === "player" &&
+        (asset.linkedPageIds ?? []).some((pageId) => canViewSpecificPlayerPage(ctx, pageId))
+      );
+    case "unlock_after_session":
+      return (
+        ctx.effectiveRole === "player" &&
+        (asset.linkedPageIds ?? []).some((pageId) => canViewUnlockedPage(ctx, pageId))
+      );
+    default:
+      return false;
+  }
+}
+
+export function filterAssetsForViewer<T extends AssetAccessInfo>(
+  ctx: AccessContext,
+  assets: T[],
+): T[] {
+  return assets.filter((asset) => canViewAsset(ctx, asset));
 }
 
 export function canPreviewAsPlayer(ctx: AccessContext): boolean {
