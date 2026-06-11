@@ -57,6 +57,9 @@ importers:
 
   apps/studio:
     dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../../packages/ai-brain
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -96,10 +99,20 @@ importers:
         version: 5.9.3
 
   packages/ai-brain:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
     devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
       '@uwe/config':
         specifier: workspace:*
         version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

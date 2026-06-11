@@ -210,6 +210,115 @@ export class UweRepository {
       },
     });
   }
+
+  async getWorldBySlug(worldSlug: string) {
+    return this.db.world.findUnique({
+      where: { slug: worldSlug },
+    });
+  }
+
+  async getPageById(pageId: string): Promise<PageWithBlocks | null> {
+    return this.db.page.findUnique({
+      where: { id: pageId },
+      include: {
+        contentBlocks: {
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+  }
+
+  async getPageWithLinks(pageId: string) {
+    return this.db.page.findUnique({
+      where: { id: pageId },
+      include: {
+        contentBlocks: {
+          orderBy: { sortOrder: "asc" },
+        },
+        outgoingLinks: {
+          include: {
+            targetPage: {
+              select: { id: true, title: true, slug: true, visibility: true, canonicalStatus: true },
+            },
+          },
+        },
+        incomingLinks: {
+          include: {
+            sourcePage: {
+              select: { id: true, title: true, slug: true, visibility: true, canonicalStatus: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async addContentBlock(pageId: string, input: CreateContentBlockInput) {
+    return this.db.contentBlock.create({
+      data: {
+        pageId,
+        type: input.type,
+        sortOrder: input.sortOrder,
+        content: input.content ?? "",
+        visibility: input.visibility ?? "dm_only",
+        metadata: input.metadata ?? {},
+      },
+    });
+  }
+
+  async getNextContentBlockSortOrder(pageId: string): Promise<number> {
+    const lastBlock = await this.db.contentBlock.findFirst({
+      where: { pageId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    return (lastBlock?.sortOrder ?? -1) + 1;
+  }
+
+  async createIdeaPage(input: {
+    worldId: string;
+    title: string;
+    slug: string;
+    type: PageType;
+    summary?: string | null;
+    content: string;
+    sourcePageId?: string;
+    taskType?: string;
+    visibility?: Visibility;
+  }) {
+    return this.db.page.create({
+      data: {
+        worldId: input.worldId,
+        title: input.title,
+        slug: input.slug,
+        type: input.type,
+        summary: input.summary ?? null,
+        visibility: input.visibility ?? "dm_only",
+        publishStatus: "draft",
+        canonicalStatus: "idea",
+        contentBlocks: {
+          create: [
+            {
+              type: "rich_text",
+              sortOrder: 0,
+              content: input.content,
+              visibility: input.visibility ?? "dm_only",
+              metadata: {
+                source: "ai_brain",
+                sourcePageId: input.sourcePageId ?? null,
+                taskType: input.taskType ?? null,
+              },
+            },
+          ],
+        },
+      },
+      include: {
+        contentBlocks: {
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+  }
 }
 
 export function createUweRepository(databaseUrl?: string): UweRepository {
@@ -246,4 +355,35 @@ export async function getPublicPageForPortal(
 
 export async function getDmPage(worldSlug: string, pageSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getDmPage(worldSlug, pageSlug);
+}
+
+export async function getDbWorldBySlug(worldSlug: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).getWorldBySlug(worldSlug);
+}
+
+export async function getDbPageById(pageId: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).getPageById(pageId);
+}
+
+export async function getPageWithLinks(pageId: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).getPageWithLinks(pageId);
+}
+
+export async function addContentBlock(
+  pageId: string,
+  input: CreateContentBlockInput,
+  databaseUrl?: string,
+) {
+  return createUweRepository(databaseUrl).addContentBlock(pageId, input);
+}
+
+export async function getNextContentBlockSortOrder(pageId: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).getNextContentBlockSortOrder(pageId);
+}
+
+export async function createIdeaPage(
+  input: Parameters<UweRepository["createIdeaPage"]>[0],
+  databaseUrl?: string,
+) {
+  return createUweRepository(databaseUrl).createIdeaPage(input);
 }

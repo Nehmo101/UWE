@@ -12,6 +12,7 @@
     "test": "node --import tsx --test src/health.test.ts"
   },
   "dependencies": {
+    "@uwe/ai-brain": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/wiki-engine": "workspace:*",

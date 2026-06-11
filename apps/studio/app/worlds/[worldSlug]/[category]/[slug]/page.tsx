@@ -6,6 +6,7 @@ import {
   VisibilityBadge,
   CATEGORY_LABELS,
 } from "@uwe/shared-ui";
+import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import {
   getPageByPath,
   getWorldBySlug,
@@ -94,17 +95,20 @@ export default async function StudioPageView({ params }: Props) {
         <WikiContent html={html} />
       </main>
 
-      <WikiSidebar
-        backlinks={backlinks.map((b) => ({
-          title: b.sourcePage.title,
-          href: b.href,
-        }))}
-        relatedPages={related.map((r) => ({
-          title: r.page.title,
-          href: r.href,
-          reasons: r.reasons,
-        }))}
-      />
+      <div className="wiki-sidebar-stack">
+        <WikiSidebar
+          backlinks={backlinks.map((b) => ({
+            title: b.sourcePage.title,
+            href: b.href,
+          }))}
+          relatedPages={related.map((r) => ({
+            title: r.page.title,
+            href: r.href,
+            reasons: r.reasons,
+          }))}
+        />
+        <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
+      </div>
     </div>
   );
 }

@@ -61,6 +61,12 @@ export {
   listPagesByWorld,
   getPublicPageForPortal,
   getDmPage,
+  getDbWorldBySlug,
+  getDbPageById,
+  getPageWithLinks,
+  addContentBlock,
+  getNextContentBlockSortOrder,
+  createIdeaPage,
   UweRepository,
 } from "./repository";
 
