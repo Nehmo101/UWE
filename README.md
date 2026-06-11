@@ -6,76 +6,57 @@
 |-----------|------|---------|
 | Product | **UWE** | Overall platform |
 | DM App | **UWE Studio** | World and campaign editor (DM-only knowledge) |
-| Player App | **UWE Portal** | Player-facing wiki and handouts |
+| Player App | **UWE Portal** | Player-facing wiki and handouts (live web app + API) |
+| Export | **Static Export** | Player-safe HTML export for simple hosting |
 | Backend | **UWE Core** | Shared data layer, auth, wiki engine (packages) |
 
 > Self-hosted campaign brain and world wiki — no cloud required.
 
 ---
 
-## Architecture
+## Quick start (Docker)
 
-UWE is built as a **pnpm monorepo** with **Turborepo** for task orchestration.
-
-### Why this stack?
-
-| Layer | Choice | Rationale |
-|-------|--------|-----------|
-| Monorepo | pnpm workspaces + Turborepo | Clean separation of Studio, Portal, and Core packages with shared tooling |
-| Apps | Next.js 15 (App Router) | Modern React, SSR-ready, self-hostable, Docker-friendly |
-| Language | TypeScript | Type safety across apps and packages |
-| Database (planned) | Prisma + SQLite/PostgreSQL | Local-first with optional self-hosted Postgres |
-| Auth (planned) | Package stub → session-based | DM vs. player role separation |
-
-### Repository structure
-
-```
-apps/
-  studio/          # UWE Studio — DM campaign editor (port 3000)
-  portal/          # UWE Portal — player wiki (port 3001)
-
-packages/
-  config/          # Shared TypeScript configs
-  shared-ui/       # Shared React components
-  database/        # UWE Core — database layer (Phase 2)
-  wiki-engine/     # Wikilinks, backlinks (Phase 3)
-  auth/            # Authentication (Phase 4)
-  assets/          # Maps, handouts, sounds (future)
-  ai-brain/        # Local AI integration (future)
+```bash
+cp .env.example .env
+docker compose up -d
 ```
 
-This matches the proposed monorepo layout. Studio and Portal stay independent deployable apps; Core logic lives in shared packages consumed by both.
+- **Studio (DM):** http://localhost:3000  
+- **Portal (Spieler):** http://localhost:3001  
 
-**UWE is fully independent from KnoteForge Local.** No code, config, or data is shared with the existing KnoteForge repository.
+Optional demo data on first start:
 
----
+```bash
+RUN_DB_SEED=true docker compose up -d
+```
 
-## Prerequisites
+Demo login (after seed): any seeded user with password `uwe-dev`.
 
-- **Node.js** ≥ 20
-- **pnpm** ≥ 10 (`corepack enable && corepack prepare pnpm@latest --activate`)
+Persistent data:
+
+| Path | Purpose |
+|------|---------|
+| Docker volume `uwe-database` | SQLite database |
+| `./data/uploads` | Uploaded assets |
+| `./data/backups` | Backup folder |
+| `./exports` | Static HTML exports |
 
 ---
 
 ## Local development
 
-### 1. Install dependencies
+### Prerequisites
+
+- **Node.js** ≥ 20
+- **pnpm** ≥ 10 (`corepack enable && corepack prepare pnpm@latest --activate`)
+
+### Install and run
 
 ```bash
 pnpm install
-```
-
-### 2. Environment (optional)
-
-```bash
 cp .env.example .env
-```
-
-Adjust ports or URLs if needed. Defaults work out of the box.
-
-### 3. Start both apps
-
-```bash
+pnpm --filter @uwe/database db:migrate
+pnpm --filter @uwe/database db:seed
 pnpm dev
 ```
 
@@ -86,12 +67,7 @@ pnpm dev:studio   # http://localhost:3000
 pnpm dev:portal   # http://localhost:3001
 ```
 
-### 4. Health checks
-
-- Studio: [http://localhost:3000/api/health](http://localhost:3000/api/health)
-- Portal: [http://localhost:3001/api/health](http://localhost:3001/api/health)
-
-### 5. Build and test
+### Build and test
 
 ```bash
 pnpm build
@@ -101,63 +77,117 @@ pnpm typecheck
 
 ---
 
-## Roadmap
+## Player Portal (live)
 
-### Phase 1 — Foundation (current)
+The **UWE Portal** is a Next.js web app with backend/API:
 
-- [x] Monorepo structure
-- [x] UWE Studio and Portal start pages
-- [x] Shared UI and config packages
-- [x] Health check endpoints
-- [x] Minimal tests
+- Public wiki at `/worlds/[worldSlug]/…`
+- Player login at `/login` and authenticated views at `/auth/worlds/…`
+- Health check: `GET /api/health` (includes database check)
+- Auth API: `POST /api/auth/login`, `/logout`, `/preview`
 
-### Phase 2 — UWE Core database
+Only **published** pages with visibility `public` or `player_visible` appear in the public wiki. DM-only blocks and pages are filtered server-side.
 
-- [ ] Prisma schema for worlds, campaigns, entities
-- [ ] SQLite for local dev, PostgreSQL for self-host
-- [ ] CRUD API layer in `@uwe/database`
+---
 
-### Phase 3 — Wiki engine
+## Static Export
 
-- [ ] `[[wikilink]]` parsing and rendering
-- [ ] Backlinks and graph navigation
-- [ ] Obsidian-style page editor in Studio
+Export a world as static HTML for hosting on webspace, NAS, GitHub Pages, or any static file server.
 
-### Phase 4 — Auth and knowledge separation
+```bash
+pnpm export:static --world terra
+```
 
-- [ ] DM vs. player roles
-- [ ] Player-safe content filtering for Portal
-- [ ] Session and access tokens
+Output example:
 
-### Phase 5 — Player portal
+```
+exports/terra-static/
+  index.html
+  locations/arbor/index.html
+  locations/validori/index.html
+  factions/nepurga/index.html
+  assets/portal.css
+  assets/search.js
+  search-index.json
+```
 
-- [ ] Campaign selection and player login
-- [ ] Handouts and session recaps
-- [ ] Public wiki pages
+Features:
 
-### Phase 6 — Self-host and Docker
+- Exports one world at a time
+- Only portal-visible, published content
+- Internal wikilinks rewritten to relative paths
+- Bundled CSS/JS and client-side search index
+- Security audit: no DM-only titles, blocks, or secret JSON fields
 
-- [ ] Docker Compose for Studio + Portal + database
-- [ ] Production build and deployment docs
+From Studio (API):
 
-### Phase 7 — AI brain
+```bash
+curl -X POST http://localhost:3000/api/export/static \
+  -H 'Content-Type: application/json' \
+  -d '{"worldSlug":"terra"}'
+```
 
-- [ ] Local Ollama integration
-- [ ] Optional cloud API keys
-- [ ] Campaign context for AI assistance
+Host the export folder with any static web server, for example:
 
-### Phase 8 — KnoteForge import
+```bash
+npx serve exports/terra-static
+```
 
-- [x] One-way import from KnoteForge Local (JSON export)
-- [x] Migration mapping and validation (preview, duplicate detection, conflict resolution)
-- [ ] Markdown/HTML export formats
-- [ ] Asset file import (maps, sounds, handouts)
+---
 
-### Future
+## Roadmap (Auszug)
 
-- Asset management (maps, sounds, handouts)
-- Dungeon cockpit
-- Soundboard integration
+Erledigt:
+
+- [x] Docker Compose für Studio + Portal + persistente Datenbank
+- [x] Static HTML Export für player-sichere Wiki-Seiten
+- [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung
+- [x] Session Management für Welten und Kampagnen
+
+Geplant:
+
+- [ ] Markdown/HTML als zusätzliche Export-Formate
+- [ ] Asset-Datei-Import (Karten, Sounds, Handouts)
+- [ ] PostgreSQL-Option für Self-Hosting
+
+---
+
+## Architecture
+
+UWE is a **pnpm monorepo** with **Turborepo**:
+
+```
+apps/
+  studio/          # UWE Studio — DM editor (port 3000)
+  portal/          # UWE Portal — player wiki (port 3001)
+
+packages/
+  config/          # Shared TypeScript configs
+  shared-ui/       # Shared React components
+  database/        # Prisma schema, repository, page rendering
+  static-export/   # Static HTML export generator
+  wiki-engine/     # Wikilink parsing
+  auth/            # Roles and permissions
+  assets/          # Asset helpers (future)
+  ai-brain/        # Local AI integration (Studio)
+```
+
+Stack: Next.js 15, React 19, TypeScript, Prisma 7, SQLite (libsql).
+
+---
+
+## Environment
+
+Copy `.env.example` to `.env`. Important variables:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | SQLite path (`file:./data/uwe.db` in dev) |
+| `UPLOADS_DIR` | Persistent uploads |
+| `EXPORTS_DIR` | Static export output (Studio API) |
+| `BACKUPS_DIR` | Backup folder |
+| `AUTH_SECRET` | Session secret (set in production) |
+| `RUN_DB_SEED` | Seed demo world in Docker (`true`/`false`) |
 
 ---
 

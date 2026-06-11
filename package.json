@@ -8,11 +8,15 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && node --import tsx --test scripts/selfhost.test.ts",
     "dev:studio": "pnpm --filter @uwe/studio dev",
-    "dev:portal": "pnpm --filter @uwe/portal dev"
+    "dev:portal": "pnpm --filter @uwe/portal dev",
+    "export:static": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/cli.ts",
+    "db:migrate": "pnpm --filter @uwe/database db:migrate",
+    "db:seed": "pnpm --filter @uwe/database db:seed"
   },
   "devDependencies": {
+    "tsx": "^4.22.4",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },

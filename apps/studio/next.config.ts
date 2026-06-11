@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/ai-brain"],
+  output: "standalone",
+  transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/ai-brain", "@uwe/static-export"],
   serverExternalPackages: [
     "@libsql/client",
     "@prisma/adapter-libsql",

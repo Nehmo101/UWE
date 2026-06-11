@@ -3,6 +3,8 @@ import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "UWE Portal",
   description: "Universeller Welten-Editor — player portal",

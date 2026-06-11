@@ -1,0 +1,30 @@
+{
+  "name": "@uwe/static-export",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static HTML export for UWE player portal content",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"No lint configured yet\"",
+    "test": "prisma generate --schema ../database/prisma/schema.prisma && node --import tsx --test 'src/**/*.test.ts'",
+    "export": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@uwe/database": "workspace:*",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

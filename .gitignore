@@ -37,7 +37,13 @@ coverage/
 *.sqlite
 *.sqlite3
 uploads/
-data/
+data/*
+!data/uploads/.gitkeep
+!data/backups/.gitkeep
+
+# Static exports (generated)
+exports/*
+!exports/.gitkeep
 
 # TypeScript
 *.tsbuildinfo

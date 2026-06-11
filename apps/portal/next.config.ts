@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/auth"],
   serverExternalPackages: [
     "@libsql/client",

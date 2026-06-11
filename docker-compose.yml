@@ -1,0 +1,53 @@
+services:
+  studio:
+    build:
+      context: .
+      target: studio
+    ports:
+      - "${STUDIO_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: file:/data/uwe.db
+      UPLOADS_DIR: /app/data/uploads
+      EXPORTS_DIR: /app/exports
+      BACKUPS_DIR: /app/data/backups
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production}
+      RUN_DB_SEED: ${RUN_DB_SEED:-false}
+    volumes:
+      - uwe-database:/data
+      - ./data/uploads:/app/data/uploads
+      - ./data/backups:/app/data/backups
+      - ./exports:/app/exports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  portal:
+    build:
+      context: .
+      target: portal
+    ports:
+      - "${PORTAL_PORT:-3001}:3001"
+    environment:
+      DATABASE_URL: file:/data/uwe.db
+      UPLOADS_DIR: /app/data/uploads
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production}
+    volumes:
+      - uwe-database:/data
+      - ./data/uploads:/app/data/uploads
+    depends_on:
+      studio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  uwe-database:
