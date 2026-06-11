@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
+import { searchForAuthContext, type SearchOptions, type SearchResultItem } from "./search-service";
 import {
   GameSessionService,
   toDmGameSessionView,
@@ -264,6 +265,18 @@ export class AuthService {
     });
 
     return filterPagesForViewer(ctx, pages);
+  }
+
+  async searchForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    options: SearchOptions,
+  ): Promise<SearchResultItem[]> {
+    return searchForAuthContext(this.db, ctx, {
+      ...options,
+      worldSlug,
+      urlMode: options.urlMode ?? "auth-portal",
+    });
   }
 
   async setWorldGuestMode(worldId: string, enabled: boolean) {

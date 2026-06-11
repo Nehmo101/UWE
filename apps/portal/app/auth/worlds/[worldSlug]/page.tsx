@@ -9,14 +9,29 @@ import {
   getPreviewUserId,
   getWorldPlayers,
 } from "@/src/lib/auth";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import {
+  GlobalSearchForm,
+  SearchFilterBar,
+  SearchResultsList,
+} from "@uwe/shared-ui";
+import {
+  createAuthService,
+  createPrismaClient,
+  SEARCH_ENTITY_FILTER_LABELS,
+  SEARCH_ENTITY_FILTERS,
+  type SearchEntityFilter,
+  type SearchResultItem,
+  type DbPage,
+} from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ q?: string; filter?: string }>;
 }
 
-export default async function AuthWorldPage({ params }: Props) {
+export default async function AuthWorldPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { q, filter: entityFilter } = await searchParams;
   const user = await getCurrentUser();
   const ctx = await getAccessContextForWorld(worldSlug);
 
@@ -27,9 +42,19 @@ export default async function AuthWorldPage({ params }: Props) {
   const db = createPrismaClient();
   const auth = createAuthService(db);
 
-  let pages;
+  const isSearching = Boolean(q?.trim());
+
+  let pages: DbPage[] = [];
+  let searchResults: SearchResultItem[] = [];
   try {
-    pages = await auth.listPagesForViewer(worldSlug, ctx);
+    if (isSearching) {
+      searchResults = await auth.searchForViewer(worldSlug, ctx, {
+        query: q!,
+        entityFilter: entityFilter as SearchEntityFilter | undefined,
+      });
+    } else {
+      pages = await auth.listPagesForViewer(worldSlug, ctx);
+    }
   } finally {
     await db.$disconnect();
   }
@@ -52,6 +77,12 @@ export default async function AuthWorldPage({ params }: Props) {
           {ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}
         </p>
 
+        <GlobalSearchForm
+          action={`/auth/worlds/${worldSlug}`}
+          query={q ?? ""}
+          placeholder="Erlaubte Inhalte durchsuchen…"
+        />
+
         <p>
           <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps anzeigen →</Link>
         </p>
@@ -68,18 +99,39 @@ export default async function AuthWorldPage({ params }: Props) {
           />
         )}
 
-        <ul className="auth-page-list">
-          {pages.map((page) => (
-            <li key={page.id}>
-              <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
-                <strong>{page.title}</strong>
-                <span>{page.visibility}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {isSearching ? (
+          <>
+            <SearchFilterBar
+              action={`/auth/worlds/${worldSlug}`}
+              query={q}
+              filters={[
+                {
+                  name: "filter",
+                  label: "Typ",
+                  value: entityFilter,
+                  options: SEARCH_ENTITY_FILTERS.map((filter) => ({
+                    value: filter,
+                    label: SEARCH_ENTITY_FILTER_LABELS[filter],
+                  })),
+                },
+              ]}
+            />
+            <SearchResultsList results={searchResults} query={q} />
+          </>
+        ) : (
+          <ul className="auth-page-list">
+            {pages.map((page) => (
+              <li key={page.id}>
+                <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
+                  <strong>{page.title}</strong>
+                  <span>{page.visibility}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
 
-        {pages.length === 0 && (
+        {!isSearching && pages.length === 0 && (
           <p>Für deine Rolle sind derzeit keine Inhalte freigegeben.</p>
         )}
       </section>

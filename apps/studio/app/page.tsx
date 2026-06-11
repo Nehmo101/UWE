@@ -23,7 +23,7 @@ export default async function StudioDashboard() {
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle="Dungeon Master Workspace" />
-          <SearchField action="/worlds" placeholder="Welten durchsuchen…" />
+          <SearchField action="/search" placeholder="Global suchen…" />
         </>
       }
       sidebar={

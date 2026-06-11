@@ -22,6 +22,13 @@ export {
 } from "./AppShell";
 
 export {
+  GlobalSearchForm,
+  SearchFilterBar,
+  SearchResultsList,
+  type SearchResultViewModel,
+} from "./SearchResults";
+
+export {
   BLOCK_TYPE_LABELS,
   CANONICAL_LABELS,
   ContentBlockList,
