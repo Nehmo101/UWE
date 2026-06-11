@@ -1,0 +1,312 @@
+# UWE — Produktion & Release
+
+Anleitung für den ersten produktiven Betrieb von **UWE (Universeller Welten-Editor)**.
+
+| Komponente | URL (Standard) | Zweck |
+|------------|----------------|-------|
+| UWE Studio | http://localhost:3000 | DM-Editor (nur für Spielleiter) |
+| UWE Portal | http://localhost:3001 | Spieler-Wiki |
+
+---
+
+## Voraussetzungen
+
+- **Docker** ≥ 24 und **Docker Compose** v2, oder
+- **Node.js** ≥ 20 und **pnpm** ≥ 10 für manuellen Build
+
+---
+
+## Schnellstart (Docker — empfohlen)
+
+```bash
+git clone <repository-url> uwe
+cd uwe
+cp .env.example .env
+```
+
+Bearbeiten Sie `.env` und setzen Sie mindestens:
+
+```env
+AUTH_SECRET=<starkes-zufaelliges-geheimnis>
+RUN_DB_SEED=false
+```
+
+Start:
+
+```bash
+docker compose up -d
+```
+
+Prüfen:
+
+```bash
+curl http://localhost:3000/api/health
+curl http://localhost:3001/api/health
+```
+
+Erwartete Antwort (Auszug):
+
+```json
+{
+  "status": "ok",
+  "app": "UWE Studio",
+  "version": "0.1.0",
+  "checks": { "database": { "status": "ok" } }
+}
+```
+
+---
+
+## Build-Prozess
+
+### Mit Docker (Release-Build)
+
+```bash
+pnpm docker:build
+# oder direkt:
+docker compose build
+```
+
+Images werden aus dem Multi-Stage-`Dockerfile` gebaut:
+
+1. **deps** — `pnpm install --frozen-lockfile`
+2. **builder** — Prisma generate + `pnpm build` (Studio & Portal)
+3. **studio / portal** — schlanke Runtime mit Next.js Standalone-Output
+
+Beim Container-Start führt `scripts/docker-entrypoint.sh` automatisch `prisma migrate deploy` aus.
+
+### Manueller Production-Build (ohne Docker)
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build:release
+```
+
+Start der Apps:
+
+```bash
+pnpm --filter @uwe/studio start    # Port 3000
+pnpm --filter @uwe/portal start    # Port 3001
+```
+
+Vor dem ersten Start:
+
+```bash
+pnpm db:migrate
+```
+
+---
+
+## Persistente Daten & Volumes
+
+| Pfad / Volume | Inhalt | Backup? |
+|---------------|--------|---------|
+| Docker-Volume `uwe-database` | SQLite-Datenbank (`uwe.db`) | **Ja — kritisch** |
+| `./data/uploads` | Hochgeladene Assets (Karten, Sounds, Bilder) | **Ja** |
+| `./data/backups` | Von UWE erstellte Backup-ZIPs | Optional (Kopien extern sichern) |
+| `./exports` | Statische HTML-Exporte | Optional |
+
+### Docker Compose Volume-Mapping
+
+```yaml
+volumes:
+  uwe-database:          # SQLite — geteilt von Studio und Portal
+  ./data/uploads          # Asset-Dateien
+  ./data/backups          # Backup-Ausgabe
+  ./exports               # Static-Export-Ausgabe
+```
+
+**Wichtig:** Bei Updates oder Neuinstallation diese Pfade **nicht löschen**, sonst gehen Welten, Uploads und Benutzer verloren.
+
+Empfohlene Verzeichnisstruktur nach dem ersten Start:
+
+```
+uwe/
+  data/
+    uploads/     ← Asset-Dateien
+    backups/     ← Backup-ZIPs
+  exports/       ← Static HTML
+  .env           ← lokale Konfiguration (nicht committen)
+```
+
+---
+
+## Umgebungsvariablen
+
+Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
+
+| Variable | Beschreibung | Produktion |
+|----------|--------------|------------|
+| `AUTH_SECRET` | Session-Signatur | **Pflicht — zufällig generieren** |
+| `DATABASE_URL` | SQLite-Pfad | Docker: `file:/data/uwe.db` (automatisch) |
+| `UPLOADS_DIR` | Upload-Verzeichnis | Docker: `/app/data/uploads` |
+| `BACKUPS_DIR` | Backup-Verzeichnis | Docker: `/app/data/backups` |
+| `EXPORTS_DIR` | Export-Verzeichnis | Docker: `/app/exports` |
+| `RUN_DB_SEED` | Demo-Welt beim Start | `false` in Produktion |
+| `STUDIO_PORT` / `PORTAL_PORT` | Host-Ports | Nach Bedarf anpassen |
+
+AI-Provider-Keys (`OPENAI_API_KEY`, etc.) sind optional und nur für UWE Studio relevant.
+
+---
+
+## Healthcheck
+
+Beide Apps stellen `GET /api/health` bereit:
+
+| App | Endpoint | Docker healthcheck |
+|-----|----------|-------------------|
+| Studio | http://localhost:3000/api/health | alle 30s |
+| Portal | http://localhost:3001/api/health | alle 30s, startet nach Studio |
+
+Manuelle Prüfung:
+
+```bash
+docker compose ps
+docker compose logs studio --tail 50
+```
+
+Status `healthy` in `docker compose ps` bestätigt, dass App und Datenbank erreichbar sind.
+
+---
+
+## Backup vor Updates
+
+**Vor jedem Update unbedingt sichern:**
+
+### 1. UWE-Backup (empfohlen)
+
+Über Studio UI unter **Backup** oder per CLI:
+
+```bash
+pnpm backup:create
+```
+
+Backups landen in `./data/backups/`.
+
+### 2. Manuelles Datei-Backup
+
+```bash
+# Datenbank-Volume exportieren
+docker compose stop
+docker run --rm \
+  -v uwe_uwe-database:/data \
+  -v $(pwd)/data/backups:/backup \
+  alpine tar czf /backup/uwe-db-$(date +%Y%m%d).tar.gz -C /data .
+
+# Uploads und Backups kopieren
+tar czf uwe-data-$(date +%Y%m%d).tar.gz data/uploads data/backups exports
+docker compose start
+```
+
+Ersetzen Sie `uwe_uwe-database` ggf. durch den tatsächlichen Volume-Namen (`docker volume ls`).
+
+---
+
+## Update-Anleitung
+
+1. **Backup erstellen** (siehe oben)
+2. Neues Release auschecken oder Images pullen:
+   ```bash
+   git fetch origin
+   git checkout v0.1.0   # oder gewünschte Version
+   ```
+3. Images neu bauen und Container ersetzen:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+4. Migrationen laufen beim Start automatisch (`prisma migrate deploy`)
+5. Healthchecks prüfen:
+   ```bash
+   curl -sf http://localhost:3000/api/health
+   curl -sf http://localhost:3001/api/health
+   ```
+6. Release Notes in `CHANGELOG.md` lesen
+
+Bei Problemen: Container-Logs prüfen und ggf. auf Backup zurücksetzen.
+
+---
+
+## Versionierung
+
+- Produktversion steht in `VERSION` und `package.json` (Root)
+- API-Health liefert `"version": "0.1.0"` (aus `VERSION`)
+- Release-Tags: `v0.1.0`, `v0.2.0`, …
+
+Version prüfen:
+
+```bash
+cat VERSION
+curl -s http://localhost:3000/api/health | jq .version
+```
+
+---
+
+## Troubleshooting
+
+### Container startet nicht / bleibt `unhealthy`
+
+```bash
+docker compose logs studio
+docker compose logs portal
+```
+
+Häufige Ursachen:
+
+- **Datenbank nicht beschreibbar** — Volume-Berechtigungen prüfen
+- **Migration fehlgeschlagen** — Logs nach `Prisma migrate failed` durchsuchen
+- **Port belegt** — `STUDIO_PORT` / `PORTAL_PORT` in `.env` ändern
+
+### Portal zeigt keine Inhalte
+
+- Seiten müssen **veröffentlicht** (`published`) sein
+- Sichtbarkeit muss `public` oder `player_visible` sein
+- Spieler brauchen Login und World-Membership
+
+### Uploads fehlen nach Update
+
+- Prüfen, ob `./data/uploads` als Bind-Mount gemappt ist
+- Nicht `./data/uploads` beim Update löschen
+
+### `AUTH_SECRET`-Warnung / Sessions ungültig
+
+Nach Änderung von `AUTH_SECRET` müssen sich alle Benutzer neu anmelden. Secret nicht ohne Backup-Rotation ändern.
+
+### Manueller DB-Reset (nur Entwicklung!)
+
+```bash
+pnpm --filter @uwe/database db:reset
+```
+
+**Niemals in Produktion** — löscht alle Daten.
+
+### Build schlägt fehl
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @uwe/database db:generate
+pnpm build
+pnpm typecheck
+```
+
+---
+
+## Release-Checkliste
+
+Vor einem Release:
+
+- [ ] `pnpm build:release` erfolgreich
+- [ ] `pnpm test` erfolgreich
+- [ ] `pnpm release:check` erfolgreich
+- [ ] `docker compose build` erfolgreich
+- [ ] Keine Secrets in Git (`.env` nicht committed)
+- [ ] `CHANGELOG.md` aktualisiert
+- [ ] `VERSION` und `package.json` synchron
+
+---
+
+## Weitere Dokumentation
+
+- [README.md](../README.md) — Entwicklung und Architektur
+- [CHANGELOG.md](../CHANGELOG.md) — Release Notes
+- [SECURITY.md](../SECURITY.md) — Sicherheitshinweise

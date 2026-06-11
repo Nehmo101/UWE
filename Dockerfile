@@ -7,7 +7,7 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json VERSION ./
 COPY apps ./apps
 COPY packages ./packages
 RUN pnpm install --frozen-lockfile
@@ -28,6 +28,7 @@ RUN apt-get update \
 FROM runtime-base AS studio
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+COPY --from=builder /app/VERSION ./VERSION
 COPY --from=builder /app/apps/studio/.next/standalone ./
 COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 COPY --from=builder /app/packages/database ./packages/database
@@ -43,6 +44,7 @@ CMD ["studio"]
 FROM runtime-base AS portal
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
+COPY --from=builder /app/VERSION ./VERSION
 COPY --from=builder /app/apps/portal/.next/standalone ./
 COPY --from=builder /app/apps/portal/.next/static ./apps/portal/.next/static
 COPY --from=builder /app/packages/database ./packages/database

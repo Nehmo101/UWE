@@ -18,13 +18,16 @@
 
 ```bash
 cp .env.example .env
+# Set AUTH_SECRET in .env before production use
 docker compose up -d
 ```
 
 - **Studio (DM):** http://localhost:3000  
 - **Portal (Spieler):** http://localhost:3001  
 
-Optional demo data on first start:
+**Production deployment:** see [docs/PRODUCTION.md](docs/PRODUCTION.md) (backup, updates, volumes, troubleshooting).
+
+Optional demo data on first start (development only):
 
 ```bash
 RUN_DB_SEED=true docker compose up -d
@@ -70,10 +73,13 @@ pnpm dev:portal   # http://localhost:3001
 ### Build and test
 
 ```bash
-pnpm build
+pnpm build:release   # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
+pnpm release:check   # validate release files and version sync
 ```
+
+Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
@@ -210,3 +216,12 @@ Copy `.env.example` to `.env`. Important variables:
 ## License
 
 Private project — all rights reserved.
+
+## Release
+
+| Document | Purpose |
+|----------|---------|
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
+| [docs/PRODUCTION.md](docs/PRODUCTION.md) | Production deployment, updates, backup |
+| [SECURITY.md](SECURITY.md) | Security policy and checklist |
+| [VERSION](VERSION) | Current product version |

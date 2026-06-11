@@ -11,6 +11,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "Dockerfile")));
     assert.ok(fs.existsSync(path.join(root, "docker-compose.yml")));
     assert.ok(fs.existsSync(path.join(root, ".env.example")));
+    assert.ok(fs.existsSync(path.join(root, "VERSION")));
     assert.ok(fs.existsSync(path.join(root, "scripts/docker-entrypoint.sh")));
   });
 

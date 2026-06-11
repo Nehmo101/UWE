@@ -8,6 +8,7 @@ export type { PrismaClient } from "./client";
 export type { Prisma } from "./generated/prisma/client";
 
 export { databaseHealthCheck, type HealthCheckResult } from "./health-server";
+export { UWE_PRODUCT_NAME, UWE_VERSION } from "./version";
 
 export { getAppRepository } from "./app-repository";
 

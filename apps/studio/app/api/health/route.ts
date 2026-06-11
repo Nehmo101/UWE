@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { databaseHealthCheck } from "@uwe/database/server";
+import { databaseHealthCheck, UWE_PRODUCT_NAME, UWE_VERSION } from "@uwe/database/server";
 
 export async function GET() {
   const db = await databaseHealthCheck();
@@ -7,8 +7,8 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     app: "UWE Studio",
-    product: "Universeller Welten-Editor",
-    version: "0.1.0",
+    product: UWE_PRODUCT_NAME,
+    version: UWE_VERSION,
     timestamp: new Date().toISOString(),
     checks: {
       database: db,

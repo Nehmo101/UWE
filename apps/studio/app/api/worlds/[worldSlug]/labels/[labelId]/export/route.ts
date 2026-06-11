@@ -9,12 +9,13 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
-  searchParams: Promise<{ format?: string; includeDmOnly?: string }>;
 }
 
-export async function GET(request: Request, { params, searchParams }: Props) {
+export async function GET(request: Request, { params }: Props) {
   const { worldSlug, labelId } = await params;
-  const { format = "html", includeDmOnly } = await searchParams;
+  const url = new URL(request.url);
+  const format = url.searchParams.get("format") ?? "html";
+  const includeDmOnly = url.searchParams.get("includeDmOnly");
 
   const repo = getAppRepository();
   const labelService = createLabelService();
