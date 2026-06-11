@@ -1,4 +1,5 @@
 import type {
+  AssetType,
   CanonicalStatus,
   ContentBlockType,
   GameSessionStatus,
@@ -76,6 +77,16 @@ export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   gm_note: "GM-Notiz",
   player_text: "Spielertext",
   ai_summary: "KI-Zusammenfassung",
+};
+
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  image: "Bild",
+  map: "Karte",
+  handout: "Handout",
+  document: "Dokument",
+  audio: "Audio",
+  video: "Video",
+  other: "Sonstiges",
 };
 
 export function VisibilityBadge({ visibility }: { visibility: Visibility }) {

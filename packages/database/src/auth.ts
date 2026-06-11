@@ -2,8 +2,10 @@ import type { PrismaClient } from "./client";
 import type { AccessContext, AuthUser, PreviewOptions } from "@uwe/auth";
 import {
   buildAccessContext,
+  canViewAsset,
   canViewContentBlock,
   canViewPage,
+  filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
   generateSessionToken,
@@ -359,10 +361,66 @@ export class AuthService {
       orderBy: [{ user: { displayName: "asc" } }],
     });
   }
+
+  async listAssetsForViewer(worldSlug: string, ctx: AccessContext, options?: { type?: string }) {
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
+    if (!world) return [];
+
+    const assets = await this.db.asset.findMany({
+      where: {
+        worldId: world.id,
+        ...(options?.type ? { type: options.type as import("./generated/prisma/client").AssetType } : {}),
+      },
+      include: {
+        pageLinks: { select: { pageId: true } },
+      },
+      orderBy: [{ title: "asc" }],
+    });
+
+    const withLinks = assets.map((asset) => ({
+      ...asset,
+      linkedPageIds: asset.pageLinks.map((link) => link.pageId),
+    }));
+
+    return filterAssetsForViewer(ctx, withLinks);
+  }
+
+  async getAssetForViewer(worldSlug: string, assetId: string, ctx: AccessContext) {
+    const asset = await this.db.asset.findFirst({
+      where: {
+        id: assetId,
+        world: { slug: worldSlug },
+      },
+      include: {
+        pageLinks: { select: { pageId: true } },
+      },
+    });
+
+    if (!asset) return null;
+
+    const accessInfo = {
+      id: asset.id,
+      visibility: asset.visibility,
+      linkedPageIds: asset.pageLinks.map((link) => link.pageId),
+    };
+
+    if (!canViewAsset(ctx, accessInfo)) {
+      return null;
+    }
+
+    return asset;
+  }
 }
 
 export function createAuthService(db: PrismaClient): AuthService {
   return new AuthService(db);
 }
 
-export { canViewContentBlock, canViewPage, filterBlocksForViewer, filterPagesForViewer };
+export {
+  canViewAsset,
+  canViewContentBlock,
+  canViewPage,
+  filterAssetsForViewer,
+  filterBlocksForViewer,
+  filterPagesForViewer,
+};

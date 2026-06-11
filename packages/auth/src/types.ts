@@ -36,6 +36,13 @@ export interface ContentBlockAccessInfo {
   visibility: PageVisibility;
 }
 
+export interface AssetAccessInfo {
+  id: string;
+  visibility: PageVisibility;
+  /** Page IDs linked to this asset (for specific_players / unlock_after_session). */
+  linkedPageIds?: string[];
+}
+
 /**
  * Runtime access context for permission checks in Studio or Portal.
  * Built from the authenticated user, world membership, and optional preview mode.

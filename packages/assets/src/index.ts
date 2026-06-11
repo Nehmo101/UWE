@@ -1,15 +1,29 @@
-/**
- * UWE Assets — placeholder for future phases.
- * Planned: maps, handouts, soundboard assets, dungeon cockpit media.
- */
+export {
+  ASSET_TYPE_LABELS,
+  ASSET_TYPES,
+  type AssetRecord,
+  type AssetType,
+  type AssetVisibility,
+  type CreateAssetInput,
+  type UpdateAssetInput,
+} from "./types";
 
-export type AssetType = "map" | "handout" | "sound" | "image" | "document";
+export {
+  UPLOADS_DIR_NAME,
+  buildStorageKey,
+  ensureUploadDirectory,
+  inferAssetTypeFromMime,
+  inferMimeTypeFromFilename,
+  resolveAssetFilePath,
+  resolveUploadsRoot,
+} from "./storage";
 
-export interface Asset {
-  id: string;
-  name: string;
-  type: AssetType;
-  path: string;
-}
+export {
+  PORTAL_ASSET_VISIBILITIES,
+  filterAssetsForContext,
+  isAssetAccessible,
+  isPortalAssetVisibility,
+  type AssetAccessContext,
+} from "./permissions";
 
-export const ASSETS_PACKAGE_VERSION = "0.1.0";
+export const ASSETS_PACKAGE_VERSION = "0.2.0";

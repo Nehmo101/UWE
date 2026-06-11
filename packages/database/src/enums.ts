@@ -5,6 +5,7 @@ export type {
   PageType,
   PublishStatus,
   Visibility,
+  AssetType,
 } from "./generated/prisma/client";
 
 export {
@@ -14,4 +15,5 @@ export {
   PageType as PageTypeEnum,
   PublishStatus as PublishStatusEnum,
   Visibility as VisibilityEnum,
+  AssetType as AssetTypeEnum,
 } from "./generated/prisma/client";

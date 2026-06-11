@@ -37,6 +37,7 @@ export {
   PAGE_TYPE_LABELS,
   PUBLISH_LABELS,
   VISIBILITY_LABELS,
+  AssetTypeBadge,
   CanonicalBadge,
   GameSessionStatusBadge,
   PageTypeBadge,

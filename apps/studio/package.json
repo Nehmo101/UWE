@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
+    "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
     "@uwe/shared-ui": "workspace:*",

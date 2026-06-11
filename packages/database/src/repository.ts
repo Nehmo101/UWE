@@ -1,4 +1,20 @@
+import {
+  createAssetRecord,
+  deleteAssetRecord,
+  getAssetById,
+  getAssetForContext,
+  linkAssetToContentBlock,
+  linkAssetToPage,
+  listAssetsByWorld,
+  listAssetsForContext,
+  listAssetsForPage,
+  unlinkAssetFromPage,
+  updateAssetRecord,
+  type CreateAssetInput,
+  type UpdateAssetInput,
+} from "./asset-repository";
 import type {
+  AssetType,
   CanonicalStatus,
   ContentBlockType,
   Page,
@@ -36,6 +52,8 @@ export {
 
 export type {
   Campaign,
+  Asset,
+  AssetType,
   CanonicalStatus,
   ContentBlock,
   ContentBlockType,
@@ -50,10 +68,13 @@ export type {
 export {
   CanonicalStatus as CanonicalStatusEnum,
   ContentBlockType as ContentBlockTypeEnum,
+  AssetType as AssetTypeEnum,
   PageType as PageTypeEnum,
   PublishStatus as PublishStatusEnum,
   Visibility as VisibilityEnum,
 } from "./generated/prisma/client";
+
+export type { CreateAssetInput, UpdateAssetInput } from "./asset-repository";
 
 export interface CreateWorldInput {
   name: string;
@@ -74,6 +95,7 @@ export interface CreateContentBlockInput {
   content?: string;
   visibility?: Visibility;
   metadata?: Prisma.InputJsonValue;
+  assetId?: string | null;
 }
 
 export interface CreatePageInput {
@@ -110,6 +132,7 @@ export interface UpdateContentBlockInput {
   content?: string;
   visibility?: Visibility;
   metadata?: Prisma.InputJsonValue;
+  assetId?: string | null;
 }
 
 export type PageWithBlocks = Prisma.PageGetPayload<{
@@ -216,6 +239,7 @@ export class UweRepository {
                 content: block.content ?? "",
                 visibility: block.visibility ?? "dm_only",
                 metadata: block.metadata ?? {},
+                assetId: block.assetId ?? null,
               })),
             }
           : undefined,
@@ -258,6 +282,7 @@ export class UweRepository {
         content: input.content ?? "",
         visibility: input.visibility ?? "dm_only",
         metadata: input.metadata ?? {},
+        assetId: input.assetId ?? null,
       },
     });
   }
@@ -271,6 +296,7 @@ export class UweRepository {
         content: input.content,
         visibility: input.visibility,
         metadata: input.metadata,
+        assetId: input.assetId,
       },
     });
   }
@@ -554,6 +580,57 @@ export class UweRepository {
     ]);
 
     return { worldCount, pageCount, publishedCount, draftCount };
+  }
+
+  async listAssetsByWorld(
+    worldSlug: string,
+    options?: { type?: AssetType; campaignId?: string | null },
+  ) {
+    return listAssetsByWorld(this.db, worldSlug, options);
+  }
+
+  async getAssetById(assetId: string) {
+    return getAssetById(this.db, assetId);
+  }
+
+  async createAsset(input: CreateAssetInput) {
+    return createAssetRecord(this.db, input);
+  }
+
+  async updateAsset(assetId: string, input: UpdateAssetInput) {
+    return updateAssetRecord(this.db, assetId, input);
+  }
+
+  async deleteAsset(assetId: string) {
+    return deleteAssetRecord(this.db, assetId);
+  }
+
+  async linkAssetToPage(assetId: string, pageId: string) {
+    return linkAssetToPage(this.db, assetId, pageId);
+  }
+
+  async unlinkAssetFromPage(assetId: string, pageId: string) {
+    return unlinkAssetFromPage(this.db, assetId, pageId);
+  }
+
+  async linkAssetToContentBlock(blockId: string, assetId: string | null) {
+    return linkAssetToContentBlock(this.db, blockId, assetId);
+  }
+
+  async listAssetsForContext(
+    worldSlug: string,
+    context: AccessContext,
+    options?: { type?: AssetType },
+  ) {
+    return listAssetsForContext(this.db, worldSlug, context, options);
+  }
+
+  async getAssetForContext(assetId: string, context: AccessContext) {
+    return getAssetForContext(this.db, assetId, context);
+  }
+
+  async listAssetsForPage(pageId: string) {
+    return listAssetsForPage(this.db, pageId);
   }
 }
 

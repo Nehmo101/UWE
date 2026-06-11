@@ -72,6 +72,16 @@ enum ContentBlockType {
   ai_summary
 }
 
+enum AssetType {
+  image
+  map
+  handout
+  document
+  audio
+  video
+  other
+}
+
 enum UserRole {
   owner
   dm
@@ -176,6 +186,7 @@ model World {
 
   campaigns        Campaign[]
   pages            Page[]
+  assets           Asset[]
   worldMemberships WorldMembership[]
   gameSessions     GameSession[]
 
@@ -269,6 +280,7 @@ model GameSessionPageLink {
 model ContentBlock {
   id         String           @id @default(cuid())
   pageId     String           @map("page_id")
+  assetId    String?          @map("asset_id")
   type       ContentBlockType
   sortOrder  Int              @map("sort_order")
   content    String           @default("")
@@ -277,10 +289,51 @@ model ContentBlock {
   createdAt  DateTime         @default(now()) @map("created_at")
   updatedAt  DateTime         @updatedAt @map("updated_at")
 
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page  Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
   @@index([pageId, sortOrder])
+  @@index([assetId])
   @@map("content_blocks")
+}
+
+model Asset {
+  id          String     @id @default(cuid())
+  worldId     String     @map("world_id")
+  campaignId  String?    @map("campaign_id")
+  title       String
+  description String?
+  type        AssetType
+  storageKey  String     @map("storage_key")
+  mimeType    String?    @map("mime_type")
+  size        Int        @default(0)
+  visibility  Visibility @default(dm_only)
+  tags        Json?
+  metadata    Json?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  world         World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  pageLinks     AssetPageLink[]
+  contentBlocks ContentBlock[]
+
+  @@index([worldId, type])
+  @@map("assets")
+}
+
+model AssetPageLink {
+  id        String   @id @default(cuid())
+  assetId   String   @map("asset_id")
+  pageId    String   @map("page_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, pageId])
+  @@index([pageId])
+  @@map("asset_page_links")
 }
 
 model PageLink {
