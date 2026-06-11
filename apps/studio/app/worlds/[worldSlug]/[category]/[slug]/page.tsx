@@ -15,16 +15,21 @@ import {
   WikiSidebar,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
+import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import {
   buildPageGraph,
   buildPageView,
   buildPageUrl,
+  createPrismaClient,
+  createShareLinkService,
   getAppRepository,
   navCategoryForPageType,
   NAV_CATEGORY_LABELS,
   parseStringArray,
   type NavCategory,
+  type ShareTargetType,
 } from "@uwe/database/server";
+import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "../../../../actions";
 
 interface Props {
@@ -54,6 +59,48 @@ export default async function StudioPageView({ params, searchParams }: Props) {
   const pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, context, "neighbors");
 
   const dmPage = context === "dm" ? rawPage : null;
+
+  const shareTargetType: ShareTargetType =
+    rawPage.type === "handout" ? "handout" : "page";
+  const returnPath = buildPageUrl(worldSlug, rawPage.type, slug);
+
+  const db = createPrismaClient();
+  let shareLinks: Array<{
+    id: string;
+    token: string;
+    enabled: boolean;
+    expiresAt: string | null;
+    readOnly: boolean;
+    logAccess: boolean;
+    hasPassword: boolean;
+    createdAt: string;
+  }> = [];
+  let previewHref: string | undefined;
+
+  try {
+    const shareService = createShareLinkService(db);
+    const links = await shareService.listShareLinksForTarget(
+      world.id,
+      shareTargetType,
+      rawPage.id,
+    );
+    shareLinks = links.map((link) => ({
+      id: link.id,
+      token: link.token,
+      enabled: link.enabled,
+      expiresAt: link.expiresAt?.toISOString() ?? null,
+      readOnly: link.readOnly,
+      logAccess: link.logAccess,
+      hasPassword: Boolean(link.passwordHash),
+      createdAt: link.createdAt.toISOString(),
+    }));
+    const activeLink = links.find((link) => link.enabled);
+    if (activeLink) {
+      previewHref = getShareLinkPublicUrl(activeLink.token);
+    }
+  } finally {
+    await db.$disconnect();
+  }
 
   return (
     <>
@@ -164,6 +211,17 @@ export default async function StudioPageView({ params, searchParams }: Props) {
                     type={dmPage.type}
                     tags={parseStringArray(dmPage.tags)}
                     aliases={parseStringArray(dmPage.aliases)}
+                  />
+                </SidebarSection>
+                <SidebarSection title="Freigabe">
+                  <ShareLinkPanel
+                    worldId={world.id}
+                    worldSlug={worldSlug}
+                    targetType={shareTargetType}
+                    targetId={rawPage.id}
+                    returnPath={returnPath}
+                    links={shareLinks}
+                    previewHref={previewHref}
                   />
                 </SidebarSection>
                 <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />

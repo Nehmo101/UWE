@@ -77,7 +77,9 @@ export {
   shouldHidePageTitle,
   PORTAL_ASSET_VISIBILITIES,
   type AccessContext,
+  type ShareAccessGrant,
   type PortalAccessOptions,
+  type PageAccessOptions,
 } from "./permissions";
 
 export {
@@ -221,6 +223,23 @@ export {
 } from "./label-export";
 
 export type { LabelExportOptions } from "./label-export";
+
+export {
+  createShareLinkService,
+  ShareLinkService,
+  buildShareUrl,
+  isShareLinkActive,
+} from "./share-link-service";
+
+export type {
+  CreateShareLinkInput,
+  UpdateShareLinkInput,
+  ShareLinkValidationResult,
+  ShareResolvedTarget,
+  ShareAccessMeta,
+  ShareLink as DbShareLink,
+  ShareTargetType,
+} from "./share-link-service";
 
 export {
   createSettingsService,

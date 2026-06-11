@@ -7,10 +7,19 @@ export const PORTAL_PAGE_VISIBILITIES: Visibility[] = ["public", "player_visible
 /** Block visibilities exposed to the player portal API and UI. */
 export const PORTAL_BLOCK_VISIBILITIES: Visibility[] = ["public", "player_visible"];
 
-export type AccessContext = "dm" | "portal" | "preview";
+export type AccessContext = "dm" | "portal" | "preview" | "share";
+
+export interface ShareAccessGrant {
+  sharedPageIds: Set<string>;
+  sharedAssetIds: Set<string>;
+}
 
 export interface PortalAccessOptions {
   publicSharingEnabled?: boolean;
+}
+
+export interface PageAccessOptions extends PortalAccessOptions {
+  shareGrant?: ShareAccessGrant;
 }
 
 export function isPortalPageVisibility(visibility: Visibility): boolean {
@@ -42,10 +51,14 @@ function isPublicVisibilityAllowed(
 }
 
 export function isPageAccessible(
-  page: Pick<Page, "visibility" | "publishStatus">,
+  page: Pick<Page, "id" | "visibility" | "publishStatus">,
   context: AccessContext,
-  options?: PortalAccessOptions,
+  options?: PageAccessOptions,
 ): boolean {
+  if (context === "share" && options?.shareGrant) {
+    return options.shareGrant.sharedPageIds.has(page.id);
+  }
+
   if (context === "dm") {
     return true;
   }
@@ -85,9 +98,14 @@ export function isPortalAssetVisibility(visibility: Visibility): boolean {
 }
 
 export function isAssetAccessible(
-  asset: Pick<{ visibility: Visibility }, "visibility">,
+  asset: Pick<{ id: string; visibility: Visibility }, "id" | "visibility">,
   context: AccessContext,
+  options?: PageAccessOptions,
 ): boolean {
+  if (context === "share" && options?.shareGrant) {
+    return options.shareGrant.sharedAssetIds.has(asset.id);
+  }
+
   if (context === "dm") {
     return true;
   }
@@ -107,8 +125,9 @@ export function filterAssetsForContext<T extends Pick<{ visibility: Visibility }
 }
 
 export function shouldHidePageTitle(
-  page: Pick<Page, "visibility" | "publishStatus">,
+  page: Pick<Page, "id" | "visibility" | "publishStatus">,
   context: AccessContext,
+  options?: PageAccessOptions,
 ): boolean {
-  return !isPageAccessible(page, context);
+  return !isPageAccessible(page, context, options);
 }

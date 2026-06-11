@@ -14,8 +14,13 @@ import {
 } from "@uwe/shared-ui";
 import {
   getAppRepository,
+  createPrismaClient,
+  createShareLinkService,
   type AssetType,
+  type ShareTargetType,
 } from "@uwe/database/server";
+import { ShareLinkPanel } from "@/components/ShareLinkPanel";
+import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
 import { linkAssetToPageAction } from "@/app/asset-actions";
 
@@ -41,6 +46,34 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
     type: typeFilter as AssetType | undefined,
   });
   const pages = await repo.listPagesByWorld(worldSlug);
+
+  const db = createPrismaClient();
+  const shareService = createShareLinkService(db);
+  const assetShareData = await Promise.all(
+    assets.map(async (asset) => {
+      const targetType: ShareTargetType = asset.type === "handout" ? "handout" : "asset";
+      const links = await shareService.listShareLinksForTarget(world.id, targetType, asset.id);
+      const activeLink = links.find((link) => link.enabled);
+      return {
+        assetId: asset.id,
+        targetType,
+        links: links.map((link) => ({
+          id: link.id,
+          token: link.token,
+          enabled: link.enabled,
+          expiresAt: link.expiresAt?.toISOString() ?? null,
+          readOnly: link.readOnly,
+          logAccess: link.logAccess,
+          hasPassword: Boolean(link.passwordHash),
+          createdAt: link.createdAt.toISOString(),
+        })),
+        previewHref: activeLink ? getShareLinkPublicUrl(activeLink.token) : undefined,
+      };
+    }),
+  );
+  await db.$disconnect();
+
+  const shareByAssetId = new Map(assetShareData.map((item) => [item.assetId, item]));
 
   return (
     <AppShell
@@ -213,6 +246,30 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
 
           {assets.length === 0 && (
             <p className="uwe-empty">Noch keine Assets für diesen Filter.</p>
+          )}
+
+          {assets.length > 0 && (
+            <section className="uwe-panel">
+              <h2>Freigabe-Links</h2>
+              {assets.map((asset) => {
+                const share = shareByAssetId.get(asset.id);
+                if (!share) return null;
+                return (
+                  <details key={asset.id} className="share-asset-details">
+                    <summary>{asset.title}</summary>
+                    <ShareLinkPanel
+                      worldId={world.id}
+                      worldSlug={worldSlug}
+                      targetType={share.targetType}
+                      targetId={asset.id}
+                      returnPath={`/worlds/${worldSlug}/assets`}
+                      links={share.links}
+                      previewHref={share.previewHref}
+                    />
+                  </details>
+                );
+              })}
+            </section>
           )}
 
           {assets.length > 0 && pages.length > 0 && (
