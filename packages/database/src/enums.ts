@@ -1,6 +1,7 @@
 export type {
   CanonicalStatus,
   ContentBlockType,
+  DungeonPrepStatus,
   GameSessionStatus,
   PageType,
   PublishStatus,
@@ -11,6 +12,7 @@ export type {
 export {
   CanonicalStatus as CanonicalStatusEnum,
   ContentBlockType as ContentBlockTypeEnum,
+  DungeonPrepStatus as DungeonPrepStatusEnum,
   GameSessionStatus as GameSessionStatusEnum,
   PageType as PageTypeEnum,
   PublishStatus as PublishStatusEnum,

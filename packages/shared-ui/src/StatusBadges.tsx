@@ -2,6 +2,7 @@ import type {
   AssetType,
   CanonicalStatus,
   ContentBlockType,
+  DungeonPrepStatus,
   GameSessionStatus,
   PageType,
   PublishStatus,
@@ -44,6 +45,10 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   dungeon_level: "Dungeon-Ebene",
   room: "Raum",
   encounter: "Begegnung",
+  trap: "Falle",
+  puzzle: "Rätsel",
+  loot: "Loot",
+  secret: "Geheimnis",
   session: "Session",
   quest: "Quest",
   handout: "Handout",
@@ -53,6 +58,13 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   sound: "Sound",
   map: "Karte",
   note: "Notiz",
+};
+
+export const DUNGEON_PREP_STATUS_LABELS: Record<DungeonPrepStatus, string> = {
+  unprepared: "Unvorbereitet",
+  ready: "Bereit",
+  played: "Gespielt",
+  skipped: "Übersprungen",
 };
 
 export const GAME_SESSION_STATUS_LABELS: Record<GameSessionStatus, string> = {
@@ -136,6 +148,21 @@ export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }
           : "uwe-badge uwe-badge-draft";
 
   return <span className={className}>{GAME_SESSION_STATUS_LABELS[status]}</span>;
+}
+
+export function DungeonPrepStatusBadge({ status }: { status: DungeonPrepStatus | null }) {
+  if (!status) return <span className="uwe-badge">—</span>;
+
+  const className =
+    status === "played"
+      ? "uwe-badge uwe-badge-player"
+      : status === "ready"
+        ? "uwe-badge uwe-badge-published"
+        : status === "skipped"
+          ? "uwe-badge"
+          : "uwe-badge uwe-badge-draft";
+
+  return <span className={className}>{DUNGEON_PREP_STATUS_LABELS[status]}</span>;
 }
 
 export interface ContentBlockViewModel {

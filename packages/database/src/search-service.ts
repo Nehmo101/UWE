@@ -168,7 +168,7 @@ function pageTypesForEntityFilter(filter: SearchEntityFilter): PageType[] | null
     case "sessions":
       return ["session"];
     case "dungeons":
-      return ["dungeon", "dungeon_level"];
+      return ["dungeon", "dungeon_level", "trap", "puzzle", "loot", "secret"];
     case "rooms":
       return ["room"];
     case "encounters":

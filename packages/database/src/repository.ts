@@ -101,6 +101,7 @@ export interface CreateContentBlockInput {
 export interface CreatePageInput {
   worldId: string;
   campaignId?: string | null;
+  parentPageId?: string | null;
   title: string;
   slug: string;
   type: PageType;
@@ -108,6 +109,7 @@ export interface CreatePageInput {
   visibility?: Visibility;
   publishStatus?: PublishStatus;
   canonicalStatus?: CanonicalStatus;
+  prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   tags?: string[];
   aliases?: string[];
   contentBlocks?: CreateContentBlockInput[];
@@ -119,9 +121,11 @@ export interface UpdatePageInput {
   type?: PageType;
   summary?: string | null;
   campaignId?: string | null;
+  parentPageId?: string | null;
   visibility?: Visibility;
   publishStatus?: PublishStatus;
   canonicalStatus?: CanonicalStatus;
+  prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   tags?: string[];
   aliases?: string[];
 }
@@ -222,6 +226,7 @@ export class UweRepository {
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
+        parentPageId: input.parentPageId ?? null,
         title: input.title,
         slug: input.slug,
         type: input.type,
@@ -229,6 +234,7 @@ export class UweRepository {
         visibility: input.visibility ?? "dm_only",
         publishStatus: input.publishStatus ?? "draft",
         canonicalStatus: input.canonicalStatus ?? "draft",
+        prepStatus: input.prepStatus ?? null,
         tags: toJsonArray(input.tags),
         aliases: toJsonArray(input.aliases),
         contentBlocks: input.contentBlocks
@@ -260,9 +266,11 @@ export class UweRepository {
         type: input.type,
         summary: input.summary,
         campaignId: input.campaignId,
+        parentPageId: input.parentPageId,
         visibility: input.visibility,
         publishStatus: input.publishStatus,
         canonicalStatus: input.canonicalStatus,
+        prepStatus: input.prepStatus,
         tags: input.tags ? toJsonArray(input.tags) : undefined,
         aliases: input.aliases ? toJsonArray(input.aliases) : undefined,
       },

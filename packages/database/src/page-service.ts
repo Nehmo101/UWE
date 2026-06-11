@@ -358,3 +358,17 @@ export async function buildPageView(
     html,
   };
 }
+
+export function renderPageContentHtml(
+  worldSlug: string,
+  page: PageWithBlocks,
+  wikiIndex: WikiPageNode[],
+  context: AccessContext,
+  allPages?: PageSummary[],
+): string {
+  const visibleBlocks = filterBlocksForContext(page.contentBlocks, context);
+  const content = combineBlockContent(visibleBlocks);
+  const index = buildLookupIndex(wikiIndex, context, allPages);
+  const links = resolveLinksInContent(content, index, context, allPages);
+  return renderContentHtml(content, links);
+}

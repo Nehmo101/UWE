@@ -20,6 +20,10 @@ enum PageType {
   dungeon_level
   room
   encounter
+  trap
+  puzzle
+  loot
+  secret
   session
   quest
   handout
@@ -29,6 +33,13 @@ enum PageType {
   sound
   map
   note
+}
+
+enum DungeonPrepStatus {
+  unprepared
+  ready
+  played
+  skipped
 }
 
 enum Visibility {
@@ -231,23 +242,27 @@ model Campaign {
 }
 
 model Page {
-  id              String          @id @default(cuid())
-  worldId         String          @map("world_id")
-  campaignId      String?         @map("campaign_id")
+  id              String             @id @default(cuid())
+  worldId         String             @map("world_id")
+  campaignId      String?            @map("campaign_id")
+  parentPageId    String?            @map("parent_page_id")
   title           String
   slug            String
   type            PageType
   summary         String?
-  visibility      Visibility      @default(dm_only)
-  publishStatus   PublishStatus   @default(draft) @map("publish_status")
-  canonicalStatus CanonicalStatus @default(draft) @map("canonical_status")
+  visibility      Visibility         @default(dm_only)
+  publishStatus   PublishStatus      @default(draft) @map("publish_status")
+  canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
+  prepStatus      DungeonPrepStatus? @map("prep_status")
   tags            Json?
   aliases         Json?
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
 
   world            World              @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign         Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  parentPage       Page?              @relation("PageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
+  childPages       Page[]             @relation("PageHierarchy")
   contentBlocks    ContentBlock[]
   outgoingLinks    PageLink[]         @relation("SourcePage")
   incomingLinks    PageLink[]         @relation("TargetPage")
@@ -258,6 +273,7 @@ model Page {
   assetPageLinks         AssetPageLink[]
 
   @@unique([worldId, slug])
+  @@index([parentPageId])
   @@map("pages")
 }
 

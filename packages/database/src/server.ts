@@ -95,6 +95,7 @@ export {
   buildWorldWikiIndex,
   combineBlockContent,
   pageToWikiNode,
+  renderPageContentHtml,
   type PageViewData,
   type WikiPageNode,
 } from "./page-service";
@@ -143,6 +144,31 @@ export type {
   GameSessionWithLinks,
   GameSessionStatus,
 } from "./game-session";
+
+export {
+  createDungeonCockpitService,
+  DungeonCockpitService,
+  DUNGEON_PREP_STATUS_LABELS,
+  DUNGEON_PAGE_TYPES,
+  ROOM_CHILD_TYPES,
+  categorizeRoomBlocks,
+  filterRoomChildren,
+  toPortalRoomCockpitView,
+  suggestSlugFromTitle,
+  DungeonPrepStatusEnum,
+} from "./dungeon-cockpit";
+
+export type {
+  CreateDungeonEntityInput,
+  UpdateDungeonEntityInput,
+  DmDungeonOverview,
+  DmLevelOverview,
+  DmRoomCockpitView,
+  PortalRoomCockpitView,
+  DungeonEntitySummary,
+  RoomChildType,
+  DungeonPrepStatus,
+} from "./dungeon-cockpit";
 
 export {
   createLabelService,
