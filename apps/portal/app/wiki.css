@@ -1,0 +1,270 @@
+.wiki-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 16rem 1fr 18rem;
+  gap: 0;
+}
+
+.wiki-nav {
+  padding: 1.5rem 1rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.5);
+  overflow-y: auto;
+}
+
+.wiki-nav h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wiki-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wiki-nav li {
+  margin-bottom: 0.35rem;
+}
+
+.wiki-nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.wiki-nav a:hover {
+  color: #38bdf8;
+}
+
+.wiki-main {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.wiki-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  color: #f8fafc;
+}
+
+.wiki-header-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.wiki-tag {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+}
+
+.wiki-content {
+  line-height: 1.75;
+  color: #cbd5e1;
+  max-width: 42rem;
+}
+
+.wiki-content a.wiki-link {
+  color: #38bdf8;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(56, 189, 248, 0.4);
+}
+
+.wiki-content a.wiki-link:hover {
+  border-bottom-style: solid;
+}
+
+.wiki-link-hidden {
+  color: #94a3b8;
+  font-style: italic;
+  cursor: not-allowed;
+}
+
+.wiki-link-broken {
+  color: #f87171;
+  text-decoration: line-through;
+  cursor: help;
+}
+
+.wiki-sidebar {
+  padding: 1.5rem 1rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.35);
+  overflow-y: auto;
+}
+
+.wiki-sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.wiki-sidebar-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wiki-sidebar-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wiki-sidebar-section li {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.wiki-sidebar-section a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.wiki-sidebar-section a:hover {
+  text-decoration: underline;
+}
+
+.wiki-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.wiki-empty {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.wiki-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.wiki-badge-secret {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+.wiki-badge-player {
+  background: rgba(74, 222, 128, 0.15);
+  color: #86efac;
+}
+
+.wiki-badge-public {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+}
+
+.wiki-page-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.wiki-list-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #94a3b8;
+}
+
+.wiki-list-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wiki-list-section li {
+  margin-bottom: 0.4rem;
+}
+
+.wiki-list-section a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.wiki-breadcrumb {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.wiki-breadcrumb a {
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.wiki-breadcrumb a:hover {
+  color: #38bdf8;
+}
+
+.wiki-world-grid {
+  display: grid;
+  gap: 1rem;
+  max-width: 48rem;
+}
+
+.wiki-world-card {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.wiki-world-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.wiki-world-card a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.wiki-broken-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.wiki-broken-table th,
+.wiki-broken-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.wiki-broken-table th {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.wiki-broken-table a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+@media (max-width: 960px) {
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wiki-nav,
+  .wiki-sidebar {
+    border: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  }
+}

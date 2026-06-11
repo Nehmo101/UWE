@@ -18,11 +18,14 @@ export default function StudioHomePage() {
           <li>Wiki-style linking with backlinks</li>
           <li>Clear separation of DM and player knowledge</li>
         </ul>
+        <p style={{ marginTop: "1rem" }}>
+          <a href="/worlds">Wiki öffnen →</a>
+        </p>
       </section>
       <footer className="footer">
         <a href="/api/health">Health check</a>
         <span>·</span>
-        <span>Phase 1 — Initial setup</span>
+        <span>Phase 3 — Wiki Engine</span>
       </footer>
     </main>
   );

@@ -17,9 +17,15 @@ importers:
 
   apps/portal:
     dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      '@uwe/wiki-engine':
+        specifier: workspace:*
+        version: link:../../packages/wiki-engine
       next:
         specifier: ^15.3.4
         version: 15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -146,6 +152,10 @@ importers:
         version: 5.9.3
 
   packages/wiki-engine:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

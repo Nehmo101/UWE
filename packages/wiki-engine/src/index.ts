@@ -1,29 +1,38 @@
 /**
- * UWE Wiki Engine — placeholder for Phase 3.
- * Planned: Obsidian-style [[wikilinks]], backlinks, graph navigation.
+ * UWE Wiki Engine — wikilinks, backlinks, related pages, broken link detection.
  */
 
-export const WIKI_ENGINE_VERSION = "0.1.0";
+export const WIKI_ENGINE_VERSION = "0.2.0";
 
-export interface WikiLink {
-  source: string;
-  target: string;
-  label?: string;
-}
+export type { ParsedWikiLink, WikiLink } from "./parseWikiLinks";
+export { parseWikiLinks, parseWikiLinksLegacy } from "./parseWikiLinks";
 
-/** Parse [[wikilink]] syntax from markdown text. */
-export function parseWikiLinks(text: string): WikiLink[] {
-  const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-  const links: WikiLink[] = [];
-  let match: RegExpExecArray | null;
+export type {
+  Backlink,
+  ResolvedLinkStatus,
+  ResolvedWikiLink,
+  ResolveWikiLinksOptions,
+} from "./backlinks";
+export { getBacklinks, resolveWikiLinks } from "./backlinks";
 
-  while ((match = pattern.exec(text)) !== null) {
-    links.push({
-      source: "",
-      target: match[1].trim(),
-      label: match[2]?.trim(),
-    });
-  }
+export type { RelatedPage, FindRelatedPagesOptions } from "./related";
+export { findRelatedPages } from "./related";
 
-  return links;
-}
+export type { BrokenLink, BrokenLinkReport } from "./brokenLinks";
+export {
+  findBrokenLinks,
+  findBrokenLinksReport,
+  findPlayerVisibleBrokenLinks,
+  wouldLeakSecretPage,
+} from "./brokenLinks";
+
+export type { PlayerSafePageView, PlayerFilterOptions } from "./render";
+export {
+  buildPlayerSafePageView,
+  filterPageTitlesForPlayer,
+  renderWikiContent,
+  sanitizeLinkForPlayer,
+} from "./render";
+
+// Legacy export for backward compatibility
+export { parseWikiLinksLegacy as parseWikiLinksCompat } from "./parseWikiLinks";

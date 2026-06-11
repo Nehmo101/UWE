@@ -11,7 +11,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "echo \"No lint configured yet\"",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@uwe/database": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

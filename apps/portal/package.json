@@ -12,7 +12,9 @@
     "test": "node --import tsx --test src/health.test.ts"
   },
   "dependencies": {
+    "@uwe/database": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
+    "@uwe/wiki-engine": "workspace:*",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
