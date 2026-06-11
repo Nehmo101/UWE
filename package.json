@@ -1,0 +1,23 @@
+{
+  "name": "uwe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Universeller Welten-Editor — self-hosted campaign brain and world wiki",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "dev:studio": "pnpm --filter @uwe/studio dev",
+    "dev:portal": "pnpm --filter @uwe/portal dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20"
+  }
+}
