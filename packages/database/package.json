@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./page-types": "./src/page-types.ts",
+    "./graph-types": "./src/graph-types.ts",
     "./server": "./src/server.ts",
     "./enums": "./src/enums.ts",
     "./test-helpers": "./src/test-helpers.ts"

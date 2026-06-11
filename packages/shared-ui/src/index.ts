@@ -52,4 +52,11 @@ export {
 export { BrandHeader } from "./BrandHeader";
 export { HealthBadge } from "./HealthBadge";
 
+export {
+  GraphRelationList,
+  GraphView,
+  type GraphViewProps,
+  type GraphRelationListProps,
+} from "./GraphView";
+
 export { CATEGORY_LABELS, WikiPageList, type WikiNavItem } from "./WikiComponents";

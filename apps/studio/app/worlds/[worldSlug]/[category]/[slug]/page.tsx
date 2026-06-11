@@ -4,6 +4,7 @@ import {
   AppShell,
   Breadcrumb,
   ContentBlockList,
+  GraphView,
   MetaPanel,
   PageHeader,
   SidebarNav,
@@ -15,6 +16,7 @@ import {
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import {
+  buildPageGraph,
   buildPageView,
   buildPageUrl,
   getAppRepository,
@@ -49,6 +51,8 @@ export default async function StudioPageView({ params, searchParams }: Props) {
   const view = await buildPageView(repo, worldSlug, slug, context);
   if (!view) notFound();
 
+  const pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, context, "neighbors");
+
   const dmPage = context === "dm" ? rawPage : null;
 
   return (
@@ -80,6 +84,7 @@ export default async function StudioPageView({ params, searchParams }: Props) {
               <SidebarNav
                 items={[
                   { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
+                  { label: "Graph", href: `/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors` },
                   { label: "Bearbeiten", href: `${buildPageUrl(worldSlug, rawPage.type, slug)}/edit` },
                 ]}
               />
@@ -136,6 +141,11 @@ export default async function StudioPageView({ params, searchParams }: Props) {
               }
             />
             <WikiContent html={view.html} />
+
+            <section style={{ marginTop: "2rem" }}>
+              <h2 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Nachbarschafts-Graph</h2>
+              <GraphView nodes={pageGraph.nodes} edges={pageGraph.edges} compact />
+            </section>
           </>
         }
         context={

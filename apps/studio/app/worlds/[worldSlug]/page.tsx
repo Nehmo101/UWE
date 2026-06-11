@@ -99,6 +99,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
                 { label: "Labels", href: `/worlds/${worldSlug}/labels` },
                 { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
                 { label: "Soundboard", href: `/worlds/${worldSlug}/soundboard` },
+                { label: "Graph", href: `/worlds/${worldSlug}/graph` },
                 { label: "Neue Seite", href: `/worlds/${worldSlug}/pages/new` },
               ]}
             />

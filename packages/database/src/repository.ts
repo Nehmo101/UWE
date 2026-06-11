@@ -392,6 +392,35 @@ export class UweRepository {
     });
   }
 
+  async listPagesWithBlocksForGraph(
+    worldSlug: string,
+    context: AccessContext,
+    options?: { campaignId?: string | null; types?: PageType[] },
+  ): Promise<PageWithBlocks[]> {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return [];
+
+    const pages = await this.db.page.findMany({
+      where: {
+        worldId: world.id,
+        ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+        ...(options?.types?.length ? { type: { in: options.types } } : {}),
+      },
+      include: {
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
+      },
+      orderBy: [{ title: "asc" }],
+    });
+
+    return pages
+      .filter((page) => isPageAccessible(page, context))
+      .map((page) => ({
+        ...withParsedArrays(page),
+        contentBlocks: filterBlocksForContext(page.contentBlocks, context),
+      }));
+  }
+
   async search(
     context: AccessContext,
     options: SearchOptions,

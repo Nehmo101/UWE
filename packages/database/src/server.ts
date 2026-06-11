@@ -95,10 +95,27 @@ export {
   buildWorldWikiIndex,
   combineBlockContent,
   pageToWikiNode,
+  parseWikiLinks,
   renderPageContentHtml,
   type PageViewData,
   type WikiPageNode,
 } from "./page-service";
+
+export {
+  buildPageGraph,
+  buildWorldGraph,
+  graphCategoryForPageType,
+  graphNodeCategoryLabel,
+  GRAPH_NODE_CATEGORIES,
+  GRAPH_NODE_CATEGORY_LABELS,
+  type GraphEdge,
+  type GraphEdgeKind,
+  type GraphFilters,
+  type GraphNode,
+  type GraphNodeCategory,
+  type GraphViewMode,
+  type WorldGraphData,
+} from "./graph-service";
 
 export { AuthService, createAuthService } from "./auth";
 export type { CreateUserInput, CreateWorldMembershipInput } from "./auth";

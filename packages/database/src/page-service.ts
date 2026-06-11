@@ -29,7 +29,7 @@ interface ParsedWikiLink {
   end: number;
 }
 
-function parseWikiLinks(text: string): ParsedWikiLink[] {
+export function parseWikiLinks(text: string): ParsedWikiLink[] {
   const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
   const links: ParsedWikiLink[] = [];
   let match: RegExpExecArray | null;
