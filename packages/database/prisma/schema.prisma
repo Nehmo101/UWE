@@ -85,6 +85,14 @@ enum WorldMemberRole {
   player
 }
 
+enum GameSessionStatus {
+  planned
+  prepared
+  played
+  summarized
+  archived
+}
+
 model User {
   id           String   @id @default(cuid())
   displayName  String   @map("display_name")
@@ -169,6 +177,7 @@ model World {
   campaigns        Campaign[]
   pages            Page[]
   worldMemberships WorldMembership[]
+  gameSessions     GameSession[]
 
   @@map("worlds")
 }
@@ -182,8 +191,9 @@ model Campaign {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  world World  @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  pages Page[]
+  world        World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  pages        Page[]
+  gameSessions GameSession[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -210,11 +220,50 @@ model Page {
   contentBlocks    ContentBlock[]
   outgoingLinks    PageLink[]         @relation("SourcePage")
   incomingLinks    PageLink[]         @relation("TargetPage")
-  playerAccess     PagePlayerAccess[]
-  sessionUnlocks   SessionUnlock[]
+  playerAccess       PagePlayerAccess[]
+  sessionUnlocks     SessionUnlock[]
+  gameSessionLinks   GameSessionPageLink[]
 
   @@unique([worldId, slug])
   @@map("pages")
+}
+
+model GameSession {
+  id              String            @id @default(cuid())
+  worldId         String            @map("world_id")
+  campaignId      String?           @map("campaign_id")
+  title           String
+  sessionNumber   Int               @map("session_number")
+  date            DateTime?         @map("date")
+  status          GameSessionStatus @default(planned)
+  summaryDm       String?           @map("summary_dm")
+  summaryPlayer   String?           @map("summary_player")
+  notes           String?
+  openPlots       String?           @map("open_plots")
+  playerDecisions String?           @map("player_decisions")
+  recapPublished  Boolean           @default(false) @map("recap_published")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  world        World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  linkedPages  GameSessionPageLink[]
+
+  @@index([worldId, sessionNumber])
+  @@map("game_sessions")
+}
+
+model GameSessionPageLink {
+  id            String   @id @default(cuid())
+  gameSessionId String   @map("game_session_id")
+  pageId        String   @map("page_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, pageId])
+  @@map("game_session_page_links")
 }
 
 model ContentBlock {

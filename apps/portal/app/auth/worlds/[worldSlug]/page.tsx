@@ -52,6 +52,10 @@ export default async function AuthWorldPage({ params }: Props) {
           {ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}
         </p>
 
+        <p>
+          <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps anzeigen →</Link>
+        </p>
+
         {previewEnabled && (
           <PreviewAsPlayerForm
             worldSlug={worldSlug}

@@ -101,3 +101,21 @@ export {
 export type { SeedAuthUsersResult } from "./auth-seed";
 
 export { seedTerraWorld } from "./terra-seed";
+
+export {
+  createGameSessionService,
+  GameSessionService,
+  GAME_SESSION_STATUS_LABELS,
+  toDmGameSessionView,
+  toPortalGameSessionView,
+  GameSessionStatusEnum,
+} from "./game-session";
+
+export type {
+  CreateGameSessionInput,
+  UpdateGameSessionInput,
+  DmGameSessionView,
+  PortalGameSessionView,
+  GameSessionWithLinks,
+  GameSessionStatus,
+} from "./game-session";

@@ -12,6 +12,13 @@ import {
   verifyPassword,
 } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
+import {
+  GameSessionService,
+  toDmGameSessionView,
+  toPortalGameSessionView,
+  type DmGameSessionView,
+  type PortalGameSessionView,
+} from "./game-session";
 
 export interface CreateUserInput {
   displayName: string;
@@ -28,7 +35,11 @@ export interface CreateWorldMembershipInput {
 }
 
 export class AuthService {
-  constructor(private readonly db: PrismaClient) {}
+  private readonly gameSessions: GameSessionService;
+
+  constructor(private readonly db: PrismaClient) {
+    this.gameSessions = new GameSessionService(db);
+  }
 
   async createUser(input: CreateUserInput) {
     return this.db.user.create({
@@ -260,6 +271,53 @@ export class AuthService {
       where: { id: worldId },
       data: { guestModeEnabled: enabled },
     });
+  }
+
+  async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
+    const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
+
+    if (isDm) {
+      const sessions = await this.gameSessions.listByWorld(worldSlug);
+      return sessions
+        .filter((session) => session.recapPublished)
+        .map(toPortalGameSessionView);
+    }
+
+    if (ctx.effectiveRole !== "player") {
+      return [];
+    }
+
+    const sessions = await this.gameSessions.listPublishedForPortal(worldSlug);
+    return sessions.map(toPortalGameSessionView);
+  }
+
+  async getGameSessionForViewer(
+    worldSlug: string,
+    sessionId: string,
+    ctx: AccessContext,
+  ): Promise<PortalGameSessionView | null> {
+    const session = await this.gameSessions.getByIdForWorld(worldSlug, sessionId);
+    if (!session) {
+      return null;
+    }
+
+    const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
+    if (!session.recapPublished && !isDm) {
+      return null;
+    }
+
+    // Portal never exposes DM-only fields — even for DMs viewing the portal.
+    return toPortalGameSessionView(session);
+  }
+
+  async listGameSessionsForDm(worldSlug: string, campaignId?: string | null): Promise<DmGameSessionView[]> {
+    const sessions = await this.gameSessions.listByWorld(worldSlug, { campaignId });
+    return sessions.map(toDmGameSessionView);
+  }
+
+  async getGameSessionForDm(worldSlug: string, sessionId: string): Promise<DmGameSessionView | null> {
+    const loaded = await this.gameSessions.getByIdForWorld(worldSlug, sessionId);
+    return loaded ? toDmGameSessionView(loaded) : null;
   }
 
   async listWorldPlayers(worldSlug: string) {

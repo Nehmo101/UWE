@@ -1,6 +1,7 @@
 import type {
   CanonicalStatus,
   ContentBlockType,
+  GameSessionStatus,
   PageType,
   PublishStatus,
   Visibility,
@@ -53,6 +54,14 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   note: "Notiz",
 };
 
+export const GAME_SESSION_STATUS_LABELS: Record<GameSessionStatus, string> = {
+  planned: "Geplant",
+  prepared: "Vorbereitet",
+  played: "Gespielt",
+  summarized: "Zusammengefasst",
+  archived: "Archiviert",
+};
+
 export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   rich_text: "Rich Text",
   html: "HTML",
@@ -99,6 +108,19 @@ export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
 
 export function PageTypeBadge({ type }: { type: PageType }) {
   return <span className="uwe-badge uwe-badge-type">{PAGE_TYPE_LABELS[type]}</span>;
+}
+
+export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }) {
+  const className =
+    status === "summarized"
+      ? "uwe-badge uwe-badge-published"
+      : status === "archived"
+        ? "uwe-badge"
+        : status === "played"
+          ? "uwe-badge uwe-badge-player"
+          : "uwe-badge uwe-badge-draft";
+
+  return <span className={className}>{GAME_SESSION_STATUS_LABELS[status]}</span>;
 }
 
 export interface ContentBlockViewModel {
