@@ -35,6 +35,20 @@ import {
   PORTAL_PAGE_VISIBILITIES,
   type AccessContext,
 } from "./permissions";
+import {
+  searchForWikiContext,
+  searchGlobalForDm,
+  type SearchOptions,
+  type SearchResultItem,
+} from "./search-service";
+
+export type { SearchOptions, SearchResultItem, SearchEntityFilter, SearchMatchField } from "./search-service";
+export {
+  SEARCH_ENTITY_FILTERS,
+  SEARCH_ENTITY_FILTER_LABELS,
+  buildSearchIndex,
+  searchIndex,
+} from "./search-service";
 
 export type {
   Campaign,
@@ -368,6 +382,17 @@ export class UweRepository {
 
       return haystack.includes(q);
     });
+  }
+
+  async search(
+    context: AccessContext,
+    options: SearchOptions,
+  ): Promise<SearchResultItem[]> {
+    if (context === "dm" && !options.worldSlug) {
+      return searchGlobalForDm(this.db, options);
+    }
+
+    return searchForWikiContext(this.db, context, options);
   }
 
   async getPageForContext(

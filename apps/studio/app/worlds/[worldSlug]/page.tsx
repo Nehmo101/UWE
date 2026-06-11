@@ -2,30 +2,50 @@ import Link from "next/link";
 import {
   AppShell,
   Breadcrumb,
+  GlobalSearchForm,
   PageHeader,
   PageTypeBadge,
   PublishBadge,
+  SearchFilterBar,
+  SearchResultsList,
   SidebarNav,
   SidebarSection,
   TopBarBrand,
   VisibilityBadge,
+  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
   getAppRepository,
   NAV_CATEGORIES,
   NAV_CATEGORY_LABELS,
+  SEARCH_ENTITY_FILTER_LABELS,
+  SEARCH_ENTITY_FILTERS,
   type NavCategory,
+  type SearchEntityFilter,
+  type Visibility,
 } from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; type?: string }>;
+  searchParams: Promise<{
+    campaign?: string;
+    type?: string;
+    q?: string;
+    filter?: string;
+    visibility?: string;
+  }>;
 }
 
 export default async function StudioWorldPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, type: typeFilter } = await searchParams;
+  const {
+    campaign: campaignSlug,
+    type: typeFilter,
+    q,
+    filter: entityFilter,
+    visibility,
+  } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -41,9 +61,31 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     navCategory: typeFilter as NavCategory | undefined,
   });
 
+  const searchResults = q?.trim()
+    ? await repo.search("dm", {
+        query: q,
+        worldSlug,
+        campaignId: selectedCampaign?.id,
+        entityFilter: entityFilter as SearchEntityFilter | undefined,
+        visibilityFilter: visibility ? [visibility as Visibility] : undefined,
+        urlMode: "studio",
+      })
+    : [];
+
+  const isSearching = Boolean(q?.trim());
+
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={
+        <>
+          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+          <GlobalSearchForm
+            action={`/worlds/${worldSlug}`}
+            query={q ?? ""}
+            placeholder="In dieser Welt suchen…"
+          />
+        </>
+      }
       sidebar={
         <>
           <SidebarSection title="Welt">
@@ -51,7 +93,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
               items={[
                 { label: "← Dashboard", href: "/" },
                 { label: "Seiten", href: `/worlds/${worldSlug}`, active: true },
-                { label: "Assets", href: `/worlds/${worldSlug}/assets` },
+                { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
                 { label: "Neue Seite", href: `/worlds/${worldSlug}/pages/new` },
               ]}
             />
@@ -106,6 +148,41 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
             ))}
           </div>
 
+          {isSearching ? (
+            <>
+              <SearchFilterBar
+                action={`/worlds/${worldSlug}`}
+                query={q}
+                hiddenFields={campaignSlug ? { campaign: campaignSlug } : undefined}
+                filters={[
+                  {
+                    name: "filter",
+                    label: "Suchbereich",
+                    value: entityFilter,
+                    options: SEARCH_ENTITY_FILTERS.map((filter) => ({
+                      value: filter,
+                      label: SEARCH_ENTITY_FILTER_LABELS[filter],
+                    })),
+                  },
+                  {
+                    name: "visibility",
+                    label: "Sichtbarkeit",
+                    value: visibility,
+                    options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
+                      value,
+                      label,
+                    })),
+                  },
+                ]}
+              />
+              <SearchResultsList
+                results={searchResults}
+                query={q}
+                showVisibility
+              />
+            </>
+          ) : (
+            <>
           <table className="uwe-page-table">
             <thead>
               <tr>
@@ -133,6 +210,8 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
 
           {pages.length === 0 && (
             <p className="uwe-empty">Keine Seiten für diesen Filter.</p>
+          )}
+            </>
           )}
         </>
       }

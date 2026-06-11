@@ -5,6 +5,7 @@
 
 export { createPrismaClient, prisma, resolveDatabaseUrl } from "./client";
 export type { PrismaClient } from "./client";
+export type { Prisma } from "./generated/prisma/client";
 
 export { databaseHealthCheck, type HealthCheckResult } from "./health-server";
 
@@ -109,3 +110,36 @@ export {
 export type { SeedAuthUsersResult } from "./auth-seed";
 
 export { seedTerraWorld } from "./terra-seed";
+
+export {
+  SEARCH_ENTITY_FILTERS,
+  SEARCH_ENTITY_FILTER_LABELS,
+  buildSearchIndex,
+  searchForAuthContext,
+  searchForWikiContext,
+  searchGlobalForDm,
+  searchIndex,
+  type SearchEntityFilter,
+  type SearchMatchField,
+  type SearchOptions,
+  type SearchResultItem,
+  type SearchUrlMode,
+} from "./search-service";
+
+export {
+  createGameSessionService,
+  GameSessionService,
+  GAME_SESSION_STATUS_LABELS,
+  toDmGameSessionView,
+  toPortalGameSessionView,
+  GameSessionStatusEnum,
+} from "./game-session";
+
+export type {
+  CreateGameSessionInput,
+  UpdateGameSessionInput,
+  DmGameSessionView,
+  PortalGameSessionView,
+  GameSessionWithLinks,
+  GameSessionStatus,
+} from "./game-session";

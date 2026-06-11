@@ -15,6 +15,7 @@
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/knoteforge-import": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/wiki-engine": "workspace:*",
     "next": "^15.3.4",
