@@ -34,6 +34,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
   if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
+  const settings = await repo.getSystemSettings();
   const selectedCampaign = campaignSlug
     ? campaigns.find((c) => c.slug === campaignSlug)
     : campaigns[0];
@@ -94,7 +95,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
             <label>
               Sichtbarkeit
-              <select name="visibility" defaultValue="dm_only">
+              <select name="visibility" defaultValue={settings.worlds.defaultVisibility}>
                 {Object.values(VisibilityEnum).map((v) => (
                   <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
                 ))}
@@ -112,7 +113,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
             <label>
               Canonical Status
-              <select name="canonicalStatus" defaultValue="draft">
+              <select name="canonicalStatus" defaultValue={settings.worlds.defaultCanonicalStatus}>
                 {Object.values(CanonicalStatusEnum).map((v) => (
                   <option key={v} value={v}>{CANONICAL_LABELS[v]}</option>
                 ))}

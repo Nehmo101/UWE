@@ -13,6 +13,7 @@ import {
   type AccessContext as WikiAccessContext,
   filterBlocksForContext,
   isPageAccessible,
+  type PortalAccessOptions,
 } from "./permissions";
 
 export const SEARCH_ENTITY_FILTERS = [
@@ -379,12 +380,15 @@ export async function searchForWikiContext(
   db: PrismaClient,
   context: WikiAccessContext,
   options: SearchOptions,
+  portalOptions?: PortalAccessOptions,
 ): Promise<SearchResultItem[]> {
   const pages = await loadPagesForSearch(db, options);
-  const accessiblePages = pages.filter((page) => isPageAccessible(page, context));
+  const accessiblePages = pages.filter((page) =>
+    isPageAccessible(page, context, portalOptions),
+  );
 
   const index = buildSearchIndex(accessiblePages, (page) =>
-    filterBlocksForContext(page.contentBlocks, context),
+    filterBlocksForContext(page.contentBlocks, context, portalOptions),
   );
 
   return searchIndex(index, options);

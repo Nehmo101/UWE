@@ -9,6 +9,10 @@ export const PORTAL_BLOCK_VISIBILITIES: Visibility[] = ["public", "player_visibl
 
 export type AccessContext = "dm" | "portal" | "preview";
 
+export interface PortalAccessOptions {
+  publicSharingEnabled?: boolean;
+}
+
 export function isPortalPageVisibility(visibility: Visibility): boolean {
   return PORTAL_PAGE_VISIBILITIES.includes(visibility);
 }
@@ -21,9 +25,26 @@ export function isPublishedForPortal(publishStatus: PublishStatus): boolean {
   return publishStatus === "published";
 }
 
+function isPublicVisibilityAllowed(
+  visibility: Visibility,
+  context: AccessContext,
+  options?: PortalAccessOptions,
+): boolean {
+  if (visibility !== "public") {
+    return true;
+  }
+
+  if (context === "dm") {
+    return true;
+  }
+
+  return options?.publicSharingEnabled !== false;
+}
+
 export function isPageAccessible(
   page: Pick<Page, "visibility" | "publishStatus">,
   context: AccessContext,
+  options?: PortalAccessOptions,
 ): boolean {
   if (context === "dm") {
     return true;
@@ -33,18 +54,27 @@ export function isPageAccessible(
     return false;
   }
 
+  if (!isPublicVisibilityAllowed(page.visibility, context, options)) {
+    return false;
+  }
+
   return isPortalPageVisibility(page.visibility);
 }
 
 export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility">>(
   blocks: T[],
   context: AccessContext,
+  options?: PortalAccessOptions,
 ): T[] {
   if (context === "dm") {
     return blocks;
   }
 
-  return blocks.filter((block) => isPortalBlockVisibility(block.visibility));
+  return blocks.filter(
+    (block) =>
+      isPortalBlockVisibility(block.visibility) &&
+      isPublicVisibilityAllowed(block.visibility, context, options),
+  );
 }
 
 /** Asset visibilities exposed to the player portal API and UI. */

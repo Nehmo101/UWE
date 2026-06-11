@@ -2,30 +2,42 @@ import { NextResponse } from "next/server";
 import {
   createUweRepository,
   getNextContentBlockSortOrder,
+  getSystemSettings,
+  resolveLocalOnlyMode,
 } from "@uwe/database/server";
 import {
   buildAiContextBySlug,
   createProvider,
   createApiKeyStoreFromEnv,
   generateAiTaskBySlug,
-  getAiBrainSettings,
+  resolveAiBrainSettings,
   saveAiResultAsContentBlock,
   saveAiResultAsIdea,
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
 
+async function getAiSettingsOverrides() {
+  const systemSettings = await getSystemSettings();
+  return {
+    localOnly: resolveLocalOnlyMode(systemSettings),
+    enabled: systemSettings.ai.enabled,
+  };
+}
+
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
 export async function getSettings() {
-  const settings = getAiBrainSettings(createApiKeyStoreFromEnv());
+  const overrides = await getAiSettingsOverrides();
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
   return NextResponse.json({ settings });
 }
 
 export async function getModels(providerId: AiProviderId, useMock = false) {
-  const settings = getAiBrainSettings(createApiKeyStoreFromEnv());
+  const overrides = await getAiSettingsOverrides();
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
   if (settings.localOnly && !settings.providers.find((p) => p.id === providerId)?.isLocal) {
     return jsonError("Local-only-Modus: Cloud-Provider nicht verfügbar.", 403);
   }
@@ -43,7 +55,8 @@ export async function postContext(body: {
   allowDmOnly?: boolean;
 }) {
   const repo = createUweRepository();
-  const settings = getAiBrainSettings(createApiKeyStoreFromEnv());
+  const overrides = await getAiSettingsOverrides();
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
 
   const context = await buildAiContextBySlug(
     repo,
@@ -71,7 +84,8 @@ export async function postGenerate(body: {
   useMock?: boolean;
 }) {
   const repo = createUweRepository();
-  const settings = getAiBrainSettings(createApiKeyStoreFromEnv());
+  const overrides = await getAiSettingsOverrides();
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
   const useMock = body.useMock ?? process.env.AI_USE_MOCK === "true";
 
   const { context, result } = await generateAiTaskBySlug(repo, {

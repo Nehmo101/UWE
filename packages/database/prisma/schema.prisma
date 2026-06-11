@@ -471,3 +471,11 @@ model SoundboardButtonPageLink {
   @@index([pageId])
   @@map("soundboard_button_page_links")
 }
+
+model SystemSettings {
+  id        String   @id @default("default")
+  settings  Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

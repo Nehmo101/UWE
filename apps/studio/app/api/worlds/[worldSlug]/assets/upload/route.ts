@@ -9,6 +9,8 @@ import {
 } from "@uwe/assets";
 import {
   getAppRepository,
+  getSystemSettings,
+  resolveEffectiveUploadsPath,
   type AssetType,
   type Visibility,
 } from "@uwe/database/server";
@@ -44,8 +46,10 @@ export async function POST(request: Request, context: RouteContext) {
     inferAssetTypeFromMime(mimeType);
 
   const storageKey = buildStorageKey(world.id, file.name);
-  ensureUploadDirectory(world.id);
-  const filePath = resolveAssetFilePath(storageKey);
+  const settings = await getSystemSettings();
+  const uploadsRoot = resolveEffectiveUploadsPath(settings);
+  ensureUploadDirectory(world.id, undefined, uploadsRoot);
+  const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
   const buffer = Buffer.from(await file.arrayBuffer());
   fs.writeFileSync(filePath, buffer);
 

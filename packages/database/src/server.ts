@@ -77,6 +77,7 @@ export {
   shouldHidePageTitle,
   PORTAL_ASSET_VISIBILITIES,
   type AccessContext,
+  type PortalAccessOptions,
 } from "./permissions";
 
 export {
@@ -220,6 +221,36 @@ export {
 } from "./label-export";
 
 export type { LabelExportOptions } from "./label-export";
+
+export {
+  createSettingsService,
+  SettingsService,
+  getSystemSettings,
+  getSystemSettingsForClient,
+  DEFAULT_SYSTEM_SETTINGS,
+  sanitizeSettingsForClient,
+  resolveEffectiveUploadsPath,
+  resolveEffectiveBackupsPath,
+  isGuestPortalAccessAllowed,
+  isPortalGloballyEnabled,
+  isPublicSharingEnabled,
+  resolveLocalOnlyMode,
+} from "./settings-service";
+
+export type {
+  UweSystemSettings,
+  UweSystemSettingsUpdate,
+  AppSettings,
+  WorldSettings,
+  CampaignSettings,
+  PortalSettings,
+  AiSettings,
+  AiProviderKeyPlaceholder,
+  StorageSettings,
+  BackupSettings,
+  PrivacySettings,
+  ThemeAppearance,
+} from "./settings-service";
 
 export {
   createSoundboardService,

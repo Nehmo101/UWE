@@ -34,7 +34,9 @@ import {
   PORTAL_BLOCK_VISIBILITIES,
   PORTAL_PAGE_VISIBILITIES,
   type AccessContext,
+  type PortalAccessOptions,
 } from "./permissions";
+import { SettingsService } from "./settings-service";
 import {
   searchForWikiContext,
   searchGlobalForDm,
@@ -164,7 +166,23 @@ function withParsedArrays<T extends { tags: unknown; aliases: unknown }>(
 }
 
 export class UweRepository {
+  private settingsService?: SettingsService;
+
   constructor(private readonly db: PrismaClient) {}
+
+  private getSettingsService(): SettingsService {
+    if (!this.settingsService) {
+      this.settingsService = new SettingsService(this.db);
+    }
+    return this.settingsService;
+  }
+
+  private async getPortalAccessOptions(): Promise<PortalAccessOptions> {
+    const settings = await this.getSettingsService().getSettings();
+    return {
+      publicSharingEnabled: settings.portal.publicSharingEnabled,
+    };
+  }
 
   async listWorlds() {
     return this.db.world.findMany({
@@ -222,6 +240,8 @@ export class UweRepository {
   }
 
   async createPage(input: CreatePageInput) {
+    const defaults = await this.getSettingsService().getWorldDefaults();
+
     return this.db.page.create({
       data: {
         worldId: input.worldId,
@@ -231,9 +251,9 @@ export class UweRepository {
         slug: input.slug,
         type: input.type,
         summary: input.summary ?? null,
-        visibility: input.visibility ?? "dm_only",
+        visibility: input.visibility ?? defaults.defaultVisibility,
         publishStatus: input.publishStatus ?? "draft",
-        canonicalStatus: input.canonicalStatus ?? "draft",
+        canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
         prepStatus: input.prepStatus ?? null,
         tags: toJsonArray(input.tags),
         aliases: toJsonArray(input.aliases),
@@ -370,7 +390,14 @@ export class UweRepository {
       navCategory: options?.navCategory,
     });
 
-    const filtered = pages.filter((page) => isPageAccessible(page, context));
+    const portalOptions =
+      context === "portal" || context === "preview"
+        ? await this.getPortalAccessOptions()
+        : undefined;
+
+    const filtered = pages.filter((page) =>
+      isPageAccessible(page, context, portalOptions),
+    );
 
     if (!options?.query?.trim()) {
       return filtered;
@@ -429,7 +456,12 @@ export class UweRepository {
       return searchGlobalForDm(this.db, options);
     }
 
-    return searchForWikiContext(this.db, context, options);
+    const portalOptions =
+      context === "portal" || context === "preview"
+        ? await this.getPortalAccessOptions()
+        : undefined;
+
+    return searchForWikiContext(this.db, context, options, portalOptions);
   }
 
   async getPageForContext(
@@ -439,11 +471,17 @@ export class UweRepository {
   ): Promise<PageWithBlocks | null> {
     const page = await this.getPageBySlug(worldSlug, pageSlug);
     if (!page) return null;
-    if (!isPageAccessible(page, context)) return null;
+
+    const portalOptions =
+      context === "portal" || context === "preview"
+        ? await this.getPortalAccessOptions()
+        : undefined;
+
+    if (!isPageAccessible(page, context, portalOptions)) return null;
 
     return {
       ...page,
-      contentBlocks: filterBlocksForContext(page.contentBlocks, context),
+      contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
     };
   }
 
@@ -574,6 +612,8 @@ export class UweRepository {
     taskType?: string;
     visibility?: Visibility;
   }) {
+    const defaults = await this.getSettingsService().getWorldDefaults();
+
     return this.db.page.create({
       data: {
         worldId: input.worldId,
@@ -581,7 +621,7 @@ export class UweRepository {
         slug: input.slug,
         type: input.type,
         summary: input.summary ?? null,
-        visibility: input.visibility ?? "dm_only",
+        visibility: input.visibility ?? defaults.defaultVisibility,
         publishStatus: "draft",
         canonicalStatus: "idea",
         contentBlocks: {
@@ -617,6 +657,14 @@ export class UweRepository {
     ]);
 
     return { worldCount, pageCount, publishedCount, draftCount };
+  }
+
+  async getSystemSettings() {
+    return this.getSettingsService().getSettingsForClient();
+  }
+
+  async updateSystemSettings(update: import("./settings-service").UweSystemSettingsUpdate) {
+    return this.getSettingsService().updateSettings(update);
   }
 
   async listAssetsByWorld(

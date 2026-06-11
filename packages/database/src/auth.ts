@@ -15,6 +15,7 @@ import {
 } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
 import { searchForAuthContext, type SearchOptions, type SearchResultItem } from "./search-service";
+import { SettingsService, isGuestPortalAccessAllowed } from "./settings-service";
 import {
   GameSessionService,
   toDmGameSessionView,
@@ -193,6 +194,8 @@ export class AuthService {
       return null;
     }
 
+    const systemSettings = await new SettingsService(this.db).getSettings();
+
     const user = options.userId
       ? await this.db.user.findUnique({ where: { id: options.userId } })
       : null;
@@ -233,7 +236,7 @@ export class AuthService {
             characterName: membership.characterName,
           }
         : null,
-      guestModeEnabled: world.guestModeEnabled,
+      guestModeEnabled: isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
       unlockedPageIds: unlocks.map((entry) => entry.pageId),
       specificPlayerPageIds: specificAccess.map((entry) => entry.pageId),
       preview: options.preview,

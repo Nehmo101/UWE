@@ -6,7 +6,14 @@ import type { AssetType } from "./types";
 /** Default uploads root (gitignored at repo root). */
 export const UPLOADS_DIR_NAME = "uploads";
 
-export function resolveUploadsRoot(baseDir?: string): string {
+export function resolveUploadsRoot(baseDir?: string, overridePath?: string): string {
+  if (overridePath?.trim()) {
+    const configured = overridePath.trim();
+    return path.isAbsolute(configured)
+      ? configured
+      : path.resolve(baseDir ?? process.cwd(), configured);
+  }
+
   if (process.env.UWE_UPLOADS_ROOT) {
     return process.env.UWE_UPLOADS_ROOT;
   }
@@ -22,8 +29,12 @@ export function buildStorageKey(worldId: string, filename: string): string {
   return path.posix.join(worldId, `${base}-${unique}${ext}`);
 }
 
-export function resolveAssetFilePath(storageKey: string, baseDir?: string): string {
-  const uploadsRoot = resolveUploadsRoot(baseDir);
+export function resolveAssetFilePath(
+  storageKey: string,
+  baseDir?: string,
+  uploadsRootOverride?: string,
+): string {
+  const uploadsRoot = resolveUploadsRoot(baseDir, uploadsRootOverride);
   const normalized = path.normalize(storageKey).replace(/^(\.\.(\/|\\|$))+/, "");
   const absolute = path.resolve(uploadsRoot, normalized);
   const rootResolved = path.resolve(uploadsRoot);
@@ -35,8 +46,12 @@ export function resolveAssetFilePath(storageKey: string, baseDir?: string): stri
   return absolute;
 }
 
-export function ensureUploadDirectory(worldId: string, baseDir?: string): string {
-  const dir = path.join(resolveUploadsRoot(baseDir), worldId);
+export function ensureUploadDirectory(
+  worldId: string,
+  baseDir?: string,
+  uploadsRootOverride?: string,
+): string {
+  const dir = path.join(resolveUploadsRoot(baseDir, uploadsRootOverride), worldId);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
