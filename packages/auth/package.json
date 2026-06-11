@@ -10,10 +10,13 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"No lint configured yet\""
+    "lint": "echo \"No lint configured yet\"",
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "devDependencies": {
+    "@types/node": "^22.15.32",
     "@uwe/config": "workspace:*",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }

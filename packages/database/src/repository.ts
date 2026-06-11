@@ -163,6 +163,19 @@ export class UweRepository {
     });
   }
 
+  async listWorldsWithGuestMode() {
+    return this.db.world.findMany({
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        guestModeEnabled: true,
+      },
+    });
+  }
+
   async getPublicPageForPortal(
     worldSlug: string,
     pageSlug: string,

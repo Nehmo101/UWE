@@ -1,4 +1,4 @@
-import type { UweRepository } from "@uwe/database";
+import type { UweRepository } from "@uwe/database/server";
 import { buildAiContext, buildAiContextBySlug } from "./context/buildAiContext";
 import { sanitizeContextForCloud, validateProviderForContext } from "./privacy";
 import { createProvider, runAiTask } from "./providers/registry";

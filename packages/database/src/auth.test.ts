@@ -1,0 +1,213 @@
+import assert from "node:assert/strict";
+import { after, before, describe, it } from "node:test";
+import { createAuthService } from "./auth";
+import { seedAuthDemoContent, seedAuthUsers } from "./auth-seed";
+import { createPrismaClient } from "./client";
+import { createTestDatabaseUrl } from "./test-helpers";
+import { createUweRepository } from "./repository";
+
+describe("UWE auth and permissions", () => {
+  let databaseUrl: string;
+  let worldSlug: string;
+  let dmUserId: string;
+  let amanUserId: string;
+  let lazulUserId: string;
+
+  before(async () => {
+    databaseUrl = createTestDatabaseUrl();
+    const db = createPrismaClient(databaseUrl);
+    const repo = createUweRepository(databaseUrl);
+    const auth = createAuthService(db);
+
+    const world = await repo.createWorld({
+      name: "Auth Test World",
+      slug: "auth-test",
+      description: "Auth integration tests",
+    });
+    worldSlug = world.slug;
+
+    await auth.setWorldGuestMode(world.id, true);
+
+    const users = await seedAuthUsers(auth, repo, world.id);
+    dmUserId = users.dm.id;
+    amanUserId = users.players.find((player) => player.displayName === "Aman")!.id;
+    lazulUserId = users.players.find((player) => player.displayName === "Lazul")!.id;
+
+    await seedAuthDemoContent(auth, repo, world.id, {
+      aman: amanUserId,
+      lazul: lazulUserId,
+      veldrin: users.players.find((player) => player.displayName === "Veldrin")!.id,
+      finnion: users.players.find((player) => player.displayName === "Finnion")!.id,
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Public Notice",
+      slug: "public-notice",
+      type: "note",
+      visibility: "public",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "public",
+          content: "Public bulletin.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Player Lore",
+      slug: "player-lore",
+      type: "note",
+      visibility: "player_visible",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "player_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: "Known to the party.",
+        },
+        {
+          type: "gm_note",
+          sortOrder: 1,
+          visibility: "dm_only",
+          content: "Hidden GM note.",
+        },
+      ],
+    });
+
+    await db.$disconnect();
+  });
+
+  after(async () => {
+    await createPrismaClient(databaseUrl).$disconnect();
+  });
+
+  it("lets DM see all pages including archived and dm_only blocks", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
+    assert.ok(ctx);
+    assert.ok(ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm");
+
+    const pages = await auth.listPagesForViewer(worldSlug, ctx);
+    const slugs = pages.map((page) => page.slug);
+
+    assert.ok(slugs.includes("public-notice"));
+    assert.ok(slugs.includes("player-lore"));
+    assert.ok(slugs.includes("archivierte-notiz"));
+    assert.ok(slugs.includes("amans-geheimnis"));
+
+    const playerLore = await auth.getPageForViewer(worldSlug, "player-lore", ctx);
+    assert.ok(playerLore);
+    assert.equal(playerLore.contentBlocks.length, 2);
+
+    await db.$disconnect();
+  });
+
+  it("shows players only allowed portal content", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
+    assert.ok(ctx);
+    assert.equal(ctx.effectiveRole, "player");
+
+    const pages = await auth.listPagesForViewer(worldSlug, ctx);
+    const slugs = pages.map((page) => page.slug);
+
+    assert.ok(slugs.includes("public-notice"));
+    assert.ok(slugs.includes("player-lore"));
+    assert.ok(slugs.includes("amans-geheimnis"));
+    assert.ok(!slugs.includes("archivierte-notiz"));
+
+    const playerLore = await auth.getPageForViewer(worldSlug, "player-lore", ctx);
+    assert.ok(playerLore);
+    assert.equal(playerLore.contentBlocks.length, 1);
+    assert.equal(playerLore.contentBlocks[0]?.visibility, "player_visible");
+
+    await db.$disconnect();
+  });
+
+  it("shows guests only public content when guest mode is enabled", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const ctx = await auth.buildAccessContextForWorld(worldSlug);
+    assert.ok(ctx);
+    assert.equal(ctx.effectiveRole, "guest");
+
+    const pages = await auth.listPagesForViewer(worldSlug, ctx);
+    const slugs = pages.map((page) => page.slug);
+
+    assert.deepEqual(slugs, ["public-notice"]);
+
+    await db.$disconnect();
+  });
+
+  it("restricts specific-player pages to granted users", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const amanCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
+    const lazulCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: lazulUserId });
+
+    assert.ok(amanCtx);
+    assert.ok(lazulCtx);
+
+    assert.ok(await auth.getPageForViewer(worldSlug, "amans-geheimnis", amanCtx!));
+    assert.equal(await auth.getPageForViewer(worldSlug, "amans-geheimnis", lazulCtx!), null);
+
+    await db.$disconnect();
+  });
+
+  it("supports preview-as-player for DM users", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const previewCtx = await auth.buildAccessContextForWorld(worldSlug, {
+      userId: dmUserId,
+      preview: { previewAsUserId: amanUserId },
+    });
+
+    assert.ok(previewCtx);
+    assert.equal(previewCtx.effectiveRole, "player");
+
+    const pages = await auth.listPagesForViewer(worldSlug, previewCtx);
+    const slugs = pages.map((page) => page.slug);
+
+    assert.ok(slugs.includes("amans-geheimnis"));
+    assert.ok(!slugs.includes("archivierte-notiz"));
+    assert.equal(await auth.getPageForViewer(worldSlug, "player-lore", previewCtx)?.then(Boolean), true);
+
+    const previewBlocks = await auth.getPageForViewer(worldSlug, "player-lore", previewCtx);
+    assert.ok(previewBlocks);
+    assert.equal(previewBlocks.contentBlocks.length, 1);
+
+    await db.$disconnect();
+  });
+
+  it("creates and validates login sessions", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const user = await auth.authenticate("aman@uwe.local", "uwe-dev");
+    assert.ok(user);
+    assert.equal(user.displayName, "Aman");
+
+    const session = await auth.createSession(user.id);
+    const loaded = await auth.getSessionByToken(session.token);
+    assert.ok(loaded);
+    assert.equal(loaded.user.id, user.id);
+
+    await auth.deleteSession(session.token);
+    assert.equal(await auth.getSessionByToken(session.token), null);
+
+    await db.$disconnect();
+  });
+});

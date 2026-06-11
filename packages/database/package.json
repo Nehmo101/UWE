@@ -7,6 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
     "./test-helpers": "./src/test-helpers.ts"
   },
   "scripts": {
@@ -25,7 +26,8 @@
   "dependencies": {
     "@libsql/client": "^0.17.3",
     "@prisma/adapter-libsql": "^7.8.0",
-    "@prisma/client": "^7.8.0"
+    "@prisma/client": "^7.8.0",
+    "@uwe/auth": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

@@ -6,7 +6,7 @@ import {
   createUweRepository,
   createWorld,
   seedTerraWorld,
-} from "@uwe/database";
+} from "@uwe/database/server";
 import {
   AiPrivacyError,
   buildAiContext,
@@ -27,7 +27,7 @@ describe("AI Brain — buildAiContext", () => {
   });
 
   afterEach(async () => {
-    const { createPrismaClient } = await import("@uwe/database");
+    const { createPrismaClient } = await import("@uwe/database/server");
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
@@ -260,7 +260,7 @@ describe("AI Brain — saving results", () => {
   });
 
   afterEach(async () => {
-    const { createPrismaClient } = await import("@uwe/database");
+    const { createPrismaClient } = await import("@uwe/database/server");
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
@@ -312,7 +312,7 @@ describe("AI Brain — generateAiTask with mock provider", () => {
   });
 
   afterEach(async () => {
-    const { createPrismaClient } = await import("@uwe/database");
+    const { createPrismaClient } = await import("@uwe/database/server");
     await createPrismaClient(databaseUrl).$disconnect();
   });
 

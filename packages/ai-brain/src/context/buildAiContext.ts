@@ -1,4 +1,4 @@
-import type { UweRepository } from "@uwe/database";
+import type { UweRepository } from "@uwe/database/server";
 import type {
   AiContext,
   AiContextBlock,

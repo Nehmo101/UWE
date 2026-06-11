@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { databaseHealthCheck } from "@uwe/database";
+import { databaseHealthCheck } from "@uwe/database/server";
 
 export async function GET() {
   const db = await databaseHealthCheck();

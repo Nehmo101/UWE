@@ -72,16 +72,103 @@ enum ContentBlockType {
   ai_summary
 }
 
-model World {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+enum UserRole {
+  owner
+  dm
+  player
+  guest
+}
 
-  campaigns Campaign[]
-  pages     Page[]
+enum WorldMemberRole {
+  owner
+  dm
+  player
+}
+
+model User {
+  id           String   @id @default(cuid())
+  displayName  String   @map("display_name")
+  email        String?  @unique
+  passwordHash String?  @map("password_hash")
+  role         UserRole @default(player)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions         Session[]
+  worldMemberships WorldMembership[]
+  pageAccess       PagePlayerAccess[]
+  sessionUnlocks   SessionUnlock[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("sessions")
+}
+
+model WorldMembership {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  worldId       String          @map("world_id")
+  role          WorldMemberRole
+  characterName String?         @map("character_name")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, worldId])
+  @@map("world_memberships")
+}
+
+model PagePlayerAccess {
+  id     String @id @default(cuid())
+  pageId String @map("page_id")
+  userId String @map("user_id")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@map("page_player_access")
+}
+
+model SessionUnlock {
+  id           String   @id @default(cuid())
+  pageId       String   @map("page_id")
+  userId       String   @map("user_id")
+  unlockedAt   DateTime @default(now()) @map("unlocked_at")
+  sessionLabel String?  @map("session_label")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@map("session_unlocks")
+}
+
+model World {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  description      String?
+  guestModeEnabled Boolean  @default(false) @map("guest_mode_enabled")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  campaigns        Campaign[]
+  pages            Page[]
+  worldMemberships WorldMembership[]
 
   @@map("worlds")
 }
@@ -118,11 +205,13 @@ model Page {
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
-  world            World          @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign         Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  world            World              @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign         Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   contentBlocks    ContentBlock[]
-  outgoingLinks    PageLink[]     @relation("SourcePage")
-  incomingLinks    PageLink[]     @relation("TargetPage")
+  outgoingLinks    PageLink[]         @relation("SourcePage")
+  incomingLinks    PageLink[]         @relation("TargetPage")
+  playerAccess     PagePlayerAccess[]
+  sessionUnlocks   SessionUnlock[]
 
   @@unique([worldId, slug])
   @@map("pages")

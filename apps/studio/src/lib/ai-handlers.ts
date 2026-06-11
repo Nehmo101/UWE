@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   createUweRepository,
   getNextContentBlockSortOrder,
-} from "@uwe/database";
+} from "@uwe/database/server";
 import {
   buildAiContextBySlug,
   createProvider,

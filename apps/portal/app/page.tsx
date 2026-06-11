@@ -19,13 +19,16 @@ export default function PortalHomePage() {
           <li>Linked world knowledge</li>
         </ul>
         <p style={{ marginTop: "1rem" }}>
-          <a href="/worlds">Wiki öffnen →</a>
+          <a href="/auth/worlds">Mit Anmeldung öffnen →</a>
+        </p>
+        <p>
+          <a href="/login">Anmelden</a> · <a href="/worlds">Legacy-Wiki (Demo)</a>
         </p>
       </section>
       <footer className="footer">
         <a href="/api/health">Health check</a>
         <span>·</span>
-        <span>Phase 3 — Wiki Engine</span>
+        <span>Phase 4 — Auth &amp; Player Portal</span>
       </footer>
     </main>
   );
