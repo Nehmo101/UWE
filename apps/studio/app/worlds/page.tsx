@@ -1,26 +1,43 @@
 import Link from "next/link";
-import { BrandHeader } from "@uwe/shared-ui";
-import { listWorlds, getWikiStore } from "@uwe/database";
+import {
+  AppShell,
+  PageHeader,
+  SidebarNav,
+  SidebarSection,
+  TopBarBrand,
+} from "@uwe/shared-ui";
+import { getAppRepository } from "@uwe/database/server";
 
-export default function WorldsPage() {
-  const store = getWikiStore();
-  const worlds = listWorlds(store);
+export default async function WorldsPage() {
+  const worlds = await getAppRepository().listWorlds();
 
   return (
-    <main className="page wiki-world-page">
-      <BrandHeader appName="UWE Studio" tagline="Wiki — Welten" />
-      <section className="card wiki-world-grid">
-        <h2>Welten</h2>
-        {worlds.map((world) => (
-          <article key={world.id} className="wiki-world-card">
-            <h2>
-              <Link href={`/worlds/${world.slug}`}>{world.name}</Link>
-            </h2>
-            {world.description && <p>{world.description}</p>}
-            <Link href={`/worlds/${world.slug}`}>Seiten öffnen →</Link>
-          </article>
-        ))}
-      </section>
-    </main>
+    <AppShell
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/" />}
+      sidebar={
+        <SidebarSection title="Navigation">
+          <SidebarNav
+            items={[
+              { label: "Dashboard", href: "/" },
+              { label: "Welten", href: "/worlds", active: true },
+            ]}
+          />
+        </SidebarSection>
+      }
+      main={
+        <>
+          <PageHeader title="Welten" summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung." />
+          <div className="wiki-world-grid">
+            {worlds.map((world) => (
+              <article key={world.id} className="wiki-world-card">
+                <h2>{world.name}</h2>
+                {world.description && <p>{world.description}</p>}
+                <Link href={`/worlds/${world.slug}`}>Welt verwalten →</Link>
+              </article>
+            ))}
+          </div>
+        </>
+      }
+    />
   );
 }

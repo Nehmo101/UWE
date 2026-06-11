@@ -8,8 +8,16 @@ export async function seedTerraWorld(repo: UweRepository) {
       "Die Hauptwelt von UWE — ein reiches Fantasy-Setting mit alten Mächten, vergessenen Türmen und verborgenen Intrigen.",
   });
 
+  const campaign = await repo.createCampaign({
+    worldId: world.id,
+    name: "Schatten über Validori",
+    slug: "schatten-ueber-validori",
+    description: "Die Spieler entdecken politische Intrigen zwischen Nepurga und Validori.",
+  });
+
   const arbor = await repo.createPage({
     worldId: world.id,
+    campaignId: campaign.id,
     title: "Arbor",
     slug: "arbor",
     type: "region",
@@ -25,7 +33,7 @@ export async function seedTerraWorld(repo: UweRepository) {
         sortOrder: 0,
         visibility: "public",
         content:
-          "Arbor erstreckt sich als endloses Blätterdach über den Norden Terras. Reisende berichten von leuchtenden Lichtungen und singenden Bäumen.",
+          "Arbor erstreckt sich als endloses Blätterdach über den Norden Terras. Reisende berichten von leuchtenden Lichtungen und singenden Bäumen. Im Süden grenzt der Wald an [[Validori]].",
       },
       {
         type: "gm_note",
@@ -39,6 +47,7 @@ export async function seedTerraWorld(repo: UweRepository) {
 
   const validori = await repo.createPage({
     worldId: world.id,
+    campaignId: campaign.id,
     title: "Validori",
     slug: "validori",
     type: "location",
@@ -54,7 +63,7 @@ export async function seedTerraWorld(repo: UweRepository) {
         sortOrder: 0,
         visibility: "player_visible",
         content:
-          "Validori thront an der Küste des Inneren Meeres. Ihre Türme aus weißem Stein leuchten nachts und weisen Schiffen den Weg.",
+          "Validori thront an der Küste des Inneren Meeres. Ihre Türme aus weißem Stein leuchten nachts und weisen Schiffen den Weg. Der [[Magister-Turm von Validori|Leuchtturm]] ist weit sichtbar.",
       },
       {
         type: "player_text",
@@ -68,13 +77,14 @@ export async function seedTerraWorld(repo: UweRepository) {
         sortOrder: 2,
         visibility: "dm_only",
         content:
-          "Der Rat der Magister plant heimlich, Nepurga als Vasallenstaat anzuerkennen — gegen den Willen von Shagottar.",
+          "Der Rat der Magister plant heimlich, Nepurga als Vasallenstaat anzuerkennen — gegen den Willen von [[Shagottar]].",
       },
     ],
   });
 
   const nepurga = await repo.createPage({
     worldId: world.id,
+    campaignId: campaign.id,
     title: "Nepurga",
     slug: "nepurga",
     type: "faction",
@@ -89,7 +99,7 @@ export async function seedTerraWorld(repo: UweRepository) {
         sortOrder: 0,
         visibility: "public",
         content:
-          "Nepurga kontrolliert die Handelswege zwischen Arbor und Validori. Sein Herrscherhaus beansprucht altes Blutrecht über die Feenwälder.",
+          "Nepurga kontrolliert die Handelswege zwischen [[Arbor]] und [[Validori]]. Sein Herrscherhaus beansprucht altes Blutrecht über die Feenwälder.",
       },
       {
         type: "relation",
@@ -107,8 +117,30 @@ export async function seedTerraWorld(repo: UweRepository) {
     ],
   });
 
+  const shagottar = await repo.createPage({
+    worldId: world.id,
+    title: "Shagottar",
+    slug: "shagottar",
+    type: "location",
+    summary: "Geheime Festung — nur für den DM bekannt.",
+    visibility: "dm_only",
+    publishStatus: "published",
+    canonicalStatus: "canon",
+    tags: ["geheim", "festung"],
+    contentBlocks: [
+      {
+        type: "gm_note",
+        sortOrder: 0,
+        visibility: "dm_only",
+        content:
+          "Shagottar ist der wahre Machtzentrum hinter Nepurga. Verlinkt von [[Validori]] aus GM-Notizen.",
+      },
+    ],
+  });
+
   const magisterTurm = await repo.createPage({
     worldId: world.id,
+    campaignId: campaign.id,
     title: "Magister-Turm von Validori",
     slug: "magister-turm-von-validori",
     type: "location",
@@ -124,7 +156,7 @@ export async function seedTerraWorld(repo: UweRepository) {
         sortOrder: 0,
         visibility: "public",
         content:
-          "Der Magister-Turm ragt über alle Dächer Validoris empor. Sein Leuchtfeuer ist weit über die Bucht sichtbar.",
+          "Der Magister-Turm ragt über alle Dächer Validoris empor. Sein Leuchtfeuer ist weit über die Bucht sichtbar. Er gehört zur Stadt [[Validori]].",
       },
       {
         type: "gm_note",
@@ -152,10 +184,12 @@ export async function seedTerraWorld(repo: UweRepository) {
 
   return {
     world,
+    campaign,
     pages: {
       arbor,
       validori,
       nepurga,
+      shagottar,
       magisterTurm,
     },
   };

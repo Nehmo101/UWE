@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./uwe.css": "./src/uwe.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -16,7 +17,11 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "dependencies": {
+    "@uwe/database": "workspace:*"
+  },
   "devDependencies": {
+    "@types/node": "^22.19.21",
     "@types/react": "^19.1.8",
     "@uwe/config": "workspace:*",
     "react": "^19.1.0",

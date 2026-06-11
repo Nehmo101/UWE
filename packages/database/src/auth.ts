@@ -230,6 +230,7 @@ export class AuthService {
         contentBlocks: {
           orderBy: { sortOrder: "asc" },
         },
+        campaign: true,
       },
     });
 

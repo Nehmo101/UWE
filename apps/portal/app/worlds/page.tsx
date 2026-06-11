@@ -1,26 +1,34 @@
 import Link from "next/link";
-import { BrandHeader } from "@uwe/shared-ui";
-import { listWorlds, getWikiStore } from "@uwe/database";
+import {
+  AppShell,
+  PageHeader,
+  TopBarBrand,
+} from "@uwe/shared-ui";
+import { getAppRepository } from "@uwe/database/server";
 
-export default function PortalWorldsPage() {
-  const store = getWikiStore();
-  const worlds = listWorlds(store);
+export default async function PortalWorldsPage() {
+  const worlds = await getAppRepository().listWorlds();
 
   return (
-    <main className="page wiki-world-page">
-      <BrandHeader appName="UWE Portal" tagline="Spieler-Wiki" />
-      <section className="card wiki-world-grid">
-        <h2>Welten</h2>
-        {worlds.map((world) => (
-          <article key={world.id} className="wiki-world-card">
-            <h2>
-              <Link href={`/worlds/${world.slug}`}>{world.name}</Link>
-            </h2>
-            {world.description && <p>{world.description}</p>}
-            <Link href={`/worlds/${world.slug}`}>Wiki lesen →</Link>
-          </article>
-        ))}
-      </section>
-    </main>
+    <AppShell
+      topBar={<TopBarBrand appName="UWE Portal" subtitle="Welten" href="/" />}
+      main={
+        <>
+          <PageHeader
+            title="Welten"
+            summary="Wähle eine Welt und erkunde veröffentlichte Inhalte."
+          />
+          <div className="wiki-world-grid">
+            {worlds.map((world) => (
+              <article key={world.id} className="wiki-world-card">
+                <h2>{world.name}</h2>
+                {world.description && <p>{world.description}</p>}
+                <Link href={`/worlds/${world.slug}`}>Welt betreten →</Link>
+              </article>
+            ))}
+          </div>
+        </>
+      }
+    />
   );
 }

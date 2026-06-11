@@ -1,12 +1,24 @@
 import type {
   CanonicalStatus,
   ContentBlockType,
+  Page,
   PageType,
   Prisma,
   PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
+import { navCategoryForPageType, pageTypesForNavCategory, type NavCategory } from "./page-types";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { parseStringArray, toJsonArray } from "./json-utils";
+import {
+  filterBlocksForContext,
+  isPageAccessible,
+  isPortalPageVisibility,
+  isPublishedForPortal,
+  PORTAL_BLOCK_VISIBILITIES,
+  PORTAL_PAGE_VISIBILITIES,
+  type AccessContext,
+} from "./permissions";
 
 export type {
   Campaign,
@@ -35,6 +47,13 @@ export interface CreateWorldInput {
   description?: string | null;
 }
 
+export interface CreateCampaignInput {
+  worldId: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
 export interface CreateContentBlockInput {
   type: ContentBlockType;
   sortOrder: number;
@@ -58,29 +77,102 @@ export interface CreatePageInput {
   contentBlocks?: CreateContentBlockInput[];
 }
 
+export interface UpdatePageInput {
+  title?: string;
+  slug?: string;
+  type?: PageType;
+  summary?: string | null;
+  campaignId?: string | null;
+  visibility?: Visibility;
+  publishStatus?: PublishStatus;
+  canonicalStatus?: CanonicalStatus;
+  tags?: string[];
+  aliases?: string[];
+}
+
+export interface UpdateContentBlockInput {
+  type?: ContentBlockType;
+  sortOrder?: number;
+  content?: string;
+  visibility?: Visibility;
+  metadata?: Prisma.InputJsonValue;
+}
+
 export type PageWithBlocks = Prisma.PageGetPayload<{
-  include: { contentBlocks: true };
+  include: { contentBlocks: true; campaign: true };
+}>;
+
+export type PageSummary = Prisma.PageGetPayload<{
+  include: { campaign: true };
 }>;
 
 export type PublicPage = PageWithBlocks;
-
-const PORTAL_PAGE_VISIBILITIES: Visibility[] = ["public", "player_visible"];
-const PORTAL_BLOCK_VISIBILITIES: Visibility[] = ["public", "player_visible"];
-
-function normalizeStringArray(value: string[] | undefined): string[] {
-  return value ?? [];
-}
 
 function sortBlocks<T extends { sortOrder: number }>(blocks: T[]): T[] {
   return [...blocks].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function withParsedArrays<T extends { tags: unknown; aliases: unknown }>(
+  page: T,
+): T & { tags: string[]; aliases: string[] } {
+  return {
+    ...page,
+    tags: parseStringArray(page.tags),
+    aliases: parseStringArray(page.aliases),
+  };
+}
+
 export class UweRepository {
   constructor(private readonly db: PrismaClient) {}
+
+  async listWorlds() {
+    return this.db.world.findMany({
+      orderBy: { name: "asc" },
+    });
+  }
+
+  async getWorldBySlug(slug: string) {
+    return this.db.world.findUnique({ where: { slug } });
+  }
+
+  async listCampaignsByWorld(worldSlug: string) {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return [];
+
+    return this.db.campaign.findMany({
+      where: { worldId: world.id },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  async getCampaignBySlug(worldSlug: string, campaignSlug: string) {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return null;
+
+    return this.db.campaign.findUnique({
+      where: {
+        worldId_slug: {
+          worldId: world.id,
+          slug: campaignSlug,
+        },
+      },
+    });
+  }
 
   async createWorld(input: CreateWorldInput) {
     return this.db.world.create({
       data: {
+        name: input.name,
+        slug: input.slug,
+        description: input.description ?? null,
+      },
+    });
+  }
+
+  async createCampaign(input: CreateCampaignInput) {
+    return this.db.campaign.create({
+      data: {
+        worldId: input.worldId,
         name: input.name,
         slug: input.slug,
         description: input.description ?? null,
@@ -100,8 +192,8 @@ export class UweRepository {
         visibility: input.visibility ?? "dm_only",
         publishStatus: input.publishStatus ?? "draft",
         canonicalStatus: input.canonicalStatus ?? "draft",
-        tags: normalizeStringArray(input.tags),
-        aliases: normalizeStringArray(input.aliases),
+        tags: toJsonArray(input.tags),
+        aliases: toJsonArray(input.aliases),
         contentBlocks: input.contentBlocks
           ? {
               create: input.contentBlocks.map((block) => ({
@@ -115,24 +207,69 @@ export class UweRepository {
           : undefined,
       },
       include: {
-        contentBlocks: {
-          orderBy: { sortOrder: "asc" },
-        },
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
       },
     });
   }
 
-  async getPageBySlug(worldSlug: string, pageSlug: string): Promise<PageWithBlocks | null> {
-    const world = await this.db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
+  async updatePage(pageId: string, input: UpdatePageInput) {
+    return this.db.page.update({
+      where: { id: pageId },
+      data: {
+        title: input.title,
+        slug: input.slug,
+        type: input.type,
+        summary: input.summary,
+        campaignId: input.campaignId,
+        visibility: input.visibility,
+        publishStatus: input.publishStatus,
+        canonicalStatus: input.canonicalStatus,
+        tags: input.tags ? toJsonArray(input.tags) : undefined,
+        aliases: input.aliases ? toJsonArray(input.aliases) : undefined,
+      },
+      include: {
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
+      },
     });
+  }
 
-    if (!world) {
-      return null;
-    }
+  async createContentBlock(pageId: string, input: CreateContentBlockInput) {
+    return this.db.contentBlock.create({
+      data: {
+        pageId,
+        type: input.type,
+        sortOrder: input.sortOrder,
+        content: input.content ?? "",
+        visibility: input.visibility ?? "dm_only",
+        metadata: input.metadata ?? {},
+      },
+    });
+  }
 
-    return this.db.page.findUnique({
+  async updateContentBlock(blockId: string, input: UpdateContentBlockInput) {
+    return this.db.contentBlock.update({
+      where: { id: blockId },
+      data: {
+        type: input.type,
+        sortOrder: input.sortOrder,
+        content: input.content,
+        visibility: input.visibility,
+        metadata: input.metadata,
+      },
+    });
+  }
+
+  async deleteContentBlock(blockId: string) {
+    return this.db.contentBlock.delete({ where: { id: blockId } });
+  }
+
+  async getPageBySlug(worldSlug: string, pageSlug: string): Promise<PageWithBlocks | null> {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return null;
+
+    const page = await this.db.page.findUnique({
       where: {
         worldId_slug: {
           worldId: world.id,
@@ -140,27 +277,86 @@ export class UweRepository {
         },
       },
       include: {
-        contentBlocks: {
-          orderBy: { sortOrder: "asc" },
-        },
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
       },
+    });
+
+    return page ? withParsedArrays(page) : null;
+  }
+
+  async listPagesByWorld(
+    worldSlug: string,
+    options?: { campaignId?: string | null; type?: PageType; navCategory?: NavCategory },
+  ): Promise<PageSummary[]> {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return [];
+
+    const types = options?.navCategory
+      ? pageTypesForNavCategory(options.navCategory)
+      : options?.type
+        ? [options.type]
+        : undefined;
+
+    const pages = await this.db.page.findMany({
+      where: {
+        worldId: world.id,
+        ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+        ...(types ? { type: { in: types } } : {}),
+      },
+      include: { campaign: true },
+      orderBy: [{ title: "asc" }],
+    });
+
+    return pages.map((page) => withParsedArrays(page));
+  }
+
+  async listPagesForContext(
+    worldSlug: string,
+    context: AccessContext,
+    options?: { campaignId?: string | null; type?: PageType; navCategory?: NavCategory; query?: string },
+  ): Promise<PageSummary[]> {
+    const pages = await this.listPagesByWorld(worldSlug, {
+      campaignId: options?.campaignId,
+      type: options?.type,
+      navCategory: options?.navCategory,
+    });
+
+    const filtered = pages.filter((page) => isPageAccessible(page, context));
+
+    if (!options?.query?.trim()) {
+      return filtered;
+    }
+
+    const q = options.query.trim().toLocaleLowerCase("de");
+    return filtered.filter((page) => {
+      const haystack = [
+        page.title,
+        page.slug,
+        page.summary ?? "",
+        ...parseStringArray(page.tags),
+        ...parseStringArray(page.aliases),
+      ]
+        .join(" ")
+        .toLocaleLowerCase("de");
+
+      return haystack.includes(q);
     });
   }
 
-  async listPagesByWorld(worldSlug: string) {
-    const world = await this.db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
+  async getPageForContext(
+    worldSlug: string,
+    pageSlug: string,
+    context: AccessContext,
+  ): Promise<PageWithBlocks | null> {
+    const page = await this.getPageBySlug(worldSlug, pageSlug);
+    if (!page) return null;
+    if (!isPageAccessible(page, context)) return null;
 
-    if (!world) {
-      return [];
-    }
-
-    return this.db.page.findMany({
-      where: { worldId: world.id },
-      orderBy: [{ title: "asc" }],
-    });
+    return {
+      ...page,
+      contentBlocks: filterBlocksForContext(page.contentBlocks, context),
+    };
   }
 
   async listWorldsWithGuestMode() {
@@ -180,32 +376,22 @@ export class UweRepository {
     worldSlug: string,
     pageSlug: string,
   ): Promise<PublicPage | null> {
-    const page = await this.getPageBySlug(worldSlug, pageSlug);
-
-    if (!page) {
-      return null;
-    }
-
-    if (page.publishStatus !== "published") {
-      return null;
-    }
-
-    if (!PORTAL_PAGE_VISIBILITIES.includes(page.visibility)) {
-      return null;
-    }
-
-    return {
-      ...page,
-      contentBlocks: sortBlocks(
-        page.contentBlocks.filter((block) =>
-          PORTAL_BLOCK_VISIBILITIES.includes(block.visibility),
-        ),
-      ),
-    };
+    return this.getPageForContext(worldSlug, pageSlug, "portal");
   }
 
   async getDmPage(worldSlug: string, pageSlug: string): Promise<PageWithBlocks | null> {
     return this.getPageBySlug(worldSlug, pageSlug);
+  }
+
+  async getWorldPageIndex(worldSlug: string): Promise<PageSummary[]> {
+    return this.listPagesByWorld(worldSlug);
+  }
+
+  async getWorldPageIndexForContext(
+    worldSlug: string,
+    context: AccessContext,
+  ): Promise<PageSummary[]> {
+    return this.listPagesForContext(worldSlug, context);
   }
 
   async createPageLink(input: {
@@ -224,21 +410,31 @@ export class UweRepository {
     });
   }
 
-  async getWorldBySlug(worldSlug: string) {
-    return this.db.world.findUnique({
-      where: { slug: worldSlug },
+  async listPageLinksForWorld(worldSlug: string) {
+    const world = await this.getWorldBySlug(worldSlug);
+    if (!world) return [];
+
+    return this.db.pageLink.findMany({
+      where: {
+        sourcePage: { worldId: world.id },
+      },
+      include: {
+        sourcePage: true,
+        targetPage: true,
+      },
     });
   }
 
   async getPageById(pageId: string): Promise<PageWithBlocks | null> {
-    return this.db.page.findUnique({
+    const page = await this.db.page.findUnique({
       where: { id: pageId },
       include: {
-        contentBlocks: {
-          orderBy: { sortOrder: "asc" },
-        },
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
       },
     });
+
+    return page ? withParsedArrays(page) : null;
   }
 
   async getPageWithLinks(pageId: string) {
@@ -267,16 +463,7 @@ export class UweRepository {
   }
 
   async addContentBlock(pageId: string, input: CreateContentBlockInput) {
-    return this.db.contentBlock.create({
-      data: {
-        pageId,
-        type: input.type,
-        sortOrder: input.sortOrder,
-        content: input.content ?? "",
-        visibility: input.visibility ?? "dm_only",
-        metadata: input.metadata ?? {},
-      },
-    });
+    return this.createContentBlock(pageId, input);
   }
 
   async getNextContentBlockSortOrder(pageId: string): Promise<number> {
@@ -332,6 +519,17 @@ export class UweRepository {
       },
     });
   }
+
+  async getDashboardStats() {
+    const [worldCount, pageCount, publishedCount, draftCount] = await Promise.all([
+      this.db.world.count(),
+      this.db.page.count(),
+      this.db.page.count({ where: { publishStatus: "published" } }),
+      this.db.page.count({ where: { publishStatus: "draft" } }),
+    ]);
+
+    return { worldCount, pageCount, publishedCount, draftCount };
+  }
 }
 
 export function createUweRepository(databaseUrl?: string): UweRepository {
@@ -369,6 +567,8 @@ export async function getPublicPageForPortal(
 export async function getDmPage(worldSlug: string, pageSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getDmPage(worldSlug, pageSlug);
 }
+
+export { PORTAL_BLOCK_VISIBILITIES, PORTAL_PAGE_VISIBILITIES, isPortalPageVisibility, isPublishedForPortal };
 
 export async function getDbWorldBySlug(worldSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getWorldBySlug(worldSlug);

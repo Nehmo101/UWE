@@ -1,114 +1,167 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  AppShell,
+  Breadcrumb,
+  ContentBlockList,
+  MetaPanel,
+  PageHeader,
+  SidebarNav,
+  SidebarSection,
+  TopBarBrand,
+  VisibilityBadge,
   WikiContent,
   WikiSidebar,
-  VisibilityBadge,
-  CATEGORY_LABELS,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import {
-  getPageByPath,
-  getWorldBySlug,
-  getWikiStore,
-  listPagesInWorld,
-  pageHref,
-  type PageCategory,
-} from "@uwe/database";
-import {
-  findRelatedPages,
-  getBacklinks,
-  resolveWikiLinks,
-  renderWikiContent,
-} from "@uwe/wiki-engine";
+  buildPageView,
+  buildPageUrl,
+  getAppRepository,
+  navCategoryForPageType,
+  NAV_CATEGORY_LABELS,
+  parseStringArray,
+  type NavCategory,
+} from "@uwe/database/server";
+import { pagePreviewHref } from "../../../../actions";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
-export default async function StudioPageView({ params }: Props) {
+export default async function StudioPageView({ params, searchParams }: Props) {
   const { worldSlug, category, slug } = await params;
-  const store = getWikiStore();
-  const world = getWorldBySlug(store, worldSlug);
+  const { preview } = await searchParams;
+  const isPlayerPreview = preview === "player";
+  const context = isPlayerPreview ? "preview" : "dm";
+  const repo = getAppRepository();
 
+  const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const page = getPageByPath(store, worldSlug, category as PageCategory, slug);
-  if (!page) notFound();
+  const rawPage = await repo.getPageBySlug(worldSlug, slug);
+  if (!rawPage) notFound();
 
-  const href = pageHref(store, page)!;
-  const resolved = resolveWikiLinks(store, world.id, page.id, page.content);
-  const html = renderWikiContent(page.content, resolved);
-  const backlinks = getBacklinks(store, page.id);
-  const related = findRelatedPages(store, page.id);
+  const expectedCategory = navCategoryForPageType(rawPage.type);
+  if (expectedCategory !== category) notFound();
 
-  const navPages = listPagesInWorld(store, world.id);
+  const view = await buildPageView(repo, worldSlug, slug, context);
+  if (!view) notFound();
+
+  const dmPage = context === "dm" ? rawPage : null;
 
   return (
-    <div className="wiki-layout">
-      <nav className="wiki-nav">
-        <h2>{world.name}</h2>
-        <ul>
-          <li>
-            <Link href="/worlds">← Welten</Link>
-          </li>
-          <li>
-            <Link href={`/worlds/${worldSlug}`}>Seitenliste</Link>
-          </li>
-          {navPages.map((p) => {
-            const pHref = pageHref(store, p);
-            if (!pHref) return null;
-            return (
-              <li key={p.id}>
-                <Link href={pHref}>{p.title}</Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <main className="wiki-main">
-        <div className="wiki-breadcrumb">
-          <Link href="/worlds">Welten</Link> /{" "}
-          <Link href={`/worlds/${worldSlug}`}>{world.name}</Link> /{" "}
-          {CATEGORY_LABELS[page.category]} / {page.title}
+    <>
+      {isPlayerPreview && (
+        <div className="uwe-preview-banner">
+          Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
         </div>
-
-        <header className="wiki-header">
-          <h1>{page.title}</h1>
-          <div className="wiki-header-meta">
-            <VisibilityBadge visibility={page.visibility} />
-            <span className="wiki-meta">{href}</span>
-            {page.aliases.length > 0 && (
-              <span className="wiki-meta">
-                Aliase: {page.aliases.join(", ")}
-              </span>
+      )}
+      <AppShell
+        topBar={
+          <>
+            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+            {!isPlayerPreview && (
+              <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, rawPage.type, slug)}>
+                Vorschau als Spieler
+              </Link>
             )}
-            {page.tags.map((tag) => (
-              <span key={tag} className="wiki-tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </header>
-
-        <WikiContent html={html} />
-      </main>
-
-      <div className="wiki-sidebar-stack">
-        <WikiSidebar
-          backlinks={backlinks.map((b) => ({
-            title: b.sourcePage.title,
-            href: b.href,
-          }))}
-          relatedPages={related.map((r) => ({
-            title: r.page.title,
-            href: r.href,
-            reasons: r.reasons,
-          }))}
-        />
-        <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
-      </div>
-    </div>
+            {isPlayerPreview && (
+              <Link className="uwe-btn uwe-btn-ghost" href={buildPageUrl(worldSlug, rawPage.type, slug)}>
+                Zurück zur DM-Ansicht
+              </Link>
+            )}
+          </>
+        }
+        sidebar={
+          <>
+            <SidebarSection title="Navigation">
+              <SidebarNav
+                items={[
+                  { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
+                  { label: "Bearbeiten", href: `${buildPageUrl(worldSlug, rawPage.type, slug)}/edit` },
+                ]}
+              />
+            </SidebarSection>
+            {!isPlayerPreview && dmPage && (
+              <SidebarSection title="Blöcke">
+                <ContentBlockList
+                  blocks={dmPage.contentBlocks.map((b) => ({
+                    id: b.id,
+                    type: b.type,
+                    sortOrder: b.sortOrder,
+                    content: b.content,
+                    visibility: b.visibility,
+                  }))}
+                  showVisibility
+                />
+              </SidebarSection>
+            )}
+          </>
+        }
+        main={
+          <>
+            <Breadcrumb
+              items={[
+                { label: "Dashboard", href: "/" },
+                { label: world.name, href: `/worlds/${worldSlug}` },
+                { label: NAV_CATEGORY_LABELS[category as NavCategory] },
+                { label: view.page.title },
+              ]}
+            />
+            <PageHeader
+              title={view.page.title}
+              summary={rawPage.summary}
+              meta={
+                !isPlayerPreview && dmPage ? (
+                  <>
+                    <VisibilityBadge visibility={dmPage.visibility} />
+                    {view.page.tags.map((tag) => (
+                      <span key={tag} className="uwe-tag">{tag}</span>
+                    ))}
+                  </>
+                ) : (
+                  view.page.tags.map((tag) => (
+                    <span key={tag} className="uwe-tag">{tag}</span>
+                  ))
+                )
+              }
+              actions={
+                !isPlayerPreview ? (
+                  <Link className="uwe-btn uwe-btn-primary" href={`${buildPageUrl(worldSlug, rawPage.type, slug)}/edit`}>
+                    Bearbeiten
+                  </Link>
+                ) : undefined
+              }
+            />
+            <WikiContent html={view.html} />
+          </>
+        }
+        context={
+          <>
+            <WikiSidebar
+              backlinks={view.backlinks}
+              relatedPages={view.relatedPages}
+            />
+            {!isPlayerPreview && dmPage && (
+              <>
+                <SidebarSection title="Metadaten">
+                  <MetaPanel
+                    visibility={dmPage.visibility}
+                    publishStatus={dmPage.publishStatus}
+                    canonicalStatus={dmPage.canonicalStatus}
+                    type={dmPage.type}
+                    tags={parseStringArray(dmPage.tags)}
+                    aliases={parseStringArray(dmPage.aliases)}
+                  />
+                </SidebarSection>
+                <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
+              </>
+            )}
+          </>
+        }
+      />
+    </>
   );
 }

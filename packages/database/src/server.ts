@@ -1,13 +1,14 @@
 /**
- * Server-only database exports (Prisma, auth, repository).
+ * Server-only database exports (Prisma, auth, repository, portal services).
  * Import from `@uwe/database/server` in Next.js route handlers and server components.
  */
 
 export { createPrismaClient, prisma, resolveDatabaseUrl } from "./client";
 export type { PrismaClient } from "./client";
 
-export { databaseHealthCheck } from "./health";
-export type { HealthCheckResult } from "./health";
+export { databaseHealthCheck, type HealthCheckResult } from "./health-server";
+
+export { getAppRepository } from "./app-repository";
 
 export {
   createUweRepository,
@@ -24,6 +25,10 @@ export {
   getNextContentBlockSortOrder,
   createIdeaPage,
   UweRepository,
+  PORTAL_BLOCK_VISIBILITIES,
+  PORTAL_PAGE_VISIBILITIES,
+  isPortalPageVisibility,
+  isPublishedForPortal,
 } from "./repository";
 
 export type {
@@ -38,9 +43,13 @@ export type {
   Visibility,
   World as DbWorld,
   CreateWorldInput,
+  CreateCampaignInput,
   CreatePageInput,
+  UpdatePageInput,
+  UpdateContentBlockInput,
   CreateContentBlockInput,
   PageWithBlocks,
+  PageSummary,
   PublicPage,
 } from "./repository";
 
@@ -51,6 +60,34 @@ export {
   PublishStatusEnum,
   VisibilityEnum,
 } from "./repository";
+
+export {
+  filterBlocksForContext,
+  isPageAccessible,
+  isPortalBlockVisibility,
+  shouldHidePageTitle,
+  type AccessContext,
+} from "./permissions";
+
+export {
+  NAV_CATEGORIES,
+  NAV_CATEGORY_LABELS,
+  buildPageUrl,
+  navCategoryForPageType,
+  pageTypesForNavCategory,
+  type NavCategory,
+} from "./page-types";
+
+export { parseStringArray, toJsonArray } from "./json-utils";
+
+export {
+  buildPageView,
+  buildWorldWikiIndex,
+  combineBlockContent,
+  pageToWikiNode,
+  type PageViewData,
+  type WikiPageNode,
+} from "./page-service";
 
 export { AuthService, createAuthService } from "./auth";
 export type { CreateUserInput, CreateWorldMembershipInput } from "./auth";

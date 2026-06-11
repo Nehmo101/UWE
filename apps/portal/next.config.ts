@@ -7,16 +7,27 @@ const nextConfig: NextConfig = {
     "@prisma/adapter-libsql",
     "@prisma/client",
     "libsql",
+    "better-sqlite3",
   ],
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /\.(md|txt)$/,
+        contextRegExp: /[\\/]@libsql[\\/]/,
+      }),
+    );
+
     if (isServer) {
       config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)),
+        ...(Array.isArray(config.externals)
+          ? config.externals
+          : [config.externals].filter(Boolean)),
         "@libsql/client",
         "@prisma/adapter-libsql",
         "libsql",
       ];
     }
+
     return config;
   },
 };

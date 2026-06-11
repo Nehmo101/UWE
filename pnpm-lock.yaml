@@ -181,7 +181,14 @@ importers:
         version: 5.9.3
 
   packages/shared-ui:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
     devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.19.21
       '@types/react':
         specifier: ^19.1.8
         version: 19.2.17

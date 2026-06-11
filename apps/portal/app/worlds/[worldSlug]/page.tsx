@@ -1,65 +1,100 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { WikiPageList, type WikiNavItem } from "@uwe/shared-ui";
 import {
-  getWorldBySlug,
-  getWikiStore,
-  listPlayerVisiblePages,
-  pageHref,
-} from "@uwe/database";
+  AppShell,
+  PortalNavByType,
+  PortalWorldHero,
+  SearchField,
+  SidebarSection,
+  TopBarBrand,
+} from "@uwe/shared-ui";
+import {
+  buildPageUrl,
+  getAppRepository,
+  navCategoryForPageType,
+  type NavCategory,
+} from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ type?: string; q?: string }>;
 }
 
-export default async function PortalWorldOverviewPage({ params }: Props) {
+export default async function PortalWorldHome({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const store = getWikiStore();
-  const world = getWorldBySlug(store, worldSlug);
+  const { type, q } = await searchParams;
+  const repo = getAppRepository();
 
+  const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const pages: WikiNavItem[] = listPlayerVisiblePages(store, world.id).flatMap((page) => {
-    const href = pageHref(store, page);
-    if (!href) return [];
-    return [{
-      title: page.title,
-      href,
-      category: page.category,
-      visibility: page.visibility,
-    }];
+  const pages = await repo.listPagesForContext(worldSlug, "portal", {
+    navCategory: type as NavCategory | undefined,
+    query: q,
   });
 
+  const navItems = pages.map((page) => ({
+    title: page.title,
+    href: buildPageUrl(worldSlug, page.type, page.slug),
+    navCategory: navCategoryForPageType(page.type),
+  }));
+
   return (
-    <div className="wiki-layout">
-      <nav className="wiki-nav">
-        <h2>{world.name}</h2>
-        <ul>
-          <li>
-            <Link href="/worlds">← Alle Welten</Link>
-          </li>
-        </ul>
-      </nav>
+    <AppShell
+      topBar={
+        <>
+          <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
+          <SearchField
+            action={`/worlds/${worldSlug}`}
+            defaultValue={q ?? ""}
+            placeholder="In dieser Welt suchen…"
+          />
+        </>
+      }
+      sidebar={
+        <SidebarSection title="Navigation">
+          <Link href="/worlds" style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+            ← Alle Welten
+          </Link>
+          <PortalNavByType
+            worldSlug={worldSlug}
+            items={navItems}
+            activeCategory={type as NavCategory | undefined}
+          />
+        </SidebarSection>
+      }
+      main={
+        <>
+          <PortalWorldHero
+            name={world.name}
+            description={world.description}
+            pageCount={pages.length}
+          />
 
-      <main className="wiki-main">
-        <div className="wiki-breadcrumb">
-          <Link href="/worlds">Welten</Link> / {world.name}
-        </div>
-        <header className="wiki-header">
-          <h1>{world.name}</h1>
-          {world.description && <p>{world.description}</p>}
-        </header>
-        <WikiPageList pages={pages} />
-      </main>
+          {q && (
+            <p style={{ color: "#94a3b8", marginBottom: "1rem" }}>
+              {pages.length} Treffer für „{q}"
+            </p>
+          )}
 
-      <aside className="wiki-sidebar">
-        <section className="wiki-sidebar-section">
-          <h3>Spielerportal</h3>
-          <p className="wiki-meta">
-            Nur veröffentlichte Inhalte — keine GM-Geheimnisse.
-          </p>
-        </section>
-      </aside>
-    </div>
+          <div className="wiki-page-list">
+            {pages.map((page) => (
+              <article key={page.id} className="wiki-world-card">
+                <h2>
+                  <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                    {page.title}
+                  </Link>
+                </h2>
+                {page.summary && <p>{page.summary}</p>}
+              </article>
+            ))}
+          </div>
+
+          {pages.length === 0 && (
+            <p className="uwe-empty">Keine veröffentlichten Seiten gefunden.</p>
+          )}
+        </>
+      }
+    />
   );
 }

@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  AppShell,
+  Breadcrumb,
+  PageHeader,
+  PortalNavByType,
+  SearchField,
+  SidebarSection,
+  TopBarBrand,
   WikiContent,
   WikiSidebar,
-  CATEGORY_LABELS,
 } from "@uwe/shared-ui";
 import {
-  getPageByPath,
-  getWorldBySlug,
-  getWikiStore,
-  isPlayerVisible,
-  listPlayerVisiblePages,
-  pageHref,
-  type PageCategory,
-} from "@uwe/database";
-import { buildPlayerSafePageView, renderWikiContent } from "@uwe/wiki-engine";
+  buildPageView,
+  buildPageUrl,
+  getAppRepository,
+  navCategoryForPageType,
+  NAV_CATEGORY_LABELS,
+  type NavCategory,
+} from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
@@ -22,79 +26,73 @@ interface Props {
 
 export default async function PortalPageView({ params }: Props) {
   const { worldSlug, category, slug } = await params;
-  const store = getWikiStore();
-  const world = getWorldBySlug(store, worldSlug);
+  const repo = getAppRepository();
 
+  const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const page = getPageByPath(store, worldSlug, category as PageCategory, slug);
-  if (!page || !isPlayerVisible(page.visibility)) notFound();
+  const rawPage = await repo.getPublicPageForPortal(worldSlug, slug);
+  if (!rawPage) notFound();
 
-  const href = pageHref(store, page)!;
-  const view = buildPlayerSafePageView(store, page, href);
+  const expectedCategory = navCategoryForPageType(rawPage.type);
+  if (expectedCategory !== category) notFound();
+
+  const view = await buildPageView(repo, worldSlug, slug, "portal");
   if (!view) notFound();
 
-  const html = renderWikiContent(page.content, view.resolvedLinks, {
-    forPlayer: true,
-  });
-
-  const navPages = listPlayerVisiblePages(store, world.id);
+  const navPages = await repo.listPagesForContext(worldSlug, "portal");
+  const navItems = navPages.map((page) => ({
+    title: page.title,
+    href: buildPageUrl(worldSlug, page.type, page.slug),
+    navCategory: navCategoryForPageType(page.type),
+  }));
 
   return (
-    <div className="wiki-layout">
-      <nav className="wiki-nav">
-        <h2>{world.name}</h2>
-        <ul>
-          <li>
-            <Link href="/worlds">← Welten</Link>
-          </li>
-          <li>
-            <Link href={`/worlds/${worldSlug}`}>Seitenliste</Link>
-          </li>
-          {navPages.map((p) => {
-            const pHref = pageHref(store, p);
-            if (!pHref) return null;
-            return (
-              <li key={p.id}>
-                <Link href={pHref}>{p.title}</Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <main className="wiki-main">
-        <div className="wiki-breadcrumb">
-          <Link href="/worlds">Welten</Link> /{" "}
-          <Link href={`/worlds/${worldSlug}`}>{world.name}</Link> /{" "}
-          {CATEGORY_LABELS[page.category]} / {page.title}
-        </div>
-
-        <header className="wiki-header">
-          <h1>{page.title}</h1>
-          <div className="wiki-header-meta">
-            {page.tags.map((tag) => (
-              <span key={tag} className="wiki-tag">
-                {tag}
-              </span>
+    <AppShell
+      topBar={
+        <>
+          <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
+          <SearchField
+            action={`/worlds/${worldSlug}`}
+            placeholder="Suchen…"
+          />
+        </>
+      }
+      sidebar={
+        <>
+          <SidebarSection title="Navigation">
+            <Link href={`/worlds/${worldSlug}`} style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+              ← {world.name}
+            </Link>
+            <PortalNavByType worldSlug={worldSlug} items={navItems} activeCategory={category as NavCategory} />
+          </SidebarSection>
+        </>
+      }
+      main={
+        <>
+          <Breadcrumb
+            items={[
+              { label: "Welten", href: "/worlds" },
+              { label: world.name, href: `/worlds/${worldSlug}` },
+              { label: NAV_CATEGORY_LABELS[category as NavCategory] },
+              { label: view.page.title },
+            ]}
+          />
+          <PageHeader
+            title={view.page.title}
+            meta={view.page.tags.map((tag) => (
+              <span key={tag} className="uwe-tag">{tag}</span>
             ))}
-          </div>
-        </header>
-
-        <WikiContent html={html} />
-      </main>
-
-      <WikiSidebar
-        backlinks={view.backlinks.map((b) => ({
-          title: b.sourcePage.title,
-          href: b.href,
-        }))}
-        relatedPages={view.relatedPages.map((r) => ({
-          title: r.page.title,
-          href: r.href,
-          reasons: r.reasons,
-        }))}
-      />
-    </div>
+          />
+          <WikiContent html={view.html} />
+        </>
+      }
+      context={
+        <WikiSidebar
+          backlinks={view.backlinks}
+          relatedPages={view.relatedPages}
+        />
+      }
+    />
   );
 }

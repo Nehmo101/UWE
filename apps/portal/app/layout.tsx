@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
 
