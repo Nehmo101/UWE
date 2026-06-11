@@ -103,6 +103,14 @@ enum GameSessionStatus {
   archived
 }
 
+enum LabelSourceType {
+  page
+  dungeon_room
+  content_block
+  asset
+  manual
+}
+
 enum SoundSourceType {
   local
   youtube
@@ -195,6 +203,8 @@ model World {
   assets           Asset[]
   worldMemberships WorldMembership[]
   gameSessions     GameSession[]
+  labelTemplates    LabelTemplate[]
+  labels            Label[]
   soundboardButtons SoundboardButton[]
 
   @@map("worlds")
@@ -213,6 +223,7 @@ model Campaign {
   pages             Page[]
   assets            Asset[]
   gameSessions      GameSession[]
+  labels            Label[]
   soundboardButtons SoundboardButton[]
 
   @@unique([worldId, slug])
@@ -362,6 +373,46 @@ model PageLink {
   @@index([sourcePageId])
   @@index([targetPageId])
   @@map("page_links")
+}
+
+model LabelTemplate {
+  id              String   @id @default(cuid())
+  worldId         String?  @map("world_id")
+  name            String
+  slug            String
+  description     String?
+  layoutSettings  Json     @map("layout_settings")
+  isSystem        Boolean  @default(false) @map("is_system")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  world  World?  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  labels Label[]
+
+  @@unique([worldId, slug])
+  @@map("label_templates")
+}
+
+model Label {
+  id             String          @id @default(cuid())
+  worldId        String          @map("world_id")
+  campaignId     String?         @map("campaign_id")
+  title          String
+  sourceType     LabelSourceType @map("source_type")
+  sourceId       String?         @map("source_id")
+  templateId     String          @map("template_id")
+  content        Json
+  layoutSettings Json            @map("layout_settings")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  world    World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  template LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@index([worldId, updatedAt])
+  @@index([sourceType, sourceId])
+  @@map("labels")
 }
 
 model SoundboardButton {

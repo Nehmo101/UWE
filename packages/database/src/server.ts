@@ -145,6 +145,40 @@ export type {
 } from "./game-session";
 
 export {
+  createLabelService,
+  LabelService,
+  LABEL_SOURCE_TYPE_LABELS,
+  LabelSourceTypeEnum,
+  normalizeLabel,
+  applyLayoutToContent,
+  assertPlayerSafeExport,
+  buildLabelContentFromPage,
+  buildLabelContentFromBlock,
+  buildLabelContentFromAsset,
+} from "./label-service";
+
+export type {
+  Label as DbLabel,
+  LabelTemplate as DbLabelTemplate,
+  LabelSourceType,
+  LabelLayoutMode,
+  LabelLayoutSettings,
+  LabelContentData,
+  CreateLabelInput,
+  UpdateLabelInput,
+  CreateLabelFromSourceInput,
+  LabelWithRelations,
+} from "./label-service";
+
+export {
+  renderLabelHtml,
+  renderLabelPdf,
+  renderLabelExport,
+} from "./label-export";
+
+export type { LabelExportOptions } from "./label-export";
+
+export {
   createSoundboardService,
   SoundboardService,
   extractYouTubeVideoId,

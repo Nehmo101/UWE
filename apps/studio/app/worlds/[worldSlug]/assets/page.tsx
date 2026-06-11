@@ -53,6 +53,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                 { label: "← Dashboard", href: "/" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Assets", href: `/worlds/${worldSlug}/assets`, active: true },
+                { label: "Labels", href: `/worlds/${worldSlug}/labels` },
                 { label: "Neue Seite", href: `/worlds/${worldSlug}/pages/new` },
               ]}
             />
