@@ -76,6 +76,21 @@ export const GAME_SESSION_STATUS_LABELS: Record<GameSessionStatus, string> = {
   archived: "Archiviert",
 };
 
+export type PlayerNoteStatus =
+  | "draft"
+  | "visible_to_dm"
+  | "accepted"
+  | "hidden"
+  | "deleted";
+
+export const PLAYER_NOTE_STATUS_LABELS: Record<PlayerNoteStatus, string> = {
+  draft: "Entwurf",
+  visible_to_dm: "An GM gesendet",
+  accepted: "Übernommen",
+  hidden: "Verborgen",
+  deleted: "Gelöscht",
+};
+
 export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   rich_text: "Rich Text",
   html: "HTML",
@@ -149,6 +164,19 @@ export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }
           : "uwe-badge uwe-badge-draft";
 
   return <span className={className}>{GAME_SESSION_STATUS_LABELS[status]}</span>;
+}
+
+export function PlayerNoteStatusBadge({ status }: { status: PlayerNoteStatus }) {
+  const className =
+    status === "accepted"
+      ? "uwe-badge uwe-badge-published"
+      : status === "visible_to_dm"
+        ? "uwe-badge uwe-badge-player"
+        : status === "hidden" || status === "deleted"
+          ? "uwe-badge"
+          : "uwe-badge uwe-badge-draft";
+
+  return <span className={className}>{PLAYER_NOTE_STATUS_LABELS[status]}</span>;
 }
 
 export function DungeonPrepStatusBadge({ status }: { status: DungeonPrepStatus | null }) {

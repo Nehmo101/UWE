@@ -128,6 +128,20 @@ enum SoundSourceType {
   spotify
 }
 
+enum PlayerNoteStatus {
+  draft
+  visible_to_dm
+  accepted
+  hidden
+  deleted
+}
+
+enum PlayerNoteVisibility {
+  private
+  dm_only
+  party
+}
+
 enum ShareTargetType {
   page
   handout
@@ -147,6 +161,7 @@ model User {
   worldMemberships WorldMembership[]
   pageAccess       PagePlayerAccess[]
   sessionUnlocks   SessionUnlock[]
+  playerNotes      PlayerNote[]
 
   @@map("users")
 }
@@ -211,9 +226,10 @@ model World {
   name             String
   slug             String   @unique
   description      String?
-  guestModeEnabled Boolean  @default(false) @map("guest_mode_enabled")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  guestModeEnabled     Boolean  @default(false) @map("guest_mode_enabled")
+  guestCommentsEnabled Boolean  @default(false) @map("guest_comments_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   campaigns        Campaign[]
   pages            Page[]
@@ -223,6 +239,7 @@ model World {
   labelTemplates    LabelTemplate[]
   labels            Label[]
   soundboardButtons SoundboardButton[]
+  playerNotes       PlayerNote[]
   shareLinks        ShareLink[]
 
   @@map("worlds")
@@ -243,6 +260,7 @@ model Campaign {
   gameSessions      GameSession[]
   labels            Label[]
   soundboardButtons SoundboardButton[]
+  playerNotes       PlayerNote[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -278,6 +296,7 @@ model Page {
   gameSessionLinks       GameSessionPageLink[]
   soundboardButtonLinks  SoundboardButtonPageLink[]
   assetPageLinks         AssetPageLink[]
+  playerNotes            PlayerNote[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -304,6 +323,7 @@ model GameSession {
   world        World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   linkedPages  GameSessionPageLink[]
+  playerNotes  PlayerNote[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
@@ -477,6 +497,33 @@ model SoundboardButtonPageLink {
   @@unique([soundboardButtonId, pageId])
   @@index([pageId])
   @@map("soundboard_button_page_links")
+}
+
+model PlayerNote {
+  id            String               @id @default(cuid())
+  worldId       String               @map("world_id")
+  campaignId    String               @map("campaign_id")
+  pageId        String?              @map("page_id")
+  gameSessionId String?              @map("game_session_id")
+  userId        String               @map("user_id")
+  content       String
+  visibility    PlayerNoteVisibility @default(private)
+  status        PlayerNoteStatus     @default(draft)
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, status])
+  @@index([worldId, campaignId])
+  @@index([userId, worldId])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("player_notes")
 }
 
 model ShareLink {

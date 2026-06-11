@@ -290,3 +290,24 @@ export type {
   SoundboardButtonWithLinks,
   SoundSourceType,
 } from "./soundboard";
+
+export {
+  createPlayerNoteService,
+  PlayerNoteService,
+  PLAYER_NOTE_STATUS_LABELS,
+  PLAYER_NOTE_VISIBILITY_LABELS,
+  toDmPlayerNoteView,
+  toPortalPlayerNoteView,
+  PlayerNoteStatusEnum,
+  PlayerNoteVisibilityEnum,
+} from "./player-note-service";
+
+export type {
+  CreatePlayerNoteInput,
+  UpdatePlayerNoteInput,
+  DmPlayerNoteView,
+  PortalPlayerNoteView,
+  PlayerNoteWithRelations,
+  PlayerNoteStatus,
+  PlayerNoteVisibility,
+} from "./player-note-service";

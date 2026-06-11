@@ -27,6 +27,20 @@ export {
   resolveEffectiveRole,
 } from "./permissions";
 
+export type {
+  PlayerNoteAccessInfo,
+  PlayerNoteStatus,
+  PlayerNoteVisibility,
+} from "./player-note-permissions";
+
+export {
+  canCreatePlayerNote,
+  canEditPlayerNote,
+  canModeratePlayerNote,
+  canViewPlayerNote,
+  filterPlayerNotesForViewer,
+} from "./player-note-permissions";
+
 export { hashPassword, verifyPassword } from "./password";
 
 export {

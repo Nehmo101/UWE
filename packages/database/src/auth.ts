@@ -2,12 +2,17 @@ import type { PrismaClient } from "./client";
 import type { AccessContext, AuthUser, PreviewOptions } from "@uwe/auth";
 import {
   buildAccessContext,
+  canCreatePlayerNote,
+  canEditPlayerNote,
+  canModeratePlayerNote,
   canViewAsset,
   canViewContentBlock,
   canViewPage,
+  canViewPlayerNote,
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
+  filterPlayerNotesForViewer,
   generateSessionToken,
   hashPassword,
   sessionExpiresAt,
@@ -31,6 +36,13 @@ import {
   type DmSoundboardButtonView,
   type PortalSoundboardButtonView,
 } from "./soundboard";
+import {
+  PlayerNoteService,
+  toDmPlayerNoteView,
+  toPortalPlayerNoteView,
+  type DmPlayerNoteView,
+  type PortalPlayerNoteView,
+} from "./player-note-service";
 
 export interface CreateUserInput {
   displayName: string;
@@ -49,10 +61,12 @@ export interface CreateWorldMembershipInput {
 export class AuthService {
   private readonly gameSessions: GameSessionService;
   private readonly soundboard: SoundboardService;
+  private readonly playerNotes: PlayerNoteService;
 
   constructor(private readonly db: PrismaClient) {
     this.gameSessions = new GameSessionService(db);
     this.soundboard = new SoundboardService(db);
+    this.playerNotes = new PlayerNoteService(db);
   }
 
   async createUser(input: CreateUserInput) {
@@ -489,6 +503,142 @@ export class AuthService {
 
     return toPortalSoundboardButtonView(button);
   }
+
+  async listPlayerNotesForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: { campaignId?: string | null; pageId?: string; gameSessionId?: string },
+  ): Promise<PortalPlayerNoteView[]> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { guestCommentsEnabled: true },
+    });
+    if (!world) return [];
+
+    let notes;
+    if (options?.pageId) {
+      notes = await this.playerNotes.listForPage(worldSlug, options.pageId, {
+        campaignId: options.campaignId,
+      });
+    } else if (options?.gameSessionId) {
+      notes = await this.playerNotes.listForGameSession(worldSlug, options.gameSessionId);
+    } else if (ctx.user && ctx.effectiveRole === "player") {
+      notes = await this.playerNotes.listByUser(worldSlug, ctx.user.id, {
+        campaignId: options?.campaignId,
+      });
+    } else {
+      notes = await this.playerNotes.listByWorld(worldSlug, {
+        campaignId: options?.campaignId,
+      });
+    }
+
+    return filterPlayerNotesForViewer(ctx, notes).map(toPortalPlayerNoteView);
+  }
+
+  async getPlayerNoteForViewer(
+    worldSlug: string,
+    noteId: string,
+    ctx: AccessContext,
+  ): Promise<PortalPlayerNoteView | null> {
+    const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
+    if (!note || !canViewPlayerNote(ctx, note)) {
+      return null;
+    }
+    return toPortalPlayerNoteView(note);
+  }
+
+  async createPlayerNoteForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    input: {
+      campaignId: string;
+      content: string;
+      pageId?: string | null;
+      gameSessionId?: string | null;
+    },
+  ): Promise<PortalPlayerNoteView | null> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true, guestCommentsEnabled: true },
+    });
+    if (!world || !ctx.user || !canCreatePlayerNote(ctx, world.guestCommentsEnabled)) {
+      return null;
+    }
+
+    const note = await this.playerNotes.create({
+      worldId: world.id,
+      campaignId: input.campaignId,
+      userId: ctx.user.id,
+      content: input.content,
+      pageId: input.pageId,
+      gameSessionId: input.gameSessionId,
+    });
+
+    return toPortalPlayerNoteView(note);
+  }
+
+  async updatePlayerNoteForViewer(
+    worldSlug: string,
+    noteId: string,
+    ctx: AccessContext,
+    content: string,
+  ): Promise<PortalPlayerNoteView | null> {
+    const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
+    if (!note || !canEditPlayerNote(ctx, note)) {
+      return null;
+    }
+
+    const updated = await this.playerNotes.update(noteId, { content });
+    return toPortalPlayerNoteView(updated);
+  }
+
+  async submitPlayerNoteForViewer(
+    worldSlug: string,
+    noteId: string,
+    ctx: AccessContext,
+  ): Promise<PortalPlayerNoteView | null> {
+    const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
+    if (!note || !canEditPlayerNote(ctx, note) || note.status !== "draft") {
+      return null;
+    }
+
+    const updated = await this.playerNotes.submitToDm(noteId);
+    return toPortalPlayerNoteView(updated);
+  }
+
+  async listPlayerNotesForDm(
+    worldSlug: string,
+    options?: { campaignId?: string | null; status?: import("./generated/prisma/client").PlayerNoteStatus },
+  ): Promise<DmPlayerNoteView[]> {
+    const notes = await this.playerNotes.listByWorld(worldSlug, {
+      campaignId: options?.campaignId,
+      status: options?.status ?? ["visible_to_dm", "accepted", "hidden", "draft"],
+    });
+    return notes.map(toDmPlayerNoteView);
+  }
+
+  async listPlayerNoteReviewQueue(
+    worldSlug: string,
+    campaignId?: string | null,
+  ): Promise<DmPlayerNoteView[]> {
+    const notes = await this.playerNotes.listByWorld(worldSlug, {
+      campaignId,
+      status: "visible_to_dm",
+    });
+    return notes.map(toDmPlayerNoteView);
+  }
+
+  async getPlayerNoteForDm(
+    worldSlug: string,
+    noteId: string,
+  ): Promise<DmPlayerNoteView | null> {
+    const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
+    return note ? toDmPlayerNoteView(note) : null;
+  }
+
+  getPlayerNoteService(): PlayerNoteService {
+    return this.playerNotes;
+  }
 }
 
 export function createAuthService(db: PrismaClient): AuthService {
@@ -502,4 +652,9 @@ export {
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
+  canCreatePlayerNote,
+  canEditPlayerNote,
+  canModeratePlayerNote,
+  canViewPlayerNote,
+  filterPlayerNotesForViewer,
 };

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
+import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
+import { canCreatePlayerNote } from "@uwe/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 
 interface Props {
@@ -21,15 +23,34 @@ export default async function PortalSessionDetailPage({ params }: Props) {
   const auth = createAuthService(db);
 
   let session;
+  let notes;
+  let canComment = false;
+
   try {
     session = await auth.getGameSessionForViewer(worldSlug, sessionId, ctx);
+    if (!session) {
+      notFound();
+    }
+
+    notes = session.campaignId
+      ? await auth.listPlayerNotesForViewer(worldSlug, ctx, {
+          gameSessionId: sessionId,
+          campaignId: session.campaignId,
+        })
+      : [];
+
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { guestCommentsEnabled: true },
+    });
+    canComment = Boolean(
+      session.campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled),
+    );
   } finally {
     await db.$disconnect();
   }
 
-  if (!session) {
-    notFound();
-  }
+  const returnPath = `/auth/worlds/${worldSlug}/sessions/${sessionId}`;
 
   return (
     <main className="auth-page">
@@ -71,6 +92,18 @@ export default async function PortalSessionDetailPage({ params }: Props) {
               ))}
             </ul>
           </section>
+        )}
+
+        {session.campaignId && (
+          <PlayerNotesPanel
+            worldSlug={worldSlug}
+            campaignId={session.campaignId}
+            notes={notes}
+            currentUserId={user?.id ?? null}
+            canComment={canComment}
+            gameSessionId={sessionId}
+            returnPath={returnPath}
+          />
         )}
       </article>
     </main>

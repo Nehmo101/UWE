@@ -388,6 +388,94 @@ body {
   background: rgba(0, 0, 0, 0.25);
 }
 
+.auth-notes-panel {
+  margin-top: 1.5rem;
+}
+
+.auth-notes-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-note-item {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 10, 46, 0.55);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.auth-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.auth-note-content {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.auth-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.auth-note-form {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.auth-note-form label {
+  font-size: 0.875rem;
+  color: #c4b5fd;
+}
+
+.auth-note-form textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(15, 10, 46, 0.8);
+  color: #f5f3ff;
+  font: inherit;
+  resize: vertical;
+}
+
+.auth-btn {
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: #7c3aed;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.auth-btn-small {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.auth-muted {
+  color: #a78bfa;
+  font-size: 0.875rem;
+}
+
+.auth-note-edit summary {
+  cursor: pointer;
+  color: #c4b5fd;
+  font-size: 0.875rem;
+}
+
 .share-gate {
   min-height: 100vh;
   display: flex;

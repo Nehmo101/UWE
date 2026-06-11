@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
+import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
+import { canCreatePlayerNote } from "@uwe/auth";
 import {
   BLOCK_TYPE_LABELS,
   PageTypeBadge,
   VisibilityBadge,
 } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService, createPrismaClient, getAppRepository } from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string; slug: string }>;
@@ -24,17 +26,41 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
+  const repo = getAppRepository();
 
   let page;
+  let notes;
+  let canComment = false;
+  let campaignId: string | null = null;
+
   try {
     page = await auth.getPageForViewer(worldSlug, slug, ctx);
+    if (!page) {
+      notFound();
+    }
+
+    campaignId =
+      page.campaignId ??
+      (await repo.listCampaignsByWorld(worldSlug))[0]?.id ??
+      null;
+
+    notes = campaignId
+      ? await auth.listPlayerNotesForViewer(worldSlug, ctx, {
+          pageId: page.id,
+          campaignId,
+        })
+      : [];
+
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { guestCommentsEnabled: true },
+    });
+    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
   } finally {
     await db.$disconnect();
   }
 
-  if (!page) {
-    notFound();
-  }
+  const returnPath = `/auth/worlds/${worldSlug}/${slug}`;
 
   return (
     <main className="auth-page">
@@ -65,6 +91,18 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             </section>
           ))}
         </div>
+
+        {campaignId && (
+          <PlayerNotesPanel
+            worldSlug={worldSlug}
+            campaignId={campaignId}
+            notes={notes}
+            currentUserId={user?.id ?? null}
+            canComment={canComment}
+            pageId={page.id}
+            returnPath={returnPath}
+          />
+        )}
       </article>
     </main>
   );
