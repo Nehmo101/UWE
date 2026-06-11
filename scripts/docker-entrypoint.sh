@@ -5,21 +5,58 @@ APP="${1:-portal}"
 DB_PATH="${DATABASE_URL#file:}"
 MIGRATIONS_DIR="/app/packages/database/prisma/migrations"
 PRISMA_BIN="/app/node_modules/prisma/build/index.js"
+TSX_BIN="/app/node_modules/tsx/dist/cli.mjs"
+SEED_SCRIPT="/app/packages/database/prisma/seed.ts"
+EMPTY_CHECK="/app/scripts/docker-db-empty-check.ts"
+SEED_MARKER="${DB_PATH}.seeded"
 
 mkdir -p "$(dirname "$DB_PATH")" /app/data/uploads /app/data/backups /app/exports
 
 if [ -f "$PRISMA_BIN" ] && [ -d "$MIGRATIONS_DIR" ]; then
   echo "Running database migrations…"
-  DATABASE_URL="$DATABASE_URL" node "$PRISMA_BIN" migrate deploy \
-    --schema /app/packages/database/prisma/schema.prisma || {
-      echo "Prisma migrate failed — continuing startup"
-    }
+  if ! DATABASE_URL="$DATABASE_URL" node "$PRISMA_BIN" migrate deploy \
+    --schema /app/packages/database/prisma/schema.prisma; then
+    echo "Prisma migrate failed — aborting startup"
+    exit 1
+  fi
 fi
 
-if [ "${RUN_DB_SEED:-false}" = "true" ] && [ ! -f "${DB_PATH}.seeded" ]; then
-  echo "Seeding demo database…"
-  if DATABASE_URL="$DATABASE_URL" node /app/node_modules/tsx/dist/cli.mjs /app/packages/database/prisma/seed.ts; then
-    touch "${DB_PATH}.seeded"
+should_seed=false
+seed_mode="${RUN_DB_SEED:-auto}"
+
+case "$seed_mode" in
+  false|0|no)
+    should_seed=false
+    ;;
+  true|1|yes)
+    if [ ! -f "$SEED_MARKER" ]; then
+      should_seed=true
+    fi
+    ;;
+  auto|"")
+    if [ ! -f "$SEED_MARKER" ] && [ -f "$EMPTY_CHECK" ] && [ -f "$TSX_BIN" ]; then
+      if DATABASE_URL="$DATABASE_URL" node "$TSX_BIN" "$EMPTY_CHECK"; then
+        should_seed=true
+      fi
+    fi
+    ;;
+  *)
+    echo "Unknown RUN_DB_SEED value: $seed_mode (expected auto, true, or false)"
+    exit 1
+    ;;
+esac
+
+if [ "$should_seed" = "true" ]; then
+  echo "Seeding demo database (first start)…"
+  if DATABASE_URL="$DATABASE_URL" node "$TSX_BIN" "$SEED_SCRIPT"; then
+    touch "$SEED_MARKER"
+    echo ""
+    echo "Demo world ready. Portal login: dm@uwe.local / uwe-dev"
+    echo "Studio: http://localhost:${STUDIO_PORT:-3000}"
+    echo "Portal: http://localhost:${PORTAL_PORT:-3001}"
+    echo ""
+  else
+    echo "Database seed failed — continuing without demo data"
   fi
 fi
 

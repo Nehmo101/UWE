@@ -14,39 +14,49 @@
 
 ---
 
-## Quick start (Docker)
+## Quick start (Docker — empfohlen)
+
+Der einfachste Weg: Docker installieren, Repository klonen, `.env` anlegen, starten.
 
 ```bash
+git clone https://github.com/nehmo101/uwe
+cd uwe
 cp .env.example .env
-# Set AUTH_SECRET in .env before production use
 docker compose up -d
 ```
 
-- **Studio (DM):** http://localhost:3000  
-- **Portal (Spieler):** http://localhost:3001  
+Beim **ersten Start** baut Docker die Images (kann einige Minuten dauern). Anschließend:
 
-**Production deployment:** see [docs/PRODUCTION.md](docs/PRODUCTION.md) (backup, updates, volumes, troubleshooting).
+| App | URL | Zweck |
+|-----|-----|-------|
+| **UWE Studio** (DM) | http://localhost:3000 | Welten bearbeiten |
+| **UWE Portal** (Spieler) | http://localhost:3001 | Wiki & Handouts |
 
-Optional demo data on first start (development only):
+**Demo-Login** (automatisch beim ersten Start): `dm@uwe.local` / `uwe-dev`  
+Weitere Demo-Spieler: siehe Container-Logs nach dem Seed (`docker compose logs studio`).
+
+Status prüfen:
 
 ```bash
-RUN_DB_SEED=true docker compose up -d
+docker compose ps
+curl http://localhost:3000/api/health
+curl http://localhost:3001/api/health
 ```
 
-Demo login (after seed): any seeded user with password `uwe-dev`.
+**Produktion:** `AUTH_SECRET` in `.env` setzen und `RUN_DB_SEED=false` — Details in [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
-Persistent data:
+Persistente Daten:
 
-| Path | Purpose |
-|------|---------|
-| Docker volume `uwe-database` | SQLite database |
-| `./data/uploads` | Uploaded assets |
-| `./data/backups` | Backup folder |
-| `./exports` | Static HTML exports |
+| Pfad / Volume | Inhalt |
+|---------------|--------|
+| Docker-Volume `uwe-database` | SQLite-Datenbank |
+| `./data/uploads` | Hochgeladene Assets |
+| `./data/backups` | Backup-Ordner |
+| `./exports` | Statische HTML-Exporte |
 
 ---
 
-## Local development
+## Alternative: Lokale Entwicklung (ohne Docker)
 
 ### Prerequisites
 
@@ -209,7 +219,7 @@ Copy `.env.example` to `.env`. Important variables:
 | `EXPORTS_DIR` | Static export output (Studio API) |
 | `BACKUPS_DIR` | Backup folder |
 | `AUTH_SECRET` | Session secret (set in production) |
-| `RUN_DB_SEED` | Seed demo world in Docker (`true`/`false`) |
+| `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
 
 ---
 

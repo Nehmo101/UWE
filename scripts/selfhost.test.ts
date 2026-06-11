@@ -24,6 +24,18 @@ describe("self-hosting setup", () => {
     assert.match(compose, /uploads/);
     assert.match(compose, /backups/);
     assert.match(compose, /exports/);
+    assert.match(compose, /RUN_DB_SEED.*auto/);
+  });
+
+  it("includes persistent data directories", () => {
+    assert.ok(fs.existsSync(path.join(root, "data/uploads/.gitkeep")));
+    assert.ok(fs.existsSync(path.join(root, "data/backups/.gitkeep")));
+    assert.ok(fs.existsSync(path.join(root, "exports/.gitkeep")));
+  });
+
+  it("documents auto seed in env example", () => {
+    const envExample = fs.readFileSync(path.join(root, ".env.example"), "utf8");
+    assert.match(envExample, /RUN_DB_SEED=auto/);
   });
 
   it("validates docker compose configuration when Docker is available", () => {

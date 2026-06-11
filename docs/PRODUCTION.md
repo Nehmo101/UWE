@@ -22,24 +22,29 @@ Anleitung für den ersten produktiven Betrieb von **UWE (Universeller Welten-Edi
 git clone <repository-url> uwe
 cd uwe
 cp .env.example .env
+docker compose up -d
 ```
 
-Bearbeiten Sie `.env` und setzen Sie mindestens:
+Beim ersten Start werden Images gebaut und — sofern die Datenbank leer ist — automatisch Demo-Inhalte angelegt (`RUN_DB_SEED=auto`, Standard in `.env.example`).
+
+| App | URL |
+|-----|-----|
+| UWE Studio | http://localhost:3000 |
+| UWE Portal | http://localhost:3001/login |
+
+Demo-Login nach erstem Start: `dm@uwe.local` / `uwe-dev`
+
+**Produktion:** Bearbeiten Sie `.env` vor dem Start:
 
 ```env
-AUTH_SECRET=<starkes-zufaelliges-geheimnis>
+AUTH_SECRET=<starkes-zufaelliges-geheimnis>   # openssl rand -base64 32
 RUN_DB_SEED=false
-```
-
-Start:
-
-```bash
-docker compose up -d
 ```
 
 Prüfen:
 
 ```bash
+docker compose ps
 curl http://localhost:3000/api/health
 curl http://localhost:3001/api/health
 ```
@@ -142,7 +147,7 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 | `UPLOADS_DIR` | Upload-Verzeichnis | Docker: `/app/data/uploads` |
 | `BACKUPS_DIR` | Backup-Verzeichnis | Docker: `/app/data/backups` |
 | `EXPORTS_DIR` | Export-Verzeichnis | Docker: `/app/exports` |
-| `RUN_DB_SEED` | Demo-Welt beim Start | `false` in Produktion |
+| `RUN_DB_SEED` | Demo-Welt beim Start | `auto` (Erststart), `false` in Produktion |
 | `STUDIO_PORT` / `PORTAL_PORT` | Host-Ports | Nach Bedarf anpassen |
 
 AI-Provider-Keys (`OPENAI_API_KEY`, etc.) sind optional und nur für UWE Studio relevant.

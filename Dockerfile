@@ -35,6 +35,7 @@ COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY scripts/docker-db-empty-check.ts /app/scripts/docker-db-empty-check.ts
 COPY scripts/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 EXPOSE 3000

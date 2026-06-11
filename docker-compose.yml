@@ -1,3 +1,5 @@
+name: uwe
+
 services:
   studio:
     build:
@@ -11,7 +13,9 @@ services:
       EXPORTS_DIR: /app/exports
       BACKUPS_DIR: /app/data/backups
       AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production}
-      RUN_DB_SEED: ${RUN_DB_SEED:-false}
+      RUN_DB_SEED: ${RUN_DB_SEED:-auto}
+      STUDIO_PORT: ${STUDIO_PORT:-3000}
+      PORTAL_PORT: ${PORTAL_PORT:-3001}
     volumes:
       - uwe-database:/data
       - ./data/uploads:/app/data/uploads
