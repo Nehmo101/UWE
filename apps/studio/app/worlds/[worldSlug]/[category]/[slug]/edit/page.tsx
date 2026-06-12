@@ -197,8 +197,14 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   <textarea name="content" defaultValue={block.content} rows={6} />
                 </label>
 
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                   <button type="submit" className="uwe-btn">Block speichern</button>
+                  <Link
+                    className="uwe-btn uwe-btn-ghost"
+                    href={`/worlds/${worldSlug}/labels/new?sourceRef=content_block:${block.id}`}
+                  >
+                    Aus Block Label erstellen
+                  </Link>
                 </div>
               </form>
             ))}

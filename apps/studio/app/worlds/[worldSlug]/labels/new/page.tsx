@@ -19,12 +19,12 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ sourceRef?: string }>;
+  searchParams: Promise<{ sourceRef?: string; includeDmOnly?: string }>;
 }
 
 export default async function StudioNewLabelPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { sourceRef: preselectedSource } = await searchParams;
+  const { sourceRef: preselectedSource, includeDmOnly } = await searchParams;
   const repo = getAppRepository();
   const labelService = createLabelService();
 
@@ -152,7 +152,11 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
               </fieldset>
 
               <label className="uwe-checkbox uwe-text-warning">
-                <input type="checkbox" name="includeDmOnly" />
+                <input
+                  type="checkbox"
+                  name="includeDmOnly"
+                  defaultChecked={includeDmOnly === "1"}
+                />
                 DM-only Inhalte bewusst einschließen
               </label>
 

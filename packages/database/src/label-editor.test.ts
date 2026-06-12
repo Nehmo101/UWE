@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createTestDatabaseUrl } from "./test-helpers";
-import { createWorld } from "./repository";
+import { createPage, createWorld } from "./repository";
 import { createPrismaClient } from "./client";
 import {
   applyAutoFitToContent,
@@ -19,7 +19,12 @@ import {
 } from "./label-safety";
 import { createLabelService, normalizeLabel } from "./label-service";
 import { createPrintListService } from "./label-print-list-service";
-import { renderLabelExportAsync, renderMultiLabelPdfAsync } from "./label-export";
+import {
+  renderLabelExportAsync,
+  renderLabelSvg,
+  renderMultiLabelPdfAsync,
+} from "./label-export";
+import { analyzeLabelExportWarnings } from "./label-export-warnings";
 
 describe("Label editor extensions", () => {
   let databaseUrl: string;
@@ -287,6 +292,115 @@ describe("Label editor extensions", () => {
 
     assert.equal(result.contentType, "application/pdf");
     assert.match(String(result.body).slice(0, 8), /%PDF/);
+  });
+
+  it("export warnings detect overflow and small font", () => {
+    const warnings = analyzeLabelExportWarnings(
+      {
+        title: "Warn",
+        text: "Gekürzt",
+        fitStatus: "overflow",
+        fitApplied: true,
+        elements: [
+          {
+            id: "t1",
+            type: "text",
+            x: 0.2,
+            y: 0.2,
+            width: 5,
+            height: 1,
+            zIndex: 1,
+            visible: true,
+            text: "Klein",
+            style: { fontSize: 6 },
+          },
+        ],
+      },
+      {
+        mode: "text_only",
+        truncateToPage: true,
+        truncateLongWords: true,
+        widthInches: 6,
+        heightInches: 4,
+      },
+    );
+
+    assert.ok(warnings.some((w) => w.code === "text_overflow"));
+    assert.ok(warnings.some((w) => w.code === "small_font"));
+  });
+
+  it("renders SVG export for labels", () => {
+    const svg = renderLabelSvg({
+      content: { title: "SVG", text: "Export", editorMode: "visual", elements: [] },
+      layoutSettings: {
+        mode: "text_only",
+        truncateToPage: true,
+        truncateLongWords: true,
+        widthInches: 6,
+        heightInches: 4,
+      },
+      title: "SVG",
+    });
+
+    assert.match(svg, /<svg/);
+  });
+
+  it("creates print list from room and children", async () => {
+    const world = await createWorld(
+      { name: "Raumwelt", slug: "raumwelt", description: "Test" },
+      databaseUrl,
+    );
+
+    const room = await createPage(
+      {
+        worldId: world.id,
+        title: "Krypta",
+        slug: "krypta",
+        type: "room",
+        visibility: "dm_only",
+        publishStatus: "draft",
+        contentBlocks: [
+          {
+            type: "rich_text",
+            sortOrder: 0,
+            visibility: "player_visible",
+            content: "Ein dunkler Raum.",
+          },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const encounter = await createPage(
+      {
+        worldId: world.id,
+        title: "Skelettwache",
+        slug: "skelettwache",
+        type: "encounter",
+        visibility: "dm_only",
+        publishStatus: "draft",
+        contentBlocks: [
+          {
+            type: "rich_text",
+            sortOrder: 0,
+            visibility: "player_visible",
+            content: "Zwei Skelette.",
+          },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const list = await printLists.createFromRoomAndChildren(
+      world.id,
+      "Raumliste",
+      room.id,
+      [encounter.id],
+      { forNextSession: true },
+    );
+
+    assert.equal(list.items.length, 2);
+    assert.equal(list.forNextSession, true);
   });
 
   it("player label does not receive DM-only elements after strip", () => {

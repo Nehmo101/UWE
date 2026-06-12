@@ -24,6 +24,8 @@ import {
   unlinkPageFromSessionAction,
   updateGameSessionAction,
 } from "../../../../session-actions";
+import { preparePrintListFromSessionAction } from "@/app/label-actions";
+import { pageLabelNewHref } from "@/src/lib/label-links";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
@@ -181,6 +183,26 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           </form>
 
           <section style={{ marginTop: "2rem" }}>
+            <h2 style={{ fontSize: "1rem", color: "#94a3b8" }}>Labels für nächste Session</h2>
+            {session.linkedPages.length > 0 ? (
+              <form action={preparePrintListFromSessionAction} className="uwe-form-inline">
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                <input type="hidden" name="sessionId" value={sessionId} />
+                <input type="hidden" name="name" value={`${session.title} — Handouts`} />
+                <label className="uwe-checkbox">
+                  <input type="checkbox" name="forNextSession" defaultChecked />
+                  Für nächste Session markieren
+                </label>
+                <button type="submit" className="uwe-btn uwe-btn-primary">
+                  Druckliste aus Session vorbereiten
+                </button>
+              </form>
+            ) : (
+              <p className="uwe-empty">Verknüpfe Seiten, um Labels vorzubereiten.</p>
+            )}
+          </section>
+
+          <section style={{ marginTop: "2rem" }}>
             <h2 style={{ fontSize: "1rem", color: "#94a3b8" }}>Verknüpfte Seiten</h2>
             {session.linkedPages.length > 0 ? (
               <ul className="uwe-linked-list">
@@ -190,6 +212,12 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                       {page.title}
                     </Link>
                     <PageTypeBadge type={page.type} />
+                    <Link
+                      className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                      href={pageLabelNewHref(worldSlug, page.type, page.id)}
+                    >
+                      Label
+                    </Link>
                     <form action={unlinkPageFromSessionAction} style={{ display: "inline" }}>
                       <input type="hidden" name="worldSlug" value={worldSlug} />
                       <input type="hidden" name="sessionId" value={sessionId} />

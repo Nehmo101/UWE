@@ -15,6 +15,7 @@ import {
   summarizePrintList,
 } from "@uwe/database/server";
 import { worldSidebar } from "../../page";
+import { PrintListEditor } from "@/components/PrintListEditor";
 import {
   deletePrintListAction,
   setPrintListStatusAction,
@@ -40,10 +41,17 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
   if (!list || list.worldId !== world.id) notFound();
 
   const summary = summarizePrintList(list);
-  const copiesJson = JSON.stringify(
-    Object.fromEntries(list.items.map((item) => [item.labelId, item.copies])),
-  );
-  const labelOrder = list.items.map((item) => item.labelId).join(",");
+  const editorItems = list.items.map((item) => {
+    const parsed = normalizeLabel(item.label);
+    return {
+      labelId: item.labelId,
+      title: item.label.title,
+      copies: item.copies,
+      containsDmOnly: parsed.content.containsDmOnly,
+      previewHref: `/worlds/${worldSlug}/labels/${item.labelId}/preview`,
+      labelHref: `/worlds/${worldSlug}/labels/${item.labelId}`,
+    };
+  });
 
   return (
     <AppShell
@@ -78,6 +86,12 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
                 >
                   PDF exportieren
                 </a>
+                <a
+                  href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}
+                  className="uwe-btn"
+                >
+                  PNG exportieren
+                </a>
               </>
             }
           />
@@ -102,11 +116,12 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
 
           <section className="uwe-panel">
             <h2>Druckliste bearbeiten</h2>
+            <p className="uwe-table-sub">
+              Reihenfolge per Drag &amp; Drop ändern, Kopien direkt editieren, dann speichern.
+            </p>
             <form action={updatePrintListAction} className="uwe-form-grid">
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="printListId" value={printListId} />
-              <input type="hidden" name="labelOrder" value={labelOrder} />
-              <input type="hidden" name="copiesJson" value={copiesJson} />
 
               <label>
                 Name
@@ -121,40 +136,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
                 Für nächste Session vorbereitet
               </label>
 
-              <table className="uwe-page-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Label</th>
-                    <th>Kopien</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.items.map((item, index) => {
-                    const parsed = normalizeLabel(item.label);
-                    return (
-                      <tr key={item.id}>
-                        <td>{index + 1}</td>
-                        <td>
-                          <Link href={`/worlds/${worldSlug}/labels/${item.labelId}`}>
-                            {item.label.title}
-                          </Link>
-                          {parsed.content.containsDmOnly && (
-                            <p className="uwe-table-sub uwe-text-warning">DM-only</p>
-                          )}
-                        </td>
-                        <td>{item.copies}</td>
-                        <td>
-                          <Link href={`/worlds/${worldSlug}/labels/${item.labelId}/preview`}>
-                            Vorschau
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <PrintListEditor items={editorItems} />
 
               <div className="uwe-form-actions">
                 <button type="submit" className="uwe-btn uwe-btn-primary">Speichern</button>
@@ -193,7 +175,16 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
                 PDF exportieren
               </a>
             </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}>
+                PNG (ZIP) — erste Seite
+              </a>
+            </li>
           </ul>
+          <p className="uwe-table-sub" style={{ marginTop: "0.75rem" }}>
+            Bei PDF-Fehlern liefert der Export Print-HTML mit Header{" "}
+            <code>X-UWE-Export-Fallback: 1</code>.
+          </p>
         </SidebarSection>
       }
     />

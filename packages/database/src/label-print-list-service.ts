@@ -187,14 +187,56 @@ export class PrintListService {
     });
   }
 
+  async createFromRoomAndChildren(
+    worldId: string,
+    name: string,
+    roomPageId: string,
+    childPageIds: string[],
+    options: { forNextSession?: boolean; campaignId?: string | null } = {},
+  ): Promise<PrintListWithItems> {
+    const { LabelService } = await import("./label-service");
+    const labelService = new LabelService(this.db);
+    const template = await labelService.getDefaultTemplate();
+
+    const labelIds: { labelId: string; copies: number }[] = [];
+
+    const roomLabel = await labelService.createFromSource({
+      worldId,
+      campaignId: options.campaignId ?? null,
+      sourceType: "dungeon_room",
+      sourceId: roomPageId,
+      templateId: template.id,
+    });
+    labelIds.push({ labelId: roomLabel.id, copies: 1 });
+
+    for (const pageId of childPageIds) {
+      const label = await labelService.createFromSource({
+        worldId,
+        campaignId: options.campaignId ?? null,
+        sourceType: "page",
+        sourceId: pageId,
+        templateId: template.id,
+      });
+      labelIds.push({ labelId: label.id, copies: 1 });
+    }
+
+    return this.create({
+      worldId,
+      campaignId: options.campaignId ?? null,
+      name,
+      forNextSession: options.forNextSession,
+      labelIds,
+    });
+  }
+
   async createFromPageIds(
     worldId: string,
     name: string,
     pageIds: string[],
     options: { forNextSession?: boolean; campaignId?: string | null } = {},
   ): Promise<PrintListWithItems> {
-    const { createLabelService } = await import("./label-service");
-    const labelService = createLabelService();
+    const { LabelService } = await import("./label-service");
+    const labelService = new LabelService(this.db);
     const template = await labelService.getDefaultTemplate();
 
     const labelIds: { labelId: string; copies: number }[] = [];

@@ -8,6 +8,8 @@ import {
   renderMultiLabelPdfAsync,
   stripDmOnlyForPlayer,
 } from "@uwe/database/server";
+import { logPrintListExportActivity } from "@/app/label-actions";
+import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
 
 interface Props {
   params: Promise<{ worldSlug: string; printListId: string }>;
@@ -81,10 +83,30 @@ export async function GET(request: Request, { params }: Props) {
 
   const safeName = list.name.replace(/[^\w\-]+/g, "_").slice(0, 60) || "druckliste";
 
+  if (format === "png") {
+    const first = exportOptions[0];
+    if (!first) {
+      return NextResponse.json({ error: "Druckliste ist leer" }, { status: 400 });
+    }
+    const exported = await renderLabelPngExportAsync(first);
+    const body =
+      typeof exported.body === "string" ? exported.body : Buffer.from(exported.body);
+    await logPrintListExportActivity(worldSlug, printListId, list.name, "png");
+    return new NextResponse(body, {
+      headers: {
+        "Content-Type": exported.contentType,
+        "Content-Disposition": `attachment; filename="${safeName}_01.${exported.filename.split(".").pop()}"`,
+        ...(exported.fallback ? { "X-UWE-Export-Fallback": "1" } : {}),
+        "X-UWE-Export-Note": "PNG enthält das erste Label — für alle Labels PDF/HTML nutzen.",
+      },
+    });
+  }
+
   if (format === "pdf") {
     try {
       const pdf = await renderMultiLabelPdfAsync(exportOptions);
       await printListService.markStatus(printListId, "exported");
+      await logPrintListExportActivity(worldSlug, printListId, list.name, "pdf");
       return new NextResponse(Buffer.from(pdf), {
         headers: {
           "Content-Type": "application/pdf",
@@ -93,6 +115,7 @@ export async function GET(request: Request, { params }: Props) {
       });
     } catch (error) {
       const html = renderMultiLabelHtml(exportOptions, true);
+      await logPrintListExportActivity(worldSlug, printListId, list.name, "pdf-fallback");
       return new NextResponse(html, {
         status: 422,
         headers: {
@@ -109,6 +132,8 @@ export async function GET(request: Request, { params }: Props) {
   if (format === "print") {
     await printListService.markStatus(printListId, "printed");
   }
+
+  await logPrintListExportActivity(worldSlug, printListId, list.name, format);
 
   return new NextResponse(html, {
     headers: {

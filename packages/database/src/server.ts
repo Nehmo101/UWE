@@ -405,11 +405,17 @@ export {
   renderLabelExport,
   renderLabelExportAsync,
   renderLabelPdfAsync,
+  renderLabelSvg,
   renderMultiLabelHtml,
   renderMultiLabelPdfAsync,
 } from "./label-export";
 
 export type { LabelExportOptions, LabelExportResult, LabelExportRenderOptions } from "./label-export";
+
+export {
+  analyzeLabelExportWarnings,
+  type LabelExportWarning,
+} from "./label-export-warnings";
 
 export {
   createShareLinkService,

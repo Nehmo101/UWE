@@ -196,6 +196,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                 <th>Größe</th>
                 <th>Seiten</th>
                 <th>Vorschau</th>
+                <th>Label</th>
               </tr>
             </thead>
             <tbody>
@@ -237,6 +238,18 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       >
                         Download
                       </a>
+                    )}
+                  </td>
+                  <td>
+                    {asset.mimeType?.startsWith("image/") ? (
+                      <a
+                        className="uwe-link"
+                        href={`/worlds/${worldSlug}/labels/new?sourceRef=asset:${asset.id}`}
+                      >
+                        Als Label
+                      </a>
+                    ) : (
+                      "—"
                     )}
                   </td>
                 </tr>

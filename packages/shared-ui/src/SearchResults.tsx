@@ -33,12 +33,15 @@ export function SearchResultsList({
   showWorld = false,
   showVisibility = false,
   showPublish = false,
+  showLabelActions = false,
 }: {
   results: SearchResultViewModel[];
   query?: string;
   showWorld?: boolean;
   showVisibility?: boolean;
   showPublish?: boolean;
+  /** Studio: optional „Label erstellen“ link per result */
+  showLabelActions?: boolean;
 }) {
   if (!query?.trim()) {
     return (
@@ -99,6 +102,17 @@ export function SearchResultsList({
               {result.matchedFields.length > 0 && (
                 <p className="uwe-search-result-fields">
                   Treffer in: {result.matchedFields.map((field) => MATCH_FIELD_LABELS[field] ?? field).join(", ")}
+                </p>
+              )}
+
+              {showLabelActions && (
+                <p className="uwe-search-result-actions">
+                  <a
+                    className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                    href={`/worlds/${result.worldSlug}/labels/new?sourceRef=${result.type === "room" ? "dungeon_room" : "page"}:${result.pageId}`}
+                  >
+                    Label erstellen
+                  </a>
                 </p>
               )}
             </article>

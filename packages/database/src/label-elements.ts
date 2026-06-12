@@ -21,6 +21,12 @@ export interface LabelElementStyle {
   borderColor?: string;
   borderRadius?: number;
   opacity?: number;
+  /** Image crop: focus X 0–100 % */
+  cropFocusX?: number;
+  /** Image crop: focus Y 0–100 % */
+  cropFocusY?: number;
+  /** Image crop: zoom 100 = full frame */
+  cropZoom?: number;
 }
 
 export interface LabelElement {

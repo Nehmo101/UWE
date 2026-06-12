@@ -8,6 +8,7 @@ import {
   TopBarBrand,
 } from "@uwe/shared-ui";
 import {
+  analyzeLabelExportWarnings,
   analyzeLabelSafety,
   createLabelService,
   createPrintListService,
@@ -16,6 +17,7 @@ import {
   LABEL_SOURCE_TYPE_LABELS,
   normalizeLabel,
 } from "@uwe/database/server";
+import { isLabelAiShortenAvailable } from "@/src/lib/label-ai-shorten";
 import { worldSidebar } from "../page";
 import { LabelEditWorkspace } from "@/components/LabelEditWorkspace";
 import {
@@ -55,6 +57,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
   const lists = await createPrintListService().listByWorld(worldSlug);
   const parsed = normalizeLabel(label);
   const safety = analyzeLabelSafety(parsed.content, parsed.content.elements);
+  const exportWarnings = analyzeLabelExportWarnings(parsed.content, parsed.layoutSettings);
   const assets = await repo.listAssetsByWorld(worldSlug);
   const imageAssets = assets
     .filter((a) => a.mimeType?.startsWith("image/"))
@@ -119,6 +122,12 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           {safety.warnings.map((warning) => (
             <p key={warning.code} className="uwe-flash uwe-flash-warning">
               {warning.message}
+            </p>
+          ))}
+
+          {exportWarnings.map((warning) => (
+            <p key={`export-${warning.code}-${warning.message}`} className="uwe-flash uwe-flash-warning">
+              Export: {warning.message}
             </p>
           ))}
 
@@ -200,17 +209,28 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
                   />
                   Safe Area anzeigen
                 </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="showCropMarks"
+                    defaultChecked={parsed.layoutSettings.showCropMarks ?? false}
+                  />
+                  Schnittmarken im Export
+                </label>
               </fieldset>
 
               <LabelEditWorkspace
                 initialElements={parsed.content.elements ?? []}
                 imageAssets={imageAssets}
+                worldSlug={worldSlug}
                 originalText={parsed.content.originalText ?? parsed.content.text}
+                currentText={parsed.content.text ?? ""}
                 fitStatus={parsed.content.fitStatus ?? "fits"}
                 fitApplied={parsed.content.fitApplied}
                 snapToGrid={parsed.layoutSettings.snapToGrid ?? true}
                 gridSize={parsed.layoutSettings.gridSize ?? 0.1}
                 showSafeArea={parsed.layoutSettings.showSafeArea ?? true}
+                aiAvailable={isLabelAiShortenAvailable()}
               />
 
               <div className="uwe-form-actions">
@@ -284,11 +304,21 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
                 </a>
               </li>
               <li>
+                <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=png`}>
+                  PNG exportieren
+                </a>
+              </li>
+              <li>
                 <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`} target="_blank">
                   Druckvorschau
                 </a>
               </li>
             </ul>
+            <p className="uwe-table-sub" style={{ marginTop: "0.75rem" }}>
+              PDF-Fallback: Bei Fehlern liefert der Server Print-HTML mit Header{" "}
+              <code>X-UWE-Export-Fallback: 1</code> — Grund steht in{" "}
+              <code>X-UWE-Export-Fallback-Reason</code>.
+            </p>
           </SidebarSection>
           <SidebarSection title="Druckstatus">
             <form action={setLabelPrintStatusAction} className="uwe-form-grid">

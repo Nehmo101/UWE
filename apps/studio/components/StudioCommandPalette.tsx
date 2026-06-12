@@ -46,9 +46,24 @@ export function StudioCommandPalette({ worlds }: StudioCommandPaletteProps) {
         { id: "world-soundboard", label: "Soundboard öffnen", href: `${base}/soundboard`, group, keywords: ["musik", "audio"] },
         { id: "world-notes", label: "Spielernotizen öffnen", href: `${base}/notes`, group, keywords: ["kommentare", "review"] },
         { id: "world-dungeons", label: "Dungeons öffnen", href: `${base}/dungeons`, group, keywords: ["räume", "cockpit"] },
+        { id: "world-labels", label: "Labels öffnen", href: `${base}/labels`, group, keywords: ["druck", "handout", "6x4", "label"] },
+        { id: "new-label", label: "Neues Label erstellen", href: `${base}/labels/new`, group, keywords: ["create", "label", "handout"] },
         { id: "world-import", label: "Import öffnen", href: `${base}/import`, group, keywords: ["knoteforge"] },
         { id: "world-backup", label: "Welt-Backup öffnen", href: `${base}/backup`, group, keywords: ["sicherung"] },
       );
+
+      const pageMatch = pathname?.match(
+        /^\/worlds\/[^/]+\/(?:pages|npcs|orte|fraktionen|quests|handouts|items|notes|encounters|secrets|traps|puzzles|loot|rooms)\/([^/]+)/,
+      );
+      if (pageMatch) {
+        list.push({
+          id: "new-label-from-url",
+          label: "Label aus aktueller Seite",
+          href: `${base}/labels/new`,
+          group,
+          keywords: ["label", "quelle"],
+        });
+      }
     }
 
     list.push(
@@ -71,7 +86,7 @@ export function StudioCommandPalette({ worlds }: StudioCommandPaletteProps) {
     }
 
     return list;
-  }, [worlds, worldSlug]);
+  }, [worlds, worldSlug, pathname]);
 
   return (
     <CommandPalette

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   AppShell,
@@ -12,6 +13,9 @@ import {
   TopBarBrand,
   WikiContent,
 } from "@uwe/shared-ui";
+import { DungeonEntityList } from "@/components/DungeonEntityList";
+import { preparePrintListFromRoomAction } from "@/app/label-actions";
+import { labelNewHref } from "@/src/lib/label-links";
 import {
   buildWorldWikiIndex,
   createDungeonCockpitService,
@@ -33,36 +37,6 @@ interface Props {
     roomSlug: string;
   }>;
   searchParams: Promise<{ created?: string; saved?: string; added?: string; assetLinked?: string }>;
-}
-
-function EntityList({
-  title,
-  items,
-}: {
-  title: string;
-  items: Array<{ id: string; title: string; prepStatus: import("@uwe/database/enums").DungeonPrepStatus | null }>;
-}) {
-  if (items.length === 0) {
-    return (
-      <section className="uwe-section">
-        <h3>{title}</h3>
-        <p className="uwe-empty">Keine Einträge.</p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="uwe-section">
-      <h3>{title}</h3>
-      <ul>
-        {items.map((item) => (
-          <li key={item.id}>
-            {item.title} — <DungeonPrepStatusBadge status={item.prepStatus} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 export default async function StudioDungeonRoomPage({ params, searchParams }: Props) {
@@ -91,6 +65,15 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   const readAloud = cockpit.sections.readAloud.map((b) => b.content).join("\n\n");
   const playerDescription = cockpit.sections.playerDescription.map((b) => b.content).join("\n\n");
   const dmNotes = cockpit.sections.dmNotes.map((b) => b.content).join("\n\n");
+  const childPageIds = [
+    ...cockpit.encounters,
+    ...cockpit.traps,
+    ...cockpit.puzzles,
+    ...cockpit.loot,
+    ...cockpit.secrets,
+    ...cockpit.handouts,
+    ...cockpit.maps,
+  ].map((item) => item.id);
 
   return (
     <AppShell
@@ -133,6 +116,26 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
             title={cockpit.room.title}
             summary={`${cockpit.level.title} · ${cockpit.dungeon.title}`}
             meta={<DungeonPrepStatusBadge status={cockpit.room.prepStatus} />}
+            actions={
+              <>
+                <Link
+                  className="uwe-btn"
+                  href={labelNewHref(worldSlug, "dungeon_room", cockpit.room.id)}
+                >
+                  Label erstellen
+                </Link>
+                <form action={preparePrintListFromRoomAction} style={{ display: "inline" }}>
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="roomPageId" value={cockpit.room.id} />
+                  <input type="hidden" name="childPageIds" value={childPageIds.join(",")} />
+                  <input type="hidden" name="name" value={`${cockpit.room.title} — Druckliste`} />
+                  <input type="hidden" name="forNextSession" value="on" />
+                  <button type="submit" className="uwe-btn uwe-btn-primary">
+                    Druckliste vorbereiten
+                  </button>
+                </form>
+              </>
+            }
           />
 
           <form action={updateRoomContentAction} className="uwe-edit-form">
@@ -181,13 +184,18 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
             <WikiContent html={cockpit.html} />
           </section>
 
-          <EntityList title="Encounters" items={cockpit.encounters} />
-          <EntityList title="Fallen" items={cockpit.traps} />
-          <EntityList title="Rätsel" items={cockpit.puzzles} />
-          <EntityList title="Loot" items={cockpit.loot} />
-          <EntityList title="Geheimnisse" items={cockpit.secrets} />
-          <EntityList title="Handouts" items={cockpit.handouts} />
-          <EntityList title="Karten" items={cockpit.maps} />
+          <DungeonEntityList title="Encounters" worldSlug={worldSlug} items={cockpit.encounters} />
+          <DungeonEntityList title="Fallen" worldSlug={worldSlug} items={cockpit.traps} />
+          <DungeonEntityList title="Rätsel" worldSlug={worldSlug} items={cockpit.puzzles} />
+          <DungeonEntityList title="Loot" worldSlug={worldSlug} items={cockpit.loot} />
+          <DungeonEntityList
+            title="Geheimnisse"
+            worldSlug={worldSlug}
+            items={cockpit.secrets}
+            isSecretSection
+          />
+          <DungeonEntityList title="Handouts" worldSlug={worldSlug} items={cockpit.handouts} />
+          <DungeonEntityList title="Karten" worldSlug={worldSlug} items={cockpit.maps} />
 
           <section className="uwe-section">
             <h2>Neuer Raum-Inhalt</h2>
@@ -233,7 +241,15 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
             {cockpit.assets.length > 0 && (
               <ul>
                 {cockpit.assets.map((asset) => (
-                  <li key={asset.id}>{asset.title} ({asset.type})</li>
+                  <li key={asset.id}>
+                    {asset.title} ({asset.type}){" "}
+                    <Link
+                      className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                      href={labelNewHref(worldSlug, "asset", asset.id)}
+                    >
+                      Bild als Label
+                    </Link>
+                  </li>
                 ))}
               </ul>
             )}
@@ -272,6 +288,23 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
               }))}
               showVisibility
             />
+            <ul className="uwe-linked-list" style={{ marginTop: "0.75rem" }}>
+              {[
+                ...cockpit.sections.readAloud,
+                ...cockpit.sections.playerDescription,
+                ...cockpit.sections.dmNotes,
+                ...cockpit.sections.otherBlocks,
+              ].map((block) => (
+                <li key={`label-${block.id}`}>
+                  <Link
+                    className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                    href={labelNewHref(worldSlug, "content_block", block.id)}
+                  >
+                    Block → Label ({block.type})
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
         </>
       }

@@ -191,6 +191,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
                 results={searchResults}
                 query={q}
                 showVisibility
+                showLabelActions
               />
             </>
           ) : pages.length === 0 ? (

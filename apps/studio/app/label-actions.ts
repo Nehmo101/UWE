@@ -46,13 +46,17 @@ function parseElementsJson(value: FormDataEntryValue | null): LabelElement[] {
   }
 }
 
+type ActivityTargetType = "label" | "print_list";
+
 async function logLabelActivity(
   worldSlug: string,
   worldId: string,
   action: "content_created" | "content_updated" | "export_executed",
-  labelId: string,
+  targetType: ActivityTargetType,
+  targetId: string,
   title: string,
   summary: string,
+  targetHref: string,
 ) {
   try {
     const { createPrismaClient } = await import("@uwe/database/server");
@@ -62,10 +66,10 @@ async function logLabelActivity(
         worldId,
         worldSlug,
         action,
-        targetType: "label",
-        targetId: labelId,
+        targetType,
+        targetId,
         targetLabel: title,
-        targetHref: `/worlds/${worldSlug}/labels/${labelId}`,
+        targetHref,
         summary,
       },
     });
@@ -110,7 +114,16 @@ export async function createLabelFromSourceAction(formData: FormData) {
     },
   });
 
-  await logLabelActivity(worldSlug, world.id, "content_created", label.id, label.title, "Label erstellt");
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "label",
+    label.id,
+    label.title,
+    "Label erstellt",
+    `/worlds/${worldSlug}/labels/${label.id}`,
+  );
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
   redirect(`/worlds/${worldSlug}/labels/${label.id}?created=1`);
@@ -143,7 +156,16 @@ export async function createManualLabelAction(formData: FormData) {
     },
   });
 
-  await logLabelActivity(worldSlug, world.id, "content_created", label.id, label.title, "Manuelles Label erstellt");
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "label",
+    label.id,
+    label.title,
+    "Manuelles Label erstellt",
+    `/worlds/${worldSlug}/labels/${label.id}`,
+  );
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
   redirect(`/worlds/${worldSlug}/labels/${label.id}?created=1`);
@@ -186,6 +208,7 @@ export async function updateLabelAction(formData: FormData) {
     heightInches: 4,
     snapToGrid: formData.get("snapToGrid") === "on",
     showSafeArea: formData.get("showSafeArea") === "on",
+    showCropMarks: formData.get("showCropMarks") === "on",
     fitMode: (String(formData.get("fitMode") || "normal") as "conservative" | "normal" | "aggressive"),
   };
 
@@ -193,6 +216,27 @@ export async function updateLabelAction(formData: FormData) {
     content = applyAutoFitToContent(content, layoutSettings, elements);
   } else if (action === "restore_original") {
     content = restoreOriginalText(content);
+  } else if (action === "ai_shorten") {
+    const sourceText = content.originalText || content.text || "";
+    const { tryAiShortenLabelText } = await import("@/src/lib/label-ai-shorten");
+    const shortened = await tryAiShortenLabelText(sourceText);
+    if (shortened) {
+      content = {
+        ...content,
+        text: shortened,
+        fitApplied: true,
+        fitStatus: "tight",
+      };
+      if (elements.length > 0) {
+        content = syncContentFromElements(content, elements.map((el) =>
+          el.type === "text" || el.type === "title"
+            ? { ...el, text: shortened }
+            : el,
+        ));
+      }
+    } else {
+      content = applyAutoFitToContent(content, layoutSettings, elements);
+    }
   }
 
   await labels().updateLabel(labelId, {
@@ -202,7 +246,16 @@ export async function updateLabelAction(formData: FormData) {
     layoutSettings,
   });
 
-  await logLabelActivity(worldSlug, world.id, "content_updated", labelId, String(formData.get("title")), "Label geändert");
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_updated",
+    "label",
+    labelId,
+    String(formData.get("title")),
+    action === "ai_shorten" ? "Label per KI gekürzt" : "Label geändert",
+    `/worlds/${worldSlug}/labels/${labelId}`,
+  );
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
   revalidatePath(`/worlds/${worldSlug}/labels/${labelId}`);
@@ -299,6 +352,112 @@ export async function createPrintListAction(formData: FormData) {
     forNextSession: formData.get("forNextSession") === "on",
   });
 
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "print_list",
+    list.id,
+    list.name,
+    "Druckliste erstellt",
+    `/worlds/${worldSlug}/labels/print-lists/${list.id}`,
+  );
+
+  revalidatePath(`/worlds/${worldSlug}/labels`);
+  redirect(`/worlds/${worldSlug}/labels/print-lists/${list.id}?created=1`);
+}
+
+export async function preparePrintListFromSessionAction(formData: FormData) {
+  const worldSlug = String(formData.get("worldSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) throw new Error("World not found");
+
+  const session = await repo().getGameSessionById(sessionId);
+  if (!session || session.worldId !== world.id) throw new Error("Session not found");
+
+  const pageIds = session.linkedPages.map((page) => page.id);
+  if (pageIds.length === 0) throw new Error("Keine verknüpften Seiten");
+
+  const list = await printLists().createFromPageIds(
+    world.id,
+    String(formData.get("name") || `Session: ${session.title}`),
+    pageIds,
+    { forNextSession: formData.get("forNextSession") === "on" },
+  );
+
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "print_list",
+    list.id,
+    list.name,
+    "Druckliste aus Session vorbereitet",
+    `/worlds/${worldSlug}/labels/print-lists/${list.id}`,
+  );
+
+  revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
+  redirect(`/worlds/${worldSlug}/labels/print-lists/${list.id}?created=1`);
+}
+
+export async function preparePrintListFromRoomAction(formData: FormData) {
+  const worldSlug = String(formData.get("worldSlug"));
+  const roomPageId = String(formData.get("roomPageId"));
+  const childPageIds = String(formData.get("childPageIds") || "")
+    .split(",")
+    .filter(Boolean);
+
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) throw new Error("World not found");
+
+  const list = await printLists().createFromRoomAndChildren(
+    world.id,
+    String(formData.get("name") || "Raum-Druckliste"),
+    roomPageId,
+    childPageIds,
+    { forNextSession: formData.get("forNextSession") === "on" },
+  );
+
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "print_list",
+    list.id,
+    list.name,
+    "Druckliste aus Dungeon-Raum vorbereitet",
+    `/worlds/${worldSlug}/labels/print-lists/${list.id}`,
+  );
+
+  revalidatePath(`/worlds/${worldSlug}/labels`);
+  redirect(`/worlds/${worldSlug}/labels/print-lists/${list.id}?created=1`);
+}
+
+export async function preparePrintListFromPageAction(formData: FormData) {
+  const worldSlug = String(formData.get("worldSlug"));
+  const pageId = String(formData.get("pageId"));
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) throw new Error("World not found");
+
+  const list = await printLists().createFromPageIds(
+    world.id,
+    String(formData.get("name") || "Seiten-Druckliste"),
+    [pageId],
+    { forNextSession: formData.get("forNextSession") === "on" },
+  );
+
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_created",
+    "print_list",
+    list.id,
+    list.name,
+    "Druckliste aus Seite vorbereitet",
+    `/worlds/${worldSlug}/labels/print-lists/${list.id}`,
+  );
+
   revalidatePath(`/worlds/${worldSlug}/labels`);
   redirect(`/worlds/${worldSlug}/labels/print-lists/${list.id}?created=1`);
 }
@@ -319,6 +478,8 @@ export async function addLabelToPrintListAction(formData: FormData) {
 export async function updatePrintListAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) throw new Error("World not found");
 
   const labelOrder = String(formData.get("labelOrder") || "");
   if (labelOrder) {
@@ -343,6 +504,17 @@ export async function updatePrintListAction(formData: FormData) {
       : undefined,
   });
 
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "content_updated",
+    "print_list",
+    printListId,
+    String(formData.get("name") || "Druckliste"),
+    "Druckliste geändert",
+    `/worlds/${worldSlug}/labels/print-lists/${printListId}`,
+  );
+
   revalidatePath(`/worlds/${worldSlug}/labels/print-lists/${printListId}`);
   redirect(`/worlds/${worldSlug}/labels/print-lists/${printListId}?saved=1`);
 }
@@ -354,6 +526,21 @@ export async function setPrintListStatusAction(formData: FormData) {
 
   await printLists().markStatus(printListId, status);
 
+  const world = await repo().getWorldBySlug(worldSlug);
+  const list = await printLists().getById(printListId);
+  if (world && list) {
+    await logLabelActivity(
+      worldSlug,
+      world.id,
+      status === "printed" ? "export_executed" : "content_updated",
+      "print_list",
+      printListId,
+      list.name,
+      status === "printed" ? "Druckliste gedruckt" : `Druckliste-Status: ${status}`,
+      `/worlds/${worldSlug}/labels/print-lists/${printListId}`,
+    );
+  }
+
   revalidatePath(`/worlds/${worldSlug}/labels`);
   revalidatePath(`/worlds/${worldSlug}/labels/print-lists/${printListId}`);
   redirect(`/worlds/${worldSlug}/labels/print-lists/${printListId}?status=${status}`);
@@ -363,10 +550,68 @@ export async function deletePrintListAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
 
+  const world = await repo().getWorldBySlug(worldSlug);
+  const list = await printLists().getById(printListId);
+
   await printLists().delete(printListId);
+
+  if (world && list) {
+    await logLabelActivity(
+      worldSlug,
+      world.id,
+      "content_updated",
+      "print_list",
+      printListId,
+      list.name,
+      "Druckliste gelöscht",
+      `/worlds/${worldSlug}/labels?tab=print-lists`,
+    );
+  }
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
   redirect(`/worlds/${worldSlug}/labels?tab=print-lists&deleted=1`);
+}
+
+export async function logLabelExportActivity(
+  worldSlug: string,
+  labelId: string,
+  title: string,
+  format: string,
+) {
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) return;
+
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "export_executed",
+    "label",
+    labelId,
+    title,
+    `Label exportiert (${format})`,
+    `/worlds/${worldSlug}/labels/${labelId}`,
+  );
+}
+
+export async function logPrintListExportActivity(
+  worldSlug: string,
+  printListId: string,
+  name: string,
+  format: string,
+) {
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) return;
+
+  await logLabelActivity(
+    worldSlug,
+    world.id,
+    "export_executed",
+    "print_list",
+    printListId,
+    name,
+    `Druckliste exportiert (${format})`,
+    `/worlds/${worldSlug}/labels/print-lists/${printListId}`,
+  );
 }
 
 export async function setLabelPrintStatusAction(formData: FormData) {

@@ -91,6 +91,7 @@ export interface LabelEditorAsset {
 interface Props {
   initialElements: LabelElement[];
   imageAssets: LabelEditorAsset[];
+  worldSlug?: string;
   snapToGrid?: boolean;
   gridSize?: number;
   showSafeArea?: boolean;
@@ -106,12 +107,15 @@ function snap(value: number, grid: number): number {
 export function LabelEditor({
   initialElements,
   imageAssets,
+  worldSlug,
   snapToGrid = true,
   gridSize = 0.1,
   showSafeArea = true,
   onChange,
   hiddenInputName = "elementsJson",
 }: Props) {
+  const [localAssets, setLocalAssets] = useState(imageAssets);
+  const [uploading, setUploading] = useState(false);
   const [state, dispatch] = useReducer(editorReducer, {
     elements: initialElements,
     selectedId: null,
@@ -253,8 +257,44 @@ export function LabelEditor({
     dispatch({ type: "select", id });
   };
 
+  useEffect(() => {
+    setLocalAssets(imageAssets);
+  }, [imageAssets]);
+
   const assetUrl = (assetId: string | null | undefined) =>
-    imageAssets.find((a) => a.id === assetId)?.url ?? null;
+    localAssets.find((a) => a.id === assetId)?.url ?? null;
+
+  const uploadImage = async (file: File) => {
+    if (!worldSlug || !selected || selected.type !== "image") return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("title", file.name);
+      formData.set("visibility", "player_visible");
+      const response = await fetch(`/api/worlds/${worldSlug}/assets/upload`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Upload fehlgeschlagen");
+      const asset = (await response.json()) as { id: string; title: string };
+      const entry: LabelEditorAsset = {
+        id: asset.id,
+        title: asset.title,
+        url: `/api/assets/${asset.id}/file`,
+        visibility: "player_visible",
+      };
+      setLocalAssets((current) => [...current, entry]);
+      dispatch({
+        type: "update_element",
+        id: selected.id,
+        patch: { imageAssetId: asset.id },
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="uwe-label-editor">
@@ -378,7 +418,22 @@ export function LabelEditor({
                 >
                   {element.type === "image" && imgUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl} alt={element.imageAlt ?? ""} draggable={false} />
+                    <img
+                      src={imgUrl}
+                      alt={element.imageAlt ?? ""}
+                      draggable={false}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: (element.style?.cropZoom ?? 100) > 100 ? "cover" : "contain",
+                        objectPosition: `${element.style?.cropFocusX ?? 50}% ${element.style?.cropFocusY ?? 50}%`,
+                        transform:
+                          (element.style?.cropZoom ?? 100) > 100
+                            ? `scale(${(element.style?.cropZoom ?? 100) / 100})`
+                            : undefined,
+                        transformOrigin: `${element.style?.cropFocusX ?? 50}% ${element.style?.cropFocusY ?? 50}%`,
+                      }}
+                    />
                   ) : element.type === "image" ? (
                     <span className="uwe-label-editor-placeholder">Bild wählen →</span>
                   ) : element.type === "divider" ? (
@@ -590,13 +645,118 @@ export function LabelEditor({
                       }
                     >
                       <option value="">— Kein Bild —</option>
-                      {imageAssets.map((asset) => (
+                      {localAssets.map((asset) => (
                         <option key={asset.id} value={asset.id}>
                           {asset.title}
                           {asset.visibility === "dm_only" ? " (DM)" : ""}
                         </option>
                       ))}
                     </select>
+                  </label>
+                  {worldSlug && (
+                    <label className="uwe-span-2">
+                      Bild hochladen
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploading}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadImage(file);
+                        }}
+                      />
+                    </label>
+                  )}
+                  {selected.imageAssetId && assetUrl(selected.imageAssetId) && (
+                    <div className="uwe-span-2">
+                      <p className="uwe-table-sub">Thumbnail</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={assetUrl(selected.imageAssetId)!}
+                        alt={selected.imageAlt ?? ""}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: 120,
+                          objectFit: "contain",
+                          border: "1px solid rgba(148,163,184,0.2)",
+                          borderRadius: 4,
+                        }}
+                      />
+                      {localAssets.find((a) => a.id === selected.imageAssetId)?.visibility ===
+                        "dm_only" && (
+                        <p className="uwe-text-warning uwe-table-sub">
+                          DM-only Asset — nicht in Spieler-Labels exportieren.
+                        </p>
+                      )}
+                      {!selected.visible && (
+                        <p className="uwe-text-warning uwe-table-sub">
+                          Element ist ausgeblendet — erscheint nicht im Export.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <label>
+                    Zuschnitt X (%)
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={selected.style?.cropFocusX ?? 50}
+                      onChange={(e) =>
+                        dispatch({
+                          type: "update_element",
+                          id: selected.id,
+                          patch: {
+                            style: {
+                              ...selected.style,
+                              cropFocusX: Number(e.target.value),
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Zuschnitt Y (%)
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={selected.style?.cropFocusY ?? 50}
+                      onChange={(e) =>
+                        dispatch({
+                          type: "update_element",
+                          id: selected.id,
+                          patch: {
+                            style: {
+                              ...selected.style,
+                              cropFocusY: Number(e.target.value),
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Zoom (%)
+                    <input
+                      type="range"
+                      min={100}
+                      max={200}
+                      value={selected.style?.cropZoom ?? 100}
+                      onChange={(e) =>
+                        dispatch({
+                          type: "update_element",
+                          id: selected.id,
+                          patch: {
+                            style: {
+                              ...selected.style,
+                              cropZoom: Number(e.target.value),
+                            },
+                          },
+                        })
+                      }
+                    />
                   </label>
                   <label className="uwe-span-2">
                     Alt-Text

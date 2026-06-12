@@ -129,6 +129,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
             query={q}
             showWorld={!worldSlug}
             showVisibility
+            showLabelActions
           />
         </>
       }

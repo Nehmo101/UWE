@@ -62,8 +62,14 @@ function elementToCss(element: LabelElement, imageUrls: Record<string, string>):
     if (!url) {
       return `<div class="label-el label-el-image label-el-empty" style="${base} display:flex;align-items:center;justify-content:center;border:1px dashed #ccc;font-size:8pt;color:#999;">Kein Bild</div>`;
     }
+    const focusX = style.cropFocusX ?? 50;
+    const focusY = style.cropFocusY ?? 50;
+    const zoom = style.cropZoom ?? 100;
+    const objectPosition = `${focusX}% ${focusY}%`;
+    const objectFit = zoom > 100 ? "cover" : "contain";
+    const transform = zoom > 100 ? `scale(${zoom / 100})` : "none";
     return `<div class="label-el label-el-image" style="${base} overflow:hidden;">
-      <img src="${escapeHtml(url)}" alt="${escapeHtml(element.imageAlt ?? "")}" style="width:100%;height:100%;object-fit:contain;" />
+      <img src="${escapeHtml(url)}" alt="${escapeHtml(element.imageAlt ?? "")}" style="width:100%;height:100%;object-fit:${objectFit};object-position:${objectPosition};transform:${transform};transform-origin:${objectPosition};" />
     </div>`;
   }
 
@@ -133,13 +139,20 @@ function labelStyles(settings: LabelLayoutSettings, renderOpts: LabelExportRende
       z-index: 0;
     }
 
-    .label-crop-marks::before,
-    .label-crop-marks::after {
+    .label-crop-marks::before {
       content: "";
       position: absolute;
-      border-color: #94a3b8;
-      border-style: solid;
+      inset: -0.12in;
       pointer-events: none;
+      background:
+        linear-gradient(#94a3b8, #94a3b8) left top / 0.12in 1px no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) left top / 1px 0.12in no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) right top / 0.12in 1px no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) right top / 1px 0.12in no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) left bottom / 0.12in 1px no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) left bottom / 1px 0.12in no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) right bottom / 0.12in 1px no-repeat,
+        linear-gradient(#94a3b8, #94a3b8) right bottom / 1px 0.12in no-repeat;
     }
 
     .label-elements {
@@ -594,6 +607,73 @@ export interface LabelExportResult {
   filename: string;
   fallback?: boolean;
   fallbackReason?: string;
+}
+
+function elementToSvg(
+  element: LabelElement,
+  imageUrls: Record<string, string>,
+  scale: number,
+): string {
+  const x = element.x * scale;
+  const y = element.y * scale;
+  const w = element.width * scale;
+  const h = element.height * scale;
+  const style = element.style ?? {};
+
+  if (element.type === "box") {
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${style.backgroundColor ?? "none"}" stroke="${style.borderColor ?? "#ccc"}" stroke-width="${style.borderWidth ?? 1}" />`;
+  }
+
+  if (element.type === "divider") {
+    return `<line x1="${x}" y1="${y + h / 2}" x2="${x + w}" y2="${y + h / 2}" stroke="${style.borderColor ?? "#999"}" stroke-width="${style.borderWidth ?? 1}" />`;
+  }
+
+  if (element.type === "title" || element.type === "text") {
+    const fontSize = (style.fontSize ?? (element.type === "title" ? 14 : 10)) * (scale / 96);
+    const weight = style.fontWeight === "bold" ? "bold" : "normal";
+    const anchor =
+      style.textAlign === "center" ? "middle" : style.textAlign === "right" ? "end" : "start";
+    const textX =
+      style.textAlign === "center" ? x + w / 2 : style.textAlign === "right" ? x + w : x;
+    const lines = (element.text ?? "").split(/\r?\n/).slice(0, 20);
+    return lines
+      .map(
+        (line, index) =>
+          `<text x="${textX}" y="${y + fontSize + index * fontSize * (style.lineHeight ?? 1.35)}" font-size="${fontSize}" font-weight="${weight}" fill="${style.color ?? "#111"}" text-anchor="${anchor}">${escapeHtml(line)}</text>`,
+      )
+      .join("");
+  }
+
+  if (element.type === "image" && element.imageAssetId && imageUrls[element.imageAssetId]) {
+    return `<image href="${escapeHtml(imageUrls[element.imageAssetId]!)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" />`;
+  }
+
+  return "";
+}
+
+export function renderLabelSvg(
+  options: LabelExportOptions,
+  dpi = 150,
+): string {
+  const w = options.layoutSettings.widthInches * dpi;
+  const h = options.layoutSettings.heightInches * dpi;
+  const elements = ensureLabelElements(options.content, options.layoutSettings);
+  const imageUrls = { ...(options.imageUrls ?? {}) };
+  if (options.imageUrl && options.content.imageAssetId) {
+    imageUrls[options.content.imageAssetId] = options.imageUrl;
+  }
+
+  const body = elements
+    .filter((el) => el.visible && (!el.dmOnly || options.includeDmOnly))
+    .sort((a, b) => a.zIndex - b.zIndex)
+    .map((el) => elementToSvg(el, imageUrls, dpi))
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  ${body}
+</svg>`;
 }
 
 export async function renderLabelExportAsync(

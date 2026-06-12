@@ -9,7 +9,9 @@ export type LabelFitStatus = "fits" | "tight" | "overflow";
 interface Props {
   initialElements: LabelElement[];
   imageAssets: LabelEditorAsset[];
+  worldSlug: string;
   originalText: string;
+  currentText: string;
   fitStatus?: LabelFitStatus;
   fitApplied?: boolean;
   snapToGrid?: boolean;
@@ -33,7 +35,9 @@ const FIT_CLASS: Record<LabelFitStatus, string> = {
 export function LabelEditWorkspace({
   initialElements,
   imageAssets,
+  worldSlug,
   originalText,
+  currentText,
   fitStatus = "fits",
   fitApplied = false,
   snapToGrid = true,
@@ -42,6 +46,7 @@ export function LabelEditWorkspace({
   aiAvailable = false,
 }: Props) {
   const [, setElements] = useState<LabelElement[]>(initialElements);
+  const [showCompare, setShowCompare] = useState(false);
 
   const onChange = useCallback((elements: LabelElement[]) => {
     setElements(elements);
@@ -53,13 +58,22 @@ export function LabelEditWorkspace({
         <span className={`uwe-badge ${FIT_CLASS[fitStatus]}`}>
           {FIT_LABELS[fitStatus]}
         </span>
-        {fitApplied && <span className="uwe-table-sub">Auto-Fit angewendet</span>}
+        {fitApplied && <span className="uwe-table-sub">Auto-Fit / Kürzung angewendet</span>}
         <button type="submit" name="action" value="auto_fit" className="uwe-btn uwe-btn-sm">
           Automatisch passend machen
         </button>
         <button type="submit" name="action" value="restore_original" className="uwe-btn uwe-btn-sm">
           Original wiederherstellen
         </button>
+        {fitApplied && (
+          <button
+            type="button"
+            className="uwe-btn uwe-btn-sm"
+            onClick={() => setShowCompare((value) => !value)}
+          >
+            {showCompare ? "Vergleich ausblenden" : "Vorher/Nachher"}
+          </button>
+        )}
         {aiAvailable ? (
           <button type="submit" name="action" value="ai_shorten" className="uwe-btn uwe-btn-sm">
             KI-kürzen
@@ -71,11 +85,25 @@ export function LabelEditWorkspace({
         )}
       </div>
 
+      {showCompare && fitApplied && (
+        <div className="uwe-label-compare uwe-form-row uwe-form-row-2">
+          <label>
+            Original
+            <textarea rows={4} readOnly value={originalText} />
+          </label>
+          <label>
+            Aktuell (editierbar beim Speichern)
+            <textarea rows={4} readOnly value={currentText} />
+          </label>
+        </div>
+      )}
+
       <input type="hidden" name="originalText" value={originalText} />
 
       <LabelEditor
         initialElements={initialElements}
         imageAssets={imageAssets}
+        worldSlug={worldSlug}
         snapToGrid={snapToGrid}
         gridSize={gridSize}
         showSafeArea={showSafeArea}

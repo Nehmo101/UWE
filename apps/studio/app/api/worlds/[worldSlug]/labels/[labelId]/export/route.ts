@@ -7,6 +7,8 @@ import {
   renderLabelExportAsync,
   stripDmOnlyForPlayer,
 } from "@uwe/database/server";
+import { logLabelExportActivity } from "@/app/label-actions";
+import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
@@ -43,9 +45,6 @@ export async function GET(request: Request, { params }: Props) {
     return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
-  const exportFormat =
-    format === "pdf" ? "pdf" : format === "print" ? "print" : "html";
-
   const imageUrls: Record<string, string> = {};
   if (content.imageAssetId) {
     imageUrls[content.imageAssetId] = new URL(
@@ -62,7 +61,7 @@ export async function GET(request: Request, { params }: Props) {
     }
   }
 
-  const exported = await renderLabelExportAsync(exportFormat, {
+  const exportOptions = {
     content,
     layoutSettings: parsed.layoutSettings,
     title: label.title,
@@ -70,7 +69,15 @@ export async function GET(request: Request, { params }: Props) {
     imageUrls,
     worldName: world.name,
     includeDmOnly: allowDm,
-  });
+  };
+
+  const exported =
+    format === "png"
+      ? await renderLabelPngExportAsync(exportOptions)
+      : await renderLabelExportAsync(
+          format === "pdf" ? "pdf" : format === "print" ? "print" : "html",
+          exportOptions,
+        );
 
   const body =
     typeof exported.body === "string" ? exported.body : Buffer.from(exported.body);
@@ -79,11 +86,16 @@ export async function GET(request: Request, { params }: Props) {
     await labelService.setPrintStatus(labelId, format === "pdf" ? "exported" : "printed");
   }
 
+  await logLabelExportActivity(worldSlug, labelId, label.title, format);
+
   return new NextResponse(body, {
     headers: {
       "Content-Type": exported.contentType,
       "Content-Disposition": `attachment; filename="${exported.filename}"`,
       ...(exported.fallback ? { "X-UWE-Export-Fallback": "1" } : {}),
+      ...(exported.fallbackReason
+        ? { "X-UWE-Export-Fallback-Reason": exported.fallbackReason }
+        : {}),
     },
   });
 }
