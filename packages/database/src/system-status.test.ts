@@ -36,12 +36,16 @@ describe("system status and next actions", () => {
     assert.equal(status.seeds.pageTemplatesSeeded, true);
     assert.equal(status.trust.studioLogin, "none-by-design");
     assert.equal(typeof status.trust.studioApiTokenConfigured, "boolean");
+    assert.equal(typeof status.trust.authSecretConfigured, "boolean");
+    assert.equal(typeof status.trust.authSecretLooksWeak, "boolean");
+    assert.equal(typeof status.trust.runDbSeedDisabled, "boolean");
+    assert.equal(typeof status.trust.publicPortalSharingEnabled, "boolean");
     assert.ok(status.rateLimiter.mode.length > 0);
 
     // Hard rule: the status must never contain token/secret values.
     const serialized = JSON.stringify(status);
     assert.ok(!serialized.includes(process.env.STUDIO_API_TOKEN ?? "\u0000"));
-    assert.ok(!/password|secret[^s]/i.test(serialized));
+    assert.ok(!serialized.includes(process.env.AUTH_SECRET ?? "\u0000"));
   });
 
   it("surfaces missing backups and open findings as next actions", async () => {

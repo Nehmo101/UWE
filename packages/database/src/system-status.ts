@@ -8,6 +8,12 @@ import {
 } from "./page-template-service";
 import { isSeedApplied } from "./seed-tracker";
 import {
+  isPublicPortalExposureEnabled,
+  isRunDbSeedUnsafe,
+  isStudioApiTokenMissing,
+  isWeakAuthSecret,
+} from "./production-safety";
+import {
   SettingsService,
   resolveEffectiveBackupsPath,
   resolveEffectiveUploadsPath,
@@ -38,6 +44,10 @@ export interface TrustStatus {
   /** Studio has no login by design — exposure is controlled at network level. */
   studioLogin: "none-by-design";
   studioApiTokenConfigured: boolean;
+  authSecretConfigured: boolean;
+  authSecretLooksWeak: boolean;
+  runDbSeedDisabled: boolean;
+  publicPortalSharingEnabled: boolean;
   exposureHint: string;
 }
 
@@ -145,6 +155,19 @@ export async function getSystemStatus(
     }
   }
 
+  let publicPortalSharingEnabled = false;
+  if (databaseStatus.ok) {
+    try {
+      const settings = await new SettingsService(db).getSettings();
+      publicPortalSharingEnabled = isPublicPortalExposureEnabled(settings);
+    } catch {
+      publicPortalSharingEnabled = false;
+    }
+  }
+
+  const authSecret = process.env.AUTH_SECRET;
+  const authSecretConfigured = Boolean(authSecret?.trim());
+
   return {
     ok: databaseStatus.ok && migrations.ok && storage.ok,
     version: UWE_VERSION,
@@ -158,9 +181,13 @@ export async function getSystemStatus(
     },
     trust: {
       studioLogin: "none-by-design",
-      studioApiTokenConfigured: Boolean(process.env.STUDIO_API_TOKEN),
+      studioApiTokenConfigured: !isStudioApiTokenMissing(),
+      authSecretConfigured,
+      authSecretLooksWeak: isWeakAuthSecret(authSecret),
+      runDbSeedDisabled: !isRunDbSeedUnsafe(),
+      publicPortalSharingEnabled,
       exposureHint:
-        "Studio hat bewusst kein Login — nur in vertrauten Netzen oder hinter Reverse-Proxy-Auth/VPN betreiben.",
+        "Studio hat bewusst kein Login — niemals direkt öffentlich ohne Reverse-Proxy-Auth, VPN oder Cloudflare Access betreiben.",
     },
     rateLimiter: {
       mode: options.rateLimiterMode ?? "in-memory (prozesslokal)",

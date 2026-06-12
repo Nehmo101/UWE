@@ -17,6 +17,7 @@ import {
   buildPageUrl,
   createActivityLogService,
   getAppRepository,
+  getProductionSafetyWarnings,
   prisma,
 } from "@uwe/database/server";
 import { undoActivityAction } from "./inspector-actions";
@@ -33,13 +34,19 @@ interface Props {
 export default async function StudioDashboard({ searchParams }: Props) {
   const { undoApplied, undoError } = await searchParams;
   const repo = getAppRepository();
-  const [stats, worlds, recentPages, activityEntries, nextActions] = await Promise.all([
-    repo.getDashboardStats(),
-    repo.listWorlds(),
-    repo.listRecentlyEditedPages(6),
-    createActivityLogService(prisma).list({ limit: 15 }),
-    buildNextActions(prisma),
-  ]);
+  const [stats, worlds, recentPages, activityEntries, nextActions, productionWarnings] =
+    await Promise.all([
+      repo.getDashboardStats(),
+      repo.listWorlds(),
+      repo.listRecentlyEditedPages(6),
+      createActivityLogService(prisma).list({ limit: 15 }),
+      buildNextActions(prisma),
+      getProductionSafetyWarnings(prisma),
+    ]);
+
+  const criticalProductionWarnings = productionWarnings.filter(
+    (warning) => warning.severity === "critical",
+  );
 
   return (
     <AppShell
@@ -70,6 +77,20 @@ export default async function StudioDashboard({ searchParams }: Props) {
             title="Dashboard"
             summary="Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff."
           />
+
+          {criticalProductionWarnings.length > 0 && (
+            <div className="uwe-form-error" role="alert">
+              <strong>Produktions-/Selfhosting-Warnung:</strong>
+              <ul className="uwe-inspector-findings">
+                {criticalProductionWarnings.map((warning) => (
+                  <li key={warning.id} data-severity={warning.severity}>
+                    <strong>{warning.title}</strong>{" "}
+                    <span className="uwe-dashboard-muted">{warning.description}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {undoApplied && (
             <p className="uwe-inspector-ok" role="status">✓ {undoApplied}</p>

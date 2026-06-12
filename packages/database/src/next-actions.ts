@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { getProductionSafetyWarnings } from "./production-safety";
 import { isPageAccessible, type PortalAccessOptions } from "./permissions";
 import { SettingsService } from "./settings-service";
 import { getSystemStatus } from "./system-status";
@@ -28,6 +29,17 @@ const BACKUP_REMINDER_DAYS = 7;
 
 export async function buildNextActions(db: PrismaClient): Promise<NextActionItem[]> {
   const actions: NextActionItem[] = [];
+
+  const productionWarnings = await getProductionSafetyWarnings(db);
+  for (const warning of productionWarnings) {
+    actions.push({
+      id: warning.id,
+      severity: warning.severity,
+      title: warning.title,
+      description: warning.description,
+      href: warning.href,
+    });
+  }
 
   // System problems first: migrations, storage, missing template seed.
   const system = await getSystemStatus(db);

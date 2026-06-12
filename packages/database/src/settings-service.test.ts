@@ -154,6 +154,31 @@ describe("SettingsService", () => {
     }
   });
 
+  it("preserves unchanged values on partial update", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createSettingsService(db);
+
+    await service.updateSettings({
+      app: { theme: "light" },
+      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
+      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
+      ai: { localOnlyMode: true, enabled: false },
+    });
+
+    await service.updateSettings({
+      app: { theme: "dark" },
+    });
+
+    const settings = await service.getSettings();
+    assert.equal(settings.app.theme, "dark");
+    assert.equal(settings.worlds.defaultVisibility, "player_visible");
+    assert.equal(settings.worlds.defaultCanonicalStatus, "canon");
+    assert.equal(settings.portal.guestAccessEnabled, false);
+    assert.equal(settings.portal.publicSharingEnabled, false);
+    assert.equal(settings.ai.localOnlyMode, true);
+    assert.equal(settings.ai.enabled, false);
+  });
+
   it("never exposes API keys in client settings", async () => {
     const original = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "super-secret-key";

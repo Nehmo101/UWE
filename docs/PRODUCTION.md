@@ -39,7 +39,16 @@ Demo-Login nach erstem Start: `dm@uwe.local` / `uwe-dev`
 ```env
 AUTH_SECRET=<starkes-zufaelliges-geheimnis>   # openssl rand -base64 32
 RUN_DB_SEED=false
+STUDIO_API_TOKEN=<optional-aber-empfohlen>    # openssl rand -base64 32
 ```
+
+**Wichtig — Studio absichern:** UWE Studio hat **kein Benutzer-Login**. Betreiben Sie Studio **niemals** direkt öffentlich im Internet. Schützen Sie es mit mindestens einer dieser Maßnahmen:
+
+- Reverse-Proxy mit HTTP-Basic-Auth oder OAuth (z. B. nginx, Caddy, Traefik)
+- VPN (Tailscale, WireGuard, …)
+- Cloudflare Access oder vergleichbarer Zero-Trust-Zugang
+
+Das Studio-Dashboard und `GET /api/health` zeigen Warnungen, wenn typische Selfhosting-Fehler erkannt werden (fehlendes `AUTH_SECRET`, `RUN_DB_SEED` nicht `false`, fehlendes `STUDIO_API_TOKEN`, aktive öffentliche Portal-/Share-Funktionen).
 
 Prüfen:
 
@@ -142,14 +151,23 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 
 | Variable | Beschreibung | Produktion |
 |----------|--------------|------------|
-| `AUTH_SECRET` | Reserviert für zukünftige signierte Cookies | **Zufällig generieren** |
-| `STUDIO_API_TOKEN` | Optionaler Bearer-Token für sensible Studio-APIs | Empfohlen bei exponiertem Studio |
+| `AUTH_SECRET` | Reserviert für zukünftige signierte Cookies | **Pflicht:** starkes Zufallsgeheimnis (`openssl rand -base64 32`), keine Platzhalter |
+| `STUDIO_API_TOKEN` | Optionaler Bearer-Token für sensible Studio-APIs | **Empfohlen** bei exponiertem Studio (Backup, Restore, Settings, AI, Export) |
 | `DATABASE_URL` | SQLite-Pfad | Docker: `file:/data/uwe.db` (automatisch) |
 | `UPLOADS_DIR` | Upload-Verzeichnis | Docker: `/app/data/uploads` |
 | `BACKUPS_DIR` | Backup-Verzeichnis | Docker: `/app/data/backups` |
 | `EXPORTS_DIR` | Export-Verzeichnis | Docker: `/app/exports` |
-| `RUN_DB_SEED` | Demo-Welt beim Start | `auto` (Erststart), `false` in Produktion |
-| `STUDIO_PORT` / `PORTAL_PORT` | Host-Ports | Nach Bedarf anpassen |
+| `RUN_DB_SEED` | Demo-Welt beim Start | `auto` (Erststart), **`false` in Produktion** |
+| `STUDIO_PORT` / `PORTAL_PORT` | Host-Ports | Nach Bedarf anpassen; Studio nicht ohne Schutz nach außen öffnen |
+
+### Selfhosting-Sicherheit (Kurzcheckliste)
+
+- [ ] Studio nur im vertrauten Netz oder hinter Reverse-Proxy-Auth/VPN/Cloudflare Access
+- [ ] `AUTH_SECRET` gesetzt und nicht der Platzhalter aus `.env.example`
+- [ ] `RUN_DB_SEED=false`
+- [ ] `STUDIO_API_TOKEN` gesetzt, wenn Studio oder APIs von außen erreichbar sein könnten
+- [ ] Öffentliche Portal-/Share-Funktionen in den Einstellungen bewusst geprüft
+- [ ] Rate Limiter beachten: prozesslokal — bei mehreren Instanzen zusätzlich am Reverse Proxy limitieren
 
 AI-Provider-Keys (`OPENAI_API_KEY`, etc.) sind optional und nur für UWE Studio relevant.
 

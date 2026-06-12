@@ -449,6 +449,24 @@ export {
   resolveLocalOnlyMode,
 } from "./settings-service";
 
+export { validateSettingsUpdate } from "./settings-validation";
+
+export type {
+  SettingsValidationError,
+  SettingsValidationResult,
+  ValidateSettingsUpdateResult,
+} from "./settings-validation";
+
+export {
+  getProductionSafetyWarnings,
+  isPublicPortalExposureEnabled,
+  isRunDbSeedUnsafe,
+  isStudioApiTokenMissing,
+  isWeakAuthSecret,
+} from "./production-safety";
+
+export type { ProductionSafetyWarning } from "./production-safety";
+
 export type {
   UweSystemSettings,
   UweSystemSettingsUpdate,
