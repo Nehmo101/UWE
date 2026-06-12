@@ -1,6 +1,10 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getAppRepository } from "@uwe/database/server";
+import {
+  createActivityLogService,
+  getAppRepository,
+  prisma,
+} from "@uwe/database/server";
 import { exportWorldStatic } from "@uwe/static-export";
 import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
@@ -51,6 +55,18 @@ export async function POST(request: Request) {
       worldSlug,
       outputDir,
       uploadsDir: process.env.UPLOADS_DIR,
+    });
+
+    await createActivityLogService(prisma).log({
+      worldId: world.id,
+      worldSlug,
+      action: "export_executed",
+      targetType: "world",
+      targetId: world.id,
+      targetLabel: world.name,
+      targetHref: `/worlds/${worldSlug}`,
+      summary: `Statischer Export für Welt „${world.name}“ erstellt.`,
+      details: { outputDir: path.basename(outputDir) },
     });
 
     return NextResponse.json({

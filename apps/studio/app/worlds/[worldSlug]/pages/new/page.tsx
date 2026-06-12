@@ -13,9 +13,9 @@ import {
   CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
+  createPageTemplateService,
   getAppRepository,
-  getPageTemplate,
-  PAGE_TEMPLATES,
+  prisma,
   PageTypeEnum,
   VisibilityEnum,
   PublishStatusEnum,
@@ -42,13 +42,20 @@ export default async function NewPageForm({ params, searchParams }: Props) {
     ? campaigns.find((c) => c.slug === campaignSlug)
     : null;
 
-  const template = getPageTemplate(templateId) ?? getPageTemplate("blank")!;
+  const templateService = createPageTemplateService(prisma);
+  const templates = await templateService.listTemplates();
+  const template =
+    (await templateService.getTemplate(templateId)) ??
+    templates.find((entry) => entry.slug === "blank") ??
+    templates[0];
+  if (!template) notFound();
+
   const extraBlocks = template.blocks.slice(1);
 
-  function templateHref(id: string): string {
+  function templateHref(slug: string): string {
     const query = new URLSearchParams();
     if (campaignSlug) query.set("campaign", campaignSlug);
-    if (id !== "blank") query.set("template", id);
+    if (slug !== "blank") query.set("template", slug);
     const qs = query.toString();
     return `/worlds/${worldSlug}/pages/new${qs ? `?${qs}` : ""}`;
   }
@@ -82,10 +89,10 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           />
 
           <div className="uwe-template-grid" role="group" aria-label="Seitenvorlagen">
-            {PAGE_TEMPLATES.map((entry) => (
+            {templates.map((entry) => (
               <Link
                 key={entry.id}
-                href={templateHref(entry.id)}
+                href={templateHref(entry.slug)}
                 className={`uwe-template-card${entry.id === template.id ? " active" : ""}`}
               >
                 <strong>{entry.name}</strong>
@@ -94,9 +101,13 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             ))}
           </div>
 
+          <p className="uwe-form-hint">
+            <Link href="/templates">Templates verwalten →</Link>
+          </p>
+
           <form action={createPageAction} className="uwe-form" key={template.id}>
             <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="template" value={template.id} />
+            <input type="hidden" name="template" value={template.slug} />
             {/* Campaign is chosen via the visible select below — no hidden default. */}
 
             <label>
@@ -144,7 +155,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
               <select
                 name="visibility"
                 defaultValue={
-                  template.id === "blank"
+                  template.slug === "blank"
                     ? settings.worlds.defaultVisibility
                     : template.defaultVisibility
                 }
@@ -153,6 +164,11 @@ export default async function NewPageForm({ params, searchParams }: Props) {
                   <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
                 ))}
               </select>
+              <small className="uwe-field-hint">
+                „Portal (ohne Login)“ und „Öffentlich (Share-Link)“ sind nach dem
+                Veröffentlichen ohne Login über die Player-Routen (/worlds/…) sichtbar.
+                „Nur GM“ erscheint dort niemals.
+              </small>
             </label>
 
             <label>
@@ -182,7 +198,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
               Erster Inhaltsblock
               <textarea
                 name="initialContent"
-                rows={template.id === "blank" ? 6 : 12}
+                rows={template.slug === "blank" ? 6 : 12}
                 defaultValue={template.blocks[0]?.content ?? ""}
                 placeholder="[[Wikilinks]] unterstützt"
               />

@@ -21,9 +21,11 @@ import {
   type InspectorSeverity,
 } from "@uwe/database/server";
 import { worldNavItems } from "@/src/lib/world-nav";
+import { applyInspectorFixAction } from "../../../inspector-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ fixApplied?: string; fixError?: string }>;
 }
 
 const SEVERITY_LABELS: Record<InspectorSeverity, string> = {
@@ -34,27 +36,62 @@ const SEVERITY_LABELS: Record<InspectorSeverity, string> = {
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
-function FindingList({ findings, emptyText }: { findings: InspectorFinding[]; emptyText: string }) {
+function FindingList({
+  findings,
+  emptyText,
+  worldSlug,
+}: {
+  findings: InspectorFinding[];
+  emptyText: string;
+  worldSlug: string;
+}) {
   if (findings.length === 0) {
     return <p className="uwe-inspector-ok">✓ {emptyText}</p>;
   }
 
   return (
     <ul className="uwe-inspector-findings">
-      {findings.map((finding, index) => (
-        <li key={`${finding.code}-${index}`} data-severity={finding.severity}>
+      {findings.map((finding) => (
+        <li key={finding.id} data-severity={finding.severity}>
           <span className="uwe-inspector-severity">{SEVERITY_LABELS[finding.severity]}</span>
           <span className="uwe-inspector-message">
             {finding.href ? <Link href={finding.href}>{finding.message}</Link> : finding.message}
           </span>
+          {finding.fixes.length > 0 && (
+            <span className="uwe-inspector-fixes">
+              {finding.fixes.map((fix) => (
+                <form
+                  key={fix.action}
+                  action={applyInspectorFixAction}
+                  style={{ display: "inline" }}
+                >
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="fixAction" value={fix.action} />
+                  {finding.pageId && (
+                    <input type="hidden" name="pageId" value={finding.pageId} />
+                  )}
+                  {finding.blockId && (
+                    <input type="hidden" name="blockId" value={finding.blockId} />
+                  )}
+                  {finding.linkTarget && (
+                    <input type="hidden" name="linkTarget" value={finding.linkTarget} />
+                  )}
+                  <button type="submit" className="uwe-btn uwe-btn-small">
+                    {fix.label}
+                  </button>
+                </form>
+              ))}
+            </span>
+          )}
         </li>
       ))}
     </ul>
   );
 }
 
-export default async function WorldInspectorPage({ params }: Props) {
+export default async function WorldInspectorPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { fixApplied, fixError } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -100,8 +137,15 @@ export default async function WorldInspectorPage({ params }: Props) {
 
           <PageHeader
             title="Inspektor"
-            summary="Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat."
+            summary="Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log)."
           />
+
+          {fixApplied && (
+            <p className="uwe-inspector-ok" role="status">✓ {fixApplied}</p>
+          )}
+          {fixError && (
+            <p className="uwe-form-error" role="alert">Fix fehlgeschlagen: {fixError}</p>
+          )}
 
           <StatGrid
             stats={[
@@ -117,6 +161,7 @@ export default async function WorldInspectorPage({ params }: Props) {
             <FindingList
               findings={report.safetyFindings}
               emptyText="Keine Auffälligkeiten — DM-Inhalte bleiben verborgen."
+              worldSlug={worldSlug}
             />
           </section>
 
@@ -202,6 +247,7 @@ export default async function WorldInspectorPage({ params }: Props) {
             <FindingList
               findings={report.canonFindings}
               emptyText="Keine Widersprüche, toten Links oder Duplikate gefunden."
+              worldSlug={worldSlug}
             />
           </section>
         </>

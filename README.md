@@ -86,8 +86,14 @@ pnpm dev:portal   # http://localhost:3001
 pnpm build:release   # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
+pnpm lint            # ESLint (flat config at eslint.config.mjs, zero warnings allowed)
 pnpm release:check   # validate release files and version sync
 ```
+
+Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
+`eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
+shared packages. Run `pnpm lint` from the repo root; there are no per-package lint
+scripts.
 
 Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
@@ -97,8 +103,9 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
 - **World Overview** — `/worlds/[slug]/dashboard` is the per-world start page: stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create shortcuts.
 - **Command Palette** — press `Ctrl/⌘ + K` anywhere in Studio to jump to any view, quick-create entities, switch worlds, or search pages live.
-- **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically.
-- **World Inspector** — `/worlds/[slug]/inspector` audits what players can actually see: portal-visible pages/blocks/assets, share links (password/expiry), safety findings (e.g. player-visible GM notes), and canon warnings (broken wiki links, duplicate names, contradictions, orphan pages).
+- **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically. Templates are DB-backed and user-editable at `/templates` (create, edit, duplicate, deactivate); the built-in set is seeded once as system templates.
+- **World Inspector with fix actions** — `/worlds/[slug]/inspector` audits what players can actually see: portal-visible pages/blocks/assets, share links (password/expiry), safety findings (e.g. player-visible GM notes), and canon warnings (broken wiki links, duplicate names, contradictions, orphan pages, unassigned pages). Findings link directly to the affected page/block and offer one-click fixes (e.g. set block to DM-only, convert broken wikilinks to text) — every fix is logged and undoable.
+- **Activity Log & Next Actions** — the Studio dashboard shows an audit log (content/visibility changes, inspector fixes, template usage, imports/exports, backups, errors) with links to affected objects and inline undo, plus a "Next Actions" section (open findings, backup age, unassigned content, publicly visible player content, seed/migration problems).
 
 ---
 
@@ -112,6 +119,8 @@ The **UWE Portal** is a Next.js web app with backend/API:
 - Auth API: `POST /api/auth/login`, `/logout`, `/preview`
 
 Only **published** pages with visibility `public` or `player_visible` appear in the public wiki. DM-only blocks and pages are filtered server-side.
+
+**Naming note:** because these routes need no login, Studio labels `player_visible` as **"Portal (ohne Login)"** — anything published with this visibility is readable by everyone who can reach the Portal. `dm_only` content is never served on `/worlds/*`; this is enforced by hard security tests (`packages/database/src/visibility-security.test.ts`).
 
 ---
 

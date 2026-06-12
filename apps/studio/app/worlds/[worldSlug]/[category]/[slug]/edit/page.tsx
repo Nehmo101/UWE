@@ -16,14 +16,12 @@ import {
   buildPageUrl,
   getAppRepository,
   navCategoryForPageType,
-  NAV_CATEGORY_LABELS,
   parseStringArray,
   PageTypeEnum,
   VisibilityEnum,
   PublishStatusEnum,
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
-  type NavCategory,
 } from "@uwe/database/server";
 import {
   updatePageAction,
@@ -127,6 +125,11 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
                 ))}
               </select>
+              <small className="uwe-field-hint">
+                „Portal (ohne Login)“ und „Öffentlich (Share-Link)“ sind nach dem
+                Veröffentlichen ohne Login über die Player-Routen (/worlds/…) sichtbar.
+                „Nur GM“ erscheint dort niemals.
+              </small>
             </label>
 
             <label>

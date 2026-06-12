@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { CanonicalStatus, Prisma, PrismaClient, Visibility } from "./generated/prisma/client";
-import { createPrismaClient, prisma } from "./client";
+import { prisma } from "./client";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 

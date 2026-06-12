@@ -17,13 +17,12 @@ import type {
   AssetType,
   CanonicalStatus,
   ContentBlockType,
-  Page,
   PageType,
   Prisma,
   PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
-import { navCategoryForPageType, pageTypesForNavCategory, type NavCategory } from "./page-types";
+import { pageTypesForNavCategory, type NavCategory } from "./page-types";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray, toJsonArray } from "./json-utils";
 import {
@@ -150,10 +149,6 @@ export type PageSummary = Prisma.PageGetPayload<{
 }>;
 
 export type PublicPage = PageWithBlocks;
-
-function sortBlocks<T extends { sortOrder: number }>(blocks: T[]): T[] {
-  return [...blocks].sort((a, b) => a.sortOrder - b.sortOrder);
-}
 
 function withParsedArrays<T extends { tags: unknown; aliases: unknown }>(
   page: T,

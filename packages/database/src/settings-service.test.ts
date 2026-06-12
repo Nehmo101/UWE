@@ -5,7 +5,6 @@ import { createPrismaClient } from "./client";
 import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
-  SettingsService,
   createSettingsService,
   isGuestPortalAccessAllowed,
   resolveLocalOnlyMode,

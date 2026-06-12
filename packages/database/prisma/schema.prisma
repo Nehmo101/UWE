@@ -568,3 +568,108 @@ model SystemSettings {
 
   @@map("system_settings")
 }
+
+enum ActivityAction {
+  content_created
+  content_updated
+  content_deleted
+  content_restored
+  visibility_changed
+  inspector_fix_applied
+  template_created
+  template_updated
+  template_used
+  import_executed
+  export_executed
+  backup_created
+  backup_restored
+  seed_applied
+  error
+  warning
+}
+
+enum ActivityTargetType {
+  page
+  content_block
+  asset
+  page_template
+  world
+  share_link
+  game_session
+  system
+}
+
+// Audit log. Intentionally without foreign keys to content tables so entries
+// survive the deletion of the objects they describe.
+model ActivityLog {
+  id          String             @id @default(cuid())
+  worldId     String?            @map("world_id")
+  worldSlug   String?            @map("world_slug")
+  action      ActivityAction
+  targetType  ActivityTargetType @map("target_type")
+  targetId    String?            @map("target_id")
+  targetLabel String?            @map("target_label")
+  targetHref  String?            @map("target_href")
+  summary     String
+  details     Json?
+  undoEntryId String?            @map("undo_entry_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  undoEntry UndoEntry? @relation(fields: [undoEntryId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, createdAt])
+  @@index([createdAt])
+  @@index([undoEntryId])
+  @@map("activity_logs")
+}
+
+// Undo basis: a JSON snapshot of the state *before* a destructive or
+// automatic change (inspector fixes, deletions). Restoring re-applies the
+// snapshot; `undoneAt` marks consumed entries.
+model UndoEntry {
+  id         String             @id @default(cuid())
+  worldId    String?            @map("world_id")
+  operation  String
+  targetType ActivityTargetType @map("target_type")
+  targetId   String             @map("target_id")
+  snapshot   Json
+  undoneAt   DateTime?          @map("undone_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  activityLogs ActivityLog[]
+
+  @@index([worldId, createdAt])
+  @@map("undo_entries")
+}
+
+// User-editable Quick-Create page templates. System templates are seeded
+// from the previous code-defined set (see seed-page-templates.ts) and can be
+// deactivated but not deleted.
+model PageTemplate {
+  id                String     @id @default(cuid())
+  slug              String     @unique
+  name              String
+  description       String     @default("")
+  pageType          PageType   @map("page_type")
+  defaultVisibility Visibility @default(dm_only) @map("default_visibility")
+  titlePlaceholder  String     @default("") @map("title_placeholder")
+  blocks            Json
+  isSystem          Boolean    @default(false) @map("is_system")
+  isActive          Boolean    @default(true) @map("is_active")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  @@map("page_templates")
+}
+
+// Tracks which data seeds (e.g. system page templates) have already been
+// applied, so seeds stay idempotent across restarts and upgrades.
+model SeedHistory {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  version   Int      @default(1)
+  appliedAt DateTime @default(now()) @map("applied_at")
+  details   Json?
+
+  @@map("seed_history")
+}

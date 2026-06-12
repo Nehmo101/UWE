@@ -61,7 +61,7 @@ export function SearchResultsList({
   return (
     <>
       <p className="uwe-search-count">
-        {results.length} Treffer für „{query}"
+        {results.length} Treffer für „{query}&ldquo;
       </p>
       <ul className="uwe-search-results">
         {results.map((result) => (

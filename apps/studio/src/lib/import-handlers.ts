@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { createUweRepository } from "@uwe/database/server";
+import {
+  createActivityLogService,
+  createUweRepository,
+  prisma,
+} from "@uwe/database/server";
 import {
   executeImport,
   importSourceRegistry,
@@ -116,14 +120,28 @@ export async function postImportExecute(body: ImportRequestBody) {
       body.format,
       options,
     );
+
+    await createActivityLogService(prisma).log({
+      worldSlug: body.worldSlug,
+      action: "import_executed",
+      targetType: "world",
+      targetLabel: body.worldSlug,
+      targetHref: `/worlds/${body.worldSlug}`,
+      summary: `Import (${body.format}) in Welt „${body.worldSlug}“ ausgeführt.`,
+      details: { format: body.format },
+    });
+
     return NextResponse.json({ result });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Import fehlgeschlagen.",
-      },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
+    await createActivityLogService(prisma).log({
+      worldSlug: body.worldSlug,
+      action: "error",
+      targetType: "world",
+      targetLabel: body.worldSlug,
+      summary: `Import (${body.format}) fehlgeschlagen: ${message}`,
+    });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

@@ -803,6 +803,12 @@
   resize: vertical;
 }
 
+.uwe-field-hint {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+
 .uwe-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1787,6 +1793,36 @@
 .uwe-inspector-findings li[data-severity="warning"] {
   border-color: rgba(251, 191, 36, 0.35);
   background: rgba(245, 158, 11, 0.08);
+}
+
+.uwe-inspector-fixes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.uwe-form-error {
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.88rem;
+}
+
+.uwe-template-block-fieldset {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.65rem;
+}
+
+.uwe-template-block-fieldset legend {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding: 0 0.35rem;
 }
 
 .uwe-inspector-severity {

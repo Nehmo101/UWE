@@ -43,17 +43,41 @@ export type InspectorFindingCode =
   | "contradictory_page"
   | "visible_but_unpublished"
   | "published_but_dm_only"
-  | "orphan_page";
+  | "orphan_page"
+  | "uncategorized_page";
+
+/** Fix actions that can be applied directly from a finding (see inspector-fix-service). */
+export type InspectorFixAction =
+  | "set_block_dm_only"
+  | "set_page_dm_only"
+  | "publish_page"
+  | "set_page_player_visible"
+  | "remove_broken_wiki_link"
+  | "assign_page_campaign";
+
+export interface InspectorFixSuggestion {
+  action: InspectorFixAction;
+  label: string;
+}
 
 export interface InspectorFinding {
+  /** Stable identifier so a finding can be matched before/after a fix. */
+  id: string;
   code: InspectorFindingCode;
   severity: InspectorSeverity;
   message: string;
   pageTitle?: string;
   href?: string;
+  pageId?: string;
+  blockId?: string;
+  /** Unresolved wikilink target (only for broken_wiki_link). */
+  linkTarget?: string;
+  fixes: InspectorFixSuggestion[];
 }
 
 export interface InspectorBlockInput {
+  /** DB id — optional so synthetic test fixtures stay simple. */
+  id?: string;
   type: ContentBlockType;
   visibility: Visibility;
   content: string;
@@ -68,7 +92,20 @@ export interface InspectorPageInput {
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   aliases: string[];
+  campaignId?: string | null;
   blocks: InspectorBlockInput[];
+}
+
+export interface CanonFindingOptions {
+  /** Campaigns of the world — enables the uncategorized_page finding. */
+  campaigns?: { id: string; name: string }[];
+}
+
+function findingId(
+  code: InspectorFindingCode,
+  parts: (string | undefined)[],
+): string {
+  return [code, ...parts.filter(Boolean)].join(":");
 }
 
 export interface InspectorShareLinkInput {
@@ -164,6 +201,7 @@ export function buildCanonFindings(
   worldSlug: string,
   pages: InspectorPageInput[],
   explicitLinks: { sourcePageId: string; targetPageId: string }[] = [],
+  options: CanonFindingOptions = {},
 ): InspectorFinding[] {
   const findings: InspectorFinding[] = [];
   const titleIndex = buildTitleIndex(pages);
@@ -181,6 +219,7 @@ export function buildCanonFindings(
     reportedPairs.add(pairKey);
 
     findings.push({
+      id: findingId("duplicate_name", [pairKey]),
       code: "duplicate_name",
       severity: "warning",
       message: `Mehrdeutiger Name „${key}": ${bucket
@@ -188,6 +227,8 @@ export function buildCanonFindings(
         .join(", ")} — Wikilinks können auf die falsche Seite zeigen.`,
       pageTitle: bucket[0].title,
       href: studioHref(worldSlug, bucket[0]),
+      pageId: bucket[0].id,
+      fixes: [],
     });
   }
 
@@ -216,21 +257,33 @@ export function buildCanonFindings(
 
     for (const target of brokenTargets) {
       findings.push({
+        id: findingId("broken_wiki_link", [page.id, normalizeLookupKey(target)]),
         code: "broken_wiki_link",
         severity: "warning",
         message: `„${page.title}" verlinkt auf „${target}", aber diese Seite existiert nicht.`,
         pageTitle: page.title,
         href,
+        pageId: page.id,
+        linkTarget: target,
+        fixes: [
+          {
+            action: "remove_broken_wiki_link",
+            label: "Wikilink in normalen Text umwandeln",
+          },
+        ],
       });
     }
 
     if (page.canonicalStatus === "contradictory") {
       findings.push({
+        id: findingId("contradictory_page", [page.id]),
         code: "contradictory_page",
         severity: "warning",
         message: `„${page.title}" ist als widersprüchlich markiert und sollte aufgelöst werden.`,
         pageTitle: page.title,
         href,
+        pageId: page.id,
+        fixes: [],
       });
     }
 
@@ -239,21 +292,60 @@ export function buildCanonFindings(
       page.publishStatus === "draft"
     ) {
       findings.push({
+        id: findingId("visible_but_unpublished", [page.id]),
         code: "visible_but_unpublished",
         severity: "info",
         message: `„${page.title}" ist für Spieler freigegeben, aber noch ein Entwurf — im Portal nicht sichtbar.`,
         pageTitle: page.title,
         href,
+        pageId: page.id,
+        fixes: [
+          { action: "publish_page", label: "Seite veröffentlichen" },
+          { action: "set_page_dm_only", label: "Auf Nur GM setzen" },
+        ],
       });
     }
 
     if (page.publishStatus === "published" && page.visibility === "dm_only") {
       findings.push({
+        id: findingId("published_but_dm_only", [page.id]),
         code: "published_but_dm_only",
         severity: "info",
         message: `„${page.title}" ist veröffentlicht, aber DM-only — Spieler sehen sie nicht.`,
         pageTitle: page.title,
         href,
+        pageId: page.id,
+        fixes: [
+          {
+            action: "set_page_player_visible",
+            label: "Für das Portal freigeben (ohne Login sichtbar)",
+          },
+        ],
+      });
+    }
+
+    if (
+      options.campaigns &&
+      options.campaigns.length > 0 &&
+      page.campaignId === null
+    ) {
+      const singleCampaign = options.campaigns.length === 1 ? options.campaigns[0] : null;
+      findings.push({
+        id: findingId("uncategorized_page", [page.id]),
+        code: "uncategorized_page",
+        severity: "info",
+        message: `„${page.title}" ist keiner Kampagne zugeordnet.`,
+        pageTitle: page.title,
+        href,
+        pageId: page.id,
+        fixes: singleCampaign
+          ? [
+              {
+                action: "assign_page_campaign",
+                label: `Kampagne „${singleCampaign.name}" zuordnen`,
+              },
+            ]
+          : [],
       });
     }
   }
@@ -277,11 +369,14 @@ export function buildCanonFindings(
 
     if (!isLinkedFromOthers) {
       findings.push({
+        id: findingId("orphan_page", [page.id]),
         code: "orphan_page",
         severity: "info",
         message: `„${page.title}" hat keine Beziehungen — keine Wikilinks hinein oder hinaus.`,
         pageTitle: page.title,
         href: studioHref(worldSlug, page),
+        pageId: page.id,
+        fixes: [],
       });
     }
   }
@@ -304,25 +399,34 @@ export function buildSafetyFindings(
     const href = studioHref(worldSlug, page);
     const portalVisible = isPageAccessible(page, "portal", portalOptions);
 
-    for (const block of page.blocks) {
+    for (const [blockIndex, block] of page.blocks.entries()) {
       if (block.type === "gm_note" && isPortalBlockVisibility(block.visibility)) {
         findings.push({
+          id: findingId("gm_note_player_visible", [page.id, block.id ?? String(blockIndex)]),
           code: "gm_note_player_visible",
           severity: "critical",
           message: `GM-Notiz auf „${page.title}" ist als spielersichtbar markiert — Inhalt prüfen!`,
           pageTitle: page.title,
           href,
+          pageId: page.id,
+          blockId: block.id,
+          fixes: block.id
+            ? [{ action: "set_block_dm_only", label: "Block auf Nur GM setzen" }]
+            : [],
         });
       }
     }
 
     if (page.type === "secret" && portalVisible) {
       findings.push({
+        id: findingId("secret_page_portal_visible", [page.id]),
         code: "secret_page_portal_visible",
         severity: "critical",
         message: `Geheimnis-Seite „${page.title}" ist im Portal sichtbar.`,
         pageTitle: page.title,
         href,
+        pageId: page.id,
+        fixes: [{ action: "set_page_dm_only", label: "Seite auf Nur GM setzen" }],
       });
     }
 
@@ -345,11 +449,14 @@ export function buildSafetyFindings(
 
       for (const hiddenTitle of hiddenTargets) {
         findings.push({
+          id: findingId("hidden_link_in_portal_page", [page.id, normalizeLookupKey(hiddenTitle)]),
           code: "hidden_link_in_portal_page",
           severity: "info",
           message: `„${page.title}" verlinkt sichtbar auf die verborgene Seite „${hiddenTitle}" — Spieler sehen einen „Verborgen"-Platzhalter.`,
           pageTitle: page.title,
           href,
+          pageId: page.id,
+          fixes: [],
         });
       }
     }
@@ -359,10 +466,12 @@ export function buildSafetyFindings(
     const active = isShareLinkActive({ enabled: link.enabled, expiresAt: link.expiresAt });
     if (active && !link.hasPassword && !link.expiresAt) {
       findings.push({
+        id: findingId("share_link_unprotected", [link.id]),
         code: "share_link_unprotected",
         severity: "warning",
         message: `Share-Link für „${link.targetTitle}" ist aktiv, läuft nie ab und hat kein Passwort.`,
         pageTitle: link.targetTitle,
+        fixes: [],
       });
     }
   }
@@ -382,7 +491,7 @@ export class WorldInspectorService {
       publicSharingEnabled: settings.portal.publicSharingEnabled,
     };
 
-    const [rawPages, rawShareLinks, assets, explicitLinks] = await Promise.all([
+    const [rawPages, rawShareLinks, assets, explicitLinks, campaigns] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: world.id },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } } },
@@ -401,6 +510,11 @@ export class WorldInspectorService {
         where: { sourcePage: { worldId: world.id } },
         select: { sourcePageId: true, targetPageId: true },
       }),
+      this.db.campaign.findMany({
+        where: { worldId: world.id },
+        select: { id: true, name: true },
+        orderBy: { createdAt: "asc" },
+      }),
     ]);
 
     const pages: InspectorPageInput[] = rawPages.map((page) => ({
@@ -412,7 +526,9 @@ export class WorldInspectorService {
       publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
+      campaignId: page.campaignId,
       blocks: page.contentBlocks.map((block) => ({
+        id: block.id,
         type: block.type,
         visibility: block.visibility,
         content: block.content,
@@ -476,7 +592,7 @@ export class WorldInspectorService {
         expiresAt: link.expiresAt,
       })),
       safetyFindings: buildSafetyFindings(worldSlug, pages, shareLinkInputs, portalOptions),
-      canonFindings: buildCanonFindings(worldSlug, pages, explicitLinks),
+      canonFindings: buildCanonFindings(worldSlug, pages, explicitLinks, { campaigns }),
     };
   }
 }

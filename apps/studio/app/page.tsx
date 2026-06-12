@@ -11,14 +11,34 @@ import {
   StatGrid,
   TopBarBrand,
 } from "@uwe/shared-ui";
-import { buildPageUrl, getAppRepository } from "@uwe/database/server";
+import {
+  ACTIVITY_ACTION_LABELS,
+  buildNextActions,
+  buildPageUrl,
+  createActivityLogService,
+  getAppRepository,
+  prisma,
+} from "@uwe/database/server";
+import { undoActivityAction } from "./inspector-actions";
 
-export default async function StudioDashboard() {
+const ACTIVITY_DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+interface Props {
+  searchParams: Promise<{ undoApplied?: string; undoError?: string }>;
+}
+
+export default async function StudioDashboard({ searchParams }: Props) {
+  const { undoApplied, undoError } = await searchParams;
   const repo = getAppRepository();
-  const [stats, worlds, recentPages] = await Promise.all([
+  const [stats, worlds, recentPages, activityEntries, nextActions] = await Promise.all([
     repo.getDashboardStats(),
     repo.listWorlds(),
     repo.listRecentlyEditedPages(6),
+    createActivityLogService(prisma).list({ limit: 15 }),
+    buildNextActions(prisma),
   ]);
 
   return (
@@ -36,6 +56,7 @@ export default async function StudioDashboard() {
               items={[
                 { label: "Dashboard", href: "/", active: true },
                 { label: "Welten", href: "/worlds" },
+                { label: "Templates", href: "/templates" },
                 { label: "Backup", href: "/backup" },
                 { label: "Einstellungen", href: "/settings" },
               ]}
@@ -50,6 +71,13 @@ export default async function StudioDashboard() {
             summary="Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff."
           />
 
+          {undoApplied && (
+            <p className="uwe-inspector-ok" role="status">✓ {undoApplied}</p>
+          )}
+          {undoError && (
+            <p className="uwe-form-error" role="alert">Undo fehlgeschlagen: {undoError}</p>
+          )}
+
           <StatGrid
             stats={[
               { label: "Welten", value: stats.worldCount },
@@ -58,6 +86,81 @@ export default async function StudioDashboard() {
               { label: "Entwürfe", value: stats.draftCount },
             ]}
           />
+
+          <section className="uwe-section">
+            <h2 className="uwe-section-title">Next Actions</h2>
+            {nextActions.length === 0 ? (
+              <p className="uwe-inspector-ok">✓ Nichts offen — alles erledigt.</p>
+            ) : (
+              <ul className="uwe-inspector-findings">
+                {nextActions.map((action) => (
+                  <li key={action.id} data-severity={action.severity}>
+                    <span className="uwe-inspector-message">
+                      {action.href ? (
+                        <Link href={action.href}>
+                          <strong>{action.title}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{action.title}</strong>
+                      )}{" "}
+                      <span className="uwe-dashboard-muted">{action.description}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="uwe-section">
+            <h2 className="uwe-section-title">Activity Log</h2>
+            {activityEntries.length === 0 ? (
+              <p className="uwe-dashboard-muted">
+                Noch keine Aktivitäten aufgezeichnet — Änderungen an Inhalten, Sichtbarkeit,
+                Templates und Backups erscheinen hier.
+              </p>
+            ) : (
+              <table className="uwe-page-table">
+                <thead>
+                  <tr>
+                    <th>Zeit</th>
+                    <th>Aktion</th>
+                    <th>Was</th>
+                    <th>Undo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activityEntries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{ACTIVITY_DATE_FORMAT.format(entry.createdAt)}</td>
+                      <td>{ACTIVITY_ACTION_LABELS[entry.action]}</td>
+                      <td>
+                        {entry.targetHref ? (
+                          <Link href={entry.targetHref}>{entry.summary}</Link>
+                        ) : (
+                          entry.summary
+                        )}
+                      </td>
+                      <td>
+                        {entry.undo && !entry.undo.undoneAt ? (
+                          <form action={undoActivityAction}>
+                            <input type="hidden" name="undoEntryId" value={entry.undo.entryId} />
+                            <input type="hidden" name="redirectTo" value="/" />
+                            <button type="submit" className="uwe-btn uwe-btn-small">
+                              Rückgängig
+                            </button>
+                          </form>
+                        ) : entry.undo?.undoneAt ? (
+                          <span className="uwe-dashboard-muted">rückgängig gemacht</span>
+                        ) : (
+                          <span className="uwe-dashboard-muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
 
           {recentPages.length > 0 && (
             <section className="uwe-section">

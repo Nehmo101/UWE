@@ -12,11 +12,27 @@ import { EmptyState } from "./AppShell";
 
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
   dm_only: "Nur GM",
-  player_visible: "Spieler",
-  public: "Öffentlich",
+  player_visible: "Portal (ohne Login)",
+  public: "Öffentlich (Share-Link)",
   specific_players: "Bestimmte Spieler",
   unlock_after_session: "Nach Session",
   archived: "Archiviert",
+};
+
+/**
+ * Full explanations for visibility values. The Studio has no login, the Portal
+ * exposes published content on /worlds/* without authentication — these texts
+ * make that consequence explicit wherever a visibility is chosen or shown.
+ */
+export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
+  dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
+  player_visible:
+    "Über die Player-/World-Routen (/worlds/…) ohne Login sichtbar, sobald die Seite veröffentlicht ist.",
+  public:
+    "Wie Portal-sichtbar, zusätzlich über öffentliche Share-Links erreichbar (abschaltbar in den Einstellungen).",
+  specific_players: "Nur für eingeloggte Spieler mit Freigabe sichtbar.",
+  unlock_after_session: "Wird nach der verknüpften Session für Spieler freigeschaltet.",
+  archived: "Archiviert — für Spieler ausgeblendet, im Studio weiterhin auffindbar.",
 };
 
 export const PUBLISH_LABELS: Record<PublishStatus, string> = {
@@ -127,7 +143,11 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
           ? "uwe-badge uwe-badge-public"
           : "uwe-badge";
 
-  return <span className={className}>{VISIBILITY_LABELS[visibility]}</span>;
+  return (
+    <span className={className} title={VISIBILITY_DESCRIPTIONS[visibility]}>
+      {VISIBILITY_LABELS[visibility]}
+    </span>
+  );
 }
 
 export function PublishBadge({ status }: { status: PublishStatus }) {

@@ -5,6 +5,13 @@
  * service required.
  */
 
+/**
+ * Reported by the healthcheck. Process-local: with multiple instances each
+ * process counts separately — for multi-instance deployments the limiter
+ * must move to an external store (e.g. Redis).
+ */
+export const RATE_LIMITER_MODE = "in-memory (prozesslokal, Single-Instance)";
+
 interface RateLimitOptions {
   maxAttempts: number;
   windowMs: number;

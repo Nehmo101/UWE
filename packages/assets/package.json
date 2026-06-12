@@ -9,8 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "lint": "echo \"No lint configured yet\""
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

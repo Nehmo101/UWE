@@ -49,7 +49,6 @@ export const DUNGEON_PAGE_TYPES = [
   ...ROOM_CHILD_TYPES,
 ] as const satisfies readonly PageType[];
 
-const LEVEL_CHILD_TYPES: PageType[] = [DUNGEON_ROOM_TYPE];
 const DUNGEON_CHILD_TYPES: PageType[] = [DUNGEON_LEVEL_TYPE];
 
 export interface CreateDungeonEntityInput {

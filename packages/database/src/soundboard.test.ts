@@ -31,9 +31,7 @@ import { createUweRepository } from "./repository";
 
 describe("UWE soundboard", () => {
   let databaseUrl: string;
-  let worldId: string;
   let worldSlug: string;
-  let campaignId: string;
   let roomPageId: string;
   let playerUserId: string;
   let localButtonId: string;
@@ -57,7 +55,6 @@ describe("UWE soundboard", () => {
       slug: "soundboard-test",
       description: "Soundboard integration tests",
     });
-    worldId = world.id;
     worldSlug = world.slug;
 
     const campaign = await repo.createCampaign({
@@ -65,7 +62,6 @@ describe("UWE soundboard", () => {
       name: "Main Campaign",
       slug: "main",
     });
-    campaignId = campaign.id;
 
     const users = await seedAuthUsers(auth, repo, world.id);
     playerUserId = users.players[0]!.id;

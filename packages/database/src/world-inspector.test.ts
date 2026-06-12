@@ -226,9 +226,21 @@ describe("world-inspector findings", () => {
 
   it("sorts findings by severity", () => {
     const sorted = sortFindings([
-      { code: "orphan_page", severity: "info", message: "c" },
-      { code: "gm_note_player_visible", severity: "critical", message: "a" },
-      { code: "broken_wiki_link", severity: "warning", message: "b" },
+      { id: "orphan_page:x", code: "orphan_page", severity: "info", message: "c", fixes: [] },
+      {
+        id: "gm_note_player_visible:x",
+        code: "gm_note_player_visible",
+        severity: "critical",
+        message: "a",
+        fixes: [],
+      },
+      {
+        id: "broken_wiki_link:x",
+        code: "broken_wiki_link",
+        severity: "warning",
+        message: "b",
+        fixes: [],
+      },
     ]);
 
     assert.deepEqual(

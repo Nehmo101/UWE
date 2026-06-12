@@ -7,7 +7,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
-    "lint": "turbo run lint",
+    "lint": "eslint --max-warnings 0 .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts",
     "release:check": "node --import tsx --test scripts/release.test.ts",
@@ -22,6 +22,9 @@
     "db:seed": "pnpm --filter @uwe/database db:seed"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.19",
     "tsx": "^4.22.4",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"

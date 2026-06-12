@@ -24,8 +24,8 @@ describe("UWE dungeon cockpit", () => {
     databaseUrl = createTestDatabaseUrl();
     const db = createPrismaClient(databaseUrl);
     const repo = createUweRepository(databaseUrl);
-    const dungeons = createDungeonCockpitService(databaseUrl);
     const auth = createAuthService(db);
+    const dungeons = createDungeonCockpitService(databaseUrl);
 
     const world = await repo.createWorld({
       name: "Dungeon Test World",
@@ -246,7 +246,6 @@ describe("UWE dungeon cockpit", () => {
   });
 
   it("portal mapper strips dm-only blocks from room sections", async () => {
-    const dungeons = createDungeonCockpitService(databaseUrl);
     const repo = createUweRepository(databaseUrl);
     const db = createPrismaClient(databaseUrl);
 

@@ -244,7 +244,6 @@ describe("KnoteForge import", () => {
       description: "Test",
     });
 
-    const bundle = buildBundle();
     const preview = await previewFromContent(repo, "json", SAMPLE_EXPORT, "dup-test");
 
     const duplicateItem = preview.items.find((item) => item.status === "duplicate");

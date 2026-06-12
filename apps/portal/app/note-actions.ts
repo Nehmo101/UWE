@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import {
   canCreatePlayerNote,
   canEditPlayerNote,
-  canModeratePlayerNote,
 } from "@uwe/auth";
 import {
   createAuthService,

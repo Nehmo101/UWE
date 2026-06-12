@@ -8,7 +8,6 @@ import { createUweRepository } from "./repository";
 
 describe("UWE player notes", () => {
   let databaseUrl: string;
-  let worldId: string;
   let worldSlug: string;
   let campaignId: string;
   let pageId: string;
@@ -30,7 +29,6 @@ describe("UWE player notes", () => {
       slug: "notes-test",
       description: "Player notes tests",
     });
-    worldId = world.id;
     worldSlug = world.slug;
 
     const campaign = await repo.createCampaign({

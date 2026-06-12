@@ -91,7 +91,7 @@ export async function executeRestore(
       if (options.autoResolveSlugConflicts) {
         const slug = resolveUniqueSlug(world.slug, takenWorldSlugs);
         takenWorldSlugs.add(slug);
-        const created = await db.world.create({
+        await db.world.create({
           data: {
             id: remapId(idMap, world.id),
             name: world.name,

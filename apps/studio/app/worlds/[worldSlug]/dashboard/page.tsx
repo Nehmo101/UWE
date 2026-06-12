@@ -19,7 +19,6 @@ import {
   buildPageUrl,
   createWorldOverviewService,
   getAppRepository,
-  NAV_CATEGORY_LABELS,
   prisma,
 } from "@uwe/database/server";
 import { worldNavItems } from "@/src/lib/world-nav";
@@ -147,7 +146,7 @@ export default async function WorldDashboardPage({ params }: Props) {
               <h2 className="uwe-section-title">Offene Plots</h2>
               {overview.openPlots.length === 0 ? (
                 <p className="uwe-dashboard-muted">
-                  Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots".
+                  Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots&ldquo;.
                 </p>
               ) : (
                 <ul className="uwe-dashboard-list">

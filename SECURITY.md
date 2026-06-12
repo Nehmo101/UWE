@@ -40,6 +40,7 @@ Before exposing UWE to the internet:
 
 - **SQLite** — suitable for small to medium deployments; concurrent write limits apply
 - **Studio trust model** — Studio assumes a trusted network; it has no per-user login. Use network controls (VPN, reverse-proxy auth) and `STUDIO_API_TOKEN`
+- **`player_visible` means "no login required"** — published pages/blocks/assets with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal (ohne Login)" to make the consequence explicit. `dm_only` content is never served on those routes
 - **Portal sessions** — opaque database-backed tokens (httpOnly, SameSite=Lax, Secure in production); they are not derived from `AUTH_SECRET`
 - **File uploads** — stored on disk under `UPLOADS_DIR`; ensure filesystem permissions are restricted
 - **Share links** — public URLs grant read access to specific content; review active links regularly

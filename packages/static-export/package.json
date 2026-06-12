@@ -12,7 +12,6 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"No lint configured yet\"",
     "test": "prisma generate --schema ../database/prisma/schema.prisma && node --import tsx --test 'src/**/*.test.ts'",
     "export": "tsx src/cli.ts"
   },

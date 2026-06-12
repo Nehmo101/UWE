@@ -16,7 +16,6 @@ import {
 } from "./page-service";
 import type { PageWithBlocks, UweRepository } from "./repository";
 import {
-  GRAPH_NODE_CATEGORY_LABELS,
   type GraphEdge,
   type GraphFilters,
   type GraphNode,

@@ -203,7 +203,7 @@ export function CommandPalette({
         />
         <ul className="uwe-palette-list" ref={listRef} role="listbox">
           {entries.length === 0 && (
-            <li className="uwe-palette-empty">Keine Treffer für „{query}"</li>
+            <li className="uwe-palette-empty">Keine Treffer für „{query}&ldquo;</li>
           )}
           {entries.map((entry, index) => {
             const showGroup = entry.group !== lastGroup;

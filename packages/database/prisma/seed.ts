@@ -3,11 +3,20 @@ import { createAuthService } from "../src/auth";
 import { prisma } from "../src/client";
 import { createUweRepository } from "../src/repository";
 import { seedAuthDemoContent, seedAuthUsers } from "../src/auth-seed";
+import { ensureSystemPageTemplates } from "../src/page-template-service";
 import { seedTerraWorld } from "../src/terra-seed";
 
 async function main() {
   const repo = createUweRepository();
   const auth = createAuthService(prisma);
+
+  const templateSeed = await ensureSystemPageTemplates(prisma);
+  console.log(
+    templateSeed.applied
+      ? "Seeded system page templates."
+      : "System page templates already seeded — skipped.",
+  );
+
   const result = await seedTerraWorld(repo);
 
   await auth.setWorldGuestMode(result.world.id, true);

@@ -18,9 +18,7 @@ import { createUweRepository } from "./repository";
 
 describe("UWE asset system", () => {
   let databaseUrl: string;
-  let worldId: string;
   let worldSlug: string;
-  let dmUserId: string;
   let playerUserId: string;
   let pageId: string;
   let dmOnlyAssetId: string;
@@ -41,11 +39,9 @@ describe("UWE asset system", () => {
       slug: "asset-test",
       description: "Asset integration tests",
     });
-    worldId = world.id;
     worldSlug = world.slug;
 
     const users = await seedAuthUsers(auth, repo, world.id);
-    dmUserId = users.dm.id;
     playerUserId = users.players[0]!.id;
 
     const page = await repo.createPage({

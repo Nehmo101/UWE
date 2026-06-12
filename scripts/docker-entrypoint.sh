@@ -13,6 +13,17 @@ SEED_MARKER="${DB_PATH}.seeded"
 mkdir -p "$(dirname "$DB_PATH")" /app/data/uploads /app/data/backups /app/exports
 
 if [ -f "$PRISMA_BIN" ] && [ -d "$MIGRATIONS_DIR" ]; then
+  # Safety net: copy the SQLite file before applying pending migrations, so a
+  # broken migration can always be rolled back locally.
+  if [ -f "$DB_PATH" ]; then
+    if ! DATABASE_URL="$DATABASE_URL" node "$PRISMA_BIN" migrate status \
+      --schema /app/packages/database/prisma/schema.prisma >/dev/null 2>&1; then
+      PRE_MIGRATION_BACKUP="/app/data/backups/pre-migration-$(date +%Y%m%d-%H%M%S).db"
+      echo "Pending migrations detected — creating local DB backup: $PRE_MIGRATION_BACKUP"
+      cp "$DB_PATH" "$PRE_MIGRATION_BACKUP"
+    fi
+  fi
+
   echo "Running database migrations…"
   if ! DATABASE_URL="$DATABASE_URL" node "$PRISMA_BIN" migrate deploy \
     --schema /app/packages/database/prisma/schema.prisma; then

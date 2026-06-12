@@ -78,7 +78,8 @@ describe("shared-ui components", () => {
         <PageTypeBadge type="lore" />
       </>,
     );
-    assert.match(html, /Spieler/);
+    assert.match(html, /Portal \(ohne Login\)/);
+    assert.match(html, /ohne Login sichtbar/);
     assert.match(html, /Veröffentlicht/);
     assert.match(html, /Lore/);
     assert.doesNotMatch(html, /dm_only/);
@@ -108,7 +109,7 @@ describe("shared-ui components", () => {
       />,
     );
     assert.match(html, /Arbor/);
-    assert.match(html, /Spieler/);
+    assert.match(html, /Portal \(ohne Login\)/);
     assert.doesNotMatch(html, /Nur GM/);
     assert.doesNotMatch(html, /dm_only/);
     assert.doesNotMatch(html, /Geheim/);

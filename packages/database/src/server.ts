@@ -158,6 +158,82 @@ export {
 export type { PageTemplate, PageTemplateBlock } from "./page-templates";
 
 export {
+  createPageTemplateService,
+  ensureSystemPageTemplates,
+  parseTemplateBlocks,
+  PageTemplateService,
+  PAGE_TEMPLATE_SEED_KEY,
+  PAGE_TEMPLATE_SEED_VERSION,
+} from "./page-template-service";
+
+export type {
+  PageTemplateInput,
+  PageTemplateView,
+} from "./page-template-service";
+
+export {
+  ACTIVITY_ACTION_LABELS,
+  ActivityLogService,
+  createActivityLogService,
+} from "./activity-log-service";
+
+export type {
+  ActivityLogEntryView,
+  ListActivityOptions,
+  LogActivityInput,
+} from "./activity-log-service";
+
+export type {
+  ActivityAction,
+  ActivityTargetType,
+} from "./generated/prisma/client";
+
+export {
+  createUndoService,
+  UndoService,
+} from "./undo-service";
+
+export type { UndoOperation, UndoResult } from "./undo-service";
+
+export {
+  createInspectorFixService,
+  InspectorFixService,
+} from "./inspector-fix-service";
+
+export type {
+  ApplyInspectorFixInput,
+  InspectorFixResult,
+} from "./inspector-fix-service";
+
+export {
+  isSeedApplied,
+  listSeedHistory,
+  runSeedOnce,
+} from "./seed-tracker";
+
+export type { SeedStatus } from "./seed-tracker";
+
+export {
+  getMigrationStatus,
+  listMigrationDirectories,
+} from "./migration-status";
+
+export type { MigrationStatus } from "./migration-status";
+
+export { getStorageStatus, getSystemStatus } from "./system-status";
+
+export type {
+  SeedStatusSummary,
+  StorageStatus,
+  SystemStatus,
+  TrustStatus,
+} from "./system-status";
+
+export { buildNextActions } from "./next-actions";
+
+export type { NextActionItem } from "./next-actions";
+
+export {
   createWorldOverviewService,
   WorldOverviewService,
 } from "./world-overview";
@@ -178,8 +254,11 @@ export {
 } from "./world-inspector";
 
 export type {
+  CanonFindingOptions,
   InspectorFinding,
   InspectorFindingCode,
+  InspectorFixAction,
+  InspectorFixSuggestion,
   InspectorSeverity,
   PortalVisibleAsset,
   PortalVisiblePage,

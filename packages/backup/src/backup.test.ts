@@ -26,7 +26,6 @@ describe("UWE backup and restore", () => {
   let uploadsRoot: string;
   let backupsDir: string;
   let worldSlug: string;
-  let worldId: string;
   let assetStorageKey: string;
 
   before(async () => {
@@ -42,7 +41,6 @@ describe("UWE backup and restore", () => {
       description: "Backup integration tests",
     });
     worldSlug = world.slug;
-    worldId = world.id;
 
     const campaign = await repo.createCampaign({
       worldId: world.id,

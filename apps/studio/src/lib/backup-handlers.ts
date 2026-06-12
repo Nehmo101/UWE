@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
-import { createPrismaClient } from "@uwe/database/server";
+import { createActivityLogService, createPrismaClient, prisma } from "@uwe/database/server";
 import {
   executeRestore,
   exportBackupJson,
@@ -59,6 +59,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
       const filename = `uwe-backup-${body.type}-${Date.now()}.json`;
       const outputPath = path.join(backupsDir, filename);
       fs.writeFileSync(outputPath, JSON.stringify(bundle, null, 2), "utf8");
+      await logBackupCreated(body, filename);
       return NextResponse.json({
         backup: {
           id: filename,
@@ -70,6 +71,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
     }
 
     const { bundle, outputPath } = await exportBackupZip(undefined, options);
+    await logBackupCreated(body, path.basename(outputPath));
     return NextResponse.json({
       backup: {
         id: path.basename(outputPath),
@@ -79,13 +81,27 @@ export async function postBackupCreate(body: BackupCreateBody) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Backup-Erstellung fehlgeschlagen.",
-      },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error ? error.message : "Backup-Erstellung fehlgeschlagen.";
+    await createActivityLogService(prisma).log({
+      action: "error",
+      targetType: "system",
+      summary: `Backup-Erstellung fehlgeschlagen: ${message}`,
+    });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+async function logBackupCreated(body: BackupCreateBody, filename: string) {
+  await createActivityLogService(prisma).log({
+    worldSlug: body.worldSlug ?? null,
+    action: "backup_created",
+    targetType: "system",
+    targetLabel: filename,
+    targetHref: "/backup",
+    summary: `Backup erstellt (${body.type}${body.worldSlug ? `, Welt ${body.worldSlug}` : ""}): ${filename}.`,
+    details: { type: body.type, worldSlug: body.worldSlug ?? null, filename },
+  });
 }
 
 export async function getBackupDownload(backupId: string) {
@@ -189,13 +205,25 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
     );
 
     await db.$disconnect();
+
+    await createActivityLogService(prisma).log({
+      worldSlug: body.targetWorldSlug ?? null,
+      action: "backup_restored",
+      targetType: "system",
+      targetLabel: body.backupId ?? body.filename ?? null,
+      targetHref: "/backup",
+      summary: `Backup wiederhergestellt${body.targetWorldSlug ? ` (Welt ${body.targetWorldSlug})` : ""}.`,
+      details: { backupId: body.backupId ?? null, filename: body.filename ?? null },
+    });
+
     return NextResponse.json({ result });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Restore fehlgeschlagen.",
-      },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "Restore fehlgeschlagen.";
+    await createActivityLogService(prisma).log({
+      action: "error",
+      targetType: "system",
+      summary: `Restore fehlgeschlagen: ${message}`,
+    });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
