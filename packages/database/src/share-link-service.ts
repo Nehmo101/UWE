@@ -325,7 +325,10 @@ export class ShareLinkService {
 
     return {
       ...page,
-      contentBlocks: filterBlocksForContext(page.contentBlocks, "share"),
+      contentBlocks: filterBlocksForContext(page.contentBlocks, "share", {
+        shareGrant: grant,
+        pageId: page.id,
+      }),
     };
   }
 

@@ -82,7 +82,7 @@ describe("ShareLinkService", () => {
     assert.match(view.html, /Spieler sichtbarer Text/);
   });
 
-  it("does not expose dm_only blocks in share view", async () => {
+  it("exposes dm_only blocks on an explicitly shared page", async () => {
     const { world, page, link } = await seedSharedPage("blocks");
     const repo = createUweRepository(databaseUrl);
 
@@ -95,8 +95,20 @@ describe("ShareLinkService", () => {
     });
 
     assert.ok(view);
-    assert.doesNotMatch(view.html, /Geheime Fallen/);
-    assert.equal(view.page.content.includes("Geheime Fallen"), false);
+    assert.match(view.html, /Geheime Fallen/);
+    assert.equal(view.page.content.includes("Geheime Fallen"), true);
+  });
+
+  it("exposes dm_only page content via filterPageForShare", async () => {
+    const { link } = await seedSharedPage("filter");
+    const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+    assert.ok(access);
+    assert.equal(access.target.kind, "page");
+
+    const filtered = shareService.filterPageForShare(access.target.page, access.grant);
+    assert.ok(filtered);
+    assert.equal(filtered.contentBlocks.length, 2);
+    assert.ok(filtered.contentBlocks.some((block) => block.visibility === "dm_only"));
   });
 
   it("rejects disabled share links", async () => {
@@ -178,6 +190,81 @@ describe("ShareLinkService", () => {
       password: "geheim123",
     });
     assert.ok(withPassword);
+  });
+
+  it("hides dm_only link targets that are not explicitly shared", async () => {
+    const world = await createWorld(
+      { name: "Link Leak Test", slug: "link-leak-test", description: "Test" },
+      databaseUrl,
+    );
+
+    const sharedPage = await createPage(
+      {
+        worldId: world.id,
+        title: "Geteiltes Versteck",
+        slug: "geteiltes-versteck",
+        type: "secret",
+        visibility: "dm_only",
+        contentBlocks: [
+          {
+            type: "rich_text",
+            sortOrder: 0,
+            visibility: "dm_only",
+            content: "Fluchtweg nach [[Anderer Geheimort]].",
+          },
+        ],
+      },
+      databaseUrl,
+    );
+
+    await createPage(
+      {
+        worldId: world.id,
+        title: "Anderer Geheimort",
+        slug: "anderer-geheimort",
+        type: "secret",
+        visibility: "dm_only",
+        contentBlocks: [
+          {
+            type: "rich_text",
+            sortOrder: 0,
+            visibility: "dm_only",
+            content: "Nur für den DM.",
+          },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const link = await shareService.createShareLink({
+      worldId: world.id,
+      targetType: "page",
+      targetId: sharedPage.id,
+    });
+
+    const repo = createUweRepository(databaseUrl);
+    const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+    assert.ok(access);
+
+    const view = await buildPageView(repo, world.slug, sharedPage.slug, "share", {
+      shareGrant: access.grant,
+      shareToken: link.token,
+    });
+
+    assert.ok(view);
+    assert.match(view.html, /Fluchtweg/);
+    assert.doesNotMatch(view.html, /Anderer Geheimort/);
+    assert.doesNotMatch(view.html, /Nur für den DM/);
+
+    const hiddenLink = view.links.find((item) => item.status === "hidden");
+    assert.ok(hiddenLink);
+    assert.equal(hiddenLink.displayText, "Verborgen");
+
+    const otherView = await buildPageView(repo, world.slug, "anderer-geheimort", "share", {
+      shareGrant: access.grant,
+      shareToken: link.token,
+    });
+    assert.equal(otherView, null);
   });
 
   it("only shows backlinks for pages that are also shared", async () => {
@@ -323,6 +410,49 @@ describe("ShareLinkService", () => {
       shareToken: linkA.token,
     });
     assert.equal(crossView, null);
+  });
+
+  it("allows share asset access only for the explicitly shared asset", async () => {
+    const world = await createWorld(
+      { name: "Asset Scope", slug: "asset-scope", description: "Test" },
+      databaseUrl,
+    );
+
+    const db = createPrismaClient(databaseUrl);
+    const sharedAsset = await db.asset.create({
+      data: {
+        worldId: world.id,
+        title: "Geteiltes Bild",
+        type: "image",
+        storageKey: "images/shared.png",
+        mimeType: "image/png",
+        visibility: "dm_only",
+      },
+    });
+
+    const otherAsset = await db.asset.create({
+      data: {
+        worldId: world.id,
+        title: "Anderes Bild",
+        type: "image",
+        storageKey: "images/other.png",
+        mimeType: "image/png",
+        visibility: "dm_only",
+      },
+    });
+
+    const link = await shareService.createShareLink({
+      worldId: world.id,
+      targetType: "asset",
+      targetId: sharedAsset.id,
+    });
+
+    const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+    assert.ok(access);
+    assert.equal(access.target.kind, "asset");
+    assert.equal(access.target.asset.id, sharedAsset.id);
+    assert.equal(shareService.canAccessAssetViaShare(sharedAsset.id, access.grant), true);
+    assert.equal(shareService.canAccessAssetViaShare(otherAsset.id, access.grant), false);
   });
 
   it("creates share links for handout assets", async () => {

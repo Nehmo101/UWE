@@ -20,6 +20,8 @@ export interface PortalAccessOptions {
 
 export interface PageAccessOptions extends PortalAccessOptions {
   shareGrant?: ShareAccessGrant;
+  /** Required in share context so dm_only blocks are only revealed for explicitly shared pages. */
+  pageId?: string;
 }
 
 export function isPortalPageVisibility(visibility: Visibility): boolean {
@@ -77,9 +79,18 @@ export function isPageAccessible(
 export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility">>(
   blocks: T[],
   context: AccessContext,
-  options?: PortalAccessOptions,
+  options?: PageAccessOptions,
 ): T[] {
   if (context === "dm") {
+    return blocks;
+  }
+
+  if (
+    context === "share" &&
+    options?.shareGrant &&
+    options.pageId &&
+    options.shareGrant.sharedPageIds.has(options.pageId)
+  ) {
     return blocks;
   }
 

@@ -65,11 +65,14 @@ export function pageToWikiNode(
   worldSlug: string,
   page: PageSummary | PageWithBlocks,
   context: AccessContext,
-  options?: { shareToken?: string },
+  options?: { shareToken?: string; shareGrant?: ShareAccessGrant },
 ): WikiPageNode {
   const blocks =
     "contentBlocks" in page
-      ? filterBlocksForContext(page.contentBlocks, context)
+      ? filterBlocksForContext(page.contentBlocks, context, {
+          shareGrant: options?.shareGrant,
+          pageId: page.id,
+        })
       : [];
 
   const href = options?.shareToken
@@ -104,7 +107,12 @@ export async function buildWorldWikiIndex(
         )
       : await repo.getWorldPageIndexForContext(worldSlug, context);
 
-  return pages.map((page) => pageToWikiNode(worldSlug, page, context, { shareToken: options?.shareToken }));
+  return pages.map((page) =>
+    pageToWikiNode(worldSlug, page, context, {
+      shareToken: options?.shareToken,
+      shareGrant: options?.shareGrant,
+    }),
+  );
 }
 
 export function normalizeLookupKey(key: string): string {
@@ -291,7 +299,10 @@ export async function buildPageView(
     if (!isPageAccessible(rawPage, context, shareAccessOptions(options.shareGrant))) return null;
     page = {
       ...rawPage,
-      contentBlocks: filterBlocksForContext(rawPage.contentBlocks, context),
+      contentBlocks: filterBlocksForContext(rawPage.contentBlocks, context, {
+        shareGrant: options.shareGrant,
+        pageId: rawPage.id,
+      }),
     };
   } else {
     page = await repo.getPageForContext(worldSlug, pageSlug, context);
@@ -299,7 +310,10 @@ export async function buildPageView(
 
   if (!page) return null;
 
-  const node = pageToWikiNode(worldSlug, page, context, { shareToken: options?.shareToken });
+  const node = pageToWikiNode(worldSlug, page, context, {
+    shareToken: options?.shareToken,
+    shareGrant: options?.shareGrant,
+  });
   const allPages = await repo.getWorldPageIndex(worldSlug);
   const visibleNodes = await buildWorldWikiIndex(repo, worldSlug, context, options);
   const index = buildLookupIndex(visibleNodes, context, allPages, shareAccessOptions(options?.shareGrant));
@@ -409,7 +423,10 @@ export function renderPageContentHtml(
   allPages?: PageSummary[],
   accessOptions?: PageAccessOptions,
 ): string {
-  const visibleBlocks = filterBlocksForContext(page.contentBlocks, context);
+  const visibleBlocks = filterBlocksForContext(page.contentBlocks, context, {
+    ...accessOptions,
+    pageId: page.id,
+  });
   const content = combineBlockContent(visibleBlocks);
   const index = buildLookupIndex(wikiIndex, context, allPages, accessOptions);
   const links = resolveLinksInContent(content, index, context, allPages, accessOptions);
