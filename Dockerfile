@@ -16,6 +16,9 @@ FROM deps AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @uwe/database db:generate
 RUN pnpm build
+# pnpm keeps prisma/tsx under package-local symlinks; deploy materializes a
+# self-contained node_modules tree for the runtime COPY steps below.
+RUN pnpm --filter @uwe/database deploy --legacy /runtime/prisma-deps
 
 FROM node:20-bookworm-slim AS runtime-base
 WORKDIR /app
@@ -32,9 +35,7 @@ COPY --from=builder /app/VERSION ./VERSION
 COPY --from=builder /app/apps/studio/.next/standalone ./
 COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 COPY --from=builder /app/packages/database ./packages/database
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder /runtime/prisma-deps/node_modules ./node_modules
 COPY scripts/docker-db-empty-check.ts /app/scripts/docker-db-empty-check.ts
 COPY scripts/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
@@ -49,8 +50,7 @@ COPY --from=builder /app/VERSION ./VERSION
 COPY --from=builder /app/apps/portal/.next/standalone ./
 COPY --from=builder /app/apps/portal/.next/static ./apps/portal/.next/static
 COPY --from=builder /app/packages/database ./packages/database
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /runtime/prisma-deps/node_modules ./node_modules
 COPY scripts/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 EXPOSE 3001
