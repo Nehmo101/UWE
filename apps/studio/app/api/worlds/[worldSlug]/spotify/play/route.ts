@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 import { playSpotifyForWorld } from "@/src/lib/spotify-handlers";
 
@@ -10,6 +11,14 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (authError) return authError;
 
   const { worldSlug } = await params;
-  const body = (await request.json()) as { uri?: string; volume?: number };
+
+  let body: { uri?: string; volume?: number };
+
+  try {
+    body = (await request.json()) as { uri?: string; volume?: number };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   return playSpotifyForWorld(worldSlug, body);
 }
