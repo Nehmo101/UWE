@@ -12,6 +12,10 @@ const SECRET_FIELD_NAMES = new Set([
   "session_token",
   "openai_api_key",
   "anthropic_api_key",
+  "access_token_encrypted",
+  "refresh_token_encrypted",
+  "accesstokenencrypted",
+  "refreshtokenencrypted",
 ]);
 
 const SECRET_VALUE_PATTERNS = [

@@ -249,6 +249,7 @@ model World {
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
   shareLinks        ShareLink[]
+  spotifyConnection SpotifyConnection?
 
   @@map("worlds")
 }
@@ -604,6 +605,23 @@ model ShareAccessLog {
 
   @@index([shareLinkId, accessedAt])
   @@map("share_access_logs")
+}
+
+model SpotifyConnection {
+  id                    String   @id @default(cuid())
+  worldId               String   @unique @map("world_id")
+  spotifyUserId         String   @map("spotify_user_id")
+  spotifyDisplayName    String?  @map("spotify_display_name")
+  accessTokenEncrypted  String   @map("access_token_encrypted")
+  refreshTokenEncrypted String   @map("refresh_token_encrypted")
+  expiresAt             DateTime @map("expires_at")
+  scopes                String   @default("")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@map("spotify_connections")
 }
 
 model SystemSettings {

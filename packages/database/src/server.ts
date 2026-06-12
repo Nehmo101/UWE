@@ -523,3 +523,12 @@ export type {
   PlayerNoteStatus,
   PlayerNoteVisibility,
 } from "./player-note-service";
+
+export {
+  createSpotifyConnectionService,
+  isSpotifyOAuthConfigured,
+  resolveSpotifyOAuthConfig,
+  SpotifyConnectionService,
+} from "./spotify-connection-service";
+
+export type { SpotifyConnectionStatus } from "./spotify-connection-service";

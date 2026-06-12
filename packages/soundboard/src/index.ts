@@ -48,6 +48,22 @@ export {
 } from "./spotify";
 
 export {
+  buildSpotifyAuthorizationUrl,
+  computeTokenExpiry,
+  exchangeSpotifyAuthorizationCode,
+  refreshSpotifyAccessToken,
+  shouldRefreshSpotifyToken,
+  SPOTIFY_AUTHORIZE_URL,
+  SPOTIFY_PLAYBACK_SCOPES,
+  SPOTIFY_TOKEN_REFRESH_BUFFER_MS,
+  SPOTIFY_TOKEN_URL,
+  type SpotifyOAuthConfig,
+  type SpotifyOAuthResult,
+  type SpotifyRefreshResult,
+  type SpotifyTokenSet,
+} from "./spotify-oauth";
+
+export {
   extractYouTubeVideoId,
   getYouTubeThumbnailUrl,
   isYouTubeUrl,

@@ -21,6 +21,7 @@ import {
   updateSoundboardButtonAction,
 } from "@/app/soundboard-actions";
 import { SoundboardButtonForm } from "./SoundboardButtonForm";
+import { SpotifyConnectionPanel } from "./SpotifyConnectionPanel";
 import { SoundboardWorkspace, type SoundboardButtonView } from "./SoundboardWorkspace";
 
 interface Props {
@@ -39,8 +40,16 @@ interface Props {
 
 export default async function StudioSoundboardPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, created, saved, deleted, linked, error, spotifyConnected, spotifyError } =
-    await searchParams;
+  const {
+    campaign: campaignSlug,
+    created,
+    saved,
+    deleted,
+    linked,
+    error,
+    spotifyConnected,
+    spotifyError,
+  } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -63,10 +72,6 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   const linkablePages = await repo.listPagesByWorld(worldSlug, {
     campaignId: selectedCampaign?.id,
   });
-
-  const soundboardReturnPath = `/worlds/${worldSlug}/soundboard${
-    campaignSlug ? `?campaign=${encodeURIComponent(campaignSlug)}` : ""
-  }`;
 
   const buttonViews: SoundboardButtonView[] = buttons.map((button) => ({
     id: button.id,
@@ -127,6 +132,8 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             summary="Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
           />
 
+          <SpotifyConnectionPanel worldSlug={worldSlug} />
+
           {(created || saved || deleted || linked) && (
             <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
           )}
@@ -141,10 +148,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             </p>
           )}
 
-          <SoundboardWorkspace
-            buttons={buttonViews}
-            spotifyReturnPath={soundboardReturnPath}
-          />
+          <SoundboardWorkspace buttons={buttonViews} worldSlug={worldSlug} />
 
           <section className="uwe-panel">
             <h2>Neuer Soundboard-Button</h2>

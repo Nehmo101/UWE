@@ -42,10 +42,16 @@ interface SpotifyConnectionStatus {
 
 interface Props {
   buttons: SoundboardButtonView[];
-  /** Enables Spotify OAuth UI and playback via /api/spotify (Studio). */
+  /** Enables world-scoped Spotify OAuth playback (Studio). */
+  worldSlug?: string;
+  /** Legacy: enables global Spotify OAuth UI (deprecated — use worldSlug). */
   spotifyReturnPath?: string;
   /** Shown for Spotify sounds when OAuth is unavailable (Portal). */
   spotifyPlaybackHint?: string;
+}
+
+function worldSpotifyEndpoint(worldSlug: string, action: string): string {
+  return `/api/worlds/${encodeURIComponent(worldSlug)}/spotify/${action}`;
 }
 
 function sourceTypeLabel(sourceType: SoundboardButtonView["sourceType"]): string {
@@ -98,10 +104,12 @@ function renderLinkedPages(pages: SoundboardLinkedPage[]): ReactNode {
 
 export function SoundboardWorkspace({
   buttons,
+  worldSlug,
   spotifyReturnPath,
   spotifyPlaybackHint = "Spotify-Wiedergabe ist nur im Studio verfügbar (OAuth noch nicht im Portal).",
 }: Props) {
-  const spotifyOAuthEnabled = Boolean(spotifyReturnPath);
+  const spotifyOAuthEnabled = Boolean(worldSlug) || Boolean(spotifyReturnPath);
+  const useWorldScopedSpotify = Boolean(worldSlug);
   const [activeSounds, setActiveSounds] = useState<ActiveSound[]>([]);
   const [tagFilter, setTagFilter] = useState<string>("");
   const [spotifyStatus, setSpotifyStatus] = useState<SpotifyConnectionStatus | null>(null);
@@ -115,13 +123,18 @@ export function SoundboardWorkspace({
 
   const refreshSpotifyStatus = useCallback(async () => {
     try {
-      const response = await fetch("/api/spotify/status");
-      const payload = (await response.json()) as { status: SpotifyConnectionStatus };
-      setSpotifyStatus(payload.status);
+      const statusUrl = worldSlug
+        ? worldSpotifyEndpoint(worldSlug, "status")
+        : "/api/spotify/status";
+      const response = await fetch(statusUrl);
+      const payload = worldSlug
+        ? ((await response.json()) as SpotifyConnectionStatus)
+        : ((await response.json()) as { status: SpotifyConnectionStatus }).status;
+      setSpotifyStatus(payload);
     } catch {
       setSpotifyStatus({ configured: false, connected: false, expiresAt: null, scope: null });
     }
-  }, []);
+  }, [worldSlug]);
 
   useEffect(() => {
     if (spotifyOAuthEnabled && hasSpotifyButtons) {
@@ -144,6 +157,9 @@ export function SoundboardWorkspace({
     async (sound: ActiveSound, action: "play" | "pause" | "resume" | "stop" | "volume") => {
       if (sound.sourceType !== "spotify") return true;
 
+      const endpoint = (name: string) =>
+        worldSlug ? worldSpotifyEndpoint(worldSlug, name) : `/api/spotify/${name}`;
+
       let result: { ok: boolean; message: string };
 
       if (action === "play") {
@@ -151,18 +167,18 @@ export function SoundboardWorkspace({
           setSpotifyError(sound.instanceId, "Spotify-URL fehlt.");
           return false;
         }
-        result = await callSpotifyApi("/api/spotify/play", {
+        result = await callSpotifyApi(endpoint("play"), {
           uri: sound.sourceUrl,
           volume: sound.volume,
         });
       } else if (action === "pause") {
-        result = await callSpotifyApi("/api/spotify/pause");
+        result = await callSpotifyApi(endpoint("pause"));
       } else if (action === "resume") {
-        result = await callSpotifyApi("/api/spotify/resume");
+        result = await callSpotifyApi(endpoint("resume"));
       } else if (action === "stop") {
-        result = await callSpotifyApi("/api/spotify/stop");
+        result = await callSpotifyApi(endpoint("stop"));
       } else {
-        result = await callSpotifyApi("/api/spotify/volume", { volume: sound.volume });
+        result = await callSpotifyApi(endpoint("volume"), { volume: sound.volume });
       }
 
       if (!result.ok) {
@@ -173,7 +189,7 @@ export function SoundboardWorkspace({
       setSpotifyError(sound.instanceId, null);
       return true;
     },
-    [setSpotifyError],
+    [setSpotifyError, worldSlug],
   );
 
   const allTags = useMemo(() => {
@@ -318,13 +334,15 @@ export function SoundboardWorkspace({
     setActiveSounds(stopAllSounds().sounds);
   };
 
-  const spotifyAuthHref = spotifyReturnPath
-    ? `/api/spotify/auth?returnTo=${encodeURIComponent(spotifyReturnPath)}`
-    : null;
+  const spotifyAuthHref =
+    !useWorldScopedSpotify && spotifyReturnPath
+      ? `/api/spotify/auth?returnTo=${encodeURIComponent(spotifyReturnPath)}`
+      : null;
+  const spotifyConnectHref = worldSlug ? worldSpotifyEndpoint(worldSlug, "connect") : null;
 
   return (
     <div className="uwe-soundboard">
-      {spotifyOAuthEnabled && hasSpotifyButtons && (
+      {spotifyOAuthEnabled && !useWorldScopedSpotify && hasSpotifyButtons && (
         <section className="uwe-panel" style={{ marginBottom: "1rem" }}>
           <h2>Spotify</h2>
           {!spotifyStatus?.configured && (
@@ -334,12 +352,12 @@ export function SoundboardWorkspace({
               <code>.env</code> setzen.
             </p>
           )}
-          {spotifyStatus?.configured && !spotifyStatus.connected && spotifyAuthHref && (
+          {spotifyStatus?.configured && !spotifyStatus.connected && (spotifyAuthHref || spotifyConnectHref) && (
             <>
               <p className="uwe-table-sub">
                 Spotify-Wiedergabe benötigt Premium, OAuth und ein aktives Spotify Connect-Gerät.
               </p>
-              <a className="uwe-btn" href={spotifyAuthHref}>
+              <a className="uwe-btn" href={spotifyConnectHref ?? spotifyAuthHref ?? "#"}>
                 Mit Spotify verbinden
               </a>
             </>
