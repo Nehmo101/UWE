@@ -106,7 +106,7 @@ export function SoundboardWorkspace({
   buttons,
   worldSlug,
   spotifyReturnPath,
-  spotifyPlaybackHint = "Spotify-Wiedergabe ist nur im Studio verfügbar (OAuth noch nicht im Portal).",
+  spotifyPlaybackHint = "Spotify-Wiedergabe wird nur im Studio gesteuert (Spotify Connect / Web API). Im Portal sind Spotify-Buttons nur zur Anzeige.",
 }: Props) {
   const spotifyOAuthEnabled = Boolean(worldSlug) || Boolean(spotifyReturnPath);
   const useWorldScopedSpotify = Boolean(worldSlug);
