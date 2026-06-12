@@ -251,6 +251,10 @@ export function SoundboardButtonForm({
             </option>
           ))}
         </select>
+        <span className="uwe-form-hint">
+          „Portal (ohne Login)“ ist im Spielerportal ohne Login sichtbar. DM-only Sounds erscheinen
+          dort nicht — Playback-Steuerung (insbesondere Spotify) bleibt Studio-seitig.
+        </span>
       </label>
 
       <label>
