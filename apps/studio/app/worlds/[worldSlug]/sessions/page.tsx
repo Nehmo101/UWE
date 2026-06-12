@@ -14,6 +14,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -43,6 +44,8 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
 
   return (
     <AppShell
+      bottomNav={studioWorldBottomNav(worldSlug, "more")}
+      contextTitle="Kontext"
       topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
       sidebar={
         <>
@@ -104,19 +107,19 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
             <tbody>
               {sessions.map((session) => (
                 <tr key={session.id}>
-                  <td>{session.sessionNumber}</td>
-                  <td>
+                  <td data-label="#">{session.sessionNumber}</td>
+                  <td data-label="Titel">
                     <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
                       {session.title}
                     </Link>
                   </td>
-                  <td>
+                  <td data-label="Datum">
                     {session.date
                       ? session.date.toLocaleDateString("de-DE")
                       : "—"}
                   </td>
-                  <td><GameSessionStatusBadge status={session.status} /></td>
-                  <td>
+                  <td data-label="Status"><GameSessionStatusBadge status={session.status} /></td>
+                  <td data-label="Portal">
                     {session.recapPublished ? (
                       <span className="uwe-badge uwe-badge-published">Veröffentlicht</span>
                     ) : (

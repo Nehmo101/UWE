@@ -17,6 +17,7 @@ import {
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
+import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   searchParams: Promise<{
@@ -56,6 +57,8 @@ export default async function StudioSearchPage({ searchParams }: Props) {
 
   return (
     <AppShell
+      bottomNav={studioGlobalBottomNav("search")}
+      contextTitle="Suchbereiche"
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle="Globale Suche" href="/" />

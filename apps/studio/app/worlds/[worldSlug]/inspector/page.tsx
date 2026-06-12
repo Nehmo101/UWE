@@ -21,6 +21,7 @@ import {
   type InspectorSeverity,
 } from "@uwe/database/server";
 import { worldNavItems } from "@/src/lib/world-nav";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import { applyInspectorFixAction } from "../../../inspector-actions";
 
 interface Props {
@@ -110,6 +111,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
 
   return (
     <AppShell
+      bottomNav={studioWorldBottomNav(worldSlug, "inspector")}
+      contextTitle="Inspektor-Hilfe"
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />

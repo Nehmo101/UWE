@@ -8,6 +8,7 @@ import {
   PageHeader,
   PageTypeBadge,
   PublishBadge,
+  PageListCards,
   SearchFilterBar,
   SearchResultsList,
   SidebarNav,
@@ -28,6 +29,7 @@ import {
   type Visibility,
 } from "@uwe/database/server";
 import { worldNavItems } from "@/src/lib/world-nav";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -85,6 +87,8 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
 
   return (
     <AppShell
+      bottomNav={studioWorldBottomNav(worldSlug, isSearching ? "search" : "pages")}
+      contextTitle="Welt-Kontext"
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
@@ -205,30 +209,46 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
               }
             />
           ) : (
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>Titel</th>
-                  <th>Typ</th>
-                  <th>Sichtbarkeit</th>
-                  <th>Publish</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pages.map((page) => (
-                  <tr key={page.id}>
-                    <td>
-                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                        {page.title}
-                      </Link>
-                    </td>
-                    <td><PageTypeBadge type={page.type} /></td>
-                    <td><VisibilityBadge visibility={page.visibility} /></td>
-                    <td><PublishBadge status={page.publishStatus} /></td>
+            <>
+              <PageListCards
+                items={pages.map((page) => ({
+                  id: page.id,
+                  title: page.title,
+                  href: buildPageUrl(worldSlug, page.type, page.slug),
+                  badges: (
+                    <>
+                      <PageTypeBadge type={page.type} />
+                      <VisibilityBadge visibility={page.visibility} />
+                      <PublishBadge status={page.publishStatus} />
+                    </>
+                  ),
+                }))}
+              />
+              <table className="uwe-page-table uwe-table-hidden-mobile">
+                <thead>
+                  <tr>
+                    <th>Titel</th>
+                    <th>Typ</th>
+                    <th>Sichtbarkeit</th>
+                    <th>Publish</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pages.map((page) => (
+                    <tr key={page.id}>
+                      <td data-label="Titel">
+                        <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                          {page.title}
+                        </Link>
+                      </td>
+                      <td data-label="Typ"><PageTypeBadge type={page.type} /></td>
+                      <td data-label="Sichtbarkeit"><VisibilityBadge visibility={page.visibility} /></td>
+                      <td data-label="Publish"><PublishBadge status={page.publishStatus} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </>
       }

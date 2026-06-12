@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   AppShell,
   Breadcrumb,
+  CollapsibleSection,
   PAGE_TYPE_LABELS,
   SidebarNav,
   SidebarSection,
@@ -12,6 +13,7 @@ import {
   CANONICAL_LABELS,
   BLOCK_TYPE_LABELS,
 } from "@uwe/shared-ui";
+import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
 import {
   buildPageUrl,
   getAppRepository,
@@ -73,7 +75,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         </SidebarSection>
       }
       main={
-        <>
+        <div className="uwe-has-sticky-actions">
           <Breadcrumb
             items={[
               { label: "Dashboard", href: "/" },
@@ -87,7 +89,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             <p style={{ color: "#86efac", fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
           )}
 
-          <form action={updatePageAction} className="uwe-form">
+          <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-form">
             <input type="hidden" name="pageId" value={page.id} />
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="pageSlug" value={slug} />
@@ -160,12 +162,16 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <input name="aliases" defaultValue={aliases.join(", ")} />
             </label>
 
-            <button type="submit" className="uwe-btn uwe-btn-primary">Seite speichern</button>
+            <div className="uwe-form-actions">
+              <button type="submit" className="uwe-btn uwe-btn-primary">Seite speichern</button>
+            </div>
           </form>
 
-          <section style={{ marginTop: "2.5rem" }}>
-            <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>ContentBlocks</h2>
-
+          <CollapsibleSection
+            title="ContentBlocks"
+            summary={`${page.contentBlocks.length} Blöcke`}
+            defaultOpen={page.contentBlocks.length <= 3}
+          >
             {page.contentBlocks.map((block) => (
               <form key={block.id} action={updateContentBlockAction} className="uwe-form" style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "0.65rem" }}>
                 <input type="hidden" name="blockId" value={block.id} />
@@ -254,8 +260,10 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
               <button type="submit" className="uwe-btn uwe-btn-primary">Block hinzufügen</button>
             </form>
-          </section>
-        </>
+          </CollapsibleSection>
+
+          <EditPageStickyBar previewHref={pagePreviewHref(worldSlug, page.type, slug)} />
+        </div>
       }
     />
   );

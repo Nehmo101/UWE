@@ -8,12 +8,14 @@ import {
   TopBarBrand,
 } from "@uwe/shared-ui";
 import { getAppRepository } from "@uwe/database/server";
+import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 
 export default async function WorldsPage() {
   const worlds = await getAppRepository().listWorlds();
 
   return (
     <AppShell
+      bottomNav={studioGlobalBottomNav("worlds")}
       topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/" />}
       sidebar={
         <SidebarSection title="Navigation">

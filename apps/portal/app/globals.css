@@ -533,6 +533,10 @@ body {
 @media (max-width: 960px) {
   .auth-header {
     flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
   }
 
   .auth-mobile-toggle {
@@ -540,6 +544,9 @@ body {
     align-items: center;
     justify-content: center;
     margin-left: auto;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 1.25rem;
   }
 
   .auth-header nav {
@@ -548,6 +555,16 @@ body {
     flex-direction: column;
     align-items: stretch;
     padding-top: 0.5rem;
+    gap: 0.25rem;
+  }
+
+  .auth-header nav a,
+  .auth-header nav button {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    font-size: 1rem;
   }
 
   .auth-header[data-nav-open="true"] nav {
@@ -561,5 +578,36 @@ body {
   .auth-card,
   .auth-card-wide {
     padding: 1.15rem;
+  }
+
+  .auth-page {
+    padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .auth-form input,
+  .auth-form button,
+  .auth-preview select,
+  .auth-preview button {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .auth-note-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .auth-quick-links a {
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .share-gate {
+    padding: 1rem;
+  }
+
+  .share-password-form {
+    max-width: none;
   }
 }

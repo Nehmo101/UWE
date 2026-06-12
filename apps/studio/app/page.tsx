@@ -20,6 +20,7 @@ import {
   getProductionSafetyWarnings,
   prisma,
 } from "@uwe/database/server";
+import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { undoActivityAction } from "./inspector-actions";
 
 const ACTIVITY_DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -50,6 +51,8 @@ export default async function StudioDashboard({ searchParams }: Props) {
 
   return (
     <AppShell
+      bottomNav={studioGlobalBottomNav("dashboard")}
+      contextTitle="Schnellaktionen"
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle="Dungeon Master Workspace" />
@@ -152,16 +155,16 @@ export default async function StudioDashboard({ searchParams }: Props) {
                 <tbody>
                   {activityEntries.map((entry) => (
                     <tr key={entry.id}>
-                      <td>{ACTIVITY_DATE_FORMAT.format(entry.createdAt)}</td>
-                      <td>{ACTIVITY_ACTION_LABELS[entry.action]}</td>
-                      <td>
+                      <td data-label="Zeit">{ACTIVITY_DATE_FORMAT.format(entry.createdAt)}</td>
+                      <td data-label="Aktion">{ACTIVITY_ACTION_LABELS[entry.action]}</td>
+                      <td data-label="Was">
                         {entry.targetHref ? (
                           <Link href={entry.targetHref}>{entry.summary}</Link>
                         ) : (
                           entry.summary
                         )}
                       </td>
-                      <td>
+                      <td data-label="Undo">
                         {entry.undo && !entry.undo.undoneAt ? (
                           <form action={undoActivityAction}>
                             <input type="hidden" name="undoEntryId" value={entry.undo.entryId} />
@@ -198,16 +201,16 @@ export default async function StudioDashboard({ searchParams }: Props) {
                 <tbody>
                   {recentPages.map((page) => (
                     <tr key={page.id}>
-                      <td>
+                      <td data-label="Titel">
                         <Link href={buildPageUrl(page.world.slug, page.type, page.slug)}>
                           {page.title}
                         </Link>
                       </td>
-                      <td>
+                      <td data-label="Welt">
                         <Link href={`/worlds/${page.world.slug}`}>{page.world.name}</Link>
                       </td>
-                      <td><PageTypeBadge type={page.type} /></td>
-                      <td><PublishBadge status={page.publishStatus} /></td>
+                      <td data-label="Typ"><PageTypeBadge type={page.type} /></td>
+                      <td data-label="Publish"><PublishBadge status={page.publishStatus} /></td>
                     </tr>
                   ))}
                 </tbody>

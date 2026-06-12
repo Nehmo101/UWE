@@ -22,6 +22,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { worldNavItems } from "@/src/lib/world-nav";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -57,6 +58,8 @@ export default async function WorldDashboardPage({ params }: Props) {
 
   return (
     <AppShell
+      bottomNav={studioWorldBottomNav(worldSlug, "overview")}
+      contextTitle="Quick Create"
       topBar={
         <>
           <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />

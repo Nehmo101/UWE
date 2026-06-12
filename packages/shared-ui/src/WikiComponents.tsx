@@ -86,10 +86,10 @@ function SidebarSection({
   );
 }
 
-export function WikiContent({ html }: { html: string }) {
+export function WikiContent({ html, readMode = true }: { html: string; readMode?: boolean }) {
   return (
     <article
-      className="wiki-content"
+      className={readMode ? "wiki-content wiki-content-readmode" : "wiki-content"}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
