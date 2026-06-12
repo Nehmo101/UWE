@@ -315,7 +315,7 @@ describe("Spotify Web API playback", () => {
 
   it("resumeSpotifyPlayback calls PUT /v1/me/player/play without body", async () => {
     let capturedUrl = "";
-    let capturedBody = initBodyTracker();
+    const capturedBody = initBodyTracker();
 
     const fetchImpl = createMockFetch((url, init) => {
       capturedUrl = url;
