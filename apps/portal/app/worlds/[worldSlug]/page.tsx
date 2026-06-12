@@ -20,6 +20,7 @@ import {
   type NavCategory,
   type SearchEntityFilter,
 } from "@uwe/database/server";
+import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -59,14 +60,18 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
 
   return (
     <AppShell
+      bottomNav={portalWorldBottomNav(worldSlug, isSearching ? "search" : "home")}
+      contextTitle="Navigation"
       topBar={
         <>
           <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
-          <GlobalSearchForm
-            action={`/worlds/${worldSlug}`}
-            query={q ?? ""}
-            placeholder="In dieser Welt suchen…"
-          />
+          <div id="search">
+            <GlobalSearchForm
+              action={`/worlds/${worldSlug}`}
+              query={q ?? ""}
+              placeholder="In dieser Welt suchen…"
+            />
+          </div>
         </>
       }
       sidebar={

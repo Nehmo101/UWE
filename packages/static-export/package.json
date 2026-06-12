@@ -12,7 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "prisma generate --schema ../database/prisma/schema.prisma && node --import tsx --test 'src/**/*.test.ts'",
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
     "export": "tsx src/cli.ts"
   },
   "dependencies": {

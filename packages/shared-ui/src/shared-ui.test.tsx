@@ -8,8 +8,11 @@ import {
   EmptyState,
   ErrorAlert,
   LoadingSpinner,
+  MobileBottomNav,
   PageHeader,
+  SidebarContextProvider,
   SidebarNav,
+  StickyActionBar,
 } from "./index";
 import {
   PageTypeBadge,
@@ -120,6 +123,11 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /max-width: 960px/);
     assert.match(uweCss, /uwe-btn-secondary/);
     assert.match(uweCss, /uwe-error-alert/);
+    assert.match(uweCss, /uwe-bottom-nav/);
+    assert.match(uweCss, /uwe-sticky-action-bar/);
+    assert.match(uweCss, /uwe-filter-sheet/);
+    assert.match(uweCss, /uwe-page-list-cards/);
+    assert.match(uweCss, /safe-area-inset/);
   });
 
   it("includes command palette, dashboard and inspector styles in shared CSS", () => {
@@ -127,6 +135,32 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /uwe-template-card/);
     assert.match(uweCss, /uwe-dashboard-grid/);
     assert.match(uweCss, /uwe-inspector-findings/);
+  });
+
+  it("renders mobile bottom navigation with active item", () => {
+    const html = renderToStaticMarkup(
+      <SidebarContextProvider closeSidebar={() => {}}>
+        <MobileBottomNav
+          items={[
+            { label: "Dashboard", href: "/", icon: "⌂", active: true },
+            { label: "Mehr", icon: "☰", action: "open-sidebar" },
+          ]}
+        />
+      </SidebarContextProvider>,
+    );
+    assert.match(html, /uwe-bottom-nav/);
+    assert.match(html, /class="active"/);
+    assert.match(html, /aria-current="page"/);
+  });
+
+  it("renders sticky action bar for mobile forms", () => {
+    const html = renderToStaticMarkup(
+      <StickyActionBar>
+        <button type="submit">Speichern</button>
+      </StickyActionBar>,
+    );
+    assert.match(html, /uwe-sticky-action-bar/);
+    assert.match(html, /role="toolbar"/);
   });
 });
 

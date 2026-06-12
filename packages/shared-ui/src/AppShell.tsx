@@ -1,20 +1,45 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  MobileBottomNav,
+  MobileContextPanel,
+  MobileSidebarContent,
+  SidebarContextProvider,
+  type BottomNavItem,
+} from "./MobileComponents";
 
 export interface AppShellProps {
   sidebar?: ReactNode;
   main: ReactNode;
   context?: ReactNode;
   topBar?: ReactNode;
+  /** Optional bottom navigation bar (shown on mobile only) */
+  bottomNav?: BottomNavItem[];
+  /** Title for collapsible context panel on mobile */
+  contextTitle?: string;
 }
 
-export function AppShell({ sidebar, main, context, topBar }: AppShellProps) {
+export function AppShell({
+  sidebar,
+  main,
+  context,
+  topBar,
+  bottomNav,
+  contextTitle = "Details & Kontext",
+}: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasSidebar = Boolean(sidebar);
   const hasContext = Boolean(context);
+  const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), []);
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -27,48 +52,78 @@ export function AppShell({ sidebar, main, context, topBar }: AppShellProps) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [sidebarOpen, closeSidebar]);
 
+  useEffect(() => {
+    function onToggleSidebar() {
+      toggleSidebar();
+    }
+    document.addEventListener("uwe:toggle-sidebar", onToggleSidebar);
+    return () => document.removeEventListener("uwe:toggle-sidebar", onToggleSidebar);
+  }, [toggleSidebar]);
+
+  /* Lock body scroll when mobile drawer is open */
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
+
   return (
-    <div className="uwe-shell" data-sidebar-open={sidebarOpen ? "true" : "false"}>
-      {topBar && (
-        <header className="uwe-topbar">
-          {hasSidebar && (
-            <button
-              type="button"
-              className="uwe-mobile-nav-toggle"
-              aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
-              aria-expanded={sidebarOpen}
-              aria-controls="uwe-sidebar"
-              onClick={() => setSidebarOpen((open) => !open)}
-            >
-              <span className="uwe-mobile-nav-icon" aria-hidden />
-            </button>
-          )}
-          <div className="uwe-topbar-inner">{topBar}</div>
-        </header>
-      )}
+    <SidebarContextProvider closeSidebar={closeSidebar}>
       <div
-        className="uwe-shell-body"
-        data-has-sidebar={hasSidebar ? "true" : "false"}
-        data-has-context={hasContext ? "true" : "false"}
+        className="uwe-shell"
+        data-sidebar-open={sidebarOpen ? "true" : "false"}
+        data-has-bottom-nav={hasBottomNav ? "true" : "false"}
       >
-        {hasSidebar && (
-          <>
-            <button
-              type="button"
-              className="uwe-sidebar-backdrop"
-              aria-label="Navigation schließen"
-              tabIndex={sidebarOpen ? 0 : -1}
-              onClick={closeSidebar}
-            />
-            <aside id="uwe-sidebar" className="uwe-sidebar">
-              {sidebar}
-            </aside>
-          </>
+        {topBar && (
+          <header className="uwe-topbar">
+            {hasSidebar && (
+              <button
+                type="button"
+                className="uwe-mobile-nav-toggle"
+                aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
+                aria-expanded={sidebarOpen}
+                aria-controls="uwe-sidebar"
+                onClick={toggleSidebar}
+              >
+                <span className="uwe-mobile-nav-icon" aria-hidden />
+              </button>
+            )}
+            <div className="uwe-topbar-inner">{topBar}</div>
+          </header>
         )}
-        <main className="uwe-main">{main}</main>
-        {hasContext && <aside className="uwe-context">{context}</aside>}
+        <div
+          className="uwe-shell-body"
+          data-has-sidebar={hasSidebar ? "true" : "false"}
+          data-has-context={hasContext ? "true" : "false"}
+        >
+          {hasSidebar && (
+            <>
+              <button
+                type="button"
+                className="uwe-sidebar-backdrop"
+                aria-label="Navigation schließen"
+                tabIndex={sidebarOpen ? 0 : -1}
+                onClick={closeSidebar}
+              />
+              <aside id="uwe-sidebar" className="uwe-sidebar">
+                <MobileSidebarContent>{sidebar}</MobileSidebarContent>
+              </aside>
+            </>
+          )}
+          <main className="uwe-main">{main}</main>
+          {hasContext && (
+            <>
+              <aside className="uwe-context uwe-context-desktop">{context}</aside>
+              <MobileContextPanel title={contextTitle}>{context}</MobileContextPanel>
+            </>
+          )}
+        </div>
+        {hasBottomNav && bottomNav && <MobileBottomNav items={bottomNav} />}
       </div>
-    </div>
+    </SidebarContextProvider>
   );
 }
 
@@ -147,6 +202,7 @@ export function SearchField({
         placeholder={placeholder}
         defaultValue={defaultValue}
         aria-label="Suche"
+        enterKeyHint="search"
       />
     </form>
   );
@@ -204,7 +260,7 @@ export function PageHeader({
 }) {
   return (
     <header className="uwe-page-header">
-      <div>
+      <div className="uwe-page-header-main">
         <h1>{title}</h1>
         {summary && <p className="uwe-page-summary">{summary}</p>}
         {meta && <div className="uwe-page-meta">{meta}</div>}

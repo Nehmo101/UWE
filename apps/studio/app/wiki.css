@@ -423,4 +423,101 @@
     border: none;
     border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   }
+
+  .wiki-main {
+    padding: 1rem 1rem 1.5rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .wiki-header h1 {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    line-height: 1.25;
+  }
+
+  .wiki-header-meta {
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .wiki-content {
+    max-width: none;
+    font-size: 1.05rem;
+    line-height: 1.8;
+  }
+
+  .wiki-content img,
+  .wiki-content figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
+
+  .wiki-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 0.9rem;
+  }
+
+  .wiki-content pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 0.85rem;
+  }
+
+  .wiki-broken-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .wiki-broken-table thead {
+    display: none;
+  }
+
+  .wiki-broken-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .wiki-broken-table tr {
+    display: block;
+    padding: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 0.5rem;
+  }
+
+  .wiki-broken-table td {
+    display: block;
+    padding: 0.2rem 0;
+    border: none;
+  }
+
+  .wiki-world-grid {
+    max-width: none;
+  }
+
+  .ai-brain-panel {
+    padding: 1rem;
+  }
+
+  .ai-brain-actions button {
+    min-height: 2.75rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Reading mode for long wiki text on mobile */
+@media (max-width: 960px) {
+  .wiki-content-readmode {
+    font-size: 1.1rem;
+    line-height: 1.9;
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+
+  .wiki-content-readmode p {
+    margin-bottom: 1.35rem;
+  }
 }

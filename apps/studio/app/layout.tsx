@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { getAppRepository } from "@uwe/database/server";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import "@uwe/shared-ui/uwe.css";
@@ -10,6 +10,19 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "UWE Studio",
   description: "Universeller Welten-Editor — DM campaign editor",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "UWE Studio",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#6366f1",
 };
 
 export default async function RootLayout({

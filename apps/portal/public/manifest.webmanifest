@@ -1,0 +1,19 @@
+{
+  "name": "UWE Portal",
+  "short_name": "UWE Portal",
+  "description": "Universeller Welten-Editor — Spieler-Portal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0a2e",
+  "theme_color": "#7c3aed",
+  "orientation": "any",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

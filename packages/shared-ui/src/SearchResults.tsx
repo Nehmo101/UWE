@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./AppShell";
+import { MobileFilterSheet } from "./MobileComponents";
 import { PageTypeBadge, PUBLISH_LABELS, VisibilityBadge } from "./StatusBadges";
 import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 
@@ -139,7 +140,9 @@ export function SearchFilterBar({
   }[];
   hiddenFields?: Record<string, string>;
 }) {
-  return (
+  const activeCount = filters.filter((filter) => filter.value).length;
+
+  const formContent = (
     <form className="uwe-search-filters" action={action} method="get">
       <input type="hidden" name="q" value={query ?? ""} />
       {hiddenFields &&
@@ -164,6 +167,12 @@ export function SearchFilterBar({
       </button>
     </form>
   );
+
+  return (
+    <MobileFilterSheet title="Suchfilter" activeCount={activeCount}>
+      {formContent}
+    </MobileFilterSheet>
+  );
 }
 
 export function GlobalSearchForm({
@@ -185,6 +194,7 @@ export function GlobalSearchForm({
         placeholder={placeholder}
         defaultValue={query}
         aria-label="Globale Suche"
+        enterKeyHint="search"
       />
       {extraFields}
       <button type="submit" className="uwe-btn uwe-btn-primary">
