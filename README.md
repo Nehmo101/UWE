@@ -106,6 +106,7 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 - **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically. Templates are DB-backed and user-editable at `/templates` (create, edit, duplicate, deactivate); the built-in set is seeded once as system templates.
 - **World Inspector with fix actions** — `/worlds/[slug]/inspector` audits what players can actually see: portal-visible pages/blocks/assets, share links (password/expiry), safety findings (e.g. player-visible GM notes), and canon warnings (broken wiki links, duplicate names, contradictions, orphan pages, unassigned pages). Findings link directly to the affected page/block and offer one-click fixes (e.g. set block to DM-only, convert broken wikilinks to text) — every fix is logged and undoable.
 - **Activity Log & Next Actions** — the Studio dashboard shows an audit log (content/visibility changes, inspector fixes, template usage, imports/exports, backups, errors) with links to affected objects and inline undo, plus a "Next Actions" section (open findings, backup age, unassigned content, publicly visible player content, seed/migration problems).
+- **Label-Druck** — `/worlds/[slug]/labels`: visueller 6×4-Zoll-Editor, Templates, Drucklisten, PDF/HTML-Export, DM/Player-Sicherheit. Details: [docs/LABELS.md](docs/LABELS.md).
 
 ---
 

@@ -55,6 +55,8 @@ export function sanitizeBackupData(data: BackupData): BackupData {
     gameSessionPageLinks: data.gameSessionPageLinks.map((link) => sanitizeRecord(link)),
     labelTemplates: data.labelTemplates.map((template) => sanitizeRecord(template)),
     labels: data.labels.map((label) => sanitizeRecord(label)),
+    printLists: (data.printLists ?? []).map((list) => sanitizeRecord(list)),
+    printListItems: (data.printListItems ?? []).map((item) => sanitizeRecord(item)),
     soundboardButtons: data.soundboardButtons.map((button) => sanitizeRecord(button)),
     soundboardButtonPageLinks: data.soundboardButtonPageLinks.map((link) =>
       sanitizeRecord(link),

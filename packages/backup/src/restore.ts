@@ -458,6 +458,40 @@ export async function executeRestore(
         templateId,
         content: label.content as never,
         layoutSettings: label.layoutSettings as never,
+        printStatus: (label.printStatus as never) ?? "open",
+      },
+    });
+  }
+
+  for (const list of bundle.data.printLists ?? []) {
+    const worldId = idMap.get(list.worldId);
+    if (!worldId) continue;
+
+    await db.printList.create({
+      data: {
+        id: remapId(idMap, list.id),
+        worldId,
+        campaignId: list.campaignId ? idMap.get(list.campaignId) ?? null : null,
+        name: list.name,
+        description: list.description,
+        status: list.status as never,
+        forNextSession: list.forNextSession,
+      },
+    });
+  }
+
+  for (const item of bundle.data.printListItems ?? []) {
+    const printListId = idMap.get(item.printListId);
+    const labelId = idMap.get(item.labelId);
+    if (!printListId || !labelId) continue;
+
+    await db.printListItem.create({
+      data: {
+        id: remapId(idMap, item.id),
+        printListId,
+        labelId,
+        copies: item.copies,
+        sortOrder: item.sortOrder,
       },
     });
   }

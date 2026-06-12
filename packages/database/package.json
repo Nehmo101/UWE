@@ -31,7 +31,8 @@
     "@prisma/client": "^7.8.0",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
-    "@uwe/soundboard": "workspace:*"
+    "@uwe/soundboard": "workspace:*",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

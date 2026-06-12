@@ -2,12 +2,20 @@ import type {
   Asset,
   ContentBlock,
   Label,
+  LabelPrintStatus,
   LabelSourceType,
   LabelTemplate,
   Page,
   Prisma,
 } from "./generated/prisma/client";
 import { createPrismaClient, prisma, type PrismaClient } from "./client";
+import {
+  defaultElementsForMode,
+  ensureLabelElements,
+  parseElements,
+  syncContentFromElements,
+  type LabelElement,
+} from "./label-elements";
 import { combineBlockContent } from "./page-service";
 import {
   filterBlocksForContext,
@@ -17,13 +25,18 @@ import type { PageWithBlocks } from "./repository";
 
 export type {
   Label,
+  LabelPrintStatus,
   LabelSourceType,
   LabelTemplate,
 } from "./generated/prisma/client";
 
 export {
+  LabelPrintStatus as LabelPrintStatusEnum,
   LabelSourceType as LabelSourceTypeEnum,
 } from "./generated/prisma/client";
+
+export type { LabelElement, LabelElementType } from "./label-elements";
+export { ensureLabelElements, syncContentFromElements } from "./label-elements";
 
 export const LABEL_SOURCE_TYPE_LABELS: Record<LabelSourceType, string> = {
   page: "Seite",
@@ -35,6 +48,8 @@ export const LABEL_SOURCE_TYPE_LABELS: Record<LabelSourceType, string> = {
 
 export type LabelLayoutMode = "image_text" | "text_only" | "image_only";
 
+export type LabelFitMode = "conservative" | "normal" | "aggressive";
+
 export interface LabelLayoutSettings {
   mode: LabelLayoutMode;
   truncateToPage: boolean;
@@ -43,6 +58,14 @@ export interface LabelLayoutSettings {
   maxWordLength?: number;
   widthInches: number;
   heightInches: number;
+  showSafeArea?: boolean;
+  showCropMarks?: boolean;
+  printFriendly?: boolean;
+  snapToGrid?: boolean;
+  gridSize?: number;
+  fitMode?: LabelFitMode;
+  autoFit?: boolean;
+  elements?: LabelElement[];
 }
 
 export interface LabelContentData {
@@ -54,6 +77,13 @@ export interface LabelContentData {
   sourceTitle?: string;
   containsDmOnly?: boolean;
   dmOnlyBlockCount?: number;
+  elements?: LabelElement[];
+  editorMode?: "visual" | "legacy";
+  originalText?: string;
+  fittedText?: string;
+  fitStatus?: "fits" | "tight" | "overflow";
+  fitMode?: LabelFitMode;
+  fitApplied?: boolean;
   /** Placeholder for future AI image generation */
   aiImagePlaceholder?: string;
   /** Placeholder for future AI text generation */
@@ -77,6 +107,23 @@ export interface UpdateLabelInput {
   templateId?: string;
   content?: LabelContentData;
   layoutSettings?: LabelLayoutSettings;
+  printStatus?: LabelPrintStatus;
+}
+
+export interface CreateLabelTemplateInput {
+  worldId: string;
+  name: string;
+  slug?: string;
+  description?: string | null;
+  layoutSettings: LabelLayoutSettings;
+  elements?: LabelElement[];
+}
+
+export interface UpdateLabelTemplateInput {
+  name?: string;
+  description?: string | null;
+  layoutSettings?: LabelLayoutSettings;
+  elements?: LabelElement[];
 }
 
 export interface CreateLabelFromSourceInput {
@@ -102,6 +149,13 @@ const DEFAULT_LAYOUT: LabelLayoutSettings = {
   maxWordLength: 24,
   widthInches: 6,
   heightInches: 4,
+  showSafeArea: true,
+  showCropMarks: false,
+  printFriendly: true,
+  snapToGrid: true,
+  gridSize: 0.1,
+  fitMode: "normal",
+  autoFit: false,
 };
 
 const PLAYER_BLOCK_TYPES = new Set([
@@ -132,6 +186,14 @@ function parseLayoutSettings(raw: unknown): LabelLayoutSettings {
     maxWordLength: value.maxWordLength ?? DEFAULT_LAYOUT.maxWordLength,
     widthInches: value.widthInches ?? DEFAULT_LAYOUT.widthInches,
     heightInches: value.heightInches ?? DEFAULT_LAYOUT.heightInches,
+    showSafeArea: value.showSafeArea ?? DEFAULT_LAYOUT.showSafeArea,
+    showCropMarks: value.showCropMarks ?? DEFAULT_LAYOUT.showCropMarks,
+    printFriendly: value.printFriendly ?? DEFAULT_LAYOUT.printFriendly,
+    snapToGrid: value.snapToGrid ?? DEFAULT_LAYOUT.snapToGrid,
+    gridSize: value.gridSize ?? DEFAULT_LAYOUT.gridSize,
+    fitMode: value.fitMode ?? DEFAULT_LAYOUT.fitMode,
+    autoFit: value.autoFit ?? DEFAULT_LAYOUT.autoFit,
+    elements: value.elements ? parseElements(value.elements) : undefined,
   };
 }
 
@@ -150,6 +212,13 @@ function parseContentData(raw: unknown): LabelContentData {
     sourceTitle: value.sourceTitle,
     containsDmOnly: value.containsDmOnly ?? false,
     dmOnlyBlockCount: value.dmOnlyBlockCount ?? 0,
+    elements: value.elements ? parseElements(value.elements) : undefined,
+    editorMode: value.editorMode,
+    originalText: value.originalText,
+    fittedText: value.fittedText,
+    fitStatus: value.fitStatus,
+    fitMode: value.fitMode,
+    fitApplied: value.fitApplied,
     aiImagePlaceholder: value.aiImagePlaceholder,
     aiTextPlaceholder: value.aiTextPlaceholder,
   };
@@ -159,10 +228,18 @@ export function normalizeLabel(label: Label): Label & {
   content: LabelContentData;
   layoutSettings: LabelLayoutSettings;
 } {
+  const content = parseContentData(label.content);
+  const layoutSettings = parseLayoutSettings(label.layoutSettings);
+  const elements = ensureLabelElements(content, layoutSettings);
+
   return {
     ...label,
-    content: parseContentData(label.content),
-    layoutSettings: parseLayoutSettings(label.layoutSettings),
+    content: {
+      ...content,
+      elements,
+      originalText: content.originalText ?? content.text,
+    },
+    layoutSettings,
   } as Label & {
     content: LabelContentData;
     layoutSettings: LabelLayoutSettings;
@@ -464,8 +541,190 @@ export class LabelService {
         templateId,
         content: toJsonContent(content),
         layoutSettings: toJsonLayout(layoutSettings),
+        printStatus: input.printStatus,
       },
       include: { template: true, campaign: true },
+    });
+  }
+
+  async updateLabelElements(
+    labelId: string,
+    elements: LabelElement[],
+    layoutSettings?: Partial<LabelLayoutSettings>,
+  ): Promise<LabelWithRelations> {
+    const existing = await this.getLabelById(labelId);
+    if (!existing) throw new Error("Label not found");
+
+    const parsed = parseContentData(existing.content);
+    const settings = layoutSettings
+      ? { ...parseLayoutSettings(existing.layoutSettings), ...layoutSettings }
+      : parseLayoutSettings(existing.layoutSettings);
+
+    const content = syncContentFromElements(parsed, elements);
+
+    return this.updateLabel(labelId, { content, layoutSettings: settings });
+  }
+
+  async saveAsTemplate(
+    labelId: string,
+    name: string,
+    worldId: string,
+  ): Promise<LabelTemplate> {
+    const label = await this.getLabelById(labelId);
+    if (!label) throw new Error("Label not found");
+
+    const parsed = normalizeLabel(label);
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || `template-${Date.now()}`;
+
+    const layoutSettings: LabelLayoutSettings = {
+      mode: parsed.layoutSettings.mode,
+      truncateToPage: parsed.layoutSettings.truncateToPage,
+      truncateLongWords: parsed.layoutSettings.truncateLongWords,
+      maxChars: parsed.layoutSettings.maxChars,
+      maxWordLength: parsed.layoutSettings.maxWordLength,
+      widthInches: parsed.layoutSettings.widthInches,
+      heightInches: parsed.layoutSettings.heightInches,
+      showSafeArea: parsed.layoutSettings.showSafeArea,
+      showCropMarks: parsed.layoutSettings.showCropMarks,
+      printFriendly: parsed.layoutSettings.printFriendly,
+      snapToGrid: parsed.layoutSettings.snapToGrid,
+      gridSize: parsed.layoutSettings.gridSize,
+      fitMode: parsed.layoutSettings.fitMode,
+      autoFit: parsed.layoutSettings.autoFit,
+      elements: parsed.content.elements,
+    };
+
+    return this.createWorldTemplate({
+      worldId,
+      name,
+      slug,
+      description: `Aus Label „${label.title}"`,
+      layoutSettings,
+      elements: parsed.content.elements,
+    });
+  }
+
+  async createWorldTemplate(input: CreateLabelTemplateInput): Promise<LabelTemplate> {
+    const slug =
+      input.slug ??
+      input.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 48);
+
+    const layoutSettings: LabelLayoutSettings = {
+      ...input.layoutSettings,
+      elements: input.elements ?? input.layoutSettings.elements,
+    };
+
+    return this.db.labelTemplate.create({
+      data: {
+        worldId: input.worldId,
+        name: input.name,
+        slug,
+        description: input.description,
+        layoutSettings: toJsonLayout(layoutSettings),
+        isSystem: false,
+      },
+    });
+  }
+
+  async updateWorldTemplate(
+    templateId: string,
+    input: UpdateLabelTemplateInput,
+  ): Promise<LabelTemplate> {
+    const existing = await this.db.labelTemplate.findUnique({ where: { id: templateId } });
+    if (!existing) throw new Error("Template not found");
+    if (existing.isSystem) throw new Error("System templates cannot be edited");
+
+    const layoutSettings = input.layoutSettings
+      ? {
+          ...parseLayoutSettings(existing.layoutSettings),
+          ...input.layoutSettings,
+          elements: input.elements ?? input.layoutSettings.elements,
+        }
+      : parseLayoutSettings(existing.layoutSettings);
+
+    return this.db.labelTemplate.update({
+      where: { id: templateId },
+      data: {
+        name: input.name,
+        description: input.description,
+        layoutSettings: toJsonLayout(layoutSettings),
+      },
+    });
+  }
+
+  async duplicateTemplate(templateId: string, worldId: string): Promise<LabelTemplate> {
+    const template = await this.db.labelTemplate.findUnique({ where: { id: templateId } });
+    if (!template) throw new Error("Template not found");
+
+    const baseSlug = `${template.slug}-kopie`;
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (
+      await this.db.labelTemplate.findFirst({
+        where: { worldId, slug },
+      })
+    ) {
+      counter += 1;
+      slug = `${baseSlug}-${counter}`;
+    }
+
+    return this.createWorldTemplate({
+      worldId,
+      name: `${template.name} (Kopie)`,
+      slug,
+      description: template.description,
+      layoutSettings: parseLayoutSettings(template.layoutSettings),
+      elements: parseLayoutSettings(template.layoutSettings).elements,
+    });
+  }
+
+  async renameTemplate(templateId: string, name: string): Promise<LabelTemplate> {
+    return this.updateWorldTemplate(templateId, { name });
+  }
+
+  async deleteWorldTemplate(templateId: string): Promise<void> {
+    const template = await this.db.labelTemplate.findUnique({ where: { id: templateId } });
+    if (!template) throw new Error("Template not found");
+    if (template.isSystem) throw new Error("System templates cannot be deleted");
+
+    const inUse = await this.db.label.count({ where: { templateId } });
+    if (inUse > 0) {
+      throw new Error("Template wird noch von Labels verwendet");
+    }
+
+    await this.db.labelTemplate.delete({ where: { id: templateId } });
+  }
+
+  async resetLabelToTemplate(labelId: string): Promise<LabelWithRelations> {
+    const label = await this.getLabelById(labelId);
+    if (!label) throw new Error("Label not found");
+
+    const template = await this.getTemplateById(label.templateId);
+    if (!template) throw new Error("Template not found");
+
+    const layoutSettings = parseLayoutSettings(template.layoutSettings);
+    const content = parseContentData(label.content);
+    const elements = defaultElementsForMode(content, layoutSettings.mode);
+
+    return this.updateLabel(labelId, {
+      layoutSettings,
+      content: syncContentFromElements(content, elements),
+    });
+  }
+
+  async setPrintStatus(labelId: string, status: LabelPrintStatus): Promise<void> {
+    await this.db.label.update({
+      where: { id: labelId },
+      data: { printStatus: status },
     });
   }
 

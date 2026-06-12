@@ -1169,6 +1169,211 @@
   overflow: hidden;
 }
 
+/* Label editor */
+.uwe-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 1.25rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.uwe-tab {
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.35rem;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.uwe-tab.is-active,
+.uwe-tab:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #e2e8f0;
+}
+
+.uwe-label-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.uwe-label-editor-sep {
+  width: 1px;
+  height: 1.25rem;
+  background: rgba(148, 163, 184, 0.3);
+  margin: 0 0.25rem;
+}
+
+.uwe-label-editor-workspace {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .uwe-label-editor-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.uwe-label-editor-canvas {
+  position: relative;
+  background: #fff;
+  border-radius: 0.35rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  user-select: none;
+}
+
+.uwe-label-editor-safe {
+  position: absolute;
+  left: calc(0.2 / 6 * 100%);
+  top: calc(0.2 / 4 * 100%);
+  width: calc(5.6 / 6 * 100%);
+  height: calc(3.6 / 4 * 100%);
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.uwe-label-editor-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+  background-size: calc(100% / 60) calc(100% / 40);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.uwe-label-editor-element {
+  position: absolute;
+  border: 1px solid transparent;
+  cursor: move;
+  overflow: hidden;
+  color: #111;
+  font-family: Georgia, serif;
+  padding: 2px 4px;
+}
+
+.uwe-label-editor-element.is-selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.uwe-label-editor-element.is-dm-only {
+  outline: 1px dashed #f59e0b;
+}
+
+.uwe-label-editor-element img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.uwe-label-editor-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  border: 1px dashed #cbd5e1;
+}
+
+.uwe-label-editor-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: #3b82f6;
+  cursor: se-resize;
+}
+
+.uwe-label-editor-props {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.uwe-label-editor-props h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.uwe-form-grid-compact label {
+  font-size: 0.85rem;
+}
+
+.uwe-span-2 {
+  grid-column: span 2;
+}
+
+.uwe-form-row {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.uwe-form-row-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.uwe-form-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.uwe-form-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.uwe-label-fit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.uwe-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.uwe-badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.uwe-badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.uwe-badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.uwe-btn-sm {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+}
+
 .uwe-text-warning {
   color: #fbbf24;
 }

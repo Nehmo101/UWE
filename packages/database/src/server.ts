@@ -313,6 +313,7 @@ export {
   createLabelService,
   LabelService,
   LABEL_SOURCE_TYPE_LABELS,
+  LabelPrintStatusEnum,
   LabelSourceTypeEnum,
   normalizeLabel,
   applyLayoutToContent,
@@ -320,28 +321,95 @@ export {
   buildLabelContentFromPage,
   buildLabelContentFromBlock,
   buildLabelContentFromAsset,
+  ensureLabelElements,
+  syncContentFromElements,
 } from "./label-service";
 
 export type {
   Label as DbLabel,
   LabelTemplate as DbLabelTemplate,
+  LabelPrintStatus,
   LabelSourceType,
   LabelLayoutMode,
   LabelLayoutSettings,
   LabelContentData,
+  LabelElement,
+  LabelElementType,
+  LabelFitMode,
   CreateLabelInput,
   UpdateLabelInput,
   CreateLabelFromSourceInput,
+  CreateLabelTemplateInput,
+  UpdateLabelTemplateInput,
   LabelWithRelations,
 } from "./label-service";
+
+export {
+  createPrintListService,
+  PrintListService,
+  LABEL_PRINT_STATUS_LABELS,
+  summarizePrintList,
+} from "./label-print-list-service";
+
+export type {
+  CreatePrintListInput,
+  UpdatePrintListInput,
+  PrintListItemInput,
+  PrintListWithItems,
+} from "./label-print-list-service";
+
+export {
+  assessTextFit,
+  applyAutoFitToContent,
+  restoreOriginalText,
+  LABEL_FIT_STATUS_LABELS,
+} from "./label-fit-service";
+
+export type { LabelFitStatus, LabelFitResult, LabelFitOptions } from "./label-fit-service";
+
+export {
+  analyzeLabelSafety,
+  stripDmOnlyForPlayer,
+  removeDmOnlyElements,
+  removeImagesFromContent,
+} from "./label-safety";
+
+export type { LabelSafetyWarning, LabelSafetyReport } from "./label-safety";
+
+export {
+  resolveLabelImageProvider,
+  isLabelImageGenerationEnabled,
+  DisabledLabelImageProvider,
+} from "./label-image-provider";
+
+export type {
+  LabelImageProvider,
+  LabelImageGenerateInput,
+  LabelImageGenerateResult,
+} from "./label-image-provider";
+
+export {
+  LABEL_CANVAS_WIDTH,
+  LABEL_CANVAS_HEIGHT,
+  LABEL_SAFE_MARGIN,
+  createElementId,
+  defaultElementsForMode,
+  duplicateElement,
+  snapValue,
+  clampElementToCanvas,
+} from "./label-elements";
 
 export {
   renderLabelHtml,
   renderLabelPdf,
   renderLabelExport,
+  renderLabelExportAsync,
+  renderLabelPdfAsync,
+  renderMultiLabelHtml,
+  renderMultiLabelPdfAsync,
 } from "./label-export";
 
-export type { LabelExportOptions } from "./label-export";
+export type { LabelExportOptions, LabelExportResult, LabelExportRenderOptions } from "./label-export";
 
 export {
   createShareLinkService,

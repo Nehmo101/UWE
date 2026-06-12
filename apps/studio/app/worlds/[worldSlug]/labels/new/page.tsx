@@ -19,10 +19,12 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ sourceRef?: string }>;
 }
 
-export default async function StudioNewLabelPage({ params }: Props) {
+export default async function StudioNewLabelPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { sourceRef: preselectedSource } = await searchParams;
   const repo = getAppRepository();
   const labelService = createLabelService();
 
@@ -73,7 +75,7 @@ export default async function StudioNewLabelPage({ params }: Props) {
 
               <label>
                 Quelle
-                <select name="sourceRef" required defaultValue={pages[0] ? `page:${pages[0].id}` : ""}>
+                <select name="sourceRef" required defaultValue={preselectedSource || (pages[0] ? `page:${pages[0].id}` : "")}>
                   <optgroup label="Seiten">
                     {pages.map((page) => (
                       <option key={page.id} value={`page:${page.id}`}>

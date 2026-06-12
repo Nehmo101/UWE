@@ -8,7 +8,7 @@ import {
   createLabelService,
   normalizeLabel,
 } from "./label-service";
-import { renderLabelExport, renderLabelHtml } from "./label-export";
+import { renderLabelExport, renderLabelExportAsync, renderLabelHtml } from "./label-export";
 import { createPrismaClient } from "./client";
 
 describe("Label service", () => {
@@ -186,14 +186,14 @@ describe("Label service", () => {
     assert.match(String(htmlExport.body), /Druckbarer Inhalt/);
     assert.match(String(htmlExport.body), /6in 4in/);
 
-    const pdfExport = renderLabelExport("pdf", {
+    const pdfExport = await renderLabelExportAsync("pdf", {
       content: parsed.content,
       layoutSettings: parsed.layoutSettings,
       title: label.title,
     });
 
     assert.equal(pdfExport.contentType, "application/pdf");
-    assert.match(String(pdfExport.body).slice(0, 8), /%PDF-1.4/);
+    assert.match(String(pdfExport.body).slice(0, 4), /%PDF/);
   });
 
   it("blocks player export when dm_only content is present without confirmation", async () => {

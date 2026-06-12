@@ -33,17 +33,27 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
   if (!label || label.worldId !== world.id) notFound();
 
   const parsed = normalizeLabel(label);
-  const imageUrl = parsed.content.imageAssetId
-    ? `/api/assets/${parsed.content.imageAssetId}/file`
-    : null;
+  const imageUrls: Record<string, string> = {};
+  if (parsed.content.imageAssetId) {
+    imageUrls[parsed.content.imageAssetId] = `/api/assets/${parsed.content.imageAssetId}/file`;
+  }
+  for (const el of parsed.content.elements ?? []) {
+    if (el.imageAssetId) {
+      imageUrls[el.imageAssetId] = `/api/assets/${el.imageAssetId}/file`;
+    }
+  }
 
   const html = renderLabelHtml(
     {
       content: parsed.content,
       layoutSettings: parsed.layoutSettings,
       title: label.title,
-      imageUrl,
+      imageUrl: parsed.content.imageAssetId
+        ? imageUrls[parsed.content.imageAssetId]
+        : null,
+      imageUrls,
       worldName: world.name,
+      includeDmOnly: includeDmOnly === "1",
     },
     true,
   );

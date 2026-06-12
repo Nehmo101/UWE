@@ -122,6 +122,13 @@ enum LabelSourceType {
   manual
 }
 
+enum LabelPrintStatus {
+  open
+  exported
+  printed
+  archived
+}
+
 enum SoundSourceType {
   local
   youtube
@@ -238,6 +245,7 @@ model World {
   gameSessions     GameSession[]
   labelTemplates    LabelTemplate[]
   labels            Label[]
+  printLists        PrintList[]
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
   shareLinks        ShareLink[]
@@ -259,6 +267,7 @@ model Campaign {
   assets            Asset[]
   gameSessions      GameSession[]
   labels            Label[]
+  printLists        PrintList[]
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
 
@@ -437,25 +446,61 @@ model LabelTemplate {
 }
 
 model Label {
-  id             String          @id @default(cuid())
-  worldId        String          @map("world_id")
-  campaignId     String?         @map("campaign_id")
+  id             String           @id @default(cuid())
+  worldId        String           @map("world_id")
+  campaignId     String?          @map("campaign_id")
   title          String
-  sourceType     LabelSourceType @map("source_type")
-  sourceId       String?         @map("source_id")
-  templateId     String          @map("template_id")
+  sourceType     LabelSourceType  @map("source_type")
+  sourceId       String?          @map("source_id")
+  templateId     String           @map("template_id")
   content        Json
-  layoutSettings Json            @map("layout_settings")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  layoutSettings Json             @map("layout_settings")
+  printStatus    LabelPrintStatus @default(open) @map("print_status")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
 
-  world    World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  template LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  world          World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign       Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  template       LabelTemplate    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  printListItems PrintListItem[]
 
   @@index([worldId, updatedAt])
   @@index([sourceType, sourceId])
   @@map("labels")
+}
+
+model PrintList {
+  id             String           @id @default(cuid())
+  worldId        String           @map("world_id")
+  campaignId     String?          @map("campaign_id")
+  name           String
+  description    String?
+  status         LabelPrintStatus @default(open)
+  forNextSession Boolean          @default(false) @map("for_next_session")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  world    World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  items    PrintListItem[]
+
+  @@index([worldId, updatedAt])
+  @@map("print_lists")
+}
+
+model PrintListItem {
+  id          String @id @default(cuid())
+  printListId String @map("print_list_id")
+  labelId     String @map("label_id")
+  copies      Int    @default(1)
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  printList PrintList @relation(fields: [printListId], references: [id], onDelete: Cascade)
+  label     Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([printListId, labelId])
+  @@index([printListId, sortOrder])
+  @@map("print_list_items")
 }
 
 model SoundboardButton {
@@ -596,6 +641,8 @@ enum ActivityTargetType {
   world
   share_link
   game_session
+  label
+  print_list
   system
 }
 

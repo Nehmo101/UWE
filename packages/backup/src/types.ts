@@ -10,6 +10,7 @@ export interface BackupStats {
   gameSessions: number;
   labels: number;
   labelTemplates: number;
+  printLists: number;
   soundboardButtons: number;
 }
 
@@ -166,8 +167,29 @@ export interface BackupLabelRecord {
   templateId: string;
   content: unknown;
   layoutSettings: unknown;
+  printStatus?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BackupPrintListRecord {
+  id: string;
+  worldId: string;
+  campaignId: string | null;
+  name: string;
+  description: string | null;
+  status: string;
+  forNextSession: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackupPrintListItemRecord {
+  id: string;
+  printListId: string;
+  labelId: string;
+  copies: number;
+  sortOrder: number;
 }
 
 export interface BackupSoundboardButtonRecord {
@@ -231,6 +253,8 @@ export interface BackupData {
   gameSessionPageLinks: BackupGameSessionPageLinkRecord[];
   labelTemplates: BackupLabelTemplateRecord[];
   labels: BackupLabelRecord[];
+  printLists: BackupPrintListRecord[];
+  printListItems: BackupPrintListItemRecord[];
   soundboardButtons: BackupSoundboardButtonRecord[];
   soundboardButtonPageLinks: BackupSoundboardButtonPageLinkRecord[];
   worldMemberships: BackupWorldMembershipRecord[];

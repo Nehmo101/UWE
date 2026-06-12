@@ -181,9 +181,17 @@ export default async function StudioPageView({ params, searchParams }: Props) {
               }
               actions={
                 !isPlayerPreview ? (
-                  <Link className="uwe-btn uwe-btn-primary" href={`${buildPageUrl(worldSlug, rawPage.type, slug)}/edit`}>
-                    Bearbeiten
-                  </Link>
+                  <>
+                    <Link
+                      className="uwe-btn"
+                      href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
+                    >
+                      Label erstellen
+                    </Link>
+                    <Link className="uwe-btn uwe-btn-primary" href={`${buildPageUrl(worldSlug, rawPage.type, slug)}/edit`}>
+                      Bearbeiten
+                    </Link>
+                  </>
                 ) : undefined
               }
             />

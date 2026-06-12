@@ -4,7 +4,8 @@ import {
   createLabelService,
   getAppRepository,
   normalizeLabel,
-  renderLabelExport,
+  renderLabelExportAsync,
+  stripDmOnlyForPlayer,
 } from "@uwe/database/server";
 
 interface Props {
@@ -16,6 +17,7 @@ export async function GET(request: Request, { params }: Props) {
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "html";
   const includeDmOnly = url.searchParams.get("includeDmOnly");
+  const version = url.searchParams.get("version");
 
   const repo = getAppRepository();
   const labelService = createLabelService();
@@ -31,35 +33,57 @@ export async function GET(request: Request, { params }: Props) {
   }
 
   const parsed = normalizeLabel(label);
-  const allowDm = includeDmOnly === "1";
+  const allowDm = includeDmOnly === "1" || version === "dm";
+  const playerVersion = version === "player";
 
-  const safety = assertPlayerSafeExport(parsed.content, allowDm);
-  if (!safety.allowed) {
+  const content = playerVersion ? stripDmOnlyForPlayer(parsed.content) : parsed.content;
+
+  const safety = assertPlayerSafeExport(content, allowDm || !playerVersion);
+  if (!safety.allowed && playerVersion) {
     return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
   const exportFormat =
     format === "pdf" ? "pdf" : format === "print" ? "print" : "html";
 
-  const imageUrl = parsed.content.imageAssetId
-    ? new URL(`/api/assets/${parsed.content.imageAssetId}/file`, request.url).toString()
-    : null;
+  const imageUrls: Record<string, string> = {};
+  if (content.imageAssetId) {
+    imageUrls[content.imageAssetId] = new URL(
+      `/api/assets/${content.imageAssetId}/file`,
+      request.url,
+    ).toString();
+  }
+  for (const el of content.elements ?? []) {
+    if (el.imageAssetId) {
+      imageUrls[el.imageAssetId] = new URL(
+        `/api/assets/${el.imageAssetId}/file`,
+        request.url,
+      ).toString();
+    }
+  }
 
-  const exported = renderLabelExport(exportFormat, {
-    content: parsed.content,
+  const exported = await renderLabelExportAsync(exportFormat, {
+    content,
     layoutSettings: parsed.layoutSettings,
     title: label.title,
-    imageUrl,
+    imageUrl: content.imageAssetId ? imageUrls[content.imageAssetId] : null,
+    imageUrls,
     worldName: world.name,
+    includeDmOnly: allowDm,
   });
 
   const body =
     typeof exported.body === "string" ? exported.body : Buffer.from(exported.body);
 
+  if (format === "pdf" || format === "print") {
+    await labelService.setPrintStatus(labelId, format === "pdf" ? "exported" : "printed");
+  }
+
   return new NextResponse(body, {
     headers: {
       "Content-Type": exported.contentType,
       "Content-Disposition": `attachment; filename="${exported.filename}"`,
+      ...(exported.fallback ? { "X-UWE-Export-Fallback": "1" } : {}),
     },
   });
 }

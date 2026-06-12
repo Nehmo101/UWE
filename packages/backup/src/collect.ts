@@ -10,6 +10,8 @@ import type {
   BackupGameSessionRecord,
   BackupLabelRecord,
   BackupLabelTemplateRecord,
+  BackupPrintListItemRecord,
+  BackupPrintListRecord,
   BackupPageLinkRecord,
   BackupPagePlayerAccessRecord,
   BackupPageRecord,
@@ -44,6 +46,7 @@ function collectStats(data: BackupData): BackupStats {
     gameSessions: data.gameSessions.length,
     labels: data.labels.length,
     labelTemplates: data.labelTemplates.length,
+    printLists: data.printLists.length,
     soundboardButtons: data.soundboardButtons.length,
   };
 }
@@ -248,6 +251,17 @@ export async function collectBackupData(
       ? await db.label.findMany({ where: { campaignId: { in: campaignIds } } })
       : await db.label.findMany({ where: { worldId: { in: worldIds } } });
 
+  const printLists =
+    scope.type === "campaign"
+      ? await db.printList.findMany({ where: { campaignId: { in: campaignIds } } })
+      : await db.printList.findMany({ where: { worldId: { in: worldIds } } });
+
+  const printListIds = printLists.map((list) => list.id);
+
+  const printListItems = await db.printListItem.findMany({
+    where: { printListId: { in: printListIds } },
+  });
+
   const soundboardButtons =
     scope.type === "campaign"
       ? await db.soundboardButton.findMany({ where: { campaignId: { in: campaignIds } } })
@@ -433,8 +447,31 @@ export async function collectBackupData(
         templateId: label.templateId,
         content: label.content,
         layoutSettings: label.layoutSettings,
+        printStatus: label.printStatus,
         createdAt: label.createdAt.toISOString(),
         updatedAt: label.updatedAt.toISOString(),
+      }),
+    ),
+    printLists: printLists.map(
+      (list): BackupPrintListRecord => ({
+        id: list.id,
+        worldId: list.worldId,
+        campaignId: list.campaignId,
+        name: list.name,
+        description: list.description,
+        status: list.status,
+        forNextSession: list.forNextSession,
+        createdAt: list.createdAt.toISOString(),
+        updatedAt: list.updatedAt.toISOString(),
+      }),
+    ),
+    printListItems: printListItems.map(
+      (item): BackupPrintListItemRecord => ({
+        id: item.id,
+        printListId: item.printListId,
+        labelId: item.labelId,
+        copies: item.copies,
+        sortOrder: item.sortOrder,
       }),
     ),
     soundboardButtons: soundboardButtons.map(
