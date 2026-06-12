@@ -24,6 +24,9 @@ export async function updatePageAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const pageSlug = String(formData.get("pageSlug"));
 
+  // Capture old type/slug before the update so both old and new URLs are revalidated.
+  const oldPage = await repo().getPageBySlug(worldSlug, pageSlug);
+
   await repo().updatePage(pageId, {
     title: String(formData.get("title")),
     slug: String(formData.get("slug")),
@@ -47,7 +50,10 @@ export async function updatePageAction(formData: FormData) {
   const category = navCategoryForPageType(type);
 
   revalidatePath(`/worlds/${worldSlug}`);
-  revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}`);
+  if (oldPage) {
+    revalidatePath(buildPageUrl(worldSlug, oldPage.type, oldPage.slug));
+  }
+  revalidatePath(buildPageUrl(worldSlug, type, newSlug));
   redirect(`/worlds/${worldSlug}/${category}/${newSlug}/edit?saved=1`);
 }
 
@@ -160,10 +166,6 @@ export async function deleteContentBlockAction(formData: FormData) {
 
   revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);
   redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?saved=1`);
-}
-
-export function pageEditHref(worldSlug: string, type: PageType, slug: string) {
-  return `${buildPageUrl(worldSlug, type, slug)}/edit`;
 }
 
 export function pagePreviewHref(worldSlug: string, type: PageType, slug: string) {

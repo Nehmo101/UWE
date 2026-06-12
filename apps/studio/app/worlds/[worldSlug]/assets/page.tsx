@@ -22,7 +22,7 @@ import {
 import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
-import { linkAssetToPageAction } from "@/app/asset-actions";
+import { linkAssetToPageAction, updateAssetAction } from "@/app/asset-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -246,6 +246,52 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
 
           {assets.length === 0 && (
             <p className="uwe-empty">Noch keine Assets für diesen Filter.</p>
+          )}
+
+          {assets.length > 0 && (
+            <section className="uwe-panel">
+              <h2>Asset bearbeiten</h2>
+              {assets.map((asset) => (
+                <details key={asset.id} className="share-asset-details">
+                  <summary>{asset.title}</summary>
+                  <form action={updateAssetAction} className="uwe-form-grid">
+                    <input type="hidden" name="worldSlug" value={worldSlug} />
+                    <input type="hidden" name="assetId" value={asset.id} />
+                    <label>
+                      Titel
+                      <input type="text" name="title" defaultValue={asset.title} required />
+                    </label>
+                    <label>
+                      Beschreibung
+                      <textarea name="description" rows={2} defaultValue={asset.description ?? ""} />
+                    </label>
+                    <label>
+                      Typ
+                      <select name="type" defaultValue={asset.type}>
+                        {ASSET_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {ASSET_TYPE_LABELS[type]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Sichtbarkeit
+                      <select name="visibility" defaultValue={asset.visibility}>
+                        {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button type="submit" className="uwe-btn uwe-btn-primary">
+                      Speichern
+                    </button>
+                  </form>
+                </details>
+              ))}
+            </section>
           )}
 
           {assets.length > 0 && (

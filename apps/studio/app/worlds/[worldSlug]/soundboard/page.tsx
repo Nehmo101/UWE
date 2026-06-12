@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   AppShell,
   Breadcrumb,
@@ -33,7 +34,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
-  if (!world) return null;
+  if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   const selectedCampaign = campaignSlug
@@ -176,12 +177,14 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                 </select>
               </label>
               <label>
-                Seiten verknüpfen (IDs, kommagetrennt)
-                <input
-                  type="text"
-                  name="linkedPageIds"
-                  placeholder={linkablePages.slice(0, 3).map((page) => page.id).join(", ")}
-                />
+                Seiten verknüpfen (Mehrfachauswahl mit Strg/Cmd)
+                <select name="linkedPageIds" multiple size={Math.min(linkablePages.length, 5) || 1}>
+                  {linkablePages.map((page) => (
+                    <option key={page.id} value={page.id}>
+                      {page.title} ({page.type})
+                    </option>
+                  ))}
+                </select>
               </label>
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Button erstellen
@@ -280,12 +283,27 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                               </select>
                             </label>
                             <label>
-                              Verknüpfte Seiten (IDs)
-                              <input
-                                type="text"
+                              Verknüpfte Seiten (Mehrfachauswahl mit Strg/Cmd)
+                              <select
                                 name="linkedPageIds"
-                                defaultValue={button.linkedPages.map((page) => page.id).join(", ")}
-                              />
+                                multiple
+                                size={Math.min(linkablePages.length, 5) || 1}
+                                defaultValue={button.linkedPages.map((page) => page.id)}
+                              >
+                                {/* Linked pages outside the current campaign filter stay selectable. */}
+                                {button.linkedPages
+                                  .filter((page) => !linkablePages.some((p) => p.id === page.id))
+                                  .map((page) => (
+                                    <option key={page.id} value={page.id}>
+                                      {page.title}
+                                    </option>
+                                  ))}
+                                {linkablePages.map((page) => (
+                                  <option key={page.id} value={page.id}>
+                                    {page.title} ({page.type})
+                                  </option>
+                                ))}
+                              </select>
                             </label>
                             <button type="submit" className="uwe-btn">
                               Speichern

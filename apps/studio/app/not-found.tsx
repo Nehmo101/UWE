@@ -1,0 +1,18 @@
+import Link from "next/link";
+import { EmptyState } from "@uwe/shared-ui";
+
+export default function StudioNotFound() {
+  return (
+    <div className="page">
+      <EmptyState
+        title="Seite nicht gefunden"
+        description="Diese Welt oder Seite existiert nicht (mehr). Prüfe die Adresse oder kehre zum Dashboard zurück."
+        action={
+          <Link className="uwe-btn uwe-btn-primary" href="/">
+            Zum Dashboard
+          </Link>
+        }
+      />
+    </div>
+  );
+}

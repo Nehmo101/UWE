@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   AppShell,
   Breadcrumb,
@@ -32,7 +33,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
-  if (!world) return null;
+  if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   const selectedCampaign = campaignSlug

@@ -57,6 +57,15 @@ export default async function StudioNewLabelPage({ params }: Props) {
             summary="Quelle und Vorlage wählen — Inhalt wird aus bestehenden Pages, Räumen, Blöcken oder Assets übernommen."
           />
 
+          {pages.length === 0 && blocks.length === 0 && assets.length === 0 ? (
+            <section className="uwe-panel">
+              <h2>Aus Seite, Raum, Block oder Asset</h2>
+              <p className="uwe-empty">
+                Noch keine Quellen vorhanden — erstelle zuerst Seiten oder lade Assets hoch.
+                Alternativ kannst du unten ein leeres Label anlegen.
+              </p>
+            </section>
+          ) : (
           <section className="uwe-panel">
             <h2>Aus Seite, Raum, Block oder Asset</h2>
             <form action={createLabelFromSourceAction} className="uwe-form-grid">
@@ -150,6 +159,7 @@ export default async function StudioNewLabelPage({ params }: Props) {
               </button>
             </form>
           </section>
+          )}
 
           <section className="uwe-panel">
             <h2>Leeres Label (manuell)</h2>

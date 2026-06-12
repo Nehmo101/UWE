@@ -15,11 +15,16 @@ import {
   type Visibility,
 } from "@uwe/database/server";
 
+import { requireStudioApiAuth } from "../../../../../../src/lib/studio-api-auth";
+
 interface RouteContext {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   const { worldSlug } = await context.params;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);

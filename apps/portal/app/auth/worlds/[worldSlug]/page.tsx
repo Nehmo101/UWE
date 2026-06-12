@@ -49,7 +49,14 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
 
   let pages: DbPage[] = [];
   let searchResults: SearchResultItem[] = [];
+  let worldName = worldSlug;
   try {
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { name: true },
+    });
+    worldName = world?.name ?? worldSlug;
+
     if (isSearching) {
       searchResults = await auth.searchForViewer(worldSlug, ctx, {
         query: q!,
@@ -71,10 +78,10 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
       <AuthHeader user={user} />
       <section className="auth-card auth-card-wide">
         <div className="auth-breadcrumb">
-          <Link href="/auth/worlds">Welten</Link> / {worldSlug}
+          <Link href="/auth/worlds">Welten</Link> / {worldName}
         </div>
 
-        <h1>{worldSlug}</h1>
+        <h1>{worldName}</h1>
         <p className="auth-lead">
           Sichtbarkeit: {ctx.effectiveRole}
           {ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}

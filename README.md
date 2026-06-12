@@ -227,7 +227,8 @@ Copy `.env.example` to `.env`. Important variables:
 | `UPLOADS_DIR` | Persistent uploads |
 | `EXPORTS_DIR` | Static export output (Studio API) |
 | `BACKUPS_DIR` | Backup folder |
-| `AUTH_SECRET` | Session secret (set in production) |
+| `AUTH_SECRET` | Reserved secret for future signed cookies (set in production) |
+| `STUDIO_API_TOKEN` | Optional bearer token guarding sensitive Studio APIs |
 | `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
 
 ---

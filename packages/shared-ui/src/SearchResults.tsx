@@ -1,7 +1,16 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./AppShell";
-import { PageTypeBadge, VisibilityBadge } from "./StatusBadges";
+import { PageTypeBadge, PUBLISH_LABELS, VisibilityBadge } from "./StatusBadges";
 import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+
+const MATCH_FIELD_LABELS: Record<string, string> = {
+  title: "Titel",
+  slug: "Slug",
+  summary: "Zusammenfassung",
+  tags: "Tags",
+  aliases: "Aliase",
+  content: "Inhalt",
+};
 
 export interface SearchResultViewModel {
   pageId: string;
@@ -79,7 +88,7 @@ export function SearchResultsList({
                   <span>{result.campaignName}</span>
                 )}
                 {showPublish && result.publishStatus && (
-                  <span>{result.publishStatus}</span>
+                  <span>{PUBLISH_LABELS[result.publishStatus] ?? result.publishStatus}</span>
                 )}
               </div>
 
@@ -89,7 +98,7 @@ export function SearchResultsList({
 
               {result.matchedFields.length > 0 && (
                 <p className="uwe-search-result-fields">
-                  Treffer in: {result.matchedFields.join(", ")}
+                  Treffer in: {result.matchedFields.map((field) => MATCH_FIELD_LABELS[field] ?? field).join(", ")}
                 </p>
               )}
             </article>

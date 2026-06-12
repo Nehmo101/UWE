@@ -1,7 +1,11 @@
 import { postSave } from "../../../../src/lib/ai-handlers";
 import type { AiContextSource, AiProviderId, AiTaskType } from "@uwe/ai-brain";
+import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
 
 export async function POST(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   const body = (await request.json()) as {
     mode: "idea" | "content_block" | "player_recap";
     taskType: AiTaskType;

@@ -40,7 +40,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
   const settings = await repo.getSystemSettings();
   const selectedCampaign = campaignSlug
     ? campaigns.find((c) => c.slug === campaignSlug)
-    : campaigns[0];
+    : null;
 
   const template = getPageTemplate(templateId) ?? getPageTemplate("blank")!;
   const extraBlocks = template.blocks.slice(1);
@@ -97,14 +97,26 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           <form action={createPageAction} className="uwe-form" key={template.id}>
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="template" value={template.id} />
-            {selectedCampaign && (
-              <input type="hidden" name="campaignId" value={selectedCampaign.id} />
-            )}
+            {/* Campaign is chosen via the visible select below — no hidden default. */}
 
             <label>
               Titel
               <input name="title" required placeholder={template.titlePlaceholder} />
             </label>
+
+            {campaigns.length > 0 && (
+              <label>
+                Kampagne
+                <select name="campaignId" defaultValue={selectedCampaign?.id ?? ""}>
+                  <option value="">Keine Kampagne (weltweit)</option>
+                  {campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label>
               Slug (optional)

@@ -19,6 +19,13 @@ import {
   verifyPassword,
 } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
+import {
+  normalizeLookupKey,
+  parseWikiLinks,
+  renderContentHtml,
+  type PageViewLink,
+} from "./page-service";
+import { parseStringArray } from "./json-utils";
 import { searchForAuthContext, type SearchOptions, type SearchResultItem } from "./search-service";
 import { SettingsService, isGuestPortalAccessAllowed } from "./settings-service";
 import {
@@ -296,6 +303,69 @@ export class AuthService {
     return filterPagesForViewer(ctx, pages);
   }
 
+  /**
+   * Renders block content as HTML with resolved wikilinks for the
+   * authenticated portal. Links to pages the viewer cannot see are shown as
+   * "Verborgen" and never expose the target title or slug.
+   */
+  async renderBlockContentForViewer(
+    worldSlug: string,
+    content: string,
+    ctx: AccessContext,
+  ): Promise<string> {
+    const parsed = parseWikiLinks(content);
+    if (parsed.length === 0) {
+      return renderContentHtml(content, []);
+    }
+
+    const allPages = await this.db.page.findMany({
+      where: { world: { slug: worldSlug } },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        visibility: true,
+        publishStatus: true,
+        aliases: true,
+      },
+    });
+
+    const lookup = new Map<string, (typeof allPages)[number]>();
+    for (const page of allPages) {
+      const keys = [
+        normalizeLookupKey(page.title),
+        normalizeLookupKey(page.slug),
+        ...parseStringArray(page.aliases).map(normalizeLookupKey),
+      ];
+      for (const key of keys) {
+        if (!lookup.has(key)) {
+          lookup.set(key, page);
+        }
+      }
+    }
+
+    const links: PageViewLink[] = parsed.map((raw) => {
+      const displayText = raw.label ?? raw.target;
+      const target = lookup.get(normalizeLookupKey(raw.target));
+
+      if (!target) {
+        return { displayText, status: "broken" as const };
+      }
+
+      if (!canViewPage(ctx, target)) {
+        return { displayText: raw.label ?? "Verborgen", status: "hidden" as const };
+      }
+
+      return {
+        displayText,
+        href: `/auth/worlds/${worldSlug}/${target.slug}`,
+        status: "resolved" as const,
+      };
+    });
+
+    return renderContentHtml(content, links);
+  }
+
   async searchForViewer(
     worldSlug: string,
     ctx: AccessContext,
@@ -315,6 +385,22 @@ export class AuthService {
     });
   }
 
+  /**
+   * Linked pages can include DM-only or unpublished pages. Their titles and
+   * slugs must never leak to portal viewers, so the list is filtered with the
+   * same visibility rules as the wiki itself.
+   */
+  private toPortalSessionViewForViewer(
+    session: Parameters<typeof toPortalGameSessionView>[0],
+    ctx: AccessContext,
+  ): PortalGameSessionView {
+    const view = toPortalGameSessionView(session);
+    return {
+      ...view,
+      linkedPages: filterPagesForViewer(ctx, view.linkedPages),
+    };
+  }
+
   async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
     const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
 
@@ -322,7 +408,7 @@ export class AuthService {
       const sessions = await this.gameSessions.listByWorld(worldSlug);
       return sessions
         .filter((session) => session.recapPublished)
-        .map(toPortalGameSessionView);
+        .map((session) => this.toPortalSessionViewForViewer(session, ctx));
     }
 
     if (ctx.effectiveRole !== "player") {
@@ -330,7 +416,7 @@ export class AuthService {
     }
 
     const sessions = await this.gameSessions.listPublishedForPortal(worldSlug);
-    return sessions.map(toPortalGameSessionView);
+    return sessions.map((session) => this.toPortalSessionViewForViewer(session, ctx));
   }
 
   async getGameSessionForViewer(
@@ -349,7 +435,7 @@ export class AuthService {
     }
 
     // Portal never exposes DM-only fields — even for DMs viewing the portal.
-    return toPortalGameSessionView(session);
+    return this.toPortalSessionViewForViewer(session, ctx);
   }
 
   async listGameSessionsForDm(worldSlug: string, campaignId?: string | null): Promise<DmGameSessionView[]> {

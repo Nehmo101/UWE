@@ -440,11 +440,16 @@ export class UweRepository {
       orderBy: [{ title: "asc" }],
     });
 
+    const portalOptions =
+      context === "portal" || context === "preview"
+        ? await this.getPortalAccessOptions()
+        : undefined;
+
     return pages
-      .filter((page) => isPageAccessible(page, context))
+      .filter((page) => isPageAccessible(page, context, portalOptions))
       .map((page) => ({
         ...withParsedArrays(page),
-        contentBlocks: filterBlocksForContext(page.contentBlocks, context),
+        contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
       }));
   }
 
@@ -661,6 +666,17 @@ export class UweRepository {
     ]);
 
     return { worldCount, pageCount, publishedCount, draftCount };
+  }
+
+  /** Most recently edited pages across all worlds — for the DM dashboard. */
+  async listRecentlyEditedPages(limit = 8) {
+    return this.db.page.findMany({
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+      include: {
+        world: { select: { name: true, slug: true } },
+      },
+    });
   }
 
   async getSystemSettings() {

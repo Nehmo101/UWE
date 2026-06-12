@@ -17,7 +17,10 @@ export function shareAuthCookieOptions(token: string, maxAgeSeconds = 60 * 60 * 
     value: "ok",
     httpOnly: true,
     sameSite: "lax" as const,
-    path: `/share/${token}`,
+    secure: process.env.NODE_ENV === "production",
+    // Path must cover both /share/[token]/* pages and /api/share/[token]/*
+    // file routes; the cookie name is already scoped to the token.
+    path: "/",
     maxAge: maxAgeSeconds,
   };
 }

@@ -1,7 +1,11 @@
 import { postGenerate } from "../../../../src/lib/ai-handlers";
 import type { AiProviderId, AiTaskType } from "@uwe/ai-brain";
+import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
 
 export async function POST(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   const body = (await request.json()) as {
     taskType: AiTaskType;
     worldSlug: string;

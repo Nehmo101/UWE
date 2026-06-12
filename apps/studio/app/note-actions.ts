@@ -62,7 +62,7 @@ export async function adoptPlayerNoteAsContentBlockAction(formData: FormData) {
   const targetPageId = String(formData.get("targetPageId") || "");
 
   const { db, auth } = notes();
-  let pageSlug: string | null = null;
+  let page: { slug: string; type: Parameters<typeof buildPageUrl>[1] } | null = null;
 
   try {
     const note = await auth.getPlayerNoteForDm(worldSlug, noteId);
@@ -75,16 +75,18 @@ export async function adoptPlayerNoteAsContentBlockAction(formData: FormData) {
       throw new Error("Keine Zielseite angegeben");
     }
 
-    const result = await auth.getPlayerNoteService().adoptAsContentBlock(noteId, pageId);
-    const page = await db.page.findUnique({ where: { id: pageId } });
-    pageSlug = page?.slug ?? null;
+    await auth.getPlayerNoteService().adoptAsContentBlock(noteId, pageId);
+    page = await db.page.findUnique({
+      where: { id: pageId },
+      select: { slug: true, type: true },
+    });
   } finally {
     await db.$disconnect();
   }
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
-  if (pageSlug) {
-    revalidatePath(`/worlds/${worldSlug}/lore/${pageSlug}`);
+  if (page) {
+    revalidatePath(buildPageUrl(worldSlug, page.type, page.slug));
   }
 }
 

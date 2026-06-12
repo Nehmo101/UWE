@@ -37,7 +37,7 @@ export async function GET(_request: Request, context: RouteContext) {
       }
     }
 
-    const grant = await shareService.buildShareGrantForWorld(link.worldId);
+    const grant = await shareService.buildShareGrantForLink(link);
     if (!shareService.canAccessAssetViaShare(assetId, grant)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

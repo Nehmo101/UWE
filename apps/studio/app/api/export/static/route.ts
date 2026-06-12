@@ -1,8 +1,31 @@
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { getAppRepository } from "@uwe/database/server";
 import { exportWorldStatic } from "@uwe/static-export";
+import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+
+/**
+ * Exports are confined to the exports base directory. The client may only
+ * choose a folder name, never an arbitrary filesystem path.
+ */
+function resolveExportDir(worldSlug: string, requestedDirName?: string): string | null {
+  const baseDir = path.resolve(process.env.EXPORTS_DIR ?? "exports");
+  const dirName = requestedDirName ?? `${worldSlug}-static`;
+
+  const resolved = path.resolve(baseDir, dirName);
+  if (resolved !== baseDir && !resolved.startsWith(baseDir + path.sep)) {
+    return null;
+  }
+
+  return resolved;
+}
 
 export async function POST(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const body = (await request.json()) as {
       worldSlug?: string;
@@ -10,10 +33,13 @@ export async function POST(request: Request) {
     };
 
     const worldSlug = body.worldSlug ?? "terra";
-    const outputDir =
-      body.outputDir ??
-      process.env.EXPORTS_DIR ??
-      `exports/${worldSlug}-static`;
+    const outputDir = resolveExportDir(worldSlug, body.outputDir);
+    if (!outputDir) {
+      return NextResponse.json(
+        { error: "outputDir muss ein Ordnername innerhalb des Export-Verzeichnisses sein." },
+        { status: 400 },
+      );
+    }
 
     const repo = getAppRepository();
     const world = await repo.getWorldBySlug(worldSlug);

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
@@ -33,8 +34,16 @@ describe("release packaging", () => {
     assert.doesNotMatch(envExample, /AUTH_SECRET=super-secret/);
     assert.match(envExample, /generate-a-random-secret/);
 
-    const trackedEnv = path.join(root, ".env");
-    assert.ok(!fs.existsSync(trackedEnv), ".env must not be committed");
+    // A local .env is expected for development (`cp .env.example .env`).
+    // What must never happen is .env being tracked by git.
+    const trackedFiles = execFileSync("git", ["ls-files", ".env", ".env.*"], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .filter(Boolean);
+    const trackedSecrets = trackedFiles.filter((file) => file !== ".env.example");
+    assert.deepEqual(trackedSecrets, [], ".env files must not be committed to git");
   });
 
   it("documents backup and update guidance in production docs", () => {

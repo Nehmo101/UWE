@@ -245,6 +245,86 @@ describe("ShareLinkService", () => {
     assert.equal(view.backlinks.length, 0);
   });
 
+  it("scopes a share token strictly to its own target", async () => {
+    const world = await createWorld(
+      { name: "Scope Test", slug: "scope-test", description: "Test" },
+      databaseUrl,
+    );
+
+    const pageA = await createPage(
+      {
+        worldId: world.id,
+        title: "Seite A",
+        slug: "seite-a",
+        type: "location",
+        contentBlocks: [
+          { type: "rich_text", sortOrder: 0, visibility: "public", content: "Inhalt A." },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const pageB = await createPage(
+      {
+        worldId: world.id,
+        title: "Seite B — passwortgeschützt",
+        slug: "seite-b",
+        type: "secret",
+        contentBlocks: [
+          { type: "rich_text", sortOrder: 0, visibility: "public", content: "Inhalt B." },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const db = createPrismaClient(databaseUrl);
+    const sharedAsset = await db.asset.create({
+      data: {
+        worldId: world.id,
+        title: "Anderes Asset",
+        type: "image",
+        storageKey: "images/andere.png",
+        mimeType: "image/png",
+        visibility: "dm_only",
+      },
+    });
+
+    const linkA = await shareService.createShareLink({
+      worldId: world.id,
+      targetType: "page",
+      targetId: pageA.id,
+    });
+
+    await shareService.createShareLink({
+      worldId: world.id,
+      targetType: "page",
+      targetId: pageB.id,
+      password: "geheim",
+    });
+
+    await shareService.createShareLink({
+      worldId: world.id,
+      targetType: "asset",
+      targetId: sharedAsset.id,
+    });
+
+    const access = await shareService.validateShareAccess(linkA.token, { passwordVerified: true });
+    assert.ok(access);
+
+    // Token A must not unlock page B (shared via a different, protected link).
+    assert.ok(access.grant.sharedPageIds.has(pageA.id));
+    assert.equal(access.grant.sharedPageIds.has(pageB.id), false);
+    assert.equal(access.grant.sharedAssetIds.has(sharedAsset.id), false);
+    assert.equal(shareService.canAccessAssetViaShare(sharedAsset.id, access.grant), false);
+
+    const repo = createUweRepository(databaseUrl);
+    const crossView = await buildPageView(repo, world.slug, pageB.slug, "share", {
+      shareGrant: access.grant,
+      shareToken: linkA.token,
+    });
+    assert.equal(crossView, null);
+  });
+
   it("creates share links for handout assets", async () => {
     const world = await createWorld(
       { name: "Handout Test", slug: "handout-test", description: "Test" },

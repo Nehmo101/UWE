@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppRepository } from "@uwe/database/server";
 import type { UweSystemSettingsUpdate } from "@uwe/database/server";
+import { requireStudioApiAuth } from "../../../src/lib/studio-api-auth";
 
 export async function GET() {
   const settings = await getAppRepository().getSystemSettings();
@@ -8,6 +9,9 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   let body: UweSystemSettingsUpdate;
 
   try {

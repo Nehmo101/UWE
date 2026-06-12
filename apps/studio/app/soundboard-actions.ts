@@ -17,6 +17,15 @@ function repo() {
   return getAppRepository();
 }
 
+/** Supports both multi-select fields and comma-separated text input. */
+function parseLinkedPageIds(formData: FormData): string[] {
+  return formData
+    .getAll("linkedPageIds")
+    .flatMap((value) => String(value).split(","))
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
 export async function createSoundboardButtonAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const world = await repo().getWorldBySlug(worldSlug);
@@ -32,10 +41,7 @@ export async function createSoundboardButtonAction(formData: FormData) {
   const sourceUrl = String(formData.get("sourceUrl") || "") || null;
   const thumbnail = String(formData.get("thumbnail") || "") || null;
 
-  const linkedPageIds = String(formData.get("linkedPageIds") || "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
+  const linkedPageIds = parseLinkedPageIds(formData);
 
   const tags = String(formData.get("tags") || "")
     .split(",")
@@ -73,10 +79,7 @@ export async function updateSoundboardButtonAction(formData: FormData) {
   const sourceUrl = String(formData.get("sourceUrl") || "") || null;
   const thumbnail = String(formData.get("thumbnail") || "") || null;
 
-  const linkedPageIds = String(formData.get("linkedPageIds") || "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
+  const linkedPageIds = parseLinkedPageIds(formData);
 
   const tags = String(formData.get("tags") || "")
     .split(",")

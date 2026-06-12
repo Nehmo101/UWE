@@ -51,10 +51,14 @@ export async function updateGameSessionAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
 
-  const linkedPageIds = String(formData.get("linkedPageIds") || "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
+  // Page links are managed via dedicated link/unlink actions; only overwrite
+  // them when the form explicitly submits the field.
+  const linkedPageIds = formData.has("linkedPageIds")
+    ? String(formData.get("linkedPageIds") || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    : undefined;
 
   await sessions().update(sessionId, {
     title: String(formData.get("title")),
@@ -95,4 +99,15 @@ export async function linkPageToSessionAction(formData: FormData) {
 
   revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
   redirect(`/worlds/${worldSlug}/sessions/${sessionId}?linked=1`);
+}
+
+export async function unlinkPageFromSessionAction(formData: FormData) {
+  const worldSlug = String(formData.get("worldSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const pageId = String(formData.get("pageId"));
+
+  await sessions().unlinkPage(sessionId, pageId);
+
+  revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
+  redirect(`/worlds/${worldSlug}/sessions/${sessionId}?unlinked=1`);
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   AppShell,
   Breadcrumb,
@@ -51,7 +52,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
-  if (!world) return null;
+  if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   const selectedCampaign = campaignSlug
@@ -75,6 +76,12 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     : [];
 
   const isSearching = Boolean(q?.trim());
+  const newPageHref = `/worlds/${worldSlug}/pages/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`;
+
+  const recentPages = [...pages]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5);
+  const draftCount = pages.filter((page) => page.publishStatus === "draft").length;
 
   return (
     <AppShell
@@ -92,7 +99,15 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         <>
           <SidebarSection title="Welt">
             <SidebarNav
-              items={[{ label: "← Dashboard", href: "/" }, ...worldNavItems(worldSlug, "pages")]}
+              items={[
+                { label: "← Dashboard", href: "/" },
+                // Keep the active campaign filter on "Neue Seite".
+                ...worldNavItems(worldSlug, "pages").map((item) =>
+                  item.href === `/worlds/${worldSlug}/pages/new`
+                    ? { ...item, href: newPageHref }
+                    : item,
+                ),
+              ]}
             />
           </SidebarSection>
           <SidebarSection title="Kampagnen">
@@ -121,7 +136,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
             title={world.name}
             summary={world.description}
             actions={
-              <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+              <Link className="uwe-btn uwe-btn-primary" href={newPageHref}>
                 Seite erstellen
               </Link>
             }
@@ -178,55 +193,64 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
                 showVisibility
               />
             </>
-          ) : (
-            <>
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Typ</th>
-                <th>Sichtbarkeit</th>
-                <th>Publish</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pages.map((page) => (
-                <tr key={page.id}>
-                  <td>
-                    <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                      {page.title}
-                    </Link>
-                  </td>
-                  <td><PageTypeBadge type={page.type} /></td>
-                  <td><VisibilityBadge visibility={page.visibility} /></td>
-                  <td><PublishBadge status={page.publishStatus} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {pages.length === 0 && (
+          ) : pages.length === 0 ? (
             <EmptyState
               title="Keine Seiten"
               description="Für diesen Filter gibt es noch keine Einträge. Erstelle eine neue Seite oder passe den Filter an."
               action={
-                <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+                <Link className="uwe-btn uwe-btn-primary" href={newPageHref}>
                   Seite erstellen
                 </Link>
               }
             />
-          )}
-            </>
+          ) : (
+            <table className="uwe-page-table">
+              <thead>
+                <tr>
+                  <th>Titel</th>
+                  <th>Typ</th>
+                  <th>Sichtbarkeit</th>
+                  <th>Publish</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pages.map((page) => (
+                  <tr key={page.id}>
+                    <td>
+                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                        {page.title}
+                      </Link>
+                    </td>
+                    <td><PageTypeBadge type={page.type} /></td>
+                    <td><VisibilityBadge visibility={page.visibility} /></td>
+                    <td><PublishBadge status={page.publishStatus} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </>
       }
       context={
-        <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
-            {pages.length} Seiten
-            {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
-          </p>
-        </SidebarSection>
+        <>
+          <SidebarSection title="Kontext">
+            <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+              {pages.length} Seiten
+              {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
+              {draftCount > 0 ? ` · ${draftCount} Entwürfe` : ""}
+            </p>
+          </SidebarSection>
+          {recentPages.length > 0 && (
+            <SidebarSection title="Zuletzt bearbeitet">
+              <SidebarNav
+                items={recentPages.map((page) => ({
+                  label: page.title,
+                  href: buildPageUrl(worldSlug, page.type, page.slug),
+                }))}
+              />
+            </SidebarSection>
+          )}
+        </>
       }
     />
   );

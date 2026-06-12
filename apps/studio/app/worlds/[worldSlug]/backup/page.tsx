@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   AppShell,
   Breadcrumb,
@@ -19,7 +20,7 @@ export default async function WorldBackupPage({ params }: Props) {
   const { worldSlug } = await params;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
-  if (!world) return null;
+  if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   const backups = listStoredBackups().filter(

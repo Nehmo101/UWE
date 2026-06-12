@@ -8,6 +8,7 @@ import {
   BLOCK_TYPE_LABELS,
   PageTypeBadge,
   VisibilityBadge,
+  WikiContent,
 } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient, getAppRepository } from "@uwe/database/server";
 
@@ -32,12 +33,20 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let notes;
   let canComment = false;
   let campaignId: string | null = null;
+  let worldName = worldSlug;
+  let blockHtml: string[] = [];
 
   try {
     page = await auth.getPageForViewer(worldSlug, slug, ctx);
     if (!page) {
       notFound();
     }
+
+    blockHtml = await Promise.all(
+      page.contentBlocks.map((block) =>
+        auth.renderBlockContentForViewer(worldSlug, block.content, ctx),
+      ),
+    );
 
     campaignId =
       page.campaignId ??
@@ -53,8 +62,9 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { name: true, guestCommentsEnabled: true },
     });
+    worldName = world?.name ?? worldSlug;
     canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
   } finally {
     await db.$disconnect();
@@ -68,7 +78,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
       <article className="auth-card auth-card-wide">
         <div className="auth-breadcrumb">
           <Link href="/auth/worlds">Welten</Link> /{" "}
-          <Link href={`/auth/worlds/${worldSlug}`}>{worldSlug}</Link> / {page.title}
+          <Link href={`/auth/worlds/${worldSlug}`}>{worldName}</Link> / {page.title}
         </div>
 
         <header className="auth-page-header">
@@ -81,13 +91,15 @@ export default async function AuthWorldPageDetail({ params }: Props) {
         </header>
 
         <div className="auth-blocks">
-          {page.contentBlocks.map((block) => (
+          {page.contentBlocks.map((block, index) => (
             <section key={block.id} className="auth-block">
               <div className="auth-block-meta">
                 <span className="uwe-badge uwe-badge-type">{BLOCK_TYPE_LABELS[block.type]}</span>
                 <VisibilityBadge visibility={block.visibility} />
               </div>
-              <div className="auth-block-content wiki-content">{block.content}</div>
+              <div className="auth-block-content">
+                <WikiContent html={blockHtml[index] ?? ""} />
+              </div>
             </section>
           ))}
         </div>

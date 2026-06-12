@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import { NextResponse } from "next/server";
 import { resolveAssetFilePath } from "@uwe/assets";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import {
+  createAuthService,
+  createPrismaClient,
+  getSystemSettings,
+  isPortalGloballyEnabled,
+} from "@uwe/database/server";
 import { getAccessContextForWorld, getSessionToken } from "@/src/lib/auth";
 
 interface RouteContext {
@@ -9,6 +14,11 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const settings = await getSystemSettings();
+  if (!isPortalGloballyEnabled(settings)) {
+    return NextResponse.json({ error: "Portal disabled" }, { status: 403 });
+  }
+
   const { assetId } = await context.params;
   const worldSlug = new URL(request.url).searchParams.get("world");
 

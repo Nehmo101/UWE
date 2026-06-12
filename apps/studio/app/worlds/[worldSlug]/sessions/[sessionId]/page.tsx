@@ -21,17 +21,18 @@ import {
 import {
   linkPageToSessionAction,
   publishSessionRecapAction,
+  unlinkPageFromSessionAction,
   updateGameSessionAction,
 } from "../../../../session-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
-  searchParams: Promise<{ saved?: string; published?: string; linked?: string }>;
+  searchParams: Promise<{ saved?: string; published?: string; linked?: string; unlinked?: string }>;
 }
 
 export default async function StudioSessionDetailPage({ params, searchParams }: Props) {
   const { worldSlug, sessionId } = await params;
-  const { saved, published, linked } = await searchParams;
+  const { saved, published, linked, unlinked } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -76,6 +77,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           {saved && <p className="uwe-flash uwe-flash-success">Session gespeichert.</p>}
           {published && <p className="uwe-flash uwe-flash-success">Recap fürs Portal veröffentlicht.</p>}
           {linked && <p className="uwe-flash uwe-flash-success">Seite verknüpft.</p>}
+          {unlinked && <p className="uwe-flash uwe-flash-success">Verknüpfung entfernt.</p>}
 
           <PageHeader
             title={`Session ${session.sessionNumber}: ${session.title}`}
@@ -110,11 +112,6 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           <form action={updateGameSessionAction} className="uwe-edit-form">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="sessionId" value={sessionId} />
-            <input
-              type="hidden"
-              name="linkedPageIds"
-              value={session.linkedPages.map((p) => p.id).join(",")}
-            />
 
             <label>
               Titel
@@ -193,6 +190,14 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                       {page.title}
                     </Link>
                     <PageTypeBadge type={page.type} />
+                    <form action={unlinkPageFromSessionAction} style={{ display: "inline" }}>
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="sessionId" value={sessionId} />
+                      <input type="hidden" name="pageId" value={page.id} />
+                      <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-small">
+                        Entfernen
+                      </button>
+                    </form>
                   </li>
                 ))}
               </ul>

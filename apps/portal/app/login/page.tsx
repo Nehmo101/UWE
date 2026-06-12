@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// Inlined at build time — dev credential hints never ship in production builds.
+const SHOW_DEV_CREDENTIALS = process.env.NODE_ENV === "development";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("aman@uwe.local");
-  const [password, setPassword] = useState("uwe-dev");
+  const [email, setEmail] = useState(SHOW_DEV_CREDENTIALS ? "aman@uwe.local" : "");
+  const [password, setPassword] = useState(SHOW_DEV_CREDENTIALS ? "uwe-dev" : "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -72,13 +75,15 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="auth-seed-users">
-          <h2>Entwicklungs-Benutzer</h2>
-          <ul>
-            <li>DM: dm@uwe.local / uwe-dev</li>
-            <li>Spieler: aman@uwe.local, lazul@uwe.local, veldrin@uwe.local, finnion@uwe.local / uwe-dev</li>
-          </ul>
-        </div>
+        {SHOW_DEV_CREDENTIALS && (
+          <div className="auth-seed-users">
+            <h2>Entwicklungs-Benutzer</h2>
+            <ul>
+              <li>DM: dm@uwe.local / uwe-dev</li>
+              <li>Spieler: aman@uwe.local, lazul@uwe.local, veldrin@uwe.local, finnion@uwe.local / uwe-dev</li>
+            </ul>
+          </div>
+        )}
 
         <p className="auth-footer">
           <Link href="/">← Zurück zum Portal</Link>

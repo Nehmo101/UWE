@@ -168,53 +168,35 @@ export class ShareLinkService {
     return this.updateShareLink(id, { enabled: false });
   }
 
-  async buildShareGrantForWorld(worldId: string): Promise<ShareAccessGrant> {
-    const links = await this.db.shareLink.findMany({
-      where: {
-        worldId,
-        enabled: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-    });
-
+  /**
+   * Builds the access grant for a single share link. A token only ever grants
+   * access to its own target — never to other share links in the same world,
+   * which may be password-protected or have different expiry dates.
+   */
+  async buildShareGrantForLink(
+    link: Pick<ShareLink, "worldId" | "targetType" | "targetId">,
+  ): Promise<ShareAccessGrant> {
     const grant: ShareAccessGrant = {
       sharedPageIds: new Set<string>(),
       sharedAssetIds: new Set<string>(),
     };
 
-    if (links.length === 0) {
-      return grant;
-    }
-
-    const pageIds = links
-      .filter((link) => link.targetType === "page" || link.targetType === "handout")
-      .map((link) => link.targetId);
-    const assetIds = links
-      .filter((link) => link.targetType === "asset" || link.targetType === "handout")
-      .map((link) => link.targetId);
-
-    const [pages, assets] = await Promise.all([
-      pageIds.length
-        ? this.db.page.findMany({ where: { id: { in: pageIds }, worldId }, select: { id: true, type: true } })
-        : Promise.resolve([]),
-      assetIds.length
-        ? this.db.asset.findMany({ where: { id: { in: assetIds }, worldId }, select: { id: true, type: true } })
-        : Promise.resolve([]),
+    const [page, asset] = await Promise.all([
+      link.targetType === "page" || link.targetType === "handout"
+        ? this.db.page.findFirst({
+            where: { id: link.targetId, worldId: link.worldId },
+            select: { id: true, type: true },
+          })
+        : Promise.resolve(null),
+      link.targetType === "asset" || link.targetType === "handout"
+        ? this.db.asset.findFirst({
+            where: { id: link.targetId, worldId: link.worldId },
+            select: { id: true, type: true },
+          })
+        : Promise.resolve(null),
     ]);
 
-    const pageTypeById = new Map(pages.map((page) => [page.id, page.type]));
-    const assetTypeById = new Map(assets.map((asset) => [asset.id, asset.type]));
-
-    for (const link of links) {
-      addTargetToGrant(
-        grant,
-        link.targetType,
-        link.targetId,
-        pageTypeById.get(link.targetId),
-        assetTypeById.get(link.targetId),
-      );
-    }
-
+    addTargetToGrant(grant, link.targetType, link.targetId, page?.type, asset?.type);
     return grant;
   }
 
@@ -313,7 +295,7 @@ export class ShareLinkService {
       return null;
     }
 
-    const grant = await this.buildShareGrantForWorld(link.worldId);
+    const grant = await this.buildShareGrantForLink(link);
 
     if (target.kind === "page" && !grant.sharedPageIds.has(target.page.id)) {
       return null;

@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
-import { buildWorldGraph, getAppRepository } from "@uwe/database/server";
+import {
+  buildWorldGraph,
+  getAppRepository,
+  getSystemSettings,
+  isPortalGloballyEnabled,
+} from "@uwe/database/server";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function GET(_request: Request, { params }: RouteParams) {
+  const settings = await getSystemSettings();
+  if (!isPortalGloballyEnabled(settings)) {
+    return NextResponse.json({ error: "Portal disabled" }, { status: 403 });
+  }
+
   const { worldSlug } = await params;
   const repo = getAppRepository();
 

@@ -142,7 +142,8 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 
 | Variable | Beschreibung | Produktion |
 |----------|--------------|------------|
-| `AUTH_SECRET` | Session-Signatur | **Pflicht — zufällig generieren** |
+| `AUTH_SECRET` | Reserviert für zukünftige signierte Cookies | **Zufällig generieren** |
+| `STUDIO_API_TOKEN` | Optionaler Bearer-Token für sensible Studio-APIs | Empfohlen bei exponiertem Studio |
 | `DATABASE_URL` | SQLite-Pfad | Docker: `file:/data/uwe.db` (automatisch) |
 | `UPLOADS_DIR` | Upload-Verzeichnis | Docker: `/app/data/uploads` |
 | `BACKUPS_DIR` | Backup-Verzeichnis | Docker: `/app/data/backups` |
@@ -273,9 +274,11 @@ Häufige Ursachen:
 - Prüfen, ob `./data/uploads` als Bind-Mount gemappt ist
 - Nicht `./data/uploads` beim Update löschen
 
-### `AUTH_SECRET`-Warnung / Sessions ungültig
+### Sessions ungültig machen
 
-Nach Änderung von `AUTH_SECRET` müssen sich alle Benutzer neu anmelden. Secret nicht ohne Backup-Rotation ändern.
+Portal-Sessions sind opake, datenbankgestützte Tokens (Tabelle `Session`). Sie hängen
+**nicht** von `AUTH_SECRET` ab. Um alle Sessions zu invalidieren, leeren Sie die
+`Session`-Tabelle (z. B. via `sqlite3 /data/uwe.db "DELETE FROM sessions;"`).
 
 ### Manueller DB-Reset (nur Entwicklung!)
 

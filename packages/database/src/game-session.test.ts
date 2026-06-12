@@ -199,4 +199,58 @@ describe("UWE game session management", () => {
 
     await db.$disconnect();
   });
+
+  it("hides dm_only and unpublished linked page titles from players", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const repo = createUweRepository(databaseUrl);
+    const sessions = createGameSessionService(databaseUrl);
+
+    const secretPage = await repo.createPage({
+      worldId,
+      campaignId,
+      title: "Geheimer Verräter Lord Mordrek",
+      slug: "geheimer-verraeter",
+      type: "npc",
+      visibility: "dm_only",
+      publishStatus: "published",
+    });
+
+    const visiblePage = await repo.createPage({
+      worldId,
+      campaignId,
+      title: "Bekannter Marktplatz",
+      slug: "bekannter-marktplatz",
+      type: "location",
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    await sessions.linkPage(sessionId, secretPage.id);
+    await sessions.linkPage(sessionId, visiblePage.id);
+
+    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+    assert.ok(playerCtx);
+
+    const detail = await auth.getGameSessionForViewer(worldSlug, sessionId, playerCtx);
+    assert.ok(detail);
+
+    const linkedTitles = detail.linkedPages.map((page) => page.title);
+    assert.ok(linkedTitles.includes("Bekannter Marktplatz"));
+    assert.ok(!linkedTitles.includes("Geheimer Verräter Lord Mordrek"));
+
+    const serialized = JSON.stringify(detail);
+    assert.ok(!serialized.includes("Geheimer Verräter"));
+    assert.ok(!serialized.includes("geheimer-verraeter"));
+
+    const list = await auth.listGameSessionsForViewer(worldSlug, playerCtx);
+    const serializedList = JSON.stringify(list);
+    assert.ok(!serializedList.includes("Geheimer Verräter"));
+
+    const dmView = await auth.getGameSessionForDm(worldSlug, sessionId);
+    assert.ok(dmView);
+    assert.ok(dmView.linkedPages.some((page) => page.title === "Geheimer Verräter Lord Mordrek"));
+
+    await db.$disconnect();
+  });
 });
