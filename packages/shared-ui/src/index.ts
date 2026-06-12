@@ -77,3 +77,9 @@ export {
 } from "./GraphView";
 
 export { CATEGORY_LABELS, WikiPageList, type WikiNavItem } from "./WikiComponents";
+
+export {
+  SoundboardWorkspace,
+  type SoundboardButtonView,
+  type SoundboardLinkedPage,
+} from "./SoundboardWorkspace";

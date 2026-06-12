@@ -38,6 +38,7 @@ describe("UWE soundboard", () => {
   let youtubeButtonId: string;
   let spotifyButtonId: string;
   let dmOnlyButtonId: string;
+  let dmOnlyAssetButtonId: string;
   let uploadsRoot: string;
 
   before(async () => {
@@ -133,6 +134,28 @@ describe("UWE soundboard", () => {
     });
     dmOnlyButtonId = dmOnlyButton.id;
 
+    const dmOnlyAsset = await repo.createAsset({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "DM Secret Audio",
+      type: "audio",
+      storageKey: buildStorageKey(world.id, "secret.mp3"),
+      mimeType: "audio/mpeg",
+      size: 10,
+      visibility: "dm_only",
+    });
+    fs.writeFileSync(resolveAssetFilePath(dmOnlyAsset.storageKey, uploadsRoot), "secret-audio");
+
+    const dmOnlyAssetButton = await soundboard.create({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Hidden Ambient",
+      sourceType: "local",
+      assetId: dmOnlyAsset.id,
+      visibility: "player_visible",
+    });
+    dmOnlyAssetButtonId = dmOnlyAssetButton.id;
+
     await db.$disconnect();
   });
 
@@ -211,6 +234,30 @@ describe("UWE soundboard", () => {
     assert.ok(!portalViews.some((button) => button.id === dmOnlyButtonId));
 
     await db.$disconnect();
+  });
+
+  it("hides player_visible buttons when linked asset is dm_only", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    try {
+      const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+      assert.ok(playerCtx);
+
+      const portalButtons = await auth.listSoundboardForViewer(worldSlug, playerCtx);
+      const portalIds = portalButtons.map((button) => button.id);
+
+      assert.ok(!portalIds.includes(dmOnlyAssetButtonId));
+
+      const hiddenDetail = await auth.getSoundboardButtonForViewer(
+        worldSlug,
+        dmOnlyAssetButtonId,
+        playerCtx,
+      );
+      assert.equal(hiddenDetail, null);
+    } finally {
+      await db.$disconnect();
+    }
   });
 
   it("manages active sounds state with source limits", () => {

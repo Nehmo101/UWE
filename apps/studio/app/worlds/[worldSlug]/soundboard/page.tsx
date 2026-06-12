@@ -80,7 +80,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
     loop: button.loop,
     tags: button.tags,
     visibility: button.visibility,
-    linkedPageTitles: button.linkedPages.map((page) => page.title),
+    linkedPages: button.linkedPages.map((page) => ({ title: page.title })),
   }));
 
   return (

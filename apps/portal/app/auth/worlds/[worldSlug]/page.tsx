@@ -96,6 +96,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
         <div className="auth-quick-links">
           <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps</Link>
           <Link href={`/auth/worlds/${worldSlug}/assets`}>Assets</Link>
+          <Link href={`/auth/worlds/${worldSlug}/soundboard`}>Soundboard</Link>
         </div>
 
         {previewEnabled && (

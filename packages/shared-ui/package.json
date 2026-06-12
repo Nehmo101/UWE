@@ -18,7 +18,9 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
-    "@uwe/database": "workspace:*"
+    "@uwe/database": "workspace:*",
+    "@uwe/soundboard": "workspace:*",
+    "next": "^15.3.4"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

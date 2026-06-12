@@ -41,6 +41,9 @@ importers:
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      '@uwe/soundboard':
+        specifier: workspace:*
+        version: link:../../packages/soundboard
       '@uwe/wiki-engine':
         specifier: workspace:*
         version: link:../../packages/wiki-engine
@@ -280,6 +283,12 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/soundboard':
+        specifier: workspace:*
+        version: link:../soundboard
+      next:
+        specifier: ^15.3.4
+        version: 15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     devDependencies:
       '@types/node':
         specifier: ^22.19.21
