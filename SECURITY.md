@@ -18,7 +18,7 @@ UWE is a private/self-hosted project. If you discover a security issue:
 
 Before exposing UWE to the internet:
 
-- [ ] Set a strong, unique `AUTH_SECRET` in `.env` (never commit `.env`; replace the `.env.example` placeholder)
+- [ ] Set a strong, unique `AUTH_SECRET` in `.env` (never commit `.env`; replace the `.env.example` placeholder). Keep it stable after connecting Spotify — it encrypts OAuth tokens per world
 - [ ] Set `RUN_DB_SEED=false` in production (never auto-seed demo worlds on a live deployment)
 - [ ] Run Studio and Portal behind HTTPS (reverse proxy recommended)
 - [ ] **Never expose Studio directly to the public internet** — Studio has no user login. Use reverse-proxy auth, VPN, or Cloudflare Access
@@ -33,7 +33,7 @@ The Studio dashboard and `GET /api/health` surface warnings for common misconfig
 
 ## Built-in Protections
 
-- **Visibility filtering** — `dm_only` pages, blocks, assets, session fields, and even secret page *titles* are filtered server-side for the Portal, search, graph, backlinks, related pages, and static export
+- **Visibility filtering** — `dm_only` pages, blocks, assets, soundboard buttons, session fields, and even secret page *titles* are filtered server-side for the Portal, search, graph, backlinks, related pages, and static export
 - **Share links** — each token is scoped strictly to its own target; expiry, enable/disable, and scrypt-hashed passwords are enforced on every access
 - **Rate limiting** — login and share-password attempts are rate limited per IP (in-memory, per process; not sufficient alone for multi-instance deployments)
 - **Settings API validation** — partial settings updates are validated at runtime; unknown keys and invalid enum/path values are rejected with HTTP 400
@@ -45,9 +45,10 @@ The Studio dashboard and `GET /api/health` surface warnings for common misconfig
 
 - **SQLite** — suitable for small to medium deployments; concurrent write limits apply
 - **Studio trust model** — Studio assumes a trusted network; it has no per-user login. Never run it publicly without reverse-proxy auth, VPN, or Cloudflare Access. Use `STUDIO_API_TOKEN` for API hardening
-- **`AUTH_SECRET` in production** — must be set to a strong random value before production use
+- **`AUTH_SECRET`** — encrypts Spotify OAuth tokens per world; must be set to a strong random value in production and kept stable after Spotify connect (rotating it invalidates stored tokens)
 - **`RUN_DB_SEED` in production** — must be `false`; `auto`/`true` can create demo content on startup
-- **`player_visible` means "no login required"** — published pages/blocks/assets with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal (ohne Login)" to make the consequence explicit. `dm_only` content is never served on those routes
+- **`player_visible` means "no login required"** — published pages/blocks/assets/soundboard buttons with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal (ohne Login)" to make the consequence explicit. `dm_only` content is never served on those routes
+- **Spotify playback** — OAuth and Web API playback control are Studio-only. The Portal may display Spotify buttons but does not trigger playback
 - **Portal sessions** — opaque database-backed tokens (httpOnly, SameSite=Lax, Secure in production); they are not derived from `AUTH_SECRET`
 - **File uploads** — stored on disk under `UPLOADS_DIR`; ensure filesystem permissions are restricted
 - **Share links** — public URLs grant read access to specific content; review active links regularly

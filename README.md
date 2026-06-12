@@ -89,12 +89,15 @@ pnpm dev:portal   # http://localhost:3001
 ### Build and test
 
 ```bash
+pnpm install --frozen-lockfile
 pnpm build:release   # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
 pnpm lint            # ESLint (flat config at eslint.config.mjs, zero warnings allowed)
 pnpm release:check   # validate release files and version sync
 ```
+
+Pull requests and pushes to `main` run the same checks in GitHub Actions (`.github/workflows/ci.yml`).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
@@ -125,9 +128,17 @@ The **UWE Portal** is a Next.js web app with backend/API:
 - Health check: `GET /api/health` (includes database check)
 - Auth API: `POST /api/auth/login`, `/logout`, `/preview`
 
-Only **published** pages with visibility `public` or `player_visible` appear in the public wiki. DM-only blocks and pages are filtered server-side.
+Only **published** pages with visibility `public` or `player_visible` appear in the public wiki. DM-only blocks and pages are filtered server-side — this is enforced by hard security tests (`packages/database/src/visibility-security.test.ts`).
 
-**Naming note:** because these routes need no login, Studio labels `player_visible` as **"Portal (ohne Login)"** — anything published with this visibility is readable by everyone who can reach the Portal. `dm_only` content is never served on `/worlds/*`; this is enforced by hard security tests (`packages/database/src/visibility-security.test.ts`).
+**What is safe to expose publicly**
+
+| Surface | Public exposure |
+|---------|-----------------|
+| **Player Portal** (`/worlds/*`) | Published `player_visible` / `public` content only — no login required on these routes |
+| **Authenticated Portal** (`/auth/worlds/*`) | Role-filtered player content; still no Spotify playback control |
+| **Studio** | **Not safe without protection** — no real DM login yet; use reverse-proxy auth, VPN, or Cloudflare Access |
+
+**Naming note:** because public routes need no login, Studio labels `player_visible` as **"Portal (ohne Login)"** — anything published with this visibility is readable by everyone who can reach the Portal. `dm_only` content is never served on `/worlds/*`.
 
 ---
 
@@ -137,9 +148,30 @@ UWE Studio includes a per-world/campaign **Soundboard** at `/worlds/[worldSlug]/
 
 - **Local audio** via the asset library (`AssetType.audio`)
 - **YouTube links** stored as URLs (embedded playback in Studio)
-- **Spotify links** stored and prepared for future playback
+- **Spotify links** with OAuth per world and playback control via the **Spotify Web API** / **Spotify Connect** in Studio
 
-**Spotify note:** Full Spotify playback control requires **Spotify Premium** and the **Spotify Web API** (OAuth + `PUT /v1/me/player/play`). OAuth is intentionally not implemented yet; see `packages/soundboard/src/spotify.ts` for the prepared adapter.
+### Spotify setup (Studio only)
+
+Spotify playback is **Studio/DM-side only**. The Player Portal may show Spotify buttons and hints, but it does **not** trigger playback.
+
+1. Create a Spotify app at [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Add the redirect URI to your app (must match exactly):
+   ```
+   http://localhost:3000/api/spotify/callback
+   ```
+3. Set these variables in `.env`:
+
+   | Variable | Purpose |
+   |----------|---------|
+   | `SPOTIFY_CLIENT_ID` | OAuth client ID |
+   | `SPOTIFY_CLIENT_SECRET` | OAuth client secret |
+   | `SPOTIFY_REDIRECT_URI` | Callback URL (e.g. `http://localhost:3000/api/spotify/callback`) |
+   | `AUTH_SECRET` | Encrypts stored Spotify tokens — **must stay stable** after connecting accounts |
+
+4. In Studio, open the world soundboard and connect Spotify (one account per world).
+5. **Spotify Premium** is required for playback-control endpoints (`/v1/me/player/*`).
+
+Token storage is world-scoped and encrypted with `AUTH_SECRET`. Changing `AUTH_SECRET` after connecting Spotify invalidates stored tokens — reconnect in Studio if you rotate the secret.
 
 DM-only soundboard buttons are filtered for the Player Portal via the same visibility rules as assets.
 
@@ -198,7 +230,7 @@ Erledigt:
 - [x] Static HTML Export für player-sichere Wiki-Seiten
 - [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung
 - [x] Session Management für Welten und Kampagnen
-- [x] Soundboard (lokale Sounds, YouTube, Spotify vorbereitet)
+- [x] Soundboard (lokale Sounds, YouTube, Spotify OAuth + Web-API-Playback im Studio)
 
 Geplant:
 
@@ -225,7 +257,7 @@ packages/
   wiki-engine/     # Wikilink parsing
   auth/            # Roles and permissions
   assets/          # Asset upload paths and MIME helpers
-  soundboard/      # Active sound state + Spotify adapter (OAuth later)
+  soundboard/      # Active sound state + Spotify Web API adapter (Studio OAuth)
   ai-brain/        # Local AI integration (Studio)
 ```
 
@@ -243,9 +275,14 @@ Copy `.env.example` to `.env`. Important variables:
 | `UPLOADS_DIR` | Persistent uploads |
 | `EXPORTS_DIR` | Static export output (Studio API) |
 | `BACKUPS_DIR` | Backup folder |
-| `AUTH_SECRET` | Reserved secret for future signed cookies (set in production) |
+| `AUTH_SECRET` | Encrypts Spotify tokens and other secrets — set a strong value in production and **do not rotate** after Spotify connect without reconnecting |
 | `STUDIO_API_TOKEN` | Optional bearer token guarding sensitive Studio APIs |
+| `SPOTIFY_CLIENT_ID` | Spotify OAuth client ID (Studio soundboard, optional) |
+| `SPOTIFY_CLIENT_SECRET` | Spotify OAuth client secret (optional) |
+| `SPOTIFY_REDIRECT_URI` | Spotify OAuth callback, e.g. `http://localhost:3000/api/spotify/callback` |
 | `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
+
+**Public hosting:** Studio must not be exposed to the internet without reverse-proxy auth, VPN, or Cloudflare Access. The Portal may be hosted more openly, but only publishes content marked `player_visible` or `public`. See [SECURITY.md](SECURITY.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
 ---
 

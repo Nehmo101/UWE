@@ -151,8 +151,11 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 
 | Variable | Beschreibung | Produktion |
 |----------|--------------|------------|
-| `AUTH_SECRET` | Reserviert für zukünftige signierte Cookies | **Pflicht:** starkes Zufallsgeheimnis (`openssl rand -base64 32`), keine Platzhalter |
+| `AUTH_SECRET` | Verschlüsselt Spotify-OAuth-Tokens pro Welt (und weitere Geheimnisse) | **Pflicht:** starkes Zufallsgeheimnis (`openssl rand -base64 32`); **stabil halten** nach Spotify-Verbindung |
 | `STUDIO_API_TOKEN` | Optionaler Bearer-Token für sensible Studio-APIs | **Empfohlen** bei exponiertem Studio (Backup, Restore, Settings, AI, Export) |
+| `SPOTIFY_CLIENT_ID` | Spotify OAuth Client ID (Soundboard, optional) | Nur wenn Spotify-Playback im Studio genutzt wird |
+| `SPOTIFY_CLIENT_SECRET` | Spotify OAuth Client Secret | Wie oben |
+| `SPOTIFY_REDIRECT_URI` | OAuth-Callback, z. B. `http://localhost:3000/api/spotify/callback` | Muss exakt in der Spotify-App hinterlegt sein |
 | `DATABASE_URL` | SQLite-Pfad | Docker: `file:/data/uwe.db` (automatisch) |
 | `UPLOADS_DIR` | Upload-Verzeichnis | Docker: `/app/data/uploads` |
 | `BACKUPS_DIR` | Backup-Verzeichnis | Docker: `/app/data/backups` |
@@ -170,6 +173,16 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 - [ ] Rate Limiter beachten: prozesslokal — bei mehreren Instanzen zusätzlich am Reverse Proxy limitieren
 
 AI-Provider-Keys (`OPENAI_API_KEY`, etc.) sind optional und nur für UWE Studio relevant.
+
+### Spotify (Studio Soundboard, optional)
+
+Spotify-Playback läuft **nur im Studio** über die Spotify Web API / Spotify Connect — nicht im Spielerportal.
+
+1. Spotify-App im [Developer Dashboard](https://developer.spotify.com/dashboard) anlegen.
+2. Redirect-URI eintragen (muss mit `SPOTIFY_REDIRECT_URI` übereinstimmen).
+3. `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI` und `AUTH_SECRET` in `.env` setzen.
+4. Im Studio pro Welt unter Soundboard verbinden (**Spotify Premium** erforderlich).
+5. `AUTH_SECRET` nach dem Verbinden nicht ändern — sonst Tokens neu verbinden.
 
 ---
 

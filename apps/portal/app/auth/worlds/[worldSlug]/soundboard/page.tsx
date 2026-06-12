@@ -71,7 +71,7 @@ export default async function PortalSoundboardPage({ params }: Props) {
 
         <SoundboardWorkspace
           buttons={buttonViews}
-          spotifyPlaybackHint="Spotify-Wiedergabe ist nur im Studio verfügbar (OAuth noch nicht im Portal)."
+          spotifyPlaybackHint="Spotify-Wiedergabe wird nur im Studio gesteuert (Spotify Connect / Web API). Im Portal sind Spotify-Buttons nur zur Anzeige."
         />
 
         {buttonViews.length === 0 && (
