@@ -1,7 +1,11 @@
 import {
   getAppRepository,
+  getPageTemplate,
   navCategoryForPageType,
   buildPageUrl,
+  pickUniqueSlug,
+  slugifyPageTitle,
+  type CreateContentBlockInput,
   type PageType,
   type Visibility,
   type PublishStatus,
@@ -53,13 +57,44 @@ export async function createPageAction(formData: FormData) {
   if (!world) throw new Error("World not found");
 
   const type = formData.get("type") as PageType;
-  const slug = String(formData.get("slug"));
+  const title = String(formData.get("title"));
   const campaignId = String(formData.get("campaignId") || "") || null;
+  const template = getPageTemplate(String(formData.get("template") || "") || null);
+
+  // Slug is optional: derive it from the title and avoid collisions.
+  let slug = String(formData.get("slug") || "").trim();
+  if (!slug) {
+    const existing = await repo().listPagesByWorld(worldSlug);
+    slug = pickUniqueSlug(
+      slugifyPageTitle(title),
+      existing.map((page) => page.slug),
+    );
+  }
+
+  const initialContent = String(formData.get("initialContent") || "");
+
+  // With a template, the form's content textarea edits the first template
+  // block; the remaining blocks (e.g. DM-only notes) come from the template.
+  const contentBlocks: CreateContentBlockInput[] = template
+    ? template.blocks.map((block, index) => ({
+        type: block.type,
+        sortOrder: index,
+        visibility: block.visibility,
+        content: index === 0 ? initialContent : block.content,
+      }))
+    : [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: initialContent,
+        },
+      ];
 
   await repo().createPage({
     worldId: world.id,
     campaignId,
-    title: String(formData.get("title")),
+    title,
     slug,
     type,
     summary: String(formData.get("summary") || "") || null,
@@ -70,14 +105,7 @@ export async function createPageAction(formData: FormData) {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean),
-    contentBlocks: [
-      {
-        type: "rich_text",
-        sortOrder: 0,
-        visibility: "player_visible",
-        content: String(formData.get("initialContent") || ""),
-      },
-    ],
+    contentBlocks,
   });
 
   const category = navCategoryForPageType(type);

@@ -32,7 +32,7 @@ export default async function WorldsPage() {
               <article key={world.id} className="wiki-world-card">
                 <h2>{world.name}</h2>
                 {world.description && <p>{world.description}</p>}
-                <Link href={`/worlds/${world.slug}`}>Welt verwalten →</Link>
+                <Link href={`/worlds/${world.slug}/dashboard`}>Welt verwalten →</Link>
               </article>
             ))}
           </div>

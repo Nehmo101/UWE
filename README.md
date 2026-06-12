@@ -93,6 +93,15 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## DM Workflow Highlights (Studio)
+
+- **World Overview** — `/worlds/[slug]/dashboard` is the per-world start page: stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create shortcuts.
+- **Command Palette** — press `Ctrl/⌘ + K` anywhere in Studio to jump to any view, quick-create entities, switch worlds, or search pages live.
+- **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically.
+- **World Inspector** — `/worlds/[slug]/inspector` audits what players can actually see: portal-visible pages/blocks/assets, share links (password/expiry), safety findings (e.g. player-visible GM notes), and canon warnings (broken wiki links, duplicate names, contradictions, orphan pages).
+
+---
+
 ## Player Portal (live)
 
 The **UWE Portal** is a Next.js web app with backend/API:

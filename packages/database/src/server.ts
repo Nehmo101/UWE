@@ -149,6 +149,45 @@ export {
 } from "./search-service";
 
 export {
+  PAGE_TEMPLATES,
+  getPageTemplate,
+  pickUniqueSlug,
+  slugifyPageTitle,
+} from "./page-templates";
+
+export type { PageTemplate, PageTemplateBlock } from "./page-templates";
+
+export {
+  createWorldOverviewService,
+  WorldOverviewService,
+} from "./world-overview";
+
+export type {
+  WorldOverviewData,
+  WorldOverviewOpenPlot,
+  WorldOverviewPage,
+  WorldOverviewSession,
+} from "./world-overview";
+
+export {
+  createWorldInspectorService,
+  WorldInspectorService,
+  buildCanonFindings,
+  buildSafetyFindings,
+  sortFindings,
+} from "./world-inspector";
+
+export type {
+  InspectorFinding,
+  InspectorFindingCode,
+  InspectorSeverity,
+  PortalVisibleAsset,
+  PortalVisiblePage,
+  ShareLinkOverview,
+  WorldInspectorReport,
+} from "./world-inspector";
+
+export {
   createGameSessionService,
   GameSessionService,
   GAME_SESSION_STATUS_LABELS,

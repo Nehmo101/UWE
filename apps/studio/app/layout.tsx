@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getAppRepository } from "@uwe/database/server";
+import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -10,14 +12,28 @@ export const metadata: Metadata = {
   description: "Universeller Welten-Editor — DM campaign editor",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let worlds: { name: string; slug: string }[] = [];
+  try {
+    worlds = (await getAppRepository().listWorlds()).map((world) => ({
+      name: world.name,
+      slug: world.slug,
+    }));
+  } catch {
+    // Database not ready (e.g. first start before migration) — the palette
+    // still works with static commands.
+  }
+
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        {children}
+        <StudioCommandPalette worlds={worlds} />
+      </body>
     </html>
   );
 }

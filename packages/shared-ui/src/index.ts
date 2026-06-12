@@ -57,6 +57,14 @@ export {
   type ContentBlockViewModel,
 } from "./StatusBadges";
 
+export {
+  CommandPalette,
+  filterPaletteCommands,
+  type CommandPaletteCommand,
+  type CommandPaletteProps,
+  type CommandPaletteSearchResult,
+} from "./CommandPalette";
+
 export { BrandHeader } from "./BrandHeader";
 export { HealthBadge } from "./HealthBadge";
 

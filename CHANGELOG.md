@@ -5,6 +5,15 @@ All notable changes to **UWE (Universeller Welten-Editor)** are documented in th
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **World Overview Dashboard** — per-world start page (`/worlds/[slug]/dashboard`) with stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create actions
+- **Command Palette** — global `Ctrl/⌘ + K` palette in Studio with navigation commands, quick-create actions, world switching, and live page search (`GET /api/command/search`)
+- **Quick Create with page templates** — template picker for NPC, Ort, Fraktion, Quest, Session-Plan, and Handout on the new-page form; templates pre-fill player-visible content plus DM-only note blocks; slugs are now optional and auto-generated (umlaut-aware, collision-safe)
+- **World Inspector** — read-only audit view (`/worlds/[slug]/inspector`) showing exactly which pages, blocks, and assets are portal-visible, all share links with password/expiry status, plus safety findings (player-visible GM notes, exposed secret pages, unprotected share links) and canon warnings (broken wiki links, ambiguous duplicate names, contradictory pages, orphan pages, inconsistent publish states)
+
 ## [0.1.0] - 2026-06-11
 
 First usable self-hosted release of UWE.

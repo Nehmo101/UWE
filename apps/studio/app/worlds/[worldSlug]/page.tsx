@@ -26,6 +26,7 @@ import {
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
+import { worldNavItems } from "@/src/lib/world-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -91,20 +92,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         <>
           <SidebarSection title="Welt">
             <SidebarNav
-              items={[
-                { label: "← Dashboard", href: "/" },
-                { label: "Seiten", href: `/worlds/${worldSlug}`, active: true },
-                { label: "Import", href: `/worlds/${worldSlug}/import` },
-                { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
-                { label: "Assets", href: `/worlds/${worldSlug}/assets` },
-                { label: "Labels", href: `/worlds/${worldSlug}/labels` },
-                { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
-                { label: "Spielernotizen", href: `/worlds/${worldSlug}/notes` },
-                { label: "Soundboard", href: `/worlds/${worldSlug}/soundboard` },
-                { label: "Graph", href: `/worlds/${worldSlug}/graph` },
-                { label: "Backup", href: `/worlds/${worldSlug}/backup` },
-                { label: "Neue Seite", href: `/worlds/${worldSlug}/pages/new` },
-              ]}
+              items={[{ label: "← Dashboard", href: "/" }, ...worldNavItems(worldSlug, "pages")]}
             />
           </SidebarSection>
           <SidebarSection title="Kampagnen">

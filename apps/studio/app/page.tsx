@@ -74,7 +74,7 @@ export default async function StudioDashboard() {
                   <article key={world.id} className="wiki-world-card uwe-card">
                     <h2>{world.name}</h2>
                     {world.description && <p>{world.description}</p>}
-                    <Link className="uwe-card-link" href={`/worlds/${world.slug}`}>
+                    <Link className="uwe-card-link" href={`/worlds/${world.slug}/dashboard`}>
                       Welt öffnen →
                     </Link>
                   </article>

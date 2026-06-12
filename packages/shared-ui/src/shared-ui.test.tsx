@@ -17,6 +17,7 @@ import {
   VisibilityBadge,
 } from "./StatusBadges";
 import { SearchResultsList } from "./SearchResults";
+import { filterPaletteCommands } from "./CommandPalette";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uweCss = readFileSync(path.join(__dirname, "uwe.css"), "utf8");
@@ -118,5 +119,48 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /max-width: 960px/);
     assert.match(uweCss, /uwe-btn-secondary/);
     assert.match(uweCss, /uwe-error-alert/);
+  });
+
+  it("includes command palette, dashboard and inspector styles in shared CSS", () => {
+    assert.match(uweCss, /uwe-palette-overlay/);
+    assert.match(uweCss, /uwe-template-card/);
+    assert.match(uweCss, /uwe-dashboard-grid/);
+    assert.match(uweCss, /uwe-inspector-findings/);
+  });
+});
+
+describe("command palette filtering", () => {
+  const commands = [
+    { id: "a", label: "NPC erstellen", group: "Welt: Terra", keywords: ["create", "charakter"] },
+    { id: "b", label: "Backup öffnen", group: "Studio", keywords: ["sicherung"] },
+    { id: "c", label: "Inspektor öffnen", group: "Welt: Terra", keywords: ["sicherheit", "leak"] },
+  ];
+
+  it("returns all commands for an empty query", () => {
+    assert.equal(filterPaletteCommands(commands, "").length, 3);
+    assert.equal(filterPaletteCommands(commands, "   ").length, 3);
+  });
+
+  it("matches against label, group and keywords case-insensitively", () => {
+    assert.deepEqual(
+      filterPaletteCommands(commands, "npc").map((c) => c.id),
+      ["a"],
+    );
+    assert.deepEqual(
+      filterPaletteCommands(commands, "SICHERUNG").map((c) => c.id),
+      ["b"],
+    );
+    assert.deepEqual(
+      filterPaletteCommands(commands, "leak").map((c) => c.id),
+      ["c"],
+    );
+  });
+
+  it("requires all tokens to match", () => {
+    assert.deepEqual(
+      filterPaletteCommands(commands, "terra erstellen").map((c) => c.id),
+      ["a"],
+    );
+    assert.equal(filterPaletteCommands(commands, "terra backup").length, 0);
   });
 });
