@@ -56,6 +56,12 @@ Persistente Daten:
 
 ---
 
+## Windows (ohne Docker)
+
+Für Windows-Nutzer gibt es einen lokalen Installer/Bootstrapper mit Startmenü, Auto-Start und Launcher — siehe [docs/WINDOWS_INSTALLER.md](docs/WINDOWS_INSTALLER.md).
+
+---
+
 ## Alternative: Lokale Entwicklung (ohne Docker)
 
 ### Prerequisites

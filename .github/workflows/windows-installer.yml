@@ -1,0 +1,82 @@
+name: Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "tools/windows-installer/**"
+      - "scripts/windows/**"
+      - ".github/workflows/windows-installer.yml"
+  pull_request:
+    paths:
+      - "tools/windows-installer/**"
+      - "scripts/windows/**"
+      - ".github/workflows/windows-installer.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Generate Prisma client
+        run: pnpm --filter @uwe/database db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Windows installer dry-run
+        run: pnpm installer:windows:dry-run
+
+  build-exe:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build installer package
+        run: pnpm --filter @uwe/windows-installer run build
+
+      - name: Install pkg
+        run: pnpm --filter @uwe/windows-installer add -D @yao-pkg/pkg@6.5.1
+
+      - name: Build Windows EXE
+        run: pnpm installer:windows:build
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uwe-windows-setup-exe
+          path: tools/windows-installer/dist/exe/UWE-Setup.exe
+          if-no-files-found: warn
