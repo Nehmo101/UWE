@@ -1,6 +1,9 @@
 import {
   extractYouTubeVideoId,
+  fetchSpotifyCoverUrl,
+  getCachedSpotifyCoverUrl,
   getYouTubeThumbnailUrl,
+  type SpotifyCoverFetchOptions,
 } from "@uwe/soundboard";
 import type { Prisma, SoundSourceType, Visibility } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
@@ -142,15 +145,56 @@ export function resolveThumbnail(button: SoundboardButtonWithLinks): string | nu
     }
   }
 
+  if (button.sourceType === "spotify" && button.sourceUrl) {
+    const cached = getCachedSpotifyCoverUrl(button.sourceUrl);
+    if (cached) {
+      return cached;
+    }
+  }
+
   return null;
+}
+
+function readSpotifyCoverOptionsFromEnv(): SpotifyCoverFetchOptions {
+  return {
+    clientId: process.env.SPOTIFY_CLIENT_ID ?? null,
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? null,
+  };
+}
+
+async function resolveSpotifyThumbnailForWrite(
+  sourceType: SoundSourceType,
+  sourceUrl: string | null | undefined,
+  thumbnail: string | null | undefined,
+  spotifyCoverOptions?: SpotifyCoverFetchOptions,
+): Promise<string | null> {
+  const explicit = thumbnail?.trim();
+  if (explicit) {
+    return explicit;
+  }
+
+  if (sourceType !== "spotify" || !sourceUrl?.trim()) {
+    return null;
+  }
+
+  return (
+    await fetchSpotifyCoverUrl(sourceUrl, spotifyCoverOptions ?? readSpotifyCoverOptionsFromEnv())
+  );
 }
 
 export function isSoundboardButtonVisibleInPortal(visibility: Visibility): boolean {
   return isPortalAssetVisibility(visibility);
 }
 
+export interface SoundboardServiceOptions {
+  spotifyCoverOptions?: SpotifyCoverFetchOptions;
+}
+
 export class SoundboardService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly options: SoundboardServiceOptions = {},
+  ) {}
 
   private buttonInclude() {
     return {
@@ -227,6 +271,12 @@ export class SoundboardService {
 
   async create(input: CreateSoundboardButtonInput): Promise<SoundboardButtonWithLinks> {
     const linkedPageIds = input.linkedPageIds ?? [];
+    const thumbnail = await resolveSpotifyThumbnailForWrite(
+      input.sourceType,
+      input.sourceUrl,
+      input.thumbnail,
+      this.options.spotifyCoverOptions,
+    );
 
     return this.db.soundboardButton.create({
       data: {
@@ -236,7 +286,7 @@ export class SoundboardService {
         sourceType: input.sourceType,
         sourceUrl: input.sourceUrl ?? null,
         assetId: input.assetId ?? null,
-        thumbnail: input.thumbnail ?? null,
+        thumbnail,
         volume: input.volume ?? 1.0,
         loop: input.loop ?? false,
         tags: toJsonArray(input.tags ?? []),
@@ -256,6 +306,22 @@ export class SoundboardService {
     buttonId: string,
     input: UpdateSoundboardButtonInput,
   ): Promise<SoundboardButtonWithLinks> {
+    const existing = await this.db.soundboardButton.findUnique({
+      where: { id: buttonId },
+      select: { sourceType: true, sourceUrl: true, thumbnail: true },
+    });
+
+    const sourceType = input.sourceType ?? existing?.sourceType ?? "local";
+    const sourceUrl = input.sourceUrl ?? existing?.sourceUrl ?? null;
+    const thumbnailInput =
+      input.thumbnail !== undefined ? input.thumbnail : existing?.thumbnail ?? null;
+    const thumbnail = await resolveSpotifyThumbnailForWrite(
+      sourceType,
+      sourceUrl,
+      thumbnailInput,
+      this.options.spotifyCoverOptions,
+    );
+
     if (input.linkedPageIds) {
       await this.db.soundboardButtonPageLink.deleteMany({
         where: { soundboardButtonId: buttonId },
@@ -279,7 +345,7 @@ export class SoundboardService {
         sourceType: input.sourceType,
         sourceUrl: input.sourceUrl,
         assetId: input.assetId,
-        thumbnail: input.thumbnail,
+        thumbnail: input.thumbnail !== undefined ? thumbnail : undefined,
         volume: input.volume,
         loop: input.loop,
         tags: input.tags ? toJsonArray(input.tags) : undefined,
@@ -326,6 +392,9 @@ export class SoundboardService {
   }
 }
 
-export function createSoundboardService(databaseUrl?: string): SoundboardService {
-  return new SoundboardService(createPrismaClient(databaseUrl));
+export function createSoundboardService(
+  databaseUrl?: string,
+  options?: SoundboardServiceOptions,
+): SoundboardService {
+  return new SoundboardService(createPrismaClient(databaseUrl), options);
 }

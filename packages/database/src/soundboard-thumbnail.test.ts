@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from "@uwe/soundboard";
+import { afterEach, describe, it } from "node:test";
+import {
+  clearSpotifyCoverCache,
+  extractYouTubeVideoId,
+  fetchSpotifyCoverUrl,
+  getYouTubeThumbnailUrl,
+} from "@uwe/soundboard";
 import { resolveThumbnail, type SoundboardButtonWithLinks } from "./soundboard";
 
 function buildButton(
@@ -29,6 +34,10 @@ function buildButton(
 }
 
 describe("resolveThumbnail", () => {
+  afterEach(() => {
+    clearSpotifyCoverCache();
+  });
+
   it("prefers an explicit thumbnail URL", () => {
     const thumbnail = resolveThumbnail(
       buildButton({
@@ -84,5 +93,36 @@ describe("resolveThumbnail", () => {
       }),
     );
     assert.equal(thumbnail, null);
+  });
+
+  it("uses a cached Spotify cover when the DB field is empty", async () => {
+    const sourceUrl = "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl";
+    const coverUrl = "https://cdn.example.com/spotify-track.jpg";
+    const fetchImpl = async (url: string) => ({
+      ok: url.includes("/oembed"),
+      json: async () => ({ thumbnail_url: coverUrl }),
+    });
+
+    await fetchSpotifyCoverUrl(sourceUrl, { fetchImpl: fetchImpl as typeof fetch });
+
+    const thumbnail = resolveThumbnail(
+      buildButton({
+        sourceType: "spotify",
+        sourceUrl,
+      }),
+    );
+    assert.equal(thumbnail, coverUrl);
+  });
+
+  it("returns an auto-fetched Spotify thumbnail stored on the button", () => {
+    const coverUrl = "https://cdn.example.com/spotify-auto.jpg";
+    const thumbnail = resolveThumbnail(
+      buildButton({
+        sourceType: "spotify",
+        sourceUrl: "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
+        thumbnail: coverUrl,
+      }),
+    );
+    assert.equal(thumbnail, coverUrl);
   });
 });

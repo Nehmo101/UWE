@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import {
+  clearSpotifyCoverCache,
+  fetchSpotifyCoverUrl,
+  fetchSpotifyCoverViaOEmbed,
+  fetchSpotifyCoverViaWebApi,
+  getCachedSpotifyCoverUrl,
   isSpotifyUrl,
   mapButtonVolumeToSpotifyPercent,
   mapSpotifyHttpError,
   normalizeSpotifyUri,
   parseSpotifyUrl,
   pauseSpotifyPlayback,
+  pickBestSpotifyImage,
   playSpotifyTrack,
   resumeSpotifyPlayback,
   setSpotifyVolume,
@@ -79,6 +85,85 @@ describe("Spotify URL parser", () => {
       assert.equal(normalizeSpotifyUri(url), null);
     });
   }
+});
+
+describe("Spotify cover art", () => {
+  afterEach(() => {
+    clearSpotifyCoverCache();
+  });
+
+  it("prefers the largest Spotify image", () => {
+    const url = pickBestSpotifyImage([
+      { url: "https://example.com/small.jpg", width: 64, height: 64 },
+      { url: "https://example.com/large.jpg", width: 640, height: 640 },
+    ]);
+    assert.equal(url, "https://example.com/large.jpg");
+  });
+
+  it("fetches track covers via oEmbed", async () => {
+    const trackUrl = "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl";
+    const coverUrl = "https://cdn.example.com/spotify-track.jpg";
+    const fetchImpl = async (url: string) => ({
+      ok: url.includes("/oembed"),
+      json: async () => ({ thumbnail_url: coverUrl }),
+    });
+
+    const result = await fetchSpotifyCoverViaOEmbed(trackUrl, fetchImpl as typeof fetch);
+    assert.equal(result, coverUrl);
+  });
+
+  it("fetches album covers via Web API when oEmbed is unavailable", async () => {
+    const albumUrl = "https://open.spotify.com/album/2noRn2Aes5aoNVsR6duXjY";
+    const coverUrl = "https://cdn.example.com/spotify-album.jpg";
+    const parsed = parseSpotifyUrl(albumUrl);
+    assert.ok(parsed);
+
+    const fetchImpl = async (url: string) => {
+      if (url.includes("/oembed")) {
+        return { ok: false, json: async () => null };
+      }
+
+      if (url.includes("/albums/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            images: [{ url: coverUrl, width: 640, height: 640 }],
+          }),
+        };
+      }
+
+      return { ok: false, json: async () => null };
+    };
+
+    const result = await fetchSpotifyCoverViaWebApi(parsed, "token", fetchImpl as typeof fetch);
+    assert.equal(result, coverUrl);
+  });
+
+  it("uses oEmbed first and caches the resolved cover URL", async () => {
+    const trackUrl = "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl";
+    const coverUrl = "https://cdn.example.com/spotify-track.jpg";
+    let apiCalls = 0;
+
+    const fetchImpl = async (url: string) => {
+      apiCalls += 1;
+      if (url.includes("/oembed")) {
+        return {
+          ok: true,
+          json: async () => ({ thumbnail_url: coverUrl }),
+        };
+      }
+
+      return { ok: false, json: async () => null };
+    };
+
+    const first = await fetchSpotifyCoverUrl(trackUrl, { fetchImpl: fetchImpl as typeof fetch });
+    const second = await fetchSpotifyCoverUrl(trackUrl, { fetchImpl: fetchImpl as typeof fetch });
+
+    assert.equal(first, coverUrl);
+    assert.equal(second, coverUrl);
+    assert.equal(apiCalls, 1);
+    assert.equal(getCachedSpotifyCoverUrl(trackUrl), coverUrl);
+  });
 });
 
 describe("Spotify volume mapping", () => {

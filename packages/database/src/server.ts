@@ -499,6 +499,7 @@ export type {
   DmSoundboardButtonView,
   PortalSoundboardButtonView,
   SoundboardButtonWithLinks,
+  SoundboardServiceOptions,
   SoundSourceType,
 } from "./soundboard";
 

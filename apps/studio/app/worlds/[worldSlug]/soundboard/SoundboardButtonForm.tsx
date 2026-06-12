@@ -215,7 +215,7 @@ export function SoundboardButtonForm({
         />
         {sourceType === "spotify" && (
           <span className="uwe-table-sub">
-            Spotify-Cover kann manuell gesetzt werden, bis die OAuth-Integration verfügbar ist.
+            Cover wird automatisch von Spotify geladen; optional kann ein eigenes Bild gesetzt werden.
           </span>
         )}
       </label>
