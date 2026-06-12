@@ -7,6 +7,14 @@
  * @see https://developer.spotify.com/documentation/web-api
  */
 
+export type SpotifyResourceType = "track" | "album" | "playlist" | "artist";
+
+export interface ParsedSpotifyUrl {
+  type: SpotifyResourceType;
+  id: string;
+  uri: string;
+}
+
 export interface SpotifyPlaybackConfig {
   /** OAuth access token — to be supplied after future auth flow */
   accessToken?: string | null;
@@ -20,41 +28,90 @@ export interface SpotifyPlaybackResult {
   message: string;
 }
 
-export function isSpotifyUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.includes("spotify.com") || parsed.protocol === "spotify:";
-  } catch {
-    return url.startsWith("spotify:");
-  }
+const SPOTIFY_RESOURCE_TYPES = new Set<SpotifyResourceType>([
+  "track",
+  "album",
+  "playlist",
+  "artist",
+]);
+
+/** Spotify IDs are base62; length varies but is always alphanumeric. */
+const SPOTIFY_ID_PATTERN = /^[a-zA-Z0-9]{10,}$/;
+
+function buildParsedSpotifyUrl(type: SpotifyResourceType, id: string): ParsedSpotifyUrl {
+  return {
+    type,
+    id,
+    uri: `spotify:${type}:${id}`,
+  };
 }
 
-export function normalizeSpotifyUri(input: string): string | null {
-  const trimmed = input.trim();
-  if (trimmed.startsWith("spotify:")) {
-    return trimmed;
+function parseSpotifyUri(input: string): ParsedSpotifyUrl | null {
+  const match = /^spotify:(track|album|playlist|artist):([a-zA-Z0-9]+)$/i.exec(input);
+  if (!match?.[1] || !match[2]) {
+    return null;
   }
 
+  const type = match[1].toLowerCase() as SpotifyResourceType;
+  const id = match[2];
+  if (!SPOTIFY_RESOURCE_TYPES.has(type) || !SPOTIFY_ID_PATTERN.test(id)) {
+    return null;
+  }
+
+  return buildParsedSpotifyUrl(type, id);
+}
+
+function parseSpotifyWebUrl(input: string): ParsedSpotifyUrl | null {
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(input);
     if (!parsed.hostname.includes("spotify.com")) {
       return null;
     }
 
     const parts = parsed.pathname.split("/").filter(Boolean);
-    if (parts.length < 2) {
-      return null;
-    }
+    for (let index = 0; index < parts.length; index += 1) {
+      const candidate = parts[index]?.toLowerCase();
+      if (!candidate || !SPOTIFY_RESOURCE_TYPES.has(candidate as SpotifyResourceType)) {
+        continue;
+      }
 
-    const [type, id] = parts.slice(-2);
-    if (!type || !id) {
-      return null;
-    }
+      const id = parts[index + 1];
+      if (!id || !SPOTIFY_ID_PATTERN.test(id)) {
+        return null;
+      }
 
-    return `spotify:${type}:${id}`;
+      return buildParsedSpotifyUrl(candidate as SpotifyResourceType, id);
+    }
   } catch {
     return null;
   }
+
+  return null;
+}
+
+/**
+ * Parses Spotify web URLs and `spotify:` URIs.
+ * Supports locale prefixes such as `/intl-de/track/...` and ignores query parameters.
+ */
+export function parseSpotifyUrl(input: string): ParsedSpotifyUrl | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith("spotify:")) {
+    return parseSpotifyUri(trimmed);
+  }
+
+  return parseSpotifyWebUrl(trimmed);
+}
+
+export function isSpotifyUrl(url: string): boolean {
+  return parseSpotifyUrl(url) !== null;
+}
+
+export function normalizeSpotifyUri(input: string): string | null {
+  return parseSpotifyUrl(input)?.uri ?? null;
 }
 
 /** Placeholder until OAuth + Web API playback is wired up. */

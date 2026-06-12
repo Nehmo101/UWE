@@ -118,7 +118,7 @@ describe("UWE soundboard", () => {
       worldId: world.id,
       title: "Tavern Playlist",
       sourceType: "spotify",
-      sourceUrl: "https://open.spotify.com/track/abc123",
+      sourceUrl: "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
       visibility: "player_visible",
     });
     spotifyButtonId = spotifyButton.id;
@@ -177,7 +177,7 @@ describe("UWE soundboard", () => {
     const spotify = await soundboard.getById(spotifyButtonId);
     assert.ok(spotify);
     assert.equal(spotify.sourceType, "spotify");
-    assert.equal(spotify.sourceUrl, "https://open.spotify.com/track/abc123");
+    assert.equal(spotify.sourceUrl, "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl");
   });
 
   it("does not expose dm_only sounds in player portal", async () => {

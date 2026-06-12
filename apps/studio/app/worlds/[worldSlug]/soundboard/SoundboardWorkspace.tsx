@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  extractYouTubeVideoId,
   pauseSound,
   playSound,
   resumeSound,
@@ -30,15 +31,14 @@ interface Props {
   buttons: SoundboardButtonView[];
 }
 
-function extractYouTubeId(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) {
-      return parsed.pathname.replace(/^\//, "").split("/")[0] || null;
-    }
-    return parsed.searchParams.get("v");
-  } catch {
-    return null;
+function sourceTypeLabel(sourceType: SoundboardButtonView["sourceType"]): string {
+  switch (sourceType) {
+    case "spotify":
+      return "Spotify";
+    case "youtube":
+      return "YouTube";
+    default:
+      return "Lokal";
   }
 }
 
@@ -198,7 +198,7 @@ export function SoundboardWorkspace({ buttons }: Props) {
                 <div className="uwe-soundboard-youtube">
                   <iframe
                     title={sound.title}
-                    src={`https://www.youtube.com/embed/${extractYouTubeId(sound.sourceUrl) ?? ""}?autoplay=${sound.status === "playing" ? 1 : 0}&loop=${sound.loop ? 1 : 0}`}
+                    src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sound.sourceUrl) ?? ""}?autoplay=${sound.status === "playing" ? 1 : 0}&loop=${sound.loop ? 1 : 0}`}
                     allow="autoplay; encrypted-media"
                   />
                 </div>
@@ -243,7 +243,7 @@ export function SoundboardWorkspace({ buttons }: Props) {
               <img src={button.thumbnail} alt="" className="uwe-soundboard-thumb" />
             ) : (
               <div className="uwe-soundboard-thumb uwe-soundboard-thumb-placeholder">
-                {button.sourceType.toUpperCase()}
+                {sourceTypeLabel(button.sourceType)}
               </div>
             )}
             <span className="uwe-soundboard-button-title">{button.title}</span>

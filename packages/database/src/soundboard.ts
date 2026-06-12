@@ -1,8 +1,14 @@
+import {
+  extractYouTubeVideoId,
+  getYouTubeThumbnailUrl,
+} from "@uwe/soundboard";
 import type { Prisma, SoundSourceType, Visibility } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray, toJsonArray } from "./json-utils";
 import type { PageSummary } from "./repository";
 import { isPortalAssetVisibility } from "./permissions";
+
+export { extractYouTubeVideoId } from "@uwe/soundboard";
 
 export type { SoundSourceType } from "./generated/prisma/client";
 
@@ -132,33 +138,8 @@ export function resolveThumbnail(button: SoundboardButtonWithLinks): string | nu
   if (button.sourceType === "youtube" && button.sourceUrl) {
     const videoId = extractYouTubeVideoId(button.sourceUrl);
     if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      return getYouTubeThumbnailUrl(videoId);
     }
-  }
-
-  return null;
-}
-
-export function extractYouTubeVideoId(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) {
-      const id = parsed.pathname.replace(/^\//, "").split("/")[0];
-      return id || null;
-    }
-
-    if (parsed.hostname.includes("youtube.com")) {
-      const fromQuery = parsed.searchParams.get("v");
-      if (fromQuery) return fromQuery;
-
-      const parts = parsed.pathname.split("/").filter(Boolean);
-      const embedIndex = parts.indexOf("embed");
-      if (embedIndex >= 0 && parts[embedIndex + 1]) {
-        return parts[embedIndex + 1] ?? null;
-      }
-    }
-  } catch {
-    return null;
   }
 
   return null;

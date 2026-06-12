@@ -6,6 +6,7 @@ import {
   type SoundSourceType,
   type Visibility,
 } from "@uwe/database/server";
+import { assertValidSoundboardButton } from "@uwe/soundboard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,6 +27,36 @@ function parseLinkedPageIds(formData: FormData): string[] {
     .filter(Boolean);
 }
 
+function redirectWithError(path: string, error: unknown): never {
+  const message = error instanceof Error ? error.message : "Unbekannter Fehler.";
+  redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+function parseButtonInput(formData: FormData) {
+  const sourceType = String(formData.get("sourceType")) as SoundSourceType;
+  const assetId = String(formData.get("assetId") || "") || null;
+  const sourceUrl = String(formData.get("sourceUrl") || "") || null;
+  const thumbnail = String(formData.get("thumbnail") || "") || null;
+  const title = String(formData.get("title") ?? "");
+  const volume = Number(formData.get("volume") ?? 1);
+
+  return {
+    title,
+    sourceType,
+    sourceUrl,
+    assetId: sourceType === "local" ? assetId : null,
+    thumbnail,
+    volume,
+    loop: formData.get("loop") === "on",
+    tags: String(formData.get("tags") || "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+    visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
+    linkedPageIds: parseLinkedPageIds(formData),
+  };
+}
+
 export async function createSoundboardButtonAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const world = await repo().getWorldBySlug(worldSlug);
@@ -36,71 +67,71 @@ export async function createSoundboardButtonAction(formData: FormData) {
     ? await repo().getCampaignBySlug(worldSlug, campaignSlug)
     : null;
 
-  const sourceType = String(formData.get("sourceType")) as SoundSourceType;
-  const assetId = String(formData.get("assetId") || "") || null;
-  const sourceUrl = String(formData.get("sourceUrl") || "") || null;
-  const thumbnail = String(formData.get("thumbnail") || "") || null;
+  const input = parseButtonInput(formData);
+  const redirectParams = new URLSearchParams();
+  if (campaignSlug) {
+    redirectParams.set("campaign", campaignSlug);
+  }
+  const redirectPath = `/worlds/${worldSlug}/soundboard${
+    redirectParams.size > 0 ? `?${redirectParams.toString()}` : ""
+  }`;
 
-  const linkedPageIds = parseLinkedPageIds(formData);
-
-  const tags = String(formData.get("tags") || "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  try {
+    assertValidSoundboardButton(input);
+  } catch (error) {
+    redirectWithError(redirectPath, error);
+  }
 
   const sortOrder = await soundboard().getNextSortOrder(world.id, campaign?.id ?? null);
 
   await soundboard().create({
     worldId: world.id,
     campaignId: campaign?.id ?? null,
-    title: String(formData.get("title")),
-    sourceType,
-    sourceUrl,
-    assetId: sourceType === "local" ? assetId : null,
-    thumbnail,
-    volume: Number(formData.get("volume") ?? 1),
-    loop: formData.get("loop") === "on",
-    tags,
-    visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
+    title: input.title,
+    sourceType: input.sourceType,
+    sourceUrl: input.sourceUrl,
+    assetId: input.assetId,
+    thumbnail: input.thumbnail,
+    volume: input.volume,
+    loop: input.loop,
+    tags: input.tags,
+    visibility: input.visibility,
     sortOrder,
-    linkedPageIds,
+    linkedPageIds: input.linkedPageIds,
   });
 
   revalidatePath(`/worlds/${worldSlug}/soundboard`);
-  redirect(`/worlds/${worldSlug}/soundboard?created=1`);
+  redirectParams.set("created", "1");
+  redirect(`/worlds/${worldSlug}/soundboard?${redirectParams.toString()}`);
 }
 
 export async function updateSoundboardButtonAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const buttonId = String(formData.get("buttonId"));
+  const input = parseButtonInput(formData);
+  const redirectPath = `/worlds/${worldSlug}/soundboard`;
 
-  const sourceType = String(formData.get("sourceType")) as SoundSourceType;
-  const assetId = String(formData.get("assetId") || "") || null;
-  const sourceUrl = String(formData.get("sourceUrl") || "") || null;
-  const thumbnail = String(formData.get("thumbnail") || "") || null;
-
-  const linkedPageIds = parseLinkedPageIds(formData);
-
-  const tags = String(formData.get("tags") || "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  try {
+    assertValidSoundboardButton(input);
+  } catch (error) {
+    redirectWithError(redirectPath, error);
+  }
 
   await soundboard().update(buttonId, {
-    title: String(formData.get("title")),
-    sourceType,
-    sourceUrl,
-    assetId: sourceType === "local" ? assetId : null,
-    thumbnail,
-    volume: Number(formData.get("volume") ?? 1),
-    loop: formData.get("loop") === "on",
-    tags,
-    visibility: formData.get("visibility") as Visibility,
-    linkedPageIds,
+    title: input.title,
+    sourceType: input.sourceType,
+    sourceUrl: input.sourceUrl,
+    assetId: input.assetId,
+    thumbnail: input.thumbnail,
+    volume: input.volume,
+    loop: input.loop,
+    tags: input.tags,
+    visibility: input.visibility,
+    linkedPageIds: input.linkedPageIds,
   });
 
   revalidatePath(`/worlds/${worldSlug}/soundboard`);
-  redirect(`/worlds/${worldSlug}/soundboard?saved=1`);
+  redirect(`${redirectPath}?saved=1`);
 }
 
 export async function deleteSoundboardButtonAction(formData: FormData) {

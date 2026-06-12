@@ -7,7 +7,6 @@ import {
   SidebarNav,
   SidebarSection,
   TopBarBrand,
-  VISIBILITY_LABELS,
   VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
@@ -21,16 +20,17 @@ import {
   linkPageToSoundboardButtonAction,
   updateSoundboardButtonAction,
 } from "@/app/soundboard-actions";
+import { SoundboardButtonForm } from "./SoundboardButtonForm";
 import { SoundboardWorkspace, type SoundboardButtonView } from "./SoundboardWorkspace";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; created?: string; saved?: string; deleted?: string; linked?: string }>;
+  searchParams: Promise<{ campaign?: string; created?: string; saved?: string; deleted?: string; linked?: string; error?: string }>;
 }
 
 export default async function StudioSoundboardPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, created, saved, deleted, linked } = await searchParams;
+  const { campaign: campaignSlug, created, saved, deleted, linked, error } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -117,79 +117,24 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
           )}
 
+          {error && (
+            <p className="uwe-flash uwe-flash-error" role="alert">
+              {error}
+            </p>
+          )}
+
           <SoundboardWorkspace buttons={buttonViews} />
 
           <section className="uwe-panel">
             <h2>Neuer Soundboard-Button</h2>
-            <form action={createSoundboardButtonAction} className="uwe-form-grid">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              {campaignSlug && <input type="hidden" name="campaignSlug" value={campaignSlug} />}
-              <label>
-                Titel
-                <input type="text" name="title" required />
-              </label>
-              <label>
-                Quelle
-                <select name="sourceType" defaultValue="local">
-                  <option value="local">Lokale Audiodatei</option>
-                  <option value="youtube">YouTube-Link</option>
-                  <option value="spotify">Spotify-Link</option>
-                </select>
-              </label>
-              <label>
-                Asset (lokal)
-                <select name="assetId" defaultValue="">
-                  <option value="">— Keins —</option>
-                  {audioAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                URL (YouTube / Spotify)
-                <input type="url" name="sourceUrl" placeholder="https://…" />
-              </label>
-              <label>
-                Thumbnail-URL (optional)
-                <input type="url" name="thumbnail" placeholder="https://…" />
-              </label>
-              <label>
-                Lautstärke
-                <input type="number" name="volume" min={0} max={1} step={0.05} defaultValue={1} />
-              </label>
-              <label>
-                <input type="checkbox" name="loop" /> Loop
-              </label>
-              <label>
-                Tags (kommagetrennt)
-                <input type="text" name="tags" placeholder="ambient, kampf" />
-              </label>
-              <label>
-                Sichtbarkeit
-                <select name="visibility" defaultValue="dm_only">
-                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Seiten verknüpfen (Mehrfachauswahl mit Strg/Cmd)
-                <select name="linkedPageIds" multiple size={Math.min(linkablePages.length, 5) || 1}>
-                  {linkablePages.map((page) => (
-                    <option key={page.id} value={page.id}>
-                      {page.title} ({page.type})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
-                Button erstellen
-              </button>
-            </form>
+            <SoundboardButtonForm
+              action={createSoundboardButtonAction}
+              worldSlug={worldSlug}
+              campaignSlug={campaignSlug}
+              audioAssets={audioAssets}
+              linkablePages={linkablePages}
+              submitLabel="Button erstellen"
+            />
             <p className="uwe-table-sub">
               Audio-Assets zuerst unter{" "}
               <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
@@ -220,95 +165,31 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                       <td>
                         <details>
                           <summary>Bearbeiten</summary>
-                          <form action={updateSoundboardButtonAction} className="uwe-form-grid">
-                            <input type="hidden" name="worldSlug" value={worldSlug} />
-                            <input type="hidden" name="buttonId" value={button.id} />
-                            <label>
-                              Titel
-                              <input type="text" name="title" defaultValue={button.title} required />
-                            </label>
-                            <label>
-                              Quelle
-                              <select name="sourceType" defaultValue={button.sourceType}>
-                                <option value="local">Lokal</option>
-                                <option value="youtube">YouTube</option>
-                                <option value="spotify">Spotify</option>
-                              </select>
-                            </label>
-                            <label>
-                              Asset
-                              <select name="assetId" defaultValue={button.assetId ?? ""}>
-                                <option value="">— Keins —</option>
-                                {audioAssets.map((asset) => (
-                                  <option key={asset.id} value={asset.id}>
-                                    {asset.title}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              URL
-                              <input type="url" name="sourceUrl" defaultValue={button.sourceUrl ?? ""} />
-                            </label>
-                            <label>
-                              Thumbnail
-                              <input type="url" name="thumbnail" defaultValue={button.thumbnail ?? ""} />
-                            </label>
-                            <label>
-                              Lautstärke
-                              <input
-                                type="number"
-                                name="volume"
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                defaultValue={button.volume}
-                              />
-                            </label>
-                            <label>
-                              <input type="checkbox" name="loop" defaultChecked={button.loop} /> Loop
-                            </label>
-                            <label>
-                              Tags
-                              <input type="text" name="tags" defaultValue={button.tags.join(", ")} />
-                            </label>
-                            <label>
-                              Sichtbarkeit
-                              <select name="visibility" defaultValue={button.visibility}>
-                                {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              Verknüpfte Seiten (Mehrfachauswahl mit Strg/Cmd)
-                              <select
-                                name="linkedPageIds"
-                                multiple
-                                size={Math.min(linkablePages.length, 5) || 1}
-                                defaultValue={button.linkedPages.map((page) => page.id)}
-                              >
-                                {/* Linked pages outside the current campaign filter stay selectable. */}
-                                {button.linkedPages
-                                  .filter((page) => !linkablePages.some((p) => p.id === page.id))
-                                  .map((page) => (
-                                    <option key={page.id} value={page.id}>
-                                      {page.title}
-                                    </option>
-                                  ))}
-                                {linkablePages.map((page) => (
-                                  <option key={page.id} value={page.id}>
-                                    {page.title} ({page.type})
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <button type="submit" className="uwe-btn">
-                              Speichern
-                            </button>
-                          </form>
+                          <SoundboardButtonForm
+                            action={updateSoundboardButtonAction}
+                            worldSlug={worldSlug}
+                            buttonId={button.id}
+                            initialValues={{
+                              title: button.title,
+                              sourceType: button.sourceType,
+                              sourceUrl: button.sourceUrl ?? "",
+                              assetId: button.assetId ?? "",
+                              thumbnail: button.thumbnail ?? "",
+                              volume: button.volume,
+                              loop: button.loop,
+                              tags: button.tags.join(", "),
+                              visibility: button.visibility,
+                              linkedPageIds: button.linkedPages.map((page) => page.id),
+                            }}
+                            audioAssets={audioAssets}
+                            linkablePages={linkablePages}
+                            extraLinkedPages={button.linkedPages.map((page) => ({
+                              id: page.id,
+                              title: page.title,
+                              type: page.type,
+                            }))}
+                            submitLabel="Speichern"
+                          />
                           <form action={deleteSoundboardButtonAction}>
                             <input type="hidden" name="worldSlug" value={worldSlug} />
                             <input type="hidden" name="buttonId" value={button.id} />
