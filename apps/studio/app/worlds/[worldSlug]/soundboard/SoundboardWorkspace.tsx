@@ -27,8 +27,17 @@ export interface SoundboardButtonView {
   linkedPageTitles: string[];
 }
 
+interface SpotifyConnectionStatus {
+  configured: boolean;
+  connected: boolean;
+  expiresAt: number | null;
+  scope: string | null;
+}
+
 interface Props {
   buttons: SoundboardButtonView[];
+  /** Path for OAuth return redirect, e.g. /worlds/terra/soundboard */
+  spotifyReturnPath?: string;
 }
 
 function sourceTypeLabel(sourceType: SoundboardButtonView["sourceType"]): string {
@@ -42,10 +51,93 @@ function sourceTypeLabel(sourceType: SoundboardButtonView["sourceType"]): string
   }
 }
 
-export function SoundboardWorkspace({ buttons }: Props) {
+async function callSpotifyApi<T extends { ok: boolean; message: string }>(
+  endpoint: string,
+  body?: unknown,
+): Promise<T> {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  return (await response.json()) as T;
+}
+
+export function SoundboardWorkspace({ buttons, spotifyReturnPath = "/" }: Props) {
   const [activeSounds, setActiveSounds] = useState<ActiveSound[]>([]);
   const [tagFilter, setTagFilter] = useState<string>("");
+  const [spotifyStatus, setSpotifyStatus] = useState<SpotifyConnectionStatus | null>(null);
+  const [spotifyErrors, setSpotifyErrors] = useState<Record<string, string>>({});
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  const hasSpotifyButtons = useMemo(
+    () => buttons.some((button) => button.sourceType === "spotify"),
+    [buttons],
+  );
+
+  const refreshSpotifyStatus = useCallback(async () => {
+    try {
+      const response = await fetch("/api/spotify/status");
+      const payload = (await response.json()) as { status: SpotifyConnectionStatus };
+      setSpotifyStatus(payload.status);
+    } catch {
+      setSpotifyStatus({ configured: false, connected: false, expiresAt: null, scope: null });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasSpotifyButtons) {
+      void refreshSpotifyStatus();
+    }
+  }, [hasSpotifyButtons, refreshSpotifyStatus]);
+
+  const setSpotifyError = useCallback((instanceId: string, message: string | null) => {
+    setSpotifyErrors((prev) => {
+      if (!message) {
+        const next = { ...prev };
+        delete next[instanceId];
+        return next;
+      }
+      return { ...prev, [instanceId]: message };
+    });
+  }, []);
+
+  const syncSpotifyPlayback = useCallback(
+    async (sound: ActiveSound, action: "play" | "pause" | "resume" | "stop" | "volume") => {
+      if (sound.sourceType !== "spotify") return true;
+
+      let result: { ok: boolean; message: string };
+
+      if (action === "play") {
+        if (!sound.sourceUrl) {
+          setSpotifyError(sound.instanceId, "Spotify-URL fehlt.");
+          return false;
+        }
+        result = await callSpotifyApi("/api/spotify/play", {
+          uri: sound.sourceUrl,
+          volume: sound.volume,
+        });
+      } else if (action === "pause") {
+        result = await callSpotifyApi("/api/spotify/pause");
+      } else if (action === "resume") {
+        result = await callSpotifyApi("/api/spotify/resume");
+      } else if (action === "stop") {
+        result = await callSpotifyApi("/api/spotify/stop");
+      } else {
+        result = await callSpotifyApi("/api/spotify/volume", { volume: sound.volume });
+      }
+
+      if (!result.ok) {
+        setSpotifyError(sound.instanceId, result.message);
+        return false;
+      }
+
+      setSpotifyError(sound.instanceId, null);
+      return true;
+    },
+    [setSpotifyError],
+  );
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -102,7 +194,16 @@ export function SoundboardWorkspace({ buttons }: Props) {
     }
   }, [activeSounds, syncAudioElement]);
 
-  const handlePlay = (button: SoundboardButtonView) => {
+  const handlePlay = async (button: SoundboardButtonView) => {
+    if (button.sourceType === "spotify" && !spotifyStatus?.connected) {
+      window.alert(
+        "Spotify ist nicht verbunden. Bitte zuerst mit Spotify verbinden (Premium + aktives Gerät erforderlich).",
+      );
+      return;
+    }
+
+    let nextSound: ActiveSound | null = null;
+
     setActiveSounds((prev) => {
       const result = playSound({ sounds: prev }, {
         id: button.id,
@@ -113,37 +214,95 @@ export function SoundboardWorkspace({ buttons }: Props) {
         volume: button.volume,
         loop: button.loop,
       });
+      nextSound = result.sound;
       return result.state.sounds;
     });
+
+    if (nextSound && button.sourceType === "spotify") {
+      const ok = await syncSpotifyPlayback(nextSound, "play");
+      if (!ok) {
+        setActiveSounds((prev) => stopSound({ sounds: prev }, nextSound!.instanceId).sounds);
+      }
+    }
   };
 
-  const handlePause = (instanceId: string) => {
-    setActiveSounds((prev) => pauseSound({ sounds: prev }, instanceId).sounds);
+  const handlePause = async (sound: ActiveSound) => {
+    if (sound.sourceType === "spotify") {
+      const ok = await syncSpotifyPlayback(sound, "pause");
+      if (!ok) return;
+    }
+    setActiveSounds((prev) => pauseSound({ sounds: prev }, sound.instanceId).sounds);
   };
 
-  const handleResume = (instanceId: string) => {
-    setActiveSounds((prev) => resumeSound({ sounds: prev }, instanceId).sounds);
+  const handleResume = async (sound: ActiveSound) => {
+    if (sound.sourceType === "spotify") {
+      const ok = await syncSpotifyPlayback(sound, "resume");
+      if (!ok) return;
+    }
+    setActiveSounds((prev) => resumeSound({ sounds: prev }, sound.instanceId).sounds);
   };
 
-  const handleStop = (instanceId: string) => {
-    setActiveSounds((prev) => stopSound({ sounds: prev }, instanceId).sounds);
+  const handleStop = async (sound: ActiveSound) => {
+    if (sound.sourceType === "spotify") {
+      await syncSpotifyPlayback(sound, "stop");
+    }
+    setActiveSounds((prev) => stopSound({ sounds: prev }, sound.instanceId).sounds);
   };
 
-  const handleVolume = (instanceId: string, volume: number) => {
-    setActiveSounds((prev) => setSoundVolume({ sounds: prev }, instanceId, volume).sounds);
+  const handleVolume = async (sound: ActiveSound, volume: number) => {
+    const updatedSound = { ...sound, volume };
+    setActiveSounds((prev) => setSoundVolume({ sounds: prev }, sound.instanceId, volume).sounds);
+
+    if (sound.sourceType === "spotify" && sound.status === "playing") {
+      await syncSpotifyPlayback(updatedSound, "volume");
+    }
   };
 
-  const handleStopAll = () => {
+  const handleStopAll = async () => {
+    const spotifySounds = activeSounds.filter((sound) => sound.sourceType === "spotify");
+    for (const sound of spotifySounds) {
+      await syncSpotifyPlayback(sound, "stop");
+    }
     setActiveSounds(stopAllSounds().sounds);
   };
 
+  const spotifyAuthHref = `/api/spotify/auth?returnTo=${encodeURIComponent(spotifyReturnPath)}`;
+
   return (
     <div className="uwe-soundboard">
+      {hasSpotifyButtons && (
+        <section className="uwe-panel" style={{ marginBottom: "1rem" }}>
+          <h2>Spotify</h2>
+          {!spotifyStatus?.configured && (
+            <p className="uwe-table-sub">
+              Spotify OAuth ist nicht konfiguriert —{" "}
+              <code>SPOTIFY_CLIENT_ID</code> und <code>SPOTIFY_CLIENT_SECRET</code> in{" "}
+              <code>.env</code> setzen.
+            </p>
+          )}
+          {spotifyStatus?.configured && !spotifyStatus.connected && (
+            <>
+              <p className="uwe-table-sub">
+                Spotify-Wiedergabe benötigt Premium, OAuth und ein aktives Spotify Connect-Gerät.
+              </p>
+              <a className="uwe-btn" href={spotifyAuthHref}>
+                Mit Spotify verbinden
+              </a>
+            </>
+          )}
+          {spotifyStatus?.connected && (
+            <p className="uwe-flash uwe-flash-success" style={{ margin: 0 }}>
+              Spotify verbunden — Wiedergabe über Spotify Connect (Premium erforderlich).
+            </p>
+          )}
+        </section>
+      )}
+
       <section className="uwe-panel">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2>Aktive Sounds</h2>
           {activeSounds.length > 0 && (
-            <button type="button" className="uwe-btn" onClick={handleStopAll}>
+            <button type="button" className="uwe-btn" onClick={() => void handleStopAll()}>
               Alle stoppen
             </button>
           )}
@@ -161,9 +320,9 @@ export function SoundboardWorkspace({ buttons }: Props) {
                 <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
                   {sound.sourceType}
                 </span>
-                {sound.sourceType === "spotify" && (
-                  <p className="uwe-table-sub">
-                    Spotify-Wiedergabe benötigt später Premium + Web-API (OAuth vorbereitet).
+                {sound.sourceType === "spotify" && spotifyErrors[sound.instanceId] && (
+                  <p className="uwe-flash uwe-flash-error" role="alert">
+                    {spotifyErrors[sound.instanceId]}
                   </p>
                 )}
               </div>
@@ -177,20 +336,32 @@ export function SoundboardWorkspace({ buttons }: Props) {
                     step={0.05}
                     value={sound.volume}
                     onChange={(event) =>
-                      handleVolume(sound.instanceId, Number(event.target.value))
+                      void handleVolume(sound, Number(event.target.value))
                     }
                   />
                 </label>
                 {sound.status === "playing" ? (
-                  <button type="button" className="uwe-btn" onClick={() => handlePause(sound.instanceId)}>
+                  <button
+                    type="button"
+                    className="uwe-btn"
+                    onClick={() => void handlePause(sound)}
+                  >
                     Pause
                   </button>
                 ) : (
-                  <button type="button" className="uwe-btn" onClick={() => handleResume(sound.instanceId)}>
+                  <button
+                    type="button"
+                    className="uwe-btn"
+                    onClick={() => void handleResume(sound)}
+                  >
                     Weiter
                   </button>
                 )}
-                <button type="button" className="uwe-btn" onClick={() => handleStop(sound.instanceId)}>
+                <button
+                  type="button"
+                  className="uwe-btn"
+                  onClick={() => void handleStop(sound)}
+                >
                   Stop
                 </button>
               </div>
@@ -236,7 +407,7 @@ export function SoundboardWorkspace({ buttons }: Props) {
             key={button.id}
             type="button"
             className="uwe-soundboard-button"
-            onClick={() => handlePlay(button)}
+            onClick={() => void handlePlay(button)}
           >
             {button.thumbnail ? (
               // eslint-disable-next-line @next/next/no-img-element

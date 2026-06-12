@@ -2,8 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isSpotifyUrl,
+  mapButtonVolumeToSpotifyPercent,
+  mapSpotifyHttpError,
   normalizeSpotifyUri,
   parseSpotifyUrl,
+  pauseSpotifyPlayback,
+  playSpotifyTrack,
+  resumeSpotifyPlayback,
+  setSpotifyVolume,
+  stopSpotifyPlayback,
+  type SpotifyFetch,
 } from "./spotify";
 
 describe("Spotify URL parser", () => {
@@ -72,3 +80,200 @@ describe("Spotify URL parser", () => {
     });
   }
 });
+
+describe("Spotify volume mapping", () => {
+  it("maps 0–1 button volume to 0–100 Spotify percent", () => {
+    assert.equal(mapButtonVolumeToSpotifyPercent(0), 0);
+    assert.equal(mapButtonVolumeToSpotifyPercent(0.5), 50);
+    assert.equal(mapButtonVolumeToSpotifyPercent(1), 100);
+    assert.equal(mapButtonVolumeToSpotifyPercent(1.5), 100);
+    assert.equal(mapButtonVolumeToSpotifyPercent(-0.2), 0);
+  });
+});
+
+describe("Spotify HTTP error mapping", () => {
+  it("maps 401 to expired token message", () => {
+    assert.match(mapSpotifyHttpError(401), /abgelaufen/i);
+  });
+
+  it("maps 403 to Premium message", () => {
+    assert.match(mapSpotifyHttpError(403, "Premium required"), /Premium/i);
+  });
+
+  it("maps 404 to no active device message", () => {
+    assert.match(mapSpotifyHttpError(404, "No active device found"), /Gerät/i);
+  });
+});
+
+function createMockFetch(
+  handler: (url: string, init?: RequestInit) => { status: number; body?: string },
+): SpotifyFetch {
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input.toString();
+    const result = handler(url, init);
+    return new Response(result.body ?? null, { status: result.status });
+  }) as SpotifyFetch;
+}
+
+describe("Spotify Web API playback", () => {
+  const trackUri = "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl";
+  const accessToken = "test-access-token";
+
+  it("playSpotifyTrack calls PUT /v1/me/player/play with track URI and volume", async () => {
+    let capturedUrl = "";
+    let capturedMethod = "";
+    let capturedBody = "";
+    let capturedAuth = "";
+
+    const fetchImpl = createMockFetch((_url, init) => {
+      capturedUrl = _url;
+      capturedMethod = init?.method ?? "GET";
+      capturedBody = String(init?.body ?? "");
+      capturedAuth = String(
+        (init?.headers as Record<string, string> | undefined)?.Authorization ?? "",
+      );
+      return { status: 204 };
+    });
+
+    const result = await playSpotifyTrack(
+      { accessToken, uri: trackUri, volume: 0.75 },
+      fetchImpl,
+    );
+
+    assert.equal(result.ok, true);
+    assert.match(capturedUrl, /\/v1\/me\/player\/play\?volume_percent=75$/);
+    assert.equal(capturedMethod, "PUT");
+    assert.equal(capturedAuth, "Bearer test-access-token");
+    assert.deepEqual(JSON.parse(capturedBody), {
+      uris: ["spotify:track:11dFghVXANMlKmJXsNCbNl"],
+    });
+  });
+
+  it("playSpotifyTrack sends context_uri for playlists", async () => {
+    let capturedBody = "";
+
+    const fetchImpl = createMockFetch((_url, init) => {
+      capturedBody = String(init?.body ?? "");
+      return { status: 204 };
+    });
+
+    const result = await playSpotifyTrack(
+      {
+        accessToken,
+        uri: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+      },
+      fetchImpl,
+    );
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(JSON.parse(capturedBody), {
+      context_uri: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+    });
+  });
+
+  it("returns German error for 401 unauthorized", async () => {
+    const fetchImpl = createMockFetch(() => ({ status: 401, body: "token expired" }));
+
+    const result = await playSpotifyTrack({ accessToken, uri: trackUri }, fetchImpl);
+
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 401);
+    assert.match(result.message, /abgelaufen/i);
+  });
+
+  it("returns German error for 403 without Premium", async () => {
+    const fetchImpl = createMockFetch(() => ({
+      status: 403,
+      body: "Player command failed: Premium required",
+    }));
+
+    const result = await playSpotifyTrack({ accessToken, uri: trackUri }, fetchImpl);
+
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 403);
+    assert.match(result.message, /Premium/i);
+  });
+
+  it("returns German error for 404 no active device", async () => {
+    const fetchImpl = createMockFetch(() => ({
+      status: 404,
+      body: "No active device found",
+    }));
+
+    const result = await playSpotifyTrack({ accessToken, uri: trackUri }, fetchImpl);
+
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 404);
+    assert.match(result.message, /Gerät/i);
+  });
+
+  it("returns error when access token is missing", async () => {
+    const result = await playSpotifyTrack({ uri: trackUri });
+
+    assert.equal(result.ok, false);
+    assert.match(result.message, /nicht verbunden/i);
+  });
+
+  it("pauseSpotifyPlayback calls PUT /v1/me/player/pause", async () => {
+    let capturedUrl = "";
+
+    const fetchImpl = createMockFetch((url) => {
+      capturedUrl = url;
+      return { status: 204 };
+    });
+
+    const result = await pauseSpotifyPlayback({ accessToken }, fetchImpl);
+
+    assert.equal(result.ok, true);
+    assert.match(capturedUrl, /\/v1\/me\/player\/pause$/);
+  });
+
+  it("resumeSpotifyPlayback calls PUT /v1/me/player/play without body", async () => {
+    let capturedUrl = "";
+    let capturedBody = initBodyTracker();
+
+    const fetchImpl = createMockFetch((url, init) => {
+      capturedUrl = url;
+      capturedBody.value = init?.body;
+      return { status: 204 };
+    });
+
+    const result = await resumeSpotifyPlayback({ accessToken }, fetchImpl);
+
+    assert.equal(result.ok, true);
+    assert.match(capturedUrl, /\/v1\/me\/player\/play$/);
+    assert.equal(capturedBody.value, undefined);
+  });
+
+  it("stopSpotifyPlayback uses pause endpoint", async () => {
+    let capturedUrl = "";
+
+    const fetchImpl = createMockFetch((url) => {
+      capturedUrl = url;
+      return { status: 204 };
+    });
+
+    const result = await stopSpotifyPlayback({ accessToken }, fetchImpl);
+
+    assert.equal(result.ok, true);
+    assert.match(capturedUrl, /\/v1\/me\/player\/pause$/);
+  });
+
+  it("setSpotifyVolume maps volume to volume_percent query param", async () => {
+    let capturedUrl = "";
+
+    const fetchImpl = createMockFetch((url) => {
+      capturedUrl = url;
+      return { status: 204 };
+    });
+
+    const result = await setSpotifyVolume({ accessToken, volume: 0.4 }, fetchImpl);
+
+    assert.equal(result.ok, true);
+    assert.match(capturedUrl, /\/v1\/me\/player\/volume\?volume_percent=40$/);
+  });
+});
+
+function initBodyTracker(): { value: unknown } {
+  return { value: Symbol("unset") };
+}

@@ -25,12 +25,22 @@ import { SoundboardWorkspace, type SoundboardButtonView } from "./SoundboardWork
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; created?: string; saved?: string; deleted?: string; linked?: string; error?: string }>;
+  searchParams: Promise<{
+    campaign?: string;
+    created?: string;
+    saved?: string;
+    deleted?: string;
+    linked?: string;
+    error?: string;
+    spotifyConnected?: string;
+    spotifyError?: string;
+  }>;
 }
 
 export default async function StudioSoundboardPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, created, saved, deleted, linked, error } = await searchParams;
+  const { campaign: campaignSlug, created, saved, deleted, linked, error, spotifyConnected, spotifyError } =
+    await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -53,6 +63,10 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   const linkablePages = await repo.listPagesByWorld(worldSlug, {
     campaignId: selectedCampaign?.id,
   });
+
+  const soundboardReturnPath = `/worlds/${worldSlug}/soundboard${
+    campaignSlug ? `?campaign=${encodeURIComponent(campaignSlug)}` : ""
+  }`;
 
   const buttonViews: SoundboardButtonView[] = buttons.map((button) => ({
     id: button.id,
@@ -110,20 +124,27 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
           />
           <PageHeader
             title="Soundboard"
-            summary="Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (vorbereitet)."
+            summary="Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
           />
 
           {(created || saved || deleted || linked) && (
             <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
           )}
 
-          {error && (
+          {spotifyConnected && (
+            <p className="uwe-flash uwe-flash-success">Spotify erfolgreich verbunden.</p>
+          )}
+
+          {(error || spotifyError) && (
             <p className="uwe-flash uwe-flash-error" role="alert">
-              {error}
+              {error ?? spotifyError}
             </p>
           )}
 
-          <SoundboardWorkspace buttons={buttonViews} />
+          <SoundboardWorkspace
+            buttons={buttonViews}
+            spotifyReturnPath={soundboardReturnPath}
+          />
 
           <section className="uwe-panel">
             <h2>Neuer Soundboard-Button</h2>
@@ -138,7 +159,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             <p className="uwe-table-sub">
               Audio-Assets zuerst unter{" "}
               <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
-              Spotify-Wiedergabe erfordert später Premium und OAuth — siehe README.
+              Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Gerät.
             </p>
           </section>
 

@@ -21,13 +21,22 @@ export {
 
 export {
   isSpotifyUrl,
+  mapButtonVolumeToSpotifyPercent,
+  mapSpotifyHttpError,
   normalizeSpotifyUri,
   parseSpotifyUrl,
+  pauseSpotifyPlayback,
   playSpotifyTrack,
+  resumeSpotifyPlayback,
+  setSpotifyVolume,
+  stopSpotifyPlayback,
   type ParsedSpotifyUrl,
+  type SpotifyFetch,
   type SpotifyPlaybackConfig,
   type SpotifyPlaybackResult,
   type SpotifyResourceType,
+  type SpotifyTokenConfig,
+  type SpotifyVolumeConfig,
 } from "./spotify";
 
 export {
