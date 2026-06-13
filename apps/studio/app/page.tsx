@@ -66,8 +66,12 @@ export default async function StudioDashboard({ searchParams }: Props) {
               items={[
                 { label: "Dashboard", href: "/", active: true },
                 { label: "Welten", href: "/worlds" },
+                { label: "Brain Store", href: "/brain" },
                 { label: "Templates", href: "/templates" },
+                { label: "Mail Center", href: "/mail" },
                 { label: "Backup", href: "/backup" },
+                { label: "Jobs", href: "/jobs" },
+                { label: "Systemstatus", href: "/admin/status" },
                 { label: "Einstellungen", href: "/settings" },
               ]}
             />

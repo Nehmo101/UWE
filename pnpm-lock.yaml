@@ -57,6 +57,9 @@ importers:
         specifier: ^19.1.0
         version: 19.2.7(react@19.2.7)
     devDependencies:
+      '@next/env':
+        specifier: ^16.2.9
+        version: 16.2.9
       '@types/node':
         specifier: ^22.15.32
         version: 22.19.21
@@ -84,6 +87,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../../packages/assets
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@uwe/backup':
         specifier: workspace:*
         version: link:../../packages/backup
@@ -93,6 +99,9 @@ importers:
       '@uwe/knoteforge-import':
         specifier: workspace:*
         version: link:../../packages/knoteforge-import
+      '@uwe/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
@@ -233,6 +242,9 @@ importers:
       '@uwe/auth':
         specifier: workspace:*
         version: link:../auth
+      '@uwe/mail':
+        specifier: workspace:*
+        version: link:../mail
       '@uwe/soundboard':
         specifier: workspace:*
         version: link:../soundboard
@@ -268,6 +280,28 @@ importers:
       '@types/node':
         specifier: ^22.15.32
         version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/mail:
+    dependencies:
+      nodemailer:
+        specifier: ^7.0.3
+        version: 7.0.13
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.24
       '@uwe/config':
         specifier: workspace:*
         version: link:../config
@@ -329,6 +363,9 @@ importers:
 
   packages/static-export:
     dependencies:
+      '@uwe/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
@@ -840,6 +877,9 @@ packages:
   '@next/env@15.5.19':
     resolution: {integrity: sha512-sWWluFvcv5v3Fxznmf2ZfjyoVQt/64oCnYqS90inQWGzMPK1VjvekPiz3OPHKmFT30EnHrjlbyaHLt3M0vWabw==}
 
+  '@next/env@16.2.9':
+    resolution: {integrity: sha512-ki5VxxXfzD/9TDe13wyeTKIjQTAwBVpnr8KhRDUr8ltMUq1/NBpWNT5tiPoxiGl+PHM4X2ahSOiPk6iAimIzPg==}
+
   '@next/eslint-plugin-next@15.5.19':
     resolution: {integrity: sha512-Ctwb4qYuMbHN/1oXLlTdMchwG8h8Xzwq+wGZZMgF3o6+uwyBKAI2c96bdOsl+C62PaUD0Jkh+QpNkhUeDlam0Q==}
 
@@ -1109,6 +1149,9 @@ packages:
 
   '@types/node@22.19.21':
     resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
+
+  '@types/nodemailer@6.4.24':
+    resolution: {integrity: sha512-Ww4u0rT9wQNXh4JiQaIwx3QWdcOFXzOjQA2zc+jtFYNmQiT4mIUqcDin51bDFdkzKubFnQCZNK7FIHlPKQ/q9w==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -2235,6 +2278,10 @@ packages:
     resolution: {integrity: sha512-pyFS63ptit/P5WqUkt+UUfe+4oevH+bFeIiPPdfb0pFeYEu/1ELnJu5l+5EcTKYL5M7zaAa7S8ddywgXypqKCw==}
     engines: {node: '>= 0.4'}
 
+  nodemailer@7.0.13:
+    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
+    engines: {node: '>=6.0.0'}
+
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
@@ -3097,6 +3144,8 @@ snapshots:
 
   '@next/env@15.5.19': {}
 
+  '@next/env@16.2.9': {}
+
   '@next/eslint-plugin-next@15.5.19':
     dependencies:
       fast-glob: 3.3.1
@@ -3348,6 +3397,10 @@ snapshots:
   '@types/node@22.19.21':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/nodemailer@6.4.24':
+    dependencies:
+      '@types/node': 22.19.21
 
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
@@ -4672,6 +4725,8 @@ snapshots:
       es-errors: 1.3.0
       object.entries: 1.1.9
       semver: 6.3.1
+
+  nodemailer@7.0.13: {}
 
   object-assign@4.1.1: {}
 

@@ -11,7 +11,9 @@ import {
 import {
   CanonicalStatusEnum,
   getAppRepository,
+  getPersistentPathConfiguration,
   resolveEffectiveBackupsPath,
+  resolveEffectiveExportsPath,
   resolveEffectiveUploadsPath,
   VisibilityEnum,
 } from "@uwe/database/server";
@@ -24,7 +26,9 @@ const TABS = [
   { id: "privacy", label: "Privacy" },
   { id: "storage", label: "Storage" },
   { id: "ai", label: "AI" },
+  { id: "mail", label: "Mail" },
   { id: "backup", label: "Backup" },
+  { id: "status", label: "Systemstatus" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -49,6 +53,14 @@ export default async function SettingsPage({ searchParams }: Props) {
 
   const uploadsPath = resolveEffectiveUploadsPath(settings);
   const backupsPath = resolveEffectiveBackupsPath(settings);
+  const exportsPath = resolveEffectiveExportsPath(settings);
+  const paths = getPersistentPathConfiguration(settings);
+
+  const pathSourceLabel = {
+    settings: "Studio-Einstellungen",
+    env: "Umgebungsvariable",
+    default: "Standard",
+  } as const;
 
   return (
     <AppShell
@@ -271,6 +283,52 @@ export default async function SettingsPage({ searchParams }: Props) {
             <form action={updateSettingsAction} className="uwe-form">
               <input type="hidden" name="tab" value="storage" />
               <h2>Storage Settings</h2>
+              <p className="uwe-hint">
+                Persistente Pfade können über Umgebungsvariablen (`.env`) oder hier in den
+                Studio-Einstellungen gesetzt werden. Studio-Einstellungen haben Vorrang vor ENV.
+              </p>
+
+              <section className="uwe-settings-path-overview" style={{ marginBottom: "1.5rem" }}>
+                <h3>Aktive Pfade (Übersicht)</h3>
+                <dl className="uwe-dl">
+                  <div>
+                    <dt>Datenverzeichnis</dt>
+                    <dd>
+                      <code>{paths.dataDir}</code>
+                      <span className="uwe-hint"> — via <code>UWE_DATA_DIR</code> oder Standard</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Datenbank</dt>
+                    <dd>
+                      <code>{paths.databaseFile ?? "— (nicht file:-SQLite)"}</code>
+                      <span className="uwe-hint"> — via <code>DATABASE_URL</code></span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Uploads</dt>
+                    <dd>
+                      <code>{paths.uploads.effectivePath}</code>
+                      <span className="uwe-hint"> — {pathSourceLabel[paths.uploads.source]}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Backups</dt>
+                    <dd>
+                      <code>{paths.backups.effectivePath}</code>
+                      <span className="uwe-hint"> — {pathSourceLabel[paths.backups.source]}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Exports</dt>
+                    <dd>
+                      <code>{paths.exports.effectivePath}</code>
+                      <span className="uwe-hint"> — {pathSourceLabel[paths.exports.source]}</span>
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+
               <label>
                 Upload-Pfad
                 <input
@@ -280,6 +338,22 @@ export default async function SettingsPage({ searchParams }: Props) {
                 />
               </label>
               <p className="uwe-hint">Aktiver Pfad: {uploadsPath}</p>
+
+              <label>
+                Export-Pfad
+                <input
+                  name="exportsPath"
+                  defaultValue={settings.storage.exportsPath}
+                  placeholder="Leer = Umgebungsvariable / Standard"
+                />
+              </label>
+              <p className="uwe-hint">Aktiver Pfad: {exportsPath}</p>
+
+              <p className="uwe-hint">
+                Backup-Pfad wird unter dem Tab <Link href="/settings?tab=backup">Backup</Link>{" "}
+                konfiguriert. Aktiver Pfad: <code>{backupsPath}</code>
+              </p>
+
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern
               </button>
@@ -331,6 +405,66 @@ export default async function SettingsPage({ searchParams }: Props) {
             </form>
           )}
 
+          {activeTab === "mail" && (
+            <form action={updateSettingsAction} className="uwe-form">
+              <input type="hidden" name="tab" value="mail" />
+              <h2>Mail Settings</h2>
+              <p className="uwe-hint">
+                SMTP-Host, Benutzer und Passwort werden nur über <code>.env</code> konfiguriert.
+                Versand erfolgt ausschließlich nach expliziter Aktion im{" "}
+                <Link href="/mail">Mail Center</Link>.
+              </p>
+              <label className="uwe-checkbox">
+                <input type="checkbox" name="mailEnabled" defaultChecked={settings.mail.enabled} />
+                Mail Center aktiv
+              </label>
+              <label>
+                Absender-Anzeigename (optional)
+                <input
+                  name="fromDisplayName"
+                  defaultValue={settings.mail.fromDisplayName}
+                  placeholder="z. B. UWE Kampagne"
+                />
+              </label>
+              <label className="uwe-checkbox">
+                <input type="checkbox" name="mailLogBody" defaultChecked={settings.mail.logBody} />
+                Mail-Body in Logs speichern (nur für Diagnose — in Production eher aus)
+              </label>
+              <section style={{ marginTop: "1.5rem" }}>
+                <h3>SMTP-Status (aus ENV)</h3>
+                <dl className="uwe-dl">
+                  <div>
+                    <dt>Host</dt>
+                    <dd>{settings.mail.smtp.host ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Port</dt>
+                    <dd>{settings.mail.smtp.port ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>From</dt>
+                    <dd>{settings.mail.smtp.fromAddress ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>User konfiguriert</dt>
+                    <dd>{settings.mail.smtp.userConfigured ? "Ja" : "Nein"}</dd>
+                  </div>
+                  <div>
+                    <dt>Passwort konfiguriert</dt>
+                    <dd>{settings.mail.smtp.passwordConfigured ? "Ja" : "Nein"}</dd>
+                  </div>
+                  <div>
+                    <dt>Diagnose</dt>
+                    <dd>{settings.mail.smtp.message}</dd>
+                  </div>
+                </dl>
+              </section>
+              <button type="submit" className="uwe-btn uwe-btn-primary">
+                Speichern
+              </button>
+            </form>
+          )}
+
           {activeTab === "backup" && (
             <form action={updateSettingsAction} className="uwe-form">
               <input type="hidden" name="tab" value="backup" />
@@ -356,6 +490,21 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Speichern
               </button>
             </form>
+          )}
+
+          {activeTab === "status" && (
+            <section className="uwe-form">
+              <h2>Systemstatus</h2>
+              <p>
+                Vollständige Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail,
+                Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
+              </p>
+              <p style={{ marginTop: "1rem" }}>
+                <Link className="uwe-btn uwe-btn-primary" href="/admin/status">
+                  Admin Status Dashboard öffnen
+                </Link>
+              </p>
+            </section>
           )}
         </>
       }

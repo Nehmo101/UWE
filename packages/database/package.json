@@ -15,7 +15,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test 'src/**/*.test.ts'",
+    "test": "node ../../scripts/run-node-tests.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -31,6 +31,7 @@
     "@prisma/client": "^7.8.0",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
+    "@uwe/mail": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "pdf-lib": "^1.17.1"
   },

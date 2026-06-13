@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import path from "node:path";
 import { config as loadEnv } from "dotenv";
+import { resolveUploadsDirFromEnv } from "@uwe/assets";
 import { createUweRepository, resolveDatabaseUrl } from "@uwe/database/server";
 import { exportWorldStatic } from "./export-world";
 
@@ -9,7 +10,7 @@ loadEnv({ path: path.resolve(process.cwd(), ".env") });
 function parseArgs(argv: string[]) {
   let worldSlug = "terra";
   let outputDir = "exports/terra-static";
-  let uploadsDir = process.env.UPLOADS_DIR ?? path.resolve(process.cwd(), "data/uploads");
+  let uploadsDir = resolveUploadsDirFromEnv(process.cwd());
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];

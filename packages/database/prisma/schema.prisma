@@ -149,10 +149,131 @@ enum PlayerNoteVisibility {
   party
 }
 
+enum AiRunStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+  applied
+  discarded
+}
+
+enum AiProposalStatus {
+  pending
+  applied
+  discarded
+  superseded
+}
+
+enum AiApplyAction {
+  apply
+  discard
+  partial_apply
+  edit_apply
+  rerun
+}
+
+enum AiProposalApplyMode {
+  idea
+  content_block
+  player_recap
+}
+
 enum ShareTargetType {
   page
   handout
   asset
+}
+
+enum BrainVisibility {
+  dm_only
+  player_visible
+  public
+}
+
+enum BrainSource {
+  manual
+  ai_generated
+  import
+  session_summary
+}
+
+enum BrainStatus {
+  draft
+  reviewed
+  canonical
+  deprecated
+}
+
+enum BrainDocumentType {
+  world_knowledge
+  campaign_knowledge
+  session_summary
+  npc_facts
+  location_facts
+  faction_facts
+  canon_facts
+  general
+  ai_summary
+}
+
+enum BrainFactType {
+  npc
+  location
+  faction
+  canon
+  plot_thread
+  decision
+  custom
+}
+
+enum BrainLinkSourceType {
+  brain_document
+  brain_fact
+  brain_chunk
+}
+
+enum BrainLinkTargetType {
+  page
+  game_session
+  campaign
+  world
+  brain_document
+  brain_fact
+}
+
+enum MailMessageStatus {
+  draft
+  pending
+  sent
+  failed
+}
+
+enum MailTemplateKind {
+  session_recap
+  handout
+  share_link
+  custom
+}
+
+enum JobType {
+  mail_send
+  ai_run
+  embedding
+  reindex
+  import
+  backup
+  backup_restore
+  canon_check
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
 }
 
 model User {
@@ -169,6 +290,9 @@ model User {
   pageAccess       PagePlayerAccess[]
   sessionUnlocks   SessionUnlock[]
   playerNotes      PlayerNote[]
+  aiRuns           AiRun[]
+  mailRecipients   MailRecipient[]
+  jobs             Job[]
 
   @@map("users")
 }
@@ -250,6 +374,13 @@ model World {
   playerNotes       PlayerNote[]
   shareLinks        ShareLink[]
   spotifyConnection SpotifyConnection?
+  brainDocuments    BrainDocument[]
+  brainFacts        BrainFact[]
+  brainLinks        BrainLink[]
+  aiRuns            AiRun[]
+  mailTemplates       MailTemplate[]
+  mailRecipientGroups MailRecipientGroup[]
+  mailMessageLogs     MailMessageLog[]
 
   @@map("worlds")
 }
@@ -271,6 +402,8 @@ model Campaign {
   printLists        PrintList[]
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
+  brainDocuments    BrainDocument[]
+  brainFacts        BrainFact[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -307,6 +440,9 @@ model Page {
   soundboardButtonLinks  SoundboardButtonPageLink[]
   assetPageLinks         AssetPageLink[]
   playerNotes            PlayerNote[]
+  brainDocuments         BrainDocument[]
+  brainFacts             BrainFact[]
+  aiRuns                 AiRun[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -334,6 +470,9 @@ model GameSession {
   campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   linkedPages  GameSessionPageLink[]
   playerNotes  PlayerNote[]
+  brainDocuments BrainDocument[]
+  brainFacts     BrainFact[]
+  aiRuns         AiRun[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
@@ -647,6 +786,8 @@ enum ActivityAction {
   backup_created
   backup_restored
   seed_applied
+  ai_proposal_applied
+  ai_proposal_discarded
   error
   warning
 }
@@ -661,6 +802,9 @@ enum ActivityTargetType {
   game_session
   label
   print_list
+  ai_proposal
+  ai_run
+  brain_document
   system
 }
 
@@ -702,6 +846,7 @@ model UndoEntry {
   createdAt  DateTime           @default(now()) @map("created_at")
 
   activityLogs ActivityLog[]
+  applyLogs    AiApplyLog[]
 
   @@index([worldId, createdAt])
   @@map("undo_entries")
@@ -737,4 +882,318 @@ model SeedHistory {
   details   Json?
 
   @@map("seed_history")
+}
+
+// AI Run History — every KI execution is stored for review; results never auto-apply.
+model AiRun {
+  id            String      @id @default(cuid())
+  worldId       String?     @map("world_id")
+  pageId        String?     @map("page_id")
+  gameSessionId String?     @map("game_session_id")
+  userId        String?     @map("user_id")
+  source        String?
+  taskType      String      @map("task_type")
+  provider      String
+  model         String
+  status        AiRunStatus @default(pending)
+  systemPrompt  String?     @map("system_prompt")
+  userPrompt    String?     @map("user_prompt")
+  contextData   Json?       @map("context_data")
+  resultText    String?     @map("result_text")
+  resultMeta    Json?       @map("result_meta")
+  errorMessage  String?     @map("error_message")
+  errorDetails  Json?       @map("error_details")
+  durationMs    Int?        @map("duration_ms")
+  targetType    String?     @map("target_type")
+  targetId      String?     @map("target_id")
+  proposals     Json?
+  appliedAt     DateTime?   @map("applied_at")
+  discardedAt   DateTime?   @map("discarded_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  world       World?       @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  aiProposals AiProposal[]
+
+  @@index([worldId, createdAt])
+  @@index([status, createdAt])
+  @@index([pageId])
+  @@map("ai_runs")
+}
+
+// Generated patch / proposal from a completed AI run. Never auto-applies to production data.
+model AiProposal {
+  id                String              @id @default(cuid())
+  aiRunId           String              @map("ai_run_id")
+  worldId           String              @map("world_id")
+  status            AiProposalStatus    @default(pending)
+  suggestedMode     AiProposalApplyMode @map("suggested_mode")
+  patch             Json
+  resultText        String              @map("result_text")
+  editedText        String?             @map("edited_text")
+  sourcePageId      String?             @map("source_page_id")
+  sessionId         String?             @map("session_id")
+  appliedTargetType ActivityTargetType? @map("applied_target_type")
+  appliedTargetId   String?             @map("applied_target_id")
+  appliedAt         DateTime?           @map("applied_at")
+  discardedAt       DateTime?           @map("discarded_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  aiRun     AiRun        @relation(fields: [aiRunId], references: [id], onDelete: Cascade)
+  applyLogs AiApplyLog[]
+
+  @@index([aiRunId])
+  @@index([worldId, status])
+  @@map("ai_proposals")
+}
+
+// Audit log for explicit apply/discard/rerun actions on AI proposals.
+model AiApplyLog {
+  id          String        @id @default(cuid())
+  proposalId  String        @map("proposal_id")
+  aiRunId     String        @map("ai_run_id")
+  worldId     String        @map("world_id")
+  action      AiApplyAction
+  summary     String
+  details     Json?
+  undoEntryId String?       @map("undo_entry_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  proposal  AiProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  undoEntry UndoEntry? @relation(fields: [undoEntryId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId, createdAt])
+  @@index([aiRunId])
+  @@index([worldId, createdAt])
+  @@index([undoEntryId])
+  @@map("ai_apply_logs")
+}
+
+model BrainDocument {
+  id            String            @id @default(cuid())
+  worldId       String            @map("world_id")
+  campaignId    String?           @map("campaign_id")
+  gameSessionId String?           @map("game_session_id")
+  pageId        String?           @map("page_id")
+  title         String
+  content       String            @default("")
+  documentType  BrainDocumentType @default(general) @map("document_type")
+  visibility    BrainVisibility   @default(dm_only)
+  source        BrainSource       @default(manual)
+  status        BrainStatus       @default(draft)
+  trustLevel    Float?            @map("trust_level")
+  metadata      Json?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  chunks      BrainChunk[]
+
+  @@index([worldId, status])
+  @@index([worldId, visibility])
+  @@index([worldId, documentType])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("brain_documents")
+}
+
+model BrainChunk {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  chunkIndex Int      @map("chunk_index")
+  content    String
+  tokenCount Int?     @map("token_count")
+  embedding  Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  document BrainDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@map("brain_chunks")
+}
+
+model BrainFact {
+  id            String          @id @default(cuid())
+  worldId       String          @map("world_id")
+  campaignId    String?         @map("campaign_id")
+  gameSessionId String?         @map("game_session_id")
+  pageId        String?         @map("page_id")
+  factType      BrainFactType   @default(custom) @map("fact_type")
+  title         String
+  content       String          @default("")
+  visibility    BrainVisibility @default(dm_only)
+  source        BrainSource     @default(manual)
+  status        BrainStatus     @default(draft)
+  confidence    Float?
+  metadata      Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, status])
+  @@index([worldId, visibility])
+  @@index([worldId, factType])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("brain_facts")
+}
+
+model BrainLink {
+  id           String              @id @default(cuid())
+  worldId      String              @map("world_id")
+  sourceType   BrainLinkSourceType @map("source_type")
+  sourceId     String              @map("source_id")
+  targetType   BrainLinkTargetType @map("target_type")
+  targetId     String              @map("target_id")
+  relationType String              @default("related") @map("relation_type")
+  label        String?
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@map("brain_links")
+}
+
+// Background job queue — long-running tasks (mail, AI, embeddings, import, backup).
+model Job {
+  id            String    @id @default(cuid())
+  type          JobType
+  status        JobStatus @default(pending)
+  title         String
+  worldId       String?   @map("world_id")
+  worldSlug     String?   @map("world_slug")
+  userId        String?   @map("user_id")
+  payload       Json?
+  result        Json?
+  errorMessage  String?   @map("error_message")
+  errorDetails  Json?     @map("error_details")
+  progress      Int?
+  progressLabel String?   @map("progress_label")
+  attemptCount  Int       @default(0) @map("attempt_count")
+  maxAttempts   Int       @default(3) @map("max_attempts")
+  relatedType   String?   @map("related_type")
+  relatedId     String?   @map("related_id")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  cancelledAt   DateTime? @map("cancelled_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  logs JobLog[]
+
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([worldId, createdAt])
+  @@map("jobs")
+}
+
+model JobLog {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  level     String   @default("info")
+  message   String
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("job_logs")
+}
+
+// --- Mail Center (outbound v1) ---
+
+model MailTemplate {
+  id          String           @id @default(cuid())
+  worldId     String?          @map("world_id")
+  kind        MailTemplateKind @default(custom)
+  slug        String
+  name        String
+  description String           @default("")
+  subject     String
+  bodyHtml    String           @default("") @map("body_html")
+  bodyText    String           @default("") @map("body_text")
+  isSystem    Boolean          @default(false) @map("is_system")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([worldId, slug])
+  @@index([kind])
+  @@map("mail_templates")
+}
+
+model MailRecipientGroup {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  slug        String
+  name        String
+  description String   @default("")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world      World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  recipients MailRecipient[]
+
+  @@unique([worldId, slug])
+  @@map("mail_recipient_groups")
+}
+
+model MailRecipient {
+  id        String   @id @default(cuid())
+  groupId   String   @map("group_id")
+  email     String
+  name      String   @default("")
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group MailRecipientGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, email])
+  @@index([userId])
+  @@map("mail_recipients")
+}
+
+model MailMessageLog {
+  id           String            @id @default(cuid())
+  worldId      String?           @map("world_id")
+  status       MailMessageStatus @default(pending)
+  subject      String
+  toAddresses  Json              @map("to_addresses")
+  fromAddress  String            @map("from_address")
+  templateId   String?           @map("template_id")
+  sourceType   String?           @map("source_type")
+  sourceId     String?           @map("source_id")
+  errorMessage String?           @map("error_message")
+  bodyLogged   Boolean           @default(false) @map("body_logged")
+  bodyPreview  String?           @map("body_preview")
+  sentAt       DateTime?         @map("sent_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, status])
+  @@index([createdAt])
+  @@map("mail_message_logs")
 }

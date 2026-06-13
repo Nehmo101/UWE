@@ -13,9 +13,11 @@
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
+    "@uwe/auth": "workspace:*",
     "@uwe/backup": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
+    "@uwe/mail": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "@uwe/static-export": "workspace:*",

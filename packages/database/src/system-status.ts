@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { PrismaClient } from "./client";
+import {
+  resolveAllDataPaths,
+  resolveDatabaseFilePath,
+  resolveExportsDirFromEnv,
+  type ResolvedDataPaths,
+} from "@uwe/assets";
 import { getMigrationStatus, type MigrationStatus } from "./migration-status";
 import {
   PAGE_TEMPLATE_SEED_KEY,
@@ -16,8 +22,13 @@ import {
 import {
   SettingsService,
   resolveEffectiveBackupsPath,
+  resolveEffectiveExportsPath,
   resolveEffectiveUploadsPath,
 } from "./settings-service";
+import {
+  getUweRuntimeConfig,
+  isPublicExposureConfigured,
+} from "@uwe/auth";
 import { UWE_VERSION } from "./version";
 
 /**
@@ -32,12 +43,33 @@ export interface StorageStatus {
   ok: boolean;
   uploadsWritable: boolean;
   backupsWritable: boolean;
+  exportsWritable: boolean;
+  databaseFileExists: boolean | null;
+  paths: ResolvedDataPaths;
   message: string;
+}
+
+export interface AppRuntimeStatus {
+  ok: boolean;
+  nodeEnv: string;
+  production: boolean;
 }
 
 export interface SeedStatusSummary {
   pageTemplatesSeeded: boolean;
   expectedVersion: number;
+}
+
+export interface ProxyStatus {
+  publicAppUrl: string | null;
+  trustProxy: boolean;
+  cloudflareTunnel: boolean;
+  authRequired: boolean;
+  sessionCookieSecure: boolean;
+  playerPreviewPublic: boolean;
+  playerPreviewRequireToken: boolean;
+  playerPreviewAllowDmOnly: boolean;
+  publicExposureConfigured: boolean;
 }
 
 export interface TrustStatus {
@@ -51,15 +83,25 @@ export interface TrustStatus {
   exposureHint: string;
 }
 
+export interface MailStatus {
+  enabled: boolean;
+  configured: boolean;
+  useMock: boolean;
+  message: string;
+}
+
 export interface SystemStatus {
   ok: boolean;
   version: string;
   commit: string | null;
+  app: AppRuntimeStatus;
   database: { ok: boolean; message: string };
   migrations: MigrationStatus;
   storage: StorageStatus;
   seeds: SeedStatusSummary;
   trust: TrustStatus;
+  proxy: ProxyStatus;
+  mail: MailStatus;
   rateLimiter: { mode: string };
 }
 
@@ -80,32 +122,80 @@ export async function getStorageStatus(db: PrismaClient): Promise<StorageStatus>
     const settings = await new SettingsService(db).getSettings();
     const uploadsDir = resolveEffectiveUploadsPath(settings);
     const backupsDir = resolveEffectiveBackupsPath(settings);
+    const exportsDir = resolveEffectiveExportsPath(settings);
+    const paths = resolveAllDataPaths();
 
     const uploadsWritable = checkDirWritable(uploadsDir);
     const backupsWritable = checkDirWritable(backupsDir);
-    const ok = uploadsWritable && backupsWritable;
+    const exportsWritable = checkDirWritable(exportsDir);
+
+    const databaseFile = resolveDatabaseFilePath();
+    const databaseFileExists = databaseFile ? fs.existsSync(databaseFile) : null;
+
+    const ok = uploadsWritable && backupsWritable && exportsWritable;
+
+    const issues = [
+      !uploadsWritable && "Uploads",
+      !backupsWritable && "Backups",
+      !exportsWritable && "Exports",
+    ].filter(Boolean);
 
     return {
       ok,
       uploadsWritable,
       backupsWritable,
-      message: ok
-        ? "Uploads- und Backup-Verzeichnis beschreibbar."
-        : `Nicht beschreibbar: ${[
-            !uploadsWritable && "Uploads",
-            !backupsWritable && "Backups",
-          ]
-            .filter(Boolean)
-            .join(", ")}.`,
+      exportsWritable,
+      databaseFileExists,
+      paths: {
+        ...paths,
+        uploadsDir,
+        backupsDir,
+        exportsDir,
+      },
+      message:
+        issues.length === 0
+          ? "Uploads-, Backup- und Export-Verzeichnis beschreibbar."
+          : `Nicht beschreibbar: ${issues.join(", ")}.`,
     };
   } catch (error) {
+    const paths = resolveAllDataPaths();
     return {
       ok: false,
       uploadsWritable: false,
       backupsWritable: false,
+      exportsWritable: false,
+      databaseFileExists: null,
+      paths,
       message: error instanceof Error ? error.message : "Storage-Check fehlgeschlagen.",
     };
   }
+}
+
+export function getAppRuntimeStatus(): AppRuntimeStatus {
+  const nodeEnv = process.env.NODE_ENV?.trim() || "development";
+  const production = nodeEnv === "production";
+
+  return {
+    ok: true,
+    nodeEnv,
+    production,
+  };
+}
+
+export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatus {
+  const runtime = getUweRuntimeConfig(env);
+
+  return {
+    publicAppUrl: runtime.publicAppUrl,
+    trustProxy: runtime.trustProxy,
+    cloudflareTunnel: runtime.cloudflareTunnel,
+    authRequired: runtime.authRequired,
+    sessionCookieSecure: runtime.sessionCookieSecure,
+    playerPreviewPublic: runtime.playerPreviewPublic,
+    playerPreviewRequireToken: runtime.playerPreviewRequireToken,
+    playerPreviewAllowDmOnly: runtime.playerPreviewAllowDmOnly,
+    publicExposureConfigured: isPublicExposureConfigured(env),
+  };
 }
 
 export async function getSystemStatus(
@@ -139,6 +229,9 @@ export async function getSystemStatus(
         ok: false,
         uploadsWritable: false,
         backupsWritable: false,
+        exportsWritable: false,
+        databaseFileExists: null,
+        paths: resolveAllDataPaths(),
         message: "Übersprungen — Datenbank nicht erreichbar.",
       };
 
@@ -156,10 +249,22 @@ export async function getSystemStatus(
   }
 
   let publicPortalSharingEnabled = false;
+  let mailStatus: MailStatus = {
+    enabled: false,
+    configured: false,
+    useMock: false,
+    message: "Übersprungen — Datenbank nicht erreichbar.",
+  };
   if (databaseStatus.ok) {
     try {
       const settings = await new SettingsService(db).getSettings();
       publicPortalSharingEnabled = isPublicPortalExposureEnabled(settings);
+      mailStatus = {
+        enabled: settings.mail.enabled,
+        configured: settings.mail.smtp.configured,
+        useMock: settings.mail.smtp.useMock,
+        message: settings.mail.smtp.message,
+      };
     } catch {
       publicPortalSharingEnabled = false;
     }
@@ -172,6 +277,7 @@ export async function getSystemStatus(
     ok: databaseStatus.ok && migrations.ok && storage.ok,
     version: UWE_VERSION,
     commit: process.env.UWE_COMMIT ?? process.env.GIT_COMMIT ?? null,
+    app: getAppRuntimeStatus(),
     database: databaseStatus,
     migrations,
     storage,
@@ -189,6 +295,8 @@ export async function getSystemStatus(
       exposureHint:
         "Studio hat bewusst kein Login — niemals direkt öffentlich ohne Reverse-Proxy-Auth, VPN oder Cloudflare Access betreiben.",
     },
+    proxy: getProxyStatus(),
+    mail: mailStatus,
     rateLimiter: {
       mode: options.rateLimiterMode ?? "in-memory (prozesslokal)",
     },

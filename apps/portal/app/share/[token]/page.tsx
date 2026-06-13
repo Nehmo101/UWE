@@ -15,8 +15,9 @@ import {
   createShareLinkService,
 } from "@uwe/database/server";
 import { SharePasswordForm } from "@/src/components/SharePasswordForm";
-import { isShareFeatureEnabled } from "@/src/lib/share-access";
+import { isShareFeatureEnabled, isShareLinkPasswordRequired } from "@/src/lib/share-access";
 import { isSharePasswordVerified } from "@/src/lib/share-auth";
+import { resolveClientIp } from "@uwe/auth";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -40,7 +41,15 @@ async function resolveShareView(token: string) {
     const passwordVerified = await isSharePasswordVerified(token);
     const link = await shareService.getShareLinkByToken(token);
 
-    if (link?.passwordHash && !passwordVerified) {
+    if (!link) {
+      return { kind: "not_found" as const };
+    }
+
+    if (isShareLinkPasswordRequired(link)) {
+      return { kind: "password_required" as const };
+    }
+
+    if (link.passwordHash && !passwordVerified) {
       return { kind: "password" as const };
     }
 
@@ -48,7 +57,7 @@ async function resolveShareView(token: string) {
     const access = await shareService.validateShareAccess(token, {
       passwordVerified,
       meta: {
-        ipAddress: headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip"),
+        ipAddress: resolveClientIp(headersList),
         userAgent: headersList.get("user-agent"),
       },
     });
@@ -99,6 +108,20 @@ export default async function ShareLinkView({ params }: Props) {
     return (
       <main className="share-gate">
         <SharePasswordForm token={token} />
+      </main>
+    );
+  }
+
+  if (result.kind === "password_required") {
+    return (
+      <main className="share-gate">
+        <div className="share-password-form">
+          <h1>Passwort erforderlich</h1>
+          <p>
+            Dieser Freigabe-Link ist nicht passwortgeschützt. In Production müssen
+            Share-Links ein Passwort haben (PLAYER_PREVIEW_REQUIRE_TOKEN).
+          </p>
+        </div>
       </main>
     );
   }

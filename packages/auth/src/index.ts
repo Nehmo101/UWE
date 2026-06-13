@@ -51,4 +51,16 @@ export {
   sessionExpiresAt,
 } from "./session";
 
+export type { SessionCookieOptions, SessionCookieSameSite, UweRuntimeConfig } from "./runtime-config";
+export {
+  getSessionCookieOptions,
+  getTrustedRequestHosts,
+  getUweRuntimeConfig,
+  isProductionEnv,
+  isPublicExposureConfigured,
+  originMatchesTrustedHost,
+} from "./runtime-config";
+
+export { resolveClientIp } from "./proxy";
+
 export const AUTH_PACKAGE_VERSION = "0.2.0";

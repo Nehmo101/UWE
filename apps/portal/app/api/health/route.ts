@@ -9,8 +9,8 @@ import {
 import { RATE_LIMITER_MODE } from "@/src/lib/rate-limit";
 
 /**
- * Healthcheck: database, migrations, storage, version and rate limiter mode.
- * Leaks no sensitive data — only booleans, counts and non-secret facts.
+ * Healthcheck: app runtime, database, migrations, storage, version and rate limiter mode.
+ * Leaks no sensitive data — only booleans, counts, resolved paths and non-secret facts.
  */
 export async function GET() {
   const db = await databaseHealthCheck();
@@ -21,9 +21,12 @@ export async function GET() {
   return NextResponse.json(
     {
       status,
-      app: "UWE Portal",
-      product: UWE_PRODUCT_NAME,
-      version: UWE_VERSION,
+      app: {
+        name: "UWE Portal",
+        product: UWE_PRODUCT_NAME,
+        version: UWE_VERSION,
+        runtime: system.app,
+      },
       commit: system.commit,
       timestamp: new Date().toISOString(),
       checks: {
@@ -39,6 +42,7 @@ export async function GET() {
         storage: system.storage,
       },
       rateLimiter: system.rateLimiter,
+      proxy: system.proxy,
     },
     { status: status === "ok" ? 200 : 503 },
   );

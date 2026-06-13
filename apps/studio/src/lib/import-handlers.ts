@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import {
-  createActivityLogService,
+  createJobService,
   createUweRepository,
   prisma,
 } from "@uwe/database/server";
 import {
-  executeImport,
   importSourceRegistry,
   parseImportContent,
   previewFromContent,
-  type ImportExecuteOptions,
   type ImportFormat,
 } from "@uwe/knoteforge-import";
+import { enqueueAndDispatch, runJob } from "./job-executor";
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -25,6 +24,7 @@ export interface ImportRequestBody {
   itemIds?: string[];
   autoResolveSlugConflicts?: boolean;
   allowUpdates?: boolean;
+  sync?: boolean;
 }
 
 function validateBody(body: ImportRequestBody): string | null {
@@ -94,55 +94,56 @@ export async function postImportExecute(body: ImportRequestBody) {
     );
   }
 
-  const repo = createUweRepository();
-
-  let bundle;
   try {
-    ({ bundle } = parseImportContent(body.format, body.content));
+    parseImportContent(body.format, body.content);
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Import-Datei konnte nicht gelesen werden.",
     );
   }
 
-  const options: ImportExecuteOptions = {
-    confirmed: true,
-    itemIds: body.itemIds,
-    autoResolveSlugConflicts: body.autoResolveSlugConflicts ?? true,
-    allowUpdates: body.allowUpdates ?? true,
-  };
+  const title = `Import (${body.format}) → ${body.worldSlug}`;
 
-  try {
-    const result = await executeImport(
-      repo,
-      bundle,
-      body.worldSlug,
-      body.format,
-      options,
-    );
-
-    await createActivityLogService(prisma).log({
+  if (body.sync) {
+    const jobs = createJobService(prisma);
+    const job = await jobs.enqueue({
+      type: "import",
+      title,
       worldSlug: body.worldSlug,
-      action: "import_executed",
-      targetType: "world",
-      targetLabel: body.worldSlug,
-      targetHref: `/worlds/${body.worldSlug}`,
-      summary: `Import (${body.format}) in Welt „${body.worldSlug}“ ausgeführt.`,
-      details: { format: body.format },
+      payload: {
+        format: body.format,
+        content: body.content,
+        worldSlug: body.worldSlug,
+        itemIds: body.itemIds,
+        autoResolveSlugConflicts: body.autoResolveSlugConflicts,
+        allowUpdates: body.allowUpdates,
+      },
     });
-
-    return NextResponse.json({ result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
-    await createActivityLogService(prisma).log({
-      worldSlug: body.worldSlug,
-      action: "error",
-      targetType: "world",
-      targetLabel: body.worldSlug,
-      summary: `Import (${body.format}) fehlgeschlagen: ${message}`,
-    });
-    return NextResponse.json({ error: message }, { status: 500 });
+    const completed = await runJob(job.id);
+    if (completed?.status === "failed") {
+      return NextResponse.json(
+        { error: completed.errorMessage ?? "Import fehlgeschlagen." },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ job: completed, result: completed?.result });
   }
+
+  const job = await enqueueAndDispatch({
+    type: "import",
+    title,
+    worldSlug: body.worldSlug,
+    payload: {
+      format: body.format,
+      content: body.content,
+      worldSlug: body.worldSlug,
+      itemIds: body.itemIds,
+      autoResolveSlugConflicts: body.autoResolveSlugConflicts,
+      allowUpdates: body.allowUpdates,
+    },
+  });
+
+  return NextResponse.json({ job }, { status: 202 });
 }
 
 export async function getImportFormats() {

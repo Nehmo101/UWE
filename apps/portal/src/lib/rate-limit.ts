@@ -5,6 +5,8 @@
  * service required.
  */
 
+import { resolveClientIp } from "@uwe/auth";
+
 /**
  * Reported by the healthcheck. Process-local: with multiple instances each
  * process counts separately — for multi-instance deployments the limiter
@@ -63,9 +65,5 @@ function pruneExpired(windowStart: number): void {
 }
 
 export function clientIpFromHeaders(headers: Headers): string {
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]!.trim();
-  }
-  return headers.get("x-real-ip") ?? "unknown";
+  return resolveClientIp(headers);
 }

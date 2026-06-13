@@ -1,18 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { resolveBackupsDirFromEnv } from "@uwe/assets";
+
 export const BACKUP_MANIFEST_FILE = "manifest.json";
 export const BACKUP_DATA_FILE = "data.json";
 export const BACKUP_ASSETS_DIR = "assets";
 
 export function resolveBackupsDir(baseDir?: string): string {
-  const configured = process.env.BACKUPS_DIR;
-  if (configured) {
-    return path.isAbsolute(configured)
-      ? configured
-      : path.resolve(baseDir ?? process.cwd(), configured);
-  }
-  return path.resolve(baseDir ?? process.cwd(), "data", "backups");
+  return resolveBackupsDirFromEnv(baseDir);
 }
 
 export function ensureBackupsDir(baseDir?: string): string {

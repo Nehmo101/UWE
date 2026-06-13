@@ -28,6 +28,8 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   backup_created: "Backup erstellt",
   backup_restored: "Backup wiederhergestellt",
   seed_applied: "Seed ausgeführt",
+  ai_proposal_applied: "KI-Vorschlag übernommen",
+  ai_proposal_discarded: "KI-Vorschlag verworfen",
   error: "Fehler",
   warning: "Warnung",
 };

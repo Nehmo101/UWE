@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { waitForJob } from "@/src/lib/poll-job";
 
 interface StoredBackup {
   id: string;
@@ -112,6 +113,11 @@ export function BackupWorkspace({
       if (!response.ok) {
         throw new Error(data.error ?? "Backup fehlgeschlagen.");
       }
+
+      if (response.status === 202 && data.job?.id) {
+        await waitForJob(data.job.id);
+      }
+
       await refreshBackups();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Backup fehlgeschlagen.");
@@ -182,7 +188,13 @@ export function BackupWorkspace({
       if (!response.ok) {
         throw new Error(data.error ?? "Restore fehlgeschlagen.");
       }
-      setResult(data.result);
+
+      if (response.status === 202 && data.job?.id) {
+        const job = await waitForJob(data.job.id);
+        setResult((job.result as { result?: RestoreResult })?.result ?? null);
+      } else {
+        setResult(data.result);
+      }
     } catch (restoreError) {
       setError(restoreError instanceof Error ? restoreError.message : "Restore fehlgeschlagen.");
     } finally {

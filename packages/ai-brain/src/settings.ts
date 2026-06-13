@@ -1,3 +1,4 @@
+import { resolveInferenceConfig } from "./inference-config";
 import type { AiBrainSettings, AiProviderId, AiProviderSettings, ApiKeyStore } from "./types";
 
 const PROVIDER_DEFINITIONS: Omit<AiProviderSettings, "enabled" | "hasApiKey">[] = [
@@ -90,22 +91,34 @@ export function resolveAiBrainSettings(
     overrides?.localOnly ??
     (datenschutzMode || process.env.AI_LOCAL_ONLY === "true");
 
+  const inferenceConfig = resolveInferenceConfig();
+
   const providers: AiProviderSettings[] = PROVIDER_DEFINITIONS.map((def) => {
     const envBaseUrl = resolveProviderBaseUrlFromEnv(def.id);
+    const inferenceBaseUrl =
+      def.id === inferenceConfig.providerId ? inferenceConfig.baseUrl : undefined;
     return {
       ...def,
-      baseUrl: envBaseUrl ?? def.baseUrl,
-      enabled: def.isLocal || apiKeyStore.has(def.id),
+      baseUrl: inferenceBaseUrl ?? envBaseUrl ?? def.baseUrl,
+      defaultModel:
+        def.id === inferenceConfig.providerId ? inferenceConfig.defaultModel : def.defaultModel,
+      enabled:
+        def.isLocal
+          ? inferenceConfig.enabled && inferenceConfig.urlAllowed
+          : apiKeyStore.has(def.id),
       hasApiKey: def.isLocal || apiKeyStore.has(def.id),
     };
   });
 
   const defaultProvider =
     overrides?.defaultProvider ??
-    (localOnly ? "ollama" : (process.env.AI_DEFAULT_PROVIDER as AiProviderId | undefined) ?? "ollama");
+    (localOnly
+      ? inferenceConfig.providerId
+      : ((process.env.AI_DEFAULT_PROVIDER as AiProviderId | undefined) ??
+        inferenceConfig.providerId));
 
   return {
-    enabled: overrides?.enabled ?? process.env.AI_BRAIN_ENABLED !== "false",
+    enabled: overrides?.enabled ?? inferenceConfig.enabled,
     datenschutzMode,
     localOnly,
     defaultProvider,
@@ -114,11 +127,16 @@ export function resolveAiBrainSettings(
 }
 
 function resolveProviderBaseUrlFromEnv(providerId: AiProviderId): string | undefined {
+  const inference = resolveInferenceConfig();
+  if (providerId === inference.providerId && process.env.AI_INFERENCE_BASE_URL?.trim()) {
+    return inference.baseUrl;
+  }
+
   switch (providerId) {
     case "ollama":
-      return process.env.OLLAMA_BASE_URL;
+      return process.env.OLLAMA_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL;
     case "openai_compatible":
-      return process.env.OPENAI_COMPATIBLE_BASE_URL;
+      return process.env.OPENAI_COMPATIBLE_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL;
     case "openai":
       return process.env.OPENAI_BASE_URL;
     case "anthropic":

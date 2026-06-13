@@ -1,3 +1,4 @@
+import { getUweRuntimeConfig } from "@uwe/auth";
 import type { ContentBlock, Page, Visibility } from "./generated/prisma/client";
 import type { PublishStatus } from "./generated/prisma/client";
 
@@ -20,7 +21,7 @@ export interface PortalAccessOptions {
 
 export interface PageAccessOptions extends PortalAccessOptions {
   shareGrant?: ShareAccessGrant;
-  /** Required in share context so dm_only blocks are only revealed for explicitly shared pages. */
+  /** Required in share context when PLAYER_PREVIEW_ALLOW_DM_ONLY=true. */
   pageId?: string;
 }
 
@@ -89,7 +90,8 @@ export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility"
     context === "share" &&
     options?.shareGrant &&
     options.pageId &&
-    options.shareGrant.sharedPageIds.has(options.pageId)
+    options.shareGrant.sharedPageIds.has(options.pageId) &&
+    getUweRuntimeConfig().playerPreviewAllowDmOnly
   ) {
     return blocks;
   }

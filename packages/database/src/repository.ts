@@ -789,6 +789,10 @@ export function createUweRepository(databaseUrl?: string): UweRepository {
   return new UweRepository(createPrismaClient(databaseUrl));
 }
 
+export function createUweRepositoryFromClient(db: PrismaClient): UweRepository {
+  return new UweRepository(db);
+}
+
 export async function createWorld(input: CreateWorldInput, databaseUrl?: string) {
   return createUweRepository(databaseUrl).createWorld(input);
 }

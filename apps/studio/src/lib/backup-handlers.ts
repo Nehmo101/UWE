@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
-import path from "node:path";
-import { createActivityLogService, createPrismaClient, prisma } from "@uwe/database/server";
+import { createActivityLogService, createJobService, createPrismaClient, prisma } from "@uwe/database/server";
 import {
-  executeRestore,
-  exportBackupJson,
-  exportBackupZip,
   listStoredBackups,
   loadBackupFromBuffer,
   loadBackupFromFile,
   previewRestoreOnly,
-  resolveBackupsDir,
   type BackupType,
-  type CreateBackupOptions,
 } from "@uwe/backup";
+import { enqueueAndDispatch, runJob } from "./job-executor";
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -24,11 +19,22 @@ export interface BackupCreateBody {
   worldSlug?: string;
   campaignSlug?: string;
   format?: "zip" | "json";
+  sync?: boolean;
 }
 
 export async function getBackupList() {
   const backups = listStoredBackups();
   return NextResponse.json({ backups });
+}
+
+function backupJobTitle(body: BackupCreateBody): string {
+  const scope =
+    body.type === "full"
+      ? "Vollbackup"
+      : body.type === "world"
+        ? `Welt ${body.worldSlug}`
+        : `Kampagne ${body.campaignSlug}`;
+  return `Backup: ${scope}`;
 }
 
 export async function postBackupCreate(body: BackupCreateBody) {
@@ -44,42 +50,51 @@ export async function postBackupCreate(body: BackupCreateBody) {
     return jsonError("campaignSlug ist für Kampagnen-Backups erforderlich.");
   }
 
-  const options: CreateBackupOptions = {
-    type: body.type,
-    worldSlug: body.worldSlug,
-    campaignSlug: body.campaignSlug,
-    format: body.format ?? "zip",
-  };
-
   try {
-    if (options.format === "json") {
-      const bundle = await exportBackupJson(undefined, options);
-      const backupsDir = resolveBackupsDir();
-      fs.mkdirSync(backupsDir, { recursive: true });
-      const filename = `uwe-backup-${body.type}-${Date.now()}.json`;
-      const outputPath = path.join(backupsDir, filename);
-      fs.writeFileSync(outputPath, JSON.stringify(bundle, null, 2), "utf8");
-      await logBackupCreated(body, filename);
-      return NextResponse.json({
-        backup: {
-          id: filename,
-          filename,
-          path: outputPath,
-          manifest: bundle.manifest,
+    if (body.sync) {
+      const jobs = createJobService(prisma);
+      const job = await jobs.enqueue({
+        type: "backup",
+        title: backupJobTitle(body),
+        worldSlug: body.worldSlug,
+        payload: {
+          type: body.type,
+          worldSlug: body.worldSlug,
+          campaignSlug: body.campaignSlug,
+          format: body.format ?? "zip",
         },
+      });
+      const completed = await runJob(job.id);
+      if (completed?.status === "failed") {
+        return NextResponse.json({ error: completed.errorMessage ?? "Backup fehlgeschlagen." }, { status: 500 });
+      }
+      const result = completed?.result as { filename?: string; path?: string; manifest?: unknown } | null;
+      return NextResponse.json({
+        job: completed,
+        backup: result
+          ? {
+              id: result.filename,
+              filename: result.filename,
+              path: result.path,
+              manifest: result.manifest,
+            }
+          : null,
       });
     }
 
-    const { bundle, outputPath } = await exportBackupZip(undefined, options);
-    await logBackupCreated(body, path.basename(outputPath));
-    return NextResponse.json({
-      backup: {
-        id: path.basename(outputPath),
-        filename: path.basename(outputPath),
-        path: outputPath,
-        manifest: bundle.manifest,
+    const job = await enqueueAndDispatch({
+      type: "backup",
+      title: backupJobTitle(body),
+      worldSlug: body.worldSlug,
+      payload: {
+        type: body.type,
+        worldSlug: body.worldSlug,
+        campaignSlug: body.campaignSlug,
+        format: body.format ?? "zip",
       },
     });
+
+    return NextResponse.json({ job }, { status: 202 });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Backup-Erstellung fehlgeschlagen.";
@@ -90,18 +105,6 @@ export async function postBackupCreate(body: BackupCreateBody) {
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-async function logBackupCreated(body: BackupCreateBody, filename: string) {
-  await createActivityLogService(prisma).log({
-    worldSlug: body.worldSlug ?? null,
-    action: "backup_created",
-    targetType: "system",
-    targetLabel: filename,
-    targetHref: "/backup",
-    summary: `Backup erstellt (${body.type}${body.worldSlug ? `, Welt ${body.worldSlug}` : ""}): ${filename}.`,
-    details: { type: body.type, worldSlug: body.worldSlug ?? null, filename },
-  });
 }
 
 export async function getBackupDownload(backupId: string) {
@@ -134,6 +137,7 @@ export interface RestoreRequestBody {
   autoResolveSlugConflicts?: boolean;
   allowUpdates?: boolean;
   skipExisting?: boolean;
+  sync?: boolean;
 }
 
 async function loadBackupFromRequest(body: RestoreRequestBody) {
@@ -187,36 +191,38 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
   }
 
   try {
-    const { bundle, zipBuffer } = await loadBackupFromRequest(body);
-    const db = createPrismaClient();
+    const title = body.targetWorldSlug
+      ? `Restore: Welt ${body.targetWorldSlug}`
+      : "Restore: Backup";
 
-    const result = await executeRestore(
-      db,
-      bundle,
-      {
-        confirmed: true,
-        targetWorldSlug: body.targetWorldSlug,
-        autoResolveSlugConflicts: body.autoResolveSlugConflicts ?? true,
-        allowUpdates: body.allowUpdates ?? false,
-        skipExisting: body.skipExisting ?? false,
-      },
-      zipBuffer,
-      process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
-    );
+    if (body.sync) {
+      const jobs = createJobService(prisma);
+      const job = await jobs.enqueue({
+        type: "backup_restore",
+        title,
+        worldSlug: body.targetWorldSlug,
+        payload: body as unknown as Record<string, unknown>,
+        maxAttempts: 1,
+      });
+      const completed = await runJob(job.id);
+      if (completed?.status === "failed") {
+        return NextResponse.json(
+          { error: completed.errorMessage ?? "Restore fehlgeschlagen." },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({ job: completed, result: completed?.result });
+    }
 
-    await db.$disconnect();
-
-    await createActivityLogService(prisma).log({
-      worldSlug: body.targetWorldSlug ?? null,
-      action: "backup_restored",
-      targetType: "system",
-      targetLabel: body.backupId ?? body.filename ?? null,
-      targetHref: "/backup",
-      summary: `Backup wiederhergestellt${body.targetWorldSlug ? ` (Welt ${body.targetWorldSlug})` : ""}.`,
-      details: { backupId: body.backupId ?? null, filename: body.filename ?? null },
+    const job = await enqueueAndDispatch({
+      type: "backup_restore",
+      title,
+      worldSlug: body.targetWorldSlug,
+      payload: body as unknown as Record<string, unknown>,
+      maxAttempts: 1,
     });
 
-    return NextResponse.json({ result });
+    return NextResponse.json({ job }, { status: 202 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Restore fehlgeschlagen.";
     await createActivityLogService(prisma).log({

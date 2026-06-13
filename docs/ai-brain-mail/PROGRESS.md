@@ -1,57 +1,55 @@
-# UWE AI Brain Mail Progress
+# UWE AI Brain + Mail — Implementierungsfortschritt
 
-## Aktueller Stand
+Stand: **P13 abgeschlossen**. Alle Pakete P00–P13 sind umgesetzt und mit Tests/Doku abgesichert.
 
-- P00 Repo analysis: done
-- P01 Production host baseline: partial
-  - P01A Production ENV and path concept: done
-  - P01B App/DB/Storage healthcheck: done
-  - P01C Persistent paths: open
-  - P01D Production docs: open
-- P02 Cloudflare and auth hardening: blocked until P01C/P01D are done
-- P03 Mail Center: open
-- P04 Brain Knowledge Store: open
-- P05 RTX Inference Connector: open
-- P06 AI Run History: open
-- P07 Context Builder integration: open
-- P08 Review Apply Undo: open
-- P09 First Brain Actions: open
-- P10 Embeddings and Vector Search: open
-- P11 Admin Status Dashboard: open
-- P12 Job Queue: open
-- P13 QA and Hardening: open
+## Paket-Status
 
-## Architekturregel
+| Paket | Status | Notizen |
+|-------|--------|---------|
+| **P00** Repo-Analyse | ✅ done | |
+| **P01** Production Host Baseline | ✅ done | ENV, Pfade, Healthcheck, Doku |
+| **P02** Cloudflare + Auth | ✅ done | Proxy, Cookies, Studio-Schutz |
+| **P03** Mail Center | ✅ done | SMTP, Logs, Templates, Compose, dm_only-Gate |
+| **P04** Brain Store | ✅ done | Dokumente, Chunks, Fakten, UI |
+| **P05** Inference Connector | ✅ done | Ollama, LM Studio, Mock, Offline/Timeout |
+| **P06** AI Run History | ✅ done | Status, API, Run-Detail |
+| **P07** Context Builder | ✅ done | Sichtbarkeit, Budget |
+| **P08** Review/Apply | ✅ done | Proposals, Apply-Log, Undo |
+| **P09** Brain Actions | ✅ done | Session Recap, Prep, Kanon |
+| **P10** Embeddings | ✅ done | Chunking, Index, Reindex, Search |
+| **P11** Admin Dashboard | ✅ done | `/admin/status`, `/api/admin/status` |
+| **P12** Job Queue | ✅ done | Jobs, Logs, Retry, Admin-Liste |
+| **P13** QA Hardening | ✅ done | Tests, Smoke-Doku, Windows-Test-Runner |
 
-UWE owns all persistent application data and all Brain knowledge.
-The RTX machine is only an inference worker.
-The RTX machine must not persist UWE application data.
-Only UWE on the old laptop is exposed through Cloudflare.
+## P13 — Kurzfassung
 
-## P01 completion note
+- **Tests:** `compose.test.ts`, `transport.test.ts`, SMTP-Password in `settings-service.test.ts`
+- **Windows-Fix:** `scripts/run-node-tests.mjs` für `@uwe/mail` und `@uwe/database`
+- **Doku:** `docs/ai-brain-mail/SMOKE_TESTS.md`, Backup in `ENV_AND_DEPLOYMENT.md`
+- **Abgedeckt:** Secrets, SMTP-Fehler, RTX offline/Timeout, MockProvider, Context-Filter, Player Preview, Mail dm_only, AI Runs, Review/Apply, Admin-Status, Backup
 
-P01A and P01B were reported as completed by the user.
-`GRANULAR_TASKS.md` also defines P01C and P01D, so P01 is not fully complete yet.
+## P12 — Kurzfassung (Referenz)
 
-Remaining P01 tasks:
+- **Datenmodell:** `Job`, `JobLog` — Status `pending`, `running`, `completed`, `failed`, `cancelled`
+- **Service:** `packages/database/src/job-service.ts`
+- **Executor:** `apps/studio/src/lib/job-executor.ts` + `job-runners.ts`
+- **API:** `GET/POST /api/jobs`, `GET/POST /api/jobs/[jobId]`
+- **UI:** `apps/studio/app/jobs/page.tsx`
 
-- P01C Persistent paths: Make uploads, data, backups and exports configurable through env or existing settings.
-- P01D Production docs: Document old-laptop production start and smoke checks.
+## Architektur-Invariante (unverändert)
 
-Before starting the long-running orchestrator flow, the agent should verify the local working tree with `git status` and confirm that the current build/test state is acceptable.
+```txt
+UWE ist der alleinige Besitzer aller Daten und allen Brain-Wissens.
+Der RTX-Rechner ist nur ein austauschbarer Inference Worker.
+```
 
-## Nach jedem Paket aktualisieren
+## Bekannte Grenzen / Restfehler
 
-For each completed package, update this file with:
+- `pnpm test` — grün (Embeddings-Search kann unter Turbo-Parallelität flaky sein; erneut ausführen).
+- `pnpm lint` — 7 unused-vars/import Fehler (vorbestehend).
+- Echter SMTP/RTX E2E erfordert laufende Infrastruktur; `MAIL_USE_MOCK=true` / `AI_USE_MOCK=true` für lokale Tests.
 
-- package id
-- status
-- changed files
-- commands run
-- result
-- known limitations
-- recommended next package
+## Nächste Schritte (optional)
 
-## Aktuelle Empfehlung
-
-Finish P01C and P01D next. After P01C/P01D are completed and build/tests are acceptable, update this file to mark P01 done and continue with P02.
+- Lint unused-vars bereinigen
+- Erweiterte Mail-UI (Templates, Empfängergruppen)

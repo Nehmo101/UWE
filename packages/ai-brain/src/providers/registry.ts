@@ -1,3 +1,5 @@
+import { assertInferenceUrlAllowed } from "../inference-url-guard";
+import { resolveInferenceConfig } from "../inference-config";
 import type {
   AiHealthCheckResult,
   AiModel,
@@ -48,12 +50,25 @@ export class MockAiProvider implements AiProvider {
       latencyMs: 1,
     };
   }
+
+  async embedText(text: string): Promise<number[]> {
+    const { deterministicMockVector } = await import("../embeddings/provider");
+    return deterministicMockVector(text, 16);
+  }
+}
+
+export interface CreateProviderOptions {
+  useMock?: boolean;
+  baseUrl?: string;
+  timeoutMs?: number;
+  apiKey?: string;
+  allowPublicUrl?: boolean;
 }
 
 export function createProvider(
   providerId: AiProviderId,
   apiKeyStore: ApiKeyStore,
-  options?: { useMock?: boolean },
+  options?: CreateProviderOptions,
 ): AiProvider {
   if (options?.useMock) {
     const def = getProviderDefinition(providerId);
@@ -61,21 +76,37 @@ export function createProvider(
   }
 
   const def = getProviderDefinition(providerId);
+  const inferenceConfig = resolveInferenceConfig();
+  const isLocalInferenceProvider = providerId === "ollama" || providerId === "openai_compatible";
+
   const baseUrl =
+    options?.baseUrl ??
+    (isLocalInferenceProvider && inferenceConfig.baseUrl
+      ? inferenceConfig.baseUrl
+      : undefined) ??
     resolveProviderBaseUrl(providerId) ??
     def?.baseUrl ??
     defaultBaseUrl(providerId);
-  const apiKey = apiKeyStore.get(providerId);
+
+  if (isLocalInferenceProvider) {
+    assertInferenceUrlAllowed(
+      baseUrl,
+      options?.allowPublicUrl ?? inferenceConfig.allowPublicUrl,
+    );
+  }
+
+  const apiKey = options?.apiKey ?? apiKeyStore.get(providerId);
+  const timeoutMs = options?.timeoutMs ?? inferenceConfig.timeoutMs;
 
   switch (providerId) {
     case "ollama":
-      return new OllamaProvider(baseUrl);
+      return new OllamaProvider(baseUrl, undefined, timeoutMs);
     case "openai_compatible":
-      return new OpenAiCompatibleProvider(baseUrl, apiKey);
+      return new OpenAiCompatibleProvider(baseUrl, apiKey, timeoutMs);
     case "openai":
-      return new OpenAiProvider(baseUrl, apiKey);
+      return new OpenAiProvider(baseUrl, apiKey, timeoutMs);
     case "openrouter":
-      return new OpenRouterProvider(baseUrl, apiKey);
+      return new OpenRouterProvider(baseUrl, apiKey, timeoutMs);
     case "anthropic":
       return new AnthropicProvider(baseUrl, apiKey);
     case "gemini":

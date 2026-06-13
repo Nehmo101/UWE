@@ -7,7 +7,9 @@ import {
   PORTAL_BLOCK_VISIBILITIES,
   PORTAL_PAGE_VISIBILITIES,
 } from "./permissions";
+import { buildPageView } from "./page-service";
 import { createUweRepository, type UweRepository } from "./repository";
+import { createShareLinkService } from "./share-link-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 /**
@@ -128,6 +130,31 @@ describe("visibility security guarantees", () => {
     assert.ok(titles.includes("Geheimplan"));
     assert.ok(titles.includes("Marktplatz"));
     assert.ok(titles.includes("Unfertiger Ort"));
+  });
+
+  it("never exposes dm_only blocks through share links by default", async () => {
+    const marktplatz = await repo.getPageBySlug(worldSlug, "marktplatz");
+    assert.ok(marktplatz);
+
+    const shareService = createShareLinkService(db);
+    const link = await shareService.createShareLink({
+      worldId,
+      targetType: "page",
+      targetId: marktplatz.id,
+    });
+
+    const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+    assert.ok(access);
+
+    const view = await buildPageView(repo, worldSlug, "marktplatz", "share", {
+      shareGrant: access.grant,
+      shareToken: link.token,
+    });
+
+    assert.ok(view);
+    const contents = view.page.content;
+    assert.ok(contents.includes("Belebter Markt."));
+    assert.ok(!contents.includes("GEHEIM"), "dm_only block leaked into share view!");
   });
 
   it("code-defined templates keep GM secrets in dm_only blocks", () => {

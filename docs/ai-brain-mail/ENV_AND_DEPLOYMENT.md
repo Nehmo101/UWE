@@ -226,6 +226,29 @@ UWE muss weiter funktionieren:
 
 UWE sollte lokal erreichbar bleiben.
 
+## Backup und Restore
+
+UWE-Daten (Welten, Brain, Mail-Logs, Uploads) liegen auf dem alten Laptop unter `UWE_DATA_DIR` bzw. `%LOCALAPPDATA%\UWE\data`.
+
+| Aktion | Befehl / Ort |
+|--------|------------|
+| Backup erstellen | `pnpm backup` oder UWE Steuerung → Backup |
+| Restore | UWE stoppen → `pnpm restore` oder Steuerung |
+| Manuelle Anleitung | [docs/backup-restore.md](../backup-restore.md) |
+| Technische Details | [docs/BACKUP.md](../BACKUP.md) |
+
+Regeln:
+
+- Secrets (`SMTP_PASSWORD`, `AUTH_SECRET`, API Keys) werden nicht in Backup-Bundles exportiert.
+- Vor Restore wird automatisch ein Sicherungs-Backup erstellt.
+- RTX-Rechner enthält keine dauerhaften UWE-Daten — Restore betrifft nur den Laptop-Host.
+
+## Smoke-Tests und QA
+
+Vollständige Checkliste (manuell + automatisierte Test-Matrix): [SMOKE_TESTS.md](SMOKE_TESTS.md).
+
+Produktions-Smoke-Checks: [docs/PRODUCTION.md](../PRODUCTION.md).
+
 ## Sicherheitscheckliste
 
 - [ ] Studio/Auth aktiv

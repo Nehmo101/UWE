@@ -53,12 +53,20 @@ export async function updateSettingsAction(formData: FormData) {
     case "storage":
       update.storage = {
         uploadsPath: String(formData.get("uploadsPath") || ""),
+        exportsPath: String(formData.get("exportsPath") || ""),
       };
       break;
     case "ai":
       update.ai = {
         enabled: parseBoolean(formData.get("aiEnabled")),
         localOnlyMode: parseBoolean(formData.get("localOnlyMode")),
+      };
+      break;
+    case "mail":
+      update.mail = {
+        enabled: parseBoolean(formData.get("mailEnabled")),
+        fromDisplayName: String(formData.get("fromDisplayName") || ""),
+        logBody: parseBoolean(formData.get("mailLogBody")),
       };
       break;
     case "backup":

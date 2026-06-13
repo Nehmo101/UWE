@@ -45,13 +45,39 @@ describe("rate limiter", () => {
     assert.equal(checkRateLimit(key, { maxAttempts: 3, windowMs: 60_000 }).allowed, true);
   });
 
-  it("extracts the client IP from forwarded headers", () => {
-    const forwarded = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" });
-    assert.equal(clientIpFromHeaders(forwarded), "203.0.113.7");
+  it("extracts the client IP from forwarded headers when TRUST_PROXY is enabled", () => {
+    const previous = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "true";
 
-    const realIp = new Headers({ "x-real-ip": "198.51.100.2" });
-    assert.equal(clientIpFromHeaders(realIp), "198.51.100.2");
+    try {
+      const forwarded = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" });
+      assert.equal(clientIpFromHeaders(forwarded), "203.0.113.7");
 
-    assert.equal(clientIpFromHeaders(new Headers()), "unknown");
+      const realIp = new Headers({ "x-real-ip": "198.51.100.2" });
+      assert.equal(clientIpFromHeaders(realIp), "198.51.100.2");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.TRUST_PROXY;
+      } else {
+        process.env.TRUST_PROXY = previous;
+      }
+    }
+  });
+
+  it("ignores forwarded headers when TRUST_PROXY is disabled", () => {
+    const previous = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "false";
+
+    try {
+      const forwarded = new Headers({ "x-forwarded-for": "203.0.113.7" });
+      assert.equal(clientIpFromHeaders(forwarded), "unknown");
+      assert.equal(clientIpFromHeaders(new Headers()), "unknown");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.TRUST_PROXY;
+      } else {
+        process.env.TRUST_PROXY = previous;
+      }
+    }
   });
 });

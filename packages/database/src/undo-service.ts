@@ -19,7 +19,12 @@ export type UndoOperation =
   | "page.update"
   | "page.delete"
   | "block.update"
-  | "block.delete";
+  | "block.delete"
+  | "ai.page.create"
+  | "ai.block.create"
+  | "ai.session.recap"
+  | "ai.session.summary_dm"
+  | "ai.brain_document.create";
 
 interface PageSnapshot {
   kind: "page";
@@ -55,7 +60,42 @@ interface BlockSnapshot {
   };
 }
 
-type UndoSnapshot = PageSnapshot | BlockSnapshot;
+interface AiPageCreateSnapshot {
+  kind: "ai_page_create";
+  pageId: string;
+}
+
+interface AiBlockCreateSnapshot {
+  kind: "ai_block_create";
+  blockId: string;
+}
+
+interface SessionRecapSnapshot {
+  kind: "session_recap";
+  sessionId: string;
+  summaryPlayer: string | null;
+  status: string;
+}
+
+interface SessionSummaryDmSnapshot {
+  kind: "session_summary_dm";
+  sessionId: string;
+  summaryDm: string | null;
+}
+
+interface BrainDocumentCreateSnapshot {
+  kind: "brain_document_create";
+  documentId: string;
+}
+
+type UndoSnapshot =
+  | PageSnapshot
+  | BlockSnapshot
+  | AiPageCreateSnapshot
+  | AiBlockCreateSnapshot
+  | SessionRecapSnapshot
+  | SessionSummaryDmSnapshot
+  | BrainDocumentCreateSnapshot;
 
 export interface UndoResult {
   ok: boolean;
@@ -185,6 +225,90 @@ export class UndoService {
     });
   }
 
+  /** Snapshot before AI apply creates a new idea page (undo = delete page). */
+  async captureAiPageCreate(pageId: string, worldId: string) {
+    return this.db.undoEntry.create({
+      data: {
+        worldId,
+        operation: "ai.page.create" satisfies UndoOperation,
+        targetType: "page",
+        targetId: pageId,
+        snapshot: asJson({ kind: "ai_page_create", pageId }),
+      },
+    });
+  }
+
+  /** Snapshot before AI apply creates a content block (undo = delete block). */
+  async captureAiBlockCreate(blockId: string, worldId: string) {
+    return this.db.undoEntry.create({
+      data: {
+        worldId,
+        operation: "ai.block.create" satisfies UndoOperation,
+        targetType: "content_block",
+        targetId: blockId,
+        snapshot: asJson({ kind: "ai_block_create", blockId }),
+      },
+    });
+  }
+
+  /** Snapshot player recap before AI apply overwrites it. */
+  async captureSessionRecap(sessionId: string) {
+    const session = await this.db.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) throw new Error(`Session ${sessionId} nicht gefunden.`);
+
+    const snapshot: SessionRecapSnapshot = {
+      kind: "session_recap",
+      sessionId: session.id,
+      summaryPlayer: session.summaryPlayer,
+      status: session.status,
+    };
+
+    return this.db.undoEntry.create({
+      data: {
+        worldId: session.worldId,
+        operation: "ai.session.recap" satisfies UndoOperation,
+        targetType: "game_session",
+        targetId: session.id,
+        snapshot: asJson(snapshot),
+      },
+    });
+  }
+
+  /** Snapshot DM session summary before AI apply overwrites it. */
+  async captureSessionSummaryDm(sessionId: string) {
+    const session = await this.db.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) throw new Error(`Session ${sessionId} nicht gefunden.`);
+
+    const snapshot: SessionSummaryDmSnapshot = {
+      kind: "session_summary_dm",
+      sessionId: session.id,
+      summaryDm: session.summaryDm,
+    };
+
+    return this.db.undoEntry.create({
+      data: {
+        worldId: session.worldId,
+        operation: "ai.session.summary_dm" satisfies UndoOperation,
+        targetType: "game_session",
+        targetId: session.id,
+        snapshot: asJson(snapshot),
+      },
+    });
+  }
+
+  /** Snapshot before AI apply creates a brain document (undo = delete document). */
+  async captureBrainDocumentCreate(documentId: string, worldId: string) {
+    return this.db.undoEntry.create({
+      data: {
+        worldId,
+        operation: "ai.brain_document.create" satisfies UndoOperation,
+        targetType: "brain_document",
+        targetId: documentId,
+        snapshot: asJson({ kind: "brain_document_create", documentId }),
+      },
+    });
+  }
+
   /**
    * Restore the snapshot of an undo entry. Restores are conservative: if the
    * target no longer exists for an update snapshot, the undo fails with a
@@ -207,6 +331,36 @@ export class UndoService {
 
     if (snapshot.kind === "block") {
       const result = await this.restoreBlock(entry.operation as UndoOperation, snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "ai_page_create") {
+      const result = await this.undoAiPageCreate(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "ai_block_create") {
+      const result = await this.undoAiBlockCreate(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "session_recap") {
+      const result = await this.restoreSessionRecap(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "session_summary_dm") {
+      const result = await this.restoreSessionSummaryDm(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "brain_document_create") {
+      const result = await this.undoBrainDocumentCreate(snapshot);
       if (result.ok) await this.markUndone(entryId);
       return result;
     }
@@ -356,6 +510,67 @@ export class UndoService {
     });
 
     return { ok: true, message: "Block auf vorherigen Stand zurückgesetzt." };
+  }
+
+  private async undoAiPageCreate(snapshot: AiPageCreateSnapshot): Promise<UndoResult> {
+    const page = await this.db.page.findUnique({ where: { id: snapshot.pageId } });
+    if (!page) {
+      return { ok: false, message: "Die übernommene Idee-Seite existiert nicht mehr." };
+    }
+
+    await this.db.page.delete({ where: { id: snapshot.pageId } });
+    return { ok: true, message: `KI-Idee-Seite „${page.title}“ rückgängig gemacht (gelöscht).` };
+  }
+
+  private async undoAiBlockCreate(snapshot: AiBlockCreateSnapshot): Promise<UndoResult> {
+    const block = await this.db.contentBlock.findUnique({ where: { id: snapshot.blockId } });
+    if (!block) {
+      return { ok: false, message: "Der übernommene ContentBlock existiert nicht mehr." };
+    }
+
+    await this.db.contentBlock.delete({ where: { id: snapshot.blockId } });
+    return { ok: true, message: "KI-ContentBlock rückgängig gemacht (gelöscht)." };
+  }
+
+  private async restoreSessionRecap(snapshot: SessionRecapSnapshot): Promise<UndoResult> {
+    const session = await this.db.gameSession.findUnique({ where: { id: snapshot.sessionId } });
+    if (!session) {
+      return { ok: false, message: "Session existiert nicht mehr — Undo nicht möglich." };
+    }
+
+    await this.db.gameSession.update({
+      where: { id: snapshot.sessionId },
+      data: {
+        summaryPlayer: snapshot.summaryPlayer,
+        status: snapshot.status as import("./generated/prisma/client").GameSessionStatus,
+      },
+    });
+
+    return { ok: true, message: "Spieler-Recap auf vorherigen Stand zurückgesetzt." };
+  }
+
+  private async restoreSessionSummaryDm(snapshot: SessionSummaryDmSnapshot): Promise<UndoResult> {
+    const session = await this.db.gameSession.findUnique({ where: { id: snapshot.sessionId } });
+    if (!session) {
+      return { ok: false, message: "Session existiert nicht mehr — Undo nicht möglich." };
+    }
+
+    await this.db.gameSession.update({
+      where: { id: snapshot.sessionId },
+      data: { summaryDm: snapshot.summaryDm },
+    });
+
+    return { ok: true, message: "DM-Session-Recap auf vorherigen Stand zurückgesetzt." };
+  }
+
+  private async undoBrainDocumentCreate(snapshot: BrainDocumentCreateSnapshot): Promise<UndoResult> {
+    const doc = await this.db.brainDocument.findUnique({ where: { id: snapshot.documentId } });
+    if (!doc) {
+      return { ok: false, message: "Das Brain-Dokument existiert nicht mehr." };
+    }
+
+    await this.db.brainDocument.delete({ where: { id: snapshot.documentId } });
+    return { ok: true, message: `Brain-Dokument „${doc.title}“ rückgängig gemacht (gelöscht).` };
   }
 }
 

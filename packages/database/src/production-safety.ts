@@ -1,6 +1,10 @@
 import type { PrismaClient } from "./client";
 import type { InspectorSeverity } from "./world-inspector";
 import { SettingsService, type UweSystemSettings } from "./settings-service";
+import {
+  getUweRuntimeConfig,
+  isPublicExposureConfigured,
+} from "@uwe/auth";
 
 export interface ProductionSafetyWarning {
   id: string;
@@ -89,20 +93,53 @@ export async function getProductionSafetyWarnings(
   if (isStudioApiTokenMissing()) {
     warnings.push({
       id: "production:studio-api-token",
-      severity: "warning",
+      severity: isPublicExposureConfigured() ? "critical" : "warning",
       title: "STUDIO_API_TOKEN nicht gesetzt",
-      description:
-        "Empfohlen bei exponiertem Studio: Bearer-Token für sensible APIs (Backup, Restore, Settings, AI) setzen.",
+      description: isPublicExposureConfigured()
+        ? "Öffentliche Erreichbarkeit (PUBLIC_APP_URL/CLOUDFLARE_TUNNEL) erkannt — setze STUDIO_API_TOKEN und schütze Studio zusätzlich mit Cloudflare Access oder Reverse-Proxy-Auth."
+        : "Empfohlen bei exponiertem Studio: Bearer-Token für sensible APIs (Backup, Restore, Settings, AI) setzen.",
       href: "/settings",
+    });
+  }
+
+  if (isPublicExposureConfigured()) {
+    warnings.push({
+      id: "production:cloudflare-tunnel-scope",
+      severity: "warning",
+      title: "Cloudflare/Proxy nur auf UWE zeigen",
+      description:
+        "Der Tunnel oder Reverse Proxy darf nur auf UWE (Studio/Portal) zeigen — niemals auf Ollama, LM Studio oder den RTX-Inference-Endpoint.",
+    });
+  }
+
+  const runtime = getUweRuntimeConfig();
+  if (runtime.isProduction && runtime.playerPreviewAllowDmOnly) {
+    warnings.push({
+      id: "production:player-preview-dm-only",
+      severity: "critical",
+      title: "PLAYER_PREVIEW_ALLOW_DM_ONLY ist aktiv",
+      description:
+        "DM-only Inhalte dürfen in Player Preview nicht freigegeben werden. Setze PLAYER_PREVIEW_ALLOW_DM_ONLY=false in Production.",
+    });
+  }
+
+  if (runtime.isProduction && !runtime.authRequired) {
+    warnings.push({
+      id: "production:auth-not-required",
+      severity: "warning",
+      title: "AUTH_REQUIRED ist deaktiviert",
+      description:
+        "In Production sollte AUTH_REQUIRED=true gesetzt sein, damit das Portal nicht anonym erreichbar ist.",
     });
   }
 
   warnings.push({
     id: "production:studio-exposure",
-    severity: "critical",
+    severity: isPublicExposureConfigured() ? "critical" : "critical",
     title: "Studio ohne Login — nur hinter Schutz betreiben",
-    description:
-      "Studio niemals direkt öffentlich erreichbar machen. Nutze Reverse-Proxy-Auth, VPN oder Cloudflare Access.",
+    description: isPublicExposureConfigured()
+      ? "Studio ist über Cloudflare/Proxy erreichbar, hat aber kein Benutzer-Login. Nutze Cloudflare Access, Reverse-Proxy-Auth oder VPN — und setze STUDIO_API_TOKEN."
+      : "Studio niemals direkt öffentlich erreichbar machen. Nutze Reverse-Proxy-Auth, VPN oder Cloudflare Access.",
   });
 
   if (isPublicPortalExposureEnabled(settings)) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
+import { originMatchesTrustedHost } from "@uwe/auth";
 
 /**
  * Request guard for sensitive Studio API routes (backup, restore, import,
@@ -54,7 +55,7 @@ function isCrossSiteBrowserRequest(request: Request): boolean {
     return false;
   }
 
-  return !originMatchesHost(origin, request.headers.get("host"));
+  return !originMatchesTrustedHost(origin, request.headers.get("host"));
 }
 
 function isSameOriginBrowserRequest(request: Request): boolean {
@@ -64,22 +65,10 @@ function isSameOriginBrowserRequest(request: Request): boolean {
 
   const origin = request.headers.get("origin");
   if (origin && origin !== "null") {
-    return originMatchesHost(origin, request.headers.get("host"));
+    return originMatchesTrustedHost(origin, request.headers.get("host"));
   }
 
   return false;
-}
-
-function originMatchesHost(origin: string, host: string | null): boolean {
-  if (!host) {
-    return false;
-  }
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
 }
 
 function hasValidBearerToken(request: Request, requiredToken: string): boolean {

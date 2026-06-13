@@ -8,8 +8,8 @@ import {
 } from "@uwe/database/server";
 
 /**
- * Healthcheck: database, migrations, storage, seeds, version and trust mode.
- * Leaks no sensitive data — only booleans, counts and non-secret facts.
+ * Healthcheck: app runtime, database, migrations, storage, seeds, version and trust mode.
+ * Leaks no sensitive data — only booleans, counts, resolved paths and non-secret facts.
  */
 export async function GET() {
   const db = await databaseHealthCheck();
@@ -22,9 +22,12 @@ export async function GET() {
   return NextResponse.json(
     {
       status,
-      app: "UWE Studio",
-      product: UWE_PRODUCT_NAME,
-      version: UWE_VERSION,
+      app: {
+        name: "UWE Studio",
+        product: UWE_PRODUCT_NAME,
+        version: UWE_VERSION,
+        runtime: system.app,
+      },
       commit: system.commit,
       timestamp: new Date().toISOString(),
       checks: {
@@ -40,6 +43,8 @@ export async function GET() {
         seeds: system.seeds,
       },
       trust: system.trust,
+      proxy: system.proxy,
+      mail: system.mail,
       rateLimiter: system.rateLimiter,
     },
     { status: status === "ok" ? 200 : 503 },

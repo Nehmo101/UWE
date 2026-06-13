@@ -163,6 +163,14 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                 Recap für Spieler
                 <textarea name="summaryPlayer" rows={5} defaultValue={session.summaryPlayer ?? ""} />
               </label>
+              <p className="uwe-hint">
+                <Link
+                  href={`/mail/compose?kind=session_recap&worldSlug=${worldSlug}&sourceId=${sessionId}`}
+                >
+                  Mail aus Spieler-Recap vorbereiten
+                </Link>
+                {" "}(nur player-sichtbarer Text — DM-only wird nicht übernommen)
+              </p>
             </fieldset>
 
             <fieldset className="uwe-fieldset">

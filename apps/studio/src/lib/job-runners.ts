@@ -1,0 +1,590 @@
+import fs from "node:fs";
+import path from "node:path";
+import {
+  createActivityLogService,
+  createAiReviewService,
+  createAiRunServiceFromClient,
+  createBrainStoreService,
+  createMailService,
+  createPrismaClient,
+  createUweRepository,
+  createWorldInspectorService,
+  getSystemSettings,
+  prisma,
+  resolveLocalOnlyMode,
+  type JobService,
+  type JobView,
+} from "@uwe/database/server";
+import {
+  AI_TASK_LABELS,
+  createApiKeyStoreFromEnv,
+  generateAiTaskBySlug,
+  indexBrainDocument,
+  isBrainActionId,
+  reindexBrainWorld,
+  resolveAiBrainSettings,
+  runBrainAction,
+  type AiProviderId,
+  type AiTaskType,
+} from "@uwe/ai-brain";
+import {
+  executeImport,
+  parseImportContent,
+  type ImportExecuteOptions,
+  type ImportFormat,
+} from "@uwe/knoteforge-import";
+import {
+  executeRestore,
+  exportBackupJson,
+  exportBackupZip,
+  loadBackupFromBuffer,
+  loadBackupFromFile,
+  listStoredBackups,
+  resolveBackupsDir,
+  type BackupType,
+  type CreateBackupOptions,
+} from "@uwe/backup";
+
+export interface JobRunnerContext {
+  jobs: JobService;
+  jobId: string;
+  job: JobView;
+}
+
+async function assertNotCancelled(jobs: JobService, jobId: string): Promise<void> {
+  if (await jobs.isCancelled(jobId)) {
+    throw new Error("Job wurde abgebrochen.");
+  }
+}
+
+export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as BackupCreateBody;
+  if (!payload.type) {
+    throw new Error("Backup-Typ fehlt im Job-Payload.");
+  }
+
+  await ctx.jobs.updateProgress(ctx.jobId, 10, "Backup vorbereiten");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const options: CreateBackupOptions = {
+    type: payload.type,
+    worldSlug: payload.worldSlug,
+    campaignSlug: payload.campaignSlug,
+    format: payload.format ?? "zip",
+  };
+
+  if (options.format === "json") {
+    const bundle = await exportBackupJson(undefined, options);
+    const backupsDir = resolveBackupsDir();
+    fs.mkdirSync(backupsDir, { recursive: true });
+    const filename = `uwe-backup-${payload.type}-${Date.now()}.json`;
+    const outputPath = path.join(backupsDir, filename);
+    fs.writeFileSync(outputPath, JSON.stringify(bundle, null, 2), "utf8");
+
+    await createActivityLogService(prisma).log({
+      worldSlug: payload.worldSlug ?? null,
+      action: "backup_created",
+      targetType: "system",
+      targetLabel: filename,
+      targetHref: "/backup",
+      summary: `Backup erstellt (${payload.type}): ${filename}.`,
+    });
+
+    return { filename, path: outputPath, manifest: bundle.manifest };
+  }
+
+  await ctx.jobs.updateProgress(ctx.jobId, 40, "Daten exportieren");
+  const { bundle, outputPath } = await exportBackupZip(undefined, options);
+  const filename = path.basename(outputPath);
+
+  await createActivityLogService(prisma).log({
+    worldSlug: payload.worldSlug ?? null,
+    action: "backup_created",
+    targetType: "system",
+    targetLabel: filename,
+    targetHref: "/backup",
+    summary: `Backup erstellt (${payload.type}): ${filename}.`,
+  });
+
+  return { filename, path: outputPath, manifest: bundle.manifest };
+}
+
+export interface BackupCreateBody {
+  type: BackupType;
+  worldSlug?: string;
+  campaignSlug?: string;
+  format?: "zip" | "json";
+}
+
+export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as ImportJobPayload;
+  if (!payload.format || !payload.content || !payload.worldSlug) {
+    throw new Error("Import-Payload unvollständig.");
+  }
+
+  await ctx.jobs.updateProgress(ctx.jobId, 15, "Import-Datei lesen");
+  const repo = createUweRepository();
+  const { bundle } = parseImportContent(payload.format, payload.content);
+
+  const options: ImportExecuteOptions = {
+    confirmed: true,
+    itemIds: payload.itemIds,
+    autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
+    allowUpdates: payload.allowUpdates ?? true,
+  };
+
+  await ctx.jobs.updateProgress(ctx.jobId, 50, "Daten importieren");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const result = await executeImport(repo, bundle, payload.worldSlug, payload.format, options);
+
+  await createActivityLogService(prisma).log({
+    worldSlug: payload.worldSlug,
+    action: "import_executed",
+    targetType: "world",
+    targetLabel: payload.worldSlug,
+    targetHref: `/worlds/${payload.worldSlug}`,
+    summary: `Import (${payload.format}) in Welt „${payload.worldSlug}" ausgeführt.`,
+  });
+
+  return { result };
+}
+
+export interface ImportJobPayload {
+  format: ImportFormat;
+  content: string;
+  worldSlug: string;
+  itemIds?: string[];
+  autoResolveSlugConflicts?: boolean;
+  allowUpdates?: boolean;
+}
+
+export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as BrainActionJobPayload;
+  if (!payload.actionId || !payload.worldSlug || !payload.pageSlug || !payload.providerId || !payload.model) {
+    throw new Error("Brain-Aktions-Job-Payload unvollständig.");
+  }
+
+  if (!isBrainActionId(payload.actionId)) {
+    throw new Error(`Unbekannte Brain-Aktion: ${payload.actionId}`);
+  }
+
+  const overrides = await getAiSettingsOverrides();
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const useMock = payload.useMock ?? process.env.AI_USE_MOCK === "true";
+  const deps = {
+    repo: createUweRepository(),
+    aiRuns: createAiRunServiceFromClient(prisma),
+    brainStore: createBrainStoreService(),
+  };
+
+  await ctx.jobs.updateProgress(ctx.jobId, 15, "Brain-Aktion starten");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const result = await runBrainAction(deps, {
+    actionId: payload.actionId,
+    worldSlug: payload.worldSlug,
+    pageSlug: payload.pageSlug,
+    providerId: payload.providerId,
+    model: payload.model,
+    userPrompt: payload.userPrompt,
+    sessionId: payload.sessionId,
+    allowDmOnly: payload.allowDmOnly ?? settings.localOnly,
+    useMock,
+    options: {
+      datenschutzMode: settings.datenschutzMode,
+      localOnly: settings.localOnly,
+    },
+  });
+
+  await prisma.job.update({
+    where: { id: ctx.jobId },
+    data: { relatedType: "ai_run", relatedId: result.runId },
+  });
+
+  const review = createAiReviewService(prisma);
+  await review.syncJsonProposalsFromRun(result.runId, result.proposals);
+
+  const run = await deps.aiRuns.getById(result.runId);
+  await ctx.jobs.updateProgress(ctx.jobId, 100, "Brain-Aktion abgeschlossen");
+
+  return {
+    runId: result.runId,
+    run,
+    context: result.context,
+    result: result.result,
+    proposals: result.proposals,
+  };
+}
+
+async function getAiSettingsOverrides() {
+  const systemSettings = await getSystemSettings();
+  return {
+    localOnly: resolveLocalOnlyMode(systemSettings),
+    enabled: systemSettings.ai.enabled,
+  };
+}
+
+export interface BrainActionJobPayload {
+  actionId: string;
+  worldSlug: string;
+  pageSlug: string;
+  providerId: AiProviderId;
+  model: string;
+  userPrompt?: string;
+  sessionId?: string;
+  allowDmOnly?: boolean;
+  useMock?: boolean;
+}
+
+export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as AiRunJobPayload & BrainActionJobPayload;
+  if (payload.actionId) {
+    return runBrainActionJob(ctx);
+  }
+  if (!payload.taskType || !payload.worldSlug || !payload.pageSlug || !payload.providerId || !payload.model) {
+    throw new Error("KI-Job-Payload unvollständig.");
+  }
+
+  const repo = createUweRepository();
+  const aiRuns = createAiRunServiceFromClient(prisma);
+  const review = createAiReviewService(prisma);
+  const systemSettings = await getSystemSettings();
+  const overrides = {
+    localOnly: resolveLocalOnlyMode(systemSettings),
+    enabled: systemSettings.ai.enabled,
+  };
+  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const useMock = payload.useMock ?? process.env.AI_USE_MOCK === "true";
+
+  const world = await repo.getWorldBySlug(payload.worldSlug);
+  const page = await repo.getPageBySlug(payload.worldSlug, payload.pageSlug);
+  if (!world || !page) {
+    throw new Error("Welt oder Seite nicht gefunden.");
+  }
+
+  if (payload.discardProposalId) {
+    await review.discardProposal(payload.discardProposalId, { action: "rerun" });
+  }
+
+  const aiRun = await aiRuns.create({
+    worldId: world.id,
+    pageId: page.id,
+    gameSessionId: payload.sessionId ?? null,
+    source: "job_queue",
+    taskType: payload.taskType,
+    provider: payload.providerId,
+    model: payload.model,
+    userPrompt: payload.userPrompt ?? null,
+    targetType: "page",
+    targetId: page.id,
+  });
+
+  await prisma.job.update({
+    where: { id: ctx.jobId },
+    data: { relatedType: "ai_run", relatedId: aiRun.id },
+  });
+
+  await ctx.jobs.appendLog(
+    ctx.jobId,
+    "info",
+    `AI Run ${aiRun.id} angelegt (${AI_TASK_LABELS[payload.taskType]}).`,
+  );
+
+  await aiRuns.markRunning(aiRun.id);
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "Kontext sammeln");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const started = Date.now();
+
+  try {
+    const generated = await generateAiTaskBySlug(repo, {
+      taskType: payload.taskType,
+      worldSlug: payload.worldSlug,
+      pageSlug: payload.pageSlug,
+      providerId: payload.providerId,
+      model: payload.model,
+      userPrompt: payload.userPrompt,
+      options: {
+        allowDmOnly: payload.allowDmOnly ?? settings.localOnly,
+        datenschutzMode: settings.datenschutzMode,
+        localOnly: settings.localOnly,
+        sessionId: payload.sessionId,
+      },
+      apiKeyStore: createApiKeyStoreFromEnv(),
+      useMock,
+    }) as Awaited<ReturnType<typeof generateAiTaskBySlug>> & {
+      prompts: { systemPrompt: string; userPrompt: string };
+    };
+
+    const { context, result, prompts } = generated;
+    const durationMs = Date.now() - started;
+
+    const completedRun = await aiRuns.markCompleted(aiRun.id, {
+      resultText: result.text,
+      resultMeta: {
+        finishReason: result.finishReason ?? null,
+        provider: result.provider,
+        model: result.model,
+      },
+      contextData: JSON.parse(JSON.stringify(context)),
+      systemPrompt: prompts.systemPrompt,
+      userPrompt: prompts.userPrompt,
+      durationMs,
+    });
+
+    const { proposal } = await review.createProposalFromRun({
+      aiRunId: completedRun.id,
+      worldId: world.id,
+      pageId: page.id,
+      sessionId: payload.sessionId,
+      taskType: payload.taskType,
+      resultText: result.text,
+    });
+
+    await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Aufgabe abgeschlossen");
+
+    return {
+      aiRunId: completedRun.id,
+      runId: completedRun.id,
+      context,
+      result,
+      proposal,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - started;
+    const message = error instanceof Error ? error.message : "KI-Aufgabe fehlgeschlagen.";
+    await aiRuns.markFailed(aiRun.id, {
+      errorMessage: message,
+      durationMs,
+    });
+    throw error;
+  }
+}
+
+export interface AiRunJobPayload {
+  taskType: AiTaskType;
+  worldSlug: string;
+  pageSlug: string;
+  providerId: AiProviderId;
+  model: string;
+  userPrompt?: string;
+  allowDmOnly?: boolean;
+  sessionId?: string;
+  useMock?: boolean;
+  discardProposalId?: string;
+}
+
+export interface MailSendJobPayload {
+  to: Array<{ email: string; name?: string }>;
+  subject: string;
+  bodyText?: string;
+  bodyHtml?: string;
+  text?: string;
+  html?: string;
+  worldId?: string | null;
+  templateId?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  confirmDmOnly?: boolean;
+  containsDmOnlyHint?: boolean;
+}
+
+export async function runMailSendJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as MailSendJobPayload;
+  if (!payload.to?.length || !payload.subject) {
+    throw new Error("Mail-Payload unvollständig (Empfänger/Betreff fehlen).");
+  }
+
+  const mailService = createMailService(prisma);
+
+  await ctx.jobs.updateProgress(ctx.jobId, 30, "Mail versenden");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const outcome = await mailService.sendMail({
+    to: payload.to,
+    subject: payload.subject,
+    bodyText: payload.bodyText ?? payload.text ?? "",
+    bodyHtml: payload.bodyHtml ?? payload.html,
+    worldId: payload.worldId ?? null,
+    templateId: payload.templateId ?? null,
+    sourceType: payload.sourceType ?? null,
+    sourceId: payload.sourceId ?? null,
+    confirmDmOnly: payload.confirmDmOnly,
+    containsDmOnlyHint: payload.containsDmOnlyHint,
+  });
+
+  if (!outcome.ok) {
+    throw new Error(outcome.error ?? "Mail-Versand fehlgeschlagen.");
+  }
+
+  return {
+    logId: outcome.log.id,
+    status: outcome.log.status,
+  };
+}
+
+export async function runEmbeddingJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as { documentId?: string; useMock?: boolean };
+  if (!payload.documentId) {
+    throw new Error("documentId fehlt im Embedding-Job.");
+  }
+
+  const brainStore = createBrainStoreService();
+  await ctx.jobs.updateProgress(ctx.jobId, 25, "Chunks und Embeddings berechnen");
+
+  const result = await indexBrainDocument(brainStore, payload.documentId, undefined, {
+    useMock: payload.useMock,
+  });
+
+  return result as unknown as Record<string, unknown>;
+}
+
+export async function runReindexJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as {
+    worldSlug?: string;
+    campaignId?: string | null;
+    useMock?: boolean;
+    force?: boolean;
+  };
+
+  if (!payload.worldSlug) {
+    throw new Error("worldSlug fehlt im Reindex-Job.");
+  }
+
+  const brainStore = createBrainStoreService();
+  await ctx.jobs.updateProgress(ctx.jobId, 10, "Brain-Dokumente laden");
+
+  const result = await reindexBrainWorld(brainStore, payload.worldSlug, undefined, {
+    campaignId: payload.campaignId,
+    useMock: payload.useMock,
+    force: payload.force ?? true,
+  });
+
+  await ctx.jobs.updateProgress(ctx.jobId, 100, "Reindex abgeschlossen");
+
+  return result as unknown as Record<string, unknown>;
+}
+
+export async function runCanonCheckJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as { worldSlug?: string };
+  if (!payload.worldSlug) {
+    throw new Error("worldSlug fehlt im Kanonprüfungs-Job.");
+  }
+
+  const inspector = createWorldInspectorService(prisma);
+  await ctx.jobs.updateProgress(ctx.jobId, 30, "Welt analysieren");
+
+  const report = await inspector.inspectWorld(payload.worldSlug);
+  if (!report) {
+    throw new Error(`Welt ${payload.worldSlug} nicht gefunden.`);
+  }
+
+  const findings = [...report.safetyFindings, ...report.canonFindings];
+
+  return {
+    worldSlug: payload.worldSlug,
+    findingCount: findings.length,
+    criticalCount: findings.filter((f) => f.severity === "critical").length,
+    findings: findings.slice(0, 50),
+  };
+}
+
+export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as RestoreJobPayload;
+  if (!payload.confirmed) {
+    throw new Error("Restore erfordert confirmed: true.");
+  }
+
+  const { bundle, zipBuffer } = await loadBackupForRestore(payload);
+  const db = createPrismaClient();
+
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "Backup wiederherstellen");
+
+  const result = await executeRestore(
+    db,
+    bundle,
+    {
+      confirmed: true,
+      targetWorldSlug: payload.targetWorldSlug,
+      autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
+      allowUpdates: payload.allowUpdates ?? false,
+      skipExisting: payload.skipExisting ?? false,
+    },
+    zipBuffer,
+    process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
+  );
+
+  await db.$disconnect();
+
+  await createActivityLogService(prisma).log({
+    worldSlug: payload.targetWorldSlug ?? null,
+    action: "backup_restored",
+    targetType: "system",
+    targetLabel: payload.backupId ?? payload.filename ?? null,
+    targetHref: "/backup",
+    summary: `Backup wiederhergestellt${payload.targetWorldSlug ? ` (Welt ${payload.targetWorldSlug})` : ""}.`,
+  });
+
+  return { result };
+}
+
+export interface RestoreJobPayload {
+  backupId?: string;
+  contentBase64?: string;
+  filename?: string;
+  confirmed?: boolean;
+  targetWorldSlug?: string;
+  autoResolveSlugConflicts?: boolean;
+  allowUpdates?: boolean;
+  skipExisting?: boolean;
+}
+
+async function loadBackupForRestore(payload: RestoreJobPayload) {
+  if (payload.backupId) {
+    const backups = listStoredBackups();
+    const backup = backups.find(
+      (entry) => entry.id === payload.backupId || entry.filename === payload.backupId,
+    );
+    if (!backup) {
+      throw new Error("Backup wurde nicht gefunden.");
+    }
+    return {
+      bundle: loadBackupFromFile(backup.path),
+      zipBuffer: backup.filename.endsWith(".zip") ? fs.readFileSync(backup.path) : undefined,
+    };
+  }
+
+  if (payload.contentBase64) {
+    const buffer = Buffer.from(payload.contentBase64, "base64");
+    return {
+      bundle: loadBackupFromBuffer(buffer, payload.filename),
+      zipBuffer: payload.filename?.endsWith(".zip") ? buffer : undefined,
+    };
+  }
+
+  throw new Error("backupId oder contentBase64 ist erforderlich.");
+}
+
+export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  switch (ctx.job.type) {
+    case "backup":
+      return runBackupJob(ctx);
+    case "import":
+      return runImportJob(ctx);
+    case "ai_run":
+      return runAiRunJob(ctx);
+    case "mail_send":
+      return runMailSendJob(ctx);
+    case "embedding":
+      return runEmbeddingJob(ctx);
+    case "reindex":
+      return runReindexJob(ctx);
+    case "canon_check":
+      return runCanonCheckJob(ctx);
+    case "backup_restore":
+      return runBackupRestoreJob(ctx);
+    default:
+      throw new Error(`Unbekannter Job-Typ: ${ctx.job.type}`);
+  }
+}

@@ -19,6 +19,16 @@ export {
 } from "./storage";
 
 export {
+  resolveAllDataPaths,
+  resolveBackupsDirFromEnv,
+  resolveDataDir,
+  resolveDatabaseFilePath,
+  resolveExportsDirFromEnv,
+  resolveUploadsDirFromEnv,
+  type ResolvedDataPaths,
+} from "./data-paths";
+
+export {
   PORTAL_ASSET_VISIBILITIES,
   filterAssetsForContext,
   isAssetAccessible,

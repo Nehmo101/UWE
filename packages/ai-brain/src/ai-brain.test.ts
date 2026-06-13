@@ -53,6 +53,8 @@ describe("AI Brain — buildAiContext", () => {
     assert.ok(pageIds.includes(seeded.pages.magisterTurm.id));
     assert.equal(context.primaryPageId, seeded.pages.validori.id);
     assert.ok(context.sources.some((source) => source.pageId === seeded.pages.validori.id));
+    assert.ok(context.debug);
+    assert.equal(context.debug?.audience, "dm_internal");
   });
 
   it("respects visibility when DM-only content is disallowed", async () => {

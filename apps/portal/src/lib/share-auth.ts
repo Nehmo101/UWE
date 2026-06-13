@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getSessionCookieOptions } from "@uwe/auth";
 
 export const SHARE_AUTH_COOKIE_PREFIX = "uwe_share_";
 
@@ -12,15 +13,16 @@ export async function isSharePasswordVerified(token: string): Promise<boolean> {
 }
 
 export function shareAuthCookieOptions(token: string, maxAgeSeconds = 60 * 60 * 24) {
+  const cookie = getSessionCookieOptions();
   return {
     name: shareAuthCookieName(token),
     value: "ok",
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    httpOnly: cookie.httpOnly,
+    sameSite: cookie.sameSite,
+    secure: cookie.secure,
     // Path must cover both /share/[token]/* pages and /api/share/[token]/*
     // file routes; the cookie name is already scoped to the token.
-    path: "/",
+    path: cookie.path,
     maxAge: maxAgeSeconds,
   };
 }

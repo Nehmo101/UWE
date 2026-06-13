@@ -14,6 +14,7 @@ export { getAppRepository } from "./app-repository";
 
 export {
   createUweRepository,
+  createUweRepositoryFromClient,
   createWorld,
   createPage,
   getPageBySlug,
@@ -196,6 +197,26 @@ export {
 export type { UndoOperation, UndoResult } from "./undo-service";
 
 export {
+  AiReviewService,
+  createAiReviewService,
+  allowedApplyModes,
+  buildGeneratedPatch,
+  suggestApplyMode,
+} from "./ai-review-service";
+
+export type {
+  AiProposalApplyMode,
+  AiProposalView,
+  ApplyAiProposalInput,
+  ApplyAiProposalResult,
+  ApplyBrainProposalInput,
+  GeneratedPatch,
+  JsonBrainProposal,
+  RecordAiRunInput,
+  RecordAiRunResult,
+} from "./ai-review-service";
+
+export {
   createInspectorFixService,
   InspectorFixService,
 } from "./inspector-fix-service";
@@ -220,14 +241,39 @@ export {
 
 export type { MigrationStatus } from "./migration-status";
 
-export { getStorageStatus, getSystemStatus } from "./system-status";
+export { getAppRuntimeStatus, getProxyStatus, getStorageStatus, getSystemStatus } from "./system-status";
 
 export type {
+  AppRuntimeStatus,
+  MailStatus,
+  ProxyStatus,
   SeedStatusSummary,
   StorageStatus,
   SystemStatus,
   TrustStatus,
 } from "./system-status";
+
+export {
+  assertAdminStatusHasNoSecrets,
+  getAdminStatus,
+  getAiRunSummaryStatus,
+  getAuthHealthStatus,
+  getBrainStoreHealthStatus,
+  getEmbeddingHealthStatus,
+  getJobsHealthStatus,
+  getMailHealthStatus,
+} from "./admin-status";
+
+export type {
+  AdminStatus,
+  AiRunSummaryItem,
+  AiRunSummaryStatus,
+  AuthHealthStatus,
+  BrainStoreHealthStatus,
+  EmbeddingHealthStatus,
+  JobsHealthStatus,
+  MailHealthStatus,
+} from "./admin-status";
 
 export { buildNextActions } from "./next-actions";
 
@@ -443,6 +489,8 @@ export {
   sanitizeSettingsForClient,
   resolveEffectiveUploadsPath,
   resolveEffectiveBackupsPath,
+  resolveEffectiveExportsPath,
+  getPersistentPathConfiguration,
   isGuestPortalAccessAllowed,
   isPortalGloballyEnabled,
   isPublicSharingEnabled,
@@ -479,6 +527,11 @@ export type {
   StorageSettings,
   BackupSettings,
   PrivacySettings,
+  MailSettings,
+  MailSmtpStatus,
+  PersistentPathConfiguration,
+  PersistentPathEntry,
+  PersistentPathSource,
   ThemeAppearance,
 } from "./settings-service";
 
@@ -532,3 +585,118 @@ export {
 } from "./spotify-connection-service";
 
 export type { SpotifyConnectionStatus } from "./spotify-connection-service";
+
+export {
+  createJobService,
+  JobService,
+  JOB_TYPE_LABELS,
+  JOB_STATUS_LABELS,
+  RETRYABLE_JOB_TYPES,
+} from "./job-service";
+
+export type {
+  EnqueueJobInput,
+  JobLogView,
+  JobSummary,
+  JobView,
+  JobStatus,
+  JobType,
+  ListJobsOptions,
+} from "./job-service";
+
+export {
+  AI_RUN_STATUS_LABELS,
+  AiRunService,
+  createAiRunService,
+  createAiRunServiceFromClient,
+  AiRunStatusEnum,
+} from "./ai-run-service";
+
+export type {
+  AiRunView,
+  CreateAiRunInput,
+  CompleteAiRunInput,
+  FailAiRunInput,
+  ListAiRunsOptions,
+  AiRunStatus,
+} from "./ai-run-service";
+
+export {
+  createBrainStoreService,
+  BrainStoreService,
+  BRAIN_VISIBILITY_LABELS,
+  BRAIN_STATUS_LABELS,
+  BRAIN_SOURCE_LABELS,
+  BRAIN_DOCUMENT_TYPE_LABELS,
+  BRAIN_FACT_TYPE_LABELS,
+  PORTAL_BRAIN_VISIBILITIES,
+  filterBrainByVisibility,
+  isPortalBrainVisibility,
+  BrainDocumentTypeEnum,
+  BrainFactTypeEnum,
+  BrainLinkSourceTypeEnum,
+  BrainLinkTargetTypeEnum,
+  BrainSourceEnum,
+  BrainStatusEnum,
+  BrainVisibilityEnum,
+} from "./brain-store-service";
+
+export type {
+  BrainAccessContext,
+  BrainDocumentWithRelations,
+  BrainFactWithRelations,
+  CreateBrainDocumentInput,
+  UpdateBrainDocumentInput,
+  CreateBrainFactInput,
+  UpdateBrainFactInput,
+  CreateBrainChunkInput,
+  CreateBrainLinkInput,
+  ListBrainDocumentsOptions,
+  ListBrainFactsOptions,
+  SearchableBrainChunk,
+  BrainDocumentType,
+  BrainFactType,
+  BrainLinkSourceType,
+  BrainLinkTargetType,
+  BrainSource,
+  BrainStatus,
+  BrainVisibility,
+} from "./brain-store-service";
+
+export {
+  createMailLogService,
+  MailLogService,
+} from "./mail-log-service";
+
+export type { MailLogEntry, CreateMailLogInput } from "./mail-log-service";
+
+export {
+  createMailTemplateService,
+  MailTemplateService,
+  MAIL_TEMPLATE_SEED_KEY,
+  MAIL_TEMPLATE_SEED_VERSION,
+} from "./mail-template-service";
+
+export type { MailTemplateView, MailTemplateInput } from "./mail-template-service";
+
+export {
+  createMailRecipientService,
+  MailRecipientService,
+} from "./mail-recipient-service";
+
+export type {
+  MailRecipientView,
+  MailRecipientGroupView,
+  MailPlayerContact,
+} from "./mail-recipient-service";
+
+export {
+  createMailService,
+  MailService,
+  getPublicMailConfigStatus,
+  assertMailApiResponseHasNoSecrets,
+} from "./mail-service";
+
+export type { SendMailInput, SendMailResult } from "./mail-service";
+
+export { createMailComposeService, MailComposeService } from "./mail-compose-service";

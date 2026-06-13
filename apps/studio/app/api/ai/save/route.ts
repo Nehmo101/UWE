@@ -1,5 +1,4 @@
 import { postSave } from "../../../../src/lib/ai-handlers";
-import type { AiContextSource, AiProviderId, AiTaskType } from "@uwe/ai-brain";
 import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
 
 export async function POST(request: Request) {
@@ -7,30 +6,22 @@ export async function POST(request: Request) {
   if (authError) return authError;
 
   const body = (await request.json()) as {
+    proposalId: string;
     mode: "idea" | "content_block" | "player_recap";
-    taskType: AiTaskType;
-    worldSlug: string;
-    pageSlug: string;
     title?: string;
-    content: string;
-    providerId: AiProviderId;
-    model: string;
+    content?: string;
     sessionId?: string;
-    sources?: AiContextSource[];
   };
 
-  if (!body.mode || !body.content || !body.worldSlug || !body.pageSlug) {
-    return Response.json(
-      { error: "mode, content, worldSlug und pageSlug sind erforderlich." },
-      { status: 400 },
-    );
+  if (!body.proposalId || !body.mode) {
+    return Response.json({ error: "proposalId und mode sind erforderlich." }, { status: 400 });
   }
 
   try {
     return await postSave(body);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Speichern fehlgeschlagen." },
+      { error: error instanceof Error ? error.message : "Übernahme fehlgeschlagen." },
       { status: 500 },
     );
   }

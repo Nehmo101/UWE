@@ -1,32 +1,54 @@
 import { NextResponse } from "next/server";
 import {
+  createAiReviewService,
+  createAiRunServiceFromClient,
+  createJobService,
   createUweRepository,
-  getNextContentBlockSortOrder,
   getSystemSettings,
+  prisma,
   resolveLocalOnlyMode,
+  type AiRunStatus,
 } from "@uwe/database/server";
 import {
   AiPrivacyError,
+  AiProviderError,
+  AI_TASK_LABELS,
   buildAiContextBySlug,
   createProvider,
   createApiKeyStoreFromEnv,
-  generateAiTaskBySlug,
+  InferenceUrlBlockedError,
   listSessionsForBrain,
   resolveAiBrainSettings,
-  saveAiResultAsContentBlock,
-  saveAiResultAsIdea,
-  saveAiResultAsPlayerRecap,
   SESSION_AWARE_TASKS,
-  type AiContextSource,
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
+import { enqueueAndDispatch, runJob } from "./job-executor";
 
 async function getAiSettingsOverrides() {
   const systemSettings = await getSystemSettings();
   return {
     localOnly: resolveLocalOnlyMode(systemSettings),
     enabled: systemSettings.ai.enabled,
+  };
+}
+
+function aiRuns() {
+  return createAiRunServiceFromClient(prisma);
+}
+
+function aiReview() {
+  return createAiReviewService(prisma);
+}
+
+function serializeRun(run: Awaited<ReturnType<ReturnType<typeof aiRuns>["getById"]>>) {
+  if (!run) return null;
+  return {
+    ...run,
+    createdAt: run.createdAt.toISOString(),
+    updatedAt: run.updatedAt.toISOString(),
+    appliedAt: run.appliedAt?.toISOString() ?? null,
+    discardedAt: run.discardedAt?.toISOString() ?? null,
   };
 }
 
@@ -37,6 +59,12 @@ function jsonError(message: string, status = 400) {
 function handleAiError(error: unknown) {
   if (error instanceof AiPrivacyError) {
     return jsonError(error.message, 403);
+  }
+  if (error instanceof InferenceUrlBlockedError) {
+    return jsonError(error.message, 403);
+  }
+  if (error instanceof AiProviderError) {
+    return jsonError(error.message, 502);
   }
   throw error;
 }
@@ -54,10 +82,14 @@ export async function getModels(providerId: AiProviderId, useMock = false) {
     return jsonError("Local-only-Modus: Cloud-Provider nicht verfügbar.", 403);
   }
 
-  const provider = createProvider(providerId, createApiKeyStoreFromEnv(), { useMock });
-  const models = await provider.listModels();
-  const health = await provider.healthCheck();
-  return NextResponse.json({ models, health });
+  try {
+    const provider = createProvider(providerId, createApiKeyStoreFromEnv(), { useMock });
+    const models = await provider.listModels();
+    const health = await provider.healthCheck();
+    return NextResponse.json({ models, health });
+  } catch (error) {
+    return handleAiError(error);
+  }
 }
 
 export async function getSessions(worldSlug: string, pageSlug?: string) {
@@ -118,112 +150,168 @@ export async function postGenerate(body: {
   allowDmOnly?: boolean;
   sessionId?: string;
   useMock?: boolean;
+  discardProposalId?: string;
+  sync?: boolean;
 }) {
-  try {
-    const repo = createUweRepository();
-    const overrides = await getAiSettingsOverrides();
-    const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
-    const useMock = body.useMock ?? process.env.AI_USE_MOCK === "true";
+  const repo = createUweRepository();
+  const world = await repo.getWorldBySlug(body.worldSlug);
+  const page = await repo.getPageBySlug(body.worldSlug, body.pageSlug);
 
-    const { context, result } = await generateAiTaskBySlug(repo, {
-      taskType: body.taskType,
+  if (!world || !page) {
+    return jsonError("Welt oder Seite nicht gefunden.", 404);
+  }
+
+  const title = `${AI_TASK_LABELS[body.taskType]} · ${body.pageSlug}`;
+
+  try {
+    if (body.sync) {
+      const jobs = createJobService(prisma);
+      const job = await jobs.enqueue({
+        type: "ai_run",
+        title,
+        worldSlug: body.worldSlug,
+        payload: body,
+      });
+      const completed = await runJob(job.id);
+      if (completed?.status === "failed") {
+        return jsonError(completed.errorMessage ?? "Generierung fehlgeschlagen.", 500);
+      }
+      const result = completed?.result as Record<string, unknown> | null;
+      return NextResponse.json({
+        job: completed,
+        ...(result ?? {}),
+        runId: result?.runId,
+        run: result?.runId ? await aiRuns().getById(String(result.runId)).then(serializeRun) : null,
+      });
+    }
+
+    const job = await enqueueAndDispatch({
+      type: "ai_run",
+      title,
       worldSlug: body.worldSlug,
-      pageSlug: body.pageSlug,
-      providerId: body.providerId,
-      model: body.model,
-      userPrompt: body.userPrompt,
-      options: {
-        allowDmOnly: body.allowDmOnly ?? settings.localOnly,
-        datenschutzMode: settings.datenschutzMode,
-        localOnly: settings.localOnly,
-        sessionId: body.sessionId,
-      },
-      apiKeyStore: createApiKeyStoreFromEnv(),
-      useMock,
+      payload: body,
     });
 
-    return NextResponse.json({ context, result });
+    return NextResponse.json({ job }, { status: 202 });
   } catch (error) {
     return handleAiError(error);
   }
 }
 
 export async function postSave(body: {
+  proposalId: string;
   mode: "idea" | "content_block" | "player_recap";
-  taskType: AiTaskType;
-  worldSlug: string;
-  pageSlug: string;
   title?: string;
-  content: string;
-  providerId: AiProviderId;
-  model: string;
+  content?: string;
   sessionId?: string;
-  sources?: AiContextSource[];
 }) {
   try {
-    const repo = createUweRepository();
-    const world = await repo.getWorldBySlug(body.worldSlug);
-    const page = await repo.getPageBySlug(body.worldSlug, body.pageSlug);
-
-    if (!world || !page) {
-      return jsonError("Welt oder Seite nicht gefunden.", 404);
+    if (!body.proposalId || !body.mode) {
+      return jsonError("proposalId und mode sind erforderlich.", 400);
     }
 
-    const sources = body.sources ?? [];
-
-    if (body.mode === "idea") {
-      const idea = await saveAiResultAsIdea(repo, {
-        worldId: world.id,
-        sourcePageId: page.id,
-        title: body.title ?? `KI-Idee: ${page.title}`,
-        content: body.content,
-        taskType: body.taskType,
-        sources,
-        sessionId: body.sessionId,
-        providerId: body.providerId,
-        model: body.model,
-      });
-      return NextResponse.json({ saved: idea, mode: "idea" });
-    }
-
-    if (body.mode === "player_recap") {
-      if (!body.sessionId) {
-        return jsonError("sessionId ist für Spieler-Recap erforderlich.", 400);
-      }
-      if (!SESSION_AWARE_TASKS.includes(body.taskType) && body.taskType !== "generate_player_recap") {
-        return jsonError("Ungültiger Task-Typ für Spieler-Recap.", 400);
-      }
-
-      const saved = await saveAiResultAsPlayerRecap(repo, {
-        sessionId: body.sessionId,
-        content: body.content,
-        taskType: body.taskType,
-        providerId: body.providerId,
-        model: body.model,
-        sources,
-        sourcePageId: page.id,
-      });
-
-      return NextResponse.json({ saved: saved.session, metadata: saved.metadata, mode: "player_recap" });
-    }
-
-    const block = await saveAiResultAsContentBlock(repo, {
-      pageId: page.id,
-      content: body.content,
-      taskType: body.taskType,
-      providerId: body.providerId,
-      model: body.model,
-      sources,
+    const result = await aiReview().applyProposal(body.proposalId, {
+      mode: body.mode,
+      title: body.title,
+      editedText: body.content,
       sessionId: body.sessionId,
-      sourcePageId: page.id,
     });
 
+    if (!result.ok) {
+      return jsonError(result.message, 400);
+    }
+
     return NextResponse.json({
-      saved: block,
-      mode: "content_block",
-      sortOrder: await getNextContentBlockSortOrder(page.id),
+      ok: true,
+      message: result.message,
+      proposal: result.proposal,
+      undoEntryId: result.undoEntryId,
+      appliedTargetType: result.appliedTargetType,
+      appliedTargetId: result.appliedTargetId,
+      mode: body.mode,
     });
   } catch (error) {
     return handleAiError(error);
+  }
+}
+
+export async function postDiscard(body: { proposalId: string; reason?: string }) {
+  if (!body.proposalId) {
+    return jsonError("proposalId ist erforderlich.", 400);
+  }
+
+  const result = await aiReview().discardProposal(body.proposalId, { reason: body.reason });
+  if (!result.ok) {
+    return jsonError(result.message, 400);
+  }
+  return NextResponse.json(result);
+}
+
+export async function getProposal(proposalId: string) {
+  const proposal = await aiReview().getProposal(proposalId);
+  if (!proposal) {
+    return jsonError("Vorschlag nicht gefunden.", 404);
+  }
+  return NextResponse.json({ proposal });
+}
+
+export async function getRuns(query: {
+  worldSlug?: string;
+  pageId?: string;
+  gameSessionId?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const repo = createUweRepository();
+  let worldId: string | undefined;
+
+  if (query.worldSlug) {
+    const world = await repo.getWorldBySlug(query.worldSlug);
+    if (!world) {
+      return jsonError("Welt nicht gefunden.", 404);
+    }
+    worldId = world.id;
+  }
+
+  const { runs, total } = await aiRuns().list({
+    worldId,
+    pageId: query.pageId,
+    gameSessionId: query.gameSessionId,
+    status: query.status as AiRunStatus | undefined,
+    limit: query.limit ?? 50,
+    offset: query.offset ?? 0,
+  });
+
+  return NextResponse.json({
+    runs: runs.map((run) => serializeRun(run)!),
+    total,
+  });
+}
+
+export async function getRun(runId: string) {
+  const run = await aiRuns().getById(runId);
+  if (!run) {
+    return jsonError("AI Run nicht gefunden.", 404);
+  }
+  return NextResponse.json({ run: serializeRun(run) });
+}
+
+export async function patchRun(runId: string, body: { status: "applied" | "discarded" | "cancelled" }) {
+  const runs = aiRuns();
+  const existing = await runs.getById(runId);
+  if (!existing) {
+    return jsonError("AI Run nicht gefunden.", 404);
+  }
+
+  switch (body.status) {
+    case "applied":
+      return NextResponse.json({ run: serializeRun(await runs.markApplied(runId)) });
+    case "discarded":
+      return NextResponse.json({ run: serializeRun(await runs.markDiscarded(runId)) });
+    case "cancelled":
+      return NextResponse.json({ run: serializeRun(await runs.markCancelled(runId)) });
+    default:
+      return jsonError("Ungültiger Status. Erlaubt: applied, discarded, cancelled.", 400);
   }
 }

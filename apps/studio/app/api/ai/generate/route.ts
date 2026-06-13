@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     allowDmOnly?: boolean;
     sessionId?: string;
     useMock?: boolean;
+    discardProposalId?: string;
   };
 
   if (!body.taskType || !body.worldSlug || !body.pageSlug || !body.providerId || !body.model) {

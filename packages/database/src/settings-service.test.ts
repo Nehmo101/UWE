@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
@@ -6,7 +7,9 @@ import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
   createSettingsService,
+  getPersistentPathConfiguration,
   isGuestPortalAccessAllowed,
+  resolveEffectiveExportsPath,
   resolveLocalOnlyMode,
 } from "./settings-service";
 import { createTestDatabaseUrl } from "./test-helpers";
@@ -41,7 +44,7 @@ describe("SettingsService", () => {
       worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
       portal: { guestAccessEnabled: false, publicSharingEnabled: false },
       ai: { localOnlyMode: true },
-      storage: { uploadsPath: "./custom-uploads" },
+      storage: { uploadsPath: "./custom-uploads", exportsPath: "./custom-exports" },
       backup: { backupsPath: "./custom-backups" },
     });
 
@@ -52,7 +55,42 @@ describe("SettingsService", () => {
     assert.equal(reloaded.portal.guestAccessEnabled, false);
     assert.equal(reloaded.ai.localOnlyMode, true);
     assert.equal(reloaded.storage.uploadsPath, "./custom-uploads");
+    assert.equal(reloaded.storage.exportsPath, "./custom-exports");
     assert.equal(reloaded.backup.backupsPath, "./custom-backups");
+  });
+
+  it("resolves effective persistent paths from settings and env", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createSettingsService(db);
+    const base = path.resolve("/tmp/uwe-path-test");
+
+    const previousUploads = process.env.UPLOADS_DIR;
+    delete process.env.UPLOADS_DIR;
+
+    try {
+      await service.updateSettings({
+        storage: { uploadsPath: "./from-settings/uploads", exportsPath: "./from-settings/exports" },
+        backup: { backupsPath: "./from-settings/backups" },
+      });
+
+      const settings = await service.getSettings();
+      assert.equal(
+        resolveEffectiveExportsPath(settings, base),
+        path.resolve(base, "./from-settings/exports"),
+      );
+
+      const config = getPersistentPathConfiguration(settings, base);
+      assert.equal(config.uploads.source, "settings");
+      assert.equal(config.exports.source, "settings");
+      assert.equal(config.backups.source, "settings");
+      assert.ok(config.dataDir.length > 0);
+    } finally {
+      if (previousUploads === undefined) {
+        delete process.env.UPLOADS_DIR;
+      } else {
+        process.env.UPLOADS_DIR = previousUploads;
+      }
+    }
   });
 
   it("uses default visibility when creating pages", async () => {
@@ -197,6 +235,41 @@ describe("SettingsService", () => {
         delete process.env.OPENAI_API_KEY;
       } else {
         process.env.OPENAI_API_KEY = original;
+      }
+    }
+  });
+
+  it("never exposes SMTP password in client settings", async () => {
+    const originalPassword = process.env.SMTP_PASSWORD;
+    const originalUser = process.env.SMTP_USER;
+    const originalHost = process.env.SMTP_HOST;
+    process.env.SMTP_PASSWORD = "smtp-secret-do-not-leak";
+    process.env.SMTP_USER = "mailer@example.org";
+    process.env.SMTP_HOST = "smtp.example.com";
+
+    try {
+      const service = createSettingsService(createPrismaClient(databaseUrl));
+      const clientSettings = await service.getSettingsForClient();
+      const serialized = JSON.stringify(clientSettings);
+
+      assert.ok(!serialized.includes("smtp-secret-do-not-leak"));
+      assert.equal(clientSettings.mail.smtp.passwordConfigured, true);
+      assert.equal(clientSettings.mail.smtp.userConfigured, true);
+    } finally {
+      if (originalPassword === undefined) {
+        delete process.env.SMTP_PASSWORD;
+      } else {
+        process.env.SMTP_PASSWORD = originalPassword;
+      }
+      if (originalUser === undefined) {
+        delete process.env.SMTP_USER;
+      } else {
+        process.env.SMTP_USER = originalUser;
+      }
+      if (originalHost === undefined) {
+        delete process.env.SMTP_HOST;
+      } else {
+        process.env.SMTP_HOST = originalHost;
       }
     }
   });

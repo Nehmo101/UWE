@@ -4,6 +4,7 @@ import { prisma } from "../src/client";
 import { createUweRepository } from "../src/repository";
 import { seedAuthDemoContent, seedAuthUsers } from "../src/auth-seed";
 import { ensureSystemPageTemplates } from "../src/page-template-service";
+import { ensureSystemMailTemplates } from "../src/mail-template-service";
 import { seedTerraWorld } from "../src/terra-seed";
 
 async function main() {
@@ -15,6 +16,13 @@ async function main() {
     templateSeed.applied
       ? "Seeded system page templates."
       : "System page templates already seeded — skipped.",
+  );
+
+  const mailTemplateSeed = await ensureSystemMailTemplates(prisma);
+  console.log(
+    mailTemplateSeed.applied
+      ? "Seeded system mail templates."
+      : "System mail templates already seeded — skipped.",
   );
 
   const result = await seedTerraWorld(repo);

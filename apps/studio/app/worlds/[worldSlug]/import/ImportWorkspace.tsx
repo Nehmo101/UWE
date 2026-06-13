@@ -8,6 +8,7 @@ import type {
   ImportPreviewResult,
   ImportStatus,
 } from "@uwe/knoteforge-import";
+import { waitForJob } from "@/src/lib/poll-job";
 
 const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   new: "Neu",
@@ -142,14 +143,28 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
 
       const data = (await response.json()) as {
         result?: ImportExecuteResult;
+        job?: { id: string; result?: { result?: ImportExecuteResult } };
         error?: string;
       };
 
-      if (!response.ok || !data.result) {
+      if (!response.ok) {
         throw new Error(data.error ?? "Import fehlgeschlagen.");
       }
 
-      setResult(data.result);
+      if (response.status === 202 && data.job?.id) {
+        const job = await waitForJob(data.job.id);
+        const importResult =
+          (job.result as { result?: ImportExecuteResult })?.result ??
+          (job.result as ImportExecuteResult | undefined);
+        if (!importResult) {
+          throw new Error("Import ohne Ergebnis abgeschlossen.");
+        }
+        setResult(importResult);
+      } else if (data.result) {
+        setResult(data.result);
+      } else {
+        throw new Error("Import fehlgeschlagen.");
+      }
     } catch (executeError) {
       setError(
         executeError instanceof Error ? executeError.message : "Import fehlgeschlagen.",

@@ -33,6 +33,9 @@ describe("system status and next actions", () => {
     assert.equal(status.database.ok, true);
     assert.equal(status.migrations.ok, true);
     assert.match(status.version, /^\d+\.\d+\.\d+$/);
+    assert.equal(status.app.ok, true);
+    assert.equal(typeof status.app.nodeEnv, "string");
+    assert.equal(typeof status.app.production, "boolean");
     assert.equal(status.seeds.pageTemplatesSeeded, true);
     assert.equal(status.trust.studioLogin, "none-by-design");
     assert.equal(typeof status.trust.studioApiTokenConfigured, "boolean");
@@ -40,6 +43,14 @@ describe("system status and next actions", () => {
     assert.equal(typeof status.trust.authSecretLooksWeak, "boolean");
     assert.equal(typeof status.trust.runDbSeedDisabled, "boolean");
     assert.equal(typeof status.trust.publicPortalSharingEnabled, "boolean");
+    assert.equal(typeof status.storage.exportsWritable, "boolean");
+    assert.ok(
+      status.storage.databaseFileExists === null ||
+        typeof status.storage.databaseFileExists === "boolean",
+    );
+    assert.ok(status.storage.paths.uploadsDir.length > 0);
+    assert.ok(status.storage.paths.backupsDir.length > 0);
+    assert.ok(status.storage.paths.exportsDir.length > 0);
     assert.ok(status.rateLimiter.mode.length > 0);
 
     // Hard rule: the status must never contain token/secret values.

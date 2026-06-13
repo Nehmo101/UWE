@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
+import { getSessionCookieOptions, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
 import { checkRateLimit, clientIpFromHeaders, resetRateLimit } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -38,10 +38,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
+      ...getSessionCookieOptions(),
       expires: sessionExpiresAt(),
     });
 

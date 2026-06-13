@@ -13,6 +13,10 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   create_encounter: "Encounter erstellen",
   improve_lore_text: "Lore verbessern",
   prepare_canon_check: "Kanonprüfung vorbereiten",
+  prepare_next_session: "Nächste Session vorbereiten",
+  create_player_handout: "Spieler-Handout erstellen",
+  fill_dungeon_room: "Dungeonraum füllen",
+  prepare_mail_draft: "Mail-Entwurf vorbereiten",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -40,6 +44,14 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Verbessere den Lore-Text stilistisch und strukturell, ohne Kanon-Fakten zu verändern.",
   prepare_canon_check:
     "Bereite eine Kanonprüfung vor: Liste Abweichungen, fehlende Quellen, widersprüchliche Aussagen und Empfehlungen zur Kanonisierung.",
+  prepare_next_session:
+    "Bereite die nächste Session vor: Agenda, Szenen, NPCs, mögliche Encounters, offene Plot-Hooks und Vorbereitungshinweise für den Spielleiter.",
+  create_player_handout:
+    "Erstelle ein spielerfreundliches Handout (In-Game-Dokument oder Session-Zusammenfassung). Keine GM-Geheimnisse, keine DM-only-Inhalte.",
+  fill_dungeon_room:
+    "Fülle einen Dungeonraum mit Atmosphäre, Beschreibung, Interaktionen, Gefahren, Loot-Hinweisen und GM-Notizen. Passend zum bestehenden Setting.",
+  prepare_mail_draft:
+    "Bereite einen Mail-Entwurf für Spieler vor (Betreff + Text). Nur spieler-sichere Inhalte, keine DM-only-Geheimnisse. Keine automatische Versendung.",
 };
 
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {
@@ -52,10 +64,12 @@ export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPr
     context.promptContext,
     "",
     "Quellen:",
-    ...context.sources.map(
-      (s) =>
-        `- Seite ${s.pageId}${s.blockIds?.length ? ` (Blöcke: ${s.blockIds.join(", ")})` : ""}`,
-    ),
+    ...context.sources.map((s) => {
+      const parts = [`Seite ${s.pageId}`];
+      if (s.blockIds?.length) parts.push(`Blöcke: ${s.blockIds.join(", ")}`);
+      if (s.brainEntryId) parts.push(`Brain: ${s.brainEntryId}`);
+      return `- ${parts.join(" — ")}`;
+    }),
   ];
 
   if (context.sessionId) {
@@ -75,10 +89,14 @@ export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPr
 }
 
 export function buildTaskSystemPrompt(taskType: AiTaskType): string {
-  const extra =
-    taskType === "generate_player_recap"
-      ? " Enthülle niemals GM-Geheimnisse, DM-only-Inhalte oder versteckte Plot-Twists."
-      : "";
+  const playerSafe = [
+    "generate_player_recap",
+    "create_player_handout",
+    "prepare_mail_draft",
+  ].includes(taskType);
+  const extra = playerSafe
+    ? " Enthülle niemals GM-Geheimnisse, DM-only-Inhalte oder versteckte Plot-Twists."
+    : "";
 
   return [
     "Du bist der AI-Assistent des Universellen Welten-Editors (UWE) für Pen-&-Paper-Kampagnen.",

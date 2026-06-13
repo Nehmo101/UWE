@@ -63,10 +63,12 @@ describe("production safety helpers", () => {
     const previousAuth = process.env.AUTH_SECRET;
     const previousSeed = process.env.RUN_DB_SEED;
     const previousToken = process.env.STUDIO_API_TOKEN;
+    const previousPublicUrl = process.env.PUBLIC_APP_URL;
 
     process.env.AUTH_SECRET = "change-me";
     delete process.env.STUDIO_API_TOKEN;
     process.env.RUN_DB_SEED = "auto";
+    process.env.PUBLIC_APP_URL = "https://uweandragons.org";
 
     try {
       const warnings = await getProductionSafetyWarnings(createPrismaClient(databaseUrl));
@@ -76,6 +78,11 @@ describe("production safety helpers", () => {
       assert.ok(warnings.some((warning) => warning.id === "production:run-db-seed"));
       assert.ok(warnings.some((warning) => warning.id === "production:studio-api-token"));
       assert.ok(warnings.some((warning) => warning.id === "production:studio-exposure"));
+      assert.ok(warnings.some((warning) => warning.id === "production:cloudflare-tunnel-scope"));
+      assert.equal(
+        warnings.find((warning) => warning.id === "production:studio-api-token")?.severity,
+        "critical",
+      );
       assert.ok(!serialized.includes("change-me"));
     } finally {
       if (previousAuth === undefined) {
@@ -92,6 +99,11 @@ describe("production safety helpers", () => {
         delete process.env.STUDIO_API_TOKEN;
       } else {
         process.env.STUDIO_API_TOKEN = previousToken;
+      }
+      if (previousPublicUrl === undefined) {
+        delete process.env.PUBLIC_APP_URL;
+      } else {
+        process.env.PUBLIC_APP_URL = previousPublicUrl;
       }
     }
   });

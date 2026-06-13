@@ -1,5 +1,13 @@
 import path from "node:path";
 import type { CanonicalStatus, Prisma, PrismaClient, Visibility } from "./generated/prisma/client";
+import {
+  resolveBackupsDirFromEnv,
+  resolveDataDir,
+  resolveDatabaseFilePath,
+  resolveExportsDirFromEnv,
+  resolveUploadsDirFromEnv,
+} from "@uwe/assets";
+import { getMailConfigStatus } from "@uwe/mail";
 import { prisma } from "./client";
 
 export type ThemeAppearance = "dark" | "light" | "system";
@@ -38,6 +46,7 @@ export interface AiSettings {
 
 export interface StorageSettings {
   uploadsPath: string;
+  exportsPath: string;
 }
 
 export interface BackupSettings {
@@ -50,12 +59,32 @@ export interface PrivacySettings {
   restrictPublicExport: boolean;
 }
 
+export interface MailSmtpStatus {
+  host: string | null;
+  port: number | null;
+  secure: boolean;
+  userConfigured: boolean;
+  passwordConfigured: boolean;
+  fromAddress: string | null;
+  configured: boolean;
+  useMock: boolean;
+  message: string;
+}
+
+export interface MailSettings {
+  enabled: boolean;
+  fromDisplayName: string;
+  logBody: boolean;
+  smtp: MailSmtpStatus;
+}
+
 export interface UweSystemSettings {
   app: AppSettings;
   worlds: WorldSettings;
   campaigns: CampaignSettings;
   portal: PortalSettings;
   ai: AiSettings;
+  mail: MailSettings;
   storage: StorageSettings;
   backup: BackupSettings;
   privacy: PrivacySettings;
@@ -67,12 +96,39 @@ export type UweSystemSettingsUpdate = {
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
   ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled">>;
+  mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody">>;
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
   privacy?: Partial<PrivacySettings>;
 };
 
 const SETTINGS_ID = "default";
+
+function buildMailSettings(
+  stored?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody">>,
+): MailSettings {
+  const smtpStatus = getMailConfigStatus(process.env, {
+    enabled: stored?.enabled,
+    logBody: stored?.logBody,
+  });
+
+  return {
+    enabled: stored?.enabled ?? smtpStatus.enabled,
+    fromDisplayName: stored?.fromDisplayName?.trim() ?? "",
+    logBody: stored?.logBody ?? smtpStatus.logBody,
+    smtp: {
+      host: smtpStatus.host,
+      port: smtpStatus.port,
+      secure: smtpStatus.secure,
+      userConfigured: smtpStatus.userConfigured,
+      passwordConfigured: smtpStatus.passwordConfigured,
+      fromAddress: smtpStatus.fromAddress,
+      configured: smtpStatus.configured,
+      useMock: smtpStatus.useMock,
+      message: smtpStatus.message,
+    },
+  };
+}
 
 export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   app: {
@@ -95,8 +151,10 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     enabled: true,
     providerKeyPlaceholders: buildProviderKeyPlaceholders(),
   },
+  mail: buildMailSettings(),
   storage: {
     uploadsPath: "",
+    exportsPath: "",
   },
   backup: {
     backupsPath: "",
@@ -163,6 +221,9 @@ function mergeSettings(
         : {}),
       providerKeyPlaceholders: buildProviderKeyPlaceholders(),
     },
+    mail: buildMailSettings(
+      isRecord(stored.mail) ? (stored.mail as unknown as MailSettings) : undefined,
+    ),
     storage: {
       ...base.storage,
       ...(isRecord(stored.storage) ? (stored.storage as unknown as StorageSettings) : {}),
@@ -183,10 +244,19 @@ function mergeSettings(
 function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
   return {
     ...settings,
+    storage: {
+      uploadsPath: settings.storage.uploadsPath ?? "",
+      exportsPath: settings.storage.exportsPath ?? "",
+    },
     ai: {
       ...settings.ai,
       providerKeyPlaceholders: buildProviderKeyPlaceholders(),
     },
+    mail: buildMailSettings({
+      enabled: settings.mail.enabled,
+      fromDisplayName: settings.mail.fromDisplayName,
+      logBody: settings.mail.logBody,
+    }),
     privacy: {
       ...settings.privacy,
       maskSecretsInUi: true,
@@ -223,14 +293,7 @@ export function resolveEffectiveUploadsPath(
     return process.env.UWE_UPLOADS_ROOT;
   }
 
-  if (process.env.UPLOADS_DIR) {
-    const uploadsDir = process.env.UPLOADS_DIR;
-    return path.isAbsolute(uploadsDir)
-      ? uploadsDir
-      : path.resolve(baseDir ?? process.cwd(), uploadsDir);
-  }
-
-  return path.join(baseDir ?? process.cwd(), "uploads");
+  return resolveUploadsDirFromEnv(baseDir);
 }
 
 export function resolveEffectiveBackupsPath(
@@ -244,14 +307,83 @@ export function resolveEffectiveBackupsPath(
       : path.resolve(baseDir ?? process.cwd(), configured);
   }
 
-  if (process.env.BACKUPS_DIR) {
-    const backupsDir = process.env.BACKUPS_DIR;
-    return path.isAbsolute(backupsDir)
-      ? backupsDir
-      : path.resolve(baseDir ?? process.cwd(), backupsDir);
+  return resolveBackupsDirFromEnv(baseDir);
+}
+
+export function resolveEffectiveExportsPath(
+  settings: UweSystemSettings,
+  baseDir?: string,
+): string {
+  const configured = settings.storage.exportsPath.trim();
+  if (configured) {
+    return path.isAbsolute(configured)
+      ? configured
+      : path.resolve(baseDir ?? process.cwd(), configured);
   }
 
-  return path.join(baseDir ?? process.cwd(), "data", "backups");
+  return resolveExportsDirFromEnv(baseDir);
+}
+
+export type PersistentPathSource = "settings" | "env" | "default";
+
+export interface PersistentPathEntry {
+  effectivePath: string;
+  source: PersistentPathSource;
+  settingsValue: string;
+}
+
+export interface PersistentPathConfiguration {
+  dataDir: string;
+  databaseFile: string | null;
+  uploads: PersistentPathEntry;
+  backups: PersistentPathEntry;
+  exports: PersistentPathEntry;
+}
+
+function resolvePathSource(settingsValue: string, envKeys: readonly string[]): PersistentPathSource {
+  if (settingsValue.trim()) {
+    return "settings";
+  }
+
+  for (const key of envKeys) {
+    if (process.env[key]?.trim()) {
+      return "env";
+    }
+  }
+
+  return "default";
+}
+
+/** Effective persistent paths for Studio settings UI and diagnostics. */
+export function getPersistentPathConfiguration(
+  settings: UweSystemSettings,
+  baseDir?: string,
+): PersistentPathConfiguration {
+  const base = baseDir ?? process.cwd();
+
+  return {
+    dataDir: resolveDataDir(base),
+    databaseFile: resolveDatabaseFilePath(base),
+    uploads: {
+      settingsValue: settings.storage.uploadsPath,
+      effectivePath: resolveEffectiveUploadsPath(settings, base),
+      source: resolvePathSource(settings.storage.uploadsPath, [
+        "UWE_UPLOADS_DIR",
+        "UWE_UPLOADS_ROOT",
+        "UPLOADS_DIR",
+      ]),
+    },
+    backups: {
+      settingsValue: settings.backup.backupsPath,
+      effectivePath: resolveEffectiveBackupsPath(settings, base),
+      source: resolvePathSource(settings.backup.backupsPath, ["UWE_BACKUP_DIR", "BACKUPS_DIR"]),
+    },
+    exports: {
+      settingsValue: settings.storage.exportsPath,
+      effectivePath: resolveEffectiveExportsPath(settings, base),
+      source: resolvePathSource(settings.storage.exportsPath, ["UWE_EXPORT_DIR", "EXPORTS_DIR"]),
+    },
+  };
 }
 
 export function isGuestPortalAccessAllowed(
@@ -310,6 +442,11 @@ export class SettingsService {
         ...update.ai,
         providerKeyPlaceholders: buildProviderKeyPlaceholders(),
       },
+      mail: buildMailSettings({
+        enabled: update.mail?.enabled ?? current.mail.enabled,
+        fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,
+        logBody: update.mail?.logBody ?? current.mail.logBody,
+      }),
       storage: { ...current.storage, ...update.storage },
       backup: { ...current.backup, ...update.backup },
       privacy: { ...current.privacy, ...update.privacy },

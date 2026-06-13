@@ -15,11 +15,13 @@ export abstract class BaseHttpProvider implements AiProvider {
   constructor(
     protected readonly baseUrl: string,
     protected readonly apiKey?: string,
+    protected readonly timeoutMs = 120_000,
   ) {}
 
   protected async fetchJson<T>(
     path: string,
     init: RequestInit = {},
+    timeoutMs = this.timeoutMs,
   ): Promise<T> {
     const url = `${this.baseUrl.replace(/\/$/, "")}${path}`;
     const headers: Record<string, string> = {
@@ -31,20 +33,43 @@ export abstract class BaseHttpProvider implements AiProvider {
       headers.Authorization = `Bearer ${this.apiKey}`;
     }
 
-    const response = await fetch(url, {
-      ...init,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      const body = await response.text();
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new AiProviderError(
+          `${this.id} request failed (${response.status}): ${body.slice(0, 200)}`,
+          this.id,
+        );
+      }
+
+      return response.json() as Promise<T>;
+    } catch (error) {
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new AiProviderError(
+          `${this.id} Anfrage abgebrochen nach ${Math.round(timeoutMs / 1000)}s (AI_INFERENCE_TIMEOUT_SECONDS). RTX antwortet nicht rechtzeitig.`,
+          this.id,
+        );
+      }
+      const endpoint = this.baseUrl.replace(/\/$/, "");
       throw new AiProviderError(
-        `${this.id} request failed (${response.status}): ${body.slice(0, 200)}`,
+        `${this.id} auf ${endpoint} nicht erreichbar. RTX/Ollama/LM Studio offline oder Netzwerk blockiert.`,
         this.id,
       );
+    } finally {
+      clearTimeout(timeout);
     }
-
-    return response.json() as Promise<T>;
   }
 
   abstract listModels(): Promise<AiModel[]>;

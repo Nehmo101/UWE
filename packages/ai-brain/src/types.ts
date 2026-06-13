@@ -20,17 +20,32 @@ export type AiTaskType =
   | "create_location"
   | "create_encounter"
   | "improve_lore_text"
-  | "prepare_canon_check";
+  | "prepare_canon_check"
+  | "prepare_next_session"
+  | "create_player_handout"
+  | "fill_dungeon_room"
+  | "prepare_mail_draft";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [
   "summarize_session",
   "generate_player_recap",
   "find_open_threads",
+  "prepare_next_session",
+  "prepare_mail_draft",
 ];
 
 /** Tasks that must never receive DM-only context (output is player-facing). */
-export const PLAYER_SAFE_TASKS: AiTaskType[] = ["generate_player_recap"];
+export const PLAYER_SAFE_TASKS: AiTaskType[] = [
+  "generate_player_recap",
+  "create_player_handout",
+  "prepare_mail_draft",
+];
+
+/** Audience for context visibility filtering. */
+export type ContextAudience = "dm_internal" | "player_visible" | "mail";
+
+export type BrainVisibility = "dm_only" | "player_visible" | "public";
 
 export interface AiModel {
   id: string;
@@ -116,6 +131,51 @@ export interface AiContextPage {
 export interface AiContextSource {
   pageId: string;
   blockIds?: string[];
+  brainEntryId?: string;
+}
+
+export interface AiContextWorld {
+  worldId: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+export interface AiContextCampaign {
+  campaignId: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+export interface AiContextBrainEntry {
+  entryId: string;
+  title: string;
+  content: string;
+  visibility: BrainVisibility;
+  sourceType: string;
+  objectRef?: string | null;
+  trustLevel?: string | null;
+}
+
+export interface AiContextDebugItem {
+  kind: "world" | "campaign" | "session" | "page" | "brain";
+  id: string;
+  title: string;
+  visibility?: string;
+  charCount: number;
+  included: boolean;
+  reason?: string;
+}
+
+export interface AiContextDebug {
+  audience: ContextAudience;
+  allowDmOnly: boolean;
+  maxChars: number;
+  totalChars: number;
+  truncated: boolean;
+  items: AiContextDebugItem[];
+  collectedAt: string;
 }
 
 export interface AiContextSession {
@@ -138,12 +198,16 @@ export interface AiContext {
   primaryPageId: string;
   sessionId?: string;
   session?: AiContextSession;
+  world?: AiContextWorld;
+  campaign?: AiContextCampaign;
+  brainEntries?: AiContextBrainEntry[];
   pages: AiContextPage[];
   sources: AiContextSource[];
   promptContext: string;
   truncated: boolean;
   datenschutzMode: boolean;
   allowDmOnly: boolean;
+  debug?: AiContextDebug;
 }
 
 export interface BuildAiContextOptions {
@@ -153,6 +217,7 @@ export interface BuildAiContextOptions {
   datenschutzMode?: boolean;
   localOnly?: boolean;
   sessionId?: string;
+  audience?: ContextAudience;
 }
 
 export interface ApiKeyStore {

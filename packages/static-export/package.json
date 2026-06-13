@@ -16,6 +16,7 @@
     "export": "tsx src/cli.ts"
   },
   "dependencies": {
+    "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
     "dotenv": "^17.4.2"
   },

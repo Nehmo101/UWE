@@ -178,3 +178,48 @@ body {
 .uwe-page-table-wrap {
   overflow-x: auto;
 }
+
+.uwe-brain-summary {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 1.25rem;
+}
+
+.uwe-brain-section {
+  margin-bottom: 2rem;
+}
+
+.uwe-brain-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.uwe-brain-create-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.uwe-brain-create-form,
+.uwe-brain-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.uwe-brain-create-form h2,
+.uwe-brain-edit-form h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.uwe-brain-meta {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}

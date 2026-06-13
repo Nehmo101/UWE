@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { PREVIEW_COOKIE_NAME, canPreviewAsPlayer } from "@uwe/auth";
+import {
+  getSessionCookieOptions,
+  PREVIEW_COOKIE_NAME,
+  canPreviewAsPlayer,
+} from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 
 export async function POST(request: Request) {
@@ -35,10 +39,7 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   if (previewAsUserId) {
     cookieStore.set(PREVIEW_COOKIE_NAME, previewAsUserId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
+      ...getSessionCookieOptions(),
     });
   } else {
     cookieStore.delete(PREVIEW_COOKIE_NAME);

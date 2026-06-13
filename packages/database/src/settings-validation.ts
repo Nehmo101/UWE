@@ -27,6 +27,7 @@ const TOP_LEVEL_KEYS = new Set([
   "campaigns",
   "portal",
   "ai",
+  "mail",
   "storage",
   "backup",
   "privacy",
@@ -37,7 +38,8 @@ const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
-const STORAGE_KEYS = new Set(["uploadsPath"]);
+const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody"]);
+const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 
@@ -270,19 +272,55 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
     }
   }
 
-  if ("storage" in body) {
-    const sectionErrors = validateSection(body.storage, STORAGE_KEYS, "settings.storage", (key, value, sectionErrors) => {
-      if (key === "uploadsPath") {
-        requireSafePathString(value, "settings.storage.uploadsPath", sectionErrors);
+  if ("mail" in body) {
+    const sectionErrors = validateSection(body.mail, MAIL_KEYS, "settings.mail", (key, value, sectionErrors) => {
+      if (key === "enabled" || key === "logBody") {
+        requireBoolean(value, `settings.mail.${key}`, sectionErrors);
+      }
+      if (key === "fromDisplayName") {
+        if (typeof value !== "string") {
+          sectionErrors.push("settings.mail.fromDisplayName muss ein String sein.");
+        } else if (value.length > 120) {
+          sectionErrors.push("settings.mail.fromDisplayName ist zu lang (max. 120 Zeichen).");
+        }
       }
     });
     errors.push(...sectionErrors);
-    if (
-      sectionErrors.length === 0 &&
-      isRecord(body.storage) &&
-      body.storage.uploadsPath !== undefined
-    ) {
-      update.storage = { uploadsPath: body.storage.uploadsPath as string };
+    if (sectionErrors.length === 0 && isRecord(body.mail)) {
+      const mail: NonNullable<UweSystemSettingsUpdate["mail"]> = {};
+      if (body.mail.enabled !== undefined) {
+        mail.enabled = body.mail.enabled as boolean;
+      }
+      if (body.mail.fromDisplayName !== undefined) {
+        mail.fromDisplayName = body.mail.fromDisplayName as string;
+      }
+      if (body.mail.logBody !== undefined) {
+        mail.logBody = body.mail.logBody as boolean;
+      }
+      if (Object.keys(mail).length > 0) {
+        update.mail = mail;
+      }
+    }
+  }
+
+  if ("storage" in body) {
+    const sectionErrors = validateSection(body.storage, STORAGE_KEYS, "settings.storage", (key, value, sectionErrors) => {
+      if (key === "uploadsPath" || key === "exportsPath") {
+        requireSafePathString(value, `settings.storage.${key}`, sectionErrors);
+      }
+    });
+    errors.push(...sectionErrors);
+    if (sectionErrors.length === 0 && isRecord(body.storage)) {
+      const storage: NonNullable<UweSystemSettingsUpdate["storage"]> = {};
+      if (body.storage.uploadsPath !== undefined) {
+        storage.uploadsPath = body.storage.uploadsPath as string;
+      }
+      if (body.storage.exportsPath !== undefined) {
+        storage.exportsPath = body.storage.exportsPath as string;
+      }
+      if (Object.keys(storage).length > 0) {
+        update.storage = storage;
+      }
     }
   }
 

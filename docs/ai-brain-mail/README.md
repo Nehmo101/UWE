@@ -24,6 +24,7 @@ Er darf keine UWE-Daten dauerhaft speichern und ist nicht öffentlich erreichbar
 | [IMPLEMENTATION_PACKAGES.md](IMPLEMENTATION_PACKAGES.md) | Sinnvoll aufgeteilte Umsetzungspakete für Cursor |
 | [CURSOR_PROMPTS.md](CURSOR_PROMPTS.md) | Copy-Paste-Prompts für Cursor mit Verweisen auf diese Doku |
 | [ENV_AND_DEPLOYMENT.md](ENV_AND_DEPLOYMENT.md) | ENV-Konzept, Cloudflare, alter Laptop, RTX-Rechner |
+| [SMOKE_TESTS.md](SMOKE_TESTS.md) | P13 Smoke-Checks, QA-Matrix, Backup-Hinweise |
 
 ## Kurzfassung
 

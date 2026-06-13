@@ -69,7 +69,7 @@ describe("validateSettingsUpdate", () => {
 
   it("rejects unsafe storage paths", () => {
     const result = validateSettingsUpdate({
-      storage: { uploadsPath: "../../etc/passwd" },
+      storage: { uploadsPath: "../../etc/passwd", exportsPath: "C:\\Windows\\System32" },
       backup: { backupsPath: "/etc/shadow" },
     });
 
@@ -77,7 +77,19 @@ describe("validateSettingsUpdate", () => {
     if (result.ok) return;
 
     assert.ok(result.errors.some((error) => error.includes("settings.storage.uploadsPath")));
+    assert.ok(result.errors.some((error) => error.includes("settings.storage.exportsPath")));
     assert.ok(result.errors.some((error) => error.includes("settings.backup.backupsPath")));
+  });
+
+  it("accepts exportsPath in storage updates", () => {
+    const result = validateSettingsUpdate({
+      storage: { exportsPath: "./exports/custom" },
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.equal(result.value.storage?.exportsPath, "./exports/custom");
   });
 
   it("rejects disabling maskSecretsInUi", () => {

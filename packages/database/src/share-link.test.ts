@@ -82,7 +82,7 @@ describe("ShareLinkService", () => {
     assert.match(view.html, /Spieler sichtbarer Text/);
   });
 
-  it("exposes dm_only blocks on an explicitly shared page", async () => {
+  it("does not expose dm_only blocks on shared pages by default", async () => {
     const { world, page, link } = await seedSharedPage("blocks");
     const repo = createUweRepository(databaseUrl);
 
@@ -95,11 +95,40 @@ describe("ShareLinkService", () => {
     });
 
     assert.ok(view);
-    assert.match(view.html, /Geheime Fallen/);
-    assert.equal(view.page.content.includes("Geheime Fallen"), true);
+    assert.match(view.html, /Spieler sichtbarer Text/);
+    assert.doesNotMatch(view.html, /Geheime Fallen/);
+    assert.equal(view.page.content.includes("Geheime Fallen"), false);
   });
 
-  it("exposes dm_only page content via filterPageForShare", async () => {
+  it("exposes dm_only blocks on shared pages when PLAYER_PREVIEW_ALLOW_DM_ONLY=true", async () => {
+    const previous = process.env.PLAYER_PREVIEW_ALLOW_DM_ONLY;
+    process.env.PLAYER_PREVIEW_ALLOW_DM_ONLY = "true";
+
+    try {
+      const { world, page, link } = await seedSharedPage("blocks-opt-in");
+      const repo = createUweRepository(databaseUrl);
+
+      const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+      assert.ok(access);
+
+      const view = await buildPageView(repo, world.slug, page.slug, "share", {
+        shareGrant: access!.grant,
+        shareToken: link.token,
+      });
+
+      assert.ok(view);
+      assert.match(view.html, /Geheime Fallen/);
+      assert.equal(view.page.content.includes("Geheime Fallen"), true);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.PLAYER_PREVIEW_ALLOW_DM_ONLY;
+      } else {
+        process.env.PLAYER_PREVIEW_ALLOW_DM_ONLY = previous;
+      }
+    }
+  });
+
+  it("filters dm_only blocks in filterPageForShare by default", async () => {
     const { link } = await seedSharedPage("filter");
     const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
     assert.ok(access);
@@ -107,8 +136,8 @@ describe("ShareLinkService", () => {
 
     const filtered = shareService.filterPageForShare(access.target.page, access.grant);
     assert.ok(filtered);
-    assert.equal(filtered.contentBlocks.length, 2);
-    assert.ok(filtered.contentBlocks.some((block) => block.visibility === "dm_only"));
+    assert.equal(filtered.contentBlocks.length, 1);
+    assert.equal(filtered.contentBlocks[0]?.visibility, "player_visible");
   });
 
   it("rejects disabled share links", async () => {
@@ -209,6 +238,12 @@ describe("ShareLinkService", () => {
           {
             type: "rich_text",
             sortOrder: 0,
+            visibility: "player_visible",
+            content: "Spieler-Hinweis mit Link nach [[Anderer Geheimort]].",
+          },
+          {
+            type: "gm_note",
+            sortOrder: 1,
             visibility: "dm_only",
             content: "Fluchtweg nach [[Anderer Geheimort]].",
           },
@@ -252,7 +287,8 @@ describe("ShareLinkService", () => {
     });
 
     assert.ok(view);
-    assert.match(view.html, /Fluchtweg/);
+    assert.match(view.html, /Spieler-Hinweis/);
+    assert.doesNotMatch(view.html, /Fluchtweg/);
     assert.doesNotMatch(view.html, /Anderer Geheimort/);
     assert.doesNotMatch(view.html, /Nur für den DM/);
 
