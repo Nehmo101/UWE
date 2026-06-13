@@ -46,11 +46,12 @@ export function buildShortcutScript(
   targetScript: string,
   installRoot: string,
   action = "start",
+  scriptArgs = "",
 ): string {
   return [
     "@echo off",
     `cd /d "${installRoot}"`,
-    `powershell -NoProfile -ExecutionPolicy Bypass -File "${targetScript}" -Action ${action} -InstallRoot "${installRoot}"`,
+    `powershell -NoProfile -ExecutionPolicy Bypass -File "${targetScript}" -Action ${action} -InstallRoot "${installRoot}" ${scriptArgs}`,
     "",
   ].join("\r\n");
 }
@@ -112,8 +113,8 @@ export function createDesktopShortcut(
   dryRun = false,
 ): CommandResult {
   const desktop = getDesktopFolder();
-  const shortcutPath = path.join(desktop, "UWE Launcher.cmd");
-  const content = buildShortcutScript(launcherScript, installRoot);
+  const shortcutPath = path.join(desktop, "UWE starten.cmd");
+  const content = buildShortcutScript(launcherScript, installRoot, "start");
 
   if (!dryRun) {
     fs.writeFileSync(shortcutPath, content, "utf8");
@@ -137,8 +138,8 @@ export function createStartMenuShortcut(
   }
 
   const uweFolder = path.join(programs, "UWE");
-  const shortcutPath = path.join(uweFolder, "UWE Launcher.cmd");
-  const content = buildShortcutScript(launcherScript, installRoot);
+  const shortcutPath = path.join(uweFolder, "UWE starten.cmd");
+  const content = buildShortcutScript(launcherScript, installRoot, "start");
 
   if (!dryRun) {
     fs.mkdirSync(uweFolder, { recursive: true });
@@ -148,6 +149,26 @@ export function createStartMenuShortcut(
   return {
     ok: true,
     message: `Start Menu shortcut created: ${shortcutPath}`,
+    details: { shortcutPath },
+  };
+}
+
+export function createControlPanelShortcut(
+  installRoot: string,
+  controlPanelScript: string,
+  dryRun = false,
+): CommandResult {
+  const desktop = getDesktopFolder();
+  const shortcutPath = path.join(desktop, "UWE Steuerung.cmd");
+  const content = buildShortcutScript(controlPanelScript, installRoot, "panel");
+
+  if (!dryRun) {
+    fs.writeFileSync(shortcutPath, content, "utf8");
+  }
+
+  return {
+    ok: true,
+    message: `Control panel shortcut created: ${shortcutPath}`,
     details: { shortcutPath },
   };
 }

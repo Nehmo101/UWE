@@ -1,13 +1,24 @@
 #!/usr/bin/env node
 import path from "node:path";
 
+import { createInstallBackup, createDataSnapshot, restoreInstallBackup } from "./backup-restore.js";
 import { defaultPortConfig } from "./config.js";
+import { createDiagnosticsPackage } from "./diagnostics.js";
+import { doctorToCommandResult, runDoctor } from "./doctor.js";
 import { installUwe } from "./install.js";
-import { startUwe, stopUwe, statusUwe } from "./launcher.js";
+import {
+  startUwe,
+  stopUwe,
+  restartUwe,
+  statusUwe,
+  openUweInBrowser,
+} from "./launcher.js";
 import {
   defaultInstallRoot,
   resolveInstallPaths,
 } from "./paths.js";
+import { installPnpmViaCorepack, repairPnpmPath } from "./pnpm-path.js";
+import { runRepair } from "./repair.js";
 import {
   createDesktopShortcut,
   createStartMenuShortcut,
@@ -16,6 +27,8 @@ import {
 } from "./startup.js";
 import { runSystemCheck } from "./system-check.js";
 import { readInstallerState } from "./state.js";
+import { checkForUpdate, getInstalledVersion, runUpdate } from "./update.js";
+import { uninstallUwe } from "./uninstall.js";
 import type { InstallMode } from "./types.js";
 
 interface ParsedArgs {
@@ -24,8 +37,14 @@ interface ParsedArgs {
   mode: InstallMode;
   bundlePath?: string;
   repoPath?: string;
+  backupPath?: string;
   dryRun: boolean;
   json: boolean;
+  keepData: boolean;
+  seedDemo: boolean;
+  fixAll: boolean;
+  actions: string[];
+  noBrowser: boolean;
 }
 
 function printHelp(): void {
@@ -37,21 +56,40 @@ Usage:
 Commands:
   check                 Run system checks
   install               Install or update UWE locally
-  start                 Start Studio and Portal
+  start                 Start Studio and Portal (opens browser)
   stop                  Stop Studio and Portal
+  restart               Restart UWE
   status                Show runtime status
-  dry-run               Plan install without changes
+  open                  Open UWE Studio in browser
+  doctor                Diagnose installation and environment
+  repair                Repair common problems
+  backup                Create a backup
+  restore               Restore from backup ZIP
+  snapshot              Create raw data snapshot (db + uploads + config)
+  update                Check for and install updates
+  update-check          Check if update is available
+  uninstall             Remove UWE (use --keep-data to preserve worlds)
+  diagnostics           Create diagnostics ZIP (no secrets)
   enable-autostart      Add Startup folder entry
   disable-autostart     Remove Startup folder entry
   shortcut-desktop      Create Desktop shortcut
   shortcut-startmenu    Create Start Menu shortcut
+  install-pnpm          Install pnpm via corepack
+  repair-pnpm-path      Add pnpm global bin to user PATH
+  dry-run               Plan install without changes
 
 Options:
   --root <path>         Install root (default: %LOCALAPPDATA%\\UWE)
-  --mode <release|dev>  Install mode (default: dev)
+  --mode <release|dev>  Install mode (default: release)
   --bundle <path>       Release bundle directory
   --repo <path>         Repository path for dev mode
+  --backup <path>       Backup ZIP for restore
+  --keep-data           Keep data on uninstall
+  --seed-demo           Install demo world (dev/fresh installs)
+  --fix-all             Repair all fixable doctor issues
+  --action <name>       Specific repair action (repeatable)
   --dry-run             Do not write changes
+  --no-browser          Do not open browser on start
   --json                Print machine-readable JSON
   -h, --help            Show help
 `);
@@ -64,9 +102,14 @@ function parseArgs(argv: string[]): ParsedArgs {
   const parsed: ParsedArgs = {
     command,
     installRoot: defaultInstallRoot(),
-    mode: "dev",
+    mode: "release",
     dryRun: false,
     json: false,
+    keepData: false,
+    seedDemo: false,
+    fixAll: false,
+    actions: [],
+    noBrowser: false,
   };
 
   while (args.length > 0) {
@@ -92,8 +135,26 @@ function parseArgs(argv: string[]): ParsedArgs {
       case "--repo":
         parsed.repoPath = args.shift();
         break;
+      case "--backup":
+        parsed.backupPath = args.shift();
+        break;
+      case "--keep-data":
+        parsed.keepData = true;
+        break;
+      case "--seed-demo":
+        parsed.seedDemo = true;
+        break;
+      case "--fix-all":
+        parsed.fixAll = true;
+        break;
+      case "--action":
+        parsed.actions.push(args.shift() ?? "");
+        break;
       case "--dry-run":
         parsed.dryRun = true;
+        break;
+      case "--no-browser":
+        parsed.noBrowser = true;
         break;
       case "--json":
         parsed.json = true;
@@ -161,12 +222,16 @@ async function main(): Promise<number> {
           bundlePath: parsed.bundlePath,
           repoPath: parsed.repoPath,
           dryRun: parsed.dryRun,
+          seedDemo: parsed.seedDemo,
+          upgrade: Boolean(readInstallerState(paths.stateFile)),
         });
         emit(result, parsed.json);
         return result.ok ? 0 : 1;
       }
       case "start": {
-        const result = startUwe(paths.stateFile);
+        const result = await startUwe(paths.stateFile, {
+          openBrowser: !parsed.noBrowser,
+        });
         emit(result, parsed.json);
         return result.ok ? 0 : 1;
       }
@@ -175,8 +240,116 @@ async function main(): Promise<number> {
         emit(result, parsed.json);
         return result.ok ? 0 : 1;
       }
+      case "restart": {
+        const result = await restartUwe(paths.stateFile, {
+          openBrowser: !parsed.noBrowser,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
       case "status": {
         const result = statusUwe(paths.stateFile);
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "open": {
+        const result = openUweInBrowser(paths.stateFile, "studio");
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "doctor": {
+        const result = await runDoctor({ installRoot: paths.root });
+        emit(doctorToCommandResult(result), parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "repair": {
+        const result = await runRepair({
+          installRoot: paths.root,
+          actions: parsed.actions,
+          fixAll: parsed.fixAll || parsed.actions.length === 0,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "backup": {
+        const result = await createInstallBackup({
+          installRoot: paths.root,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "restore": {
+        if (!parsed.backupPath) {
+          emit({ ok: false, message: "Provide --backup <path> to a UWE backup ZIP." }, parsed.json);
+          return 1;
+        }
+        const result = await restoreInstallBackup({
+          installRoot: paths.root,
+          backupPath: parsed.backupPath,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "snapshot": {
+        const result = createDataSnapshot(paths.root, parsed.dryRun);
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "update-check": {
+        const state = readInstallerState(paths.stateFile);
+        const source =
+          parsed.bundlePath ??
+          parsed.repoPath ??
+          state?.bundlePath ??
+          state?.repoPath;
+        if (!source) {
+          emit({ ok: false, message: "No update source. Provide --bundle or --repo." }, parsed.json);
+          return 1;
+        }
+        const check = checkForUpdate(paths.root, source);
+        const message = check.updateAvailable
+          ? `Update available: ${check.installedVersion} -> ${check.availableVersion}`
+          : `UWE is up to date (${getInstalledVersion(paths.root) ?? "unknown"}).`;
+        emit({ ok: true, message, details: check }, parsed.json);
+        return 0;
+      }
+      case "update": {
+        const result = await runUpdate({
+          installRoot: paths.root,
+          bundlePath: parsed.bundlePath,
+          repoPath: parsed.repoPath,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "uninstall": {
+        const result = await uninstallUwe({
+          installRoot: paths.root,
+          keepData: parsed.keepData,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "diagnostics": {
+        const result = await createDiagnosticsPackage({
+          installRoot: paths.root,
+          dryRun: parsed.dryRun,
+        });
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "install-pnpm": {
+        const result = installPnpmViaCorepack(parsed.dryRun);
+        emit(result, parsed.json);
+        return result.ok ? 0 : 1;
+      }
+      case "repair-pnpm-path": {
+        const result = repairPnpmPath(parsed.dryRun);
         emit(result, parsed.json);
         return result.ok ? 0 : 1;
       }

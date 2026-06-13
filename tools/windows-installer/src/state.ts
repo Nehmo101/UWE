@@ -11,6 +11,7 @@ export interface InstallerState {
   ports: PortConfig;
   repoPath?: string;
   bundlePath?: string;
+  uweVersion?: string;
 }
 
 export function readInstallerState(stateFile: string): InstallerState | null {

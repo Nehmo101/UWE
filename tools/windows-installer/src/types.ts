@@ -44,3 +44,44 @@ export interface CommandResult {
   message: string;
   details?: Record<string, unknown>;
 }
+
+export interface DoctorCheck {
+  id: string;
+  ok: boolean;
+  message: string;
+  fixable?: boolean;
+  fixAction?: string;
+}
+
+export interface DoctorResult {
+  ok: boolean;
+  checks: DoctorCheck[];
+  summary: string;
+  installRoot: string;
+  uweVersion?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface RepairOptions {
+  installRoot: string;
+  actions: string[];
+  fixAll?: boolean;
+  dryRun?: boolean;
+}
+
+export interface InstallOptions {
+  installRoot: string;
+  mode: InstallMode;
+  bundlePath?: string;
+  repoPath?: string;
+  dryRun?: boolean;
+  upgrade?: boolean;
+  seedDemo?: boolean;
+  createShortcuts?: boolean;
+  openBrowser?: boolean;
+}
+
+export interface StartOptions {
+  openBrowser?: boolean;
+  waitForHealth?: boolean;
+}

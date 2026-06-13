@@ -58,7 +58,30 @@ Persistente Daten:
 
 ## Windows (ohne Docker)
 
-Für Windows-Nutzer gibt es einen lokalen Installer/Bootstrapper mit Startmenü, Auto-Start und Launcher — siehe [docs/WINDOWS_INSTALLER.md](docs/WINDOWS_INSTALLER.md).
+Für Windows-Nutzer gibt es einen **One-Click-Installations-Assistenten** — ohne Terminal, Docker oder manuelle Konfiguration.
+
+### One-Click Installation
+
+1. Node.js 20+ installieren: https://nodejs.org/
+2. **`UWE-Installieren.cmd`** doppelklicken oder:
+
+```powershell
+pnpm installer:windows
+```
+
+3. Im Assistenten **„Installieren & Starten“** wählen
+4. UWE über die Desktop-Verknüpfung **„UWE starten“** öffnen
+
+| Dokument | Inhalt |
+|----------|--------|
+| [docs/windows-install.md](docs/windows-install.md) | Schritt-für-Schritt für Endnutzer |
+| [docs/windows-troubleshooting.md](docs/windows-troubleshooting.md) | Fehlerbehebung |
+| [docs/backup-restore.md](docs/backup-restore.md) | Backup & Restore |
+| [docs/WINDOWS_INSTALLER.md](docs/WINDOWS_INSTALLER.md) | Technische Details |
+
+**Wartung:** Desktop-Verknüpfung **„UWE Steuerung“** — Start/Stop, Backup, Update, Reparatur, Deinstallation.
+
+**Entwickler:** Der normale Workflow (`pnpm install`, `pnpm dev`, `pnpm build`) bleibt unverändert.
 
 ---
 

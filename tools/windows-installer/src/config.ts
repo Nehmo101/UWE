@@ -119,7 +119,15 @@ export function generateEnvContent(options: EnvGenerationOptions): {
   }
 
   const dbPath = path.join(options.paths.data, "uwe.db");
-  const authSecret = generateAuthSecret();
+
+  let authSecret = generateAuthSecret();
+  if (options.existingEnvPath && fs.existsSync(options.existingEnvPath)) {
+    const existingValues = parseEnvFile(readEnvTemplate(options.existingEnvPath));
+    const existingSecret = existingValues.get("AUTH_SECRET");
+    if (existingSecret && existingSecret.length > 0) {
+      authSecret = existingSecret;
+    }
+  }
 
   content = upsertEnvValue(content, "AUTH_SECRET", authSecret);
   content = upsertEnvValue(content, "RUN_DB_SEED", runDbSeedForMode(options.mode));

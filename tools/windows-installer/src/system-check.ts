@@ -6,6 +6,8 @@ import {
   MIN_NODE_MAJOR,
   MIN_PNPM_MAJOR,
 } from "./constants.js";
+import { describeExistingInstall, detectExistingInstall } from "./install-detection.js";
+import { checkPnpmPath } from "./pnpm-path.js";
 import { canWriteDirectory, getFreeDiskBytes, isWindows } from "./paths.js";
 import { checkPorts } from "./ports.js";
 import type { PortConfig, SystemCheckResult } from "./types.js";
@@ -20,6 +22,7 @@ function commandOutput(command: string): string | null {
     return execSync(command, {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      shell: process.platform === "win32" ? "cmd.exe" : undefined,
     }).trim();
   } catch {
     return null;
@@ -50,6 +53,7 @@ export interface SystemCheckOptions {
   installRoot: string;
   ports: PortConfig;
   requireGit?: boolean;
+  checkExistingInstall?: boolean;
 }
 
 export async function runSystemCheck(
@@ -77,7 +81,7 @@ export async function runSystemCheck(
   details.node = nodeVersion ?? "missing";
   if (!nodeVersion) {
     errors.push(
-      `Node.js ${MIN_NODE_MAJOR}+ is required but was not found in PATH. Install from https://nodejs.org/`,
+      `Node.js ${MIN_NODE_MAJOR}+ is required but was not found in PATH. Install from https://nodejs.org/ — the wizard can guide you.`,
     );
   } else {
     const major = parseMajor(nodeVersion);
@@ -92,13 +96,21 @@ export async function runSystemCheck(
   details.pnpm = pnpmVersion ?? "missing";
   if (!pnpmVersion) {
     errors.push(
-      `pnpm ${MIN_PNPM_MAJOR}+ is required. Enable with: corepack enable && corepack prepare pnpm@latest --activate`,
+      `pnpm ${MIN_PNPM_MAJOR}+ is required. The wizard can install it automatically via corepack.`,
     );
   } else {
     const major = parseMajor(pnpmVersion);
     if (!major || major < MIN_PNPM_MAJOR) {
       errors.push(`pnpm ${MIN_PNPM_MAJOR}+ is required. Found: ${pnpmVersion}`);
     }
+  }
+
+  const pnpmPath = checkPnpmPath();
+  details.pnpmPath = pnpmPath.ok ? "ok" : "missing-from-path";
+  if (isWindows() && !pnpmPath.ok) {
+    errors.push(pnpmPath.errors.join(" "));
+  } else if (!pnpmPath.ok) {
+    warnings.push(pnpmPath.errors.join(" "));
   }
 
   const gitVersion = getGitVersion();
@@ -118,7 +130,9 @@ export async function runSystemCheck(
   );
   details.ports = portCheck.ok ? "available" : `busy: ${portCheck.busy.join(", ")}`;
   if (!portCheck.ok) {
-    errors.push(`Required ports are already in use: ${portCheck.busy.join(", ")}`);
+    errors.push(
+      `Required ports are already in use: ${portCheck.busy.join(", ")}. Close other apps using these ports or change STUDIO_PORT/PORTAL_PORT in .env after install.`,
+    );
   }
 
   const writable = canWriteDirectory(options.installRoot);
@@ -133,6 +147,14 @@ export async function runSystemCheck(
     errors.push(
       `At least ${Math.round(MIN_FREE_DISK_BYTES / (1024 * 1024 * 1024))} GiB free disk space required.`,
     );
+  }
+
+  if (options.checkExistingInstall !== false) {
+    const existing = detectExistingInstall(options.installRoot);
+    details.existingInstall = existing.installed ? "yes" : "no";
+    if (existing.installed) {
+      warnings.push(...describeExistingInstall(existing));
+    }
   }
 
   return {

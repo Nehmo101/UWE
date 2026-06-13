@@ -3,8 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { InstallerError } from "./errors.js";
+import { waitForHealth } from "./health.js";
+import { appendRuntimeLog } from "./logging.js";
 import { readInstallerState } from "./state.js";
-import type { CommandResult } from "./types.js";
+import type { CommandResult, StartOptions } from "./types.js";
 
 export interface ProcessStatus {
   running: boolean;
@@ -72,6 +74,16 @@ function loadEnvFile(envFile: string): NodeJS.ProcessEnv {
   return env;
 }
 
+function openBrowser(url: string): void {
+  if (process.platform === "win32") {
+    execSync(`start "" "${url}"`, { shell: "cmd.exe", stdio: "ignore" });
+  } else if (process.platform === "darwin") {
+    execSync(`open "${url}"`, { stdio: "ignore" });
+  } else {
+    execSync(`xdg-open "${url}"`, { stdio: "ignore" });
+  }
+}
+
 function spawnApp(
   appRoot: string,
   filter: string,
@@ -119,7 +131,10 @@ export function getProcessStatus(pidFile: string): ProcessStatus {
   return { running, pid: running ? pid : null };
 }
 
-export function startUwe(stateFile: string): CommandResult {
+export async function startUwe(
+  stateFile: string,
+  options: StartOptions = {},
+): Promise<CommandResult> {
   const state = readInstallerState(stateFile);
   if (!state) {
     throw new InstallerError("BUNDLE_MISSING", "UWE is not installed. Run install first.");
@@ -129,11 +144,17 @@ export function startUwe(stateFile: string): CommandResult {
   const portalStatus = getProcessStatus(state.paths.portalPidFile);
 
   if (studioStatus.running && portalStatus.running) {
-    return { ok: true, message: "UWE is already running." };
+    const studioUrl = `http://localhost:${state.ports.studioPort}`;
+    if (options.openBrowser) {
+      openBrowser(studioUrl);
+    }
+    return { ok: true, message: "UWE is already running.", details: { studioUrl } };
   }
 
   const studioLog = path.join(state.paths.logs, "studio.log");
   const portalLog = path.join(state.paths.logs, "portal.log");
+
+  appendRuntimeLog(state.paths.logs, "Starting UWE...");
 
   if (!studioStatus.running) {
     spawnApp(state.paths.app, "@uwe/studio", studioLog, state.paths.studioPidFile);
@@ -143,12 +164,39 @@ export function startUwe(stateFile: string): CommandResult {
     spawnApp(state.paths.app, "@uwe/portal", portalLog, state.paths.portalPidFile);
   }
 
+  const studioUrl = `http://localhost:${state.ports.studioPort}`;
+  const portalUrl = `http://localhost:${state.ports.portalPort}`;
+
+  if (options.waitForHealth !== false) {
+    const studioHealthy = await waitForHealth({
+      url: `${studioUrl}/api/health`,
+      timeoutMs: 120_000,
+    });
+    const portalHealthy = await waitForHealth({
+      url: `${portalUrl}/api/health`,
+      timeoutMs: 120_000,
+    });
+
+    if (!studioHealthy || !portalHealthy) {
+      appendRuntimeLog(
+        state.paths.logs,
+        `Health check warning: studio=${studioHealthy}, portal=${portalHealthy}`,
+      );
+    }
+  }
+
+  if (options.openBrowser !== false) {
+    openBrowser(studioUrl);
+  }
+
+  appendRuntimeLog(state.paths.logs, "UWE started.");
+
   return {
     ok: true,
     message: "UWE started.",
     details: {
-      studioUrl: `http://localhost:${state.ports.studioPort}`,
-      portalUrl: `http://localhost:${state.ports.portalPort}`,
+      studioUrl,
+      portalUrl,
     },
   };
 }
@@ -159,6 +207,8 @@ export function stopUwe(stateFile: string): CommandResult {
     return { ok: false, message: "UWE is not installed." };
   }
 
+  appendRuntimeLog(state.paths.logs, "Stopping UWE...");
+
   for (const pidFile of [state.paths.studioPidFile, state.paths.portalPidFile]) {
     const pid = readPid(pidFile);
     if (pid) {
@@ -167,7 +217,18 @@ export function stopUwe(stateFile: string): CommandResult {
     clearPid(pidFile);
   }
 
+  appendRuntimeLog(state.paths.logs, "UWE stopped.");
+
   return { ok: true, message: "UWE stopped." };
+}
+
+export async function restartUwe(
+  stateFile: string,
+  options: StartOptions = {},
+): Promise<CommandResult> {
+  stopUwe(stateFile);
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
+  return startUwe(stateFile, options);
 }
 
 export function statusUwe(stateFile: string): CommandResult {
@@ -187,6 +248,22 @@ export function statusUwe(stateFile: string): CommandResult {
       portal,
       installRoot: state.paths.root,
       logs: state.paths.logs,
+      uweVersion: state.uweVersion,
     },
   };
+}
+
+export function openUweInBrowser(stateFile: string, target: "studio" | "portal" = "studio"): CommandResult {
+  const state = readInstallerState(stateFile);
+  if (!state) {
+    return { ok: false, message: "UWE is not installed." };
+  }
+
+  const url =
+    target === "portal"
+      ? `http://localhost:${state.ports.portalPort}`
+      : `http://localhost:${state.ports.studioPort}`;
+
+  openBrowser(url);
+  return { ok: true, message: `Opened ${url}` };
 }

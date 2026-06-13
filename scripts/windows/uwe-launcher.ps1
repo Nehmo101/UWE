@@ -4,7 +4,7 @@
   Interactive launcher for UWE on Windows.
 #>
 param(
-  [ValidateSet("menu", "install", "start", "stop", "status", "check", "logs", "open-studio", "open-portal")]
+  [ValidateSet("menu", "install", "wizard", "panel", "start", "stop", "restart", "status", "check", "logs", "open-studio", "open-portal", "doctor", "repair", "backup", "diagnostics")]
   [string] $Action = "menu",
 
   [string] $InstallRoot = $(if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA "UWE" } else { Join-Path $env:USERPROFILE ".uwe" }),
@@ -50,39 +50,37 @@ function Show-Menu {
   Write-Host "UWE Windows Launcher"
   Write-Host "Install root: $InstallRoot"
   Write-Host ""
-  Write-Host "1) System check"
-  Write-Host "2) Install / Update"
-  Write-Host "3) Start UWE"
-  Write-Host "4) Stop UWE"
-  Write-Host "5) Status"
-  Write-Host "6) Open logs folder"
-  Write-Host "7) Open Studio in browser"
-  Write-Host "8) Open Portal in browser"
-  Write-Host "9) Enable auto-start"
-  Write-Host "10) Disable auto-start"
-  Write-Host "11) Create Desktop shortcut"
-  Write-Host "12) Create Start Menu shortcut"
+  Write-Host "1) Installations-Assistent (Wizard)"
+  Write-Host "2) System check / Doctor"
+  Write-Host "3) Install / Update"
+  Write-Host "4) Start UWE"
+  Write-Host "5) Stop UWE"
+  Write-Host "6) Status"
+  Write-Host "7) Steuerung öffnen"
+  Write-Host "8) Logs öffnen"
+  Write-Host "9) Backup erstellen"
+  Write-Host "10) Reparieren"
+  Write-Host "11) Diagnosepaket"
   Write-Host "0) Exit"
   Write-Host ""
   $choice = Read-Host "Select option"
   switch ($choice) {
-    "1" { Invoke-UweInstaller @("check", "--mode", $Mode) }
-    "2" {
+    "1" { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "uwe-wizard.ps1") -InstallRoot $InstallRoot -Mode $Mode -BundlePath $BundlePath -RepoPath $RepoPath }
+    "2" { Invoke-UweInstaller @("doctor") }
+    "3" {
       $args = @("install", "--mode", $Mode)
       if ($BundlePath) { $args += @("--bundle", $BundlePath) }
       if ($RepoPath) { $args += @("--repo", $RepoPath) }
       Invoke-UweInstaller $args
     }
-    "3" { Invoke-UweInstaller @("start") }
-    "4" { Invoke-UweInstaller @("stop") }
-    "5" { Invoke-UweInstaller @("status") }
-    "6" { Invoke-Item (Join-Path $InstallRoot "logs") }
-    "7" { Open-Url "http://localhost:3000" }
-    "8" { Open-Url "http://localhost:3001" }
-    "9" { Invoke-UweInstaller @("enable-autostart") }
-    "10" { Invoke-UweInstaller @("disable-autostart") }
-    "11" { Invoke-UweInstaller @("shortcut-desktop") }
-    "12" { Invoke-UweInstaller @("shortcut-startmenu") }
+    "4" { Invoke-UweInstaller @("start") }
+    "5" { Invoke-UweInstaller @("stop") }
+    "6" { Invoke-UweInstaller @("status") }
+    "7" { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "uwe-control-panel.ps1") -InstallRoot $InstallRoot }
+    "8" { Invoke-Item (Join-Path $InstallRoot "logs") }
+    "9" { Invoke-UweInstaller @("backup") }
+    "10" { Invoke-UweInstaller @("repair", "--fix-all") }
+    "11" { Invoke-UweInstaller @("diagnostics") }
     "0" { return }
     default { Write-Host "Unknown option." }
   }
@@ -90,6 +88,8 @@ function Show-Menu {
 
 switch ($Action) {
   "menu" { Show-Menu }
+  "wizard" { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "uwe-wizard.ps1") -InstallRoot $InstallRoot -Mode $Mode -BundlePath $BundlePath -RepoPath $RepoPath }
+  "panel" { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "uwe-control-panel.ps1") -InstallRoot $InstallRoot }
   "install" {
     $args = @("install", "--mode", $Mode)
     if ($BundlePath) { $args += @("--bundle", $BundlePath) }
@@ -97,8 +97,13 @@ switch ($Action) {
     Invoke-UweInstaller $args
   }
   "check" { Invoke-UweInstaller @("check", "--mode", $Mode) }
+  "doctor" { Invoke-UweInstaller @("doctor") }
+  "repair" { Invoke-UweInstaller @("repair", "--fix-all") }
+  "backup" { Invoke-UweInstaller @("backup") }
+  "diagnostics" { Invoke-UweInstaller @("diagnostics") }
   "start" { Invoke-UweInstaller @("start") }
   "stop" { Invoke-UweInstaller @("stop") }
+  "restart" { Invoke-UweInstaller @("restart") }
   "status" { Invoke-UweInstaller @("status") }
   "logs" { Invoke-Item (Join-Path $InstallRoot "logs") }
   "open-studio" { Open-Url "http://localhost:3000" }

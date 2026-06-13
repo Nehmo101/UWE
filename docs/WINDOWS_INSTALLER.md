@@ -2,17 +2,41 @@
 
 This document describes the Windows bootstrapper for installing, configuring, and running UWE locally without Docker.
 
+> **End users:** See [windows-install.md](windows-install.md) for a simple step-by-step guide.
+
 ## Overview
 
 The Windows installer consists of:
 
 | Component | Path | Role |
 |-----------|------|------|
-| Node CLI | `tools/windows-installer/` | System checks, install, start/stop, config generation |
+| **GUI Wizard** | `scripts/windows/uwe-wizard.ps1` | One-click install for non-technical users |
+| **Control Panel** | `scripts/windows/uwe-control-panel.ps1` | Start/stop, backup, update, repair, uninstall |
+| Node CLI | `tools/windows-installer/` | System checks, install, doctor, repair, backup |
 | PowerShell launcher | `scripts/windows/uwe-launcher.ps1` | Interactive menu and thin wrappers |
-| EXE build | `tools/windows-installer/dist/exe/UWE-Setup.exe` | Packaged CLI for end users (built in CI) |
+| Inno Setup | `tools/windows-installer/inno/UWE-Setup.iss` | Proper Windows installer EXE |
+| EXE build | `tools/windows-installer/dist/exe/UWE-Setup.exe` | Packaged CLI (CI artifact) |
 
-End users should eventually run **`UWE-Setup.exe`**. Until a release artifact is published, use the PowerShell launcher from a cloned repository.
+End users should run **`UWE-Installieren.cmd`** or the GUI wizard. Developers use `pnpm installer:windows` or `pnpm launcher:dev`.
+
+## New commands (CLI)
+
+```bash
+node tools/windows-installer/dist/cli.js doctor
+node tools/windows-installer/dist/cli.js repair --fix-all
+node tools/windows-installer/dist/cli.js backup
+node tools/windows-installer/dist/cli.js restore --backup <path>
+node tools/windows-installer/dist/cli.js update
+node tools/windows-installer/dist/cli.js diagnostics
+node tools/windows-installer/dist/cli.js repair-pnpm-path
+node tools/windows-installer/dist/cli.js uninstall --keep-data
+```
+
+Root shortcuts: `pnpm doctor`, `pnpm repair`, `pnpm backup`, `pnpm restore`
+
+## pnpm PATH auto-repair
+
+The installer detects when `C:\Users\<user>\AppData\Local\pnpm` is not in PATH and adds it to the user environment via `setx`. After repair, restart open terminals.
 
 ## What the installer does
 
@@ -48,10 +72,13 @@ Default root: `%LOCALAPPDATA%\UWE`
 3. **Setup**
    - Copies a release bundle or local repository into `app/`
    - Runs `pnpm install --frozen-lockfile`
+   - Runs `pnpm build:release` (production build)
    - Generates `.env` with a random `AUTH_SECRET`
    - Sets absolute Windows paths for DB/uploads/backups/exports
    - Runs `prisma generate` and `prisma migrate deploy`
-   - Seeds demo data only in **dev** mode (`RUN_DB_SEED=auto`)
+   - Pre-migration DB backup to `data/backups/pre-migration-*.db`
+   - Seeds demo data only in **dev** mode or when `--seed-demo` is set
+   - Creates Desktop/Start Menu shortcuts and opens browser on start
 
 4. **Launcher UX**
    - Start / stop Studio and Portal
@@ -108,7 +135,25 @@ pnpm build:release
 # package the repo root into uwe-release-<version>.zip
 ```
 
-## Building the EXE
+## Building the installer
+
+From the repository root:
+
+```bash
+# GUI wizard (dev)
+pnpm installer:windows
+
+# Release bundle + EXE
+pnpm package:windows
+```
+
+This builds:
+1. Release bundle in `tools/windows-installer/dist/release/`
+2. CLI compiled to `dist/cli.js`
+3. Optional `UWE-Setup.exe` via `@yao-pkg/pkg` (Windows CI)
+4. Optional Inno Setup installer if ISCC is installed
+
+## Building the EXE (legacy/pkg)
 
 From the repository root:
 
