@@ -64,6 +64,12 @@ export class InMemoryApiKeyStore implements ApiKeyStore {
 
 export function createApiKeyStoreFromEnv(): InMemoryApiKeyStore {
   const store = new InMemoryApiKeyStore();
+  const cloudProvider = process.env.CLOUD_AI_PROVIDER?.trim() as AiProviderId | undefined;
+  const cloudKey = process.env.CLOUD_AI_API_KEY?.trim();
+  if (cloudProvider && cloudKey && isCloudProvider(cloudProvider)) {
+    store.set(cloudProvider, cloudKey);
+  }
+
   const envMap: Partial<Record<AiProviderId, string | undefined>> = {
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,

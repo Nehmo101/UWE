@@ -567,3 +567,334 @@
     margin-bottom: 1.35rem;
   }
 }
+
+/* ===== Mobile KI-Prompt (Admin) ===== */
+
+.mobile-ai-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+.uwe-context .mobile-ai-prompt {
+  max-width: 100%;
+}
+
+.mobile-ai-page-hint {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 0.5rem;
+  line-height: 1.5;
+}
+
+.mobile-ai-page-hint code {
+  font-size: 0.8rem;
+}
+
+.mobile-ai-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.mobile-ai-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+  min-width: 4.5rem;
+}
+
+.mobile-ai-chip-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.mobile-ai-chip-value {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.mobile-ai-chip-ok {
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.mobile-ai-chip-ok .mobile-ai-chip-value {
+  color: #86efac;
+}
+
+.mobile-ai-chip-warn {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.mobile-ai-chip-warn .mobile-ai-chip-value {
+  color: #fcd34d;
+}
+
+.mobile-ai-chip-error {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.mobile-ai-chip-error .mobile-ai-chip-value {
+  color: #fca5a5;
+}
+
+.mobile-ai-chip-neutral .mobile-ai-chip-value {
+  color: #94a3b8;
+}
+
+.mobile-ai-active-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.mobile-ai-active-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #818cf8;
+}
+
+.mobile-ai-active-value {
+  color: #e0e7ff;
+  font-weight: 600;
+}
+
+.mobile-ai-context-section {
+  margin-bottom: 0.5rem;
+}
+
+.mobile-ai-context-section > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 0.65rem;
+}
+
+.mobile-ai-context-section[open] > summary {
+  margin-bottom: 0.85rem;
+}
+
+.mobile-ai-brain-divider {
+  margin: 1.25rem 0 0.75rem;
+  border: none;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.mobile-ai-segment-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.mobile-ai-segment-legend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.mobile-ai-segment-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.mobile-ai-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-ai-segment-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.mobile-ai-segment-label {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: #cbd5e1;
+}
+
+.mobile-ai-segment-active {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.mobile-ai-segment-active .mobile-ai-segment-label {
+  color: #e0e7ff;
+  font-weight: 600;
+}
+
+.mobile-ai-segment-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mobile-ai-hints {
+  list-style: none;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.06);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #fcd34d;
+}
+
+.mobile-ai-hints li + li {
+  margin-top: 0.35rem;
+}
+
+.mobile-ai-object-hint {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.mobile-ai-prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mobile-ai-prompt-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.mobile-ai-prompt-input {
+  width: 100%;
+  min-height: 9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.75);
+  color: #f1f5f9;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.mobile-ai-prompt-input:focus {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 1px;
+}
+
+.mobile-ai-loading {
+  padding: 0.5rem 0;
+}
+
+.mobile-ai-response {
+  margin-top: 0.25rem;
+}
+
+.mobile-ai-response-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.mobile-ai-response-body {
+  padding: 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.65);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.mobile-ai-send-btn {
+  width: 100%;
+  min-height: 2.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mobile-ai-send-desktop {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 960px) {
+  .mobile-ai-segment-group {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-ai-prompt-input {
+    min-height: 10rem;
+    font-size: 1.05rem;
+  }
+
+  .mobile-ai-send-desktop {
+    display: none;
+  }
+
+  .mobile-ai-response-body {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+}
+
+@media (min-width: 961px) {
+  .mobile-ai-prompt .uwe-sticky-action-bar {
+    display: none;
+  }
+
+  .mobile-ai-prompt.uwe-has-sticky-actions {
+    padding-bottom: 0;
+  }
+}

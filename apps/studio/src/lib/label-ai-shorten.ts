@@ -24,12 +24,15 @@ export async function tryAiShortenLabelText(
   try {
     const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), {
       enabled: process.env.AI_BRAIN_ENABLED !== "false",
-      localOnly: options.localOnly,
+      localOnly: true,
     });
 
     if (!settings.enabled) return null;
 
     const providerId = settings.defaultProvider;
+    if (!settings.providers.find((p) => p.id === providerId)?.isLocal) {
+      return null;
+    }
     const provider = createProvider(providerId, createApiKeyStoreFromEnv(), {
       useMock: process.env.AI_USE_MOCK === "true",
     });

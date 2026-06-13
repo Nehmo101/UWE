@@ -2,6 +2,19 @@ import { isCloudProvider } from "./settings";
 import type { AiContext, AiProviderId } from "./types";
 import { AiPrivacyError } from "./types";
 
+/** True when context carries any UWE campaign/brain/object knowledge. */
+export function contextContainsLocalKnowledge(context: AiContext): boolean {
+  return (
+    context.pages.length > 0 ||
+    (context.brainEntries?.length ?? 0) > 0 ||
+    Boolean(context.session) ||
+    Boolean(context.campaign) ||
+    Boolean(context.world?.description?.trim()) ||
+    Boolean(context.promptContext?.trim()) ||
+    context.sources.length > 0
+  );
+}
+
 export function contextContainsDmOnly(context: AiContext): boolean {
   return context.pages.some(
     (page) =>
@@ -27,18 +40,32 @@ export function validateProviderForContext(
     );
   }
 
-  if (isCloudProvider(providerId) && contextContainsDmOnly(context) && !context.allowDmOnly) {
+  if (isCloudProvider(providerId) && contextContainsLocalKnowledge(context)) {
     throw new AiPrivacyError(
-      "Cloud-Provider dürfen keine DM-only-Inhalte erhalten. Aktiviere local-only oder erlaube DM-Inhalte ausdrücklich.",
+      "Cloud-Provider dürfen keinen lokalen Kampagnen-, Brain- oder Objekt-Kontext erhalten.",
+    );
+  }
+
+  if (isCloudProvider(providerId) && contextContainsDmOnly(context)) {
+    throw new AiPrivacyError(
+      "Cloud-Provider dürfen keine DM-only-Inhalte erhalten.",
     );
   }
 }
 
-export function sanitizeContextForCloud(context: AiContext): AiContext {
-  if (context.allowDmOnly) {
-    return context;
+/** Server-owned allowDmOnly — never trust client-supplied flags for cloud routes. */
+export function resolveServerAllowDmOnly(
+  settings: { localOnly: boolean },
+  routeIsCloud: boolean,
+  playerSafe?: boolean,
+): boolean {
+  if (routeIsCloud || playerSafe) {
+    return false;
   }
+  return settings.localOnly;
+}
 
+export function sanitizeContextForCloud(context: AiContext): AiContext {
   const pages = context.pages
     .map((page) => {
       const contentBlocks = page.contentBlocks.filter((block) => block.visibility !== "dm_only");

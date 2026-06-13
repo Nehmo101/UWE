@@ -711,6 +711,8 @@ export function assertAdminStatusHasNoSecrets(
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
     "OPENROUTER_API_KEY",
+    "RTX_AGENT_TOKEN",
+    "CLOUD_AI_API_KEY",
     "SPOTIFY_CLIENT_SECRET",
   ] as const;
 

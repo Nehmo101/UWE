@@ -200,6 +200,146 @@ DM-only soundboard buttons are filtered for the Player Portal via the same visib
 
 ---
 
+## KI-System (Brain & RTX)
+
+UWE Studio bietet ein **lokales Brain** (DnD-/World-Wissen, Sessions, Kanon) und optional **Cloud-KI** nur für allgemeine Fragen ohne Kampagnendaten. Inferenz läuft bevorzugt über einen **RTX-Agent** im Heimnetz (Ollama/LM Studio auf dem RTX-Rechner).
+
+| Rolle | Rechner | Aufgabe |
+|-------|---------|---------|
+| **UWE Host** | Alter Laptop / Self-Host | Datenbank, Brain, Mail, Studio — **alle persistenten Daten** |
+| **RTX-Agent** | RTX-PC (Heimnetz) | Nur Inferenz-Worker — **speichert keine UWE-Daten** |
+| **Cloud-KI** | Externer Anbieter | Nur allgemeiner Chat — **kein Brain/Weltwissen** |
+
+Details zur Sicherheit: [SECURITY_NOTES.md](SECURITY_NOTES.md) · Deployment: [docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md](docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md)
+
+### KI-Modi
+
+Wähle im Admin-Portal (Desktop oder mobil), **welcher Provider** die Anfrage ausführt:
+
+| Modus | Verhalten |
+|-------|-----------|
+| **Auto** | Bevorzugt lokale RTX-KI. Bei **Allgemeinem Chat** und offline RTX: Fallback auf Cloud (wenn konfiguriert). Bei Brain oder aktuellem Objekt: **blockieren**, wenn RTX nicht bereit — **kein Cloud-Fallback**. |
+| **Lokale KI / RTX** | Nur der RTX-Agent. Brain-, Objekt- und Weltkontext erlaubt, wenn RTX **ready** ist. RTX offline/deaktiviert → Anfrage wird abgelehnt. |
+| **Cloud-KI** | Nur **Allgemeiner Chat**. Kein Brain, kein aktuelles Objekt, keine UWE-Weltdaten. |
+
+### Kontextmodi
+
+Zusätzlich zum KI-Modus wählst du, **welcher Kontext** an die KI geht:
+
+| Kontext | Inhalt | Cloud erlaubt? |
+|---------|--------|----------------|
+| **Allgemeiner Chat** | Nur dein Prompt — keine UWE-Objekte, kein Brain | Ja |
+| **DnD-/World-Wissen** | Brain-Retrieval, Wissenstexte, Kanon | Nein — nur lokale RTX |
+| **Aktuelles Objekt** | Die gerade geöffnete Seite/Entität | Nein — nur lokale RTX |
+| **Aktuelles Objekt + DnD-/World-Wissen** | Objekt plus Brain-Kontext | Nein — nur lokale RTX |
+
+### Datenschutzregel
+
+Diese Regel ist **nicht verhandelbar** und wird serverseitig durchgesetzt:
+
+- **Brain bleibt lokal** — Wissen, Embeddings und Retrieval liegen in UWE auf dem Host-Rechner.
+- **Cloud-KI nutzt nur Allgemeinen Chat** — kein Brain, kein aktuelles Objekt, keine Sessions, NPCs, Orte oder Kanon.
+- **Cloud-KI erhält kein Brain/Weltwissen** — auch nicht „aus Versehen“ über Auto oder UI.
+- **Brain-Prompts funktionieren nur mit lokaler KI** — Kontextmodi mit Brain oder Objekt erfordern RTX **ready**.
+- **Auto fällt bei Brain nicht auf Cloud zurück** — RTX offline → blockieren mit klarer Fehlermeldung, nicht an Cloud senden.
+
+In der UI siehst du Hinweise wie: *„Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.“*
+
+### RTX-Agent einrichten
+
+Der **UWE RTX-Agent** läuft auf dem RTX-Rechner als lokaler Dienst (optional mit Windows-Tray und Autostart). UWE spricht nur mit dem Agenten — nicht direkt mit dem Internet.
+
+#### 1. RTX-Agent starten
+
+Auf dem RTX-PC das Teilprojekt `uwe-rtx-agent` starten (Konsole oder Tray-App). Standard: lauscht im Heimnetz auf einer privaten IP (z. B. `http://192.168.x.x:8787`).
+
+#### 2. Token setzen
+
+Im Agent und in UWE **dasselbe** Shared Secret verwenden:
+
+```env
+# RTX-Agent (.env auf dem RTX-PC)
+AGENT_TOKEN=generiere-ein-langes-zufaelliges-geheimnis
+
+# UWE Host (.env auf dem Laptop)
+RTX_AGENT_TOKEN=dasselbe-geheimnis-wie-oben
+```
+
+Token nur serverseitig — **nie** im Browser oder in Git committen.
+
+#### 3. URL konfigurieren
+
+In der UWE-`.env` auf dem Host:
+
+```env
+RTX_AGENT_URL=http://192.168.x.x:8787
+```
+
+Nur Heimnetz-IP oder `localhost` — **keine** öffentliche URL, kein Cloudflare-Tunnel zum RTX.
+
+#### 4. Ollama/Backend konfigurieren
+
+Auf dem RTX-PC im Agent (Beispiel Ollama):
+
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+DEFAULT_MODEL=qwen2.5-coder:7b
+```
+
+Alternativ LM Studio / OpenAI-kompatibel — siehe Agent-README. Optional: `START_OLLAMA_COMMAND`, wenn der Agent Ollama mitstarten soll.
+
+In UWE optional:
+
+```env
+PREFERRED_LOCAL_MODEL=qwen2.5-coder:7b
+```
+
+#### 5. Autostart aktivieren
+
+In der Windows-Tray-App: **„Beim Windows-Start ausführen“** aktivieren (CurrentUser-Autostart, ohne Adminrechte). Nach Neustart prüfen, ob der Tray-Status **grün** (ready) ist.
+
+#### 6. Status prüfen
+
+| Wo | Was prüfen |
+|----|------------|
+| RTX Tray / Agent | `GET /health` → `ready`, `disabled`, `starting` oder `error` |
+| UWE Studio | Admin-Dashboard: RTX online/offline/deaktiviert, lokale KI bereit, Cloud konfiguriert |
+| Manuell | `curl -H "Authorization: Bearer <RTX_AGENT_TOKEN>" http://192.168.x.x:8787/health` |
+
+Healthcheck-Intervall und Timeout in UWE:
+
+```env
+RTX_HEALTHCHECK_INTERVAL_MS=10000
+RTX_TIMEOUT_MS=3000
+```
+
+### Cloud-Fallback
+
+Cloud-Fallback gilt **ausschließlich** für:
+
+- KI-Modus **Auto**
+- Kontext **Allgemeiner Chat**
+- RTX nicht bereit **und** Cloud-KI konfiguriert
+
+Cloud-Fallback sendet **niemals**:
+
+- Brain / DnD-/World-Wissen
+- Aktuelles Objekt
+- Sessions, NPCs, Orte, Kanon, Dungeons
+- Beliebige anderen lokalen UWE-Daten
+
+Ohne Cloud-Konfiguration oder bei allen anderen Kontextmodi: Anfrage **blockieren**, wenn RTX nicht ready ist.
+
+Cloud-KI konfigurieren (nur Host-`.env`):
+
+```env
+CLOUD_AI_PROVIDER=openai
+CLOUD_AI_API_KEY=sk-...
+CLOUD_AI_MODEL=gpt-4o-mini
+```
+
+---
+
 ## Static Export
 
 Export a world as static HTML for hosting on webspace, NAS, GitHub Pages, or any static file server.
@@ -304,8 +444,18 @@ Copy `.env.example` to `.env`. Important variables:
 | `SPOTIFY_CLIENT_SECRET` | Spotify OAuth client secret (optional) |
 | `SPOTIFY_REDIRECT_URI` | Spotify OAuth callback, e.g. `http://localhost:3000/api/spotify/callback` |
 | `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
+| `RTX_AGENT_URL` | Heimnetz-URL des UWE RTX-Agent (z. B. `http://192.168.x.x:8787`) |
+| `RTX_AGENT_TOKEN` | Shared Secret für RTX-Agent (serverseitig, nicht im Frontend) |
+| `RTX_HEALTHCHECK_INTERVAL_MS` | Intervall für RTX-Statusprüfung (Standard: `10000`) |
+| `RTX_TIMEOUT_MS` | Timeout pro RTX-Healthcheck (Standard: `3000`) |
+| `PREFERRED_LOCAL_MODEL` | Bevorzugtes lokales Modell für RTX |
+| `CLOUD_AI_PROVIDER` | Cloud-Anbieter für Allgemeinen Chat (z. B. `openai`) |
+| `CLOUD_AI_API_KEY` | API-Key — nur in `.env`, nie in Git |
+| `CLOUD_AI_MODEL` | Cloud-Modell für Allgemeinen Chat |
 
-**Public hosting:** Studio must not be exposed to the internet without reverse-proxy auth, VPN, or Cloudflare Access. The Portal may be hosted more openly, but only publishes content marked `player_visible` or `public`. See [SECURITY.md](SECURITY.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
+Weitere Brain-/Inferenz-Variablen: siehe `.env.example` und Abschnitt [KI-System](#ki-system-brain--rtx).
+
+**Public hosting:** Studio must not be exposed to the internet without reverse-proxy auth, VPN, or Cloudflare Access. The Portal may be hosted more openly, but only publishes content marked `player_visible` or `public`. See [SECURITY.md](SECURITY.md), [SECURITY_NOTES.md](SECURITY_NOTES.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
 ---
 
@@ -320,4 +470,5 @@ Private project — all rights reserved.
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | Production deployment, updates, backup |
 | [SECURITY.md](SECURITY.md) | Security policy and checklist |
+| [SECURITY_NOTES.md](SECURITY_NOTES.md) | KI-Datenschutz, RTX-Agent, Cloud-Regeln |
 | [VERSION](VERSION) | Current product version |

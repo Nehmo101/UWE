@@ -1,18 +1,14 @@
 import type { UweRepository } from "@uwe/database/server";
 import { buildAiContext } from "./context/context-builder";
 import {
-  extractDmOnlyPhrases,
-  sanitizeContextForCloud,
-  validatePlayerRecapContent,
-  validateProviderForContext,
-} from "./privacy";
-import { createProvider, runAiTask } from "./providers/registry";
+  legacyContextMode,
+  providerIdToMode,
+  routeAiRequest,
+} from "./router";
 import {
   createApiKeyStoreFromEnv,
-  isCloudProvider,
   resolveAiBrainSettings,
 } from "./settings";
-import { buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
 import type {
   AiBrainSettings,
   AiContext,
@@ -22,7 +18,6 @@ import type {
   BuildAiContextOptions,
   GenerateTextResult,
 } from "./types";
-import { PLAYER_SAFE_TASKS } from "./types";
 
 export * from "./types";
 export { buildAiContext, buildAiContextBySlug, listSessionsForBrain } from "./context/context-builder";
@@ -47,6 +42,8 @@ export {
   sanitizeContextForCloud,
   validateProviderForContext,
   contextContainsDmOnly,
+  contextContainsLocalKnowledge,
+  resolveServerAllowDmOnly,
   validatePlayerRecapContent,
   extractDmOnlyPhrases,
 } from "./privacy";
@@ -74,6 +71,29 @@ export {
   InferenceUrlBlockedError,
   type InferenceUrlKind,
 } from "./inference-url-guard";
+export {
+  routeAiRequest,
+  resolveProviderRoute,
+  providerIdToMode,
+  legacyContextMode,
+  validateProviderContextCombination,
+  validateResolvedRouteForContext,
+  validateContextModeRequirements,
+  validateLocalRtxRequired,
+  buildRouterContext,
+  createBrainRetrievalAdapter,
+  createLocalRtxProvider,
+  createCloudProvider,
+  resolveCloudProviderId,
+  checkRtxHealth,
+  isRtxReady,
+  AiRouterError,
+  type AiProviderMode,
+  type AiContextMode,
+  type AiRouterRequest,
+  type AiRouterResult,
+  type AiRouterDeps,
+} from "./router";
 
 export interface GenerateAiTaskInput {
   taskType: AiTaskType;
@@ -92,6 +112,25 @@ export interface GenerateAiTaskBySlugInput extends Omit<GenerateAiTaskInput, "wo
   pageSlug: string;
 }
 
+async function resolveSlugsFromIds(
+  repo: UweRepository,
+  worldId: string,
+  pageId: string,
+): Promise<{ worldSlug: string; pageSlug: string }> {
+  const page = await repo.getPageById(pageId);
+  if (!page || page.worldId !== worldId) {
+    throw new Error(`Seite ${pageId} gehört nicht zur Welt ${worldId} oder existiert nicht.`);
+  }
+
+  const worlds = await repo.listWorlds();
+  const world = worlds.find((w) => w.id === worldId);
+  if (!world) {
+    throw new Error(`Welt ${worldId} nicht gefunden.`);
+  }
+
+  return { worldSlug: world.slug, pageSlug: page.slug };
+}
+
 export async function generateAiTask(
   repo: UweRepository,
   input: GenerateAiTaskInput,
@@ -100,44 +139,34 @@ export async function generateAiTask(
   result: GenerateTextResult;
   prompts: { systemPrompt: string; userPrompt: string };
 }> {
-  const settings = resolveAiBrainSettings(input.apiKeyStore ?? createApiKeyStoreFromEnv(), {
-    datenschutzMode: input.options?.datenschutzMode,
-    localOnly: input.options?.localOnly,
-  });
-
-  const context = await buildAiContext(repo, input.taskType, input.worldId, input.pageId, {
-    ...input.options,
-    datenschutzMode: settings.datenschutzMode,
-    localOnly: settings.localOnly,
-  });
-
-  validateProviderForContext(input.providerId, context, settings);
-
-  const safeContext = isCloudProvider(input.providerId)
-    ? sanitizeContextForCloud(context)
-    : context;
-
-  const provider = createProvider(
-    input.providerId,
-    input.apiKeyStore ?? createApiKeyStoreFromEnv(),
-    { useMock: input.useMock },
+  const { worldSlug, pageSlug } = await resolveSlugsFromIds(
+    repo,
+    input.worldId,
+    input.pageId,
   );
 
-  const prompt = buildTaskPrompt(input.taskType, safeContext, input.userPrompt);
-  const systemPrompt = buildTaskSystemPrompt(input.taskType);
+  const routed = await routeAiRequest(
+    { repo },
+    {
+      providerMode: providerIdToMode(input.providerId),
+      contextMode: legacyContextMode({ withBrain: false }),
+      taskType: input.taskType,
+      worldSlug,
+      pageSlug,
+      model: input.model,
+      cloudProviderId: providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
+      userPrompt: input.userPrompt,
+      useMock: input.useMock,
+      apiKeyStore: input.apiKeyStore,
+      options: input.options,
+    },
+  );
 
-  const result = await runAiTask(provider, {
-    model: input.model,
-    prompt,
-    systemPrompt,
-  });
-
-  if (PLAYER_SAFE_TASKS.includes(input.taskType)) {
-    const forbidden = extractDmOnlyPhrases(context);
-    validatePlayerRecapContent(result.text, forbidden);
-  }
-
-  return { context: safeContext, result, prompts: { systemPrompt, userPrompt: prompt } };
+  return {
+    context: routed.context,
+    result: routed.result,
+    prompts: routed.prompts,
+  };
 }
 
 export async function generateAiTaskBySlug(

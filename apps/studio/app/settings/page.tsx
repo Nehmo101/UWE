@@ -499,9 +499,12 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Vollständige Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail,
                 Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
               </p>
-              <p style={{ marginTop: "1rem" }}>
+              <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
                 <Link className="uwe-btn uwe-btn-primary" href="/admin/status">
                   Admin Status Dashboard öffnen
+                </Link>
+                <Link className="uwe-btn" href="/admin/ai-prompt">
+                  KI-Prompt (mobil)
                 </Link>
               </p>
             </section>

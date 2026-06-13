@@ -21,17 +21,32 @@ function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }
 
-function inferenceLevel(inference: Awaited<ReturnType<typeof getAdminDashboardStatus>>["inference"]): StatusLevel {
-  if (!inference.enabled) {
+function rtxLevel(rtx: Awaited<ReturnType<typeof getAdminDashboardStatus>>["rtx"]): StatusLevel {
+  if (rtx.agentStatus === "disabled") {
     return "disabled";
   }
-  if (!inference.configured) {
+  if (rtx.agentStatus === "starting") {
+    return "degraded";
+  }
+  if (rtx.ready) {
+    return "ok";
+  }
+  if (rtx.agentStatus === "error" || rtx.agentStatus === "unreachable") {
     return "error";
   }
-  if (!inference.online) {
+  if (!rtx.online) {
     return "error";
   }
   return "ok";
+}
+
+function rtxStatusLabel(rtx: Awaited<ReturnType<typeof getAdminDashboardStatus>>["rtx"]): string {
+  if (rtx.agentStatus === "disabled") return "Deaktiviert";
+  if (rtx.agentStatus === "starting") return "Startet";
+  if (rtx.ready) return "Bereit";
+  if (rtx.agentStatus === "error") return "Fehler";
+  if (rtx.agentStatus === "unreachable") return "Nicht erreichbar";
+  return rtx.online ? "Online" : "Offline";
 }
 
 function mailLevel(mail: Awaited<ReturnType<typeof getAdminDashboardStatus>>["mail"]): StatusLevel {
@@ -67,7 +82,7 @@ export default async function AdminStatusPage() {
     useMockInference,
   });
 
-  const { system, inference, mail, brain, embeddings, aiRuns, jobs, auth } = status;
+  const { system, inference, rtx, mail, brain, embeddings, aiRuns, jobs, auth } = status;
 
   const overallBadge = status.ok ? "ok" : "degraded";
 
@@ -237,36 +252,26 @@ export default async function AdminStatusPage() {
             />
 
             <StatusCard
-              title="RTX Inference"
-              level={inferenceLevel(inference)}
-              statusLabel={
-                !inference.enabled
-                  ? "Deaktiviert"
-                  : !inference.online
-                    ? "Offline"
-                    : "Online"
-              }
-              message={
-                !inference.enabled
-                  ? inference.message
-                  : !inference.online
-                    ? inference.offlineReason ?? inference.message
-                    : inference.message
-              }
+              title="RTX / Lokale KI"
+              level={rtxLevel(rtx)}
+              statusLabel={rtxStatusLabel(rtx)}
+              message={rtx.message}
               details={[
-                { label: "Provider", value: inference.provider },
-                { label: "Endpoint", value: inference.endpoint },
-                { label: "Standardmodell", value: inference.defaultModel },
-                { label: "Timeout (s)", value: inference.timeoutSeconds },
-                { label: "Modelle", value: inference.modelCount ?? "—" },
-                { label: "URL erlaubt", value: inference.urlAllowed },
+                { label: "Quelle", value: rtx.source === "agent" ? "RTX-Agent" : "Direkt (Inference)" },
+                { label: "Agent-Status", value: rtx.agentStatus ?? "—" },
+                { label: "Endpoint", value: rtx.endpoint },
+                { label: "Standardmodell", value: rtx.defaultModel },
+                { label: "Inference aktiv", value: inference.enabled },
+                { label: "Inference online", value: inference.online },
               ]}
               nextSteps={
-                !inference.online && inference.enabled
+                !rtx.ready && inference.enabled
                   ? [
-                      "Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft.",
-                      "Prüfe AI_INFERENCE_BASE_URL (private Heimnetz-IP, z. B. 192.168.x.x).",
-                      "UWE bleibt nutzbar — KI-Aktionen zeigen „Brain offline“.",
+                      rtx.source === "agent"
+                        ? "Prüfe UWE RTX-Agent auf dem RTX-Rechner (Tray, Token, Ollama)."
+                        : "Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft.",
+                      "Prüfe RTX_AGENT_URL oder AI_INFERENCE_BASE_URL (private Heimnetz-IP).",
+                      "Brain-/Objekt-KI blockiert bei RTX offline — Allgemeiner Cloud-Chat bleibt möglich.",
                     ]
                   : []
               }

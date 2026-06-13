@@ -72,6 +72,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
                 { label: "Backup", href: "/backup" },
                 { label: "Jobs", href: "/jobs" },
                 { label: "Systemstatus", href: "/admin/status" },
+                { label: "KI-Prompt", href: "/admin/ai-prompt" },
                 { label: "Einstellungen", href: "/settings" },
               ]}
             />

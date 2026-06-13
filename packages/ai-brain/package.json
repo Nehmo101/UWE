@@ -8,11 +8,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./inference": "./src/inference.ts",
-    "./inference-config": "./src/inference-config.ts"
+    "./inference-config": "./src/inference-config.ts",
+    "./router": "./src/router/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/inference.test.ts src/context-builder.test.ts src/embeddings/embeddings.test.ts src/brain-actions.test.ts src/ai-brain.test.ts"
+    "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
     "@uwe/database": "workspace:*"

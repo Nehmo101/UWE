@@ -12,6 +12,7 @@ import {
 import {
   AiPrivacyError,
   AiProviderError,
+  AiRouterError,
   AI_TASK_LABELS,
   buildAiContextBySlug,
   createProvider,
@@ -57,6 +58,9 @@ function jsonError(message: string, status = 400) {
 
 function handleAiError(error: unknown) {
   if (error instanceof AiPrivacyError) {
+    return jsonError(error.message, 403);
+  }
+  if (error instanceof AiRouterError) {
     return jsonError(error.message, 403);
   }
   if (error instanceof InferenceUrlBlockedError) {

@@ -8,6 +8,7 @@ import {
 } from "@uwe/database/server";
 import {
   AiPrivacyError,
+  AiRouterError,
   applyProposal,
   BRAIN_ACTION_LIST,
   discardRun,
@@ -22,6 +23,9 @@ function jsonError(message: string, status = 400) {
 
 function handleBrainError(error: unknown) {
   if (error instanceof AiPrivacyError) {
+    return jsonError(error.message, 403);
+  }
+  if (error instanceof AiRouterError) {
     return jsonError(error.message, 403);
   }
   if (error instanceof Error) {

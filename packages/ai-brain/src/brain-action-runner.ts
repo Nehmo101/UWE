@@ -7,23 +7,15 @@ import {
   type BrainActionId,
   getBrainAction,
 } from "./actions";
-import { createContextBuilder } from "./context";
-import { createDbBrainKnowledgeSource } from "./context/db-brain-knowledge-source";
 import { toAiRunContextSnapshot } from "./context/debug";
-import {
-  extractDmOnlyPhrases,
-  sanitizeContextForCloud,
-  validatePlayerRecapContent,
-  validateProviderForContext,
-} from "./privacy";
 import { buildProposalsFromResult } from "./proposals";
-import { createProvider, runAiTask } from "./providers/registry";
+import { resolveServerAllowDmOnly } from "./privacy";
 import {
-  createApiKeyStoreFromEnv,
-  isCloudProvider,
-  resolveAiBrainSettings,
-} from "./settings";
-import { buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
+  legacyContextMode,
+  providerIdToMode,
+  routeAiRequest,
+} from "./router";
+import { createApiKeyStoreFromEnv, resolveAiBrainSettings } from "./settings";
 import type {
   AiContext,
   AiProviderId,
@@ -31,7 +23,6 @@ import type {
   BuildAiContextOptions,
   GenerateTextResult,
 } from "./types";
-import { PLAYER_SAFE_TASKS } from "./types";
 
 export interface RunBrainActionInput {
   actionId: BrainActionId;
@@ -106,50 +97,36 @@ export async function runBrainAction(
   try {
     await deps.aiRuns.markRunning(run.id);
 
-    const brainSource = createDbBrainKnowledgeSource(deps.brainStore, input.worldSlug);
-    const contextBuilder = createContextBuilder(deps.repo, { brainSource });
-
     const contextOptions: BuildAiContextOptions = {
       ...input.options,
       datenschutzMode: settings.datenschutzMode,
       localOnly: settings.localOnly,
       sessionId: input.sessionId,
       audience: action.audience,
-      allowDmOnly: action.playerSafe
-        ? false
-        : (input.allowDmOnly ?? settings.localOnly),
+      allowDmOnly: resolveServerAllowDmOnly(settings, false, action.playerSafe),
     };
 
-    const context = await contextBuilder.build({
-      taskType: action.taskType,
-      worldId: world.id,
-      pageId: page.id,
-      options: contextOptions,
-    });
+    const routed = await routeAiRequest(
+      { repo: deps.repo, brainStore: deps.brainStore },
+      {
+        providerMode: providerIdToMode(input.providerId),
+        contextMode: legacyContextMode({ withBrain: true }),
+        taskType: action.taskType,
+        worldSlug: input.worldSlug,
+        pageSlug: input.pageSlug,
+        sessionId: input.sessionId,
+        model: input.model,
+        cloudProviderId:
+          providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
+        userPrompt: input.userPrompt,
+        useMock: input.useMock,
+        apiKeyStore,
+        options: contextOptions,
+      },
+    );
 
-    validateProviderForContext(input.providerId, context, settings);
-
-    const safeContext = isCloudProvider(input.providerId)
-      ? sanitizeContextForCloud(context)
-      : context;
-
-    const provider = createProvider(input.providerId, apiKeyStore, {
-      useMock: input.useMock,
-    });
-
-    const userPrompt = buildTaskPrompt(action.taskType, safeContext, input.userPrompt);
-    const systemPrompt = buildTaskSystemPrompt(action.taskType);
-
-    const result = await runAiTask(provider, {
-      model: input.model,
-      prompt: userPrompt,
-      systemPrompt,
-    });
-
-    if (PLAYER_SAFE_TASKS.includes(action.taskType)) {
-      const forbidden = extractDmOnlyPhrases(context);
-      validatePlayerRecapContent(result.text, forbidden);
-    }
+    const { context, result, prompts } = routed;
+    const { systemPrompt, userPrompt } = prompts;
 
     const proposals = buildProposalsFromResult({
       action,
@@ -181,7 +158,7 @@ export async function runBrainAction(
 
     return {
       runId: run.id,
-      context: safeContext,
+      context,
       result,
       proposals,
     };

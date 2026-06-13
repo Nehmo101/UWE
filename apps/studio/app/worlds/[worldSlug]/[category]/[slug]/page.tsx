@@ -15,6 +15,7 @@ import {
   WikiSidebar,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
+import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
 import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import {
   buildPageGraph,
@@ -101,6 +102,8 @@ export default async function StudioPageView({ params, searchParams }: Props) {
   } finally {
     await db.$disconnect();
   }
+
+  const useMockAi = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
 
   return (
     <>
@@ -232,6 +235,15 @@ export default async function StudioPageView({ params, searchParams }: Props) {
                     previewHref={previewHref}
                   />
                 </SidebarSection>
+                <SidebarSection title="KI-Prompt">
+                  <MobileAiPromptPanel
+                    worldSlug={worldSlug}
+                    pageSlug={slug}
+                    pageTitle={view.page.title}
+                    useMock={useMockAi}
+                  />
+                </SidebarSection>
+                <hr className="mobile-ai-brain-divider" aria-hidden="true" />
                 <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
               </>
             )}
