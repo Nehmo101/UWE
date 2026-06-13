@@ -15,7 +15,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "prisma generate && node --import tsx --test 'src/**/*.test.ts'",
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
