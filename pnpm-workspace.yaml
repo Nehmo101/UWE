@@ -6,3 +6,6 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - sharp
+  - prisma
+  - "@prisma/engines"
+  - better-sqlite3
