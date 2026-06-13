@@ -100,12 +100,6 @@ const GENERAL_CHAT_SYSTEM =
 
 
 
-const LOCAL_CONTEXT_SYSTEM =
-
-  "Du bist ein KI-Assistent für UWE-Kampagnen. Nutze den bereitgestellten Kontext. Antworte auf Deutsch.";
-
-
-
 function createEmptyGeneralChatContext(request: AiRouterRequest): AiContext {
 
   return {

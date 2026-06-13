@@ -16,7 +16,7 @@ Text:
 
 export async function tryAiShortenLabelText(
   text: string,
-  options: { localOnly?: boolean } = {},
+  _options: { localOnly?: boolean } = {},
 ): Promise<string | null> {
   const trimmed = text.trim();
   if (!trimmed) return null;

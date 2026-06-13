@@ -189,11 +189,12 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
     model: payload.model,
     userPrompt: payload.userPrompt,
     sessionId: payload.sessionId,
-      options: {
-        allowDmOnly: settings.localOnly,
-        datenschutzMode: settings.datenschutzMode,
-        localOnly: settings.localOnly,
-      },
+    useMock,
+    options: {
+      allowDmOnly: settings.localOnly,
+      datenschutzMode: settings.datenschutzMode,
+      localOnly: settings.localOnly,
+    },
   });
 
   await prisma.job.update({
