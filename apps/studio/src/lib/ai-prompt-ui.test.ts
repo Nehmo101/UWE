@@ -21,7 +21,6 @@ function baseCaps(overrides: Partial<AiPromptCapabilities> = {}): AiPromptCapabi
   return {
     rtxEnabled,
     rtxOnline,
-    rtxState,
     localAiReady: overrides.localAiReady ?? rtxOnline,
     cloudAvailable: true,
     brainLocal: true,

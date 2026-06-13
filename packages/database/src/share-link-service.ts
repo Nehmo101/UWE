@@ -1,4 +1,4 @@
-import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth";
+import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth/server";
 import type { PrismaClient } from "./client";
 import type { Asset, Page, ShareLink, ShareTargetType } from "./generated/prisma/client";
 import { filterBlocksForContext, type ShareAccessGrant } from "./permissions";

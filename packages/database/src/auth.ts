@@ -13,11 +13,9 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   filterPlayerNotesForViewer,
-  generateSessionToken,
-  hashPassword,
   sessionExpiresAt,
-  verifyPassword,
 } from "@uwe/auth";
+import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth/server";
 import type { PageWithBlocks } from "./repository";
 import {
   normalizeLookupKey,

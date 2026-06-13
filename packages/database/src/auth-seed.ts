@@ -1,6 +1,6 @@
 import type { AuthService } from "./auth";
 import type { UweRepository } from "./repository";
-import { hashPassword } from "@uwe/auth";
+import { hashPassword } from "@uwe/auth/server";
 
 /** Default dev password for all seed users. */
 export const DEV_SEED_PASSWORD = "uwe-dev";
