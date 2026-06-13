@@ -14,7 +14,6 @@ describe("AI review / apply / undo", () => {
   let undo: ReturnType<typeof createUndoService>;
   let activity: ReturnType<typeof createActivityLogService>;
   let worldId: string;
-  let worldSlug: string;
   let pageId: string;
   let sessionId: string;
 
@@ -28,7 +27,6 @@ describe("AI review / apply / undo", () => {
 
     const world = await repo.createWorld({ name: "Brain Review", slug: "brain-review" });
     worldId = world.id;
-    worldSlug = world.slug;
 
     const page = await repo.createPage({
       worldId,

@@ -19,7 +19,6 @@ import {
   InferenceUrlBlockedError,
   listSessionsForBrain,
   resolveAiBrainSettings,
-  SESSION_AWARE_TASKS,
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";

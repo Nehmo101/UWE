@@ -4,7 +4,6 @@ import type {
   BrainEmbeddingSettings,
   EmbeddingHealthCheckResult,
   EmbeddingProvider,
-  EmbeddingProviderId,
 } from "./types";
 import { BrainEmbeddingError } from "./types";
 

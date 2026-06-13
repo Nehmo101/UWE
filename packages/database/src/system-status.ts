@@ -4,7 +4,6 @@ import type { PrismaClient } from "./client";
 import {
   resolveAllDataPaths,
   resolveDatabaseFilePath,
-  resolveExportsDirFromEnv,
   type ResolvedDataPaths,
 } from "@uwe/assets";
 import { getMigrationStatus, type MigrationStatus } from "./migration-status";

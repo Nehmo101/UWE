@@ -13,7 +13,6 @@ describe("UWE brain store", () => {
   let databaseUrl: string;
   let worldSlug: string;
   let worldId: string;
-  let campaignId: string;
   let pageId: string;
   let documentId: string;
   let factId: string;
@@ -36,7 +35,6 @@ describe("UWE brain store", () => {
       name: "Main Campaign",
       slug: "main",
     });
-    campaignId = campaign.id;
 
     const page = await repo.createPage({
       worldId: world.id,

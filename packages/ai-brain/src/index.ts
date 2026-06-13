@@ -16,7 +16,6 @@ import { buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
 import type {
   AiBrainSettings,
   AiContext,
-  AiContextSource,
   AiProviderId,
   AiTaskType,
   ApiKeyStore,
