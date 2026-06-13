@@ -3,8 +3,10 @@
 ## Aktueller Stand
 
 - P00 Repo analysis: done
-- P01 Production host baseline: in progress or next
-- P02 Cloudflare and auth hardening: open
+- P01 Production host baseline: done
+  - P01A Production ENV and path concept: done
+  - P01B App/DB/Storage healthcheck: done
+- P02 Cloudflare and auth hardening: next
 - P03 Mail Center: open
 - P04 Brain Knowledge Store: open
 - P05 RTX Inference Connector: open
@@ -24,6 +26,11 @@ The RTX machine is only an inference worker.
 The RTX machine must not persist UWE application data.
 Only UWE on the old laptop is exposed through Cloudflare.
 
+## P01 completion note
+
+P01A and P01B were reported as completed by the user. The next package is P02.
+Before starting the long-running orchestrator flow, the agent should still verify the local working tree with `git status` and confirm that the current build/test state is acceptable.
+
 ## Nach jedem Paket aktualisieren
 
 For each completed package, update this file with:
@@ -38,4 +45,4 @@ For each completed package, update this file with:
 
 ## Aktuelle Empfehlung
 
-Finish P01 first. After P01, use `docs/ai-brain-mail/ONE_PROMPT_AFTER_P01.md` to start the long-running orchestrator flow.
+Start P02 next. After P01, use the one-prompt orchestrator instruction from the chat or the available automode documents under `docs/ai-brain-mail/` to continue from P02 through P13.
