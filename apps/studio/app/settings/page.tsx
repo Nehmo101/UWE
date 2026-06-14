@@ -15,6 +15,10 @@ import {
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
   resolveEffectiveUploadsPath,
+  resolveAgentJobsConfig,
+  resolveCalendarConfig,
+  resolveDndApiConfig,
+  resolveImageStudioConfig,
   VisibilityEnum,
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
@@ -26,6 +30,7 @@ const TABS = [
   { id: "privacy", label: "Privacy" },
   { id: "storage", label: "Storage" },
   { id: "ai", label: "AI" },
+  { id: "integrations", label: "Integrationen" },
   { id: "mail", label: "Mail" },
   { id: "backup", label: "Backup" },
   { id: "status", label: "Systemstatus" },
@@ -55,6 +60,10 @@ export default async function SettingsPage({ searchParams }: Props) {
   const backupsPath = resolveEffectiveBackupsPath(settings);
   const exportsPath = resolveEffectiveExportsPath(settings);
   const paths = getPersistentPathConfiguration(settings);
+  const imageStudioConfig = resolveImageStudioConfig();
+  const calendarConfig = resolveCalendarConfig();
+  const dndApiConfig = resolveDndApiConfig();
+  const agentJobsConfig = resolveAgentJobsConfig();
 
   const pathSourceLabel = {
     settings: "Studio-Einstellungen",
@@ -426,6 +435,63 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Speichern
               </button>
             </form>
+          )}
+
+          {activeTab === "integrations" && (
+            <section className="uwe-form">
+              <h2>Integrationen (ENV-gesteuert)</h2>
+              <p className="uwe-hint">
+                Alle externen Integrationen sind deaktivierbar. Secrets nur serverseitig in .env —
+                nie im Frontend.
+              </p>
+              <table className="uwe-table" style={{ width: "100%", marginTop: "1rem" }}>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Status</th>
+                    <th>Admin-Seite</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Image Studio</td>
+                    <td>{imageStudioConfig.enabled ? "aktiv" : "deaktiviert"}</td>
+                    <td>
+                      <Link href="/image-studio">/image-studio</Link>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Kalender</td>
+                    <td>{calendarConfig.enabled ? "aktiv" : "deaktiviert"}</td>
+                    <td>
+                      <Link href="/calendar">/calendar</Link>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DnD API (Open5e/SRD)</td>
+                    <td>
+                      Open5e: {dndApiConfig.open5eEnabled ? "an" : "aus"} · SRD:{" "}
+                      {dndApiConfig.dnd5eSrdEnabled ? "an" : "aus"}
+                    </td>
+                    <td>Welt → DnD API</td>
+                  </tr>
+                  <tr>
+                    <td>Agent Jobs</td>
+                    <td>
+                      {agentJobsConfig.enabled ? "aktiv" : "deaktiviert"} · Token:{" "}
+                      {agentJobsConfig.githubTokenConfigured ? "OK" : "fehlt"}
+                    </td>
+                    <td>
+                      <Link href="/admin/agent-jobs">/admin/agent-jobs</Link>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="uwe-hint" style={{ marginTop: "1rem" }}>
+                Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_* und
+                CALDAV_PASSWORD.
+              </p>
+            </section>
           )}
 
           {activeTab === "mail" && (

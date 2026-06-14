@@ -828,4 +828,77 @@ export {
 
 export type { SendMailInput, SendMailResult } from "./mail-service";
 
+export {
+  createCalendarService,
+  CalendarService,
+  CALENDAR_EVENT_KIND_LABELS,
+  CALENDAR_FEED_TYPE_LABELS,
+  CalendarEventKindEnum,
+  CalendarFeedTypeEnum,
+  CalendarFeedDirectionEnum,
+} from "./calendar-service";
+
+export type {
+  CreateCalendarFeedInput,
+  CreateCalendarEventInput,
+  ListCalendarEventsOptions,
+  CalendarEvent,
+  CalendarFeed,
+  CalendarEventKind,
+  CalendarFeedType,
+  CalendarFeedDirection,
+} from "./calendar-service";
+
+export {
+  createDevAgentJobService,
+  DevAgentJobService,
+  resolveAgentJobsConfig,
+  DEV_AGENT_JOB_STATUS_LABELS,
+  DEV_AGENT_JOB_PROVIDER_LABELS,
+  DevAgentJobStatusEnum,
+  DevAgentJobProviderEnum,
+} from "./agent-job-service";
+
+export type {
+  CreateDevAgentJobInput,
+  UpdateDevAgentJobInput,
+  DevAgentJob,
+  DevAgentJobStatus,
+  DevAgentJobProvider,
+  AgentJobsConfig,
+} from "./agent-job-service";
+
+export {
+  createImageStudioService,
+  ImageStudioService,
+  createDndApiService,
+  DndApiService,
+  resolveImageStudioConfig,
+  resolveDndApiConfig,
+  resolveCalendarConfig,
+  IMAGE_STUDIO_OPERATION_LABELS,
+  IMAGE_STUDIO_STATUS_LABELS,
+  ImageStudioOperationEnum,
+  ImageStudioStatusEnum,
+  ImageStudioLinkTargetTypeEnum,
+  DndApiProviderEnum,
+} from "./integrations-service";
+
+export type {
+  CreateImageStudioProjectInput,
+  CreateImageStudioVersionInput,
+  ImageStudioProject,
+  ImageStudioVersion,
+  ImageStudioLink,
+  ImageStudioOperation,
+  ImageStudioStatus,
+  ImageStudioLinkTargetType,
+  DndApiProvider,
+  DndBeyondReference,
+  DndApiCacheEntry,
+  ImageStudioConfig,
+  DndApiConfig,
+  CalendarIntegrationConfig,
+} from "./integrations-service";
+
 export { createMailComposeService, MailComposeService } from "./mail-compose-service";

@@ -10,6 +10,7 @@ export type WorldNavKey =
   | "graph"
   | "inspector"
   | "import"
+  | "dnd-api"
   | "backup"
   | "new-page";
 
@@ -29,6 +30,7 @@ export function worldNavItems(worldSlug: string, active?: WorldNavKey) {
     { key: "graph", label: "Graph", href: `${base}/graph` },
     { key: "inspector", label: "Inspektor", href: `${base}/inspector` },
     { key: "import", label: "Import", href: `${base}/import` },
+    { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
     { key: "backup", label: "Backup", href: `${base}/backup` },
     { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
   ];

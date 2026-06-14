@@ -17,6 +17,9 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   backup: "Backup erstellen",
   backup_restore: "Backup wiederherstellen",
   canon_check: "Kanonprüfung",
+  image_studio: "Image Studio",
+  agent_job: "Agent-Job",
+  calendar_sync: "Kalender-Sync",
 };
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -36,6 +39,9 @@ export const RETRYABLE_JOB_TYPES = new Set<JobType>([
   "import",
   "backup",
   "canon_check",
+  "image_studio",
+  "agent_job",
+  "calendar_sync",
 ]);
 
 export interface EnqueueJobInput {

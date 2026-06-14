@@ -266,6 +266,9 @@ enum JobType {
   backup
   backup_restore
   canon_check
+  image_studio
+  agent_job
+  calendar_sync
 }
 
 enum JobStatus {
@@ -501,6 +504,9 @@ model World {
   workshopProjects    WorkshopProject[]
   generatorPresets    GeneratorPreset[]
   generatorOutputs    GeneratorOutput[]
+  imageStudioProjects ImageStudioProject[]
+  calendarEvents      CalendarEvent[]
+  dndBeyondReferences DndBeyondReference[]
 
   @@map("worlds")
 }
@@ -567,6 +573,7 @@ model Page {
   personalProjects       PersonalProject[]
   workshopProjects       WorkshopProject[]
   generatorOutputs       GeneratorOutput[]
+  dndBeyondReferences    DndBeyondReference[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -597,6 +604,7 @@ model GameSession {
   brainDocuments BrainDocument[]
   brainFacts     BrainFact[]
   aiRuns         AiRun[]
+  calendarEvents CalendarEvent[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
@@ -656,6 +664,7 @@ model Asset {
   pageLinks         AssetPageLink[]
   contentBlocks     ContentBlock[]
   soundboardButtons SoundboardButton[]
+  imageStudioVersions ImageStudioVersion[]
 
   @@index([worldId, type])
   @@map("assets")
@@ -1546,4 +1555,222 @@ model GeneratorOutput {
   @@index([presetId])
   @@index([isFavorite])
   @@map("generator_outputs")
+}
+
+// --- Media, Calendar, DnD Integrations & Agent Automation ---
+
+enum ImageStudioOperation {
+  generate
+  edit
+  inpaint
+  remove_background
+  variant
+}
+
+enum ImageStudioStatus {
+  draft
+  processing
+  completed
+  failed
+}
+
+enum ImageStudioLinkTargetType {
+  page
+  asset
+  label
+  game_session
+  handout
+  brain_document
+  capture
+}
+
+enum CalendarEventKind {
+  session
+  prep
+  personal
+  external
+  dnd
+}
+
+enum CalendarFeedType {
+  local
+  caldav
+  ical_url
+  familywall
+}
+
+enum CalendarFeedDirection {
+  read_only
+  read_write
+}
+
+enum DevAgentJobStatus {
+  pending
+  dispatched
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum DevAgentJobProvider {
+  github_actions
+  cursor_cloud
+  cursor_cli_local
+}
+
+enum DndApiProvider {
+  open5e
+  dnd5e_srd
+}
+
+model ImageStudioProject {
+  id          String             @id @default(cuid())
+  worldId     String?            @map("world_id")
+  title       String
+  prompt      String?
+  status      ImageStudioStatus  @default(draft)
+  metadata    Json?
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  world    World?               @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  versions ImageStudioVersion[]
+  links    ImageStudioLink[]
+
+  @@index([worldId, status])
+  @@map("image_studio_projects")
+}
+
+model ImageStudioVersion {
+  id              String               @id @default(cuid())
+  projectId       String               @map("project_id")
+  versionNumber   Int                  @map("version_number")
+  operation       ImageStudioOperation
+  prompt          String?
+  assetId         String?              @map("asset_id")
+  parentVersionId String?              @map("parent_version_id")
+  providerMode    String?              @map("provider_mode")
+  metadata        Json?
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  project ImageStudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  asset   Asset?             @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, versionNumber])
+  @@map("image_studio_versions")
+}
+
+model ImageStudioLink {
+  id         String                    @id @default(cuid())
+  projectId  String                    @map("project_id")
+  targetType ImageStudioLinkTargetType @map("target_type")
+  targetId   String                    @map("target_id")
+  createdAt  DateTime                  @default(now()) @map("created_at")
+
+  project ImageStudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@map("image_studio_links")
+}
+
+model CalendarFeed {
+  id          String                @id @default(cuid())
+  name        String
+  type        CalendarFeedType
+  direction   CalendarFeedDirection @default(read_only)
+  url         String?
+  caldavUrl   String?               @map("caldav_url")
+  username    String?
+  enabled     Boolean               @default(true)
+  color       String?
+  lastSyncAt  DateTime?             @map("last_sync_at")
+  syncError   String?               @map("sync_error")
+  metadata    Json?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  events CalendarEvent[]
+
+  @@map("calendar_feeds")
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  feedId      String?           @map("feed_id")
+  worldId     String?           @map("world_id")
+  sessionId   String?           @map("session_id")
+  title       String
+  description String?
+  location    String?
+  startAt     DateTime          @map("start_at")
+  endAt       DateTime?         @map("end_at")
+  allDay      Boolean           @default(false) @map("all_day")
+  kind        CalendarEventKind @default(personal)
+  externalUid String?           @map("external_uid")
+  metadata    Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  feed    CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: SetNull)
+  world   World?        @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  session GameSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([startAt])
+  @@index([worldId, startAt])
+  @@index([feedId, externalUid])
+  @@map("calendar_events")
+}
+
+model DevAgentJob {
+  id           String              @id @default(cuid())
+  title        String
+  prompt       String
+  status       DevAgentJobStatus   @default(pending)
+  provider     DevAgentJobProvider @default(github_actions)
+  branchName   String?             @map("branch_name")
+  prUrl        String?             @map("pr_url")
+  issueUrl     String?             @map("issue_url")
+  githubRunId  String?             @map("github_run_id")
+  cursorJobId  String?             @map("cursor_job_id")
+  result       Json?
+  errorMessage String?             @map("error_message")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  completedAt  DateTime?           @map("completed_at")
+
+  @@index([status, createdAt])
+  @@map("dev_agent_jobs")
+}
+
+model DndBeyondReference {
+  id         String   @id @default(cuid())
+  worldId    String   @map("world_id")
+  pageId     String?  @map("page_id")
+  title      String
+  url        String
+  entityType String?  @map("entity_type")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([worldId])
+  @@map("dnd_beyond_references")
+}
+
+model DndApiCacheEntry {
+  id        String         @id @default(cuid())
+  provider  DndApiProvider
+  cacheKey  String         @map("cache_key")
+  payload   Json
+  expiresAt DateTime?      @map("expires_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([provider, cacheKey])
+  @@index([expiresAt])
+  @@map("dnd_api_cache_entries")
 }

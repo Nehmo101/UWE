@@ -1,0 +1,71 @@
+name: Cursor Agent Job
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Development prompt for the Cursor agent"
+        required: true
+        type: string
+      title:
+        description: "Job title"
+        required: true
+        type: string
+      job_id:
+        description: "UWE DevAgentJob ID"
+        required: true
+        type: string
+      branch_name:
+        description: "Target branch name"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cursor-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create branch
+        run: git checkout -b "${{ github.event.inputs.branch_name }}"
+
+      - name: Run Cursor CLI (if available)
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          echo "UWE Agent Job: ${{ github.event.inputs.title }}"
+          echo "Job ID: ${{ github.event.inputs.job_id }}"
+          if command -v cursor >/dev/null 2>&1; then
+            cursor agent --prompt "${{ github.event.inputs.prompt }}" || echo "Cursor CLI failed — manual follow-up required"
+          else
+            echo "Cursor CLI not installed in CI — create PR manually from branch"
+            echo "${{ github.event.inputs.prompt }}" > .cursor-agent-prompt.txt
+          fi
+
+      - name: Commit placeholder if changes
+        run: |
+          git config user.name "UWE Agent"
+          git config user.email "agent@uwe.local"
+          git add -A
+          git diff --staged --quiet || git commit -m "chore(agent): ${{ github.event.inputs.title }}"
+
+      - name: Push branch
+        run: git push -u origin "${{ github.event.inputs.branch_name }}"
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "${{ github.event.inputs.branch_name }}" \
+            --title "${{ github.event.inputs.title }}" \
+            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge." \
+            --draft || echo "PR may already exist"

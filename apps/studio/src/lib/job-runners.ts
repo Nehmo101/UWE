@@ -34,6 +34,11 @@ import {
   type ImportFormat,
 } from "@uwe/knoteforge-import";
 import {
+  runAgentJob,
+  runCalendarSyncJob,
+  runImageStudioJob,
+} from "./integration-job-runners";
+import {
   executeRestore,
   exportBackupJson,
   exportBackupZip,
@@ -637,6 +642,12 @@ export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<s
       return runCanonCheckJob(ctx);
     case "backup_restore":
       return runBackupRestoreJob(ctx);
+    case "image_studio":
+      return runImageStudioJob(ctx);
+    case "agent_job":
+      return runAgentJob(ctx);
+    case "calendar_sync":
+      return runCalendarSyncJob(ctx);
     default:
       throw new Error(`Unbekannter Job-Typ: ${ctx.job.type}`);
   }

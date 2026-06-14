@@ -11,11 +11,15 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/agent-jobs": "workspace:*",
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/backup": "workspace:*",
+    "@uwe/calendar": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/dnd-api": "workspace:*",
+    "@uwe/image-studio": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
     "@uwe/mail": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
