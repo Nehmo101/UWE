@@ -84,5 +84,18 @@ Details: [docs/backup-restore.md](../backup-restore.md), [docs/BACKUP.md](../BAC
 - Echter SMTP- und RTX-End-to-End-Test erfordert laufende Infrastruktur; Unit-Tests mocken Transport/Fetch.
 - `MAIL_USE_MOCK=true` und `AI_USE_MOCK=true` für lokale Tests ohne externe Dienste.
 - Embeddings semantic-search Test kann unter Turbo-Parallelität flaky sein.
-- **Typecheck:** `@uwe/studio` Modulpfade in zwei API-Routes (vorbestehend).
-- **Lint:** 7 unused-vars Fehler (vorbestehend).
+- **Daily Admin OS UI** (`/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain): noch nicht implementiert — siehe [docs/daily-admin-os.md](../daily-admin-os.md).
+
+## Integration Smoke (Subagent 8)
+
+Automatisiert via `scripts/integration-smoke.test.ts` (läuft mit `pnpm test`):
+
+| Bereich | Abdeckung |
+|---------|-----------|
+| Core Studio/Portal routes | Route-Dateien vorhanden |
+| DnD-KI tasks & brain actions | Task-Definitionen in `tasks.ts` / `actions.ts` |
+| Security tests | privacy, router, inference, visibility, production-safety |
+| No secrets in client | Scan von `"use client"` Komponenten |
+| RTX public URL guard | `inference-url-guard.ts` + Test |
+| Documentation | daily-admin-os, life-brain-privacy, dnd-generator-upgrade |
+| Mobile nav | `mobile-nav.ts`, `MobileComponents.tsx` |

@@ -45,7 +45,8 @@ export default async function BrainOverviewPage() {
           <SidebarNav
             items={[
               { label: "← Dashboard", href: "/" },
-              { label: "Brain Store", href: "/brain", active: true },
+              { label: "Life-Brain", href: "/life-brain" },
+              { label: "DnD Brain Store", href: "/brain", active: true },
             ]}
           />
         </SidebarSection>
@@ -54,7 +55,7 @@ export default async function BrainOverviewPage() {
         <>
           <PageHeader
             title="Brain Knowledge Store"
-            summary="Dauerhaftes Welt- und Kampagnenwissen — gespeichert in UWE auf dem Host-Laptop, nicht auf dem RTX-Inferenz-Rechner."
+            summary="Dauerhaftes DnD-Welt- und Kampagnenwissen — getrennt vom privaten Life-Brain unter /life-brain."
           />
 
           {worlds.length === 0 ? (

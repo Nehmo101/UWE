@@ -9,7 +9,7 @@
     "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "turbo run typecheck",
-    "test": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts",
+    "test": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
     "release:check": "node --import tsx --test scripts/release.test.ts",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",

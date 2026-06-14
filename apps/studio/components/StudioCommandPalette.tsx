@@ -67,6 +67,8 @@ export function StudioCommandPalette({ worlds }: StudioCommandPaletteProps) {
     }
 
     list.push(
+      { id: "go-today", label: "Heute öffnen", href: "/today", group: "Studio", keywords: ["daily", "cockpit", "start"] },
+      { id: "go-capture", label: "Capture öffnen", href: "/capture", group: "Studio", keywords: ["inbox", "notiz", "erfassen"] },
       { id: "go-dashboard", label: "Dashboard öffnen", href: "/", group: "Studio", keywords: ["home", "start"] },
       { id: "go-worlds", label: "Welten öffnen", href: "/worlds", group: "Studio", keywords: ["worlds"] },
       { id: "go-search", label: "Globale Suche öffnen", href: "/search", group: "Studio", keywords: ["finden"] },

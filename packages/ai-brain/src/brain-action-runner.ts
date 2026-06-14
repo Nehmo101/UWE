@@ -27,7 +27,7 @@ import type {
 export interface RunBrainActionInput {
   actionId: BrainActionId;
   worldSlug: string;
-  pageSlug: string;
+  pageSlug?: string;
   providerId: AiProviderId;
   model: string;
   userPrompt?: string;
@@ -37,6 +37,39 @@ export interface RunBrainActionInput {
   userId?: string;
   options?: BuildAiContextOptions;
   apiKeyStore?: ApiKeyStore;
+}
+
+async function resolveAnchorPageSlug(
+  deps: BrainActionRunnerDeps,
+  input: RunBrainActionInput,
+): Promise<{ pageSlug: string; pageId: string }> {
+  if (input.pageSlug?.trim()) {
+    const page = await deps.repo.getPageBySlug(input.worldSlug, input.pageSlug);
+    if (!page) {
+      throw new Error(`Seite ${input.pageSlug} nicht gefunden.`);
+    }
+    return { pageSlug: page.slug, pageId: page.id };
+  }
+
+  if (input.sessionId) {
+    const world = await deps.repo.getWorldBySlug(input.worldSlug);
+    if (!world) {
+      throw new Error(`Welt ${input.worldSlug} nicht gefunden.`);
+    }
+    const sessions = await deps.repo.listGameSessionsByWorldId(world.id);
+    const session = sessions.find((s) => s.id === input.sessionId);
+    const linkedPage = session?.linkedPages?.[0]?.page;
+    if (linkedPage) {
+      return { pageSlug: linkedPage.slug, pageId: linkedPage.id };
+    }
+  }
+
+  const pages = await deps.repo.listPagesByWorld(input.worldSlug);
+  const anchor = pages[0];
+  if (!anchor) {
+    throw new Error("Keine Anker-Seite für Brain-Kontext gefunden.");
+  }
+  return { pageSlug: anchor.slug, pageId: anchor.id };
 }
 
 export interface RunBrainActionResult {
@@ -70,9 +103,10 @@ export async function runBrainAction(
     throw new Error(`Welt ${input.worldSlug} nicht gefunden.`);
   }
 
-  const page = await deps.repo.getPageBySlug(input.worldSlug, input.pageSlug);
+  const anchor = await resolveAnchorPageSlug(deps, input);
+  const page = await deps.repo.getPageBySlug(input.worldSlug, anchor.pageSlug);
   if (!page) {
-    throw new Error(`Seite ${input.pageSlug} nicht gefunden.`);
+    throw new Error(`Seite ${anchor.pageSlug} nicht gefunden.`);
   }
 
   if (action.requiresSession && !input.sessionId) {
@@ -113,7 +147,7 @@ export async function runBrainAction(
         contextMode: legacyContextMode({ withBrain: true }),
         taskType: action.taskType,
         worldSlug: input.worldSlug,
-        pageSlug: input.pageSlug,
+        pageSlug: anchor.pageSlug,
         sessionId: input.sessionId,
         model: input.model,
         cloudProviderId:

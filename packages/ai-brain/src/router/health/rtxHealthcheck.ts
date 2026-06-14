@@ -1,7 +1,9 @@
 import { getInferenceStatus } from "../../inference";
 import { resolveInferenceConfig } from "../../inference-config";
+import { sanitizeInferenceEndpointLabel, type InferenceUrlKind } from "../../inference-url-guard";
 import { fetchRtxAgentHealth } from "../../rtx-agent-client";
 import {
+  evaluateRtxAgentUrl,
   isRtxAgentConfigured,
   resolveRtxAgentConfig,
   type RtxAgentStatus,
@@ -21,12 +23,35 @@ export interface RtxHealthStatus {
   agentStatus?: RtxAgentStatus;
   /** Whether health was read from RTX agent vs direct inference. */
   source: "agent" | "inference";
+  urlAllowed: boolean;
+  urlKind: InferenceUrlKind | string;
+  publicExposureWarning?: string;
 }
 
 export async function checkRtxHealth(options?: {
   useMock?: boolean;
+  env?: NodeJS.ProcessEnv;
 }): Promise<RtxHealthStatus> {
-  const agentConfig = resolveRtxAgentConfig();
+  const env = options?.env ?? process.env;
+  const agentEvaluation = evaluateRtxAgentUrl(env);
+  const agentConfig = resolveRtxAgentConfig(env);
+
+  if (agentEvaluation.configured && !agentEvaluation.urlAllowed) {
+    return {
+      online: false,
+      ready: false,
+      message: agentEvaluation.blockReason ?? "RTX-Agent-URL ist öffentlich und blockiert.",
+      providerId: "ollama",
+      endpoint: sanitizeInferenceEndpointLabel(agentEvaluation.url ?? ""),
+      defaultModel: resolveInferenceConfig().defaultModel,
+      agentStatus: "error",
+      source: "agent",
+      urlAllowed: false,
+      urlKind: agentEvaluation.urlKind ?? "public",
+      publicExposureWarning:
+        "RTX_AGENT_URL zeigt auf eine öffentliche Adresse — nur Heimnetz/private IP nutzen.",
+    };
+  }
 
   if (agentConfig && !options?.useMock) {
     const agentHealth = await fetchRtxAgentHealth(agentConfig);
@@ -43,6 +68,8 @@ export async function checkRtxHealth(options?: {
         agentHealth.model ?? agentConfig.preferredModel ?? resolveInferenceConfig().defaultModel,
       agentStatus: agentHealth.status,
       source: "agent",
+      urlAllowed: true,
+      urlKind: agentEvaluation.urlKind ?? "private",
     };
   }
 
@@ -59,6 +86,11 @@ export async function checkRtxHealth(options?: {
     health: status.health,
     modelCount: status.modelCount,
     source: "inference",
+    urlAllowed: status.urlAllowed,
+    urlKind: status.urlKind,
+    publicExposureWarning: status.urlAllowed
+      ? undefined
+      : "AI_INFERENCE_BASE_URL zeigt auf eine öffentliche Adresse — RTX nur im Heimnetz betreiben.",
   };
 }
 

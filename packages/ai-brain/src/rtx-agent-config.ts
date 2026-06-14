@@ -1,4 +1,4 @@
-import { assertInferenceUrlAllowed } from "./inference-url-guard";
+import { assertInferenceUrlAllowed, classifyInferenceUrl, type InferenceUrlKind } from "./inference-url-guard";
 
 export type RtxAgentStatus = "ready" | "disabled" | "starting" | "error" | "unreachable";
 
@@ -17,18 +17,64 @@ export interface RtxAgentHealthPayload {
   backend?: string;
 }
 
-export function resolveRtxAgentConfig(env: NodeJS.ProcessEnv = process.env): RtxAgentConfig | null {
+export interface RtxAgentUrlEvaluation {
+  configured: boolean;
+  url: string | null;
+  urlAllowed: boolean;
+  urlKind: InferenceUrlKind | null;
+  blockReason: string | null;
+}
+
+export function evaluateRtxAgentUrl(env: NodeJS.ProcessEnv = process.env): RtxAgentUrlEvaluation {
   const rawUrl = env.RTX_AGENT_URL?.trim();
   if (!rawUrl) {
+    return {
+      configured: false,
+      url: null,
+      urlAllowed: true,
+      urlKind: null,
+      blockReason: null,
+    };
+  }
+
+  const allowPublicUrl = env.AI_INFERENCE_ALLOW_PUBLIC_URL === "true";
+  const urlKind = classifyInferenceUrl(rawUrl);
+
+  try {
+    assertInferenceUrlAllowed(rawUrl, allowPublicUrl);
+    return {
+      configured: true,
+      url: rawUrl.replace(/\/$/, ""),
+      urlAllowed: true,
+      urlKind,
+      blockReason: null,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "RTX-Agent-URL blockiert.";
+    return {
+      configured: true,
+      url: rawUrl.replace(/\/$/, ""),
+      urlAllowed: false,
+      urlKind,
+      blockReason: message,
+    };
+  }
+}
+
+export function resolveRtxAgentConfig(env: NodeJS.ProcessEnv = process.env): RtxAgentConfig | null {
+  const evaluation = evaluateRtxAgentUrl(env);
+  if (!evaluation.configured || !evaluation.url) {
     return null;
   }
 
-  assertInferenceUrlAllowed(rawUrl, env.AI_INFERENCE_ALLOW_PUBLIC_URL === "true");
+  if (!evaluation.urlAllowed) {
+    return null;
+  }
 
   const timeoutMs = Number.parseInt(env.RTX_TIMEOUT_MS ?? "3000", 10);
 
   return {
-    url: rawUrl.replace(/\/$/, ""),
+    url: evaluation.url,
     token: env.RTX_AGENT_TOKEN?.trim() ?? "",
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 3000,
     preferredModel: env.PREFERRED_LOCAL_MODEL?.trim() || undefined,

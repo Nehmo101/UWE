@@ -1,0 +1,241 @@
+/**
+ * Subagent 8 — Integration & release smoke checks.
+ * Validates route scaffolding, security patterns, DnD-KI tasks, and documentation.
+ */
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { describe, it } from "node:test";
+
+const root = path.resolve(import.meta.dirname, "..");
+
+function exists(relativePath: string): boolean {
+  return fs.existsSync(path.join(root, relativePath));
+}
+
+function read(relativePath: string): string {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function listFiles(dir: string, pattern: RegExp): string[] {
+  const results: string[] = [];
+  const walk = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (pattern.test(entry.name)) {
+        results.push(full);
+      }
+    }
+  };
+  if (fs.existsSync(dir)) walk(dir);
+  return results;
+}
+
+/** Client-side files that must never reference server secrets. */
+const FORBIDDEN_CLIENT_SECRET_PATTERNS = [
+  /process\.env\.AUTH_SECRET/,
+  /process\.env\.RTX_AGENT_TOKEN/,
+  /process\.env\.CLOUD_AI_API_KEY/,
+  /process\.env\.STUDIO_API_TOKEN/,
+  /process\.env\.SMTP_PASSWORD/,
+  /process\.env\.OPENAI_API_KEY/,
+  /process\.env\.SPOTIFY_CLIENT_SECRET/,
+];
+
+describe("integration smoke — core Studio routes", () => {
+  const coreRoutes = [
+    "apps/studio/app/page.tsx",
+    "apps/studio/app/worlds/page.tsx",
+    "apps/studio/app/brain/page.tsx",
+    "apps/studio/app/mail/page.tsx",
+    "apps/studio/app/backup/page.tsx",
+    "apps/studio/app/jobs/page.tsx",
+    "apps/studio/app/settings/page.tsx",
+    "apps/studio/app/admin/status/page.tsx",
+    "apps/studio/app/admin/ai-prompt/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/dashboard/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/brain/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/dungeons/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/soundboard/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/inspector/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/labels/page.tsx",
+  ];
+
+  for (const route of coreRoutes) {
+    it(`includes ${route}`, () => {
+      assert.ok(exists(route), `Missing core route: ${route}`);
+    });
+  }
+});
+
+describe("integration smoke — Daily Admin OS routes (planned)", () => {
+  const plannedRoutes = [
+    "apps/studio/app/today/page.tsx",
+    "apps/studio/app/capture/page.tsx",
+    "apps/studio/app/projects/page.tsx",
+    "apps/studio/app/workshop/page.tsx",
+    "apps/studio/app/contracts/page.tsx",
+    "apps/studio/app/hardware/page.tsx",
+    "apps/studio/app/life-brain/page.tsx",
+  ];
+
+  it("documents planned Daily Admin OS routes in docs/daily-admin-os.md", () => {
+    const doc = read("docs/daily-admin-os.md");
+    for (const route of plannedRoutes) {
+      const slug = route.split("/")[3];
+      assert.match(doc, new RegExp(slug), `docs/daily-admin-os.md should mention /${slug}`);
+    }
+  });
+});
+
+describe("integration smoke — Portal routes", () => {
+  const portalRoutes = [
+    "apps/portal/app/page.tsx",
+    "apps/portal/app/login/page.tsx",
+    "apps/portal/app/worlds/page.tsx",
+    "apps/portal/app/worlds/[worldSlug]/page.tsx",
+    "apps/portal/app/auth/worlds/page.tsx",
+  ];
+
+  for (const route of portalRoutes) {
+    it(`includes ${route}`, () => {
+      assert.ok(exists(route), `Missing portal route: ${route}`);
+    });
+  }
+});
+
+describe("integration smoke — security (no secrets in client code)", () => {
+  const clientDirs = [
+    path.join(root, "apps/studio/components"),
+    path.join(root, "apps/portal/src/components"),
+    path.join(root, "packages/shared-ui/src"),
+  ];
+
+  for (const dir of clientDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    const files = listFiles(dir, /\.(tsx|ts|jsx|js)$/);
+    for (const file of files) {
+      const content = fs.readFileSync(file, "utf8");
+      const isClient = content.includes('"use client"') || file.includes("MobileComponents");
+
+      if (!isClient) continue;
+
+      for (const pattern of FORBIDDEN_CLIENT_SECRET_PATTERNS) {
+        it(`${path.relative(root, file)} must not reference ${pattern.source}`, () => {
+          assert.doesNotMatch(
+            content,
+            pattern,
+            `Secret env var leaked in client file: ${file}`,
+          );
+        });
+      }
+    }
+  }
+});
+
+describe("integration smoke — DnD generator AI tasks", () => {
+  const tasksSource = read("packages/ai-brain/src/tasks.ts");
+  const actionsSource = read("packages/ai-brain/src/actions.ts");
+  const privacySource = read("packages/ai-brain/src/privacy.ts");
+
+  const requiredTasks = [
+    "create_npc",
+    "create_location",
+    "fill_dungeon_room",
+    "create_encounter",
+    "create_player_handout",
+    "detect_contradictions",
+    "prepare_next_session",
+    "prepare_canon_check",
+  ];
+
+  for (const task of requiredTasks) {
+    it(`defines AI task ${task}`, () => {
+      assert.match(tasksSource, new RegExp(task));
+    });
+  }
+
+  it("marks player-safe tasks in buildTaskSystemPrompt", () => {
+    assert.match(tasksSource, /generate_player_recap/);
+    assert.match(tasksSource, /create_player_handout/);
+    assert.match(tasksSource, /GM-Geheimnisse/);
+  });
+
+  it("exposes brain actions for DnD generator workflows", () => {
+    assert.match(actionsSource, /next_session_prep/);
+    assert.match(actionsSource, /canon_check/);
+    assert.match(actionsSource, /player_handout/);
+    assert.match(actionsSource, /fill_dungeon_room/);
+  });
+
+  it("blocks cloud provider when context has local knowledge", () => {
+    assert.match(privacySource, /contextContainsLocalKnowledge/);
+    assert.match(privacySource, /isCloudProvider/);
+  });
+});
+
+describe("integration smoke — security test coverage", () => {
+  const securityTests = [
+    "packages/ai-brain/src/privacy.test.ts",
+    "packages/ai-brain/src/router/router.test.ts",
+    "packages/ai-brain/src/inference.test.ts",
+    "packages/database/src/visibility-security.test.ts",
+    "packages/database/src/production-safety.test.ts",
+    "packages/database/src/system-status.test.ts",
+    "apps/studio/src/lib/studio-api-auth.test.ts",
+    "apps/studio/src/admin-status.test.ts",
+  ];
+
+  for (const testFile of securityTests) {
+    it(`includes ${testFile}`, () => {
+      assert.ok(exists(testFile), `Missing security test: ${testFile}`);
+    });
+  }
+});
+
+describe("integration smoke — documentation", () => {
+  const requiredDocs = [
+    "docs/daily-admin-os.md",
+    "docs/life-brain-privacy.md",
+    "docs/dnd-generator-upgrade.md",
+    "docs/PRODUCTION.md",
+    "SECURITY_NOTES.md",
+    "CHANGELOG.md",
+  ];
+
+  for (const doc of requiredDocs) {
+    it(`includes ${doc}`, () => {
+      assert.ok(exists(doc), `Missing documentation: ${doc}`);
+    });
+  }
+});
+
+describe("integration smoke — mobile navigation", () => {
+  it("defines global bottom nav items", () => {
+    const nav = read("apps/studio/src/lib/mobile-nav.ts");
+    assert.match(nav, /studioGlobalBottomNav/);
+    assert.match(nav, /studioWorldBottomNav/);
+  });
+
+  it("includes MobileBottomNav component", () => {
+    const mobile = read("packages/shared-ui/src/MobileComponents.tsx");
+    assert.match(mobile, /MobileBottomNav/);
+    assert.match(mobile, /PageListCards/);
+  });
+});
+
+describe("integration smoke — RTX public URL guard", () => {
+  it("blocks public inference URLs by default", () => {
+    const guard = read("packages/ai-brain/src/inference-url-guard.ts");
+    assert.match(guard, /isInferenceUrlAllowed/);
+    assert.match(guard, /allowPublicUrl/);
+  });
+
+  it("tests public URL blocking", () => {
+    const test = read("packages/ai-brain/src/inference.test.ts");
+    assert.match(test, /blocks public base URLs when allowPublicUrl is false/);
+  });
+});

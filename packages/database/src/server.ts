@@ -513,6 +513,15 @@ export {
 
 export { validateSettingsUpdate } from "./settings-validation";
 
+export {
+  jobRequiresLocalRtx,
+  isRtxOfflineError,
+  RTX_REQUIRED_JOB_TYPES,
+  DEFERRED_JOB_PROGRESS_LABEL,
+} from "./rtx-deferred-jobs";
+
+export type { RtxDeferCheckInput } from "./rtx-deferred-jobs";
+
 export type {
   SettingsValidationError,
   SettingsValidationResult,

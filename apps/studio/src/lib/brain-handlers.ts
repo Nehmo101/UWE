@@ -50,7 +50,7 @@ export async function getBrainActions() {
 export async function postBrainRun(body: {
   actionId: string;
   worldSlug: string;
-  pageSlug: string;
+  pageSlug?: string;
   providerId: AiProviderId;
   model: string;
   userPrompt?: string;
@@ -65,7 +65,7 @@ export async function postBrainRun(body: {
     }
 
     const action = BRAIN_ACTION_LIST.find((entry) => entry.id === body.actionId);
-    const title = `${action?.label ?? body.actionId} · ${body.pageSlug}`;
+    const title = `${action?.label ?? body.actionId} · ${body.pageSlug ?? body.sessionId ?? body.worldSlug}`;
 
     if (body.sync) {
       const jobs = createJobService(prisma);

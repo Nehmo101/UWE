@@ -8,6 +8,8 @@ import {
   InferenceUrlBlockedError,
   isInferenceUrlAllowed,
 } from "./inference-url-guard";
+import { evaluateRtxAgentUrl } from "./rtx-agent-config";
+import { checkRtxHealth } from "./router/health/rtxHealthcheck";
 import { createProvider, MockAiProvider } from "./providers/registry";
 import { InMemoryApiKeyStore } from "./settings";
 import { AiProviderError } from "./types";
@@ -24,6 +26,7 @@ const ENV_KEYS = [
   "OLLAMA_BASE_URL",
   "OPENAI_COMPATIBLE_BASE_URL",
   "AI_DEFAULT_PROVIDER",
+  "RTX_AGENT_URL",
 ] as const;
 
 const originalEnv: Record<string, string | undefined> = {};
@@ -296,5 +299,41 @@ describe("createProvider URL guard", () => {
         }),
       InferenceUrlBlockedError,
     );
+  });
+});
+
+describe("RTX agent URL evaluation", () => {
+  beforeEach(() => snapshotEnv());
+  afterEach(() => restoreEnv());
+
+  it("allows private RTX agent URLs", () => {
+    process.env.RTX_AGENT_URL = "http://192.168.1.50:8787";
+
+    const evaluation = evaluateRtxAgentUrl(process.env);
+
+    assert.equal(evaluation.configured, true);
+    assert.equal(evaluation.urlAllowed, true);
+    assert.equal(evaluation.urlKind, "private");
+  });
+
+  it("blocks public RTX agent URLs without throwing", () => {
+    process.env.RTX_AGENT_URL = "https://rtx.public.example:8787";
+
+    const evaluation = evaluateRtxAgentUrl(process.env);
+
+    assert.equal(evaluation.configured, true);
+    assert.equal(evaluation.urlAllowed, false);
+    assert.equal(evaluation.urlKind, "public");
+    assert.ok(evaluation.blockReason?.includes("öffentlich"));
+  });
+
+  it("reports public exposure in RTX health status", async () => {
+    process.env.RTX_AGENT_URL = "https://rtx.public.example:8787";
+
+    const health = await checkRtxHealth({ env: process.env });
+
+    assert.equal(health.urlAllowed, false);
+    assert.equal(health.ready, false);
+    assert.ok(health.publicExposureWarning);
   });
 });

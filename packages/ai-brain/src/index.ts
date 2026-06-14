@@ -96,6 +96,8 @@ export {
   type AiRouterDeps,
 } from "./router";
 
+export * from "./dnd-generator";
+
 export interface GenerateAiTaskInput {
   taskType: AiTaskType;
   worldId: string;

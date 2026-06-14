@@ -378,8 +378,22 @@ Details: `docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md`
 - [ ] `PUBLIC_APP_URL`, `TRUST_PROXY` und `SESSION_COOKIE_SECURE` für Cloudflare/HTTPS gesetzt
 - [ ] `PLAYER_PREVIEW_ALLOW_DM_ONLY=false`
 - [ ] Cloudflare-Tunnel zeigt nur auf UWE — nicht auf RTX/Ollama
+- [ ] `AI_INFERENCE_ALLOW_PUBLIC_URL=false` — RTX-Agent nur im Heimnetz
+- [ ] `RTX_AGENT_URL` zeigt auf private IP (`192.168.x.x`) — keine öffentliche URL
+- [ ] Cloud-KI erhält nur Allgemeinen Chat — kein Brain/Objekt/Life-Kontext (serverseitig erzwungen)
 - [ ] Öffentliche Portal-/Share-Funktionen in den Einstellungen bewusst geprüft
 - [ ] Rate Limiter beachten: prozesslokal — bei mehreren Instanzen zusätzlich am Reverse Proxy limitieren
+
+Das Studio-Dashboard (`/`) und `/admin/status` zeigen **Production-Safety-Warnungen**, wenn typische Selfhosting-Fehler erkannt werden (schwaches `AUTH_SECRET`, `RUN_DB_SEED` nicht `false`, fehlendes `STUDIO_API_TOKEN`, öffentliche RTX-URL). Keine Secrets werden in der UI oder in `GET /api/health` ausgegeben.
+
+Weitere Security-Dokumentation:
+
+| Dokument | Inhalt |
+|----------|--------|
+| [SECURITY.md](../SECURITY.md) | Security Policy |
+| [SECURITY_NOTES.md](../SECURITY_NOTES.md) | KI-Datenschutz, RTX, Cloud-Verbot |
+| [life-brain-privacy.md](life-brain-privacy.md) | Privacy für persönliches Brain |
+| [dnd-generator-upgrade.md](dnd-generator-upgrade.md) | DnD-KI: keine DM-only-Leaks, kein Cloud-Kontext |
 
 AI-Provider-Keys (`OPENAI_API_KEY`, etc.) sind optional und nur für UWE Studio relevant.
 
@@ -558,3 +572,7 @@ Vor einem Release:
 - [README.md](../README.md) — Entwicklung und Architektur
 - [CHANGELOG.md](../CHANGELOG.md) — Release Notes
 - [SECURITY.md](../SECURITY.md) — Sicherheitshinweise
+- [SECURITY_NOTES.md](../SECURITY_NOTES.md) — KI-Datenschutz, RTX, Cloud-Regeln
+- [daily-admin-os.md](daily-admin-os.md) — Daily Admin OS Zielstruktur und Integrationsstatus
+- [dnd-generator-upgrade.md](dnd-generator-upgrade.md) — DnD-KI-Generator, Review, Player-Safety
+- [life-brain-privacy.md](life-brain-privacy.md) — Privacy für persönliches Brain

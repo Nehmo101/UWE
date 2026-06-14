@@ -24,6 +24,7 @@ import {
   unlinkPageFromSessionAction,
   updateGameSessionAction,
 } from "../../../../session-actions";
+import { AiContextPanel } from "@/components/AiContextPanel";
 import { preparePrintListFromSessionAction } from "@/app/label-actions";
 import { pageLabelNewHref } from "@/src/lib/label-links";
 
@@ -260,13 +261,20 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         </>
       }
       context={
-        <SidebarSection title="Workflow">
-          <ol style={{ fontSize: "0.875rem", color: "#94a3b8", paddingLeft: "1.25rem" }}>
-            <li>Geplant → Vorbereiten (DM-Notizen)</li>
-            <li>Gespielt → Nachbereiten</li>
-            <li>Recap schreiben → Portal veröffentlichen</li>
-          </ol>
-        </SidebarSection>
+        <>
+          <AiContextPanel
+            kind="session"
+            worldSlug={worldSlug}
+            sessionId={sessionId}
+          />
+          <SidebarSection title="Workflow">
+            <ol style={{ fontSize: "0.875rem", color: "#94a3b8", paddingLeft: "1.25rem" }}>
+              <li>Geplant → Vorbereiten (DM-Notizen)</li>
+              <li>Gespielt → Nachbereiten</li>
+              <li>Recap schreiben → Portal veröffentlichen</li>
+            </ol>
+          </SidebarSection>
+        </>
       }
     />
   );

@@ -14,6 +14,7 @@ import {
   WikiContent,
 } from "@uwe/shared-ui";
 import { DungeonEntityList } from "@/components/DungeonEntityList";
+import { AiContextPanel } from "@/components/AiContextPanel";
 import { preparePrintListFromRoomAction } from "@/app/label-actions";
 import { labelNewHref } from "@/src/lib/label-links";
 import {
@@ -307,6 +308,16 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
             </ul>
           </section>
         </>
+      }
+      context={
+        <AiContextPanel
+          kind="dungeon_room"
+          worldSlug={worldSlug}
+          pageSlug={roomSlug}
+          dungeonSlug={dungeonSlug}
+          levelSlug={levelSlug}
+          roomSlug={roomSlug}
+        />
       }
     />
   );

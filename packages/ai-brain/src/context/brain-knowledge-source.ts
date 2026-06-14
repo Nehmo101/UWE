@@ -60,5 +60,25 @@ export function serializeBrainEntries(entries: AiContextBrainEntry[]): string {
       .join("\n"),
   );
 
-  return ["# Brain-Wissen", ...blocks].join("\n\n");
+  return ["# DnD-Brain-Wissen", ...blocks].join("\n\n");
+}
+
+export function serializeLifeBrainEntries(entries: AiContextBrainEntry[]): string {
+  if (entries.length === 0) {
+    return "";
+  }
+
+  const blocks = entries.map((entry) =>
+    [
+      `### ${entry.title} (${entry.entryId})`,
+      `Quelle: ${entry.sourceType}`,
+      entry.trustLevel ? `Status: ${entry.trustLevel}` : "",
+      entry.objectRef ? `Bezug: ${entry.objectRef}` : "",
+      entry.content,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+
+  return ["# Life-Brain (privat, lokal)", ...blocks].join("\n\n");
 }

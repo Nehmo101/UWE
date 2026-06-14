@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
-import type { AiBrainSettings, AiContext, AiProviderId } from "@uwe/ai-brain";
+import type { AiBrainSettings, AiContext, AiProviderId, DndGeneratorAction } from "@uwe/ai-brain";
 import type { BrainActionDefinition, BrainActionId } from "@uwe/ai-brain";
 
 interface Props {
   worldSlug: string;
-  pageSlug: string;
+  pageSlug?: string;
+  sessionId?: string;
+  defaultSessionId?: string;
+  generatorActions?: DndGeneratorAction[];
 }
 
 interface SessionOption {
@@ -35,7 +38,13 @@ interface AiRunView {
   createdAt: string;
 }
 
-export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
+export function AiBrainSidebar({
+  worldSlug,
+  pageSlug,
+  sessionId: fixedSessionId,
+  defaultSessionId,
+  generatorActions,
+}: Props) {
   const [settings, setSettings] = useState<AiBrainSettings | null>(null);
   const [actions, setActions] = useState<BrainActionDefinition[]>([]);
   const [actionId, setActionId] = useState<BrainActionId>("expand_knowledge");
@@ -94,6 +103,12 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
   }, []);
 
   const loadSessions = useCallback(async () => {
+    if (fixedSessionId) {
+      setSessionId(fixedSessionId);
+      return;
+    }
+    if (!pageSlug) return;
+
     const response = await fetch(
       `/api/ai/sessions?worldSlug=${encodeURIComponent(worldSlug)}&pageSlug=${encodeURIComponent(pageSlug)}`,
     );
@@ -101,14 +116,18 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
     const data = (await response.json()) as { sessions: SessionOption[] };
     setSessions(data.sessions);
     if (data.sessions.length > 0) {
-      setSessionId((prev) => prev || data.sessions[0].id);
+      setSessionId((prev) => prev || defaultSessionId || data.sessions[0].id);
     }
-  }, [worldSlug, pageSlug]);
+  }, [worldSlug, pageSlug, fixedSessionId, defaultSessionId]);
 
   const loadRecentRuns = useCallback(async () => {
-    const response = await fetch(
-      `/api/brain/runs?worldSlug=${encodeURIComponent(worldSlug)}&pageSlug=${encodeURIComponent(pageSlug)}&limit=5`,
-    );
+    const params = new URLSearchParams({
+      worldSlug,
+      limit: "5",
+    });
+    if (pageSlug) params.set("pageSlug", pageSlug);
+
+    const response = await fetch(`/api/brain/runs?${params.toString()}`);
     if (!response.ok) return;
     const data = (await response.json()) as { runs: AiRunView[] };
     setRecentRuns(data.runs);
@@ -168,12 +187,14 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
         body: JSON.stringify({
           actionId,
           worldSlug,
-          pageSlug,
+          pageSlug: pageSlug || undefined,
           providerId,
           model,
           userPrompt,
           allowDmOnly,
-          sessionId: needsSession ? sessionId || undefined : undefined,
+          sessionId: needsSession
+            ? fixedSessionId || sessionId || undefined
+            : fixedSessionId || undefined,
           useMock,
         }),
       });
@@ -184,7 +205,19 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
 
       let payload = data;
       if (response.status === 202 && data.job?.id) {
+        if (data.job.status === "deferred") {
+          setStatus(
+            "RTX offline — KI-Job vorgemerkt (deferred). Ausführung startet automatisch, wenn RTX bereit ist. Kein Cloud-Fallback.",
+          );
+          return;
+        }
         const job = await waitForJob(data.job.id);
+        if (job.status === "deferred") {
+          setStatus(
+            "RTX offline — KI-Job wartet auf lokale RTX (deferred). Planung möglich, Ausführung folgt bei RTX-Bereitschaft.",
+          );
+          return;
+        }
         payload = (job.result as typeof data) ?? data;
       }
 
@@ -288,7 +321,21 @@ export function AiBrainSidebar({ worldSlug, pageSlug }: Props) {
         <p className="ai-brain-meta">{selectedAction.description}</p>
       )}
 
-      {needsSession && (
+      {generatorActions && generatorActions.length > 0 && (
+        <details className="ai-brain-context">
+          <summary>Kontextuelle Generator-Aktionen ({generatorActions.length})</summary>
+          <ul>
+            {generatorActions.map((action) => (
+              <li key={action.id}>
+                {action.label}
+                {action.playerSafe ? " (spieler-sicher)" : ""}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {needsSession && !fixedSessionId && (
         <label className="ai-brain-field">
           <span>Session</span>
           <select value={sessionId} onChange={(event) => setSessionId(event.target.value)}>

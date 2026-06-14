@@ -12,6 +12,18 @@
 
 > Self-hosted campaign brain and world wiki — no cloud required.
 
+### Daily Admin OS (in Entwicklung)
+
+UWE wird zum **täglichen privaten Admin-Cockpit** erweitert: Heute-Dashboard, Capture-Inbox, Projekte, Werkstatt, Verträge, Hardware/Homelab und persönliches Brain — neben dem bestehenden DnD-Editor.
+
+| Bereich | Status |
+|---------|--------|
+| DnD-Welten, Brain, KI-Router, Admin Status | ✅ Vorhanden |
+| Mobile Bottom Nav, KI-Prompt | ✅ Vorhanden |
+| `/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain | 🔲 Geplant |
+
+Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · DnD-KI: [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) · Privacy: [docs/life-brain-privacy.md](docs/life-brain-privacy.md)
+
 ---
 
 ## Quick start (Docker — empfohlen)
@@ -135,6 +147,7 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
 ## DM Workflow Highlights (Studio)
 
+- **KI-gestützter DnD-Generator** — kontextuelle Aktionen (NPC, Ort, Dungeon-Raum, Encounter, Handout, Kanonprüfung, Session-Vorbereitung) über lokale RTX; Review/Apply-Workflow, keine automatische Kanonisierung. Details: [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md).
 - **World Overview** — `/worlds/[slug]/dashboard` is the per-world start page: stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create shortcuts.
 - **Command Palette** — press `Ctrl/⌘ + K` anywhere in Studio to jump to any view, quick-create entities, switch worlds, or search pages live.
 - **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically. Templates are DB-backed and user-editable at `/templates` (create, edit, duplicate, deactivate); the built-in set is seeded once as system templates.
@@ -473,4 +486,7 @@ Private project — all rights reserved.
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | Production deployment, updates, backup |
 | [SECURITY.md](SECURITY.md) | Security policy and checklist |
 | [SECURITY_NOTES.md](SECURITY_NOTES.md) | KI-Datenschutz, RTX-Agent, Cloud-Regeln |
+| [docs/daily-admin-os.md](docs/daily-admin-os.md) | Daily Admin OS — Zielstruktur und Integrationsstatus |
+| [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) | DnD-KI-Generator — Aktionen, Review, Player-Safety |
+| [docs/life-brain-privacy.md](docs/life-brain-privacy.md) | Privacy-Regeln für persönliches Brain |
 | [VERSION](VERSION) | Current product version |
