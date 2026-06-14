@@ -90,6 +90,9 @@ export interface AiRouterDeps {
 
   brainStore?: BrainStoreService;
 
+  /** Loads serialized personal brain context — required for personal_brain mode. */
+  loadPersonalBrainContext?: () => Promise<string>;
+
 }
 
 
@@ -447,6 +450,27 @@ export async function routeAiRequest(
 
   } else {
 
+    if (request.contextMode === "personal_brain") {
+      if (!deps.loadPersonalBrainContext) {
+        throw new AiRouterError(
+          "Persönliches Life-Brain ist nicht konfiguriert — Server-Loader fehlt.",
+        );
+      }
+
+      const personalBrainPromptContext = await deps.loadPersonalBrainContext();
+
+      context = await buildRouterContext(deps.repo, {
+        taskType: request.taskType,
+        contextMode: request.contextMode,
+        personalBrainPromptContext,
+        options: {
+          ...request.options,
+          datenschutzMode: settings.datenschutzMode,
+          localOnly: settings.localOnly,
+          allowDmOnly: true,
+        },
+      });
+    } else {
     if (
 
       (request.contextMode === "brain" ||
@@ -510,6 +534,8 @@ export async function routeAiRequest(
       },
 
     });
+
+    }
 
   }
 

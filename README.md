@@ -32,6 +32,8 @@ Beim **ersten Start** baut Docker die Images (kann einige Minuten dauern). Ansch
 | **UWE Studio** (DM) | http://localhost:3000 | Welten bearbeiten |
 | **UWE Portal** (Spieler) | http://localhost:3001 | Wiki & Handouts |
 
+**Daily Admin OS** (Studio): `/today` — Cockpit für Capture, Projekte, Verträge, Hardware und persönliches Life-Brain. Siehe [docs/daily-admin-os.md](docs/daily-admin-os.md).
+
 **Demo-Login** (automatisch beim ersten Start): `dm@uwe.local` / `uwe-dev`  
 Weitere Demo-Spieler: siehe Container-Logs nach dem Seed (`docker compose logs studio`).
 

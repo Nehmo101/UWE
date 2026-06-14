@@ -51,7 +51,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
 
   return (
     <AppShell
-      bottomNav={studioGlobalBottomNav("dashboard")}
+      bottomNav={studioGlobalBottomNav("more")}
       contextTitle="Schnellaktionen"
       topBar={
         <>

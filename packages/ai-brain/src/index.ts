@@ -79,6 +79,8 @@ export {
   validateResolvedRouteForContext,
   validateContextModeRequirements,
   validateLocalRtxRequired,
+  contextModeRequiresLocalContext,
+  isCloudRouteAllowedForContext,
   buildRouterContext,
   createBrainRetrievalAdapter,
   createLocalRtxProvider,

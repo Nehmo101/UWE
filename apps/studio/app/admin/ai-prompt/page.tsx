@@ -24,7 +24,7 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
 
   return (
     <AppShell
-      bottomNav={studioGlobalBottomNav("settings")}
+      bottomNav={studioGlobalBottomNav("ai")}
       topBar={<TopBarBrand appName="UWE Studio" subtitle="KI-Prompt" href="/" />}
       sidebar={
         <SidebarSection title="Navigation">

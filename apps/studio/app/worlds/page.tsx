@@ -15,7 +15,7 @@ export default async function WorldsPage() {
 
   return (
     <AppShell
-      bottomNav={studioGlobalBottomNav("worlds")}
+      bottomNav={studioGlobalBottomNav("more")}
       topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/" />}
       sidebar={
         <SidebarSection title="Navigation">

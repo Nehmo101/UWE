@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **UWE Daily Admin OS** — private admin cockpit: `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain`
+- **Studio Security Step 1** — URL classification, RTX exposure assessment, admin status cards
+- **Life Admin data models** — Capture, PersonalProject, WorkshopProject, ContractExpense, HardwareDevice, PersonalBrain, Generator presets/outputs
+- **Mobile bottom nav** — Heute, Capture, Suche, KI, Mehr + global Capture FAB
+- **Personal Brain privacy** — `personal_brain` context mode, local-only, RTX offline job queue
+- **Contextual Generator panel** — page edit KI actions with review flow and RTX-deferred jobs
+- **Favorite world setting** — `app.favoriteWorldSlug` for /today without hardcoding Terra
+- Docs: `docs/daily-admin-os.md`, `docs/life-brain-privacy.md`
+
 - **World Overview Dashboard** — per-world start page (`/worlds/[slug]/dashboard`) with stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create actions
 - **Command Palette** — global `Ctrl/⌘ + K` palette in Studio with navigation commands, quick-create actions, world switching, and live page search (`GET /api/command/search`)
 - **Quick Create with page templates** — template picker for NPC, Ort, Fraktion, Quest, Session-Plan, and Handout on the new-page form; templates pre-fill player-visible content plus DM-only note blocks; slugs are now optional and auto-generated (umlaut-aware, collision-safe)

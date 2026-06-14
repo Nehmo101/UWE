@@ -21,6 +21,27 @@ function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }
 
+function studioSecurityLevel(
+  studioSecurity: Awaited<ReturnType<typeof getAdminDashboardStatus>>["studioSecurity"],
+): StatusLevel {
+  if (studioSecurity.severity === "ok") {
+    return studioSecurity.level === "local_only" ? "ok" : "ok";
+  }
+  if (studioSecurity.severity === "warning") {
+    return "degraded";
+  }
+  return "error";
+}
+
+function rtxExposureLevel(
+  rtxExposure: Awaited<ReturnType<typeof getAdminDashboardStatus>>["rtxExposure"],
+): StatusLevel {
+  if (rtxExposure.ok) {
+    return "ok";
+  }
+  return rtxExposure.severity === "warning" ? "degraded" : "error";
+}
+
 function rtxLevel(rtx: Awaited<ReturnType<typeof getAdminDashboardStatus>>["rtx"]): StatusLevel {
   if (rtx.agentStatus === "disabled") {
     return "disabled";
@@ -82,7 +103,8 @@ export default async function AdminStatusPage() {
     useMockInference,
   });
 
-  const { system, inference, rtx, mail, brain, embeddings, aiRuns, jobs, auth } = status;
+  const { system, inference, rtx, mail, brain, embeddings, aiRuns, jobs, auth, studioSecurity, rtxExposure } =
+    status;
 
   const overallBadge = status.ok ? "ok" : "degraded";
 
@@ -129,6 +151,43 @@ export default async function AdminStatusPage() {
           </p>
 
           <div className="uwe-dashboard-grid">
+            <StatusCard
+              title="Studio Security"
+              level={studioSecurityLevel(studioSecurity)}
+              statusLabel={studioSecurity.label}
+              message={studioSecurity.message}
+              details={[
+                { label: "Öffentliche Exposition", value: studioSecurity.publicExposureConfigured },
+                { label: "TRUST_PROXY", value: studioSecurity.proxyIndicators.trustProxy },
+                { label: "CLOUDFLARE_TUNNEL", value: studioSecurity.proxyIndicators.cloudflareTunnel },
+                {
+                  label: "Netzwerk-Schutz (Heuristik)",
+                  value: studioSecurity.proxyIndicators.networkProtectionLikely,
+                },
+                { label: "STUDIO_API_TOKEN", value: studioSecurity.checks.studioApiTokenConfigured },
+                { label: "Portal AUTH_REQUIRED", value: studioSecurity.checks.portalAuthRequired },
+                { label: "AUTH_SECRET schwach", value: studioSecurity.checks.authSecretLooksWeak },
+                { label: "RUN_DB_SEED=false", value: studioSecurity.checks.runDbSeedDisabled },
+                { label: "Cookie Secure", value: studioSecurity.checks.sessionCookieSecure },
+              ]}
+              nextSteps={studioSecurity.nextSteps}
+              wide
+            />
+
+            <StatusCard
+              title="RTX Exposure"
+              level={rtxExposureLevel(rtxExposure)}
+              statusLabel={rtxExposure.ok ? "Privates Netz" : "Öffentlich blockiert"}
+              message={rtxExposure.message}
+              details={rtxExposure.endpoints
+                .filter((endpoint) => endpoint.configured)
+                .map((endpoint) => ({
+                  label: endpoint.envKey,
+                  value: `${endpoint.endpointLabel} (${endpoint.urlKind}${endpoint.privateNetworkOk ? ", OK" : ", blockiert"})`,
+                }))}
+              nextSteps={rtxExposure.nextSteps}
+            />
+
             <StatusCard
               title="UWE App"
               level={overallLevel(system.app.ok && system.database.ok)}

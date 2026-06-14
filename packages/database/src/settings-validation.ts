@@ -33,7 +33,7 @@ const TOP_LEVEL_KEYS = new Set([
   "privacy",
 ]);
 
-const APP_KEYS = new Set(["theme"]);
+const APP_KEYS = new Set(["theme", "favoriteWorldSlug", "lastActiveWorldSlug"]);
 const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
@@ -169,8 +169,46 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
     });
     errors.push(...sectionErrors);
-    if (sectionErrors.length === 0 && isRecord(body.app) && body.app.theme !== undefined) {
-      update.app = { theme: body.app.theme as ThemeAppearance };
+    if (isRecord(body.app)) {
+      const appErrors: string[] = [];
+      const app: NonNullable<UweSystemSettingsUpdate["app"]> = {};
+      if (body.app.theme !== undefined) {
+        if (!requireEnum(body.app.theme, THEME_VALUES, "settings.app.theme", appErrors)) {
+          // recorded in appErrors
+        } else {
+          app.theme = body.app.theme as ThemeAppearance;
+        }
+      }
+      if (body.app.favoriteWorldSlug !== undefined) {
+        if (
+          body.app.favoriteWorldSlug !== null &&
+          typeof body.app.favoriteWorldSlug !== "string"
+        ) {
+          appErrors.push("settings.app.favoriteWorldSlug muss ein String oder null sein.");
+        } else {
+          app.favoriteWorldSlug =
+            typeof body.app.favoriteWorldSlug === "string"
+              ? body.app.favoriteWorldSlug.trim() || null
+              : null;
+        }
+      }
+      if (body.app.lastActiveWorldSlug !== undefined) {
+        if (
+          body.app.lastActiveWorldSlug !== null &&
+          typeof body.app.lastActiveWorldSlug !== "string"
+        ) {
+          appErrors.push("settings.app.lastActiveWorldSlug muss ein String oder null sein.");
+        } else {
+          app.lastActiveWorldSlug =
+            typeof body.app.lastActiveWorldSlug === "string"
+              ? body.app.lastActiveWorldSlug.trim() || null
+              : null;
+        }
+      }
+      errors.push(...appErrors);
+      if (appErrors.length === 0 && sectionErrors.length === 0 && Object.keys(app).length > 0) {
+        update.app = app;
+      }
     }
   }
 

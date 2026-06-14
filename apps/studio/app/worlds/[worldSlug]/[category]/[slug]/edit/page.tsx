@@ -14,6 +14,8 @@ import {
   BLOCK_TYPE_LABELS,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
+import { ContextualGeneratorPanel } from "../../../../../../components/ContextualGeneratorPanel";
+import { getGeneratorPanelData } from "@/src/lib/generator-handlers";
 import {
   buildPageUrl,
   getAppRepository,
@@ -53,6 +55,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
   const tags = parseStringArray(page.tags);
   const aliases = parseStringArray(page.aliases);
+  const generatorPanel = await getGeneratorPanelData(worldSlug, slug);
 
   return (
     <AppShell
@@ -261,6 +264,18 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <button type="submit" className="uwe-btn uwe-btn-primary">Block hinzufügen</button>
             </form>
           </CollapsibleSection>
+
+          {generatorPanel && (
+            <ContextualGeneratorPanel
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              actions={generatorPanel.actions}
+              missingHints={generatorPanel.missingHints}
+              rtxReady={generatorPanel.rtxReady}
+              rtxEnabled={generatorPanel.rtxEnabled}
+            />
+          )}
 
           <EditPageStickyBar previewHref={pagePreviewHref(worldSlug, page.type, slug)} />
         </div>

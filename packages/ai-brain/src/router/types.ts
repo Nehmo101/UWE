@@ -15,7 +15,8 @@ export type AiContextMode =
   | "general_chat"
   | "brain"
   | "current_object"
-  | "current_object_plus_brain";
+  | "current_object_plus_brain"
+  | "personal_brain";
 
 /** Resolved backend route after provider selection. */
 export type AiResolvedRoute = "local_rtx" | "cloud";
@@ -66,6 +67,7 @@ export const LOCAL_ONLY_CONTEXT_MODES: readonly AiContextMode[] = [
   "brain",
   "current_object",
   "current_object_plus_brain",
+  "personal_brain",
 ] as const;
 
 /** Only mode allowed when route resolves to cloud. */

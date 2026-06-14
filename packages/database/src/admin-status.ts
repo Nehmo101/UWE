@@ -1,6 +1,12 @@
 import type { PrismaClient } from "./client";
 import { Prisma } from "./generated/prisma/client";
 import { getSystemStatus, type SystemStatus } from "./system-status";
+import {
+  assessRtxExposure,
+  assessStudioSecurity,
+  type RtxExposureAssessment,
+  type StudioSecurityAssessment,
+} from "./studio-security";
 import type { MailConfigStatus } from "@uwe/mail";
 import { createMailLogService } from "./mail-log-service";
 import { createMailService } from "./mail-service";
@@ -146,6 +152,8 @@ export interface AdminStatus {
   ok: boolean;
   timestamp: string;
   system: SystemStatus;
+  studioSecurity: StudioSecurityAssessment;
+  rtxExposure: RtxExposureAssessment;
   mail: MailHealthStatus;
   brain: BrainStoreHealthStatus;
   embeddings: EmbeddingHealthStatus;
@@ -676,9 +684,13 @@ export async function getAdminStatus(
   ]);
 
   const auth = getAuthHealthStatus(system);
+  const studioSecurity = assessStudioSecurity(system, env);
+  const rtxExposure = assessRtxExposure(env);
 
   const ok =
     system.ok &&
+    studioSecurity.severity !== "critical" &&
+    rtxExposure.severity !== "critical" &&
     (!mail.enabled || mail.ok) &&
     brain.ok &&
     (!embeddings.enabled || embeddings.ok);
@@ -687,6 +699,8 @@ export async function getAdminStatus(
     ok,
     timestamp: new Date().toISOString(),
     system,
+    studioSecurity,
+    rtxExposure,
     mail,
     brain,
     embeddings,

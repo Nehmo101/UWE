@@ -7,8 +7,21 @@ export interface StudioBottomNavItem {
   action?: "open-sidebar";
 }
 
-/** Bottom navigation for global Studio pages (dashboard, worlds list, etc.) */
-export function studioGlobalBottomNav(active: "dashboard" | "worlds" | "search" | "settings"): StudioBottomNavItem[] {
+/** Bottom navigation for global Studio pages (Daily Admin OS) */
+export function studioGlobalBottomNav(
+  active: "today" | "capture" | "search" | "ai" | "more",
+): StudioBottomNavItem[] {
+  return [
+    { label: "Heute", href: "/today", icon: "☀", active: active === "today" },
+    { label: "Capture", href: "/capture", icon: "+", active: active === "capture" },
+    { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
+    { label: "KI", href: "/ai", icon: "✦", active: active === "ai" },
+    { label: "Mehr", href: "/", icon: "☰", active: active === "more" },
+  ];
+}
+
+/** @deprecated Use studioGlobalBottomNav — kept for gradual migration */
+export function studioLegacyBottomNav(active: "dashboard" | "worlds" | "search" | "settings"): StudioBottomNavItem[] {
   return [
     { label: "Dashboard", href: "/", icon: "⌂", active: active === "dashboard" },
     { label: "Welten", href: "/worlds", icon: "🌍", active: active === "worlds" },

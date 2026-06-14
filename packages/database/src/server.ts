@@ -275,6 +275,20 @@ export type {
   MailHealthStatus,
 } from "./admin-status";
 
+export {
+  assessRtxExposure,
+  assessStudioSecurity,
+  classifyEndpointUrl,
+} from "./studio-security";
+
+export type {
+  EndpointExposureCheck,
+  RtxExposureAssessment,
+  StudioSecurityAssessment,
+  StudioSecurityLevel,
+  StudioSecuritySeverity,
+} from "./studio-security";
+
 export { buildNextActions } from "./next-actions";
 
 export type { NextActionItem } from "./next-actions";
@@ -603,6 +617,112 @@ export type {
   JobType,
   ListJobsOptions,
 } from "./job-service";
+
+export {
+  createLifeAdminService,
+  LifeAdminService,
+  CAPTURE_STATUS_LABELS,
+  CAPTURE_TYPE_LABELS,
+  PROJECT_STATUS_LABELS,
+  WORKSHOP_STATUS_LABELS,
+  CONTRACT_STATUS_LABELS,
+  HARDWARE_STATUS_LABELS,
+  PROJECT_CATEGORY_LABELS,
+  WORKSHOP_TYPE_LABELS,
+  PERSONAL_BRAIN_CATEGORIES,
+  PERSONAL_BRAIN_CATEGORY_LABELS,
+  CaptureStatusEnum,
+  CaptureTypeEnum,
+  PersonalProjectStatusEnum,
+  PersonalProjectCategoryEnum,
+  WorkshopStatusEnum,
+  WorkshopProjectTypeEnum,
+  ContractStatusEnum,
+  ContractExpenseTypeEnum,
+  ContractBillingIntervalEnum,
+  HardwareStatusEnum,
+} from "./life-admin-service";
+
+export type {
+  CreateAdminLinkInput,
+  CreateCaptureInput,
+  CreateContractExpenseInput,
+  CreateGeneratorOutputInput,
+  CreateGeneratorPresetInput,
+  CreateHardwareDeviceInput,
+  CreatePersonalBrainDocumentInput,
+  CreatePersonalBrainFactInput,
+  CreatePersonalProjectInput,
+  CreateWorkshopProjectInput,
+  ListCapturesOptions,
+  TodayAdminSummary,
+  CaptureEntry,
+  CaptureStatus,
+  CaptureType,
+  PersonalProject,
+  PersonalProjectCategory,
+  PersonalProjectStatus,
+  WorkshopProject,
+  WorkshopProjectType,
+  WorkshopStatus,
+  ContractExpense,
+  ContractExpenseType,
+  ContractStatus,
+  HardwareDevice,
+  HardwareStatus,
+  PersonalBrainDocument,
+  PersonalBrainFact,
+  AdminEntityLink,
+  AdminLinkSourceType,
+  AdminLinkTargetType,
+  GeneratorPreset,
+  GeneratorOutput,
+} from "./life-admin-service";
+
+export type { ContractBillingInterval } from "./generated/prisma/client";
+
+export {
+  buildContractAlerts,
+  formatEuroFromCents,
+  normalizeToMonthlyCents,
+  normalizeToYearlyCents,
+  summarizeContractCosts,
+  BILLING_INTERVAL_LABELS,
+} from "./contract-expense-utils";
+
+export type { ContractAlert, ContractCostSummary } from "./contract-expense-utils";
+
+export {
+  countOpenSetupSteps,
+  detectHardwareUrlWarnings,
+} from "./hardware-utils";
+
+export type { HardwareUrlWarning } from "./hardware-utils";
+
+export {
+  serializePersonalBrainForPrompt,
+  loadPersonalBrainPromptContext,
+} from "./personal-brain-context";
+
+export type {
+  PersonalBrainDocSlice,
+  PersonalBrainFactSlice,
+} from "./personal-brain-context";
+
+export {
+  DEFAULT_GENERATOR_PRESETS,
+  detectMissingContent,
+  listGeneratorActions,
+  resolveGeneratorContextFromPage,
+} from "./generator-service";
+
+export type {
+  GeneratorActionDefinition,
+  GeneratorActionId,
+  GeneratorContext,
+  GeneratorContextType,
+  MissingContentHint,
+} from "./generator-service";
 
 export {
   AI_RUN_STATUS_LABELS,

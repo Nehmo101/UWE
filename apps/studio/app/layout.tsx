@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { getAppRepository } from "@uwe/database/server";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
+import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -45,6 +46,7 @@ export default async function RootLayout({
     <html lang="de">
       <body>
         {children}
+        <GlobalCaptureFab />
         <StudioCommandPalette worlds={worlds} />
       </body>
     </html>

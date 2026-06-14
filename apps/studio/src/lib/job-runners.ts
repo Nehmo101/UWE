@@ -237,8 +237,61 @@ export interface BrainActionJobPayload {
   useMock?: boolean;
 }
 
+export interface DeferredAiPromptJobPayload {
+  deferredAiPrompt: true;
+  prompt: string;
+  providerMode: "auto" | "local_rtx" | "cloud";
+  contextMode:
+    | "general_chat"
+    | "brain"
+    | "current_object"
+    | "current_object_plus_brain"
+    | "personal_brain";
+  worldSlug?: string;
+  pageSlug?: string;
+  useMock?: boolean;
+}
+
+async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as DeferredAiPromptJobPayload;
+  if (!payload.prompt?.trim()) {
+    throw new Error("Deferred KI-Prompt ohne prompt.");
+  }
+
+  await ctx.jobs.updateProgress(ctx.jobId, 10, "Warte auf RTX…");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const { executeAiPrompt } = await import("./ai-prompt-handlers");
+  const result = await executeAiPrompt({
+    prompt: payload.prompt,
+    providerMode: payload.providerMode,
+    contextMode: payload.contextMode,
+    worldSlug: payload.worldSlug,
+    pageSlug: payload.pageSlug,
+    useMock: payload.useMock,
+  });
+
+  if (result.kind === "deferred") {
+    throw new Error("RTX weiterhin offline — Job wird erneut versucht.");
+  }
+
+  await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Prompt abgeschlossen");
+  return {
+    text: result.text,
+    provider: result.provider,
+    model: result.model,
+    routedVia: result.routedVia,
+    contextMode: result.contextMode,
+  };
+}
+
 export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as AiRunJobPayload & BrainActionJobPayload;
+  const payload = (ctx.job.payload ?? {}) as AiRunJobPayload &
+    BrainActionJobPayload &
+    DeferredAiPromptJobPayload;
+  if (payload.deferredAiPrompt) {
+    return runDeferredAiPromptJob(ctx);
+  }
   if (payload.actionId) {
     return runBrainActionJob(ctx);
   }

@@ -276,6 +276,121 @@ enum JobStatus {
   cancelled
 }
 
+// --- Daily Admin OS (life admin, world-independent with optional DnD links) ---
+
+enum CaptureStatus {
+  inbox
+  triaged
+  linked
+  archived
+}
+
+enum CaptureType {
+  quick_note
+  dnd_idea
+  uwe_todo
+  project_idea
+  hardware
+  contract_expense
+  art_miniature_terrain
+  link
+  file_image
+}
+
+enum PersonalProjectStatus {
+  idea
+  planned
+  active
+  blocked
+  paused
+  done
+  archived
+}
+
+enum PersonalProjectCategory {
+  uwe
+  hardware_homelab
+  dnd
+  art_workshop
+  printing_3d
+  other
+}
+
+enum WorkshopProjectType {
+  dnd_terrain
+  miniature
+  printing_3d
+  diorama
+  artwork
+  other
+}
+
+enum WorkshopStatus {
+  idea
+  planned
+  material_missing
+  in_progress
+  paused
+  done
+  archived
+}
+
+enum ContractStatus {
+  active
+  cancelled
+  review
+  paused
+  archived
+}
+
+enum ContractExpenseType {
+  subscription
+  rent
+  insurance
+  utility
+  software
+  other
+}
+
+enum ContractBillingInterval {
+  monthly
+  yearly
+  once
+  other
+}
+
+enum HardwareStatus {
+  planned
+  active
+  offline
+  broken
+  retired
+  archived
+}
+
+enum AdminLinkSourceType {
+  capture
+  personal_project
+  workshop_project
+  contract_expense
+  hardware_device
+  personal_brain_document
+  personal_brain_fact
+}
+
+enum AdminLinkTargetType {
+  capture
+  personal_project
+  workshop_project
+  contract_expense
+  hardware_device
+  personal_brain_document
+  personal_brain_fact
+  world
+  page
+  asset
+}
+
 model User {
   id           String   @id @default(cuid())
   displayName  String   @map("display_name")
@@ -381,6 +496,11 @@ model World {
   mailTemplates       MailTemplate[]
   mailRecipientGroups MailRecipientGroup[]
   mailMessageLogs     MailMessageLog[]
+  captureEntries      CaptureEntry[]
+  personalProjects    PersonalProject[]
+  workshopProjects    WorkshopProject[]
+  generatorPresets    GeneratorPreset[]
+  generatorOutputs    GeneratorOutput[]
 
   @@map("worlds")
 }
@@ -443,6 +563,10 @@ model Page {
   brainDocuments         BrainDocument[]
   brainFacts             BrainFact[]
   aiRuns                 AiRun[]
+  captureEntries         CaptureEntry[]
+  personalProjects       PersonalProject[]
+  workshopProjects       WorkshopProject[]
+  generatorOutputs       GeneratorOutput[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -1196,4 +1320,230 @@ model MailMessageLog {
   @@index([worldId, status])
   @@index([createdAt])
   @@map("mail_message_logs")
+}
+
+// --- Daily Admin OS entities ---
+
+model CaptureEntry {
+  id          String        @id @default(cuid())
+  title       String        @default("")
+  content     String        @default("")
+  captureType CaptureType   @default(quick_note) @map("capture_type")
+  status      CaptureStatus @default(inbox)
+  url         String?
+  storageKey  String?       @map("storage_key")
+  worldId     String?       @map("world_id")
+  pageId      String?       @map("page_id")
+  metadata    Json?
+  capturedAt  DateTime      @default(now()) @map("captured_at")
+  triagedAt   DateTime?     @map("triaged_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status, capturedAt])
+  @@index([captureType])
+  @@index([worldId])
+  @@map("capture_entries")
+}
+
+model PersonalProject {
+  id          String                  @id @default(cuid())
+  name        String
+  description String                  @default("")
+  status      PersonalProjectStatus   @default(idea)
+  category    PersonalProjectCategory @default(other)
+  nextAction  String?                 @map("next_action")
+  notes       String                  @default("")
+  links       Json?
+  costCents   Int?                    @map("cost_cents")
+  worldId     String?                 @map("world_id")
+  pageId      String?                 @map("page_id")
+  metadata    Json?
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@index([worldId])
+  @@map("personal_projects")
+}
+
+model WorkshopProject {
+  id               String              @id @default(cuid())
+  title            String
+  projectType      WorkshopProjectType @map("project_type")
+  status           WorkshopStatus      @default(idea)
+  description      String              @default("")
+  materialsNeeded  Json?               @map("materials_needed")
+  materialsUsed    Json?               @map("materials_used")
+  colorsUsed       Json?               @map("colors_used")
+  filamentsUsed    Json?               @map("filaments_used")
+  stlLinks         Json?               @map("stl_links")
+  imageGallery     Json?               @map("image_gallery")
+  referenceImages  Json?               @map("reference_images")
+  progressPhotos   Json?               @map("progress_photos")
+  costCents        Int?                @map("cost_cents")
+  nextAction       String?             @map("next_action")
+  notes            String              @default("")
+  worldId          String?             @map("world_id")
+  pageId           String?             @map("page_id")
+  metadata         Json?
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([projectType])
+  @@index([worldId])
+  @@map("workshop_projects")
+}
+
+model ContractExpense {
+  id              String                  @id @default(cuid())
+  name            String
+  vendor          String                  @default("")
+  status          ContractStatus          @default(active)
+  expenseType     ContractExpenseType     @default(other) @map("expense_type")
+  billingInterval ContractBillingInterval @default(monthly) @map("billing_interval")
+  categoryLabel   String                  @default("") @map("category_label")
+  amountCents     Int?                    @map("amount_cents")
+  currency        String                  @default("EUR")
+  billingDay      Int?                    @map("billing_day")
+  startDate       DateTime?               @map("start_date")
+  nextPaymentDate DateTime?               @map("next_payment_date")
+  renewalDate     DateTime?               @map("renewal_date")
+  cancelByDate    DateTime?               @map("cancel_by_date")
+  portalUrl       String?                 @map("portal_url")
+  notes           String                  @default("")
+  metadata        Json?
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([expenseType])
+  @@index([renewalDate])
+  @@index([nextPaymentDate])
+  @@map("contract_expenses")
+}
+
+model HardwareDevice {
+  id              String         @id @default(cuid())
+  name            String
+  role            String         @default("")
+  status          HardwareStatus @default(planned)
+  hostname        String?
+  ipAddress       String?        @map("ip_address")
+  localUrl        String?        @map("local_url")
+  publicUrl       String?        @map("public_url")
+  operatingSystem String         @default("") @map("operating_system")
+  specs           Json?
+  setupSteps      Json?          @map("setup_steps")
+  errorNotes      String?        @map("error_notes")
+  notes           String         @default("")
+  metadata        Json?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([role])
+  @@map("hardware_devices")
+}
+
+model PersonalBrainDocument {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("")
+  category  String?
+  tags      Json?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("personal_brain_documents")
+}
+
+model PersonalBrainFact {
+  id        String   @id @default(cuid())
+  factType  String   @default("custom") @map("fact_type")
+  title     String
+  content   String   @default("")
+  tags      Json?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([factType])
+  @@map("personal_brain_facts")
+}
+
+model AdminEntityLink {
+  id           String              @id @default(cuid())
+  sourceType   AdminLinkSourceType @map("source_type")
+  sourceId     String              @map("source_id")
+  targetType   AdminLinkTargetType @map("target_type")
+  targetId     String              @map("target_id")
+  relationType String              @default("related") @map("relation_type")
+  label        String?
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@map("admin_entity_links")
+}
+
+model GeneratorPreset {
+  id          String   @id @default(cuid())
+  worldId     String?  @map("world_id")
+  name        String
+  description String   @default("")
+  targetType  String   @map("target_type")
+  template    Json
+  isSystem    Boolean  @default(false) @map("is_system")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world   World?            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  outputs GeneratorOutput[]
+
+  @@index([worldId, targetType])
+  @@index([targetType, sortOrder])
+  @@map("generator_presets")
+}
+
+model GeneratorOutput {
+  id              String   @id @default(cuid())
+  worldId         String?  @map("world_id")
+  pageId          String?  @map("page_id")
+  presetId        String?  @map("preset_id")
+  contextType     String?  @map("context_type")
+  contextId       String?  @map("context_id")
+  generatorAction String?  @map("generator_action")
+  promptSummary   String?  @map("prompt_summary")
+  output          Json
+  isFavorite      Boolean  @default(false) @map("is_favorite")
+  variantOfId     String?  @map("variant_of_id")
+  aiRunId         String?  @map("ai_run_id")
+  tone            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  world   World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page    Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  preset  GeneratorPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, pageId])
+  @@index([contextType, contextId])
+  @@index([presetId])
+  @@index([isFavorite])
+  @@map("generator_outputs")
 }

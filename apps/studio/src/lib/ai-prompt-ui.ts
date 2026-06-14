@@ -9,7 +9,8 @@ export type AiContextMode =
   | "general_chat"
   | "brain"
   | "current_object"
-  | "current_object_plus_brain";
+  | "current_object_plus_brain"
+  | "personal_brain";
 
 export const PROVIDER_LABELS: Record<AiProviderMode, string> = {
   auto: "Auto",
@@ -22,6 +23,7 @@ export const CONTEXT_LABELS: Record<AiContextMode, string> = {
   brain: "DnD-/World-Wissen",
   current_object: "Aktuelles Objekt",
   current_object_plus_brain: "Aktuelles Objekt + DnD-/World-Wissen",
+  personal_brain: "Persönliches Life-Brain",
 };
 
 export const HINT_CLOUD_NO_BRAIN =
@@ -34,6 +36,8 @@ export const HINT_RTX_DISABLED = "RTX-Agent deaktiviert.";
 export const HINT_RTX_UNREACHABLE = "RTX-Rechner nicht erreichbar.";
 export const HINT_LOCAL_NOT_READY =
   "Lokale KI ist aktuell nicht bereit. Bitte RTX-Agent aktivieren oder allgemeinen Cloud-Chat nutzen.";
+export const HINT_PERSONAL_BRAIN_LOCAL_ONLY =
+  "Persönliches Life-Brain ist nur mit lokaler RTX verfügbar — kein Cloud-Fallback.";
 export const HINT_OBJECT_NEEDS_PAGE =
   "Aktuelles Objekt erfordert eine geöffnete Wiki-Seite.";
 
@@ -161,6 +165,7 @@ const LOCAL_CONTEXT_MODES: AiContextMode[] = [
   "brain",
   "current_object",
   "current_object_plus_brain",
+  "personal_brain",
 ];
 
 export function requiresLocalContext(mode: AiContextMode): boolean {
@@ -205,16 +210,22 @@ function isContextDisabled(
   }
 
   if (requiresLocalContext(mode) && !caps.localAiReady) {
-    if (provider === "auto" && caps.cloudAvailable && mode === "brain") {
-      return { disabled: true, reason: HINT_BRAIN_LOCAL_ONLY };
+    if (provider === "auto" && caps.cloudAvailable && mode !== "general_chat") {
+      return {
+        disabled: true,
+        reason: mode === "personal_brain" ? HINT_PERSONAL_BRAIN_LOCAL_ONLY : HINT_BRAIN_LOCAL_ONLY,
+      };
     }
     if (provider === "auto") {
-      return { disabled: true, reason: HINT_BRAIN_LOCAL_ONLY };
+      return {
+        disabled: true,
+        reason: mode === "personal_brain" ? HINT_PERSONAL_BRAIN_LOCAL_ONLY : HINT_BRAIN_LOCAL_ONLY,
+      };
     }
     return { disabled: true, reason: HINT_LOCAL_NOT_READY };
   }
 
-  if (requiresLocalContext(mode) && !caps.brainLocal && mode !== "current_object") {
+  if (requiresLocalContext(mode) && !caps.brainLocal && mode === "brain") {
     return { disabled: true, reason: "Brain ist lokal nicht verfügbar." };
   }
 

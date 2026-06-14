@@ -3,15 +3,21 @@ import {
   AiPrivacyError,
   AiProviderError,
   AiRouterError,
+  contextModeRequiresLocalContext,
   createApiKeyStoreFromEnv,
   InferenceUrlBlockedError,
+  isRtxReady,
   resolveAiBrainSettings,
   routeAiRequest,
 } from "@uwe/ai-brain";
 import {
   createBrainStoreService,
+  createJobService,
+  createLifeAdminService,
   createUweRepository,
   getSystemSettings,
+  loadPersonalBrainPromptContext,
+  prisma,
   resolveLocalOnlyMode,
 } from "@uwe/database/server";
 import type { AiContextMode, AiProviderMode } from "./ai-prompt-ui";
@@ -36,37 +42,57 @@ function resolvePromptTaskType(contextMode: AiContextMode) {
       return "summarize_page" as const;
     case "current_object_plus_brain":
       return "improve_lore_text" as const;
+    case "personal_brain":
+      return "improve_lore_text" as const;
     default:
       return "improve_lore_text" as const;
   }
 }
 
-export async function postAiPrompt(body: {
+export interface AiPromptRequestBody {
   prompt: string;
   providerMode: AiProviderMode;
   contextMode: AiContextMode;
   worldSlug?: string;
   pageSlug?: string;
   useMock?: boolean;
-}) {
+}
+
+export type AiPromptExecutionResult =
+  | {
+      kind: "completed";
+      text: string;
+      provider: string;
+      model: string;
+      routedVia: string;
+      contextMode: AiContextMode;
+      providerMode: AiProviderMode;
+    }
+  | {
+      kind: "deferred";
+      jobId: string;
+      message: string;
+    };
+
+export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiPromptExecutionResult> {
   const prompt = body.prompt?.trim();
   if (!prompt) {
-    return jsonError("prompt ist erforderlich.", 400);
+    throw new Error("prompt ist erforderlich.");
   }
 
   if (!body.providerMode || !body.contextMode) {
-    return jsonError("providerMode und contextMode sind erforderlich.", 400);
+    throw new Error("providerMode und contextMode sind erforderlich.");
   }
 
   if (
     (body.contextMode === "current_object" || body.contextMode === "current_object_plus_brain") &&
     (!body.worldSlug?.trim() || !body.pageSlug?.trim())
   ) {
-    return jsonError("worldSlug und pageSlug sind für Objekt-Kontext erforderlich.", 400);
+    throw new Error("worldSlug und pageSlug sind für Objekt-Kontext erforderlich.");
   }
 
   if (body.contextMode === "brain" && !body.worldSlug?.trim()) {
-    return jsonError("worldSlug ist für Brain-Kontext erforderlich.", 400);
+    throw new Error("worldSlug ist für Brain-Kontext erforderlich.");
   }
 
   const overrides = await getSettingsOverrides();
@@ -74,38 +100,104 @@ export async function postAiPrompt(body: {
   const settings = resolveAiBrainSettings(apiKeyStore, overrides);
 
   if (!settings.enabled) {
-    return jsonError("KI ist deaktiviert.", 503);
+    throw new Error("KI ist deaktiviert.");
+  }
+
+  const needsLocalRtx =
+    body.providerMode === "local_rtx" ||
+    (body.providerMode === "auto" && contextModeRequiresLocalContext(body.contextMode));
+
+  if (needsLocalRtx && contextModeRequiresLocalContext(body.contextMode)) {
+    const rtxReady = await isRtxReady({ useMock: body.useMock });
+    if (!rtxReady) {
+      const jobs = createJobService(prisma);
+      const job = await jobs.enqueue({
+        type: "ai_run",
+        title: `KI-Prompt (${body.contextMode}) — wartet auf RTX`,
+        worldSlug: body.worldSlug?.trim() || null,
+        payload: {
+          deferredAiPrompt: true,
+          prompt: body.prompt,
+          providerMode: body.providerMode,
+          contextMode: body.contextMode,
+          worldSlug: body.worldSlug,
+          pageSlug: body.pageSlug,
+          useMock: body.useMock ?? false,
+        },
+      });
+
+      return {
+        kind: "deferred",
+        jobId: job.id,
+        message:
+          "RTX ist offline — Anfrage wurde als Job vorgemerkt. Kein Cloud-Fallback für lokalen Kontext.",
+      };
+    }
   }
 
   const repo = createUweRepository();
   const brainStore = createBrainStoreService();
+  const lifeAdmin = createLifeAdminService(prisma);
 
-  try {
-    const routed = await routeAiRequest(
-      { repo, brainStore },
-      {
-        providerMode: body.providerMode,
-        contextMode: body.contextMode,
-        taskType: resolvePromptTaskType(body.contextMode),
-        worldSlug: body.worldSlug?.trim() || undefined,
-        pageSlug: body.pageSlug?.trim() || undefined,
-        userPrompt: prompt,
-        useMock: body.useMock,
-        apiKeyStore,
-        options: {
-          datenschutzMode: settings.datenschutzMode,
-          localOnly: settings.localOnly,
-        },
+  const routed = await routeAiRequest(
+    {
+      repo,
+      brainStore,
+      loadPersonalBrainContext: () =>
+        loadPersonalBrainPromptContext(
+          () => lifeAdmin.listPersonalBrainDocuments({ limit: 30 }),
+          () => lifeAdmin.listPersonalBrainFacts({ limit: 30 }),
+        ),
+    },
+    {
+      providerMode: body.providerMode,
+      contextMode: body.contextMode,
+      taskType: resolvePromptTaskType(body.contextMode),
+      worldSlug: body.worldSlug?.trim() || undefined,
+      pageSlug: body.pageSlug?.trim() || undefined,
+      userPrompt: prompt,
+      useMock: body.useMock,
+      apiKeyStore,
+      options: {
+        datenschutzMode: settings.datenschutzMode,
+        localOnly: settings.localOnly,
       },
-    );
+    },
+  );
+
+  return {
+    kind: "completed",
+    text: routed.result.text,
+    provider: routed.result.provider,
+    model: routed.result.model,
+    routedVia: routed.route,
+    contextMode: routed.contextMode,
+    providerMode: routed.providerMode,
+  };
+}
+
+export async function postAiPrompt(body: AiPromptRequestBody) {
+  try {
+    const result = await executeAiPrompt(body);
+
+    if (result.kind === "deferred") {
+      return NextResponse.json(
+        {
+          deferred: true,
+          jobId: result.jobId,
+          message: result.message,
+        },
+        { status: 202 },
+      );
+    }
 
     return NextResponse.json({
-      text: routed.result.text,
-      provider: routed.result.provider,
-      model: routed.result.model,
-      routedVia: routed.route,
-      contextMode: routed.contextMode,
-      providerMode: routed.providerMode,
+      text: result.text,
+      provider: result.provider,
+      model: result.model,
+      routedVia: result.routedVia,
+      contextMode: result.contextMode,
+      providerMode: result.providerMode,
     });
   } catch (error) {
     if (error instanceof AiPrivacyError || error instanceof AiRouterError) {
@@ -116,6 +208,9 @@ export async function postAiPrompt(body: {
     }
     if (error instanceof AiProviderError) {
       return jsonError(error.message, 502);
+    }
+    if (error instanceof Error) {
+      return jsonError(error.message, 400);
     }
     throw error;
   }

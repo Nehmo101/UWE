@@ -37,6 +37,9 @@ export async function updateSettingsAction(formData: FormData) {
           formData.get("defaultCanonicalStatus") || "draft",
         ) as CanonicalStatus,
       };
+      update.app = {
+        favoriteWorldSlug: String(formData.get("favoriteWorldSlug") || "").trim() || null,
+      };
       break;
     case "portal":
       update.portal = {

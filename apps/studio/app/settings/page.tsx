@@ -181,6 +181,29 @@ export default async function SettingsPage({ searchParams }: Props) {
               </section>
 
               <section style={{ marginTop: "2rem" }}>
+                <h2>Bevorzugte DnD-Welt</h2>
+                <p className="uwe-hint">
+                  Wird auf /today prominent angezeigt. Leer = Env{" "}
+                  <code>PREFERRED_WORLD_SLUG</code>, dann Terra (falls vorhanden), sonst erste
+                  Welt. Terra wird nie hardcodiert erzwungen.
+                </p>
+                <label>
+                  Favorit für Today-Dashboard
+                  <select
+                    name="favoriteWorldSlug"
+                    defaultValue={settings.app.favoriteWorldSlug ?? ""}
+                  >
+                    <option value="">— Automatisch —</option>
+                    {worlds.map((world) => (
+                      <option key={world.id} value={world.slug}>
+                        {world.name} ({world.slug})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </section>
+
+              <section style={{ marginTop: "2rem" }}>
                 <h2>Gastmodus pro Welt</h2>
                 <div className="uwe-page-table-wrap">
                   <table className="uwe-page-table">

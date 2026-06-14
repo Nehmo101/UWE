@@ -53,6 +53,9 @@ describe("admin status dashboard sources", () => {
     assert.equal(typeof status.aiRuns.totalRuns, "number");
     assert.equal(typeof status.mail.passwordConfigured, "boolean");
     assert.ok(Array.isArray(status.mail.nextSteps));
+    assert.equal(typeof status.studioSecurity.level, "string");
+    assert.equal(typeof status.rtxExposure.ok, "boolean");
+    assert.ok(Array.isArray(status.studioSecurity.nextSteps));
   });
 
   it("marks mail as misconfigured when enabled without SMTP host", () => {

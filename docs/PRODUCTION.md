@@ -327,6 +327,8 @@ Kopieren Sie `.env.example` nach `.env`. Wichtige Variablen:
 
 Cloudflare darf **nur auf UWE** zeigen — niemals auf Ollama, LM Studio oder den RTX-Inference-Endpoint.
 
+**Daily Admin OS / Life-Brain:** Persönliches Life-Brain und DnD-Brain dürfen nur über lokale RTX-Inference verarbeitet werden — Cloud-KI erhält keinen lokalen Kontext. RTX offline → Jobs werden vorgemerkt, kein Cloud-Fallback. Details: [life-brain-privacy.md](./life-brain-privacy.md), Admin-Status unter `/admin/status`.
+
 ```txt
 Internet → Cloudflare Tunnel → http://localhost:3000 (Studio)
                               → http://localhost:3001 (Portal)

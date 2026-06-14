@@ -13,6 +13,7 @@ const CONTEXT_MODE_LABELS: Record<AiContextMode, string> = {
   brain: "Brain-Wissen",
   current_object: "Aktuelles Objekt",
   current_object_plus_brain: "Objekt + Brain",
+  personal_brain: "Persönliches Life-Brain",
 };
 
 const PROVIDER_MODE_LABELS: Record<AiProviderMode, string> = {

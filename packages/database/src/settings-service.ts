@@ -14,6 +14,10 @@ export type ThemeAppearance = "dark" | "light" | "system";
 
 export interface AppSettings {
   theme: ThemeAppearance;
+  /** Preferred DnD world slug for /today — never hardcoded; set in settings or env. */
+  favoriteWorldSlug?: string | null;
+  /** Last actively opened world slug (optional UX hint). */
+  lastActiveWorldSlug?: string | null;
 }
 
 export interface WorldSettings {
@@ -133,6 +137,8 @@ function buildMailSettings(
 export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   app: {
     theme: "dark",
+    favoriteWorldSlug: null,
+    lastActiveWorldSlug: null,
   },
   worlds: {
     defaultVisibility: "dm_only",

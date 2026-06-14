@@ -16,6 +16,7 @@ export interface RouterContextBuildInput {
   pageSlug?: string;
   contextMode: AiContextMode;
   brainSource?: BrainKnowledgeSource;
+  personalBrainPromptContext?: string;
   options?: BuildAiContextOptions;
 }
 
@@ -116,6 +117,22 @@ function applyContextMode(context: AiContext, mode: AiContextMode): AiContext {
         promptContext: rebuildPromptContext(context, mode),
       };
 
+    case "personal_brain":
+      return {
+        taskType: context.taskType,
+        worldId: "",
+        primaryPageId: "",
+        pages: [],
+        brainEntries: [],
+        session: undefined,
+        campaign: undefined,
+        sources: [],
+        promptContext: context.promptContext,
+        truncated: false,
+        datenschutzMode: context.datenschutzMode,
+        allowDmOnly: true,
+      };
+
     default:
       return context;
   }
@@ -144,6 +161,23 @@ export async function buildRouterContext(
   const builder = createContextBuilder(repo, { brainSource });
 
   let fullContext: AiContext;
+
+  if (input.contextMode === "personal_brain") {
+    return applyContextMode(
+      {
+        taskType: input.taskType,
+        worldId: "",
+        primaryPageId: "",
+        pages: [],
+        sources: [],
+        promptContext: input.personalBrainPromptContext?.trim() ?? "",
+        truncated: false,
+        datenschutzMode: input.options?.datenschutzMode ?? true,
+        allowDmOnly: true,
+      },
+      input.contextMode,
+    );
+  }
 
   if (input.contextMode === "general_chat") {
     if (!input.worldSlug?.trim()) {

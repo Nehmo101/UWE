@@ -95,6 +95,9 @@ const PROVIDER_CONTEXT_MATRIX: Array<{
   { id: 12, provider: "auto", context: "brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
   { id: 13, provider: "auto", context: "current_object", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
   { id: 14, provider: "auto", context: "current_object_plus_brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
+  { id: 15, provider: "cloud", context: "personal_brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "blocked", error: AiPrivacyError, via: "privacyGuard" } },
+  { id: 16, provider: "auto", context: "personal_brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
+  { id: 17, provider: "local_rtx", context: "personal_brain", rtxReady: true, cloudAvailable: false, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
 ];
 
 async function resolveRouteForScenario(
