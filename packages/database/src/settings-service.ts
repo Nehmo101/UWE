@@ -56,6 +56,8 @@ export interface StorageSettings {
 export interface BackupSettings {
   backupsPath: string;
   autoBackupEnabled: boolean;
+  /** Number of stored backups to retain (7, 14, or 30). */
+  retentionCount: number;
 }
 
 export interface PrivacySettings {
@@ -165,6 +167,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   backup: {
     backupsPath: "",
     autoBackupEnabled: false,
+    retentionCount: 14,
   },
   privacy: {
     maskSecretsInUi: true,

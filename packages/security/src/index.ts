@@ -1,0 +1,117 @@
+export {
+  apiError,
+  csrfError,
+  forbidden,
+  rateLimitError,
+  safeHandlerError,
+  unauthorized,
+  validationError,
+  type ApiErrorBody,
+} from "./security/errors";
+
+export {
+  parseBody,
+  parseFormData,
+  parseFormDataOrThrow,
+  parseParams,
+  parseQuery,
+  type ParseFailure,
+  type ParseResult,
+  type ParseSuccess,
+} from "./security/validate";
+
+export {
+  isCrossSiteBrowserRequest,
+  isSameOriginBrowserRequest,
+  requireSameOrigin,
+  requireSameOriginMutation,
+} from "./security/csrf";
+
+export {
+  handleSameOriginPreflight,
+  sameOriginCorsHeaders,
+} from "./security/cors";
+
+export {
+  RATE_LIMITER_MODE,
+  RATE_LIMIT_PRESETS,
+  checkRateLimit,
+  clientIpFromHeaders,
+  enforceRateLimit,
+  getRateLimitStore,
+  resetRateLimit,
+  resetRateLimitStore,
+  setRateLimitStore,
+  type RateLimitOptions,
+  type RateLimitPreset,
+  type RateLimitResult,
+  type RateLimitStore,
+} from "./security/rate-limit";
+
+export {
+  guardStudioMutation,
+  requirePortalApiAuth,
+  requirePortalReadAuth,
+  requireRestoreOwnerAuth,
+  requireStudioApiAuth,
+  type PortalGuardOptions,
+  type StudioGuardOptions,
+} from "./security/guards";
+
+export * from "./schemas/common";
+export * from "./schemas/actions";
+
+export {
+  canUseAi,
+  requireAiRole,
+  resolveEffectiveAiRole,
+  resolveAiPolicyLimits,
+  checkAiRateLimit,
+  resetAiRateLimit,
+  validatePromptLength,
+  validateContextSize,
+  validateMaxOutputTokens,
+  assertModelAllowed,
+  enforceAiRequestLimits,
+  enforceAiAccessPolicy,
+  resolveEffectiveAllowDmOnly,
+  filterContextForViewer,
+  sanitizeAiResponseForClient,
+  type AiAccessContext,
+  type AiAuthorizedRole,
+  type AiRequestLimitsInput,
+  type AiDmContextInput,
+} from "./security/ai-policy";
+
+export {
+  redactAiSecrets,
+  truncatePromptForLog,
+  formatAiPromptLog,
+  sanitizeAiLogPayload,
+  shouldLogAiPrompts,
+  resolvePromptLogMaxChars,
+} from "./security/ai-logging";
+
+export {
+  assertFetchUrlAllowed,
+  isBlockedUserFetchTarget,
+  resolveAiFetchAllowlist,
+  SsrfBlockedError,
+} from "./security/ssrf-guard";
+
+export {
+  rejectClientWorkerUrl,
+  resolveRtxBaseUrl,
+  resolveRtxWorkerBoundary,
+  buildRtxWorkerAuthHeaders,
+  verifyRtxHmacSignature,
+  fetchRtxWorker,
+  toRtxAgentConfig,
+  RtxBoundaryError,
+  type RtxWorkerBoundaryConfig,
+  type RtxWorkerRequestOptions,
+} from "./security/rtx-boundary";
+
+export { AiAccessDeniedError, AiPolicyViolationError } from "./security/errors";
+
+export const SECURITY_PACKAGE_VERSION = "0.1.0";

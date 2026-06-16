@@ -9,6 +9,7 @@ import {
   getPreviewUserId,
   getWorldPlayers,
 } from "@/src/lib/auth";
+import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import {
   EmptyState,
   GlobalSearchForm,
@@ -53,9 +54,19 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { name: true },
+      select: { id: true, name: true },
     });
-    worldName = world?.name ?? worldSlug;
+    if (!world) {
+      notFound();
+    }
+
+    try {
+      assertPortalCanReadWorld(ctx, world.id);
+    } catch {
+      notFound();
+    }
+
+    worldName = world.name;
 
     if (isSearching) {
       searchResults = await auth.searchForViewer(worldSlug, ctx, {

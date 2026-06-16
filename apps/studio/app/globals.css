@@ -307,3 +307,89 @@ body {
 .uwe-system-ampel-item[data-status="error"] {
   border-color: rgba(239, 68, 68, 0.35);
 }
+
+.studio-auth-page {
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.studio-auth-card {
+  width: min(100%, 28rem);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.studio-auth-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+}
+
+.studio-auth-lead {
+  margin: 0 0 1.25rem;
+  color: #94a3b8;
+  font-size: 0.92rem;
+}
+
+.studio-auth-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.studio-auth-form label {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.studio-auth-form input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+}
+
+.studio-auth-form button {
+  margin-top: 0.5rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #6366f1;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.studio-auth-form button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.studio-auth-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.9rem;
+}
+
+.studio-auth-seed-users {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.studio-auth-footer {
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
+}
+
+.studio-auth-footer a {
+  color: #a5b4fc;
+}

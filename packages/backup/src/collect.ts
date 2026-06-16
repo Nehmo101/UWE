@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@uwe/database/server";
-import { sanitizeBackupData } from "./sanitize";
+import { createSettingsService } from "@uwe/database/server";
+import { sanitizeBackupData, sanitizeSettingsForBackup } from "./sanitize";
 import type {
   BackupAssetPageLinkRecord,
   BackupAssetRecord,
@@ -16,6 +17,7 @@ import type {
   BackupPagePlayerAccessRecord,
   BackupPageRecord,
   BackupSessionUnlockRecord,
+  BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
   BackupStats,
@@ -165,7 +167,7 @@ async function collectPageIds(
 export async function collectBackupData(
   db: PrismaClient,
   scope: CollectScope,
-): Promise<{ data: BackupData; stats: BackupStats }> {
+): Promise<{ data: BackupData; stats: BackupStats; settings?: BackupSettingsRecord }> {
   const { worldIds, campaignIds } = await resolveScopeIds(db, scope);
   const pageIds = await collectPageIds(db, scope, worldIds, campaignIds);
 
@@ -538,7 +540,16 @@ export async function collectBackupData(
     ),
   });
 
-  return { data, stats: collectStats(data) };
+  let settings: BackupSettingsRecord | undefined;
+  if (scope.type === "full") {
+    const settingsService = createSettingsService(db);
+    const systemSettings = await settingsService.getSettings();
+    settings = sanitizeSettingsForBackup(
+      systemSettings as unknown as Record<string, unknown>,
+    );
+  }
+
+  return { data, stats: collectStats(data), settings };
 }
 
 export { collectStats };

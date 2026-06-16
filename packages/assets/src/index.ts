@@ -16,7 +16,49 @@ export {
   inferMimeTypeFromFilename,
   resolveAssetFilePath,
   resolveUploadsRoot,
+  sanitizeOriginalFilename,
 } from "./storage";
+
+export {
+  ALLOWED_UPLOAD_KINDS,
+  UploadValidationError,
+  buildSecureStorageKey,
+  buildThumbnailStorageKey,
+  parseUploadVisibility,
+  resolveUploadMaxBytes,
+  resolveUploadPolicyConfig,
+  validateUploadInput,
+  type UploadPolicyConfig,
+  type ValidatedUpload,
+} from "./upload-policy";
+
+export {
+  BLOCKED_EXTENSIONS,
+  EXTENSION_TO_KIND,
+  KIND_TO_MIME,
+  detectFileKind,
+  extensionForKind,
+  type DetectedFileKind,
+  type MagicByteDetection,
+} from "./magic-bytes";
+
+export {
+  ZipSecurityError,
+  assertSafeZipEntryName,
+  extractSafeZipEntries,
+  resolveZipImportPolicy,
+  type SafeZipEntry,
+  type ZipImportPolicy,
+} from "./zip-security";
+
+export { buildAssetDownloadHeaders } from "./download-headers";
+
+export {
+  processUploadedImage,
+  shouldGenerateThumbnails,
+  shouldStripExif,
+  type ProcessedImageResult,
+} from "./image-processing";
 
 export {
   resolveAllDataPaths,
@@ -35,5 +77,14 @@ export {
   isPortalAssetVisibility,
   type AssetAccessContext,
 } from "./permissions";
+
+export {
+  buildSignedMediaUrl,
+  createSignedMediaToken,
+  isProtectedMediaVisibility,
+  requiresSignedMediaAccess,
+  verifySignedMediaToken,
+  type SignedMediaPayload,
+} from "./signed-media";
 
 export const ASSETS_PACKAGE_VERSION = "0.2.0";

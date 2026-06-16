@@ -106,7 +106,7 @@ export default async function AdminStatusPage() {
     useMockInference,
   });
 
-  const { system, inference, rtx, mail, brain, embeddings, aiRuns, jobs, auth, studioSecurity, rtxExposure } =
+  const { system, inference, rtx, mail, brain, embeddings, aiRuns, jobs, auth, studioSecurity, rtxExposure, envValidation, publicLeaks } =
     status;
 
   const overallBadge = status.ok ? "ok" : "degraded";
@@ -154,6 +154,63 @@ export default async function AdminStatusPage() {
           </p>
 
           <div className="uwe-dashboard-grid">
+            <StatusCard
+              title="Public Leak Scanner"
+              level={publicLeaks.criticalCount > 0 ? "error" : publicLeaks.warningCount > 0 ? "degraded" : "ok"}
+              statusLabel={
+                publicLeaks.findingCount === 0
+                  ? "Keine Befunde"
+                  : `${publicLeaks.criticalCount} kritisch, ${publicLeaks.warningCount} Warnungen`
+              }
+              message={
+                publicLeaks.findingCount === 0
+                  ? "Keine verdächtigen Portal-Leaks in published/player_visible Inhalten gefunden."
+                  : `${publicLeaks.findingCount} potenzielle Leak-Befunde — prüfe Sichtbarkeiten und Block-Typen.`
+              }
+              details={publicLeaks.findings.slice(0, 8).map((finding) => ({
+                label: finding.targetLabel,
+                value: `${finding.severity}: ${finding.message}`,
+              }))}
+              nextSteps={
+                publicLeaks.findingCount > 0
+                  ? [
+                      "Öffne den World Inspector und prüfe player_visible Inhalte.",
+                      "JSON-API: /api/admin/security/leaks",
+                    ]
+                  : []
+              }
+              wide
+            />
+
+            <StatusCard
+              title="Env Validation"
+              level={
+                envValidation.some((issue) => issue.severity === "error")
+                  ? "error"
+                  : envValidation.some((issue) => issue.severity === "warning")
+                    ? "degraded"
+                    : "ok"
+              }
+              statusLabel={
+                envValidation.length === 0 ? "OK" : `${envValidation.length} Hinweise`
+              }
+              message={
+                envValidation.length === 0
+                  ? "Keine Umgebungsprobleme erkannt."
+                  : "Prüfe .env — Details ohne Secret-Werte."
+              }
+              details={envValidation.map((issue) => ({
+                label: issue.envKey ?? issue.id,
+                value: `${issue.severity}: ${issue.message}`,
+              }))}
+              nextSteps={
+                envValidation.some((issue) => issue.severity === "error")
+                  ? ["Behebe kritische .env-Einträge vor öffentlicher Exposition."]
+                  : []
+              }
+              wide
+            />
+
             <StatusCard
               title="Studio Security"
               level={studioSecurityLevel(studioSecurity)}

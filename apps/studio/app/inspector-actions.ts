@@ -9,6 +9,11 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  assertStudioTrusted,
+  requireStudioContentEdit,
+  requireStudioWorldEdit,
+} from "@/src/lib/authz";
 
 const FIX_ACTIONS: InspectorFixAction[] = [
   "set_block_dm_only",
@@ -22,6 +27,13 @@ const FIX_ACTIONS: InspectorFixAction[] = [
 export async function applyInspectorFixAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const action = String(formData.get("fixAction")) as InspectorFixAction;
+  const pageId = String(formData.get("pageId") || "");
+
+  if (pageId) {
+    await requireStudioContentEdit(worldSlug, pageId);
+  } else {
+    await requireStudioWorldEdit(worldSlug);
+  }
 
   if (!FIX_ACTIONS.includes(action)) {
     redirect(`/worlds/${worldSlug}/inspector?fixError=unbekannte+Aktion`);
@@ -47,6 +59,8 @@ export async function applyInspectorFixAction(formData: FormData) {
 
 /** Undo a change from the activity log (inspector fixes, deletions). */
 export async function undoActivityAction(formData: FormData) {
+  assertStudioTrusted();
+
   const undoEntryId = String(formData.get("undoEntryId"));
   const redirectTo = String(formData.get("redirectTo") || "/");
 

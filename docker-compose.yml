@@ -12,7 +12,12 @@ services:
       UPLOADS_DIR: /app/data/uploads
       EXPORTS_DIR: /app/exports
       BACKUPS_DIR: /app/data/backups
-      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production}
+      NODE_ENV: ${NODE_ENV:-development}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      AUTH_SECRET: ${AUTH_SECRET:-${SESSION_SECRET:-}}
+      UWE_SETUP_TOKEN: ${UWE_SETUP_TOKEN:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-${PUBLIC_BASE_URL:-}}
       RUN_DB_SEED: ${RUN_DB_SEED:-auto}
       STUDIO_PORT: ${STUDIO_PORT:-3000}
       PORTAL_PORT: ${PORTAL_PORT:-3001}
@@ -23,7 +28,7 @@ services:
       - ./exports:/app/exports
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/public').then(r=>r.text()).then(t=>process.exit(t==='ok'?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -38,7 +43,12 @@ services:
     environment:
       DATABASE_URL: file:/data/uwe.db
       UPLOADS_DIR: /app/data/uploads
-      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production}
+      NODE_ENV: ${NODE_ENV:-development}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      AUTH_SECRET: ${AUTH_SECRET:-${SESSION_SECRET:-}}
+      UWE_SETUP_TOKEN: ${UWE_SETUP_TOKEN:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-${PUBLIC_BASE_URL:-}}
     volumes:
       - uwe-database:/data
       - ./data/uploads:/app/data/uploads
@@ -47,7 +57,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health/public').then(r=>r.text()).then(t=>process.exit(t==='ok'?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5

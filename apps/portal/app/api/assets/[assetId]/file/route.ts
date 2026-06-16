@@ -1,12 +1,14 @@
 import fs from "node:fs";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
-import { resolveAssetFilePath } from "@uwe/assets";
+import { resolveAssetFilePath, requiresSignedMediaAccess, verifySignedMediaToken } from "@uwe/assets";
 import {
   createAuthService,
   createPrismaClient,
   getSystemSettings,
   isPortalGloballyEnabled,
 } from "@uwe/database/server";
+import { assertCanReadWorldWithContext } from "@uwe/auth";
 import { getAccessContextForWorld, getSessionToken } from "@/src/lib/auth";
 
 interface RouteContext {
@@ -14,6 +16,9 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const authError = await requirePortalApiAuth(request);
+  if (authError) return authError;
+
   const settings = await getSystemSettings();
   if (!isPortalGloballyEnabled(settings)) {
     return NextResponse.json({ error: "Portal disabled" }, { status: 403 });
@@ -40,9 +45,33 @@ export async function GET(request: Request, context: RouteContext) {
   const auth = createAuthService(db);
 
   try {
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    try {
+      assertCanReadWorldWithContext(ctx, world.id);
+    } catch {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const asset = await auth.getAssetForViewer(worldSlug, assetId, ctx);
     if (!asset) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (requiresSignedMediaAccess(asset.visibility)) {
+      const signature = new URL(request.url).searchParams.get("sig");
+      if (
+        !signature ||
+        !verifySignedMediaToken(signature, { assetId: asset.id, worldSlug })
+      ) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
     }
 
     let filePath: string;

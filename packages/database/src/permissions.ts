@@ -1,12 +1,19 @@
 import { getUweRuntimeConfig } from "@uwe/auth";
 import type { ContentBlock, Page, Visibility } from "./generated/prisma/client";
 import type { PublishStatus } from "./generated/prisma/client";
+import {
+  isBlockPlayerExposable,
+  isDmOnlyVisibility,
+  isPlayerExposableContent,
+  isPlayerPortalVisibility,
+  PLAYER_PORTAL_VISIBILITIES,
+} from "./content-access";
 
 /** Page visibilities exposed to the player portal API and UI. */
-export const PORTAL_PAGE_VISIBILITIES: Visibility[] = ["public", "player_visible"];
+export const PORTAL_PAGE_VISIBILITIES: Visibility[] = [...PLAYER_PORTAL_VISIBILITIES];
 
 /** Block visibilities exposed to the player portal API and UI. */
-export const PORTAL_BLOCK_VISIBILITIES: Visibility[] = ["public", "player_visible"];
+export const PORTAL_BLOCK_VISIBILITIES: Visibility[] = [...PLAYER_PORTAL_VISIBILITIES];
 
 export type AccessContext = "dm" | "portal" | "preview" | "share";
 
@@ -25,12 +32,25 @@ export interface PageAccessOptions extends PortalAccessOptions {
   pageId?: string;
 }
 
+export type PageAccessRecord = Pick<
+  Page,
+  "id" | "visibility" | "publishStatus"
+> & {
+  secretLevel?: Page["secretLevel"] | null;
+  revealState?: Page["revealState"] | null;
+};
+
+export type BlockAccessRecord = Pick<ContentBlock, "visibility" | "type"> & {
+  secretLevel?: ContentBlock["secretLevel"] | null;
+  revealState?: ContentBlock["revealState"] | null;
+};
+
 export function isPortalPageVisibility(visibility: Visibility): boolean {
-  return PORTAL_PAGE_VISIBILITIES.includes(visibility);
+  return isPlayerPortalVisibility(visibility);
 }
 
 export function isPortalBlockVisibility(visibility: Visibility): boolean {
-  return PORTAL_BLOCK_VISIBILITIES.includes(visibility);
+  return isPlayerPortalVisibility(visibility);
 }
 
 export function isPublishedForPortal(publishStatus: PublishStatus): boolean {
@@ -54,7 +74,7 @@ function isPublicVisibilityAllowed(
 }
 
 export function isPageAccessible(
-  page: Pick<Page, "id" | "visibility" | "publishStatus">,
+  page: PageAccessRecord,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {
@@ -66,7 +86,7 @@ export function isPageAccessible(
     return true;
   }
 
-  if (!isPublishedForPortal(page.publishStatus)) {
+  if (!isPlayerExposableContent(page)) {
     return false;
   }
 
@@ -77,7 +97,7 @@ export function isPageAccessible(
   return isPortalPageVisibility(page.visibility);
 }
 
-export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility">>(
+export function filterBlocksForContext<T extends BlockAccessRecord>(
   blocks: T[],
   context: AccessContext,
   options?: PageAccessOptions,
@@ -98,20 +118,25 @@ export function filterBlocksForContext<T extends Pick<ContentBlock, "visibility"
 
   return blocks.filter(
     (block) =>
-      isPortalBlockVisibility(block.visibility) &&
+      isBlockPlayerExposable(block) &&
       isPublicVisibilityAllowed(block.visibility, context, options),
   );
 }
 
 /** Asset visibilities exposed to the player portal API and UI. */
-export const PORTAL_ASSET_VISIBILITIES: Visibility[] = ["public", "player_visible"];
+export const PORTAL_ASSET_VISIBILITIES: Visibility[] = [...PLAYER_PORTAL_VISIBILITIES];
 
 export function isPortalAssetVisibility(visibility: Visibility): boolean {
-  return PORTAL_ASSET_VISIBILITIES.includes(visibility);
+  return isPlayerPortalVisibility(visibility);
 }
 
+export type AssetAccessRecord = Pick<
+  { id: string; visibility: Visibility; secretLevel?: Page["secretLevel"]; revealState?: Page["revealState"] },
+  "id" | "visibility" | "secretLevel" | "revealState"
+> & { publishStatus?: PublishStatus };
+
 export function isAssetAccessible(
-  asset: Pick<{ id: string; visibility: Visibility }, "id" | "visibility">,
+  asset: AssetAccessRecord,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {
@@ -123,10 +148,33 @@ export function isAssetAccessible(
     return true;
   }
 
-  return isPortalAssetVisibility(asset.visibility);
+  if (isDmOnlyVisibility(asset.visibility)) {
+    return false;
+  }
+
+  if (!isPlayerPortalVisibility(asset.visibility)) {
+    return false;
+  }
+
+  if (asset.publishStatus && !isPublishedForPortal(asset.publishStatus)) {
+    return false;
+  }
+
+  if (!isPlayerExposableContent({
+    visibility: asset.visibility,
+    publishStatus: asset.publishStatus ?? "published",
+    secretLevel: asset.secretLevel,
+    revealState: asset.revealState,
+  })) {
+    return false;
+  }
+
+  return isPublicVisibilityAllowed(asset.visibility, context, options);
 }
 
-export function filterAssetsForContext<T extends Pick<{ visibility: Visibility }, "visibility">>(
+export function filterAssetsForContext<
+  T extends Pick<{ visibility: Visibility }, "visibility">,
+>(
   assets: T[],
   context: AccessContext,
 ): T[] {
@@ -138,7 +186,7 @@ export function filterAssetsForContext<T extends Pick<{ visibility: Visibility }
 }
 
 export function shouldHidePageTitle(
-  page: Pick<Page, "id" | "visibility" | "publishStatus">,
+  page: PageAccessRecord,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {

@@ -1,33 +1,16 @@
-import { postAiPrompt } from "@/src/lib/ai-prompt-handlers";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
-import type { AiContextMode, AiProviderMode } from "@/src/lib/ai-prompt-ui";
+import { postAiPrompt, type AiPromptRequestBody } from "@/src/lib/ai-prompt-handlers";
+import {
+  aiPromptBodySchema,
+  guardStudioMutation,
+  parseBody,
+} from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    prompt?: string;
-    providerMode?: AiProviderMode;
-    contextMode?: AiContextMode;
-    worldSlug?: string;
-    pageSlug?: string;
-    useMock?: boolean;
-  };
+  const parsed = await parseBody(request, aiPromptBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.prompt || !body.providerMode || !body.contextMode) {
-    return Response.json(
-      { error: "prompt, providerMode und contextMode sind erforderlich." },
-      { status: 400 },
-    );
-  }
-
-  return postAiPrompt({
-    prompt: body.prompt,
-    providerMode: body.providerMode,
-    contextMode: body.contextMode,
-    worldSlug: body.worldSlug,
-    pageSlug: body.pageSlug,
-    useMock: body.useMock,
-  });
+  return postAiPrompt(parsed.data as unknown as AiPromptRequestBody);
 }

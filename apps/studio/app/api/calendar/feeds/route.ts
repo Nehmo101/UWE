@@ -4,8 +4,25 @@ import {
   createJobService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  requireStudioApiAuth,
+} from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { z } from "zod";
+
+const calendarFeedCreateSchema = z.object({
+  name: nonEmptyString.max(200),
+  type: z.enum(["local", "caldav", "ical_url", "familywall"]),
+  url: optionalString,
+  caldavUrl: optionalString,
+  username: optionalString,
+  enabled: z.boolean().optional(),
+  sync: z.boolean().optional(),
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -17,23 +34,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    name?: string;
-    type?: "local" | "caldav" | "ical_url" | "familywall";
-    url?: string;
-    caldavUrl?: string;
-    username?: string;
-    enabled?: boolean;
-    sync?: boolean;
-  };
+  const parsed = await parseBody(request, calendarFeedCreateSchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.name?.trim() || !body.type) {
-    return NextResponse.json({ error: "name und type sind erforderlich." }, { status: 400 });
-  }
-
+  const body = parsed.data;
   const calendar = createCalendarService(prisma);
   const feed = await calendar.createFeed({
     name: body.name,

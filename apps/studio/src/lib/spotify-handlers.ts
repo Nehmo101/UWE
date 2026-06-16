@@ -22,6 +22,9 @@ import {
   SPOTIFY_STATE_COOKIE,
   verifySpotifyOAuthState,
 } from "./spotify-oauth-state";
+import { getOAuthStateCookieOptions } from "@uwe/auth";
+
+const SPOTIFY_STATE_COOKIE_PATH = "/api/spotify/callback";
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -88,10 +91,7 @@ export async function startSpotifyConnect(worldSlug: string) {
 
     const response = NextResponse.redirect(authorizationUrl);
     response.cookies.set(SPOTIFY_STATE_COOKIE, hashStateCookieValue(nonce), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/api/spotify/callback",
+      ...getOAuthStateCookieOptions(SPOTIFY_STATE_COOKIE_PATH),
       maxAge: 10 * 60,
     });
 
@@ -321,10 +321,7 @@ function redirectWithSpotifyMessage(errorMessage: string): NextResponse {
 
 function clearSpotifyStateCookie(response: NextResponse) {
   response.cookies.set(SPOTIFY_STATE_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/api/spotify/callback",
+    ...getOAuthStateCookieOptions(SPOTIFY_STATE_COOKIE_PATH),
     maxAge: 0,
   });
 }

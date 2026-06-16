@@ -6,17 +6,44 @@ import {
   resolveDndApiConfig,
 } from "@uwe/database/server";
 import { getOpen5eMonster, searchAllDndApis } from "@uwe/dnd-api";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  parseQuery,
+  requireStudioApiAuth,
+  slugSchema,
+} from "@uwe/security";
+import { z } from "zod";
+
+const dndApiQuerySchema = z.object({
+  worldSlug: slugSchema.optional(),
+  q: optionalString,
+  provider: optionalString,
+  slug: optionalString,
+});
+
+const dndBeyondReferenceSchema = z.object({
+  action: z.literal("add_beyond_reference"),
+  worldSlug: slugSchema,
+  title: nonEmptyString.max(500),
+  url: nonEmptyString.max(2000),
+  entityType: optionalString,
+  notes: optionalString,
+  pageId: idSchema.optional().nullable(),
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const url = new URL(request.url);
-  const worldSlug = url.searchParams.get("worldSlug");
-  const query = url.searchParams.get("q") ?? "";
-  const provider = url.searchParams.get("provider");
-  const slug = url.searchParams.get("slug");
+  const parsed = parseQuery(request.url, dndApiQuerySchema);
+  if (!parsed.success) return parsed.response;
+
+  const { worldSlug, q, provider, slug } = parsed.data;
+  const query = q ?? "";
 
   const config = resolveDndApiConfig();
   const dndApi = createDndApiService(prisma);
@@ -68,28 +95,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    action?: "add_beyond_reference";
-    worldSlug?: string;
-    title?: string;
-    url?: string;
-    entityType?: string;
-    notes?: string;
-    pageId?: string;
-  };
+  const parsed = await parseBody(request, dndBeyondReferenceSchema);
+  if (!parsed.success) return parsed.response;
 
-  if (body.action !== "add_beyond_reference") {
-    return NextResponse.json({ error: "Unbekannte Aktion." }, { status: 400 });
-  }
-
-  if (!body.worldSlug || !body.title?.trim() || !body.url?.trim()) {
-    return NextResponse.json({ error: "worldSlug, title und url sind erforderlich." }, { status: 400 });
-  }
-
-  if (!body.url.includes("dndbeyond.com")) {
+  if (!parsed.data.url.includes("dndbeyond.com")) {
     return NextResponse.json(
       { error: "Nur D&D Beyond Links erlaubt — kein Scraping, nur manuelle Referenz." },
       { status: 400 },
@@ -97,7 +109,7 @@ export async function POST(request: Request) {
   }
 
   const repo = getAppRepository();
-  const world = await repo.getWorldBySlug(body.worldSlug);
+  const world = await repo.getWorldBySlug(parsed.data.worldSlug);
   if (!world) {
     return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
   }
@@ -105,11 +117,11 @@ export async function POST(request: Request) {
   const dndApi = createDndApiService(prisma);
   const reference = await dndApi.createBeyondReference({
     worldId: world.id,
-    pageId: body.pageId ?? null,
-    title: body.title,
-    url: body.url,
-    entityType: body.entityType ?? null,
-    notes: body.notes ?? null,
+    pageId: parsed.data.pageId ?? null,
+    title: parsed.data.title,
+    url: parsed.data.url,
+    entityType: parsed.data.entityType ?? null,
+    notes: parsed.data.notes ?? null,
   });
 
   return NextResponse.json({ reference }, { status: 201 });

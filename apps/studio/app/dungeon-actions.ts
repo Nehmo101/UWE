@@ -1,3 +1,4 @@
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createDungeonCockpitService,
   getAppRepository,
@@ -6,6 +7,11 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  requireStudioAssetEdit,
+  requireStudioContentEdit,
+  requireStudioWorldEdit,
+} from "@/src/lib/authz";
 
 function dungeons() {
   return createDungeonCockpitService();
@@ -20,7 +26,10 @@ function dungeonBasePath(worldSlug: string, dungeonSlug: string) {
 }
 
 export async function createDungeonAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -49,8 +58,11 @@ export async function createDungeonAction(formData: FormData) {
 }
 
 export async function createDungeonLevelAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const dungeonSlug = String(formData.get("dungeonSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -71,9 +83,12 @@ export async function createDungeonLevelAction(formData: FormData) {
 }
 
 export async function createDungeonRoomAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const dungeonSlug = String(formData.get("dungeonSlug"));
   const levelSlug = String(formData.get("levelSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -118,11 +133,14 @@ export async function createDungeonRoomAction(formData: FormData) {
 }
 
 export async function createRoomChildAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const dungeonSlug = String(formData.get("dungeonSlug"));
   const levelSlug = String(formData.get("levelSlug"));
   const roomSlug = String(formData.get("roomSlug"));
   const childType = formData.get("childType") as RoomChildType;
+
+  await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
@@ -165,8 +183,13 @@ export async function createRoomChildAction(formData: FormData) {
 }
 
 export async function updateDungeonEntityAction(formData: FormData) {
+  await requireStudioActionAuth();
   const pageId = String(formData.get("pageId"));
   const redirectTo = String(formData.get("redirectTo"));
+  const worldSlug = redirectTo.split("/")[2];
+  if (!worldSlug) throw new Error("World not found");
+
+  await requireStudioContentEdit(worldSlug, pageId);
 
   await dungeons().updateEntity(pageId, {
     title: String(formData.get("title")),
@@ -181,9 +204,15 @@ export async function updateDungeonEntityAction(formData: FormData) {
 }
 
 export async function linkAssetToDungeonPageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const pageId = String(formData.get("pageId"));
   const assetId = String(formData.get("assetId"));
   const redirectTo = String(formData.get("redirectTo"));
+  const worldSlug = redirectTo.split("/")[2];
+  if (!worldSlug) throw new Error("World not found");
+
+  await requireStudioContentEdit(worldSlug, pageId);
+  await requireStudioAssetEdit(worldSlug, assetId);
 
   await dungeons().linkAsset(pageId, assetId);
 
@@ -192,11 +221,14 @@ export async function linkAssetToDungeonPageAction(formData: FormData) {
 }
 
 export async function updateRoomContentAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const dungeonSlug = String(formData.get("dungeonSlug"));
   const levelSlug = String(formData.get("levelSlug"));
   const roomSlug = String(formData.get("roomSlug"));
   const roomId = String(formData.get("roomId"));
+
+  await requireStudioContentEdit(worldSlug, roomId);
 
   const page = await repo().getPageById(roomId);
   if (!page) throw new Error("Room not found");

@@ -9,6 +9,10 @@
     ".": "./src/index.ts",
     "./inference": "./src/inference.ts",
     "./inference-config": "./src/inference-config.ts",
+    "./inference-url-guard": "./src/inference-url-guard.ts",
+    "./privacy": "./src/privacy.ts",
+    "./rtx-agent-config": "./src/rtx-agent-config.ts",
+    "./types": "./src/types.ts",
     "./router": "./src/router/index.ts"
   },
   "scripts": {

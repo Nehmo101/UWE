@@ -717,14 +717,17 @@ export function assertAdminStatusHasNoSecrets(
 ): void {
   const serialized = JSON.stringify(status);
   const secretKeys = [
+    "SESSION_SECRET",
     "SMTP_PASSWORD",
     "AUTH_SECRET",
+    "UWE_SETUP_TOKEN",
     "STUDIO_API_TOKEN",
     "AI_INFERENCE_API_KEY",
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
     "OPENROUTER_API_KEY",
+    "RTX_SERVICE_TOKEN",
     "RTX_AGENT_TOKEN",
     "CLOUD_AI_API_KEY",
     "SPOTIFY_CLIENT_SECRET",

@@ -61,7 +61,7 @@ UWE_EXPORT_DIR=C:\UWE\exports
 
 ```env
 AUTH_REQUIRED=true
-AUTH_SECRET=change-me-long-random-secret
+SESSION_SECRET=<openssl rand -base64 32>
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAMESITE=lax
 ```
@@ -82,8 +82,8 @@ MAIL_FROM="UWE <uwe@uweanddragons.org>"
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=change-me
-SMTP_PASSWORD=change-me
+SMTP_USER=<your-smtp-user>
+SMTP_PASSWORD=<your-smtp-password>
 MAIL_LOG_BODY=false
 ```
 

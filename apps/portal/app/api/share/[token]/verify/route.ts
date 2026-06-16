@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import {
   createPrismaClient,
   createShareLinkService,
@@ -12,6 +13,9 @@ interface RouteContext {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const authError = await requirePortalApiAuth(request);
+  if (authError) return authError;
+
   const { token } = await context.params;
 
   const ip = clientIpFromHeaders(request.headers);

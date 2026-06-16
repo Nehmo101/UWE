@@ -1,53 +1,61 @@
-# PR Review Log — Media, Calendar, DnD & Agent Automation
+# PR Review Log — Security Hardening (#74–#89)
 
-Stand: 2026-06-14 (final)  
-Orchestrator: `cursor/media-calendar-dnd-agents-75a2` → **squash-merged als #73**
+Stand: 2026-06-16 (final)  
+Orchestrator: `cursor/security-orchestrator-77f6` → **squash-merged als #90**
 
-## Zusammenfassung (#61–#73)
+## Zusammenfassung (#74–#89)
 
 | Aktion | Anzahl | PRs |
 |--------|--------|-----|
-| **Squash-merged auf main** | 1 | #73 (inkl. Inhalt aus #61) |
-| **Geschlossen (superseded by #73)** | 12 | #61–#62, #63–#72 |
+| **Squash-merged auf main** | 1 | #90 (inkl. Inhalt aus #74–#89) |
+| **Geschlossen (superseded by #90)** | 16 | #74–#89 |
 | **Offen** | 0 | — |
 
-**Main-Commit nach Merge:** `997d7e3` — `feat(integrations): Image Studio, Calendar, DnD API & Agent Jobs (#73)`
+**Main-Commit nach Merge:** `feat(security): Cloudflare-ready hardening — headers, authz, uploads, audit (#90)`
 
-## PR #61–#73 — Einzelentscheidungen
+## PR #74–#89 — Einzelentscheidungen
 
 | PR | Titel | Branch | Entscheidung |
 |----|-------|--------|--------------|
-| #73 | feat(integrations): Image Studio, Calendar, DnD API & Agent Jobs | `cursor/media-calendar-dnd-agents-75a2` | **SQUASH-MERGED** → `main` |
-| #72 | test(qa): E2E QA session, fixes, and test documentation | `cursor/qa-e2e-test-fixes-bc01` | **CLOSED** — superseded by #73 |
-| #71 | feat(ai): Provider Registry, Final Audit Docs & AiRun inputHash | `cursor/ai-routing-final-audit-9861` | **CLOSED** — superseded by #73 |
-| #70 | feat: UWE Image Studio — DnD-Medienwerkstatt | `cursor/image-studio-9a4b` | **CLOSED** — superseded by #73 |
-| #69 | feat: Cursor Agent Integration für UWE Admin | `cursor/agent-integration-ea24` | **CLOSED** — superseded by #73 |
-| #68 | FamilyWall iCal read-only Kalender-Integration | `cursor/familywall-ical-integration-4905` | **CLOSED** — superseded by #73 |
-| #67 | feat(calendar): Lokaler UWE-Kalender mit CalDAV/ICS | `cursor/calendar-caldav-ics-15af` | **CLOSED** — superseded by #73 |
-| #66 | feat: Security Settings Agent | `cursor/security-settings-integrations-06d1` | **CLOSED** — superseded by #73 |
-| #65 | feat(media): DnD Asset Library | `cursor/media-library-dnd-ee7d` | **CLOSED** — superseded by #73 |
-| #64 | feat(mobile): iPhone-first UX | `cursor/mobile-ux-iphone-efaa` | **CLOSED** — superseded by #73 |
-| #63 | feat(dnd): SRD/Open5e Compendium-Integration | `cursor/dnd-compendium-integration-e2a0` | **CLOSED** — superseded by #73 |
-| #62 | docs: PR review log | `cursor/pr-review-log-2dd6` | **CLOSED** — superseded by #73 |
-| #61 | docs: UWE Repository Audit | `cursor/repo-audit-0b14` | **CLOSED** — Inhalt in #73 enthalten |
+| #90 | feat(security): Cloudflare-ready hardening orchestrator | `cursor/security-orchestrator-77f6` | **SQUASH-MERGED** → `main` |
+| #89 | Harden UWE API routes and server actions | `cursor/harden-api-security-d6bc` | **CLOSED** — superseded by #90 |
+| #88 | feat(visibility): secure player exposure, secrets, media | `cursor/visibility-secret-system-8bce` | **CLOSED** — superseded by #90 |
+| #87 | feat(auth): zentrale Authorization-Schicht | `cursor/central-authz-layer-12a6` | **CLOSED** — superseded by #90 |
+| #86 | Security: final pass before Cloudflare exposure | `cursor/final-security-pass-c3da` | **CLOSED** — superseded by #90 |
+| #85 | feat(audit): manipulation-resistant audit log | `cursor/audit-log-097d` | **CLOSED** — superseded by #90 |
+| #84 | Security hardening for Cloudflare Tunnel | `cursor/security-hardening-853a` | **CLOSED** — superseded by #90 |
+| #83 | feat(studio): Lokales Auth-System | `cursor/local-auth-system-8a5e` | **CLOSED** — superseded by #90 |
+| #82 | Harden AI/RTX worker integration | `cursor/harden-ai-rtx-security-87ff` | **CLOSED** — superseded by #90 |
+| #81 | Secure backup/restore | `cursor/secure-backup-restore-9397` | **CLOSED** — superseded by #90 |
+| #80 | Sichere Upload- und Medienverwaltung | `cursor/secure-upload-media-babc` | **CLOSED** — superseded by #90 |
+| #79 | Security Dashboard (/admin/security) | `cursor/security-dashboard-33df` | **CLOSED** — superseded by #90 |
+| #78 | Centralized secrets and ENV management | `cursor/secrets-env-management-c565` | **CLOSED** — superseded by #90 |
+| #77 | Security boundary: route policy & middleware | `cursor/security-route-policy-4141` | **CLOSED** — superseded by #90 |
+| #76 | Deployment-Hardening (Cloudflare Tunnel) | `cursor/deployment-hardening-6c18` | **CLOSED** — superseded by #90 |
+| #75 | Automated security test suite | `cursor/security-test-suite-1878` | **CLOSED** — superseded by #90 |
+| #74 | Security Headers, Cookies & CORS | `cursor/security-headers-cookies-cors-b32a` | **CLOSED** — superseded by #90 |
 
-## Remote-Branches gelöscht
+## Integrierte Pakete & Module
 
-Alle Branches von #61–#73 wurden nach Close/Merge entfernt:
-
-`cursor/repo-audit-0b14`, `cursor/pr-review-log-2dd6`, `cursor/dnd-compendium-integration-e2a0`, `cursor/mobile-ux-iphone-efaa`, `cursor/media-library-dnd-ee7d`, `cursor/security-settings-integrations-06d1`, `cursor/calendar-caldav-ics-15af`, `cursor/familywall-ical-integration-4905`, `cursor/agent-integration-ea24`, `cursor/image-studio-9a4b`, `cursor/ai-routing-final-audit-9861`, `cursor/qa-e2e-test-fixes-bc01`, `cursor/media-calendar-dnd-agents-75a2`
+- **`@uwe/security`** — Input-Validation (Zod), CSRF, Rate-Limiting, Studio/Portal-Guards, AI/RTX-Policy, SSRF-Schutz
+- **`@uwe/env`** — Zod-validierte ENV-Konfiguration, Log-Redaction
+- **`@uwe/security-tests`** — Role-Matrix, Route-Authz, Public-Leak-Scanner
+- **`packages/auth`** — Security Headers, Route Policy, `authorize()`, Authz-Schicht, Visibility, Audit-Zugriff
+- **Studio/Portal Middleware** — Security Headers, Session-Auth, deny-by-default Route Policy
+- **Deployment** — `docs/deployment-hardening.md`, systemd units, `.env.production.example`
 
 ## Frühere PRs (Kontext)
 
 | PR | Status | Anmerkung |
 |----|--------|-----------|
-| #60 | MERGED | Daily Admin OS Subagent-Integration (#50–#58) |
-| #59 | MERGED | Daily Admin OS Orchestrator |
-| #50–#58 | CLOSED → #60 | Subagent-PRs |
+| #73 | MERGED | Media, Calendar, DnD & Agent Jobs |
+| #60 | MERGED | Daily Admin OS Subagent-Integration |
+| #74–#73 | siehe oben | Security-Orchestrator-Phase |
 
 ## Nächste Schritte auf dem Host
 
-1. `git pull origin main` (Commit `997d7e3`)
+1. `git pull origin main`
 2. `pnpm install && pnpm db:migrate`
-3. ENV-Variablen setzen (siehe `.env.example`)
-4. RTX Image Endpoint `/v1/images` testen (optional)
+3. ENV setzen: `.env.example` + optional `.env.production.example`
+4. `pnpm test:security` für Security-Suite
+5. Cloudflare Tunnel + `AUTH_REQUIRED=true` für Production-Exposure testen

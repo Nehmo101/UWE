@@ -1,0 +1,86 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { timingSafeEqual } from "node:crypto";
+import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import {
+  getSessionCookieOptions,
+  getUweRuntimeConfig,
+  SESSION_COOKIE_NAME,
+  sessionExpiresAt,
+} from "@uwe/auth";
+
+function tokensMatch(provided: string, expected: string): boolean {
+  const left = Buffer.from(provided);
+  const right = Buffer.from(expected);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export async function GET() {
+  const db = createPrismaClient();
+  const auth = createAuthService(db);
+  try {
+    const setupAvailable = await auth.isSetupAvailable();
+    return NextResponse.json({ setupAvailable });
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+export async function POST(request: Request) {
+  const config = getUweRuntimeConfig();
+  if (!config.setupToken) {
+    return NextResponse.json({ error: "Setup ist nicht konfiguriert." }, { status: 503 });
+  }
+
+  const body = (await request.json()) as {
+    setupToken?: string;
+    displayName?: string;
+    email?: string;
+    password?: string;
+  };
+
+  const setupToken = body.setupToken?.trim() ?? "";
+  if (!tokensMatch(setupToken, config.setupToken)) {
+    return NextResponse.json({ error: "Ungültiges Setup-Token." }, { status: 403 });
+  }
+
+  const displayName = body.displayName?.trim();
+  const email = body.email?.trim().toLowerCase();
+  const password = body.password;
+
+  if (!displayName || !email || !password || password.length < 8) {
+    return NextResponse.json(
+      { error: "Name, E-Mail und Passwort (min. 8 Zeichen) sind erforderlich." },
+      { status: 400 },
+    );
+  }
+
+  const db = createPrismaClient();
+  const auth = createAuthService(db);
+
+  try {
+    if (!(await auth.isSetupAvailable())) {
+      return NextResponse.json({ error: "Setup ist nicht mehr verfügbar." }, { status: 403 });
+    }
+
+    const owner = await auth.createOwnerViaSetup({ displayName, email, password });
+    const session = await auth.createSession(owner.id);
+    const cookieStore = await cookies();
+
+    cookieStore.set(SESSION_COOKIE_NAME, session.token, {
+      ...getSessionCookieOptions(),
+      expires: sessionExpiresAt(),
+    });
+
+    return NextResponse.json({
+      user: auth.toAuthUser(owner),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "SETUP_DISABLED") {
+      return NextResponse.json({ error: "Setup ist nicht mehr verfügbar." }, { status: 403 });
+    }
+    throw error;
+  } finally {
+    await db.$disconnect();
+  }
+}

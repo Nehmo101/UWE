@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@uwe/database/server";
+import { createSettingsService } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
 import { previewRestore } from "./restore-preview";
 import type {
@@ -536,6 +537,32 @@ export async function executeRestore(
   const afterCounts = await db.world.count();
   if (afterCounts === beforeCounts && result.created === 0 && result.updated === 0) {
     result.errors.push("Es wurden keine Daten wiederhergestellt.");
+  }
+
+  if (
+    options.restoreSettings !== false &&
+    bundle.manifest.type === "full" &&
+    bundle.settings
+  ) {
+    const settingsService = createSettingsService(db);
+    const stored = bundle.settings;
+    await settingsService.updateSettings({
+      app: stored.app as never,
+      worlds: stored.worlds as never,
+      campaigns: stored.campaigns as never,
+      portal: stored.portal as never,
+      ai: stored.ai as never,
+      mail: stored.mail as never,
+      storage: stored.storage as never,
+      backup: stored.backup as never,
+      privacy: stored.privacy as never,
+    });
+    result.updated++;
+    result.items.push({
+      entityType: "settings",
+      identifier: "system",
+      status: "updated",
+    });
   }
 
   return result;

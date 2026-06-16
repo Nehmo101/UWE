@@ -1,4 +1,8 @@
 import type { ContentBlock, Page } from "./generated/prisma/client";
+import {
+  detectPrivateReferences,
+  formatPrivateReferenceWarning,
+} from "./content-access";
 import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
 import {
@@ -191,6 +195,8 @@ export interface PageViewData {
   backlinks: PageViewBacklink[];
   relatedPages: PageViewRelated[];
   html: string;
+  /** Warning shown to DMs in player preview when content links to private targets. */
+  privateReferenceWarning?: string | null;
 }
 
 export function resolveLinksInContent(
@@ -406,12 +412,28 @@ export async function buildPageView(
       reasons: [...item.reasons],
     }));
 
+  let privateReferenceWarning: string | null = null;
+  if (context === "preview") {
+    const dmPage = await repo.getPageBySlug(worldSlug, pageSlug);
+    if (dmPage) {
+      const playerContent = combineBlockContent(
+        dmPage.contentBlocks.filter(
+          (block) => block.type !== "gm_note" && block.visibility !== "dm_only" && block.visibility !== "private",
+        ),
+      );
+      privateReferenceWarning = formatPrivateReferenceWarning(
+        detectPrivateReferences(playerContent, allPages),
+      );
+    }
+  }
+
   return {
     page: node,
     links,
     backlinks,
     relatedPages,
     html,
+    privateReferenceWarning,
   };
 }
 

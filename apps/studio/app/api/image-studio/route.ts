@@ -6,8 +6,26 @@ import {
   prisma,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  requireStudioApiAuth,
+  slugSchema,
+} from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { z } from "zod";
+
+const imageStudioCreateSchema = z.object({
+  worldSlug: slugSchema,
+  title: optionalString,
+  prompt: nonEmptyString.max(10_000),
+  task: z.enum(["generate", "edit", "inpaint", "remove_background", "variant"]),
+  providerMode: optionalString,
+  linkTargetType: optionalString,
+  linkTargetId: optionalString,
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -25,7 +43,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
   const config = resolveImageStudioConfig();
@@ -33,23 +51,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Image Studio ist deaktiviert." }, { status: 403 });
   }
 
-  const body = (await request.json()) as {
-    worldSlug?: string;
-    title?: string;
-    prompt?: string;
-    task?: "generate" | "edit" | "inpaint" | "remove_background" | "variant";
-    providerMode?: string;
-    linkTargetType?: string;
-    linkTargetId?: string;
-  };
+  const parsed = await parseBody(request, imageStudioCreateSchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.worldSlug?.trim() || !body.prompt?.trim() || !body.task) {
-    return NextResponse.json(
-      { error: "worldSlug, prompt und task sind erforderlich." },
-      { status: 400 },
-    );
-  }
-
+  const body = parsed.data;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(body.worldSlug);
   if (!world) {

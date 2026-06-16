@@ -1,4 +1,5 @@
 "use server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -7,6 +8,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
+import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 function getBrainDeps() {
   const db = createPrismaClient();
@@ -14,6 +16,7 @@ function getBrainDeps() {
 }
 
 export async function createBrainDocumentAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
@@ -24,6 +27,8 @@ export async function createBrainDocumentAction(formData: FormData) {
   if (!title) {
     throw new Error("Titel ist erforderlich");
   }
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, brain, repo } = getBrainDeps();
   let documentId: string | null = null;
@@ -54,6 +59,7 @@ export async function createBrainDocumentAction(formData: FormData) {
 }
 
 export async function createBrainFactAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
@@ -64,6 +70,8 @@ export async function createBrainFactAction(formData: FormData) {
   if (!title) {
     throw new Error("Titel ist erforderlich");
   }
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, brain, repo } = getBrainDeps();
   let factId: string | null = null;
@@ -94,6 +102,7 @@ export async function createBrainFactAction(formData: FormData) {
 }
 
 export async function updateBrainDocumentAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const documentId = String(formData.get("documentId"));
   const title = String(formData.get("title") || "").trim();
@@ -101,6 +110,8 @@ export async function updateBrainDocumentAction(formData: FormData) {
   const documentType = String(formData.get("documentType") || "general");
   const visibility = String(formData.get("visibility") || "dm_only");
   const status = String(formData.get("status") || "draft");
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, brain } = getBrainDeps();
   try {
@@ -120,6 +131,7 @@ export async function updateBrainDocumentAction(formData: FormData) {
 }
 
 export async function updateBrainFactAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const factId = String(formData.get("factId"));
   const title = String(formData.get("title") || "").trim();
@@ -127,6 +139,8 @@ export async function updateBrainFactAction(formData: FormData) {
   const factType = String(formData.get("factType") || "custom");
   const visibility = String(formData.get("visibility") || "dm_only");
   const status = String(formData.get("status") || "draft");
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, brain } = getBrainDeps();
   try {

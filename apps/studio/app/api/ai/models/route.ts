@@ -1,21 +1,23 @@
 import { getModels } from "../../../../src/lib/ai-handlers";
-import type { AiProviderId } from "@uwe/ai-brain";
+import {
+  aiModelsQuerySchema,
+  parseQuery,
+  requireStudioApiAuth,
+  safeHandlerError,
+} from "@uwe/security";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const providerId = searchParams.get("provider") as AiProviderId | null;
-  const useMock = searchParams.get("mock") === "true";
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
 
-  if (!providerId) {
-    return Response.json({ error: "provider query parameter required" }, { status: 400 });
-  }
+  const parsed = parseQuery(request.url, aiModelsQuerySchema);
+  if (!parsed.success) return parsed.response;
+
+  const useMock = parsed.data.mock === "true";
 
   try {
-    return await getModels(providerId, useMock);
+    return await getModels(parsed.data.provider, useMock);
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Modelle konnten nicht geladen werden." },
-      { status: 502 },
-    );
+    return safeHandlerError(error, "Modelle konnten nicht geladen werden.");
   }
 }

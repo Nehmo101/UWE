@@ -4,6 +4,7 @@ import type { ThemeAppearance, UweSystemSettingsUpdate } from "./settings-servic
 const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
 
 const VISIBILITY_VALUES = new Set<Visibility>([
+  "private",
   "dm_only",
   "player_visible",
   "public",
@@ -40,7 +41,7 @@ const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicShari
 const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
 const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody"]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
-const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled"]);
+const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 
 const UNSAFE_PATH_PATTERNS = [
@@ -370,6 +371,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (key === "autoBackupEnabled") {
         requireBoolean(value, "settings.backup.autoBackupEnabled", sectionErrors);
       }
+      if (key === "retentionCount") {
+        const count = typeof value === "number" ? value : Number(value);
+        if (![7, 14, 30].includes(count)) {
+          sectionErrors.push("settings.backup.retentionCount muss 7, 14 oder 30 sein.");
+        }
+      }
     });
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.backup)) {
@@ -379,6 +386,9 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (body.backup.autoBackupEnabled !== undefined) {
         backup.autoBackupEnabled = body.backup.autoBackupEnabled as boolean;
+      }
+      if (body.backup.retentionCount !== undefined) {
+        backup.retentionCount = body.backup.retentionCount as number;
       }
       if (Object.keys(backup).length > 0) {
         update.backup = backup;

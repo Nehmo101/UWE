@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   createJobService,
   createUweRepository,
+  logAuditEvent,
   prisma,
 } from "@uwe/database/server";
 import {
@@ -103,6 +104,7 @@ export async function postImportExecute(body: ImportRequestBody) {
   }
 
   const title = `Import (${body.format}) → ${body.worldSlug}`;
+  const world = await createUweRepository().getWorldBySlug(body.worldSlug);
 
   if (body.sync) {
     const jobs = createJobService(prisma);
@@ -119,13 +121,39 @@ export async function postImportExecute(body: ImportRequestBody) {
         allowUpdates: body.allowUpdates,
       },
     });
+
+    await logAuditEvent(prisma, {
+      action: "import_started",
+      targetType: "import",
+      targetId: job.id,
+      worldId: world?.id,
+      metadata: { format: body.format, sync: true },
+    });
+
     const completed = await runJob(job.id);
     if (completed?.status === "failed") {
+      await logAuditEvent(prisma, {
+        action: "import_failed",
+        targetType: "import",
+        targetId: job.id,
+        worldId: world?.id,
+        metadata: { format: body.format, error: completed.errorMessage },
+      });
+
       return NextResponse.json(
         { error: completed.errorMessage ?? "Import fehlgeschlagen." },
         { status: 500 },
       );
     }
+
+    await logAuditEvent(prisma, {
+      action: "import_completed",
+      targetType: "import",
+      targetId: job.id,
+      worldId: world?.id,
+      metadata: { format: body.format },
+    });
+
     return NextResponse.json({ job: completed, result: completed?.result });
   }
 
@@ -141,6 +169,14 @@ export async function postImportExecute(body: ImportRequestBody) {
       autoResolveSlugConflicts: body.autoResolveSlugConflicts,
       allowUpdates: body.allowUpdates,
     },
+  });
+
+  await logAuditEvent(prisma, {
+    action: "import_started",
+    targetType: "import",
+    targetId: job.id,
+    worldId: world?.id,
+    metadata: { format: body.format, async: true },
   });
 
   return NextResponse.json({ job }, { status: 202 });

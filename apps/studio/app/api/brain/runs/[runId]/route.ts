@@ -3,7 +3,17 @@ import {
   postApplyProposal,
   postDiscardRun,
 } from "../../../../../src/lib/brain-handlers";
-import { requireStudioApiAuth } from "../../../../../src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  parseBody,
+  parseParams,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+} from "@uwe/security";
+import { z } from "zod";
+
+const runIdParamSchema = z.object({ runId: idSchema });
 
 export async function GET(
   request: Request,
@@ -12,27 +22,34 @@ export async function GET(
   const authError = requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { runId } = await context.params;
-  return getBrainRunById(runId);
+  const parsedParams = await parseParams(context.params, runIdParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  return getBrainRunById(parsedParams.data.runId);
 }
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ runId: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const { runId } = await context.params;
-  const body = (await request.json()) as {
-    action: "apply" | "discard";
+  const parsedParams = await parseParams(context.params, runIdParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const body = parsed.data as {
+    action?: string;
     proposalId?: string;
     editedContent?: string;
     ideaTitle?: string;
   };
 
   if (body.action === "discard") {
-    return postDiscardRun(runId);
+    return postDiscardRun(parsedParams.data.runId);
   }
 
   if (body.action === "apply") {
@@ -40,7 +57,7 @@ export async function POST(
       return Response.json({ error: "proposalId ist für apply erforderlich." }, { status: 400 });
     }
     return postApplyProposal({
-      runId,
+      runId: parsedParams.data.runId,
       proposalId: body.proposalId,
       editedContent: body.editedContent,
       ideaTitle: body.ideaTitle,

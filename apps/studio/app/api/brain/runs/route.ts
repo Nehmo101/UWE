@@ -1,16 +1,18 @@
 import { getBrainRuns } from "../../../../src/lib/brain-handlers";
-import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
+import { parseQuery, passthroughBodySchema, requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const url = new URL(request.url);
-  const worldSlug = url.searchParams.get("worldSlug") ?? undefined;
-  const pageSlug = url.searchParams.get("pageSlug") ?? undefined;
-  const limit = url.searchParams.get("limit")
-    ? Number.parseInt(url.searchParams.get("limit")!, 10)
-    : undefined;
+  const parsed = parseQuery(request.url, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const params = parsed.data as Record<string, unknown>;
+  const worldSlug = typeof params.worldSlug === "string" ? params.worldSlug : undefined;
+  const pageSlug = typeof params.pageSlug === "string" ? params.pageSlug : undefined;
+  const limit =
+    typeof params.limit === "string" ? Number.parseInt(params.limit, 10) : undefined;
 
   return getBrainRuns({ worldSlug, pageSlug, limit });
 }

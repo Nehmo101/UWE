@@ -4,71 +4,59 @@ import {
   createMailService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  emailSchema,
+  guardStudioMutation,
+  idSchema,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+} from "@uwe/security";
+import { z } from "zod";
 
-function parseRecipients(value: unknown): Array<{ email: string; name?: string }> {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+const mailRecipientSchema = z.object({
+  email: emailSchema,
+  name: optionalString,
+});
 
-  return value
-    .map((entry) => {
-      if (typeof entry !== "object" || entry === null) {
-        return null;
-      }
-      const email = String((entry as { email?: unknown }).email ?? "").trim();
-      const name = String((entry as { name?: unknown }).name ?? "").trim();
-      if (!email.includes("@")) {
-        return null;
-      }
-      return name ? { email, name } : { email };
-    })
-    .filter((entry): entry is { email: string; name?: string } => entry !== null);
-}
+const mailSendBodySchema = z.object({
+  to: z.array(mailRecipientSchema).min(1),
+  subject: nonEmptyString.max(500),
+  bodyText: optionalString,
+  bodyHtml: optionalString,
+  worldId: idSchema.optional().nullable(),
+  templateId: idSchema.optional().nullable(),
+  sourceType: optionalString,
+  sourceId: idSchema.optional().nullable(),
+  confirmDmOnly: z.boolean().optional(),
+  containsDmOnlyHint: z.boolean().optional(),
+});
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, mailSendBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (typeof body !== "object" || body === null) {
-    return NextResponse.json({ error: "Request-Body muss ein JSON-Objekt sein." }, { status: 400 });
-  }
+  const { to, subject, bodyText, bodyHtml, ...rest } = parsed.data;
 
-  const payload = body as Record<string, unknown>;
-  const to = parseRecipients(payload.to);
-  const subject = String(payload.subject ?? "").trim();
-  const bodyText = String(payload.bodyText ?? "").trim();
-  const bodyHtml = String(payload.bodyHtml ?? "").trim() || undefined;
-
-  if (to.length === 0) {
-    return NextResponse.json({ error: "Mindestens ein Empfänger erforderlich." }, { status: 400 });
-  }
-  if (!subject) {
-    return NextResponse.json({ error: "Betreff erforderlich." }, { status: 400 });
-  }
-  if (!bodyText && !bodyHtml) {
+  if (!bodyText?.trim() && !bodyHtml?.trim()) {
     return NextResponse.json({ error: "Nachrichtentext erforderlich." }, { status: 400 });
   }
 
   const mail = createMailService(prisma);
   const result = await mail.sendMail({
-    to,
+    to: to.map((entry) => (entry.name ? { email: entry.email, name: entry.name } : { email: entry.email })),
     subject,
-    bodyText: bodyText || bodyHtml || "",
-    bodyHtml,
-    worldId: payload.worldId ? String(payload.worldId) : null,
-    templateId: payload.templateId ? String(payload.templateId) : null,
-    sourceType: payload.sourceType ? String(payload.sourceType) : null,
-    sourceId: payload.sourceId ? String(payload.sourceId) : null,
-    confirmDmOnly: payload.confirmDmOnly === true,
-    containsDmOnlyHint: payload.containsDmOnlyHint === true,
+    bodyText: bodyText?.trim() || bodyHtml?.trim() || "",
+    bodyHtml: bodyHtml?.trim() || undefined,
+    worldId: rest.worldId ?? null,
+    templateId: rest.templateId ?? null,
+    sourceType: rest.sourceType ?? null,
+    sourceId: rest.sourceId ?? null,
+    confirmDmOnly: rest.confirmDmOnly === true,
+    containsDmOnlyHint: rest.containsDmOnlyHint === true,
   });
 
   const response = {

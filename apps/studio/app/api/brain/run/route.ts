@@ -1,29 +1,16 @@
 import { postBrainRun } from "../../../../src/lib/brain-handlers";
-import type { AiProviderId } from "@uwe/ai-brain";
-import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
+import {
+  brainRunBodySchema,
+  guardStudioMutation,
+  parseBody,
+} from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    actionId: string;
-    worldSlug: string;
-    pageSlug: string;
-    providerId: AiProviderId;
-    model: string;
-    userPrompt?: string;
-    sessionId?: string;
-    allowDmOnly?: boolean;
-    useMock?: boolean;
-  };
+  const parsed = await parseBody(request, brainRunBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.actionId || !body.worldSlug || !body.pageSlug || !body.providerId || !body.model) {
-    return Response.json(
-      { error: "actionId, worldSlug, pageSlug, providerId und model sind erforderlich." },
-      { status: 400 },
-    );
-  }
-
-  return postBrainRun(body);
+  return postBrainRun(parsed.data);
 }

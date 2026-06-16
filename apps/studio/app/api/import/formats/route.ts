@@ -1,12 +1,13 @@
 import { getImportFormats } from "../../../../src/lib/import-handlers";
+import { requireStudioApiAuth, safeHandlerError } from "@uwe/security";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   try {
     return await getImportFormats();
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Formate konnten nicht geladen werden." },
-      { status: 500 },
-    );
+    return safeHandlerError(error, "Formate konnten nicht geladen werden.");
   }
 }

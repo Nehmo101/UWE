@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { createBrainStoreService, createPrismaClient } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  parseBody,
+  parseParams,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+  safeHandlerError,
+  worldSlugParamSchema,
+} from "@uwe/security";
+
+const brainEntryParamsSchema = worldSlugParamSchema.extend({
+  entryId: idSchema,
+});
 
 interface RouteParams {
   params: Promise<{ worldSlug: string; entryId: string }>;
@@ -10,7 +23,10 @@ export async function GET(request: Request, { params }: RouteParams) {
   const authError = requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { worldSlug, entryId } = await params;
+  const parsedParams = await parseParams(params, brainEntryParamsSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const { worldSlug, entryId } = parsedParams.data;
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind") ?? "document";
 
@@ -44,11 +60,17 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const { worldSlug, entryId } = await params;
-  const body = (await request.json()) as Record<string, unknown> & { kind?: string };
+  const parsedParams = await parseParams(params, brainEntryParamsSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const { worldSlug, entryId } = parsedParams.data;
+  const body = parsed.data as Record<string, unknown> & { kind?: string };
 
   const db = createPrismaClient();
   const brain = createBrainStoreService();
@@ -87,8 +109,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ fact });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return safeHandlerError(error, "Brain-Eintrag konnte nicht aktualisiert werden.");
   } finally {
     await db.$disconnect();
   }

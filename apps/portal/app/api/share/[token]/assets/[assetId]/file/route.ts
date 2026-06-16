@@ -1,6 +1,7 @@
 import fs from "node:fs";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
-import { resolveAssetFilePath } from "@uwe/assets";
+import { buildAssetDownloadHeaders, resolveAssetFilePath } from "@uwe/assets";
 import {
   createPrismaClient,
   createShareLinkService,
@@ -15,6 +16,9 @@ interface RouteContext {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
+  const authError = await requirePortalApiAuth(request);
+  if (authError) return authError;
+
   const { token, assetId } = await context.params;
   const db = createPrismaClient();
   const shareService = createShareLinkService(db);
@@ -60,11 +64,12 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const data = fs.readFileSync(filePath);
     return new NextResponse(data, {
-      headers: {
-        "Content-Type": asset.mimeType ?? "application/octet-stream",
-        "Content-Length": String(asset.size),
-        "Content-Disposition": `inline; filename="${encodeURIComponent(asset.title)}"`,
-      },
+      headers: buildAssetDownloadHeaders({
+        mimeType: asset.mimeType,
+        size: data.length,
+        title: asset.title,
+        inline: true,
+      }),
     });
   } finally {
     await db.$disconnect();

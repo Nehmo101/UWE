@@ -4,6 +4,7 @@ import type { CaptureType } from "@uwe/database/server";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { assertStudioTrusted } from "@/src/lib/authz";
 
 const VALID_CAPTURE_TYPES = new Set<CaptureType>([
   "quick_note",
@@ -22,6 +23,8 @@ function lifeAdmin() {
 }
 
 export async function createCaptureAction(formData: FormData) {
+  assertStudioTrusted();
+
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
   const captureTypeRaw = String(formData.get("captureType") || "quick_note");
@@ -45,6 +48,8 @@ export async function createCaptureAction(formData: FormData) {
 }
 
 export async function updateCaptureStatusAction(formData: FormData) {
+  assertStudioTrusted();
+
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as "inbox" | "triaged" | "linked" | "archived";
 
@@ -55,6 +60,8 @@ export async function updateCaptureStatusAction(formData: FormData) {
 }
 
 export async function deleteCaptureAction(formData: FormData) {
+  assertStudioTrusted();
+
   const id = String(formData.get("id"));
   await lifeAdmin().deleteCapture(id);
   revalidatePath("/today");

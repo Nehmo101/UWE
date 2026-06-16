@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  getOAuthStateCookieOptions,
   getSessionCookieOptions,
   getTrustedRequestHosts,
   getUweRuntimeConfig,
@@ -54,6 +55,38 @@ describe("runtime config", () => {
     assert.equal(options.secure, true);
     assert.equal(options.sameSite, "lax");
     assert.equal(options.path, "/");
+  });
+
+  it("keeps production cookies secure by default", () => {
+    const options = getSessionCookieOptions({
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uweandragons.org",
+    });
+
+    assert.equal(options.secure, true);
+    assert.equal(options.httpOnly, true);
+  });
+
+  it("scopes OAuth state cookies to callback path", () => {
+    const options = getOAuthStateCookieOptions("/api/spotify/callback", {
+      NODE_ENV: "production",
+      SESSION_COOKIE_SECURE: "true",
+    });
+
+    assert.equal(options.path, "/api/spotify/callback");
+    assert.equal(options.httpOnly, true);
+    assert.equal(options.secure, true);
+  });
+
+  it("parses optional allowed CORS origins from env", () => {
+    const config = getUweRuntimeConfig({
+      ALLOWED_CORS_ORIGINS: "https://partner.example, https://second.example/",
+    });
+
+    assert.deepEqual(config.allowedCorsOrigins, [
+      "https://partner.example",
+      "https://second.example",
+    ]);
   });
 
   it("detects public exposure configuration", () => {

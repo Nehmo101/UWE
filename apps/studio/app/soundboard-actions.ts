@@ -1,4 +1,5 @@
 "use server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import {
   createSoundboardService,
@@ -9,6 +10,7 @@ import {
 import { assertValidSoundboardButton } from "@uwe/soundboard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function soundboard() {
   return createSoundboardService();
@@ -58,7 +60,10 @@ function parseButtonInput(formData: FormData) {
 }
 
 export async function createSoundboardButtonAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -106,8 +111,11 @@ export async function createSoundboardButtonAction(formData: FormData) {
 }
 
 export async function updateSoundboardButtonAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const buttonId = String(formData.get("buttonId"));
+  await requireStudioWorldEdit(worldSlug);
+
   const input = parseButtonInput(formData);
   const redirectPath = `/worlds/${worldSlug}/soundboard`;
 
@@ -135,8 +143,11 @@ export async function updateSoundboardButtonAction(formData: FormData) {
 }
 
 export async function deleteSoundboardButtonAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const buttonId = String(formData.get("buttonId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   await soundboard().delete(buttonId);
 
@@ -145,9 +156,12 @@ export async function deleteSoundboardButtonAction(formData: FormData) {
 }
 
 export async function linkPageToSoundboardButtonAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const buttonId = String(formData.get("buttonId"));
   const pageId = String(formData.get("pageId"));
+
+  await requireStudioContentEdit(worldSlug, pageId);
 
   await soundboard().linkPage(buttonId, pageId);
 

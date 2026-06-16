@@ -1,0 +1,176 @@
+import assert from "node:assert/strict";
+import { before, describe, it } from "node:test";
+import {
+  AuthorizationError,
+  assertCanReadContent,
+  canReadContent,
+  canReadWorld,
+} from "@uwe/auth";
+import { createAuthService } from "./auth";
+import { createPrismaClient, type PrismaClient } from "./client";
+import { createUweRepository, type UweRepository } from "./repository";
+import { createTestDatabaseUrl } from "./test-helpers";
+
+/**
+ * Integration tests for central authz — IDOR/BOLA prevention with real DB.
+ */
+describe("authz integration — IDOR/BOLA", () => {
+  let db: PrismaClient;
+  let repo: UweRepository;
+  let auth: ReturnType<typeof createAuthService>;
+  let worldAId: string;
+  let worldBId: string;
+  let privatePageBId: string;
+
+  const worldASlug = "authz-world-a";
+  const worldBSlug = "authz-world-b";
+
+  before(async () => {
+    const databaseUrl = createTestDatabaseUrl();
+    db = createPrismaClient(databaseUrl);
+    repo = createUweRepository(databaseUrl);
+    auth = createAuthService(db);
+
+    const worldA = await repo.createWorld({ name: "World A", slug: worldASlug });
+    worldAId = worldA.id;
+
+    const worldB = await repo.createWorld({ name: "World B", slug: worldBSlug });
+    worldBId = worldB.id;
+
+    const userA = await auth.createUser({
+      displayName: "Player A",
+      email: "player-a@authz.test",
+      password: "secret",
+      role: "player",
+    });
+
+    await auth.createWorldMembership({
+      userId: userA.id,
+      worldId: worldAId,
+      role: "player",
+    });
+
+    await repo.createPage({
+      worldId: worldAId,
+      title: "Public A",
+      slug: "public-a",
+      type: "lore",
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    const privatePageB = await repo.createPage({
+      worldId: worldBId,
+      title: "Secret B",
+      slug: "secret-b",
+      type: "secret",
+      visibility: "dm_only",
+      publishStatus: "published",
+    });
+    privatePageBId = privatePageB.id;
+  });
+
+  it("blocks User A from reading World B via authz", async () => {
+    const userA = await auth.findUserByEmail("player-a@authz.test");
+    assert.ok(userA);
+
+    const ctxB = await auth.buildAccessContextForWorld(worldBSlug, { userId: userA.id });
+    assert.ok(ctxB);
+
+    assert.equal(
+      canReadWorld(auth.toAuthUser(userA), {
+        id: worldBId,
+        guestModeEnabled: false,
+        membership: ctxB.worldMembership,
+      }),
+      false,
+    );
+  });
+
+  it("blocks direct ID lookup on private resource in foreign world", async () => {
+    const userA = await auth.findUserByEmail("player-a@authz.test");
+    assert.ok(userA);
+
+    const ctxA = await auth.buildAccessContextForWorld(worldASlug, { userId: userA.id });
+    assert.ok(ctxA);
+
+    const foreignPage = await db.page.findUnique({ where: { id: privatePageBId } });
+    assert.ok(foreignPage);
+
+    const scope = {
+      world: {
+        id: worldBId,
+        guestModeEnabled: false,
+        membership: null,
+      },
+    };
+
+    assert.throws(
+      () =>
+        assertCanReadContent(
+          auth.toAuthUser(userA),
+          foreignPage,
+          scope.world,
+        ),
+      (error: unknown) => error instanceof AuthorizationError,
+    );
+
+    const leakedViaViewer = await auth.getPageForViewer(worldBSlug, "secret-b", ctxA);
+    assert.equal(leakedViaViewer, null);
+  });
+
+  it("blocks PLAYER from reading DM-only content", async () => {
+    await repo.createPage({
+      worldId: worldAId,
+      title: "DM Plan",
+      slug: "dm-plan",
+      type: "lore",
+      visibility: "dm_only",
+      publishStatus: "published",
+    });
+
+    const userA = await auth.findUserByEmail("player-a@authz.test");
+    assert.ok(userA);
+
+    const ctxA = await auth.buildAccessContextForWorld(worldASlug, { userId: userA.id });
+    assert.ok(ctxA);
+
+    const page = await auth.getPageForViewer(worldASlug, "dm-plan", ctxA);
+    assert.equal(page, null);
+
+    const dmPage = await db.page.findFirst({
+      where: { slug: "dm-plan", worldId: worldAId },
+    });
+    assert.ok(dmPage);
+
+    assert.equal(
+      canReadContent(
+        auth.toAuthUser(userA),
+        dmPage,
+        { id: worldAId, guestModeEnabled: false, membership: ctxA.worldMembership },
+        {
+          unlockedPageIds: ctxA.unlockedPageIds,
+          specificPlayerPageIds: ctxA.specificPlayerPageIds,
+          previewAsUserId: ctxA.previewAsUserId,
+        },
+      ),
+      false,
+    );
+  });
+
+  it("allows OWNER to read everything", async () => {
+    const owner = await auth.createUser({
+      displayName: "Owner",
+      email: "owner@authz.test",
+      password: "secret",
+      role: "owner",
+    });
+
+    const ctx = await auth.buildAccessContextForWorld(worldBSlug, { userId: owner.id });
+    assert.ok(ctx);
+
+    const page = await auth.getPageForViewer(worldBSlug, "secret-b", ctx);
+    assert.ok(page);
+    assert.equal(page.title, "Secret B");
+  });
+});

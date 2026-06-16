@@ -5,6 +5,7 @@ import { resolveBackupsDirFromEnv } from "@uwe/assets";
 
 export const BACKUP_MANIFEST_FILE = "manifest.json";
 export const BACKUP_DATA_FILE = "data.json";
+export const BACKUP_SETTINGS_FILE = "settings.json";
 export const BACKUP_ASSETS_DIR = "assets";
 
 export function resolveBackupsDir(baseDir?: string): string {

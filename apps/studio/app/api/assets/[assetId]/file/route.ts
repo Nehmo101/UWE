@@ -2,13 +2,20 @@ import fs from "node:fs";
 import { NextResponse } from "next/server";
 import { resolveAssetFilePath } from "@uwe/assets";
 import { getAppRepository } from "@uwe/database/server";
+import { assetIdParamSchema, parseParams, requireStudioApiAuth } from "@uwe/security";
 
 interface RouteContext {
   params: Promise<{ assetId: string }>;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
-  const { assetId } = await context.params;
+export async function GET(request: Request, context: RouteContext) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
+  const parsed = await parseParams(context.params, assetIdParamSchema);
+  if (!parsed.success) return parsed.response;
+
+  const { assetId } = parsed.data;
   const repo = getAppRepository();
   const asset = await repo.getAssetById(assetId);
 

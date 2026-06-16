@@ -9,8 +9,13 @@ import type {
   WorldMemberRole,
   WorldMembership,
 } from "./types";
+import {
+  isPlayerExposableContent,
+  isSecretVisibleToPlayer,
+  isDmOnlyVisibility,
+} from "./content-access";
 
-const DM_ROLES: ReadonlySet<UweRole> = new Set(["owner", "dm"]);
+const DM_ROLES: ReadonlySet<UweRole> = new Set(["owner", "admin", "dm"]);
 const WORLD_DM_ROLES: ReadonlySet<WorldMemberRole> = new Set(["owner", "dm"]);
 
 export function isDmOrOwner(ctx: AccessContext): boolean {
@@ -51,12 +56,12 @@ export function resolveEffectiveRole(input: {
     return "player";
   }
 
-  if (input.user?.role === "owner" || input.user?.role === "dm") {
-    return input.user.role;
+  if (input.user?.role === "owner" || input.user?.role === "admin" || input.user?.role === "dm") {
+    return input.user.role === "admin" ? "dm" : input.user.role;
   }
 
-  if (input.user?.role === "player") {
-    return "player";
+  if (input.user?.role === "player" || input.user?.role === "readonly") {
+    return input.user.role;
   }
 
   return "guest";
@@ -100,7 +105,7 @@ function canViewUnlockedPage(ctx: AccessContext, pageId: string): boolean {
 }
 
 export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
-  if (page.visibility === "archived") {
+  if (page.visibility === "archived" || page.visibility === "private") {
     return isDmOrOwner(ctx);
   }
 
@@ -110,6 +115,10 @@ export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
 
   if (isDmOrOwner(ctx)) {
     return true;
+  }
+
+  if (!isSecretVisibleToPlayer(page)) {
+    return false;
   }
 
   switch (page.visibility) {
@@ -142,7 +151,15 @@ export function canViewContentBlock(
     return true;
   }
 
-  if (block.visibility === "archived" || block.visibility === "dm_only") {
+  if (block.type === "gm_note") {
+    return false;
+  }
+
+  if (block.visibility === "archived" || block.visibility === "private" || block.visibility === "dm_only") {
+    return false;
+  }
+
+  if (!isSecretVisibleToPlayer(block)) {
     return false;
   }
 
@@ -182,12 +199,16 @@ export function filterBlocksForViewer<T extends ContentBlockAccessInfo>(
 }
 
 export function canViewAsset(ctx: AccessContext, asset: AssetAccessInfo): boolean {
-  if (asset.visibility === "archived") {
+  if (asset.visibility === "archived" || asset.visibility === "private") {
     return isDmOrOwner(ctx);
   }
 
   if (isDmOrOwner(ctx)) {
     return true;
+  }
+
+  if (!isSecretVisibleToPlayer(asset)) {
+    return false;
   }
 
   switch (asset.visibility) {
@@ -226,4 +247,9 @@ export function canPreviewAsPlayer(ctx: AccessContext): boolean {
     ctx.worldMembership !== null &&
     WORLD_DM_ROLES.has(ctx.worldMembership.role)
   );
+}
+
+/** Only OWNER/DM roles may view the security audit log. */
+export function canViewAuditLog(ctx: AccessContext): boolean {
+  return isDmOrOwner(ctx);
 }

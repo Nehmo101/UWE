@@ -31,8 +31,10 @@ describe("release packaging", () => {
   it("does not commit secrets in example or release files", () => {
     const envExample = fs.readFileSync(path.join(root, ".env.example"), "utf8");
     assert.doesNotMatch(envExample, /sk-[a-zA-Z0-9]{20,}/);
-    assert.doesNotMatch(envExample, /AUTH_SECRET=super-secret/);
+    assert.doesNotMatch(envExample, /SESSION_SECRET=super-secret/);
     assert.match(envExample, /generate-a-random-secret/);
+    assert.ok(fs.existsSync(path.join(root, "docs/secrets.md")));
+    assert.ok(fs.existsSync(path.join(root, "packages/env/src/config/env.ts")));
 
     // A local .env is expected for development (`cp .env.example .env`).
     // What must never happen is .env being tracked by git.
@@ -42,7 +44,9 @@ describe("release packaging", () => {
     })
       .split("\n")
       .filter(Boolean);
-    const trackedSecrets = trackedFiles.filter((file) => file !== ".env.example");
+    const trackedSecrets = trackedFiles.filter(
+      (file) => file !== ".env.example" && file !== ".env.production.example",
+    );
     assert.deepEqual(trackedSecrets, [], ".env files must not be committed to git");
   });
 

@@ -7,13 +7,20 @@ import {
   type GraphViewMode,
   type Visibility,
 } from "@uwe/database/server";
+import { parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const { worldSlug } = await params;
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
+  const parsed = await parseParams(params, worldSlugParamSchema);
+  if (!parsed.success) return parsed.response;
+
+  const { worldSlug } = parsed.data;
   const url = new URL(request.url);
   const repo = getAppRepository();
 

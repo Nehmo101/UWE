@@ -1,0 +1,11 @@
+[Unit]
+Description=Run UWE backup daily at 03:15
+Documentation=file:///opt/uwe/docs/deployment-hardening.md
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

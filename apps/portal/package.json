@@ -14,6 +14,8 @@
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/security": "workspace:*",
+    "@uwe/env": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "@uwe/wiki-engine": "workspace:*",

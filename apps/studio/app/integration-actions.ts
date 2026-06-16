@@ -13,6 +13,11 @@ import {
   resolveImageStudioConfig,
 } from "@uwe/database/server";
 import { dispatchJob } from "@/src/lib/job-executor";
+import {
+  assertStudioCanUseAI,
+  assertStudioTrusted,
+  requireStudioWorldEdit,
+} from "@/src/lib/authz";
 
 export async function createImageStudioJobAction(formData: FormData) {
   const config = resolveImageStudioConfig();
@@ -28,6 +33,9 @@ export async function createImageStudioJobAction(formData: FormData) {
     | "variant";
   const title = String(formData.get("title") ?? "") || undefined;
   const providerMode = String(formData.get("providerMode") ?? "") || undefined;
+
+  assertStudioCanUseAI();
+  await requireStudioWorldEdit(worldSlug);
 
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
@@ -67,6 +75,9 @@ export async function createAgentJobAction(formData: FormData) {
   const config = resolveAgentJobsConfig();
   if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
 
+  assertStudioTrusted();
+  assertStudioCanUseAI();
+
   const title = String(formData.get("title") ?? "");
   const prompt = String(formData.get("prompt") ?? "");
   const provider = String(formData.get("provider") ?? config.defaultProvider) as
@@ -90,6 +101,8 @@ export async function createAgentJobAction(formData: FormData) {
 }
 
 export async function createCalendarEventAction(formData: FormData) {
+  assertStudioTrusted();
+
   const calendar = createCalendarService(prisma);
   const localFeed = await calendar.ensureLocalFeed();
   await calendar.createEvent({
@@ -106,6 +119,8 @@ export async function createCalendarEventAction(formData: FormData) {
 }
 
 export async function createCalendarFeedAction(formData: FormData) {
+  assertStudioTrusted();
+
   const calendar = createCalendarService(prisma);
   const type = String(formData.get("type") ?? "ical_url") as
     | "caldav"
@@ -136,6 +151,8 @@ export async function addDndBeyondReferenceAction(formData: FormData) {
   if (!url.includes("dndbeyond.com")) {
     throw new Error("Nur D&D Beyond Links — kein Scraping.");
   }
+
+  await requireStudioWorldEdit(worldSlug);
 
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);

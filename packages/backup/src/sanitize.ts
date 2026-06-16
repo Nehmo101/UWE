@@ -1,4 +1,4 @@
-import type { BackupData } from "./types";
+import type { BackupData, BackupSettingsRecord } from "./types";
 
 const SECRET_FIELD_NAMES = new Set([
   "passwordhash",
@@ -93,4 +93,37 @@ export function findSecretIssuesInJson(json: string): string[] {
 
 function looksLikeSecretValue(value: string): boolean {
   return SECRET_VALUE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+/** Strips secret-bearing fields from system settings before backup export. */
+export function sanitizeSettingsForBackup(
+  settings: Record<string, unknown>,
+): BackupSettingsRecord {
+  const sanitized = sanitizeRecord(settings) as unknown as BackupSettingsRecord;
+
+  if (sanitized.mail && typeof sanitized.mail === "object") {
+    const mail = sanitized.mail as Record<string, unknown>;
+    if (mail.smtp && typeof mail.smtp === "object") {
+      const smtp = mail.smtp as Record<string, unknown>;
+      delete smtp.passwordConfigured;
+      delete smtp.userConfigured;
+      mail.smtp = smtp;
+    }
+    sanitized.mail = mail;
+  }
+
+  if (sanitized.ai && typeof sanitized.ai === "object") {
+    const ai = sanitized.ai as Record<string, unknown>;
+    if (Array.isArray(ai.providerKeyPlaceholders)) {
+      ai.providerKeyPlaceholders = ai.providerKeyPlaceholders.map((entry) => {
+        if (!entry || typeof entry !== "object") return entry;
+        const placeholder = { ...(entry as Record<string, unknown>) };
+        placeholder.configured = Boolean(placeholder.configured);
+        return placeholder;
+      });
+    }
+    sanitized.ai = ai;
+  }
+
+  return sanitized;
 }

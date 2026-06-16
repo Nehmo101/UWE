@@ -5,8 +5,20 @@ import {
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  nonEmptyString,
+  parseBody,
+  requireStudioApiAuth,
+} from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { z } from "zod";
+
+const agentJobCreateSchema = z.object({
+  title: nonEmptyString.max(500),
+  prompt: nonEmptyString.max(32_000),
+  provider: z.enum(["github_actions", "cursor_cloud", "cursor_cli_local"]).optional(),
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -31,7 +43,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
   const config = resolveAgentJobsConfig();
@@ -39,21 +51,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED)." }, { status: 403 });
   }
 
-  const body = (await request.json()) as {
-    title?: string;
-    prompt?: string;
-    provider?: "github_actions" | "cursor_cloud" | "cursor_cli_local";
-  };
-
-  if (!body.title?.trim() || !body.prompt?.trim()) {
-    return NextResponse.json({ error: "title und prompt sind erforderlich." }, { status: 400 });
-  }
+  const parsed = await parseBody(request, agentJobCreateSchema);
+  if (!parsed.success) return parsed.response;
 
   const agentJobs = createDevAgentJobService(prisma);
   const devJob = await agentJobs.createJob({
-    title: body.title,
-    prompt: body.prompt,
-    provider: body.provider ?? config.defaultProvider,
+    title: parsed.data.title,
+    prompt: parsed.data.prompt,
+    provider: parsed.data.provider ?? config.defaultProvider,
   });
 
   const jobs = createJobService(prisma);

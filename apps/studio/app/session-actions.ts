@@ -1,3 +1,4 @@
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createGameSessionService,
   getAppRepository,
@@ -5,6 +6,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 function sessions() {
   return createGameSessionService();
@@ -15,7 +17,10 @@ function repo() {
 }
 
 export async function createGameSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -48,8 +53,11 @@ export async function createGameSessionAction(formData: FormData) {
 }
 
 export async function updateGameSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   // Page links are managed via dedicated link/unlink actions; only overwrite
   // them when the form explicitly submits the field.
@@ -79,8 +87,11 @@ export async function updateGameSessionAction(formData: FormData) {
 }
 
 export async function publishSessionRecapAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   await sessions().publishRecap(sessionId);
 
@@ -91,9 +102,12 @@ export async function publishSessionRecapAction(formData: FormData) {
 }
 
 export async function linkPageToSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
   const pageId = String(formData.get("pageId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   await sessions().linkPage(sessionId, pageId);
 
@@ -102,9 +116,12 @@ export async function linkPageToSessionAction(formData: FormData) {
 }
 
 export async function unlinkPageFromSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
   const pageId = String(formData.get("pageId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   await sessions().unlinkPage(sessionId, pageId);
 

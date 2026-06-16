@@ -5,6 +5,8 @@ import {
   canCreatePlayerNote,
   canEditPlayerNote,
   canModeratePlayerNote,
+  canReadAsset,
+  canReadContent,
   canViewAsset,
   canViewContentBlock,
   canViewPage,
@@ -13,6 +15,7 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   filterPlayerNotesForViewer,
+  scopeFromAccessContext,
   sessionExpiresAt,
 } from "@uwe/auth";
 import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth/server";
@@ -48,12 +51,13 @@ import {
   type DmPlayerNoteView,
   type PortalPlayerNoteView,
 } from "./player-note-service";
+import { logAuditEvent } from "./audit-log-service";
 
 export interface CreateUserInput {
   displayName: string;
   email?: string | null;
   password?: string | null;
-  role?: "owner" | "dm" | "player" | "guest";
+  role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
 }
 
 export interface CreateWorldMembershipInput {
@@ -75,7 +79,12 @@ export class AuthService {
   }
 
   async createUser(input: CreateUserInput) {
-    return this.db.user.create({
+    const existingOwnerCount =
+      input.role === "owner"
+        ? await this.db.user.count({ where: { role: "owner" } })
+        : 0;
+
+    const user = await this.db.user.create({
       data: {
         displayName: input.displayName,
         email: input.email ?? null,
@@ -83,6 +92,31 @@ export class AuthService {
         role: input.role ?? "player",
       },
     });
+
+    await logAuditEvent(this.db, {
+      action: "user_created",
+      targetType: "user",
+      targetId: user.id,
+      metadata: {
+        displayName: user.displayName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+
+    if (input.role === "owner" && existingOwnerCount === 0) {
+      await logAuditEvent(this.db, {
+        action: "setup_owner_created",
+        targetType: "user",
+        targetId: user.id,
+        metadata: {
+          displayName: user.displayName,
+          email: user.email,
+        },
+      });
+    }
+
+    return user;
   }
 
   async findUserByEmail(email: string) {
@@ -93,8 +127,42 @@ export class AuthService {
     return this.db.user.findUnique({ where: { id } });
   }
 
+  async hasOwnerUser(): Promise<boolean> {
+    const owner = await this.db.user.findFirst({
+      where: { role: "owner" },
+      select: { id: true },
+    });
+    return owner !== null;
+  }
+
+  async isSetupAvailable(): Promise<boolean> {
+    return !(await this.hasOwnerUser());
+  }
+
+  async createOwnerViaSetup(input: {
+    displayName: string;
+    email: string;
+    password: string;
+  }) {
+    if (!(await this.isSetupAvailable())) {
+      throw new Error("SETUP_DISABLED");
+    }
+
+    return this.createUser({
+      displayName: input.displayName,
+      email: input.email,
+      password: input.password,
+      role: "owner",
+    });
+  }
+
   async createWorldMembership(input: CreateWorldMembershipInput) {
-    return this.db.worldMembership.create({
+    const existingOwnerMembership =
+      input.role === "owner"
+        ? await this.db.worldMembership.count({ where: { role: "owner" } })
+        : 0;
+
+    const membership = await this.db.worldMembership.create({
       data: {
         userId: input.userId,
         worldId: input.worldId,
@@ -102,6 +170,51 @@ export class AuthService {
         characterName: input.characterName ?? null,
       },
     });
+
+    if (input.role === "owner" && existingOwnerMembership === 0) {
+      await logAuditEvent(this.db, {
+        action: "setup_owner_created",
+        targetType: "user",
+        targetId: input.userId,
+        worldId: input.worldId,
+        metadata: { worldRole: input.role },
+      });
+    }
+
+    return membership;
+  }
+
+  async updateWorldMembershipRole(
+    userId: string,
+    worldId: string,
+    role: "owner" | "dm" | "player",
+  ) {
+    const existing = await this.db.worldMembership.findUnique({
+      where: { userId_worldId: { userId, worldId } },
+    });
+
+    if (!existing) {
+      throw new Error("World membership not found");
+    }
+
+    const updated = await this.db.worldMembership.update({
+      where: { userId_worldId: { userId, worldId } },
+      data: { role },
+    });
+
+    await logAuditEvent(this.db, {
+      action: "user_role_changed",
+      targetType: "user",
+      targetId: userId,
+      worldId,
+      metadata: {
+        from: existing.role,
+        to: role,
+        scope: "world",
+      },
+    });
+
+    return updated;
   }
 
   async grantPagePlayerAccess(pageId: string, userId: string) {
@@ -184,7 +297,7 @@ export class AuthService {
     id: string;
     displayName: string;
     email: string | null;
-    role: "owner" | "dm" | "player" | "guest";
+    role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
   }): AuthUser {
     return {
       id: user.id,
@@ -280,7 +393,12 @@ export class AuthService {
       },
     });
 
-    if (!page || !canViewPage(ctx, page)) {
+    if (!page) {
+      return null;
+    }
+
+    const scope = scopeFromAccessContext(ctx, page.worldId);
+    if (!canReadContent(ctx.user, page, scope.world, scope)) {
       return null;
     }
 
@@ -342,6 +460,16 @@ export class AuthService {
       }
     }
 
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return renderContentHtml(content, []);
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
+
     const links: PageViewLink[] = parsed.map((raw) => {
       const displayText = raw.label ?? raw.target;
       const target = lookup.get(normalizeLookupKey(raw.target));
@@ -350,7 +478,7 @@ export class AuthService {
         return { displayText, status: "broken" as const };
       }
 
-      if (!canViewPage(ctx, target)) {
+      if (!canReadContent(ctx.user, target, scope.world, scope)) {
         return { displayText: raw.label ?? "Verborgen", status: "hidden" as const };
       }
 
@@ -509,13 +637,16 @@ export class AuthService {
 
     if (!asset) return null;
 
+    const scope = scopeFromAccessContext(ctx, asset.worldId);
     const accessInfo = {
       id: asset.id,
       visibility: asset.visibility,
+      secretLevel: asset.secretLevel,
+      revealState: asset.revealState,
       linkedPageIds: asset.pageLinks.map((link) => link.pageId),
     };
 
-    if (!canViewAsset(ctx, accessInfo)) {
+    if (!canReadAsset(ctx.user, accessInfo, scope.world, scope)) {
       return null;
     }
 
@@ -543,6 +674,15 @@ export class AuthService {
     ctx: AccessContext,
     options?: { campaignId?: string | null },
   ): Promise<PortalSoundboardButtonView[]> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return [];
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
     const buttons = await this.soundboard.listByWorld(worldSlug, options);
 
     return buttons
@@ -552,11 +692,16 @@ export class AuthService {
         }
 
         if (button.assetId && button.asset) {
-          return canViewAsset(ctx, {
-            id: button.asset.id,
-            visibility: button.asset.visibility,
-            linkedPageIds: [],
-          });
+          return canReadAsset(
+            ctx.user,
+            {
+              id: button.asset.id,
+              visibility: button.asset.visibility,
+              linkedPageIds: [],
+            },
+            scope.world,
+            scope,
+          );
         }
 
         return true;
@@ -575,11 +720,25 @@ export class AuthService {
     }
 
     if (button.asset) {
-      const allowed = canViewAsset(ctx, {
-        id: button.asset.id,
-        visibility: button.asset.visibility,
-        linkedPageIds: [],
+      const world = await this.db.world.findUnique({
+        where: { slug: worldSlug },
+        select: { id: true },
       });
+      if (!world) {
+        return null;
+      }
+
+      const scope = scopeFromAccessContext(ctx, world.id);
+      const allowed = canReadAsset(
+        ctx.user,
+        {
+          id: button.asset.id,
+          visibility: button.asset.visibility,
+          linkedPageIds: [],
+        },
+        scope.world,
+        scope,
+      );
       if (!allowed) {
         return null;
       }
@@ -730,6 +889,8 @@ export function createAuthService(db: PrismaClient): AuthService {
 }
 
 export {
+  canReadAsset,
+  canReadContent,
   canViewAsset,
   canViewContentBlock,
   canViewPage,

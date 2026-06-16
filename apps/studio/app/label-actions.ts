@@ -15,6 +15,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function labels() {
   return createLabelService();
@@ -80,6 +81,8 @@ async function logLabelActivity(
 
 export async function createLabelFromSourceAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -131,6 +134,8 @@ export async function createLabelFromSourceAction(formData: FormData) {
 
 export async function createManualLabelAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -175,6 +180,8 @@ export async function updateLabelAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const action = String(formData.get("action") || "save");
+
+  await requireStudioWorldEdit(worldSlug);
 
   const existing = await labels().getLabelById(labelId);
   if (!existing) throw new Error("Label not found");
@@ -266,6 +273,8 @@ export async function duplicateLabelAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
 
+  await requireStudioWorldEdit(worldSlug);
+
   const copy = await labels().duplicateLabel(labelId);
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
@@ -275,6 +284,8 @@ export async function duplicateLabelAction(formData: FormData) {
 export async function deleteLabelAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   await labels().deleteLabel(labelId);
 
@@ -286,6 +297,8 @@ export async function saveLabelAsTemplateAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const name = String(formData.get("templateName") || "Mein Template");
+
+  await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
@@ -300,6 +313,8 @@ export async function resetLabelToTemplateAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
 
+  await requireStudioWorldEdit(worldSlug);
+
   await labels().resetLabelToTemplate(labelId);
 
   revalidatePath(`/worlds/${worldSlug}/labels/${labelId}`);
@@ -309,6 +324,8 @@ export async function resetLabelToTemplateAction(formData: FormData) {
 export async function duplicateTemplateAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const templateId = String(formData.get("templateId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
@@ -324,6 +341,8 @@ export async function renameTemplateAction(formData: FormData) {
   const templateId = String(formData.get("templateId"));
   const name = String(formData.get("name"));
 
+  await requireStudioWorldEdit(worldSlug);
+
   await labels().renameTemplate(templateId, name);
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
@@ -334,6 +353,8 @@ export async function deleteTemplateAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const templateId = String(formData.get("templateId"));
 
+  await requireStudioWorldEdit(worldSlug);
+
   await labels().deleteWorldTemplate(templateId);
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
@@ -342,6 +363,8 @@ export async function deleteTemplateAction(formData: FormData) {
 
 export async function createPrintListAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -370,6 +393,8 @@ export async function createPrintListAction(formData: FormData) {
 export async function preparePrintListFromSessionAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -408,6 +433,8 @@ export async function preparePrintListFromRoomAction(formData: FormData) {
     .split(",")
     .filter(Boolean);
 
+  await requireStudioContentEdit(worldSlug, roomPageId);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -437,6 +464,8 @@ export async function preparePrintListFromRoomAction(formData: FormData) {
 export async function preparePrintListFromPageAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const pageId = String(formData.get("pageId"));
+  await requireStudioContentEdit(worldSlug, pageId);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -468,6 +497,8 @@ export async function addLabelToPrintListAction(formData: FormData) {
   const labelId = String(formData.get("labelId"));
   const copies = Number(formData.get("copies") || 1);
 
+  await requireStudioWorldEdit(worldSlug);
+
   await printLists().addLabel(printListId, labelId, copies);
 
   revalidatePath(`/worlds/${worldSlug}/labels`);
@@ -478,6 +509,8 @@ export async function addLabelToPrintListAction(formData: FormData) {
 export async function updatePrintListAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -524,6 +557,8 @@ export async function setPrintListStatusAction(formData: FormData) {
   const printListId = String(formData.get("printListId"));
   const status = String(formData.get("status")) as LabelPrintStatus;
 
+  await requireStudioWorldEdit(worldSlug);
+
   await printLists().markStatus(printListId, status);
 
   const world = await repo().getWorldBySlug(worldSlug);
@@ -549,6 +584,8 @@ export async function setPrintListStatusAction(formData: FormData) {
 export async function deletePrintListAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
   const list = await printLists().getById(printListId);
@@ -578,6 +615,8 @@ export async function logLabelExportActivity(
   title: string,
   format: string,
 ) {
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) return;
 
@@ -599,6 +638,8 @@ export async function logPrintListExportActivity(
   name: string,
   format: string,
 ) {
+  await requireStudioWorldEdit(worldSlug);
+
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) return;
 
@@ -618,6 +659,8 @@ export async function setLabelPrintStatusAction(formData: FormData) {
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const status = String(formData.get("status")) as LabelPrintStatus;
+
+  await requireStudioWorldEdit(worldSlug);
 
   await labels().setPrintStatus(labelId, status);
 

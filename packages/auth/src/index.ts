@@ -12,12 +12,39 @@ export type {
 } from "./types";
 
 export {
+  ADMIN_ACCESS_ROLES,
+  AuthRequiredError,
+  ForbiddenRoleError,
+  STUDIO_ACCESS_ROLES,
+  canAccessAdmin,
+  canAccessStudio,
+  getRequiredRolesForApiPath,
+  getRequiredRolesForPagePath,
+  hasAnyRole,
+  isContentEditorRole,
+  isOwner,
+  requireOwner,
+  requireRole,
+  requireUser,
+} from "./roles";
+
+export type { AdminAccessRole, StudioAccessRole } from "./roles";
+
+export {
+  SECURITY_DASHBOARD_ROLES,
+  SECURITY_ROLE_LABELS,
+  canAccessSecurityDashboard,
+  isSecurityDashboardRole,
+} from "./security-access";
+
+export {
   buildAccessContext,
   canChangeVisibility,
-  canEditContent,
+  canEditContent as canEditContentRole,
   canPreviewAsPlayer,
   canPublishContent,
   canViewAsset,
+  canViewAuditLog,
   canViewContentBlock,
   canViewPage,
   filterAssetsForViewer,
@@ -26,6 +53,59 @@ export {
   isDmOrOwner,
   resolveEffectiveRole,
 } from "./permissions";
+
+export {
+  detectPrivateReferences,
+  formatPrivateReferenceWarning,
+  isBlockPlayerExposable,
+  isDmOnlyVisibility,
+  isPagePlayerExposable,
+  isPlayerExposableContent,
+  isPlayerPortalVisibility,
+  isPublishedContentStatus,
+  isSecretVisibleToPlayer,
+  mapPublishStatusToContentStatus,
+  PLAYER_PORTAL_VISIBILITIES,
+  type ContentAccessFields,
+  type ContentBlockAccessFields,
+  type ContentStatus,
+  type ContentVisibility,
+  type PrivateReferenceTarget,
+  type RevealState,
+  type SecretLevel,
+} from "./content-access";
+
+export type {
+  AIUsageContext,
+  AuthzScope,
+  ContentAuthTarget,
+  MediaUploadTarget,
+  SecretAuthTarget,
+  WorldAuthTarget,
+} from "./security/authz";
+
+export {
+  AuthorizationError,
+  assertCanEditContent,
+  assertCanEditContentWithContext,
+  assertCanEditWorld,
+  assertCanReadContent,
+  assertCanReadContentWithContext,
+  assertCanReadWorld,
+  assertCanReadWorldWithContext,
+  assertCanRevealSecret,
+  assertCanUploadMedia,
+  assertCanUseAI,
+  canEditContent,
+  canReadAsset,
+  canReadContent,
+  canReadContentBlock,
+  canReadWorld,
+  canRevealSecret,
+  canUploadMedia,
+  canUseAI,
+  scopeFromAccessContext,
+} from "./security/authz";
 
 export type {
   PlayerNoteAccessInfo,
@@ -50,6 +130,8 @@ export {
 
 export type { SessionCookieOptions, SessionCookieSameSite, UweRuntimeConfig } from "./runtime-config";
 export {
+  getAllowedCorsOrigins,
+  getOAuthStateCookieOptions,
   getSessionCookieOptions,
   getTrustedRequestHosts,
   getUweRuntimeConfig,
@@ -58,6 +140,58 @@ export {
   originMatchesTrustedHost,
 } from "./runtime-config";
 
+export type { ApiOriginGuardResult } from "./api-origin-guard";
+export {
+  assessApiOrigin,
+  isCrossSiteBrowserRequest,
+  isSameOriginBrowserRequest,
+} from "./api-origin-guard";
+
+export type { SecurityHeader, SecurityHeaderOptions } from "./security-headers";
+export {
+  applySecurityHeaders,
+  buildContentSecurityPolicy,
+  getUweSecurityHeaderEntries,
+  getUweSecurityHeaders,
+} from "./security-headers";
+
 export { resolveClientIp } from "./proxy";
+
+export type {
+  AuthorizeDenied,
+  AuthorizeInput,
+  AuthorizeResult,
+  AuthorizeScope,
+} from "./security/authorize";
+export { authorize, authorizeForSurface, hasCloudflareAccessAuth } from "./security/authorize";
+
+export type {
+  RouteAccess,
+  RouteClassification,
+  UweAppSurface,
+} from "./security/route-policy";
+export {
+  PUBLIC_ASSET_ROUTES,
+  PUBLIC_PLAYER_APP_ROUTES,
+  PUBLIC_PORTAL_API_ROUTES,
+  PUBLIC_STUDIO_API_ROUTES,
+  PROTECTED_ROUTE_PREFIXES,
+  classifyRoute,
+  isApiRoute,
+  isGuestWikiPath,
+  isPublicRoute,
+  isUnknownProtectedApi,
+  matchesRoutePattern,
+  normalizePathname,
+  requiresPortalSession,
+  requiresStudioAuth,
+} from "./security/route-policy";
+
+export type { MiddlewareDecision, MiddlewareRequestLike } from "./security/middleware";
+export {
+  evaluatePortalMiddleware,
+  evaluateStudioMiddleware,
+  getMiddlewareMatcher,
+} from "./security/middleware";
 
 export const AUTH_PACKAGE_VERSION = "0.2.0";

@@ -1,5 +1,6 @@
 import {
   createJobService,
+  logAuditEvent,
   prisma,
   type EnqueueJobInput,
   type JobView,
@@ -67,6 +68,21 @@ export async function runJob(jobId: string): Promise<JobView | null> {
       error instanceof Error
         ? { name: error.name, stack: error.stack?.split("\n").slice(0, 5) }
         : undefined;
+
+    if (running.type === "import") {
+      const payload = (running.payload ?? {}) as { worldSlug?: string; format?: string };
+      const world = payload.worldSlug
+        ? await prisma.world.findUnique({ where: { slug: payload.worldSlug } })
+        : null;
+
+      await logAuditEvent(prisma, {
+        action: "import_failed",
+        targetType: "import",
+        targetId: jobId,
+        worldId: world?.id,
+        metadata: { format: payload.format, error: message },
+      });
+    }
 
     return jobs.markFailed(jobId, message, details);
   }

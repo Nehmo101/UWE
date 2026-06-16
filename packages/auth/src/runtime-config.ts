@@ -8,6 +8,8 @@ export interface UweRuntimeConfig {
   authRequired: boolean;
   sessionCookieSecure: boolean;
   sessionCookieSameSite: SessionCookieSameSite;
+  allowedCorsOrigins: string[];
+  setupToken: string | null;
   playerPreviewPublic: boolean;
   playerPreviewRequireToken: boolean;
   playerPreviewAllowDmOnly: boolean;
@@ -44,6 +46,28 @@ function parseSameSite(value: string | undefined): SessionCookieSameSite {
   return "lax";
 }
 
+function parseAllowedCorsOrigins(value: string | undefined): string[] {
+  if (!value?.trim()) {
+    return [];
+  }
+
+  const origins: string[] = [];
+  for (const part of value.split(",")) {
+    const origin = part.trim();
+    if (!origin) {
+      continue;
+    }
+
+    try {
+      origins.push(new URL(origin).toString().replace(/\/$/, ""));
+    } catch {
+      // ignore invalid origins — default remains same-origin only
+    }
+  }
+
+  return origins;
+}
+
 function normalizePublicAppUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -64,7 +88,9 @@ export function isProductionEnv(env: NodeJS.ProcessEnv = process.env): boolean {
 
 export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRuntimeConfig {
   const isProduction = isProductionEnv(env);
-  const publicAppUrl = normalizePublicAppUrl(env.PUBLIC_APP_URL);
+  const publicAppUrl = normalizePublicAppUrl(
+    env.PUBLIC_BASE_URL ?? env.PUBLIC_APP_URL,
+  );
   const publicHttps = publicAppUrl?.startsWith("https://") ?? false;
 
   const trustProxy = parseBoolEnv(env.TRUST_PROXY, isProduction && Boolean(publicAppUrl));
@@ -75,6 +101,8 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     isProduction || publicHttps,
   );
 
+  const setupToken = env.UWE_SETUP_TOKEN?.trim() || null;
+
   return {
     isProduction,
     publicAppUrl,
@@ -83,6 +111,8 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),
     sessionCookieSecure,
     sessionCookieSameSite: parseSameSite(env.SESSION_COOKIE_SAMESITE),
+    allowedCorsOrigins: parseAllowedCorsOrigins(env.ALLOWED_CORS_ORIGINS),
+    setupToken,
     playerPreviewPublic: parseBoolEnv(env.PLAYER_PREVIEW_PUBLIC, !isProduction),
     playerPreviewRequireToken: parseBoolEnv(env.PLAYER_PREVIEW_REQUIRE_TOKEN, isProduction),
     playerPreviewAllowDmOnly: parseBoolEnv(env.PLAYER_PREVIEW_ALLOW_DM_ONLY, false),
@@ -105,6 +135,21 @@ export function getSessionCookieOptions(
     secure: config.sessionCookieSecure,
     path: "/",
   };
+}
+
+export function getOAuthStateCookieOptions(
+  cookiePath: string,
+  env: NodeJS.ProcessEnv = process.env,
+): SessionCookieOptions {
+  const base = getSessionCookieOptions(env);
+  return {
+    ...base,
+    path: cookiePath,
+  };
+}
+
+export function getAllowedCorsOrigins(env: NodeJS.ProcessEnv = process.env): Set<string> {
+  return new Set(getUweRuntimeConfig(env).allowedCorsOrigins);
 }
 
 export function getTrustedRequestHosts(

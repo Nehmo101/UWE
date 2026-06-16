@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@uwe/assets": "workspace:*",
+    "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "adm-zip": "^0.5.16"
   },

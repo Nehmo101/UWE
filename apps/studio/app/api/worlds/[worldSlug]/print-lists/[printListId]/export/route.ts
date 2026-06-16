@@ -10,13 +10,24 @@ import {
 } from "@uwe/database/server";
 import { logPrintListExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
+import { idSchema, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+
+const printListExportParamsSchema = worldSlugParamSchema.extend({
+  printListId: idSchema,
+});
 
 interface Props {
   params: Promise<{ worldSlug: string; printListId: string }>;
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const { worldSlug, printListId } = await params;
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
+  const parsedParams = await parseParams(params, printListExportParamsSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const { worldSlug, printListId } = parsedParams.data;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "html";
   const includeDmOnly = url.searchParams.get("includeDmOnly") === "1";

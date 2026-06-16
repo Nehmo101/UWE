@@ -4,43 +4,50 @@ import {
   createMailRecipientService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  emailSchema,
+  guardStudioMutation,
+  idSchema,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  parseQuery,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+  slugSchema,
+} from "@uwe/security";
+import { z } from "zod";
+
+const mailRecipientsQuerySchema = z.object({
+  worldSlug: slugSchema,
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
-  if (authError) return authError;  const url = new URL(request.url);
-  const worldSlug = url.searchParams.get("worldSlug")?.trim();
+  if (authError) return authError;
 
-  if (!worldSlug) {
-    return NextResponse.json({ error: "worldSlug erforderlich." }, { status: 400 });
-  }
+  const parsed = parseQuery(request.url, mailRecipientsQuerySchema);
+  if (!parsed.success) return parsed.response;
 
   const recipients = createMailRecipientService(prisma);
   const [groups, players] = await Promise.all([
-    recipients.listGroups(worldSlug),
-    recipients.listWorldPlayerContacts(worldSlug),
+    recipients.listGroups(parsed.data.worldSlug),
+    recipients.listWorldPlayerContacts(parsed.data.worldSlug),
   ]);
 
   const payload = { groups, players };
   assertMailApiResponseHasNoSecrets(payload);
   return NextResponse.json(payload);
 }
+
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (typeof body !== "object" || body === null) {
-    return NextResponse.json({ error: "Request-Body muss ein JSON-Objekt sein." }, { status: 400 });
-  }
-
-  const payload = body as Record<string, unknown>;
+  const payload = parsed.data as Record<string, unknown>;
   const action = String(payload.action ?? "sync_players");
   const worldSlug = String(payload.worldSlug ?? "").trim();
 

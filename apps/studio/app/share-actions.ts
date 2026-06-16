@@ -1,4 +1,5 @@
 "use server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import {
   createPrismaClient,
@@ -6,8 +7,13 @@ import {
   type ShareTargetType,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
+import {
+  assertStudioTrusted,
+  requireStudioWorldEdit,
+} from "@/src/lib/authz";
 
 export async function createShareLinkAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldId = String(formData.get("worldId"));
   const worldSlug = String(formData.get("worldSlug"));
   const targetType = formData.get("targetType") as ShareTargetType;
@@ -17,6 +23,8 @@ export async function createShareLinkAction(formData: FormData) {
   const password = String(formData.get("password") || "") || null;
   const readOnly = formData.get("readOnly") !== "off";
   const logAccess = formData.get("logAccess") === "on";
+
+  await requireStudioWorldEdit(worldSlug);
 
   const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
 
@@ -40,8 +48,16 @@ export async function createShareLinkAction(formData: FormData) {
 }
 
 export async function updateShareLinkAction(formData: FormData) {
+  await requireStudioActionAuth();
   const linkId = String(formData.get("linkId"));
   const returnPath = String(formData.get("returnPath"));
+  const worldSlug = returnPath.match(/^\/worlds\/([^/]+)/)?.[1];
+  if (worldSlug) {
+    await requireStudioWorldEdit(worldSlug);
+  } else {
+    assertStudioTrusted();
+  }
+
   const expiresAtRaw = String(formData.get("expiresAt") || "");
   const password = String(formData.get("password") || "");
   const clearPassword = formData.get("clearPassword") === "on";
@@ -65,8 +81,15 @@ export async function updateShareLinkAction(formData: FormData) {
 }
 
 export async function disableShareLinkAction(formData: FormData) {
+  await requireStudioActionAuth();
   const linkId = String(formData.get("linkId"));
   const returnPath = String(formData.get("returnPath"));
+  const worldSlug = returnPath.match(/^\/worlds\/([^/]+)/)?.[1];
+  if (worldSlug) {
+    await requireStudioWorldEdit(worldSlug);
+  } else {
+    assertStudioTrusted();
+  }
 
   const db = createPrismaClient();
   try {

@@ -8,7 +8,16 @@ PRISMA_BIN="/app/node_modules/prisma/build/index.js"
 TSX_BIN="/app/node_modules/tsx/dist/cli.mjs"
 SEED_SCRIPT="/app/packages/database/prisma/seed.ts"
 EMPTY_CHECK="/app/scripts/docker-db-empty-check.ts"
+ENV_CHECK="/app/scripts/docker-env-check.ts"
 SEED_MARKER="${DB_PATH}.seeded"
+
+if [ "${NODE_ENV:-development}" = "production" ] && [ -f "$ENV_CHECK" ] && [ -f "$TSX_BIN" ]; then
+  echo "Validating production environment…"
+  if ! node "$TSX_BIN" "$ENV_CHECK"; then
+    echo "Production environment validation failed — aborting startup"
+    exit 1
+  fi
+fi
 
 mkdir -p "$(dirname "$DB_PATH")" /app/data/uploads /app/data/backups /app/exports
 

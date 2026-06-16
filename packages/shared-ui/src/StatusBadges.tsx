@@ -11,6 +11,7 @@ import type {
 import { EmptyState } from "./AppShell";
 
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
+  private: "Privat",
   dm_only: "Nur GM",
   player_visible: "Portal (ohne Login)",
   public: "Öffentlich (Share-Link)",
@@ -25,6 +26,7 @@ export const VISIBILITY_LABELS: Record<Visibility, string> = {
  * make that consequence explicit wherever a visibility is chosen or shown.
  */
 export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
+  private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",
   dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
   player_visible:
     "Über die Player-/World-Routen (/worlds/…) ohne Login sichtbar, sobald die Seite veröffentlicht ist.",

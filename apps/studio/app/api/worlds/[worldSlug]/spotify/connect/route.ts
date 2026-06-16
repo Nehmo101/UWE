@@ -1,4 +1,4 @@
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
 import { startSpotifyConnect } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {
@@ -6,9 +6,11 @@ interface RouteParams {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { worldSlug } = await params;
-  return startSpotifyConnect(worldSlug);
+  const parsedParams = await parseParams(params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  return startSpotifyConnect(parsedParams.data.worldSlug);
 }

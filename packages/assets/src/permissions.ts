@@ -1,4 +1,5 @@
 import type { AssetVisibility } from "./types";
+import { isDmOnlyVisibility, isPlayerPortalVisibility } from "@uwe/auth/content-access";
 
 /** Asset visibilities exposed to the legacy player portal filter. */
 export const PORTAL_ASSET_VISIBILITIES: AssetVisibility[] = ["public", "player_visible"];
@@ -6,7 +7,7 @@ export const PORTAL_ASSET_VISIBILITIES: AssetVisibility[] = ["public", "player_v
 export type AssetAccessContext = "dm" | "portal" | "preview";
 
 export function isPortalAssetVisibility(visibility: AssetVisibility): boolean {
-  return PORTAL_ASSET_VISIBILITIES.includes(visibility);
+  return isPlayerPortalVisibility(visibility);
 }
 
 export function isAssetAccessible(
@@ -15,6 +16,10 @@ export function isAssetAccessible(
 ): boolean {
   if (context === "dm") {
     return true;
+  }
+
+  if (isDmOnlyVisibility(asset.visibility)) {
+    return false;
   }
 
   return isPortalAssetVisibility(asset.visibility);

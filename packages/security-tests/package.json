@@ -1,0 +1,23 @@
+{
+  "name": "@uwe/security-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automated security, authorization, and leak tests for UWE",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "test:authz": "node --import tsx --test src/role-matrix.test.ts src/route-authz.test.ts",
+    "test:leaks": "node --import tsx --test src/public-leak-scanner.test.ts"
+  },
+  "dependencies": {
+    "@uwe/assets": "workspace:*",
+    "@uwe/auth": "workspace:*",
+    "@uwe/database": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,20 +1,16 @@
 import { postGeneratorAction } from "@/src/lib/generator-handlers";
-import type { GeneratorActionId } from "@uwe/database/server";
+import {
+  aiGeneratorBodySchema,
+  guardStudioMutation,
+  parseBody,
+} from "@uwe/security";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
-    actionId?: GeneratorActionId;
-    worldSlug?: string;
-    pageSlug?: string;
-    useMock?: boolean;
-    sync?: boolean;
-  };
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  if (authError) return authError;
 
-  return postGeneratorAction({
-    actionId: body.actionId as GeneratorActionId,
-    worldSlug: body.worldSlug ?? "",
-    pageSlug: body.pageSlug ?? "",
-    useMock: body.useMock,
-    sync: body.sync,
-  });
+  const parsed = await parseBody(request, aiGeneratorBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  return postGeneratorAction(parsed.data);
 }

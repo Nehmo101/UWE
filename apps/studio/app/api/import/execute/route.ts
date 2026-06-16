@@ -1,27 +1,21 @@
 import { postImportExecute } from "../../../../src/lib/import-handlers";
-import type { ImportFormat } from "@uwe/knoteforge-import";
-import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  importExecuteBodySchema,
+  parseBody,
+  safeHandlerError,
+} from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "import" });
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    format: ImportFormat;
-    content: string;
-    worldSlug: string;
-    confirmed?: boolean;
-    itemIds?: string[];
-    autoResolveSlugConflicts?: boolean;
-    allowUpdates?: boolean;
-  };
+  const parsed = await parseBody(request, importExecuteBodySchema);
+  if (!parsed.success) return parsed.response;
 
   try {
-    return await postImportExecute(body);
+    return await postImportExecute(parsed.data);
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Import fehlgeschlagen." },
-      { status: 500 },
-    );
+    return safeHandlerError(error, "Import fehlgeschlagen.");
   }
 }

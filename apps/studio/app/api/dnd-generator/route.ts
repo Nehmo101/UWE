@@ -13,6 +13,7 @@ import {
   createUweRepository,
   prisma,
 } from "@uwe/database/server";
+import { requireStudioApiAuth } from "@uwe/security";
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -79,6 +80,9 @@ async function resolveContext(searchParams: URLSearchParams): Promise<DndContext
 }
 
 export async function GET(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   const { searchParams } = new URL(request.url);
   const context = await resolveContext(searchParams);
   if (!context) {

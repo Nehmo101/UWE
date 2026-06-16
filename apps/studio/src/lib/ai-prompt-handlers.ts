@@ -20,7 +20,14 @@ import {
   prisma,
   resolveLocalOnlyMode,
 } from "@uwe/database/server";
+import {
+  AiAccessDeniedError,
+  AiPolicyViolationError,
+  enforceAiRequestLimits,
+  RtxBoundaryError,
+} from "@uwe/security";
 import type { AiContextMode, AiProviderMode } from "./ai-prompt-ui";
+import { aiPolicyErrorResponse } from "./ai-security";
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -56,6 +63,8 @@ export interface AiPromptRequestBody {
   worldSlug?: string;
   pageSlug?: string;
   useMock?: boolean;
+  model?: string;
+  maxTokens?: number;
 }
 
 export type AiPromptExecutionResult =
@@ -83,6 +92,12 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
   if (!body.providerMode || !body.contextMode) {
     throw new Error("providerMode und contextMode sind erforderlich.");
   }
+
+  enforceAiRequestLimits({
+    prompt,
+    model: body.model,
+    maxTokens: body.maxTokens,
+  });
 
   if (
     (body.contextMode === "current_object" || body.contextMode === "current_object_plus_brain") &&
@@ -200,6 +215,13 @@ export async function postAiPrompt(body: AiPromptRequestBody) {
       providerMode: result.providerMode,
     });
   } catch (error) {
+    if (
+      error instanceof AiAccessDeniedError ||
+      error instanceof AiPolicyViolationError ||
+      error instanceof RtxBoundaryError
+    ) {
+      return aiPolicyErrorResponse(error);
+    }
     if (error instanceof AiPrivacyError || error instanceof AiRouterError) {
       return jsonError(error.message, 403);
     }

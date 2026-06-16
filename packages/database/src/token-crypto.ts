@@ -38,13 +38,14 @@ export function decryptSecret(payload: string, secret: string): string {
 }
 
 export function resolveTokenEncryptionSecret(): string {
-  const secret = process.env.AUTH_SECRET?.trim();
+  const secret =
+    process.env.SESSION_SECRET?.trim() || process.env.AUTH_SECRET?.trim();
   if (secret) {
     return secret;
   }
 
   if (process.env.NODE_ENV === "production") {
-    throw new Error("AUTH_SECRET is required to encrypt Spotify tokens in production.");
+    throw new Error("SESSION_SECRET is required to encrypt Spotify tokens in production.");
   }
 
   return "development-only-spotify-token-secret";

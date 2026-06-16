@@ -9,6 +9,7 @@ import {
   type GeneratorActionId,
 } from "@uwe/database/server";
 import { getInferenceStatus } from "@uwe/ai-brain";
+import { enforceAiRequestLimits } from "@uwe/security";
 import { postGenerate } from "./ai-handlers";
 import { buildGeneratorUserPrompt, mapGeneratorActionToTaskType } from "./generator-action-map";
 
@@ -64,10 +65,13 @@ export async function postGeneratorAction(body: {
   pageSlug: string;
   useMock?: boolean;
   sync?: boolean;
+  workerUrl?: string;
 }) {
   if (!body.actionId || !body.worldSlug?.trim() || !body.pageSlug?.trim()) {
     return jsonError("actionId, worldSlug und pageSlug sind erforderlich.", 400);
   }
+
+  enforceAiRequestLimits({ workerUrl: body.workerUrl });
 
   const repo = createUweRepository();
   const page = await repo.getPageBySlug(body.worldSlug, body.pageSlug);
@@ -90,7 +94,6 @@ export async function postGeneratorAction(body: {
     providerId: "ollama",
     model,
     userPrompt,
-    allowDmOnly: true,
     useMock: body.useMock,
     sync: body.sync ?? !inference.online,
   });

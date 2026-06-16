@@ -1,12 +1,17 @@
 import { getProposal } from "../../../../../src/lib/ai-handlers";
-import { requireStudioApiAuth } from "../../../../../src/lib/studio-api-auth";
+import { idSchema, parseParams, requireStudioApiAuth } from "@uwe/security";
+import { z } from "zod";
+
+const proposalIdParamSchema = z.object({ id: idSchema });
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Params) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { id } = await params;
-  return getProposal(id);
+  const parsedParams = await parseParams(params, proposalIdParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  return getProposal(parsedParams.data.id);
 }

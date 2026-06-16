@@ -1,5 +1,11 @@
 import { getJobsList, postEnqueueJob } from "../../../src/lib/job-api-handlers";
-import { requireStudioApiAuth } from "../../../src/lib/studio-api-auth";
+import type { JobType } from "@uwe/database/server";
+import {
+  guardStudioMutation,
+  parseBody,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+} from "@uwe/security";
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -9,9 +15,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const body = await request.json();
-  return postEnqueueJob(body);
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  return postEnqueueJob(parsed.data as {
+    type: JobType;
+    title: string;
+    worldSlug?: string;
+    payload?: Record<string, unknown>;
+    sync?: boolean;
+  });
 }

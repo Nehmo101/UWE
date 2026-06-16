@@ -1,8 +1,17 @@
 import type { NextConfig } from "next";
+import { getUweSecurityHeaderEntries } from "@uwe/auth";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/auth"],
+  transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/auth", "@uwe/env"],
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: getUweSecurityHeaderEntries(),
+      },
+    ];
+  },
   serverExternalPackages: [
     "@libsql/client",
     "@prisma/adapter-libsql",

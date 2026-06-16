@@ -5,6 +5,7 @@ import {
   createJobService,
   createUweRepository,
   getSystemSettings,
+  logAuditEvent,
   prisma,
   resolveLocalOnlyMode,
   type AiRunStatus,
@@ -23,6 +24,10 @@ import {
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
+import {
+  filterContextForViewer,
+  resolveEffectiveAllowDmOnly,
+} from "@uwe/security";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 
 async function getAiSettingsOverrides() {
@@ -124,20 +129,28 @@ export async function postContext(body: {
     const overrides = await getAiSettingsOverrides();
     const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
 
+    const allowDmOnly = resolveEffectiveAllowDmOnly({
+      clientAllowDmOnly: body.allowDmOnly,
+      localOnly: settings.localOnly,
+      routeIsCloud: false,
+    });
+
     const context = await buildAiContextBySlug(
       repo,
       body.taskType,
       body.worldSlug,
       body.pageSlug,
       {
-        allowDmOnly: body.allowDmOnly ?? settings.localOnly,
+        allowDmOnly,
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
         sessionId: body.sessionId,
       },
     );
 
-    return NextResponse.json({ context });
+    const filtered = filterContextForViewer(context, allowDmOnly, false);
+
+    return NextResponse.json({ context: filtered });
   } catch (error) {
     return handleAiError(error);
   }
@@ -193,6 +206,20 @@ export async function postGenerate(body: {
       title,
       worldSlug: body.worldSlug,
       payload: body,
+    });
+
+    await logAuditEvent(prisma, {
+      action: "ai_request",
+      targetType: "ai_run",
+      targetId: job.id,
+      worldId: world.id,
+      metadata: {
+        taskType: body.taskType,
+        providerId: body.providerId,
+        model: body.model,
+        pageSlug: body.pageSlug,
+        promptLength: body.userPrompt?.length ?? 0,
+      },
     });
 
     return NextResponse.json({ job }, { status: 202 });

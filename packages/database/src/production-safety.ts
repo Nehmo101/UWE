@@ -1,3 +1,4 @@
+import { isWeakSecret as isWeakAuthSecret } from "@uwe/env";
 import type { PrismaClient } from "./client";
 import type { InspectorSeverity } from "./world-inspector";
 import { SettingsService, type UweSystemSettings } from "./settings-service";
@@ -14,34 +15,7 @@ export interface ProductionSafetyWarning {
   href?: string;
 }
 
-const WEAK_AUTH_SECRET_PATTERNS = [
-  /^change[-_]?me$/i,
-  /^changeme$/i,
-  /^generate-a-random-secret-for-production$/i,
-  /^super-secret$/i,
-  /^your-secret-here$/i,
-  /^dev(elopment)?$/i,
-  /^test$/i,
-  /^password$/i,
-  /^secret$/i,
-  /^uwe-dev$/i,
-];
-
-/**
- * Returns true when AUTH_SECRET is missing or looks like a placeholder/default.
- */
-export function isWeakAuthSecret(secret: string | undefined): boolean {
-  const trimmed = secret?.trim();
-  if (!trimmed) {
-    return true;
-  }
-
-  if (trimmed.length < 16) {
-    return true;
-  }
-
-  return WEAK_AUTH_SECRET_PATTERNS.some((pattern) => pattern.test(trimmed));
-}
+export { isWeakAuthSecret };
 
 /**
  * Demo seeding should be disabled in production/self-hosted deployments.
@@ -68,13 +42,16 @@ export async function getProductionSafetyWarnings(
   const warnings: ProductionSafetyWarning[] = [];
   const settings = await new SettingsService(db).getSettings();
 
-  if (isWeakAuthSecret(process.env.AUTH_SECRET)) {
+  const sessionSecret =
+    process.env.SESSION_SECRET?.trim() || process.env.AUTH_SECRET?.trim();
+
+  if (isWeakAuthSecret(sessionSecret)) {
     warnings.push({
       id: "production:auth-secret",
       severity: "critical",
-      title: "AUTH_SECRET fehlt oder ist unsicher",
+      title: "SESSION_SECRET fehlt oder ist unsicher",
       description:
-        "Setze in .env ein starkes, zufälliges AUTH_SECRET (z. B. openssl rand -base64 32). Platzhalter und kurze Werte sind nicht zulässig.",
+        "Setze in .env ein starkes, zufälliges SESSION_SECRET (Alias: AUTH_SECRET, z. B. openssl rand -base64 32). Platzhalter und kurze Werte sind nicht zulässig.",
       href: "/settings",
     });
   }

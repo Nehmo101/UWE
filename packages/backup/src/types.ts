@@ -24,6 +24,8 @@ export interface BackupManifest {
   campaignSlug?: string;
   includesUsers: boolean;
   includesAuthSessions: boolean;
+  includesSettings: boolean;
+  encrypted?: boolean;
   stats: BackupStats;
   assetFiles: string[];
 }
@@ -241,6 +243,18 @@ export interface BackupSessionUnlockRecord {
   sessionLabel: string | null;
 }
 
+export interface BackupSettingsRecord {
+  app: Record<string, unknown>;
+  worlds: Record<string, unknown>;
+  campaigns: Record<string, unknown>;
+  portal: Record<string, unknown>;
+  ai: Record<string, unknown>;
+  mail: Record<string, unknown>;
+  storage: Record<string, unknown>;
+  backup: Record<string, unknown>;
+  privacy: Record<string, unknown>;
+}
+
 export interface BackupData {
   worlds: BackupWorldRecord[];
   campaigns: BackupCampaignRecord[];
@@ -266,6 +280,7 @@ export interface BackupData {
 export interface BackupBundle {
   manifest: BackupManifest;
   data: BackupData;
+  settings?: BackupSettingsRecord;
 }
 
 export type RestorePreviewStatus = "new" | "conflict" | "duplicate" | "skipped" | "warning";
@@ -299,6 +314,8 @@ export interface RestoreExecuteOptions {
   autoResolveSlugConflicts?: boolean;
   allowUpdates?: boolean;
   skipExisting?: boolean;
+  restoreSettings?: boolean;
+  encryptionPassword?: string;
 }
 
 export interface RestoreExecuteItemResult {
@@ -325,6 +342,9 @@ export interface CreateBackupOptions {
   uploadsRoot?: string;
   outputDir?: string;
   format?: "zip" | "json";
+  encrypt?: boolean;
+  encryptionPassword?: string;
+  retentionCount?: number;
 }
 
 export interface StoredBackupInfo {

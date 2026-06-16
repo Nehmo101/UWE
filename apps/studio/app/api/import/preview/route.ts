@@ -1,26 +1,21 @@
 import { postImportPreview } from "../../../../src/lib/import-handlers";
-import type { ImportFormat } from "@uwe/knoteforge-import";
-import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  importPreviewBodySchema,
+  parseBody,
+  safeHandlerError,
+} from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "import" });
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    format: ImportFormat;
-    content: string;
-    worldSlug: string;
-  };
+  const parsed = await parseBody(request, importPreviewBodySchema);
+  if (!parsed.success) return parsed.response;
 
   try {
-    return await postImportPreview(body);
+    return await postImportPreview(parsed.data);
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Import-Vorschau fehlgeschlagen.",
-      },
-      { status: 500 },
-    );
+    return safeHandlerError(error, "Import-Vorschau fehlgeschlagen.");
   }
 }

@@ -110,6 +110,11 @@ export default async function StudioPageView({ params, searchParams }: Props) {
       {isPlayerPreview && (
         <div className="uwe-preview-banner">
           Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
+          {view.privateReferenceWarning && (
+            <p style={{ margin: "0.5rem 0 0", fontWeight: 600 }}>
+              {view.privateReferenceWarning}
+            </p>
+          )}
         </div>
       )}
       <AppShell

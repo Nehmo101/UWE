@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { getAppRepository } from "@uwe/database/server";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
+import { enforceStudioPageAuth } from "@/src/lib/auth";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -31,6 +33,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-uwe-pathname") ?? "/";
+  await enforceStudioPageAuth(pathname);
+
   let worlds: { name: string; slug: string }[] = [];
   try {
     worlds = (await getAppRepository().listWorlds()).map((world) => ({

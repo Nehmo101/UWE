@@ -15,6 +15,7 @@ import {
   isPageAccessible,
   type PortalAccessOptions,
 } from "./permissions";
+import { buildSearchIndexForScope } from "./search-index";
 
 export const SEARCH_ENTITY_FILTERS = [
   "pages",
@@ -383,13 +384,8 @@ export async function searchForWikiContext(
   portalOptions?: PortalAccessOptions,
 ): Promise<SearchResultItem[]> {
   const pages = await loadPagesForSearch(db, options);
-  const accessiblePages = pages.filter((page) =>
-    isPageAccessible(page, context, portalOptions),
-  );
-
-  const index = buildSearchIndex(accessiblePages, (page) =>
-    filterBlocksForContext(page.contentBlocks, context, portalOptions),
-  );
+  const scope = context === "dm" ? "studio" : "public";
+  const index = buildSearchIndexForScope(pages, scope, context, portalOptions);
 
   return searchIndex(index, options);
 }
@@ -402,8 +398,12 @@ export async function searchForAuthContext(
   const pages = await loadPagesForSearch(db, options);
   const accessiblePages = pages.filter((page) => canViewPage(context, page));
 
-  const index = buildSearchIndex(accessiblePages, (page) =>
-    page.contentBlocks.filter((block) => canViewContentBlock(context, block, page)),
+  const index = buildSearchIndexForScope(
+    accessiblePages.map((page) => ({
+      ...page,
+      contentBlocks: page.contentBlocks.filter((block) => canViewContentBlock(context, block, page)),
+    })),
+    "public",
   );
 
   return searchIndex(index, options);

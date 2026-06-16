@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SECRET_KEYS = [
+  "SESSION_SECRET",
   "AUTH_SECRET",
+  "UWE_SETUP_TOKEN",
   "STUDIO_API_TOKEN",
   "SPOTIFY_CLIENT_SECRET",
   "SPOTIFY_ACCESS_TOKEN",

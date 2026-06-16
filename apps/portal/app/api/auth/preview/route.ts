@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import {
@@ -9,6 +10,9 @@ import {
 import { getAccessContextForWorld } from "@/src/lib/auth";
 
 export async function POST(request: Request) {
+  const authError = await requirePortalApiAuth(request);
+  if (authError) return authError;
+
   const body = (await request.json()) as { worldSlug?: string; previewAsUserId?: string | null };
   const worldSlug = body.worldSlug?.trim();
   const previewAsUserId = body.previewAsUserId ?? null;

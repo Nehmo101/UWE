@@ -1,4 +1,4 @@
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { guardStudioMutation, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
 import { stopSpotifyForWorld } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {
@@ -6,9 +6,11 @@ interface RouteParams {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const { worldSlug } = await params;
-  return stopSpotifyForWorld(worldSlug);
+  const parsedParams = await parseParams(params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  return stopSpotifyForWorld(parsedParams.data.worldSlug);
 }

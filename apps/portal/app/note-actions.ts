@@ -10,9 +10,16 @@ import {
   createPrismaClient,
 } from "@uwe/database/server";
 import {
+  parseFormDataOrThrow,
+  playerNoteCreateSchema,
+  playerNoteIdSchema,
+  playerNoteUpdateSchema,
+} from "@uwe/security";
+import {
   getAccessContextForWorld,
   getCurrentUser,
 } from "@/src/lib/auth";
+import { assertPortalCanReadWorld } from "@/src/lib/authz";
 
 async function getAuthContext(worldSlug: string) {
   const user = await getCurrentUser();
@@ -20,20 +27,34 @@ async function getAuthContext(worldSlug: string) {
   if (!user || !ctx) {
     throw new Error("Nicht angemeldet");
   }
+
+  const db = createPrismaClient();
+  try {
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      throw new Error("Welt nicht gefunden");
+    }
+    assertPortalCanReadWorld(ctx, world.id);
+  } finally {
+    await db.$disconnect();
+  }
+
   return { user, ctx };
 }
 
 export async function createPlayerNoteAction(formData: FormData) {
-  const worldSlug = String(formData.get("worldSlug"));
-  const campaignId = String(formData.get("campaignId"));
-  const content = String(formData.get("content") || "").trim();
-  const pageId = String(formData.get("pageId") || "") || null;
-  const gameSessionId = String(formData.get("gameSessionId") || "") || null;
-  const returnPath = String(formData.get("returnPath") || `/auth/worlds/${worldSlug}`);
-
-  if (!content) {
-    throw new Error("Notiz darf nicht leer sein");
-  }
+  const {
+    worldSlug,
+    campaignId,
+    content,
+    pageId,
+    gameSessionId,
+    returnPath,
+  } = parseFormDataOrThrow(formData, playerNoteCreateSchema);
+  const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
   const db = createPrismaClient();
@@ -51,21 +72,20 @@ export async function createPlayerNoteAction(formData: FormData) {
     await auth.createPlayerNoteForViewer(worldSlug, ctx, {
       campaignId,
       content,
-      pageId,
-      gameSessionId,
+      pageId: pageId ?? null,
+      gameSessionId: gameSessionId ?? null,
     });
   } finally {
     await db.$disconnect();
   }
 
-  revalidatePath(returnPath);
+  revalidatePath(path);
   revalidatePath(`/auth/worlds/${worldSlug}`);
 }
 
 export async function submitPlayerNoteAction(formData: FormData) {
-  const worldSlug = String(formData.get("worldSlug"));
-  const noteId = String(formData.get("noteId"));
-  const returnPath = String(formData.get("returnPath") || `/auth/worlds/${worldSlug}`);
+  const { worldSlug, noteId, returnPath } = parseFormDataOrThrow(formData, playerNoteIdSchema);
+  const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
   const db = createPrismaClient();
@@ -82,18 +102,15 @@ export async function submitPlayerNoteAction(formData: FormData) {
     await db.$disconnect();
   }
 
-  revalidatePath(returnPath);
+  revalidatePath(path);
 }
 
 export async function updatePlayerNoteAction(formData: FormData) {
-  const worldSlug = String(formData.get("worldSlug"));
-  const noteId = String(formData.get("noteId"));
-  const content = String(formData.get("content") || "").trim();
-  const returnPath = String(formData.get("returnPath") || `/auth/worlds/${worldSlug}`);
-
-  if (!content) {
-    throw new Error("Notiz darf nicht leer sein");
-  }
+  const { worldSlug, noteId, content, returnPath } = parseFormDataOrThrow(
+    formData,
+    playerNoteUpdateSchema,
+  );
+  const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
   const db = createPrismaClient();
@@ -110,5 +127,5 @@ export async function updatePlayerNoteAction(formData: FormData) {
     await db.$disconnect();
   }
 
-  revalidatePath(returnPath);
+  revalidatePath(path);
 }

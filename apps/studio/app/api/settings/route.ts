@@ -1,25 +1,28 @@
 import { NextResponse } from "next/server";
 import { getAppRepository, validateSettingsUpdate } from "@uwe/database/server";
-import { requireStudioApiAuth } from "../../../src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  parseBody,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+} from "@uwe/security";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
   const settings = await getAppRepository().getSystemSettings();
   return NextResponse.json({ settings });
 }
 
 export async function PUT(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "setup" });
   if (authError) return authError;
 
-  let body: unknown;
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const validation = validateSettingsUpdate(body);
+  const validation = validateSettingsUpdate(parsed.data);
   if (!validation.ok) {
     return NextResponse.json(
       { error: "Ungültige Einstellungen", details: validation.errors },

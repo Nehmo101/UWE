@@ -13,6 +13,7 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/env": "workspace:*",
     "nodemailer": "^7.0.3"
   },
   "devDependencies": {

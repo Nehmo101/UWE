@@ -10,22 +10,32 @@ import {
 import {
   getAppRepository,
   getSystemSettings,
+  logAuditEvent,
+  prisma,
   resolveEffectiveUploadsPath,
   type AssetType,
-  type Visibility,
 } from "@uwe/database/server";
-
-import { requireStudioApiAuth } from "../../../../../../src/lib/studio-api-auth";
+import { getUweEnvOrNull } from "@uwe/env";
+import {
+  guardStudioMutation,
+  parseFormData,
+  parseParams,
+  uploadMetadataSchema,
+  worldSlugParamSchema,
+} from "@uwe/security";
 
 interface RouteContext {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
-  const { worldSlug } = await context.params;
+  const parsedParams = await parseParams(context.params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const { worldSlug } = parsedParams.data;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
 
@@ -34,21 +44,33 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const formData = await request.formData();
-  const file = formData.get("file");
+  const parsedMetadata = parseFormData(formData, uploadMetadataSchema);
+  if (!parsedMetadata.success) return parsedMetadata.response;
 
+  const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "File required" }, { status: 400 });
   }
 
-  const title = String(formData.get("title") || file.name || "Unbenannt");
-  const description = String(formData.get("description") || "") || null;
-  const visibility = (String(formData.get("visibility") || "dm_only") as Visibility) ?? "dm_only";
-  const pageId = String(formData.get("pageId") || "") || null;
+  const maxUploadBytes = getUweEnvOrNull()?.maxUploadBytes ?? 50 * 1024 * 1024;
+  if (file.size > maxUploadBytes) {
+    return NextResponse.json(
+      {
+        error: `File exceeds maximum upload size (${Math.floor(maxUploadBytes / (1024 * 1024))} MB)`,
+      },
+      { status: 413 },
+    );
+  }
+
+  const metadata = parsedMetadata.data;
+  const title = metadata.title || file.name || "Unbenannt";
+  const description = metadata.description || null;
+  const visibility = metadata.visibility;
+  const pageId = metadata.pageId ?? null;
 
   const mimeType = file.type || inferMimeTypeFromFilename(file.name);
   const type =
-    (String(formData.get("type") || "") as AssetType) ||
-    inferAssetTypeFromMime(mimeType);
+    (metadata.type as AssetType | undefined) || inferAssetTypeFromMime(mimeType);
 
   const storageKey = buildStorageKey(world.id, file.name);
   const settings = await getSystemSettings();
@@ -72,6 +94,20 @@ export async function POST(request: Request, context: RouteContext) {
   if (pageId) {
     await repo.linkAssetToPage(asset.id, pageId);
   }
+
+  await logAuditEvent(prisma, {
+    action: "upload_created",
+    targetType: "asset",
+    targetId: asset.id,
+    worldId: world.id,
+    metadata: {
+      title: asset.title,
+      type: asset.type,
+      mimeType: asset.mimeType,
+      size: asset.size,
+      visibility,
+    },
+  });
 
   const redirectUrl = new URL(`/worlds/${worldSlug}/assets?uploaded=1`, request.url);
   const accept = request.headers.get("accept") ?? "";

@@ -1,4 +1,5 @@
 "use server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -8,6 +9,7 @@ import {
   getAppRepository,
   buildPageUrl,
 } from "@uwe/database/server";
+import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function notes() {
   const db = createPrismaClient();
@@ -15,8 +17,11 @@ function notes() {
 }
 
 export async function acceptPlayerNoteAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const noteId = String(formData.get("noteId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, auth } = notes();
   try {
@@ -29,8 +34,11 @@ export async function acceptPlayerNoteAction(formData: FormData) {
 }
 
 export async function hidePlayerNoteAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const noteId = String(formData.get("noteId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, auth } = notes();
   try {
@@ -43,8 +51,11 @@ export async function hidePlayerNoteAction(formData: FormData) {
 }
 
 export async function deletePlayerNoteAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const noteId = String(formData.get("noteId"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, auth } = notes();
   try {
@@ -57,9 +68,16 @@ export async function deletePlayerNoteAction(formData: FormData) {
 }
 
 export async function adoptPlayerNoteAsContentBlockAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const noteId = String(formData.get("noteId"));
   const targetPageId = String(formData.get("targetPageId") || "");
+
+  if (targetPageId) {
+    await requireStudioContentEdit(worldSlug, targetPageId);
+  } else {
+    await requireStudioWorldEdit(worldSlug);
+  }
 
   const { db, auth } = notes();
   let page: { slug: string; type: Parameters<typeof buildPageUrl>[1] } | null = null;
@@ -91,9 +109,12 @@ export async function adoptPlayerNoteAsContentBlockAction(formData: FormData) {
 }
 
 export async function adoptPlayerNoteAsPageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const noteId = String(formData.get("noteId"));
   const title = String(formData.get("title") || "").trim();
+
+  await requireStudioWorldEdit(worldSlug);
 
   const { db, auth } = notes();
   let pageId: string | null = null;

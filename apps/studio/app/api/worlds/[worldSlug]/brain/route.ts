@@ -4,7 +4,15 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  parseBody,
+  parseParams,
+  passthroughBodySchema,
+  requireStudioApiAuth,
+  safeHandlerError,
+  worldSlugParamSchema,
+} from "@uwe/security";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
@@ -19,7 +27,10 @@ export async function GET(request: Request, { params }: RouteParams) {
   const authError = requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { worldSlug } = await params;
+  const parsedParams = await parseParams(params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const { worldSlug } = parsedParams.data;
   const url = new URL(request.url);
   const campaignSlug = url.searchParams.get("campaign");
   const accessContext = url.searchParams.get("accessContext") === "portal" ? "portal" : "dm";
@@ -54,13 +65,18 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const { worldSlug } = await params;
-  const body = (await request.json()) as {
-    kind: "document" | "fact";
-    title: string;
+  const parsedParams = await parseParams(params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const body = parsed.data as {
+    kind?: string;
+    title?: string;
     content?: string;
     documentType?: string;
     factType?: string;
@@ -76,6 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "kind und title sind erforderlich." }, { status: 400 });
   }
 
+  const { worldSlug } = parsedParams.data;
   const { db, brain, repo } = brainService();
   try {
     const world = await repo.getWorldBySlug(worldSlug);
@@ -113,8 +130,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ fact }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return safeHandlerError(error, "Brain-Eintrag konnte nicht erstellt werden.");
   } finally {
     await db.$disconnect();
   }

@@ -4,10 +4,10 @@ import {
   createMailLogService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
   const url = new URL(request.url);

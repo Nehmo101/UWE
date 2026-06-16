@@ -1,5 +1,10 @@
-import { getBackupList, postBackupCreate } from "../../../src/lib/backup-handlers";
-import { requireStudioApiAuth } from "../../../src/lib/studio-api-auth";
+import { getBackupList, postBackupCreate, type BackupCreateBody } from "../../../src/lib/backup-handlers";
+import {
+  guardStudioMutation,
+  passthroughBodySchema,
+  parseBody,
+  requireStudioApiAuth,
+} from "@uwe/security";
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -9,9 +14,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "setup" });
   if (authError) return authError;
 
-  const body = await request.json();
-  return postBackupCreate(body);
+  const parsed = await parseBody(request, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  return postBackupCreate(parsed.data as unknown as BackupCreateBody);
 }

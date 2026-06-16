@@ -1,14 +1,19 @@
 import { getBackupDownload } from "../../../../../src/lib/backup-handlers";
-import { requireStudioApiAuth } from "../../../../../src/lib/studio-api-auth";
+import { idSchema, parseParams, requireStudioApiAuth } from "@uwe/security";
+import { z } from "zod";
+
+const backupIdParamSchema = z.object({ backupId: idSchema });
 
 interface Props {
   params: Promise<{ backupId: string }>;
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const { backupId } = await params;
-  return getBackupDownload(decodeURIComponent(backupId));
+  const parsedParams = await parseParams(params, backupIdParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  return getBackupDownload(decodeURIComponent(parsedParams.data.backupId));
 }

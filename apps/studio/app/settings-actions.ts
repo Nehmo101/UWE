@@ -11,6 +11,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { assertStudioTrusted } from "@/src/lib/authz";
 
 function repo() {
   return getAppRepository();
@@ -21,6 +22,8 @@ function parseBoolean(value: FormDataEntryValue | null): boolean {
 }
 
 export async function updateSettingsAction(formData: FormData) {
+  assertStudioTrusted();
+
   const tab = String(formData.get("tab") || "general");
   const update: UweSystemSettingsUpdate = {};
 
@@ -89,6 +92,8 @@ export async function updateSettingsAction(formData: FormData) {
 }
 
 export async function setWorldGuestModeAction(formData: FormData) {
+  assertStudioTrusted();
+
   const worldId = String(formData.get("worldId"));
   const enabled = parseBoolean(formData.get("guestModeEnabled"));
   const tab = String(formData.get("tab") || "worlds");

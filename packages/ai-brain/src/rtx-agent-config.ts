@@ -72,10 +72,15 @@ export function resolveRtxAgentConfig(env: NodeJS.ProcessEnv = process.env): Rtx
   }
 
   const timeoutMs = Number.parseInt(env.RTX_TIMEOUT_MS ?? "3000", 10);
+  const token = env.RTX_AGENT_TOKEN?.trim() ?? "";
+
+  if (!token) {
+    return null;
+  }
 
   return {
     url: evaluation.url,
-    token: env.RTX_AGENT_TOKEN?.trim() ?? "",
+    token,
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 3000,
     preferredModel: env.PREFERRED_LOCAL_MODEL?.trim() || undefined,
   };

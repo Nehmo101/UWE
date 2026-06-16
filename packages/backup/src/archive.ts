@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import AdmZip from "adm-zip";
-import { resolveAssetFilePath } from "@uwe/assets";
+import { resolveAssetFilePath, ZipSecurityError, assertSafeZipEntryName, resolveZipImportPolicy } from "@uwe/assets";
 import type { BackupBundle, BackupManifest } from "./types";
 import {
   BACKUP_ASSETS_DIR,
@@ -67,19 +67,42 @@ export function extractBackupAssets(
   targetUploadsRoot: string,
   idMap?: Map<string, string>,
 ): string[] {
-  const zip = Buffer.isBuffer(zipInput) ? new AdmZip(zipInput) : new AdmZip(zipInput);
+  const policy = resolveZipImportPolicy();
+  const zipBuffer = Buffer.isBuffer(zipInput) ? zipInput : fs.readFileSync(zipInput);
+
+  if (zipBuffer.length > policy.maxZipBytes) {
+    throw new ZipSecurityError(
+      `Backup-ZIP überschreitet die maximale Größe von ${policy.maxZipBytes} Bytes.`,
+      "zip_too_large",
+    );
+  }
+
+  const zip = new AdmZip(zipBuffer);
   const bundle = parseBackupZip(zip);
   const copied: string[] = [];
+  let totalUncompressed = 0;
 
   for (const asset of bundle.data.assets) {
-    const entry = zip.getEntry(assetZipPath(asset.storageKey));
+    const zipEntryPath = assetZipPath(asset.storageKey);
+    assertSafeZipEntryName(zipEntryPath);
+
+    const entry = zip.getEntry(zipEntryPath);
     if (!entry) continue;
+
+    const data = entry.getData();
+    totalUncompressed += data.length;
+    if (totalUncompressed > policy.maxUncompressedBytes) {
+      throw new ZipSecurityError(
+        `Entpackter Backup-Inhalt überschreitet ${policy.maxUncompressedBytes} Bytes.`,
+        "zip_bomb",
+      );
+    }
 
     const mappedWorldId = idMap?.get(asset.worldId) ?? asset.worldId;
     const storageKey = asset.storageKey.replace(asset.worldId, mappedWorldId);
     const targetPath = resolveAssetFilePath(storageKey, targetUploadsRoot);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.writeFileSync(targetPath, entry.getData());
+    fs.writeFileSync(targetPath, data);
     copied.push(storageKey);
   }
 

@@ -10,6 +10,7 @@ import {
   createUweRepository,
   createWorldInspectorService,
   getSystemSettings,
+  logAuditEvent,
   prisma,
   resolveLocalOnlyMode,
   type JobService,
@@ -95,6 +96,13 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
       summary: `Backup erstellt (${payload.type}): ${filename}.`,
     });
 
+    await logAuditEvent(prisma, {
+      action: "backup_created",
+      targetType: "backup",
+      targetId: filename,
+      metadata: { type: payload.type, format: "json", filename },
+    });
+
     return { filename, path: outputPath, manifest: bundle.manifest };
   }
 
@@ -109,6 +117,13 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
     targetLabel: filename,
     targetHref: "/backup",
     summary: `Backup erstellt (${payload.type}): ${filename}.`,
+  });
+
+  await logAuditEvent(prisma, {
+    action: "backup_created",
+    targetType: "backup",
+    targetId: filename,
+    metadata: { type: payload.type, format: "zip", filename },
   });
 
   return { filename, path: outputPath, manifest: bundle.manifest };
@@ -142,6 +157,7 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   const result = await executeImport(repo, bundle, payload.worldSlug, payload.format, options);
+  const world = await repo.getWorldBySlug(payload.worldSlug);
 
   await createActivityLogService(prisma).log({
     worldSlug: payload.worldSlug,
@@ -150,6 +166,14 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
     targetLabel: payload.worldSlug,
     targetHref: `/worlds/${payload.worldSlug}`,
     summary: `Import (${payload.format}) in Welt „${payload.worldSlug}" ausgeführt.`,
+  });
+
+  await logAuditEvent(prisma, {
+    action: "import_completed",
+    targetType: "import",
+    targetId: ctx.jobId,
+    worldId: world?.id,
+    metadata: { format: payload.format, jobId: ctx.jobId },
   });
 
   return { result };
@@ -582,6 +606,16 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
     targetLabel: payload.backupId ?? payload.filename ?? null,
     targetHref: "/backup",
     summary: `Backup wiederhergestellt${payload.targetWorldSlug ? ` (Welt ${payload.targetWorldSlug})` : ""}.`,
+  });
+
+  await logAuditEvent(prisma, {
+    action: "restore_completed",
+    targetType: "backup",
+    targetId: payload.backupId ?? payload.filename ?? ctx.jobId,
+    metadata: {
+      targetWorldSlug: payload.targetWorldSlug,
+      jobId: ctx.jobId,
+    },
   });
 
   return { result };

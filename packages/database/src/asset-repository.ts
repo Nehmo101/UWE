@@ -1,5 +1,6 @@
 import type { AssetType, Prisma, Visibility } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { logAuditEvent } from "./audit-log-service";
 import { parseStringArray, toJsonArray } from "./json-utils";
 import {
   filterAssetsForContext,
@@ -149,7 +150,20 @@ export async function updateAssetRecord(db: PrismaClient, assetId: string, input
 }
 
 export async function deleteAssetRecord(db: PrismaClient, assetId: string) {
-  return db.asset.delete({ where: { id: assetId } });
+  const asset = await db.asset.findUnique({ where: { id: assetId } });
+  const deleted = await db.asset.delete({ where: { id: assetId } });
+
+  if (asset) {
+    await logAuditEvent(db, {
+      action: "upload_deleted",
+      targetType: "asset",
+      targetId: assetId,
+      worldId: asset.worldId,
+      metadata: { title: asset.title, type: asset.type },
+    });
+  }
+
+  return deleted;
 }
 
 export async function linkAssetToPage(db: PrismaClient, assetId: string, pageId: string) {

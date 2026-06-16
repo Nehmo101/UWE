@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import {
   databaseHealthCheck,
   getSystemStatus,
@@ -12,7 +13,10 @@ import { RATE_LIMITER_MODE } from "@/src/lib/rate-limit";
  * Healthcheck: app runtime, database, migrations, storage, version and rate limiter mode.
  * Leaks no sensitive data — only booleans, counts, resolved paths and non-secret facts.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requirePortalApiAuth(request);
+  if (authError) return authError;
+
   const db = await databaseHealthCheck();
   const system = await getSystemStatus(prisma, { rateLimiterMode: RATE_LIMITER_MODE });
 

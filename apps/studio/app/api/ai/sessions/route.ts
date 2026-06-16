@@ -1,20 +1,21 @@
 import { getSessions } from "../../../../src/lib/ai-handlers";
+import {
+  aiSessionsQuerySchema,
+  parseQuery,
+  requireStudioApiAuth,
+  safeHandlerError,
+} from "@uwe/security";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const worldSlug = searchParams.get("worldSlug");
-  const pageSlug = searchParams.get("pageSlug") ?? undefined;
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
 
-  if (!worldSlug) {
-    return Response.json({ error: "worldSlug ist erforderlich." }, { status: 400 });
-  }
+  const parsed = parseQuery(request.url, aiSessionsQuerySchema);
+  if (!parsed.success) return parsed.response;
 
   try {
-    return await getSessions(worldSlug, pageSlug);
+    return await getSessions(parsed.data.worldSlug, parsed.data.pageSlug);
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Sessions konnten nicht geladen werden." },
-      { status: 500 },
-    );
+    return safeHandlerError(error, "Sessions konnten nicht geladen werden.");
   }
 }

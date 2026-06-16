@@ -1,0 +1,43 @@
+[Unit]
+Description=UWE — Universeller Welten-Editor (Studio + Portal)
+Documentation=file:///opt/uwe/docs/deployment-hardening.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=uwe
+Group=uwe
+WorkingDirectory=/opt/uwe
+Environment=UWE_HOME=/opt/uwe
+Environment=UWE_ENV=/etc/uwe/uwe.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+EnvironmentFile=-/etc/uwe/uwe.env
+
+# Bind to localhost only — Cloudflare Tunnel connects locally; no WAN exposure.
+ExecStart=/opt/uwe/deploy/scripts/start-uwe.sh
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/uwe /var/backups/uwe /var/log/uwe
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uwe
+
+[Install]
+WantedBy=multi-user.target

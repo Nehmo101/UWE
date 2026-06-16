@@ -1,15 +1,23 @@
 import { postDiscard } from "../../../../../src/lib/ai-handlers";
-import { requireStudioApiAuth } from "../../../../../src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  optionalString,
+  parseBody,
+} from "@uwe/security";
+import { z } from "zod";
+
+const aiDiscardBodySchema = z.object({
+  proposalId: idSchema,
+  reason: optionalString,
+});
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
-  const body = (await request.json()) as { proposalId: string; reason?: string };
+  const parsed = await parseBody(request, aiDiscardBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.proposalId) {
-    return Response.json({ error: "proposalId ist erforderlich." }, { status: 400 });
-  }
-
-  return postDiscard(body);
+  return postDiscard(parsed.data);
 }

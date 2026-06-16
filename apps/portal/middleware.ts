@@ -1,45 +1,75 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
-  getUweRuntimeConfig,
-  isProductionEnv,
-  SESSION_COOKIE_NAME,
+  applySecurityHeaders,
+  evaluatePortalMiddleware,
+  isCrossSiteBrowserRequest,
 } from "@uwe/auth";
 
-function isGuestWikiPath(pathname: string): boolean {
-  return pathname === "/worlds" || pathname.startsWith("/worlds/");
-}
+function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null {
+  if (!request.nextUrl.pathname.startsWith("/api/")) {
+    return null;
+  }
 
-function requiresAuthenticatedPortalAccess(): boolean {
-  const config = getUweRuntimeConfig();
-  return config.isProduction && (config.authRequired || !config.playerPreviewPublic);
+  if (!isCrossSiteBrowserRequest(request)) {
+    return null;
+  }
+
+  return applySecurityHeaders(
+    NextResponse.json(
+      { error: "Cross-Origin-Anfragen an die Portal-API sind nicht erlaubt." },
+      { status: 403 },
+    ),
+  );
 }
 
 export function middleware(request: NextRequest) {
-  if (!isProductionEnv()) {
-    return NextResponse.next();
+  const crossOriginError = rejectCrossOriginApiRequest(request);
+  if (crossOriginError) {
+    return crossOriginError;
   }
 
-  const pathname = request.nextUrl.pathname;
-  if (!isGuestWikiPath(pathname)) {
-    return NextResponse.next();
+  const decision = evaluatePortalMiddleware({
+    pathname: request.nextUrl.pathname,
+    url: request.url,
+    headers: request.headers,
+    cookies: request.cookies,
+  });
+
+  if (decision.action === "allow") {
+    return applySecurityHeaders(NextResponse.next());
   }
 
-  if (!requiresAuthenticatedPortalAccess()) {
-    return NextResponse.next();
+  if (decision.action === "redirect-login") {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = decision.redirectPath ?? "/login";
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
-  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
-  if (hasSession) {
-    return NextResponse.next();
+  if (decision.status === 404) {
+    return applySecurityHeaders(
+      NextResponse.json({ error: decision.error ?? "Nicht gefunden." }, { status: 404 }),
+    );
   }
 
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.pathname = "/login";
-  loginUrl.searchParams.set("redirect", pathname);
-  return NextResponse.redirect(loginUrl);
+  return applySecurityHeaders(
+    NextResponse.json(
+      { error: decision.error ?? "Zugriff verweigert." },
+      { status: decision.status ?? 403 },
+    ),
+  );
 }
 
 export const config = {
-  matcher: ["/worlds", "/worlds/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/worlds/:path*",
+    "/players/:path*",
+    "/auth/:path*",
+    "/share/:path*",
+    "/public-assets/:path*",
+    "/api/:path*",
+  ],
 };

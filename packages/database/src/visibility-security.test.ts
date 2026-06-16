@@ -87,7 +87,9 @@ describe("visibility security guarantees", () => {
 
   it("never exposes dm_only visibilities through the portal allow-lists", () => {
     assert.ok(!PORTAL_PAGE_VISIBILITIES.includes("dm_only"));
+    assert.ok(!PORTAL_PAGE_VISIBILITIES.includes("private"));
     assert.ok(!PORTAL_BLOCK_VISIBILITIES.includes("dm_only"));
+    assert.ok(!PORTAL_BLOCK_VISIBILITIES.includes("private"));
     assert.ok(!PORTAL_PAGE_VISIBILITIES.includes("archived"));
     assert.ok(!PORTAL_BLOCK_VISIBILITIES.includes("archived"));
   });

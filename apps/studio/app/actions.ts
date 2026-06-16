@@ -1,3 +1,4 @@
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   buildPageUrl,
   createActivityLogService,
@@ -17,6 +18,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function repo() {
   return getAppRepository();
@@ -27,9 +29,12 @@ function activity() {
 }
 
 export async function updatePageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const pageId = String(formData.get("pageId"));
   const worldSlug = String(formData.get("worldSlug"));
   const pageSlug = String(formData.get("pageSlug"));
+
+  await requireStudioContentEdit(worldSlug, pageId);
 
   // Capture old type/slug before the update so both old and new URLs are revalidated.
   const oldPage = await repo().getPageBySlug(worldSlug, pageSlug);
@@ -93,7 +98,9 @@ export async function updatePageAction(formData: FormData) {
 }
 
 export async function createPageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
   const world = await repo().getWorldBySlug(worldSlug);
   if (!world) throw new Error("World not found");
 
@@ -180,15 +187,27 @@ export async function createPageAction(formData: FormData) {
 }
 
 export async function updateContentBlockAction(formData: FormData) {
+  await requireStudioActionAuth();
   const blockId = String(formData.get("blockId"));
   const worldSlug = String(formData.get("worldSlug"));
   const pageSlug = String(formData.get("pageSlug"));
   const category = String(formData.get("category"));
 
+  await requireStudioWorldEdit(worldSlug);
+
   const oldBlock = await prisma.contentBlock.findUnique({
     where: { id: blockId },
     include: { page: { select: { worldId: true, title: true } } },
   });
+  if (!oldBlock) {
+    throw new Error("Block nicht gefunden");
+  }
+
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world || oldBlock.page.worldId !== world.id) {
+    throw new Error("Block nicht gefunden");
+  }
+
   const newVisibility = formData.get("visibility") as Visibility;
 
   await repo().updateContentBlock(blockId, {
@@ -219,10 +238,13 @@ export async function updateContentBlockAction(formData: FormData) {
 }
 
 export async function createContentBlockAction(formData: FormData) {
+  await requireStudioActionAuth();
   const pageId = String(formData.get("pageId"));
   const worldSlug = String(formData.get("worldSlug"));
   const pageSlug = String(formData.get("pageSlug"));
   const category = String(formData.get("category"));
+
+  await requireStudioContentEdit(worldSlug, pageId);
 
   const page = await repo().getPageBySlug(worldSlug, pageSlug);
   const nextOrder = page?.contentBlocks.length ?? 0;
@@ -239,10 +261,13 @@ export async function createContentBlockAction(formData: FormData) {
 }
 
 export async function deleteContentBlockAction(formData: FormData) {
+  await requireStudioActionAuth();
   const blockId = String(formData.get("blockId"));
   const worldSlug = String(formData.get("worldSlug"));
   const pageSlug = String(formData.get("pageSlug"));
   const category = String(formData.get("category"));
+
+  await requireStudioWorldEdit(worldSlug);
 
   // Snapshot before deleting so the block can be restored from the activity log.
   const block = await prisma.contentBlock.findUnique({
@@ -250,16 +275,24 @@ export async function deleteContentBlockAction(formData: FormData) {
     include: { page: { select: { worldId: true, title: true } } },
   });
 
+  if (!block) {
+    throw new Error("Block nicht gefunden");
+  }
+
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world || block.page.worldId !== world.id) {
+    throw new Error("Block nicht gefunden");
+  }
+
   let undoEntryId: string | undefined;
-  if (block) {
+  {
     const undoEntry = await createUndoService(prisma).captureBlock(blockId, "block.delete");
     undoEntryId = undoEntry.id;
   }
 
   await repo().deleteContentBlock(blockId);
 
-  if (block) {
-    await activity().log({
+  await activity().log({
       worldId: block.page.worldId,
       worldSlug,
       action: "content_deleted",
@@ -271,7 +304,6 @@ export async function deleteContentBlockAction(formData: FormData) {
       details: { blockType: block.type, visibility: block.visibility },
       undoEntryId,
     });
-  }
 
   revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);
   redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?saved=1`);

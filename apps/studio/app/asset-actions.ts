@@ -1,3 +1,4 @@
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   getAppRepository,
   type AssetType,
@@ -5,15 +6,22 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireStudioAssetEdit, requireStudioContentEdit } from "@/src/lib/authz";
 
 function repo() {
   return getAppRepository();
 }
 
 export async function linkAssetToPageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const assetId = String(formData.get("assetId"));
   const pageId = String(formData.get("pageId"));
+
+  await requireStudioAssetEdit(worldSlug, assetId);
+  if (pageId) {
+    await requireStudioContentEdit(worldSlug, pageId);
+  }
 
   if (pageId) {
     await repo().linkAssetToPage(assetId, pageId);
@@ -24,8 +32,11 @@ export async function linkAssetToPageAction(formData: FormData) {
 }
 
 export async function updateAssetAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const assetId = String(formData.get("assetId"));
+
+  await requireStudioAssetEdit(worldSlug, assetId);
 
   await repo().updateAsset(assetId, {
     title: String(formData.get("title")),

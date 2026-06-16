@@ -4,7 +4,26 @@ import {
   createMailTemplateService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  requireStudioApiAuth,
+} from "@uwe/security";
+import { z } from "zod";
+
+const mailTemplateCreateSchema = z.object({
+  worldId: idSchema,
+  name: nonEmptyString.max(200),
+  subject: nonEmptyString.max(500),
+  description: optionalString,
+  bodyHtml: optionalString,
+  bodyText: optionalString,
+  slug: optionalString,
+  kind: z.literal("custom").optional(),
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -20,38 +39,22 @@ export async function GET(request: Request) {
   assertMailApiResponseHasNoSecrets(payload);
   return NextResponse.json(payload);
 }
+
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, mailTemplateCreateSchema);
+  if (!parsed.success) return parsed.response;
 
-  if (typeof body !== "object" || body === null) {
-    return NextResponse.json({ error: "Request-Body muss ein JSON-Objekt sein." }, { status: 400 });
-  }
-
-  const payload = body as Record<string, unknown>;
-  const worldId = String(payload.worldId ?? "").trim();
-  const name = String(payload.name ?? "").trim();
-  const subject = String(payload.subject ?? "").trim();
-
-  if (!worldId || !name || !subject) {
-    return NextResponse.json({ error: "worldId, name und subject erforderlich." }, { status: 400 });
-  }
-
-  const template = await createMailTemplateService(prisma).createTemplate(worldId, {
-    name,
-    subject,
-    description: String(payload.description ?? ""),
-    bodyHtml: String(payload.bodyHtml ?? ""),
-    bodyText: String(payload.bodyText ?? ""),
-    slug: payload.slug ? String(payload.slug) : undefined,
-    kind: payload.kind ? (String(payload.kind) as "custom") : undefined,
+  const template = await createMailTemplateService(prisma).createTemplate(parsed.data.worldId, {
+    name: parsed.data.name,
+    subject: parsed.data.subject,
+    description: parsed.data.description ?? "",
+    bodyHtml: parsed.data.bodyHtml ?? "",
+    bodyText: parsed.data.bodyText ?? "",
+    slug: parsed.data.slug,
+    kind: parsed.data.kind,
   });
 
   return NextResponse.json({ template }, { status: 201 });

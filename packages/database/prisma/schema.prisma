@@ -43,12 +43,25 @@ enum DungeonPrepStatus {
 }
 
 enum Visibility {
+  private
   dm_only
   player_visible
   public
   specific_players
   unlock_after_session
   archived
+}
+
+enum SecretLevel {
+  none
+  spoiler
+  dm_secret
+}
+
+enum RevealState {
+  hidden
+  preview
+  revealed
 }
 
 enum PublishStatus {
@@ -95,8 +108,10 @@ enum AssetType {
 
 enum UserRole {
   owner
+  admin
   dm
   player
+  readonly
   guest
 }
 
@@ -544,8 +559,10 @@ model Page {
   slug            String
   type            PageType
   summary         String?
-  visibility      Visibility         @default(dm_only)
+  visibility      Visibility         @default(private)
   publishStatus   PublishStatus      @default(draft) @map("publish_status")
+  secretLevel     SecretLevel        @default(none) @map("secret_level")
+  revealState     RevealState        @default(hidden) @map("reveal_state")
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   tags            Json?
@@ -629,9 +646,11 @@ model ContentBlock {
   assetId    String?          @map("asset_id")
   type       ContentBlockType
   sortOrder  Int              @map("sort_order")
-  content    String           @default("")
-  visibility Visibility       @default(dm_only)
-  metadata   Json?
+  content     String           @default("")
+  visibility  Visibility       @default(private)
+  secretLevel SecretLevel      @default(none) @map("secret_level")
+  revealState RevealState      @default(hidden) @map("reveal_state")
+  metadata    Json?
   createdAt  DateTime         @default(now()) @map("created_at")
   updatedAt  DateTime         @updatedAt @map("updated_at")
 
@@ -653,11 +672,13 @@ model Asset {
   storageKey  String     @map("storage_key")
   mimeType    String?    @map("mime_type")
   size        Int        @default(0)
-  visibility  Visibility @default(dm_only)
+  visibility  Visibility  @default(private)
+  secretLevel SecretLevel @default(none) @map("secret_level")
+  revealState RevealState @default(hidden) @map("reveal_state")
   tags        Json?
   metadata    Json?
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
   world         World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
@@ -963,6 +984,66 @@ model ActivityLog {
   @@index([createdAt])
   @@index([undoEntryId])
   @@map("activity_logs")
+}
+
+enum AuditAction {
+  login_success
+  login_failed
+  logout
+  setup_owner_created
+  user_created
+  user_role_changed
+  content_created
+  content_updated
+  content_deleted
+  visibility_changed
+  secret_revealed
+  import_started
+  import_completed
+  import_failed
+  upload_created
+  upload_deleted
+  ai_request
+  backup_created
+  restore_started
+  restore_completed
+  authz_denied
+  rate_limit_hit
+}
+
+enum AuditTargetType {
+  user
+  session
+  page
+  content_block
+  asset
+  world
+  system
+  ai_run
+  backup
+  import
+  settings
+}
+
+// Security audit log — append-only, no FKs to content tables.
+// Stores hashed IP/UA only; metadata is redacted before persistence.
+model AuditLog {
+  id             String          @id @default(cuid())
+  timestamp      DateTime        @default(now())
+  actorUserId    String?         @map("actor_user_id")
+  action         AuditAction
+  targetType     AuditTargetType @map("target_type")
+  targetId       String?         @map("target_id")
+  worldId        String?         @map("world_id")
+  ipHash         String?         @map("ip_hash")
+  userAgentHash  String?         @map("user_agent_hash")
+  metadataJson   Json?           @map("metadata_json")
+
+  @@index([action, timestamp])
+  @@index([actorUserId, timestamp])
+  @@index([worldId, timestamp])
+  @@index([timestamp])
+  @@map("audit_logs")
 }
 
 // Undo basis: a JSON snapshot of the state *before* a destructive or

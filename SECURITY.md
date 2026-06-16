@@ -38,7 +38,7 @@ The Studio dashboard and `GET /api/health` surface warnings for common misconfig
 - **Rate limiting** — login and share-password attempts are rate limited per IP (in-memory, per process; not sufficient alone for multi-instance deployments)
 - **Settings API validation** — partial settings updates are validated at runtime; unknown keys and invalid enum/path values are rejected with HTTP 400
 - **CSRF protection** — sensitive Studio API routes reject cross-origin browser requests
-- **Backups** — password hashes, session tokens, and API keys are stripped before export
+- **Backups** — password hashes, session tokens, and API keys are stripped before export; role-based access (OWNER/ADMIN create, OWNER-only restore); Zip Slip protection; optional AES-256-GCM encryption via `UWE_BACKUP_ENCRYPTION_KEY`
 - **AI keys** — read from environment only; never stored in the database or returned to clients
 
 ## Known Considerations

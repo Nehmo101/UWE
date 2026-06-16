@@ -1,38 +1,28 @@
 import { runInferenceTestPrompt } from "@uwe/ai-brain";
+import {
+  guardStudioMutation,
+  inferenceTestPromptBodySchema,
+  parseBody,
+} from "@uwe/security";
 
 /**
  * RTX inference smoke test — no secrets in response.
  */
 export async function POST(request: Request) {
-  let prompt: string | undefined;
-  let model: string | undefined;
-  let useMock = false;
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  if (authError) return authError;
 
-  try {
-    const body = (await request.json()) as {
-      prompt?: unknown;
-      model?: unknown;
-      mock?: unknown;
-    };
-    if (typeof body.prompt === "string") {
-      prompt = body.prompt;
-    }
-    if (typeof body.model === "string") {
-      model = body.model;
-    }
-    if (body.mock === true) {
-      useMock = true;
-    }
-  } catch {
-    // empty body is fine — defaults apply
-  }
+  const parsed = await parseBody(request, inferenceTestPromptBodySchema);
+  if (!parsed.success) return parsed.response;
 
   const { searchParams } = new URL(request.url);
-  if (searchParams.get("mock") === "true") {
-    useMock = true;
-  }
+  const useMock = parsed.data.mock === true || searchParams.get("mock") === "true";
 
-  const test = await runInferenceTestPrompt({ prompt, model, useMock });
+  const test = await runInferenceTestPrompt({
+    prompt: parsed.data.prompt,
+    model: parsed.data.model,
+    useMock,
+  });
 
   return Response.json({ test }, { status: test.ok ? 200 : 503 });
 }

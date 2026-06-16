@@ -123,13 +123,18 @@ export function generateEnvContent(options: EnvGenerationOptions): {
   let authSecret = generateAuthSecret();
   if (options.existingEnvPath && fs.existsSync(options.existingEnvPath)) {
     const existingValues = parseEnvFile(readEnvTemplate(options.existingEnvPath));
-    const existingSecret = existingValues.get("AUTH_SECRET");
+    const existingSecret =
+      existingValues.get("SESSION_SECRET") ?? existingValues.get("AUTH_SECRET");
     if (existingSecret && existingSecret.length > 0) {
       authSecret = existingSecret;
     }
   }
 
+  content = upsertEnvValue(content, "SESSION_SECRET", authSecret);
   content = upsertEnvValue(content, "AUTH_SECRET", authSecret);
+  if (!options.existingEnvPath || !fs.existsSync(options.existingEnvPath)) {
+    content = upsertEnvValue(content, "UWE_SETUP_TOKEN", generateAuthSecret());
+  }
   content = upsertEnvValue(content, "RUN_DB_SEED", runDbSeedForMode(options.mode));
   content = upsertEnvValue(content, "STUDIO_PORT", String(options.ports.studioPort));
   content = upsertEnvValue(content, "PORTAL_PORT", String(options.ports.portalPort));

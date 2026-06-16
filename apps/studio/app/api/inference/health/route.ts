@@ -1,12 +1,22 @@
 import { getInferenceStatus, runInferenceTestPrompt } from "@uwe/ai-brain";
+import {
+  inferenceHealthQuerySchema,
+  parseQuery,
+  requireStudioApiAuth,
+} from "@uwe/security";
 
 /**
  * RTX inference health — no secrets, only reachability and config facts.
  */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const useMock = searchParams.get("mock") === "true";
-  const runTest = searchParams.get("test") === "true";
+  const authError = requireStudioApiAuth(request, { rateLimit: "ai" });
+  if (authError) return authError;
+
+  const parsed = parseQuery(request.url, inferenceHealthQuerySchema);
+  if (!parsed.success) return parsed.response;
+
+  const useMock = parsed.data.mock === "true";
+  const runTest = parsed.data.test === "true";
 
   const status = await getInferenceStatus({ useMock });
 

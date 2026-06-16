@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { getAppRepository } from "@uwe/database/server";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
+import {
+  parseQuery,
+  requireStudioApiAuth,
+  searchQuerySchema,
+} from "@uwe/security";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q")?.trim() ?? "";
+  const authError = requireStudioApiAuth(request, { rateLimit: "search" });
+  if (authError) return authError;
 
+  const parsed = parseQuery(request.url, searchQuerySchema);
+  if (!parsed.success) return parsed.response;
+
+  const query = parsed.data.q.trim();
   if (query.length < 2) {
     return NextResponse.json({ results: [] });
   }

@@ -1,0 +1,2 @@
+-- Extend global UserRole enum with admin and readonly (SQLite stores enum as TEXT).
+-- Existing rows keep their current role values; new values are available for assignment.

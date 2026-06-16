@@ -1,24 +1,30 @@
-import { NextResponse } from "next/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  parseBody,
+  parseParams,
+  worldSlugParamSchema,
+} from "@uwe/security";
 import { playSpotifyForWorld } from "@/src/lib/spotify-handlers";
+import { z } from "zod";
+
+const spotifyPlayBodySchema = z.object({
+  uri: z.string().max(500).optional(),
+  volume: z.number().min(0).max(100).optional(),
+});
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const { worldSlug } = await params;
+  const parsedParams = await parseParams(params, worldSlugParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
 
-  let body: { uri?: string; volume?: number };
+  const parsed = await parseBody(request, spotifyPlayBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  try {
-    body = (await request.json()) as { uri?: string; volume?: number };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  return playSpotifyForWorld(worldSlug, body);
+  return playSpotifyForWorld(parsedParams.data.worldSlug, parsed.data);
 }

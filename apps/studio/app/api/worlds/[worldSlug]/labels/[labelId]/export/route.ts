@@ -9,13 +9,24 @@ import {
 } from "@uwe/database/server";
 import { logLabelExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
+import { idSchema, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+
+const labelExportParamsSchema = worldSlugParamSchema.extend({
+  labelId: idSchema,
+});
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const { worldSlug, labelId } = await params;
+  const authError = requireStudioApiAuth(request);
+  if (authError) return authError;
+
+  const parsedParams = await parseParams(params, labelExportParamsSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const { worldSlug, labelId } = parsedParams.data;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "html";
   const includeDmOnly = url.searchParams.get("includeDmOnly");

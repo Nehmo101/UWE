@@ -4,7 +4,27 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { generateIcalCalendar } from "@uwe/calendar";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import {
+  guardStudioMutation,
+  idSchema,
+  nonEmptyString,
+  optionalString,
+  parseBody,
+  requireStudioApiAuth,
+} from "@uwe/security";
+import { z } from "zod";
+
+const calendarEventCreateSchema = z.object({
+  title: nonEmptyString.max(500),
+  description: optionalString,
+  location: optionalString,
+  startAt: nonEmptyString.max(100),
+  endAt: optionalString,
+  allDay: z.boolean().optional(),
+  kind: z.enum(["session", "prep", "personal", "external", "dnd"]).optional(),
+  worldId: idSchema.optional().nullable(),
+  sessionId: idSchema.optional().nullable(),
+});
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -47,25 +67,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const body = (await request.json()) as {
-    title?: string;
-    description?: string;
-    location?: string;
-    startAt?: string;
-    endAt?: string;
-    allDay?: boolean;
-    kind?: string;
-    worldId?: string;
-    sessionId?: string;
-  };
+  const parsed = await parseBody(request, calendarEventCreateSchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!body.title?.trim() || !body.startAt) {
-    return NextResponse.json({ error: "title und startAt sind erforderlich." }, { status: 400 });
-  }
-
+  const body = parsed.data;
   const calendar = createCalendarService(prisma);
   const localFeed = await calendar.ensureLocalFeed();
   const event = await calendar.createEvent({
@@ -76,7 +84,7 @@ export async function POST(request: Request) {
     startAt: new Date(body.startAt),
     endAt: body.endAt ? new Date(body.endAt) : null,
     allDay: body.allDay ?? false,
-    kind: (body.kind as "session" | "prep" | "personal" | "external" | "dnd") ?? "personal",
+    kind: body.kind ?? "personal",
     worldId: body.worldId ?? null,
     sessionId: body.sessionId ?? null,
   });

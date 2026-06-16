@@ -4,11 +4,13 @@ import {
   createMailService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
-  if (authError) return authError;  const mail = createMailService(prisma);
+  if (authError) return authError;
+
+  const mail = createMailService(prisma);
   const status = await mail.getConfigStatus();
   const payload = { status };
 

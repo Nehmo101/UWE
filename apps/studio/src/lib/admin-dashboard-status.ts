@@ -1,29 +1,39 @@
+import type { PrismaClient } from "@uwe/database/server";
 import {
   getAdminStatus,
+  scanPublicContentLeaks,
   type AdminStatus,
+  type PublicLeakScanResult,
 } from "@uwe/database/server";
+import { validateUweEnvironment, type EnvValidationIssue } from "@uwe/auth";
 import { checkRtxHealth, type RtxHealthStatus } from "@uwe/ai-brain/router";
 import { getInferenceStatus, type InferenceStatus } from "@uwe/ai-brain/inference";
-import type { PrismaClient } from "@uwe/database/server";
 
 export interface AdminDashboardStatus extends AdminStatus {
   inference: InferenceStatus;
   rtx: RtxHealthStatus;
+  envValidation: EnvValidationIssue[];
+  publicLeaks: PublicLeakScanResult;
 }
 
 export async function getAdminDashboardStatus(
   db: PrismaClient,
   options: { rateLimiterMode?: string; useMockInference?: boolean } = {},
 ): Promise<AdminDashboardStatus> {
-  const [admin, inference, rtx] = await Promise.all([
+  const [admin, inference, rtx, publicLeaks] = await Promise.all([
     getAdminStatus(db, { rateLimiterMode: options.rateLimiterMode }),
     getInferenceStatus({ useMock: options.useMockInference }),
     checkRtxHealth({ useMock: options.useMockInference }),
+    scanPublicContentLeaks(db),
   ]);
+
+  const envValidation = validateUweEnvironment();
 
   const inferenceBlocksOk = !inference.enabled || rtx.ready || inference.online;
   const securityBlocksOk =
-    admin.studioSecurity.severity !== "critical" && admin.rtxExposure.severity !== "critical";
+    admin.studioSecurity.severity !== "critical" &&
+    admin.rtxExposure.severity !== "critical" &&
+    publicLeaks.criticalCount === 0;
   const ok = admin.ok && inferenceBlocksOk && securityBlocksOk;
 
   return {
@@ -31,6 +41,8 @@ export async function getAdminDashboardStatus(
     ok,
     inference,
     rtx,
+    envValidation,
+    publicLeaks,
   };
 }
 

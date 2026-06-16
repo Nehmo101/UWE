@@ -1,17 +1,21 @@
 import { getRuns } from "../../../../src/lib/ai-handlers";
-import { requireStudioApiAuth } from "../../../../src/lib/studio-api-auth";
+import { parseQuery, passthroughBodySchema, requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await requireStudioApiAuth(request);
   if (authError) return authError;
 
-  const url = new URL(request.url);
-  const worldSlug = url.searchParams.get("worldSlug") ?? undefined;
-  const pageId = url.searchParams.get("pageId") ?? undefined;
-  const gameSessionId = url.searchParams.get("gameSessionId") ?? undefined;
-  const status = url.searchParams.get("status") ?? undefined;
-  const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : undefined;
-  const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : undefined;
+  const parsed = parseQuery(request.url, passthroughBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const params = parsed.data as Record<string, unknown>;
+  const worldSlug = typeof params.worldSlug === "string" ? params.worldSlug : undefined;
+  const pageId = typeof params.pageId === "string" ? params.pageId : undefined;
+  const gameSessionId =
+    typeof params.gameSessionId === "string" ? params.gameSessionId : undefined;
+  const status = typeof params.status === "string" ? params.status : undefined;
+  const limit = typeof params.limit === "string" ? Number(params.limit) : undefined;
+  const offset = typeof params.offset === "string" ? Number(params.offset) : undefined;
 
   return getRuns({ worldSlug, pageId, gameSessionId, status, limit, offset });
 }

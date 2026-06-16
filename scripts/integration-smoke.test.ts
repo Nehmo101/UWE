@@ -35,7 +35,10 @@ function listFiles(dir: string, pattern: RegExp): string[] {
 
 /** Client-side files that must never reference server secrets. */
 const FORBIDDEN_CLIENT_SECRET_PATTERNS = [
+  /process\.env\.SESSION_SECRET/,
   /process\.env\.AUTH_SECRET/,
+  /process\.env\.UWE_SETUP_TOKEN/,
+  /process\.env\.RTX_SERVICE_TOKEN/,
   /process\.env\.RTX_AGENT_TOKEN/,
   /process\.env\.CLOUD_AI_API_KEY/,
   /process\.env\.STUDIO_API_TOKEN/,
@@ -179,16 +182,42 @@ describe("integration smoke — DnD generator AI tasks", () => {
   });
 });
 
+describe("integration smoke — AI security policy module", () => {
+  it("includes centralized ai-policy module", () => {
+    assert.ok(
+      exists("packages/security/src/security/ai-policy.ts"),
+      "Missing packages/security/src/security/ai-policy.ts",
+    );
+    const policy = read("packages/security/src/security/ai-policy.ts");
+    assert.match(policy, /requireAiRole|canUseAi/);
+    assert.match(policy, /validatePromptLength/);
+    assert.match(policy, /resolveEffectiveAllowDmOnly/);
+  });
+
+  it("protects unauthenticated AI routes", () => {
+    const dndGenerator = read("apps/studio/app/api/dnd-generator/route.ts");
+    const inferenceTest = read("apps/studio/app/api/inference/test-prompt/route.ts");
+    assert.match(dndGenerator, /requireStudioApiAuth|guardStudioMutation/);
+    assert.match(inferenceTest, /requireStudioApiAuth|guardStudioMutation/);
+  });
+});
+
 describe("integration smoke — security test coverage", () => {
   const securityTests = [
+    "packages/security/src/security/ai-policy.test.ts",
     "packages/ai-brain/src/privacy.test.ts",
     "packages/ai-brain/src/router/router.test.ts",
     "packages/ai-brain/src/inference.test.ts",
     "packages/database/src/visibility-security.test.ts",
     "packages/database/src/production-safety.test.ts",
+    "packages/database/src/security-dashboard.test.ts",
+    "packages/auth/src/security-access.test.ts",
     "packages/database/src/system-status.test.ts",
     "apps/studio/src/lib/studio-api-auth.test.ts",
     "apps/studio/src/admin-status.test.ts",
+    "packages/security-tests/src/public-leak-scanner.test.ts",
+    "packages/security-tests/src/role-matrix.test.ts",
+    "packages/security-tests/src/route-authz.test.ts",
   ];
 
   for (const testFile of securityTests) {
@@ -203,6 +232,7 @@ describe("integration smoke — Media, Calendar, DnD & Agent routes", () => {
     "apps/studio/app/image-studio/page.tsx",
     "apps/studio/app/calendar/page.tsx",
     "apps/studio/app/admin/agent-jobs/page.tsx",
+    "apps/studio/app/admin/security/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dnd-api/page.tsx",
     "apps/studio/app/api/image-studio/route.ts",
     "apps/studio/app/api/calendar/events/route.ts",
@@ -236,6 +266,7 @@ describe("integration smoke — documentation", () => {
     "docs/CALENDAR_INTEGRATION.md",
     "docs/DND_API_INTEGRATION.md",
     "docs/SECURITY_SETTINGS.md",
+    "docs/security-testing.md",
     "docs/TEST_PLAN.md",
     "SECURITY_NOTES.md",
     "CHANGELOG.md",
@@ -259,6 +290,20 @@ describe("integration smoke — mobile navigation", () => {
     const mobile = read("packages/shared-ui/src/MobileComponents.tsx");
     assert.match(mobile, /MobileBottomNav/);
     assert.match(mobile, /PageListCards/);
+  });
+});
+
+describe("integration smoke — env and secrets", () => {
+  it("includes centralized env validation", () => {
+    assert.ok(exists("packages/env/src/config/env.ts"));
+    assert.ok(exists("docs/secrets.md"));
+    assert.ok(exists("apps/studio/instrumentation.ts"));
+    assert.ok(exists("apps/portal/instrumentation.ts"));
+  });
+
+  it("documents secret scan script", () => {
+    const pkg = read("package.json");
+    assert.match(pkg, /secret:scan/);
   });
 });
 

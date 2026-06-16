@@ -8,6 +8,13 @@ export type { PrismaClient } from "./client";
 export type { Prisma } from "./generated/prisma/client";
 
 export { databaseHealthCheck, type HealthCheckResult } from "./health-server";
+export {
+  buildDetailedHealthPayload,
+  evaluatePublicHealth,
+  type BuildDetailedHealthOptions,
+  type DetailedHealthPayload,
+  type HealthAppName,
+} from "./health-endpoints";
 export { UWE_PRODUCT_NAME, UWE_VERSION } from "./version";
 
 export { getAppRepository } from "./app-repository";
@@ -68,6 +75,32 @@ export {
   PublishStatusEnum,
   VisibilityEnum,
 } from "./repository";
+
+export {
+  isPlayerExposableContent,
+  isBlockPlayerExposable,
+  isPagePlayerExposable,
+  isSecretVisibleToPlayer,
+  isDmOnlyVisibility,
+  isPlayerPortalVisibility,
+  mapPublishStatusToContentStatus,
+  sanitizeForPlayer,
+  detectPrivateReferences,
+  formatPrivateReferenceWarning,
+  PLAYER_PORTAL_VISIBILITIES,
+  type ContentAccessFields,
+  type ContentStatus,
+  type ContentVisibility,
+  type SanitizedPage,
+  type SecretLevel,
+  type RevealState,
+} from "./content-access";
+
+export {
+  buildPublicSearchIndex,
+  buildStudioSearchIndex,
+  buildSearchIndexForScope,
+} from "./search-index";
 
 export {
   filterBlocksForContext,
@@ -184,9 +217,29 @@ export type {
   LogActivityInput,
 } from "./activity-log-service";
 
+export {
+  AUDIT_ACTION_LABELS,
+  AuditLogService,
+  auditRequestFromHeaders,
+  createAuditLogService,
+  hashClientIp,
+  hashUserAgent,
+  logAuditEvent,
+  redactAuditMetadata,
+} from "./audit-log-service";
+
+export type {
+  AuditLogEntryView,
+  AuditRequestContext,
+  ListAuditLogOptions,
+  LogAuditEventInput,
+} from "./audit-log-service";
+
 export type {
   ActivityAction,
   ActivityTargetType,
+  AuditAction,
+  AuditTargetType,
 } from "./generated/prisma/client";
 
 export {
@@ -537,6 +590,21 @@ export {
 } from "./production-safety";
 
 export type { ProductionSafetyWarning } from "./production-safety";
+
+export {
+  assertSecurityDashboardHasNoSecrets,
+  buildSecurityWarnings,
+  getSecurityDashboardStatus,
+  getUserRoleCounts,
+} from "./security-dashboard";
+
+export type {
+  EnvSecretStatus,
+  SecurityDashboardStatus,
+  SecurityWarning,
+  SecurityWarningSeverity,
+  UserRoleCounts,
+} from "./security-dashboard";
 
 export type {
   UweSystemSettings,

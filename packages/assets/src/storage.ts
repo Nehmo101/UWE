@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { resolveUploadsDirFromEnv } from "./data-paths";
+import { EXTENSION_TO_KIND } from "./magic-bytes";
+import { buildSecureStorageKey, sanitizeOriginalFilename } from "./upload-policy";
 import type { AssetType } from "./types";
 
 /** Default uploads root (gitignored at repo root). */
@@ -18,13 +20,18 @@ export function resolveUploadsRoot(baseDir?: string, overridePath?: string): str
   return resolveUploadsDirFromEnv(baseDir ?? process.cwd());
 }
 
+/**
+ * Build a storage key from a filename hint. The original name is never used as a path segment.
+ */
 export function buildStorageKey(worldId: string, filename: string): string {
-  const safeName = filename.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  const unique = randomUUID().slice(0, 8);
-  const ext = path.extname(safeName);
-  const base = path.basename(safeName, ext) || "asset";
-  return path.posix.join(worldId, `${base}-${unique}${ext}`);
+  const ext = path.extname(filename).toLowerCase();
+  if (ext && ext in EXTENSION_TO_KIND) {
+    return buildSecureStorageKey(worldId, ext);
+  }
+  return path.posix.join(worldId, randomUUID());
 }
+
+export { sanitizeOriginalFilename };
 
 export function resolveAssetFilePath(
   storageKey: string,
@@ -32,7 +39,21 @@ export function resolveAssetFilePath(
   uploadsRootOverride?: string,
 ): string {
   const uploadsRoot = resolveUploadsRoot(baseDir, uploadsRootOverride);
-  const normalized = path.normalize(storageKey).replace(/^(\.\.(\/|\\|$))+/, "");
+
+  if (!storageKey.trim() || path.isAbsolute(storageKey) || storageKey.includes("\0")) {
+    throw new Error("Invalid storage key");
+  }
+
+  const normalized = path.normalize(storageKey).replace(/\\/g, "/");
+  if (
+    normalized.startsWith("..") ||
+    normalized.includes("/../") ||
+    normalized.endsWith("/..") ||
+    normalized.split("/").some((segment) => segment === "..")
+  ) {
+    throw new Error("Invalid storage key");
+  }
+
   const absolute = path.resolve(uploadsRoot, normalized);
   const rootResolved = path.resolve(uploadsRoot);
 

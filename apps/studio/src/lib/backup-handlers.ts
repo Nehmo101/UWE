@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
-import { createActivityLogService, createJobService, createPrismaClient, prisma } from "@uwe/database/server";
+import {
+  createActivityLogService,
+  createJobService,
+  createPrismaClient,
+  logAuditEvent,
+  prisma,
+} from "@uwe/database/server";
 import {
   listStoredBackups,
   loadBackupFromBuffer,
@@ -204,6 +210,18 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
         payload: body as unknown as Record<string, unknown>,
         maxAttempts: 1,
       });
+
+      await logAuditEvent(prisma, {
+        action: "restore_started",
+        targetType: "backup",
+        targetId: job.id,
+        metadata: {
+          backupId: body.backupId,
+          targetWorldSlug: body.targetWorldSlug,
+          sync: true,
+        },
+      });
+
       const completed = await runJob(job.id);
       if (completed?.status === "failed") {
         return NextResponse.json(
@@ -220,6 +238,17 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
       worldSlug: body.targetWorldSlug,
       payload: body as unknown as Record<string, unknown>,
       maxAttempts: 1,
+    });
+
+    await logAuditEvent(prisma, {
+      action: "restore_started",
+      targetType: "backup",
+      targetId: job.id,
+      metadata: {
+        backupId: body.backupId,
+        targetWorldSlug: body.targetWorldSlug,
+        async: true,
+      },
     });
 
     return NextResponse.json({ job }, { status: 202 });

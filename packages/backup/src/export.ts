@@ -3,7 +3,16 @@ import path from "node:path";
 import { createPrismaClient } from "@uwe/database/server";
 import { collectBackupData } from "./collect";
 import { readBackupZip, writeBackupZip } from "./archive";
+import { writeFileAtomic } from "./atomic-write";
+import {
+  decryptBackupPayload,
+  encryptBackupPayload,
+  encryptionKeyConfigured,
+  isEncryptedBackupPayload,
+} from "./encrypt";
 import { findSecretIssuesInJson } from "./sanitize";
+import { applyBackupRetention, normalizeRetentionCount } from "./retention";
+import { validateBackupBundleOrThrow } from "./validate";
 import {
   buildBackupFilename,
   ensureBackupsDir,
@@ -25,7 +34,7 @@ export async function createBackupBundle(
   const db = createPrismaClient(databaseUrl);
 
   try {
-    const { data, stats } = await collectBackupData(db, {
+    const { data, stats, settings } = await collectBackupData(db, {
       type: options.type,
       worldSlug: options.worldSlug,
       campaignSlug: options.campaignSlug,
@@ -41,17 +50,15 @@ export async function createBackupBundle(
       campaignSlug: options.campaignSlug,
       includesUsers: data.users.length > 0,
       includesAuthSessions: false,
+      includesSettings: Boolean(settings),
+      encrypted: Boolean(options.encrypt || encryptionKeyConfigured()),
       stats,
       assetFiles: [],
     };
 
-    const json = JSON.stringify(data);
-    const secretIssues = findSecretIssuesInJson(json);
-    if (secretIssues.length > 0) {
-      throw new Error(`Backup enthält sensible Daten: ${secretIssues.join(", ")}`);
-    }
-
-    return { manifest, data };
+    const bundle: BackupBundle = { manifest, data, settings };
+    validateBackupBundleOrThrow(bundle);
+    return bundle;
   } finally {
     await db.$disconnect();
   }
@@ -64,6 +71,26 @@ export async function exportBackupJson(
   return createBackupBundle(databaseUrl, options);
 }
 
+function shouldEncrypt(options: CreateBackupOptions): boolean {
+  return Boolean(options.encrypt || encryptionKeyConfigured() || options.encryptionPassword);
+}
+
+function writeEncryptedOrPlain(
+  outputPath: string,
+  content: Buffer,
+  options: CreateBackupOptions,
+): void {
+  if (shouldEncrypt(options)) {
+    const encrypted = encryptBackupPayload(content, {
+      password: options.encryptionPassword,
+    });
+    writeFileAtomic(outputPath, encrypted);
+    return;
+  }
+
+  writeFileAtomic(outputPath, content);
+}
+
 export async function exportBackupZip(
   databaseUrl: string | undefined,
   options: CreateBackupOptions,
@@ -74,13 +101,32 @@ export async function exportBackupZip(
 
   if (options.format === "json") {
     const jsonPath = path.join(backupsDir, filename);
-    fs.writeFileSync(jsonPath, JSON.stringify(bundle, null, 2), "utf8");
+    const jsonContent = Buffer.from(JSON.stringify(bundle, null, 2), "utf8");
+    writeEncryptedOrPlain(jsonPath, jsonContent, options);
     return { bundle, outputPath: jsonPath };
   }
 
   const zipFilename = buildBackupFilename(bundle.manifest);
   const outputPath = path.join(backupsDir, zipFilename);
-  writeBackupZip(bundle, outputPath, options.uploadsRoot);
+  const tempPath = `${outputPath}.${process.pid}.${Date.now()}.tmp`;
+  writeBackupZip(bundle, tempPath, options.uploadsRoot);
+  const zipBuffer = fs.readFileSync(tempPath);
+
+  if (shouldEncrypt(options)) {
+    const encrypted = encryptBackupPayload(zipBuffer, {
+      password: options.encryptionPassword,
+    });
+    writeFileAtomic(outputPath + ".enc", encrypted);
+    fs.unlinkSync(tempPath);
+    return { bundle, outputPath: outputPath + ".enc" };
+  }
+
+  fs.renameSync(tempPath, outputPath);
+
+  const retention = normalizeRetentionCount(options.retentionCount);
+  const backups = listStoredBackups(backupsDir);
+  applyBackupRetention(backups, retention);
+
   return { bundle, outputPath };
 }
 
@@ -89,13 +135,57 @@ export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   return entries
-    .filter((entry) => entry.isFile() && /\.(zip|json)$/i.test(entry.name))
+    .filter(
+      (entry) =>
+        entry.isFile() && /\.(zip|json|enc)$/i.test(entry.name) && !entry.name.startsWith("."),
+    )
     .map((entry) => {
       const filePath = path.join(dir, entry.name);
       const stat = fs.statSync(filePath);
+      const raw = fs.readFileSync(filePath);
+
+      if (entry.name.endsWith(".enc")) {
+        return {
+          id: entry.name,
+          filename: entry.name,
+          path: filePath,
+          manifest: {
+            version: "1.0" as const,
+            uweVersion: UWE_VERSION,
+            schemaVersion: "unknown",
+            type: "full" as const,
+            createdAt: stat.mtime.toISOString(),
+            includesUsers: false,
+            includesAuthSessions: false,
+            includesSettings: false,
+            encrypted: true,
+            stats: {
+              worlds: 0,
+              campaigns: 0,
+              pages: 0,
+              contentBlocks: 0,
+              pageLinks: 0,
+              assets: 0,
+              gameSessions: 0,
+              labels: 0,
+              labelTemplates: 0,
+              printLists: 0,
+              soundboardButtons: 0,
+            },
+            assetFiles: [],
+          },
+          size: stat.size,
+          createdAt: stat.mtime.toISOString(),
+        };
+      }
+
+      const content = isEncryptedBackupPayload(raw)
+        ? decryptBackupPayload(raw)
+        : raw;
 
       if (entry.name.endsWith(".json")) {
-        const bundle = JSON.parse(fs.readFileSync(filePath, "utf8")) as BackupBundle;
+        const bundle = JSON.parse(content.toString("utf8")) as BackupBundle;
+        validateBackupBundleOrThrow(bundle);
         return {
           id: entry.name,
           filename: entry.name,
@@ -106,7 +196,8 @@ export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
         };
       }
 
-      const bundle = readBackupZip(filePath);
+      const bundle = readBackupZip(content);
+      validateBackupBundleOrThrow(bundle);
       return {
         id: entry.name,
         filename: entry.name,
@@ -119,26 +210,68 @@ export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function loadBackupFromFile(filePath: string): BackupBundle {
+function loadRawBackupFile(
+  filePath: string,
+  encryptionPassword?: string,
+): { bundle: BackupBundle; zipBuffer?: Buffer } {
+  const raw = fs.readFileSync(filePath);
+  const decrypted = isEncryptedBackupPayload(raw)
+    ? decryptBackupPayload(raw, { password: encryptionPassword })
+    : raw;
+
   if (filePath.endsWith(".json")) {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as BackupBundle;
-    if (!parsed.manifest || !parsed.data) {
-      throw new Error("JSON-Backup hat ein ungültiges Format.");
-    }
-    return parsed;
+    const bundle = JSON.parse(decrypted.toString("utf8")) as BackupBundle;
+    validateBackupBundleOrThrow(bundle);
+    return { bundle };
   }
 
-  return readBackupZip(filePath);
+  const bundle = readBackupZip(decrypted);
+  validateBackupBundleOrThrow(bundle);
+  return {
+    bundle,
+    zipBuffer: filePath.endsWith(".zip") ? decrypted : undefined,
+  };
 }
 
-export function loadBackupFromBuffer(buffer: Buffer, filename?: string): BackupBundle {
+export function loadBackupFromFile(
+  filePath: string,
+  encryptionPassword?: string,
+): BackupBundle {
+  return loadRawBackupFile(filePath, encryptionPassword).bundle;
+}
+
+export function loadBackupFromBuffer(
+  buffer: Buffer,
+  filename?: string,
+  encryptionPassword?: string,
+): BackupBundle {
+  const decrypted = isEncryptedBackupPayload(buffer)
+    ? decryptBackupPayload(buffer, { password: encryptionPassword })
+    : buffer;
+
   if (filename?.endsWith(".json")) {
-    const parsed = JSON.parse(buffer.toString("utf8")) as BackupBundle;
-    if (!parsed.manifest || !parsed.data) {
-      throw new Error("JSON-Backup hat ein ungültiges Format.");
-    }
-    return parsed;
+    const bundle = JSON.parse(decrypted.toString("utf8")) as BackupBundle;
+    validateBackupBundleOrThrow(bundle);
+    return bundle;
   }
 
-  return readBackupZip(buffer);
+  const bundle = readBackupZip(decrypted);
+  validateBackupBundleOrThrow(bundle);
+  return bundle;
+}
+
+export function loadBackupZipBufferFromFile(
+  filePath: string,
+  encryptionPassword?: string,
+): Buffer | undefined {
+  const raw = fs.readFileSync(filePath);
+  const decrypted = isEncryptedBackupPayload(raw)
+    ? decryptBackupPayload(raw, { password: encryptionPassword })
+    : raw;
+
+  if (filePath.endsWith(".zip") || filePath.endsWith(".enc")) {
+    return decrypted;
+  }
+
+  return undefined;
 }

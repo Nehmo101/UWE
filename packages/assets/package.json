@@ -12,7 +12,13 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
+  "dependencies": {
+    "@uwe/auth": "workspace:*",
+    "adm-zip": "^0.5.16",
+    "sharp": "^0.34.5"
+  },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/node": "^22.19.21",
     "@uwe/config": "workspace:*",
     "typescript": "^5.8.3"

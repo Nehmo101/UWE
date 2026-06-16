@@ -1,7 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
+
+interface BackupPermissions {
+  role: string;
+  canCreate: boolean;
+  canDownload: boolean;
+  canRestore: boolean;
+  canPreview: boolean;
+  retentionCount: number;
+  encryptionConfigured: boolean;
+}
 
 interface StoredBackup {
   id: string;
@@ -79,6 +89,19 @@ export function BackupWorkspace({
   const [selectedBackupId, setSelectedBackupId] = useState<string>("");
   const [uploadBase64, setUploadBase64] = useState<string>("");
   const [uploadFilename, setUploadFilename] = useState<string>("");
+  const [permissions, setPermissions] = useState<BackupPermissions | null>(null);
+  const [restoreConfirmed, setRestoreConfirmed] = useState(false);
+  const [showRestoreWarning, setShowRestoreWarning] = useState(false);
+
+  useEffect(() => {
+    async function loadPermissions() {
+      const response = await fetch("/api/backup?permissions=1");
+      if (response.ok) {
+        setPermissions(await response.json());
+      }
+    }
+    void loadPermissions();
+  }, []);
 
   const previewSummary = useMemo(() => {
     if (!preview) return null;
@@ -90,6 +113,31 @@ export function BackupWorkspace({
     const data = await response.json();
     if (response.ok) {
       setBackups(data.backups ?? []);
+    }
+  }
+
+  async function downloadBackup(backupId: string, filename: string) {
+    setBusy("download");
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/backup/${encodeURIComponent(backupId)}/download`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Download fehlgeschlagen.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "Download fehlgeschlagen.");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -169,8 +217,14 @@ export function BackupWorkspace({
       return;
     }
 
+    if (!restoreConfirmed) {
+      setShowRestoreWarning(true);
+      return;
+    }
+
     setBusy("restore");
     setError(null);
+    setShowRestoreWarning(false);
 
     try {
       const response = await fetch("/api/backup/restore/execute", {
@@ -195,6 +249,7 @@ export function BackupWorkspace({
       } else {
         setResult(data.result);
       }
+      setRestoreConfirmed(false);
     } catch (restoreError) {
       setError(restoreError instanceof Error ? restoreError.message : "Restore fehlgeschlagen.");
     } finally {
@@ -204,6 +259,15 @@ export function BackupWorkspace({
 
   return (
     <div className="uwe-backup-workspace">
+      {permissions && (
+        <p style={{ color: "#94a3b8", marginBottom: "1rem" }}>
+          Rolle: <strong>{permissions.role}</strong> · Aufbewahrung: letzte{" "}
+          {permissions.retentionCount} Backups
+          {permissions.encryptionConfigured ? " · Verschlüsselung aktiv (ENV)" : ""}
+        </p>
+      )}
+
+      {permissions?.canCreate && (
       <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ marginTop: 0 }}>Backup erstellen</h2>
         <div className="uwe-filter-bar" style={{ marginBottom: "1rem" }}>
@@ -264,6 +328,7 @@ export function BackupWorkspace({
           {busy === "create" ? "Erstelle…" : "Backup erstellen"}
         </button>
       </section>
+      )}
 
       <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ marginTop: 0 }}>Gespeicherte Backups</h2>
@@ -292,12 +357,17 @@ export function BackupWorkspace({
                     </td>
                     <td>{new Date(backup.manifest.createdAt).toLocaleString("de-DE")}</td>
                     <td style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      <a
-                        className="uwe-btn"
-                        href={`/api/backup/${encodeURIComponent(backup.id)}/download`}
-                      >
-                        Download
-                      </a>
+                      {permissions?.canDownload && (
+                        <button
+                          type="button"
+                          className="uwe-btn"
+                          disabled={busy === "download"}
+                          onClick={() => downloadBackup(backup.id, backup.filename)}
+                        >
+                          Download
+                        </button>
+                      )}
+                      {permissions?.canPreview && (
                       <button
                         type="button"
                         className="uwe-btn"
@@ -307,10 +377,12 @@ export function BackupWorkspace({
                           setUploadFilename("");
                           setPreview(null);
                           setResult(null);
+                          setRestoreConfirmed(false);
                         }}
                       >
                         Für Restore wählen
                       </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -320,9 +392,14 @@ export function BackupWorkspace({
         )}
       </section>
 
+      {permissions?.canPreview && (
       <section className="uwe-panel">
         <h2 style={{ marginTop: 0 }}>Backup importieren &amp; wiederherstellen</h2>
-        <p style={{ color: "#94a3b8", marginTop: 0 }}>
+        <p style={{ color: "#fbbf24", marginTop: 0 }}>
+          <strong>Warnung:</strong> Ein Restore überschreibt bestehende Daten. Vor jedem Restore wird
+          automatisch eine Sicherheitskopie erstellt. Nur OWNER dürfen Restore ausführen.
+        </p>
+        <p style={{ color: "#94a3b8" }}>
           Secrets, Passwörter, Auth-Sessions und API-Keys werden nicht exportiert oder importiert.
         </p>
 
@@ -350,6 +427,7 @@ export function BackupWorkspace({
           >
             {busy === "preview" ? "Analysiere…" : "Preview anzeigen"}
           </button>
+          {permissions?.canRestore && (
           <button
             type="button"
             className="uwe-btn uwe-btn-primary"
@@ -358,7 +436,53 @@ export function BackupWorkspace({
           >
             {busy === "restore" ? "Stelle wieder her…" : "Restore bestätigen"}
           </button>
+          )}
         </div>
+
+        {showRestoreWarning && (
+          <div
+            className="uwe-panel"
+            style={{
+              marginBottom: "1rem",
+              border: "1px solid #fbbf24",
+              background: "rgba(251, 191, 36, 0.08)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: "#fbbf24" }}>Restore wirklich ausführen?</h3>
+            <p>
+              Dieser Vorgang kann bestehende Welten, Seiten und Medien verändern. Eine
+              Sicherheitskopie wird vorab erstellt, trotzdem solltest du dir sicher sein.
+            </p>
+            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
+              <input
+                type="checkbox"
+                checked={restoreConfirmed}
+                onChange={(event) => setRestoreConfirmed(event.target.checked)}
+              />
+              Ich verstehe die Risiken und möchte den Restore ausführen.
+            </label>
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                type="button"
+                className="uwe-btn uwe-btn-primary"
+                disabled={!restoreConfirmed || busy === "restore"}
+                onClick={runRestore}
+              >
+                Restore endgültig starten
+              </button>
+              <button
+                type="button"
+                className="uwe-btn"
+                onClick={() => {
+                  setShowRestoreWarning(false);
+                  setRestoreConfirmed(false);
+                }}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
 
         {preview && (
           <div style={{ marginBottom: "1rem" }}>
@@ -415,13 +539,14 @@ export function BackupWorkspace({
             )}
           </div>
         )}
-
-        {error && (
-          <p style={{ color: "#f87171" }} role="alert">
-            {error}
-          </p>
-        )}
       </section>
+      )}
+
+      {error && (
+        <p style={{ color: "#f87171" }} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
