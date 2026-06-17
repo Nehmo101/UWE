@@ -17,6 +17,10 @@ export default function PortalHome() {
             Lore, Orte, NPCs und Handouts — alles was deine Gruppe wissen darf,
             schön aufbereitet und mobil optimiert.
           </p>
+          <p className="uwe-dashboard-muted">
+            Nutze den Anmeldebereich für private Spielerbereiche. Das Demo-Wiki zeigt nur
+            Inhalte, die bewusst öffentlich oder spielersicher freigegeben sind.
+          </p>
           <div className="uwe-portal-hero-actions">
             <Link className="uwe-btn uwe-btn-primary" href="/auth/worlds">
               Mit Anmeldung öffnen

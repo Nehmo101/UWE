@@ -16,6 +16,7 @@ import {
   getAppRepository,
   navCategoryForPageType,
 } from "@uwe/database/server";
+import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -39,6 +40,7 @@ export default async function PortalGraphPage({ params }: Props) {
 
   return (
     <AppShell
+      bottomNav={portalWorldBottomNav(worldSlug, "graph")}
       topBar={
         <>
           <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
