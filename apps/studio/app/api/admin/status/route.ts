@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@uwe/database/server";
+import { assertAdminStatusHasNoSecrets, prisma } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { RATE_LIMITER_MODE, requireStudioApiAuth } from "@uwe/security";
 
@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     rateLimiterMode: RATE_LIMITER_MODE,
     useMockInference,
   });
+  assertAdminStatusHasNoSecrets(status);
 
   return NextResponse.json(status, {
     status: status.ok ? 200 : 503,

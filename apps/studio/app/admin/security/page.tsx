@@ -15,6 +15,16 @@ function boolLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }
 
+function severityLevel(severity: "ok" | "warning" | "critical"): StatusLevel {
+  if (severity === "ok") {
+    return "ok";
+  }
+  if (severity === "warning") {
+    return "degraded";
+  }
+  return "error";
+}
+
 export default async function AdminSecurityPage() {
   const access = await resolveSecurityDashboardAccess(prisma);
 
@@ -110,6 +120,27 @@ export default async function AdminSecurityPage() {
             label: `Check ${index + 1}`,
             value: item,
           }))}
+          wide
+        />
+
+        <StatusCard
+          title="Studio Security"
+          level={severityLevel(status.studioSecurity.severity)}
+          statusLabel={status.studioSecurity.label}
+          message={status.studioSecurity.message}
+          details={[
+            { label: "Öffentlich konfiguriert", value: status.studioSecurity.publicExposureConfigured },
+            {
+              label: "Proxy/Tunnel-Indikatoren",
+              value: status.studioSecurity.proxyIndicators.networkProtectionLikely,
+            },
+            {
+              label: "Studio API Token",
+              value: status.studioSecurity.checks.studioApiTokenConfigured,
+            },
+            { label: "Portal AUTH_REQUIRED", value: status.studioSecurity.checks.portalAuthRequired },
+          ]}
+          nextSteps={status.studioSecurity.nextSteps}
           wide
         />
 

@@ -118,6 +118,8 @@ describe("security dashboard status", () => {
           AUTH_SECRET: secret,
           UWE_SETUP_TOKEN: secret,
           RTX_AGENT_TOKEN: secret,
+          SMTP_PASSWORD: secret,
+          SPOTIFY_CLIENT_SECRET: secret,
         },
       });
 
@@ -125,7 +127,31 @@ describe("security dashboard status", () => {
         AUTH_SECRET: secret,
         UWE_SETUP_TOKEN: secret,
         RTX_AGENT_TOKEN: secret,
+        SMTP_PASSWORD: secret,
+        SPOTIFY_CLIENT_SECRET: secret,
       });
+    } finally {
+      await db.$disconnect();
+    }
+  });
+
+  it("does not mark Studio protected when public exposure lacks an API token", async () => {
+    const db = createPrismaClient(createTestDatabaseUrl());
+    try {
+      const status = await getSecurityDashboardStatus(db, {
+        env: {
+          NODE_ENV: "production",
+          PUBLIC_APP_URL: "https://uwe.example",
+          TRUST_PROXY: "true",
+          CLOUDFLARE_TUNNEL: "true",
+          AUTH_SECRET: "strong-auth-secret-for-security-dashboard-test",
+          AUTH_REQUIRED: "true",
+          RUN_DB_SEED: "false",
+        },
+      });
+
+      assert.equal(status.studioSecurity.severity, "critical");
+      assert.equal(status.publicRoutes.studioAdminProtected, false);
     } finally {
       await db.$disconnect();
     }
