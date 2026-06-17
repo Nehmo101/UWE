@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import { resolveBackupsDirFromEnv } from "@uwe/assets";
 import { isWeakSecret as isWeakAuthSecret } from "@uwe/env";
 import type { PrismaClient } from "./client";
 import type { InspectorSeverity } from "./world-inspector";
@@ -17,6 +20,16 @@ export interface ProductionSafetyWarning {
 
 export { isWeakAuthSecret };
 
+export interface BackupFreshnessStatus {
+  backupCount: number;
+  latestBackupAt: Date | null;
+  latestBackupFilename: string | null;
+  backupsDir: string;
+  readable: boolean;
+}
+
+const BACKUP_STALE_AFTER_MS = 1000 * 60 * 60 * 24 * 7;
+
 /**
  * Demo seeding should be disabled in production/self-hosted deployments.
  */
@@ -32,6 +45,52 @@ export function isPublicPortalExposureEnabled(settings: UweSystemSettings): bool
   return settings.portal.publicSharingEnabled || settings.portal.guestAccessEnabled;
 }
 
+export function getBackupFreshnessStatus(
+  backupsDir: string = resolveBackupsDirFromEnv(),
+): BackupFreshnessStatus {
+  if (!fs.existsSync(backupsDir)) {
+    return {
+      backupCount: 0,
+      latestBackupAt: null,
+      latestBackupFilename: null,
+      backupsDir,
+      readable: false,
+    };
+  }
+
+  try {
+    const backups = fs
+      .readdirSync(backupsDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && /\.(zip|json|enc)$/i.test(entry.name))
+      .map((entry) => {
+        const filePath = path.join(backupsDir, entry.name);
+        const stat = fs.statSync(filePath);
+        return {
+          filename: entry.name,
+          createdAt: stat.mtime,
+        };
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    const latest = backups[0] ?? null;
+    return {
+      backupCount: backups.length,
+      latestBackupAt: latest?.createdAt ?? null,
+      latestBackupFilename: latest?.filename ?? null,
+      backupsDir,
+      readable: true,
+    };
+  } catch {
+    return {
+      backupCount: 0,
+      latestBackupAt: null,
+      latestBackupFilename: null,
+      backupsDir,
+      readable: false,
+    };
+  }
+}
+
 /**
  * Production/self-hosting warnings for dashboard and health surfaces.
  * Never includes secret values — only configuration facts.
@@ -41,6 +100,7 @@ export async function getProductionSafetyWarnings(
 ): Promise<ProductionSafetyWarning[]> {
   const warnings: ProductionSafetyWarning[] = [];
   const settings = await new SettingsService(db).getSettings();
+  const backupFreshness = getBackupFreshnessStatus();
 
   const sessionSecret =
     process.env.SESSION_SECRET?.trim() || process.env.AUTH_SECRET?.trim();
@@ -64,6 +124,37 @@ export async function getProductionSafetyWarnings(
       description:
         "In Produktion RUN_DB_SEED=false setzen, damit keine Demo-Welten automatisch angelegt werden.",
       href: "/settings",
+    });
+  }
+
+  if (!backupFreshness.readable) {
+    warnings.push({
+      id: "production:backup-path",
+      severity: "warning",
+      title: "Backup-Verzeichnis nicht lesbar",
+      description:
+        "UWE konnte das Backup-Verzeichnis nicht lesen. Prüfe UWE_BACKUP_DIR/BACKUPS_DIR und Dateirechte, bevor du Updates oder Restores ausführst.",
+      href: "/backup",
+    });
+  } else if (backupFreshness.backupCount === 0) {
+    warnings.push({
+      id: "production:backup-missing",
+      severity: "warning",
+      title: "Kein Backup gefunden",
+      description:
+        "Im Backup-Verzeichnis wurde kein ZIP/JSON/ENC-Backup gefunden. Erstelle ein Vollbackup, bevor du Updates, Migrationen oder Restores ausführst.",
+      href: "/backup",
+    });
+  } else if (
+    backupFreshness.latestBackupAt &&
+    Date.now() - backupFreshness.latestBackupAt.getTime() > BACKUP_STALE_AFTER_MS
+  ) {
+    warnings.push({
+      id: "production:backup-stale",
+      severity: "warning",
+      title: "Letztes Backup ist älter als 7 Tage",
+      description: `Letztes Backup: ${backupFreshness.latestBackupFilename ?? "unbekannt"}. Erstelle vor Updates oder Restores ein aktuelles Vollbackup.`,
+      href: "/backup",
     });
   }
 

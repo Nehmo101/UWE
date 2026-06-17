@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createPrismaClient } from "./client";
 import {
+  getBackupFreshnessStatus,
   getProductionSafetyWarnings,
   isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
@@ -59,16 +63,41 @@ describe("production safety helpers", () => {
     assert.equal(isPublicPortalExposureEnabled(await service.getSettings()), true);
   });
 
+  it("detects missing and stale backup files", () => {
+    const backupsDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-backups-"));
+    try {
+      const emptyStatus = getBackupFreshnessStatus(backupsDir);
+      assert.equal(emptyStatus.readable, true);
+      assert.equal(emptyStatus.backupCount, 0);
+
+      const oldBackupPath = path.join(backupsDir, "uwe-backup-full-old.zip");
+      fs.writeFileSync(oldBackupPath, "test-backup");
+      const oldDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 8);
+      fs.utimesSync(oldBackupPath, oldDate, oldDate);
+
+      const staleStatus = getBackupFreshnessStatus(backupsDir);
+      assert.equal(staleStatus.backupCount, 1);
+      assert.equal(staleStatus.latestBackupFilename, "uwe-backup-full-old.zip");
+      assert.ok(staleStatus.latestBackupAt);
+      assert.ok(Date.now() - staleStatus.latestBackupAt.getTime() > 1000 * 60 * 60 * 24 * 7);
+    } finally {
+      fs.rmSync(backupsDir, { recursive: true, force: true });
+    }
+  });
+
   it("builds production warnings without leaking secret values", async () => {
     const previousAuth = process.env.AUTH_SECRET;
     const previousSeed = process.env.RUN_DB_SEED;
     const previousToken = process.env.STUDIO_API_TOKEN;
     const previousPublicUrl = process.env.PUBLIC_APP_URL;
+    const previousBackupDir = process.env.BACKUPS_DIR;
+    const backupsDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-prod-warnings-"));
 
     process.env.AUTH_SECRET = "change-me";
     delete process.env.STUDIO_API_TOKEN;
     process.env.RUN_DB_SEED = "auto";
     process.env.PUBLIC_APP_URL = "https://uweandragons.org";
+    process.env.BACKUPS_DIR = backupsDir;
 
     try {
       const warnings = await getProductionSafetyWarnings(createPrismaClient(databaseUrl));
@@ -79,6 +108,7 @@ describe("production safety helpers", () => {
       assert.ok(warnings.some((warning) => warning.id === "production:studio-api-token"));
       assert.ok(warnings.some((warning) => warning.id === "production:studio-exposure"));
       assert.ok(warnings.some((warning) => warning.id === "production:cloudflare-tunnel-scope"));
+      assert.ok(warnings.some((warning) => warning.id === "production:backup-missing"));
       assert.equal(
         warnings.find((warning) => warning.id === "production:studio-api-token")?.severity,
         "critical",
@@ -105,6 +135,12 @@ describe("production safety helpers", () => {
       } else {
         process.env.PUBLIC_APP_URL = previousPublicUrl;
       }
+      if (previousBackupDir === undefined) {
+        delete process.env.BACKUPS_DIR;
+      } else {
+        process.env.BACKUPS_DIR = previousBackupDir;
+      }
+      fs.rmSync(backupsDir, { recursive: true, force: true });
     }
   });
 });
