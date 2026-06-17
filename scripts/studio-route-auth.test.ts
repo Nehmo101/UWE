@@ -10,9 +10,16 @@ const root = path.resolve(import.meta.dirname, "..");
 const studioApiRoot = path.join(root, "apps/studio/app/api");
 
 const PUBLIC_ALLOWLIST = new Set([
+  "auth/login/route.ts",
+  "auth/logout/route.ts",
+  "auth/setup/route.ts",
   "health/route.ts",
+  "health/public/route.ts",
   "spotify/callback/route.ts",
 ]);
+
+const AUTH_GUARD_PATTERN =
+  /requireStudioApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
 
 function listRouteFiles(dir: string, prefix = ""): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -47,18 +54,15 @@ describe("Studio API route auth inventory", () => {
       if (PUBLIC_ALLOWLIST.has(route)) {
         assert.doesNotMatch(
           content,
-          /requireStudioApiAuth|requireRestoreOwnerAuth/,
+          AUTH_GUARD_PATTERN,
           `${route} is public allowlist — must not import auth guard`,
         );
         return;
       }
 
-      const protectedByStudioAuth = content.includes("requireStudioApiAuth");
-      const protectedByRestoreAuth = content.includes("requireRestoreOwnerAuth");
-
       assert.ok(
-        protectedByStudioAuth || protectedByRestoreAuth,
-        `${route} must call requireStudioApiAuth or requireRestoreOwnerAuth`,
+        AUTH_GUARD_PATTERN.test(content),
+        `${route} must call requireStudioApiAuth, guardStudioMutation, requireRestoreOwnerAuth, or requirePrivateHealthAuth`,
       );
     });
   }

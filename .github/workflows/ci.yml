@@ -29,11 +29,17 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Secret scan
+        run: pnpm secret:scan
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
+
+      - name: Security tests
+        run: pnpm test:security
 
       - name: Build
         run: pnpm build:release

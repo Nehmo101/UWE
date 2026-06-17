@@ -317,7 +317,7 @@ describe("integration smoke — agent CI quality gate", () => {
 
   it("exposes pnpm quality script matching CI pipeline", () => {
     const pkg = read("package.json");
-    assert.match(pkg, /"quality":\s*"pnpm lint && pnpm --filter @uwe\/database db:generate && pnpm typecheck && pnpm test && pnpm build:release"/);
+    assert.match(pkg, /"quality":\s*"pnpm lint && pnpm secret:scan && pnpm --filter @uwe\/database db:generate && pnpm typecheck && pnpm test && pnpm build:release"/);
   });
 
   it("includes ci-quality-gate Cursor skill", () => {
@@ -334,6 +334,12 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.ok(generateIndex >= 0, "CI must run db:generate");
     assert.ok(lintIndex >= 0, "CI must run lint");
     assert.ok(generateIndex < lintIndex, "db:generate must run before lint");
+  });
+
+  it("runs secret scan and security tests in CI workflow", () => {
+    const ci = read(".github/workflows/ci.yml");
+    assert.match(ci, /pnpm secret:scan/);
+    assert.match(ci, /pnpm test:security/);
   });
 
   it("runs quality gate in cursor-agent workflow before push", () => {
