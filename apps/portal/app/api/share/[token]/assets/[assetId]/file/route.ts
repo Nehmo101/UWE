@@ -15,7 +15,7 @@ interface RouteContext {
   params: Promise<{ token: string; assetId: string }>;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
 

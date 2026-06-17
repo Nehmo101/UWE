@@ -41,11 +41,14 @@ function emptyContext(overrides: Partial<AiContext> = {}): AiContext {
         aliases: [],
         contentBlocks: [
           {
+            blockId: "b1",
             type: "gm_note",
             content: "Geheimer Plot",
             visibility: "dm_only",
           },
         ],
+        relations: [],
+        backlinks: [],
       },
     ],
     sources: [],

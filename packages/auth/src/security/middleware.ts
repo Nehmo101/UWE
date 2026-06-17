@@ -2,8 +2,8 @@ import {
   getUweRuntimeConfig,
   isProductionEnv,
   isPublicExposureConfigured,
-  SESSION_COOKIE_NAME,
 } from "../runtime-config";
+import { SESSION_COOKIE_NAME } from "../session";
 import { authorizeForSurface } from "./authorize";
 import {
   classifyRoute,

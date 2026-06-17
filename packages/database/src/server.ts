@@ -606,6 +606,13 @@ export type {
   UserRoleCounts,
 } from "./security-dashboard";
 
+export { scanPublicContentLeaks } from "./public-leak-scanner";
+export type {
+  PublicLeakFinding,
+  PublicLeakScanResult,
+  PublicLeakSeverity,
+} from "./public-leak-scanner";
+
 export type {
   UweSystemSettings,
   UweSystemSettingsUpdate,

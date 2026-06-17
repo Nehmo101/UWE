@@ -1,6 +1,18 @@
-import { timingSafeEqual } from "node:crypto";
 import { isPublicExposureConfigured, originMatchesTrustedHost } from "../runtime-config";
 import { classifyRoute, isApiRoute, type UweAppSurface } from "./route-policy";
+
+function timingSafeEqual(a: Buffer, b: Buffer): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+  for (let index = 0; index < a.length; index += 1) {
+    mismatch |= a[index]! ^ b[index]!;
+  }
+
+  return mismatch === 0;
+}
 
 export type AuthorizeScope =
   | "studio-api"

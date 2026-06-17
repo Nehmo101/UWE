@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { canAccessSecurityDashboard, SESSION_COOKIE_NAME } from "@uwe/auth";
 import {
   assertSecurityDashboardHasNoSecrets,
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
     return authError;
   }
 
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
     return NextResponse.json({ error: "Portal-Login erforderlich (OWNER/ADMIN)." }, { status: 403 });
   }

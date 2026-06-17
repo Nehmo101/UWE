@@ -235,7 +235,7 @@ export function filterContextForViewer(
 }
 
 export function sanitizeAiResponseForClient<T extends Record<string, unknown>>(payload: T): T {
-  const sanitized = { ...payload };
+  const sanitized: Record<string, unknown> = { ...payload };
 
   delete sanitized.systemPrompt;
   delete sanitized.apiKey;
@@ -248,7 +248,7 @@ export function sanitizeAiResponseForClient<T extends Record<string, unknown>>(p
     sanitized.promptContext = "[redacted]";
   }
 
-  return sanitized;
+  return sanitized as T;
 }
 
 function readPositiveInt(raw: string | undefined, fallback: number): number {

@@ -140,6 +140,9 @@ export {
   originMatchesTrustedHost,
 } from "./runtime-config";
 
+export type { EnvValidationIssue, EnvValidationSeverity } from "./env-validation";
+export { hasBlockingEnvIssues, validateUweEnvironment } from "./env-validation";
+
 export type { ApiOriginGuardResult } from "./api-origin-guard";
 export {
   assessApiOrigin,

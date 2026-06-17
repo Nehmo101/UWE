@@ -11,7 +11,7 @@ import {
 
 import { requireStudioApiAuth } from "./studio-api-auth";
 
-export function enforceStudioAiRoute(request: Request): NextResponse | null {
+export function enforceStudioAiRoute(request: Request): Response | null {
   const authError = requireStudioApiAuth(request);
   if (authError) {
     return authError;

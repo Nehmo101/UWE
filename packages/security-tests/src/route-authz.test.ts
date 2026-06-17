@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, it } from "node:test";
-import { requireStudioApiAuth } from "../../../apps/studio/src/lib/studio-api-auth";
+import { requireStudioApiAuth } from "@uwe/security";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 

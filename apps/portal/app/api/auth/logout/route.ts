@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getSessionCookieOptions, PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "@uwe/auth";

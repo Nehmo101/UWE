@@ -13,7 +13,7 @@ interface RouteParams {
   params: Promise<{ worldSlug: string }>;
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
 

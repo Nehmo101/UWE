@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { getUweSecurityHeaderEntries } from "@uwe/auth";
+import { getUweSecurityHeaderEntries } from "@uwe/auth/security-headers";
 
 const nextConfig: NextConfig = {
   output: "standalone",

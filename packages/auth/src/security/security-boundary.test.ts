@@ -145,8 +145,8 @@ describe("security boundary", () => {
       }
       assert.match(
         content,
-        /requireStudioApiAuth|guardStudioMutation/,
-        `${file} must call requireStudioApiAuth or guardStudioMutation`,
+        /requireStudioApiAuth|guardStudioMutation|requireRestoreOwnerAuth/,
+        `${file} must call requireStudioApiAuth, guardStudioMutation, or requireRestoreOwnerAuth`,
       );
     }
 
