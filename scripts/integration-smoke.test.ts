@@ -17,6 +17,24 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
+function readPackageScripts(): Record<string, string> {
+  const pkg = JSON.parse(read("package.json")) as { scripts?: Record<string, string> };
+  return pkg.scripts ?? {};
+}
+
+function assertScriptIncludesInOrder(scriptName: string, commands: string[]): void {
+  const script = readPackageScripts()[scriptName];
+  assert.ok(script, `Missing package.json script: ${scriptName}`);
+
+  let previousIndex = -1;
+  for (const command of commands) {
+    const index = script.indexOf(command);
+    assert.ok(index >= 0, `${scriptName} must include ${command}`);
+    assert.ok(index > previousIndex, `${command} must run after the previous ${scriptName} command`);
+    previousIndex = index;
+  }
+}
+
 function listFiles(dir: string, pattern: RegExp): string[] {
   const results: string[] = [];
   const walk = (current: string) => {
@@ -109,6 +127,54 @@ describe("integration smoke — Portal routes", () => {
       assert.ok(exists(route), `Missing portal route: ${route}`);
     });
   }
+});
+
+describe("integration smoke — minimal app access paths", () => {
+  it("defines runnable Studio and Portal app scripts", () => {
+    const studio = JSON.parse(read("apps/studio/package.json")) as {
+      scripts?: Record<string, string>;
+    };
+    const portal = JSON.parse(read("apps/portal/package.json")) as {
+      scripts?: Record<string, string>;
+    };
+
+    assert.match(studio.scripts?.dev ?? "", /next dev --port 3000/);
+    assert.match(studio.scripts?.start ?? "", /next start --port 3000/);
+    assert.match(portal.scripts?.dev ?? "", /next dev --port 3001/);
+    assert.match(portal.scripts?.start ?? "", /next start --port 3001/);
+  });
+
+  it("keeps Studio login reachable and protects admin routes without auth", () => {
+    assert.ok(exists("apps/studio/app/login/page.tsx"));
+    assert.ok(exists("apps/studio/app/admin/layout.tsx"));
+
+    const middleware = read("apps/studio/middleware.ts");
+    const rootLayout = read("apps/studio/app/layout.tsx");
+    const adminLayout = read("apps/studio/app/admin/layout.tsx");
+
+    assert.match(middleware, /PUBLIC_PATH_PREFIXES[\s\S]*"\/login"/);
+    assert.match(middleware, /config\.authRequired[\s\S]*!isPublicPath\(pathname\)/);
+    assert.match(middleware, /loginUrl\.pathname = "\/login"/);
+    assert.match(rootLayout, /enforceStudioPageAuth\(pathname\)/);
+    assert.match(adminLayout, /requireAdminAccess\(\)/);
+  });
+
+  it("keeps Portal public pages reachable", () => {
+    const middleware = read("apps/portal/middleware.ts");
+    const home = read("apps/portal/app/page.tsx");
+
+    assert.match(middleware, /"\/"/);
+    assert.match(middleware, /"\/worlds\/:path\*"/);
+    assert.match(home, /href="\/worlds"/);
+    assert.match(home, /href="\/login"/);
+  });
+
+  it("keeps DM-only content covered by public leak regression tests", () => {
+    const visibilityTest = read("packages/database/src/visibility-security.test.ts");
+    assert.match(visibilityTest, /dm_only content must NEVER be readable through portal contexts/);
+    assert.match(visibilityTest, /hides dm_only pages from portal page listings/);
+    assert.match(visibilityTest, /dm_only block leaked into portal page/);
+  });
 });
 
 describe("integration smoke — security (no secrets in client code)", () => {
@@ -302,8 +368,9 @@ describe("integration smoke — env and secrets", () => {
   });
 
   it("documents secret scan script", () => {
-    const pkg = read("package.json");
-    assert.match(pkg, /secret:scan/);
+    const scripts = readPackageScripts();
+    assert.ok(scripts["secret:scan"]);
+    assert.ok(scripts["audit:prod"]);
   });
 });
 
@@ -316,8 +383,16 @@ describe("integration smoke — agent CI quality gate", () => {
   });
 
   it("exposes pnpm quality script matching CI pipeline", () => {
-    const pkg = read("package.json");
-    assert.match(pkg, /"quality":\s*"pnpm lint && pnpm --filter @uwe\/database db:generate && pnpm typecheck && pnpm test && pnpm build:release"/);
+    assertScriptIncludesInOrder("quality", [
+      "pnpm --filter @uwe/database db:generate",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test",
+      "pnpm test:security",
+      "pnpm secret:scan",
+      "pnpm audit:prod",
+      "pnpm build:release",
+    ]);
   });
 
   it("includes ci-quality-gate Cursor skill", () => {
@@ -334,6 +409,29 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.ok(generateIndex >= 0, "CI must run db:generate");
     assert.ok(lintIndex >= 0, "CI must run lint");
     assert.ok(generateIndex < lintIndex, "db:generate must run before lint");
+  });
+
+  it("runs security gates before build in CI workflow", () => {
+    const ci = read(".github/workflows/ci.yml");
+    const securityIndex = ci.indexOf("pnpm test:security");
+    const secretIndex = ci.indexOf("pnpm secret:scan");
+    const auditIndex = ci.indexOf("pnpm audit:prod");
+    const buildIndex = ci.indexOf("pnpm build:release");
+
+    assert.ok(securityIndex >= 0, "CI must run test:security");
+    assert.ok(secretIndex >= 0, "CI must run secret:scan");
+    assert.ok(auditIndex >= 0, "CI must run audit:prod");
+    assert.ok(buildIndex >= 0, "CI must run build:release");
+    assert.ok(securityIndex < buildIndex, "security tests must run before build");
+    assert.ok(secretIndex < buildIndex, "secret scan must run before build");
+    assert.ok(auditIndex < buildIndex, "dependency audit must run before build");
+  });
+
+  it("keeps Docker builds conditional in CI", () => {
+    const ci = read(".github/workflows/ci.yml");
+    assert.match(ci, /docker-build:/);
+    assert.match(ci, /Detect Docker-affecting changes/);
+    assert.match(ci, /docker\/build-push-action@v6/);
   });
 
   it("runs quality gate in cursor-agent workflow before push", () => {

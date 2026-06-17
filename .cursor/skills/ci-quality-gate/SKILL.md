@@ -25,6 +25,9 @@ description: Run the UWE CI quality pipeline before finishing agent work. Use wh
    pnpm quality
    ```
 
+   This includes Prisma client generation, lint, typecheck, unit/smoke tests,
+   security tests, secret scanning, production dependency audit, and release build.
+
 3. If lint fails with `@typescript-eslint/no-unused-vars`:
    - Remove unused imports
    - Prefix intentionally unused params with `_`
@@ -34,7 +37,7 @@ description: Run the UWE CI quality pipeline before finishing agent work. Use wh
    - Verify `SESSION_COOKIE_NAME` is imported from `session` or `@uwe/auth`, not `runtime-config`
    - Run `pnpm --filter @uwe/database db:generate` then `pnpm typecheck`
 
-5. If tests fail, fix the failing package and re-run `pnpm quality`.
+5. If tests or security scans fail, fix the failing package or finding and re-run `pnpm quality`.
 
 6. Only push when `pnpm quality` exits 0.
 

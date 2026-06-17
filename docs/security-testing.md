@@ -26,7 +26,9 @@ CI runs `pnpm test:security` on every pull request before merge.
 |-------|---------|--------|
 | **Role matrix** | part of `test:authz` | Anonymous, PLAYER, DM, ADMIN, OWNER access to pages, blocks, assets |
 | **Route authorization** | part of `test:authz` | Studio `/admin`, `/api/admin/*`, `/api/import/*`, `/api/brain/*`, `/api/ai/*`, search, Portal `/worlds/*`, player management |
+| **Studio route inventory** | part of `test:authz` | Every Studio API route must call `requireStudioApiAuth`, `requireRestoreOwnerAuth`, or be explicitly allowlisted |
 | **Public leak scanner** | `test:leaks` | All anonymous portal data paths scanned for private test markers |
+| **Leak smoke inventory** | part of `test:leaks` | Ensures portal visibility, share-link, search, graph, asset, and permission leak tests stay present |
 
 Package: `@uwe/security-tests` (`packages/security-tests/`).
 
@@ -98,7 +100,7 @@ Studio API routes use `requireStudioApiAuth` (CSRF + optional `STUDIO_API_TOKEN`
 - **DM-only leak:** `public-leak-scanner.test.ts` fails if `__DM_ONLY_SECRET_SHOULD_NOT_LEAK__` appears on anonymous paths.
 - **Role matrix:** `role-matrix.test.ts` covers all five roles against pages, blocks, assets, and both worlds.
 - **pnpm integration:** `pnpm test:security`, `pnpm test:authz`, `pnpm test:leaks` at repo root.
-- **CI gate:** `.github/workflows/ci.yml` runs security tests before build.
+- **CI gate:** `.github/workflows/ci.yml` runs security tests, `pnpm secret:scan`, and `pnpm audit:prod` before build.
 
 ## Extending the suite
 
@@ -114,3 +116,5 @@ Studio API routes use `requireStudioApiAuth` (CSRF + optional `STUDIO_API_TOKEN`
 - `packages/database/src/auth.test.ts` — auth integration
 - `packages/auth/src/permissions.test.ts` — permission unit tests
 - `apps/studio/src/lib/studio-api-auth.test.ts` — CSRF / bearer token guard
+- `scripts/studio-route-auth.test.ts` — Studio API route auth inventory
+- `scripts/security-leaks.test.ts` — leak-prevention coverage inventory

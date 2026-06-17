@@ -68,7 +68,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Quality gate (lint, typecheck, test, build)
+      - name: Quality gate (lint, typecheck, test, security, build)
         run: pnpm quality
 
       - name: Push branch
