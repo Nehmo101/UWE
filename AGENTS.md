@@ -12,10 +12,11 @@ pnpm quality
 `pnpm quality` runs, in order:
 
 1. `pnpm lint` — ESLint with `--max-warnings 0`
-2. `pnpm --filter @uwe/database db:generate` — Prisma client
-3. `pnpm typecheck` — all workspace packages
-4. `pnpm test` — unit + integration smoke tests
-5. `pnpm build:release` — production build
+2. `pnpm secret:scan` — lightweight working-tree secret scan
+3. `pnpm --filter @uwe/database db:generate` — Prisma client
+4. `pnpm typecheck` — all workspace packages
+5. `pnpm test` — unit + integration smoke tests
+6. `pnpm build:release` — production build
 
 Do **not** push or mark a PR ready until this succeeds locally.
 
