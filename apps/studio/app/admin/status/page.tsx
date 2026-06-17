@@ -11,6 +11,7 @@ import {
 import { prisma, UWE_VERSION } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
+import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -113,6 +114,7 @@ export default async function AdminStatusPage() {
 
   return (
     <AppShell
+      bottomNav={studioGlobalBottomNav("more")}
       topBar={<TopBarBrand appName="UWE Studio" subtitle="Systemstatus" href="/" />}
       sidebar={
         <>
