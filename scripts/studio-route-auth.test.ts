@@ -18,12 +18,8 @@ const PUBLIC_ALLOWLIST = new Set([
   "spotify/callback/route.ts",
 ]);
 
-const PROTECTION_HELPERS = [
-  "guardStudioMutation",
-  "requirePrivateHealthAuth",
-  "requireRestoreOwnerAuth",
-  "requireStudioApiAuth",
-];
+const AUTH_GUARD_PATTERN =
+  /requireStudioApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
 
 function listRouteFiles(dir: string, prefix = ""): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -58,17 +54,15 @@ describe("Studio API route auth inventory", () => {
       if (PUBLIC_ALLOWLIST.has(route)) {
         assert.doesNotMatch(
           content,
-          /guardStudioMutation|requirePrivateHealthAuth|requireRestoreOwnerAuth|requireStudioApiAuth/,
+          AUTH_GUARD_PATTERN,
           `${route} is public allowlist — must not import auth guard`,
         );
         return;
       }
 
-      const protectedByKnownHelper = PROTECTION_HELPERS.some((helper) => content.includes(helper));
-
       assert.ok(
-        protectedByKnownHelper,
-        `${route} must call one of: ${PROTECTION_HELPERS.join(", ")}`,
+        AUTH_GUARD_PATTERN.test(content),
+        `${route} must call requireStudioApiAuth, guardStudioMutation, requireRestoreOwnerAuth, or requirePrivateHealthAuth`,
       );
     });
   }

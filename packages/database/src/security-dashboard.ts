@@ -450,10 +450,7 @@ export async function getSecurityDashboardStatus(
   const playerRoutesPublic =
     runtime.playerPreviewPublic || (!runtime.authRequired && !runtime.isProduction);
 
-  const studioAdminProtected =
-    studioSecurity.checks.studioApiTokenConfigured ||
-    studioSecurity.proxyIndicators.networkProtectionLikely ||
-    !studioSecurity.publicExposureConfigured;
+  const studioAdminProtected = studioSecurity.severity !== "critical";
 
   const publicRouteDetails = [
     `Portal Player Preview öffentlich: ${runtime.playerPreviewPublic ? "ja" : "nein"}`,
@@ -566,6 +563,8 @@ export function assertSecurityDashboardHasNoSecrets(
     "GEMINI_API_KEY",
     "OPENROUTER_API_KEY",
     "CLOUD_AI_API_KEY",
+    "SMTP_PASSWORD",
+    "SPOTIFY_CLIENT_SECRET",
   ] as const;
 
   for (const key of secretKeys) {

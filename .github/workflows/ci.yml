@@ -32,6 +32,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Secret scan
+        run: pnpm secret:scan
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -40,9 +43,6 @@ jobs:
 
       - name: Security tests
         run: pnpm test:security
-
-      - name: Secret scan
-        run: pnpm secret:scan
 
       - name: Dependency audit (production)
         run: pnpm audit:prod

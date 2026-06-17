@@ -38,6 +38,7 @@ const ALLOWLIST_PATHS = [
   /packages\/database\/prisma\/seed\.ts$/,
   /packages\/security-tests\/src\/fixtures\/security-fixture\.ts$/,
   /apps\/portal\/app\/login\/page\.tsx$/,
+  /packages\/security-tests\/src\/fixtures\/security-fixture\.ts$/,
   /packages\/env\/src\/config\/env\.ts$/,
   /tools\/uwe-rtx-agent\/src\/test-helpers\.ts$/,
   /\.test\.(ts|tsx)$/,

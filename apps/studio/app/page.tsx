@@ -92,7 +92,13 @@ export default async function StudioDashboard({ searchParams }: Props) {
               <ul className="uwe-inspector-findings">
                 {criticalProductionWarnings.map((warning) => (
                   <li key={warning.id} data-severity={warning.severity}>
-                    <strong>{warning.title}</strong>{" "}
+                    {warning.href ? (
+                      <Link href={warning.href}>
+                        <strong>{warning.title}</strong>
+                      </Link>
+                    ) : (
+                      <strong>{warning.title}</strong>
+                    )}{" "}
                     <span className="uwe-dashboard-muted">{warning.description}</span>
                   </li>
                 ))}
@@ -117,7 +123,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
           />
 
           <section className="uwe-section">
-            <h2 className="uwe-section-title">Next Actions</h2>
+            <h2 className="uwe-section-title">Nächste Schritte</h2>
             {nextActions.length === 0 ? (
               <p className="uwe-inspector-ok">✓ Nichts offen — alles erledigt.</p>
             ) : (

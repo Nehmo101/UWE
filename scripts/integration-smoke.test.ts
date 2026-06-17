@@ -386,10 +386,10 @@ describe("integration smoke — agent CI quality gate", () => {
     assertScriptIncludesInOrder("quality", [
       "pnpm --filter @uwe/database db:generate",
       "pnpm lint",
+      "pnpm secret:scan",
       "pnpm typecheck",
       "pnpm test",
       "pnpm test:security",
-      "pnpm secret:scan",
       "pnpm audit:prod",
       "pnpm build:release",
     ]);

@@ -13,10 +13,10 @@ pnpm quality
 
 1. `pnpm --filter @uwe/database db:generate` — Prisma client
 2. `pnpm lint` — ESLint with `--max-warnings 0`
-3. `pnpm typecheck` — all workspace packages
-4. `pnpm test` — unit + integration smoke tests
-5. `pnpm test:security` — authz, public leak scanner, Studio route guard smoke tests
-6. `pnpm secret:scan` — lightweight repository secret scan
+3. `pnpm secret:scan` — lightweight repository secret scan
+4. `pnpm typecheck` — all workspace packages
+5. `pnpm test` — unit + integration smoke tests
+6. `pnpm test:security` — authz, public leak scanner, Studio route guard smoke tests
 7. `pnpm audit:prod` — production dependency audit at high severity and above
 8. `pnpm build:release` — production build
 

@@ -48,7 +48,7 @@ Admin-Portal (/admin/agent-jobs)
 `.github/workflows/cursor-agent.yml` — `workflow_dispatch` mit Inputs:
 - `prompt`, `title`, `job_id`, `branch_name`
 
-Der Workflow führt `pnpm quality` (Prisma generate → lint → typecheck → test → security → secret scan → production audit → build) **vor** dem Push aus. Fehlgeschlagene Quality-Checks blockieren den PR.
+Der Workflow führt `pnpm quality` (Prisma generate → lint → secret scan → typecheck → test → security → production audit → build) **vor** dem Push aus. Fehlgeschlagene Quality-Checks blockieren den PR.
 
 ## Agent Quality Gate
 
