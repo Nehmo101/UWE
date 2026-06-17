@@ -8,6 +8,7 @@
     "build": "turbo run build",
     "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
     "lint": "eslint --max-warnings 0 .",
+    "quality": "pnpm lint && pnpm --filter @uwe/database db:generate && pnpm typecheck && pnpm test && pnpm build:release",
     "typecheck": "turbo run typecheck",
     "test": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
     "test:security": "pnpm --filter @uwe/security-tests test",

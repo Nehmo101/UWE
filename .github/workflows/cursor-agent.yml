@@ -33,6 +33,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
       - name: Create branch
         run: git checkout -b "${{ github.event.inputs.branch_name }}"
 
@@ -55,6 +64,12 @@ jobs:
           git config user.email "agent@uwe.local"
           git add -A
           git diff --staged --quiet || git commit -m "chore(agent): ${{ github.event.inputs.title }}"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Quality gate (lint, typecheck, test, build)
+        run: pnpm quality
 
       - name: Push branch
         run: git push -u origin "${{ github.event.inputs.branch_name }}"

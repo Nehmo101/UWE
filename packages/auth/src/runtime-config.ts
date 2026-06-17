@@ -1,3 +1,7 @@
+// Re-export session cookie names so internal imports from this module stay valid.
+// Agents often colocate these with getSessionCookieOptions / getUweRuntimeConfig.
+export { PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "./session";
+
 export type SessionCookieSameSite = "lax" | "strict" | "none";
 
 export interface UweRuntimeConfig {

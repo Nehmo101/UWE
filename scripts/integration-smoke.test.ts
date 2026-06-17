@@ -307,6 +307,45 @@ describe("integration smoke — env and secrets", () => {
   });
 });
 
+describe("integration smoke — agent CI quality gate", () => {
+  it("documents agent quality requirements", () => {
+    assert.ok(exists("AGENTS.md"));
+    const agents = read("AGENTS.md");
+    assert.match(agents, /pnpm quality/);
+    assert.match(agents, /no-unused-vars|unused imports/i);
+  });
+
+  it("exposes pnpm quality script matching CI pipeline", () => {
+    const pkg = read("package.json");
+    assert.match(pkg, /"quality":\s*"pnpm lint && pnpm --filter @uwe\/database db:generate && pnpm typecheck && pnpm test && pnpm build:release"/);
+  });
+
+  it("includes ci-quality-gate Cursor skill", () => {
+    assert.ok(exists(".cursor/skills/ci-quality-gate/SKILL.md"));
+    const skill = read(".cursor/skills/ci-quality-gate/SKILL.md");
+    assert.match(skill, /name:\s*ci-quality-gate/);
+    assert.match(skill, /pnpm quality/);
+  });
+
+  it("runs prisma generate before lint in CI workflow", () => {
+    const ci = read(".github/workflows/ci.yml");
+    const generateIndex = ci.indexOf("db:generate");
+    const lintIndex = ci.indexOf("pnpm lint");
+    assert.ok(generateIndex >= 0, "CI must run db:generate");
+    assert.ok(lintIndex >= 0, "CI must run lint");
+    assert.ok(generateIndex < lintIndex, "db:generate must run before lint");
+  });
+
+  it("runs quality gate in cursor-agent workflow before push", () => {
+    const workflow = read(".github/workflows/cursor-agent.yml");
+    assert.match(workflow, /pnpm quality/);
+    const qualityIndex = workflow.indexOf("pnpm quality");
+    const pushIndex = workflow.indexOf("git push");
+    assert.ok(qualityIndex >= 0 && pushIndex >= 0);
+    assert.ok(qualityIndex < pushIndex, "quality must run before push");
+  });
+});
+
 describe("integration smoke — RTX public URL guard", () => {
   it("blocks public inference URLs by default", () => {
     const guard = read("packages/ai-brain/src/inference-url-guard.ts");

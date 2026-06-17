@@ -48,6 +48,19 @@ Admin-Portal (/admin/agent-jobs)
 `.github/workflows/cursor-agent.yml` — `workflow_dispatch` mit Inputs:
 - `prompt`, `title`, `job_id`, `branch_name`
 
+Der Workflow führt `pnpm quality` (lint → prisma generate → typecheck → test → build) **vor** dem Push aus. Fehlgeschlagene Quality-Checks blockieren den PR.
+
+## Agent Quality Gate
+
+Alle Agenten (Cloud, CLI, Subagents) müssen dieselben Checks lokal bestehen, bevor sie pushen:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm quality
+```
+
+Siehe `AGENTS.md` und `.cursor/skills/ci-quality-gate/` für wiederkehrende Fehlermuster (unused imports, Auth-Import-Pfade).
+
 ## Bekannte Limits
 
 - Cursor CLI muss im CI-Runner installiert sein, sonst Placeholder-Commit.
