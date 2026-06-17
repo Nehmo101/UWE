@@ -29,6 +29,7 @@ import {
   resolveEffectiveAllowDmOnly,
 } from "@uwe/security";
 import { enqueueAndDispatch, runJob } from "./job-executor";
+import { jsonError } from "./api-response";
 
 async function getAiSettingsOverrides() {
   const systemSettings = await getSystemSettings();
@@ -57,9 +58,6 @@ function serializeRun(run: Awaited<ReturnType<ReturnType<typeof aiRuns>["getById
   };
 }
 
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
 
 function handleAiError(error: unknown) {
   if (error instanceof AiPrivacyError) {

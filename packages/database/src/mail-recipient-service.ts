@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { slugifyMailKey } from "./mail-utils";
 
 export interface MailRecipientView {
   id: string;
@@ -23,15 +24,6 @@ export interface MailPlayerContact {
   displayName: string;
   email: string;
   characterName: string | null;
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "group";
 }
 
 function toRecipientView(record: {
@@ -195,7 +187,7 @@ export class MailRecipientService {
       throw new Error("Welt nicht gefunden.");
     }
 
-    const slug = input.slug?.trim() || slugify(input.name);
+    const slug = input.slug?.trim() || slugifyMailKey(input.name, "group");
     const group = await this.db.mailRecipientGroup.create({
       data: {
         worldId: world.id,

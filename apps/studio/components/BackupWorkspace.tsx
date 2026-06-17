@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
+import { formatStudioDate } from "@/src/lib/format";
 
 interface BackupPermissions {
   role: string;
@@ -355,7 +356,7 @@ export function BackupWorkspace({
                       {backup.manifest.stats.worlds} Welten · {backup.manifest.stats.pages} Seiten ·{" "}
                       {backup.manifest.stats.assets} Assets
                     </td>
-                    <td>{new Date(backup.manifest.createdAt).toLocaleString("de-DE")}</td>
+                    <td>{formatStudioDate(backup.manifest.createdAt)}</td>
                     <td style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                       {permissions?.canDownload && (
                         <button

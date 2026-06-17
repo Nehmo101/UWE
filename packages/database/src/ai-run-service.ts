@@ -1,5 +1,6 @@
 import type { Prisma, AiRunStatus } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 
 export type { AiRun, AiRunStatus } from "./generated/prisma/client";
 
@@ -95,11 +96,6 @@ export interface AiRunView {
   gameSessionNumber: number | null;
 }
 
-function toJsonValue(value: Prisma.InputJsonValue | null | undefined): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
 function toView(
   run: Prisma.AiRunGetPayload<{
     include: {
@@ -165,7 +161,7 @@ export class AiRunService {
         status: "pending",
         systemPrompt: input.systemPrompt ?? null,
         userPrompt: input.userPrompt ?? null,
-        contextData: toJsonValue(input.contextData),
+        contextData: toPrismaJsonValue(input.contextData),
         targetType: input.targetType ?? null,
         targetId: input.targetId ?? null,
       },
@@ -189,8 +185,8 @@ export class AiRunService {
       data: {
         status: "completed",
         resultText: input.resultText,
-        resultMeta: toJsonValue(input.resultMeta),
-        contextData: toJsonValue(input.contextData),
+        resultMeta: toPrismaJsonValue(input.resultMeta),
+        contextData: toPrismaJsonValue(input.contextData),
         systemPrompt: input.systemPrompt ?? undefined,
         userPrompt: input.userPrompt ?? undefined,
         durationMs: input.durationMs ?? null,
@@ -206,7 +202,7 @@ export class AiRunService {
       data: {
         status: "failed",
         errorMessage: input.errorMessage,
-        errorDetails: toJsonValue(input.errorDetails),
+        errorDetails: toPrismaJsonValue(input.errorDetails),
         durationMs: input.durationMs ?? null,
       },
       include: runInclude(),
@@ -251,7 +247,7 @@ export class AiRunService {
     const run = await this.db.aiRun.update({
       where: { id },
       data: {
-        proposals: toJsonValue(proposals as Prisma.InputJsonValue),
+        proposals: toPrismaJsonValue(proposals as Prisma.InputJsonValue),
       },
       include: runInclude(),
     });

@@ -16,17 +16,11 @@ import {
   getAppRepository,
   type AiRunStatus,
 } from "@uwe/database/server";
+import { formatStudioDate } from "@/src/lib/format";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
   searchParams: Promise<{ status?: string }>;
-}
-
-function formatDate(value: Date): string {
-  return value.toLocaleString("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
 }
 
 export default async function AiRunsPage({ params, searchParams }: Props) {
@@ -113,7 +107,7 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id}>
-                    <td>{formatDate(run.createdAt)}</td>
+                    <td>{formatStudioDate(run.createdAt, "short")}</td>
                     <td>
                       {AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
                     </td>

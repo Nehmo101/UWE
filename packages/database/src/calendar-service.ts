@@ -5,6 +5,7 @@ import type {
   Prisma,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 
 export type {
   CalendarEvent,
@@ -71,11 +72,6 @@ export interface ListCalendarEventsOptions {
   limit?: number;
 }
 
-function toJson(value: Record<string, unknown> | null | undefined): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
 export class CalendarService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -101,7 +97,7 @@ export class CalendarService {
         username: input.username?.trim() || null,
         enabled: input.enabled ?? true,
         color: input.color?.trim() || null,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -118,7 +114,7 @@ export class CalendarService {
         ...(input.username !== undefined ? { username: input.username?.trim() || null } : {}),
         ...(input.enabled != null ? { enabled: input.enabled } : {}),
         ...(input.color !== undefined ? { color: input.color?.trim() || null } : {}),
-        ...(input.metadata !== undefined ? { metadata: toJson(input.metadata) } : {}),
+        ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),
       },
     });
   }
@@ -159,7 +155,7 @@ export class CalendarService {
         allDay: input.allDay ?? false,
         kind: input.kind ?? "personal",
         externalUid: input.externalUid ?? null,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -179,7 +175,7 @@ export class CalendarService {
         ...(input.allDay != null ? { allDay: input.allDay } : {}),
         ...(input.kind != null ? { kind: input.kind } : {}),
         ...(input.externalUid !== undefined ? { externalUid: input.externalUid } : {}),
-        ...(input.metadata !== undefined ? { metadata: toJson(input.metadata) } : {}),
+        ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),
       },
     });
   }

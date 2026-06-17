@@ -8,10 +8,7 @@ import {
   type JobType,
 } from "@uwe/database/server";
 import { dispatchJob, enqueueAndDispatch, retryAndDispatch } from "./job-executor";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "./api-response";
 
 function getJobs() {
   return createJobService(prisma);

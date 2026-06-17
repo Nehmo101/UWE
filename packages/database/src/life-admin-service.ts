@@ -14,6 +14,7 @@ import type {
   WorkshopStatus,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 import {
   buildContractAlerts,
   summarizeContractCosts,
@@ -161,11 +162,6 @@ export const HARDWARE_STATUS_LABELS: Record<HardwareStatus, string> = {
   retired: "Ausgemustert",
   archived: "Archiviert",
 };
-
-function toJson(value: unknown): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
 
 export interface ListCapturesOptions {
   status?: CaptureStatus | CaptureStatus[];
@@ -357,7 +353,7 @@ export class LifeAdminService {
         storageKey: input.storageKey ?? undefined,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -374,7 +370,7 @@ export class LifeAdminService {
         storageKey: input.storageKey ?? undefined,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
         triagedAt:
           input.status === "triaged" || input.status === "linked"
             ? new Date()
@@ -425,11 +421,11 @@ export class LifeAdminService {
         category: input.category ?? "other",
         nextAction: input.nextAction ?? undefined,
         notes: input.notes ?? "",
-        links: toJson(input.links),
+        links: toPrismaJsonValue(input.links),
         costCents: input.costCents ?? undefined,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -448,11 +444,11 @@ export class LifeAdminService {
         category: input.category,
         nextAction: input.nextAction ?? undefined,
         notes: input.notes,
-        links: input.links === undefined ? undefined : toJson(input.links),
+        links: input.links === undefined ? undefined : toPrismaJsonValue(input.links),
         costCents: input.costCents ?? undefined,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -497,20 +493,20 @@ export class LifeAdminService {
         projectType: input.projectType,
         status: input.status ?? "idea",
         description: input.description ?? "",
-        materialsNeeded: toJson(input.materialsNeeded),
-        materialsUsed: toJson(input.materialsUsed),
-        colorsUsed: toJson(input.colorsUsed),
-        filamentsUsed: toJson(input.filamentsUsed),
-        stlLinks: toJson(input.stlLinks),
-        imageGallery: toJson(input.imageGallery),
-        referenceImages: toJson(input.referenceImages),
-        progressPhotos: toJson(input.progressPhotos),
+        materialsNeeded: toPrismaJsonValue(input.materialsNeeded),
+        materialsUsed: toPrismaJsonValue(input.materialsUsed),
+        colorsUsed: toPrismaJsonValue(input.colorsUsed),
+        filamentsUsed: toPrismaJsonValue(input.filamentsUsed),
+        stlLinks: toPrismaJsonValue(input.stlLinks),
+        imageGallery: toPrismaJsonValue(input.imageGallery),
+        referenceImages: toPrismaJsonValue(input.referenceImages),
+        progressPhotos: toPrismaJsonValue(input.progressPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
         notes: input.notes ?? "",
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -527,20 +523,20 @@ export class LifeAdminService {
         projectType: input.projectType,
         status: input.status,
         description: input.description,
-        materialsNeeded: input.materialsNeeded === undefined ? undefined : toJson(input.materialsNeeded),
-        materialsUsed: input.materialsUsed === undefined ? undefined : toJson(input.materialsUsed),
-        colorsUsed: input.colorsUsed === undefined ? undefined : toJson(input.colorsUsed),
-        filamentsUsed: input.filamentsUsed === undefined ? undefined : toJson(input.filamentsUsed),
-        stlLinks: input.stlLinks === undefined ? undefined : toJson(input.stlLinks),
-        imageGallery: input.imageGallery === undefined ? undefined : toJson(input.imageGallery),
-        referenceImages: input.referenceImages === undefined ? undefined : toJson(input.referenceImages),
-        progressPhotos: input.progressPhotos === undefined ? undefined : toJson(input.progressPhotos),
+        materialsNeeded: input.materialsNeeded === undefined ? undefined : toPrismaJsonValue(input.materialsNeeded),
+        materialsUsed: input.materialsUsed === undefined ? undefined : toPrismaJsonValue(input.materialsUsed),
+        colorsUsed: input.colorsUsed === undefined ? undefined : toPrismaJsonValue(input.colorsUsed),
+        filamentsUsed: input.filamentsUsed === undefined ? undefined : toPrismaJsonValue(input.filamentsUsed),
+        stlLinks: input.stlLinks === undefined ? undefined : toPrismaJsonValue(input.stlLinks),
+        imageGallery: input.imageGallery === undefined ? undefined : toPrismaJsonValue(input.imageGallery),
+        referenceImages: input.referenceImages === undefined ? undefined : toPrismaJsonValue(input.referenceImages),
+        progressPhotos: input.progressPhotos === undefined ? undefined : toPrismaJsonValue(input.progressPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
         notes: input.notes,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -592,7 +588,7 @@ export class LifeAdminService {
         cancelByDate: input.cancelByDate ?? undefined,
         portalUrl: input.portalUrl ?? undefined,
         notes: input.notes ?? "",
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -620,7 +616,7 @@ export class LifeAdminService {
         cancelByDate: input.cancelByDate ?? undefined,
         portalUrl: input.portalUrl ?? undefined,
         notes: input.notes,
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -665,11 +661,11 @@ export class LifeAdminService {
         localUrl: input.localUrl ?? undefined,
         publicUrl: input.publicUrl ?? undefined,
         operatingSystem: input.operatingSystem ?? "",
-        specs: toJson(input.specs),
-        setupSteps: toJson(input.setupSteps),
+        specs: toPrismaJsonValue(input.specs),
+        setupSteps: toPrismaJsonValue(input.setupSteps),
         errorNotes: input.errorNotes ?? undefined,
         notes: input.notes ?? "",
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -690,11 +686,11 @@ export class LifeAdminService {
         localUrl: input.localUrl ?? undefined,
         publicUrl: input.publicUrl ?? undefined,
         operatingSystem: input.operatingSystem,
-        specs: input.specs === undefined ? undefined : toJson(input.specs),
-        setupSteps: input.setupSteps === undefined ? undefined : toJson(input.setupSteps),
+        specs: input.specs === undefined ? undefined : toPrismaJsonValue(input.specs),
+        setupSteps: input.setupSteps === undefined ? undefined : toPrismaJsonValue(input.setupSteps),
         errorNotes: input.errorNotes ?? undefined,
         notes: input.notes,
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -757,8 +753,8 @@ export class LifeAdminService {
         title: input.title,
         content: input.content ?? "",
         category: input.category ?? undefined,
-        tags: toJson(input.tags),
-        metadata: toJson(input.metadata),
+        tags: toPrismaJsonValue(input.tags),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -774,8 +770,8 @@ export class LifeAdminService {
         title: input.title,
         content: input.content,
         category: input.category ?? undefined,
-        tags: input.tags === undefined ? undefined : toJson(input.tags),
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        tags: input.tags === undefined ? undefined : toPrismaJsonValue(input.tags),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -806,8 +802,8 @@ export class LifeAdminService {
         factType: input.factType ?? "custom",
         title: input.title,
         content: input.content ?? "",
-        tags: toJson(input.tags),
-        metadata: toJson(input.metadata),
+        tags: toPrismaJsonValue(input.tags),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -823,8 +819,8 @@ export class LifeAdminService {
         factType: input.factType,
         title: input.title,
         content: input.content,
-        tags: input.tags === undefined ? undefined : toJson(input.tags),
-        metadata: input.metadata === undefined ? undefined : toJson(input.metadata),
+        tags: input.tags === undefined ? undefined : toPrismaJsonValue(input.tags),
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -898,7 +894,7 @@ export class LifeAdminService {
         name: input.name,
         description: input.description ?? "",
         targetType: input.targetType,
-        template: toJson(input.template) ?? {},
+        template: toPrismaJsonValue(input.template) ?? {},
         isSystem: input.isSystem ?? false,
         sortOrder: input.sortOrder ?? 0,
       },
@@ -934,7 +930,7 @@ export class LifeAdminService {
         contextId: input.contextId ?? undefined,
         generatorAction: input.generatorAction ?? undefined,
         promptSummary: input.promptSummary ?? undefined,
-        output: toJson(input.output) ?? {},
+        output: toPrismaJsonValue(input.output) ?? {},
         isFavorite: input.isFavorite ?? false,
         variantOfId: input.variantOfId ?? undefined,
         aiRunId: input.aiRunId ?? undefined,

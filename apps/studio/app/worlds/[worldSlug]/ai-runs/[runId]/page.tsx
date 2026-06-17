@@ -15,16 +15,10 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { AiRunActions } from "@/components/AiRunActions";
+import { formatStudioDate } from "@/src/lib/format";
 
 interface Props {
   params: Promise<{ worldSlug: string; runId: string }>;
-}
-
-function formatDate(value: Date): string {
-  return value.toLocaleString("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 function formatJson(value: unknown): string {
@@ -83,7 +77,7 @@ export default async function AiRunDetailPage({ params }: Props) {
             title={
               AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType
             }
-            summary={`${AI_RUN_STATUS_LABELS[run.status]} · ${formatDate(run.createdAt)}`}
+            summary={`${AI_RUN_STATUS_LABELS[run.status]} · ${formatStudioDate(run.createdAt, "medium")}`}
           />
 
           <dl className="uwe-detail-grid">

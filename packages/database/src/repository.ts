@@ -26,7 +26,7 @@ import type {
 } from "./generated/prisma/client";
 import { pageTypesForNavCategory, type NavCategory } from "./page-types";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { parseStringArray, toJsonArray } from "./json-utils";
+import { parseStringArray, toJsonArray, withParsedArrays } from "./json-utils";
 import {
   filterBlocksForContext,
   isPageAccessible,
@@ -159,16 +159,6 @@ export type PageSummary = Prisma.PageGetPayload<{
 }>;
 
 export type PublicPage = PageWithBlocks;
-
-function withParsedArrays<T extends { tags: unknown; aliases: unknown }>(
-  page: T,
-): T & { tags: string[]; aliases: string[] } {
-  return {
-    ...page,
-    tags: parseStringArray(page.tags),
-    aliases: parseStringArray(page.aliases),
-  };
-}
 
 export class UweRepository {
   private settingsService?: SettingsService;

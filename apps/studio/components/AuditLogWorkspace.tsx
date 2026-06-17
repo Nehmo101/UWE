@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatStudioDate } from "@/src/lib/format";
 
 interface AuditEntry {
   id: string;
@@ -142,7 +143,7 @@ export function AuditLogWorkspace() {
               <tbody>
                 {entries.map((entry) => (
                   <tr key={entry.id}>
-                    <td>{new Date(entry.timestamp).toLocaleString("de-DE")}</td>
+                    <td>{formatStudioDate(entry.timestamp)}</td>
                     <td>{entry.actionLabel}</td>
                     <td>{entry.actorUserId ?? "—"}</td>
                     <td>

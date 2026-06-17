@@ -7,6 +7,7 @@ import {
   updateShareLinkAction,
 } from "@/app/share-actions";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
+import { formatStudioDateOrDash } from "@/src/lib/format";
 
 interface ShareLinkRecord {
   id: string;
@@ -27,11 +28,6 @@ interface ShareLinkPanelProps {
   returnPath: string;
   links: ShareLinkRecord[];
   previewHref?: string;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("de-DE");
 }
 
 function toDateTimeLocal(value: string | null): string {
@@ -110,10 +106,10 @@ export function ShareLinkPanel({
               <div className="share-link-meta">
                 <code>{getShareLinkPublicUrl(link.token)}</code>
                 <span>
-                  {link.enabled ? "Aktiv" : "Deaktiviert"} · Erstellt {formatDate(link.createdAt)}
+                  {link.enabled ? "Aktiv" : "Deaktiviert"} · Erstellt {formatStudioDateOrDash(link.createdAt)}
                 </span>
                 <span>
-                  Ablauf: {formatDate(link.expiresAt)} · {link.hasPassword ? "Passwort" : "Kein Passwort"} ·{" "}
+                  Ablauf: {formatStudioDateOrDash(link.expiresAt)} · {link.hasPassword ? "Passwort" : "Kein Passwort"} ·{" "}
                   {link.readOnly ? "Nur-Lesen" : "Bearbeitbar"} ·{" "}
                   {link.logAccess ? "Protokoll an" : "Protokoll aus"}
                 </span>

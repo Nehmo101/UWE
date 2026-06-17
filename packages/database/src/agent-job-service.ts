@@ -1,9 +1,9 @@
 import type {
   DevAgentJobProvider,
   DevAgentJobStatus,
-  Prisma,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 
 export type {
   DevAgentJob,
@@ -49,11 +49,6 @@ export interface UpdateDevAgentJobInput {
   completedAt?: Date | null;
 }
 
-function toJson(value: Record<string, unknown> | null | undefined): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
 export class DevAgentJobService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -89,7 +84,7 @@ export class DevAgentJobService {
         ...(input.issueUrl !== undefined ? { issueUrl: input.issueUrl } : {}),
         ...(input.githubRunId !== undefined ? { githubRunId: input.githubRunId } : {}),
         ...(input.cursorJobId !== undefined ? { cursorJobId: input.cursorJobId } : {}),
-        ...(input.result !== undefined ? { result: toJson(input.result) } : {}),
+        ...(input.result !== undefined ? { result: toPrismaJsonValue(input.result) } : {}),
         ...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
         ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {}),
       },

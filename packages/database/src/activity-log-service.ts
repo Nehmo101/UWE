@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 import type {
   ActivityAction,
   ActivityTargetType,
@@ -91,8 +92,7 @@ export class ActivityLogService {
           targetLabel: input.targetLabel ?? null,
           targetHref: input.targetHref ?? null,
           summary: input.summary,
-          details:
-            input.details == null ? undefined : JSON.parse(JSON.stringify(input.details)),
+          details: toPrismaJsonValue(input.details),
           undoEntryId: input.undoEntryId ?? null,
         },
       });

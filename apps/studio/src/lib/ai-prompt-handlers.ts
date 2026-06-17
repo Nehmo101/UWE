@@ -28,10 +28,7 @@ import {
 } from "@uwe/security";
 import type { AiContextMode, AiProviderMode } from "./ai-prompt-ui";
 import { aiPolicyErrorResponse } from "./ai-security";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "./api-response";
 
 async function getSettingsOverrides() {
   const systemSettings = await getSystemSettings();

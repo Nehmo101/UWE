@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { slugifyMailKey } from "./mail-utils";
 import type { MailTemplateKind } from "./generated/prisma/client";
 import { runSeedOnce } from "./seed-tracker";
 
@@ -68,15 +69,6 @@ const SYSTEM_TEMPLATES: Array<{
     bodyText: "{{targetLabel}}\n\nVorschau-Link: {{publicUrl}}",
   },
 ];
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "template";
-}
 
 function toView(record: {
   id: string;
@@ -175,7 +167,7 @@ export class MailTemplateService {
   }
 
   async createTemplate(worldId: string, input: MailTemplateInput): Promise<MailTemplateView> {
-    const slug = input.slug?.trim() || slugify(input.name);
+    const slug = input.slug?.trim() || slugifyMailKey(input.name, "template");
 
     const record = await this.db.mailTemplate.create({
       data: {

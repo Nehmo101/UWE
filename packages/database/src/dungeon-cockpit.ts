@@ -6,7 +6,7 @@ import type {
   Prisma,
 } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { parseStringArray } from "./json-utils";
+import { withParsedArrays } from "./json-utils";
 import { renderPageContentHtml, type WikiPageNode } from "./page-service";
 import { filterBlocksForContext } from "./permissions";
 import type { PageSummary } from "./repository";
@@ -163,16 +163,6 @@ function slugifyTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "entity";
-}
-
-function withParsedArrays<T extends { tags: unknown; aliases: unknown }>(
-  page: T,
-): T & { tags: string[]; aliases: string[] } {
-  return {
-    ...page,
-    tags: parseStringArray(page.tags),
-    aliases: parseStringArray(page.aliases),
-  };
 }
 
 function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true } }>): DungeonEntitySummary {

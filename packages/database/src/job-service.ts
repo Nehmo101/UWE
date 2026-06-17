@@ -1,5 +1,6 @@
 import type { JobStatus, JobType, Prisma } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 
 export type { JobStatus, JobType } from "./generated/prisma/client";
 
@@ -112,11 +113,6 @@ export interface JobSummary {
 
 type JobRecord = Prisma.JobGetPayload<{ include: { logs: true } }> | Prisma.JobGetPayload<object>;
 
-function toJsonValue(value: Record<string, unknown> | null | undefined): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
 function toJobView(job: JobRecord, includeLogs = false): JobView {
   const canRetry =
     (job.status === "failed" || job.status === "cancelled") &&
@@ -173,7 +169,7 @@ export class JobService {
         worldId: input.worldId ?? null,
         worldSlug: input.worldSlug ?? null,
         userId: input.userId ?? null,
-        payload: toJsonValue(input.payload ?? undefined),
+        payload: toPrismaJsonValue(input.payload ?? undefined),
         maxAttempts: input.maxAttempts ?? 3,
         relatedType: input.relatedType ?? null,
         relatedId: input.relatedId ?? null,
@@ -275,7 +271,7 @@ export class JobService {
       where: { id },
       data: {
         status: "completed",
-        result: toJsonValue(result ?? undefined),
+        result: toPrismaJsonValue(result ?? undefined),
         completedAt: new Date(),
         progress: 100,
         progressLabel: "Abgeschlossen",
@@ -299,7 +295,7 @@ export class JobService {
       data: {
         status: "failed",
         errorMessage,
-        errorDetails: toJsonValue(errorDetails ?? undefined),
+        errorDetails: toPrismaJsonValue(errorDetails ?? undefined),
         completedAt: new Date(),
       },
     });
@@ -356,7 +352,7 @@ export class JobService {
           jobId,
           level,
           message,
-          details: toJsonValue(details),
+          details: toPrismaJsonValue(details),
         },
       });
     } catch (error) {

@@ -12,10 +12,7 @@ import { getInferenceStatus } from "@uwe/ai-brain";
 import { enforceAiRequestLimits } from "@uwe/security";
 import { postGenerate } from "./ai-handlers";
 import { buildGeneratorUserPrompt, mapGeneratorActionToTaskType } from "./generator-action-map";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "./api-response";
 
 export async function getGeneratorPanelData(worldSlug: string, pageSlug: string) {
   const repo = createUweRepository();

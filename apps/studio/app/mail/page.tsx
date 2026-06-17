@@ -14,10 +14,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { MailTestForm } from "@/components/MailTestForm";
-
-function formatDate(value: Date): string {
-  return value.toLocaleString("de-DE");
-}
+import { formatStudioDate } from "@/src/lib/format";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Entwurf",
@@ -136,7 +133,7 @@ export default async function MailCenterPage() {
                 <tbody>
                   {logs.map((log) => (
                     <tr key={log.id}>
-                      <td>{formatDate(log.createdAt)}</td>
+                      <td>{formatStudioDate(log.createdAt)}</td>
                       <td>{STATUS_LABELS[log.status] ?? log.status}</td>
                       <td>{log.subject}</td>
                       <td>{log.toAddresses.join(", ")}</td>

@@ -12,10 +12,7 @@ import {
   type ImportFormat,
 } from "@uwe/knoteforge-import";
 import { enqueueAndDispatch, runJob } from "./job-executor";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "./api-response";
 
 export interface ImportRequestBody {
   format: ImportFormat;

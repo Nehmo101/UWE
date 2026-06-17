@@ -23,12 +23,9 @@ import {
   verifySpotifyOAuthState,
 } from "./spotify-oauth-state";
 import { getOAuthStateCookieOptions } from "@uwe/auth";
+import { jsonError } from "./api-response";
 
 const SPOTIFY_STATE_COOKIE_PATH = "/api/spotify/callback";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
 
 function getSpotifyService() {
   const oauthConfig = resolveSpotifyOAuthConfig();

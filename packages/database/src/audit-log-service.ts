@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PrismaClient } from "./client";
 import type { AuditAction, AuditTargetType } from "./generated/prisma/client";
 import { resolveClientIp } from "@uwe/auth";
+import { toPrismaJsonValue } from "./json-utils";
 
 const AUDIT_HASH_SALT =
   process.env.AUDIT_HASH_SALT ?? process.env.AUTH_SECRET ?? "uwe-audit-dev-salt";
@@ -226,8 +227,7 @@ export class AuditLogService {
           worldId: input.worldId ?? null,
           ipHash: hashClientIp(input.request?.ip),
           userAgentHash: hashUserAgent(input.request?.userAgent),
-          metadataJson:
-            redactedMetadata == null ? undefined : JSON.parse(JSON.stringify(redactedMetadata)),
+          metadataJson: toPrismaJsonValue(redactedMetadata),
         },
       });
     } catch (error) {

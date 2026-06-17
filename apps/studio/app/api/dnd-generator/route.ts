@@ -14,10 +14,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { requireStudioApiAuth } from "@uwe/security";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "@/src/lib/api-response";
 
 async function resolveContext(searchParams: URLSearchParams): Promise<DndContextDescriptor | null> {
   const worldSlug = searchParams.get("worldSlug")?.trim();

@@ -16,10 +16,7 @@ import {
   type AiProviderId,
 } from "@uwe/ai-brain";
 import { enqueueAndDispatch, runJob } from "./job-executor";
-
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+import { jsonError } from "./api-response";
 
 function handleBrainError(error: unknown) {
   if (error instanceof AiPrivacyError) {

@@ -13,6 +13,7 @@ import { BrainStoreService } from "./brain-store-service";
 import { GameSessionService } from "./game-session";
 import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
+import { toPrismaJsonValue } from "./json-utils";
 import { createUndoService } from "./undo-service";
 
 export interface ApplyBrainProposalInput {
@@ -75,7 +76,7 @@ export class AiReviewService {
 
     await this.db.aiRun.update({
       where: { id: input.aiRunId },
-      data: { proposals: JSON.parse(JSON.stringify([patch])) },
+      data: { proposals: toPrismaJsonValue([patch]) },
     });
 
     const proposal = await this.db.aiProposal.create({
@@ -83,7 +84,7 @@ export class AiReviewService {
         aiRunId: input.aiRunId,
         worldId: input.worldId,
         suggestedMode,
-        patch: JSON.parse(JSON.stringify(patch)),
+        patch: toPrismaJsonValue(patch),
         resultText: input.resultText,
         sourcePageId: input.pageId,
         sessionId: input.sessionId ?? null,

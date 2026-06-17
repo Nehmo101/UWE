@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
+import { formatStudioDate } from "@/src/lib/format";
 import type { AiBrainSettings, AiContext, AiProviderId, DndGeneratorAction } from "@uwe/ai-brain";
 import type { BrainActionDefinition, BrainActionId } from "@uwe/ai-brain";
 
@@ -482,7 +483,7 @@ export function AiBrainSidebar({
           <ul>
             {recentRuns.map((entry) => (
               <li key={entry.id}>
-                {entry.taskType} — {entry.status} — {new Date(entry.createdAt).toLocaleString("de-DE")}
+                {entry.taskType} — {entry.status} — {formatStudioDate(entry.createdAt)}
               </li>
             ))}
           </ul>

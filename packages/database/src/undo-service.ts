@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 import type {
   CanonicalStatus,
   ContentBlockType,
@@ -102,10 +103,6 @@ export interface UndoResult {
   message: string;
 }
 
-function asJson(value: unknown) {
-  return value == null ? undefined : JSON.parse(JSON.stringify(value));
-}
-
 export class UndoService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -139,7 +136,7 @@ export class UndoService {
         operation,
         targetType: "page",
         targetId: page.id,
-        snapshot: asJson(snapshot),
+        snapshot: toPrismaJsonValue(snapshot),
       },
     });
   }
@@ -187,7 +184,7 @@ export class UndoService {
         operation: "page.delete" satisfies UndoOperation,
         targetType: "page",
         targetId: page.id,
-        snapshot: asJson(snapshot),
+        snapshot: toPrismaJsonValue(snapshot),
       },
     });
   }
@@ -220,7 +217,7 @@ export class UndoService {
         operation,
         targetType: "content_block",
         targetId: block.id,
-        snapshot: asJson(snapshot),
+        snapshot: toPrismaJsonValue(snapshot),
       },
     });
   }
@@ -233,7 +230,7 @@ export class UndoService {
         operation: "ai.page.create" satisfies UndoOperation,
         targetType: "page",
         targetId: pageId,
-        snapshot: asJson({ kind: "ai_page_create", pageId }),
+        snapshot: toPrismaJsonValue({ kind: "ai_page_create", pageId }),
       },
     });
   }
@@ -246,7 +243,7 @@ export class UndoService {
         operation: "ai.block.create" satisfies UndoOperation,
         targetType: "content_block",
         targetId: blockId,
-        snapshot: asJson({ kind: "ai_block_create", blockId }),
+        snapshot: toPrismaJsonValue({ kind: "ai_block_create", blockId }),
       },
     });
   }
@@ -269,7 +266,7 @@ export class UndoService {
         operation: "ai.session.recap" satisfies UndoOperation,
         targetType: "game_session",
         targetId: session.id,
-        snapshot: asJson(snapshot),
+        snapshot: toPrismaJsonValue(snapshot),
       },
     });
   }
@@ -291,7 +288,7 @@ export class UndoService {
         operation: "ai.session.summary_dm" satisfies UndoOperation,
         targetType: "game_session",
         targetId: session.id,
-        snapshot: asJson(snapshot),
+        snapshot: toPrismaJsonValue(snapshot),
       },
     });
   }
@@ -304,7 +301,7 @@ export class UndoService {
         operation: "ai.brain_document.create" satisfies UndoOperation,
         targetType: "brain_document",
         targetId: documentId,
-        snapshot: asJson({ kind: "brain_document_create", documentId }),
+        snapshot: toPrismaJsonValue({ kind: "brain_document_create", documentId }),
       },
     });
   }
@@ -410,8 +407,8 @@ export class UndoService {
           visibility: data.visibility,
           publishStatus: data.publishStatus,
           canonicalStatus: data.canonicalStatus,
-          tags: asJson(data.tags),
-          aliases: asJson(data.aliases),
+          tags: toPrismaJsonValue(data.tags),
+          aliases: toPrismaJsonValue(data.aliases),
           contentBlocks: {
             create: (snapshot.blocks ?? []).map((block) => ({
               id: block.id,
@@ -420,7 +417,7 @@ export class UndoService {
               sortOrder: block.sortOrder,
               content: block.content,
               visibility: block.visibility,
-              metadata: asJson(block.metadata),
+              metadata: toPrismaJsonValue(block.metadata),
             })),
           },
         },
@@ -449,8 +446,8 @@ export class UndoService {
         visibility: data.visibility,
         publishStatus: data.publishStatus,
         canonicalStatus: data.canonicalStatus,
-        tags: asJson(data.tags),
-        aliases: asJson(data.aliases),
+        tags: toPrismaJsonValue(data.tags),
+        aliases: toPrismaJsonValue(data.aliases),
       },
     });
 
@@ -486,7 +483,7 @@ export class UndoService {
           sortOrder: data.sortOrder,
           content: data.content,
           visibility: data.visibility,
-          metadata: asJson(data.metadata),
+          metadata: toPrismaJsonValue(data.metadata),
         },
       });
 
@@ -505,7 +502,7 @@ export class UndoService {
         sortOrder: data.sortOrder,
         content: data.content,
         visibility: data.visibility,
-        metadata: asJson(data.metadata),
+        metadata: toPrismaJsonValue(data.metadata),
       },
     });
 

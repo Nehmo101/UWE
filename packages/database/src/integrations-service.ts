@@ -3,9 +3,9 @@ import type {
   ImageStudioLinkTargetType,
   ImageStudioOperation,
   ImageStudioStatus,
-  Prisma,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { toPrismaJsonValue } from "./json-utils";
 
 export type {
   ImageStudioProject,
@@ -58,11 +58,6 @@ export interface CreateImageStudioVersionInput {
   metadata?: Record<string, unknown> | null;
 }
 
-function toJson(value: Record<string, unknown> | null | undefined): Prisma.InputJsonValue | undefined {
-  if (value == null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
 export class ImageStudioService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -94,7 +89,7 @@ export class ImageStudioService {
         title: input.title.trim(),
         prompt: input.prompt?.trim() || null,
         status: "draft",
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -121,7 +116,7 @@ export class ImageStudioService {
         assetId: input.assetId ?? null,
         parentVersionId: input.parentVersionId ?? null,
         providerMode: input.providerMode ?? null,
-        metadata: toJson(input.metadata),
+        metadata: toPrismaJsonValue(input.metadata),
       },
     });
   }
@@ -182,11 +177,11 @@ export class DndApiService {
       create: {
         provider,
         cacheKey,
-        payload: JSON.parse(JSON.stringify(payload)) as Prisma.InputJsonValue,
+        payload: toPrismaJsonValue(payload)!,
         expiresAt,
       },
       update: {
-        payload: JSON.parse(JSON.stringify(payload)) as Prisma.InputJsonValue,
+        payload: toPrismaJsonValue(payload)!,
         expiresAt,
       },
     });

@@ -44,3 +44,5 @@ export {
 } from "./store";
 
 export { SEED_PAGES, SEED_WORLDS } from "./seed";
+
+export { parseWikiLinks, type ParsedWikiLink } from "./wikilink-utils";

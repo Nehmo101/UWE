@@ -5,6 +5,8 @@ import {
 } from "./content-access";
 import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
+import { normalizeLookupKey } from "./queries";
+import { parseWikiLinks } from "./wikilink-utils";
 import {
   filterBlocksForContext,
   isPageAccessible,
@@ -29,29 +31,8 @@ export interface WikiPageNode {
   href: string;
 }
 
-interface ParsedWikiLink {
-  target: string;
-  label?: string;
-  start: number;
-  end: number;
-}
-
-export function parseWikiLinks(text: string): ParsedWikiLink[] {
-  const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-  const links: ParsedWikiLink[] = [];
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    links.push({
-      target: match[1].trim(),
-      label: match[2]?.trim(),
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-  }
-
-  return links;
-}
+export { parseWikiLinks, type ParsedWikiLink } from "./wikilink-utils";
+export { normalizeLookupKey } from "./queries";
 
 export function combineBlockContent(blocks: ContentBlock[]): string {
   return [...blocks]
@@ -117,10 +98,6 @@ export async function buildWorldWikiIndex(
       shareGrant: options?.shareGrant,
     }),
   );
-}
-
-export function normalizeLookupKey(key: string): string {
-  return key.trim().toLocaleLowerCase("de");
 }
 
 export function buildLookupIndex(

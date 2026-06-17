@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import {
   createLifeAdminService,
+  formatEuroFromCents,
   PersonalProjectCategoryEnum,
   PersonalProjectStatusEnum,
   prisma,
@@ -15,9 +16,9 @@ import {
   updateProjectAction,
 } from "../life-admin-actions";
 
-function formatEuro(cents: number | null | undefined): string {
+function formatProjectBudget(cents: number | null | undefined): string {
   if (cents == null) return "—";
-  return `${(cents / 100).toFixed(2)} €`;
+  return formatEuroFromCents(cents);
 }
 
 export default async function ProjectsPage() {
@@ -130,7 +131,7 @@ export default async function ProjectsPage() {
                     />
                   </label>
                   <p className="uwe-dashboard-muted">
-                    {PROJECT_STATUS_LABELS[project.status]} · {formatEuro(project.costCents)}
+                    {PROJECT_STATUS_LABELS[project.status]} · {formatProjectBudget(project.costCents)}
                   </p>
                   <div className="uwe-inline-actions">
                     <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">

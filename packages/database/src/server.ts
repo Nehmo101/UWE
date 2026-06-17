@@ -126,7 +126,7 @@ export {
   type NavCategory,
 } from "./page-types";
 
-export { parseStringArray, toJsonArray } from "./json-utils";
+export { parseStringArray, toJsonArray, toPrismaJsonValue, withParsedArrays } from "./json-utils";
 
 export {
   buildPageView,
