@@ -10,7 +10,6 @@ import {
   encryptionKeyConfigured,
   isEncryptedBackupPayload,
 } from "./encrypt";
-import { findSecretIssuesInJson } from "./sanitize";
 import { applyBackupRetention, normalizeRetentionCount } from "./retention";
 import { validateBackupBundleOrThrow } from "./validate";
 import {

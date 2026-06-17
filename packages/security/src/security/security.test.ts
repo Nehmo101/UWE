@@ -5,7 +5,6 @@ import { isCrossSiteBrowserRequest, requireSameOriginMutation } from "./csrf";
 import { validationError } from "./errors";
 import { guardStudioMutation, requireStudioApiAuth } from "./guards";
 import {
-  checkRateLimit,
   enforceRateLimit,
   resetRateLimitStore,
   setRateLimitStore,

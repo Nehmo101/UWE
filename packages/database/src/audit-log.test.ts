@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, before, describe, it } from "node:test";
+import { describe, it } from "node:test";
 import { buildAccessContext, canViewAuditLog } from "@uwe/auth";
 import { createAuthService } from "./auth";
 import { createAuditLogService, logAuditEvent, redactAuditMetadata } from "./audit-log-service";

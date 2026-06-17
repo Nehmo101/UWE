@@ -11,12 +11,6 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
 });
 
-function warningLevel(severity: string): StatusLevel {
-  if (severity === "critical") return "error";
-  if (severity === "warning") return "degraded";
-  return "ok";
-}
-
 function boolLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }

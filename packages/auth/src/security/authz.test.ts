@@ -30,13 +30,6 @@ const userA: AuthUser = {
   role: "player",
 };
 
-const userB: AuthUser = {
-  id: "user-b",
-  displayName: "User B",
-  email: "b@test",
-  role: "player",
-};
-
 const playerMembershipA: WorldMembership = {
   userId: "user-a",
   worldId: "world-a",

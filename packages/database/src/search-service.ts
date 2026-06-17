@@ -11,8 +11,6 @@ import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
 import {
   type AccessContext as WikiAccessContext,
-  filterBlocksForContext,
-  isPageAccessible,
   type PortalAccessOptions,
 } from "./permissions";
 import { buildSearchIndexForScope } from "./search-index";

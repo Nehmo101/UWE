@@ -4,7 +4,7 @@ import {
   buildDetailedHealthPayload,
   evaluatePublicHealth,
 } from "./health-endpoints";
-import { UWE_PRODUCT_NAME, UWE_VERSION } from "./version";
+import { UWE_PRODUCT_NAME } from "./version";
 import type { PrismaClient } from "./client";
 
 function createMockDb(healthy = true): PrismaClient {

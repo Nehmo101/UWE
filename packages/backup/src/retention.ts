@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import type { StoredBackupInfo } from "./types";
 
 export const DEFAULT_BACKUP_RETENTION = 14;

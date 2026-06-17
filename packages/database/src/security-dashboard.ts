@@ -10,7 +10,6 @@ import { getSystemStatus, type SystemStatus } from "./system-status";
 import { assessStudioSecurity, type StudioSecurityAssessment } from "./studio-security";
 import {
   isRunDbSeedUnsafe,
-  isStudioApiTokenMissing,
   isWeakAuthSecret,
 } from "./production-safety";
 

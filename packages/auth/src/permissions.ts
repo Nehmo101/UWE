@@ -10,9 +10,7 @@ import type {
   WorldMembership,
 } from "./types";
 import {
-  isPlayerExposableContent,
   isSecretVisibleToPlayer,
-  isDmOnlyVisibility,
 } from "./content-access";
 
 const DM_ROLES: ReadonlySet<UweRole> = new Set(["owner", "admin", "dm"]);

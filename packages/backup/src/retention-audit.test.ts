@@ -38,7 +38,7 @@ describe("backup retention and restore audit", () => {
   });
 
   it("logs backup_restored to the activity log", async () => {
-    const bundle = await createBackupBundle(databaseUrl, { type: "full" });
+    await createBackupBundle(databaseUrl, { type: "full" });
     const db = createPrismaClient(databaseUrl);
     const activity = createActivityLogService(db);
 

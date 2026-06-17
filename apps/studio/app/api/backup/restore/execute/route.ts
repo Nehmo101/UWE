@@ -1,6 +1,5 @@
 import { postRestoreExecute } from "../../../../../src/lib/backup-handlers";
 import {
-  guardStudioMutation,
   passthroughBodySchema,
   parseBody,
   requireRestoreOwnerAuth,

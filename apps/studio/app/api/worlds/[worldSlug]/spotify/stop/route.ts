@@ -1,4 +1,4 @@
-import { guardStudioMutation, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+import { guardStudioMutation, parseParams, worldSlugParamSchema } from "@uwe/security";
 import { stopSpotifyForWorld } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {
