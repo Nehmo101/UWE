@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -41,5 +44,66 @@ jobs:
       - name: Security tests
         run: pnpm test:security
 
+      - name: Dependency audit (production)
+        run: pnpm audit:prod
+
       - name: Build
         run: pnpm build:release
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Docker-affecting changes
+        id: docker_changes
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed=false
+          while IFS= read -r file; do
+            case "$file" in
+              Dockerfile|docker-compose.yml|.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|turbo.json|scripts/docker-*|packages/database/prisma/*)
+                changed=true
+                ;;
+            esac
+          done < <(git diff --name-only "$base" "$GITHUB_SHA")
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.docker_changes.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker build (studio)
+        if: steps.docker_changes.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: studio
+          push: false
+          cache-from: type=gha,scope=uwe-docker-studio
+          cache-to: type=gha,mode=max,scope=uwe-docker-studio
+
+      - name: Docker build (portal)
+        if: steps.docker_changes.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: portal
+          push: false
+          cache-from: type=gha,scope=uwe-docker-portal
+          cache-to: type=gha,mode=max,scope=uwe-docker-portal

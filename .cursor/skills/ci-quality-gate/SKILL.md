@@ -25,6 +25,9 @@ description: Run the UWE CI quality pipeline before finishing agent work. Use wh
    pnpm quality
    ```
 
+   This includes Prisma client generation, lint, secret scan, typecheck, unit/smoke tests,
+   security tests, production dependency audit, and release build.
+
 3. If `secret:scan` fails:
    - Remove hardcoded credentials from source/docs
    - Move real values into local `.env` files or deployment secrets
@@ -39,7 +42,7 @@ description: Run the UWE CI quality pipeline before finishing agent work. Use wh
    - Verify `SESSION_COOKIE_NAME` is imported from `session` or `@uwe/auth`, not `runtime-config`
    - Run `pnpm --filter @uwe/database db:generate` then `pnpm typecheck`
 
-6. If tests fail, fix the failing package and re-run `pnpm quality`.
+6. If tests or security scans fail, fix the failing package or finding and re-run `pnpm quality`.
 
 7. Only push when `pnpm quality` exits 0.
 
