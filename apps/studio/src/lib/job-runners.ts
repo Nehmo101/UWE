@@ -43,6 +43,7 @@ import {
   executeRestore,
   exportBackupJson,
   exportBackupZip,
+  createPreRestoreSafetyCopy,
   loadBackupFromBuffer,
   loadBackupFromFile,
   listStoredBackups,
@@ -581,23 +582,35 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
   const { bundle, zipBuffer } = await loadBackupForRestore(payload);
   const db = createPrismaClient();
 
-  await ctx.jobs.updateProgress(ctx.jobId, 20, "Backup wiederherstellen");
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "Safety-Backup vor Restore erstellen");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+  const safetyCopy = await createPreRestoreSafetyCopy();
 
-  const result = await executeRestore(
-    db,
-    bundle,
-    {
-      confirmed: true,
-      targetWorldSlug: payload.targetWorldSlug,
-      autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
-      allowUpdates: payload.allowUpdates ?? false,
-      skipExisting: payload.skipExisting ?? false,
-    },
-    zipBuffer,
-    process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
+  await ctx.jobs.appendLog(
+    ctx.jobId,
+    "info",
+    `Pre-Restore-Safety-Copy erstellt: ${safetyCopy.filename}`,
   );
+  await ctx.jobs.updateProgress(ctx.jobId, 35, "Backup wiederherstellen");
 
-  await db.$disconnect();
+  let result: Awaited<ReturnType<typeof executeRestore>>;
+  try {
+    result = await executeRestore(
+      db,
+      bundle,
+      {
+        confirmed: true,
+        targetWorldSlug: payload.targetWorldSlug,
+        autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
+        allowUpdates: payload.allowUpdates ?? false,
+        skipExisting: payload.skipExisting ?? false,
+      },
+      zipBuffer,
+      process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
+    );
+  } finally {
+    await db.$disconnect();
+  }
 
   await createActivityLogService(prisma).log({
     worldSlug: payload.targetWorldSlug ?? null,
@@ -615,10 +628,11 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
     metadata: {
       targetWorldSlug: payload.targetWorldSlug,
       jobId: ctx.jobId,
+      safetyCopyFilename: safetyCopy.filename,
     },
   });
 
-  return { result };
+  return { result, safetyCopy };
 }
 
 export interface RestoreJobPayload {
