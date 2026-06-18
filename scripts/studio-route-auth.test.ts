@@ -15,10 +15,23 @@ const PUBLIC_ALLOWLIST = new Set([
   "auth/setup/route.ts",
   "auth/forgot-password/route.ts",
   "auth/reset-password/route.ts",
+  "auth/two-factor/verify/route.ts",
   "health/route.ts",
   "health/public/route.ts",
   "spotify/callback/route.ts",
 ]);
+
+const DELEGATED_GUARD_ROUTES = new Set([
+  "auth/two-factor/route.ts",
+  "auth/two-factor/setup/route.ts",
+  "auth/two-factor/activate/route.ts",
+  "auth/two-factor/disable/route.ts",
+]);
+
+const TWO_FACTOR_ROUTES_HELPER = path.join(
+  root,
+  "apps/studio/src/lib/two-factor-routes.ts",
+);
 
 const AUTH_GUARD_PATTERN =
   /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
@@ -58,6 +71,15 @@ describe("Studio API route auth inventory", () => {
           content,
           AUTH_GUARD_PATTERN,
           `${route} is public allowlist — must not import auth guard`,
+        );
+        return;
+      }
+
+      if (DELEGATED_GUARD_ROUTES.has(route)) {
+        const helperContent = fs.readFileSync(TWO_FACTOR_ROUTES_HELPER, "utf8");
+        assert.ok(
+          AUTH_GUARD_PATTERN.test(helperContent),
+          `${route} delegates to two-factor-routes.ts which must call an auth guard`,
         );
         return;
       }

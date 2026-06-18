@@ -16,7 +16,10 @@ import type {
   BackupPageLinkRecord,
   BackupPagePlayerAccessRecord,
   BackupPageRecord,
+  BackupPageTemplateRecord,
+  BackupPlayerNoteRecord,
   BackupSessionUnlockRecord,
+  BackupShareLinkRecord,
   BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
@@ -31,6 +34,7 @@ export interface CollectScope {
   type: BackupType;
   worldSlug?: string;
   campaignSlug?: string;
+  includePlayerNotes?: boolean;
 }
 
 function toIso(value: Date | null | undefined): string | null {
@@ -50,6 +54,10 @@ function collectStats(data: BackupData): BackupStats {
     labelTemplates: data.labelTemplates.length,
     printLists: data.printLists.length,
     soundboardButtons: data.soundboardButtons.length,
+    pageTemplates: data.pageTemplates?.length ?? 0,
+    worldMemberships: data.worldMemberships.length,
+    shareLinks: data.shareLinks?.length ?? 0,
+    playerNotes: data.playerNotes?.length ?? 0,
   };
 }
 
@@ -305,6 +313,39 @@ export async function collectBackupData(
     },
   });
 
+  const pageTemplates =
+    scope.type === "full"
+      ? await db.pageTemplate.findMany({ where: { isSystem: false } })
+      : [];
+
+  const shareLinks = await db.shareLink.findMany({
+    where: { worldId: { in: worldIds } },
+  });
+
+  const playerNotes =
+    scope.includePlayerNotes === true
+      ? await db.playerNote.findMany({
+          where: { worldId: { in: worldIds } },
+        })
+      : [];
+
+  for (const note of playerNotes) {
+    userIds.add(note.userId);
+  }
+
+  const usersWithNotes =
+    playerNotes.length > 0
+      ? await db.user.findMany({
+          where: { id: { in: [...userIds] } },
+          select: { id: true, displayName: true, email: true, role: true },
+        })
+      : [];
+
+  const mergedUsers = new Map(users.map((user) => [user.id, user]));
+  for (const user of usersWithNotes) {
+    mergedUsers.set(user.id, user);
+  }
+
   const data: BackupData = sanitizeBackupData({
     worlds: worlds.map(
       (world): BackupWorldRecord => ({
@@ -530,12 +571,58 @@ export async function collectBackupData(
         sessionLabel: unlock.sessionLabel,
       }),
     ),
-    users: users.map(
+    users: [...mergedUsers.values()].map(
       (user): BackupUserRecord => ({
         id: user.id,
         displayName: user.displayName,
         email: user.email,
         role: user.role,
+      }),
+    ),
+    pageTemplates: pageTemplates.map(
+      (template): BackupPageTemplateRecord => ({
+        id: template.id,
+        slug: template.slug,
+        name: template.name,
+        description: template.description,
+        pageType: template.pageType,
+        defaultVisibility: template.defaultVisibility,
+        titlePlaceholder: template.titlePlaceholder,
+        blocks: template.blocks,
+        isSystem: template.isSystem,
+        isActive: template.isActive,
+        createdAt: template.createdAt.toISOString(),
+        updatedAt: template.updatedAt.toISOString(),
+      }),
+    ),
+    shareLinks: shareLinks.map(
+      (link): BackupShareLinkRecord => ({
+        id: link.id,
+        worldId: link.worldId,
+        targetType: link.targetType,
+        targetId: link.targetId,
+        expiresAt: toIso(link.expiresAt),
+        hasPassword: Boolean(link.passwordHash),
+        readOnly: link.readOnly,
+        logAccess: link.logAccess,
+        enabled: link.enabled,
+        createdAt: link.createdAt.toISOString(),
+        updatedAt: link.updatedAt.toISOString(),
+      }),
+    ),
+    playerNotes: playerNotes.map(
+      (note): BackupPlayerNoteRecord => ({
+        id: note.id,
+        worldId: note.worldId,
+        campaignId: note.campaignId,
+        pageId: note.pageId,
+        gameSessionId: note.gameSessionId,
+        userId: note.userId,
+        content: note.content,
+        visibility: note.visibility,
+        status: note.status,
+        createdAt: note.createdAt.toISOString(),
+        updatedAt: note.updatedAt.toISOString(),
       }),
     ),
   });

@@ -433,8 +433,10 @@ Erledigt:
 - [x] Session Management für Welten und Kampagnen
 - [x] Soundboard (lokale Sounds, YouTube, Spotify OAuth + Web-API-Playback im Studio)
 
-Geplant:
+Geplant — Details in [docs/ROADMAP.md](docs/ROADMAP.md):
 
+- [ ] E2E-Tests für Auth-Flows (Login, Setup, Reset, Logout)
+- [ ] 2FA im Login-Flow
 - [ ] Markdown/HTML als zusätzliche Export-Formate
 - [ ] Asset-Datei-Import (Karten, Sounds, Handouts)
 - [ ] PostgreSQL-Option für Self-Hosting

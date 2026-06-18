@@ -4,15 +4,21 @@ Anleitung für Backups unter Windows (und allgemein).
 
 ## Was wird gesichert?
 
-| Inhalt | Enthalten |
-|--------|-----------|
-| Welten & Kampagnen | Ja |
-| Seiten & Inhalte | Ja |
-| Uploads / Medien | Ja |
-| Label-Templates | Ja |
-| Soundboard | Ja |
-| Benutzer-Auth-Sessions | Nein |
-| Secrets / Tokens | Nein (automatisch ausgeschlossen) |
+| Inhalt | Enthalten | Restore |
+|--------|-----------|---------|
+| Welten & Kampagnen | Ja | Ja |
+| Seiten & Inhalte | Ja | Ja |
+| Uploads / Medien | Ja | Ja |
+| Label-Templates | Ja | Ja |
+| Soundboard | Ja | Ja |
+| Welt-Mitgliedschaften & Spieler-Zugriffe | Ja (Stub-User ohne Passwort) | Ja |
+| Session-Unlocks / Page-Player-Access | Ja | Ja |
+| Custom Page-Templates (nicht System) | Ja (Full-Backup) | Ja |
+| Benutzer-Passwörter | Nein | Nein — wiederhergestellte User müssen Passwort setzen |
+| Benutzer-Auth-Sessions | Nein | Nein |
+| ShareLinks (Token/Passwort) | Ja (ohne Token/Passwort) | Ja — neue Tokens; Passwörter neu setzen |
+| PlayerNotes | Opt-in (`includePlayerNotes`) | Ja (wenn exportiert) |
+| Secrets / Tokens | Nein (automatisch ausgeschlossen) | — |
 
 ## Backup erstellen
 
@@ -28,6 +34,8 @@ Anleitung für Backups unter Windows (und allgemein).
 pnpm backup
 # oder im Entwicklermodus:
 pnpm backup:create --type=full --format=zip
+# PlayerNotes optional (Datenschutz beachten):
+pnpm backup:create --type=full --include-player-notes
 ```
 
 ### Snapshot (Rohdaten)

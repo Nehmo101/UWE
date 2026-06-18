@@ -76,6 +76,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
                 { label: "KI-Prompt", href: "/admin/ai-prompt" },
                 { label: "Einstellungen", href: "/settings" },
                 { label: "Passwort ändern", href: "/account/password" },
+                { label: "Sicherheit (2FA)", href: "/account/security" },
               ]}
             />
           </SidebarSection>

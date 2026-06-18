@@ -468,13 +468,13 @@ model AuthIdentity {
 model Session {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
-  token     String   @unique
+  tokenHash String   @unique @map("token_hash")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  @@index([tokenHash])
   @@map("sessions")
 }
 
@@ -2111,7 +2111,7 @@ model SecurityWarning {
   @@map("security_warnings")
 }
 
-// 2FA preparation — not yet wired into login flow.
+// 2FA — wired into login flow via TwoFactorService and /api/auth/two-factor/verify.
 model TwoFactorSecret {
   id              String   @id @default(cuid())
   userId          String   @unique @map("user_id")

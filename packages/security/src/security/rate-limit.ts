@@ -1,11 +1,19 @@
 /**
- * Rate limiter abstraction — in-memory for single-instance deployments.
+ * Rate limiter abstraction — in-memory by default; file-backed when UWE_RATE_LIMIT_DIR is set.
  * Swap `setRateLimitStore()` for Redis/Upstash when scaling horizontally.
  */
 
 import { resolveClientIp } from "@uwe/auth";
+import { FileRateLimitStore } from "./file-rate-limit-store";
 
-export const RATE_LIMITER_MODE = "in-memory (prozesslokal, Single-Instance)";
+function resolveRateLimiterMode(): string {
+  if (process.env.UWE_RATE_LIMIT_DIR?.trim()) {
+    return `file-backed (${process.env.UWE_RATE_LIMIT_DIR.trim()})`;
+  }
+  return "in-memory (prozesslokal, Single-Instance)";
+}
+
+export const RATE_LIMITER_MODE = resolveRateLimiterMode();
 
 export interface RateLimitOptions {
   maxAttempts: number;
@@ -62,11 +70,19 @@ class InMemoryRateLimitStore implements RateLimitStore {
   }
 }
 
-let store: RateLimitStore = new InMemoryRateLimitStore();
+let store: RateLimitStore = createDefaultStore();
 
-/** Reset to the default in-memory store (for tests). */
+function createDefaultStore(): RateLimitStore {
+  const dir = process.env.UWE_RATE_LIMIT_DIR?.trim();
+  if (dir) {
+    return new FileRateLimitStore(dir);
+  }
+  return new InMemoryRateLimitStore();
+}
+
+/** Reset to the default store (for tests). */
 export function resetRateLimitStore(): void {
-  store = new InMemoryRateLimitStore();
+  store = createDefaultStore();
 }
 
 export function getRateLimitStore(): RateLimitStore {

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
   const { payload, httpStatus } = await buildDetailedHealthPayload(prisma, {
     appName: "UWE Studio",
-    rateLimiterMode: "none (Studio: vertrauenswürdiges Netz, kein Login by design)",
+    rateLimiterMode: "none (Studio: Session-Login via AUTH_REQUIRED, vertrauenswürdiges Netz)",
   });
 
   return NextResponse.json(payload, { status: httpStatus });

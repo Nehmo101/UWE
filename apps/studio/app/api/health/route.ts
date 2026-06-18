@@ -14,7 +14,7 @@ import {
 export async function GET() {
   const db = await databaseHealthCheck();
   const system = await getSystemStatus(prisma, {
-    rateLimiterMode: "none (Studio: vertrauenswürdiges Netz, kein Login by design)",
+    rateLimiterMode: "none (Studio: Session-Login via AUTH_REQUIRED, vertrauenswürdiges Netz)",
   });
 
   const status = db.status === "ok" && system.ok ? "ok" : "degraded";

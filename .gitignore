@@ -31,6 +31,8 @@ Thumbs.db
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 
 # UWE Linux host runtime state (PIDs, logs)
 .uwe-host/

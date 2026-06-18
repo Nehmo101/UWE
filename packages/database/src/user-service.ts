@@ -424,7 +424,7 @@ export class UserService {
         ? this.db.session.deleteMany({
             where: {
               userId: input.userId,
-              NOT: { token: input.keepSessionToken },
+              NOT: { tokenHash: hashOpaqueToken(input.keepSessionToken) },
             },
           })
         : this.db.session.deleteMany({ where: { userId: input.userId } }),

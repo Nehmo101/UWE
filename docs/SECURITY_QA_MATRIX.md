@@ -58,6 +58,9 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 2.7 | Studio logout | Studio | Visit `/logout` | Session deleted, redirect to `/login` | Manual | pass |
 | 2.8 | Portal logout | Portal | Click logout button → POST `/api/auth/logout` | Session + preview cookies cleared | Manual | pass |
 | 2.9 | Protected routes after logout | Both | Access `/` (Studio) or `/auth/worlds` (Portal) | Redirect to login | Manual | pass |
+| 2.10 | 2FA login challenge | Both | Enable 2FA → login with password | Second step asks for TOTP code | ✓ auth-flow.integration.test.ts | pass |
+| 2.11 | 2FA account setup UI | Both | `/account/security` (Studio), `/auth/account/security` (Portal) | Setup/activate/disable via UI | ✓ Playwright + Manual | pass |
+| 2.12 | Studio login E2E | Studio | `pnpm test:e2e` | Login, invalid login, protected redirect | ✓ e2e/studio-auth.spec.ts | pass |
 
 ---
 
@@ -92,6 +95,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 4.6 | `/api/health` | Public | Public | ✓ | pass |
 | 4.7 | `/api/auth/login`, `/logout` | Public | Public | ✓ | pass |
 | 4.8 | `/api/auth/change-password` | HTTP 401 | Allowed | ✓ | pass |
+| 4.8a | `/api/auth/two-factor/*` (setup/manage) | HTTP 401 | Allowed (session) | ✓ route-policy | pass |
 | 4.9 | Unknown API routes | HTTP 404 | HTTP 404 | ✓ deny-by-default | pass |
 | 4.10 | `/worlds/*` with `AUTH_REQUIRED=true` | Redirect `/login` | Allowed | ✓ middleware.test.ts | pass |
 
@@ -146,7 +150,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 7.5 | Password hashing | scrypt v1 | ✓ password.test.ts | pass |
 | 7.6 | No passwords in API responses | Safe user select excludes hash | ✓ password-security.test.ts | pass |
 | 7.7 | No tokens in logs | Audit metadata redaction | ✓ | pass |
-| 7.8 | Session tokens in DB | Plaintext (DB compromise = session hijack) | — | **known risk** |
+| 7.8 | Session tokens in DB | SHA-256 hashed at rest via `hashOpaqueToken` | ✓ auth.test.ts | pass |
 
 ---
 
@@ -198,11 +202,7 @@ Use this before exposing a new deployment:
 
 | Priority | Risk | Mitigation |
 |----------|------|------------|
-| Medium | Session tokens stored unhashed in SQLite | Hash session tokens at rest (like reset tokens) |
-| Medium | Setup GET leaks availability | Acceptable if `UWE_SETUP_TOKEN` is secret; optional: hide after setup |
-| Medium | No rate limit on setup POST | Add `RATE_LIMIT_PRESETS.setup` to setup route |
-| Low | Graph API policy vs handler mismatch | Portal graph route policy says public; handler requires session (safe, but inconsistent) |
-| Low | Multi-instance rate limit bypass | Document proxy-level limits; `setRateLimitStore()` for distributed deploys |
-| Low | Hardcoded default in `STUDIO_ACCESS_ALLOWED_EMAILS` | Override via env in production |
+| Low | Setup GET leaks availability | Acceptable if `UWE_SETUP_TOKEN` is secret |
+| Low | Multi-instance rate limit bypass | Use reverse-proxy rate limits or `setRateLimitStore()` |
 
 See also: [SECURITY.md](../SECURITY.md), [DEPLOYMENT_SECURITY.md](../DEPLOYMENT_SECURITY.md), [docs/security-testing.md](./security-testing.md).

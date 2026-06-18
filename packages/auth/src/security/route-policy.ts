@@ -49,6 +49,7 @@ export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/auth/preview",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/two-factor/verify",
   "/api/share/*",
   "/api/worlds/*/graph",
   ...PUBLIC_ASSET_ROUTES,
@@ -61,7 +62,13 @@ export const PORTAL_SESSION_APP_ROUTES = [
 ] as const;
 
 /** Portal API routes that require a logged-in player session. */
-export const PORTAL_SESSION_API_ROUTES = ["/api/auth/change-password"] as const;
+export const PORTAL_SESSION_API_ROUTES = [
+  "/api/auth/change-password",
+  "/api/auth/two-factor",
+  "/api/auth/two-factor/setup",
+  "/api/auth/two-factor/activate",
+  "/api/auth/two-factor/disable",
+] as const;
 
 /** Studio/Admin prefixes in unified proxy layouts. */
 export const STUDIO_APP_PREFIXES = ["/studio", "/studio/*"] as const;
@@ -121,6 +128,7 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/auth/setup",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/two-factor/verify",
   "/api/spotify/callback",
 ] as const;
 

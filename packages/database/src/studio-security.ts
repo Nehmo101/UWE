@@ -8,8 +8,9 @@ import { isWeakAuthSecret } from "./production-safety";
 /**
  * Studio security assessment for the Admin Status Dashboard.
  *
- * Studio has no user login by design — network-level protection (Cloudflare
- * Access, reverse-proxy auth, VPN) is required when publicly reachable.
+ * Studio enforces session login (owner/admin/dm) when AUTH_REQUIRED=true.
+ * Network-level protection (Cloudflare Access, reverse-proxy auth, VPN) is
+ * strongly recommended as the outer gate when publicly reachable.
  *
  * Cloudflare Access / reverse-proxy auth cannot be verified server-side;
  * TRUST_PROXY and CLOUDFLARE_TUNNEL are used as conservative heuristics.
@@ -172,7 +173,7 @@ export function assessStudioSecurity(
     level = "local_only";
     severity = "ok";
     message =
-      "Keine öffentliche URL konfiguriert — Studio ist nur lokal erreichbar. Studio hat kein Login; bei späterer Exposition Reverse-Proxy-Auth oder Cloudflare Access nutzen.";
+      "Keine öffentliche URL konfiguriert — Studio ist nur lokal erreichbar. Für öffentliche Exposition AUTH_REQUIRED=true setzen und Reverse-Proxy-Auth oder Cloudflare Access nutzen.";
     nextSteps.push(
       "Bei Cloudflare-Tunnel oder Reverse Proxy: PUBLIC_APP_URL, TRUST_PROXY=true und STUDIO_API_TOKEN setzen.",
     );
@@ -189,7 +190,7 @@ export function assessStudioSecurity(
     level = "unsafe";
     severity = "critical";
     message =
-      "Studio ist über Cloudflare/Proxy erreichbar, aber TRUST_PROXY/CLOUDFLARE_TUNNEL fehlen — Reverse-Proxy-Schutz ist serverseitig nicht erkennbar. Studio hat kein Benutzer-Login.";
+      "Studio ist über Cloudflare/Proxy erreichbar, aber TRUST_PROXY/CLOUDFLARE_TUNNEL fehlen — Reverse-Proxy-Schutz ist serverseitig nicht erkennbar. AUTH_REQUIRED=true aktivieren und Cloudflare Access oder Reverse-Proxy-Auth einrichten.";
     nextSteps.push("Schütze Studio mit Cloudflare Access, Reverse-Proxy-Auth oder VPN.");
     nextSteps.push("Setze TRUST_PROXY=true und CLOUDFLARE_TUNNEL=true, wenn Cloudflare genutzt wird.");
     if (!studioApiTokenConfigured) {

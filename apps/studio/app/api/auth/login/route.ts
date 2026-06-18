@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService, createPrismaClient, createTwoFactorService } from "@uwe/database/server";
 import {
   canAccessStudio,
   getSessionCookieOptions,
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
+  const twoFactor = createTwoFactorService(db);
 
   try {
     const user = await auth.authenticate(email, password);
@@ -43,6 +44,15 @@ export async function POST(request: Request) {
     }
 
     resetRateLimit(rateKey);
+
+    if (await twoFactor.isEnabled(user.id)) {
+      const challenge = await twoFactor.createLoginChallenge(user.id);
+      return NextResponse.json({
+        requiresTwoFactor: true,
+        challengeToken: challenge.challengeToken,
+        expiresAt: challenge.expiresAt.toISOString(),
+      });
+    }
 
     const session = await auth.createSession(user.id);
     await auth.recordSuccessfulLogin(user.id);

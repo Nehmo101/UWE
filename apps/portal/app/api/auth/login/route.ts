@@ -5,6 +5,7 @@ import {
   auditRequestFromHeaders,
   createAuthService,
   createPrismaClient,
+  createTwoFactorService,
   logAuditEvent,
 } from "@uwe/database/server";
 import { getSessionCookieOptions, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
+  const twoFactor = createTwoFactorService(db);
   const auditRequest = auditRequestFromHeaders(request.headers);
 
   try {
@@ -62,6 +64,15 @@ export async function POST(request: Request) {
     }
 
     resetRateLimit(rateKey);
+
+    if (await twoFactor.isEnabled(user.id)) {
+      const challenge = await twoFactor.createLoginChallenge(user.id);
+      return NextResponse.json({
+        requiresTwoFactor: true,
+        challengeToken: challenge.challengeToken,
+        expiresAt: challenge.expiresAt.toISOString(),
+      });
+    }
 
     const session = await auth.createSession(user.id);
     await auth.recordSuccessfulLogin(user.id);

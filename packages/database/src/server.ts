@@ -156,6 +156,7 @@ export {
 } from "./graph-service";
 
 export { AuthService, createAuthService } from "./auth";
+export { TwoFactorService, createTwoFactorService } from "./two-factor-service";
 export type { CreateUserInput, CreateWorldMembershipInput } from "./auth";
 
 export {

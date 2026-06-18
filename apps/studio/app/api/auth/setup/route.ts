@@ -8,6 +8,11 @@ import {
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
 } from "@uwe/auth";
+import {
+  checkRateLimit,
+  clientIpFromHeaders,
+  RATE_LIMIT_PRESETS,
+} from "@/src/lib/rate-limit";
 
 function tokensMatch(provided: string, expected: string): boolean {
   const left = Buffer.from(provided);
@@ -16,13 +21,17 @@ function tokensMatch(provided: string, expected: string): boolean {
 }
 
 export async function GET() {
-  const config = getUweRuntimeConfig();
   const db = createPrismaClient();
   const auth = createAuthService(db);
   try {
     const setupAvailable = await auth.isSetupAvailable();
+    if (!setupAvailable) {
+      return NextResponse.json({ setupAvailable: false });
+    }
+
+    const config = getUweRuntimeConfig();
     return NextResponse.json({
-      setupAvailable,
+      setupAvailable: true,
       setupConfigured: Boolean(config.setupToken),
     });
   } finally {
@@ -34,6 +43,16 @@ export async function POST(request: Request) {
   const config = getUweRuntimeConfig();
   if (!config.setupToken) {
     return NextResponse.json({ error: "Setup ist nicht konfiguriert." }, { status: 503 });
+  }
+
+  const ip = clientIpFromHeaders(request.headers);
+  const rateKey = `studio-setup:${ip}`;
+  const rate = checkRateLimit(rateKey, RATE_LIMIT_PRESETS.setup);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Setup-Versuche. Bitte warte einen Moment." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
   }
 
   const body = (await request.json()) as {

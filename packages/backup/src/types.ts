@@ -12,6 +12,10 @@ export interface BackupStats {
   labelTemplates: number;
   printLists: number;
   soundboardButtons: number;
+  pageTemplates: number;
+  worldMemberships: number;
+  shareLinks: number;
+  playerNotes: number;
 }
 
 export interface BackupManifest {
@@ -25,6 +29,8 @@ export interface BackupManifest {
   includesUsers: boolean;
   includesAuthSessions: boolean;
   includesSettings: boolean;
+  includesPlayerNotes?: boolean;
+  shareLinkTokensRegenerated?: boolean;
   encrypted?: boolean;
   stats: BackupStats;
   assetFiles: string[];
@@ -255,6 +261,49 @@ export interface BackupSettingsRecord {
   privacy: Record<string, unknown>;
 }
 
+export interface BackupShareLinkRecord {
+  id: string;
+  worldId: string;
+  targetType: string;
+  targetId: string;
+  expiresAt: string | null;
+  hasPassword: boolean;
+  readOnly: boolean;
+  logAccess: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackupPlayerNoteRecord {
+  id: string;
+  worldId: string;
+  campaignId: string;
+  pageId: string | null;
+  gameSessionId: string | null;
+  userId: string;
+  content: string;
+  visibility: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackupPageTemplateRecord {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  pageType: string;
+  defaultVisibility: string;
+  titlePlaceholder: string;
+  blocks: unknown;
+  isSystem: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BackupData {
   worlds: BackupWorldRecord[];
   campaigns: BackupCampaignRecord[];
@@ -275,6 +324,9 @@ export interface BackupData {
   pagePlayerAccess: BackupPagePlayerAccessRecord[];
   sessionUnlocks: BackupSessionUnlockRecord[];
   users: BackupUserRecord[];
+  pageTemplates?: BackupPageTemplateRecord[];
+  shareLinks?: BackupShareLinkRecord[];
+  playerNotes?: BackupPlayerNoteRecord[];
 }
 
 export interface BackupBundle {
@@ -345,6 +397,7 @@ export interface CreateBackupOptions {
   encrypt?: boolean;
   encryptionPassword?: string;
   retentionCount?: number;
+  includePlayerNotes?: boolean;
 }
 
 export interface StoredBackupInfo {

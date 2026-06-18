@@ -177,6 +177,8 @@ describe("security boundary", () => {
       );
     }
 
+    const portalTwoFactorHelper = path.join(root, "apps/portal/src/lib/two-factor-routes.ts");
+
     for (const file of walk(portalApiDir)) {
       const content = fs.readFileSync(file, "utf8");
       if (file.endsWith("/health/public/route.ts") || file.endsWith("/health/route.ts")) {
@@ -187,6 +189,18 @@ describe("security boundary", () => {
           content,
           /requireOwnerAuth|requirePortalOwnerAuth|requirePortalApiAuth|requirePrivateHealthAuth/,
           `${file} must call an auth guard`,
+        );
+        continue;
+      }
+      if (
+        file.includes("/api/auth/two-factor/") &&
+        !file.endsWith("/verify/route.ts")
+      ) {
+        const helperContent = fs.readFileSync(portalTwoFactorHelper, "utf8");
+        assert.match(
+          helperContent,
+          /requirePortalApiAuth/,
+          `${file} delegates to two-factor-routes.ts which must call requirePortalApiAuth`,
         );
         continue;
       }

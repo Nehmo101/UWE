@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
 import { createSettingsService } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
@@ -531,6 +532,216 @@ export async function executeRestore(
         soundboardButtonId,
         pageId,
       },
+    });
+  }
+
+  for (const user of bundle.data.users ?? []) {
+    const existing = user.email
+      ? await db.user.findUnique({ where: { email: user.email } })
+      : await db.user.findUnique({ where: { id: user.id } });
+
+    if (existing) {
+      idMap.set(user.id, existing.id);
+      result.skipped++;
+      result.items.push({
+        entityType: "user",
+        identifier: user.email ?? user.displayName,
+        status: "skipped",
+      });
+      continue;
+    }
+
+    await db.user.create({
+      data: {
+        id: remapId(idMap, user.id),
+        displayName: user.displayName,
+        email: user.email ?? null,
+        role: user.role as never,
+        forcePasswordChange: true,
+      },
+    });
+    result.created++;
+    result.items.push({
+      entityType: "user",
+      identifier: user.email ?? user.displayName,
+      status: "created",
+    });
+  }
+
+  for (const membership of bundle.data.worldMemberships ?? []) {
+    const userId = idMap.get(membership.userId);
+    const worldId = idMap.get(membership.worldId);
+    if (!userId || !worldId) continue;
+
+    const existing = await db.worldMembership.findFirst({
+      where: { userId, worldId },
+    });
+
+    if (existing) {
+      idMap.set(membership.id, existing.id);
+      result.skipped++;
+      result.items.push({
+        entityType: "worldMembership",
+        identifier: `${membership.userId}:${membership.worldId}`,
+        status: "skipped",
+      });
+      continue;
+    }
+
+    await db.worldMembership.create({
+      data: {
+        id: remapId(idMap, membership.id),
+        userId,
+        worldId,
+        role: membership.role as never,
+        characterName: membership.characterName ?? null,
+      },
+    });
+    result.created++;
+    result.items.push({
+      entityType: "worldMembership",
+      identifier: `${userId}:${worldId}`,
+      status: "created",
+    });
+  }
+
+  for (const access of bundle.data.pagePlayerAccess ?? []) {
+    const userId = idMap.get(access.userId);
+    const pageId = idMap.get(access.pageId);
+    if (!userId || !pageId) continue;
+
+    const existing = await db.pagePlayerAccess.findFirst({
+      where: { userId, pageId },
+    });
+    if (existing) {
+      result.skipped++;
+      continue;
+    }
+
+    await db.pagePlayerAccess.create({
+      data: {
+        id: remapId(idMap, access.id),
+        pageId,
+        userId,
+      },
+    });
+    result.created++;
+  }
+
+  for (const unlock of bundle.data.sessionUnlocks ?? []) {
+    const userId = idMap.get(unlock.userId);
+    const pageId = idMap.get(unlock.pageId);
+    if (!userId || !pageId) continue;
+
+    const existing = await db.sessionUnlock.findFirst({
+      where: { userId, pageId },
+    });
+    if (existing) {
+      result.skipped++;
+      continue;
+    }
+
+    await db.sessionUnlock.create({
+      data: {
+        id: remapId(idMap, unlock.id),
+        pageId,
+        userId,
+        unlockedAt: new Date(unlock.unlockedAt),
+        sessionLabel: unlock.sessionLabel ?? null,
+      },
+    });
+    result.created++;
+  }
+
+  for (const template of bundle.data.pageTemplates ?? []) {
+    if (template.isSystem) continue;
+
+    const existing = await db.pageTemplate.findUnique({ where: { slug: template.slug } });
+    if (existing) {
+      result.skipped++;
+      result.items.push({
+        entityType: "pageTemplate",
+        identifier: template.slug,
+        status: "skipped",
+      });
+      continue;
+    }
+
+    await db.pageTemplate.create({
+      data: {
+        id: remapId(idMap, template.id),
+        slug: template.slug,
+        name: template.name,
+        description: template.description,
+        pageType: template.pageType as never,
+        defaultVisibility: template.defaultVisibility as never,
+        titlePlaceholder: template.titlePlaceholder,
+        blocks: template.blocks as never,
+        isSystem: false,
+        isActive: template.isActive,
+      },
+    });
+    result.created++;
+    result.items.push({
+      entityType: "pageTemplate",
+      identifier: template.slug,
+      status: "created",
+    });
+  }
+
+  for (const note of bundle.data.playerNotes ?? []) {
+    const worldId = idMap.get(note.worldId);
+    const campaignId = idMap.get(note.campaignId);
+    const userId = idMap.get(note.userId);
+    if (!worldId || !campaignId || !userId) continue;
+
+    const pageId = note.pageId ? idMap.get(note.pageId) ?? null : null;
+    const gameSessionId = note.gameSessionId ? idMap.get(note.gameSessionId) ?? null : null;
+
+    await db.playerNote.create({
+      data: {
+        id: remapId(idMap, note.id),
+        worldId,
+        campaignId,
+        pageId,
+        gameSessionId,
+        userId,
+        content: note.content,
+        visibility: note.visibility as never,
+        status: note.status as never,
+      },
+    });
+    result.created++;
+  }
+
+  for (const link of bundle.data.shareLinks ?? []) {
+    const worldId = idMap.get(link.worldId);
+    const targetId = idMap.get(link.targetId);
+    if (!worldId || !targetId) continue;
+
+    const newToken = generateSessionToken();
+    await db.shareLink.create({
+      data: {
+        id: remapId(idMap, link.id),
+        worldId,
+        targetType: link.targetType as never,
+        targetId,
+        token: newToken,
+        expiresAt: link.expiresAt ? new Date(link.expiresAt) : null,
+        passwordHash: null,
+        readOnly: link.readOnly,
+        logAccess: link.logAccess,
+        enabled: link.enabled,
+      },
+    });
+    result.created++;
+    result.items.push({
+      entityType: "shareLink",
+      identifier: newToken,
+      status: "created",
+      error: link.hasPassword
+        ? "Neuer Token generiert; Passwort muss neu gesetzt werden."
+        : "Neuer Share-Link-Token generiert.",
     });
   }
 

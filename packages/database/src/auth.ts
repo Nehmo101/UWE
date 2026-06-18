@@ -19,7 +19,13 @@ import {
   scopeFromAccessContext,
   sessionExpiresAt,
 } from "@uwe/auth";
-import { generateSessionToken, hashPassword, isLegacyPasswordHash, verifyPassword } from "@uwe/auth/server";
+import {
+  generateSessionToken,
+  hashOpaqueToken,
+  hashPassword,
+  isLegacyPasswordHash,
+  verifyPassword,
+} from "@uwe/auth/server";
 import { toSafeUser, type SafeUser } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
 import {
@@ -607,10 +613,11 @@ export class AuthService {
 
   async createSession(userId: string) {
     const token = generateSessionToken();
+    const tokenHash = hashOpaqueToken(token);
     const session = await this.db.session.create({
       data: {
         userId,
-        token,
+        tokenHash,
         expiresAt: sessionExpiresAt(),
       },
       include: {
@@ -622,13 +629,15 @@ export class AuthService {
 
     return {
       ...session,
+      token,
       user: toSafeUser(session.user as Record<string, unknown>),
     };
   }
 
   async getSessionByToken(token: string) {
+    const tokenHash = hashOpaqueToken(token);
     const session = await this.db.session.findUnique({
-      where: { token },
+      where: { tokenHash },
       include: {
         user: {
           select: USER_SAFE_SELECT,
@@ -647,12 +656,14 @@ export class AuthService {
 
     return {
       ...session,
+      token,
       user: toSafeUser(session.user as Record<string, unknown>),
     };
   }
 
   async deleteSession(token: string) {
-    await this.db.session.deleteMany({ where: { token } });
+    const tokenHash = hashOpaqueToken(token);
+    await this.db.session.deleteMany({ where: { tokenHash } });
   }
 
   toAuthUser(user: {

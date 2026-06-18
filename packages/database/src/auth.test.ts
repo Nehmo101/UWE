@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { hashOpaqueToken } from "@uwe/auth/server";
 import { createAuthService } from "./auth";
 import { seedAuthDemoContent, seedAuthUsers } from "./auth-seed";
 import { createPrismaClient } from "./client";
@@ -204,6 +205,10 @@ describe("UWE auth and permissions", () => {
     const loaded = await auth.getSessionByToken(session.token);
     assert.ok(loaded);
     assert.equal(loaded.user.id, user.id);
+
+    const stored = await db.session.findUnique({ where: { id: session.id } });
+    assert.ok(stored);
+    assert.equal(stored.tokenHash, hashOpaqueToken(session.token));
 
     await auth.deleteSession(session.token);
     assert.equal(await auth.getSessionByToken(session.token), null);

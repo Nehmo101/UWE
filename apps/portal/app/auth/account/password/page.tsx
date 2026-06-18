@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
 import { ChangePasswordForm } from "@/src/components/ChangePasswordForm";
@@ -22,6 +23,9 @@ export default async function PortalAccountPasswordPage() {
           backHref="/auth/worlds"
           forcePasswordChange={user.forcePasswordChange}
         />
+        <p className="auth-footer">
+          <Link href="/auth/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
+        </p>
       </section>
     </main>
   );

@@ -22,6 +22,8 @@ describe("route policy", () => {
   it("treats portal auth routes as session-protected", () => {
     const authWorlds = classifyRoute("/auth/worlds/terra", "portal");
     assert.equal(authWorlds.access, "protected-session");
+    assert.equal(classifyRoute("/api/auth/two-factor", "portal").access, "protected-session");
+    assert.equal(classifyRoute("/api/auth/two-factor/setup", "portal").access, "protected-session");
   });
 
   it("treats studio admin and brain APIs as protected", () => {

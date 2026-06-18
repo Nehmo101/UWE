@@ -33,7 +33,7 @@ describe("studio health response shape", () => {
         },
       },
       trust: {
-        studioLogin: "none-by-design",
+        studioLogin: "session-login",
         studioApiTokenConfigured: true,
       },
       proxy: {

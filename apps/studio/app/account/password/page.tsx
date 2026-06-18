@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createPrismaClient, createUserService } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
@@ -29,6 +30,9 @@ export default async function AccountPasswordPage() {
           {user.email ? ` (${user.email})` : ""}.
         </p>
         <ChangePasswordForm backHref="/" forcePasswordChange={forcePasswordChange} />
+        <p className="studio-auth-footer">
+          <Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
+        </p>
       </section>
     </main>
   );

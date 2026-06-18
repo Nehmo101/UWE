@@ -11,6 +11,7 @@ async function main() {
     | "zip"
     | "json"
     | undefined;
+  const includePlayerNotes = args.includes("--include-player-notes");
 
   if (!["full", "world", "campaign"].includes(typeArg)) {
     throw new Error("Ungültiger --type Wert. Erlaubt: full, world, campaign");
@@ -21,6 +22,7 @@ async function main() {
     worldSlug,
     campaignSlug,
     format: format ?? "zip",
+    includePlayerNotes,
   });
 
   console.log(`Backup erstellt: ${path.resolve(outputPath)}`);
