@@ -606,6 +606,9 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
         autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
         allowUpdates: payload.allowUpdates ?? false,
         skipExisting: payload.skipExisting ?? false,
+        sendPasswordSetupEmails: payload.sendPasswordSetupEmails ?? false,
+        passwordResetRequestUrl:
+          process.env.NEXT_PUBLIC_STUDIO_URL?.replace(/\/$/, "") + "/forgot-password",
       },
       zipBuffer,
       process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
@@ -646,6 +649,7 @@ export interface RestoreJobPayload {
   autoResolveSlugConflicts?: boolean;
   allowUpdates?: boolean;
   skipExisting?: boolean;
+  sendPasswordSetupEmails?: boolean;
 }
 
 async function loadBackupForRestore(payload: RestoreJobPayload) {

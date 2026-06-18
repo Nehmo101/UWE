@@ -1,6 +1,8 @@
 export {
-  RATE_LIMIT_PRESETS,
   checkRateLimit,
+  checkRateLimitAsync,
   clientIpFromHeaders,
   resetRateLimit,
+  resetRateLimitAsync,
+  RATE_LIMIT_PRESETS,
 } from "@uwe/security";

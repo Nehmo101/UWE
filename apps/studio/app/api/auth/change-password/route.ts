@@ -9,7 +9,7 @@ import {
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
 import { guardStudioMutation } from "@uwe/security";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
-import { checkRateLimit, clientIpFromHeaders } from "@/src/lib/rate-limit";
+import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const authError = guardStudioMutation(request, { rateLimit: "login" });
@@ -23,12 +23,21 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     currentPassword?: string;
     newPassword?: string;
+    initialPasswordOnly?: boolean;
   };
 
   const currentPassword = body.currentPassword ?? "";
   const newPassword = body.newPassword?.trim() ?? "";
+  const initialPasswordOnly = body.initialPasswordOnly === true;
 
-  if (!currentPassword || !newPassword) {
+  if (!newPassword) {
+    return NextResponse.json(
+      { error: "Neues Passwort ist erforderlich." },
+      { status: 400 },
+    );
+  }
+
+  if (!initialPasswordOnly && !currentPassword) {
     return NextResponse.json(
       { error: "Aktuelles und neues Passwort sind erforderlich." },
       { status: 400 },
@@ -51,7 +60,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `studio-change-password:${ip}:${user.id}`;
-  const rate = checkRateLimit(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
+  const rate = await checkRateLimitAsync(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
   if (!rate.allowed) {
     const db = createPrismaClient();
     try {
@@ -80,12 +89,25 @@ export async function POST(request: Request) {
   const users = createUserService(db);
 
   try {
-    const result = await users.changePassword({
-      userId: user.id,
-      currentPassword,
-      newPassword,
-      keepSessionToken: sessionToken,
-    });
+    const result = initialPasswordOnly
+      ? await users.setInitialPassword({
+          userId: user.id,
+          newPassword,
+          keepSessionToken: sessionToken,
+        })
+      : await users.changePassword({
+          userId: user.id,
+          currentPassword,
+          newPassword,
+          keepSessionToken: sessionToken,
+        });
+
+    if (result === "initial_password_required") {
+      return NextResponse.json(
+        { error: "Bitte nutze „Erstes Passwort setzen“ oder /forgot-password." },
+        { status: 400 },
+      );
+    }
 
     if (result === "invalid_current" || result === "no_password") {
       return NextResponse.json({ error: "Passwortänderung fehlgeschlagen." }, { status: 401 });

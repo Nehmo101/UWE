@@ -6,11 +6,13 @@ import Link from "next/link";
 interface ChangePasswordFormProps {
   backHref?: string;
   forcePasswordChange?: boolean;
+  initialPasswordOnly?: boolean;
 }
 
 export function ChangePasswordForm({
   backHref = "/auth/worlds",
   forcePasswordChange = false,
+  initialPasswordOnly = false,
 }: ChangePasswordFormProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -34,7 +36,11 @@ export function ChangePasswordForm({
     const response = await fetch("/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({
+        currentPassword: initialPasswordOnly ? undefined : currentPassword,
+        newPassword,
+        initialPasswordOnly,
+      }),
     });
 
     setLoading(false);
@@ -54,22 +60,28 @@ export function ChangePasswordForm({
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      {forcePasswordChange && (
+      {(forcePasswordChange || initialPasswordOnly) && (
         <p className="auth-lead">
-          Du musst dein Passwort ändern, bevor du fortfahren kannst.
+          {initialPasswordOnly
+            ? "Lege dein erstes Passwort fest, um dein Konto zu aktivieren."
+            : "Du musst dein Passwort ändern, bevor du fortfahren kannst."}
         </p>
       )}
 
-      <label htmlFor="current-password">Aktuelles Passwort</label>
-      <input
-        id="current-password"
-        name="currentPassword"
-        type="password"
-        autoComplete="current-password"
-        value={currentPassword}
-        onChange={(event) => setCurrentPassword(event.target.value)}
-        required
-      />
+      {!initialPasswordOnly && (
+        <>
+          <label htmlFor="current-password">Aktuelles Passwort</label>
+          <input
+            id="current-password"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            required
+          />
+        </>
+      )}
 
       <label htmlFor="new-password">Neues Passwort</label>
       <input
@@ -103,11 +115,17 @@ export function ChangePasswordForm({
       )}
 
       <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
-        {loading ? "Speichern…" : "Passwort ändern"}
+        {loading ? "Speichern…" : initialPasswordOnly ? "Passwort festlegen" : "Passwort ändern"}
       </button>
 
       <p className="auth-form-footer">
         <Link href={backHref}>Zurück</Link>
+        {initialPasswordOnly && (
+          <>
+            {" · "}
+            <Link href="/forgot-password">Passwort-Reset anfordern</Link>
+          </>
+        )}
       </p>
     </form>
   );

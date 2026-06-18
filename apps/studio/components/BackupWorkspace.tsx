@@ -53,6 +53,7 @@ interface RestoreResult {
   skipped: number;
   failed: number;
   errors: string[];
+  usersNeedingPassword?: string[];
   items: Array<{ entityType: string; identifier: string; status: string; error?: string }>;
 }
 
@@ -92,6 +93,7 @@ export function BackupWorkspace({
   const [uploadFilename, setUploadFilename] = useState<string>("");
   const [permissions, setPermissions] = useState<BackupPermissions | null>(null);
   const [restoreConfirmed, setRestoreConfirmed] = useState(false);
+  const [sendPasswordSetupEmails, setSendPasswordSetupEmails] = useState(false);
   const [showRestoreWarning, setShowRestoreWarning] = useState(false);
 
   useEffect(() => {
@@ -237,6 +239,7 @@ export function BackupWorkspace({
           contentBase64: uploadBase64 || undefined,
           filename: uploadFilename || undefined,
           autoResolveSlugConflicts: true,
+          sendPasswordSetupEmails,
         }),
       });
       const data = await response.json();
@@ -458,6 +461,14 @@ export function BackupWorkspace({
               />
               Ich verstehe die Risiken und möchte den Restore ausführen.
             </label>
+            <label style={{ display: "block", margin: "0.75rem 0" }}>
+              <input
+                type="checkbox"
+                checked={sendPasswordSetupEmails}
+                onChange={(event) => setSendPasswordSetupEmails(event.target.checked)}
+              />
+              Passwort-Setup-Mails an wiederhergestellte Benutzer senden (SMTP erforderlich)
+            </label>
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button
                 type="button"
@@ -530,6 +541,21 @@ export function BackupWorkspace({
                 <ul>
                   {result.errors.map((entry) => (
                     <li key={entry}>{entry}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(result.usersNeedingPassword?.length ?? 0) > 0 && (
+              <div>
+                <h4>Benutzer ohne Passwort</h4>
+                <p>
+                  Diese Konten wurden ohne Passwort wiederhergestellt. Nutzer müssen{" "}
+                  <strong>/forgot-password</strong> verwenden oder ein Admin sendet Setup-Mails beim
+                  Restore.
+                </p>
+                <ul>
+                  {result.usersNeedingPassword!.map((email) => (
+                    <li key={email}>{email}</li>
                   ))}
                 </ul>
               </div>

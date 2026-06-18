@@ -90,6 +90,13 @@ export async function previewRestore(
 
   warnings.push("Passwörter und API-Keys werden nicht aus Backups wiederhergestellt.");
 
+  const restoredUsers = bundle.data.users ?? [];
+  if (restoredUsers.length > 0) {
+    warnings.push(
+      `${restoredUsers.length} Benutzer ohne Passwort — nach Restore über /forgot-password ein neues Passwort setzen oder „Passwort-Setup-Mails senden“ aktivieren.`,
+    );
+  }
+
   const conflicts = items.filter((item) => item.status === "conflict");
   const stats = {
     new: items.filter((item) => item.status === "new").length,

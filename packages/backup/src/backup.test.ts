@@ -227,6 +227,14 @@ describe("UWE backup and restore", () => {
     });
     assert.ok(restoredMembership);
     assert.equal(restoredMembership.user.email, "player-backup@uwe.local");
+    assert.ok(result.usersNeedingPassword.includes("player-backup@uwe.local"));
+
+    const restoredUser = await targetDb.user.findUnique({
+      where: { email: "player-backup@uwe.local" },
+    });
+    assert.ok(restoredUser);
+    assert.equal(restoredUser.passwordHash, null);
+    assert.equal(restoredUser.forcePasswordChange, true);
 
     const restoredAsset = await targetDb.asset.findFirst({
       where: { worldId: restoredWorld!.id },

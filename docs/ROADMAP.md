@@ -15,8 +15,8 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Setup POST Rate-Limit | ✅ Implementiert | — |
 | Setup GET Leak | ✅ Kein `setupConfigured` nach Abschluss | — |
 | 2FA (TOTP) | ✅ Login + Account-UI (`/account/security`) | — |
-| E2E-Tests (Login, Setup, Reset, Logout) | ✅ Playwright-Baseline (`pnpm test:e2e`) | Portal-E2E, Setup/Reset-Flows erweitern |
-| Multi-Instance Rate-Limit | ✅ `UWE_RATE_LIMIT_DIR` (file-backed) | Redis via `setRateLimitStore()` optional |
+| E2E-Tests (Login, Setup, Reset, Logout) | ✅ Studio + Portal Playwright | Setup-Flow (unseeded DB) optional erweitern |
+| Multi-Instance Rate-Limit | ✅ File-backed + optional Redis (`UWE_REDIS_URL`) | Distributed Session Store bei horizontaler Skalierung |
 | Distributed Session Store | 🔲 SQLite only | Optional bei horizontaler Skalierung |
 
 ---
@@ -35,7 +35,7 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Thema | Status | Nächste Schritte |
 |-------|--------|------------------|
 | Welten, Seiten, Assets, Labels | ✅ | — |
-| Users/Memberships/Unlocks | ✅ Restore (PR #144) | Passwort-Reset nach Restore |
+| Users/Memberships/Unlocks | ✅ Restore + Passwort-Setup | `/forgot-password` oder Restore-Option „Setup-Mails senden“ |
 | PageTemplates (custom) | ✅ Full-Backup | — |
 | ShareLinks | ✅ Export ohne Token; Restore regeneriert Token | Passwörter müssen neu gesetzt werden |
 | PlayerNotes | ✅ Opt-in (`includePlayerNotes`) | Datenschutz beachten |
@@ -47,7 +47,7 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Thema | Status | Nächste Schritte |
 |-------|--------|------------------|
 | Static HTML Export | ✅ | `pnpm export:static` |
-| Markdown/HTML Wiki-Export | 🔲 Roadmap | Zusätzlich zu Static Export; DM-only strikt filtern |
+| Markdown/HTML Wiki-Export | ✅ `pnpm export:wiki` | DM-Kontext (`--context dm`), Asset-Links |
 | PDF Label Export | ✅ Phase 1 | Siehe `docs/LABELS.md` |
 
 ---

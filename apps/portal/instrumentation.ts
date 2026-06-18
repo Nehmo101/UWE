@@ -2,5 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { assertProductionEnvReady } = await import("@uwe/env");
     assertProductionEnvReady();
+    const { bootstrapRateLimitStore } = await import("@uwe/security");
+    bootstrapRateLimitStore();
   }
 }

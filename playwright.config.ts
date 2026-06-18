@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.E2E_PORT ?? "3199";
-const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
+const studioPort = process.env.E2E_STUDIO_PORT ?? "3199";
+const portalPort = process.env.E2E_PORTAL_PORT ?? "3200";
+const studioBaseURL = process.env.E2E_STUDIO_URL ?? `http://127.0.0.1:${studioPort}`;
+const portalBaseURL = process.env.E2E_PORTAL_URL ?? `http://127.0.0.1:${portalPort}`;
 
 export default defineConfig({
   testDir: "e2e",
@@ -10,15 +12,31 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
+  projects: [
+    {
+      name: "studio",
+      testMatch: /studio-.*\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: studioBaseURL,
+      },
+    },
+    {
+      name: "portal",
+      testMatch: /portal-.*\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: portalBaseURL,
+      },
+    },
+  ],
   use: {
-    ...devices["Desktop Chrome"],
-    baseURL,
     trace: "on-first-retry",
   },
   webServer: {
-    command: "node scripts/e2e-webserver.mjs",
-    url: `${baseURL}/login`,
+    command: "node scripts/e2e-servers.mjs",
+    url: `${studioBaseURL}/login`,
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
+    timeout: 300_000,
   },
 });

@@ -9,7 +9,7 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { getSessionCookieOptions, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
-import { checkRateLimit, clientIpFromHeaders, resetRateLimit } from "@/src/lib/rate-limit";
+import { checkRateLimitAsync, clientIpFromHeaders, resetRateLimitAsync } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const authError = await requirePortalApiAuth(request);
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `login:${ip}:${email.toLowerCase()}`;
-  const rate = checkRateLimit(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
+  const rate = await checkRateLimitAsync(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
   if (!rate.allowed) {
     const db = createPrismaClient();
     try {
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
     }
 
-    resetRateLimit(rateKey);
+    await resetRateLimitAsync(rateKey);
 
     if (await twoFactor.isEnabled(user.id)) {
       const challenge = await twoFactor.createLoginChallenge(user.id);

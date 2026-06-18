@@ -7,7 +7,7 @@ import {
 } from "@uwe/database/server";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
-import { checkRateLimit, clientIpFromHeaders } from "@/src/lib/rate-limit";
+import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 async function requireSessionUser(request: Request) {
   const authError = await requirePortalApiAuth(request);
@@ -69,7 +69,7 @@ export async function handleTwoFactorActivate(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `portal-2fa-activate:${ip}:${session.user.id}`;
-  const rate = checkRateLimit(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
+  const rate = await checkRateLimitAsync(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Zu viele Versuche. Bitte warte einen Moment." },

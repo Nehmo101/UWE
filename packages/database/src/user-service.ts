@@ -69,7 +69,18 @@ export interface ChangePasswordInput {
   keepSessionToken?: string | null;
 }
 
-export type ChangePasswordResult = "ok" | "invalid_current" | "no_password" | "not_found";
+export type ChangePasswordResult =
+  | "ok"
+  | "invalid_current"
+  | "no_password"
+  | "not_found"
+  | "initial_password_required";
+
+export interface SetInitialPasswordInput {
+  userId: string;
+  newPassword: string;
+  keepSessionToken?: string | null;
+}
 
 export interface InviteUserResult {
   user: SafeUser;
@@ -401,18 +412,45 @@ export class UserService {
     }
 
     if (!user.passwordHash) {
-      return "no_password";
+      return "initial_password_required";
     }
 
     if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
       return "invalid_current";
     }
 
-    const passwordHash = await hashPassword(input.newPassword);
+    return this.applyPasswordChange(user.id, user.displayName, input.newPassword, input.keepSessionToken);
+  }
+
+  async setInitialPassword(input: SetInitialPasswordInput): Promise<ChangePasswordResult> {
+    const user = await this.db.user.findUnique({ where: { id: input.userId } });
+    if (!user) {
+      return "not_found";
+    }
+
+    if (user.passwordHash) {
+      return "no_password";
+    }
+
+    return this.applyPasswordChange(
+      user.id,
+      user.displayName,
+      input.newPassword,
+      input.keepSessionToken,
+    );
+  }
+
+  private async applyPasswordChange(
+    userId: string,
+    displayName: string,
+    newPassword: string,
+    keepSessionToken?: string | null,
+  ): Promise<ChangePasswordResult> {
+    const passwordHash = await hashPassword(newPassword);
 
     await this.db.$transaction([
       this.db.user.update({
-        where: { id: input.userId },
+        where: { id: userId },
         data: {
           passwordHash,
           forcePasswordChange: false,
@@ -420,23 +458,23 @@ export class UserService {
           resetTokenExpiresAt: null,
         },
       }),
-      input.keepSessionToken
+      keepSessionToken
         ? this.db.session.deleteMany({
             where: {
-              userId: input.userId,
-              NOT: { tokenHash: hashOpaqueToken(input.keepSessionToken) },
+              userId,
+              NOT: { tokenHash: hashOpaqueToken(keepSessionToken) },
             },
           })
-        : this.db.session.deleteMany({ where: { userId: input.userId } }),
+        : this.db.session.deleteMany({ where: { userId } }),
     ]);
 
     await logAuditEvent(this.db, {
-      actorUserId: input.userId,
+      actorUserId: userId,
       action: "password_changed",
       targetType: "user",
-      targetId: input.userId,
+      targetId: userId,
       metadata: {
-        displayName: user.displayName,
+        displayName,
         method: "self_service",
       },
     });

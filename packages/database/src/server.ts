@@ -171,6 +171,7 @@ export type {
   ResetPasswordInput,
   ChangePasswordInput,
   ChangePasswordResult,
+  SetInitialPasswordInput,
   InviteUserResult,
 } from "./user-service";
 

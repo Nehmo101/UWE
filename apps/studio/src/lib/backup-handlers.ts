@@ -141,6 +141,7 @@ export interface RestoreRequestBody {
   allowUpdates?: boolean;
   skipExisting?: boolean;
   sync?: boolean;
+  sendPasswordSetupEmails?: boolean;
 }
 
 async function loadBackupFromRequest(body: RestoreRequestBody) {

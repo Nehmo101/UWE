@@ -12,7 +12,7 @@ import {
   sessionExpiresAt,
 } from "@uwe/auth";
 import {
-  checkRateLimit,
+  checkRateLimitAsync,
   clientIpFromHeaders,
   RATE_LIMIT_PRESETS,
 } from "@/src/lib/rate-limit";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `studio-2fa:${ip}:${challengeToken.slice(0, 8)}`;
-  const rate = checkRateLimit(rateKey, RATE_LIMIT_PRESETS.login);
+  const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.login);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Zu viele Versuche. Bitte warte einen Moment." },

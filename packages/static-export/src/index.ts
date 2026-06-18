@@ -8,6 +8,13 @@ export {
 } from "./export-world";
 
 export {
+  exportWorldWiki,
+  type WikiExportFormat,
+  type WikiExportOptions,
+  type WikiExportResult,
+} from "./export-world-wiki";
+
+export {
   staticExportCategoryForPageType,
   staticPageDir,
   staticPageHref,
