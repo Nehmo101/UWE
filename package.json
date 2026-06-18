@@ -8,7 +8,7 @@
     "build": "turbo run build",
     "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
     "lint": "eslint --max-warnings 0 .",
-    "ci": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
+    "ci:check": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
     "quality": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm secret:scan && pnpm typecheck && pnpm test && pnpm test:security && pnpm audit:prod && pnpm build:release",
     "test:ci": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
     "security:audit": "pnpm audit:prod",
@@ -60,5 +60,10 @@
   "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "nodemailer": "^9.0.1"
+    }
   }
 }

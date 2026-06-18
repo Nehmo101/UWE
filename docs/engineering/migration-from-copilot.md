@@ -47,7 +47,7 @@ New Cursor Commands:
 | `scripts/docs-check.mjs` | Required docs + Markdown sanity |
 | `docs/engineering/ci.md` | CI reference |
 | `docs/engineering/cursor-workflow.md` | Cursor workflow reference |
-| `package.json` scripts: `ci`, `test:ci`, `security:audit`, `docs:check` | Local/CI parity |
+| `package.json` scripts: `ci:check`, `test:ci`, `security:audit`, `docs:check` | Local/CI parity |
 
 ## What was removed or deprecated
 

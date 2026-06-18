@@ -15,7 +15,7 @@
   "dependencies": {
     "@uwe/env": "workspace:*",
     "imapflow": "^1.0.187",
-    "nodemailer": "^7.0.3"
+    "nodemailer": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

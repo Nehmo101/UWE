@@ -9,7 +9,7 @@ alwaysApply: true
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm run ci` | Fast gate: lint → typecheck → test:ci → build |
+| `pnpm ci:check` | Fast gate: lint → typecheck → test:ci → build:release |
 | `pnpm quality` | Full gate (same as CI `quality` job): + secret scan, security tests, audit |
 | `pnpm lint` | ESLint, zero warnings |
 | `pnpm typecheck` | Turbo typecheck across workspace |

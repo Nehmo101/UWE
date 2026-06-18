@@ -127,7 +127,7 @@ pnpm dev:portal   # http://localhost:3001
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm ci                 # fast gate: lint, typecheck, test:ci, build (use: pnpm run ci)
+pnpm ci:check           # fast gate: lint, typecheck, test:ci, build
 pnpm quality            # full gate (same as CI) — run before PR
 pnpm build:release      # production build (includes Prisma generate)
 pnpm test

@@ -56,7 +56,7 @@ Scheduled runs use the same checks for weekly dependency monitoring.
 
 | Script | Equivalent CI step |
 |--------|-------------------|
-| `pnpm run ci` | PR fast path: lint → typecheck → test:ci → build:release |
+| `pnpm ci:check` | PR fast path: lint → typecheck → test:ci → build:release |
 | `pnpm quality` | Full CI quality job |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Turbo typecheck |
@@ -80,7 +80,7 @@ pnpm lint && pnpm typecheck
 pnpm quality
 ```
 
-**Note:** pnpm reserves `pnpm ci` for its built-in CI install command. Use `pnpm run ci` for the local fast gate script.
+**Note:** Use `pnpm ci:check` for the local fast gate (avoids conflict with pnpm's built-in `pnpm ci` install command).
 
 ## Debugging common failures
 

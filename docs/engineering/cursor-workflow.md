@@ -71,7 +71,7 @@ The workflow runs `pnpm quality` before pushing. Failed quality blocks the PR.
 | Local | CI |
 |-------|-----|
 | `pnpm quality` | `ci.yml` quality job |
-| `pnpm run ci` | `pr-check.yml` fast path (subset) |
+| `pnpm ci:check` | `pr-check.yml` fast path (subset) |
 | `pnpm docs:check` | `pr-check.yml` + `docs-check.yml` |
 
 Prefer `pnpm quality` before push — it matches the blocking CI gate exactly.

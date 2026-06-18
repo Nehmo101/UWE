@@ -30,5 +30,5 @@ List exact commands to reproduce each workflow locally.
 ## Rules
 
 - Do not suggest disabling checks to go green.
-- Prefer consolidating via `pnpm quality` / `pnpm run ci` over duplicating steps in YAML.
+- Prefer consolidating via `pnpm quality` / `pnpm ci:check` over duplicating steps in YAML.
 - Flag flaky patterns (missing concurrency, no frozen lockfile, implicit Prisma deps).
