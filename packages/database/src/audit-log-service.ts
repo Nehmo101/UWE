@@ -68,6 +68,19 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   restore_completed: "Restore abgeschlossen",
   authz_denied: "Zugriff verweigert",
   rate_limit_hit: "Rate-Limit erreicht",
+  api_token_created: "API-Token erstellt",
+  api_token_used: "API-Token verwendet",
+  api_token_revoked: "API-Token widerrufen",
+  api_token_rotated: "API-Token rotiert",
+  webhook_created: "Webhook erstellt",
+  webhook_updated: "Webhook aktualisiert",
+  webhook_deleted: "Webhook gelöscht",
+  webhook_delivered: "Webhook zugestellt",
+  webhook_failed: "Webhook fehlgeschlagen",
+  mfa_enabled: "2FA aktiviert",
+  mfa_disabled: "2FA deaktiviert",
+  mfa_challenge_failed: "2FA-Challenge fehlgeschlagen",
+  security_warning_dismissed: "Sicherheitswarnung verworfen",
 };
 
 export interface AuditRequestContext {

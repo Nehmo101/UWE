@@ -5,7 +5,8 @@ import {
   prisma,
   type AuditAction,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { requireAdminApiAuth } from "@uwe/security";
+import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 
 function parseActions(value: string | null): AuditAction[] | undefined {
   if (!value?.trim()) return undefined;
@@ -17,7 +18,11 @@ function parseActions(value: string | null): AuditAction[] | undefined {
 }
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const context = await resolveStudioApiAuthContext(request);
+  const authError = requireAdminApiAuth(request, context, {
+    rateLimit: "setup",
+    requiredScopes: ["admin_read"],
+  });
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
