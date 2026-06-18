@@ -26,6 +26,7 @@ export const PUBLIC_PLAYER_APP_ROUTES = [
   "/login",
   "/forgot-password",
   "/reset-password",
+  "/portal",
   "/worlds",
   "/worlds/*",
   "/players",

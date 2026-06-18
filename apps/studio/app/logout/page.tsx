@@ -18,5 +18,5 @@ export default async function LogoutPage() {
   }
 
   cookieStore.delete(SESSION_COOKIE_NAME);
-  redirect("/login");
+  redirect("/");
 }

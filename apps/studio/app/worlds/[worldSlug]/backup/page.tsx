@@ -30,13 +30,13 @@ export default async function WorldBackupPage({ params }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Assets", href: `/worlds/${worldSlug}/assets` },
                 { label: "Backup", href: `/worlds/${worldSlug}/backup`, active: true },
@@ -57,7 +57,7 @@ export default async function WorldBackupPage({ params }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Backup" },
             ]}

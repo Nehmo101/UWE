@@ -51,7 +51,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={overview.dungeon.title} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={overview.dungeon.title} href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
@@ -69,7 +69,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
               { label: overview.dungeon.title },

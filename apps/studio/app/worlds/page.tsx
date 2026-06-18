@@ -16,12 +16,12 @@ export default async function WorldsPage() {
   return (
     <AppShell
       bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Welten", href: "/worlds", active: true },
             ]}
           />
@@ -35,7 +35,7 @@ export default async function WorldsPage() {
               title="Noch keine Welten"
               description="Lege deine erste Welt per Datenbank-Seed oder Import an — danach erscheint sie hier zur Bearbeitung."
               action={
-                <Link className="uwe-btn uwe-btn-primary" href="/">
+                <Link className="uwe-btn uwe-btn-primary" href="/studio">
                   Zum Dashboard
                 </Link>
               }

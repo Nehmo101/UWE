@@ -115,13 +115,13 @@ export default async function AdminStatusPage() {
   return (
     <AppShell
       bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Systemstatus" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Systemstatus" href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Navigation">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Systemstatus", href: "/admin/status", active: true },
                 { label: "Cookbook", href: "/admin/cookbook" },
                 { label: "Einstellungen", href: "/settings" },
@@ -135,7 +135,7 @@ export default async function AdminStatusPage() {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Systemstatus" },
             ]}
           />

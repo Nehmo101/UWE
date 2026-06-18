@@ -65,6 +65,9 @@ export const config = {
   matcher: [
     "/",
     "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/portal",
     "/worlds/:path*",
     "/players/:path*",
     "/auth/:path*",

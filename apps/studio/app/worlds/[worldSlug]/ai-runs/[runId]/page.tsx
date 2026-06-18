@@ -52,13 +52,13 @@ export default async function AiRunDetailPage({ params }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <SidebarSection title="Welt">
           <SidebarNav
             items={[
               { label: "← AI Runs", href: `/worlds/${worldSlug}/ai-runs`, active: true },
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
             ]}
           />
         </SidebarSection>
@@ -67,7 +67,7 @@ export default async function AiRunDetailPage({ params }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "AI Runs", href: `/worlds/${worldSlug}/ai-runs` },
               { label: run.id.slice(0, 8) },

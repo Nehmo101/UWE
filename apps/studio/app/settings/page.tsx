@@ -83,7 +83,7 @@ export default async function SettingsPage({ searchParams }: Props) {
     <AppShell
       topBar={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle="Einstellungen" href="/" />
+          <TopBarBrand appName="UWE Studio" subtitle="Einstellungen" href="/studio" />
         </>
       }
       sidebar={
@@ -91,7 +91,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           <SidebarSection title="Navigation">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Einstellungen", href: "/settings", active: true },
               ]}
             />

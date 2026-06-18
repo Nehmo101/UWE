@@ -70,13 +70,13 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={worldSidebar(worldSlug, "labels")}
       main={
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Labels", href: `/worlds/${worldSlug}/labels` },
               { label: label.title },

@@ -62,7 +62,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
     <AppShell
       topBar={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle="Seite bearbeiten" href="/" />
+          <TopBarBrand appName="UWE Studio" subtitle="Seite bearbeiten" href="/studio" />
           <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, page.type, slug)}>
             Vorschau als Spieler
           </Link>
@@ -82,7 +82,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         <div className="uwe-has-sticky-actions">
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: page.title, href: buildPageUrl(worldSlug, page.type, slug) },
               { label: "Bearbeiten" },

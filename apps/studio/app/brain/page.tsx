@@ -39,12 +39,12 @@ export default async function BrainOverviewPage() {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Brain Knowledge Store" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Brain Knowledge Store" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "← Dashboard", href: "/" },
+              { label: "← Dashboard", href: "/studio" },
               { label: "Life-Brain", href: "/life-brain" },
               { label: "DnD Brain Store", href: "/brain", active: true },
             ]}

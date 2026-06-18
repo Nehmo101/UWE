@@ -67,6 +67,51 @@ pnpm build
 - [ ] FamilyWall iCal URL getestet
 - [ ] Agent Job Draft-PR Workflow
 
+## Auth UI (Landing, Login, Passwort-Reset)
+
+Manuelle Frontend-QA für Studio (Port 3000) und Portal (Port 3001):
+
+### Landing Page `/`
+1. Ohne Session: `/` zeigt UWE-Branding, Beschreibung, Buttons „Zum Studio“ und „Zum Portal“.
+2. Beide Buttons führen zu `/login` (bzw. Cross-App-Login-URL).
+3. Mit Session: Buttons führen zu `/studio` (Studio) bzw. `/portal` (Portal).
+4. Abmelden-Button sichtbar und funktionsfähig.
+5. Mobile (375px): Buttons stapeln sich, Text lesbar, Touch-Ziele ≥ 44px.
+
+### Login `/login`
+1. E-Mail + Passwort + Anmelden; Tab-Reihenfolge logisch.
+2. Falsches Passwort → neutrale Fehlermeldung ohne Account-Leak.
+3. Ladezustand „Anmelden…“ während Request.
+4. Link „Passwort vergessen?“ → `/forgot-password`.
+5. Dev: `dm@uwe.local` / `uwe-dev` (Studio), `aman@uwe.local` / `uwe-dev` (Portal).
+
+### Logout
+1. Studio: Landing-Abmelden oder `/logout` → Session weg, zurück zu `/`.
+2. Portal: AuthHeader-Abmelden → zurück zu `/`.
+
+### Passwort vergessen `/forgot-password`
+1. E-Mail-Feld + Button; Ladezustand sichtbar.
+2. Erfolg → neutrale Meldung (unabhängig von Konto-Existenz).
+3. Link zurück zu `/login`.
+
+### Passwort zurücksetzen `/reset-password?token=…`
+1. Ohne Token → Fehlermeldung.
+2. Mit gültigem Token: Passwort + Bestätigung, min. 8 Zeichen.
+3. Erfolg → Redirect zu `/login?reset=success` mit Bestätigung.
+4. Abgelaufener Token → Fehlermeldung.
+
+### Tastatur & A11y
+1. Alle Formularfelder haben `<label htmlFor=…>`.
+2. Fehler mit `role="alert"`, Erfolg mit `role="status"`.
+3. Enter sendet Formulare; Buttons per Tab erreichbar.
+
+### Cross-App Links
+1. `.env`: `NEXT_PUBLIC_STUDIO_URL`, `NEXT_PUBLIC_PORTAL_URL` gesetzt.
+2. Von Portal-Landing → Studio-Link zeigt auf Studio-Origin.
+3. Von Studio-Landing → Portal-Link zeigt auf Portal-Origin.
+
+**Hinweis:** `/api/auth/forgot-password` und `/api/auth/reset-password` müssen vom Backend-Subagenten bereitstehen, damit Reset-Flows End-to-End funktionieren.
+
 ## Bekannte Test-Lücken
 
 - Kein E2E Playwright für Auth-Flows (Login, Setup, Forgot/Reset, Logout) — manuelle QA in [SECURITY_QA_MATRIX.md](./SECURITY_QA_MATRIX.md)

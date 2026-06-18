@@ -40,7 +40,7 @@ export default async function StudioBrainFactPage({ params }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <SidebarSection title="Brain">
           <SidebarNav
@@ -54,7 +54,7 @@ export default async function StudioBrainFactPage({ params }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Brain Store", href: `/worlds/${worldSlug}/brain` },
               { label: fact.title },

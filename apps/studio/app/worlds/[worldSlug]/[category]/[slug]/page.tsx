@@ -120,7 +120,7 @@ export default async function StudioPageView({ params, searchParams }: Props) {
       <AppShell
         topBar={
           <>
-            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
             {!isPlayerPreview && (
               <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, rawPage.type, slug)}>
                 Vorschau als Spieler
@@ -164,7 +164,7 @@ export default async function StudioPageView({ params, searchParams }: Props) {
           <>
             <Breadcrumb
               items={[
-                { label: "Dashboard", href: "/" },
+                { label: "Dashboard", href: "/studio" },
                 { label: world.name, href: `/worlds/${worldSlug}` },
                 { label: NAV_CATEGORY_LABELS[category as NavCategory] },
                 { label: view.page.title },

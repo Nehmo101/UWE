@@ -1224,6 +1224,41 @@ html[data-theme="light"] {
   margin-top: 1.25rem;
 }
 
+.uwe-landing-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.uwe-landing-hero {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.uwe-landing-hero .uwe-portal-hero-desc {
+  margin-inline: auto;
+}
+
+.uwe-landing-hero .uwe-portal-hero-actions {
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .uwe-landing-hero .uwe-portal-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .uwe-landing-hero .uwe-portal-hero-actions .uwe-btn,
+  .uwe-landing-hero .uwe-portal-hero-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .uwe-portal-nav {
   display: grid;
   gap: 1.25rem;

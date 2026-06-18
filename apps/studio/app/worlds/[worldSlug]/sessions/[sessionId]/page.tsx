@@ -56,7 +56,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={session.title} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={session.title} href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
@@ -70,7 +70,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
               { label: session.title },

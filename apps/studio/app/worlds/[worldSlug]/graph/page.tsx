@@ -111,7 +111,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
       <AppShell
         topBar={
           <>
-            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
             {!isPlayerPreview ? (
               <Link
                 className="uwe-btn uwe-btn-ghost"
@@ -158,7 +158,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
           <>
             <Breadcrumb
               items={[
-                { label: "Dashboard", href: "/" },
+                { label: "Dashboard", href: "/studio" },
                 { label: world.name, href: `/worlds/${worldSlug}` },
                 { label: "Graph" },
               ]}

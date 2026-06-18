@@ -97,6 +97,9 @@ const STUDIO_PUBLIC_API_ROUTES = [
 
 const STUDIO_UI_ROUTES = [
   "apps/studio/app/page.tsx",
+  "apps/studio/app/studio/page.tsx",
+  "apps/studio/app/forgot-password/page.tsx",
+  "apps/studio/app/reset-password/page.tsx",
   "apps/studio/app/admin/status/page.tsx",
   "apps/studio/app/admin/ai-prompt/page.tsx",
   "apps/studio/app/admin/agent-jobs/page.tsx",
@@ -116,6 +119,9 @@ const PORTAL_PUBLIC_ROUTES = [
 
 const PORTAL_AUTH_ROUTES = [
   "apps/portal/app/login/page.tsx",
+  "apps/portal/app/forgot-password/page.tsx",
+  "apps/portal/app/reset-password/page.tsx",
+  "apps/portal/app/portal/page.tsx",
   "apps/portal/app/auth/worlds/page.tsx",
   "apps/portal/app/auth/worlds/[worldSlug]/page.tsx",
   "apps/portal/app/api/auth/login/route.ts",
@@ -129,9 +135,11 @@ describe("route authorization — Studio UI (/studio root)", () => {
     });
   }
 
-  it("documents that Studio has no /studio path prefix (app root)", () => {
+  it("serves public landing at / and protected dashboard at /studio", () => {
     assert.ok(exists("apps/studio/app/page.tsx"));
-    assert.ok(!exists("apps/studio/app/studio/page.tsx"));
+    assert.ok(exists("apps/studio/app/studio/page.tsx"));
+    const landing = read("apps/studio/app/page.tsx");
+    assert.match(landing, /UweLandingPage/);
   });
 });
 

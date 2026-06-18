@@ -20,12 +20,12 @@ export default async function JobsPage() {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Hintergrund-Jobs" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Hintergrund-Jobs" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "← Dashboard", href: "/" },
+              { label: "← Dashboard", href: "/studio" },
               { label: "Jobs", href: "/jobs", active: true },
               { label: "Backup", href: "/backup" },
               { label: "Einstellungen", href: "/settings" },
@@ -35,7 +35,7 @@ export default async function JobsPage() {
       }
       main={
         <>
-          <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: "Jobs" }]} />
+          <Breadcrumb items={[{ label: "Dashboard", href: "/studio" }, { label: "Jobs" }]} />
           <PageHeader
             title="Job-Warteschlange"
             summary="Mail, KI, Embeddings, Import und Backup laufen als Hintergrund-Jobs — die UI bleibt reaktionsfähig."

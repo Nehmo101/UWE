@@ -115,7 +115,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
       contextTitle="Inspektor-Hilfe"
       topBar={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
           <GlobalSearchForm
             action={`/worlds/${worldSlug}`}
             query=""
@@ -125,14 +125,14 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
       }
       sidebar={
         <SidebarSection title="Welt">
-          <SidebarNav items={[{ label: "← Dashboard", href: "/" }, ...worldNavItems(worldSlug, "inspector")]} />
+          <SidebarNav items={[{ label: "← Dashboard", href: "/studio" }, ...worldNavItems(worldSlug, "inspector")]} />
         </SidebarSection>
       }
       main={
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Inspektor" },
             ]}

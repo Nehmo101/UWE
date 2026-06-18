@@ -91,7 +91,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
       contextTitle="Welt-Kontext"
       topBar={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />
+          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
           <GlobalSearchForm
             action={`/worlds/${worldSlug}`}
             query={q ?? ""}
@@ -104,7 +104,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 // Keep the active campaign filter on "Neue Seite".
                 ...worldNavItems(worldSlug, "pages").map((item) =>
                   item.href === `/worlds/${worldSlug}/pages/new`
@@ -132,7 +132,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name },
             ]}
           />

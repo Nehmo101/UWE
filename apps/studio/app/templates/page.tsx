@@ -27,12 +27,12 @@ export default async function TemplatesPage({ searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Templates" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Templates" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Welten", href: "/worlds" },
               { label: "Templates", href: "/templates", active: true },
               { label: "Backup", href: "/backup" },
@@ -43,7 +43,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
       }
       main={
         <>
-          <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: "Templates" }]} />
+          <Breadcrumb items={[{ label: "Dashboard", href: "/studio" }, { label: "Templates" }]} />
 
           <PageHeader
             title="Seiten-Templates"

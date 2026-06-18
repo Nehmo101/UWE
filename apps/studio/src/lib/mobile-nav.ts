@@ -16,14 +16,14 @@ export function studioGlobalBottomNav(
     { label: "Capture", href: "/capture", icon: "+", active: active === "capture" },
     { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
     { label: "KI", href: "/ai", icon: "✦", active: active === "ai" },
-    { label: "Mehr", href: "/", icon: "☰", active: active === "more" },
+    { label: "Mehr", href: "/studio", icon: "☰", active: active === "more" },
   ];
 }
 
 /** @deprecated Use studioGlobalBottomNav — kept for gradual migration */
 export function studioLegacyBottomNav(active: "dashboard" | "worlds" | "search" | "settings"): StudioBottomNavItem[] {
   return [
-    { label: "Dashboard", href: "/", icon: "⌂", active: active === "dashboard" },
+    { label: "Dashboard", href: "/studio", icon: "⌂", active: active === "dashboard" },
     { label: "Welten", href: "/worlds", icon: "🌍", active: active === "worlds" },
     { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
     { label: "Einstell.", href: "/settings", icon: "⚙", active: active === "settings" },

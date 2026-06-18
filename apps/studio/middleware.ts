@@ -9,6 +9,7 @@ import {
 } from "@uwe/auth";
 
 const PUBLIC_PATH_PREFIXES = [
+  "/",
   "/login",
   "/logout",
   "/setup",

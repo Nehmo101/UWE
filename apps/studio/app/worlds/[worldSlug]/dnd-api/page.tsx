@@ -46,7 +46,7 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
   return (
     <AppShell
       bottomNav={studioWorldBottomNav(worldSlug, "more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <SidebarSection title={world.name}>
           <SidebarNav items={worldNavItems(worldSlug, "dnd-api")} />

@@ -18,12 +18,12 @@ export default async function NewTemplatePage({ searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neues Template" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neues Template" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Templates", href: "/templates", active: true },
             ]}
           />
@@ -33,7 +33,7 @@ export default async function NewTemplatePage({ searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Templates", href: "/templates" },
               { label: "Neu" },
             ]}

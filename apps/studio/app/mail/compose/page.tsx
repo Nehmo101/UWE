@@ -60,7 +60,7 @@ export default async function MailComposePage({ searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Mail vorbereiten" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Mail vorbereiten" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav

@@ -113,15 +113,18 @@ export async function enforceStudioPageAuth(pathname: string): Promise<void> {
     return;
   }
 
-  if (pathname === "/login" || pathname.startsWith("/login/")) {
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/forgot-password/") ||
+    pathname === "/reset-password" ||
+    pathname.startsWith("/reset-password/")
+  ) {
     return;
   }
 
-  if (pathname === "/forgot-password" || pathname.startsWith("/forgot-password/")) {
-    return;
-  }
-
-  if (pathname === "/reset-password" || pathname.startsWith("/reset-password/")) {
+  if (pathname === "/") {
     return;
   }
 

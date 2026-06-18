@@ -27,13 +27,13 @@ export default async function StudioImportPage({ params }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Import", href: `/worlds/${worldSlug}/import`, active: true },
                 { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
@@ -51,7 +51,7 @@ export default async function StudioImportPage({ params }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "KnoteForge Import" },
             ]}

@@ -65,11 +65,12 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 
 | # | Route | Without login | With login (owner/dm) | Auto | Status |
 |---|-------|---------------|----------------------|------|--------|
-| 3.1 | `/` (dashboard) | Redirect `/login` | Allowed | ✓ middleware + layout | pass |
-| 3.2 | `/worlds`, `/worlds/*` | Redirect `/login` | Allowed (role-gated) | ✓ studio-route-auth | pass |
-| 3.3 | `/admin/*` | Redirect `/login` | Allowed (owner/admin) | ✓ | pass |
-| 3.4 | `/settings`, `/backup`, `/brain` | Redirect `/login` | Allowed | ✓ | pass |
-| 3.5 | `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password` | Public (setup gated by availability) | Public | ✓ | pass |
+| 3.1 | `/` (landing) | Public landing page | Redirect `/login` when unauthenticated | ✓ middleware + layout | pass |
+| 3.2 | `/studio` (dashboard) | Redirect `/login` | Allowed | ✓ middleware + layout | pass |
+| 3.3 | `/worlds`, `/worlds/*` | Redirect `/login` | Allowed (role-gated) | ✓ studio-route-auth | pass |
+| 3.4 | `/admin/*` | Redirect `/login` | Allowed (owner/admin) | ✓ | pass |
+| 3.5 | `/settings`, `/backup`, `/brain` | Redirect `/login` | Allowed | ✓ | pass |
+| 3.6 | `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password` | Public (setup gated by availability) | Public | ✓ | pass |
 | 3.6 | `/api/health` | Allowed | Allowed | ✓ | pass |
 | 3.7 | `/api/auth/*` | Allowed (login/setup/logout) | Allowed | ✓ | pass |
 | 3.8 | `/api/settings`, `/api/backup`, etc. | HTTP 401 | Allowed (session or bearer) | ✓ studio-route-auth (91 routes) | pass |

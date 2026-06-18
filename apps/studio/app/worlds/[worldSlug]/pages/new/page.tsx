@@ -62,7 +62,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neue Seite" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neue Seite" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
@@ -77,7 +77,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Neue Seite" },
             ]}

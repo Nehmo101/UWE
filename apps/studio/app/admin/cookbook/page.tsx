@@ -44,12 +44,12 @@ export default async function CookbookAdminPage() {
   return (
     <AppShell
       bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Cookbook" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Cookbook" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "← Dashboard", href: "/" },
+              { label: "← Dashboard", href: "/studio" },
               { label: "Cookbook", href: "/admin/cookbook", active: true },
               { label: "Systemstatus", href: "/admin/status" },
               { label: "KI-Prompt", href: "/admin/ai-prompt" },
@@ -62,7 +62,7 @@ export default async function CookbookAdminPage() {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Cookbook" },
             ]}
           />

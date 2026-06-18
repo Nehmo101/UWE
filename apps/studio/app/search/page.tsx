@@ -61,7 +61,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
       contextTitle="Suchbereiche"
       topBar={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle="Globale Suche" href="/" />
+          <TopBarBrand appName="UWE Studio" subtitle="Globale Suche" href="/studio" />
           <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
         </>
       }
@@ -69,7 +69,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Welten", href: "/worlds" },
               { label: "Globale Suche", href: "/search", active: true },
             ]}

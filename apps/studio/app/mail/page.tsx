@@ -34,13 +34,13 @@ export default async function MailCenterPage() {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Mail Center" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Mail Center" href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Navigation">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Mail Center", href: "/mail", active: true },
                 { label: "Einstellungen", href: "/settings?tab=mail" },
               ]}

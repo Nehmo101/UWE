@@ -25,12 +25,12 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={template.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={template.name} href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Templates", href: "/templates", active: true },
             ]}
           />
@@ -40,7 +40,7 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "Templates", href: "/templates" },
               { label: template.name },
             ]}

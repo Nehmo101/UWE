@@ -25,12 +25,12 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
   return (
     <AppShell
       bottomNav={studioGlobalBottomNav("ai")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="KI-Prompt" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="KI-Prompt" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "← Dashboard", href: "/" },
+              { label: "← Dashboard", href: "/studio" },
               { label: "KI-Prompt", href: "/admin/ai-prompt", active: true },
               { label: "Systemstatus", href: "/admin/status" },
               { label: "Einstellungen", href: "/settings" },
@@ -42,7 +42,7 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: "KI-Prompt" },
             ]}
           />

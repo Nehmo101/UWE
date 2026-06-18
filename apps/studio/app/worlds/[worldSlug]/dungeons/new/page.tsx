@@ -30,7 +30,7 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neuer Dungeon" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neuer Dungeon" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
@@ -44,7 +44,7 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
               { label: "Neuer Dungeon" },

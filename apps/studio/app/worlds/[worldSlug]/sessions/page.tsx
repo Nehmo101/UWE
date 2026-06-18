@@ -46,13 +46,13 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
     <AppShell
       bottomNav={studioWorldBottomNav(worldSlug, "more")}
       contextTitle="Kontext"
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Sessions", href: `/worlds/${worldSlug}/sessions`, active: true },
                 { label: "Spielernotizen", href: `/worlds/${worldSlug}/notes` },
@@ -79,7 +79,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Sessions" },
             ]}

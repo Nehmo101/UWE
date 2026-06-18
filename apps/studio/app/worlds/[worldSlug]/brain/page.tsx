@@ -58,13 +58,13 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Brain Store", href: `/worlds/${worldSlug}/brain`, active: true },
                 { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
@@ -90,7 +90,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Brain Store" },
             ]}

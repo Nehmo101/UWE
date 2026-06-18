@@ -15,12 +15,12 @@ export default async function BackupPage() {
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Backup & Restore" href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Backup & Restore" href="/studio" />}
       sidebar={
         <SidebarSection title="Navigation">
           <SidebarNav
             items={[
-              { label: "← Dashboard", href: "/" },
+              { label: "← Dashboard", href: "/studio" },
               { label: "Welten", href: "/worlds" },
               { label: "Backup", href: "/backup", active: true },
             ]}
@@ -29,7 +29,7 @@ export default async function BackupPage() {
       }
       main={
         <>
-          <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: "Backup" }]} />
+          <Breadcrumb items={[{ label: "Dashboard", href: "/studio" }, { label: "Backup" }]} />
           <PageHeader
             title="Backup & Restore"
             summary="Erstelle vollständige oder welt-/kampagnenspezifische Backups, lade sie herunter und stelle Daten sicher wieder her."

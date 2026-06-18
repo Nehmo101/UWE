@@ -70,6 +70,7 @@ const FORBIDDEN_CLIENT_SECRET_PATTERNS = [
 describe("integration smoke — core Studio routes", () => {
   const coreRoutes = [
     "apps/studio/app/page.tsx",
+    "apps/studio/app/studio/page.tsx",
     "apps/studio/app/worlds/page.tsx",
     "apps/studio/app/brain/page.tsx",
     "apps/studio/app/mail/page.tsx",
@@ -147,17 +148,23 @@ describe("integration smoke — minimal app access paths", () => {
 
   it("keeps Studio login reachable and protects admin routes without auth", () => {
     assert.ok(exists("apps/studio/app/login/page.tsx"));
+    assert.ok(exists("apps/studio/app/studio/page.tsx"));
+    assert.ok(exists("apps/studio/app/forgot-password/page.tsx"));
+    assert.ok(exists("apps/studio/app/reset-password/page.tsx"));
     assert.ok(exists("apps/studio/app/admin/layout.tsx"));
 
     const middleware = read("apps/studio/middleware.ts");
     const rootLayout = read("apps/studio/app/layout.tsx");
     const adminLayout = read("apps/studio/app/admin/layout.tsx");
+    const landing = read("apps/studio/app/page.tsx");
 
     assert.match(middleware, /PUBLIC_PATH_PREFIXES[\s\S]*"\/login"/);
+    assert.match(middleware, /PUBLIC_PATH_PREFIXES[\s\S]*"\/forgot-password"/);
     assert.match(middleware, /config\.authRequired[\s\S]*!isPublicPath\(pathname\)/);
     assert.match(middleware, /loginUrl\.pathname = "\/login"/);
     assert.match(rootLayout, /enforceStudioPageAuth\(pathname\)/);
     assert.match(adminLayout, /requireAdminAccess\(\)/);
+    assert.match(landing, /UweLandingPage/);
   });
 
   it("keeps Portal public pages reachable", () => {
@@ -166,8 +173,12 @@ describe("integration smoke — minimal app access paths", () => {
 
     assert.match(middleware, /"\/"/);
     assert.match(middleware, /"\/worlds\/:path\*"/);
-    assert.match(home, /href="\/worlds"/);
-    assert.match(home, /href="\/login"/);
+    assert.match(middleware, /"\/forgot-password"/);
+    assert.match(middleware, /"\/reset-password"/);
+    assert.match(home, /UweLandingPage/);
+    assert.ok(exists("apps/portal/app/login/page.tsx"));
+    assert.ok(exists("apps/portal/app/forgot-password/page.tsx"));
+    assert.ok(exists("apps/portal/app/reset-password/page.tsx"));
   });
 
   it("keeps DM-only content covered by public leak regression tests", () => {

@@ -90,13 +90,13 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
 
   return (
     <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/" />}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
       sidebar={
         <>
           <SidebarSection title="Welt">
             <SidebarNav
               items={[
-                { label: "← Dashboard", href: "/" },
+                { label: "← Dashboard", href: "/studio" },
                 { label: "Seiten", href: `/worlds/${worldSlug}` },
                 { label: "Sessions", href: `/worlds/${worldSlug}/sessions` },
                 { label: "Soundboard", href: `/worlds/${worldSlug}/soundboard`, active: true },
@@ -122,7 +122,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
         <>
           <Breadcrumb
             items={[
-              { label: "Dashboard", href: "/" },
+              { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
               { label: "Soundboard" },
             ]}
