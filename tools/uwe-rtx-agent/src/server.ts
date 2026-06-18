@@ -258,6 +258,44 @@ async function handleRequest(
     return;
   }
 
+  if (pathname === "/v1/images" && method === "POST") {
+    const auth = verifyToken(request, config.token);
+    if (!auth.ok) {
+      sendJson(response, 401, {
+        error: "invalid_token",
+        message: "Invalid agent token",
+      } satisfies ErrorResponse);
+      return;
+    }
+
+    const body = await readJsonBody<{
+      task?: string;
+      prompt?: string;
+      source_image?: string;
+      mask?: string;
+    }>(request);
+
+    if (!body.prompt?.trim() && body.task !== "remove_background") {
+      sendJson(response, 400, {
+        error: "invalid_request",
+        message: "prompt is required",
+      } satisfies ErrorResponse);
+      return;
+    }
+
+    // Placeholder implementation — Ollama image endpoints vary by install.
+    // Returns a 1x1 PNG so Image Studio jobs can complete in local dev/CI.
+    const placeholder =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    sendJson(response, 200, {
+      image: body.source_image ?? placeholder,
+      mime_type: "image/png",
+      task: body.task ?? "generate",
+      note: "RTX image stub — replace with diffusion backend when configured.",
+    });
+    return;
+  }
+
   sendJson(response, 404, {
     error: "not_found",
     message: "Route not found",

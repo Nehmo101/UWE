@@ -171,4 +171,25 @@ describe("server", () => {
       await mockOllama.close();
     }
   });
+
+  it("returns image stub from /v1/images", async () => {
+    const mockOllama = await startMockOllama();
+    const config = createTestConfig({ ollamaBaseUrl: mockOllama.baseUrl, port: 0 });
+    const agent = await startTestAgent(config);
+
+    try {
+      const response = await fetch(`${agent.baseUrl}/v1/images`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "generate", prompt: "dragon" }),
+      });
+      assert.equal(response.status, 200);
+      const payload = await readJson<{ image: string; mime_type: string }>(response);
+      assert.ok(payload.image);
+      assert.equal(payload.mime_type, "image/png");
+    } finally {
+      await agent.close();
+      await mockOllama.close();
+    }
+  });
 });

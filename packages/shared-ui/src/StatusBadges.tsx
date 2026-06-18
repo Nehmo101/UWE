@@ -248,11 +248,59 @@ export function ContentBlockList({
             <span className="uwe-block-type">{BLOCK_TYPE_LABELS[block.type]}</span>
             {showVisibility && <VisibilityBadge visibility={block.visibility} />}
           </header>
-          <pre className="uwe-block-content">{block.content}</pre>
+          {renderBlockBody(block)}
         </article>
       ))}
     </div>
   );
+}
+
+function renderBlockBody(block: ContentBlockViewModel) {
+  if (block.type === "image") {
+    const src = block.content.trim();
+    if (src.startsWith("http") || src.startsWith("/")) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          className="uwe-block-image"
+          style={{ maxWidth: "100%", height: "auto", borderRadius: "6px" }}
+        />
+      );
+    }
+  }
+
+  if (block.type === "gallery") {
+    const urls = block.content
+      .split(/\n|,/)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.startsWith("http") || entry.startsWith("/"));
+    if (urls.length > 0) {
+      return (
+        <div
+          className="uwe-gallery-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+            gap: "0.5rem",
+          }}
+        >
+          {urls.map((url) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={url}
+              src={url}
+              alt=""
+              style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
+            />
+          ))}
+        </div>
+      );
+    }
+  }
+
+  return <pre className="uwe-block-content">{block.content}</pre>;
 }
 
 export function MetaPanel({
