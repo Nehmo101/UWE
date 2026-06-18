@@ -18,7 +18,8 @@ import {
   scopeFromAccessContext,
   sessionExpiresAt,
 } from "@uwe/auth";
-import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth/server";
+import { generateSessionToken, hashPassword, isLegacyPasswordHash, verifyPassword } from "@uwe/auth/server";
+import { toSafeUser, type SafeUser } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
 import {
   normalizeLookupKey,
@@ -52,6 +53,7 @@ import {
   type PortalPlayerNoteView,
 } from "./player-note-service";
 import { logAuditEvent } from "./audit-log-service";
+import { USER_SAFE_SELECT } from "./user-service";
 
 export interface CreateUserInput {
   displayName: string;
@@ -78,7 +80,7 @@ export class AuthService {
     this.playerNotes = new PlayerNoteService(db);
   }
 
-  async createUser(input: CreateUserInput) {
+  async createUser(input: CreateUserInput): Promise<SafeUser> {
     const existingOwnerCount =
       input.role === "owner"
         ? await this.db.user.count({ where: { role: "owner" } })
@@ -88,9 +90,10 @@ export class AuthService {
       data: {
         displayName: input.displayName,
         email: input.email ?? null,
-        passwordHash: input.password ? hashPassword(input.password) : null,
+        passwordHash: input.password ? await hashPassword(input.password) : null,
         role: input.role ?? "player",
       },
+      select: USER_SAFE_SELECT,
     });
 
     await logAuditEvent(this.db, {
@@ -116,15 +119,21 @@ export class AuthService {
       });
     }
 
-    return user;
+    return toSafeUser(user);
   }
 
   async findUserByEmail(email: string) {
-    return this.db.user.findUnique({ where: { email } });
+    return this.db.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      select: USER_SAFE_SELECT,
+    });
   }
 
   async findUserById(id: string) {
-    return this.db.user.findUnique({ where: { id } });
+    return this.db.user.findUnique({
+      where: { id },
+      select: USER_SAFE_SELECT,
+    });
   }
 
   async hasOwnerUser(): Promise<boolean> {
@@ -245,16 +254,26 @@ export class AuthService {
   }
 
   async authenticate(email: string, password: string) {
-    const user = await this.findUserByEmail(email);
+    const user = await this.db.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
     if (!user?.passwordHash) {
       return null;
     }
 
-    if (!verifyPassword(password, user.passwordHash)) {
+    if (!(await verifyPassword(password, user.passwordHash))) {
       return null;
     }
 
-    return user;
+    if (user.passwordHash && isLegacyPasswordHash(user.passwordHash)) {
+      const upgradedHash = await hashPassword(password);
+      await this.db.user.update({
+        where: { id: user.id },
+        data: { passwordHash: upgradedHash },
+      });
+    }
+
+    return toSafeUser(user);
   }
 
   async createSession(userId: string) {
@@ -265,7 +284,11 @@ export class AuthService {
         token,
         expiresAt: sessionExpiresAt(),
       },
-      include: { user: true },
+      include: {
+        user: {
+          select: USER_SAFE_SELECT,
+        },
+      },
     });
 
     return session;
@@ -274,7 +297,11 @@ export class AuthService {
   async getSessionByToken(token: string) {
     const session = await this.db.session.findUnique({
       where: { token },
-      include: { user: true },
+      include: {
+        user: {
+          select: USER_SAFE_SELECT,
+        },
+      },
     });
 
     if (!session) {
@@ -329,7 +356,10 @@ export class AuthService {
     const systemSettings = await new SettingsService(this.db).getSettings();
 
     const user = options.userId
-      ? await this.db.user.findUnique({ where: { id: options.userId } })
+      ? await this.db.user.findUnique({
+          where: { id: options.userId },
+          select: USER_SAFE_SELECT,
+        })
       : null;
 
     const membership = user

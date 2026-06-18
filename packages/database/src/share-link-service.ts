@@ -120,7 +120,7 @@ export class ShareLinkService {
         targetId: input.targetId,
         token: generateSessionToken(),
         expiresAt: input.expiresAt ?? null,
-        passwordHash: input.password ? hashPassword(input.password) : null,
+        passwordHash: input.password ? await hashPassword(input.password) : null,
         readOnly: input.readOnly ?? true,
         logAccess: input.logAccess ?? false,
         enabled: true,
@@ -148,15 +148,18 @@ export class ShareLinkService {
   }
 
   async updateShareLink(id: string, input: UpdateShareLinkInput): Promise<ShareLink> {
+    let passwordHash: string | null | undefined;
+    if (input.clearPassword) {
+      passwordHash = null;
+    } else if (input.password) {
+      passwordHash = await hashPassword(input.password);
+    }
+
     return this.db.shareLink.update({
       where: { id },
       data: {
         expiresAt: input.expiresAt,
-        passwordHash: input.clearPassword
-          ? null
-          : input.password
-            ? hashPassword(input.password)
-            : undefined,
+        passwordHash,
         readOnly: input.readOnly,
         logAccess: input.logAccess,
         enabled: input.enabled,
@@ -257,7 +260,10 @@ export class ShareLinkService {
     return null;
   }
 
-  verifySharePassword(link: ShareLink, password: string | null | undefined): boolean {
+  async verifySharePassword(
+    link: ShareLink,
+    password: string | null | undefined,
+  ): Promise<boolean> {
     if (!link.passwordHash) {
       return true;
     }
@@ -285,7 +291,7 @@ export class ShareLinkService {
     if (link.passwordHash) {
       if (options?.passwordVerified) {
         // Cookie-based auth already verified
-      } else if (!this.verifySharePassword(link, options?.password)) {
+      } else if (!(await this.verifySharePassword(link, options?.password))) {
         return null;
       }
     }

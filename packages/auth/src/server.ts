@@ -1,4 +1,9 @@
-export { hashPassword, verifyPassword } from "./password";
+export { hashPassword, verifyPassword, isLegacyPasswordHash } from "./password";
+export {
+  generateOpaqueToken,
+  hashOpaqueToken,
+  verifyOpaqueToken,
+} from "./opaque-token";
 export { generateSessionToken } from "./session-token";
 export {
   generateApiTokenValue,

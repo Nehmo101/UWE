@@ -5,11 +5,14 @@ export type {
   ContentBlockAccessInfo,
   PageAccessInfo,
   PreviewOptions,
+  SafeUser,
   UweRole,
   WorldMemberRole,
   WorldMembership,
   PageVisibility,
 } from "./types";
+
+export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
 
 export {
   ADMIN_ACCESS_ROLES,

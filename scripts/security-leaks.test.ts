@@ -19,6 +19,8 @@ describe("security leaks — visibility and portal filtering", () => {
     "packages/database/src/graph-service.test.ts",
     "packages/database/src/asset.test.ts",
     "packages/database/src/share-link.test.ts",
+    "packages/database/src/password-security.test.ts",
+    "packages/auth/src/password.test.ts",
     "packages/auth/src/permissions.test.ts",
     "apps/portal/src/lib/share-access.test.ts",
   ];

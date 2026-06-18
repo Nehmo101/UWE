@@ -20,6 +20,15 @@ export interface AuthUser {
   role: UweRole;
 }
 
+/** User record safe for API/UI responses — never includes secrets or hashes. */
+export interface SafeUser extends AuthUser {
+  createdAt?: string;
+  updatedAt?: string;
+  forcePasswordChange?: boolean;
+  /** Whether a password is configured (never exposes the hash). */
+  hasPassword?: boolean;
+}
+
 export interface WorldMembership {
   userId: string;
   worldId: string;

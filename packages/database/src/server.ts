@@ -159,6 +159,19 @@ export { AuthService, createAuthService } from "./auth";
 export type { CreateUserInput, CreateWorldMembershipInput } from "./auth";
 
 export {
+  UserService,
+  createUserService,
+  USER_SAFE_SELECT,
+  isGlobalAdminRole,
+} from "./user-service";
+export type {
+  CreateManagedUserInput,
+  UpdateManagedUserInput,
+  ResetPasswordInput,
+  InviteUserResult,
+} from "./user-service";
+
+export {
   DEV_SEED_PASSWORD,
   seedAuthDemoContent,
   seedAuthUsers,

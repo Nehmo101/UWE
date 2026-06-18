@@ -59,8 +59,8 @@ describe("owner bootstrap setup", () => {
 
     const ok = await auth.authenticate("owner@uwe.local", "secure-password-1");
     assert.ok(ok);
-    assert.ok(ok.passwordHash);
-    assert.notEqual(ok.passwordHash, "secure-password-1");
+    assert.equal(ok.hasPassword, true);
+    assert.equal("passwordHash" in ok, false);
 
     const bad = await auth.authenticate("owner@uwe.local", "wrong-password");
     assert.equal(bad, null);
