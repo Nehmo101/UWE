@@ -21,6 +21,8 @@ export function adminSidebarNav(active: string): AdminSidebarItem[] {
     { label: "Image Studio", href: "/image-studio" },
     { label: "Kalender", href: "/calendar" },
     { label: "Agent Jobs", href: "/admin/agent-jobs" },
+    { label: "API Tokens", href: "/admin/api-tokens" },
+    { label: "Webhooks", href: "/admin/webhooks" },
     { label: "Audit Log", href: "/admin/audit-log" },
     { label: "Backup", href: "/backup" },
     { label: "Jobs", href: "/jobs" },

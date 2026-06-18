@@ -426,6 +426,9 @@ model User {
   aiRuns           AiRun[]
   mailRecipients   MailRecipient[]
   jobs             Job[]
+  apiTokens        ApiToken[]
+  twoFactorSecret  TwoFactorSecret?
+  twoFactorChallenges TwoFactorChallenge[]
 
   @@map("users")
 }
@@ -1009,6 +1012,19 @@ enum AuditAction {
   restore_completed
   authz_denied
   rate_limit_hit
+  api_token_created
+  api_token_used
+  api_token_revoked
+  api_token_rotated
+  webhook_created
+  webhook_updated
+  webhook_deleted
+  webhook_delivered
+  webhook_failed
+  mfa_enabled
+  mfa_disabled
+  mfa_challenge_failed
+  security_warning_dismissed
 }
 
 enum AuditTargetType {
@@ -1023,6 +1039,32 @@ enum AuditTargetType {
   backup
   import
   settings
+  api_token
+  webhook_endpoint
+  webhook_delivery
+  security_warning
+}
+
+enum ApiTokenScopeName {
+  health_read
+  worlds_read
+  export_read
+  webhooks_manage
+  ai_invoke
+  mail_read
+  mail_send
+  settings_read
+  settings_write
+  admin_read
+  admin_write
+  backup_read
+  backup_write
+}
+
+enum SecurityWarningSeverity {
+  info
+  warning
+  critical
 }
 
 // Security audit log — append-only, no FKs to content tables.
@@ -1854,4 +1896,135 @@ model DndApiCacheEntry {
   @@unique([provider, cacheKey])
   @@index([expiresAt])
   @@map("dnd_api_cache_entries")
+}
+
+// --- Auth/API security (native API tokens, webhooks, 2FA prep) ---
+
+model ApiToken {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  tokenHash     String   @unique @map("token_hash")
+  tokenPrefix   String   @map("token_prefix")
+  isActive      Boolean  @default(true) @map("is_active")
+  expiresAt     DateTime? @map("expires_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+  rotatedFromId String?  @map("rotated_from_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scopes    ApiTokenScope[]
+  usageLogs ApiTokenUsageLog[]
+
+  @@index([userId, isActive])
+  @@index([tokenPrefix])
+  @@map("api_tokens")
+}
+
+model ApiTokenScope {
+  id      String            @id @default(cuid())
+  tokenId String            @map("token_id")
+  scope   ApiTokenScopeName
+
+  token ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, scope])
+  @@map("api_token_scopes")
+}
+
+model ApiTokenUsageLog {
+  id         String   @id @default(cuid())
+  tokenId    String   @map("token_id")
+  route      String
+  method     String
+  statusCode Int      @map("status_code")
+  ipHash     String?  @map("ip_hash")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  token ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@index([tokenId, createdAt])
+  @@map("api_token_usage_logs")
+}
+
+model WebhookEndpoint {
+  id              String   @id @default(cuid())
+  name            String
+  url             String
+  secretEncrypted String   @map("secret_encrypted")
+  secretPrefix    String   @map("secret_prefix")
+  eventsJson      String   @map("events_json")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdById     String?  @map("created_by_id")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  deliveries WebhookDelivery[]
+
+  @@index([isActive])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  endpointId   String   @map("endpoint_id")
+  event        String
+  statusCode   Int?     @map("status_code")
+  success      Boolean  @default(false)
+  errorMessage String?  @map("error_message")
+  attemptCount Int      @default(1) @map("attempt_count")
+  payloadHash  String?  @map("payload_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+model SecurityWarning {
+  id            String                  @id @default(cuid())
+  code          String                  @unique
+  severity      SecurityWarningSeverity
+  title         String
+  description   String
+  dismissedAt   DateTime?               @map("dismissed_at")
+  dismissedById String?                 @map("dismissed_by_id")
+  detectedAt    DateTime                @default(now()) @map("detected_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+
+  @@index([severity, dismissedAt])
+  @@map("security_warnings")
+}
+
+// 2FA preparation — not yet wired into login flow.
+model TwoFactorSecret {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  secretEncrypted String   @map("secret_encrypted")
+  isEnabled       Boolean  @default(false) @map("is_enabled")
+  backupCodesHash String?  @map("backup_codes_hash")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor_secrets")
+}
+
+model TwoFactorChallenge {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  challengeTokenHash String    @unique @map("challenge_token_hash")
+  expiresAt          DateTime  @map("expires_at")
+  consumedAt         DateTime? @map("consumed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("two_factor_challenges")
 }

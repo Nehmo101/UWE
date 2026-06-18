@@ -160,6 +160,32 @@ export {
 
 export { resolveClientIp } from "./proxy";
 
+export {
+  API_TOKEN_PREFIX,
+  API_TOKEN_PREFIX_DISPLAY_LENGTH,
+  API_TOKEN_SCOPES,
+  API_TOKEN_SCOPE_LABELS,
+  assertAdminScopesForRole,
+  getApiTokenPrefix,
+  hasApiTokenScope,
+  isApiTokenFormat,
+  maskSecretValue,
+  maskTokenForDisplay,
+  parseBearerToken,
+  type ApiTokenScope,
+} from "./api-token";
+
+export {
+  evaluateAdminGate,
+  isAdminRole,
+  requireAdminRole,
+  requirePlayerBlocked,
+  requireStudioRole,
+  type AdminGateContext,
+  type AdminGateDenied,
+  type AdminGateResult,
+} from "./admin-gate";
+
 export type {
   AuthorizeDenied,
   AuthorizeInput,

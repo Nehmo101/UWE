@@ -235,6 +235,39 @@ export type {
   LogAuditEventInput,
 } from "./audit-log-service";
 
+export {
+  ApiTokenService,
+  createApiTokenService,
+} from "./api-token-service";
+
+export type {
+  ApiTokenView,
+  CreateApiTokenInput,
+  CreateApiTokenResult,
+  ResolvedApiToken,
+} from "./api-token-service";
+
+export {
+  WebhookService,
+  WEBHOOK_EVENTS,
+  createWebhookService,
+} from "./webhook-service";
+
+export type {
+  CreateWebhookInput,
+  CreateWebhookResult,
+  WebhookEndpointView,
+  WebhookEvent,
+} from "./webhook-service";
+
+export {
+  SecurityWarningService,
+  createSecurityWarningService,
+  syncSecurityWarningsFromDashboard,
+} from "./security-warning-service";
+
+export type { PersistedSecurityWarning } from "./security-warning-service";
+
 export type {
   ActivityAction,
   ActivityTargetType,

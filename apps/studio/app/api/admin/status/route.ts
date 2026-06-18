@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { assertAdminStatusHasNoSecrets, prisma } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
-import { RATE_LIMITER_MODE, requireStudioApiAuth } from "@uwe/security";
+import { RATE_LIMITER_MODE, requireAdminApiAuth } from "@uwe/security";
+import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 
 /**
  * Admin status JSON — same data as /admin/status page.
- * No secrets; protected against cross-origin abuse via requireStudioApiAuth.
+ * No secrets; requires admin gate.
  */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "setup" });
+  const context = await resolveStudioApiAuthContext(request);
+  const authError = requireAdminApiAuth(request, context, {
+    rateLimit: "setup",
+    requiredScopes: ["admin_read"],
+  });
   if (authError) {
     return authError;
   }

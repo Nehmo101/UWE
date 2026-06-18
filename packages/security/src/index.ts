@@ -50,10 +50,13 @@ export {
 
 export {
   guardStudioMutation,
+  requireAdminApiAuth,
   requirePortalApiAuth,
   requirePortalReadAuth,
   requireRestoreOwnerAuth,
   requireStudioApiAuth,
+  type AdminGuardOptions,
+  type ApiAuthContext,
   type PortalGuardOptions,
   type StudioGuardOptions,
 } from "./security/guards";

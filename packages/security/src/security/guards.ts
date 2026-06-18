@@ -1,4 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
+import type { ApiTokenScope, AuthUser } from "@uwe/auth";
+import { evaluateAdminGate, isApiTokenFormat, parseBearerToken, type AdminGateResult } from "@uwe/auth";
 import { isCrossSiteBrowserRequest, isSameOriginBrowserRequest } from "./csrf";
 import { csrfError, forbidden, unauthorized } from "./errors";
 import {
@@ -11,10 +13,21 @@ export interface StudioGuardOptions {
   rateLimitKey?: string;
 }
 
+export interface AdminGuardOptions extends StudioGuardOptions {
+  requiredScopes?: readonly ApiTokenScope[];
+}
+
+export interface ApiAuthContext {
+  user: AuthUser | null;
+  apiTokenId: string | null;
+  apiTokenScopes: ApiTokenScope[] | null;
+  authMethod: "session" | "env_token" | "api_token" | "none";
+}
+
 /**
  * Request guard for sensitive Studio API routes.
  * CSRF (same-origin) is always enforced for mutating methods.
- * Optional STUDIO_API_TOKEN for non-browser clients.
+ * Optional STUDIO_API_TOKEN or DB API token for non-browser clients.
  */
 export function requireStudioApiAuth(request: Request, options: StudioGuardOptions = {}): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD" && isCrossSiteBrowserRequest(request)) {
@@ -42,7 +55,38 @@ export function requireStudioApiAuth(request: Request, options: StudioGuardOptio
     return null;
   }
 
+  const bearer = parseBearerToken(request.headers.get("authorization"));
+  if (bearer && isApiTokenFormat(bearer)) {
+    return null;
+  }
+
   return unauthorized("Studio-API-Token erforderlich (Authorization: Bearer …).");
+}
+
+/**
+ * Admin API guard: studio network guard + admin role or scoped API token.
+ */
+export function requireAdminApiAuth(
+  request: Request,
+  context: ApiAuthContext,
+  options: AdminGuardOptions = {},
+): Response | null {
+  const base = requireStudioApiAuth(request, options);
+  if (base) {
+    return base;
+  }
+
+  if (context.authMethod === "env_token") {
+    return null;
+  }
+
+  const gate = evaluateAdminGate({
+    user: context.user,
+    apiTokenScopes: context.apiTokenScopes,
+    requiredScopes: options.requiredScopes ?? ["admin_read"],
+  });
+
+  return adminGateToResponse(gate);
 }
 
 /** Shorthand for mutating Studio routes with CSRF + optional rate limit. */
@@ -120,4 +164,14 @@ export function requirePortalReadAuth(request: Request): Response | null {
     return forbidden("Cross-Origin-Anfragen sind nicht erlaubt.");
   }
   return null;
+}
+
+function adminGateToResponse(gate: AdminGateResult): Response | null {
+  if (!gate) {
+    return null;
+  }
+  if (gate.status === 401) {
+    return unauthorized(gate.error);
+  }
+  return forbidden(gate.error);
 }

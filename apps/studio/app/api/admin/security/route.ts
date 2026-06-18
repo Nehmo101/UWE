@@ -1,32 +1,28 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { canAccessSecurityDashboard, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { canAccessSecurityDashboard } from "@uwe/auth";
 import {
   assertSecurityDashboardHasNoSecrets,
-  createAuthService,
   getSecurityDashboardStatus,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { requireAdminApiAuth } from "@uwe/security";
+import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 
 /**
  * Security dashboard JSON — same data as /admin/security page.
- * Requires OWNER/ADMIN portal session in addition to Studio API guard.
+ * Requires OWNER/ADMIN session or scoped API token.
  */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const context = await resolveStudioApiAuthContext(request);
+  const authError = requireAdminApiAuth(request, context, {
+    rateLimit: "setup",
+    requiredScopes: ["admin_read"],
+  });
   if (authError) {
     return authError;
   }
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) {
-    return NextResponse.json({ error: "Portal-Login erforderlich (OWNER/ADMIN)." }, { status: 403 });
-  }
-
-  const session = await createAuthService(prisma).getSessionByToken(token);
-  if (!session || !canAccessSecurityDashboard(session.user.role)) {
+  if (context.authMethod === "session" && context.user && !canAccessSecurityDashboard(context.user.role)) {
     return NextResponse.json({ error: "Nur OWNER/ADMIN dürfen das Security Dashboard sehen." }, { status: 403 });
   }
 

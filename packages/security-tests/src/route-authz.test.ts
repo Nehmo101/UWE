@@ -55,7 +55,7 @@ function makeAnonymousGet(apiPath: string): Request {
   });
 }
 
-const AUTH_GUARD = /requireStudioApiAuth|guardStudioMutation/;
+const AUTH_GUARD = /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation/;
 
 /** Routes that mutate state or expose DM data — must call a studio auth guard. */
 const STUDIO_PROTECTED_API_ROUTES = [

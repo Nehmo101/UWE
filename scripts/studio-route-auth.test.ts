@@ -19,7 +19,7 @@ const PUBLIC_ALLOWLIST = new Set([
 ]);
 
 const AUTH_GUARD_PATTERN =
-  /requireStudioApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
+  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
 
 function listRouteFiles(dir: string, prefix = ""): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
