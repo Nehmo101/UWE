@@ -8,7 +8,7 @@ UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) a
 
 | Workflow | File | Trigger | Purpose | Blocking |
 |----------|------|---------|---------|----------|
-| **CI** | `.github/workflows/ci.yml` | Push `main`, all PRs | Full `pnpm quality` + conditional Docker builds | Yes |
+| **CI** | `.github/workflows/ci.yml` | Push `main`, all PRs, manual | Full `pnpm quality`, E2E, conditional Docker builds | Yes |
 | **PR Check** | `.github/workflows/pr-check.yml` | All PRs | Fast lint, typecheck, test:ci, lockfile check, docs | Yes |
 | **Security** | `.github/workflows/security.yml` | Push `main`, PRs, weekly Mon 06:00 UTC | Secret scan, prod audit, security tests | Yes (audit warns on schedule) |
 | **Docs Check** | `.github/workflows/docs-check.yml` | PR/push when docs/cursor paths change | Required docs + Markdown sanity | Yes |
@@ -27,7 +27,8 @@ UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) a
    - Security tests
    - Production dependency audit (high+)
    - Release build
-3. Docker build (studio + portal) — only when Docker-related files changed
+3. **E2E tests** (`pnpm test:e2e`) — Playwright, runs after quality passes
+4. Docker build (studio + portal) — only when Docker-related files changed
 
 ### PR Check (`pr-check.yml`)
 
