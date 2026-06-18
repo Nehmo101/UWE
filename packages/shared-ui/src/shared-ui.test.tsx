@@ -13,6 +13,7 @@ import {
   SidebarContextProvider,
   SidebarNav,
   StickyActionBar,
+  ThemePicker,
 } from "./index";
 import {
   PageTypeBadge,
@@ -82,7 +83,7 @@ describe("shared-ui components", () => {
       </>,
     );
     assert.match(html, /Portal \(ohne Login\)/);
-    assert.match(html, /ohne Login sichtbar/);
+    assert.match(html, /aria-label=/);
     assert.match(html, /Veröffentlicht/);
     assert.match(html, /Lore/);
     assert.doesNotMatch(html, /dm_only/);
@@ -127,10 +128,24 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /uwe-sticky-action-bar/);
     assert.match(uweCss, /uwe-filter-sheet/);
     assert.match(uweCss, /uwe-page-list-cards/);
-    assert.match(uweCss, /safe-area-inset/);
     assert.match(uweCss, /--uwe-bg/);
     assert.match(uweCss, /uwe-theme-frosted/);
     assert.match(uweCss, /uwe-theme-grid/);
+    assert.match(uweCss, /focus-visible/);
+    assert.match(uweCss, /prefers-reduced-motion/);
+    assert.match(uweCss, /uwe-theme-picker/);
+  });
+
+  it("renders accessible theme picker with labeled swatches", () => {
+    const html = renderToStaticMarkup(<ThemePicker defaultValue="light" />);
+    assert.match(html, /type="radio"/);
+    assert.match(html, /name="theme"/);
+    assert.match(html, /Dark/);
+    assert.match(html, /Light/);
+    assert.match(html, /System/);
+    assert.match(html, /Dunkles Erscheinungsbild/);
+    assert.match(html, /is-selected/);
+    assert.match(html, /Aktiv ausgewählt/);
   });
 
   it("includes command palette, dashboard and inspector styles in shared CSS", () => {

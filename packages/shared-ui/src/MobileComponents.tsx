@@ -199,7 +199,12 @@ export function MobileFilterSheet({
       if (event.key === "Escape") setOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prev;
+    };
   }, [open]);
 
   return (
@@ -226,7 +231,7 @@ export function MobileFilterSheet({
           onClick={() => setOpen(false)}
         />
       )}
-      <div id={id} className="uwe-filter-sheet-panel" hidden={!open} role="dialog" aria-label={title}>
+      <div id={id} className="uwe-filter-sheet-panel" hidden={!open} role="dialog" aria-modal="true" aria-label={title}>
         <div className="uwe-filter-sheet-header">
           <strong>{title}</strong>
           <button

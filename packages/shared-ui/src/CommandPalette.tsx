@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -66,6 +67,9 @@ export function CommandPalette({
   const [searchResults, setSearchResults] = useState<CommandPaletteSearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const footerId = useId();
 
   const close = useCallback(() => {
     setOpen(false);
@@ -88,6 +92,33 @@ export function CommandPalette({
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'input, button, [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   useEffect(() => {
@@ -190,7 +221,13 @@ export function CommandPalette({
         if (event.target === event.currentTarget) close();
       }}
     >
-      <div className="uwe-palette" role="dialog" aria-modal="true" aria-label="Command Palette">
+      <div
+        className="uwe-palette"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command Palette"
+      >
         <input
           ref={inputRef}
           className="uwe-palette-input"
@@ -200,8 +237,11 @@ export function CommandPalette({
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={onInputKeyDown}
           aria-label="Befehl oder Seite suchen"
+          aria-controls={listboxId}
+          aria-describedby={footerId}
+          autoComplete="off"
         />
-        <ul className="uwe-palette-list" ref={listRef} role="listbox">
+        <ul className="uwe-palette-list" ref={listRef} id={listboxId} role="listbox">
           {entries.length === 0 && (
             <li className="uwe-palette-empty">Keine Treffer für „{query}&ldquo;</li>
           )}
@@ -228,7 +268,7 @@ export function CommandPalette({
             );
           })}
         </ul>
-        <footer className="uwe-palette-footer">
+        <footer className="uwe-palette-footer" id={footerId} aria-hidden="true">
           <span>↑↓ Navigieren</span>
           <span>↵ Öffnen</span>
           <span>Esc Schließen</span>

@@ -7,6 +7,7 @@ import {
   SidebarNav,
   SidebarSection,
   ThemeSettingsPanel,
+  ThemePicker,
   TopBarBrand,
   VISIBILITY_LABELS,
   VisualThemePreview,
@@ -160,14 +161,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 </p>
                 <div className="uwe-visual-settings-grid">
                   <div>
-                    <label>
-                      Theme / Erscheinungsbild
-                      <select name="theme" defaultValue={settings.app.theme}>
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
-                        <option value="system">System</option>
-                      </select>
-                    </label>
+                    <ThemePicker defaultValue={settings.app.theme} preview />
                     <label>
                       Hintergrundmuster
                       <select

@@ -209,12 +209,14 @@ body {
   position: fixed;
   right: 1rem;
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
-  z-index: 40;
+  z-index: 38;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 3.25rem;
   height: 3.25rem;
+  min-width: var(--uwe-touch-min, 2.75rem);
+  min-height: var(--uwe-touch-min, 2.75rem);
   border-radius: 999px;
   background: linear-gradient(135deg, var(--uwe-accent), #8b5cf6);
   color: #fff;
@@ -224,6 +226,7 @@ body {
   text-decoration: none;
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.15);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .uwe-capture-fab:hover {

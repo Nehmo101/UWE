@@ -146,7 +146,11 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
           : "uwe-badge";
 
   return (
-    <span className={className} title={VISIBILITY_DESCRIPTIONS[visibility]}>
+    <span
+      className={className}
+      title={VISIBILITY_DESCRIPTIONS[visibility]}
+      aria-label={`Sichtbarkeit: ${VISIBILITY_LABELS[visibility]}. ${VISIBILITY_DESCRIPTIONS[visibility]}`}
+    >
       {VISIBILITY_LABELS[visibility]}
     </span>
   );

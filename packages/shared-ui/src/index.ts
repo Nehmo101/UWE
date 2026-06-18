@@ -79,6 +79,13 @@ export {
   type CommandPaletteSearchResult,
 } from "./CommandPalette";
 
+export {
+  ThemePicker,
+  THEME_OPTIONS,
+  applyThemeAppearance,
+  type ThemePickerProps,
+} from "./ThemePicker";
+
 export { BrandHeader } from "./BrandHeader";
 export { HealthBadge } from "./HealthBadge";
 

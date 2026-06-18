@@ -72,6 +72,9 @@ export function AppShell({
 
   return (
     <SidebarContextProvider closeSidebar={closeSidebar}>
+      <a href="#uwe-main-content" className="uwe-skip-link">
+        Zum Inhalt springen
+      </a>
       <div
         className="uwe-shell"
         data-sidebar-open={sidebarOpen ? "true" : "false"}
@@ -113,7 +116,9 @@ export function AppShell({
               </aside>
             </>
           )}
-          <main className="uwe-main">{main}</main>
+          <main id="uwe-main-content" className="uwe-main" tabIndex={-1}>
+            {main}
+          </main>
           {hasContext && (
             <>
               <aside className="uwe-context uwe-context-desktop">{context}</aside>
