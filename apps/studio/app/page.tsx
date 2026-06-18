@@ -74,6 +74,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
                 { label: "Systemstatus", href: "/admin/status" },
                 { label: "KI-Prompt", href: "/admin/ai-prompt" },
                 { label: "Einstellungen", href: "/settings" },
+                { label: "Passwort ändern", href: "/account/password" },
               ]}
             />
           </SidebarSection>

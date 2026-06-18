@@ -37,7 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    if (!shareService.verifySharePassword(link, body.password ?? null)) {
+    if (!(await shareService.verifySharePassword(link, body.password ?? null))) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 

@@ -32,9 +32,19 @@ function LoginForm() {
 
     setLoading(false);
 
+    const payload = (await response.json()) as {
+      error?: string;
+      forcePasswordChange?: boolean;
+    };
+
     if (!response.ok) {
-      const payload = (await response.json()) as { error?: string };
       setError(payload.error ?? "Ungültige Anmeldedaten.");
+      return;
+    }
+
+    if (payload.forcePasswordChange) {
+      router.push("/account/password");
+      router.refresh();
       return;
     }
 

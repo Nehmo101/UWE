@@ -34,7 +34,12 @@ export function AuthHeader({ user }: AuthHeaderProps) {
           Welten
         </Link>
         {user ? (
-          <LogoutButton displayName={user.displayName} />
+          <>
+            <Link href="/auth/account/password" onClick={() => setNavOpen(false)}>
+              Passwort
+            </Link>
+            <LogoutButton displayName={user.displayName} />
+          </>
         ) : (
           <Link href="/login" onClick={() => setNavOpen(false)}>
             Anmelden

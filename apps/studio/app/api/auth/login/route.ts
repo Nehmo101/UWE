@@ -54,6 +54,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       user: auth.toAuthUser(user),
+      forcePasswordChange: user.forcePasswordChange ?? false,
     });
   } finally {
     await db.$disconnect();

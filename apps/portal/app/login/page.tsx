@@ -27,9 +27,19 @@ export default function LoginPage() {
 
     setLoading(false);
 
+    const payload = (await response.json()) as {
+      error?: string;
+      forcePasswordChange?: boolean;
+    };
+
     if (!response.ok) {
-      const payload = (await response.json()) as { error?: string };
       setError(payload.error ?? "Anmeldung fehlgeschlagen.");
+      return;
+    }
+
+    if (payload.forcePasswordChange) {
+      router.push("/auth/account/password");
+      router.refresh();
       return;
     }
 
