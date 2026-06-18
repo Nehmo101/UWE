@@ -58,6 +58,9 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 2.7 | Studio logout | Studio | Visit `/logout` | Session deleted, redirect to `/login` | Manual | pass |
 | 2.8 | Portal logout | Portal | Click logout button → POST `/api/auth/logout` | Session + preview cookies cleared | Manual | pass |
 | 2.9 | Protected routes after logout | Both | Access `/` (Studio) or `/auth/worlds` (Portal) | Redirect to login | Manual | pass |
+| 2.10 | 2FA login challenge | Both | Enable 2FA → login with password | Second step asks for TOTP code | ✓ auth-flow.integration.test.ts | pass |
+| 2.11 | 2FA account setup UI | Both | `/account/security` (Studio), `/auth/account/security` (Portal) | Setup/activate/disable via UI | ✓ Playwright + Manual | pass |
+| 2.12 | Studio login E2E | Studio | `pnpm test:e2e` | Login, invalid login, protected redirect | ✓ e2e/studio-auth.spec.ts | pass |
 
 ---
 
@@ -92,6 +95,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 4.6 | `/api/health` | Public | Public | ✓ | pass |
 | 4.7 | `/api/auth/login`, `/logout` | Public | Public | ✓ | pass |
 | 4.8 | `/api/auth/change-password` | HTTP 401 | Allowed | ✓ | pass |
+| 4.8a | `/api/auth/two-factor/*` (setup/manage) | HTTP 401 | Allowed (session) | ✓ route-policy | pass |
 | 4.9 | Unknown API routes | HTTP 404 | HTTP 404 | ✓ deny-by-default | pass |
 | 4.10 | `/worlds/*` with `AUTH_REQUIRED=true` | Redirect `/login` | Allowed | ✓ middleware.test.ts | pass |
 

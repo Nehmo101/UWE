@@ -1,30 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TwoFactorSetupForm } from "@uwe/shared-ui";
 import { AuthHeader } from "@/src/components/AuthHeader";
-import { ChangePasswordForm } from "@/src/components/ChangePasswordForm";
 import { getCurrentUser } from "@/src/lib/auth";
 
-export default async function PortalAccountPasswordPage() {
+export default async function PortalAccountSecurityPage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login?redirect=/auth/account/password");
+    redirect("/login?redirect=/auth/account/security");
   }
 
   return (
     <main className="auth-page">
       <AuthHeader user={user} />
       <section className="auth-card">
-        <h1>Passwort ändern</h1>
+        <h1>Sicherheit</h1>
         <p className="auth-lead">
           Angemeldet als {user.displayName}
           {user.email ? ` (${user.email})` : ""}.
         </p>
-        <ChangePasswordForm
-          backHref="/auth/worlds"
-          forcePasswordChange={user.forcePasswordChange}
-        />
+        <TwoFactorSetupForm variant="portal" backHref="/auth/account/password" />
         <p className="auth-footer">
-          <Link href="/auth/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
+          <Link href="/auth/account/password">Passwort ändern</Link>
         </p>
       </section>
     </main>

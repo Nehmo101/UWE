@@ -38,6 +38,9 @@ export function AuthHeader({ user }: AuthHeaderProps) {
             <Link href="/auth/account/password" onClick={() => setNavOpen(false)}>
               Passwort
             </Link>
+            <Link href="/auth/account/security" onClick={() => setNavOpen(false)}>
+              Sicherheit
+            </Link>
             <LogoutButton displayName={user.displayName} />
           </>
         ) : (

@@ -34,6 +34,8 @@ Anleitung für Backups unter Windows (und allgemein).
 pnpm backup
 # oder im Entwicklermodus:
 pnpm backup:create --type=full --format=zip
+# PlayerNotes optional (Datenschutz beachten):
+pnpm backup:create --type=full --include-player-notes
 ```
 
 ### Snapshot (Rohdaten)

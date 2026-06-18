@@ -14,8 +14,8 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Session-Token-Hashing at rest | ✅ `token_hash` Spalte + SHA-256 | Migration invalidiert Sessions |
 | Setup POST Rate-Limit | ✅ Implementiert | — |
 | Setup GET Leak | ✅ Kein `setupConfigured` nach Abschluss | — |
-| 2FA (TOTP) | ✅ Login-Challenge-Flow | Admin-UI für Setup folgt |
-| E2E-Tests (Login, Setup, Reset, Logout) | 🔲 Browser-E2E fehlt | `packages/database/src/auth-flow.integration.test.ts` |
+| 2FA (TOTP) | ✅ Login + Account-UI (`/account/security`) | — |
+| E2E-Tests (Login, Setup, Reset, Logout) | ✅ Playwright-Baseline (`pnpm test:e2e`) | Portal-E2E, Setup/Reset-Flows erweitern |
 | Multi-Instance Rate-Limit | ✅ `UWE_RATE_LIMIT_DIR` (file-backed) | Redis via `setRateLimitStore()` optional |
 | Distributed Session Store | 🔲 SQLite only | Optional bei horizontaler Skalierung |
 
@@ -88,9 +88,9 @@ Siehe `docs/daily-admin-os.md` — Cockpit-Module teils UI-only, Brain/Mail teil
 
 ## Tests & QA
 
-- **Automatisiert:** `pnpm test:security`, `pnpm test:auth`, `docs/SECURITY_QA_MATRIX.md`
+- **Automatisiert:** `pnpm test:security`, `pnpm test:auth`, `pnpm test:e2e` (Studio Login), `docs/SECURITY_QA_MATRIX.md`
 - **Manuell:** `docs/TEST_PLAN.md` vor jedem Release
-- **E2E:** Noch nicht im CI — höchste Priorität für Auth-Flows
+- **E2E:** Playwright-Baseline im CI (`e2e`-Job); erweiterte Flows weiter manuell
 
 ---
 

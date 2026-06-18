@@ -62,7 +62,13 @@ export const PORTAL_SESSION_APP_ROUTES = [
 ] as const;
 
 /** Portal API routes that require a logged-in player session. */
-export const PORTAL_SESSION_API_ROUTES = ["/api/auth/change-password"] as const;
+export const PORTAL_SESSION_API_ROUTES = [
+  "/api/auth/change-password",
+  "/api/auth/two-factor",
+  "/api/auth/two-factor/setup",
+  "/api/auth/two-factor/activate",
+  "/api/auth/two-factor/disable",
+] as const;
 
 /** Studio/Admin prefixes in unified proxy layouts. */
 export const STUDIO_APP_PREFIXES = ["/studio", "/studio/*"] as const;

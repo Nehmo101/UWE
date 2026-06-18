@@ -47,6 +47,7 @@ export {
   LoginForm,
   LogoutButton,
   ResetPasswordForm,
+  TwoFactorSetupForm,
   UweLandingPage,
   authClasses,
   readPublicAppUrls,

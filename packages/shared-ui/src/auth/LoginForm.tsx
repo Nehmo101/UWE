@@ -48,6 +48,10 @@ function LoginFormInner({
     forbidden ? "Keine Berechtigung für diesen Bereich." : null,
   );
   const [loading, setLoading] = useState(false);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<{
+    challengeToken: string;
+  } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,10 +69,18 @@ function LoginFormInner({
     const payload = (await response.json()) as {
       error?: string;
       forcePasswordChange?: boolean;
+      requiresTwoFactor?: boolean;
+      challengeToken?: string;
     };
 
     if (!response.ok) {
       setError(payload.error ?? "Ungültige Anmeldedaten.");
+      return;
+    }
+
+    if (payload.requiresTwoFactor && payload.challengeToken) {
+      setTwoFactorChallenge({ challengeToken: payload.challengeToken });
+      setTwoFactorCode("");
       return;
     }
 
@@ -80,6 +92,94 @@ function LoginFormInner({
 
     router.push(redirectTo);
     router.refresh();
+  }
+
+  async function handleTwoFactorSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!twoFactorChallenge) return;
+
+    setLoading(true);
+    setError(null);
+
+    const response = await fetch("/api/auth/two-factor/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeToken: twoFactorChallenge.challengeToken,
+        code: twoFactorCode.trim(),
+      }),
+    });
+
+    setLoading(false);
+
+    const payload = (await response.json()) as {
+      error?: string;
+      forcePasswordChange?: boolean;
+    };
+
+    if (!response.ok) {
+      setError(payload.error ?? "Ungültiger 2FA-Code.");
+      return;
+    }
+
+    if (payload.forcePasswordChange) {
+      router.push(forcePasswordRedirect);
+      router.refresh();
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
+  }
+
+  if (twoFactorChallenge) {
+    return (
+      <AuthCard
+        variant={variant}
+        title="Zwei-Faktor-Authentifizierung"
+        lead="Gib den 6-stelligen Code aus deiner Authenticator-App ein."
+        footer={footer}
+      >
+        <form className={classes.form} onSubmit={handleTwoFactorSubmit} noValidate={false}>
+          <label htmlFor="login-2fa-code">Authenticator-Code</label>
+          <input
+            id="login-2fa-code"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={8}
+            value={twoFactorCode}
+            onChange={(event) => setTwoFactorCode(event.target.value)}
+            required
+            autoFocus
+            aria-invalid={error ? true : undefined}
+          />
+
+          {error && (
+            <p className={classes.error} role="alert">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+            {loading ? "Prüfe…" : "Bestätigen"}
+          </button>
+          <button
+            type="button"
+            className="uwe-btn"
+            disabled={loading}
+            onClick={() => {
+              setTwoFactorChallenge(null);
+              setTwoFactorCode("");
+              setError(null);
+            }}
+          >
+            Zurück
+          </button>
+        </form>
+      </AuthCard>
+    );
   }
 
   return (
