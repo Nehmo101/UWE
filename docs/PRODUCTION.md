@@ -44,6 +44,8 @@ Siehe [Schnellstart (Docker)](#schnellstart-docker--empfohlen) unten. Daten blei
 
 ### Option C: Manueller Production-Build (Node.js)
 
+**Linux Host-Laptop (Heimnetz, einfacher Start):** siehe [docs/UWE_HOST_LINUX_STARTUP.md](UWE_HOST_LINUX_STARTUP.md) — `pnpm host:start`, Autostart via systemd, LAN-Erreichbarkeit auf `0.0.0.0`.
+
 ```bash
 git clone <repository-url> uwe
 cd uwe
