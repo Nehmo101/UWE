@@ -17,6 +17,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/backup": "workspace:*",
     "@uwe/calendar": "workspace:*",
+    "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
