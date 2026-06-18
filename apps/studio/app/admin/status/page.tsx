@@ -10,13 +10,9 @@ import {
 } from "@uwe/shared-ui";
 import { prisma, UWE_VERSION } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
+import { formatStudioDateTime } from "@/src/lib/format";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -152,7 +148,7 @@ export default async function AdminStatusPage() {
           />
 
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
-            Stand: {DATE_FORMAT.format(new Date(status.timestamp))} · UWE {UWE_VERSION}
+            Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
             {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}
           </p>
 
@@ -489,7 +485,7 @@ export default async function AdminStatusPage() {
                   <li key={job.id}>
                     <strong>{job.title}</strong> · {job.type}
                     <p>
-                      {DATE_FORMAT.format(new Date(job.createdAt))}
+                      {formatStudioDateTime(new Date(job.createdAt))}
                       {job.errorMessage ? `\n${job.errorMessage}` : ""}
                     </p>
                   </li>
@@ -506,7 +502,7 @@ export default async function AdminStatusPage() {
                   <li key={run.id}>
                     <strong>{run.taskType}</strong> · {run.provider}/{run.model}
                     <p>
-                      {DATE_FORMAT.format(new Date(run.createdAt))}
+                      {formatStudioDateTime(new Date(run.createdAt))}
                       {run.errorMessage ? `\n${run.errorMessage}` : ""}
                     </p>
                   </li>

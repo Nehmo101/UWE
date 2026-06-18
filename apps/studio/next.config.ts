@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
     "@uwe/shared-ui",
-    "@uwe/wiki-engine",
     "@uwe/ai-brain",
     "@uwe/static-export",
     "@uwe/env",

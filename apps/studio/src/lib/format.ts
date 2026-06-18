@@ -1,5 +1,15 @@
 export type StudioDateStyle = "default" | "short" | "medium";
 
+const STUDIO_DATETIME_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+export function formatStudioDateTime(value: Date | string | number): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return STUDIO_DATETIME_FORMAT.format(date);
+}
+
 export function formatStudioDate(
   value: Date | string | number,
   style: StudioDateStyle = "default",

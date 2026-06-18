@@ -3,7 +3,7 @@ import { getUweSecurityHeaderEntries } from "@uwe/auth/security-headers";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@uwe/shared-ui", "@uwe/wiki-engine", "@uwe/auth", "@uwe/env"],
+  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
   async headers() {
     return [
       {
