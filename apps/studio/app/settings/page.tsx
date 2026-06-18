@@ -5,6 +5,7 @@ import {
   PageHeader,
   SidebarNav,
   SidebarSection,
+  ThemeSettingsPanel,
   TopBarBrand,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
@@ -25,6 +26,7 @@ import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actio
 
 const TABS = [
   { id: "general", label: "General" },
+  { id: "appearance", label: "Erscheinungsbild" },
   { id: "worlds", label: "Worlds" },
   { id: "portal", label: "Portal" },
   { id: "privacy", label: "Privacy" },
@@ -125,25 +127,20 @@ export default async function SettingsPage({ searchParams }: Props) {
           </nav>
 
           {activeTab === "general" && (
-            <form action={updateSettingsAction} className="uwe-form">
-              <input type="hidden" name="tab" value="general" />
+            <section className="uwe-form">
               <h2>App Settings</h2>
-              <label>
-                Theme / Erscheinungsbild
-                <select name="theme" defaultValue={settings.app.theme}>
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                  <option value="system">System</option>
-                </select>
-              </label>
               <p className="uwe-hint">
-                Theme-Einstellung wird für zukünftige UI-Anpassungen vorbereitet.
+                Visuelle Themes, Schrift, UI-Dichte und Hintergrundmuster konfigurierst du
+                unter{" "}
+                <Link href="/settings?tab=appearance">Erscheinungsbild</Link> (lokal im
+                Browser). Serverseitige App-Theme-Vorgabe (
+                <code>{settings.app.theme}</code>) bleibt für zukünftige Sync-Optionen
+                erhalten.
               </p>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
-                Speichern
-              </button>
-            </form>
+            </section>
           )}
+
+          {activeTab === "appearance" && <ThemeSettingsPanel />}
 
           {activeTab === "worlds" && (
             <>

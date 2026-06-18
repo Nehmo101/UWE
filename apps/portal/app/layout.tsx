@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ThemeBootstrapScript, ThemeProvider } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -33,20 +34,23 @@ export default async function RootLayout({
   const portalEnabled = isPortalGloballyEnabled(settings);
 
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <body>
-        {portalEnabled ? (
-          children
-        ) : (
-          <main className="page">
-            <div className="card">
-              <h2>Portal deaktiviert</h2>
-              <p>
-                Das UWE Portal ist derzeit in den Admin-Einstellungen deaktiviert.
-              </p>
-            </div>
-          </main>
-        )}
+        <ThemeBootstrapScript scope="portal" />
+        <ThemeProvider scope="portal">
+          {portalEnabled ? (
+            children
+          ) : (
+            <main className="page">
+              <div className="card">
+                <h2>Portal deaktiviert</h2>
+                <p>
+                  Das UWE Portal ist derzeit in den Admin-Einstellungen deaktiviert.
+                </p>
+              </div>
+            </main>
+          )}
+        </ThemeProvider>
       </body>
     </html>
   );

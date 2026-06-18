@@ -128,6 +128,9 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /uwe-filter-sheet/);
     assert.match(uweCss, /uwe-page-list-cards/);
     assert.match(uweCss, /safe-area-inset/);
+    assert.match(uweCss, /--uwe-bg/);
+    assert.match(uweCss, /uwe-theme-frosted/);
+    assert.match(uweCss, /uwe-theme-grid/);
   });
 
   it("includes command palette, dashboard and inspector styles in shared CSS", () => {

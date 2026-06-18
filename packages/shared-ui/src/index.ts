@@ -96,3 +96,18 @@ export {
   type SoundboardButtonView,
   type SoundboardLinkedPage,
 } from "./SoundboardWorkspace";
+
+export {
+  ThemeBootstrapScript,
+  ThemeProvider,
+  ThemeSettingsPanel,
+  UWE_THEMES,
+  THEME_LIST,
+  applyThemePreferences,
+  defaultPreferences,
+  loadPreferences,
+  type AppScope,
+  type ThemeId,
+  type UweThemePreferences,
+  useUweTheme,
+} from "./theme";

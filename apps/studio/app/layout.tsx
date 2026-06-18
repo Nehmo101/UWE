@@ -4,6 +4,7 @@ import { getAppRepository } from "@uwe/database/server";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
+import { ThemeBootstrapScript, ThemeProvider } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -49,11 +50,14 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <body>
-        {children}
-        <GlobalCaptureFab />
-        <StudioCommandPalette worlds={worlds} />
+        <ThemeBootstrapScript scope="studio" />
+        <ThemeProvider scope="studio">
+          {children}
+          <GlobalCaptureFab />
+          <StudioCommandPalette worlds={worlds} />
+        </ThemeProvider>
       </body>
     </html>
   );

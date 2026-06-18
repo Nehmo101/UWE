@@ -7,8 +7,8 @@
 
 .wiki-nav {
   padding: 1.5rem 1rem;
-  border-right: 1px solid rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.5);
+  border-right: 1px solid var(--uwe-border-muted, rgba(148, 163, 184, 0.15));
+  background: var(--uwe-surface, rgba(15, 23, 42, 0.5));
   overflow-y: auto;
 }
 
@@ -118,23 +118,24 @@
 }
 
 .wiki-content a.wiki-link {
-  color: #38bdf8;
+  color: var(--uwe-wiki-link, #c4b5fd);
   text-decoration: none;
-  border-bottom: 1px dashed rgba(56, 189, 248, 0.4);
+  border-bottom: 1px dashed color-mix(in srgb, var(--uwe-wiki-link, #c4b5fd) 40%, transparent);
 }
 
 .wiki-content a.wiki-link:hover {
+  color: var(--uwe-wiki-link-hover, #ddd6fe);
   border-bottom-style: solid;
 }
 
 .wiki-link-hidden {
-  color: #94a3b8;
+  color: var(--uwe-fg-muted, #94a3b8);
   font-style: italic;
   cursor: not-allowed;
 }
 
 .wiki-link-broken {
-  color: #f87171;
+  color: var(--uwe-danger, #f87171);
   text-decoration: line-through;
   cursor: help;
 }
