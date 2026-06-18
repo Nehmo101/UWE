@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { after, describe, it } from "node:test";
+import { createUweRepository } from "@uwe/database/server";
+import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
+import { exportWorldWiki } from "./export-world-wiki";
+
+describe("wiki export", () => {
+  let databaseUrl: string;
+  let outputDir: string;
+  const worldSlug = "wiki-export-test";
+
+  after(async () => {
+    if (outputDir) {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("exports markdown without dm_only pages", async () => {
+    databaseUrl = createTestDatabaseUrl();
+    outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-wiki-export-"));
+    const repo = createUweRepository(databaseUrl);
+
+    const world = await repo.createWorld({
+      name: "Wiki Export",
+      slug: worldSlug,
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Public Town",
+      slug: "public-town",
+      type: "location",
+      visibility: "public",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "public",
+          content: "Visible to everyone.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Secret Lair",
+      slug: "secret-lair",
+      type: "location",
+      visibility: "dm_only",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "gm_note",
+          sortOrder: 0,
+          visibility: "dm_only",
+          content: "Hidden from portal export.",
+        },
+      ],
+    });
+
+    const result = await exportWorldWiki(repo, {
+      worldSlug,
+      outputDir,
+      format: "markdown",
+      context: "portal",
+    });
+
+    assert.equal(result.pageCount, 1);
+    assert.ok(fs.existsSync(path.join(outputDir, "public-town.md")));
+    assert.equal(fs.existsSync(path.join(outputDir, "secret-lair.md")), false);
+
+    const markdown = fs.readFileSync(path.join(outputDir, "public-town.md"), "utf8");
+    assert.match(markdown, /title: Public Town/);
+    assert.match(markdown, /Visible to everyone/);
+    assert.doesNotMatch(markdown, /Secret Lair/);
+  });
+});

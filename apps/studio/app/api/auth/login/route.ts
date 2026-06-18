@@ -8,10 +8,10 @@ import {
   sessionExpiresAt,
 } from "@uwe/auth";
 import {
-  checkRateLimit,
+  checkRateLimitAsync,
   clientIpFromHeaders,
   RATE_LIMIT_PRESETS,
-  resetRateLimit,
+  resetRateLimitAsync,
 } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `studio-login:${ip}:${email.toLowerCase()}`;
-  const rate = checkRateLimit(rateKey, RATE_LIMIT_PRESETS.login);
+  const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.login);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Zu viele Anmeldeversuche. Bitte warte einen Moment." },
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
     }
 
-    resetRateLimit(rateKey);
+    await resetRateLimitAsync(rateKey);
 
     if (await twoFactor.isEnabled(user.id)) {
       const challenge = await twoFactor.createLoginChallenge(user.id);

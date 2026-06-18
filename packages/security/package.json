@@ -16,6 +16,7 @@
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
     "@uwe/auth": "workspace:*",
+    "ioredis": "^5.11.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {

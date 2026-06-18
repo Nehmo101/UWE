@@ -13,10 +13,16 @@ export default async function AccountPasswordPage() {
   const db = createPrismaClient();
   const users = createUserService(db);
   let forcePasswordChange = false;
+  let initialPasswordOnly = false;
 
   try {
     const profile = await users.getUserById(user.id);
     forcePasswordChange = profile?.forcePasswordChange ?? false;
+    const stored = await db.user.findUnique({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+    initialPasswordOnly = !stored?.passwordHash;
   } finally {
     await db.$disconnect();
   }
@@ -29,7 +35,11 @@ export default async function AccountPasswordPage() {
           Angemeldet als {user.displayName}
           {user.email ? ` (${user.email})` : ""}.
         </p>
-        <ChangePasswordForm backHref="/" forcePasswordChange={forcePasswordChange} />
+        <ChangePasswordForm
+          backHref="/"
+          forcePasswordChange={forcePasswordChange}
+          initialPasswordOnly={initialPasswordOnly}
+        />
         <p className="studio-auth-footer">
           <Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
         </p>

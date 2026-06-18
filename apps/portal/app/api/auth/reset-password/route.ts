@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { completePasswordReset, createPrismaClient } from "@uwe/database/server";
-import { checkRateLimit, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
+import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const authError = await requirePortalApiAuth(request);
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `portal-reset-password:${ip}:${email?.toLowerCase() ?? "unknown"}`;
-  const rate = checkRateLimit(rateKey, RATE_LIMIT_PRESETS.passwordReset);
+  const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.passwordReset);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Zu viele Anfragen. Bitte warte einen Moment." },

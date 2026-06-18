@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { completePasswordReset, createPrismaClient } from "@uwe/database/server";
-import { checkRateLimit, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
+import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `studio-reset-password:${ip}:${email?.toLowerCase() ?? "unknown"}`;
-  const rate = checkRateLimit(rateKey, RATE_LIMIT_PRESETS.passwordReset);
+  const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.passwordReset);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Zu viele Anfragen. Bitte warte einen Moment." },

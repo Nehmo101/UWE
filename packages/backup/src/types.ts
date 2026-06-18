@@ -368,6 +368,8 @@ export interface RestoreExecuteOptions {
   skipExisting?: boolean;
   restoreSettings?: boolean;
   encryptionPassword?: string;
+  sendPasswordSetupEmails?: boolean;
+  passwordResetRequestUrl?: string;
 }
 
 export interface RestoreExecuteItemResult {
@@ -385,6 +387,8 @@ export interface RestoreExecuteResult {
   failed: number;
   items: RestoreExecuteItemResult[];
   errors: string[];
+  /** E-Mails of restored users without password — use /forgot-password or sendPasswordSetupEmails. */
+  usersNeedingPassword: string[];
 }
 
 export interface CreateBackupOptions {

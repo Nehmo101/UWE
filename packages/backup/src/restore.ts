@@ -48,6 +48,7 @@ export async function executeRestore(
     failed: 0,
     items: [],
     errors: [],
+    usersNeedingPassword: [],
   };
 
   const idMap = new Map<string, string>();
@@ -560,6 +561,9 @@ export async function executeRestore(
         forcePasswordChange: true,
       },
     });
+    if (user.email) {
+      result.usersNeedingPassword.push(user.email);
+    }
     result.created++;
     result.items.push({
       entityType: "user",
@@ -774,6 +778,32 @@ export async function executeRestore(
       identifier: "system",
       status: "updated",
     });
+  }
+
+  if (
+    options.sendPasswordSetupEmails &&
+    options.passwordResetRequestUrl &&
+    result.usersNeedingPassword.length > 0
+  ) {
+    const { requestPasswordReset } = await import("@uwe/database/server");
+    const headers = new Headers({ "x-forwarded-for": "127.0.0.1" });
+
+    for (const email of result.usersNeedingPassword) {
+      try {
+        await requestPasswordReset({
+          db,
+          email,
+          request: { headers, url: options.passwordResetRequestUrl },
+          surface: "studio",
+        });
+      } catch (error) {
+        result.errors.push(
+          `Passwort-Setup-Mail für ${email} fehlgeschlagen: ${
+            error instanceof Error ? error.message : "unbekannt"
+          }`,
+        );
+      }
+    }
   }
 
   return result;

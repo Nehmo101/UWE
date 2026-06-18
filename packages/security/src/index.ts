@@ -36,17 +36,26 @@ export {
   RATE_LIMITER_MODE,
   RATE_LIMIT_PRESETS,
   checkRateLimit,
+  checkRateLimitAsync,
   clientIpFromHeaders,
   enforceRateLimit,
   getRateLimitStore,
+  getAsyncRateLimitStore,
   resetRateLimit,
+  resetRateLimitAsync,
   resetRateLimitStore,
   setRateLimitStore,
+  setAsyncRateLimitStore,
+  createDefaultRateLimitStore,
+  type AsyncRateLimitStore,
   type RateLimitOptions,
   type RateLimitPreset,
   type RateLimitResult,
   type RateLimitStore,
 } from "./security/rate-limit";
+
+export { bootstrapRateLimitStore } from "./security/bootstrap-rate-limit";
+export { createRedisRateLimitStore } from "./security/redis-rate-limit-store";
 
 export {
   guardStudioMutation,

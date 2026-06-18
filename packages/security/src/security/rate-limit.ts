@@ -71,6 +71,12 @@ class InMemoryRateLimitStore implements RateLimitStore {
 }
 
 let store: RateLimitStore = createDefaultStore();
+let asyncStore: AsyncRateLimitStore | null = null;
+
+export interface AsyncRateLimitStore {
+  check(key: string, options: RateLimitOptions): Promise<RateLimitResult>;
+  reset(key: string): Promise<void>;
+}
 
 function createDefaultStore(): RateLimitStore {
   const dir = process.env.UWE_RATE_LIMIT_DIR?.trim();
@@ -78,6 +84,11 @@ function createDefaultStore(): RateLimitStore {
     return new FileRateLimitStore(dir);
   }
   return new InMemoryRateLimitStore();
+}
+
+/** @internal Used by bootstrapRateLimitStore */
+export function createDefaultRateLimitStore(): RateLimitStore {
+  return createDefaultStore();
 }
 
 /** Reset to the default store (for tests). */
@@ -94,8 +105,34 @@ export function setRateLimitStore(next: RateLimitStore): void {
   store = next;
 }
 
+export function setAsyncRateLimitStore(next: AsyncRateLimitStore | null): void {
+  asyncStore = next;
+}
+
+export function getAsyncRateLimitStore(): AsyncRateLimitStore | null {
+  return asyncStore;
+}
+
 export function checkRateLimit(key: string, options: RateLimitOptions): RateLimitResult {
   return store.check(key, options);
+}
+
+export async function checkRateLimitAsync(
+  key: string,
+  options: RateLimitOptions,
+): Promise<RateLimitResult> {
+  if (asyncStore) {
+    return asyncStore.check(key, options);
+  }
+  return checkRateLimit(key, options);
+}
+
+export async function resetRateLimitAsync(key: string): Promise<void> {
+  if (asyncStore) {
+    await asyncStore.reset(key);
+    return;
+  }
+  resetRateLimit(key);
 }
 
 export function resetRateLimit(key: string): void {
