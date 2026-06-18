@@ -32,6 +32,9 @@ Thumbs.db
 # Testing
 coverage/
 
+# UWE Linux host runtime state (PIDs, logs)
+.uwe-host/
+
 # Local databases and uploads
 *.db
 *.sqlite

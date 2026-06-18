@@ -1,0 +1,30 @@
+[Unit]
+Description=UWE Home Host (Studio + Portal, Heimnetz)
+Documentation=file://@UWE_HOME@/docs/UWE_HOST_LINUX_STARTUP.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@UWE_USER@
+Group=@UWE_GROUP@
+WorkingDirectory=@UWE_HOME@
+Environment=UWE_HOME=@UWE_HOME@
+Environment=NODE_ENV=production
+Environment=HOST_BIND=0.0.0.0
+EnvironmentFile=-@UWE_HOME@/.env
+EnvironmentFile=-@UWE_HOME@/.env.local
+
+# Foreground supervisor — Studio + Portal, lauscht auf 0.0.0.0 (Heimnetz).
+ExecStart=@UWE_HOME@/scripts/uwe-host-run.sh
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uwe-host
+
+[Install]
+WantedBy=multi-user.target

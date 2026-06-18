@@ -35,7 +35,12 @@
     "launcher:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/uwe-launcher.ps1",
     "package:windows": "node tools/windows-installer/src/package-release.mjs && pnpm installer:windows:build && node tools/windows-installer/src/build-inno.mjs",
     "installer:windows:build": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/src/build-exe.mjs",
-    "installer:windows:dry-run": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js dry-run --mode dev --repo ."
+    "installer:windows:dry-run": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js dry-run --mode dev --repo .",
+    "host:start": "bash scripts/uwe-host-start.sh",
+    "host:stop": "bash scripts/uwe-host-stop.sh",
+    "host:status": "bash scripts/uwe-host-status.sh",
+    "host:install-autostart": "bash scripts/install-uwe-autostart.sh",
+    "host:uninstall-autostart": "bash scripts/uninstall-uwe-autostart.sh"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

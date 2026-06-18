@@ -13,9 +13,30 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, ".env.example")));
     assert.ok(fs.existsSync(path.join(root, ".env.production.example")));
     assert.ok(fs.existsSync(path.join(root, "docs/deployment-hardening.md")));
+    assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/linux/uwe-host.service")));
+    assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
+    assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-stop.sh")));
+    assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-status.sh")));
+    assert.ok(fs.existsSync(path.join(root, "scripts/install-uwe-autostart.sh")));
     assert.ok(fs.existsSync(path.join(root, "VERSION")));
     assert.ok(fs.existsSync(path.join(root, "scripts/docker-entrypoint.sh")));
+  });
+
+  it("defines host convenience scripts in root package.json", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    for (const key of [
+      "host:start",
+      "host:stop",
+      "host:status",
+      "host:install-autostart",
+      "host:uninstall-autostart",
+    ]) {
+      assert.ok(pkg.scripts[key], `missing package.json script: ${key}`);
+    }
   });
 
   it("defines studio and portal services with health checks", () => {
