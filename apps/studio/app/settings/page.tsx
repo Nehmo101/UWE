@@ -27,6 +27,8 @@ import {
   VisibilityEnum,
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
+import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
+import { resolveThemePreferencesForScope } from "@uwe/database/server";
 
 const TABS = [
   { id: "general", label: "General" },
@@ -136,10 +138,9 @@ export default async function SettingsPage({ searchParams }: Props) {
               <p className="uwe-hint">
                 Visuelle Themes, Schrift, UI-Dichte und Hintergrundmuster konfigurierst du
                 unter{" "}
-                <Link href="/settings?tab=appearance">Erscheinungsbild</Link> (lokal im
-                Browser). Serverseitige App-Theme-Vorgabe (
-                <code>{settings.app.theme}</code>) bleibt für zukünftige Sync-Optionen
-                erhalten.
+                <Link href="/settings?tab=appearance">Erscheinungsbild</Link>. Einstellungen
+                werden automatisch mit dem Server synchronisiert (
+                <code>settings.app.themePreferences</code>).
               </p>
             </section>
           )}
@@ -147,6 +148,11 @@ export default async function SettingsPage({ searchParams }: Props) {
           {activeTab === "appearance" && (
             <>
               <ThemeSettingsPanel />
+              <div style={{ marginTop: "2rem" }}>
+                <PortalThemeSettingsSection
+                  initialPreferences={resolveThemePreferencesForScope(settings.app, "portal")}
+                />
+              </div>
               <form
                 id="uwe-visual-settings-form"
                 action={updateSettingsAction}
@@ -154,10 +160,11 @@ export default async function SettingsPage({ searchParams }: Props) {
                 style={{ marginTop: "2rem" }}
               >
                 <input type="hidden" name="tab" value="general" />
-                <h2>Server-Standards (alle Nutzer)</h2>
+                <h2>SSR-Visual-Standards</h2>
                 <p className="uwe-hint">
-                  Diese Vorgaben gelten als SSR-Default über <code>data-uwe-*</code>-Attribute.
-                  Persönliche Theme-Auswahl oben überschreibt sie im Browser.
+                  Dark/Light/System und Motion für <code>data-uwe-*</code>-Attribute beim
+                  ersten Paint. Preset-Themes und erweiterte Optionen werden über die Panels
+                  oben synchronisiert.
                 </p>
                 <div className="uwe-visual-settings-grid">
                   <div>

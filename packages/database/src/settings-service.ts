@@ -9,6 +9,13 @@ import {
 } from "@uwe/assets";
 import { getMailConfigStatus } from "@uwe/mail";
 import { prisma } from "./client";
+import {
+  mapClientBackgroundToServer,
+  normalizeAppThemePreferences,
+  type AppThemePreferences,
+  type ThemePreferencesRecord,
+  type ThemePreferencesScope,
+} from "./theme-preferences";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 
@@ -37,6 +44,8 @@ export interface AppSettings {
   frostedGlass: boolean;
   /** Subtle UI motion (transitions). Always respects prefers-reduced-motion. */
   motionEnabled: boolean;
+  /** Full client theme preferences synced from Studio (per app scope). */
+  themePreferences?: AppThemePreferences;
   /** Preferred DnD world slug for /today — never hardcoded; set in settings or env. */
   favoriteWorldSlug?: string | null;
   /** Last actively opened world slug (optional UX hint). */
@@ -175,6 +184,7 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
     backgroundPattern: normalizeBackgroundPattern(app.backgroundPattern),
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
+    themePreferences: normalizeAppThemePreferences(app.themePreferences),
   };
 }
 
@@ -537,4 +547,43 @@ export async function getSystemSettings(db?: PrismaClient): Promise<UweSystemSet
 
 export async function getSystemSettingsForClient(db?: PrismaClient): Promise<UweSystemSettings> {
   return createSettingsService(db).getSettingsForClient();
+}
+
+export interface SystemSettingsSnapshot {
+  settings: UweSystemSettings;
+  updatedAt: string | null;
+}
+
+export async function getSystemSettingsSnapshot(
+  db?: PrismaClient,
+): Promise<SystemSettingsSnapshot> {
+  const client = db ?? prisma;
+  const row = await client.systemSettings.findUnique({
+    where: { id: SETTINGS_ID },
+  });
+  if (!row) {
+    return {
+      settings: normalizeSettings(DEFAULT_SYSTEM_SETTINGS),
+      updatedAt: null,
+    };
+  }
+  return {
+    settings: mergeSettings(DEFAULT_SYSTEM_SETTINGS, row.settings),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function buildAppSettingsFromThemePreferences(
+  current: AppSettings,
+  scope: ThemePreferencesScope,
+  preferences: ThemePreferencesRecord,
+): Partial<AppSettings> {
+  return {
+    themePreferences: {
+      ...normalizeAppThemePreferences(current.themePreferences),
+      [scope]: preferences,
+    },
+    backgroundPattern: mapClientBackgroundToServer(preferences.background),
+    frostedGlass: preferences.frostedGlass,
+  };
 }

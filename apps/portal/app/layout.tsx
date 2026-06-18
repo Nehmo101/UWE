@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { ThemeBootstrapScript, ThemeProvider } from "@uwe/shared-ui";
+import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { ThemeBootstrapScript, buildVisualThemeHtmlAttributes, toUweThemePreferences } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
-import { buildVisualThemeHtmlAttributes } from "@uwe/shared-ui";
-import { getSystemSettings, isPortalGloballyEnabled } from "@uwe/database/server";
+import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -31,17 +31,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSystemSettings();
+  const { settings, updatedAt } = await getSystemSettingsSnapshot();
   const portalEnabled = isPortalGloballyEnabled(settings);
   const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {
     appVariant: "portal",
   });
+  const serverThemePreferences = toUweThemePreferences(
+    resolveThemePreferencesForScope(settings.app, "portal"),
+    "portal",
+  );
 
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
       <body>
-        <ThemeBootstrapScript scope="portal" />
-        <ThemeProvider scope="portal">
+        <ThemeBootstrapScript
+          scope="portal"
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        />
+        <PortalThemeSyncProvider
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        >
           {portalEnabled ? (
             children
           ) : (
@@ -54,7 +65,7 @@ export default async function RootLayout({
               </div>
             </main>
           )}
-        </ThemeProvider>
+        </PortalThemeSyncProvider>
       </body>
     </html>
   );

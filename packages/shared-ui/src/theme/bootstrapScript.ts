@@ -1,8 +1,17 @@
 import { LEGACY_THEME_ID_MAP, UWE_THEMES } from "./themes";
 import { CSS_VARS } from "./tokens";
+import type { UweThemePreferences } from "./storage";
+
+export interface ThemeBootstrapOptions {
+  serverPreferences?: UweThemePreferences | null;
+  serverUpdatedAt?: string | null;
+}
 
 /** Minimal inline bootstrap to prevent theme flash before React hydrates. */
-export function buildThemeBootstrapScript(scope: "studio" | "portal"): string {
+export function buildThemeBootstrapScript(
+  scope: "studio" | "portal",
+  options?: ThemeBootstrapOptions,
+): string {
   const storageKey =
     scope === "portal"
       ? "uwe-theme-preferences-portal"
@@ -73,9 +82,14 @@ export function buildThemeBootstrapScript(scope: "studio" | "portal"): string {
   var FONTS={mono:"ui-monospace, 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",sans:"system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",serif:"Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif"};
   var DENSITY={compact:0.92,comfortable:1,spacious:1.08};
   var LEGACY=${JSON.stringify(LEGACY_THEME_ID_MAP)};
+  var SERVER_PREFS=${JSON.stringify(options?.serverPreferences ?? null)};
+  var SERVER_UPDATED_AT=${JSON.stringify(options?.serverUpdatedAt ?? null)};
+  var SYNC_KEY=${JSON.stringify(scope === "portal" ? "uwe-theme-sync-at-portal" : "uwe-theme-sync-at-studio")};
   try{
     var raw=localStorage.getItem(KEY);
-    var prefs=raw?JSON.parse(raw):null;
+    var localSyncedAt=localStorage.getItem(SYNC_KEY);
+    var useServer=SERVER_PREFS&&(!raw||!localSyncedAt||(SERVER_UPDATED_AT&&SERVER_UPDATED_AT>localSyncedAt));
+    var prefs=useServer?SERVER_PREFS:(raw?JSON.parse(raw):null);
     var tid=prefs&&prefs.themeId;
     if(tid&&LEGACY[tid]) tid=LEGACY[tid];
     var themeId=(tid&&MAP[tid])?tid:DEFAULT;

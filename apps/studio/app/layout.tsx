@@ -1,13 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { getAppRepository, getSystemSettings } from "@uwe/database/server";
-import { buildVisualThemeHtmlAttributes } from "@uwe/shared-ui";
-import type { ThemeAppearance } from "@uwe/shared-ui";
+import { getAppRepository, getSystemSettingsSnapshot, resolveThemePreferencesForScope } from "@uwe/database/server";
+import {
+  ThemeBootstrapScript,
+  buildVisualThemeHtmlAttributes,
+  toUweThemePreferences,
+  type ThemeAppearance,
+} from "@uwe/shared-ui";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { ThemeDocumentSync } from "../components/ThemeDocumentSync";
+import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
-import { ThemeBootstrapScript, ThemeProvider } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
@@ -41,17 +45,18 @@ export default async function RootLayout({
   const pathname = headersList.get("x-uwe-pathname") ?? "/";
   await enforceStudioPageAuth(pathname);
 
+  const { settings, updatedAt } = await getSystemSettingsSnapshot();
+  const serverThemePreferences = toUweThemePreferences(
+    resolveThemePreferencesForScope(settings.app, "studio"),
+    "studio",
+  );
+  const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {
+    appVariant: "studio",
+  });
+  const serverTheme: ThemeAppearance = settings.app.theme;
+
   let worlds: { name: string; slug: string }[] = [];
-  let visualThemeAttrs: ReturnType<typeof buildVisualThemeHtmlAttributes> =
-    buildVisualThemeHtmlAttributes(
-      { theme: "dark", backgroundPattern: "none", frostedGlass: true, motionEnabled: true },
-      { appVariant: "studio" },
-    );
-  let serverTheme: ThemeAppearance = "dark";
   try {
-    const settings = await getSystemSettings();
-    visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, { appVariant: "studio" });
-    serverTheme = settings.app.theme;
     worlds = (await getAppRepository().listWorlds()).map((world) => ({
       name: world.name,
       slug: world.slug,
@@ -64,13 +69,20 @@ export default async function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
       <body>
-        <ThemeBootstrapScript scope="studio" />
-        <ThemeProvider scope="studio">
+        <ThemeBootstrapScript
+          scope="studio"
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        />
+        <StudioThemeSyncProvider
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        >
           <ThemeDocumentSync theme={serverTheme} />
           {children}
           <GlobalCaptureFab />
           <StudioCommandPalette worlds={worlds} />
-        </ThemeProvider>
+        </StudioThemeSyncProvider>
       </body>
     </html>
   );

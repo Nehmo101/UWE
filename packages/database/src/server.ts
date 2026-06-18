@@ -585,6 +585,8 @@ export {
   SettingsService,
   getSystemSettings,
   getSystemSettingsForClient,
+  getSystemSettingsSnapshot,
+  buildAppSettingsFromThemePreferences,
   DEFAULT_SYSTEM_SETTINGS,
   BACKGROUND_PATTERN_VALUES,
   sanitizeSettingsForClient,
@@ -597,6 +599,29 @@ export {
   isPublicSharingEnabled,
   resolveLocalOnlyMode,
 } from "./settings-service";
+
+export type { SystemSettingsSnapshot } from "./settings-service";
+
+export {
+  defaultThemePreferencesRecord,
+  getThemePreferencesForScope,
+  legacyThemePreferencesFromApp,
+  mapClientBackgroundToServer,
+  mapServerBackgroundToClient,
+  normalizeAppThemePreferences,
+  normalizeThemePreferencesRecord,
+  resolveThemePreferencesForScope,
+  withThemePreferencesForScope,
+} from "./theme-preferences";
+
+export type {
+  AppThemePreferences,
+  ThemeClientBackground,
+  ThemeDensity,
+  ThemeFontFamily,
+  ThemePreferencesRecord,
+  ThemePreferencesScope,
+} from "./theme-preferences";
 
 export { validateSettingsUpdate } from "./settings-validation";
 

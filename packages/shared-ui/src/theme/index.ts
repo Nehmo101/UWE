@@ -51,4 +51,12 @@ export { buildThemeBootstrapScript } from "./bootstrapScript";
 export { ThemeBootstrapScript } from "./ThemeBootstrapScript";
 export { ThemeProvider, useUweTheme } from "./ThemeProvider";
 export { ThemeSettingsPanel } from "./ThemeSettingsPanel";
+export { ThemeScopeSettingsPanel, ThemePreferencesFields } from "./ThemeScopeSettingsPanel";
+export {
+  fromUweThemePreferences,
+  getSyncTimestamp,
+  setSyncTimestamp,
+  shouldApplyServerPreferences,
+  toUweThemePreferences,
+} from "./sync";
 export { BackgroundEffect } from "./BackgroundEffect";

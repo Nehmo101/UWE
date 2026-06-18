@@ -27,7 +27,14 @@
 
 - Studio vs Portal `wiki.css` — nearly identical; candidate for shared `wiki-tokens.css` import
 - Studio vs Portal `globals.css` auth patterns — separate brand colors by design
-- `settings.app.theme` (DB) vs `localStorage` theme — dual source until sync implemented
+- `settings.app.theme` (dark/light/system) vs preset `themeId` — complementary SSR vs client presets
+
+## DB ↔ Client sync
+
+- Full preferences stored in `settings.app.themePreferences.{studio,portal}`
+- Studio writes via `saveThemePreferencesAction` (debounced from `ThemeProvider`)
+- Conflict resolution: server `updatedAt` vs local `uwe-theme-sync-at-*` timestamp
+- Bootstrap script uses server prefs when local storage is empty or stale
 
 ## Breaking changes
 

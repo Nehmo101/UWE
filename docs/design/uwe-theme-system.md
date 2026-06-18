@@ -61,6 +61,18 @@ interface UweThemePreferences {
 }
 ```
 
+## DB ↔ Client sync
+
+`settings.app.themePreferences` stores full `UweThemePreferences` per scope (`studio`, `portal`).
+
+| Direction | Mechanism |
+|-----------|-----------|
+| Server → Client | `getSystemSettingsSnapshot()` in layouts; `ThemeBootstrapScript` + `ThemeProvider` merge by `updatedAt` |
+| Client → Server | `saveThemePreferencesAction` (Studio, trusted) debounced 800ms from `ThemeProvider` |
+| Portal defaults | Editable in Studio Settings → Erscheinungsbild → Portal-Standard |
+
+Legacy fields (`theme`, `backgroundPattern`, `frostedGlass`) stay in sync for SSR `data-uwe-*` attributes.
+
 ## Server settings (SSR defaults)
 
 Persisted in `settings.app` and exposed via `buildVisualThemeHtmlAttributes()`:

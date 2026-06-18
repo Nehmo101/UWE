@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -16,6 +17,10 @@ import {
   savePreferences,
   type UweThemePreferences,
 } from "./storage";
+import {
+  setSyncTimestamp,
+  shouldApplyServerPreferences,
+} from "./sync";
 import type { AppScope } from "./tokens";
 import { BackgroundEffect } from "./BackgroundEffect";
 
@@ -25,34 +30,88 @@ interface ThemeContextValue {
   setPreferences: (next: UweThemePreferences) => void;
   updatePreferences: (patch: Partial<UweThemePreferences>) => void;
   resetPreferences: () => void;
+  syncState: "idle" | "syncing" | "synced" | "error";
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+const PERSIST_DEBOUNCE_MS = 800;
+
 export function ThemeProvider({
   scope,
   children,
+  serverPreferences = null,
+  serverUpdatedAt = null,
+  onPersist,
 }: {
   scope: AppScope;
   children: ReactNode;
+  serverPreferences?: UweThemePreferences | null;
+  serverUpdatedAt?: string | null;
+  onPersist?: (preferences: UweThemePreferences) => Promise<string | void>;
 }) {
   const [preferences, setPreferencesState] = useState<UweThemePreferences>(() =>
-    typeof window === "undefined" ? defaultPreferences(scope) : loadPreferences(scope),
+    typeof window === "undefined"
+      ? (serverPreferences ?? defaultPreferences(scope))
+      : loadPreferences(scope),
   );
   const [hydrated, setHydrated] = useState(false);
+  const [syncState, setSyncState] = useState<ThemeContextValue["syncState"]>("idle");
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipPersistRef = useRef(true);
 
   useEffect(() => {
-    const loaded = loadPreferences(scope);
-    setPreferencesState(loaded);
-    applyThemePreferences(loaded, scope);
+    const local = loadPreferences(scope);
+    const useServer =
+      serverPreferences != null &&
+      shouldApplyServerPreferences(scope, serverUpdatedAt ?? undefined);
+    const next = useServer ? serverPreferences : local;
+    setPreferencesState(next);
+    applyThemePreferences(next, scope);
+    savePreferences(scope, next);
+    if (useServer && serverUpdatedAt) {
+      setSyncTimestamp(scope, serverUpdatedAt);
+    }
+    skipPersistRef.current = true;
     setHydrated(true);
-  }, [scope]);
+  }, [scope, serverPreferences, serverUpdatedAt]);
 
   useEffect(() => {
     if (!hydrated) return;
     applyThemePreferences(preferences, scope);
     savePreferences(scope, preferences);
-  }, [preferences, scope, hydrated]);
+
+    if (skipPersistRef.current) {
+      skipPersistRef.current = false;
+      return;
+    }
+
+    if (!onPersist) return;
+
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current);
+    }
+
+    persistTimerRef.current = setTimeout(() => {
+      setSyncState("syncing");
+      void onPersist(preferences)
+        .then((updatedAt) => {
+          if (typeof updatedAt === "string") {
+            setSyncTimestamp(scope, updatedAt);
+          }
+          setSyncState("synced");
+        })
+        .catch(() => {
+          setSyncState("error");
+        });
+    }, PERSIST_DEBOUNCE_MS);
+
+    return () => {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+      }
+    };
+  }, [preferences, scope, hydrated, onPersist]);
 
   const setPreferences = useCallback((next: UweThemePreferences) => {
     setPreferencesState(next);
@@ -74,8 +133,9 @@ export function ThemeProvider({
       setPreferences,
       updatePreferences,
       resetPreferences,
+      syncState,
     }),
-    [scope, preferences, setPreferences, updatePreferences, resetPreferences],
+    [scope, preferences, setPreferences, updatePreferences, resetPreferences, syncState],
   );
 
   return (

@@ -4,6 +4,8 @@ import {
   createAuthService,
   createPrismaClient,
   getAppRepository,
+  mapServerBackgroundToClient,
+  resolveThemePreferencesForScope,
   type BackgroundPattern,
   type UweSystemSettingsUpdate,
   type Visibility,
@@ -29,14 +31,34 @@ export async function updateSettingsAction(formData: FormData) {
   const update: UweSystemSettingsUpdate = {};
 
   switch (tab) {
-    case "general":
+    case "general": {
+      const current = await repo().getSystemSettings();
+      const backgroundPattern = String(
+        formData.get("backgroundPattern") || "none",
+      ) as BackgroundPattern;
+      const frostedGlass = formData.has("frostedGlass");
+      const studioPrefs = resolveThemePreferencesForScope(current.app, "studio");
+      const portalPrefs = resolveThemePreferencesForScope(current.app, "portal");
       update.app = {
         theme: String(formData.get("theme") || "dark") as ThemeAppearance,
-        backgroundPattern: String(formData.get("backgroundPattern") || "none") as BackgroundPattern,
-        frostedGlass: formData.has("frostedGlass"),
+        backgroundPattern,
+        frostedGlass,
         motionEnabled: formData.has("motionEnabled"),
+        themePreferences: {
+          studio: {
+            ...studioPrefs,
+            background: mapServerBackgroundToClient(backgroundPattern),
+            frostedGlass,
+          },
+          portal: {
+            ...portalPrefs,
+            background: mapServerBackgroundToClient(backgroundPattern),
+            frostedGlass,
+          },
+        },
       };
       break;
+    }
     case "worlds":
       update.worlds = {
         defaultVisibility: String(formData.get("defaultVisibility") || "dm_only") as Visibility,

@@ -11,7 +11,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/shared-ui.test.tsx src/theme/theme.test.ts"
+    "test": "node --import tsx --test src/shared-ui.test.tsx src/theme/theme.test.ts src/theme/sync.test.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",
