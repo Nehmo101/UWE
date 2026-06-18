@@ -110,7 +110,7 @@ function isGlobalOwner(user: AuthUser | null): boolean {
 }
 
 function isGlobalDm(user: AuthUser | null): boolean {
-  return user?.role === "owner" || user?.role === "dm";
+  return user?.role === "owner" || user?.role === "admin" || user?.role === "dm";
 }
 
 function hasDmWorldRole(membership: WorldMembership | null | undefined): boolean {

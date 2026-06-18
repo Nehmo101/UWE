@@ -52,6 +52,20 @@ export function toSafeUser(user: Record<string, unknown>): SafeUser {
     safe.forcePasswordChange = user.forcePasswordChange;
   }
 
+  if (user.status === "invited" || user.status === "active" || user.status === "disabled") {
+    safe.status = user.status;
+  }
+
+  const emailVerifiedAt = toIsoString(user.emailVerifiedAt);
+  if (emailVerifiedAt) {
+    safe.emailVerifiedAt = emailVerifiedAt;
+  }
+
+  const lastLoginAt = toIsoString(user.lastLoginAt);
+  if (lastLoginAt) {
+    safe.lastLoginAt = lastLoginAt;
+  }
+
   safe.hasPassword = Boolean(user.passwordHash ?? user.password_hash);
 
   return safe;

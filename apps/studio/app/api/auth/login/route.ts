@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     resetRateLimit(rateKey);
 
     const session = await auth.createSession(user.id);
+    await auth.recordSuccessfulLogin(user.id);
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {

@@ -1,14 +1,14 @@
 import Link from "next/link";
+import { listPortalWorlds } from "@/src/lib/auth";
 import {
   AppShell,
   EmptyState,
   PageHeader,
   TopBarBrand,
 } from "@uwe/shared-ui";
-import { getAppRepository } from "@uwe/database/server";
 
 export default async function PortalWorldsPage() {
-  const worlds = await getAppRepository().listWorlds();
+  const worlds = await listPortalWorlds();
 
   return (
     <AppShell
@@ -17,15 +17,15 @@ export default async function PortalWorldsPage() {
         <>
           <PageHeader
             title="Welten"
-            summary="Wähle eine Welt und erkunde veröffentlichte Inhalte."
+            summary="Wähle eine Welt und erkunde freigegebene Inhalte."
           />
           {worlds.length === 0 ? (
             <EmptyState
               title="Noch keine Welten verfügbar"
-              description="Sobald dein Spielleiter eine Welt veröffentlicht, erscheint sie hier."
+              description="Dir wurden noch keine Welten zugeordnet. Bitte wende dich an deinen Spielleiter."
               action={
-                <Link className="uwe-btn uwe-btn-primary" href="/">
-                  Zur Startseite
+                <Link className="uwe-btn uwe-btn-primary" href="/login">
+                  Anmelden
                 </Link>
               }
             />

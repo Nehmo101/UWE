@@ -13,13 +13,15 @@ import {
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
-  getAppRepository,
+  createAuthService,
+  createPrismaClient,
   navCategoryForPageType,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   type NavCategory,
   type SearchEntityFilter,
 } from "@uwe/database/server";
+import { assertWorldReadable } from "@/src/lib/auth";
 import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
@@ -30,27 +32,38 @@ interface Props {
 export default async function PortalWorldHome({ params, searchParams }: Props) {
   const { worldSlug } = await params;
   const { type, q, filter: entityFilter } = await searchParams;
-  const repo = getAppRepository();
 
-  const world = await repo.getWorldBySlug(worldSlug);
-  if (!world) notFound();
+  let world;
+  let ctx;
+  try {
+    ({ world, ctx } = await assertWorldReadable(worldSlug));
+  } catch {
+    notFound();
+  }
 
   const isSearching = Boolean(q?.trim());
+  const db = createPrismaClient();
+  const auth = createAuthService(db);
 
-  const pages = isSearching
-    ? []
-    : await repo.listPagesForContext(worldSlug, "portal", {
-        navCategory: type as NavCategory | undefined,
-      });
+  let pages;
+  let searchResults;
 
-  const searchResults = isSearching
-    ? await repo.search("portal", {
-        query: q!,
-        worldSlug,
-        entityFilter: entityFilter as SearchEntityFilter | undefined,
-        urlMode: "portal",
-      })
-    : [];
+  try {
+    const allPages = await auth.listPagesForViewer(worldSlug, ctx);
+    pages = type
+      ? allPages.filter((page) => navCategoryForPageType(page.type) === type)
+      : allPages;
+
+    searchResults = isSearching
+      ? await auth.searchForViewer(worldSlug, ctx, {
+          query: q!,
+          entityFilter: entityFilter as SearchEntityFilter | undefined,
+          urlMode: "portal",
+        })
+      : [];
+  } finally {
+    await db.$disconnect();
+  }
 
   const navItems = (isSearching ? searchResults : pages).map((page) => ({
     title: page.title,
@@ -131,7 +144,7 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
               {pages.length === 0 && (
                 <EmptyState
                   title="Keine veröffentlichten Seiten"
-                  description="In dieser Welt sind noch keine Inhalte für Spieler freigegeben."
+                  description="In dieser Welt sind noch keine Inhalte für dich freigegeben."
                 />
               )}
             </div>

@@ -25,6 +25,9 @@ export interface SafeUser extends AuthUser {
   createdAt?: string;
   updatedAt?: string;
   forcePasswordChange?: boolean;
+  status?: "invited" | "active" | "disabled";
+  emailVerifiedAt?: string | null;
+  lastLoginAt?: string | null;
   /** Whether a password is configured (never exposes the hash). */
   hasPassword?: boolean;
 }

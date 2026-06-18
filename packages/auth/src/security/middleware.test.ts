@@ -42,6 +42,19 @@ describe("middleware evaluation", () => {
     assert.equal(decision.redirectPath, "/login");
   });
 
+  it("redirects /worlds and /players index to login when auth is required", () => {
+    for (const path of ["/worlds", "/players"]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path), {
+        ...process.env,
+        NODE_ENV: "production",
+        AUTH_REQUIRED: "true",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+      });
+      assert.equal(decision.action, "redirect-login", path);
+      assert.equal(decision.redirectPath, "/login");
+    }
+  });
+
   it("blocks protected studio API without auth when publicly exposed", () => {
     const decision = evaluateStudioMiddleware(makeRequest("/api/brain/run"), {
       ...process.env,

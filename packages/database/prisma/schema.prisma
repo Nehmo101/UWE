@@ -115,6 +115,12 @@ enum UserRole {
   guest
 }
 
+enum UserStatus {
+  invited
+  active
+  disabled
+}
+
 enum WorldMemberRole {
   owner
   dm
@@ -412,32 +418,51 @@ enum AdminLinkTargetType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  displayName  String   @map("display_name")
-  email        String?  @unique
-  passwordHash String?  @map("password_hash")
-  role         UserRole @default(player)
-  forcePasswordChange Boolean @default(false) @map("force_password_change")
-  resetTokenHash String? @map("reset_token_hash")
-  resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
-  inviteTokenHash String? @map("invite_token_hash")
+  id                  String     @id @default(cuid())
+  displayName         String     @map("display_name")
+  email               String?    @unique
+  passwordHash        String?    @map("password_hash")
+  role                UserRole   @default(player)
+  status              UserStatus @default(active)
+  emailVerifiedAt     DateTime?  @map("email_verified_at")
+  lastLoginAt         DateTime?  @map("last_login_at")
+  forcePasswordChange Boolean    @default(false) @map("force_password_change")
+  resetTokenHash      String?    @map("reset_token_hash")
+  resetTokenExpiresAt DateTime?  @map("reset_token_expires_at")
+  inviteTokenHash     String?    @map("invite_token_hash")
   inviteTokenExpiresAt DateTime? @map("invite_token_expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
 
-  sessions         Session[]
-  worldMemberships WorldMembership[]
-  pageAccess       PagePlayerAccess[]
-  sessionUnlocks   SessionUnlock[]
-  playerNotes      PlayerNote[]
-  aiRuns           AiRun[]
-  mailRecipients   MailRecipient[]
-  jobs             Job[]
-  apiTokens        ApiToken[]
-  twoFactorSecret  TwoFactorSecret?
+  sessions            Session[]
+  worldMemberships    WorldMembership[]
+  pageAccess          PagePlayerAccess[]
+  sessionUnlocks      SessionUnlock[]
+  playerNotes         PlayerNote[]
+  aiRuns              AiRun[]
+  mailRecipients      MailRecipient[]
+  jobs                Job[]
+  apiTokens           ApiToken[]
+  twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
+  authIdentities      AuthIdentity[]
 
   @@map("users")
+}
+
+/// External identity provider link (OAuth prep — no auto-provisioning).
+model AuthIdentity {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  provider       String
+  providerUserId String   @map("provider_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("auth_identities")
 }
 
 model Session {
@@ -1005,8 +1030,10 @@ enum AuditAction {
   logout
   setup_owner_created
   user_created
-  user_role_changed
+  user_disabled
+  user_enabled
   password_reset
+  user_role_changed
   password_changed
   user_invited
   content_created

@@ -10,6 +10,7 @@ import {
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   canPreviewAsPlayer,
+  canReadWorld,
 } from "@uwe/auth";
 
 function getDb() {
@@ -92,8 +93,41 @@ export async function getAccessContextForWorld(
 }
 
 export async function listAuthWorlds() {
+  const user = await getCurrentUser();
+  const db = getDb();
+  const auth = createAuthService(db);
+  const worlds = await auth.listAccessibleWorldsForUser(user?.id ?? null);
+  await db.$disconnect();
+  return worlds;
+}
+
+export async function listPortalWorlds() {
+  return listAuthWorlds();
+}
+
+export async function assertWorldReadable(
+  worldSlug: string,
+): Promise<{
+  world: NonNullable<Awaited<ReturnType<ReturnType<typeof createUweRepository>["getWorldBySlug"]>>>;
+  ctx: AccessContext;
+}> {
+  const ctx = await getAccessContextForWorld(worldSlug);
   const repo = createUweRepository();
-  return repo.listWorldsWithGuestMode();
+  const world = await repo.getWorldBySlug(worldSlug);
+
+  if (
+    !world ||
+    !ctx ||
+    !canReadWorld(ctx.user, {
+      id: world.id,
+      guestModeEnabled: ctx.guestModeEnabled,
+      membership: ctx.worldMembership,
+    })
+  ) {
+    throw new Error("WORLD_FORBIDDEN");
+  }
+
+  return { world, ctx };
 }
 
 export async function getWorldPlayers(worldSlug: string) {

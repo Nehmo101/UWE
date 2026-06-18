@@ -13,9 +13,15 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   const service = createUserService(prisma);
-  const users = await service.listUsers();
+  const [users, worlds] = await Promise.all([
+    service.listUsersForAdmin(),
+    prisma.world.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true },
+    }),
+  ]);
 
-  return NextResponse.json({ users });
+  return NextResponse.json({ users, worlds });
 }
 
 export async function POST(request: Request) {
@@ -32,6 +38,7 @@ export async function POST(request: Request) {
     email?: string | null;
     password?: string | null;
     role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+    status?: "invited" | "active" | "disabled";
     invite?: boolean;
   };
 
@@ -76,8 +83,11 @@ export async function POST(request: Request) {
     email: body.email ?? null,
     password: body.password ?? null,
     role: body.role,
+    status: body.status,
     actorUserId: actor.id,
   });
 
-  return NextResponse.json({ user });
+  const users = await service.listUsersForAdmin();
+  const created = users.find((entry) => entry.id === user.id);
+  return NextResponse.json({ user: created ?? user }, { status: 201 });
 }

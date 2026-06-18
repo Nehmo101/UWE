@@ -7,6 +7,7 @@ import {
   canModeratePlayerNote,
   canReadAsset,
   canReadContent,
+  canReadWorld,
   canViewAsset,
   canViewContentBlock,
   canViewPage,
@@ -60,6 +61,40 @@ export interface CreateUserInput {
   email?: string | null;
   password?: string | null;
   role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  status?: "invited" | "active" | "disabled";
+}
+
+export interface UpdateUserInput {
+  displayName?: string;
+  email?: string | null;
+  role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  status?: "invited" | "active" | "disabled";
+}
+
+export interface UpsertWorldMembershipInput {
+  userId: string;
+  worldId: string;
+  role: "owner" | "dm" | "player";
+  characterName?: string | null;
+}
+
+export interface AdminUserView {
+  id: string;
+  displayName: string;
+  email: string | null;
+  role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  status: "invited" | "active" | "disabled";
+  emailVerifiedAt: Date | null;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  worldMemberships: Array<{
+    id: string;
+    worldId: string;
+    role: "owner" | "dm" | "player";
+    characterName: string | null;
+    world: { id: string; name: string; slug: string };
+  }>;
 }
 
 export interface CreateWorldMembershipInput {
@@ -92,6 +127,7 @@ export class AuthService {
         email: input.email ?? null,
         passwordHash: input.password ? await hashPassword(input.password) : null,
         role: input.role ?? "player",
+        status: input.status ?? "active",
       },
       select: USER_SAFE_SELECT,
     });
@@ -253,11 +289,304 @@ export class AuthService {
     });
   }
 
+  async listUsersForAdmin(): Promise<AdminUserView[]> {
+    const users = await this.db.user.findMany({
+      orderBy: [{ displayName: "asc" }],
+      include: {
+        worldMemberships: {
+          include: {
+            world: { select: { id: true, name: true, slug: true } },
+          },
+          orderBy: [{ world: { name: "asc" } }],
+        },
+      },
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      displayName: user.displayName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      emailVerifiedAt: user.emailVerifiedAt,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      worldMemberships: user.worldMemberships.map((membership) => ({
+        id: membership.id,
+        worldId: membership.worldId,
+        role: membership.role,
+        characterName: membership.characterName,
+        world: membership.world,
+      })),
+    }));
+  }
+
+  async updateUser(
+    userId: string,
+    input: UpdateUserInput,
+    actorUserId?: string | null,
+  ) {
+    const existing = await this.db.user.findUnique({ where: { id: userId } });
+    if (!existing) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    if (input.email !== undefined && input.email !== existing.email) {
+      if (input.email) {
+        const duplicate = await this.db.user.findUnique({ where: { email: input.email } });
+        if (duplicate && duplicate.id !== userId) {
+          throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+      }
+    }
+
+    if (input.role && input.role !== existing.role) {
+      if (existing.role === "owner" && input.role !== "owner") {
+        const ownerCount = await this.db.user.count({ where: { role: "owner", status: "active" } });
+        if (ownerCount <= 1) {
+          throw new Error("LAST_OWNER_ROLE");
+        }
+      }
+    }
+
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: {
+        displayName: input.displayName ?? undefined,
+        email: input.email !== undefined ? input.email : undefined,
+        role: input.role ?? undefined,
+        status: input.status ?? undefined,
+      },
+    });
+
+    if (input.role && input.role !== existing.role) {
+      await logAuditEvent(this.db, {
+        actorUserId: actorUserId ?? undefined,
+        action: "user_role_changed",
+        targetType: "user",
+        targetId: userId,
+        metadata: {
+          from: existing.role,
+          to: input.role,
+          scope: "global",
+        },
+      });
+    }
+
+    return updated;
+  }
+
+  async disableUser(userId: string, actorUserId?: string | null) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    if (user.status === "disabled") {
+      return user;
+    }
+
+    if (user.role === "owner") {
+      const activeOwners = await this.db.user.count({
+        where: { role: "owner", status: "active", id: { not: userId } },
+      });
+      if (activeOwners === 0) {
+        throw new Error("LAST_OWNER");
+      }
+    }
+
+    if (actorUserId && actorUserId === userId) {
+      throw new Error("CANNOT_DISABLE_SELF");
+    }
+
+    await this.db.session.deleteMany({ where: { userId } });
+
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: { status: "disabled" },
+    });
+
+    await logAuditEvent(this.db, {
+      actorUserId: actorUserId ?? undefined,
+      action: "user_disabled",
+      targetType: "user",
+      targetId: userId,
+      metadata: {
+        displayName: user.displayName,
+        email: user.email,
+      },
+    });
+
+    return updated;
+  }
+
+  async enableUser(userId: string, actorUserId?: string | null) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    if (user.status === "active") {
+      return user;
+    }
+
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: { status: "active" },
+    });
+
+    await logAuditEvent(this.db, {
+      actorUserId: actorUserId ?? undefined,
+      action: "user_enabled",
+      targetType: "user",
+      targetId: userId,
+      metadata: {
+        displayName: user.displayName,
+        email: user.email,
+      },
+    });
+
+    return updated;
+  }
+
+  async resetUserPassword(
+    userId: string,
+    password: string,
+    actorUserId?: string | null,
+  ) {
+    if (password.length < 8) {
+      throw new Error("PASSWORD_TOO_SHORT");
+    }
+
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: { passwordHash: await hashPassword(password) },
+    });
+
+    await logAuditEvent(this.db, {
+      actorUserId: actorUserId ?? undefined,
+      action: "password_reset",
+      targetType: "user",
+      targetId: userId,
+      metadata: {
+        displayName: user.displayName,
+        email: user.email,
+      },
+    });
+
+    return updated;
+  }
+
+  async upsertWorldMembership(input: UpsertWorldMembershipInput) {
+    const membership = await this.db.worldMembership.upsert({
+      where: {
+        userId_worldId: {
+          userId: input.userId,
+          worldId: input.worldId,
+        },
+      },
+      create: {
+        userId: input.userId,
+        worldId: input.worldId,
+        role: input.role,
+        characterName: input.characterName ?? null,
+      },
+      update: {
+        role: input.role,
+        characterName: input.characterName !== undefined ? input.characterName : undefined,
+      },
+      include: {
+        world: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    return membership;
+  }
+
+  async removeWorldMembership(userId: string, worldId: string) {
+    const existing = await this.db.worldMembership.findUnique({
+      where: { userId_worldId: { userId, worldId } },
+    });
+
+    if (!existing) {
+      throw new Error("MEMBERSHIP_NOT_FOUND");
+    }
+
+    await this.db.worldMembership.delete({
+      where: { userId_worldId: { userId, worldId } },
+    });
+  }
+
+  async listAccessibleWorldsForUser(userId: string | null) {
+    const worlds = await this.db.world.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        guestModeEnabled: true,
+      },
+    });
+
+    const systemSettings = await new SettingsService(this.db).getSettings();
+
+    if (!userId) {
+      return worlds.filter((world) =>
+        isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
+      );
+    }
+
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user || user.status !== "active") {
+      return [];
+    }
+
+    const memberships = await this.db.worldMembership.findMany({
+      where: { userId },
+    });
+    const membershipByWorld = new Map(memberships.map((entry) => [entry.worldId, entry]));
+    const authUser = this.toAuthUser(user);
+
+    return worlds.filter((world) => {
+      const membership = membershipByWorld.get(world.id) ?? null;
+      return canReadWorld(authUser, {
+        id: world.id,
+        guestModeEnabled: isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
+        membership: membership
+          ? {
+              userId: membership.userId,
+              worldId: membership.worldId,
+              role: membership.role,
+              characterName: membership.characterName,
+            }
+          : null,
+      });
+    });
+  }
+
+  async recordSuccessfulLogin(userId: string) {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date() },
+    });
+  }
+
   async authenticate(email: string, password: string) {
     const user = await this.db.user.findUnique({
       where: { email: email.trim().toLowerCase() },
     });
     if (!user?.passwordHash) {
+      return null;
+    }
+
+    if (user.status !== "active") {
       return null;
     }
 
@@ -367,6 +696,10 @@ export class AuthService {
           select: USER_SAFE_SELECT,
         })
       : null;
+
+    if (user && user.status !== "active") {
+      return null;
+    }
 
     const membership = user
       ? await this.db.worldMembership.findUnique({
