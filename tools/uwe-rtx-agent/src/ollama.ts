@@ -107,3 +107,61 @@ function trimTrailingSlash(value: string): string {
 export function summarizeMessages(messages: ChatMessage[]): string {
   return messages.map((message) => `${message.role}:${message.content.length}`).join(", ");
 }
+
+export interface OllamaModelInfo {
+  name: string;
+  size?: number;
+}
+
+export async function listOllamaModels(
+  baseUrl: string,
+  timeoutMs: number,
+): Promise<OllamaModelInfo[]> {
+  const response = await fetchWithTimeout(`${trimTrailingSlash(baseUrl)}/api/tags`, {
+    method: "GET",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new OllamaError(`Ollama tags failed (${response.status})`, await safeReadText(response));
+  }
+  const payload = (await response.json()) as {
+    models?: Array<{ name?: string; size?: number }>;
+  };
+  return (
+    payload.models
+      ?.filter((entry) => entry.name)
+      .map((entry) => ({ name: entry.name as string, size: entry.size })) ?? []
+  );
+}
+
+export async function pullOllamaModel(
+  baseUrl: string,
+  model: string,
+  timeoutMs: number,
+): Promise<void> {
+  const response = await fetchWithTimeout(`${trimTrailingSlash(baseUrl)}/api/pull`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: model, stream: false }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new OllamaError(`Ollama pull failed (${response.status})`, await safeReadText(response));
+  }
+}
+
+export async function deleteOllamaModel(
+  baseUrl: string,
+  model: string,
+  timeoutMs: number,
+): Promise<void> {
+  const response = await fetchWithTimeout(`${trimTrailingSlash(baseUrl)}/api/delete`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: model }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new OllamaError(`Ollama delete failed (${response.status})`, await safeReadText(response));
+  }
+}

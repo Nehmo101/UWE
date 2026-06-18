@@ -1010,3 +1010,16 @@ export type {
 } from "./integrations-service";
 
 export { createMailComposeService, MailComposeService } from "./mail-compose-service";
+
+export {
+  createInferenceEndpointService,
+  InferenceEndpointService,
+  assertInferenceEndpointUrlAllowed,
+  estimateHardwareFit,
+} from "./inference-endpoint-service";
+
+export type {
+  InferenceEndpointRecord,
+  CreateInferenceEndpointInput,
+  ProbeResult,
+} from "./inference-endpoint-service";

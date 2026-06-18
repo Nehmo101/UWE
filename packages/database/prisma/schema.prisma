@@ -2028,3 +2028,28 @@ model TwoFactorChallenge {
   @@index([userId, expiresAt])
   @@map("two_factor_challenges")
 }
+
+// --- Inference / Cookbook (local model endpoints) ---
+
+enum InferenceProvider {
+  ollama
+  openai_compatible
+  cloud
+}
+
+model InferenceEndpoint {
+  id            String             @id @default(cuid())
+  name          String
+  baseUrl       String             @map("base_url")
+  apiKeyEnc     String?            @map("api_key_enc")
+  provider      InferenceProvider  @default(ollama)
+  isEnabled     Boolean            @default(true) @map("is_enabled")
+  lastProbeAt   DateTime?          @map("last_probe_at")
+  probeStatus   String?            @map("probe_status")
+  cachedModels  Json?              @map("cached_models")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  @@index([isEnabled])
+  @@map("inference_endpoints")
+}
