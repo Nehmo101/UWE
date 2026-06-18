@@ -14,6 +14,7 @@ import {
   BLOCK_TYPE_LABELS,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
+import { ContentBlockContentField } from "../../../../../../components/ContentBlockContentField";
 import { ContextualGeneratorPanel } from "../../../../../../components/ContextualGeneratorPanel";
 import { getGeneratorPanelData } from "@/src/lib/generator-handlers";
 import {
@@ -201,10 +202,11 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   </select>
                 </label>
 
-                <label>
-                  Inhalt
-                  <textarea name="content" defaultValue={block.content} rows={6} />
-                </label>
+                <ContentBlockContentField
+                  blockType={block.type}
+                  defaultValue={block.content}
+                  rows={6}
+                />
 
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                   <button type="submit" className="uwe-btn">Block speichern</button>
@@ -256,10 +258,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 </select>
               </label>
 
-              <label>
-                Inhalt
-                <textarea name="content" rows={4} placeholder="[[Wikilinks]] werden unterstützt…" />
-              </label>
+              <ContentBlockContentField blockType="rich_text" rows={4} />
 
               <button type="submit" className="uwe-btn uwe-btn-primary">Block hinzufügen</button>
             </form>

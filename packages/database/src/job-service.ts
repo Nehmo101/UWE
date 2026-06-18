@@ -11,6 +11,7 @@ export {
 
 export const JOB_TYPE_LABELS: Record<JobType, string> = {
   mail_send: "Mail senden",
+  mail_sync: "IMAP Sync",
   ai_run: "KI-Aufgabe",
   embedding: "Embedding berechnen",
   reindex: "Brain-Reindex",
@@ -21,6 +22,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   image_studio: "Image Studio",
   agent_job: "Agent-Job",
   calendar_sync: "Kalender-Sync",
+  research: "Deep Research",
 };
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -34,6 +36,7 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
 /** Job types that may be retried safely after failure. */
 export const RETRYABLE_JOB_TYPES = new Set<JobType>([
   "mail_send",
+  "mail_sync",
   "ai_run",
   "embedding",
   "reindex",
@@ -43,6 +46,7 @@ export const RETRYABLE_JOB_TYPES = new Set<JobType>([
   "image_studio",
   "agent_job",
   "calendar_sync",
+  "research",
 ]);
 
 export interface EnqueueJobInput {

@@ -6,6 +6,7 @@ import type {
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
+import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
 export type {
   CalendarEvent,
@@ -73,7 +74,10 @@ export interface ListCalendarEventsOptions {
 }
 
 export class CalendarService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly encryptionSecret: string = resolveTokenEncryptionSecret(),
+  ) {}
 
   async listFeeds(includeDisabled = false) {
     return this.db.calendarFeed.findMany({
@@ -142,6 +146,10 @@ export class CalendarService {
   }
 
   async createEvent(input: CreateCalendarEventInput) {
+    const feed = input.feedId
+      ? await this.db.calendarFeed.findUnique({ where: { id: input.feedId } })
+      : null;
+
     return this.db.calendarEvent.create({
       data: {
         feedId: input.feedId ?? null,
@@ -156,11 +164,25 @@ export class CalendarService {
         kind: input.kind ?? "personal",
         externalUid: input.externalUid ?? null,
         metadata: toPrismaJsonValue(input.metadata),
+        caldavPending: feed?.type === "caldav" && feed.direction !== "read_only",
       },
     });
   }
 
   async updateEvent(id: string, input: Partial<CreateCalendarEventInput>) {
+    const existing = await this.db.calendarEvent.findUnique({
+      where: { id },
+      include: { feed: true },
+    });
+    if (!existing) {
+      throw new Error("Kalender-Event nicht gefunden.");
+    }
+
+    const feedId = input.feedId !== undefined ? input.feedId : existing.feedId;
+    const feed = feedId
+      ? await this.db.calendarFeed.findUnique({ where: { id: feedId } })
+      : existing.feed;
+
     return this.db.calendarEvent.update({
       where: { id },
       data: {
@@ -176,6 +198,7 @@ export class CalendarService {
         ...(input.kind != null ? { kind: input.kind } : {}),
         ...(input.externalUid !== undefined ? { externalUid: input.externalUid } : {}),
         ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),
+        caldavPending: feed?.type === "caldav" && feed.direction !== "read_only",
       },
     });
   }
@@ -220,6 +243,97 @@ export class CalendarService {
       enabled: true,
     });
     return { id: feed.id };
+  }
+
+  async listPendingWriteBackEvents(feedId: string) {
+    return this.db.calendarEvent.findMany({
+      where: { feedId, caldavPending: true },
+      orderBy: { updatedAt: "asc" },
+    });
+  }
+
+  async markEventSynced(
+    eventId: string,
+    remote: { remoteHref: string; remoteEtag?: string | null },
+  ) {
+    return this.db.calendarEvent.update({
+      where: { id: eventId },
+      data: {
+        remoteHref: remote.remoteHref,
+        remoteEtag: remote.remoteEtag ?? null,
+        caldavPending: false,
+      },
+    });
+  }
+
+  async markEventPendingWrite(eventId: string) {
+    return this.db.calendarEvent.update({
+      where: { id: eventId },
+      data: { caldavPending: true },
+    });
+  }
+
+  resolveFeedCredentials(feed: { credentialsEnc: string | null }) {
+    if (!feed.credentialsEnc) return null;
+    return decryptSecret(feed.credentialsEnc, this.encryptionSecret);
+  }
+
+  async syncSessionToCalendar(sessionId: string) {
+    const session = await this.db.gameSession.findUnique({
+      where: { id: sessionId },
+      include: { calendarEvents: true },
+    });
+    if (!session || !session.date) {
+      return null;
+    }
+
+    const localFeed = await this.ensureLocalFeed();
+    const title = `Session ${session.sessionNumber}: ${session.title}`;
+    const startAt = session.date;
+    const endAt = new Date(startAt.getTime() + 4 * 60 * 60 * 1000);
+
+    const existing = session.calendarEvents[0]
+      ?? (await this.db.calendarEvent.findFirst({
+        where: { sessionId: session.id },
+      }));
+
+    if (existing) {
+      return this.updateEvent(existing.id, {
+        feedId: localFeed.id,
+        worldId: session.worldId,
+        sessionId: session.id,
+        title,
+        startAt,
+        endAt,
+        kind: "session",
+        externalUid: existing.externalUid ?? `uwe-session-${session.id}`,
+      });
+    }
+
+    return this.createEvent({
+      feedId: localFeed.id,
+      worldId: session.worldId,
+      sessionId: session.id,
+      title,
+      startAt,
+      endAt,
+      kind: "session",
+      externalUid: `uwe-session-${session.id}`,
+    });
+  }
+
+  async syncAllSessionsForWorld(worldId: string) {
+    const sessions = await this.db.gameSession.findMany({
+      where: { worldId, date: { not: null } },
+      orderBy: { sessionNumber: "asc" },
+    });
+
+    let synced = 0;
+    for (const session of sessions) {
+      await this.syncSessionToCalendar(session.id);
+      synced += 1;
+    }
+    return { worldId, synced };
   }
 }
 

@@ -38,6 +38,8 @@ import {
   runAgentJob,
   runCalendarSyncJob,
   runImageStudioJob,
+  runMailSyncJob,
+  runResearchJob,
 } from "./integration-job-runners";
 import {
   executeRestore,
@@ -682,6 +684,8 @@ export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<s
       return runAiRunJob(ctx);
     case "mail_send":
       return runMailSendJob(ctx);
+    case "mail_sync":
+      return runMailSyncJob(ctx);
     case "embedding":
       return runEmbeddingJob(ctx);
     case "reindex":
@@ -696,6 +700,8 @@ export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<s
       return runAgentJob(ctx);
     case "calendar_sync":
       return runCalendarSyncJob(ctx);
+    case "research":
+      return runResearchJob(ctx);
     default:
       throw new Error(`Unbekannter Job-Typ: ${ctx.job.type}`);
   }

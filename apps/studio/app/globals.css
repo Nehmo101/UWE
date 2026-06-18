@@ -377,3 +377,34 @@ body {
 .studio-auth-footer a {
   color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-fg) 45%);
 }
+
+.uwe-rich-text-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
+  border-radius: 0.65rem;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--uwe-bg) 92%, var(--uwe-fg) 8%);
+}
+
+.uwe-rich-text-editor__toolbar {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.uwe-rich-text-editor__surface {
+  min-height: 8rem;
+  padding: 0.65rem;
+  outline: none;
+}
+
+.uwe-rich-text-editor__surface p {
+  margin: 0 0 0.5rem;
+}
+
+.uwe-rich-text-editor__surface ul,
+.uwe-rich-text-editor__surface ol {
+  margin: 0 0 0.5rem 1.25rem;
+}

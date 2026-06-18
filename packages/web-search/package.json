@@ -1,8 +1,8 @@
 {
-  "name": "@uwe/mail",
+  "name": "@uwe/web-search",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE Mail Center — SMTP transport, compose and diagnostics",
+  "description": "UWE Web Search — SearXNG provider for Deep Research",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -13,13 +13,10 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/env": "workspace:*",
-    "imapflow": "^1.0.187",
-    "nodemailer": "^7.0.3"
+    "@uwe/env": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",
-    "@types/nodemailer": "^6.4.17",
     "@uwe/config": "workspace:*",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

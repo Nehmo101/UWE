@@ -8,15 +8,18 @@ import {
   createCalendarService,
   createDevAgentJobService,
   createImageStudioService,
+  createMailAccountService,
   createPrismaClient,
+  createResearchService,
   createUweRepositoryFromClient,
   getSystemSettings,
   resolveEffectiveUploadsPath,
   type JobService,
 } from "@uwe/database/server";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
-import { fetchCalDavEvents, fetchIcalFeed, parseIcalEvents } from "@uwe/calendar";
+import { fetchCalDavEvents, fetchIcalFeed, parseIcalEvents, putCalDavEvent } from "@uwe/calendar";
 import { runImageStudioTask, type ImageStudioTask } from "@uwe/image-studio";
+import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
 import type { JobRunnerContext } from "./job-runners";
 
 async function assertNotCancelled(jobs: JobService, jobId: string): Promise<void> {
@@ -170,8 +173,86 @@ export async function runAgentJob(ctx: JobRunnerContext): Promise<Record<string,
   };
 }
 
+export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as { accountId?: string; limit?: number };
+  if (!payload.accountId) {
+    throw new Error("Mail-Sync: accountId fehlt.");
+  }
+
+  const db = createPrismaClient();
+  const mail = createMailAccountService(db);
+
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "IMAP Postfach synchronisieren");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  try {
+    const result = await mail.syncInbox(payload.accountId, { limit: payload.limit ?? 50 });
+    await db.$disconnect();
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await mail.markImapSyncError(payload.accountId, message);
+    await db.$disconnect();
+    throw error;
+  }
+}
+
+export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as { sessionId?: string };
+  if (!payload.sessionId) {
+    throw new Error("Research-Job: sessionId fehlt.");
+  }
+
+  const db = createPrismaClient();
+  const research = createResearchService(db);
+  const session = await research.get(payload.sessionId);
+  if (!session) {
+    await db.$disconnect();
+    throw new Error("Research-Session nicht gefunden.");
+  }
+
+  await research.markRunning(session.id);
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "Web-Suche starten");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const searxngUrl = resolveSearxngUrl();
+  if (!searxngUrl) {
+    await research.fail(session.id, "SEARXNG_URL ist nicht konfiguriert.");
+    await db.$disconnect();
+    throw new Error("SEARXNG_URL ist nicht konfiguriert.");
+  }
+
+  try {
+    const results = await searchSearxng({
+      baseUrl: searxngUrl,
+      query: session.query,
+      limit: 8,
+    });
+
+    await ctx.jobs.updateProgress(ctx.jobId, 70, "Report erstellen");
+    const reportMd = buildResearchReport(session.query, results);
+    await research.complete(
+      session.id,
+      reportMd,
+      results.map((result) => ({
+        url: result.url,
+        title: result.title,
+        snippet: result.snippet,
+      })),
+    );
+
+    await db.$disconnect();
+    return { sessionId: session.id, sourceCount: results.length };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await research.fail(session.id, message);
+    await db.$disconnect();
+    throw error;
+  }
+}
+
 export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as { feedId?: string };
+  const payload = (ctx.job.payload ?? {}) as { feedId?: string; worldId?: string };
   if (!payload.feedId) {
     throw new Error("Kalender-Sync: feedId fehlt.");
   }
@@ -184,43 +265,94 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
     throw new Error("Kalender-Feed nicht gefunden.");
   }
 
-  await ctx.jobs.updateProgress(ctx.jobId, 20, `Sync: ${feed.name}`);
+  await ctx.jobs.updateProgress(ctx.jobId, 10, `Sync: ${feed.name}`);
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   try {
-    let events;
+    let pushed = 0;
+    if (feed.type === "caldav" && feed.direction !== "read_only" && feed.caldavUrl) {
+      const password = calendar.resolveFeedCredentials(feed) ?? process.env.CALDAV_PASSWORD?.trim();
+      const pending = await calendar.listPendingWriteBackEvents(feed.id);
+      for (const event of pending) {
+        const uid = event.externalUid ?? `uwe-event-${event.id}`;
+        const result = await putCalDavEvent(
+          {
+            caldavUrl: feed.caldavUrl,
+            username: feed.username ?? undefined,
+            password,
+          },
+          {
+            uid,
+            title: event.title,
+            description: event.description,
+            location: event.location,
+            startAt: event.startAt,
+            endAt: event.endAt,
+            allDay: event.allDay,
+          },
+          event.remoteHref ?? undefined,
+        );
+        await calendar.markEventSynced(event.id, {
+          remoteHref: result.href,
+          remoteEtag: result.etag,
+        });
+        pushed += 1;
+      }
+    }
+
+    await ctx.jobs.updateProgress(ctx.jobId, 40, "Externe Events laden");
+    let imported = 0;
     if (feed.type === "caldav" && feed.caldavUrl) {
-      events = await fetchCalDavEvents({
+      const password = calendar.resolveFeedCredentials(feed) ?? process.env.CALDAV_PASSWORD?.trim();
+      const events = await fetchCalDavEvents({
         caldavUrl: feed.caldavUrl,
         username: feed.username ?? undefined,
-        password: process.env.CALDAV_PASSWORD?.trim(),
+        password,
       });
+      for (const event of events) {
+        await calendar.upsertExternalEvent(feed.id, event.uid, {
+          feedId: feed.id,
+          title: event.title,
+          description: event.description ?? null,
+          location: event.location ?? null,
+          startAt: event.startAt,
+          endAt: event.endAt ?? null,
+          allDay: event.allDay,
+          kind: "external",
+          externalUid: event.uid,
+        });
+        imported += 1;
+      }
     } else if (feed.url) {
       const content = await fetchIcalFeed(feed.url);
-      events = parseIcalEvents(content);
-    } else {
+      const events = parseIcalEvents(content);
+      for (const event of events) {
+        await calendar.upsertExternalEvent(feed.id, event.uid, {
+          feedId: feed.id,
+          title: event.title,
+          description: event.description ?? null,
+          location: event.location ?? null,
+          startAt: event.startAt,
+          endAt: event.endAt ?? null,
+          allDay: event.allDay,
+          kind: feed.type === "familywall" ? "personal" : "external",
+          externalUid: event.uid,
+        });
+        imported += 1;
+      }
+    } else if (feed.type !== "local") {
       throw new Error("Feed hat weder URL noch CalDAV-URL.");
     }
 
-    let imported = 0;
-    for (const event of events) {
-      await calendar.upsertExternalEvent(feed.id, event.uid, {
-        feedId: feed.id,
-        title: event.title,
-        description: event.description ?? null,
-        location: event.location ?? null,
-        startAt: event.startAt,
-        endAt: event.endAt ?? null,
-        allDay: event.allDay,
-        kind: feed.type === "familywall" ? "personal" : "external",
-        externalUid: event.uid,
-      });
-      imported += 1;
+    let sessionsSynced = 0;
+    if (payload.worldId) {
+      const sessionResult = await calendar.syncAllSessionsForWorld(payload.worldId);
+      sessionsSynced = sessionResult.synced;
     }
 
     await calendar.markFeedSynced(feed.id, null);
     await db.$disconnect();
-    return { feedId: feed.id, imported };
+    return { feedId: feed.id, imported, pushed, sessionsSynced };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await calendar.markFeedSynced(feed.id, message);
