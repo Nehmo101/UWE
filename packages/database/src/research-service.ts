@@ -88,6 +88,16 @@ export class ResearchService {
       data: { status: "cancelled" },
     });
   }
+
+  async fail(id: string, errorMessage: string) {
+    return this.db.researchSession.update({
+      where: { id },
+      data: {
+        status: "failed",
+        errorMessage: errorMessage.slice(0, 500),
+      },
+    });
+  }
 }
 
 export function createResearchService(db: PrismaClient): ResearchService {

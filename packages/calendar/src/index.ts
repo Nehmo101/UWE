@@ -241,3 +241,12 @@ export async function fetchCalDavEvents(options: CalDavSyncOptions): Promise<Par
     clearTimeout(timer);
   }
 }
+
+export {
+  putCalDavEvent,
+  deleteCalDavEvent,
+  buildCalDavEventHref,
+  eventToIcalBody,
+  type CalDavWriteOptions,
+  type CalDavAuth,
+} from "./caldav-write";

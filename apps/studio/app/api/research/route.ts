@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createResearchService, prisma } from "@uwe/database/server";
+import { createJobService, createResearchService, prisma } from "@uwe/database/server";
 import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 export async function GET(request: Request) {
@@ -44,12 +44,24 @@ export async function POST(request: Request) {
       worldId: body.worldId,
       contextMode: body.contextMode,
     });
+
+    const jobs = createJobService(prisma);
+    const job = await jobs.enqueue({
+      type: "research",
+      title: `Research — ${session.query.slice(0, 60)}`,
+      worldId: body.worldId ?? null,
+      payload: { sessionId: session.id },
+      relatedType: "research_session",
+      relatedId: session.id,
+    });
+
     return NextResponse.json({
       session: {
         id: session.id,
         status: session.status,
         query: session.query,
       },
+      jobId: job.id,
     });
   } catch (error) {
     return NextResponse.json(

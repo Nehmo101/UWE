@@ -5,6 +5,7 @@ import type {
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray } from "./json-utils";
 import type { PageSummary } from "./repository";
+import { createCalendarService } from "./calendar-service";
 
 export type {
   GameSession,
@@ -239,7 +240,7 @@ export class GameSessionService {
   async create(input: CreateGameSessionInput): Promise<GameSessionWithLinks> {
     const linkedPageIds = input.linkedPageIds ?? [];
 
-    return this.db.gameSession.create({
+    const session = await this.db.gameSession.create({
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
@@ -260,6 +261,12 @@ export class GameSessionService {
       },
       include: this.sessionInclude(),
     });
+
+    if (session.date) {
+      await createCalendarService(this.db).syncSessionToCalendar(session.id);
+    }
+
+    return session;
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
@@ -275,7 +282,7 @@ export class GameSessionService {
       }
     }
 
-    return this.db.gameSession.update({
+    const session = await this.db.gameSession.update({
       where: { id: sessionId },
       data: {
         title: input.title,
@@ -292,6 +299,12 @@ export class GameSessionService {
       },
       include: this.sessionInclude(),
     });
+
+    if (input.date !== undefined || input.title !== undefined || input.sessionNumber !== undefined) {
+      await createCalendarService(this.db).syncSessionToCalendar(sessionId);
+    }
+
+    return session;
   }
 
   async linkPage(sessionId: string, pageId: string) {

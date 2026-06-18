@@ -274,6 +274,7 @@ enum MailTemplateKind {
 
 enum JobType {
   mail_send
+  mail_sync
   ai_run
   embedding
   reindex
@@ -284,6 +285,7 @@ enum JobType {
   image_studio
   agent_job
   calendar_sync
+  research
 }
 
 enum JobStatus {
@@ -1458,22 +1460,46 @@ model MailMessageLog {
 }
 
 model MailAccount {
-  id           String   @id @default(cuid())
-  label        String
-  imapHost     String?  @map("imap_host")
-  imapPort     Int?     @map("imap_port")
-  smtpHost     String   @map("smtp_host")
-  smtpPort     Int?     @map("smtp_port")
-  username     String
-  passwordEnc  String   @map("password_enc")
-  isDefault    Boolean  @default(false) @map("is_default")
-  ownerId      String?  @map("owner_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(cuid())
+  label         String
+  imapHost      String?   @map("imap_host")
+  imapPort      Int?      @map("imap_port")
+  smtpHost      String    @map("smtp_host")
+  smtpPort      Int?      @map("smtp_port")
+  username      String
+  passwordEnc   String    @map("password_enc")
+  isDefault     Boolean   @default(false) @map("is_default")
+  ownerId       String?   @map("owner_id")
+  lastImapSyncAt DateTime? @map("last_imap_sync_at")
+  imapSyncError String?   @map("imap_sync_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  drafts MailDraft[]
+  drafts        MailDraft[]
+  inboxMessages MailInboxMessage[]
 
   @@map("mail_accounts")
+}
+
+model MailInboxMessage {
+  id          String   @id @default(cuid())
+  accountId   String   @map("account_id")
+  imapUid     String   @map("imap_uid")
+  messageId   String?  @map("message_id")
+  subject     String   @default("")
+  fromAddress String   @map("from_address")
+  toAddresses Json?    @map("to_addresses")
+  snippet     String?
+  bodyText    String?  @map("body_text")
+  receivedAt  DateTime @map("received_at")
+  isRead      Boolean  @default(false) @map("is_read")
+  syncedAt    DateTime @default(now()) @map("synced_at")
+
+  account MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, imapUid])
+  @@index([accountId, receivedAt])
+  @@map("mail_inbox_messages")
 }
 
 enum MailDraftStatus {

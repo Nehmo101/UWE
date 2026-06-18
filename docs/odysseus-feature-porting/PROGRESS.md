@@ -1,6 +1,6 @@
 # Feature-Portierung — Fortschritt
 
-**Orchestrator:** Cloud Agent · **Letzte Aktualisierung:** 2026-06-18 (Merge abgeschlossen)
+**Orchestrator:** Cloud Agent · **Letzte Aktualisierung:** 2026-06-18 (Phase 2 abgeschlossen)
 
 ## Phase 0: Planung ✅
 
@@ -11,7 +11,7 @@
 | Subagent-Aufgaben | ✅ Merged | `docs/odysseus-feature-porting/SUBAGENTS.md` |
 | PR-Strategie | ✅ Merged | `docs/odysseus-feature-porting/PR_STRATEGY.md` |
 
-## Feature-PRs — alle in `main` gemerged ✅
+## Phase 1 Feature-PRs — alle in `main` gemerged ✅
 
 | # | Bereich | Branch | Status | PR |
 |---|---------|--------|--------|-----|
@@ -24,40 +24,22 @@
 | 7 | Deep Research | `feature/odysseus-deep-research-port` | ✅ Merged | [#119](https://github.com/Nehmo101/UWE/pull/119) |
 | 8 | Integration | `integration/odysseus-feature-porting-final` | ✅ Docs in main | [#122](https://github.com/Nehmo101/UWE/pull/122) |
 
-## Merge-Reihenfolge (ausgeführt)
+## Phase 2 — Odysseus Follow-ups ✅
 
-1. ✅ Auth (#120)
-2. ✅ Cookbook (#116)
-3. ✅ Calendar (#115)
-4. ✅ Document (#121)
-5. ✅ Image (#118)
-6. ✅ Email (#114)
-7. ✅ Research (#119)
-8. ✅ PROGRESS-Update auf `main`
-
-## Bekannte Risiken (offen)
-
-| Risiko | Status |
-|--------|--------|
-| RTX `/v1/images` Stub | Phase 2 — Diffusion-Backend |
-| IMAP Inbox Sync | Phase 2 |
-| Rich-Text Editor (TipTap) | Phase 2 |
-| SearXNG Web-Search | Phase 2 |
-| CalDAV Write-back vollständig | Phase 2 |
+| Bereich | Status | Implementierung |
+|---------|--------|-----------------|
+| IMAP read-only Sync-Job | ✅ | `mail_sync` Job, `MailInboxMessage`, `/api/mail/inbox` |
+| CalDAV bidirektionaler Write-back | ✅ | `putCalDavEvent`, `caldavPending` Push in `calendar_sync` |
+| Rich-Text Block Editor (TipTap) | ✅ | `RichTextBlockEditor` für `rich_text` / `gm_note` |
+| SearXNG Web-Search | ✅ | `@uwe/web-search`, `research` Job, `SEARXNG_URL` |
+| RTX Diffusion statt Image-Stub | ✅ | `diffusion.ts` — A1111 API, Ollama, Fallback-PNG |
+| GameSession ↔ CalendarEvent Auto-Sync | ✅ | `syncSessionToCalendar` bei Session create/update |
 
 ## Definition of Done
 
-- [x] Alle Feature-PRs in `main` gemerged
-- [x] `pnpm quality` nach finalem Merge grün
+- [x] Phase 1 Feature-PRs in `main` gemerged
+- [x] Phase 2 Follow-ups implementiert
+- [x] `pnpm quality` grün
 - [x] Keine AGPL-Code-Kopie
-- [x] PROGRESS final aktualisiert
+- [x] PROGRESS aktualisiert
 - [ ] Manuelle QA (`docs/TEST_PLAN.md` Ergänzungen) — optional Follow-up
-
-## Post-Merge Follow-ups
-
-- IMAP read-only Sync-Job
-- CalDAV bidirektionaler Write-back
-- Rich-Text Block Editor
-- Research Web-Search (SearXNG)
-- RTX Diffusion statt Image-Stub
-- GameSession ↔ CalendarEvent Auto-Sync

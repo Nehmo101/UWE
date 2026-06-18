@@ -11,6 +11,7 @@ import { setAgentEnabled } from "./config.js";
 import { buildHealthResponse, buildTrayStatusResponse } from "./health.js";
 import { appendAgentLog } from "./logging.js";
 import { chatWithOllama, deleteOllamaModel, listOllamaModels, pullOllamaModel, summarizeMessages } from "./ollama.js";
+import { generateDiffusionImage } from "./diffusion.js";
 import { getEnvFilePath } from "./paths.js";
 import { setPersistedEnabled } from "./state.js";
 import type { ChatRequest, ErrorResponse } from "./types.js";
@@ -283,15 +284,27 @@ async function handleRequest(
       return;
     }
 
-    // Placeholder implementation — Ollama image endpoints vary by install.
-    // Returns a 1x1 PNG so Image Studio jobs can complete in local dev/CI.
-    const placeholder =
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const result = await generateDiffusionImage(
+      {
+        prompt: body.prompt?.trim() ?? "",
+        task: body.task,
+        sourceImageBase64: body.source_image,
+        maskBase64: body.mask,
+      },
+      {
+        diffusionApiUrl: process.env.DIFFUSION_API_URL?.trim(),
+        ollamaBaseUrl: config.ollamaBaseUrl,
+        ollamaImageModel: process.env.OLLAMA_IMAGE_MODEL?.trim(),
+        timeoutMs: config.requestTimeoutMs,
+      },
+    );
+
     sendJson(response, 200, {
-      image: body.source_image ?? placeholder,
-      mime_type: "image/png",
+      image: result.imageBase64,
+      mime_type: result.mimeType,
       task: body.task ?? "generate",
-      note: "RTX image stub — replace with diffusion backend when configured.",
+      provider: result.provider,
+      note: result.note,
     });
     return;
   }

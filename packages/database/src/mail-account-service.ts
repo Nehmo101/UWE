@@ -1,6 +1,7 @@
 import type { MailDraftStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
-import { encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
+import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
+import { fetchImapInboxMessages } from "@uwe/mail";
 
 export interface CreateMailAccountInput {
   label: string;
@@ -41,9 +42,15 @@ export class MailAccountService {
       username: row.username,
       isDefault: row.isDefault,
       ownerId: row.ownerId,
+      lastImapSyncAt: row.lastImapSyncAt,
+      imapSyncError: row.imapSyncError,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
+  }
+
+  async getAccount(id: string) {
+    return this.db.mailAccount.findUnique({ where: { id } });
   }
 
   async createAccount(input: CreateMailAccountInput) {
@@ -79,6 +86,104 @@ export class MailAccountService {
         bodyText: input.bodyText ?? null,
         bodyHtml: input.bodyHtml ?? null,
         status: input.status ?? "draft",
+      },
+    });
+  }
+
+  async listInbox(accountId?: string, limit = 50) {
+    const rows = await this.db.mailInboxMessage.findMany({
+      where: accountId ? { accountId } : undefined,
+      orderBy: { receivedAt: "desc" },
+      take: limit,
+      include: {
+        account: { select: { id: true, label: true } },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      accountId: row.accountId,
+      accountLabel: row.account.label,
+      subject: row.subject,
+      fromAddress: row.fromAddress,
+      snippet: row.snippet,
+      receivedAt: row.receivedAt,
+      isRead: row.isRead,
+    }));
+  }
+
+  async syncInbox(accountId: string, options?: { limit?: number }) {
+    const account = await this.db.mailAccount.findUnique({ where: { id: accountId } });
+    if (!account) {
+      throw new Error("Mail-Account nicht gefunden.");
+    }
+    if (!account.imapHost) {
+      throw new Error("IMAP-Host ist für diesen Account nicht konfiguriert.");
+    }
+
+    const password = decryptSecret(account.passwordEnc, this.encryptionSecret);
+    const fetched = await fetchImapInboxMessages(
+      {
+        host: account.imapHost,
+        port: account.imapPort ?? undefined,
+        username: account.username,
+        password,
+      },
+      { limit: options?.limit ?? 50 },
+    );
+
+    let imported = 0;
+    for (const message of fetched) {
+      await this.db.mailInboxMessage.upsert({
+        where: {
+          accountId_imapUid: {
+            accountId,
+            imapUid: message.imapUid,
+          },
+        },
+        create: {
+          accountId,
+          imapUid: message.imapUid,
+          messageId: message.messageId,
+          subject: message.subject,
+          fromAddress: message.fromAddress,
+          toAddresses: message.toAddresses,
+          snippet: message.snippet,
+          bodyText: message.bodyText,
+          receivedAt: message.receivedAt,
+          isRead: message.isRead,
+        },
+        update: {
+          messageId: message.messageId,
+          subject: message.subject,
+          fromAddress: message.fromAddress,
+          toAddresses: message.toAddresses,
+          snippet: message.snippet,
+          bodyText: message.bodyText,
+          receivedAt: message.receivedAt,
+          isRead: message.isRead,
+          syncedAt: new Date(),
+        },
+      });
+      imported += 1;
+    }
+
+    await this.db.mailAccount.update({
+      where: { id: accountId },
+      data: {
+        lastImapSyncAt: new Date(),
+        imapSyncError: null,
+      },
+    });
+
+    return { accountId, imported };
+  }
+
+  async markImapSyncError(accountId: string, error: string) {
+    await this.db.mailAccount.update({
+      where: { id: accountId },
+      data: {
+        imapSyncError: error.slice(0, 500),
       },
     });
   }

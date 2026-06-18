@@ -11,6 +11,9 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@tiptap/pm": "^2.26.1",
+    "@tiptap/react": "^2.26.1",
+    "@tiptap/starter-kit": "^2.26.1",
     "@uwe/agent-jobs": "workspace:*",
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
@@ -29,6 +32,7 @@
     "@uwe/soundboard": "workspace:*",
     "@uwe/static-export": "workspace:*",
     "@uwe/wiki-engine": "workspace:*",
+    "@uwe/web-search": "workspace:*",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

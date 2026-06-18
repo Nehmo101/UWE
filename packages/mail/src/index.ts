@@ -25,6 +25,12 @@ export {
   truncateBodyPreview,
 } from "./redact";
 
+export {
+  fetchImapInboxMessages,
+  type ImapCredentials,
+  type FetchedInboxMessage,
+} from "./imap-sync";
+
 export type {
   MailAddress,
   MailMessage,
