@@ -5,11 +5,7 @@ import { getSecurityDashboardStatus, prisma } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { resolveSecurityDashboardAccess } from "@/src/lib/security-dashboard-access";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+import { formatStudioDateTime } from "@/src/lib/format";
 
 function boolLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -67,7 +63,7 @@ export default async function AdminSecurityPage() {
       }
     >
       <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
-        Stand: {DATE_FORMAT.format(new Date(status.timestamp))} · Angemeldet: {access.displayName} (
+        Stand: {formatStudioDateTime(new Date(status.timestamp))} · Angemeldet: {access.displayName} (
         {SECURITY_ROLE_LABELS[access.userRole ?? ""] ?? access.userRole})
       </p>
 
@@ -183,7 +179,7 @@ export default async function AdminSecurityPage() {
             {
               label: "Letztes Backup",
               value: status.backup.lastBackupAt
-                ? DATE_FORMAT.format(new Date(status.backup.lastBackupAt))
+                ? formatStudioDateTime(new Date(status.backup.lastBackupAt))
                 : null,
             },
             { label: "Datei", value: status.backup.lastBackupFilename },
@@ -231,7 +227,7 @@ export default async function AdminSecurityPage() {
                 <strong>{entry.action}</strong>
                 {entry.worldSlug ? ` · ${entry.worldSlug}` : ""}
                 <p>
-                  {DATE_FORMAT.format(new Date(entry.createdAt))}
+                  {formatStudioDateTime(new Date(entry.createdAt))}
                   {" — "}
                   {entry.summary}
                 </p>

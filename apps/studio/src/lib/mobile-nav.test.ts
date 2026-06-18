@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { studioGlobalBottomNav, studioLegacyBottomNav } from "./mobile-nav";
+import { studioGlobalBottomNav } from "./mobile-nav";
 import { resolvePreferredWorldSlug } from "./today-dashboard";
 
 describe("studio mobile nav", () => {
@@ -16,10 +16,6 @@ describe("studio mobile nav", () => {
     assert.equal(nav[3]?.href, "/ai");
   });
 
-  it("keeps legacy nav for gradual migration", () => {
-    const nav = studioLegacyBottomNav("dashboard");
-    assert.ok(nav.some((item) => item.label === "Dashboard"));
-  });
 });
 
 describe("resolvePreferredWorldSlug", () => {

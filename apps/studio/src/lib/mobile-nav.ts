@@ -20,17 +20,6 @@ export function studioGlobalBottomNav(
   ];
 }
 
-/** @deprecated Use studioGlobalBottomNav — kept for gradual migration */
-export function studioLegacyBottomNav(active: "dashboard" | "worlds" | "search" | "settings"): StudioBottomNavItem[] {
-  return [
-    { label: "Dashboard", href: "/studio", icon: "⌂", active: active === "dashboard" },
-    { label: "Welten", href: "/worlds", icon: "🌍", active: active === "worlds" },
-    { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
-    { label: "Einstell.", href: "/settings", icon: "⚙", active: active === "settings" },
-    { label: "Mehr", icon: "☰", action: "open-sidebar" },
-  ];
-}
-
 /** Bottom navigation for world-scoped Studio pages */
 export function studioWorldBottomNav(
   worldSlug: string,

@@ -31,7 +31,6 @@
     "@uwe/shared-ui": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "@uwe/static-export": "workspace:*",
-    "@uwe/wiki-engine": "workspace:*",
     "@uwe/web-search": "workspace:*",
     "next": "^15.3.4",
     "react": "^19.1.0",
