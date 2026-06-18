@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveClientIp } from "@uwe/auth";
 import {
   createImageStudioService,
   createJobService,
@@ -7,6 +8,7 @@ import {
   resolveImageStudioConfig,
 } from "@uwe/database/server";
 import {
+  enforceAiAccessPolicy,
   guardStudioMutation,
   nonEmptyString,
   optionalString,
@@ -15,6 +17,7 @@ import {
   slugSchema,
 } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
 import { z } from "zod";
 
 const imageStudioCreateSchema = z.object({
@@ -45,6 +48,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const authError = guardStudioMutation(request);
   if (authError) return authError;
+
+  try {
+    enforceAiAccessPolicy({
+      role: "owner",
+      studioTrusted: true,
+      userKey: resolveClientIp(request.headers),
+    });
+  } catch (error) {
+    return aiPolicyErrorResponse(error);
+  }
 
   const config = resolveImageStudioConfig();
   if (!config.enabled) {

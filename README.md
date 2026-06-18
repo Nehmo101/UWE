@@ -12,17 +12,17 @@
 
 > Self-hosted campaign brain and world wiki — no cloud required.
 
-### Daily Admin OS (in Entwicklung)
+### Daily Admin OS
 
-UWE wird zum **täglichen privaten Admin-Cockpit** erweitert: Heute-Dashboard, Capture-Inbox, Projekte, Werkstatt, Verträge, Hardware/Homelab und persönliches Brain — neben dem bestehenden DnD-Editor.
+UWE ist ein **tägliches privates Admin-Cockpit** neben dem DnD-Editor: Heute-Dashboard, Capture-Inbox, Projekte, Werkstatt, Verträge, Hardware/Homelab und persönliches Life-Brain.
 
 | Bereich | Status |
 |---------|--------|
 | DnD-Welten, Brain, KI-Router, Admin Status | ✅ Vorhanden |
 | Mobile Bottom Nav, KI-Prompt | ✅ Vorhanden |
-| `/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain | 🔲 Geplant |
+| `/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain | ✅ Basis vorhanden (Lücken: Kalender auf `/today`, Capture-Bild-Upload) |
 
-Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · DnD-KI: [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) · Privacy: [docs/life-brain-privacy.md](docs/life-brain-privacy.md)
+Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · Reifegrad: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
 
 ---
 

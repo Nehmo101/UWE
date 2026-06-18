@@ -45,79 +45,88 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
     throw new Error("Image-Studio-Job: prompt und task sind erforderlich.");
   }
 
-  await ctx.jobs.updateProgress(ctx.jobId, 10, "Provider auswählen");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
-  const result = await runImageStudioTask({
-    task: payload.task,
-    prompt: payload.prompt,
-    providerMode: payload.providerMode as "auto" | "local_rtx" | "cloud" | undefined,
-    sourceImageBase64: payload.sourceImageBase64,
-    maskBase64: payload.maskBase64,
-  });
-
-  if (!result.success || !result.imageBase64) {
-    throw new Error(result.error ?? "Bildgenerierung fehlgeschlagen.");
-  }
-
-  await ctx.jobs.updateProgress(ctx.jobId, 60, "Bild speichern");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
   const db = createPrismaClient();
   const imageStudio = createImageStudioService(db);
-  const repo = createUweRepositoryFromClient(db);
+  const projectId = payload.projectId;
 
-  let projectId = payload.projectId;
-  if (!projectId && payload.worldId) {
-    const project = await imageStudio.createProject({
-      worldId: payload.worldId,
-      title: payload.title ?? `Image Studio ${new Date().toLocaleString("de-DE")}`,
+  try {
+    await ctx.jobs.updateProgress(ctx.jobId, 10, "Provider auswählen");
+    await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+    const result = await runImageStudioTask({
+      task: payload.task,
       prompt: payload.prompt,
+      providerMode: payload.providerMode as "auto" | "local_rtx" | "cloud" | undefined,
+      sourceImageBase64: payload.sourceImageBase64,
+      maskBase64: payload.maskBase64,
     });
-    projectId = project.id;
-  }
 
-  if (!projectId || !payload.worldId) {
+    if (!result.success || !result.imageBase64) {
+      throw new Error(result.error ?? "Bildgenerierung fehlgeschlagen.");
+    }
+
+    await ctx.jobs.updateProgress(ctx.jobId, 60, "Bild speichern");
+    await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+    const repo = createUweRepositoryFromClient(db);
+
+    let activeProjectId = projectId;
+    if (!activeProjectId && payload.worldId) {
+      const project = await imageStudio.createProject({
+        worldId: payload.worldId,
+        title: payload.title ?? `Image Studio ${new Date().toLocaleString("de-DE")}`,
+        prompt: payload.prompt,
+      });
+      activeProjectId = project.id;
+    }
+
+    if (!activeProjectId || !payload.worldId) {
+      return { imageBase64Length: result.imageBase64.length, provider: result.providerUsed };
+    }
+
+    const settings = await getSystemSettings();
+    const uploadsRoot = resolveEffectiveUploadsPath(settings);
+    ensureUploadDirectory(payload.worldId, undefined, uploadsRoot);
+    const storageKey = buildStorageKey(payload.worldId, "image-studio.png");
+    const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
+    fs.writeFileSync(filePath, Buffer.from(result.imageBase64, "base64"));
+
+    const asset = await repo.createAsset({
+      worldId: payload.worldId,
+      title: payload.title ?? `Image Studio — ${payload.task}`,
+      type: "image",
+      storageKey,
+      mimeType: result.mimeType ?? "image/png",
+      size: Buffer.byteLength(result.imageBase64, "base64"),
+      visibility: "dm_only",
+      metadata: { source: "image_studio", task: payload.task, provider: result.providerUsed },
+    });
+
+    const version = await imageStudio.addVersion({
+      projectId: activeProjectId,
+      operation: payload.task,
+      prompt: payload.prompt,
+      assetId: asset.id,
+      providerMode: result.providerUsed,
+    });
+
+    await imageStudio.updateProjectStatus(activeProjectId, "completed");
+
+    return {
+      projectId: activeProjectId,
+      versionId: version.id,
+      assetId: asset.id,
+      provider: result.providerUsed,
+      worldSlug: payload.worldSlug,
+    };
+  } catch (error) {
+    if (projectId) {
+      await imageStudio.updateProjectStatus(projectId, "failed");
+    }
+    throw error;
+  } finally {
     await db.$disconnect();
-    return { imageBase64Length: result.imageBase64.length, provider: result.providerUsed };
   }
-
-  const settings = await getSystemSettings();
-  const uploadsRoot = resolveEffectiveUploadsPath(settings);
-  ensureUploadDirectory(payload.worldId, undefined, uploadsRoot);
-  const storageKey = buildStorageKey(payload.worldId, "image-studio.png");
-  const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, Buffer.from(result.imageBase64, "base64"));
-
-  const asset = await repo.createAsset({
-    worldId: payload.worldId,
-    title: payload.title ?? `Image Studio — ${payload.task}`,
-    type: "image",
-    storageKey,
-    mimeType: result.mimeType ?? "image/png",
-    size: Buffer.byteLength(result.imageBase64, "base64"),
-    visibility: "dm_only",
-    metadata: { source: "image_studio", task: payload.task, provider: result.providerUsed },
-  });
-
-  const version = await imageStudio.addVersion({
-    projectId,
-    operation: payload.task,
-    prompt: payload.prompt,
-    assetId: asset.id,
-    providerMode: result.providerUsed,
-  });
-
-  await imageStudio.updateProjectStatus(projectId, "completed");
-  await db.$disconnect();
-
-  return {
-    projectId,
-    versionId: version.id,
-    assetId: asset.id,
-    provider: result.providerUsed,
-    worldSlug: payload.worldSlug,
-  };
 }
 
 export async function runAgentJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {

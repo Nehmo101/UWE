@@ -106,6 +106,7 @@ export {
 
 export {
   assertFetchUrlAllowed,
+  assertUserProvidedFetchUrlAllowed,
   isBlockedUserFetchTarget,
   resolveAiFetchAllowlist,
   SsrfBlockedError,

@@ -524,24 +524,44 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 - ✅ Settings UI (General, Worlds, Portal, Privacy, Storage, AI, Mail, Backup)
 - ✅ CI: lint, typecheck, test, build (`ci.yml`)
 - ✅ Docker Compose + Windows Installer
+- ✅ Image Studio Phase 1 (Prompt-Generierung, Job-Queue, RTX/Cloud)
+- ✅ Kalender Phase 1 (lokal, iCal/CalDAV/FamilyWall read-only)
+- ✅ DnD API Phase 1 (Open5e, SRD-Monster, Beyond-Links)
+- ✅ Agent Jobs (GitHub Actions / Cursor Cloud Dispatch)
 
 ---
 
-## 12. Welche Features fehlen
+## 12. Welche Features fehlen oder sind Phase 1 / unfertig
+
+Siehe **[docs/FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md)** für den vollständigen Reifegrad.
+
+Kurzfassung — **nicht** als fertig verkaufen:
+
+| Feature | Echter Status |
+|---------|---------------|
+| **Image Studio** | Phase 1: Prompt-Generierung — kein Editor/Canvas |
+| **Kalender** | Phase 1: lokal + read-only Feeds — CalDAV Write-back nicht in UI |
+| **DnD API** | Open5e + SRD-Monster — kein Statblock-Import |
+| **Agent Jobs** | Dispatch funktioniert — kein Completion-Callback |
+| **Secrets/Reveal** | Backend + Tests — keine Studio-Editor-UI |
+| **Import Undo** | Nicht vorhanden (nur Preview) |
+| **Performance-Budget / Stress-Testwelt** | Nicht vorhanden |
+| **Tag-Aufräumer** | Nicht vorhanden |
+
+Weiterhin offen (Roadmap):
 
 - ✅ **Studio DM-Login** — Session-Login (owner/admin/dm); `AUTH_REQUIRED=true` für Produktion
-- 🔲 **Image Studio Phase 2** — Inpainting-UI, Seiten-Editor-Anbindung (Phase 1 vorhanden)
-- 🔲 **Kalender Phase 2** — Monats-/Wochen-UI, Zwei-Wege-Sync (Phase 1 vorhanden)
-- 🔲 **Externe DnD-APIs** — Package vorhanden, Encounter-Import Phase 2
-- 🔲 **E2E Auth-Tests** — Playwright o.ä.; siehe `docs/ROADMAP.md`
+- ✅ **Image Studio Phase 2** — Inpaint-UI, Varianten-Batch, Seiten-Link
+- ✅ **Kalender Phase 2** — Wochenansicht, Zwei-Wege-Sync, Feed-Passwort
+- ✅ **Externe DnD-APIs** — Statblock-Import, Encounter-Builder
+- ✅ **E2E Auth-Tests** — Playwright-Baseline im CI
+- ✅ **PostgreSQL-Option** — dual-client + Baseline-Migration
+- ✅ **Markdown/HTML Export** — `pnpm export:wiki`
 - ❌ **Asset-Datei-Import** — Roadmap (README)
-- ❌ **PostgreSQL-Option** — Roadmap
-- ❌ **Markdown/HTML Export** — Roadmap
 - ❌ **Vollständige Mobile-UI** für alle Welt-Unterseiten (Soundboard, Labels, Dungeons teils ohne Bottom Nav)
 - ❌ **Capture Bild-Upload** — `file_image` Typ in DB, UI für Datei-Upload prüfen/ergänzen
 - ❌ **Personal Brain Embeddings** — Life-Brain ohne Retrieval wie DnD-Brain
 - ❌ **Reminder/Notifications** — keine Push/E-Mail für Termine
-- ❌ **Cursor-Agent Runtime** — nur Doku, kein `JobType.cursor_agent`
 
 ---
 

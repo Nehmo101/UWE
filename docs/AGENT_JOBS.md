@@ -41,7 +41,9 @@ Admin-Portal (/admin/agent-jobs)
 
 - Admin-only (Studio-Netzwerk-Schutz + optional `STUDIO_API_TOKEN`).
 - Tokens nur serverseitig.
-- Prompts werden in DB gespeichert — keine Weltdaten/Brain an Cloud unless explizit im Prompt.
+- **Kein automatischer Brain-/Welt-Kontext** — nur der manuell eingegebene Prompt wird an GitHub Actions oder Cursor Cloud gesendet.
+- Prompts werden in SQLite und ggf. in GitHub-Actions-Logs gespeichert — **keine Secrets, API-Keys, Passwörter oder Weltdaten einfügen**.
+- `AGENT_JOBS_AUTO_MERGE` muss `false` bleiben.
 
 ## GitHub Workflow
 

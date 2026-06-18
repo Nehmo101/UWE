@@ -109,6 +109,8 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/calendar/*",
   "/api/dnd-api",
   "/api/dnd-generator",
+  "/api/research",
+  "/api/research/*",
   "/api/image-studio",
   "/api/inference",
   "/api/inference/*",

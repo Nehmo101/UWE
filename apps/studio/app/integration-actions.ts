@@ -10,6 +10,7 @@ import {
   getAppRepository,
   prisma,
   resolveAgentJobsConfig,
+  resolveCalendarConfig,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
 import { dispatchJob } from "@/src/lib/job-executor";
@@ -119,6 +120,9 @@ export async function createAgentJobAction(formData: FormData) {
 }
 
 export async function createCalendarEventAction(formData: FormData) {
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
+
   assertStudioTrusted();
 
   const calendar = createCalendarService(prisma);
@@ -153,13 +157,23 @@ export async function createCalendarEventAction(formData: FormData) {
 }
 
 export async function createCalendarFeedAction(formData: FormData) {
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
+
   assertStudioTrusted();
 
-  const calendar = createCalendarService(prisma);
   const type = String(formData.get("type") ?? "ical_url") as
     | "caldav"
     | "ical_url"
     | "familywall";
+  if (type === "caldav" && !calConfig.caldavEnabled) {
+    throw new Error("CalDAV ist deaktiviert. Setze CALENDAR_CALDAV_ENABLED=true.");
+  }
+  if (type === "familywall" && !calConfig.familywallEnabled) {
+    throw new Error("FamilyWall-Feeds sind deaktiviert.");
+  }
+
+  const calendar = createCalendarService(prisma);
   const readWrite = formData.get("readWrite") === "on";
   const feed = await calendar.createFeed({
     name: String(formData.get("name") ?? ""),

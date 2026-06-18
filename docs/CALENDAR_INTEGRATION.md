@@ -52,9 +52,11 @@ Lokaler UWE-Kalender mit CalDAV/iCal-Sync, Session-Terminplanung und FamilyWall 
 
 ## Risiken
 
-- CalDAV-Vollsync (bidirektional) nicht in Phase 1 — nur Import
+- CalDAV-Vollsync (bidirektional) nicht in Phase 1 — Write-back-Code existiert, UI legt externe Feeds als `read_only` an
 - iCloud erfordert oft app-spezifisches Passwort
 - Timezone-Handling vereinfacht (UTC in iCal)
+- Feed-URLs werden gegen SSRF geprüft (kein Fetch auf localhost/private IPs)
+- `CALENDAR_CALDAV_ENABLED` und `CALENDAR_FAMILYWALL_ENABLED` werden in API und Server Actions enforced
 
 ## Phase 2 TODO
 

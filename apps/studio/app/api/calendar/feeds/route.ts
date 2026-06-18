@@ -3,6 +3,7 @@ import {
   createCalendarService,
   createJobService,
   prisma,
+  resolveCalendarConfig,
 } from "@uwe/database/server";
 import {
   guardStudioMutation,
@@ -37,10 +38,25 @@ export async function POST(request: Request) {
   const authError = guardStudioMutation(request);
   if (authError) return authError;
 
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) {
+    return NextResponse.json({ error: "Kalender ist deaktiviert." }, { status: 403 });
+  }
+
   const parsed = await parseBody(request, calendarFeedCreateSchema);
   if (!parsed.success) return parsed.response;
 
   const body = parsed.data;
+  if (body.type === "caldav" && !calConfig.caldavEnabled) {
+    return NextResponse.json(
+      { error: "CalDAV ist deaktiviert. Setze CALENDAR_CALDAV_ENABLED=true." },
+      { status: 403 },
+    );
+  }
+  if (body.type === "familywall" && !calConfig.familywallEnabled) {
+    return NextResponse.json({ error: "FamilyWall-Feeds sind deaktiviert." }, { status: 403 });
+  }
+
   const calendar = createCalendarService(prisma);
   const feed = await calendar.createFeed({
     name: body.name,

@@ -95,7 +95,7 @@ describe("integration smoke — core Studio routes", () => {
   }
 });
 
-describe("integration smoke — Daily Admin OS routes (planned)", () => {
+describe("integration smoke — Daily Admin OS routes", () => {
   const plannedRoutes = [
     "apps/studio/app/today/page.tsx",
     "apps/studio/app/capture/page.tsx",
@@ -348,6 +348,7 @@ describe("integration smoke — documentation", () => {
     "docs/PRODUCTION.md",
     "docs/PR_REVIEW_LOG.md",
     "docs/REPO_AUDIT.md",
+    "docs/FEATURE_MATURITY_MATRIX.md",
     "docs/AGENT_JOBS.md",
     "docs/IMAGE_STUDIO.md",
     "docs/CALENDAR_INTEGRATION.md",
