@@ -1,39 +1,43 @@
-# PostgreSQL Migration (Roadmap)
+# PostgreSQL (optional production database)
 
-UWE currently ships with **SQLite (libsql)**. PostgreSQL support is prepared at the client layer but requires a deliberate provider switch.
+UWE defaults to **SQLite (libsql)** for local development and tests. **PostgreSQL** is supported via a separate schema and baseline migration — no need to change `schema.prisma` for SQLite users.
 
-## When to migrate
+## Quick start (PostgreSQL)
 
-- Multiple concurrent writers
-- Database size beyond comfortable SQLite limits
-- Managed Postgres (RDS, Supabase, Neon) as part of infra standardization
+```bash
+# Provision empty Postgres DB, then:
+export DATABASE_URL=postgresql://user:pass@localhost:5432/uwe
+pnpm --filter @uwe/database db:generate
+pnpm --filter @uwe/database db:deploy:postgres
+pnpm --filter @uwe/database db:seed
+```
 
-## Steps
+## Architecture
 
-1. **Backup** — `pnpm backup:create --type=full` before any provider change.
-2. **Provision Postgres** — empty database, connection string ready.
-3. **Update schema provider** in `packages/database/prisma/schema.prisma`:
+| Component | SQLite (default) | PostgreSQL |
+|-----------|------------------|------------|
+| Schema | `prisma/schema.prisma` | `prisma/schema.postgresql.prisma` |
+| Migrations | `prisma/migrations/` | `prisma/migrations-postgresql/` |
+| Generated client | `src/generated/prisma/` | `src/generated/prisma-postgres/` |
+| Driver | `@prisma/adapter-libsql` | `@prisma/adapter-pg` + `pg` |
 
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
+`createPrismaClient()` selects the driver from `DATABASE_URL` automatically.
 
-4. **Set env** — `DATABASE_URL=postgresql://user:pass@host:5432/uwe`
-5. **Migrate fresh** — `pnpm --filter @uwe/database db:migrate` on the empty Postgres DB.
-6. **Restore data** — use UWE backup/restore or re-seed for dev.
+## Migrate from SQLite
 
-## Code readiness
+1. **Backup** — `pnpm backup:create --type=full`
+2. Set `DATABASE_URL=postgresql://…`
+3. `pnpm --filter @uwe/database db:deploy:postgres` on empty Postgres
+4. **Restore** via Studio backup UI or re-seed for dev
+5. Restored users need password setup — see [backup-restore.md](./backup-restore.md)
 
-- `createPrismaClient()` in `packages/database/src/client.ts` detects postgres URLs and fails fast with a link to this doc until the schema provider is switched.
-- Domain logic stays in `@uwe/database` repositories — apps should not use SQLite-specific SQL.
+## CI
 
-## Not automatic
+The `postgres-smoke` job runs `db:deploy:postgres` + smoke test against a service container.
 
-- Existing SQLite migration SQL is **not** portable 1:1.
-- A dedicated Postgres migration baseline will be added when production demand is confirmed.
-- Manual repopulation from backup is the supported path for early adopters.
+## Do not
+
+- Apply SQLite migration SQL directly to Postgres
+- Mix migration folders — use `db:deploy` for SQLite, `db:deploy:postgres` for Postgres
 
 See also: [docs/ROADMAP.md](./ROADMAP.md)

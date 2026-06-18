@@ -17,6 +17,7 @@ import {
 import { searchAllDndApis } from "@uwe/dnd-api";
 import { worldNavItems } from "@/src/lib/world-nav";
 import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
+import { DndApiEncounterPanel } from "@/components/DndApiEncounterPanel";
 import { addDndBeyondReferenceAction } from "../../../integration-actions";
 
 interface Props {
@@ -70,25 +71,37 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
           </section>
 
           {q && (
-            <section style={{ marginBottom: "1.5rem" }}>
-              <h2 className="uwe-section-title">{`Ergebnisse für „${q}"`}</h2>
-              {results.length === 0 ? (
-                <EmptyState title="Keine Treffer" description="Andere Schreibweise oder API deaktiviert?" />
-              ) : (
-                <ul className="uwe-list-cards">
-                  {results.map((item) => (
-                    <li key={`${item.provider}-${item.id}`} className="uwe-list-card">
-                      <strong>{item.name}</strong>
-                      <span className="uwe-badge">{item.provider}</span>
-                      {item.summary && <p className="uwe-dashboard-muted">{item.summary}</p>}
-                      <a href={item.url} target="_blank" rel="noreferrer">
-                        API / Quelle
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            <>
+              <DndApiEncounterPanel
+                worldSlug={worldSlug}
+                results={results.map((item) => ({
+                  provider: item.provider,
+                  id: item.id,
+                  name: item.name,
+                  url: item.url,
+                  summary: item.summary,
+                }))}
+              />
+              <section style={{ marginBottom: "1.5rem" }}>
+                <h2 className="uwe-section-title">{`Alle Ergebnisse für „${q}"`}</h2>
+                {results.length === 0 ? (
+                  <EmptyState title="Keine Treffer" description="Andere Schreibweise oder API deaktiviert?" />
+                ) : (
+                  <ul className="uwe-list-cards">
+                    {results.map((item) => (
+                      <li key={`${item.provider}-${item.id}`} className="uwe-list-card">
+                        <strong>{item.name}</strong>
+                        <span className="uwe-badge">{item.provider}</span>
+                        {item.summary && <p className="uwe-dashboard-muted">{item.summary}</p>}
+                        <a href={item.url} target="_blank" rel="noreferrer">
+                          API / Quelle
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </>
           )}
 
           <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>

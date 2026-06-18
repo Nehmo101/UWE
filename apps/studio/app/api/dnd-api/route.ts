@@ -4,8 +4,15 @@ import {
   getAppRepository,
   prisma,
   resolveDndApiConfig,
+  slugifyPageTitle,
+  buildPageUrl,
 } from "@uwe/database/server";
-import { getOpen5eMonster, searchAllDndApis } from "@uwe/dnd-api";
+import {
+  buildEncounterMarkdown,
+  formatOpen5eMonsterAsMarkdown,
+  getOpen5eMonster,
+  searchAllDndApis,
+} from "@uwe/dnd-api";
 import {
   guardStudioMutation,
   idSchema,
@@ -34,6 +41,48 @@ const dndBeyondReferenceSchema = z.object({
   notes: optionalString,
   pageId: idSchema.optional().nullable(),
 });
+
+const importStatblockSchema = z.object({
+  action: z.literal("import_statblock"),
+  worldSlug: slugSchema,
+  slug: slugSchema,
+  title: optionalString,
+  provider: z.literal("open5e").optional(),
+});
+
+const createEncounterSchema = z.object({
+  action: z.literal("create_encounter"),
+  worldSlug: slugSchema,
+  title: optionalString,
+  monsters: z
+    .array(
+      z.object({
+        name: nonEmptyString.max(200),
+        cr: optionalString,
+        slug: slugSchema,
+      }),
+    )
+    .min(1)
+    .max(24),
+});
+
+const dndApiPostSchema = z.discriminatedUnion("action", [
+  dndBeyondReferenceSchema,
+  importStatblockSchema,
+  createEncounterSchema,
+]);
+
+async function resolveUniquePageSlug(worldSlug: string, title: string, suffix?: string) {
+  const repo = getAppRepository();
+  const base = slugifyPageTitle(suffix ? `${title}-${suffix}` : title);
+  let candidate = base;
+  let counter = 2;
+  while (await repo.getPageBySlug(worldSlug, candidate)) {
+    candidate = `${base}-${counter}`;
+    counter += 1;
+  }
+  return candidate;
+}
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -98,15 +147,8 @@ export async function POST(request: Request) {
   const authError = guardStudioMutation(request);
   if (authError) return authError;
 
-  const parsed = await parseBody(request, dndBeyondReferenceSchema);
+  const parsed = await parseBody(request, dndApiPostSchema);
   if (!parsed.success) return parsed.response;
-
-  if (!parsed.data.url.includes("dndbeyond.com")) {
-    return NextResponse.json(
-      { error: "Nur D&D Beyond Links erlaubt — kein Scraping, nur manuelle Referenz." },
-      { status: 400 },
-    );
-  }
 
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(parsed.data.worldSlug);
@@ -114,15 +156,88 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
   }
 
-  const dndApi = createDndApiService(prisma);
-  const reference = await dndApi.createBeyondReference({
+  if (parsed.data.action === "add_beyond_reference") {
+    if (!parsed.data.url.includes("dndbeyond.com")) {
+      return NextResponse.json(
+        { error: "Nur D&D Beyond Links erlaubt — kein Scraping, nur manuelle Referenz." },
+        { status: 400 },
+      );
+    }
+
+    const dndApi = createDndApiService(prisma);
+    const reference = await dndApi.createBeyondReference({
+      worldId: world.id,
+      pageId: parsed.data.pageId ?? null,
+      title: parsed.data.title,
+      url: parsed.data.url,
+      entityType: parsed.data.entityType ?? null,
+      notes: parsed.data.notes ?? null,
+    });
+
+    return NextResponse.json({ reference }, { status: 201 });
+  }
+
+  if (parsed.data.action === "import_statblock") {
+    const config = resolveDndApiConfig();
+    const monster = await getOpen5eMonster(parsed.data.slug, {
+      open5eEnabled: config.open5eEnabled,
+      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
+    });
+    const monsterRecord = monster as Record<string, unknown>;
+    const title =
+      parsed.data.title?.trim() ||
+      (typeof monsterRecord.name === "string" ? monsterRecord.name : parsed.data.slug);
+    const markdown = formatOpen5eMonsterAsMarkdown(monster);
+    const pageSlug = await resolveUniquePageSlug(world.slug, title, parsed.data.slug);
+
+    const page = await repo.createPage({
+      worldId: world.id,
+      title,
+      slug: pageSlug,
+      type: "monster",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      summary: `Open5e Statblock (${parsed.data.slug})`,
+      contentBlocks: [
+        {
+          type: "statblock",
+          sortOrder: 0,
+          content: markdown,
+          visibility: "dm_only",
+        },
+      ],
+    });
+
+    return NextResponse.json(
+      { page, editHref: `${buildPageUrl(world.slug, page.type, page.slug)}/edit` },
+      { status: 201 },
+    );
+  }
+
+  const title = parsed.data.title?.trim() || "Encounter";
+  const markdown = buildEncounterMarkdown(parsed.data.monsters);
+  const pageSlug = await resolveUniquePageSlug(world.slug, title, "encounter");
+
+  const page = await repo.createPage({
     worldId: world.id,
-    pageId: parsed.data.pageId ?? null,
-    title: parsed.data.title,
-    url: parsed.data.url,
-    entityType: parsed.data.entityType ?? null,
-    notes: parsed.data.notes ?? null,
+    title,
+    slug: pageSlug,
+    type: "encounter",
+    visibility: "dm_only",
+    publishStatus: "draft",
+    summary: `${parsed.data.monsters.length} Monster`,
+    contentBlocks: [
+      {
+        type: "rich_text",
+        sortOrder: 0,
+        content: markdown,
+        visibility: "dm_only",
+      },
+    ],
   });
 
-  return NextResponse.json({ reference }, { status: 201 });
+  return NextResponse.json(
+    { page, editHref: `${buildPageUrl(world.slug, page.type, page.slug)}/edit` },
+    { status: 201 },
+  );
 }

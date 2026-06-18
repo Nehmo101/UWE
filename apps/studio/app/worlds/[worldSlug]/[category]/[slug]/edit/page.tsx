@@ -66,6 +66,9 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, page.type, slug)}>
             Vorschau als Spieler
           </Link>
+          <Link className="uwe-btn uwe-btn-ghost" href={`/image-studio?pageId=${page.id}`}>
+            Image Studio
+          </Link>
         </>
       }
       sidebar={

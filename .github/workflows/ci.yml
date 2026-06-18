@@ -59,6 +59,49 @@ jobs:
         env:
           CI: true
 
+  postgres-smoke:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: uwe
+          POSTGRES_PASSWORD: uwe
+          POSTGRES_DB: uwe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U uwe -d uwe"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy PostgreSQL migrations
+        run: pnpm --filter @uwe/database db:deploy:postgres
+        env:
+          DATABASE_URL: postgresql://uwe:uwe@localhost:5432/uwe
+
+      - name: PostgreSQL smoke test
+        run: pnpm --filter @uwe/database exec node --import tsx --test src/postgres-smoke.test.ts
+        env:
+          POSTGRES_TEST_URL: postgresql://uwe:uwe@localhost:5432/uwe
+          SESSION_SECRET: pg-smoke-test-secret-xxxxxxxxxxxx
+
   docker-build:
     runs-on: ubuntu-latest
     needs: quality

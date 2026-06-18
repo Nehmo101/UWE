@@ -3,6 +3,10 @@
  * Results are branches/PRs/issues — never auto-merge.
  */
 
+import { fetchWorkflowRunStatus } from "./github-status";
+
+export { fetchWorkflowRunStatus, type WorkflowRunStatus } from "./github-status";
+
 export type DevAgentJobProvider = "github_actions" | "cursor_cloud" | "cursor_cli_local";
 
 export interface AgentJobDispatchInput {
@@ -113,11 +117,22 @@ export async function dispatchGitHubActionsJob(
     };
   }
 
+  let githubRunId: string | undefined;
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const runStatus = await fetchWorkflowRunStatus(owner, repo, config.githubToken, branchName);
+    if (runStatus.runId != null) {
+      githubRunId = String(runStatus.runId);
+    }
+  } catch {
+    // Best effort — dispatch succeeded even if run lookup fails.
+  }
+
   return {
     success: true,
     provider: "github_actions",
     branchName,
-    githubRunId: `dispatched-${Date.now()}`,
+    githubRunId,
   };
 }
 

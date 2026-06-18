@@ -134,3 +134,6 @@ export async function searchAllDndApis(
   ]);
   return [...monsters, ...spells, ...srdMonsters];
 }
+
+export { formatOpen5eMonsterAsMarkdown } from "./statblock-format";
+export { buildEncounterMarkdown, type EncounterMonsterInput } from "./encounter-builder";
