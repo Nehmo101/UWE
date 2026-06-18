@@ -1029,3 +1029,6 @@ export type {
 
 export { createPageVersionService, PageVersionService } from "./page-version-service";
 export type { PageVersionRecord } from "./page-version-service";
+
+export { createResearchService, ResearchService, assertResearchQuerySafe } from "./research-service";
+export type { StartResearchInput } from "./research-service";

@@ -526,6 +526,7 @@ model World {
   imageStudioProjects ImageStudioProject[]
   calendarEvents      CalendarEvent[]
   dndBeyondReferences DndBeyondReference[]
+  researchSessions    ResearchSession[]
 
   @@map("worlds")
 }
@@ -2116,4 +2117,53 @@ model PageVersion {
   @@unique([pageId, version])
   @@index([pageId, createdAt])
   @@map("page_versions")
+}
+
+enum ResearchSessionStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum ResearchContextMode {
+  dnd_brain
+  life_brain
+  open_web
+}
+
+model ResearchSession {
+  id           String                @id @default(cuid())
+  worldId      String?               @map("world_id")
+  query        String
+  status       ResearchSessionStatus @default(pending)
+  contextMode  ResearchContextMode   @default(dnd_brain) @map("context_mode")
+  reportMd     String?               @map("report_md")
+  ownerId      String?               @map("owner_id")
+  aiRunId      String?               @map("ai_run_id")
+  errorMessage String?               @map("error_message")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+
+  world   World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  sources ResearchSource[]
+
+  @@index([status, createdAt])
+  @@index([worldId, createdAt])
+  @@map("research_sessions")
+}
+
+model ResearchSource {
+  id        String    @id @default(cuid())
+  sessionId String    @map("session_id")
+  url       String
+  title     String?
+  snippet   String?
+  fetchedAt DateTime? @map("fetched_at")
+
+  session ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("research_sources")
 }
