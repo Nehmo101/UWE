@@ -28,7 +28,8 @@ UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) a
    - Production dependency audit (high+)
    - Release build
 3. **E2E tests** (`pnpm test:e2e`) — Playwright, runs after quality passes
-4. Docker build (studio + portal) — only when Docker-related files changed
+4. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + owner setup against a Postgres 16 service container
+5. Docker build (studio + portal) — only when Docker-related files changed
 
 ### PR Check (`pr-check.yml`)
 
@@ -64,6 +65,7 @@ Scheduled runs use the same checks for weekly dependency monitoring.
 | `pnpm test` | Unit + integration smoke |
 | `pnpm test:ci` | PR test subset (no security tests) |
 | `pnpm test:security` | Authz, leaks, route guards |
+| `pnpm test:postgres-smoke` | PostgreSQL migrate + auth smoke (needs `POSTGRES_TEST_URL`) |
 | `pnpm build:release` | Prisma generate + turbo build |
 | `pnpm secret:scan` | Repository secret patterns |
 | `pnpm security:audit` | `pnpm audit --prod --audit-level high` |

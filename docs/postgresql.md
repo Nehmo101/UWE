@@ -33,7 +33,7 @@ pnpm --filter @uwe/database db:seed
 
 ## CI
 
-The `postgres-smoke` job runs `db:deploy:postgres` + smoke test against a service container.
+The `postgres-smoke` job runs `db:deploy:postgres` + `pnpm test:postgres-smoke` (includes Prisma client generate) against a service container.
 
 ## Do not
 

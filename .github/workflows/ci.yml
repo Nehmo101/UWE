@@ -99,7 +99,7 @@ jobs:
           DATABASE_URL: postgresql://uwe:uwe@localhost:5432/uwe
 
       - name: PostgreSQL smoke test
-        run: pnpm --filter @uwe/database exec node --import tsx --test src/postgres-smoke.test.ts
+        run: pnpm test:postgres-smoke
         env:
           POSTGRES_TEST_URL: postgresql://uwe:uwe@localhost:5432/uwe
           SESSION_SECRET: pg-smoke-test-secret-xxxxxxxxxxxx
