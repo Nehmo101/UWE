@@ -16,6 +16,7 @@ import {
   resolveCalendarConfig,
 } from "@uwe/database/server";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { CalendarMonthGrid } from "@/components/CalendarMonthGrid";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createCalendarEventAction, createCalendarFeedAction } from "../integration-actions";
 
@@ -29,10 +30,17 @@ export default async function CalendarPage() {
   const in30Days = new Date(now.getTime() + 30 * 86400000);
 
   const [events, feeds, worlds] = await Promise.all([
-    calendar.listEvents({ from: now, to: in30Days }),
+    calendar.listEvents({ from: new Date(now.getFullYear(), now.getMonth(), 1), to: in30Days }),
     calendar.listFeeds(true),
     repo.listWorldsWithGuestMode(),
   ]);
+
+  const gridEvents = events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    startAt: event.startAt.toISOString(),
+    kind: event.kind,
+  }));
 
   return (
     <AppShell
@@ -149,6 +157,8 @@ export default async function CalendarPage() {
               </form>
             </section>
           </div>
+
+          <CalendarMonthGrid month={now} events={gridEvents} />
 
           <section style={{ marginTop: "1.5rem" }}>
             <h2 className="uwe-section-title">Feeds</h2>

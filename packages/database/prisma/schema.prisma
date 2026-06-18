@@ -1806,6 +1806,7 @@ model CalendarFeed {
   url         String?
   caldavUrl   String?               @map("caldav_url")
   username    String?
+  credentialsEnc String?            @map("credentials_enc")
   enabled     Boolean               @default(true)
   color       String?
   lastSyncAt  DateTime?             @map("last_sync_at")
@@ -1832,6 +1833,9 @@ model CalendarEvent {
   allDay      Boolean           @default(false) @map("all_day")
   kind        CalendarEventKind @default(personal)
   externalUid String?           @map("external_uid")
+  remoteHref  String?           @map("remote_href")
+  remoteEtag  String?           @map("remote_etag")
+  caldavPending Boolean         @default(false) @map("caldav_pending")
   metadata    Json?
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
