@@ -17,12 +17,20 @@ import {
 } from "@uwe/database/server";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { CalendarMonthGrid } from "@/components/CalendarMonthGrid";
+import { CalendarWeekGrid } from "@/components/CalendarWeekGrid";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createCalendarEventAction, createCalendarFeedAction } from "../integration-actions";
 
 const DATE_FMT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
-export default async function CalendarPage() {
+interface Props {
+  searchParams: Promise<{ view?: string }>;
+}
+
+export default async function CalendarPage({ searchParams }: Props) {
+  const { view } = await searchParams;
+  const calendarView = view === "week" ? "week" : "month";
+
   const config = resolveCalendarConfig();
   const calendar = createCalendarService(prisma);
   const repo = getAppRepository();
@@ -34,6 +42,10 @@ export default async function CalendarPage() {
     calendar.listFeeds(true),
     repo.listWorldsWithGuestMode(),
   ]);
+
+  const writeableFeeds = feeds.filter(
+    (feed) => feed.type === "caldav" && feed.direction === "read_write",
+  );
 
   const gridEvents = events.map((event) => ({
     id: event.id,
@@ -57,9 +69,23 @@ export default async function CalendarPage() {
             title="Kalender"
             summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
             actions={
-              <Link href="/api/calendar/events?export=ics" className="uwe-btn">
-                .ics Export
-              </Link>
+              <>
+                <Link
+                  href="/calendar?view=month"
+                  className={`uwe-btn ${calendarView === "month" ? "uwe-btn-primary" : ""}`}
+                >
+                  Monat
+                </Link>
+                <Link
+                  href="/calendar?view=week"
+                  className={`uwe-btn ${calendarView === "week" ? "uwe-btn-primary" : ""}`}
+                >
+                  Woche
+                </Link>
+                <Link href="/api/calendar/events?export=ics" className="uwe-btn">
+                  .ics Export
+                </Link>
+              </>
             }
           />
 
@@ -85,6 +111,19 @@ export default async function CalendarPage() {
                     ))}
                   </select>
                 </label>
+                {writeableFeeds.length > 0 && (
+                  <label>
+                    CalDAV-Feed (Zwei-Wege)
+                    <select name="feedId" defaultValue="">
+                      <option value="">Lokal (UWE)</option>
+                      {writeableFeeds.map((feed) => (
+                        <option key={feed.id} value={feed.id}>
+                          {feed.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label>
                   Welt (optional)
                   <select name="worldId" defaultValue="">
@@ -148,8 +187,15 @@ export default async function CalendarPage() {
                   Benutzername (CalDAV)
                   <input name="username" autoComplete="off" />
                 </label>
+                <label>
+                  CalDAV-Passwort (pro Feed, verschlüsselt gespeichert)
+                  <input name="password" type="password" autoComplete="new-password" />
+                </label>
+                <label>
+                  <input name="readWrite" type="checkbox" /> Zwei-Wege-Sync (CalDAV read/write)
+                </label>
                 <p className="uwe-hint">
-                  CalDAV-Passwort über ENV CALDAV_PASSWORD (serverseitig). Sync startet automatisch.
+                  Alternativ weiterhin global über ENV CALDAV_PASSWORD. Sync startet automatisch.
                 </p>
                 <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!config.enabled}>
                   Feed + Sync
@@ -158,7 +204,11 @@ export default async function CalendarPage() {
             </section>
           </div>
 
-          <CalendarMonthGrid month={now} events={gridEvents} />
+          {calendarView === "week" ? (
+            <CalendarWeekGrid weekStart={now} events={gridEvents} />
+          ) : (
+            <CalendarMonthGrid month={now} events={gridEvents} />
+          )}
 
           <section style={{ marginTop: "1.5rem" }}>
             <h2 className="uwe-section-title">Feeds</h2>
@@ -170,6 +220,9 @@ export default async function CalendarPage() {
                   <li key={feed.id} className="uwe-list-card">
                     <strong>{feed.name}</strong>
                     <span className="uwe-badge">{CALENDAR_FEED_TYPE_LABELS[feed.type]}</span>
+                    {feed.direction === "read_write" && (
+                      <span className="uwe-badge uwe-badge-player">Zwei-Wege</span>
+                    )}
                     {feed.lastSyncAt && (
                       <span className="uwe-dashboard-muted">
                         Sync: {DATE_FMT.format(feed.lastSyncAt)}

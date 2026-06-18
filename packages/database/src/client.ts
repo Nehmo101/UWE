@@ -1,10 +1,15 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "./generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
+import { PrismaClient as PostgresPrismaClient } from "./generated/prisma-postgres/client";
+import { PrismaClient as SqlitePrismaClient } from "./generated/prisma/client";
 import { isPostgresDatabaseUrl } from "./database-provider";
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
+
+export type PrismaClient = SqlitePrismaClient;
 
 export function resolveDatabaseUrl(databaseUrl?: string): string {
   const url = databaseUrl ?? process.env.DATABASE_URL ?? "file:./data/uwe.db";
@@ -21,22 +26,37 @@ export function resolveDatabaseUrl(databaseUrl?: string): string {
   return url;
 }
 
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+  pgPool?: pg.Pool;
+};
+
+function createSqliteClient(url: string): SqlitePrismaClient {
+  const adapter = new PrismaLibSql({ url });
+  return new SqlitePrismaClient({ adapter });
+}
+
+function createPostgresClient(url: string): PostgresPrismaClient {
+  if (!globalForPrisma.pgPool) {
+    globalForPrisma.pgPool = new pg.Pool({
+      connectionString: url,
+      max: Number(process.env.UWE_PG_POOL_MAX ?? 10),
+    });
+  }
+
+  const adapter = new PrismaPg(globalForPrisma.pgPool);
+  return new PostgresPrismaClient({ adapter });
+}
+
 export function createPrismaClient(databaseUrl?: string): PrismaClient {
   const url = resolveDatabaseUrl(databaseUrl);
 
   if (isPostgresDatabaseUrl(url)) {
-    throw new Error(
-      "PostgreSQL DATABASE_URL detected, but schema.prisma still uses provider=sqlite. See docs/postgresql.md.",
-    );
+    return createPostgresClient(url) as unknown as PrismaClient;
   }
 
-  const adapter = new PrismaLibSql({ url });
-  return new PrismaClient({ adapter });
+  return createSqliteClient(url);
 }
-
-const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient;
-};
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
@@ -44,4 +64,4 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export type { PrismaClient };
+export { SqlitePrismaClient, PostgresPrismaClient };

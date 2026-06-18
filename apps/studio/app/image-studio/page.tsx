@@ -16,10 +16,16 @@ import {
   resolveImageStudioConfig,
 } from "@uwe/database/server";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createImageStudioJobAction } from "../integration-actions";
 
-export default async function ImageStudioPage() {
+interface Props {
+  searchParams: Promise<{ pageId?: string }>;
+}
+
+export default async function ImageStudioPage({ searchParams }: Props) {
+  const { pageId } = await searchParams;
   const config = resolveImageStudioConfig();
   const imageStudio = createImageStudioService(prisma);
   const repo = getAppRepository();
@@ -50,51 +56,24 @@ export default async function ImageStudioPage() {
             </p>
           )}
 
+          {pageId && (
+            <p className="uwe-notice">
+              Verknüpft mit Seite <code>{pageId}</code> — Ergebnis wird automatisch verlinkt.
+            </p>
+          )}
+
           <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
             <h2>Neues Bild</h2>
-            <form action={createImageStudioJobAction} className="uwe-form">
-              <label>
-                Welt
-                <select name="worldSlug" required defaultValue={worlds[0]?.slug ?? ""}>
-                  {worlds.map((w) => (
-                    <option key={w.id} value={w.slug}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Operation
-                <select name="task" defaultValue="generate">
-                  {Object.entries(IMAGE_STUDIO_OPERATION_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Provider
-                <select name="providerMode" defaultValue={config.defaultProviderMode}>
-                  <option value="auto">Auto (RTX → Cloud)</option>
-                  <option value="local_rtx">Nur RTX (lokal)</option>
-                  <option value="cloud" disabled={!config.allowCloud}>
-                    Cloud {config.allowCloud ? "" : "(deaktiviert)"}
-                  </option>
-                </select>
-              </label>
-              <label>
-                Titel (optional)
-                <input name="title" type="text" placeholder="NPC-Portrait Gandalf" />
-              </label>
-              <label>
-                Prompt
-                <textarea name="prompt" required rows={4} placeholder="Episches DnD-Portrait …" />
-              </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!config.enabled}>
-                Generieren (Job)
-              </button>
-            </form>
+            <ImageStudioJobForm
+              action={createImageStudioJobAction}
+              worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))}
+              operationLabels={IMAGE_STUDIO_OPERATION_LABELS}
+              defaultWorldSlug={worlds[0]?.slug}
+              defaultProviderMode={config.defaultProviderMode}
+              enabled={config.enabled}
+              pageId={pageId}
+              linkTargetType="page"
+            />
             <p className="uwe-hint">
               Ergebnisse erscheinen als Asset in der Medienbibliothek. Fortschritt unter{" "}
               <Link href="/jobs">Jobs</Link>.

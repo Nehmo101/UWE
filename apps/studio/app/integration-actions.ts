@@ -33,6 +33,14 @@ export async function createImageStudioJobAction(formData: FormData) {
     | "variant";
   const title = String(formData.get("title") ?? "") || undefined;
   const providerMode = String(formData.get("providerMode") ?? "") || undefined;
+  const sourceImageBase64 = String(formData.get("sourceImageBase64") ?? "") || undefined;
+  const maskBase64 = String(formData.get("maskBase64") ?? "") || undefined;
+  const pageId = String(formData.get("pageId") ?? "") || undefined;
+  const linkTargetType = String(formData.get("linkTargetType") ?? "") || undefined;
+  const variantCountRaw = Number.parseInt(String(formData.get("variantCount") ?? "1"), 10);
+  const variantCount = task === "variant"
+    ? Math.min(4, Math.max(1, Number.isFinite(variantCountRaw) ? variantCountRaw : 1))
+    : 1;
 
   assertStudioCanUseAI();
   await requireStudioWorldEdit(worldSlug);
@@ -47,27 +55,37 @@ export async function createImageStudioJobAction(formData: FormData) {
     title: title ?? `Image Studio — ${task}`,
     prompt,
   });
+
+  if (pageId && (linkTargetType === "page" || !linkTargetType)) {
+    await imageStudio.linkProject(project.id, "page", pageId);
+  }
+
   await imageStudio.updateProjectStatus(project.id, "processing");
 
   const jobs = createJobService(prisma);
-  const job = await jobs.enqueue({
-    type: "image_studio",
-    title: `Image Studio: ${task}`,
-    worldId: world.id,
-    worldSlug: world.slug,
-    payload: {
-      projectId: project.id,
+  for (let index = 0; index < variantCount; index += 1) {
+    const variantTitle = variantCount > 1 ? `${title ?? task} (${index + 1}/${variantCount})` : title;
+    const job = await jobs.enqueue({
+      type: "image_studio",
+      title: variantCount > 1 ? `Image Studio: ${task} ${index + 1}/${variantCount}` : `Image Studio: ${task}`,
       worldId: world.id,
       worldSlug: world.slug,
-      task,
-      prompt,
-      providerMode,
-      title,
-    },
-    relatedType: "image_studio_project",
-    relatedId: project.id,
-  });
-  void dispatchJob(job.id);
+      payload: {
+        projectId: project.id,
+        worldId: world.id,
+        worldSlug: world.slug,
+        task,
+        prompt,
+        providerMode,
+        title: variantTitle,
+        sourceImageBase64,
+        maskBase64,
+      },
+      relatedType: "image_studio_project",
+      relatedId: project.id,
+    });
+    void dispatchJob(job.id);
+  }
   revalidatePath("/image-studio");
 }
 
@@ -104,9 +122,12 @@ export async function createCalendarEventAction(formData: FormData) {
   assertStudioTrusted();
 
   const calendar = createCalendarService(prisma);
+  const feedIdInput = String(formData.get("feedId") ?? "");
   const localFeed = await calendar.ensureLocalFeed();
-  await calendar.createEvent({
-    feedId: localFeed.id,
+  const feedId = feedIdInput || localFeed.id;
+
+  const event = await calendar.createEvent({
+    feedId,
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
     startAt: new Date(String(formData.get("startAt") ?? "")),
@@ -115,6 +136,19 @@ export async function createCalendarEventAction(formData: FormData) {
     kind: (String(formData.get("kind") ?? "personal") as "session" | "prep" | "personal" | "dnd"),
     worldId: String(formData.get("worldId") ?? "") || null,
   });
+
+  const feed = await calendar.getFeed(feedId);
+  if (feed?.type === "caldav" && feed.direction === "read_write") {
+    await calendar.markEventPendingWrite(event.id);
+    const jobs = createJobService(prisma);
+    const job = await jobs.enqueue({
+      type: "calendar_sync",
+      title: `Kalender-Sync: ${feed.name}`,
+      payload: { feedId: feed.id },
+    });
+    void dispatchJob(job.id);
+  }
+
   revalidatePath("/calendar");
 }
 
@@ -126,13 +160,15 @@ export async function createCalendarFeedAction(formData: FormData) {
     | "caldav"
     | "ical_url"
     | "familywall";
+  const readWrite = formData.get("readWrite") === "on";
   const feed = await calendar.createFeed({
     name: String(formData.get("name") ?? ""),
     type,
     url: String(formData.get("url") ?? "") || null,
     caldavUrl: String(formData.get("caldavUrl") ?? "") || null,
     username: String(formData.get("username") ?? "") || null,
-    direction: "read_only",
+    password: String(formData.get("password") ?? "") || null,
+    direction: type === "caldav" && readWrite ? "read_write" : "read_only",
   });
 
   const jobs = createJobService(prisma);

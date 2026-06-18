@@ -26,7 +26,7 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Thema | Status | Nächste Schritte |
 |-------|--------|------------------|
 | SQLite / libsql (Prod) | ✅ Aktuell | Breaking Migrations erlaubt — manuelles Neupflegen |
-| PostgreSQL | 🔲 Roadmap | Client-Detection vorhanden; siehe `docs/postgresql.md` |
+| PostgreSQL | ✅ Baseline + dual-client | `db:deploy:postgres`, siehe `docs/postgresql.md` |
 
 ---
 
@@ -58,25 +58,25 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 
 | Phase 1 | Phase 2 TODO |
 |---------|--------------|
-| `/image-studio`, Job-Queue, RTX/Cloud-Routing | Canvas-Inpainting-UI, Seiten-Editor-Anbindung, Batch-Varianten |
+| `/image-studio`, Job-Queue, RTX/Cloud-Routing | ✅ Inpaint-UI, Varianten-Batch, Seiten-Link |
 
 ### Kalender (`docs/CALENDAR_INTEGRATION.md`)
 
 | Phase 1 | Phase 2 TODO |
 |---------|--------------|
-| `/calendar`, iCal-Import, FamilyWall read-only | Pro-Feed CalDAV-Passwort, Zwei-Wege-Sync, Monats-/Wochen-UI |
+| `/calendar`, iCal-Import, FamilyWall read-only | ✅ Feed-Passwort, Zwei-Wege-Sync, Wochenansicht |
 
 ### DnD API (`docs/DND_API_INTEGRATION.md`)
 
 | Phase 1 | Phase 2 TODO |
 |---------|--------------|
-| Package `@uwe/dnd-api`, dm_only | Encounter-Auto-Import, Bestiary-Caching |
+| Package `@uwe/dnd-api`, dm_only | ✅ Statblock-Import, Encounter-Builder |
 
 ### Agent Jobs (`docs/AGENT_JOBS.md`)
 
 | Phase 1 | Phase 2 TODO |
 |---------|--------------|
-| Admin-UI, Job-Queue, GitHub Workflow | Vollständiger Cursor-Agent-Runner, Retry-Policy |
+| Admin-UI, Job-Queue, GitHub Workflow | ✅ Retry + GitHub-Status-Polling |
 
 ---
 

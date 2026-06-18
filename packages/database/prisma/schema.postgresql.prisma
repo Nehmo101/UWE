@@ -1,0 +1,2230 @@
+// UWE Core data model — structured world knowledge (Source of Truth)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-postgres"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PageType {
+  lore
+  location
+  region
+  npc
+  faction
+  item
+  dungeon
+  dungeon_level
+  room
+  encounter
+  trap
+  puzzle
+  loot
+  secret
+  session
+  quest
+  handout
+  rule
+  player_character
+  monster
+  sound
+  map
+  note
+}
+
+enum DungeonPrepStatus {
+  unprepared
+  ready
+  played
+  skipped
+}
+
+enum Visibility {
+  private
+  dm_only
+  player_visible
+  public
+  specific_players
+  unlock_after_session
+  archived
+}
+
+enum SecretLevel {
+  none
+  spoiler
+  dm_secret
+}
+
+enum RevealState {
+  hidden
+  preview
+  revealed
+}
+
+enum PublishStatus {
+  draft
+  internal
+  published
+  archived
+}
+
+enum CanonicalStatus {
+  idea
+  draft
+  canon
+  deprecated
+  contradictory
+  non_canon
+}
+
+enum ContentBlockType {
+  rich_text
+  html
+  image
+  gallery
+  map
+  handout
+  sound
+  relation
+  timeline
+  statblock
+  gm_note
+  player_text
+  ai_summary
+}
+
+enum AssetType {
+  image
+  map
+  handout
+  document
+  audio
+  video
+  other
+}
+
+enum UserRole {
+  owner
+  admin
+  dm
+  player
+  readonly
+  guest
+}
+
+enum UserStatus {
+  invited
+  active
+  disabled
+}
+
+enum WorldMemberRole {
+  owner
+  dm
+  player
+}
+
+enum GameSessionStatus {
+  planned
+  prepared
+  played
+  summarized
+  archived
+}
+
+enum LabelSourceType {
+  page
+  dungeon_room
+  content_block
+  asset
+  manual
+}
+
+enum LabelPrintStatus {
+  open
+  exported
+  printed
+  archived
+}
+
+enum SoundSourceType {
+  local
+  youtube
+  spotify
+}
+
+enum PlayerNoteStatus {
+  draft
+  visible_to_dm
+  accepted
+  hidden
+  deleted
+}
+
+enum PlayerNoteVisibility {
+  private
+  dm_only
+  party
+}
+
+enum AiRunStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+  applied
+  discarded
+}
+
+enum AiProposalStatus {
+  pending
+  applied
+  discarded
+  superseded
+}
+
+enum AiApplyAction {
+  apply
+  discard
+  partial_apply
+  edit_apply
+  rerun
+}
+
+enum AiProposalApplyMode {
+  idea
+  content_block
+  player_recap
+}
+
+enum ShareTargetType {
+  page
+  handout
+  asset
+}
+
+enum BrainVisibility {
+  dm_only
+  player_visible
+  public
+}
+
+enum BrainSource {
+  manual
+  ai_generated
+  import
+  session_summary
+}
+
+enum BrainStatus {
+  draft
+  reviewed
+  canonical
+  deprecated
+}
+
+enum BrainDocumentType {
+  world_knowledge
+  campaign_knowledge
+  session_summary
+  npc_facts
+  location_facts
+  faction_facts
+  canon_facts
+  general
+  ai_summary
+}
+
+enum BrainFactType {
+  npc
+  location
+  faction
+  canon
+  plot_thread
+  decision
+  custom
+}
+
+enum BrainLinkSourceType {
+  brain_document
+  brain_fact
+  brain_chunk
+}
+
+enum BrainLinkTargetType {
+  page
+  game_session
+  campaign
+  world
+  brain_document
+  brain_fact
+}
+
+enum MailMessageStatus {
+  draft
+  pending
+  sent
+  failed
+}
+
+enum MailTemplateKind {
+  session_recap
+  handout
+  share_link
+  custom
+}
+
+enum JobType {
+  mail_send
+  mail_sync
+  ai_run
+  embedding
+  reindex
+  import
+  backup
+  backup_restore
+  canon_check
+  image_studio
+  agent_job
+  calendar_sync
+  research
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+// --- Daily Admin OS (life admin, world-independent with optional DnD links) ---
+
+enum CaptureStatus {
+  inbox
+  triaged
+  linked
+  archived
+}
+
+enum CaptureType {
+  quick_note
+  dnd_idea
+  uwe_todo
+  project_idea
+  hardware
+  contract_expense
+  art_miniature_terrain
+  link
+  file_image
+}
+
+enum PersonalProjectStatus {
+  idea
+  planned
+  active
+  blocked
+  paused
+  done
+  archived
+}
+
+enum PersonalProjectCategory {
+  uwe
+  hardware_homelab
+  dnd
+  art_workshop
+  printing_3d
+  other
+}
+
+enum WorkshopProjectType {
+  dnd_terrain
+  miniature
+  printing_3d
+  diorama
+  artwork
+  other
+}
+
+enum WorkshopStatus {
+  idea
+  planned
+  material_missing
+  in_progress
+  paused
+  done
+  archived
+}
+
+enum ContractStatus {
+  active
+  cancelled
+  review
+  paused
+  archived
+}
+
+enum ContractExpenseType {
+  subscription
+  rent
+  insurance
+  utility
+  software
+  other
+}
+
+enum ContractBillingInterval {
+  monthly
+  yearly
+  once
+  other
+}
+
+enum HardwareStatus {
+  planned
+  active
+  offline
+  broken
+  retired
+  archived
+}
+
+enum AdminLinkSourceType {
+  capture
+  personal_project
+  workshop_project
+  contract_expense
+  hardware_device
+  personal_brain_document
+  personal_brain_fact
+}
+
+enum AdminLinkTargetType {
+  capture
+  personal_project
+  workshop_project
+  contract_expense
+  hardware_device
+  personal_brain_document
+  personal_brain_fact
+  world
+  page
+  asset
+}
+
+model User {
+  id                  String     @id @default(cuid())
+  displayName         String     @map("display_name")
+  email               String?    @unique
+  passwordHash        String?    @map("password_hash")
+  role                UserRole   @default(player)
+  status              UserStatus @default(active)
+  emailVerifiedAt     DateTime?  @map("email_verified_at")
+  lastLoginAt         DateTime?  @map("last_login_at")
+  forcePasswordChange Boolean    @default(false) @map("force_password_change")
+  resetTokenHash      String?    @map("reset_token_hash")
+  resetTokenExpiresAt DateTime?  @map("reset_token_expires_at")
+  inviteTokenHash     String?    @map("invite_token_hash")
+  inviteTokenExpiresAt DateTime? @map("invite_token_expires_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  sessions            Session[]
+  worldMemberships    WorldMembership[]
+  pageAccess          PagePlayerAccess[]
+  sessionUnlocks      SessionUnlock[]
+  playerNotes         PlayerNote[]
+  aiRuns              AiRun[]
+  mailRecipients      MailRecipient[]
+  jobs                Job[]
+  apiTokens           ApiToken[]
+  twoFactorSecret     TwoFactorSecret?
+  twoFactorChallenges TwoFactorChallenge[]
+  authIdentities      AuthIdentity[]
+
+  @@map("users")
+}
+
+/// External identity provider link (OAuth prep — no auto-provisioning).
+model AuthIdentity {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  provider       String
+  providerUserId String   @map("provider_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("auth_identities")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("sessions")
+}
+
+model WorldMembership {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  worldId       String          @map("world_id")
+  role          WorldMemberRole
+  characterName String?         @map("character_name")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, worldId])
+  @@map("world_memberships")
+}
+
+model PagePlayerAccess {
+  id     String @id @default(cuid())
+  pageId String @map("page_id")
+  userId String @map("user_id")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@map("page_player_access")
+}
+
+model SessionUnlock {
+  id           String   @id @default(cuid())
+  pageId       String   @map("page_id")
+  userId       String   @map("user_id")
+  unlockedAt   DateTime @default(now()) @map("unlocked_at")
+  sessionLabel String?  @map("session_label")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@map("session_unlocks")
+}
+
+model World {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  description      String?
+  guestModeEnabled     Boolean  @default(false) @map("guest_mode_enabled")
+  guestCommentsEnabled Boolean  @default(false) @map("guest_comments_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  campaigns        Campaign[]
+  pages            Page[]
+  assets           Asset[]
+  worldMemberships WorldMembership[]
+  gameSessions     GameSession[]
+  labelTemplates    LabelTemplate[]
+  labels            Label[]
+  printLists        PrintList[]
+  soundboardButtons SoundboardButton[]
+  playerNotes       PlayerNote[]
+  shareLinks        ShareLink[]
+  spotifyConnection SpotifyConnection?
+  brainDocuments    BrainDocument[]
+  brainFacts        BrainFact[]
+  brainLinks        BrainLink[]
+  aiRuns            AiRun[]
+  mailTemplates       MailTemplate[]
+  mailRecipientGroups MailRecipientGroup[]
+  mailMessageLogs     MailMessageLog[]
+  mailDrafts          MailDraft[]
+  captureEntries      CaptureEntry[]
+  personalProjects    PersonalProject[]
+  workshopProjects    WorkshopProject[]
+  generatorPresets    GeneratorPreset[]
+  generatorOutputs    GeneratorOutput[]
+  imageStudioProjects ImageStudioProject[]
+  calendarEvents      CalendarEvent[]
+  dndBeyondReferences DndBeyondReference[]
+  researchSessions    ResearchSession[]
+
+  @@map("worlds")
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world        World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  pages             Page[]
+  assets            Asset[]
+  gameSessions      GameSession[]
+  labels            Label[]
+  printLists        PrintList[]
+  soundboardButtons SoundboardButton[]
+  playerNotes       PlayerNote[]
+  brainDocuments    BrainDocument[]
+  brainFacts        BrainFact[]
+
+  @@unique([worldId, slug])
+  @@map("campaigns")
+}
+
+model Page {
+  id              String             @id @default(cuid())
+  worldId         String             @map("world_id")
+  campaignId      String?            @map("campaign_id")
+  parentPageId    String?            @map("parent_page_id")
+  title           String
+  slug            String
+  type            PageType
+  summary         String?
+  visibility      Visibility         @default(private)
+  publishStatus   PublishStatus      @default(draft) @map("publish_status")
+  secretLevel     SecretLevel        @default(none) @map("secret_level")
+  revealState     RevealState        @default(hidden) @map("reveal_state")
+  canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
+  prepStatus      DungeonPrepStatus? @map("prep_status")
+  tags            Json?
+  aliases         Json?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  world            World              @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign         Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  parentPage       Page?              @relation("PageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
+  childPages       Page[]             @relation("PageHierarchy")
+  contentBlocks    ContentBlock[]
+  outgoingLinks    PageLink[]         @relation("SourcePage")
+  incomingLinks    PageLink[]         @relation("TargetPage")
+  playerAccess       PagePlayerAccess[]
+  sessionUnlocks     SessionUnlock[]
+  gameSessionLinks       GameSessionPageLink[]
+  soundboardButtonLinks  SoundboardButtonPageLink[]
+  assetPageLinks         AssetPageLink[]
+  playerNotes            PlayerNote[]
+  brainDocuments         BrainDocument[]
+  brainFacts             BrainFact[]
+  aiRuns                 AiRun[]
+  captureEntries         CaptureEntry[]
+  personalProjects       PersonalProject[]
+  workshopProjects       WorkshopProject[]
+  generatorOutputs       GeneratorOutput[]
+  dndBeyondReferences    DndBeyondReference[]
+  versions               PageVersion[]
+
+  @@unique([worldId, slug])
+  @@index([parentPageId])
+  @@map("pages")
+}
+
+model GameSession {
+  id              String            @id @default(cuid())
+  worldId         String            @map("world_id")
+  campaignId      String?           @map("campaign_id")
+  title           String
+  sessionNumber   Int               @map("session_number")
+  date            DateTime?         @map("date")
+  status          GameSessionStatus @default(planned)
+  summaryDm       String?           @map("summary_dm")
+  summaryPlayer   String?           @map("summary_player")
+  notes           String?
+  openPlots       String?           @map("open_plots")
+  playerDecisions String?           @map("player_decisions")
+  recapPublished  Boolean           @default(false) @map("recap_published")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  world        World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  linkedPages  GameSessionPageLink[]
+  playerNotes  PlayerNote[]
+  brainDocuments BrainDocument[]
+  brainFacts     BrainFact[]
+  aiRuns         AiRun[]
+  calendarEvents CalendarEvent[]
+
+  @@index([worldId, sessionNumber])
+  @@map("game_sessions")
+}
+
+model GameSessionPageLink {
+  id            String   @id @default(cuid())
+  gameSessionId String   @map("game_session_id")
+  pageId        String   @map("page_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, pageId])
+  @@map("game_session_page_links")
+}
+
+model ContentBlock {
+  id         String           @id @default(cuid())
+  pageId     String           @map("page_id")
+  assetId    String?          @map("asset_id")
+  type       ContentBlockType
+  sortOrder  Int              @map("sort_order")
+  content     String           @default("")
+  visibility  Visibility       @default(private)
+  secretLevel SecretLevel      @default(none) @map("secret_level")
+  revealState RevealState      @default(hidden) @map("reveal_state")
+  metadata    Json?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  page  Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([pageId, sortOrder])
+  @@index([assetId])
+  @@map("content_blocks")
+}
+
+model Asset {
+  id          String     @id @default(cuid())
+  worldId     String     @map("world_id")
+  campaignId  String?    @map("campaign_id")
+  title       String
+  description String?
+  type        AssetType
+  storageKey  String     @map("storage_key")
+  mimeType    String?    @map("mime_type")
+  size        Int        @default(0)
+  visibility  Visibility  @default(private)
+  secretLevel SecretLevel @default(none) @map("secret_level")
+  revealState RevealState @default(hidden) @map("reveal_state")
+  tags        Json?
+  metadata    Json?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  world         World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  pageLinks         AssetPageLink[]
+  contentBlocks     ContentBlock[]
+  soundboardButtons SoundboardButton[]
+  imageStudioVersions ImageStudioVersion[]
+
+  @@index([worldId, type])
+  @@map("assets")
+}
+
+model AssetPageLink {
+  id        String   @id @default(cuid())
+  assetId   String   @map("asset_id")
+  pageId    String   @map("page_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, pageId])
+  @@index([pageId])
+  @@map("asset_page_links")
+}
+
+model PageLink {
+  id           String   @id @default(cuid())
+  sourcePageId String   @map("source_page_id")
+  targetPageId String   @map("target_page_id")
+  relationType String   @map("relation_type")
+  label        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sourcePage Page @relation("SourcePage", fields: [sourcePageId], references: [id], onDelete: Cascade)
+  targetPage Page @relation("TargetPage", fields: [targetPageId], references: [id], onDelete: Cascade)
+
+  @@index([sourcePageId])
+  @@index([targetPageId])
+  @@map("page_links")
+}
+
+model LabelTemplate {
+  id              String   @id @default(cuid())
+  worldId         String?  @map("world_id")
+  name            String
+  slug            String
+  description     String?
+  layoutSettings  Json     @map("layout_settings")
+  isSystem        Boolean  @default(false) @map("is_system")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  world  World?  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  labels Label[]
+
+  @@unique([worldId, slug])
+  @@map("label_templates")
+}
+
+model Label {
+  id             String           @id @default(cuid())
+  worldId        String           @map("world_id")
+  campaignId     String?          @map("campaign_id")
+  title          String
+  sourceType     LabelSourceType  @map("source_type")
+  sourceId       String?          @map("source_id")
+  templateId     String           @map("template_id")
+  content        Json
+  layoutSettings Json             @map("layout_settings")
+  printStatus    LabelPrintStatus @default(open) @map("print_status")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  world          World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign       Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  template       LabelTemplate    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  printListItems PrintListItem[]
+
+  @@index([worldId, updatedAt])
+  @@index([sourceType, sourceId])
+  @@map("labels")
+}
+
+model PrintList {
+  id             String           @id @default(cuid())
+  worldId        String           @map("world_id")
+  campaignId     String?          @map("campaign_id")
+  name           String
+  description    String?
+  status         LabelPrintStatus @default(open)
+  forNextSession Boolean          @default(false) @map("for_next_session")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  world    World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  items    PrintListItem[]
+
+  @@index([worldId, updatedAt])
+  @@map("print_lists")
+}
+
+model PrintListItem {
+  id          String @id @default(cuid())
+  printListId String @map("print_list_id")
+  labelId     String @map("label_id")
+  copies      Int    @default(1)
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  printList PrintList @relation(fields: [printListId], references: [id], onDelete: Cascade)
+  label     Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([printListId, labelId])
+  @@index([printListId, sortOrder])
+  @@map("print_list_items")
+}
+
+model SoundboardButton {
+  id          String           @id @default(cuid())
+  worldId     String           @map("world_id")
+  campaignId  String?          @map("campaign_id")
+  title       String
+  sourceType  SoundSourceType  @map("source_type")
+  sourceUrl   String?          @map("source_url")
+  assetId     String?          @map("asset_id")
+  thumbnail   String?
+  volume      Float            @default(1.0)
+  loop        Boolean          @default(false)
+  tags        Json?
+  visibility  Visibility       @default(dm_only)
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  world        World                       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign?                   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  asset        Asset?                      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  linkedPages  SoundboardButtonPageLink[]
+
+  @@index([worldId, campaignId])
+  @@index([assetId])
+  @@map("soundboard_buttons")
+}
+
+model SoundboardButtonPageLink {
+  id                 String   @id @default(cuid())
+  soundboardButtonId String   @map("soundboard_button_id")
+  pageId             String   @map("page_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  soundboardButton SoundboardButton @relation(fields: [soundboardButtonId], references: [id], onDelete: Cascade)
+  page             Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([soundboardButtonId, pageId])
+  @@index([pageId])
+  @@map("soundboard_button_page_links")
+}
+
+model PlayerNote {
+  id            String               @id @default(cuid())
+  worldId       String               @map("world_id")
+  campaignId    String               @map("campaign_id")
+  pageId        String?              @map("page_id")
+  gameSessionId String?              @map("game_session_id")
+  userId        String               @map("user_id")
+  content       String
+  visibility    PlayerNoteVisibility @default(private)
+  status        PlayerNoteStatus     @default(draft)
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, status])
+  @@index([worldId, campaignId])
+  @@index([userId, worldId])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("player_notes")
+}
+
+model ShareLink {
+  id           String          @id @default(cuid())
+  worldId      String          @map("world_id")
+  targetType   ShareTargetType @map("target_type")
+  targetId     String          @map("target_id")
+  token        String          @unique
+  expiresAt    DateTime?       @map("expires_at")
+  passwordHash String?         @map("password_hash")
+  readOnly     Boolean         @default(true) @map("read_only")
+  logAccess    Boolean         @default(false) @map("log_access")
+  enabled      Boolean         @default(true)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  world      World             @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  accessLogs ShareAccessLog[]
+
+  @@index([worldId])
+  @@index([targetType, targetId])
+  @@map("share_links")
+}
+
+model ShareAccessLog {
+  id          String   @id @default(cuid())
+  shareLinkId String   @map("share_link_id")
+  accessedAt  DateTime @default(now()) @map("accessed_at")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+
+  shareLink ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  @@index([shareLinkId, accessedAt])
+  @@map("share_access_logs")
+}
+
+model SpotifyConnection {
+  id                    String   @id @default(cuid())
+  worldId               String   @unique @map("world_id")
+  spotifyUserId         String   @map("spotify_user_id")
+  spotifyDisplayName    String?  @map("spotify_display_name")
+  accessTokenEncrypted  String   @map("access_token_encrypted")
+  refreshTokenEncrypted String   @map("refresh_token_encrypted")
+  expiresAt             DateTime @map("expires_at")
+  scopes                String   @default("")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@map("spotify_connections")
+}
+
+model SystemSettings {
+  id        String   @id @default("default")
+  settings  Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+enum ActivityAction {
+  content_created
+  content_updated
+  content_deleted
+  content_restored
+  visibility_changed
+  inspector_fix_applied
+  template_created
+  template_updated
+  template_used
+  import_executed
+  export_executed
+  backup_created
+  backup_restored
+  seed_applied
+  ai_proposal_applied
+  ai_proposal_discarded
+  error
+  warning
+}
+
+enum ActivityTargetType {
+  page
+  content_block
+  asset
+  page_template
+  world
+  share_link
+  game_session
+  label
+  print_list
+  ai_proposal
+  ai_run
+  brain_document
+  system
+}
+
+// Audit log. Intentionally without foreign keys to content tables so entries
+// survive the deletion of the objects they describe.
+model ActivityLog {
+  id          String             @id @default(cuid())
+  worldId     String?            @map("world_id")
+  worldSlug   String?            @map("world_slug")
+  action      ActivityAction
+  targetType  ActivityTargetType @map("target_type")
+  targetId    String?            @map("target_id")
+  targetLabel String?            @map("target_label")
+  targetHref  String?            @map("target_href")
+  summary     String
+  details     Json?
+  undoEntryId String?            @map("undo_entry_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  undoEntry UndoEntry? @relation(fields: [undoEntryId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, createdAt])
+  @@index([createdAt])
+  @@index([undoEntryId])
+  @@map("activity_logs")
+}
+
+enum AuditAction {
+  login_success
+  login_failed
+  logout
+  setup_owner_created
+  user_created
+  user_disabled
+  user_enabled
+  password_reset
+  user_role_changed
+  password_changed
+  user_invited
+  content_created
+  content_updated
+  content_deleted
+  visibility_changed
+  secret_revealed
+  import_started
+  import_completed
+  import_failed
+  upload_created
+  upload_deleted
+  ai_request
+  backup_created
+  restore_started
+  restore_completed
+  authz_denied
+  rate_limit_hit
+  api_token_created
+  api_token_used
+  api_token_revoked
+  api_token_rotated
+  webhook_created
+  webhook_updated
+  webhook_deleted
+  webhook_delivered
+  webhook_failed
+  mfa_enabled
+  mfa_disabled
+  mfa_challenge_failed
+  security_warning_dismissed
+}
+
+enum AuditTargetType {
+  user
+  session
+  page
+  content_block
+  asset
+  world
+  system
+  ai_run
+  backup
+  import
+  settings
+  api_token
+  webhook_endpoint
+  webhook_delivery
+  security_warning
+}
+
+enum ApiTokenScopeName {
+  health_read
+  worlds_read
+  export_read
+  webhooks_manage
+  ai_invoke
+  mail_read
+  mail_send
+  settings_read
+  settings_write
+  admin_read
+  admin_write
+  backup_read
+  backup_write
+}
+
+enum SecurityWarningSeverity {
+  info
+  warning
+  critical
+}
+
+// Security audit log — append-only, no FKs to content tables.
+// Stores hashed IP/UA only; metadata is redacted before persistence.
+model AuditLog {
+  id             String          @id @default(cuid())
+  timestamp      DateTime        @default(now())
+  actorUserId    String?         @map("actor_user_id")
+  action         AuditAction
+  targetType     AuditTargetType @map("target_type")
+  targetId       String?         @map("target_id")
+  worldId        String?         @map("world_id")
+  ipHash         String?         @map("ip_hash")
+  userAgentHash  String?         @map("user_agent_hash")
+  metadataJson   Json?           @map("metadata_json")
+
+  @@index([action, timestamp])
+  @@index([actorUserId, timestamp])
+  @@index([worldId, timestamp])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// Undo basis: a JSON snapshot of the state *before* a destructive or
+// automatic change (inspector fixes, deletions). Restoring re-applies the
+// snapshot; `undoneAt` marks consumed entries.
+model UndoEntry {
+  id         String             @id @default(cuid())
+  worldId    String?            @map("world_id")
+  operation  String
+  targetType ActivityTargetType @map("target_type")
+  targetId   String             @map("target_id")
+  snapshot   Json
+  undoneAt   DateTime?          @map("undone_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  activityLogs ActivityLog[]
+  applyLogs    AiApplyLog[]
+
+  @@index([worldId, createdAt])
+  @@map("undo_entries")
+}
+
+// User-editable Quick-Create page templates. System templates are seeded
+// from the previous code-defined set (see seed-page-templates.ts) and can be
+// deactivated but not deleted.
+model PageTemplate {
+  id                String     @id @default(cuid())
+  slug              String     @unique
+  name              String
+  description       String     @default("")
+  pageType          PageType   @map("page_type")
+  defaultVisibility Visibility @default(dm_only) @map("default_visibility")
+  titlePlaceholder  String     @default("") @map("title_placeholder")
+  blocks            Json
+  isSystem          Boolean    @default(false) @map("is_system")
+  isActive          Boolean    @default(true) @map("is_active")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  @@map("page_templates")
+}
+
+// Tracks which data seeds (e.g. system page templates) have already been
+// applied, so seeds stay idempotent across restarts and upgrades.
+model SeedHistory {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  version   Int      @default(1)
+  appliedAt DateTime @default(now()) @map("applied_at")
+  details   Json?
+
+  @@map("seed_history")
+}
+
+// AI Run History — every KI execution is stored for review; results never auto-apply.
+model AiRun {
+  id            String      @id @default(cuid())
+  worldId       String?     @map("world_id")
+  pageId        String?     @map("page_id")
+  gameSessionId String?     @map("game_session_id")
+  userId        String?     @map("user_id")
+  source        String?
+  taskType      String      @map("task_type")
+  provider      String
+  model         String
+  status        AiRunStatus @default(pending)
+  systemPrompt  String?     @map("system_prompt")
+  userPrompt    String?     @map("user_prompt")
+  contextData   Json?       @map("context_data")
+  resultText    String?     @map("result_text")
+  resultMeta    Json?       @map("result_meta")
+  errorMessage  String?     @map("error_message")
+  errorDetails  Json?       @map("error_details")
+  durationMs    Int?        @map("duration_ms")
+  targetType    String?     @map("target_type")
+  targetId      String?     @map("target_id")
+  proposals     Json?
+  appliedAt     DateTime?   @map("applied_at")
+  discardedAt   DateTime?   @map("discarded_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  world       World?       @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  aiProposals AiProposal[]
+
+  @@index([worldId, createdAt])
+  @@index([status, createdAt])
+  @@index([pageId])
+  @@map("ai_runs")
+}
+
+// Generated patch / proposal from a completed AI run. Never auto-applies to production data.
+model AiProposal {
+  id                String              @id @default(cuid())
+  aiRunId           String              @map("ai_run_id")
+  worldId           String              @map("world_id")
+  status            AiProposalStatus    @default(pending)
+  suggestedMode     AiProposalApplyMode @map("suggested_mode")
+  patch             Json
+  resultText        String              @map("result_text")
+  editedText        String?             @map("edited_text")
+  sourcePageId      String?             @map("source_page_id")
+  sessionId         String?             @map("session_id")
+  appliedTargetType ActivityTargetType? @map("applied_target_type")
+  appliedTargetId   String?             @map("applied_target_id")
+  appliedAt         DateTime?           @map("applied_at")
+  discardedAt       DateTime?           @map("discarded_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  aiRun     AiRun        @relation(fields: [aiRunId], references: [id], onDelete: Cascade)
+  applyLogs AiApplyLog[]
+
+  @@index([aiRunId])
+  @@index([worldId, status])
+  @@map("ai_proposals")
+}
+
+// Audit log for explicit apply/discard/rerun actions on AI proposals.
+model AiApplyLog {
+  id          String        @id @default(cuid())
+  proposalId  String        @map("proposal_id")
+  aiRunId     String        @map("ai_run_id")
+  worldId     String        @map("world_id")
+  action      AiApplyAction
+  summary     String
+  details     Json?
+  undoEntryId String?       @map("undo_entry_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  proposal  AiProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  undoEntry UndoEntry? @relation(fields: [undoEntryId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId, createdAt])
+  @@index([aiRunId])
+  @@index([worldId, createdAt])
+  @@index([undoEntryId])
+  @@map("ai_apply_logs")
+}
+
+model BrainDocument {
+  id            String            @id @default(cuid())
+  worldId       String            @map("world_id")
+  campaignId    String?           @map("campaign_id")
+  gameSessionId String?           @map("game_session_id")
+  pageId        String?           @map("page_id")
+  title         String
+  content       String            @default("")
+  documentType  BrainDocumentType @default(general) @map("document_type")
+  visibility    BrainVisibility   @default(dm_only)
+  source        BrainSource       @default(manual)
+  status        BrainStatus       @default(draft)
+  trustLevel    Float?            @map("trust_level")
+  metadata      Json?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  chunks      BrainChunk[]
+
+  @@index([worldId, status])
+  @@index([worldId, visibility])
+  @@index([worldId, documentType])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("brain_documents")
+}
+
+model BrainChunk {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  chunkIndex Int      @map("chunk_index")
+  content    String
+  tokenCount Int?     @map("token_count")
+  embedding  Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  document BrainDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@map("brain_chunks")
+}
+
+model BrainFact {
+  id            String          @id @default(cuid())
+  worldId       String          @map("world_id")
+  campaignId    String?         @map("campaign_id")
+  gameSessionId String?         @map("game_session_id")
+  pageId        String?         @map("page_id")
+  factType      BrainFactType   @default(custom) @map("fact_type")
+  title         String
+  content       String          @default("")
+  visibility    BrainVisibility @default(dm_only)
+  source        BrainSource     @default(manual)
+  status        BrainStatus     @default(draft)
+  confidence    Float?
+  metadata      Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, status])
+  @@index([worldId, visibility])
+  @@index([worldId, factType])
+  @@index([pageId])
+  @@index([gameSessionId])
+  @@map("brain_facts")
+}
+
+model BrainLink {
+  id           String              @id @default(cuid())
+  worldId      String              @map("world_id")
+  sourceType   BrainLinkSourceType @map("source_type")
+  sourceId     String              @map("source_id")
+  targetType   BrainLinkTargetType @map("target_type")
+  targetId     String              @map("target_id")
+  relationType String              @default("related") @map("relation_type")
+  label        String?
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@map("brain_links")
+}
+
+// Background job queue — long-running tasks (mail, AI, embeddings, import, backup).
+model Job {
+  id            String    @id @default(cuid())
+  type          JobType
+  status        JobStatus @default(pending)
+  title         String
+  worldId       String?   @map("world_id")
+  worldSlug     String?   @map("world_slug")
+  userId        String?   @map("user_id")
+  payload       Json?
+  result        Json?
+  errorMessage  String?   @map("error_message")
+  errorDetails  Json?     @map("error_details")
+  progress      Int?
+  progressLabel String?   @map("progress_label")
+  attemptCount  Int       @default(0) @map("attempt_count")
+  maxAttempts   Int       @default(3) @map("max_attempts")
+  relatedType   String?   @map("related_type")
+  relatedId     String?   @map("related_id")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  cancelledAt   DateTime? @map("cancelled_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  logs JobLog[]
+
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([worldId, createdAt])
+  @@map("jobs")
+}
+
+model JobLog {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  level     String   @default("info")
+  message   String
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("job_logs")
+}
+
+// --- Mail Center (outbound v1) ---
+
+model MailTemplate {
+  id          String           @id @default(cuid())
+  worldId     String?          @map("world_id")
+  kind        MailTemplateKind @default(custom)
+  slug        String
+  name        String
+  description String           @default("")
+  subject     String
+  bodyHtml    String           @default("") @map("body_html")
+  bodyText    String           @default("") @map("body_text")
+  isSystem    Boolean          @default(false) @map("is_system")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([worldId, slug])
+  @@index([kind])
+  @@map("mail_templates")
+}
+
+model MailRecipientGroup {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  slug        String
+  name        String
+  description String   @default("")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world      World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  recipients MailRecipient[]
+
+  @@unique([worldId, slug])
+  @@map("mail_recipient_groups")
+}
+
+model MailRecipient {
+  id        String   @id @default(cuid())
+  groupId   String   @map("group_id")
+  email     String
+  name      String   @default("")
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group MailRecipientGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, email])
+  @@index([userId])
+  @@map("mail_recipients")
+}
+
+model MailMessageLog {
+  id           String            @id @default(cuid())
+  worldId      String?           @map("world_id")
+  status       MailMessageStatus @default(pending)
+  subject      String
+  toAddresses  Json              @map("to_addresses")
+  fromAddress  String            @map("from_address")
+  templateId   String?           @map("template_id")
+  sourceType   String?           @map("source_type")
+  sourceId     String?           @map("source_id")
+  errorMessage String?           @map("error_message")
+  bodyLogged   Boolean           @default(false) @map("body_logged")
+  bodyPreview  String?           @map("body_preview")
+  sentAt       DateTime?         @map("sent_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, status])
+  @@index([createdAt])
+  @@map("mail_message_logs")
+}
+
+model MailAccount {
+  id            String    @id @default(cuid())
+  label         String
+  imapHost      String?   @map("imap_host")
+  imapPort      Int?      @map("imap_port")
+  smtpHost      String    @map("smtp_host")
+  smtpPort      Int?      @map("smtp_port")
+  username      String
+  passwordEnc   String    @map("password_enc")
+  isDefault     Boolean   @default(false) @map("is_default")
+  ownerId       String?   @map("owner_id")
+  lastImapSyncAt DateTime? @map("last_imap_sync_at")
+  imapSyncError String?   @map("imap_sync_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  drafts        MailDraft[]
+  inboxMessages MailInboxMessage[]
+
+  @@map("mail_accounts")
+}
+
+model MailInboxMessage {
+  id          String   @id @default(cuid())
+  accountId   String   @map("account_id")
+  imapUid     String   @map("imap_uid")
+  messageId   String?  @map("message_id")
+  subject     String   @default("")
+  fromAddress String   @map("from_address")
+  toAddresses Json?    @map("to_addresses")
+  snippet     String?
+  bodyText    String?  @map("body_text")
+  receivedAt  DateTime @map("received_at")
+  isRead      Boolean  @default(false) @map("is_read")
+  syncedAt    DateTime @default(now()) @map("synced_at")
+
+  account MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, imapUid])
+  @@index([accountId, receivedAt])
+  @@map("mail_inbox_messages")
+}
+
+enum MailDraftStatus {
+  draft
+  pending_review
+  sent
+}
+
+model MailDraft {
+  id        String          @id @default(cuid())
+  accountId String?         @map("account_id")
+  worldId   String?         @map("world_id")
+  subject   String
+  bodyText  String?         @map("body_text")
+  bodyHtml  String?         @map("body_html")
+  status    MailDraftStatus @default(draft)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  account MailAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  world   World?       @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("mail_drafts")
+}
+
+// --- Daily Admin OS entities ---
+
+model CaptureEntry {
+  id          String        @id @default(cuid())
+  title       String        @default("")
+  content     String        @default("")
+  captureType CaptureType   @default(quick_note) @map("capture_type")
+  status      CaptureStatus @default(inbox)
+  url         String?
+  storageKey  String?       @map("storage_key")
+  worldId     String?       @map("world_id")
+  pageId      String?       @map("page_id")
+  metadata    Json?
+  capturedAt  DateTime      @default(now()) @map("captured_at")
+  triagedAt   DateTime?     @map("triaged_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status, capturedAt])
+  @@index([captureType])
+  @@index([worldId])
+  @@map("capture_entries")
+}
+
+model PersonalProject {
+  id          String                  @id @default(cuid())
+  name        String
+  description String                  @default("")
+  status      PersonalProjectStatus   @default(idea)
+  category    PersonalProjectCategory @default(other)
+  nextAction  String?                 @map("next_action")
+  notes       String                  @default("")
+  links       Json?
+  costCents   Int?                    @map("cost_cents")
+  worldId     String?                 @map("world_id")
+  pageId      String?                 @map("page_id")
+  metadata    Json?
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@index([worldId])
+  @@map("personal_projects")
+}
+
+model WorkshopProject {
+  id               String              @id @default(cuid())
+  title            String
+  projectType      WorkshopProjectType @map("project_type")
+  status           WorkshopStatus      @default(idea)
+  description      String              @default("")
+  materialsNeeded  Json?               @map("materials_needed")
+  materialsUsed    Json?               @map("materials_used")
+  colorsUsed       Json?               @map("colors_used")
+  filamentsUsed    Json?               @map("filaments_used")
+  stlLinks         Json?               @map("stl_links")
+  imageGallery     Json?               @map("image_gallery")
+  referenceImages  Json?               @map("reference_images")
+  progressPhotos   Json?               @map("progress_photos")
+  costCents        Int?                @map("cost_cents")
+  nextAction       String?             @map("next_action")
+  notes            String              @default("")
+  worldId          String?             @map("world_id")
+  pageId           String?             @map("page_id")
+  metadata         Json?
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([projectType])
+  @@index([worldId])
+  @@map("workshop_projects")
+}
+
+model ContractExpense {
+  id              String                  @id @default(cuid())
+  name            String
+  vendor          String                  @default("")
+  status          ContractStatus          @default(active)
+  expenseType     ContractExpenseType     @default(other) @map("expense_type")
+  billingInterval ContractBillingInterval @default(monthly) @map("billing_interval")
+  categoryLabel   String                  @default("") @map("category_label")
+  amountCents     Int?                    @map("amount_cents")
+  currency        String                  @default("EUR")
+  billingDay      Int?                    @map("billing_day")
+  startDate       DateTime?               @map("start_date")
+  nextPaymentDate DateTime?               @map("next_payment_date")
+  renewalDate     DateTime?               @map("renewal_date")
+  cancelByDate    DateTime?               @map("cancel_by_date")
+  portalUrl       String?                 @map("portal_url")
+  notes           String                  @default("")
+  metadata        Json?
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([expenseType])
+  @@index([renewalDate])
+  @@index([nextPaymentDate])
+  @@map("contract_expenses")
+}
+
+model HardwareDevice {
+  id              String         @id @default(cuid())
+  name            String
+  role            String         @default("")
+  status          HardwareStatus @default(planned)
+  hostname        String?
+  ipAddress       String?        @map("ip_address")
+  localUrl        String?        @map("local_url")
+  publicUrl       String?        @map("public_url")
+  operatingSystem String         @default("") @map("operating_system")
+  specs           Json?
+  setupSteps      Json?          @map("setup_steps")
+  errorNotes      String?        @map("error_notes")
+  notes           String         @default("")
+  metadata        Json?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([role])
+  @@map("hardware_devices")
+}
+
+model PersonalBrainDocument {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("")
+  category  String?
+  tags      Json?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("personal_brain_documents")
+}
+
+model PersonalBrainFact {
+  id        String   @id @default(cuid())
+  factType  String   @default("custom") @map("fact_type")
+  title     String
+  content   String   @default("")
+  tags      Json?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([factType])
+  @@map("personal_brain_facts")
+}
+
+model AdminEntityLink {
+  id           String              @id @default(cuid())
+  sourceType   AdminLinkSourceType @map("source_type")
+  sourceId     String              @map("source_id")
+  targetType   AdminLinkTargetType @map("target_type")
+  targetId     String              @map("target_id")
+  relationType String              @default("related") @map("relation_type")
+  label        String?
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@map("admin_entity_links")
+}
+
+model GeneratorPreset {
+  id          String   @id @default(cuid())
+  worldId     String?  @map("world_id")
+  name        String
+  description String   @default("")
+  targetType  String   @map("target_type")
+  template    Json
+  isSystem    Boolean  @default(false) @map("is_system")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world   World?            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  outputs GeneratorOutput[]
+
+  @@index([worldId, targetType])
+  @@index([targetType, sortOrder])
+  @@map("generator_presets")
+}
+
+model GeneratorOutput {
+  id              String   @id @default(cuid())
+  worldId         String?  @map("world_id")
+  pageId          String?  @map("page_id")
+  presetId        String?  @map("preset_id")
+  contextType     String?  @map("context_type")
+  contextId       String?  @map("context_id")
+  generatorAction String?  @map("generator_action")
+  promptSummary   String?  @map("prompt_summary")
+  output          Json
+  isFavorite      Boolean  @default(false) @map("is_favorite")
+  variantOfId     String?  @map("variant_of_id")
+  aiRunId         String?  @map("ai_run_id")
+  tone            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  world   World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page    Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  preset  GeneratorPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+
+  @@index([worldId, pageId])
+  @@index([contextType, contextId])
+  @@index([presetId])
+  @@index([isFavorite])
+  @@map("generator_outputs")
+}
+
+// --- Media, Calendar, DnD Integrations & Agent Automation ---
+
+enum ImageStudioOperation {
+  generate
+  edit
+  inpaint
+  remove_background
+  variant
+}
+
+enum ImageStudioStatus {
+  draft
+  processing
+  completed
+  failed
+}
+
+enum ImageStudioLinkTargetType {
+  page
+  asset
+  label
+  game_session
+  handout
+  brain_document
+  capture
+}
+
+enum CalendarEventKind {
+  session
+  prep
+  personal
+  external
+  dnd
+}
+
+enum CalendarFeedType {
+  local
+  caldav
+  ical_url
+  familywall
+}
+
+enum CalendarFeedDirection {
+  read_only
+  read_write
+}
+
+enum DevAgentJobStatus {
+  pending
+  dispatched
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum DevAgentJobProvider {
+  github_actions
+  cursor_cloud
+  cursor_cli_local
+}
+
+enum DndApiProvider {
+  open5e
+  dnd5e_srd
+}
+
+model ImageStudioProject {
+  id          String             @id @default(cuid())
+  worldId     String?            @map("world_id")
+  title       String
+  prompt      String?
+  status      ImageStudioStatus  @default(draft)
+  metadata    Json?
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  world    World?               @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  versions ImageStudioVersion[]
+  links    ImageStudioLink[]
+
+  @@index([worldId, status])
+  @@map("image_studio_projects")
+}
+
+model ImageStudioVersion {
+  id              String               @id @default(cuid())
+  projectId       String               @map("project_id")
+  versionNumber   Int                  @map("version_number")
+  operation       ImageStudioOperation
+  prompt          String?
+  assetId         String?              @map("asset_id")
+  parentVersionId String?              @map("parent_version_id")
+  providerMode    String?              @map("provider_mode")
+  metadata        Json?
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  project ImageStudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  asset   Asset?             @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, versionNumber])
+  @@map("image_studio_versions")
+}
+
+model ImageStudioLink {
+  id         String                    @id @default(cuid())
+  projectId  String                    @map("project_id")
+  targetType ImageStudioLinkTargetType @map("target_type")
+  targetId   String                    @map("target_id")
+  createdAt  DateTime                  @default(now()) @map("created_at")
+
+  project ImageStudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@map("image_studio_links")
+}
+
+model CalendarFeed {
+  id          String                @id @default(cuid())
+  name        String
+  type        CalendarFeedType
+  direction   CalendarFeedDirection @default(read_only)
+  url         String?
+  caldavUrl   String?               @map("caldav_url")
+  username    String?
+  credentialsEnc String?            @map("credentials_enc")
+  enabled     Boolean               @default(true)
+  color       String?
+  lastSyncAt  DateTime?             @map("last_sync_at")
+  syncError   String?               @map("sync_error")
+  metadata    Json?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  events CalendarEvent[]
+
+  @@map("calendar_feeds")
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  feedId      String?           @map("feed_id")
+  worldId     String?           @map("world_id")
+  sessionId   String?           @map("session_id")
+  title       String
+  description String?
+  location    String?
+  startAt     DateTime          @map("start_at")
+  endAt       DateTime?         @map("end_at")
+  allDay      Boolean           @default(false) @map("all_day")
+  kind        CalendarEventKind @default(personal)
+  externalUid String?           @map("external_uid")
+  remoteHref  String?           @map("remote_href")
+  remoteEtag  String?           @map("remote_etag")
+  caldavPending Boolean         @default(false) @map("caldav_pending")
+  metadata    Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  feed    CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: SetNull)
+  world   World?        @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  session GameSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([startAt])
+  @@index([worldId, startAt])
+  @@index([feedId, externalUid])
+  @@map("calendar_events")
+}
+
+model DevAgentJob {
+  id           String              @id @default(cuid())
+  title        String
+  prompt       String
+  status       DevAgentJobStatus   @default(pending)
+  provider     DevAgentJobProvider @default(github_actions)
+  branchName   String?             @map("branch_name")
+  prUrl        String?             @map("pr_url")
+  issueUrl     String?             @map("issue_url")
+  githubRunId  String?             @map("github_run_id")
+  cursorJobId  String?             @map("cursor_job_id")
+  result       Json?
+  errorMessage String?             @map("error_message")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  completedAt  DateTime?           @map("completed_at")
+
+  @@index([status, createdAt])
+  @@map("dev_agent_jobs")
+}
+
+model DndBeyondReference {
+  id         String   @id @default(cuid())
+  worldId    String   @map("world_id")
+  pageId     String?  @map("page_id")
+  title      String
+  url        String
+  entityType String?  @map("entity_type")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([worldId])
+  @@map("dnd_beyond_references")
+}
+
+model DndApiCacheEntry {
+  id        String         @id @default(cuid())
+  provider  DndApiProvider
+  cacheKey  String         @map("cache_key")
+  payload   Json
+  expiresAt DateTime?      @map("expires_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([provider, cacheKey])
+  @@index([expiresAt])
+  @@map("dnd_api_cache_entries")
+}
+
+// --- Auth/API security (native API tokens, webhooks, 2FA prep) ---
+
+model ApiToken {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  tokenHash     String   @unique @map("token_hash")
+  tokenPrefix   String   @map("token_prefix")
+  isActive      Boolean  @default(true) @map("is_active")
+  expiresAt     DateTime? @map("expires_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+  rotatedFromId String?  @map("rotated_from_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scopes    ApiTokenScope[]
+  usageLogs ApiTokenUsageLog[]
+
+  @@index([userId, isActive])
+  @@index([tokenPrefix])
+  @@map("api_tokens")
+}
+
+model ApiTokenScope {
+  id      String            @id @default(cuid())
+  tokenId String            @map("token_id")
+  scope   ApiTokenScopeName
+
+  token ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, scope])
+  @@map("api_token_scopes")
+}
+
+model ApiTokenUsageLog {
+  id         String   @id @default(cuid())
+  tokenId    String   @map("token_id")
+  route      String
+  method     String
+  statusCode Int      @map("status_code")
+  ipHash     String?  @map("ip_hash")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  token ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@index([tokenId, createdAt])
+  @@map("api_token_usage_logs")
+}
+
+model WebhookEndpoint {
+  id              String   @id @default(cuid())
+  name            String
+  url             String
+  secretEncrypted String   @map("secret_encrypted")
+  secretPrefix    String   @map("secret_prefix")
+  eventsJson      String   @map("events_json")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdById     String?  @map("created_by_id")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  deliveries WebhookDelivery[]
+
+  @@index([isActive])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  endpointId   String   @map("endpoint_id")
+  event        String
+  statusCode   Int?     @map("status_code")
+  success      Boolean  @default(false)
+  errorMessage String?  @map("error_message")
+  attemptCount Int      @default(1) @map("attempt_count")
+  payloadHash  String?  @map("payload_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+model SecurityWarning {
+  id            String                  @id @default(cuid())
+  code          String                  @unique
+  severity      SecurityWarningSeverity
+  title         String
+  description   String
+  dismissedAt   DateTime?               @map("dismissed_at")
+  dismissedById String?                 @map("dismissed_by_id")
+  detectedAt    DateTime                @default(now()) @map("detected_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+
+  @@index([severity, dismissedAt])
+  @@map("security_warnings")
+}
+
+// 2FA — wired into login flow via TwoFactorService and /api/auth/two-factor/verify.
+model TwoFactorSecret {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  secretEncrypted String   @map("secret_encrypted")
+  isEnabled       Boolean  @default(false) @map("is_enabled")
+  backupCodesHash String?  @map("backup_codes_hash")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor_secrets")
+}
+
+model TwoFactorChallenge {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  challengeTokenHash String    @unique @map("challenge_token_hash")
+  expiresAt          DateTime  @map("expires_at")
+  consumedAt         DateTime? @map("consumed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("two_factor_challenges")
+}
+
+// --- Inference / Cookbook (local model endpoints) ---
+
+enum InferenceProvider {
+  ollama
+  openai_compatible
+  cloud
+}
+
+model InferenceEndpoint {
+  id            String             @id @default(cuid())
+  name          String
+  baseUrl       String             @map("base_url")
+  apiKeyEnc     String?            @map("api_key_enc")
+  provider      InferenceProvider  @default(ollama)
+  isEnabled     Boolean            @default(true) @map("is_enabled")
+  lastProbeAt   DateTime?          @map("last_probe_at")
+  probeStatus   String?            @map("probe_status")
+  cachedModels  Json?              @map("cached_models")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  @@index([isEnabled])
+  @@map("inference_endpoints")
+}
+
+model PageVersion {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  version   Int
+  snapshot  Json
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, version])
+  @@index([pageId, createdAt])
+  @@map("page_versions")
+}
+
+enum ResearchSessionStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum ResearchContextMode {
+  dnd_brain
+  life_brain
+  open_web
+}
+
+model ResearchSession {
+  id           String                @id @default(cuid())
+  worldId      String?               @map("world_id")
+  query        String
+  status       ResearchSessionStatus @default(pending)
+  contextMode  ResearchContextMode   @default(dnd_brain) @map("context_mode")
+  reportMd     String?               @map("report_md")
+  ownerId      String?               @map("owner_id")
+  aiRunId      String?               @map("ai_run_id")
+  errorMessage String?               @map("error_message")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+
+  world   World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  sources ResearchSource[]
+
+  @@index([status, createdAt])
+  @@index([worldId, createdAt])
+  @@map("research_sessions")
+}
+
+model ResearchSource {
+  id        String    @id @default(cuid())
+  sessionId String    @map("session_id")
+  url       String
+  title     String?
+  snippet   String?
+  fetchedAt DateTime? @map("fetched_at")
+
+  session ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("research_sources")
+}

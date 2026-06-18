@@ -4,6 +4,7 @@ import type {
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
+import { createJobService } from "./job-service";
 
 export type {
   DevAgentJob,
@@ -47,6 +48,15 @@ export interface UpdateDevAgentJobInput {
   result?: Record<string, unknown> | null;
   errorMessage?: string | null;
   completedAt?: Date | null;
+}
+
+export interface AgentJobPollResult {
+  status?: string | null;
+  conclusion?: string | null;
+  runId?: string | null;
+  htmlUrl?: string | null;
+  prUrl?: string | null;
+  branchName?: string | null;
 }
 
 export class DevAgentJobService {
@@ -96,6 +106,86 @@ export class DevAgentJobService {
       status: "cancelled",
       completedAt: new Date(),
     });
+  }
+
+  async retryJob(id: string) {
+    const existing = await this.getJob(id);
+    if (!existing) {
+      throw new Error("Agent-Job nicht gefunden.");
+    }
+    if (existing.status !== "failed" && existing.status !== "cancelled") {
+      throw new Error("Nur fehlgeschlagene oder abgebrochene Jobs können wiederholt werden.");
+    }
+
+    return this.updateJob(id, {
+      status: "pending",
+      errorMessage: null,
+      completedAt: null,
+      githubRunId: null,
+      cursorJobId: null,
+      result: null,
+    });
+  }
+
+  async applyPollResult(id: string, result: AgentJobPollResult) {
+    const existing = await this.getJob(id);
+    if (!existing) {
+      throw new Error("Agent-Job nicht gefunden.");
+    }
+
+    const workflowStatus = result.status?.toLowerCase() ?? null;
+    const conclusion = result.conclusion?.toLowerCase() ?? null;
+
+    let status: DevAgentJobStatus = existing.status;
+    let completedAt: Date | null = existing.completedAt;
+    let errorMessage: string | null = existing.errorMessage;
+
+    if (workflowStatus === "queued" || workflowStatus === "in_progress" || workflowStatus === "waiting") {
+      status = "running";
+      completedAt = null;
+    } else if (workflowStatus === "completed") {
+      if (conclusion === "success") {
+        status = "completed";
+        completedAt = new Date();
+        errorMessage = null;
+      } else if (conclusion === "failure" || conclusion === "cancelled" || conclusion === "timed_out") {
+        status = "failed";
+        completedAt = new Date();
+        errorMessage = `GitHub Actions: ${conclusion}`;
+      }
+    }
+
+    return this.updateJob(id, {
+      status,
+      branchName: result.branchName ?? existing.branchName,
+      prUrl: result.prUrl ?? existing.prUrl,
+      githubRunId: result.runId ?? existing.githubRunId,
+      errorMessage,
+      completedAt,
+      result: {
+        ...(existing.result && typeof existing.result === "object"
+          ? (existing.result as Record<string, unknown>)
+          : {}),
+        poll: {
+          status: result.status ?? null,
+          conclusion: result.conclusion ?? null,
+          htmlUrl: result.htmlUrl ?? null,
+        },
+      },
+    });
+  }
+
+  async enqueueRetryDispatch(id: string) {
+    const job = await this.retryJob(id);
+    const jobs = createJobService(this.db);
+    const queueJob = await jobs.enqueue({
+      type: "agent_job",
+      title: `Agent (Retry): ${job.title}`,
+      payload: { devAgentJobId: job.id },
+      relatedType: "dev_agent_job",
+      relatedId: job.id,
+    });
+    return { job, queueJobId: queueJob.id };
   }
 }
 

@@ -6,7 +6,7 @@ import type {
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
-import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
+import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
 export type {
   CalendarEvent,
@@ -44,6 +44,7 @@ export interface CreateCalendarFeedInput {
   url?: string | null;
   caldavUrl?: string | null;
   username?: string | null;
+  password?: string | null;
   enabled?: boolean;
   color?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -91,6 +92,7 @@ export class CalendarService {
   }
 
   async createFeed(input: CreateCalendarFeedInput) {
+    const password = input.password?.trim();
     return this.db.calendarFeed.create({
       data: {
         name: input.name.trim(),
@@ -99,6 +101,9 @@ export class CalendarService {
         url: input.url?.trim() || null,
         caldavUrl: input.caldavUrl?.trim() || null,
         username: input.username?.trim() || null,
+        credentialsEnc: password
+          ? encryptSecret(password, this.encryptionSecret)
+          : null,
         enabled: input.enabled ?? true,
         color: input.color?.trim() || null,
         metadata: toPrismaJsonValue(input.metadata),
@@ -116,6 +121,13 @@ export class CalendarService {
         ...(input.url !== undefined ? { url: input.url?.trim() || null } : {}),
         ...(input.caldavUrl !== undefined ? { caldavUrl: input.caldavUrl?.trim() || null } : {}),
         ...(input.username !== undefined ? { username: input.username?.trim() || null } : {}),
+        ...(input.password !== undefined
+          ? {
+              credentialsEnc: input.password?.trim()
+                ? encryptSecret(input.password.trim(), this.encryptionSecret)
+                : null,
+            }
+          : {}),
         ...(input.enabled != null ? { enabled: input.enabled } : {}),
         ...(input.color !== undefined ? { color: input.color?.trim() || null } : {}),
         ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),

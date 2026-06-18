@@ -15,6 +15,7 @@ import {
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { AgentJobRetryButton, AgentJobsPoller } from "@/components/AgentJobsPoller";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createAgentJobAction } from "../../integration-actions";
 
@@ -22,6 +23,9 @@ export default async function AgentJobsPage() {
   const config = resolveAgentJobsConfig();
   const agentJobs = createDevAgentJobService(prisma);
   const jobs = await agentJobs.listJobs(30);
+  const runningJobIds = jobs
+    .filter((job) => job.status === "pending" || job.status === "dispatched" || job.status === "running")
+    .map((job) => job.id);
 
   return (
     <AppShell
@@ -94,6 +98,7 @@ export default async function AgentJobsPage() {
 
           <section>
             <h2 className="uwe-section-title">Verlauf</h2>
+            <AgentJobsPoller runningJobIds={runningJobIds} />
             {jobs.length === 0 ? (
               <EmptyState title="Noch keine Agent-Jobs" description="Erstelle einen Job oben." />
             ) : (
@@ -112,6 +117,9 @@ export default async function AgentJobsPage() {
                       </a>
                     )}
                     {job.errorMessage && <p className="uwe-notice-warn">{job.errorMessage}</p>}
+                    {(job.status === "failed" || job.status === "cancelled") && (
+                      <AgentJobRetryButton jobId={job.id} disabled={!config.enabled} />
+                    )}
                   </li>
                 ))}
               </ul>

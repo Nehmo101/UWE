@@ -1,14 +1,15 @@
 /**
- * PostgreSQL migration path for UWE (planned).
+ * Database provider detection and PostgreSQL migration path.
  *
- * SQLite remains the default. Switching providers requires:
- * 1. Set `DATABASE_URL=postgresql://user:pass@host:5432/uwe`
- * 2. Change `provider` in `packages/database/prisma/schema.prisma` to `postgresql`
- * 3. Run `pnpm --filter @uwe/database db:migrate` on a fresh database
- * 4. Re-seed or restore from backup
+ * SQLite (libsql) remains the default for local dev and tests.
+ * PostgreSQL uses a separate schema + baseline migration:
+ *   - `prisma/schema.postgresql.prisma`
+ *   - `prisma/migrations-postgresql/`
  *
- * `createPrismaClient()` detects postgres URLs and uses the native Prisma driver
- * (no libsql adapter). Schema SQL differs — do not apply SQLite migrations directly.
+ * Enable PostgreSQL:
+ *   DATABASE_URL=postgresql://user:pass@host:5432/uwe
+ *   pnpm --filter @uwe/database db:deploy:postgres
+ *   pnpm --filter @uwe/database db:seed
  */
 
 export function isPostgresDatabaseUrl(url: string): boolean {
