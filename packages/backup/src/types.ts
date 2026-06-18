@@ -12,6 +12,8 @@ export interface BackupStats {
   labelTemplates: number;
   printLists: number;
   soundboardButtons: number;
+  pageTemplates: number;
+  worldMemberships: number;
 }
 
 export interface BackupManifest {
@@ -255,6 +257,21 @@ export interface BackupSettingsRecord {
   privacy: Record<string, unknown>;
 }
 
+export interface BackupPageTemplateRecord {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  pageType: string;
+  defaultVisibility: string;
+  titlePlaceholder: string;
+  blocks: unknown;
+  isSystem: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BackupData {
   worlds: BackupWorldRecord[];
   campaigns: BackupCampaignRecord[];
@@ -275,6 +292,7 @@ export interface BackupData {
   pagePlayerAccess: BackupPagePlayerAccessRecord[];
   sessionUnlocks: BackupSessionUnlockRecord[];
   users: BackupUserRecord[];
+  pageTemplates?: BackupPageTemplateRecord[];
 }
 
 export interface BackupBundle {

@@ -16,6 +16,7 @@ import type {
   BackupPageLinkRecord,
   BackupPagePlayerAccessRecord,
   BackupPageRecord,
+  BackupPageTemplateRecord,
   BackupSessionUnlockRecord,
   BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
@@ -50,6 +51,8 @@ function collectStats(data: BackupData): BackupStats {
     labelTemplates: data.labelTemplates.length,
     printLists: data.printLists.length,
     soundboardButtons: data.soundboardButtons.length,
+    pageTemplates: data.pageTemplates?.length ?? 0,
+    worldMemberships: data.worldMemberships.length,
   };
 }
 
@@ -305,6 +308,11 @@ export async function collectBackupData(
     },
   });
 
+  const pageTemplates =
+    scope.type === "full"
+      ? await db.pageTemplate.findMany({ where: { isSystem: false } })
+      : [];
+
   const data: BackupData = sanitizeBackupData({
     worlds: worlds.map(
       (world): BackupWorldRecord => ({
@@ -536,6 +544,22 @@ export async function collectBackupData(
         displayName: user.displayName,
         email: user.email,
         role: user.role,
+      }),
+    ),
+    pageTemplates: pageTemplates.map(
+      (template): BackupPageTemplateRecord => ({
+        id: template.id,
+        slug: template.slug,
+        name: template.name,
+        description: template.description,
+        pageType: template.pageType,
+        defaultVisibility: template.defaultVisibility,
+        titlePlaceholder: template.titlePlaceholder,
+        blocks: template.blocks,
+        isSystem: template.isSystem,
+        isActive: template.isActive,
+        createdAt: template.createdAt.toISOString(),
+        updatedAt: template.updatedAt.toISOString(),
       }),
     ),
   });

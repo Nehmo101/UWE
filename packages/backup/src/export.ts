@@ -170,6 +170,8 @@ export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
               labelTemplates: 0,
               printLists: 0,
               soundboardButtons: 0,
+              pageTemplates: 0,
+              worldMemberships: 0,
             },
             assetFiles: [],
           },
