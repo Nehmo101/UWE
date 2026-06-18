@@ -16,8 +16,8 @@ Anleitung für Backups unter Windows (und allgemein).
 | Custom Page-Templates (nicht System) | Ja (Full-Backup) | Ja |
 | Benutzer-Passwörter | Nein | Nein — wiederhergestellte User müssen Passwort setzen |
 | Benutzer-Auth-Sessions | Nein | Nein |
-| ShareLinks (Token/Passwort) | Nein | Nein — Tokens werden aus Sicherheitsgründen nicht exportiert |
-| PlayerNotes | Nein | Roadmap (Opt-in, Datenschutz) |
+| ShareLinks (Token/Passwort) | Ja (ohne Token/Passwort) | Ja — neue Tokens; Passwörter neu setzen |
+| PlayerNotes | Opt-in (`includePlayerNotes`) | Ja (wenn exportiert) |
 | Secrets / Tokens | Nein (automatisch ausgeschlossen) | — |
 
 ## Backup erstellen

@@ -104,6 +104,8 @@ function bundleManifest(createdAt: string) {
       soundboardButtons: 0,
       pageTemplates: 0,
       worldMemberships: 0,
+      shareLinks: 0,
+      playerNotes: 0,
     },
     assetFiles: [],
   };

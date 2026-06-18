@@ -9,38 +9,26 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { getSessionCookieOptions, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
-import { checkRateLimit, clientIpFromHeaders, resetRateLimit } from "@/src/lib/rate-limit";
+import { checkRateLimit, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
 
-  const body = (await request.json()) as { email?: string; password?: string };
-  const email = body.email?.trim();
-  const password = body.password;
+  const body = (await request.json()) as { challengeToken?: string; code?: string };
+  const challengeToken = body.challengeToken?.trim();
+  const code = body.code?.trim();
 
-  if (!email || !password) {
-    return NextResponse.json({ error: "E-Mail und Passwort sind erforderlich." }, { status: 400 });
+  if (!challengeToken || !code) {
+    return NextResponse.json({ error: "Challenge-Token und Code sind erforderlich." }, { status: 400 });
   }
 
   const ip = clientIpFromHeaders(request.headers);
-  const rateKey = `login:${ip}:${email.toLowerCase()}`;
+  const rateKey = `portal-2fa:${ip}:${challengeToken.slice(0, 8)}`;
   const rate = checkRateLimit(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
   if (!rate.allowed) {
-    const db = createPrismaClient();
-    try {
-      await logAuditEvent(db, {
-        action: "rate_limit_hit",
-        targetType: "session",
-        request: auditRequestFromHeaders(request.headers),
-        metadata: { endpoint: "login", email },
-      });
-    } finally {
-      await db.$disconnect();
-    }
-
     return NextResponse.json(
-      { error: "Zu viele Anmeldeversuche. Bitte warte einen Moment." },
+      { error: "Zu viele Versuche. Bitte warte einen Moment." },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
@@ -51,27 +39,14 @@ export async function POST(request: Request) {
   const auditRequest = auditRequestFromHeaders(request.headers);
 
   try {
-    const user = await auth.authenticate(email, password);
-    if (!user) {
-      await logAuditEvent(db, {
-        action: "login_failed",
-        targetType: "session",
-        request: auditRequest,
-        metadata: { email },
-      });
-
-      return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
+    const verified = await twoFactor.verifyLoginChallenge(challengeToken, code);
+    if (!verified) {
+      return NextResponse.json({ error: "Ungültiger oder abgelaufener 2FA-Code." }, { status: 401 });
     }
 
-    resetRateLimit(rateKey);
-
-    if (await twoFactor.isEnabled(user.id)) {
-      const challenge = await twoFactor.createLoginChallenge(user.id);
-      return NextResponse.json({
-        requiresTwoFactor: true,
-        challengeToken: challenge.challengeToken,
-        expiresAt: challenge.expiresAt.toISOString(),
-      });
+    const user = await db.user.findUnique({ where: { id: verified.userId } });
+    if (!user) {
+      return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
     }
 
     const session = await auth.createSession(user.id);
@@ -89,7 +64,7 @@ export async function POST(request: Request) {
       targetType: "session",
       targetId: session.id,
       request: auditRequest,
-      metadata: { email: user.email },
+      metadata: { email: user.email, twoFactor: true },
     });
 
     return NextResponse.json({

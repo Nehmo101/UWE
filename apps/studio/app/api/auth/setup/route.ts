@@ -21,13 +21,17 @@ function tokensMatch(provided: string, expected: string): boolean {
 }
 
 export async function GET() {
-  const config = getUweRuntimeConfig();
   const db = createPrismaClient();
   const auth = createAuthService(db);
   try {
     const setupAvailable = await auth.isSetupAvailable();
+    if (!setupAvailable) {
+      return NextResponse.json({ setupAvailable: false });
+    }
+
+    const config = getUweRuntimeConfig();
     return NextResponse.json({
-      setupAvailable,
+      setupAvailable: true,
       setupConfigured: Boolean(config.setupToken),
     });
   } finally {

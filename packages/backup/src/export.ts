@@ -37,6 +37,7 @@ export async function createBackupBundle(
       type: options.type,
       worldSlug: options.worldSlug,
       campaignSlug: options.campaignSlug,
+      includePlayerNotes: options.includePlayerNotes,
     });
 
     const manifest: BackupManifest = {
@@ -50,6 +51,8 @@ export async function createBackupBundle(
       includesUsers: data.users.length > 0,
       includesAuthSessions: false,
       includesSettings: Boolean(settings),
+      includesPlayerNotes: Boolean(options.includePlayerNotes && (data.playerNotes?.length ?? 0) > 0),
+      shareLinkTokensRegenerated: (data.shareLinks?.length ?? 0) > 0,
       encrypted: Boolean(options.encrypt || encryptionKeyConfigured()),
       stats,
       assetFiles: [],
@@ -172,6 +175,8 @@ export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
               soundboardButtons: 0,
               pageTemplates: 0,
               worldMemberships: 0,
+              shareLinks: 0,
+              playerNotes: 0,
             },
             assetFiles: [],
           },

@@ -6,6 +6,12 @@ export {
 } from "./opaque-token";
 export { generateSessionToken } from "./session-token";
 export {
+  buildTotpAuthUri,
+  generateTotpCode,
+  generateTotpSecret,
+  verifyTotpCode,
+} from "./totp";
+export {
   generateApiTokenValue,
   hashApiToken,
   verifyApiTokenHash,

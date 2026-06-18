@@ -617,7 +617,7 @@ export class AuthService {
     const session = await this.db.session.create({
       data: {
         userId,
-        token: tokenHash,
+        tokenHash,
         expiresAt: sessionExpiresAt(),
       },
       include: {
@@ -637,7 +637,7 @@ export class AuthService {
   async getSessionByToken(token: string) {
     const tokenHash = hashOpaqueToken(token);
     const session = await this.db.session.findUnique({
-      where: { token: tokenHash },
+      where: { tokenHash },
       include: {
         user: {
           select: USER_SAFE_SELECT,
@@ -663,7 +663,7 @@ export class AuthService {
 
   async deleteSession(token: string) {
     const tokenHash = hashOpaqueToken(token);
-    await this.db.session.deleteMany({ where: { token: tokenHash } });
+    await this.db.session.deleteMany({ where: { tokenHash } });
   }
 
   toAuthUser(user: {

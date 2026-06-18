@@ -208,8 +208,7 @@ describe("UWE auth and permissions", () => {
 
     const stored = await db.session.findUnique({ where: { id: session.id } });
     assert.ok(stored);
-    assert.notEqual(stored.token, session.token);
-    assert.equal(stored.token, hashOpaqueToken(session.token));
+    assert.equal(stored.tokenHash, hashOpaqueToken(session.token));
 
     await auth.deleteSession(session.token);
     assert.equal(await auth.getSessionByToken(session.token), null);

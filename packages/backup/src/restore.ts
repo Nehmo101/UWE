@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
 import { createSettingsService } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
@@ -685,6 +686,62 @@ export async function executeRestore(
       entityType: "pageTemplate",
       identifier: template.slug,
       status: "created",
+    });
+  }
+
+  for (const note of bundle.data.playerNotes ?? []) {
+    const worldId = idMap.get(note.worldId);
+    const campaignId = idMap.get(note.campaignId);
+    const userId = idMap.get(note.userId);
+    if (!worldId || !campaignId || !userId) continue;
+
+    const pageId = note.pageId ? idMap.get(note.pageId) ?? null : null;
+    const gameSessionId = note.gameSessionId ? idMap.get(note.gameSessionId) ?? null : null;
+
+    await db.playerNote.create({
+      data: {
+        id: remapId(idMap, note.id),
+        worldId,
+        campaignId,
+        pageId,
+        gameSessionId,
+        userId,
+        content: note.content,
+        visibility: note.visibility as never,
+        status: note.status as never,
+      },
+    });
+    result.created++;
+  }
+
+  for (const link of bundle.data.shareLinks ?? []) {
+    const worldId = idMap.get(link.worldId);
+    const targetId = idMap.get(link.targetId);
+    if (!worldId || !targetId) continue;
+
+    const newToken = generateSessionToken();
+    await db.shareLink.create({
+      data: {
+        id: remapId(idMap, link.id),
+        worldId,
+        targetType: link.targetType as never,
+        targetId,
+        token: newToken,
+        expiresAt: link.expiresAt ? new Date(link.expiresAt) : null,
+        passwordHash: null,
+        readOnly: link.readOnly,
+        logAccess: link.logAccess,
+        enabled: link.enabled,
+      },
+    });
+    result.created++;
+    result.items.push({
+      entityType: "shareLink",
+      identifier: newToken,
+      status: "created",
+      error: link.hasPassword
+        ? "Neuer Token generiert; Passwort muss neu gesetzt werden."
+        : "Neuer Share-Link-Token generiert.",
     });
   }
 

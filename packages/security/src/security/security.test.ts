@@ -162,6 +162,17 @@ describe("rate limiter store", () => {
     assert.equal(response.headers.get("Retry-After"), "42");
     assert.deepEqual(calls, ["test:unknown"]);
   });
+
+  it("rate-limits setup attempts using the setup preset", () => {
+    resetRateLimitStore();
+    const key = "studio-setup:203.0.113.1";
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      assert.equal(enforceRateLimit(new Request("http://localhost/api"), key, "setup"), null);
+    }
+    const blocked = enforceRateLimit(new Request("http://localhost/api"), key, "setup");
+    assert.ok(blocked);
+    assert.equal(blocked?.status, 429);
+  });
 });
 
 describe("error responses", () => {

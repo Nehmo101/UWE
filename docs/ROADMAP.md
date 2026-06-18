@@ -11,11 +11,12 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Thema | Status | Nächste Schritte |
 |-------|--------|------------------|
 | Studio/Portal Session-Login | ✅ Implementiert | `AUTH_REQUIRED=true` in Produktion |
-| Session-Token-Hashing at rest | ✅ Implementiert (PR #142) | Migration invalidiert bestehende Sessions einmalig |
+| Session-Token-Hashing at rest | ✅ `token_hash` Spalte + SHA-256 | Migration invalidiert Sessions |
 | Setup POST Rate-Limit | ✅ Implementiert | — |
-| 2FA (TOTP) | 🔲 Vorbereitet (`twoFactorSecret` in Schema) | Login-Flow, Backup/Restore, Recovery-Codes |
-| E2E-Tests (Login, Setup, Reset, Logout) | 🔲 Fehlt | Playwright o.ä.; siehe `docs/TEST_PLAN.md` |
-| Multi-Instance Rate-Limit | 🔲 Prozesslokal | Reverse-Proxy-Limits oder `setRateLimitStore()` (Redis) |
+| Setup GET Leak | ✅ Kein `setupConfigured` nach Abschluss | — |
+| 2FA (TOTP) | ✅ Login-Challenge-Flow | Admin-UI für Setup folgt |
+| E2E-Tests (Login, Setup, Reset, Logout) | 🔲 Browser-E2E fehlt | `packages/database/src/auth-flow.integration.test.ts` |
+| Multi-Instance Rate-Limit | ✅ `UWE_RATE_LIMIT_DIR` (file-backed) | Redis via `setRateLimitStore()` optional |
 | Distributed Session Store | 🔲 SQLite only | Optional bei horizontaler Skalierung |
 
 ---
@@ -24,9 +25,8 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 
 | Thema | Status | Nächste Schritte |
 |-------|--------|------------------|
-| SQLite / libsql (Prod) | ✅ Aktuell | Keine Breaking Changes |
-| PostgreSQL | 🔲 Roadmap | Prisma `provider` abstrahieren; Migrations dual-testen; Connection-Pooling |
-| Vorbereitung ohne SQLite zu brechen | In Arbeit | `@uwe/database` Repository-Pattern beibehalten; keine SQLite-spezifischen Raw-Queries in Apps |
+| SQLite / libsql (Prod) | ✅ Aktuell | Breaking Migrations erlaubt — manuelles Neupflegen |
+| PostgreSQL | 🔲 Roadmap | Client-Detection vorhanden; siehe `docs/postgresql.md` |
 
 ---
 
@@ -37,8 +37,8 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Welten, Seiten, Assets, Labels | ✅ | — |
 | Users/Memberships/Unlocks | ✅ Restore (PR #144) | Passwort-Reset nach Restore |
 | PageTemplates (custom) | ✅ Full-Backup | — |
-| ShareLinks | 🔲 Nicht exportiert | Token-Regeneration beim Restore designen |
-| PlayerNotes | 🔲 Nicht exportiert | Opt-in Flag + Datenschutz-Hinweis |
+| ShareLinks | ✅ Export ohne Token; Restore regeneriert Token | Passwörter müssen neu gesetzt werden |
+| PlayerNotes | ✅ Opt-in (`includePlayerNotes`) | Datenschutz beachten |
 
 ---
 
