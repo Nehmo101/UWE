@@ -14,6 +14,7 @@ const REQUIRED_FILES = [
   "docs/engineering/ci.md",
   "docs/engineering/cursor-workflow.md",
   "docs/engineering/migration-from-copilot.md",
+  "docs/engineering/self-hosted-ci.md",
 ];
 
 const MARKDOWN_DIRS = ["docs", ".cursor/commands", ".cursor/rules"];

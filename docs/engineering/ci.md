@@ -143,6 +143,7 @@ All workflows above are **blocking** on PRs except:
 
 ## Related
 
+- `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, 4 GB Laptop, Billing-Alternativen (geplant für später)
 - `AGENTS.md` — agent quality gate
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed failure patterns
 - `docs/AGENT_JOBS.md` — Cursor agent GitHub Actions integration

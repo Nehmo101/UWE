@@ -80,5 +80,6 @@ Prefer `pnpm quality` before push — it matches the blocking CI gate exactly.
 
 - `AGENTS.md` — concise agent instructions
 - `docs/engineering/ci.md` — workflow details
+- `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, Billing-Alternativen (für später)
 - `docs/engineering/migration-from-copilot.md` — Copilot → Cursor migration notes
 - `docs/AGENT_JOBS.md` — GitHub Actions agent integration
