@@ -56,6 +56,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   user_created: "Benutzer erstellt",
   user_role_changed: "Rolle geändert",
   password_reset: "Passwort zurückgesetzt",
+  password_changed: "Passwort geändert",
   user_invited: "Benutzer eingeladen",
   content_created: "Inhalt erstellt",
   content_updated: "Inhalt geändert",

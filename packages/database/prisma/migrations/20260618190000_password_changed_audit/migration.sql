@@ -1,0 +1,2 @@
+-- Self-service password change audit action.
+-- SQLite stores enum values as TEXT; no ALTER TYPE needed.

@@ -5,6 +5,7 @@ import {
   hashOpaqueToken,
   hashPassword,
   verifyOpaqueToken,
+  verifyPassword,
 } from "@uwe/auth/server";
 import type { PrismaClient } from "./client";
 import type { UserRole } from "./generated/prisma/client";
@@ -45,6 +46,15 @@ export interface ResetPasswordInput {
   actorUserId: string;
   forcePasswordChange?: boolean;
 }
+
+export interface ChangePasswordInput {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+  keepSessionToken?: string | null;
+}
+
+export type ChangePasswordResult = "ok" | "invalid_current" | "no_password" | "not_found";
 
 export interface InviteUserResult {
   user: SafeUser;
@@ -167,6 +177,56 @@ export class UserService {
     });
 
     return true;
+  }
+
+  async changePassword(input: ChangePasswordInput): Promise<ChangePasswordResult> {
+    const user = await this.db.user.findUnique({ where: { id: input.userId } });
+    if (!user) {
+      return "not_found";
+    }
+
+    if (!user.passwordHash) {
+      return "no_password";
+    }
+
+    if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
+      return "invalid_current";
+    }
+
+    const passwordHash = await hashPassword(input.newPassword);
+
+    await this.db.$transaction([
+      this.db.user.update({
+        where: { id: input.userId },
+        data: {
+          passwordHash,
+          forcePasswordChange: false,
+          resetTokenHash: null,
+          resetTokenExpiresAt: null,
+        },
+      }),
+      input.keepSessionToken
+        ? this.db.session.deleteMany({
+            where: {
+              userId: input.userId,
+              NOT: { token: input.keepSessionToken },
+            },
+          })
+        : this.db.session.deleteMany({ where: { userId: input.userId } }),
+    ]);
+
+    await logAuditEvent(this.db, {
+      actorUserId: input.userId,
+      action: "password_changed",
+      targetType: "user",
+      targetId: input.userId,
+      metadata: {
+        displayName: user.displayName,
+        method: "self_service",
+      },
+    });
+
+    return "ok";
   }
 
   async createInvite(input: {

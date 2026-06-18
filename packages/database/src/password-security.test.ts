@@ -223,4 +223,56 @@ describe("password security", () => {
 
     await db.$disconnect();
   });
+
+  it("lets users change their own password and invalidates other sessions", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const users = createUserService(db);
+    const audit = createAuditLogService(db);
+
+    const sessionA = await auth.createSession(targetUserId);
+    const sessionB = await auth.createSession(targetUserId);
+
+    const result = await users.changePassword({
+      userId: targetUserId,
+      currentPassword: "new-secure-password",
+      newPassword: "self-changed-password",
+      keepSessionToken: sessionA.token,
+    });
+    assert.equal(result, "ok");
+
+    assert.ok(await auth.getSessionByToken(sessionA.token));
+    assert.equal(await auth.getSessionByToken(sessionB.token), null);
+
+    const oldLogin = await auth.authenticate("target-security@uwe.local", "new-secure-password");
+    assert.equal(oldLogin, null);
+
+    const newLogin = await auth.authenticate("target-security@uwe.local", "self-changed-password");
+    assert.ok(newLogin);
+
+    const entries = await audit.list({ actions: ["password_changed"], limit: 20 });
+    const match = entries.find((entry) => entry.targetId === targetUserId);
+    assert.ok(match);
+    assertNoSensitiveUserFields(match?.metadataJson, "password_changed audit");
+
+    await db.$disconnect();
+  });
+
+  it("rejects self-service password change with wrong current password", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const users = createUserService(db);
+
+    const result = await users.changePassword({
+      userId: targetUserId,
+      currentPassword: "wrong-current-password",
+      newPassword: "another-new-password",
+    });
+    assert.equal(result, "invalid_current");
+
+    const login = await auth.authenticate("target-security@uwe.local", "self-changed-password");
+    assert.ok(login);
+
+    await db.$disconnect();
+  });
 });

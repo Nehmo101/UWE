@@ -5,6 +5,7 @@ import {
   createUweRepository,
 } from "@uwe/database/server";
 import type { AccessContext } from "@uwe/auth";
+import type { SafeUser } from "@uwe/auth";
 import {
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
@@ -37,6 +38,33 @@ export async function getCurrentUser() {
   await db.$disconnect();
 
   return session?.user ?? null;
+}
+
+export async function getUserFromRequestCookieHeader(
+  cookieHeader: string | null,
+): Promise<SafeUser | null> {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const token = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SESSION_COOKIE_NAME}=`))
+    ?.slice(SESSION_COOKIE_NAME.length + 1);
+
+  if (!token) {
+    return null;
+  }
+
+  const db = getDb();
+  const auth = createAuthService(db);
+  try {
+    const session = await auth.getSessionByToken(decodeURIComponent(token));
+    return session?.user ?? null;
+  } finally {
+    await db.$disconnect();
+  }
 }
 
 export async function getAccessContextForWorld(

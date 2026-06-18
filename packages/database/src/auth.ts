@@ -291,7 +291,10 @@ export class AuthService {
       },
     });
 
-    return session;
+    return {
+      ...session,
+      user: toSafeUser(session.user as Record<string, unknown>),
+    };
   }
 
   async getSessionByToken(token: string) {
@@ -313,7 +316,10 @@ export class AuthService {
       return null;
     }
 
-    return session;
+    return {
+      ...session,
+      user: toSafeUser(session.user as Record<string, unknown>),
+    };
   }
 
   async deleteSession(token: string) {

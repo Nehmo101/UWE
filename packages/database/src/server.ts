@@ -168,6 +168,8 @@ export type {
   CreateManagedUserInput,
   UpdateManagedUserInput,
   ResetPasswordInput,
+  ChangePasswordInput,
+  ChangePasswordResult,
   InviteUserResult,
 } from "./user-service";
 

@@ -1005,6 +1005,7 @@ enum AuditAction {
   user_created
   user_role_changed
   password_reset
+  password_changed
   user_invited
   content_created
   content_updated
