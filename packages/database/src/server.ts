@@ -1023,3 +1023,6 @@ export type {
   CreateInferenceEndpointInput,
   ProbeResult,
 } from "./inference-endpoint-service";
+
+export { createPageVersionService, PageVersionService } from "./page-version-service";
+export type { PageVersionRecord } from "./page-version-service";

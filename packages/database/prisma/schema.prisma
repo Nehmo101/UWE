@@ -594,6 +594,7 @@ model Page {
   workshopProjects       WorkshopProject[]
   generatorOutputs       GeneratorOutput[]
   dndBeyondReferences    DndBeyondReference[]
+  versions               PageVersion[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -2056,4 +2057,19 @@ model InferenceEndpoint {
 
   @@index([isEnabled])
   @@map("inference_endpoints")
+}
+
+model PageVersion {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  version   Int
+  snapshot  Json
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, version])
+  @@index([pageId, createdAt])
+  @@map("page_versions")
 }
