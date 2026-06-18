@@ -127,14 +127,17 @@ pnpm dev:portal   # http://localhost:3001
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm build:release   # production build (includes Prisma generate)
+pnpm ci:check           # fast gate: lint, typecheck, test:ci, build
+pnpm quality            # full gate (same as CI) — run before PR
+pnpm build:release      # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
-pnpm lint            # ESLint (flat config at eslint.config.mjs, zero warnings allowed)
-pnpm release:check   # validate release files and version sync
+pnpm lint               # ESLint (flat config at eslint.config.mjs, zero warnings allowed)
+pnpm docs:check         # required docs + markdown sanity
+pnpm release:check      # validate release files and version sync
 ```
 
-Pull requests and pushes to `main` run the same checks in GitHub Actions (`.github/workflows/ci.yml`).
+Pull requests and pushes to `main` run CI in GitHub Actions (`.github/workflows/ci.yml` — full `pnpm quality`). Fast PR feedback: `pr-check.yml`. Security and docs: `security.yml`, `docs-check.yml`. See [docs/engineering/ci.md](docs/engineering/ci.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all

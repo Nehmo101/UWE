@@ -1,0 +1,35 @@
+---
+description: Documentation standards for UWE engineering and architecture changes
+globs: "**/*.{md,mdc}"
+alwaysApply: false
+---
+
+# Documentation
+
+## Where to document
+
+| Topic | Location |
+|-------|----------|
+| CI, workflows, local dev commands | `docs/engineering/ci.md` |
+| Cursor rules, commands, agent workflow | `docs/engineering/cursor-workflow.md` |
+| Architecture overview | `docs/ARCHITECTURE.md` |
+| Domain features (auth, backup, DnD, etc.) | `docs/<topic>.md` |
+| Agent quality gate | `AGENTS.md` |
+| README | High-level quick start only — link to `docs/` for details |
+
+## When to update docs
+
+- New or changed `package.json` scripts → update `docs/engineering/ci.md`.
+- New Cursor commands or rules → update `docs/engineering/cursor-workflow.md`.
+- Architecture or package boundary changes → update `docs/ARCHITECTURE.md`.
+- Security behavior changes → update relevant security docs and `SECURITY_QA_MATRIX.md` if applicable.
+
+## Style
+
+- Use clear headings; start Markdown files with `# Title`.
+- Prefer links over duplicating content across files.
+- Keep PR descriptions factual: what changed, why, how to test, risks.
+
+## CI validation
+
+`pnpm docs:check` verifies required engineering docs exist and scans Markdown in `docs/`, `.cursor/commands/`, and `.cursor/rules/`.

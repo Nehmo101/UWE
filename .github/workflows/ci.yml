@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -26,29 +30,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm --filter @uwe/database db:generate
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Secret scan
-        run: pnpm secret:scan
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test
-        run: pnpm test
-
-      - name: Security tests
-        run: pnpm test:security
-
-      - name: Dependency audit (production)
-        run: pnpm audit:prod
-
-      - name: Build
-        run: pnpm build:release
+      - name: Full quality gate
+        run: pnpm quality
 
   docker-build:
     runs-on: ubuntu-latest

@@ -1,0 +1,43 @@
+---
+description: UWE project context — architecture, domains, and agent workflow defaults
+alwaysApply: true
+---
+
+# UWE Project
+
+UWE (Universeller Welten-Editor) is a self-hosted campaign brain and world wiki for D&D and tabletop RPGs.
+
+## Product domains
+
+| Domain | Location | Purpose |
+|--------|----------|---------|
+| **Studio** | `apps/studio` | DM app — world editing, admin cockpit, AI workflows |
+| **Portal** | `apps/portal` | Player wiki and handouts — server-filtered, no DM leaks |
+| **Core packages** | `packages/*` | Shared data layer, auth, wiki engine, generators |
+| **DnD worlds** | `packages/database`, `packages/ai-brain` | Canon, visibility, generator tasks |
+| **Auth** | `packages/auth`, `packages/security` | Sessions, permissions, route guards |
+| **Media** | `packages/assets`, `packages/image-studio` | Uploads, MIME validation, storage paths |
+| **Generators** | `packages/ai-brain` | DnD generator, brain retrieval, privacy guards |
+| **Hosting** | Docker, `scripts/uwe-host-*`, Windows installer | Self-hosted deployment |
+
+## Architecture principles
+
+- Business logic lives in `packages/`, not in Next.js route handlers.
+- Studio is write/admin; Portal is read-only player output.
+- Never expose `dm_only` content to Portal or static export.
+- RTX/local inference stays on the home network; cloud AI gets no world/brain context.
+- Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).
+
+## Agent defaults
+
+- Prefer safe defaults over blocking questions when the right choice is clear from repo conventions.
+- Keep changes small, reviewable, and scoped to the task.
+- Run `pnpm quality` before pushing (see `ci-and-testing` rule).
+- Document non-obvious architecture changes in `docs/engineering/` or linked domain docs.
+
+## Further reading
+
+- `docs/ARCHITECTURE.md` — full architecture overview
+- `docs/engineering/ci.md` — CI workflows and local commands
+- `docs/engineering/cursor-workflow.md` — Cursor rules, commands, and PR workflow
+- `AGENTS.md` — quality gate for cloud agents
