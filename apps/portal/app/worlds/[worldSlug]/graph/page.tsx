@@ -50,11 +50,11 @@ export default async function PortalGraphPage({ params }: Props) {
       sidebar={
         <>
           <SidebarSection title="Navigation">
-            <Link href={`/worlds/${worldSlug}`} style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+            <Link href={`/worlds/${worldSlug}`} className="uwe-hint" style={{ fontSize: "0.875rem" }}>
               ← {world.name}
             </Link>
             <PortalNavByType worldSlug={worldSlug} items={navItems} />
-            <Link href={`/worlds/${worldSlug}/graph`} style={{ color: "#818cf8", fontSize: "0.875rem" }}>
+            <Link href={`/worlds/${worldSlug}/graph`} className="uwe-card-link" style={{ fontSize: "0.875rem" }}>
               Link-Graph
             </Link>
           </SidebarSection>

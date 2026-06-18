@@ -23,7 +23,7 @@ export function BrandHeader({ appName, tagline, children }: BrandHeaderProps) {
           fontSize: "0.875rem",
           letterSpacing: "0.12em",
           textTransform: "uppercase",
-          color: "#94a3b8",
+          color: "var(--uwe-muted)",
         }}
       >
         Universeller Welten-Editor
@@ -33,7 +33,7 @@ export function BrandHeader({ appName, tagline, children }: BrandHeaderProps) {
           margin: 0,
           fontSize: "2.5rem",
           fontWeight: 700,
-          color: "#f1f5f9",
+          color: "var(--uwe-fg)",
         }}
       >
         {appName}
@@ -43,9 +43,10 @@ export function BrandHeader({ appName, tagline, children }: BrandHeaderProps) {
           style={{
             margin: 0,
             fontSize: "1.125rem",
-            color: "#cbd5e1",
+            color: "var(--uwe-fg)",
             textAlign: "center",
             maxWidth: "32rem",
+            opacity: 0.85,
           }}
         >
           {tagline}

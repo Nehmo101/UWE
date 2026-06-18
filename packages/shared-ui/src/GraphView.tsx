@@ -152,7 +152,7 @@ export function GraphView({
               cy={node.y}
               r={node.isFocus ? 18 : compact ? 12 : 14}
               fill={CATEGORY_COLORS[node.category]}
-              stroke={node.isFocus ? "#e2e8f0" : "rgba(15, 23, 42, 0.8)"}
+              stroke={node.isFocus ? "var(--uwe-fg)" : "var(--uwe-card)"}
               strokeWidth={node.isFocus ? 2.5 : 1.5}
             />
             <text

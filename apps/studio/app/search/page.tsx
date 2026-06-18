@@ -138,18 +138,18 @@ export default async function StudioSearchPage({ searchParams }: Props) {
       }
       context={
         <SidebarSection title="Suchbereiche">
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem", color: "#94a3b8" }}>
+          <ul className="uwe-dashboard-muted" style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem" }}>
             {SEARCH_ENTITY_FILTERS.map((filter) => (
               <li key={filter} style={{ marginBottom: "0.35rem" }}>
                 {SEARCH_ENTITY_FILTER_LABELS[filter]}
               </li>
             ))}
           </ul>
-          <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "1rem" }}>
+          <p className="uwe-dashboard-muted" style={{ fontSize: "0.75rem", marginTop: "1rem" }}>
             Als DM siehst du alle Inhalte inkl. Entwürfe und GM-only Seiten.
           </p>
           {!worldSlug && (
-            <Link href="/search" style={{ fontSize: "0.8rem", color: "#818cf8" }}>
+            <Link href="/search" className="uwe-dashboard-list" style={{ fontSize: "0.8rem" }}>
               Weltfilter zurücksetzen
             </Link>
           )}

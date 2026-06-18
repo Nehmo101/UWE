@@ -222,7 +222,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
       }
       context={
         <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             {reviewQueue.length} in Review Queue
           </p>
         </SidebarSection>

@@ -255,7 +255,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
       context={
         <>
           <SidebarSection title="Kontext">
-            <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+            <p className="uwe-hint" style={{ margin: 0 }}>
               {pages.length} Seiten
               {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
               {draftCount > 0 ? ` · ${draftCount} Entwürfe` : ""}

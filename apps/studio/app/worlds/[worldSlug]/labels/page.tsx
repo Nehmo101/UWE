@@ -301,7 +301,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
       }
       context={
         <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             {labelRows.length} Labels · {printLists.length} Drucklisten · Format 6×4 Zoll
           </p>
         </SidebarSection>

@@ -266,7 +266,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
       }
       context={
         <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             {buttons.length} Buttons
             {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
           </p>

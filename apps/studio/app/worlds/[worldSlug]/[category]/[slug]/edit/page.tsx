@@ -89,7 +89,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           />
 
           {saved && (
-            <p style={{ color: "#86efac", fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
+            <p className="uwe-flash-success" style={{ fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
           )}
 
           <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-form">
@@ -224,7 +224,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="pageSlug" value={slug} />
                 <input type="hidden" name="category" value={category} />
-                <button type="submit" className="uwe-btn uwe-btn-ghost" style={{ color: "#fca5a5" }}>
+                <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-danger">
                   Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
                 </button>
               </form>

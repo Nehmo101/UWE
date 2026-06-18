@@ -218,7 +218,7 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
       }
       context={
         <SidebarSection title="Hinweis">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             Labels sind 6×4 Zoll. DM-only Inhalte werden standardmäßig ausgeschlossen.
             AI-Bild-/Textgenerierung ist als Platzhalter vorbereitet.
           </p>

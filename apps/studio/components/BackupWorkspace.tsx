@@ -261,7 +261,7 @@ export function BackupWorkspace({
   return (
     <div className="uwe-backup-workspace">
       {permissions && (
-        <p style={{ color: "#94a3b8", marginBottom: "1rem" }}>
+        <p className="uwe-hint" style={{ marginBottom: "1rem" }}>
           Rolle: <strong>{permissions.role}</strong> · Aufbewahrung: letzte{" "}
           {permissions.retentionCount} Backups
           {permissions.encryptionConfigured ? " · Verschlüsselung aktiv (ENV)" : ""}
@@ -396,11 +396,11 @@ export function BackupWorkspace({
       {permissions?.canPreview && (
       <section className="uwe-panel">
         <h2 style={{ marginTop: 0 }}>Backup importieren &amp; wiederherstellen</h2>
-        <p style={{ color: "#fbbf24", marginTop: 0 }}>
-          <strong>Warnung:</strong> Ein Restore überschreibt bestehende Daten. Vor jedem Restore wird
+        <p className="uwe-import-alerts" style={{ marginTop: 0, padding: 0, background: "none", border: "none" }}>
+          <strong style={{ color: "var(--uwe-warning)" }}>Warnung:</strong> Ein Restore überschreibt bestehende Daten. Vor jedem Restore wird
           automatisch eine Sicherheitskopie erstellt. Nur OWNER dürfen Restore ausführen.
         </p>
-        <p style={{ color: "#94a3b8" }}>
+        <p className="uwe-hint">
           Secrets, Passwörter, Auth-Sessions und API-Keys werden nicht exportiert oder importiert.
         </p>
 
@@ -442,14 +442,10 @@ export function BackupWorkspace({
 
         {showRestoreWarning && (
           <div
-            className="uwe-panel"
-            style={{
-              marginBottom: "1rem",
-              border: "1px solid #fbbf24",
-              background: "rgba(251, 191, 36, 0.08)",
-            }}
+            className="uwe-import-alerts"
+            style={{ marginBottom: "1rem" }}
           >
-            <h3 style={{ marginTop: 0, color: "#fbbf24" }}>Restore wirklich ausführen?</h3>
+            <h3 style={{ marginTop: 0 }}>Restore wirklich ausführen?</h3>
             <p>
               Dieser Vorgang kann bestehende Welten, Seiten und Medien verändern. Eine
               Sicherheitskopie wird vorab erstellt, trotzdem solltest du dir sicher sein.
@@ -544,7 +540,7 @@ export function BackupWorkspace({
       )}
 
       {error && (
-        <p style={{ color: "#f87171" }} role="alert">
+        <p className="uwe-error-alert" role="alert">
           {error}
         </p>
       )}

@@ -258,7 +258,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
       }
       context={
         <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             Brain-Wissen wird dauerhaft in UWE gespeichert (alter Laptop).
           </p>
         </SidebarSection>

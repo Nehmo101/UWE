@@ -192,7 +192,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           </form>
 
           <section style={{ marginTop: "2rem" }}>
-            <h2 style={{ fontSize: "1rem", color: "#94a3b8" }}>Labels für nächste Session</h2>
+            <h2 className="uwe-dashboard-muted" style={{ fontSize: "1rem" }}>Labels für nächste Session</h2>
             {session.linkedPages.length > 0 ? (
               <form action={preparePrintListFromSessionAction} className="uwe-form-inline">
                 <input type="hidden" name="worldSlug" value={worldSlug} />
@@ -212,7 +212,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           </section>
 
           <section style={{ marginTop: "2rem" }}>
-            <h2 style={{ fontSize: "1rem", color: "#94a3b8" }}>Verknüpfte Seiten</h2>
+            <h2 className="uwe-dashboard-muted" style={{ fontSize: "1rem" }}>Verknüpfte Seiten</h2>
             {session.linkedPages.length > 0 ? (
               <ul className="uwe-linked-list">
                 {session.linkedPages.map((page) => (
@@ -268,7 +268,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             sessionId={sessionId}
           />
           <SidebarSection title="Workflow">
-            <ol style={{ fontSize: "0.875rem", color: "#94a3b8", paddingLeft: "1.25rem" }}>
+            <ol className="uwe-hint" style={{ paddingLeft: "1.25rem" }}>
               <li>Geplant → Vorbereiten (DM-Notizen)</li>
               <li>Gespielt → Nachbereiten</li>
               <li>Recap schreiben → Portal veröffentlichen</li>

@@ -59,7 +59,7 @@ export function AiContextPanel({
       {generator && (
         <>
           <section style={{ marginBottom: "1rem" }}>
-            <h3 style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
+            <h3 className="uwe-dashboard-muted" style={{ fontSize: "0.9rem" }}>
               Kontext: {generator.context.title ?? generator.context.kind}
             </h3>
             {generator.missingContent.length > 0 && (

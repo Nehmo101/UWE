@@ -15,7 +15,7 @@
 .wiki-nav h2 {
   margin: 0 0 1rem;
   font-size: 1rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -31,13 +31,13 @@
 }
 
 .wiki-nav a {
-  color: #cbd5e1;
+  color: var(--uwe-fg);
   text-decoration: none;
   font-size: 0.9rem;
 }
 
 .wiki-nav a:hover {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
 }
 
 .wiki-main {
@@ -48,7 +48,7 @@
 .wiki-header h1 {
   margin: 0 0 0.5rem;
   font-size: 2rem;
-  color: #f8fafc;
+  color: var(--uwe-fg);
 }
 
 .wiki-header-meta {
@@ -63,13 +63,13 @@
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
+  background: color-mix(in srgb, var(--uwe-info) 15%, transparent);
+  color: var(--uwe-info);
 }
 
 .wiki-content {
   line-height: 1.85;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
   max-width: 46rem;
   font-size: 1.02rem;
   letter-spacing: 0.01em;
@@ -82,7 +82,7 @@
 .wiki-content h2,
 .wiki-content h3,
 .wiki-content h4 {
-  color: #f1f5f9;
+  color: var(--uwe-fg);
   margin: 2rem 0 0.75rem;
   line-height: 1.35;
 }
@@ -90,7 +90,7 @@
 .wiki-content h2 {
   font-size: 1.35rem;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  border-bottom: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .wiki-content h3 {
@@ -110,10 +110,10 @@
 .wiki-content blockquote {
   margin: 1.25rem 0;
   padding: 0.85rem 1rem;
-  border-left: 3px solid rgba(129, 140, 248, 0.5);
-  background: rgba(99, 102, 241, 0.08);
+  border-left: 3px solid color-mix(in srgb, var(--uwe-accent) 50%, white 15%);
+  background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
   border-radius: 0 0.5rem 0.5rem 0;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-style: italic;
 }
 
@@ -142,14 +142,14 @@
 
 .wiki-sidebar {
   padding: 1.5rem 1rem;
-  border-left: 1px solid rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.35);
+  border-left: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-card) 64%, transparent);
   overflow-y: auto;
 }
 
 .wiki-sidebar-stack {
-  border-left: 1px solid rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.35);
+  border-left: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-card) 64%, transparent);
   overflow-y: auto;
 }
 
@@ -159,14 +159,14 @@
 
 .ai-brain-panel {
   padding: 1.5rem 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .ai-brain-panel h3,
 .ai-brain-panel h4 {
   margin: 0 0 0.75rem;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -174,7 +174,7 @@
 .ai-brain-meta,
 .ai-brain-status {
   font-size: 0.75rem;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
   margin: 0 0 0.75rem;
 }
 
@@ -184,7 +184,7 @@
   gap: 0.25rem;
   margin-bottom: 0.75rem;
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
 }
 
 .ai-brain-field select,
@@ -193,9 +193,9 @@
   width: 100%;
   padding: 0.4rem 0.5rem;
   border-radius: 0.375rem;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.8);
-  color: #e2e8f0;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 208%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-card) 100%, var(--uwe-bg) 20%);
+  color: var(--uwe-fg);
   font: inherit;
 }
 
@@ -204,7 +204,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: #fca5a5;
+  color: var(--uwe-danger);
   margin-bottom: 0.75rem;
 }
 
@@ -219,8 +219,8 @@
   padding: 0.45rem 0.65rem;
   border-radius: 0.375rem;
   border: 1px solid rgba(56, 189, 248, 0.35);
-  background: rgba(56, 189, 248, 0.12);
-  color: #7dd3fc;
+  background: color-mix(in srgb, var(--uwe-info) 12%, transparent);
+  color: var(--uwe-info);
   cursor: pointer;
   font-size: 0.8rem;
 }
@@ -244,7 +244,7 @@
   padding: 0.5rem;
   border-radius: 0.375rem;
   background: rgba(15, 23, 42, 0.65);
-  color: #cbd5e1;
+  color: var(--uwe-fg);
   font-size: 0.72rem;
 }
 
@@ -252,7 +252,7 @@
   list-style: none;
   padding: 0;
   margin: 0.5rem 0 0;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
 }
 
 .ai-brain-result {
@@ -266,7 +266,7 @@
 .wiki-sidebar-section h3 {
   margin: 0 0 0.75rem;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -283,7 +283,7 @@
 }
 
 .wiki-sidebar-section a {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
   text-decoration: none;
 }
 
@@ -294,13 +294,13 @@
 .wiki-meta {
   display: block;
   font-size: 0.75rem;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
   margin-top: 0.15rem;
 }
 
 .wiki-empty {
   font-size: 0.875rem;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
   font-style: italic;
 }
 
@@ -314,17 +314,17 @@
 
 .wiki-badge-secret {
   background: rgba(248, 113, 113, 0.2);
-  color: #fca5a5;
+  color: var(--uwe-danger);
 }
 
 .wiki-badge-player {
   background: rgba(74, 222, 128, 0.15);
-  color: #86efac;
+  color: var(--uwe-success);
 }
 
 .wiki-badge-public {
-  background: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
+  background: color-mix(in srgb, var(--uwe-info) 15%, transparent);
+  color: var(--uwe-info);
 }
 
 .wiki-page-list {
@@ -335,7 +335,7 @@
 .wiki-list-section h3 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .wiki-list-section ul {
@@ -349,23 +349,23 @@
 }
 
 .wiki-list-section a {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
   text-decoration: none;
 }
 
 .wiki-breadcrumb {
   font-size: 0.875rem;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
   margin-bottom: 1rem;
 }
 
 .wiki-breadcrumb a {
-  color: #94a3b8;
+  color: var(--uwe-muted);
   text-decoration: none;
 }
 
 .wiki-breadcrumb a:hover {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
 }
 
 .wiki-world-grid {
@@ -378,7 +378,7 @@
   padding: 1.25rem;
   border-radius: 0.75rem;
   background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .wiki-world-card h2 {
@@ -387,7 +387,7 @@
 }
 
 .wiki-world-card a {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
   text-decoration: none;
 }
 
@@ -401,16 +401,16 @@
 .wiki-broken-table td {
   padding: 0.6rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  border-bottom: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .wiki-broken-table th {
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-weight: 600;
 }
 
 .wiki-broken-table a {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
   text-decoration: none;
 }
 
@@ -422,7 +422,7 @@
   .wiki-nav,
   .wiki-sidebar {
     border: none;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    border-bottom: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   }
 
   .wiki-main {
@@ -484,7 +484,7 @@
   .wiki-broken-table tr {
     display: block;
     padding: 0.75rem;
-    border: 1px solid rgba(148, 163, 184, 0.15);
+    border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
     border-radius: 0.5rem;
   }
 
@@ -516,14 +516,14 @@
 .ai-run-section h3 {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .ai-run-pre {
   background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
   border-radius: 0.375rem;
   padding: 0.75rem;
   font-size: 0.8rem;
@@ -536,7 +536,7 @@
 
 .ai-run-pre.ai-run-error {
   border-color: rgba(248, 113, 113, 0.4);
-  color: #fca5a5;
+  color: var(--uwe-danger);
 }
 
 .uwe-detail-grid {
@@ -548,7 +548,7 @@
 }
 
 .uwe-detail-grid dt {
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .ai-run-actions {
@@ -584,7 +584,7 @@
 
 .mobile-ai-page-hint {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   margin: 0 0 0.5rem;
   line-height: 1.5;
 }
@@ -608,8 +608,8 @@
   gap: 0.1rem;
   padding: 0.45rem 0.65rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+  background: var(--uwe-card);
   min-width: 4.5rem;
 }
 
@@ -617,13 +617,13 @@
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
 }
 
 .mobile-ai-chip-value {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--uwe-fg);
 }
 
 .mobile-ai-chip-ok {
@@ -632,7 +632,7 @@
 }
 
 .mobile-ai-chip-ok .mobile-ai-chip-value {
-  color: #86efac;
+  color: var(--uwe-success);
 }
 
 .mobile-ai-chip-warn {
@@ -641,20 +641,20 @@
 }
 
 .mobile-ai-chip-warn .mobile-ai-chip-value {
-  color: #fcd34d;
+  color: var(--uwe-warning);
 }
 
 .mobile-ai-chip-error {
-  border-color: rgba(248, 113, 113, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
   background: rgba(248, 113, 113, 0.08);
 }
 
 .mobile-ai-chip-error .mobile-ai-chip-value {
-  color: #fca5a5;
+  color: var(--uwe-danger);
 }
 
 .mobile-ai-chip-neutral .mobile-ai-chip-value {
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .mobile-ai-active-modes {
@@ -666,7 +666,7 @@
   padding: 0.55rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid rgba(99, 102, 241, 0.25);
-  background: rgba(99, 102, 241, 0.08);
+  background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
   font-size: 0.85rem;
   line-height: 1.4;
 }
@@ -676,11 +676,11 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #818cf8;
+  color: color-mix(in srgb, var(--uwe-accent) 75%, white 25%);
 }
 
 .mobile-ai-active-value {
-  color: #e0e7ff;
+  color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
   font-weight: 600;
 }
 
@@ -692,7 +692,7 @@
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
   margin-bottom: 0.65rem;
 }
 
@@ -703,7 +703,7 @@
 .mobile-ai-brain-divider {
   margin: 1.25rem 0 0.75rem;
   border: none;
-  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .mobile-ai-segment-fieldset {
@@ -718,7 +718,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   margin-bottom: 0.5rem;
   padding: 0;
 }
@@ -736,8 +736,8 @@
   min-height: 2.75rem;
   padding: 0.55rem 0.65rem;
   border-radius: 0.55rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+  background: var(--uwe-card);
   cursor: pointer;
   text-align: center;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -755,16 +755,16 @@
 .mobile-ai-segment-label {
   font-size: 0.78rem;
   line-height: 1.25;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
 }
 
 .mobile-ai-segment-active {
   border-color: rgba(99, 102, 241, 0.55);
-  background: rgba(99, 102, 241, 0.18);
+  background: color-mix(in srgb, var(--uwe-accent) 18%, transparent);
 }
 
 .mobile-ai-segment-active .mobile-ai-segment-label {
-  color: #e0e7ff;
+  color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
   font-weight: 600;
 }
 
@@ -782,7 +782,7 @@
   background: rgba(251, 191, 36, 0.06);
   font-size: 0.82rem;
   line-height: 1.45;
-  color: #fcd34d;
+  color: var(--uwe-warning);
 }
 
 .mobile-ai-hints li + li {
@@ -791,7 +791,7 @@
 
 .mobile-ai-object-hint {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   margin: 0;
 }
 
@@ -806,7 +806,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .mobile-ai-prompt-input {
@@ -814,9 +814,9 @@
   min-height: 9rem;
   padding: 0.85rem 1rem;
   border-radius: 0.65rem;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 208%, var(--uwe-muted) 0%);
   background: rgba(15, 23, 42, 0.75);
-  color: #f1f5f9;
+  color: var(--uwe-fg);
   font: inherit;
   font-size: 1rem;
   line-height: 1.55;
@@ -842,13 +842,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .mobile-ai-response-body {
   padding: 1rem;
   border-radius: 0.65rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   background: rgba(15, 23, 42, 0.65);
   font-size: 0.95rem;
   line-height: 1.65;

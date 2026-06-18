@@ -4,9 +4,9 @@ interface HealthBadgeProps {
 }
 
 const statusColors: Record<HealthBadgeProps["status"], string> = {
-  ok: "#22c55e",
-  degraded: "#eab308",
-  error: "#ef4444",
+  ok: "var(--uwe-success)",
+  degraded: "var(--uwe-warning)",
+  error: "var(--uwe-danger)",
 };
 
 export function HealthBadge({ status, label = status }: HealthBadgeProps) {
@@ -18,9 +18,9 @@ export function HealthBadge({ status, label = status }: HealthBadgeProps) {
         gap: "0.5rem",
         padding: "0.25rem 0.75rem",
         borderRadius: "9999px",
-        backgroundColor: "rgba(255,255,255,0.06)",
+        backgroundColor: "color-mix(in srgb, var(--uwe-fg) 6%, transparent)",
         fontSize: "0.875rem",
-        color: "#e2e8f0",
+        color: "var(--uwe-fg)",
       }}
     >
       <span

@@ -105,7 +105,7 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
               title="Label Vorschau"
               srcDoc={html}
               className="uwe-label-preview-iframe"
-              style={{ width: "100%", minHeight: "420px", border: "1px solid rgba(148,163,184,0.2)", borderRadius: "0.5rem", background: "#fff" }}
+              style={{ width: "100%", minHeight: "420px", border: "1px solid var(--uwe-border)", borderRadius: "0.5rem", background: "#fff" }}
             />
           </section>
         </>

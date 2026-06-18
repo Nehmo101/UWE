@@ -10,8 +10,8 @@ body {
   padding: 0;
   min-height: 100%;
   font-family: var(--uwe-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
-  background: var(--uwe-bg, radial-gradient(circle at top, #1e293b 0%, #0f172a 55%, #020617 100%));
-  color: var(--uwe-fg, #e2e8f0);
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--uwe-bg) 85%, var(--uwe-fg) 15%) 0%, color-mix(in srgb, var(--uwe-bg) 90%, var(--uwe-fg) 10%) 55%, color-mix(in srgb, var(--uwe-bg) 50%, black 50%) 100%);
+  color: var(--uwe-fg);
 }
 
 .page {
@@ -29,26 +29,26 @@ body {
   padding: 1.5rem;
   border-radius: 1rem;
   background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
 .card h2 {
   margin: 0 0 0.75rem;
   font-size: 1.25rem;
-  color: #f8fafc;
+  color: var(--uwe-fg);
 }
 
 .card p {
   margin: 0 0 1rem;
   line-height: 1.6;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
 }
 
 .card ul {
   margin: 0;
   padding-left: 1.25rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   line-height: 1.8;
 }
 
@@ -58,11 +58,11 @@ body {
   gap: 0.75rem;
   align-items: center;
   font-size: 0.875rem;
-  color: #64748b;
+  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
 }
 
 .footer a {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
   text-decoration: none;
 }
 
@@ -93,7 +93,7 @@ body {
   display: grid;
   gap: 0.25rem;
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .share-link-meta code {
@@ -132,16 +132,16 @@ body {
 .uwe-settings-tabs a {
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
+  color: var(--uwe-muted);
   text-decoration: none;
   font-size: 0.85rem;
 }
 
 .uwe-settings-tabs a.active,
 .uwe-settings-tabs a:hover {
-  background: rgba(99, 102, 241, 0.15);
-  color: #e0e7ff;
+  background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
+  color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
   border-color: rgba(99, 102, 241, 0.35);
 }
 
@@ -150,20 +150,6 @@ body {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
-}
-
-.uwe-hint {
-  color: #94a3b8;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.uwe-notice {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  color: #bbf7d0;
 }
 
 .uwe-inline-form {
@@ -175,7 +161,7 @@ body {
 }
 
 .uwe-brain-summary {
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-size: 0.9rem;
   margin: 0 0 1.25rem;
 }
@@ -203,8 +189,8 @@ body {
   gap: 0.75rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: var(--uwe-card);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .uwe-brain-create-form h2,
@@ -214,7 +200,7 @@ body {
 }
 
 .uwe-brain-meta {
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-size: 0.85rem;
   margin: 0.5rem 0 0;
 }
@@ -230,7 +216,7 @@ body {
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--uwe-accent), #8b5cf6);
   color: #fff;
   font-size: 1.75rem;
   font-weight: 600;
@@ -259,8 +245,8 @@ body {
 .uwe-today-card {
   padding: 0.875rem 1rem;
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: var(--uwe-card);
+  border: 1px solid var(--uwe-border);
 }
 
 .uwe-today-card h3 {
@@ -270,7 +256,7 @@ body {
 
 .uwe-today-card p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-size: 0.85rem;
 }
 
@@ -287,12 +273,12 @@ body {
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
   font-size: 0.78rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-card) 82%, transparent);
 }
 
 .uwe-system-ampel-item[data-status="ok"] {
-  border-color: rgba(34, 197, 94, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-success) 35%, transparent);
 }
 
 .uwe-system-ampel-item[data-status="warn"] {
@@ -316,7 +302,7 @@ body {
   padding: 1.5rem;
   border-radius: 1rem;
   background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 208%, var(--uwe-muted) 0%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -327,7 +313,7 @@ body {
 
 .studio-auth-lead {
   margin: 0 0 1.25rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
   font-size: 0.92rem;
 }
 
@@ -338,16 +324,16 @@ body {
 
 .studio-auth-form label {
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: var(--uwe-fg);
 }
 
 .studio-auth-form input {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 292%, var(--uwe-muted) 0%);
   background: rgba(15, 23, 42, 0.85);
-  color: #f8fafc;
+  color: var(--uwe-fg);
 }
 
 .studio-auth-form button {
@@ -355,7 +341,7 @@ body {
   padding: 0.65rem 1rem;
   border: none;
   border-radius: 0.5rem;
-  background: #6366f1;
+  background: var(--uwe-accent);
   color: white;
   font-weight: 600;
   cursor: pointer;
@@ -368,16 +354,16 @@ body {
 
 .studio-auth-error {
   margin: 0;
-  color: #fca5a5;
+  color: var(--uwe-danger);
   font-size: 0.9rem;
 }
 
 .studio-auth-seed-users {
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  border-top: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--uwe-muted);
 }
 
 .studio-auth-footer {
@@ -386,5 +372,5 @@ body {
 }
 
 .studio-auth-footer a {
-  color: #a5b4fc;
+  color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-fg) 45%);
 }

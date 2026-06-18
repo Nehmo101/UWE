@@ -138,7 +138,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
       }
       context={
         <SidebarSection title="Kontext">
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0 }}>
+          <p className="uwe-hint" style={{ margin: 0 }}>
             {sessions.length} Sessions
             {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
           </p>

@@ -131,7 +131,7 @@ export default async function BrainOverviewPage() {
       }
       context={
         <SidebarSection title="Sichtbarkeit">
-          <ul style={{ fontSize: "0.875rem", color: "#94a3b8", margin: 0, paddingLeft: "1.1rem" }}>
+          <ul className="uwe-hint" style={{ margin: 0, paddingLeft: "1.1rem" }}>
             {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
               <li key={value}>
                 <strong>{label}</strong>

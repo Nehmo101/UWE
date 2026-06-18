@@ -71,8 +71,8 @@ export function StatusCard({
         >
           {details.map((item) => (
             <div key={item.label} style={{ display: "contents" }}>
-              <dt style={{ color: "#94a3b8" }}>{item.label}</dt>
-              <dd style={{ margin: 0, color: "#e2e8f0" }}>{formatDetailValue(item.value)}</dd>
+              <dt className="uwe-dashboard-muted">{item.label}</dt>
+              <dd style={{ margin: 0, color: "var(--uwe-fg)" }}>{formatDetailValue(item.value)}</dd>
             </div>
           ))}
         </dl>
