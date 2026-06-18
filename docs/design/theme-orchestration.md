@@ -2,20 +2,20 @@
 
 Dieses Dokument definiert die **verbindliche Ausführungsreihenfolge** für Cloud-Agents und Subagents beim UWE-Theme-System. Odysseus dient nur als **UX-Referenz** (AGPL-3.0) — kein Code-Copy, keine Odysseus-Lizenz im Produkt-UI.
 
-## Status auf `main` (Stand: nach PR #107)
+## Status auf `main` (Stand: nach Orchestrierung #123–#127)
 
 | Schritt | Agent | Artefakt | Status |
 |---------|-------|----------|--------|
 | 1 | Odysseus UI Audit | `docs/design/odysseus-ui-audit.md` | ✅ merged (#107) |
-| 2 | UWE Design Audit | `docs/design/uwe-current-design-audit.md` | 🔄 PR pending |
+| 2 | UWE Design Audit | `docs/design/uwe-current-design-audit.md` | ✅ merged (#123) |
 | 3 | License Agent | `docs/design/odysseus-license-risk.md` | ✅ merged (#107) |
 | 4 | Theme Architecture | `packages/shared-ui/src/theme/*` | ✅ merged (#107) |
 | 5 | Theme Picker | `ThemeSettingsPanel`, Settings-Tab | ✅ merged (#107) |
-| 6 | Component Migration | Token-Migration in CSS/Komponenten | 🔄 PR pending |
-| 7 | Visual Polish | Patterns, Glass, Scrollbars, Preview | 🔄 PR pending |
-| 8 | Mobile & A11y | `ThemePicker`, Touch-Targets, Checklist | 🔄 PR pending |
-| 9 | QA Regression | `docs/design/theme-qa-report.md` | 🔄 PR pending |
-| 10 | Documentation | Finale Docs + diese Orchestrierung | 🔄 nach Schritt 9 |
+| 6 | Component Migration | Token-Migration in CSS/Komponenten | ✅ merged (#124) |
+| 7 | Visual Polish | Patterns, Glass, Scrollbars, Preview | ✅ merged (#125) |
+| 8 | Mobile & A11y | `ThemePicker`, Touch-Targets, Checklist | ✅ merged (#126) |
+| 9 | QA Regression | `docs/design/theme-qa-report.md` | ✅ merged (#127) |
+| 10 | Documentation | Finale Docs + diese Orchestrierung | ✅ merged (#128) |
 
 ## Ausführungsgraph
 
@@ -163,16 +163,19 @@ flowchart TD
 
 ---
 
-## PR-Merge-Reihenfolge
+## PR-Merge-Reihenfolge (abgeschlossen)
 
-1. **Design Audit** — `uwe-current-design-audit.md` (+ Orchestrierung)
-2. **Component Migration** — `cursor/theme-migration-9075` (rebase auf `main`)
-3. **Visual Polish** — `cursor/visual-polish-d347`
-4. **Mobile & A11y** — `cursor/theme-mobile-a11y-f8d7`
-5. **QA Regression** — `cursor/theme-qa-report-4d71`
-6. **Documentation final** — Aktualisierung nach QA
+| # | PR | Schritt |
+|---|-----|---------|
+| #107 | `cursor/uwe-theme-system-3a6e` | 4 + 5 + Basis-Docs |
+| #123 | `cursor/uwe-design-audit-merge-3a6e` | 1–3 (Design Audit + Orchestrierung) |
+| #124 | `cursor/theme-migration-merge-3a6e` | 6 Component Migration |
+| #125 | `cursor/visual-polish-merge-3a6e` | 7 Visual Polish |
+| #126 | `cursor/theme-mobile-a11y-merge-3a6e` | 8 Mobile & A11y |
+| #127 | `cursor/theme-qa-report-merge-3a6e` | 9 QA Regression |
+| #128 | `cursor/theme-docs-final-3a6e` | 10 Documentation final |
 
-**Bereits merged:** #107 (Architektur + Picker + Basis-Docs), #106 (Feature-Porting-Orchestrator)
+**Bereits merged (separat):** #106 (Feature-Porting-Orchestrator)
 
 **Nicht in dieser Pipeline:** Odysseus Feature Ports (#114–#120) — separater Track mit AGPL-Native-Review.
 

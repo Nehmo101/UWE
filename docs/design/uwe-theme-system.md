@@ -6,17 +6,22 @@ UWE uses a shared token-driven theme layer in `@uwe/shared-ui`:
 
 ```
 packages/shared-ui/src/theme/
-  tokens.ts          # CSS variable names, font/density maps
-  themes.ts          # Preset definitions
-  storage.ts         # localStorage per app scope
-  applyTheme.ts      # Runtime application to DOM
-  bootstrapScript.ts # Inline no-flash bootstrap
-  ThemeProvider.tsx  # React context + persistence
-  ThemeSettingsPanel.tsx
-  BackgroundEffect.tsx
-```
+  tokens.ts              # CSS variable names, font/density maps
+  themes.ts              # Preset definitions (9 UWE-native themes)
+  storage.ts             # localStorage per app scope + legacy ID map
+  applyTheme.ts          # Runtime application to DOM
+  bootstrapScript.ts     # Inline no-flash bootstrap
+  ThemeProvider.tsx      # React context + persistence
+  ThemeSettingsPanel.tsx # Full client appearance settings
+  BackgroundEffect.tsx   # Canvas effects (synapse, constellation)
 
-CSS consumes tokens via `packages/shared-ui/src/uwe.css` (`--uwe-*` variables).
+packages/shared-ui/src/
+  ThemePicker.tsx        # Accessible dark/light/system radio picker
+  visual-theme.ts        # Server SSR data-uwe-* attributes
+  VisualThemePreview.tsx # Live preview for server standards
+  uwe.css                # Token layer + component styles
+  uwe-visual-polish.css  # Patterns, glass, scrollbars, motion
+```
 
 ## App scopes
 
@@ -41,7 +46,7 @@ Studio and Portal can diverge — a player can use purple Portal while Studio st
 | `terra` | Earthy campaign green |
 | `hells` | Infernal red |
 
-## User preferences shape
+## User preferences shape (client)
 
 ```typescript
 interface UweThemePreferences {
@@ -56,19 +61,32 @@ interface UweThemePreferences {
 }
 ```
 
+## Server settings (SSR defaults)
+
+Persisted in `settings.app` and exposed via `buildVisualThemeHtmlAttributes()`:
+
+| Field | HTML attribute | Purpose |
+|-------|----------------|---------|
+| `theme` | `data-uwe-theme` | dark / light / system |
+| `backgroundPattern` | `data-uwe-bg-pattern` | CSS background pattern |
+| `frostedGlass` | `data-uwe-glass` | on / off |
+| `motionEnabled` | `data-uwe-motion` | on / off |
+
+Client preferences from `ThemeSettingsPanel` override these in the browser via `localStorage`.
+
 ## SSR / hydration
 
-1. `ThemeBootstrapScript` runs synchronously as the first child of `<body>`.
-2. Reads `localStorage` and sets CSS variables on `:root` before React paints.
-3. `ThemeProvider` re-loads preferences on mount and keeps DOM in sync.
-
-`suppressHydrationWarning` is set on `<html>` because client theme may differ from server defaults.
+1. `<html>` receives `data-uwe-*` from server settings + `suppressHydrationWarning`.
+2. `ThemeBootstrapScript` runs as first child of `<body>`, reads `localStorage`, sets CSS variables before paint.
+3. `ThemeProvider` re-loads preferences on mount.
+4. `ThemeDocumentSync` applies server `data-theme` for dark/light/system accessibility path.
 
 ## Studio UI
 
-**Settings → Erscheinungsbild** (`/settings?tab=appearance`) hosts `ThemeSettingsPanel`.
+**Settings → Erscheinungsbild** (`/settings?tab=appearance`):
 
-Server-side `settings.app.theme` (`dark` / `light` / `system`) remains in the database for a future sync path; client appearance is local-first today.
+- **Client:** `ThemeSettingsPanel` — presets, font, density, background, glass, scale
+- **Server:** form with `ThemePicker` + `VisualThemePreview` for global defaults
 
 ## Semantic CSS utilities
 
@@ -80,33 +98,22 @@ Server-side `settings.app.theme` (`dark` / `light` / `system`) remains in the da
 | `--uwe-wiki-link` | Wiki links |
 | `--uwe-dm-only` | GM-only emphasis |
 | `--uwe-player-visible` | Player-safe emphasis |
+| `--uwe-focus-ring` | Focus-visible outline |
 | `body.uwe-theme-frosted` | Glass blur on shell surfaces |
 
 ## Creating a new theme
 
 1. Add a `ThemeId` union member in `themes.ts`.
-2. Define `UweThemeDefinition` with full `ThemeColorTokens` (no partial palettes).
+2. Define `UweThemeDefinition` with full `ThemeColorTokens`.
 3. Optional `defaults` for background, font, frosted glass.
 4. Register in `UWE_THEMES` — automatically appears in picker and bootstrap map.
 5. Add test id to `theme.test.ts` required list.
 6. Document in this file.
 
-Example:
-
-```typescript
-"my-campaign": {
-  id: "my-campaign",
-  label: "My Campaign",
-  description: "Short player-facing description.",
-  colors: { /* all ThemeColorTokens fields */ },
-  defaults: { background: "dots" },
-},
-```
-
 ## API for components
 
 ```tsx
-import { useUweTheme, ThemeProvider } from "@uwe/shared-ui";
+import { useUweTheme, ThemeProvider, ThemePicker } from "@uwe/shared-ui";
 
 function MyPanel() {
   const { preferences, updatePreferences } = useUweTheme();
@@ -118,13 +125,23 @@ function MyPanel() {
 
 | Pattern | Implementation |
 |---------|----------------|
-| dots, parchment, noise | Pure CSS |
+| dots, parchment, noise | Pure CSS (`uwe-visual-polish.css`) |
 | synapse, constellation | CSS grid + `BackgroundEffect` canvas |
 
 Intensity controlled via `--uwe-bg-effect-intensity` and preference slider.
 
+## Accessibility
+
+- `ThemePicker`: fieldset + radio, labeled swatches, SR “Aktiv ausgewählt”
+- Touch targets: `--uwe-touch-min: 2.75rem`
+- `prefers-reduced-motion` respected in visual polish CSS
+- Checklist: [theme-a11y-checklist.md](./theme-a11y-checklist.md)
+
 ## Related docs
 
+- [theme-orchestration.md](./theme-orchestration.md) — subagent execution order
+- [theme-qa-report.md](./theme-qa-report.md) — regression report
+- [uwe-current-design-audit.md](./uwe-current-design-audit.md)
 - [odysseus-ui-audit.md](./odysseus-ui-audit.md)
 - [odysseus-license-risk.md](./odysseus-license-risk.md)
 - [theme-migration-notes.md](./theme-migration-notes.md)
