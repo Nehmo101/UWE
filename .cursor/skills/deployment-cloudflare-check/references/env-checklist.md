@@ -66,7 +66,7 @@ UWE should listen on **127.0.0.1** only; UFW blocks WAN ports. See `docs/deploym
 | Hostname | Access policy |
 |----------|---------------|
 | Portal (`wiki.*`) | Optional — Portal has own login |
-| Studio (`studio.*`) | **Required** — Studio has no app login |
+| Studio (`studio.*`) | **Required** — session login exists but grants DM access; Access is the outer gate |
 
 Manual checklist (not server-verifiable):
 

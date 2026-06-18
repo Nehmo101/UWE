@@ -248,7 +248,7 @@ Alternative for advanced setups: Windows Task Scheduler (not created automatical
 
 - `AUTH_SECRET` is generated randomly on first install; never hardcoded.
 - Default host is `127.0.0.1` / `localhost`.
-- Binding to `0.0.0.0` shows a warning because Studio is intended for trusted-network use. Set `AUTH_REQUIRED=true` and add reverse-proxy auth or Cloudflare Access before any public exposure.
+- Binding to `0.0.0.0` shows a warning — Studio has session login but grants DM-level access; set `AUTH_REQUIRED=true` and use Cloudflare Access or VPN when binding beyond localhost
 - `RUN_DB_SEED=false` in release mode.
 
 ## Troubleshooting

@@ -84,7 +84,7 @@ Details: [docs/backup-restore.md](../backup-restore.md), [docs/BACKUP.md](../BAC
 - Echter SMTP- und RTX-End-to-End-Test erfordert laufende Infrastruktur; Unit-Tests mocken Transport/Fetch.
 - `MAIL_USE_MOCK=true` und `AI_USE_MOCK=true` für lokale Tests ohne externe Dienste.
 - Embeddings semantic-search Test kann unter Turbo-Parallelität flaky sein.
-- **Daily Admin OS UI** (`/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain): noch nicht implementiert — siehe [docs/daily-admin-os.md](../daily-admin-os.md).
+- **Daily Admin OS UI** (`/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain): implementiert (Basis-UI) — siehe [docs/daily-admin-os.md](../daily-admin-os.md)
 
 ## Integration Smoke (Subagent 8)
 

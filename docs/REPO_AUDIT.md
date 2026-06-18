@@ -1,7 +1,9 @@
 # UWE Repository Audit
 
-Stand: 2026-06-18 (Version 0.1.0, Branch `main`).  
-Zweck: Orientierung für Featurebereiche und Reifegrad — siehe auch [ROADMAP.md](./ROADMAP.md).
+Stand: 2026-06-18 (Version 0.1.x, Branch `main`).  
+Zweck: Orientierung für Featurebereiche und technische Schulden.
+
+> **Source of Truth für Betrieb und Security:** [README.md](../README.md) und [SECURITY.md](../SECURITY.md). Dieses Audit kann hinter dem Code liegen — bei Widersprüchen README/SECURITY bevorzugen. Reifegrad: [ROADMAP.md](./ROADMAP.md), [FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md).
 
 ## Annahmen (aus Repo abgeleitet)
 
@@ -9,11 +11,11 @@ Zweck: Orientierung für Featurebereiche und Reifegrad — siehe auch [ROADMAP.m
 |-------|---------|
 | Framework | Next.js 15 App Router, React 19, TypeScript, pnpm Monorepo + Turborepo |
 | Datenbank | Prisma 7, SQLite (libsql), Schema in `packages/database/prisma/schema.prisma` |
-| Auth Studio | Session-Login (owner/admin/dm, `AUTH_REQUIRED=true`); Netzwerk-/Proxy-Schutz + optional `STUDIO_API_TOKEN` |
-| Auth Portal | Session-Cookies, Rollen (`owner`/`admin`/`dm`/`player`), Preview-as-Player, Forgot/Reset |
-| Image Studio | Phase 1 — `/image-studio`, Job-Queue; siehe `docs/IMAGE_STUDIO.md` |
-| Kalender | Phase 1 — `/calendar`, iCal/CalDAV read-only; siehe `docs/CALENDAR_INTEGRATION.md` |
-| Cursor-Agent-Jobs | Phase 1 — Admin-UI + Job-Queue; siehe `docs/AGENT_JOBS.md` |
+| Auth Studio | Session-Login (`/login`) für `owner`/`admin`/`dm`; Setup (`/setup`); Passwort-Reset; `AUTH_REQUIRED=true` in Produktion; plus Cloudflare Access / `STUDIO_API_TOKEN` bei öffentlicher Exposition |
+| Auth Portal | Session-Cookies, Rollen (`owner`/`admin`/`dm`/`player`/`guest`/`readonly`), Preview-as-Player, Forgot/Reset |
+| Image Studio | Phase 2 — `/image-studio`, Inpaint + Varianten; Canvas-Editor offen — siehe `docs/IMAGE_STUDIO.md` |
+| Kalender | Phase 2 — `/calendar`, Monats-/Wochenansicht, iCal/CalDAV; Write-back offen — siehe `docs/CALENDAR_INTEGRATION.md` |
+| Cursor-Agent-Jobs | Phase 2 — Admin-UI + Job-Queue + GitHub Dispatch; siehe `docs/AGENT_JOBS.md` |
 | Daily Admin OS | DB-Modelle und Basis-UI vorhanden; vollständige Cockpit-Integration teils noch ausbaubar |
 
 Build-Verifikation während Audit: `pnpm install`, `db:generate`, `pnpm typecheck` — erfolgreich.
@@ -482,7 +484,7 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 
 | Risiko | Schwere | Details |
 |--------|---------|---------|
-| Studio ohne AUTH_REQUIRED öffentlich | **Kritisch** | DM-Daten ohne Session-Schutz; `studio-security.test.ts`, `SECURITY.md` |
+| Studio ohne Session-Login öffentlich | **Kritisch** | Session-Login + `AUTH_REQUIRED=true` + Cloudflare Access; `SECURITY.md`, `SECURITY_QA_MATRIX.md` |
 | DM-only Leak ins Portal | **Kritisch** | `visibility-security.test.ts` — bei Änderungen erneut prüfen |
 | Cloud-KI + Brain-Kontext | **Kritisch** | `privacyGuard.ts` — Regression in `privacy.test.ts` |
 | `AUTH_SECRET` Rotation | Hoch | Spotify-Tokens, Share-Passwörter ungültig |

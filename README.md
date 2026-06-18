@@ -18,9 +18,10 @@ UWE ist ein **tägliches privates Admin-Cockpit** neben dem DnD-Editor: Heute-Da
 
 | Bereich | Status |
 |---------|--------|
-| DnD-Welten, Brain, KI-Router, Admin Status | ✅ Vorhanden |
-| Mobile Bottom Nav, KI-Prompt | ✅ Vorhanden |
-| `/today`, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain | ✅ Basis vorhanden (Lücken: Kalender auf `/today`, Capture-Bild-Upload) |
+| DnD-Welten, Brain, KI-Router, Admin Status | ✅ done |
+| Mobile Bottom Nav, KI-Prompt, Capture FAB | ✅ done |
+| `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain` | ✅ done (Basis-UI; Lücken: Kalender auf `/today`, Capture-Bild-Upload) |
+| Life-Brain RTX-Offline-Queue, erweiterte Mobile-Views | 🔶 partial |
 
 Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · Reifegrad: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
 
@@ -137,7 +138,7 @@ pnpm docs:check         # required docs + markdown sanity
 pnpm release:check      # validate release files and version sync
 ```
 
-Pull requests and pushes to `main` run CI in GitHub Actions (`.github/workflows/ci.yml` — full `pnpm quality`). Fast PR feedback: `pr-check.yml`. Security and docs: `security.yml`, `docs-check.yml`. See [docs/engineering/ci.md](docs/engineering/ci.md).
+Pull requests and pushes to `main` run CI in GitHub Actions (`.github/workflows/ci.yml` — full `pnpm quality`). Fast PR feedback: `pr-check.yml`. Security and docs: `security.yml`, `docs-check.yml`. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
@@ -423,23 +424,62 @@ npx serve exports/terra-static
 
 ---
 
-## Roadmap (Auszug)
+## Feature-Status (Kurzüberblick)
 
-Erledigt:
+| Bereich | Status | Hinweis |
+|---------|--------|---------|
+| Studio/Portal Session-Login, Setup, Passwort-Reset | ✅ done | `/login`, `/setup`, `/forgot-password` |
+| Rollen (owner/admin/dm/player) | ✅ done | [SECURITY.md](SECURITY.md) |
+| DM-only / Portal-Leak-Schutz | ✅ done | Hard tests + Inspector + Leak Scanner |
+| Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Mobile auf einigen Welt-Views noch lückenhaft |
+| DnD-KI-Generator, Brain, RTX-Router | ✅ done | Cloud nur für Allgemeinen Chat |
+| Static HTML Export | ✅ done | `pnpm export:static` |
+| Label-Druck (6×4, PDF/HTML) | ✅ done | [docs/LABELS.md](docs/LABELS.md) |
+| Backup/Restore (API, CLI, Windows) | 🔶 partial | Kernfunktionen da; einige Metadaten noch nicht im Backup — [docs/BACKUP.md](docs/BACKUP.md) |
+| Image Studio | 🔶 partial | Phase 2 (Inpaint, Varianten); kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
+| Kalender | 🔶 partial | Phase 2 (Wochenansicht, Feeds); CalDAV Write-back offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
+| DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import; Encounter-Builder offen — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
+| Agent Jobs (GitHub Actions) | 🔶 partial | Dispatch + Polling; kein Auto-Merge — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
+| 2FA | 🔲 planned | Schema vorbereitet, Login-Flow fehlt |
+| E2E-Tests Auth-Flows | ✅ done | Playwright-Baseline (`e2e/`) im CI |
+| PostgreSQL-Option | ✅ done | Dual-Client + Baseline-Migration — [docs/postgresql.md](docs/postgresql.md) |
+| Markdown/HTML Export | ✅ done | `pnpm export:wiki` (Portal + DM-Kontext) |
+| Asset-Datei-Import (Bulk) | 🔲 planned | Einzel-Upload vorhanden |
+| Code Cleanup / Doku-Drift | 🔶 partial | Laufend |
+
+---
+
+## Roadmap
+
+### Done
 
 - [x] Docker Compose für Studio + Portal + persistente Datenbank
+- [x] Native Auth: Login, Setup, Passwort-Reset, Rollen
 - [x] Static HTML Export für player-sichere Wiki-Seiten
 - [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung
 - [x] Session Management für Welten und Kampagnen
 - [x] Soundboard (lokale Sounds, YouTube, Spotify OAuth + Web-API-Playback im Studio)
+- [x] Label-Druck, World Inspector, Activity Log, Command Palette
+- [x] Daily Admin OS Basis (Today, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain)
 
-Geplant — Details in [docs/ROADMAP.md](docs/ROADMAP.md):
+### Partial / in progress
 
-- [ ] E2E-Tests für Auth-Flows (Login, Setup, Reset, Logout)
-- [ ] 2FA im Login-Flow
-- [ ] Markdown/HTML als zusätzliche Export-Formate
-- [ ] Asset-Datei-Import (Karten, Sounds, Handouts)
-- [ ] PostgreSQL-Option für Self-Hosting
+Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
+
+- [ ] Image Studio — Canvas-Editor, Cloud-Edit-Härtung
+- [ ] Kalender — CalDAV Write-back, Session ↔ Event Auto-Sync
+- [ ] Agent Jobs — Completion-Callback, Cursor CLI Härtung
+- [ ] Backup/Restore-Vollständigkeit (PageTemplates, ShareLinks ohne Tokens, Auto-Scheduler)
+- [ ] Mobile-UI für alle Welt-Unterseiten
+- [ ] Secrets/Reveal Studio-UI, Import Undo
+
+### Planned / not started
+
+- [ ] 2FA-Aktivierung (TOTP-Login-Integration)
+- [ ] Asset-Datei-Import (Karten, Sounds, Handouts als Bulk)
+- [ ] Performance-Budget + Stress-Testwelt
+- [ ] Tag-/Taxonomie-Aufräumer
+- [ ] Code Cleanup / Reduction (Legacy-Pfade, tote CSS)
 
 ---
 
@@ -484,6 +524,8 @@ Copy `.env.example` to `.env`. Important variables:
 | `SPOTIFY_CLIENT_SECRET` | Spotify OAuth client secret (optional) |
 | `SPOTIFY_REDIRECT_URI` | Spotify OAuth callback, e.g. `http://localhost:3000/api/spotify/callback` |
 | `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
+| `UWE_SETUP_TOKEN` | One-time owner bootstrap via Studio `/setup` (required in production first-run) |
+| `AUTH_REQUIRED` | Enforce login on Studio/Portal in production (`true` default) |
 | `RTX_AGENT_URL` | Heimnetz-URL des UWE RTX-Agent (z. B. `http://192.168.x.x:8787`) |
 | `RTX_AGENT_TOKEN` | Shared Secret für RTX-Agent (serverseitig, nicht im Frontend) |
 | `RTX_HEALTHCHECK_INTERVAL_MS` | Intervall für RTX-Statusprüfung (Standard: `10000`) |
@@ -495,7 +537,35 @@ Copy `.env.example` to `.env`. Important variables:
 
 Weitere Brain-/Inferenz-Variablen: siehe `.env.example` und Abschnitt [KI-System](#ki-system-brain--rtx).
 
-**Public hosting:** Studio must not be exposed to the internet without reverse-proxy auth, VPN, or Cloudflare Access. The Portal may be hosted more openly, but only publishes content marked `player_visible` or `public`. See [SECURITY.md](SECURITY.md), [SECURITY_NOTES.md](SECURITY_NOTES.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
+## Backup & Restore
+
+| Methode | Dokument |
+|---------|----------|
+| Studio UI | Studio → Backup erstellen / Wiederherstellen |
+| CLI | `pnpm backup` · `pnpm backup:create` |
+| Windows Steuerung | Desktop „UWE Steuerung“ → Backup erstellen |
+| Architektur & Rollen | [docs/BACKUP.md](docs/BACKUP.md) · [docs/backup-restore.md](docs/backup-restore.md) |
+
+Backups enthalten Welten, Seiten, Uploads und Settings (sanitized). **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`.
+
+---
+
+## Security & Production
+
+| Thema | Dokument |
+|-------|----------|
+| Security Policy (Source of Truth) | [SECURITY.md](SECURITY.md) |
+| KI/RTX Datenschutz | [SECURITY_NOTES.md](SECURITY_NOTES.md) |
+| Auth, API-Tokens, Rate Limits | [docs/auth-api-security.md](docs/auth-api-security.md) |
+| Production Deployment | [docs/PRODUCTION.md](docs/PRODUCTION.md) |
+| Cloudflare Tunnel + Access | [DEPLOYMENT_SECURITY.md](DEPLOYMENT_SECURITY.md) · [docs/cloudflare-access.md](docs/cloudflare-access.md) |
+| Linux Host Hardening | [docs/deployment-hardening.md](docs/deployment-hardening.md) |
+
+**Studio** has session login (`/login`) for `owner`/`admin`/`dm`, but still grants DM-level access after login — never expose it to the public internet without **Cloudflare Access, VPN, or reverse-proxy auth** in addition. Set `STUDIO_API_TOKEN` when APIs may be reachable from untrusted networks.
+
+**Portal** may be hosted more openly; only content marked `player_visible` or `public` (and published) is served on `/worlds/*`.
+
+> **Warning:** Never expose the RTX agent, Ollama, or LM Studio to the internet. Cloudflare Tunnel must point **only** to UWE (Studio + Portal), never to inference endpoints.
 
 ---
 

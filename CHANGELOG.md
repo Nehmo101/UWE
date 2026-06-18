@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DB-backed page templates** — Quick-Create templates moved from code to the database (`page_templates`); previous templates are seeded once as system templates; users can create, edit, duplicate, and deactivate templates at `/templates`; legacy `?template=npc` links keep working
 - **Seed tracking** — `seed_history` table records applied data seeds (idempotent across restarts); seed/migration problems surface in the dashboard and healthcheck
 - **Next Actions on the dashboard** — open inspector findings, missing/stale backups, unassigned content, publicly visible player content, pending template seed, and migration problems at a glance
-- **Extended healthchecks** — `GET /api/health` (Studio + Portal) now reports migrations state, storage writability, seed status, app version/commit, trust/exposure mode (Studio: no login by design), and rate limiter mode — without leaking sensitive data
+- **Extended healthchecks** — `GET /api/health` (Studio + Portal) now reports migrations state, storage writability, seed status, app version/commit, trust/exposure mode, and rate limiter mode — without leaking sensitive data
 - **Pre-migration DB backup (Docker)** — the entrypoint copies the SQLite file to `data/backups/pre-migration-<timestamp>.db` before applying pending migrations
 - **ESLint flat config** — real `eslint-config-next` setup for the whole monorepo (`pnpm lint`), placeholder lint scripts removed
 

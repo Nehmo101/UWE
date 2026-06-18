@@ -38,7 +38,7 @@ Create an Access application for `studio.example.com`:
 - **Session duration:** 24h or less
 - **Bypass:** None for production
 
-Without Access, anyone reaching Studio can attempt login — but Cloudflare Access should be the primary gate for internet-facing Studio deployments. Studio also enforces session login when `AUTH_REQUIRED=true`.
+Without Access, anyone reaching Studio can attempt login — session auth and role gates still apply, but Cloudflare Access should be the **outer** gate for internet-facing Studio deployments. Studio enforces session login when `AUTH_REQUIRED=true` (production default).
 
 ### 3. Tunnel configuration
 
@@ -151,12 +151,12 @@ Mount persistent volume for `/data` (database + uploads + backups).
 
 | Layer | Portal | Studio |
 |-------|--------|--------|
-| Network | Public URL | Cloudflare Access |
-| Middleware | Auth gate (optional) + headers | Deny-by-default API + CSRF |
-| App auth | Session login | Session login (`AUTH_REQUIRED=true`) |
-| API token | N/A | `STUDIO_API_TOKEN` |
-| Visibility | Server-side filter | Full DM access |
-| Rate limit | Login, share | Backup, import |
+| Network | Public URL | Cloudflare Access (recommended) |
+| Middleware | Auth gate (optional) + headers | Session login + deny-by-default API + CSRF |
+| App auth | Session login (`player` roles) | Session login (`owner`/`admin`/`dm`, `AUTH_REQUIRED=true`) |
+| API token | N/A | `STUDIO_API_TOKEN` or scoped `uwe_*` tokens |
+| Visibility | Server-side filter | Full DM access after login |
+| Rate limit | Login, share | Login, backup, import, AI |
 
 ## Reverse Proxy Alternative
 
@@ -188,7 +188,7 @@ location / {
 
 - Single-instance deployment (in-memory rate limits sufficient)
 - SQLite database on trusted host filesystem
-- DM operates Studio from trusted browser after Cloudflare Access
+- DM operates Studio from trusted browser after Cloudflare Access **and** UWE session login
 - RTX/AI inference runs on separate machine in home LAN
 - Portal `player_visible` content is intentionally world-readable
 

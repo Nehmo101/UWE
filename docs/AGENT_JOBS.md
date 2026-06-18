@@ -39,7 +39,7 @@ Admin-Portal (/admin/agent-jobs)
 
 ## Sicherheit
 
-- Admin-only (Studio-Netzwerk-Schutz + optional `STUDIO_API_TOKEN`).
+- Admin-only: Session-Login (`owner`/`admin`) + optional `STUDIO_API_TOKEN` / Cloudflare Access.
 - Tokens nur serverseitig.
 - **Kein automatischer Brain-/Welt-Kontext** — nur der manuell eingegebene Prompt wird an GitHub Actions oder Cursor Cloud gesendet.
 - Prompts werden in SQLite und ggf. in GitHub-Actions-Logs gespeichert — **keine Secrets, API-Keys, Passwörter oder Weltdaten einfügen**.

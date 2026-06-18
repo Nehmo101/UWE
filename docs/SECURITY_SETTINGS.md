@@ -6,7 +6,7 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 
 1. **Brain/Wissen bleibt lokal** — keine Weltdaten an Cloud-KI unless explizit im User-Prompt (Image Studio: nur Bild-Prompt).
 2. **Secrets nur serverseitig** — ENV, nie Frontend, nie API-Response.
-3. **Admin-only** — Studio ohne DM-Login; Netzwerk/Proxy + optional `STUDIO_API_TOKEN`.
+3. **Admin-only** — Studio erfordert Session-Login (`owner`/`admin`/`dm`) plus optional `STUDIO_API_TOKEN` / Cloudflare Access bei öffentlicher Exposition.
 4. **Deaktivierbar** — jedes Feature per ENV abschaltbar.
 5. **Kein Auto-Merge** — Agent Jobs erstellen Draft-PRs only.
 

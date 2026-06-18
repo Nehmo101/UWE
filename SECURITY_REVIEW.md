@@ -1,5 +1,7 @@
 # UWE Security Review — Final Pass (2026-06-16)
 
+> **Historisches Dokument.** Viele Punkte wurden behoben (Studio-Session-Login, Route-Policy, geschützte APIs). **Aktuelle Source of Truth:** [SECURITY.md](SECURITY.md), [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+
 Security review before public exposure via Cloudflare. Scope: Studio, Portal, shared packages, backups, uploads, AI, secrets, headers.
 
 ---
@@ -9,7 +11,7 @@ Security review before public exposure via Cloudflare. Scope: Studio, Portal, sh
 | Bereich | Status | Details |
 |---------|--------|---------|
 | **Auth (Portal)** | ✅ | Session-Cookies (httpOnly, SameSite, Secure in Production), Login rate-limited, Logout löscht DB-Session + Cookies |
-| **Auth (Studio)** | ⚠️ By design | Kein Benutzer-Login — Netzwerk-Schutz + `STUDIO_API_TOKEN` + CSRF-Guard |
+| **Auth (Studio)** | ✅ | Session-Login (`/login`) für `owner`/`admin`/`dm`; Setup, Passwort-Reset; plus Cloudflare Access + `STUDIO_API_TOKEN` bei Exposition |
 | **Authz (Portal)** | ✅ | Rollenmatrix (`owner`/`dm`/`player`/`guest`), Asset/Page/Block-Permissions, Share-Grants |
 | **Authz (Studio API)** | ✅ (nach Fix) | Alle sensiblen Routen mit `requireStudioApiAuth`; Restore mit `requireRestoreOwnerAuth` |
 | **Public Leaks** | ✅ | `dm_only` serverseitig gefiltert (Portal, Suche, Graph, Export, Share) |
@@ -28,7 +30,7 @@ Security review before public exposure via Cloudflare. Scope: Studio, Portal, sh
 ### Kritisch
 
 1. **16 ungeschützte Studio-API-Routen** — DM-Suche, Graph, DnD-Generator, Asset-Dateien, Label/Print-Export, AI/Inference ohne `requireStudioApiAuth`. Bei erreichbarem Studio: vollständiger DM-Datenleck + Ressourcen-Missbrauch.
-2. **Studio ohne Login bei Cloudflare-Exposition** — Architektur-Risiko; erfordert Cloudflare Access / Reverse-Proxy-Auth.
+2. **Studio ohne zusätzliche Schicht bei Cloudflare-Exposition** — Session-Login allein reicht nicht; Cloudflare Access / Reverse-Proxy-Auth erforderlich.
 
 ### Hoch
 
@@ -115,7 +117,7 @@ Studio + Portal `next.config.ts`:
 
 | Risiko | Schwere | Mitigation |
 |--------|---------|------------|
-| Studio ohne Login | **Kritisch** bei öffentlicher URL | Cloudflare Access vor Studio; `STUDIO_API_TOKEN` setzen |
+| Studio ohne Session + Access | **Kritisch** bei öffentlicher URL | Cloudflare Access vor Studio; Session-Login; `STUDIO_API_TOKEN` setzen |
 | Schwaches `AUTH_SECRET` in Docker-Default | **Hoch** | Starkes Secret in `.env`; Dashboard-Warnung prüfen |
 | `RUN_DB_SEED=auto` in Docker | **Hoch** in Production | `RUN_DB_SEED=false` setzen |
 | `player_visible` = ohne Login lesbar | **By design** | Bewusst veröffentlichen; `AUTH_REQUIRED=true` für Portal |

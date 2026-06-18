@@ -66,7 +66,7 @@ Login: `dm@uwe.local` / `uwe-dev`
 
 - UWE läuft standardmäßig nur auf **localhost** (`127.0.0.1`)
 - **Kein öffentliches Binding** ohne manuelle Konfiguration
-- Warnung bei Netzwerkzugriff: UWE hat kein echtes DM-Login — nur hinter Reverse-Proxy/VPN sicher öffentlich nutzbar
+- Warnung bei Netzwerkzugriff (`0.0.0.0`): Studio hat Session-Login (`/login`), gewährt aber DM-Zugriff — öffentlich nur mit Reverse-Proxy-Auth, VPN oder Cloudflare Access
 - Windows-Firewall: UWE erstellt **keine** Firewall-Regel automatisch
 
 ## Für Entwickler

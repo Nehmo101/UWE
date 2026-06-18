@@ -93,7 +93,7 @@ A dedicated regression test asserts the scanner would catch a deliberate poisone
 | `/api/search/*` | `apps/studio/app/search/page.tsx` + `apps/studio/app/api/command/search/route.ts` |
 | `/players/*` | Not implemented — players managed via `WorldMembership` and `POST /api/mail/recipients` (`sync_players`) |
 
-Studio API routes use `requireStudioApiAuth` (CSRF + optional `STUDIO_API_TOKEN`). Portal `/worlds/*` relies on repository visibility filters and optional production middleware (`AUTH_REQUIRED`).
+Studio API routes require session login (or bearer token) plus CSRF protection; optional `STUDIO_API_TOKEN` for extra hardening. Portal `/worlds/*` relies on repository visibility filters and optional production middleware (`AUTH_REQUIRED`).
 
 ## Acceptance criteria
 
