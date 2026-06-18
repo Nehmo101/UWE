@@ -1,6 +1,7 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import os from "node:os";
 
 import { disableAutostart, enableAutostart, getAutostartStatus } from "./autostart.js";
 import { verifyToken } from "./auth.js";
@@ -9,7 +10,7 @@ import type { AgentConfig } from "./config.js";
 import { setAgentEnabled } from "./config.js";
 import { buildHealthResponse, buildTrayStatusResponse } from "./health.js";
 import { appendAgentLog } from "./logging.js";
-import { chatWithOllama, summarizeMessages } from "./ollama.js";
+import { chatWithOllama, deleteOllamaModel, listOllamaModels, pullOllamaModel, summarizeMessages } from "./ollama.js";
 import { getEnvFilePath } from "./paths.js";
 import { setPersistedEnabled } from "./state.js";
 import type { ChatRequest, ErrorResponse } from "./types.js";
@@ -192,6 +193,68 @@ async function handleRequest(
 
     const chatResponse = await chatWithOllama(config, chatRequest);
     sendJson(response, 200, chatResponse);
+    return;
+  }
+
+  if (pathname === "/api/models" && method === "GET") {
+    const auth = verifyToken(request, config.token);
+    if (!auth.ok) {
+      sendJson(response, 401, {
+        error: "invalid_token",
+        message: "Invalid agent token",
+      } satisfies ErrorResponse);
+      return;
+    }
+    const models = await listOllamaModels(config.ollamaBaseUrl, config.requestTimeoutMs);
+    sendJson(response, 200, { models });
+    return;
+  }
+
+  if (pathname === "/api/models/pull" && method === "POST") {
+    const auth = verifyToken(request, config.token);
+    if (!auth.ok) {
+      sendJson(response, 401, { error: "invalid_token", message: "Invalid agent token" } satisfies ErrorResponse);
+      return;
+    }
+    const body = await readJsonBody<{ model?: string }>(request);
+    if (!body.model?.trim()) {
+      sendJson(response, 400, { error: "invalid_request", message: "model is required" } satisfies ErrorResponse);
+      return;
+    }
+    await pullOllamaModel(config.ollamaBaseUrl, body.model.trim(), config.requestTimeoutMs);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+
+  if (pathname.startsWith("/api/models/") && method === "DELETE") {
+    const auth = verifyToken(request, config.token);
+    if (!auth.ok) {
+      sendJson(response, 401, { error: "invalid_token", message: "Invalid agent token" } satisfies ErrorResponse);
+      return;
+    }
+    const model = decodeURIComponent(pathname.slice("/api/models/".length));
+    if (!model) {
+      sendJson(response, 400, { error: "invalid_request", message: "model is required" } satisfies ErrorResponse);
+      return;
+    }
+    await deleteOllamaModel(config.ollamaBaseUrl, model, config.requestTimeoutMs);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+
+  if (pathname === "/api/hardware" && method === "GET") {
+    const auth = verifyToken(request, config.token);
+    if (!auth.ok) {
+      sendJson(response, 401, { error: "invalid_token", message: "Invalid agent token" } satisfies ErrorResponse);
+      return;
+    }
+    sendJson(response, 200, {
+      totalRamGb: Math.round(os.totalmem() / 1024 ** 3),
+      freeRamGb: Math.round(os.freemem() / 1024 ** 3),
+      cpus: os.cpus().length,
+      platform: os.platform(),
+      gpu: "rtx",
+    });
     return;
   }
 
