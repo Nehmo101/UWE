@@ -94,6 +94,10 @@ export default async function AgentJobsPage() {
               Workflow: <code>.github/workflows/cursor-agent.yml</code> · Fortschritt unter{" "}
               <Link href="/jobs">Jobs</Link>
             </p>
+            <p className="uwe-notice uwe-notice-warn" style={{ marginTop: "0.75rem" }}>
+              Sicherheit: Prompts werden an GitHub Actions oder Cursor Cloud gesendet. Keine
+              Weltdaten, Brain-Inhalte, Passwörter oder API-Keys in den Prompt einfügen.
+            </p>
           </section>
 
           <section>

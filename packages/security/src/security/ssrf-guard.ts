@@ -55,6 +55,31 @@ export function isBlockedUserFetchTarget(url: string, allowPublicInference = fal
   return false;
 }
 
+/**
+ * Validates URLs for user-provided external feed fetches (iCal, CalDAV, webhooks).
+ * Blocks localhost/private targets; allows any public http(s) hostname.
+ */
+export function assertUserProvidedFetchUrlAllowed(url: string): void {
+  let protocol = "";
+  try {
+    protocol = new URL(url).protocol.toLowerCase();
+  } catch {
+    throw new SsrfBlockedError("Ungültige URL — Fetch blockiert.", url);
+  }
+
+  if (protocol !== "https:" && protocol !== "http:") {
+    throw new SsrfBlockedError("Nur http(s)-URLs sind erlaubt.", url);
+  }
+
+  const kind = classifyInferenceUrl(url);
+  if (kind === "loopback" || kind === "private" || kind === "link_local") {
+    throw new SsrfBlockedError(
+      "Fetch auf localhost oder private Netzwerk-Adressen ist nicht erlaubt.",
+      url,
+    );
+  }
+}
+
 export function assertFetchUrlAllowed(
   url: string,
   options?: {

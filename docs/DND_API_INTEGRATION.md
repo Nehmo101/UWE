@@ -40,6 +40,17 @@ Externe D&D-5e-Datenquellen für UWE — **ohne D&D Beyond Scraping**.
 - Keine D&D Beyond Credentials
 - URL-Validierung: muss `dndbeyond.com` enthalten
 - Admin-only Studio API
+- Nur Suchbegriffe verlassen den Host — vollständige JSON-Payloads werden lokal gecacht
+
+## Lizenz & Attribution
+
+| Quelle | Lizenz | Hinweis |
+|--------|--------|---------|
+| [Open5e](https://open5e.com) | CC-BY | Bei Nutzung in Handouts/Portal Attribution zu Open5e und Originalautor erforderlich |
+| [dnd5eapi.co](https://www.dnd5eapi.co) | SRD (OGL) | Nur System Reference Document — kein Volltext von Wizards-Produkten |
+| D&D Beyond | — | Nur manuelle Links, kein Content-Import |
+
+UWE speichert keine Lizenz-Metadaten pro Cache-Eintrag. DM ist für korrekte Attribution bei veröffentlichten Inhalten verantwortlich.
 
 ## Phase 2
 

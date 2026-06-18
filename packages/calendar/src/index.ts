@@ -3,6 +3,8 @@
  * Supports read-only iCal feeds (FamilyWall, iCloud public links, Nextcloud, Radicale).
  */
 
+import { assertUserProvidedFetchUrlAllowed } from "@uwe/security";
+
 export interface ParsedIcalEvent {
   uid: string;
   title: string;
@@ -192,6 +194,7 @@ export function generateIcalCalendar(
 }
 
 export async function fetchIcalFeed(url: string, timeoutMs = 15000): Promise<string> {
+  assertUserProvidedFetchUrlAllowed(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -217,6 +220,7 @@ export interface CalDavSyncOptions {
 
 /** Minimal CalDAV sync: fetch calendar collection as iCal (works for many providers). */
 export async function fetchCalDavEvents(options: CalDavSyncOptions): Promise<ParsedIcalEvent[]> {
+  assertUserProvidedFetchUrlAllowed(options.caldavUrl);
   const auth =
     options.username && options.password
       ? `Basic ${Buffer.from(`${options.username}:${options.password}`).toString("base64")}`

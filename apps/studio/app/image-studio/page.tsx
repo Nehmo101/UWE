@@ -47,7 +47,7 @@ export default async function ImageStudioPage({ searchParams }: Props) {
         <>
           <PageHeader
             title="Image Studio"
-            summary="Bildgenerierung, Bearbeitung, Inpainting und Varianten — lokal via RTX oder optional Cloud-KI."
+            summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
           />
 
           {!config.enabled && (

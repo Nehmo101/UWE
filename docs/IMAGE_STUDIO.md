@@ -2,14 +2,16 @@
 
 Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpainting, Background Removal, Varianten.
 
-## Features (Phase 1)
+## Features (Phase 1 — nutzbar)
 
-- Bildgenerierung per Prompt (Job-Queue)
-- Provider-Routing: RTX Agent (lokal) → optional Cloud (OpenAI DALL-E)
+- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate` und `variant`
+- Provider-Routing: RTX Agent (lokal) → optional Cloud (OpenAI DALL-E, nur generate/variant)
 - Projekt-/Versions-Tracking in SQLite
 - Ergebnis als Asset in Medienbibliothek
-- Medienzuordnung zu Seiten, Labels, Sessions (via `ImageStudioLink`)
+- Medienzuordnung zu Seiten, Labels, Sessions (via `ImageStudioLink`, API only)
 - Mobile-first Admin-UI unter `/image-studio`
+
+**Nicht in Phase 1:** Canvas-Editor, Inpainting-UI, Masken, Cloud-Bearbeitung, Asset-Integration-Links in der UI.
 
 ## ENV
 

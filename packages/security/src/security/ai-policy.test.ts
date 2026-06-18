@@ -5,6 +5,7 @@ import type { AiContext } from "@uwe/ai-brain/types";
 
 import {
   assertFetchUrlAllowed,
+  assertUserProvidedFetchUrlAllowed,
   isBlockedUserFetchTarget,
   SsrfBlockedError,
 } from "./ssrf-guard";
@@ -100,6 +101,19 @@ describe("ssrf-guard — fetch allowlist", () => {
   it("blocks hosts outside the AI fetch allowlist", () => {
     assert.throws(
       () => assertFetchUrlAllowed("https://evil.example.com/hook"),
+      (error: unknown) => error instanceof SsrfBlockedError,
+    );
+  });
+
+  it("allows public hosts for user-provided feed URLs", () => {
+    assert.doesNotThrow(() =>
+      assertUserProvidedFetchUrlAllowed("https://calendar.google.com/public/ical.ics"),
+    );
+  });
+
+  it("blocks private hosts for user-provided feed URLs", () => {
+    assert.throws(
+      () => assertUserProvidedFetchUrlAllowed("http://127.0.0.1:8080/feed.ics"),
       (error: unknown) => error instanceof SsrfBlockedError,
     );
   });

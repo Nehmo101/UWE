@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJobService, createResearchService, prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
+import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
+import { dispatchJob } from "@/src/lib/job-executor";
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = guardStudioMutation(request);
   if (authError) return authError;
 
   let body: { query?: string; worldId?: string; contextMode?: "dnd_brain" | "life_brain" | "open_web" };
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       relatedType: "research_session",
       relatedId: session.id,
     });
+    void dispatchJob(job.id);
 
     return NextResponse.json({
       session: {
