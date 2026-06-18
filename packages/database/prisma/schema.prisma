@@ -517,6 +517,7 @@ model World {
   mailTemplates       MailTemplate[]
   mailRecipientGroups MailRecipientGroup[]
   mailMessageLogs     MailMessageLog[]
+  mailDrafts          MailDraft[]
   captureEntries      CaptureEntry[]
   personalProjects    PersonalProject[]
   workshopProjects    WorkshopProject[]
@@ -1453,6 +1454,49 @@ model MailMessageLog {
   @@index([worldId, status])
   @@index([createdAt])
   @@map("mail_message_logs")
+}
+
+model MailAccount {
+  id           String   @id @default(cuid())
+  label        String
+  imapHost     String?  @map("imap_host")
+  imapPort     Int?     @map("imap_port")
+  smtpHost     String   @map("smtp_host")
+  smtpPort     Int?     @map("smtp_port")
+  username     String
+  passwordEnc  String   @map("password_enc")
+  isDefault    Boolean  @default(false) @map("is_default")
+  ownerId      String?  @map("owner_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  drafts MailDraft[]
+
+  @@map("mail_accounts")
+}
+
+enum MailDraftStatus {
+  draft
+  pending_review
+  sent
+}
+
+model MailDraft {
+  id        String          @id @default(cuid())
+  accountId String?         @map("account_id")
+  worldId   String?         @map("world_id")
+  subject   String
+  bodyText  String?         @map("body_text")
+  bodyHtml  String?         @map("body_html")
+  status    MailDraftStatus @default(draft)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  account MailAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  world   World?       @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("mail_drafts")
 }
 
 // --- Daily Admin OS entities ---

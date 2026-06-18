@@ -1011,6 +1011,9 @@ export type {
 
 export { createMailComposeService, MailComposeService } from "./mail-compose-service";
 
+export { createMailAccountService, MailAccountService } from "./mail-account-service";
+export type { CreateMailAccountInput, CreateMailDraftInput } from "./mail-account-service";
+
 export {
   createInferenceEndpointService,
   InferenceEndpointService,
