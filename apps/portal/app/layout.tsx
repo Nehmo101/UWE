@@ -3,6 +3,7 @@ import { ThemeBootstrapScript, ThemeProvider } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
+import { buildVisualThemeHtmlAttributes } from "@uwe/shared-ui";
 import { getSystemSettings, isPortalGloballyEnabled } from "@uwe/database/server";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +33,12 @@ export default async function RootLayout({
 }>) {
   const settings = await getSystemSettings();
   const portalEnabled = isPortalGloballyEnabled(settings);
+  const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {
+    appVariant: "portal",
+  });
 
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
       <body>
         <ThemeBootstrapScript scope="portal" />
         <ThemeProvider scope="portal">

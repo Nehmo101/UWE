@@ -83,6 +83,18 @@ export { BrandHeader } from "./BrandHeader";
 export { HealthBadge } from "./HealthBadge";
 
 export {
+  BACKGROUND_PATTERN_LABELS,
+  buildVisualThemeHtmlAttributes,
+  type BackgroundPattern,
+  type ThemeAppearance,
+  type VisualThemeAppVariant,
+  type VisualThemeHtmlAttributes,
+  type VisualThemeSettings,
+} from "./visual-theme";
+
+export { VisualThemePreview, type VisualThemePreviewProps } from "./VisualThemePreview";
+
+export {
   GraphRelationList,
   GraphView,
   type GraphViewProps,

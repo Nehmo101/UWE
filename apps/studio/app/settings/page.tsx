@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   AppShell,
+  BACKGROUND_PATTERN_LABELS,
   CANONICAL_LABELS,
   PageHeader,
   SidebarNav,
@@ -8,8 +9,10 @@ import {
   ThemeSettingsPanel,
   TopBarBrand,
   VISIBILITY_LABELS,
+  VisualThemePreview,
 } from "@uwe/shared-ui";
 import {
+  BACKGROUND_PATTERN_VALUES,
   CanonicalStatusEnum,
   getAppRepository,
   getPersistentPathConfiguration,
@@ -140,7 +143,90 @@ export default async function SettingsPage({ searchParams }: Props) {
             </section>
           )}
 
-          {activeTab === "appearance" && <ThemeSettingsPanel />}
+          {activeTab === "appearance" && (
+            <>
+              <ThemeSettingsPanel />
+              <form
+                id="uwe-visual-settings-form"
+                action={updateSettingsAction}
+                className="uwe-form"
+                style={{ marginTop: "2rem" }}
+              >
+                <input type="hidden" name="tab" value="general" />
+                <h2>Server-Standards (alle Nutzer)</h2>
+                <p className="uwe-hint">
+                  Diese Vorgaben gelten als SSR-Default über <code>data-uwe-*</code>-Attribute.
+                  Persönliche Theme-Auswahl oben überschreibt sie im Browser.
+                </p>
+                <div className="uwe-visual-settings-grid">
+                  <div>
+                    <label>
+                      Theme / Erscheinungsbild
+                      <select name="theme" defaultValue={settings.app.theme}>
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="system">System</option>
+                      </select>
+                    </label>
+                    <label>
+                      Hintergrundmuster
+                      <select
+                        name="backgroundPattern"
+                        defaultValue={settings.app.backgroundPattern}
+                      >
+                        {BACKGROUND_PATTERN_VALUES.map((pattern) => (
+                          <option key={pattern} value={pattern}>
+                            {BACKGROUND_PATTERN_LABELS[pattern]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="uwe-hint">
+                      Reine CSS-Muster ohne Canvas — abschaltbar über „Keins“. Auf Mobilgeräten
+                      keine Daueranimationen.
+                    </p>
+                    <label className="uwe-checkbox-row">
+                      <input
+                        type="checkbox"
+                        name="frostedGlass"
+                        value="on"
+                        defaultChecked={settings.app.frostedGlass}
+                      />
+                      Frosted Glass (Milchglas-Oberflächen)
+                    </label>
+                    <p className="uwe-hint">
+                      Aus = undurchsichtige Panels für maximale Lesbarkeit. An = dezenter
+                      Backdrop-Blur auf Karten, Leisten und Modals.
+                    </p>
+                    <label className="uwe-checkbox-row">
+                      <input
+                        type="checkbox"
+                        name="motionEnabled"
+                        value="on"
+                        defaultChecked={settings.app.motionEnabled}
+                      />
+                      Dezente UI-Animationen
+                    </label>
+                    <p className="uwe-hint">
+                      Respektiert immer <code>prefers-reduced-motion</code> des Systems.
+                    </p>
+                  </div>
+                  <VisualThemePreview
+                    formId="uwe-visual-settings-form"
+                    initial={{
+                      theme: settings.app.theme,
+                      backgroundPattern: settings.app.backgroundPattern,
+                      frostedGlass: settings.app.frostedGlass,
+                      motionEnabled: settings.app.motionEnabled,
+                    }}
+                  />
+                </div>
+                <button type="submit" className="uwe-btn uwe-btn-primary">
+                  Server-Standards speichern
+                </button>
+              </form>
+            </>
+          )}
 
           {activeTab === "worlds" && (
             <>

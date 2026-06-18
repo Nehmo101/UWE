@@ -1,7 +1,9 @@
 import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
-import type { ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
+import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
+import { BACKGROUND_PATTERN_VALUES } from "./settings-service";
 
 const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
+const BACKGROUND_PATTERN_SET = new Set<BackgroundPattern>(BACKGROUND_PATTERN_VALUES);
 
 const VISIBILITY_VALUES = new Set<Visibility>([
   "private",
@@ -34,7 +36,14 @@ const TOP_LEVEL_KEYS = new Set([
   "privacy",
 ]);
 
-const APP_KEYS = new Set(["theme", "favoriteWorldSlug", "lastActiveWorldSlug"]);
+const APP_KEYS = new Set([
+  "theme",
+  "backgroundPattern",
+  "frostedGlass",
+  "motionEnabled",
+  "favoriteWorldSlug",
+  "lastActiveWorldSlug",
+]);
 const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
@@ -168,6 +177,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (key === "theme") {
         requireEnum(value, THEME_VALUES, "settings.app.theme", sectionErrors);
       }
+      if (key === "backgroundPattern") {
+        requireEnum(value, BACKGROUND_PATTERN_SET, "settings.app.backgroundPattern", sectionErrors);
+      }
+      if (key === "frostedGlass" || key === "motionEnabled") {
+        requireBoolean(value, `settings.app.${key}`, sectionErrors);
+      }
     });
     errors.push(...sectionErrors);
     if (isRecord(body.app)) {
@@ -178,6 +193,30 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
           // recorded in appErrors
         } else {
           app.theme = body.app.theme as ThemeAppearance;
+        }
+      }
+      if (body.app.backgroundPattern !== undefined) {
+        if (
+          !requireEnum(
+            body.app.backgroundPattern,
+            BACKGROUND_PATTERN_SET,
+            "settings.app.backgroundPattern",
+            appErrors,
+          )
+        ) {
+          // recorded in appErrors
+        } else {
+          app.backgroundPattern = body.app.backgroundPattern as BackgroundPattern;
+        }
+      }
+      if (body.app.frostedGlass !== undefined) {
+        if (requireBoolean(body.app.frostedGlass, "settings.app.frostedGlass", appErrors)) {
+          app.frostedGlass = body.app.frostedGlass;
+        }
+      }
+      if (body.app.motionEnabled !== undefined) {
+        if (requireBoolean(body.app.motionEnabled, "settings.app.motionEnabled", appErrors)) {
+          app.motionEnabled = body.app.motionEnabled;
         }
       }
       if (body.app.favoriteWorldSlug !== undefined) {

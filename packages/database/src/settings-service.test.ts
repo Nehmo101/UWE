@@ -30,6 +30,9 @@ describe("SettingsService", () => {
     const settings = await service.getSettings();
 
     assert.equal(settings.app.theme, DEFAULT_SYSTEM_SETTINGS.app.theme);
+    assert.equal(settings.app.backgroundPattern, "none");
+    assert.equal(settings.app.frostedGlass, true);
+    assert.equal(settings.app.motionEnabled, true);
     assert.equal(settings.worlds.defaultVisibility, "dm_only");
     assert.equal(settings.portal.portalEnabled, true);
     assert.equal(settings.ai.localOnlyMode, false);

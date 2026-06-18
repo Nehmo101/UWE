@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { getAppRepository } from "@uwe/database/server";
+import { getAppRepository, getSystemSettings } from "@uwe/database/server";
+import { buildVisualThemeHtmlAttributes } from "@uwe/shared-ui";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
@@ -39,7 +40,13 @@ export default async function RootLayout({
   await enforceStudioPageAuth(pathname);
 
   let worlds: { name: string; slug: string }[] = [];
+  let visualThemeAttrs: ReturnType<typeof buildVisualThemeHtmlAttributes> = buildVisualThemeHtmlAttributes(
+    { theme: "dark", backgroundPattern: "none", frostedGlass: true, motionEnabled: true },
+    { appVariant: "studio" },
+  );
   try {
+    const settings = await getSystemSettings();
+    visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, { appVariant: "studio" });
     worlds = (await getAppRepository().listWorlds()).map((world) => ({
       name: world.name,
       slug: world.slug,
@@ -50,7 +57,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
       <body>
         <ThemeBootstrapScript scope="studio" />
         <ThemeProvider scope="studio">

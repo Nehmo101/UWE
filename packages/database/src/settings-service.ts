@@ -12,8 +12,31 @@ import { prisma } from "./client";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 
+export type BackgroundPattern =
+  | "none"
+  | "dots"
+  | "constellation"
+  | "synapse"
+  | "parchment"
+  | "subtle-noise";
+
+export const BACKGROUND_PATTERN_VALUES: readonly BackgroundPattern[] = [
+  "none",
+  "dots",
+  "constellation",
+  "synapse",
+  "parchment",
+  "subtle-noise",
+] as const;
+
 export interface AppSettings {
   theme: ThemeAppearance;
+  /** Decorative shell background pattern (CSS-only, performance-safe). */
+  backgroundPattern: BackgroundPattern;
+  /** Frosted-glass surfaces (backdrop-filter). Off = opaque panels for readability. */
+  frostedGlass: boolean;
+  /** Subtle UI motion (transitions). Always respects prefers-reduced-motion. */
+  motionEnabled: boolean;
   /** Preferred DnD world slug for /today — never hardcoded; set in settings or env. */
   favoriteWorldSlug?: string | null;
   /** Last actively opened world slug (optional UX hint). */
@@ -136,9 +159,31 @@ function buildMailSettings(
   };
 }
 
+function normalizeBackgroundPattern(value: unknown): BackgroundPattern {
+  if (
+    typeof value === "string" &&
+    (BACKGROUND_PATTERN_VALUES as readonly string[]).includes(value)
+  ) {
+    return value as BackgroundPattern;
+  }
+  return "none";
+}
+
+function normalizeAppSettings(app: AppSettings): AppSettings {
+  return {
+    ...app,
+    backgroundPattern: normalizeBackgroundPattern(app.backgroundPattern),
+    frostedGlass: app.frostedGlass !== false,
+    motionEnabled: app.motionEnabled !== false,
+  };
+}
+
 export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   app: {
     theme: "dark",
+    backgroundPattern: "none",
+    frostedGlass: true,
+    motionEnabled: true,
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
   },
@@ -253,6 +298,7 @@ function mergeSettings(
 function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
   return {
     ...settings,
+    app: normalizeAppSettings(settings.app),
     storage: {
       uploadsPath: settings.storage.uploadsPath ?? "",
       exportsPath: settings.storage.exportsPath ?? "",

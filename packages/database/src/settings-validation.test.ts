@@ -3,6 +3,38 @@ import { describe, it } from "node:test";
 import { validateSettingsUpdate } from "./settings-validation";
 
 describe("validateSettingsUpdate", () => {
+  it("accepts visual polish app settings", () => {
+    const result = validateSettingsUpdate({
+      app: {
+        theme: "dark",
+        backgroundPattern: "synapse",
+        frostedGlass: true,
+        motionEnabled: false,
+      },
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.deepEqual(result.value.app, {
+      theme: "dark",
+      backgroundPattern: "synapse",
+      frostedGlass: true,
+      motionEnabled: false,
+    });
+  });
+
+  it("rejects invalid background pattern", () => {
+    const result = validateSettingsUpdate({
+      app: { backgroundPattern: "matrix" },
+    });
+
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+
+    assert.ok(result.errors.some((error) => error.includes("settings.app.backgroundPattern")));
+  });
+
   it("accepts a valid partial update", () => {
     const result = validateSettingsUpdate({
       app: { theme: "light" },

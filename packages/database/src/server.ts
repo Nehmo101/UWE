@@ -586,6 +586,7 @@ export {
   getSystemSettings,
   getSystemSettingsForClient,
   DEFAULT_SYSTEM_SETTINGS,
+  BACKGROUND_PATTERN_VALUES,
   sanitizeSettingsForClient,
   resolveEffectiveUploadsPath,
   resolveEffectiveBackupsPath,
@@ -664,6 +665,7 @@ export type {
   PersistentPathEntry,
   PersistentPathSource,
   ThemeAppearance,
+  BackgroundPattern,
 } from "./settings-service";
 
 export {

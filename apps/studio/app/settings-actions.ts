@@ -4,6 +4,7 @@ import {
   createAuthService,
   createPrismaClient,
   getAppRepository,
+  type BackgroundPattern,
   type UweSystemSettingsUpdate,
   type Visibility,
   type CanonicalStatus,
@@ -31,6 +32,9 @@ export async function updateSettingsAction(formData: FormData) {
     case "general":
       update.app = {
         theme: String(formData.get("theme") || "dark") as ThemeAppearance,
+        backgroundPattern: String(formData.get("backgroundPattern") || "none") as BackgroundPattern,
+        frostedGlass: formData.has("frostedGlass"),
+        motionEnabled: formData.has("motionEnabled"),
       };
       break;
     case "worlds":

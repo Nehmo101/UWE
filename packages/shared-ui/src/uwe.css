@@ -207,6 +207,8 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
   --uwe-info: #c4b5fd;
 }
 
+@import "./uwe-visual-polish.css";
+
 /* === UWE component styles === */
 
 .uwe-shell {
@@ -2627,6 +2629,7 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
   padding: 12vh 1rem 1rem;
   background: rgba(4, 7, 14, 0.7);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .uwe-palette {
