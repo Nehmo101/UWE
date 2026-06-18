@@ -146,7 +146,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 7.5 | Password hashing | scrypt v1 | ✓ password.test.ts | pass |
 | 7.6 | No passwords in API responses | Safe user select excludes hash | ✓ password-security.test.ts | pass |
 | 7.7 | No tokens in logs | Audit metadata redaction | ✓ | pass |
-| 7.8 | Session tokens in DB | Plaintext (DB compromise = session hijack) | — | **known risk** |
+| 7.8 | Session tokens in DB | SHA-256 hashed at rest via `hashOpaqueToken` | ✓ auth.test.ts | pass |
 
 ---
 
@@ -198,11 +198,7 @@ Use this before exposing a new deployment:
 
 | Priority | Risk | Mitigation |
 |----------|------|------------|
-| Medium | Session tokens stored unhashed in SQLite | Hash session tokens at rest (like reset tokens) |
-| Medium | Setup GET leaks availability | Acceptable if `UWE_SETUP_TOKEN` is secret; optional: hide after setup |
-| Medium | No rate limit on setup POST | Add `RATE_LIMIT_PRESETS.setup` to setup route |
-| Low | Graph API policy vs handler mismatch | Portal graph route policy says public; handler requires session (safe, but inconsistent) |
-| Low | Multi-instance rate limit bypass | Document proxy-level limits; `setRateLimitStore()` for distributed deploys |
-| Low | Hardcoded default in `STUDIO_ACCESS_ALLOWED_EMAILS` | Override via env in production |
+| Low | Setup GET leaks availability | Acceptable if `UWE_SETUP_TOKEN` is secret |
+| Low | Multi-instance rate limit bypass | Use reverse-proxy rate limits or `setRateLimitStore()` |
 
 See also: [SECURITY.md](../SECURITY.md), [DEPLOYMENT_SECURITY.md](../DEPLOYMENT_SECURITY.md), [docs/security-testing.md](./security-testing.md).

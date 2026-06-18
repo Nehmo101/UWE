@@ -143,7 +143,7 @@ STUDIO_API_TOKEN=<starkes-zufalls-token>
 STUDIO_ACCESS_ALLOWED_EMAILS=lasset610@gmail.com
 ```
 
-`STUDIO_ACCESS_ALLOWED_EMAILS` wird von UWE ausgewertet, wenn Cloudflare den Header `Cf-Access-Authenticated-User-Email` mitsendet.
+`STUDIO_ACCESS_ALLOWED_EMAILS` wird von UWE ausgewertet, wenn Cloudflare den Header `Cf-Access-Authenticated-User-Email` mitsendet. **Pflicht in Produktion** — ohne gesetzte Variable akzeptiert UWE keinen Cloudflare-Access-Header (kein hardcodierter Default mehr).
 
 ## Verifikation
 

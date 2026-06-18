@@ -89,10 +89,11 @@ function hasValidBearerToken(request: Pick<Request, "headers">, requiredToken: s
 }
 
 function getAllowedAccessEmails(env: NodeJS.ProcessEnv = process.env): string[] {
-  const raw =
-    env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() ||
-    env.STUDIO_ACCESS_EMAIL?.trim() ||
-    "lasset610@gmail.com";
+  const raw = env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim();
+  if (!raw) {
+    return [];
+  }
+
   return raw
     .split(",")
     .map((entry) => entry.trim().toLowerCase())

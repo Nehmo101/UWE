@@ -79,6 +79,17 @@ describe("authorize", () => {
     assert.equal(denied?.status, 403);
   });
 
+  it("rejects Cloudflare Access when allowlist env is unset", () => {
+    assert.equal(
+      hasCloudflareAccessAuth(
+        makeRequest("/", {
+          "cf-access-authenticated-user-email": "anyone@example.com",
+        }),
+      ),
+      false,
+    );
+  });
+
   it("accepts Cloudflare Access authenticated user", () => {
     process.env.STUDIO_ACCESS_ALLOWED_EMAILS = "lasset610@gmail.com";
 
