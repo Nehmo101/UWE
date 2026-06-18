@@ -177,7 +177,7 @@ sudo systemctl status cloudflared
 
 Referenz: [Cloudflare Tunnel — run as a service](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/configure-tunnels/local-management/as-a-service/linux/)
 
-**Optional:** Cloudflare Access vor Studio legen (zusätzliche Schicht, da Studio kein Login hat).
+**Empfohlen:** Cloudflare Access vor Studio legen — Studio hat Session-Login, aber Cloudflare Access dient als primäre äußere Sperre vor dem Internet.
 
 ### 5.4 Smoke-Check über den Tunnel
 

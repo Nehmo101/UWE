@@ -28,7 +28,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 
 | Surface | Protection |
 |---------|------------|
-| **Studio** | No app login — network (Cloudflare Access / VPN) + `STUDIO_API_TOKEN` + CSRF |
+| **Studio** | Session login (`AUTH_REQUIRED=true`) + optional Cloudflare Access / `STUDIO_API_TOKEN` + CSRF |
 | **Portal** | Session cookies, role matrix (`owner`/`dm`/`player`/`guest`) |
 | **Public paths** | Visibility filters; leak scanner must pass |
 | **RTX / Ollama** | LAN only — never in Cloudflare Tunnel |

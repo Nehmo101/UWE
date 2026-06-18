@@ -72,8 +72,8 @@ export interface ProxyStatus {
 }
 
 export interface TrustStatus {
-  /** Studio has no login by design — exposure is controlled at network level. */
-  studioLogin: "none-by-design";
+  /** Studio session login mode when AUTH_REQUIRED is enforced. */
+  studioLogin: "session-login" | "none-by-design";
   studioApiTokenConfigured: boolean;
   authSecretConfigured: boolean;
   authSecretLooksWeak: boolean;
@@ -285,14 +285,14 @@ export async function getSystemStatus(
       expectedVersion: PAGE_TEMPLATE_SEED_VERSION,
     },
     trust: {
-      studioLogin: "none-by-design",
+      studioLogin: getUweRuntimeConfig().authRequired ? "session-login" : "none-by-design",
       studioApiTokenConfigured: !isStudioApiTokenMissing(),
       authSecretConfigured,
       authSecretLooksWeak: isWeakAuthSecret(authSecret),
       runDbSeedDisabled: !isRunDbSeedUnsafe(),
       publicPortalSharingEnabled,
       exposureHint:
-        "Studio hat bewusst kein Login — niemals direkt öffentlich ohne Reverse-Proxy-Auth, VPN oder Cloudflare Access betreiben.",
+        "Studio erzwingt Session-Login wenn AUTH_REQUIRED=true — zusätzlich Reverse-Proxy-Auth, VPN oder Cloudflare Access als äußere Schutzschicht nutzen.",
     },
     proxy: getProxyStatus(),
     mail: mailStatus,

@@ -1,7 +1,7 @@
 # UWE Repository Audit
 
-Stand: Analyse des Codebestands auf detached HEAD `61efe8a` (Version 0.1.0).  
-Zweck: Orientierung für neue Featurebereiche — keine Feature-Implementierung in diesem Schritt.
+Stand: 2026-06-18 (Version 0.1.0, Branch `main`).  
+Zweck: Orientierung für Featurebereiche und Reifegrad — siehe auch [ROADMAP.md](./ROADMAP.md).
 
 ## Annahmen (aus Repo abgeleitet)
 
@@ -9,11 +9,11 @@ Zweck: Orientierung für neue Featurebereiche — keine Feature-Implementierung 
 |-------|---------|
 | Framework | Next.js 15 App Router, React 19, TypeScript, pnpm Monorepo + Turborepo |
 | Datenbank | Prisma 7, SQLite (libsql), Schema in `packages/database/prisma/schema.prisma` |
-| Auth Studio | Kein DM-Login; Netzwerk-/Proxy-Schutz + optional `STUDIO_API_TOKEN` |
-| Auth Portal | Session-Cookies, Rollen (`owner`/`dm`/`player`), Preview-as-Player |
-| Image Studio | **Nicht im Repo** — geplantes Feature; Integration über Asset-Pipeline und bestehende Bild-UI (Labels, Assets, Capture) |
-| Kalender | **Nicht im Repo** — Termin-Daten existieren fragmentiert (Sessions, Verträge); kein Kalender-UI/API |
-| Cursor-Agent-Jobs | Bestehende **Job-Queue** (`Job`/`JobLog`) + Orchestrator-Docs in `docs/ai-brain-mail/` |
+| Auth Studio | Session-Login (owner/admin/dm, `AUTH_REQUIRED=true`); Netzwerk-/Proxy-Schutz + optional `STUDIO_API_TOKEN` |
+| Auth Portal | Session-Cookies, Rollen (`owner`/`admin`/`dm`/`player`), Preview-as-Player, Forgot/Reset |
+| Image Studio | Phase 1 — `/image-studio`, Job-Queue; siehe `docs/IMAGE_STUDIO.md` |
+| Kalender | Phase 1 — `/calendar`, iCal/CalDAV read-only; siehe `docs/CALENDAR_INTEGRATION.md` |
+| Cursor-Agent-Jobs | Phase 1 — Admin-UI + Job-Queue; siehe `docs/AGENT_JOBS.md` |
 | Daily Admin OS | DB-Modelle und Basis-UI vorhanden; vollständige Cockpit-Integration teils noch ausbaubar |
 
 Build-Verifikation während Audit: `pnpm install`, `db:generate`, `pnpm typecheck` — erfolgreich.
@@ -482,7 +482,7 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 
 | Risiko | Schwere | Details |
 |--------|---------|---------|
-| Studio ohne Login öffentlich | **Kritisch** | DM-Daten; `studio-security.test.ts`, `SECURITY.md` |
+| Studio ohne AUTH_REQUIRED öffentlich | **Kritisch** | DM-Daten ohne Session-Schutz; `studio-security.test.ts`, `SECURITY.md` |
 | DM-only Leak ins Portal | **Kritisch** | `visibility-security.test.ts` — bei Änderungen erneut prüfen |
 | Cloud-KI + Brain-Kontext | **Kritisch** | `privacyGuard.ts` — Regression in `privacy.test.ts` |
 | `AUTH_SECRET` Rotation | Hoch | Spotify-Tokens, Share-Passwörter ungültig |
@@ -529,10 +529,11 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 
 ## 12. Welche Features fehlen
 
-- ❌ **Image Studio** — dedizierte Bildbearbeitung (nur Label-Crop/Upload)
-- ❌ **Kalender-UI** — keine Aggregation Sessions/Verträge/Termine
-- ❌ **Externe DnD-APIs** (SRD, Bestiary) — nicht angebunden
-- ❌ **Studio DM-Login** — nur Netzwerk-Schutz
+- ✅ **Studio DM-Login** — Session-Login (owner/admin/dm); `AUTH_REQUIRED=true` für Produktion
+- 🔲 **Image Studio Phase 2** — Inpainting-UI, Seiten-Editor-Anbindung (Phase 1 vorhanden)
+- 🔲 **Kalender Phase 2** — Monats-/Wochen-UI, Zwei-Wege-Sync (Phase 1 vorhanden)
+- 🔲 **Externe DnD-APIs** — Package vorhanden, Encounter-Import Phase 2
+- 🔲 **E2E Auth-Tests** — Playwright o.ä.; siehe `docs/ROADMAP.md`
 - ❌ **Asset-Datei-Import** — Roadmap (README)
 - ❌ **PostgreSQL-Option** — Roadmap
 - ❌ **Markdown/HTML Export** — Roadmap

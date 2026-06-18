@@ -153,7 +153,7 @@ Mount persistent volume for `/data` (database + uploads + backups).
 |-------|--------|--------|
 | Network | Public URL | Cloudflare Access |
 | Middleware | Auth gate (optional) + headers | Deny-by-default API + CSRF |
-| App auth | Session login | None (network trust) |
+| App auth | Session login | Session login (`AUTH_REQUIRED=true`) |
 | API token | N/A | `STUDIO_API_TOKEN` |
 | Visibility | Server-side filter | Full DM access |
 | Rate limit | Login, share | Backup, import |

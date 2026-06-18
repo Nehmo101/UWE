@@ -21,9 +21,8 @@ export const VISIBILITY_LABELS: Record<Visibility, string> = {
 };
 
 /**
- * Full explanations for visibility values. The Studio has no login, the Portal
- * exposes published content on /worlds/* without authentication — these texts
- * make that consequence explicit wherever a visibility is chosen or shown.
+ * Full explanations for visibility values. The Portal exposes published content on
+ * /worlds/* without authentication — these texts make that consequence explicit.
  */
 export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
   private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",

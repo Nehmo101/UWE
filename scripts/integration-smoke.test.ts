@@ -167,6 +167,15 @@ describe("integration smoke — minimal app access paths", () => {
     assert.match(landing, /UweLandingPage/);
   });
 
+  it("documents auth flow roadmap and QA matrix", () => {
+    assert.ok(exists("docs/ROADMAP.md"));
+    assert.ok(exists("docs/SECURITY_QA_MATRIX.md"));
+    const roadmap = read("docs/ROADMAP.md");
+    assert.match(roadmap, /E2E-Tests/);
+    assert.match(roadmap, /2FA/);
+    assert.match(roadmap, /PostgreSQL/);
+  });
+
   it("keeps Portal public pages reachable", () => {
     const middleware = read("apps/portal/middleware.ts");
     const home = read("apps/portal/app/page.tsx");
