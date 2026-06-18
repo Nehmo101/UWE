@@ -123,6 +123,7 @@ export default async function AdminStatusPage() {
               items={[
                 { label: "← Dashboard", href: "/" },
                 { label: "Systemstatus", href: "/admin/status", active: true },
+                { label: "Cookbook", href: "/admin/cookbook" },
                 { label: "Einstellungen", href: "/settings" },
                 { label: "Backup", href: "/backup" },
               ]}

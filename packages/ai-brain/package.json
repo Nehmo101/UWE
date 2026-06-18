@@ -13,13 +13,15 @@
     "./privacy": "./src/privacy.ts",
     "./rtx-agent-config": "./src/rtx-agent-config.ts",
     "./types": "./src/types.ts",
-    "./router": "./src/router/index.ts"
+    "./router": "./src/router/index.ts",
+    "./cookbook-bridge": "./src/cookbook-bridge.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*"
   },
   "devDependencies": {

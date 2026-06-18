@@ -29,6 +29,7 @@ export function adminSidebarNav(active: string): AdminSidebarItem[] {
     { label: "Systemstatus", href: "/admin/status" },
     { label: "Security", href: "/admin/security" },
     { label: "KI-Prompt", href: "/admin/ai-prompt" },
+    { label: "Cookbook", href: "/admin/cookbook" },
     { label: "Einstellungen", href: "/settings" },
   ];
 

@@ -82,6 +82,12 @@ import type {
 
 import { AiRouterError } from "./types";
 
+import {
+  getCookbookRoutingContext,
+  resolveCookbookModelForRequest,
+} from "@uwe/cookbook";
+import { buildCookbookRuntimeProbe } from "../cookbook-bridge";
+
 
 
 export interface AiRouterDeps {
@@ -422,7 +428,29 @@ export async function routeAiRequest(
 
   const rtxHealth = await checkRtxHealth({ useMock: request.useMock });
 
-  const model = resolveModel(request, resolution, rtxHealth.defaultModel);
+  let model = resolveModel(request, resolution, rtxHealth.defaultModel);
+
+  if (resolution.route === "local_rtx" && !request.model?.trim()) {
+    const probe = await buildCookbookRuntimeProbe({
+      useMock: request.useMock,
+    });
+    const cookbook = await getCookbookRoutingContext({
+      providerMode: request.providerMode,
+      contextMode: request.contextMode,
+      taskType: request.taskType,
+      localOnlyMode: settings.localOnly,
+      rtxReady: rtxHealth.ready,
+      explicitModel: request.model,
+      probe,
+    });
+    model = resolveCookbookModelForRequest({
+      explicitModel: request.model,
+      taskType: request.taskType,
+      rtxDefaultModel: rtxHealth.defaultModel,
+      hardware: cookbook.hardware,
+      installedModels: cookbook.installedModels,
+    });
+  }
 
 
 
