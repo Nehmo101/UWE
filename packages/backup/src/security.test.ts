@@ -50,6 +50,8 @@ describe("backup security", () => {
         labelTemplates: 0,
         printLists: 0,
         soundboardButtons: 0,
+        pageTemplates: 0,
+        worldMemberships: 0,
       },
       assetFiles: [],
     };
@@ -99,6 +101,8 @@ describe("backup security", () => {
           labelTemplates: 0,
           printLists: 0,
           soundboardButtons: 0,
+          pageTemplates: 0,
+          worldMemberships: 0,
         },
         assetFiles: [],
       },

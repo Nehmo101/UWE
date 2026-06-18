@@ -42,6 +42,8 @@ describe("backup zip slip protection", () => {
         labelTemplates: 0,
         printLists: 0,
         soundboardButtons: 0,
+        pageTemplates: 0,
+        worldMemberships: 0,
       },
       assetFiles: [`${BACKUP_ASSETS_DIR}/${storageKey}`],
     };

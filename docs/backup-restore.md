@@ -4,15 +4,21 @@ Anleitung für Backups unter Windows (und allgemein).
 
 ## Was wird gesichert?
 
-| Inhalt | Enthalten |
-|--------|-----------|
-| Welten & Kampagnen | Ja |
-| Seiten & Inhalte | Ja |
-| Uploads / Medien | Ja |
-| Label-Templates | Ja |
-| Soundboard | Ja |
-| Benutzer-Auth-Sessions | Nein |
-| Secrets / Tokens | Nein (automatisch ausgeschlossen) |
+| Inhalt | Enthalten | Restore |
+|--------|-----------|---------|
+| Welten & Kampagnen | Ja | Ja |
+| Seiten & Inhalte | Ja | Ja |
+| Uploads / Medien | Ja | Ja |
+| Label-Templates | Ja | Ja |
+| Soundboard | Ja | Ja |
+| Welt-Mitgliedschaften & Spieler-Zugriffe | Ja (Stub-User ohne Passwort) | Ja |
+| Session-Unlocks / Page-Player-Access | Ja | Ja |
+| Custom Page-Templates (nicht System) | Ja (Full-Backup) | Ja |
+| Benutzer-Passwörter | Nein | Nein — wiederhergestellte User müssen Passwort setzen |
+| Benutzer-Auth-Sessions | Nein | Nein |
+| ShareLinks (Token/Passwort) | Nein | Nein — Tokens werden aus Sicherheitsgründen nicht exportiert |
+| PlayerNotes | Nein | Roadmap (Opt-in, Datenschutz) |
+| Secrets / Tokens | Nein (automatisch ausgeschlossen) | — |
 
 ## Backup erstellen
 

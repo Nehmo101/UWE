@@ -90,12 +90,20 @@ describe("UWE backup and restore", () => {
     );
 
     const db = createPrismaClient(databaseUrl);
-    await db.user.create({
+    const player = await db.user.create({
       data: {
-        displayName: "Secret User",
-        email: "secret@example.com",
-        passwordHash: "super-secret-hash",
-        role: "dm",
+        displayName: "Backup Player",
+        email: "player-backup@uwe.local",
+        passwordHash: "hashed-not-exported",
+        role: "player",
+      },
+    });
+    await db.worldMembership.create({
+      data: {
+        userId: player.id,
+        worldId: world.id,
+        role: "player",
+        characterName: "Test PC",
       },
     });
     await db.$disconnect();
@@ -120,7 +128,9 @@ describe("UWE backup and restore", () => {
     assert.equal(bundle.data.campaigns.length, 1);
     assert.ok(bundle.data.pages.some((page) => page.slug === "backup-page"));
     assert.ok(bundle.data.assets.some((asset) => asset.storageKey === assetStorageKey));
-    assert.equal(bundle.data.users.length, 0);
+    assert.equal(bundle.data.users.length, 1);
+    assert.equal(bundle.data.worldMemberships.length, 1);
+    assert.equal(bundle.data.users[0]?.email, "player-backup@uwe.local");
   });
 
   it("does not export secrets", async () => {
@@ -130,6 +140,7 @@ describe("UWE backup and restore", () => {
 
     assert.equal(issues.length, 0);
     assert.ok(!json.includes("super-secret-hash"));
+    assert.ok(!json.includes("hashed-not-exported"));
     assert.ok(!json.toLowerCase().includes("passwordhash"));
   });
 
@@ -208,6 +219,14 @@ describe("UWE backup and restore", () => {
     assert.ok(restoredWorld);
     assert.equal(await targetDb.page.count(), sourceBundle.data.pages.length);
     assert.equal(await targetDb.asset.count(), sourceBundle.data.assets.length);
+    assert.equal(await targetDb.worldMembership.count(), sourceBundle.data.worldMemberships.length);
+
+    const restoredMembership = await targetDb.worldMembership.findFirst({
+      where: { worldId: restoredWorld!.id },
+      include: { user: { select: { email: true } } },
+    });
+    assert.ok(restoredMembership);
+    assert.equal(restoredMembership.user.email, "player-backup@uwe.local");
 
     const restoredAsset = await targetDb.asset.findFirst({
       where: { worldId: restoredWorld!.id },
