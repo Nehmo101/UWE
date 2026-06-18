@@ -174,7 +174,27 @@ Only **published** pages with visibility `public` or `player_visible` appear in 
 |---------|-----------------|
 | **Player Portal** (`/worlds/*`) | Published `player_visible` / `public` content only — no login required on these routes |
 | **Authenticated Portal** (`/auth/worlds/*`) | Role-filtered player content; still no Spotify playback control |
-| **Studio** | **Not safe without protection** — no real DM login yet; use reverse-proxy auth, VPN, or Cloudflare Access |
+| **Studio** | **Not safe on the public internet without layered protection** — Studio has session login (`/login`) and role gates, but assume DM-level access after login; use Cloudflare Access, VPN, or reverse-proxy auth in addition |
+
+### Authentication & first-run setup
+
+| Route | App | Purpose |
+|-------|-----|---------|
+| `/` | Portal | Landing page (links to demo wiki and login) |
+| `/login` | Studio, Portal | Session login (email + password) |
+| `/logout` | Studio | Clears session, redirects to `/login` |
+| `/setup` | Studio | One-time owner bootstrap (requires `UWE_SETUP_TOKEN`) |
+| `/forgot-password`, `/reset-password` | Studio, Portal | Self-service password reset |
+| `/account/password` | Studio | Change password (logged-in) |
+| `/auth/account/password` | Portal | Change password (logged-in) |
+
+**First-run (production):** Set `UWE_SETUP_TOKEN` and `RUN_DB_SEED=false`, open Studio `/setup`, create the owner account. Setup is disabled automatically once an owner exists. See [docs/PRODUCTION.md](docs/PRODUCTION.md) and [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+
+**Password reset:** Self-service via `/forgot-password` and `/reset-password` (both apps). Admins can also reset via Studio (`/api/admin/users/[id]/reset-password`). Details: [docs/auth-api-security.md](docs/auth-api-security.md).
+
+**Roles:** `owner` / `admin` / `dm` → Studio; `player` → Portal only; `guest` / `readonly` → public wiki.
+
+**Protected vs public routes:** Central policy in `@uwe/auth` (`route-policy.ts`). Security QA matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 **Naming note:** because public routes need no login, Studio labels `player_visible` as **"Portal (ohne Login)"** — anything published with this visibility is readable by everyone who can reach the Portal. `dm_only` content is never served on `/worlds/*`.
 

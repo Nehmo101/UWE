@@ -24,6 +24,8 @@ export interface RouteClassification {
 export const PUBLIC_PLAYER_APP_ROUTES = [
   "/",
   "/login",
+  "/forgot-password",
+  "/reset-password",
   "/worlds",
   "/worlds/*",
   "/players",
@@ -44,6 +46,8 @@ export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/preview",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/share/*",
   "/api/worlds/*/graph",
   ...PUBLIC_ASSET_ROUTES,
@@ -111,6 +115,11 @@ export const PROTECTED_ROUTE_PREFIXES = [
 /** API routes that stay public even on Studio (health probes, OAuth callbacks). */
 export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/health",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/setup",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/spotify/callback",
 ] as const;
 

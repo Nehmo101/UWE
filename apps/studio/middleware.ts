@@ -12,6 +12,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/logout",
   "/setup",
+  "/forgot-password",
+  "/reset-password",
   "/api/auth",
   "/api/health",
 ];

@@ -31,6 +31,9 @@ function makeMiddlewareRequest(pathname: string, headers: Record<string, string>
 describe("security boundary", () => {
   it("allows public player routes", () => {
     assert.equal(isPublicRoute("/", "portal"), true);
+    assert.equal(isPublicRoute("/login", "portal"), true);
+    assert.equal(isPublicRoute("/forgot-password", "portal"), true);
+    assert.equal(isPublicRoute("/reset-password", "portal"), true);
     assert.equal(isPublicRoute("/worlds/terra", "portal"), true);
     assert.equal(isPublicRoute("/players/terra", "portal"), true);
 
@@ -89,6 +92,30 @@ describe("security boundary", () => {
 
     const authArea = classifyRoute("/auth/worlds/terra", "portal");
     assert.equal(authArea.access, "protected-session");
+  });
+
+  it("allows public portal password reset APIs without session", () => {
+    const forgotDenied = authorize({
+      scope: "portal-api",
+      request: makeRequest("/api/auth/forgot-password", {
+        host: "uweanddragons.org",
+        origin: "https://uweanddragons.org",
+      }),
+      pathname: "/api/auth/forgot-password",
+      hasSession: false,
+    });
+    assert.equal(forgotDenied, null);
+
+    const resetDenied = authorize({
+      scope: "portal-api",
+      request: makeRequest("/api/auth/reset-password", {
+        host: "uweanddragons.org",
+        origin: "https://uweanddragons.org",
+      }),
+      pathname: "/api/auth/reset-password",
+      hasSession: false,
+    });
+    assert.equal(resetDenied, null);
   });
 
   it("documents that dm_only content is filtered at repository layer for portal", () => {

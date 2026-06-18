@@ -1,4 +1,18 @@
-# Test Plan — Media, Calendar, DnD & Agent Automation
+# Test Plan — Media, Calendar, DnD, Security & Agent Automation
+
+## Security & Auth QA
+
+| Bereich | Datei / Befehl | Beschreibung |
+|---------|----------------|--------------|
+| Security Suite | `pnpm test:security` | Role matrix, route authz, leak scanner, studio route inventory |
+| Authz | `pnpm test:authz` | Role matrix + route guards |
+| Leak Scanner | `pnpm test:leaks` | Anonymous portal leak scan |
+| Studio Route Auth | `scripts/studio-route-auth.test.ts` | Every Studio API route has auth guard |
+| Visibility | `packages/database/src/visibility-security.test.ts` | `dm_only` never on portal |
+| Setup | `packages/database/src/auth-setup.test.ts` | One-time owner bootstrap |
+| Password | `packages/database/src/password-security.test.ts` | Hashing, admin reset, change-password |
+| Password reset flow | `packages/database/src/auth-password-reset.test.ts` | Self-service forgot/reset |
+| **QA Matrix** | [docs/SECURITY_QA_MATRIX.md](./SECURITY_QA_MATRIX.md) | Manuelle + automatisierte Auth/Route-Checks |
 
 ## Automatisierte Tests
 
@@ -55,6 +69,7 @@ pnpm build
 
 ## Bekannte Test-Lücken
 
+- Kein E2E Playwright für Auth-Flows (Login, Setup, Forgot/Reset, Logout) — manuelle QA in [SECURITY_QA_MATRIX.md](./SECURITY_QA_MATRIX.md)
 - Kein E2E Playwright für neue Pages (Phase 2)
 - CalDAV Integrationstest mit Mock-Server (TODO)
 - Image Studio ohne RTX/Cloud nur Fehlerpfad testbar

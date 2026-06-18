@@ -21,7 +21,7 @@ Before exposing UWE to the internet:
 - [ ] Set a strong, unique `AUTH_SECRET` in `.env` (never commit `.env`; replace the `.env.example` placeholder). Keep it stable after connecting Spotify — it encrypts OAuth tokens per world
 - [ ] Set `RUN_DB_SEED=false` in production (never auto-seed demo worlds on a live deployment)
 - [ ] Run Studio and Portal behind HTTPS (reverse proxy recommended)
-- [ ] **Never expose Studio directly to the public internet** — Studio has no user login. Use reverse-proxy auth, VPN, or Cloudflare Access
+- [ ] **Never expose Studio directly to the public internet without layered auth** — Studio has session login plus optional Cloudflare Access / `STUDIO_API_TOKEN`. Use reverse-proxy auth, VPN, or Cloudflare Access as the outer layer
 - [ ] Set `STUDIO_API_TOKEN` when Studio or its APIs may be reachable from untrusted networks (backup, restore, import, settings, AI, export, uploads)
 - [ ] Review Portal settings: guest access and public share links make content reachable without login — enable only deliberately
 - [ ] Keep Docker images and dependencies updated
@@ -44,7 +44,7 @@ The Studio dashboard and `GET /api/health` surface warnings for common misconfig
 ## Known Considerations
 
 - **SQLite** — suitable for small to medium deployments; concurrent write limits apply
-- **Studio trust model** — Studio assumes a trusted network; it has no per-user login. Never run it publicly without reverse-proxy auth, VPN, or Cloudflare Access. Use `STUDIO_API_TOKEN` for API hardening
+- **Studio trust model** — Studio uses session login (owner/admin/dm) plus optional Cloudflare Access / `STUDIO_API_TOKEN`. Never run it publicly without layered protection (reverse-proxy auth, VPN, or Cloudflare Access)
 - **`AUTH_SECRET`** — encrypts Spotify OAuth tokens per world; must be set to a strong random value in production and kept stable after Spotify connect (rotating it invalidates stored tokens)
 - **`RUN_DB_SEED` in production** — must be `false`; `auto`/`true` can create demo content on startup
 - **`player_visible` means "no login required"** — published pages/blocks/assets/soundboard buttons with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal (ohne Login)" to make the consequence explicit. `dm_only` content is never served on those routes

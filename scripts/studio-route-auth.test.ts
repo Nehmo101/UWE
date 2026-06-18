@@ -13,6 +13,8 @@ const PUBLIC_ALLOWLIST = new Set([
   "auth/login/route.ts",
   "auth/logout/route.ts",
   "auth/setup/route.ts",
+  "auth/forgot-password/route.ts",
+  "auth/reset-password/route.ts",
   "health/route.ts",
   "health/public/route.ts",
   "spotify/callback/route.ts",

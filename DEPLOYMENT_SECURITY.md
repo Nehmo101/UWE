@@ -38,7 +38,7 @@ Create an Access application for `studio.example.com`:
 - **Session duration:** 24h or less
 - **Bypass:** None for production
 
-Without Access, anyone reaching Studio has full DM control (Studio has no app login).
+Without Access, anyone reaching Studio can attempt login — but Cloudflare Access should be the primary gate for internet-facing Studio deployments. Studio also enforces session login when `AUTH_REQUIRED=true`.
 
 ### 3. Tunnel configuration
 

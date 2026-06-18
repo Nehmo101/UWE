@@ -92,6 +92,7 @@ export function clientIpFromHeaders(headers: Headers): string {
 
 export const RATE_LIMIT_PRESETS = {
   login: { maxAttempts: 8, windowMs: 5 * 60_000 },
+  passwordReset: { maxAttempts: 5, windowMs: 15 * 60_000 },
   setup: { maxAttempts: 20, windowMs: 60_000 },
   ai: { maxAttempts: 30, windowMs: 60_000 },
   import: { maxAttempts: 10, windowMs: 60_000 },

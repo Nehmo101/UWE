@@ -361,6 +361,12 @@ body {
   font-size: 0.9rem;
 }
 
+.studio-auth-success {
+  margin: 0;
+  color: var(--uwe-success, #16a34a);
+  font-size: 0.9rem;
+}
+
 .studio-auth-seed-users {
   margin-top: 1.25rem;
   padding-top: 1rem;

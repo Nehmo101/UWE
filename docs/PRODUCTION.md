@@ -170,15 +170,25 @@ Demo-Login nach erstem Start: `dm@uwe.local` / `uwe-dev`
 
 ```env
 AUTH_SECRET=<starkes-zufaelliges-geheimnis>   # openssl rand -base64 32
+UWE_SETUP_TOKEN=<einmaliges-setup-token>      # openssl rand -hex 32
 RUN_DB_SEED=false
 STUDIO_API_TOKEN=<optional-aber-empfohlen>    # openssl rand -base64 32
+AUTH_REQUIRED=true
 ```
 
-**Wichtig — Studio absichern:** UWE Studio hat **kein Benutzer-Login**. Betreiben Sie Studio **niemals** direkt öffentlich im Internet. Schützen Sie es mit mindestens einer dieser Maßnahmen:
+**Erster Owner (Produktion ohne Demo-Seed):**
 
+1. `UWE_SETUP_TOKEN` in `.env` setzen und Server neu starten
+2. Studio öffnen: http://localhost:3000/setup
+3. Owner-Konto anlegen (Setup ist danach dauerhaft deaktiviert)
+4. Optional: SMTP konfigurieren für Passwort-Reset-Mails (`SMTP_HOST`, `MAIL_ENABLED=true`)
+
+**Wichtig — Studio absichern:** UWE Studio hat **Session-Login** (owner/admin/dm) plus optionale äußere Schutzschichten. Betreiben Sie Studio **niemals** ohne zusätzliche Absicherung direkt öffentlich im Internet:
+
+- Cloudflare Access oder vergleichbarer Zero-Trust-Zugang (empfohlen als äußere Schicht)
 - Reverse-Proxy mit HTTP-Basic-Auth oder OAuth (z. B. nginx, Caddy, Traefik)
 - VPN (Tailscale, WireGuard, …)
-- Cloudflare Access oder vergleichbarer Zero-Trust-Zugang
+- `STUDIO_API_TOKEN` für API-Härtung
 
 Das Studio-Dashboard und `GET /api/health` zeigen Warnungen, wenn typische Selfhosting-Fehler erkannt werden (fehlendes `AUTH_SECRET`, `RUN_DB_SEED` nicht `false`, fehlendes `STUDIO_API_TOKEN`, aktive öffentliche Portal-/Share-Funktionen).
 

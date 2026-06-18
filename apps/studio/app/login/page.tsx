@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -18,6 +18,16 @@ function LoginForm() {
     forbidden ? "Keine Berechtigung für diesen Bereich." : null,
   );
   const [loading, setLoading] = useState(false);
+  const [setupAvailable, setSetupAvailable] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/auth/setup")
+      .then((response) => response.json())
+      .then((payload: { setupAvailable?: boolean }) => {
+        setSetupAvailable(Boolean(payload.setupAvailable));
+      })
+      .catch(() => setSetupAvailable(false));
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,7 +109,13 @@ function LoginForm() {
       )}
 
       <p className="studio-auth-footer">
-        <Link href="/setup">Erstes Setup</Link>
+        <Link href="/forgot-password">Passwort vergessen?</Link>
+        {setupAvailable && (
+          <>
+            {" · "}
+            <Link href="/setup">Erstes Setup</Link>
+          </>
+        )}
       </p>
     </section>
   );

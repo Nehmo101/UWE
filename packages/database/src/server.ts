@@ -174,6 +174,12 @@ export type {
 } from "./user-service";
 
 export {
+  completePasswordReset,
+  requestPasswordReset,
+} from "./auth-password-reset";
+export type { PasswordResetSurface } from "./auth-password-reset";
+
+export {
   DEV_SEED_PASSWORD,
   seedAuthDemoContent,
   seedAuthUsers,

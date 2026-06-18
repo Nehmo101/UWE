@@ -93,6 +93,7 @@ Single-instance in-memory limiter (`RATE_LIMITER_MODE` in `@uwe/security`).
 | Preset | Limit |
 |--------|-------|
 | `login` | 8 / 5 min |
+| `passwordReset` | 5 / 15 min |
 | `setup` | 20 / min |
 | `ai` | 30 / min |
 | `import` | 10 / min |
@@ -120,6 +121,21 @@ Public exposure checks surface when `PUBLIC_BASE_URL` / `CLOUDFLARE_TUNNEL` indi
 ## 2FA Preparation
 
 Models `TwoFactorSecret` and `TwoFactorChallenge` are schema-ready. Login flow integration is **not** active yet — enable in a follow-up PR.
+
+## Password reset (self-service)
+
+Studio and Portal expose matching flows:
+
+| Step | Studio | Portal |
+|------|--------|--------|
+| Request reset | `POST /api/auth/forgot-password` | same |
+| Set new password | `POST /api/auth/reset-password` | same |
+| UI | `/forgot-password`, `/reset-password` | same |
+
+- Always returns a neutral success message on forgot-password (no account enumeration)
+- Reset tokens are opaque, hashed at rest, 1-hour TTL; all sessions invalidated on success
+- When SMTP is configured (`SMTP_HOST`, `MAIL_ENABLED=true`), reset links are emailed; in development without SMTP, the server logs the link once (never in API responses)
+- Admin-initiated reset remains at `POST /api/admin/users/[id]/reset-password`
 
 ## Localhost / LAN Safety
 
@@ -163,6 +179,7 @@ Key assertions:
 | `API_TOKEN_HASH_SALT` | Optional dedicated API token hash salt |
 | `STUDIO_API_TOKEN` | Legacy shared bearer (prefer per-user tokens) |
 | `RESTORE_OWNER_TOKEN` | Extra guard for backup restore |
+| `UWE_SETUP_TOKEN` | One-time owner bootstrap via `/setup` |
 | `PUBLIC_BASE_URL` | Public exposure detection |
 
 ## Migration
