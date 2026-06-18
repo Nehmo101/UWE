@@ -60,6 +60,9 @@ After adding dependencies: `pnpm install` and commit `pnpm-lock.yaml`. CI uses `
 
 ## Further reading
 
+- `docs/engineering/ci.md` — CI workflows, local commands, debugging
+- `docs/engineering/cursor-workflow.md` — Cursor rules, commands, agent PR workflow
+- `.cursor/rules/` — project, coding, CI, security, and docs rules for Cursor
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed quality workflow
 - `docs/AGENT_JOBS.md` — GitHub Actions agent job integration
 - `docs/TEST_PLAN.md` — manual QA checklist

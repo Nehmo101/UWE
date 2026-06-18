@@ -414,29 +414,22 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.match(skill, /pnpm quality/);
   });
 
-  it("runs prisma generate before lint in CI workflow", () => {
+  it("runs full quality gate in CI workflow", () => {
     const ci = read(".github/workflows/ci.yml");
-    const generateIndex = ci.indexOf("db:generate");
-    const lintIndex = ci.indexOf("pnpm lint");
-    assert.ok(generateIndex >= 0, "CI must run db:generate");
-    assert.ok(lintIndex >= 0, "CI must run lint");
-    assert.ok(generateIndex < lintIndex, "db:generate must run before lint");
+    assert.match(ci, /pnpm quality/);
+    const qualityIndex = ci.indexOf("pnpm quality");
+    const dockerIndex = ci.indexOf("docker-build:");
+    assert.ok(qualityIndex >= 0, "CI must run pnpm quality");
+    assert.ok(dockerIndex < 0 || qualityIndex < dockerIndex, "quality must run before docker-build job");
   });
 
-  it("runs security gates before build in CI workflow", () => {
-    const ci = read(".github/workflows/ci.yml");
-    const securityIndex = ci.indexOf("pnpm test:security");
-    const secretIndex = ci.indexOf("pnpm secret:scan");
-    const auditIndex = ci.indexOf("pnpm audit:prod");
-    const buildIndex = ci.indexOf("pnpm build:release");
-
-    assert.ok(securityIndex >= 0, "CI must run test:security");
-    assert.ok(secretIndex >= 0, "CI must run secret:scan");
-    assert.ok(auditIndex >= 0, "CI must run audit:prod");
-    assert.ok(buildIndex >= 0, "CI must run build:release");
-    assert.ok(securityIndex < buildIndex, "security tests must run before build");
-    assert.ok(secretIndex < buildIndex, "secret scan must run before build");
-    assert.ok(auditIndex < buildIndex, "dependency audit must run before build");
+  it("quality script runs security gates before build", () => {
+    assertScriptIncludesInOrder("quality", [
+      "pnpm secret:scan",
+      "pnpm test:security",
+      "pnpm audit:prod",
+      "pnpm build:release",
+    ]);
   });
 
   it("keeps Docker builds conditional in CI", () => {

@@ -1,0 +1,46 @@
+---
+description: TypeScript, React, and Next.js coding standards for UWE
+globs: "**/*.{ts,tsx,js,mjs}"
+alwaysApply: false
+---
+
+# Coding Standards
+
+## TypeScript and React
+
+- Use strict typing; avoid `any` unless interfacing with untyped externals.
+- Prefer existing abstractions in `packages/` over duplicating logic in apps.
+- Server Actions for Studio forms; API routes for uploads, health, external callbacks.
+- Do not import server-only modules (`node:crypto`, Prisma, filesystem) into client components.
+
+## Component structure
+
+- Keep files focused — split large pages into colocated components.
+- Reuse `packages/shared-ui` for cross-app UI patterns.
+- Match surrounding naming, import style, and error handling conventions.
+
+## Imports and dead code
+
+- ESLint enforces `@typescript-eslint/no-unused-vars` with zero warnings.
+- Remove unused imports immediately; prefix intentionally unused params with `_`.
+- Do not leave dead features, commented-out blocks, or orphan files.
+
+## Auth imports (typecheck)
+
+| Symbol | Import from |
+|--------|-------------|
+| `SESSION_COOKIE_NAME`, `PREVIEW_COOKIE_NAME` | `@uwe/auth` or `packages/auth/src/session` |
+| `getUweRuntimeConfig`, `getSessionCookieOptions` | `@uwe/auth` or `packages/auth/src/runtime-config` |
+
+Do not import `SESSION_COOKIE_NAME` from `runtime-config`.
+
+## Error handling
+
+- Return structured errors from services; avoid swallowing exceptions silently.
+- API routes: use existing auth guards (`requireStudioApiAuth`, session middleware).
+- Never log secrets, tokens, or session identifiers.
+
+## Secrets
+
+- No hardcoded credentials, API keys, or production defaults in source.
+- Use `.env` / deployment secrets; demo values only in seed fixtures with allowlist.
