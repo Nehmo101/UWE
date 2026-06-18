@@ -22,10 +22,10 @@ Stand: Juni 2026 · Branch-Basis `main`.
 
 | # | Feature | Gesamtstatus | Nutzbar | Production-ready |
 |---|---------|--------------|---------|------------------|
-| 1 | Image Studio | Phase 1 MVP | Ja (Generierung) | Nein |
-| 2 | Calendar / iOS / FamilyWall | Phase 1 | Ja (lokal + read-only Feeds) | Teilweise |
-| 3 | DnD API / offene Quellen | Phase 1 | Ja (Suche + Beyond-Links) | Teilweise |
-| 4 | Agent Jobs / Orchestrator | Beta (Dispatch) | Ja (mit Limits) | Nein |
+| 1 | Image Studio | Phase 2 (Inpaint-UI) | Ja (Generierung + Inpaint) | Nein |
+| 2 | Calendar / iOS / FamilyWall | Phase 2 | Ja (lokal + Feeds + Wochenansicht) | Teilweise |
+| 3 | DnD API / offene Quellen | Phase 2 | Ja (Suche + Statblock-Import) | Teilweise |
+| 4 | Agent Jobs / Orchestrator | Phase 2 (Polling) | Ja (mit Limits) | Nein |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
 | 6 | Import Preview / Undo | Preview ja, Undo nein | Preview ja | Preview ja |
 | 7 | Secrets-/Reveal-System | Backend ja, UI nein | Teilweise | Nein |
@@ -43,17 +43,17 @@ Stand: Juni 2026 · Branch-Basis `main`.
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | Ja |
-| Scaffolding | Edit/Inpaint/Canvas = Scaffolding |
-| UI | Ja — `/image-studio` (Form + Projektliste) |
+| Scaffolding | Canvas/Editor-Drafts = Scaffolding |
+| UI | Ja — `/image-studio` (`ImageStudioJobForm` + Projektliste) |
 | API | Ja — `GET/POST /api/image-studio` |
 | DB | Ja — `ImageStudioProject`, `ImageStudioVersion`, `ImageStudioLink` |
 | Tests | Minimal — 1 Config-Test, Route-Authz, Smoke |
-| Nutzbar | **Ja** für `generate` / `variant` per Prompt |
-| Production-ready | **Nein** — kein Editor, schwache Fehler-UX, Cloud nur generate/variant |
+| Nutzbar | **Ja** für `generate` / `variant` / `inpaint` (RTX + Maske) |
+| Production-ready | **Nein** — kein Canvas-Editor, Cloud nur generate/variant |
 
-**Was funktioniert:** Prompt → Job → RTX oder optional Cloud DALL-E → `dm_only` Asset + Version.
+**Was funktioniert:** Prompt → Job → RTX oder optional Cloud DALL-E → `dm_only` Asset + Version; Inpaint-Maske + Varianten-Batch; Seiten-Link aus Editor.
 
-**Was nicht:** Canvas, Masken, Inpainting-UI, Drafts, Asset-Integration, Cloud-Edit, zuverlässiges `failed`-Handling (wird behoben).
+**Was nicht:** Canvas, Drafts, Cloud-Edit, zuverlässiges `failed`-Handling in allen Pfaden.
 
 **Risiken**
 
@@ -77,18 +77,18 @@ Stand: Juni 2026 · Branch-Basis `main`.
 |-----------|--------|
 | Vorhanden | Ja |
 | Scaffolding | CalDAV Write-back (Code da, UI blockiert `read_only`) |
-| UI | Ja — `/calendar`, Monatsgitter |
+| UI | Ja — `/calendar`, Monats- und Wochenansicht |
 | API | Ja — `/api/calendar/events`, `/api/calendar/feeds` |
 | DB | Ja — `CalendarFeed`, `CalendarEvent` |
 | Tests | Ja — iCal-Parse, CalDAV-Href, Service-Smoke |
-| Nutzbar | **Ja** — lokaler Kalender + read-only iCal/CalDAV/FamilyWall |
+| Nutzbar | **Ja** — lokaler Kalender + iCal/CalDAV/FamilyWall (read/write CalDAV optional) |
 | Production-ready | **Teilweise** — SSRF-Schutz + ENV-Gates ergänzt |
 
 **iOS Calendar:** Kein natives SDK. Indirekt über iCloud-`.ics`-URL oder CalDAV-URL + `CALDAV_PASSWORD` in `.env`.
 
 **FamilyWall:** Typ `familywall` = iCal-URL-Fetch, read-only, kein proprietäres API.
 
-**CalDAV:** Minimaler GET-Import; bidirektionaler Code (`putCalDavEvent`) existiert, aber alle externen Feeds werden als `read_only` angelegt.
+**CalDAV:** GET-Import + optional `read_write` in UI; Feed-Passwort verschlüsselt; bidirektionaler Code (`putCalDavEvent`) bei Event-Änderungen.
 
 **Risiken**
 

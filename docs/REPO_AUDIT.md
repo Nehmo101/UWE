@@ -539,10 +539,10 @@ Kurzfassung — **nicht** als fertig verkaufen:
 
 | Feature | Echter Status |
 |---------|---------------|
-| **Image Studio** | Phase 1: Prompt-Generierung — kein Editor/Canvas |
-| **Kalender** | Phase 1: lokal + read-only Feeds — CalDAV Write-back nicht in UI |
-| **DnD API** | Open5e + SRD-Monster — kein Statblock-Import |
-| **Agent Jobs** | Dispatch funktioniert — kein Completion-Callback |
+| **Image Studio** | Phase 2: Prompt + Inpaint-UI — kein Canvas-Editor |
+| **Kalender** | Phase 2: Wochenansicht + optional CalDAV Write-back |
+| **DnD API** | Open5e + Statblock-Import + Encounter-Builder |
+| **Agent Jobs** | Dispatch + GitHub-Status-Polling — kein Completion-Callback |
 | **Secrets/Reveal** | Backend + Tests — keine Studio-Editor-UI |
 | **Import Undo** | Nicht vorhanden (nur Preview) |
 | **Performance-Budget / Stress-Testwelt** | Nicht vorhanden |
