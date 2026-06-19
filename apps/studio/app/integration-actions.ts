@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  adoptAssetToTarget,
   createCalendarService,
   createDevAgentJobService,
   createDndApiService,
@@ -13,6 +14,9 @@ import {
   resolveCalendarConfig,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
+import type { ImageStudioLinkTargetType } from "@uwe/database/server";
+import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
+import { validateImageContextForProvider } from "@uwe/image-studio";
 import { dispatchJob } from "@/src/lib/job-executor";
 import {
   assertStudioCanUseAI,
@@ -38,6 +42,11 @@ export async function createImageStudioJobAction(formData: FormData) {
   const maskBase64 = String(formData.get("maskBase64") ?? "") || undefined;
   const pageId = String(formData.get("pageId") ?? "") || undefined;
   const linkTargetType = String(formData.get("linkTargetType") ?? "") || undefined;
+  const linkTargetId = String(formData.get("linkTargetId") ?? "") || pageId || undefined;
+  const contextMode = (String(formData.get("contextMode") ?? "prompt_only") ||
+    "prompt_only") as ImageStudioPromptContextMode;
+  const contextSnippet = String(formData.get("contextSnippet") ?? "") || undefined;
+  const cloudContextApproved = formData.get("cloudContextApproved") === "on";
   const variantCountRaw = Number.parseInt(String(formData.get("variantCount") ?? "1"), 10);
   const variantCount = task === "variant"
     ? Math.min(4, Math.max(1, Number.isFinite(variantCountRaw) ? variantCountRaw : 1))
@@ -45,6 +54,11 @@ export async function createImageStudioJobAction(formData: FormData) {
 
   assertStudioCanUseAI();
   await requireStudioWorldEdit(worldSlug);
+
+  const effectiveProvider = (providerMode as "auto" | "local_rtx" | "cloud" | undefined) ?? "auto";
+  if (effectiveProvider === "cloud" || (effectiveProvider === "auto" && config.allowCloud)) {
+    validateImageContextForProvider("cloud", contextMode, { cloudContextApproved });
+  }
 
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
@@ -55,10 +69,15 @@ export async function createImageStudioJobAction(formData: FormData) {
     worldId: world.id,
     title: title ?? `Image Studio — ${task}`,
     prompt,
+    metadata: { contextMode, reviewStatus: "draft" },
   });
 
-  if (pageId && (linkTargetType === "page" || !linkTargetType)) {
-    await imageStudio.linkProject(project.id, "page", pageId);
+  const resolvedLinkType = (linkTargetType ?? (pageId ? "page" : undefined)) as
+    | ImageStudioLinkTargetType
+    | undefined;
+
+  if (resolvedLinkType && linkTargetId) {
+    await imageStudio.linkProject(project.id, resolvedLinkType, linkTargetId);
   }
 
   await imageStudio.updateProjectStatus(project.id, "processing");
@@ -81,6 +100,9 @@ export async function createImageStudioJobAction(formData: FormData) {
         title: variantTitle,
         sourceImageBase64,
         maskBase64,
+        contextMode,
+        contextSnippet,
+        cloudContextApproved,
       },
       relatedType: "image_studio_project",
       relatedId: project.id,
@@ -88,6 +110,59 @@ export async function createImageStudioJobAction(formData: FormData) {
     void dispatchJob(job.id);
   }
   revalidatePath("/image-studio");
+}
+
+export async function saveImageStudioDraftAction(formData: FormData) {
+  const config = resolveImageStudioConfig();
+  if (!config.enabled) throw new Error("Image Studio ist deaktiviert.");
+
+  assertStudioCanUseAI();
+
+  const projectId = String(formData.get("projectId") ?? "");
+  const prompt = String(formData.get("prompt") ?? "") || undefined;
+  const title = String(formData.get("title") ?? "") || undefined;
+
+  if (!projectId) throw new Error("projectId fehlt.");
+
+  const imageStudio = createImageStudioService(prisma);
+  await imageStudio.saveDraft({ projectId, prompt, title });
+  revalidatePath("/image-studio");
+}
+
+export async function adoptImageStudioAssetAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const assetId = String(formData.get("assetId") ?? "");
+  const targetType = String(formData.get("targetType") ?? "") as
+    | "page"
+    | "workshop_project"
+    | "capture"
+    | "hardware_device"
+    | "contract_expense";
+  const targetId = String(formData.get("targetId") ?? "");
+  const contentBlockId = String(formData.get("contentBlockId") ?? "") || undefined;
+  const worldSlug = String(formData.get("worldSlug") ?? "");
+
+  if (!assetId || !targetType || !targetId) {
+    throw new Error("assetId, targetType und targetId sind erforderlich.");
+  }
+
+  if (worldSlug) {
+    await requireStudioWorldEdit(worldSlug);
+  }
+
+  await adoptAssetToTarget(prisma, {
+    assetId,
+    targetType,
+    targetId,
+    relationType: "adopted",
+    contentBlockId,
+  });
+
+  revalidatePath("/image-studio");
+  if (worldSlug) {
+    revalidatePath(`/worlds/${worldSlug}/assets`);
+  }
 }
 
 export async function createAgentJobAction(formData: FormData) {

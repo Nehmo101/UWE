@@ -1812,6 +1812,9 @@ enum ImageStudioLinkTargetType {
   handout
   brain_document
   capture
+  workshop_project
+  hardware_device
+  contract_expense
 }
 
 enum CalendarEventKind {

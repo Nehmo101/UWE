@@ -14,11 +14,13 @@ import {
   createUweRepositoryFromClient,
   getSystemSettings,
   resolveEffectiveUploadsPath,
+  syncImageStudioProjectLinksToAsset,
   type JobService,
 } from "@uwe/database/server";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchCalDavEvents, fetchIcalFeed, parseIcalEvents, putCalDavEvent } from "@uwe/calendar";
 import { runImageStudioTask, type ImageStudioTask } from "@uwe/image-studio";
+import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
 import type { JobRunnerContext } from "./job-runners";
 
@@ -39,6 +41,9 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
     sourceImageBase64?: string;
     maskBase64?: string;
     title?: string;
+    contextMode?: ImageStudioPromptContextMode;
+    contextSnippet?: string;
+    cloudContextApproved?: boolean;
   };
 
   if (!payload.prompt || !payload.task) {
@@ -59,6 +64,9 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       providerMode: payload.providerMode as "auto" | "local_rtx" | "cloud" | undefined,
       sourceImageBase64: payload.sourceImageBase64,
       maskBase64: payload.maskBase64,
+      contextMode: payload.contextMode,
+      contextSnippet: payload.contextSnippet,
+      cloudContextApproved: payload.cloudContextApproved,
     });
 
     if (!result.success || !result.imageBase64) {
@@ -108,7 +116,13 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       prompt: payload.prompt,
       assetId: asset.id,
       providerMode: result.providerUsed,
+      metadata: {
+        reviewStatus: "draft",
+        contextMode: payload.contextMode ?? "prompt_only",
+      },
     });
+
+    await syncImageStudioProjectLinksToAsset(db, activeProjectId, asset.id);
 
     await imageStudio.updateProjectStatus(activeProjectId, "completed");
 
