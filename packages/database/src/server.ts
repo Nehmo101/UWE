@@ -862,6 +862,8 @@ export type { ContractAlert, ContractCostSummary } from "./contract-expense-util
 export {
   countOpenSetupSteps,
   detectHardwareUrlWarnings,
+  extractHardwareRunbook,
+  mergeHardwareRunbookMetadata,
 } from "./hardware-utils";
 
 export type { HardwareUrlWarning } from "./hardware-utils";
