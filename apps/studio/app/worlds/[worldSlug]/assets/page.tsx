@@ -16,6 +16,7 @@ import {
   getAppRepository,
   createPrismaClient,
   createShareLinkService,
+  parseStringArray,
   type AssetType,
   type ShareTargetType,
 } from "@uwe/database/server";
@@ -297,6 +298,14 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                           </option>
                         ))}
                       </select>
+                    </label>
+                    <label>
+                      Tags (kommagetrennt)
+                      <input
+                        name="tags"
+                        defaultValue={parseStringArray(asset.tags).join(", ")}
+                        placeholder="karte, handout"
+                      />
                     </label>
                     <button type="submit" className="uwe-btn uwe-btn-primary">
                       Speichern

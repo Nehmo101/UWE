@@ -349,6 +349,9 @@ describe("integration smoke — documentation", () => {
     "docs/PR_REVIEW_LOG.md",
     "docs/REPO_AUDIT.md",
     "docs/FEATURE_MATURITY_MATRIX.md",
+    "docs/engineering/performance.md",
+    "docs/engineering/tag-taxonomy.md",
+    "docs/engineering/cleanup-inventory.md",
     "docs/AGENT_JOBS.md",
     "docs/IMAGE_STUDIO.md",
     "docs/CALENDAR_INTEGRATION.md",
@@ -424,6 +427,16 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.match(skill, /pnpm quality/);
   });
 
+  it("includes performance-tags-cleanup skill and perf modules", () => {
+    assert.ok(exists(".cursor/skills/uwe-performance-tags-cleanup/SKILL.md"));
+    assert.ok(exists("packages/database/src/perf-smoke.test.ts"));
+    assert.ok(exists("packages/database/src/tag-service.ts"));
+    assert.ok(exists("scripts/migration-check.mjs"));
+    assert.ok(exists("apps/studio/app/admin/tags/page.tsx"));
+    assert.ok(exists("apps/studio/app/api/admin/tags/route.ts"));
+    assert.ok(exists("scripts/bundle-budget-check.mjs"));
+  });
+
   it("runs full quality gate in CI workflow", () => {
     const ci = read(".github/workflows/ci.yml");
     assert.match(ci, /pnpm quality/);
@@ -439,6 +452,7 @@ describe("integration smoke — agent CI quality gate", () => {
       "pnpm test:security",
       "pnpm audit:prod",
       "pnpm build:release",
+      "bundle-budget-check",
     ]);
   });
 
