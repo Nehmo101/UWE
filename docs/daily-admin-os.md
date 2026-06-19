@@ -7,7 +7,7 @@ Lasses privates Admin-Cockpit in UWE Studio — neben DnD-Welten für Projekte, 
 | Route | Zweck |
 |-------|--------|
 | `/today` | Daily Cockpit — System-Ampel, DnD-Favorit, Life-Admin-Karten |
-| `/capture` | Schnell-Eingang (Inbox) — funktioniert ohne RTX |
+| `/capture` | Universelle mobile Inbox — Quick Capture, Triage, KI-Vorschläge (Review) |
 | `/projects` | Persönliche Projekte (UWE, Homelab, DnD, …) |
 | `/workshop` | Werkstatt / Miniaturen / Terrain / 3D-Druck |
 | `/contracts` | Verträge & Monatsausgaben (manuell, keine Bank-Anbindung) |
@@ -46,6 +46,7 @@ Siehe [life-brain-privacy.md](./life-brain-privacy.md).
 ## Tests
 
 - `packages/database/src/life-admin-service.test.ts`
+- `packages/database/src/capture-triage-service.test.ts`
 - `packages/database/src/studio-security.test.ts`
 - `apps/studio/src/lib/today-dashboard.test.ts`
 - `packages/ai-brain/src/router/personal-brain-privacy.test.ts`
