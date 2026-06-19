@@ -525,29 +525,29 @@ export function parseHardwareErrorHistory(metadata: unknown): HardwareErrorEntry
     return [];
   }
 
-  return history
-    .map((entry, index) => {
-      if (!entry || typeof entry !== "object") {
-        return null;
-      }
-      const record = entry as Record<string, unknown>;
-      const problem = typeof record.problem === "string" ? record.problem.trim() : "";
-      if (!problem) {
-        return null;
-      }
-      return {
-        id: typeof record.id === "string" ? record.id : `err-${index}`,
-        problem,
-        occurredAt:
-          typeof record.occurredAt === "string" ? record.occurredAt : new Date(0).toISOString(),
-        resolution: typeof record.resolution === "string" ? record.resolution : undefined,
-        affectedServices: Array.isArray(record.affectedServices)
-          ? record.affectedServices.filter((s): s is string => typeof s === "string")
-          : undefined,
-      };
-    })
-    .filter((entry): entry is HardwareErrorEntry => entry !== null)
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const entries: HardwareErrorEntry[] = [];
+  for (const [index, entry] of history.entries()) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
+    const record = entry as Record<string, unknown>;
+    const problem = typeof record.problem === "string" ? record.problem.trim() : "";
+    if (!problem) {
+      continue;
+    }
+    entries.push({
+      id: typeof record.id === "string" ? record.id : `err-${index}`,
+      problem,
+      occurredAt:
+        typeof record.occurredAt === "string" ? record.occurredAt : new Date(0).toISOString(),
+      resolution: typeof record.resolution === "string" ? record.resolution : undefined,
+      affectedServices: Array.isArray(record.affectedServices)
+        ? record.affectedServices.filter((s): s is string => typeof s === "string")
+        : undefined,
+    });
+  }
+
+  return entries.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
 export function parseHardwareLastCheckedAt(metadata: unknown): string | null {
@@ -599,7 +599,7 @@ export function buildHardwareDeviceCardView(
     notes?: string;
     metadata?: unknown;
   },
-  urlWarnings: HardwareUrlWarning[],
+  _urlWarnings: HardwareUrlWarning[],
 ): HardwareDeviceCardView {
   return {
     id: device.id,
