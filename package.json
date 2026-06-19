@@ -10,7 +10,7 @@
     "lint": "eslint --max-warnings 0 .",
     "ci:check": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
     "quality": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm secret:scan && pnpm typecheck && pnpm test && pnpm test:security && pnpm audit:prod && pnpm build:release",
-    "test:ci": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
+    "test:ci": "pnpm --filter @uwe/database db:generate && node scripts/migration-check.mjs && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
     "security:audit": "pnpm audit:prod",
     "docs:check": "node scripts/docs-check.mjs",
     "typecheck": "turbo run typecheck",
@@ -40,6 +40,7 @@
     "db:migrate": "pnpm --filter @uwe/database db:migrate",
     "db:deploy": "pnpm --filter @uwe/database db:deploy",
     "db:seed": "pnpm --filter @uwe/database db:seed",
+    "db:seed:stress": "pnpm --filter @uwe/database db:generate && node --import tsx scripts/seed-stress-world.ts",
     "bootstrap:owner": "pnpm --filter @uwe/database db:generate && npx tsx scripts/bootstrap-owner-if-needed.ts",
     "installer:windows": "pnpm --filter @uwe/windows-installer run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/uwe-wizard.ps1",
     "launcher:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/uwe-launcher.ps1",
@@ -63,16 +64,11 @@
   },
   "pnpm": {
     "overrides": {
-      "nodemailer": ">=9.0.1"
+      "nodemailer": "^9.0.1"
     }
   },
   "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=20"
-  },
-  "pnpm": {
-    "overrides": {
-      "nodemailer": "^9.0.1"
-    }
   }
 }

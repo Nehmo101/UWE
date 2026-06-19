@@ -32,9 +32,9 @@ Stand: Juni 2026 · Branch-Basis `main`.
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
 | 10 | Global Search 2.0 | Erweiterte Suche v1 | Ja | Ja (Kern) |
-| 11 | Performance-Budget + Testwelt | Nicht vorhanden | Nein | Nein |
+| 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke) | Teilweise (Dev seed) | Nein |
 | 12 | Medienverwaltung | Kern fertig | Ja | Ja (Kern) |
-| 13 | Tag-/Taxonomie-Aufräumer | Nicht vorhanden | Nein | Nein |
+| 13 | Tag-/Taxonomie-Aufräumer | Service + Tests | Teilweise (API) | Nein |
 
 ---
 
@@ -303,19 +303,20 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 | Kriterium | Status |
 |-----------|--------|
-| Vorhanden | **Nein** |
-| Scaffolding | — |
-| UI / API / DB / Tests | — |
-| Nutzbar | **Nein** |
-| Production-ready | **Nein** |
+| Vorhanden | **Ja** (Stress-Seed + CI-Smoke) |
+| Scaffolding | Web LCP/Bundle-Budgets fehlen |
+| UI / API / DB | Seed via `pnpm db:seed:stress`, Budgets in `perf-budgets.ts` |
+| Tests | `perf-smoke.test.ts` in CI |
+| Nutzbar | **Teilweise** — Dev-Stress-Welt (~500 Seiten), CI kleiner Smoke |
+| Production-ready | **Nein** — keine Browser-Performance-Gates |
 
-**Was existiert stattdessen:** AI-Token-Budget (`packages/ai-brain/src/context/budget.ts`), kleine Seeds (`terra-seed.ts`), ESLint `core-web-vitals`.
+**Was existiert:** `stress-seed.ts`, `PERF_SMOKE_SCALE` / `PERF_STRESS_SCALE`, `docs/engineering/performance.md`, `migration-check.mjs` in `test:ci`.
 
 **Nächste Schritte**
 
-1. Stress-Seed-Welt (10k+ Seiten) als Dev-Fixture.
-2. CI-Performance-Smoke (Search, Inspector, Import).
-3. Dokumentiertes Web-Performance-Budget (LCP, Bundle-Size).
+1. Größere Stress-Welt (10k+ Seiten) optional per ENV-Flag.
+2. Bundle-Size / LCP Budgets in CI.
+3. PostgreSQL-Lasttests.
 
 ---
 
@@ -341,15 +342,18 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 | Kriterium | Status |
 |-----------|--------|
-| Vorhanden | **Nein** |
-| Scaffolding | — |
-| UI / API / DB / Tests | — |
-| Nutzbar | **Nein** |
-| Production-ready | **Nein** |
+| Vorhanden | **Ja** (`tag-service.ts`) |
+| Scaffolding | Studio-Admin-UI fehlt |
+| UI | **Nein** — Service/API only |
+| API | `createTagService`, `mergeTags`, `suggestTagMerges` |
+| DB | JSON-Tags (kein Tag-Model) |
+| Tests | `tag-service.test.ts` |
+| Nutzbar | **Teilweise** — Merge/Suggestions per Code |
+| Production-ready | **Nein** — UI + Asset/Life-Brain Tag-Felder fehlen |
 
-**Was existiert:** `Page.tags` als JSON, editierbar, durchsuchbar — kein Dedupe/Merge/Cleanup-Tool.
+**Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`.
 
-**Nächste Schritte:** Admin-Tool für Tag-Normalisierung, Merge-Vorschläge, unbenutzte Tags.
+**Nächste Schritte:** Studio-Admin-UI, Asset/Life-Brain Tag-Eingaben, optional zentrales Tag-Model.
 
 ---
 

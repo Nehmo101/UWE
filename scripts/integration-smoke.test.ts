@@ -349,6 +349,9 @@ describe("integration smoke — documentation", () => {
     "docs/PR_REVIEW_LOG.md",
     "docs/REPO_AUDIT.md",
     "docs/FEATURE_MATURITY_MATRIX.md",
+    "docs/engineering/performance.md",
+    "docs/engineering/tag-taxonomy.md",
+    "docs/engineering/cleanup-inventory.md",
     "docs/AGENT_JOBS.md",
     "docs/IMAGE_STUDIO.md",
     "docs/CALENDAR_INTEGRATION.md",
@@ -422,6 +425,13 @@ describe("integration smoke — agent CI quality gate", () => {
     const skill = read(".cursor/skills/ci-quality-gate/SKILL.md");
     assert.match(skill, /name:\s*ci-quality-gate/);
     assert.match(skill, /pnpm quality/);
+  });
+
+  it("includes performance-tags-cleanup skill and perf modules", () => {
+    assert.ok(exists(".cursor/skills/uwe-performance-tags-cleanup/SKILL.md"));
+    assert.ok(exists("packages/database/src/perf-smoke.test.ts"));
+    assert.ok(exists("packages/database/src/tag-service.ts"));
+    assert.ok(exists("scripts/migration-check.mjs"));
   });
 
   it("runs full quality gate in CI workflow", () => {
