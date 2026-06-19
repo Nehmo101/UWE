@@ -15,6 +15,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/deployment-hardening.md")));
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/linux/uwe-host.service")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-stop.sh")));

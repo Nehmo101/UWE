@@ -100,6 +100,80 @@ pnpm installer:windows
 
 ---
 
+## UWE Host One-Shot Setup
+
+Einmaliges bzw. wiederholbares Linux-Host-Setup für den **alten UWE-Host-Laptop** (systemd, SQLite unter `/var/lib/uwe`, LAN-Erreichbarkeit). Nach einem Git-Pull genügt ein Befehl — idempotent und ohne Secrets im Repository.
+
+### Voraussetzungen
+
+| Voraussetzung | Hinweis |
+|---------------|---------|
+| Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
+| Node.js ≥ 20 | Runtime für Build; Production nutzt standalone |
+| pnpm ≥ 10 | `corepack enable && corepack prepare pnpm@latest --activate` |
+| git | Repository typischerweise unter `/opt/uwe` |
+| root/sudo | Script muss als root laufen |
+
+Optional: UFW — falls aktiv, öffnet das Script Port `3000/tcp` für Studio im LAN.
+
+### Einmaliger Befehl
+
+```bash
+cd /opt/uwe
+git pull   # falls noch nicht geklont
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
+
+Danach ist UWE lokal und im LAN erreichbar, z. B.:
+
+- **Studio (lokal):** `http://127.0.0.1:3000/studio`
+- **Studio (LAN):** `http://<HOST-IP>:3000/studio` (IP mit `hostname -I`)
+
+Production-Env und Secrets liegen unter **`/etc/uwe/uwe.env`** (nicht im Git). Vor Internet-Exposure: `AUTH_SECRET` setzen, siehe [docs/PRODUCTION.md](docs/PRODUCTION.md).
+
+### Was das Script macht
+
+1. Prüft root, Node/pnpm/git und erkennt das Repo (`/opt/uwe` oder Pfad relativ zum Script)
+2. Legt User `uwe`, Verzeichnisse `/etc/uwe`, `/var/lib/uwe`, `/var/log/uwe`, `/var/backups/uwe` an
+3. Erzeugt oder aktualisiert `/etc/uwe/uwe.env` (Platzhalter aus `.env.production.example`, falls vorhanden)
+4. Setzt `HOST=0.0.0.0`, `HOSTNAME=0.0.0.0`, `DATABASE_URL=file:/var/lib/uwe/uwe.db` und korrekte Rechte (`root:uwe`, `640` auf der Env-Datei)
+5. Führt `pnpm install`, Prisma `generate` (mit gefundenem `schema.prisma`), `migrate deploy` und `pnpm build` aus
+6. Installiert/aktualisiert `uwe.service` und `deploy/scripts/start-uwe.sh` (kein hartes `127.0.0.1`)
+7. Startet systemd, optional UFW-Regel, gibt Status und URLs aus
+
+Details zur Härtung mit Cloudflare Tunnel: [docs/deployment-hardening.md](docs/deployment-hardening.md).
+
+### Troubleshooting
+
+```bash
+# Service-Status und Logs
+sudo systemctl status uwe.service --no-pager
+journalctl -u uwe.service -n 80 --no-pager
+
+# Lauscht Studio auf 0.0.0.0:3000?
+ss -tulpn | grep 3000
+
+# HTTP-Test (Studio-Pfad oder Root)
+curl -i http://127.0.0.1:3000/studio
+curl -i http://127.0.0.1:3000/
+
+# Env lesbar für User uwe?
+sudo -u uwe test -r /etc/uwe/uwe.env && echo OK
+
+# Setup erneut ausführen (idempotent)
+sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh
+```
+
+### Nach Git-Pull neu bauen
+
+```bash
+cd /opt/uwe
+git pull
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
+
+---
+
 ## Alternative: Lokale Entwicklung (ohne Docker)
 
 ### Prerequisites

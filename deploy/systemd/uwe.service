@@ -12,11 +12,12 @@ WorkingDirectory=/opt/uwe
 Environment=UWE_HOME=/opt/uwe
 Environment=UWE_ENV=/etc/uwe/uwe.env
 Environment=NODE_ENV=production
-Environment=HOSTNAME=127.0.0.1
+Environment=HOST=0.0.0.0
+Environment=HOSTNAME=0.0.0.0
 Environment=PORT=3000
 EnvironmentFile=-/etc/uwe/uwe.env
 
-# Bind to localhost only — Cloudflare Tunnel connects locally; no WAN exposure.
+# Binds to 0.0.0.0 for LAN access; restrict exposure via firewall/Cloudflare Access.
 ExecStart=/opt/uwe/deploy/scripts/start-uwe.sh
 
 Restart=on-failure

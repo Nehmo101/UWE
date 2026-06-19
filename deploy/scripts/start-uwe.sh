@@ -12,8 +12,9 @@ if [[ -f "$UWE_ENV" ]]; then
   set +a
 fi
 
-STUDIO_PORT="${STUDIO_PORT:-3000}"
+STUDIO_PORT="${STUDIO_PORT:-${PORT:-3000}}"
 PORTAL_PORT="${PORTAL_PORT:-3001}"
+HOST_BIND="${HOST:-${HOSTNAME:-0.0.0.0}}"
 STUDIO_DIR="$UWE_HOME/apps/studio/.next/standalone"
 PORTAL_DIR="$UWE_HOME/apps/portal/.next/standalone"
 
@@ -25,7 +26,7 @@ fi
 (
   cd "$STUDIO_DIR"
   export PORT="$STUDIO_PORT"
-  export HOSTNAME=127.0.0.1
+  export HOSTNAME="$HOST_BIND"
   exec node apps/studio/server.js
 ) &
 STUDIO_PID=$!
@@ -33,7 +34,7 @@ STUDIO_PID=$!
 (
   cd "$PORTAL_DIR"
   export PORT="$PORTAL_PORT"
-  export HOSTNAME=127.0.0.1
+  export HOSTNAME="$HOST_BIND"
   exec node apps/portal/server.js
 ) &
 PORTAL_PID=$!
