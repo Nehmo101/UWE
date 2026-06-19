@@ -5,17 +5,37 @@ import {
   createLifeAdminService,
   firstPhotoUrl,
   formatEuroFromCents,
+  getNextWorkshopStatus,
   prisma,
   WORKSHOP_STATUS_LABELS,
   WORKSHOP_TYPE_LABELS,
   WorkshopProjectTypeEnum,
   WorkshopStatusEnum,
+  type WorkshopStatus,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { advanceWorkshopStatusAction } from "../life-admin-actions";
 import { createWorkshopAction } from "../workshop-actions";
+
+const WORKSHOP_FILTERS = [
+  { value: "all", label: "Alle" },
+  { value: "active", label: "Aktiv" },
+  { value: "material_missing", label: "Material fehlt" },
+  { value: "done", label: "Fertig" },
+  { value: "dnd", label: "DnD-verknüpft" },
+] as const;
+
+type WorkshopFilter = (typeof WORKSHOP_FILTERS)[number]["value"];
 
 interface Props {
   searchParams: Promise<{ filter?: string }>;
+}
+
+function resolveFilter(raw: string | undefined): WorkshopFilter {
+  if (raw && WORKSHOP_FILTERS.some((item) => item.value === raw)) {
+    return raw as WorkshopFilter;
+  }
+  return "all";
 }
 
 function formatCost(cents: number | null | undefined): string {
@@ -24,24 +44,26 @@ function formatCost(cents: number | null | undefined): string {
 }
 
 export default async function WorkshopPage({ searchParams }: Props) {
-  const { filter } = await searchParams;
+  const { filter: filterRaw } = await searchParams;
+  const filter = resolveFilter(filterRaw);
   const service = createLifeAdminService(prisma);
 
   const statusFilter =
     filter === "active"
-      ? (["in_progress", "planned", "material_missing"] as Array<
-          import("@uwe/database/server").WorkshopStatus
-        >)
+      ? (["in_progress", "planned", "material_missing", "idea"] as WorkshopStatus[])
       : filter === "material_missing"
         ? ("material_missing" as const)
         : filter === "done"
           ? ("done" as const)
           : undefined;
 
-  const workshops = await service.listWorkshopProjects({
-    status: statusFilter,
-    limit: 200,
-  });
+  const [workshops, filterCounts] = await Promise.all([
+    service.listWorkshopProjects({
+      status: statusFilter,
+      limit: 200,
+    }),
+    service.getWorkshopFilterCounts(),
+  ]);
 
   const visibleWorkshops =
     filter === "dnd" ? workshops.filter((item) => Boolean(item.worldId)) : workshops;
@@ -50,14 +72,29 @@ export default async function WorkshopPage({ searchParams }: Props) {
     <AdminModuleShell
       activePath="/workshop"
       title="Werkstatt"
-      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst."
+      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
     >
+      <section className="uwe-today-attention" aria-label="Werkstatt-Filter">
+        <div className="uwe-today-quick-chips">
+          {WORKSHOP_FILTERS.map((item) => {
+            const count = filterCounts[item.value];
+            const active = filter === item.value;
+            return (
+              <Link
+                key={item.value}
+                href={item.value === "all" ? "/workshop" : `/workshop?filter=${item.value}`}
+                className="uwe-today-quick-chip"
+                data-severity={active ? "warn" : "info"}
+                aria-current={active ? "page" : undefined}
+              >
+                {item.label} ({count})
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
       <nav className="uwe-inline-actions uwe-section">
-        <Link href="/workshop">Alle</Link>
-        <Link href="/workshop?filter=active">Aktiv</Link>
-        <Link href="/workshop?filter=material_missing">Material fehlt</Link>
-        <Link href="/workshop?filter=done">Fertig</Link>
-        <Link href="/workshop?filter=dnd">DnD-verknüpft</Link>
         <Link href="/workshop/recipes">Paint-Rezepte</Link>
         <Link href="/workshop/print-profiles">Druck-Profile</Link>
         <Link href="/workshop/rental">Terrain-Verleih</Link>
@@ -123,6 +160,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
         ) : (
           <div className="uwe-today-card-list">
             {visibleWorkshops.map((workshop) => {
+              const nextStatus = getNextWorkshopStatus(workshop.status);
               const thumb = firstPhotoUrl(
                 workshop.resultPhotos,
                 workshop.progressPhotos,
@@ -130,6 +168,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
                 workshop.imageGallery,
               );
               const materials = countMaterialsNeeded(workshop.materialsNeeded);
+              const world = "world" in workshop ? workshop.world : null;
 
               return (
                 <article key={workshop.id} className="uwe-today-card">
@@ -151,7 +190,14 @@ export default async function WorkshopPage({ searchParams }: Props) {
                   <p className="uwe-dashboard-muted">
                     {WORKSHOP_TYPE_LABELS[workshop.projectType]} ·{" "}
                     {WORKSHOP_STATUS_LABELS[workshop.status]}
-                    {workshop.worldId ? " · DnD-verknüpft" : ""}
+                    {world ? (
+                      <>
+                        {" "}
+                        · <Link href={`/worlds/${world.slug}/dashboard`}>{world.name}</Link>
+                      </>
+                    ) : workshop.worldId ? (
+                      " · DnD-verknüpft"
+                    ) : null}
                     {workshop.costCents != null ? ` · ${formatCost(workshop.costCents)}` : ""}
                   </p>
                   {workshop.nextAction && (
@@ -166,14 +212,25 @@ export default async function WorkshopPage({ searchParams }: Props) {
                     </p>
                   )}
                   {workshop.description && <p>{workshop.description}</p>}
-                  <p>
-                    <Link href={`/workshop/${workshop.id}`}>Cockpit öffnen →</Link>
-                  </p>
-                  <p>
-                    <Link href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}>
-                      Terrain-Verleih Mail vorbereiten
+                  <div className="uwe-inline-actions">
+                    <Link href={`/workshop/${workshop.id}`} className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                      Cockpit öffnen
                     </Link>
-                  </p>
+                    {nextStatus && (
+                      <form action={advanceWorkshopStatusAction}>
+                        <input type="hidden" name="id" value={workshop.id} />
+                        <button type="submit" className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                          → {WORKSHOP_STATUS_LABELS[nextStatus]}
+                        </button>
+                      </form>
+                    )}
+                    <Link
+                      href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}
+                      className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                    >
+                      Terrain-Mail
+                    </Link>
+                  </div>
                 </article>
               );
             })}

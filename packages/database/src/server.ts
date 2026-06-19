@@ -885,6 +885,8 @@ export {
   CAPTURE_TYPE_LABELS,
   PROJECT_STATUS_LABELS,
   WORKSHOP_STATUS_LABELS,
+  WORKSHOP_STATUS_FLOW,
+  getNextWorkshopStatus,
   CONTRACT_STATUS_LABELS,
   HARDWARE_STATUS_LABELS,
   PROJECT_CATEGORY_LABELS,
@@ -906,6 +908,11 @@ export {
   ContractBillingIntervalEnum,
   HardwareStatusEnum,
 } from "./life-admin-service";
+
+export {
+  resolveCaptureUploadFilePath,
+  saveCaptureUploadFile,
+} from "./capture-upload";
 
 export type {
   CreateAdminLinkInput,

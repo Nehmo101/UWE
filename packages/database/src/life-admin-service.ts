@@ -170,6 +170,23 @@ export const WORKSHOP_STATUS_LABELS: Record<WorkshopStatus, string> = {
   archived: "Archiviert",
 };
 
+/** Primary happy-path workflow for quick status advancement in the Werkstatt UI. */
+export const WORKSHOP_STATUS_FLOW: WorkshopStatus[] = [
+  "idea",
+  "planned",
+  "material_missing",
+  "in_progress",
+  "done",
+];
+
+export function getNextWorkshopStatus(current: WorkshopStatus): WorkshopStatus | null {
+  const index = WORKSHOP_STATUS_FLOW.indexOf(current);
+  if (index === -1 || index >= WORKSHOP_STATUS_FLOW.length - 1) {
+    return null;
+  }
+  return WORKSHOP_STATUS_FLOW[index + 1] ?? null;
+}
+
 export {
   WORKSHOP_PAINT_TARGET_LABELS,
   WORKSHOP_RENTAL_STATUS_LABELS,
@@ -487,6 +504,112 @@ export class LifeAdminService {
     return this.db.captureEntry.delete({ where: { id } });
   }
 
+  async getCaptureStatusCounts(): Promise<Record<CaptureStatus, number>> {
+    const rows = await this.db.captureEntry.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    });
+
+    const counts: Record<CaptureStatus, number> = {
+      inbox: 0,
+      triaged: 0,
+      linked: 0,
+      archived: 0,
+    };
+
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+    }
+
+    return counts;
+  }
+
+  async convertCaptureToProject(
+    captureId: string,
+    overrides: Partial<CreatePersonalProjectInput> = {},
+  ) {
+    const capture = await this.getCapture(captureId);
+    if (!capture) {
+      throw new Error("Capture not found");
+    }
+
+    const categoryByType: Partial<Record<CaptureType, PersonalProjectCategory>> = {
+      uwe_todo: "uwe",
+      project_idea: "uwe",
+      hardware: "hardware_homelab",
+      dnd_idea: "dnd",
+      art_miniature_terrain: "art_workshop",
+      contract_expense: "other",
+    };
+
+    const project = await this.createPersonalProject({
+      name: overrides.name ?? (capture.title || "Aus Capture"),
+      description: overrides.description ?? capture.content,
+      category: overrides.category ?? categoryByType[capture.captureType] ?? "other",
+      status: overrides.status ?? "idea",
+      notes: overrides.notes ?? `Erstellt aus Capture (${capture.id}).`,
+      worldId: capture.worldId ?? overrides.worldId,
+      pageId: capture.pageId ?? overrides.pageId,
+      metadata: overrides.metadata,
+    });
+
+    await this.createAdminLink({
+      sourceType: "capture",
+      sourceId: captureId,
+      targetType: "personal_project",
+      targetId: project.id,
+      relationType: "converted",
+      label: "Aus Capture",
+    });
+
+    await this.updateCapture(captureId, { status: "linked" });
+
+    return { capture: await this.getCapture(captureId), project };
+  }
+
+  async convertCaptureToWorkshop(
+    captureId: string,
+    overrides: Partial<CreateWorkshopProjectInput> = {},
+  ) {
+    const capture = await this.getCapture(captureId);
+    if (!capture) {
+      throw new Error("Capture not found");
+    }
+
+    const typeByCapture: Partial<Record<CaptureType, WorkshopProjectType>> = {
+      art_miniature_terrain: "miniature",
+      dnd_idea: "dnd_terrain",
+      file_image: "miniature",
+    };
+
+    const workshop = await this.createWorkshopProject({
+      title: overrides.title ?? (capture.title || "Aus Capture"),
+      projectType: overrides.projectType ?? typeByCapture[capture.captureType] ?? "other",
+      description: overrides.description ?? capture.content,
+      status: overrides.status ?? "planned",
+      notes: overrides.notes ?? `Erstellt aus Capture (${capture.id}).`,
+      referenceImages: capture.storageKey
+        ? [{ storageKey: capture.storageKey, label: capture.title }]
+        : overrides.referenceImages,
+      worldId: capture.worldId ?? overrides.worldId,
+      pageId: capture.pageId ?? overrides.pageId,
+      metadata: overrides.metadata,
+    });
+
+    await this.createAdminLink({
+      sourceType: "capture",
+      sourceId: captureId,
+      targetType: "workshop_project",
+      targetId: workshop.id,
+      relationType: "converted",
+      label: "Aus Capture",
+    });
+
+    await this.updateCapture(captureId, { status: "linked" });
+
+    return { capture: await this.getCapture(captureId), workshop };
+  }
+
   async listPersonalProjects(options: {
     status?: PersonalProjectStatus | PersonalProjectStatus[];
     category?: PersonalProjectCategory;
@@ -579,7 +702,73 @@ export class LifeAdminService {
       },
       orderBy: [{ updatedAt: "desc" }],
       take: options.limit ?? 50,
+      include: {
+        world: { select: { slug: true, name: true } },
+      },
     });
+  }
+
+  async getWorkshopStatusCounts(): Promise<Record<WorkshopStatus, number>> {
+    const rows = await this.db.workshopProject.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    });
+
+    const counts: Record<WorkshopStatus, number> = {
+      idea: 0,
+      planned: 0,
+      material_missing: 0,
+      in_progress: 0,
+      paused: 0,
+      done: 0,
+      archived: 0,
+    };
+
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+    }
+
+    return counts;
+  }
+
+  async getWorkshopFilterCounts(): Promise<{
+    all: number;
+    active: number;
+    material_missing: number;
+    done: number;
+    dnd: number;
+  }> {
+    const [all, active, materialMissing, done, dnd] = await Promise.all([
+      this.db.workshopProject.count(),
+      this.db.workshopProject.count({
+        where: { status: { in: ["in_progress", "planned", "material_missing", "idea"] } },
+      }),
+      this.db.workshopProject.count({ where: { status: "material_missing" } }),
+      this.db.workshopProject.count({ where: { status: "done" } }),
+      this.db.workshopProject.count({ where: { worldId: { not: null } } }),
+    ]);
+
+    return {
+      all,
+      active,
+      material_missing: materialMissing,
+      done,
+      dnd,
+    };
+  }
+
+  async advanceWorkshopStatus(id: string) {
+    const workshop = await this.getWorkshopProject(id);
+    if (!workshop) {
+      throw new Error("Workshop project not found");
+    }
+
+    const nextStatus = getNextWorkshopStatus(workshop.status);
+    if (!nextStatus) {
+      throw new Error("No next workshop status in workflow");
+    }
+
+    return this.updateWorkshopProject(id, { status: nextStatus });
   }
 
   async createWorkshopProject(input: CreateWorkshopProjectInput) {
