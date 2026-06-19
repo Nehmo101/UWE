@@ -219,11 +219,11 @@ describe("life admin service", () => {
       tags: ["3d-print"],
     });
 
-    const results = await service.searchPersonalBrain("vlan", { limit: 5 });
-    assert.ok(results.documents.some((doc) => doc.title.includes("Router")));
+    const results = await service.searchPersonalBrain({ query: "vlan", limit: 5 });
+    assert.ok(results.documents.some((doc) => doc.item.title.includes("Router")));
 
-    const factResults = await service.searchPersonalBrain("filament", { limit: 5 });
-    assert.ok(factResults.facts.some((fact) => fact.title.includes("Filament")));
+    const factResults = await service.searchPersonalBrain({ query: "filament", limit: 5 });
+    assert.ok(factResults.facts.some((fact) => fact.item.title.includes("Filament")));
   });
 
   it("deletes capture and related links", async () => {
