@@ -117,6 +117,10 @@ function hasDmWorldRole(membership: WorldMembership | null | undefined): boolean
   return membership !== null && membership !== undefined && DM_WORLD_ROLES.has(membership.role);
 }
 
+function isGlobalAdmin(user: AuthUser | null): boolean {
+  return user?.role === "owner" || user?.role === "admin";
+}
+
 function toAccessContext(
   user: AuthUser | null,
   world: WorldAuthTarget,
@@ -192,8 +196,13 @@ export function canEditWorld(
     return true;
   }
 
-  if (isGlobalDm(user)) {
+  if (user?.role === "dm") {
     return true;
+  }
+
+  // Admin manages system but does not auto-edit world canon without world DM role.
+  if (isGlobalAdmin(user)) {
+    return false;
   }
 
   return hasDmWorldRole(membershipForUser(user, world));
@@ -233,6 +242,11 @@ export function canEditContent(
   }
 
   if (!canEditWorld(user, world, scope)) {
+    return false;
+  }
+
+  const membership = membershipForUser(user, world);
+  if (membership?.role === "co_dm") {
     return false;
   }
 
@@ -327,11 +341,15 @@ export function canUseAI(
     return true;
   }
 
-  if (isGlobalDm(user)) {
+  if (user?.role === "dm") {
     return true;
   }
 
   if (hasDmWorldRole(context.membership)) {
+    return true;
+  }
+
+  if (context.membership?.role === "co_dm") {
     return true;
   }
 
