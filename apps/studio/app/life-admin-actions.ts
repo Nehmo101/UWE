@@ -191,6 +191,13 @@ export async function deleteHardwareAction(formData: FormData) {
   revalidateAdminPaths();
 }
 
+function parseCommaTags(formData: FormData, field = "tags"): string[] {
+  return String(formData.get(field) || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 export async function createLifeBrainDocumentAction(formData: FormData) {
   assertStudioTrusted();
 
@@ -198,6 +205,7 @@ export async function createLifeBrainDocumentAction(formData: FormData) {
     title: String(formData.get("title") || "").trim(),
     content: String(formData.get("content") || ""),
     category: String(formData.get("category") || "").trim() || null,
+    tags: parseCommaTags(formData),
   });
   revalidateAdminPaths();
   redirect("/life-brain");
@@ -210,6 +218,7 @@ export async function createLifeBrainFactAction(formData: FormData) {
     title: String(formData.get("title") || "").trim(),
     content: String(formData.get("content") || ""),
     factType: String(formData.get("factType") || "custom"),
+    tags: parseCommaTags(formData),
   });
   revalidateAdminPaths();
   redirect("/life-brain");
