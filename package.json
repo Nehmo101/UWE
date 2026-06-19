@@ -63,14 +63,11 @@
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
-<<<<<<< HEAD
-=======
   "pnpm": {
     "overrides": {
       "nodemailer": "^9.0.1"
     }
   },
->>>>>>> origin/main
   "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=20"
