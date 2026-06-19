@@ -59,3 +59,7 @@ Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`
 | Multi-domain rollout | `docs/engineering/product-orchestrator-plan.md` |
 
 Details: [references/architecture.md](references/architecture.md)
+
+## Capture 2.0
+
+See [references/capture-patterns.md](references/capture-patterns.md) for inbox, triage, proposals, and file upload conventions.

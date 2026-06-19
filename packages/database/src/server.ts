@@ -876,6 +876,25 @@ export type {
   GeneratorOutput,
 } from "./life-admin-service";
 
+export {
+  buildCaptureAiProposal,
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  CAPTURE_UPLOAD_NAMESPACE,
+  createCaptureTriageService,
+  CaptureTriageService,
+  parseCaptureAiProposal,
+  QUICK_CAPTURE_TYPE_OPTIONS,
+} from "./capture-triage-service";
+
+export type {
+  CaptureAiProposal,
+  CaptureProposalStatus,
+  CaptureProposalTarget,
+  CaptureTriageAction,
+  CaptureTriageOptions,
+  CaptureTriageResult,
+} from "./capture-triage-service";
+
 export type { ContractBillingInterval } from "./generated/prisma/client";
 
 export {
