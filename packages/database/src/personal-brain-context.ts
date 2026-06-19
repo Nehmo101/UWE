@@ -144,3 +144,28 @@ export async function loadPersonalBrainPromptContext(
 
   return serializePersonalBrainForPrompt(docs, facts);
 }
+
+export interface PersonalBrainAgentContextOptions {
+  query?: string;
+  limit?: number;
+}
+
+/**
+ * Loads a query-focused Life-Brain context block for local agents (RTX/Ollama).
+ * Falls back to recent entries when no query is provided.
+ */
+export async function loadPersonalBrainAgentContext(
+  loadDocs: (query?: string, limit?: number) => Promise<PersonalBrainDocSlice[]>,
+  loadFacts: (query?: string, limit?: number) => Promise<PersonalBrainFactSlice[]>,
+  options: PersonalBrainAgentContextOptions = {},
+): Promise<string> {
+  const limit = options.limit ?? 12;
+  const query = options.query?.trim();
+
+  const [docs, facts] = await Promise.all([
+    loadDocs(query, limit),
+    loadFacts(query, limit),
+  ]);
+
+  return serializePersonalBrainForPrompt(docs, facts);
+}

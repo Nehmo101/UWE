@@ -124,7 +124,22 @@ enum UserStatus {
 enum WorldMemberRole {
   owner
   dm
+  co_dm
   player
+}
+
+enum ContentReviewStatus {
+  pending
+  approved
+  rejected
+  superseded
+}
+
+enum ContentReviewSourceType {
+  ai_proposal
+  co_dm_change
+  player_note
+  portal_unlock
 }
 
 enum GameSessionStatus {
@@ -273,8 +288,13 @@ enum MailMessageStatus {
 
 enum MailTemplateKind {
   session_recap
+  session_reminder
   handout
   share_link
+  system_warning
+  backup_warning
+  contract_reminder
+  terrain_rental
   custom
 }
 
@@ -359,6 +379,21 @@ enum WorkshopStatus {
   paused
   done
   archived
+}
+
+enum WorkshopPaintTarget {
+  miniature
+  terrain
+  diorama
+  other
+}
+
+enum WorkshopRentalStatus {
+  available
+  reserved
+  on_loan
+  maintenance
+  retired
 }
 
 enum ContractStatus {
@@ -446,6 +481,9 @@ model User {
   twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
   authIdentities      AuthIdentity[]
+  contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
+  contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
+  reviewComments         ReviewComment[]
 
   @@map("users")
 }
@@ -559,6 +597,7 @@ model World {
   calendarEvents      CalendarEvent[]
   dndBeyondReferences DndBeyondReference[]
   researchSessions    ResearchSession[]
+  contentReviews      ContentReview[]
 
   @@map("worlds")
 }
@@ -903,6 +942,49 @@ model PlayerNote {
   @@map("player_notes")
 }
 
+model ContentReview {
+  id               String                  @id @default(cuid())
+  worldId          String                  @map("world_id")
+  sourceType       ContentReviewSourceType @map("source_type")
+  sourceId         String                  @map("source_id")
+  status           ContentReviewStatus     @default(pending)
+  title            String
+  summary          String                  @default("")
+  diff             Json?
+  payload          Json?
+  proposedByUserId String?                 @map("proposed_by_user_id")
+  reviewedByUserId String?                 @map("reviewed_by_user_id")
+  reviewedAt       DateTime?               @map("reviewed_at")
+  rejectReason     String?                 @map("reject_reason")
+  targetHref       String?                 @map("target_href")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  world      World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  proposedBy User?           @relation("ContentReviewProposedBy", fields: [proposedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy User?           @relation("ContentReviewReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  comments   ReviewComment[]
+
+  @@unique([sourceType, sourceId])
+  @@index([worldId, status])
+  @@index([status, createdAt])
+  @@map("content_reviews")
+}
+
+model ReviewComment {
+  id        String   @id @default(cuid())
+  reviewId  String   @map("review_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review ContentReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("review_comments")
+}
+
 model ShareLink {
   id           String          @id @default(cuid())
   worldId      String          @map("world_id")
@@ -980,6 +1062,10 @@ enum ActivityAction {
   seed_applied
   ai_proposal_applied
   ai_proposal_discarded
+  review_submitted
+  review_approved
+  review_rejected
+  review_commented
   error
   warning
 }
@@ -997,6 +1083,7 @@ enum ActivityTargetType {
   ai_proposal
   ai_run
   brain_document
+  content_review
   system
 }
 
@@ -1627,6 +1714,7 @@ model WorkshopProject {
   imageGallery     Json?               @map("image_gallery")
   referenceImages  Json?               @map("reference_images")
   progressPhotos   Json?               @map("progress_photos")
+  resultPhotos     Json?               @map("result_photos")
   costCents        Int?                @map("cost_cents")
   nextAction       String?             @map("next_action")
   notes            String              @default("")
@@ -1636,13 +1724,84 @@ model WorkshopProject {
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
-  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
-  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  world          World?                  @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page           Page?                   @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  paintRecipes   WorkshopPaintRecipe[]
+  printProfiles  WorkshopPrintProfile[]
+  terrainRentals WorkshopTerrainRental[]
 
   @@index([status])
   @@index([projectType])
   @@index([worldId])
   @@map("workshop_projects")
+}
+
+model WorkshopPaintRecipe {
+  id                String              @id @default(cuid())
+  name              String
+  targetType        WorkshopPaintTarget @default(other) @map("target_type")
+  primer            String              @default("")
+  basecoat          String              @default("")
+  wash              String              @default("")
+  highlights        String              @default("")
+  colorsUsed        Json?               @map("colors_used")
+  resultPhotoUrl    String?             @map("result_photo_url")
+  rating            Int?
+  notes             String              @default("")
+  workshopProjectId String?             @map("workshop_project_id")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  workshopProject WorkshopProject? @relation(fields: [workshopProjectId], references: [id], onDelete: SetNull)
+
+  @@index([targetType])
+  @@index([workshopProjectId])
+  @@map("workshop_paint_recipes")
+}
+
+model WorkshopPrintProfile {
+  id                String   @id @default(cuid())
+  name              String   @default("")
+  printer           String   @default("")
+  nozzle            String   @default("")
+  filament          String   @default("")
+  layerHeight       String   @default("") @map("layer_height")
+  supports          String   @default("")
+  result            String   @default("")
+  errors            String   @default("")
+  improvements      String   @default("")
+  notes             String   @default("")
+  workshopProjectId String?  @map("workshop_project_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  workshopProject WorkshopProject? @relation(fields: [workshopProjectId], references: [id], onDelete: SetNull)
+
+  @@index([workshopProjectId])
+  @@map("workshop_print_profiles")
+}
+
+model WorkshopTerrainRental {
+  id                    String               @id @default(cuid())
+  terrainSetName        String               @map("terrain_set_name")
+  boxLabel              String               @default("") @map("box_label")
+  replacementValueCents Int?                 @map("replacement_value_cents")
+  rentalPriceCents      Int?                 @map("rental_price_cents")
+  depositCents          Int?                 @map("deposit_cents")
+  status                WorkshopRentalStatus @default(available)
+  damages               String               @default("")
+  handoverChecklist     Json?                @map("handover_checklist")
+  returnChecklist       Json?                @map("return_checklist")
+  notes                 String               @default("")
+  workshopProjectId     String?              @map("workshop_project_id")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  workshopProject WorkshopProject? @relation(fields: [workshopProjectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([workshopProjectId])
+  @@map("workshop_terrain_rentals")
 }
 
 model ContractExpense {
@@ -1831,6 +1990,9 @@ enum ImageStudioLinkTargetType {
   handout
   brain_document
   capture
+  workshop_project
+  hardware_device
+  contract_expense
 }
 
 enum CalendarEventKind {

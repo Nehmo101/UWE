@@ -84,7 +84,7 @@ describe("performance smoke", () => {
   it("searches personal brain within budget", async () => {
     const lifeAdmin = createLifeAdminService(db);
     const start = process.hrtime.bigint();
-    const results = await lifeAdmin.searchPersonalBrain("homelab", { limit: 10 });
+    const results = await lifeAdmin.searchPersonalBrain({ query: "homelab", limit: 10 });
     const ms = elapsed(start);
     assert.ok(results.documents.length >= 1);
     assertWithinBudget("personalBrainSearch", ms, PERF_BUDGETS_MS.personalBrainSearch);

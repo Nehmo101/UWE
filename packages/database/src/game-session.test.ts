@@ -182,8 +182,9 @@ describe("UWE game session management", () => {
 
     assert.equal((portalView as { summaryDm?: string }).summaryDm, undefined);
     assert.equal((portalView as { notes?: string }).notes, undefined);
-    assert.equal((portalView as { openPlots?: string }).openPlots, undefined);
-    assert.equal((portalView as { playerDecisions?: string }).playerDecisions, undefined);
+    assert.equal(portalView.openPlots, "Drachenplot offen");
+    assert.equal(portalView.playerDecisions, "Gruppe hilft dem König");
+    assert.equal(portalView.summaryPlayer, "Die Gruppe trifft den König.");
 
     const dmView = await auth.getGameSessionForDm(worldSlug, sessionId);
     assert.ok(dmView);
@@ -195,7 +196,6 @@ describe("UWE game session management", () => {
     const serialized = JSON.stringify(portalView);
     assert.ok(!serialized.includes("DM-only"));
     assert.ok(!serialized.includes("DM prep notes"));
-    assert.ok(!serialized.includes("Drachenplot offen"));
 
     await db.$disconnect();
   });

@@ -24,4 +24,37 @@ describe("calendar-service", () => {
     const listed = await calendar.listEvents({ feedId: local.id });
     assert.ok(listed.some((entry) => entry.id === event.id));
   });
+
+  it("syncs session to calendar and removes event when date cleared", async () => {
+    const calendar = createCalendarService(db);
+    const world = await db.world.create({
+      data: { name: "Cal Test", slug: `cal-test-${Date.now()}` },
+    });
+
+    const session = await db.gameSession.create({
+      data: {
+        worldId: world.id,
+        title: "Abenteuer",
+        sessionNumber: 1,
+        date: new Date("2026-06-25T19:00:00Z"),
+      },
+    });
+
+    const synced = await calendar.syncSessionToCalendar(session.id);
+    assert.ok(synced);
+    assert.equal(synced?.sessionId, session.id);
+    assert.equal(synced?.kind, "session");
+
+    const events = await calendar.listEvents({ worldId: world.id });
+    assert.equal(events.length, 1);
+
+    await db.gameSession.update({
+      where: { id: session.id },
+      data: { date: null },
+    });
+    await calendar.syncSessionToCalendar(session.id);
+
+    const afterClear = await calendar.listEvents({ worldId: world.id });
+    assert.equal(afterClear.length, 0);
+  });
 });

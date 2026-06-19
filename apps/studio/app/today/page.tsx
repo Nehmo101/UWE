@@ -55,8 +55,11 @@ export default async function TodayPage() {
               <span className="uwe-system-ampel-item" data-status={statusDot(data.systemOk)}>
                 UWE {data.systemLabel}
               </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(true)}>
-                DB OK
+              <span className="uwe-system-ampel-item" data-status={statusDot(data.dbOk)}>
+                DB {data.dbOk ? "OK" : "Fehler"}
+              </span>
+              <span className="uwe-system-ampel-item" data-status={statusDot(data.backupOk, true)}>
+                Backup {data.backupOk ? "OK" : "prüfen"}
               </span>
               <span className="uwe-system-ampel-item" data-status={statusDot(data.rtxReady, true)}>
                 RTX {data.rtxReady ? "bereit" : "offline"}
@@ -76,13 +79,111 @@ export default async function TodayPage() {
               >
                 Portal {data.portalAuthRequired ? "Auth" : "offen"}
               </span>
+              <span
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.cloudflareOk, !data.cloudflareOk)}
+              >
+                CF {data.cloudflareOk ? "OK" : "Tunnel"}
+              </span>
             </div>
+            {data.homelab.alerts.criticalCount > 0 && (
+              <div className="uwe-form-error uwe-section" role="alert">
+                <strong>{data.homelab.alerts.criticalCount} kritische Homelab-/Security-Probleme</strong>
+                <ul>
+                  {data.homelab.alerts.messages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+                <p>
+                  <Link href="/hardware">Hardware-Cockpit öffnen →</Link>
+                </p>
+              </div>
+            )}
             <p className="uwe-dashboard-muted">
               <Link href="/admin/status">Details im Systemstatus →</Link>
             </p>
           </section>
 
           <div className="uwe-dashboard-grid">
+            <section className="uwe-card uwe-dashboard-card">
+              <h2 className="uwe-section-title">Kalender — Heute</h2>
+              {data.calendarToday.length > 0 ? (
+                <div className="uwe-today-card-list">
+                  {data.calendarToday.map((item) => (
+                    <article key={item.id} className="uwe-today-card">
+                      <h3>{item.title}</h3>
+                      <p>
+                        {item.moduleLabel}
+                        {item.allDay ? "" : ` · ${DATE_FORMAT.format(item.startAt)}`}
+                        {item.urgency === "overdue" ? " · überfällig" : ""}
+                      </p>
+                      {item.href && (
+                        <p>
+                          <Link href={item.href}>Details →</Link>
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="uwe-dashboard-muted">Keine Termine oder Fristen für heute.</p>
+              )}
+              {data.calendarThisWeek.length > 0 && (
+                <>
+                  <h3 className="uwe-section-subtitle">Diese Woche</h3>
+                  <div className="uwe-today-card-list">
+                    {data.calendarThisWeek.slice(0, 5).map((item) => (
+                      <article key={item.id} className="uwe-today-card">
+                        <h3>{item.title}</h3>
+                        <p>
+                          {item.moduleLabel} · {DATE_FORMAT.format(item.startAt)}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+              <p>
+                <Link href="/calendar">Kalender öffnen →</Link>
+              </p>
+            </section>
+
+            <section className="uwe-card uwe-dashboard-card">
+              <h2 className="uwe-section-title">Mail Center</h2>
+              {data.mailSummary.recentFailed > 0 ? (
+                <p className="uwe-form-error">
+                  {data.mailSummary.recentFailed} fehlgeschlagene Sendung(en)
+                  {data.mailSummary.latestFailedSubject
+                    ? `: ${data.mailSummary.latestFailedSubject}`
+                    : ""}
+                </p>
+              ) : (
+                <p className="uwe-dashboard-muted">Keine fehlgeschlagenen Mails.</p>
+              )}
+              {data.mailSummary.pendingCount > 0 && (
+                <p className="uwe-dashboard-muted">
+                  {data.mailSummary.pendingCount} ausstehende Log-Einträge
+                </p>
+              )}
+              <div className="uwe-today-card-list">
+                {data.nextSession && data.nextSession.date && (
+                  <p>
+                    <Link
+                      href={`/mail/compose?kind=session_reminder&worldSlug=${data.nextSession.worldSlug}&sourceId=${data.nextSession.id}`}
+                    >
+                      Session-Erinnerung vorbereiten
+                    </Link>
+                  </p>
+                )}
+                <p>
+                  <Link href="/mail/compose?kind=backup_warning">Backup-Warnung vorbereiten</Link>
+                </p>
+              </div>
+              <p>
+                <Link href="/mail">Mail Center →</Link>
+              </p>
+            </section>
+
             <section className="uwe-card uwe-dashboard-card">
               <h2 className="uwe-section-title">DnD / Welten</h2>
               {data.preferredWorld ? (
@@ -155,14 +256,29 @@ export default async function TodayPage() {
             <section className="uwe-card uwe-dashboard-card">
               <h2 className="uwe-section-title">Werkstatt</h2>
               <p>{data.lifeAdmin.activeWorkshopCount} in Arbeit / geplant</p>
-              <div className="uwe-today-card-list">
-                {data.lifeAdmin.activeWorkshops.map((workshop) => (
-                  <article key={workshop.id} className="uwe-today-card">
-                    <h3>{workshop.title}</h3>
-                    <p>{workshop.nextAction || workshop.status}</p>
-                  </article>
-                ))}
-              </div>
+              {data.lifeAdmin.workshopOpenTasks.length > 0 ? (
+                <div className="uwe-today-card-list">
+                  {data.lifeAdmin.workshopOpenTasks.map((task) => (
+                    <article key={task.id} className="uwe-today-card">
+                      <h3>
+                        <Link href={task.href}>{task.title}</Link>
+                      </h3>
+                      <p>{task.nextAction}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="uwe-today-card-list">
+                  {data.lifeAdmin.activeWorkshops.map((workshop) => (
+                    <article key={workshop.id} className="uwe-today-card">
+                      <h3>
+                        <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                      </h3>
+                      <p>{workshop.nextAction || workshop.status}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
               <p>
                 <Link href="/workshop">Werkstatt öffnen →</Link>
               </p>
@@ -203,10 +319,20 @@ export default async function TodayPage() {
                   ? `${data.lifeAdmin.hardwareIssues} Gerät(e) offline/defekt`
                   : "Keine akuten Hardware-Probleme"}
               </p>
+              {data.homelab.alerts.criticalCount > 0 && (
+                <p className="uwe-form-error">
+                  {data.homelab.alerts.criticalCount} kritische Warnung(en)
+                </p>
+              )}
               {data.lifeAdmin.hardwareUrlWarnings.length > 0 && (
                 <p className="uwe-form-error">
                   {data.lifeAdmin.hardwareUrlWarnings.length} URL-Warnung(en) —{" "}
                   <Link href="/hardware">Hardware prüfen</Link>
+                </p>
+              )}
+              {data.homelab.alerts.serviceIssueCount > 0 && (
+                <p className="uwe-dashboard-muted">
+                  {data.homelab.alerts.serviceIssueCount} Dienst(e) mit Problemen
                 </p>
               )}
               {data.lifeAdmin.openSetupSteps > 0 && (

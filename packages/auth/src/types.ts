@@ -2,7 +2,7 @@
 export type UweRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
 
 /** Role within a specific world. */
-export type WorldMemberRole = "owner" | "dm" | "player";
+export type WorldMemberRole = "owner" | "dm" | "co_dm" | "player";
 
 export type PageVisibility =
   | "private"

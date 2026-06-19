@@ -2,6 +2,22 @@
 
 Persönliches Life-Brain (`PersonalBrainDocument`, `PersonalBrainFact`) ist **strikt getrennt** vom DnD-Brain (`BrainDocument`, `BrainFact`).
 
+## Suche & UI
+
+| Surface | Zweck |
+|---------|--------|
+| `/life-brain` | Stichwort-Suche, Kategorie-/Tag-/Fakt-Typ-Filter, neue Einträge |
+| `/life-brain/documents/[id]` | Dokument-Detail inkl. verknüpfter Captures |
+| `/life-brain/facts/[id]` | Fakt-Detail inkl. verknüpfter Captures |
+| `GET /api/life-brain/search` | Studio-auth API für Suche |
+| `GET\|POST /api/life-brain/context` | Query-fokussierter Kontext für **lokale** Agenten |
+
+Retrieval: Keyword + Filter in `packages/database/src/personal-brain-search.ts`. Keine Life-Brain-Embeddings — DnD-Brain-Semantik bleibt getrennt.
+
+## Capture → Life Brain
+
+Captures aus `/capture` können per „Ins Life Brain“ als Dokument übernommen werden (`promoteCaptureToLifeBrain`). Quelle bleibt über `AdminEntityLink` sichtbar; Capture-Status wird `linked`.
+
 ## Regeln
 
 | Kontextmodus | Cloud erlaubt | RTX erforderlich |
@@ -16,8 +32,9 @@ Persönliches Life-Brain (`PersonalBrainDocument`, `PersonalBrainFact`) ist **st
 
 - Router: `packages/ai-brain/src/router/types.ts` — `personal_brain` in `LOCAL_ONLY_CONTEXT_MODES`
 - Privacy Guard: `validateProviderContextCombination`, `validateResolvedRouteForContext`
-- Kontext-Lader: `loadPersonalBrainPromptContext` in `@uwe/database/server` — mit Retrieval wenn Prompt/Query gesetzt
+- Kontext-Lader: `loadPersonalBrainAgentContext` / `loadPersonalBrainPromptContext` in `@uwe/database/server` — mit Retrieval wenn Prompt/Query gesetzt
 - Chunks: `PersonalBrainChunk` + `createPersonalBrainService` — Embeddings via RTX (`indexPersonalBrainDocument`)
+- Context-API-Gate: `assertPersonalBrainLocalOnly` — Cloud-Provider werden abgewiesen
 - Studio UI: KI-Prompt Modus „Persönliches Life-Brain“ — nur lokal, deaktiviert bei Cloud-Provider
 
 ## RTX offline
