@@ -1865,8 +1865,27 @@ model PersonalBrainDocument {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  chunks PersonalBrainChunk[]
+
   @@index([category])
   @@map("personal_brain_documents")
+}
+
+model PersonalBrainChunk {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  chunkIndex Int      @map("chunk_index")
+  content    String
+  tokenCount Int?     @map("token_count")
+  embedding  Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  document PersonalBrainDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@map("personal_brain_chunks")
 }
 
 model PersonalBrainFact {

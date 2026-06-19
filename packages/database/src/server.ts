@@ -1052,14 +1052,27 @@ export type {
 export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  filterPersonalBrainFactsByQuery,
+  serializePersonalBrainRetrievalForPrompt,
   loadPersonalBrainAgentContext,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainRetrievedChunk,
+  LoadPersonalBrainContextOptions,
   PersonalBrainAgentContextOptions,
 } from "./personal-brain-context";
+
+export { createPersonalBrainService } from "./personal-brain-service";
+
+export type {
+  CreatePersonalBrainChunkInput,
+  PersonalBrainChunkRecord,
+  PersonalBrainIndexStatus,
+  PersonalBrainService,
+} from "./personal-brain-service";
 
 export {
   searchPersonalBrain,

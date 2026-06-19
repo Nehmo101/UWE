@@ -32,7 +32,8 @@ Captures aus `/capture` können per „Ins Life Brain“ als Dokument übernomme
 
 - Router: `packages/ai-brain/src/router/types.ts` — `personal_brain` in `LOCAL_ONLY_CONTEXT_MODES`
 - Privacy Guard: `validateProviderContextCombination`, `validateResolvedRouteForContext`
-- Kontext-Lader: `loadPersonalBrainAgentContext` / `loadPersonalBrainPromptContext` in `@uwe/database/server`
+- Kontext-Lader: `loadPersonalBrainAgentContext` / `loadPersonalBrainPromptContext` in `@uwe/database/server` — mit Retrieval wenn Prompt/Query gesetzt
+- Chunks: `PersonalBrainChunk` + `createPersonalBrainService` — Embeddings via RTX (`indexPersonalBrainDocument`)
 - Context-API-Gate: `assertPersonalBrainLocalOnly` — Cloud-Provider werden abgewiesen
 - Studio UI: KI-Prompt Modus „Persönliches Life-Brain“ — nur lokal, deaktiviert bei Cloud-Provider
 

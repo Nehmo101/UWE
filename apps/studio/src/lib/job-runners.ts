@@ -6,6 +6,7 @@ import {
   createAiRunServiceFromClient,
   createBrainStoreService,
   createMailService,
+  createPersonalBrainService,
   createPrismaClient,
   createUweRepository,
   createWorldInspectorService,
@@ -21,8 +22,10 @@ import {
   createApiKeyStoreFromEnv,
   generateAiTaskBySlug,
   indexBrainDocument,
+  indexPersonalBrainDocument,
   isBrainActionId,
   reindexBrainWorld,
+  reindexPersonalBrain,
   resolveAiBrainSettings,
   runBrainAction,
   type AiProviderId,
@@ -510,14 +513,40 @@ export async function runMailSendJob(ctx: JobRunnerContext): Promise<Record<stri
 }
 
 export async function runEmbeddingJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as { documentId?: string; useMock?: boolean };
+  const payload = (ctx.job.payload ?? {}) as {
+    documentId?: string;
+    personalBrainDocumentId?: string;
+    reindexPersonalBrain?: boolean;
+    useMock?: boolean;
+  };
+
+  await ctx.jobs.updateProgress(ctx.jobId, 25, "Chunks und Embeddings berechnen");
+
+  if (payload.reindexPersonalBrain) {
+    const personalBrain = createPersonalBrainService(prisma);
+    const result = await reindexPersonalBrain(personalBrain, undefined, {
+      useMock: payload.useMock,
+      force: true,
+    });
+    return result as unknown as Record<string, unknown>;
+  }
+
+  if (payload.personalBrainDocumentId) {
+    const personalBrain = createPersonalBrainService(prisma);
+    const result = await indexPersonalBrainDocument(
+      personalBrain,
+      payload.personalBrainDocumentId,
+      undefined,
+      { useMock: payload.useMock },
+    );
+    return result as unknown as Record<string, unknown>;
+  }
+
   if (!payload.documentId) {
-    throw new Error("documentId fehlt im Embedding-Job.");
+    throw new Error("documentId oder personalBrainDocumentId fehlt im Embedding-Job.");
   }
 
   const brainStore = createBrainStoreService();
-  await ctx.jobs.updateProgress(ctx.jobId, 25, "Chunks und Embeddings berechnen");
-
   const result = await indexBrainDocument(brainStore, payload.documentId, undefined, {
     useMock: payload.useMock,
   });

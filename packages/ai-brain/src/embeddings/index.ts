@@ -12,4 +12,9 @@ export {
   reindexBrainWorld,
   checkEmbeddingHealth,
 } from "./indexer";
+export {
+  indexPersonalBrainDocument,
+  reindexPersonalBrain,
+} from "./personal-brain-indexer";
 export { semanticSearchBrainChunks } from "./search";
+export { semanticSearchPersonalBrainChunks } from "./personal-brain-search";
