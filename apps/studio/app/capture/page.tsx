@@ -11,8 +11,10 @@ import {
   CAPTURE_STATUS_LABELS,
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
+  getAppRepository,
   prisma,
 } from "@uwe/database/server";
+import { CaptureImageUpload } from "@/components/CaptureImageUpload";
 import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
@@ -36,6 +38,7 @@ function readIntent(metadata: unknown): string | null {
 export default async function CapturePage({ searchParams }: Props) {
   const { quick, status } = await searchParams;
   const service = createLifeAdminService(prisma);
+  const worlds = await getAppRepository().listWorldsWithGuestMode();
   const statusFilter =
     status === "archived"
       ? "archived"
@@ -61,6 +64,14 @@ export default async function CapturePage({ searchParams }: Props) {
             title="Capture Inbox"
             summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
           />
+
+          <section className="uwe-card uwe-section">
+            <h2 className="uwe-section-title">Bild erfassen (Mobile)</h2>
+            <p className="uwe-hint">
+              Fotos von Miniaturen, Terrain oder Handouts — optional direkt als Asset in einer Welt.
+            </p>
+            <CaptureImageUpload worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))} />
+          </section>
 
           <section className="uwe-card uwe-section uwe-capture-quick-section">
             <h2 className="uwe-section-title">

@@ -542,6 +542,30 @@ export type {
 } from "./label-service";
 
 export {
+  ASSET_LINK_TARGET_LABELS,
+  adoptAssetToTarget,
+  linkAssetToTarget,
+  listAssetLinksForAsset,
+  listAssetsForTarget,
+  syncImageStudioProjectLinksToAsset,
+  unlinkAssetFromTarget,
+} from "./asset-link-service";
+
+export type { AssetLinkRecord, AssetLinkTargetType, LinkAssetInput } from "./asset-link-service";
+
+export {
+  WORKSHOP_LABEL_TEMPLATE_SLUGS,
+  buildFilamentLabelContent,
+  buildUwePageQrUrl,
+  buildWorkshopLabelContent,
+  buildWorkshopLabelLayout,
+  resolveFilamentLabelTemplateSlug,
+  resolveWorkshopLabelTemplateSlug,
+} from "./label-workshop-service";
+
+export type { FilamentEntry, MaterialEntry } from "./label-workshop-service";
+
+export {
   createPrintListService,
   PrintListService,
   LABEL_PRINT_STATUS_LABELS,
