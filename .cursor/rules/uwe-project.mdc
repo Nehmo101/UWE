@@ -5,7 +5,7 @@ alwaysApply: true
 
 # UWE Project
 
-UWE (Universeller Welten-Editor) is a self-hosted campaign brain and world wiki for D&D and tabletop RPGs.
+UWE (Universeller Welten-Editor) is a self-hosted **Alltags- und Hobby-Betriebssystem**: Daily Admin OS, DnD campaign brain, player portal, and optional local AI — all on the user's own hardware.
 
 ## Product domains
 
@@ -13,10 +13,13 @@ UWE (Universeller Welten-Editor) is a self-hosted campaign brain and world wiki 
 |--------|----------|---------|
 | **Studio** | `apps/studio` | DM app — world editing, admin cockpit, AI workflows |
 | **Portal** | `apps/portal` | Player wiki and handouts — server-filtered, no DM leaks |
+| **Daily Admin OS** | `apps/studio` (`/today`, `/capture`, …) | Today, Capture, Projects, Workshop, Contracts, Hardware, Life Brain — Studio-only |
 | **Core packages** | `packages/*` | Shared data layer, auth, wiki engine, generators |
 | **DnD worlds** | `packages/database`, `packages/ai-brain` | Canon, visibility, generator tasks |
+| **Life Brain** | `apps/studio/app/life-brain`, `packages/ai-brain` | Personal knowledge — RTX-only retrieval, no Portal |
+| **Integrations** | `packages/calendar`, `packages/mail` | Calendar feeds, Mail Center (self-hosted SMTP) |
 | **Auth** | `packages/auth`, `packages/security` | Sessions, permissions, route guards |
-| **Media** | `packages/assets`, `packages/image-studio` | Uploads, MIME validation, storage paths |
+| **Media** | `packages/assets`, `packages/image-studio` | Uploads, MIME validation, Image Studio jobs |
 | **Generators** | `packages/ai-brain` | DnD generator, brain retrieval, privacy guards |
 | **Hosting** | Docker, `scripts/uwe-host-*`, Windows installer | Self-hosted deployment |
 
@@ -25,7 +28,9 @@ UWE (Universeller Welten-Editor) is a self-hosted campaign brain and world wiki 
 - Business logic lives in `packages/`, not in Next.js route handlers.
 - Studio is write/admin; Portal is read-only player output.
 - Never expose `dm_only` content to Portal or static export.
-- RTX/local inference stays on the home network; cloud AI gets no world/brain context.
+- RTX/local inference stays on the home network; cloud AI gets no world/brain/life context.
+- Daily Admin OS data (Capture, Life Brain, Contracts) never reaches Portal or static export.
+- AI outputs are proposals/drafts — never auto-applied to canon or personal brain.
 - Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).
 
 ## Agent defaults
@@ -38,6 +43,8 @@ UWE (Universeller Welten-Editor) is a self-hosted campaign brain and world wiki 
 ## Further reading
 
 - `docs/ARCHITECTURE.md` — full architecture overview
+- `docs/engineering/product-orchestrator-plan.md` — multi-domain rollout order and subagent packages
+- `docs/daily-admin-os.md` — Daily Admin OS routes and mobile nav
 - `docs/engineering/ci.md` — CI workflows and local commands
 - `docs/engineering/cursor-workflow.md` — Cursor rules, commands, and PR workflow
 - `AGENTS.md` — quality gate for cloud agents

@@ -504,6 +504,8 @@ export type {
   DungeonPrepStatus,
 } from "./dungeon-cockpit";
 
+// --- Labels (split candidate: packages/database/src/server/labels.ts) ---
+
 export {
   createLabelService,
   LabelService,
@@ -835,6 +837,8 @@ export type {
   ListJobsOptions,
 } from "./job-service";
 
+// --- Daily Admin OS / Life Admin (split candidate: life-admin-service.ts) ---
+
 export {
   createLifeAdminService,
   LifeAdminService,
@@ -957,6 +961,8 @@ export type {
   ListAiRunsOptions,
   AiRunStatus,
 } from "./ai-run-service";
+
+// --- DnD Brain store (split candidate: server/brain-store.ts) ---
 
 export {
   createBrainStoreService,

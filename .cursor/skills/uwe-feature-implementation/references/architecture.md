@@ -4,8 +4,8 @@
 
 ```
 apps/
-  studio/     # DM app — port 3000, no user login (network-protected)
-  portal/     # Player wiki — port 3001, session auth
+  studio/     # DM app — port 3000, session login (owner/admin/dm)
+  portal/     # Player wiki — port 3001, session auth + role matrix
 packages/
   database/   # Prisma, repositories, domain services
   ai-brain/   # KI router, DnD generator, brain retrieval
