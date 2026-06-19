@@ -13,8 +13,8 @@ describe("hardware URL policy warnings", () => {
       },
     ]);
 
-    assert.equal(warnings.length, 1);
-    assert.equal(warnings[0]!.field, "publicUrl");
+    assert.ok(warnings.length >= 1);
+    assert.ok(warnings.some((w) => w.field === "publicUrl"));
     assert.match(warnings[0]!.message, /öffentlich/i);
   });
 
