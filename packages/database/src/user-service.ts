@@ -1,4 +1,4 @@
-import type { SafeUser, UweRole } from "@uwe/auth";
+import type { SafeUser, UweRole, WorldMemberRole } from "@uwe/auth";
 import { toSafeUser } from "@uwe/auth";
 import {
   generateOpaqueToken,
@@ -32,7 +32,7 @@ export interface AdminUserView extends SafeUser {
   worldMemberships: Array<{
     id: string;
     worldId: string;
-    role: "owner" | "dm" | "player";
+    role: WorldMemberRole;
     characterName: string | null;
     world: { id: string; name: string; slug: string };
   }>;
@@ -330,7 +330,7 @@ export class UserService {
   async upsertWorldMembership(input: {
     userId: string;
     worldId: string;
-    role: "owner" | "dm" | "player";
+    role: WorldMemberRole;
     characterName?: string | null;
   }) {
     return this.db.worldMembership.upsert({

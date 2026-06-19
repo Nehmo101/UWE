@@ -92,6 +92,21 @@ export function ImageStudioJobForm({
       <input type="hidden" name="sourceImageBase64" value={sourceBase64} />
       <input type="hidden" name="maskBase64" value={maskBase64} />
 
+      {pageId && <input type="hidden" name="linkTargetId" value={pageId} />}
+
+      <label>
+        Prompt-Kontext
+        <select name="contextMode" defaultValue="prompt_only">
+          <option value="prompt_only">Nur Prompt (Cloud-sicher)</option>
+          <option value="page_context">Seiten-Kontext (nur RTX)</option>
+          <option value="brain_context">Brain/Welt-Kontext (nur RTX)</option>
+          <option value="object_context">Aktuelles Objekt (nur RTX)</option>
+        </select>
+      </label>
+      <p className="uwe-hint">
+        Privater Welt-/Brain-/Objekt-Kontext wird nicht an Cloud-Provider gesendet.
+      </p>
+
       <label>
         Welt
         <select

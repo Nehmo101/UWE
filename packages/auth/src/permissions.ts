@@ -15,6 +15,25 @@ import {
 
 const DM_ROLES: ReadonlySet<UweRole> = new Set(["owner", "admin", "dm"]);
 const WORLD_DM_ROLES: ReadonlySet<WorldMemberRole> = new Set(["owner", "dm"]);
+const WORLD_CO_DM_ROLES: ReadonlySet<WorldMemberRole> = new Set(["co_dm"]);
+
+export function isCoDm(ctx: AccessContext): boolean {
+  if (ctx.previewAsUserId) {
+    return false;
+  }
+  return (
+    ctx.worldMembership !== null &&
+    WORLD_CO_DM_ROLES.has(ctx.worldMembership.role)
+  );
+}
+
+/** DM, owner, or co-DM — read access to world staff content. */
+export function isWorldStaff(ctx: AccessContext): boolean {
+  if (ctx.previewAsUserId) {
+    return false;
+  }
+  return isDmOrOwner(ctx) || isCoDm(ctx);
+}
 
 export function isDmOrOwner(ctx: AccessContext): boolean {
   if (ctx.previewAsUserId) {
@@ -24,14 +43,23 @@ export function isDmOrOwner(ctx: AccessContext): boolean {
 }
 
 export function canEditContent(ctx: AccessContext): boolean {
+  if (isCoDm(ctx)) {
+    return false;
+  }
   return isDmOrOwner(ctx);
 }
 
 export function canPublishContent(ctx: AccessContext): boolean {
+  if (isCoDm(ctx)) {
+    return false;
+  }
   return isDmOrOwner(ctx);
 }
 
 export function canChangeVisibility(ctx: AccessContext): boolean {
+  if (isCoDm(ctx)) {
+    return false;
+  }
   return isDmOrOwner(ctx);
 }
 
@@ -51,6 +79,7 @@ export function resolveEffectiveRole(input: {
   if (input.worldMembership) {
     if (input.worldMembership.role === "owner") return "owner";
     if (input.worldMembership.role === "dm") return "dm";
+    if (input.worldMembership.role === "co_dm") return "readonly";
     return "player";
   }
 
@@ -104,14 +133,14 @@ function canViewUnlockedPage(ctx: AccessContext, pageId: string): boolean {
 
 export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
   if (page.visibility === "archived" || page.visibility === "private") {
-    return isDmOrOwner(ctx);
+    return isWorldStaff(ctx);
   }
 
   if (!isPublished(page)) {
-    return isDmOrOwner(ctx);
+    return isWorldStaff(ctx);
   }
 
-  if (isDmOrOwner(ctx)) {
+  if (isWorldStaff(ctx)) {
     return true;
   }
 
@@ -145,7 +174,7 @@ export function canViewContentBlock(
     return false;
   }
 
-  if (isDmOrOwner(ctx)) {
+  if (isWorldStaff(ctx)) {
     return true;
   }
 
@@ -198,10 +227,10 @@ export function filterBlocksForViewer<T extends ContentBlockAccessInfo>(
 
 export function canViewAsset(ctx: AccessContext, asset: AssetAccessInfo): boolean {
   if (asset.visibility === "archived" || asset.visibility === "private") {
-    return isDmOrOwner(ctx);
+    return isWorldStaff(ctx);
   }
 
-  if (isDmOrOwner(ctx)) {
+  if (isWorldStaff(ctx)) {
     return true;
   }
 

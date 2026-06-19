@@ -53,9 +53,31 @@ export {
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
+  isCoDm,
   isDmOrOwner,
+  isWorldStaff,
   resolveEffectiveRole,
 } from "./permissions";
+
+export {
+  ROLE_CAPABILITY_LABELS,
+  WORLD_MEMBER_ROLE_LABELS,
+  canAccessSystemAdmin,
+  canApproveReviews,
+  canDirectlyEditCanon,
+  canEditOwnPlayerNotes,
+  canGrantPortalUnlocks,
+  canManageApiTokens,
+  canManageBackups,
+  canManageSecurity,
+  canManageUsers,
+  canModeratePlayerNotes,
+  hasCapability,
+  listCapabilities,
+  mustSubmitProposal,
+} from "./role-capabilities";
+
+export type { CapabilityContext, RoleCapability } from "./role-capabilities";
 
 export {
   detectPrivateReferences,

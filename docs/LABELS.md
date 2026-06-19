@@ -30,9 +30,26 @@ Die Bibliothek hat drei Bereiche:
 - **Snap-to-Grid** (0,1 Zoll), Safe Area
 - Tastatur: Pfeiltasten zum Verschieben, Entf zum Löschen
 
+## Werkstatt- und Filament-Labels
+
+Für Miniaturen, Terrain und 3D-Druck:
+
+```typescript
+import {
+  buildWorkshopLabelContent,
+  buildFilamentLabelContent,
+  resolveWorkshopLabelTemplateSlug,
+} from "@uwe/database/server";
+```
+
+- **Werkstatt-Projekt** → Label mit Material/Filament-Liste und optionalem QR zur UWE-Seite
+- **Filament-Spule** → kompaktes 4×2 Text-Label (Material, Farbe, Gewicht)
+
+Builder: `packages/database/src/label-workshop-service.ts`
+
 ## Templates
 
-- System-Templates (Standard 6×4, Nur Text, Nur Bild, Handout Kompakt)
+- System-Templates (Standard 6×4, Nur Text, Nur Bild, Handout Kompakt, **Miniatur-Kiste**, **Terrain-Kiste**, **Filament-Spule**, **3D-Druck Projekt**)
 - Eigenes Layout: Label speichern → **Als Template speichern**
 - Templates duplizieren, umbenennen, löschen (nur Welt-Templates)
 

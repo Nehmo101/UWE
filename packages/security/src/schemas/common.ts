@@ -35,6 +35,10 @@ export const assetIdParamSchema = z.object({
   assetId: idSchema,
 });
 
+export const captureIdParamSchema = z.object({
+  captureId: idSchema,
+});
+
 export const searchQuerySchema = z.object({
   q: z.string().trim().max(200).optional().default(""),
 });

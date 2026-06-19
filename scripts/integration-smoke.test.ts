@@ -104,6 +104,10 @@ describe("integration smoke — Daily Admin OS routes", () => {
     "apps/studio/app/contracts/page.tsx",
     "apps/studio/app/hardware/page.tsx",
     "apps/studio/app/life-brain/page.tsx",
+    "apps/studio/app/life-brain/documents/[id]/page.tsx",
+    "apps/studio/app/life-brain/facts/[id]/page.tsx",
+    "apps/studio/app/api/life-brain/search/route.ts",
+    "apps/studio/app/api/life-brain/context/route.ts",
   ];
 
   it("documents planned Daily Admin OS routes in docs/daily-admin-os.md", () => {
