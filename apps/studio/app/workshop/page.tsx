@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import {
+  countMaterialsNeeded,
   createLifeAdminService,
+  firstPhotoUrl,
+  formatEuroFromCents,
   getNextWorkshopStatus,
   prisma,
   WORKSHOP_STATUS_LABELS,
@@ -11,12 +14,8 @@ import {
   type WorkshopStatus,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
-import {
-  advanceWorkshopStatusAction,
-  createWorkshopAction,
-  deleteWorkshopAction,
-  updateWorkshopAction,
-} from "../life-admin-actions";
+import { advanceWorkshopStatusAction } from "../life-admin-actions";
+import { createWorkshopAction } from "../workshop-actions";
 
 const WORKSHOP_FILTERS = [
   { value: "all", label: "Alle" },
@@ -39,19 +38,9 @@ function resolveFilter(raw: string | undefined): WorkshopFilter {
   return "all";
 }
 
-function formatMaterials(materials: unknown): string[] {
-  if (!Array.isArray(materials)) return [];
-  return materials
-    .map((item) => {
-      if (typeof item === "string") return item;
-      if (item && typeof item === "object" && "name" in item) {
-        const name = String((item as { name?: string }).name ?? "");
-        const quantity = (item as { quantity?: string }).quantity;
-        return quantity ? `${name} (${quantity})` : name;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
+function formatCost(cents: number | null | undefined): string {
+  if (cents == null) return "";
+  return formatEuroFromCents(cents);
 }
 
 export default async function WorkshopPage({ searchParams }: Props) {
@@ -83,7 +72,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
     <AdminModuleShell
       activePath="/workshop"
       title="Werkstatt"
-      summary="Kunstwerke, Miniaturen, Terrain, 3D-Druck und Dioramen — mit Status-Workflow."
+      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
     >
       <section className="uwe-today-attention" aria-label="Werkstatt-Filter">
         <div className="uwe-today-quick-chips">
@@ -104,6 +93,12 @@ export default async function WorkshopPage({ searchParams }: Props) {
           })}
         </div>
       </section>
+
+      <nav className="uwe-inline-actions uwe-section">
+        <Link href="/workshop/recipes">Paint-Rezepte</Link>
+        <Link href="/workshop/print-profiles">Druck-Profile</Link>
+        <Link href="/workshop/rental">Terrain-Verleih</Link>
+      </nav>
 
       <section className="uwe-card uwe-section">
         <h2 className="uwe-section-title">Neues Werkstatt-Projekt</h2>
@@ -133,12 +128,16 @@ export default async function WorkshopPage({ searchParams }: Props) {
             </select>
           </label>
           <label>
-            Materialien (eine Zeile pro Eintrag)
-            <textarea name="materialsNeeded" rows={3} />
+            Nächster Schritt
+            <input name="nextAction" placeholder="z. B. Grundierung auftragen" />
           </label>
           <label>
-            Nächste Aktion
-            <input name="nextAction" />
+            Materialien (Name | Menge | ja/nein)
+            <textarea
+              name="materialsNeeded"
+              rows={3}
+              placeholder={"XPS-Schaum | 2 Platten | nein\nCitadel Abaddon Black | 1 Flasche | ja"}
+            />
           </label>
           <label>
             Beschreibung
@@ -155,75 +154,68 @@ export default async function WorkshopPage({ searchParams }: Props) {
         {visibleWorkshops.length === 0 ? (
           <EmptyState
             title="Noch keine Werkstatt-Projekte"
-            description="Erfasse kreative Projekte oder lege hier direkt eines an."
+            description="Erfasse kreative Projekte per Capture oder lege hier direkt eines an."
             action={<Link href="/capture">Capture öffnen</Link>}
           />
         ) : (
           <div className="uwe-today-card-list">
             {visibleWorkshops.map((workshop) => {
               const nextStatus = getNextWorkshopStatus(workshop.status);
-              const materials = formatMaterials(workshop.materialsNeeded);
+              const thumb = firstPhotoUrl(
+                workshop.resultPhotos,
+                workshop.progressPhotos,
+                workshop.referenceImages,
+                workshop.imageGallery,
+              );
+              const materials = countMaterialsNeeded(workshop.materialsNeeded);
               const world = "world" in workshop ? workshop.world : null;
 
               return (
                 <article key={workshop.id} className="uwe-today-card">
-                  <form action={updateWorkshopAction} className="uwe-brain-create-form">
-                    <input type="hidden" name="id" value={workshop.id} />
-                    <label>
-                      Titel
-                      <input name="title" defaultValue={workshop.title} required />
-                    </label>
-                    <label>
-                      Typ
-                      <select name="projectType" defaultValue={workshop.projectType}>
-                        {Object.values(WorkshopProjectTypeEnum).map((type) => (
-                          <option key={type} value={type}>
-                            {WORKSHOP_TYPE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Status
-                      <select name="status" defaultValue={workshop.status}>
-                        {Object.values(WorkshopStatusEnum).map((status) => (
-                          <option key={status} value={status}>
-                            {WORKSHOP_STATUS_LABELS[status]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Nächste Aktion
-                      <input name="nextAction" defaultValue={workshop.nextAction ?? ""} />
-                    </label>
-                    <label>
-                      Beschreibung
-                      <textarea name="description" rows={2} defaultValue={workshop.description} />
-                    </label>
-                    <p className="uwe-dashboard-muted">
-                      {WORKSHOP_TYPE_LABELS[workshop.projectType]} ·{" "}
-                      {WORKSHOP_STATUS_LABELS[workshop.status]}
-                      {world ? (
-                        <>
-                          {" "}
-                          ·{" "}
-                          <Link href={`/worlds/${world.slug}/dashboard`}>{world.name}</Link>
-                        </>
-                      ) : null}
-                    </p>
-                    {materials.length > 0 && (
-                      <ul className="uwe-dashboard-muted">
-                        {materials.map((material) => (
-                          <li key={material}>{material}</li>
-                        ))}
-                      </ul>
-                    )}
-                    <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
-                      Speichern
-                    </button>
-                  </form>
                   <div className="uwe-inline-actions">
+                    <h3>
+                      <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                    </h3>
+                  </div>
+                  {thumb && (
+                    <p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={thumb}
+                        alt=""
+                        style={{ maxWidth: "100%", maxHeight: 140, borderRadius: 8 }}
+                      />
+                    </p>
+                  )}
+                  <p className="uwe-dashboard-muted">
+                    {WORKSHOP_TYPE_LABELS[workshop.projectType]} ·{" "}
+                    {WORKSHOP_STATUS_LABELS[workshop.status]}
+                    {world ? (
+                      <>
+                        {" "}
+                        · <Link href={`/worlds/${world.slug}/dashboard`}>{world.name}</Link>
+                      </>
+                    ) : workshop.worldId ? (
+                      " · DnD-verknüpft"
+                    ) : null}
+                    {workshop.costCents != null ? ` · ${formatCost(workshop.costCents)}` : ""}
+                  </p>
+                  {workshop.nextAction && (
+                    <p>
+                      <strong>Nächster Schritt:</strong> {workshop.nextAction}
+                    </p>
+                  )}
+                  {materials.total > 0 && (
+                    <p className="uwe-dashboard-muted">
+                      Material: {materials.total - materials.missing}/{materials.total} bereit
+                      {materials.missing > 0 ? ` · ${materials.missing} fehlen` : ""}
+                    </p>
+                  )}
+                  {workshop.description && <p>{workshop.description}</p>}
+                  <div className="uwe-inline-actions">
+                    <Link href={`/workshop/${workshop.id}`} className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                      Cockpit öffnen
+                    </Link>
                     {nextStatus && (
                       <form action={advanceWorkshopStatusAction}>
                         <input type="hidden" name="id" value={workshop.id} />
@@ -232,12 +224,12 @@ export default async function WorkshopPage({ searchParams }: Props) {
                         </button>
                       </form>
                     )}
-                    <form action={deleteWorkshopAction}>
-                      <input type="hidden" name="id" value={workshop.id} />
-                      <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
-                        Löschen
-                      </button>
-                    </form>
+                    <Link
+                      href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}
+                      className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                    >
+                      Terrain-Mail
+                    </Link>
                   </div>
                 </article>
               );

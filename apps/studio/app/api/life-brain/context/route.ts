@@ -1,0 +1,93 @@
+import { NextResponse } from "next/server";
+import {
+  createLifeAdminService,
+  loadPersonalBrainAgentContext,
+  assertPersonalBrainLocalOnly,
+  prisma,
+} from "@uwe/database/server";
+import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
+
+interface ContextBody {
+  query?: string;
+  limit?: number;
+  /** Must be local_rtx — cloud is rejected to protect private data. */
+  provider?: string;
+}
+
+function parseContextBody(body: ContextBody) {
+  const query = body.query?.trim() ?? "";
+  const limitRaw = body.limit ?? 12;
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 30) : 12;
+  const provider = body.provider?.trim() || "local_rtx";
+  return { query, limit, provider };
+}
+
+async function buildContext(query: string, limit: number) {
+  const service = createLifeAdminService(prisma);
+  return loadPersonalBrainAgentContext(
+    (searchQuery, docLimit) =>
+      service.searchPersonalBrainDocumentsForContext(searchQuery, docLimit),
+    (searchQuery, factLimit) =>
+      service.searchPersonalBrainFactsForContext(searchQuery, factLimit),
+    { query: query || undefined, limit },
+  );
+}
+
+export async function GET(request: Request) {
+  const authError = requireStudioApiAuth(request, { rateLimit: "ai" });
+  if (authError) return authError;
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q")?.trim() ?? "";
+  const provider = searchParams.get("provider")?.trim() || "local_rtx";
+
+  try {
+    assertPersonalBrainLocalOnly(provider);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Nur lokale KI erlaubt." },
+      { status: 403 },
+    );
+  }
+
+  const context = await buildContext(query, 12);
+  return NextResponse.json({
+    query,
+    provider,
+    localOnly: true,
+    context,
+    contextLength: context.length,
+  });
+}
+
+export async function POST(request: Request) {
+  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  if (authError) return authError;
+
+  let body: ContextBody;
+  try {
+    body = (await request.json()) as ContextBody;
+  } catch {
+    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+  }
+
+  const { query, limit, provider } = parseContextBody(body);
+
+  try {
+    assertPersonalBrainLocalOnly(provider);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Nur lokale KI erlaubt." },
+      { status: 403 },
+    );
+  }
+
+  const context = await buildContext(query, limit);
+  return NextResponse.json({
+    query,
+    provider,
+    localOnly: true,
+    context,
+    contextLength: context.length,
+  });
+}

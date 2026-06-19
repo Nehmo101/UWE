@@ -51,6 +51,60 @@ describe("life admin service", () => {
     assert.equal(workshop.projectType, "dnd_terrain");
   });
 
+  it("supports workshop hobby cockpit entities and capture promotion", async () => {
+    const capture = await service.createCapture({
+      title: "Goblin squad paint test",
+      content: "Contrast paints on goblins",
+      captureType: "art_miniature_terrain",
+      url: "https://example.com/ref.jpg",
+    });
+
+    const workshop = await service.promoteCaptureToWorkshop(capture.id, {
+      nextAction: "Basecoat drybrush",
+    });
+
+    assert.equal(workshop.nextAction, "Basecoat drybrush");
+    assert.ok(workshop.referenceImages);
+
+    const recipe = await service.createWorkshopPaintRecipe({
+      name: "Goblin green",
+      targetType: "miniature",
+      primer: "Chaos Black",
+      basecoat: "Warpstone Glow",
+      workshopProjectId: workshop.id,
+      rating: 4,
+    });
+
+    const profile = await service.createWorkshopPrintProfile({
+      name: "Ruin tile",
+      printer: "Bambu P1S",
+      filament: "PLA matte grey",
+      layerHeight: "0.2",
+      result: "gut",
+      workshopProjectId: workshop.id,
+    });
+
+    const rental = await service.createWorkshopTerrainRental({
+      terrainSetName: "Forest ruins",
+      boxLabel: "Box B2",
+      rentalPriceCents: 1500,
+      depositCents: 5000,
+    });
+
+    const loaded = await service.getWorkshopProject(workshop.id);
+    assert.equal(loaded?.paintRecipes.length, 1);
+    assert.equal(loaded?.printProfiles.length, 1);
+    assert.equal(recipe.name, "Goblin green");
+    assert.equal(profile.printer, "Bambu P1S");
+    assert.equal(rental.status, "available");
+
+    const tasks = await service.listWorkshopOpenTasks(5);
+    assert.ok(tasks.some((task) => task.id === workshop.id));
+
+    const links = await service.listLinksForTarget("workshop_project", workshop.id);
+    assert.ok(links.some((link) => link.sourceId === capture.id));
+  });
+
   it("creates contract and hardware records without bank data", async () => {
     const contract = await service.createContractExpense({
       name: "Cloudflare Pro",
@@ -69,23 +123,80 @@ describe("life admin service", () => {
     assert.equal(contract.currency, "EUR");
     assert.equal(device.status, "active");
     assert.ok(!JSON.stringify(contract).includes("iban"));
+
+    const counts = await service.getHardwareFilterCounts();
+    assert.ok(counts.all >= 1);
+    assert.ok(counts.active >= 1);
   });
 
   it("creates personal brain entries", async () => {
     const doc = await service.createPersonalBrainDocument({
       title: "Homelab notes",
       content: "Router config backup location",
-      category: "homelab",
+      category: "hardware_homelab",
+      tags: ["homelab"],
     });
 
     const fact = await service.createPersonalBrainFact({
       title: "Preferred filament",
       content: "PLA matte black for terrain bases",
       factType: "material",
+      tags: ["3d-druck"],
     });
 
-    assert.equal(doc.category, "homelab");
+    assert.equal(doc.category, "hardware_homelab");
     assert.equal(fact.factType, "material");
+  });
+
+  it("searches personal brain by keyword, category, and tag", async () => {
+    await service.createPersonalBrainDocument({
+      title: "Router backup",
+      content: "NAS share for homelab configs",
+      category: "hardware_homelab",
+      tags: ["homelab"],
+    });
+    await service.createPersonalBrainFact({
+      title: "Filament stock",
+      content: "PLA matte black",
+      factType: "material",
+      tags: ["3d-druck"],
+    });
+
+    const keywordHits = await service.searchPersonalBrain({ query: "homelab" });
+    assert.ok(keywordHits.documents.length >= 1);
+
+    const categoryHits = await service.searchPersonalBrain({ category: "hardware_homelab" });
+    assert.ok(categoryHits.documents.every((hit) => hit.item.category === "hardware_homelab"));
+
+    const tagHits = await service.searchPersonalBrain({ tag: "3d-druck" });
+    assert.ok(tagHits.facts.length >= 1);
+  });
+
+  it("promotes capture into life brain and links source capture", async () => {
+    const capture = await service.createCapture({
+      title: "Filament tip",
+      content: "Use matte PLA for bases",
+      captureType: "art_miniature_terrain",
+      url: "https://example.com/filament",
+    });
+
+    const promoted = await service.promoteCaptureToLifeBrain({
+      captureId: capture.id,
+      category: "printing_3d",
+      tags: ["3d-druck"],
+    });
+
+    assert.equal(promoted.kind, "document");
+    assert.match(promoted.entry.content, /matte PLA/);
+    assert.match(promoted.entry.content, /https:\/\/example.com\/filament/);
+
+    const detail = await service.getPersonalBrainDocumentDetail(promoted.entry.id);
+    assert.ok(detail);
+    assert.equal(detail.linkedCaptures.length, 1);
+    assert.equal(detail.linkedCaptures[0]?.id, capture.id);
+
+    const updatedCapture = await service.getCapture(capture.id);
+    assert.equal(updatedCapture?.status, "linked");
   });
 
   it("links admin entities", async () => {
@@ -166,11 +277,11 @@ describe("life admin service", () => {
       tags: ["3d-print"],
     });
 
-    const results = await service.searchPersonalBrain("vlan", { limit: 5 });
-    assert.ok(results.documents.some((doc) => doc.title.includes("Router")));
+    const results = await service.searchPersonalBrain({ query: "vlan", limit: 5 });
+    assert.ok(results.documents.some((doc) => doc.item.title.includes("Router")));
 
-    const factResults = await service.searchPersonalBrain("filament", { limit: 5 });
-    assert.ok(factResults.facts.some((fact) => fact.title.includes("Filament")));
+    const factResults = await service.searchPersonalBrain({ query: "filament", limit: 5 });
+    assert.ok(factResults.facts.some((fact) => fact.item.title.includes("Filament")));
   });
 
   it("deletes capture and related links", async () => {

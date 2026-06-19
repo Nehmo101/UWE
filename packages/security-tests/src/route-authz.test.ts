@@ -84,6 +84,7 @@ const STUDIO_PROTECTED_API_ROUTES = [
   "apps/studio/app/api/research/route.ts",
   "apps/studio/app/api/research/[id]/route.ts",
   "apps/studio/app/api/image-studio/route.ts",
+  "apps/studio/app/api/capture/upload/route.ts",
   "apps/studio/app/api/inference/health/route.ts",
   "apps/studio/app/api/inference/test-prompt/route.ts",
   "apps/studio/app/api/worlds/[worldSlug]/brain/route.ts",

@@ -433,6 +433,21 @@ export {
   WorldOverviewService,
 } from "./world-overview";
 
+export {
+  createPortalDashboardService,
+  PortalDashboardService,
+  sessionUnlockLabel,
+  navCategoryForPageType as portalDashboardNavCategory,
+} from "./portal-dashboard-service";
+
+export type {
+  PortalDashboardData,
+  PortalDashboardHandout,
+  PortalDashboardNote,
+  PortalDashboardPage,
+  PortalDashboardSession,
+} from "./portal-dashboard-service";
+
 export type {
   WorldOverviewData,
   WorldOverviewOpenPlot,
@@ -504,6 +519,8 @@ export type {
   DungeonPrepStatus,
 } from "./dungeon-cockpit";
 
+// --- Labels (split candidate: packages/database/src/server/labels.ts) ---
+
 export {
   createLabelService,
   LabelService,
@@ -538,6 +555,30 @@ export type {
   UpdateLabelTemplateInput,
   LabelWithRelations,
 } from "./label-service";
+
+export {
+  ASSET_LINK_TARGET_LABELS,
+  adoptAssetToTarget,
+  linkAssetToTarget,
+  listAssetLinksForAsset,
+  listAssetsForTarget,
+  syncImageStudioProjectLinksToAsset,
+  unlinkAssetFromTarget,
+} from "./asset-link-service";
+
+export type { AssetLinkRecord, AssetLinkTargetType, LinkAssetInput } from "./asset-link-service";
+
+export {
+  WORKSHOP_LABEL_TEMPLATE_SLUGS,
+  buildFilamentLabelContent,
+  buildUwePageQrUrl,
+  buildWorkshopLabelContent,
+  buildWorkshopLabelLayout,
+  resolveFilamentLabelTemplateSlug,
+  resolveWorkshopLabelTemplateSlug,
+} from "./label-workshop-service";
+
+export type { FilamentEntry, MaterialEntry } from "./label-workshop-service";
 
 export {
   createPrintListService,
@@ -785,6 +826,30 @@ export type {
 } from "./player-note-service";
 
 export {
+  createReviewService,
+  ReviewService,
+  CONTENT_REVIEW_STATUS_LABELS,
+  CONTENT_REVIEW_SOURCE_LABELS,
+} from "./review-service";
+
+export type {
+  ContentReviewView,
+  ReviewCommentView,
+  CreateContentReviewInput,
+  ListReviewsOptions,
+} from "./review-service";
+
+export {
+  resolveReview,
+  syncAiProposalReview,
+  syncPlayerNoteReview,
+  createPortalUnlockReview,
+  createCoDmChangeReview,
+} from "./review-bridge";
+
+export type { ResolveReviewResult } from "./review-bridge";
+
+export {
   createSpotifyConnectionService,
   isSpotifyOAuthConfigured,
   resolveSpotifyOAuthConfig,
@@ -811,6 +876,8 @@ export type {
   ListJobsOptions,
 } from "./job-service";
 
+// --- Daily Admin OS / Life Admin (split candidate: life-admin-service.ts) ---
+
 export {
   createLifeAdminService,
   LifeAdminService,
@@ -824,6 +891,8 @@ export {
   HARDWARE_STATUS_LABELS,
   PROJECT_CATEGORY_LABELS,
   WORKSHOP_TYPE_LABELS,
+  WORKSHOP_PAINT_TARGET_LABELS,
+  WORKSHOP_RENTAL_STATUS_LABELS,
   PERSONAL_BRAIN_CATEGORIES,
   PERSONAL_BRAIN_CATEGORY_LABELS,
   CaptureStatusEnum,
@@ -832,6 +901,8 @@ export {
   PersonalProjectCategoryEnum,
   WorkshopStatusEnum,
   WorkshopProjectTypeEnum,
+  WorkshopPaintTargetEnum,
+  WorkshopRentalStatusEnum,
   ContractStatusEnum,
   ContractExpenseTypeEnum,
   ContractBillingIntervalEnum,
@@ -839,7 +910,6 @@ export {
 } from "./life-admin-service";
 
 export {
-  CAPTURE_UPLOAD_NAMESPACE,
   resolveCaptureUploadFilePath,
   saveCaptureUploadFile,
 } from "./capture-upload";
@@ -853,10 +923,17 @@ export type {
   CreateHardwareDeviceInput,
   CreatePersonalBrainDocumentInput,
   CreatePersonalBrainFactInput,
+  PromoteCaptureToLifeBrainInput,
+  PersonalBrainDocumentDetail,
+  PersonalBrainFactDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
+  CreateWorkshopPaintRecipeInput,
+  CreateWorkshopPrintProfileInput,
+  CreateWorkshopTerrainRentalInput,
   ListCapturesOptions,
   TodayAdminSummary,
+  WorkshopOpenTask,
   CaptureEntry,
   CaptureStatus,
   CaptureType,
@@ -866,6 +943,11 @@ export type {
   WorkshopProject,
   WorkshopProjectType,
   WorkshopStatus,
+  WorkshopPaintRecipe,
+  WorkshopPrintProfile,
+  WorkshopTerrainRental,
+  WorkshopPaintTarget,
+  WorkshopRentalStatus,
   ContractExpense,
   ContractExpenseType,
   ContractStatus,
@@ -879,6 +961,25 @@ export type {
   GeneratorPreset,
   GeneratorOutput,
 } from "./life-admin-service";
+
+export {
+  buildCaptureAiProposal,
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  CAPTURE_UPLOAD_NAMESPACE,
+  createCaptureTriageService,
+  CaptureTriageService,
+  parseCaptureAiProposal,
+  QUICK_CAPTURE_TYPE_OPTIONS,
+} from "./capture-triage-service";
+
+export type {
+  CaptureAiProposal,
+  CaptureProposalStatus,
+  CaptureProposalTarget,
+  CaptureTriageAction,
+  CaptureTriageOptions,
+  CaptureTriageResult,
+} from "./capture-triage-service";
 
 export type { ContractBillingInterval } from "./generated/prisma/client";
 
@@ -896,19 +997,105 @@ export type { ContractAlert, ContractCostSummary } from "./contract-expense-util
 export {
   countOpenSetupSteps,
   detectHardwareUrlWarnings,
+  extractHardwareRunbook,
+  mergeHardwareRunbookMetadata,
 } from "./hardware-utils";
 
 export type { HardwareUrlWarning } from "./hardware-utils";
 
 export {
+  asMaterialList,
+  asColorList,
+  asFilamentList,
+  asLinkList,
+  asPhotoList,
+  asChecklist,
+  countMaterialsNeeded,
+  firstPhotoUrl,
+} from "./workshop-types";
+
+export {
+  parseMaterialsFromForm,
+  formatMaterialsForForm,
+  parseColorsFromForm,
+  formatColorsForForm,
+  parseFilamentsFromForm,
+  formatFilamentsForForm,
+  parseLinksFromForm,
+  formatLinksForForm,
+  parsePhotosFromForm,
+  formatPhotosForForm,
+  parseChecklistFromForm,
+  formatChecklistForForm,
+} from "./workshop-form-utils";
+
+export {
+  aggregateAllHardwareErrorHistory,
+  aggregateHomelabTodayAlerts,
+  appendHardwareErrorEntry,
+  buildHomelabRunbooks,
+  buildHomelabSecurityChecklist,
+  buildHomelabServiceStatuses,
+  buildHardwareDeviceCardView,
+  parseHardwareErrorHistory,
+  parseHardwareLastCheckedAt,
+  parseHardwareServices,
+  parseHardwareSpecsLines,
+} from "./homelab-cockpit";
+
+export type {
+  HardwareDeviceCardView,
+  HardwareErrorEntry,
+  HomelabHealthInput,
+  HomelabRunbook,
+  HomelabRunbookStep,
+  HomelabSecurityCheckItem,
+  HomelabServiceId,
+  HomelabServiceStatus,
+  HomelabSeverity,
+  HomelabTodayAlerts,
+} from "./homelab-cockpit";
+
+export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  loadPersonalBrainAgentContext,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainAgentContextOptions,
 } from "./personal-brain-context";
+
+export {
+  searchPersonalBrain,
+  searchPersonalBrainDocuments,
+  searchPersonalBrainFacts,
+  collectPersonalBrainTags,
+  parsePersonalBrainTags,
+} from "./personal-brain-search";
+
+export type {
+  PersonalBrainSearchOptions,
+  PersonalBrainSearchResult,
+  PersonalBrainSearchableDoc,
+  PersonalBrainSearchableFact,
+  PersonalBrainSearchHit,
+} from "./personal-brain-search";
+
+export {
+  resolveBrainCategoryForCaptureType,
+  buildLifeBrainContentFromCapture,
+} from "./personal-brain-capture";
+
+export {
+  assertPersonalBrainLocalOnly,
+  isPersonalBrainContextAllowedForProvider,
+  CLOUD_ALLOWED_CONTEXT_MODES,
+} from "./personal-brain-privacy";
+
+export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,
@@ -941,6 +1128,8 @@ export type {
   ListAiRunsOptions,
   AiRunStatus,
 } from "./ai-run-service";
+
+// --- DnD Brain store (split candidate: server/brain-store.ts) ---
 
 export {
   createBrainStoreService,
@@ -1040,6 +1229,28 @@ export type {
   CalendarFeedType,
   CalendarFeedDirection,
 } from "./calendar-service";
+
+export {
+  createCalendarAggregationService,
+  CalendarAggregationService,
+  aggregateCalendarItems,
+  splitCalendarItemsByDay,
+  classifyUrgency,
+  readMetadataDate,
+  startOfDay,
+  endOfDay,
+  endOfWeek,
+  BACKUP_CHECK_INTERVAL_DAYS,
+  SESSION_PREP_LEAD_DAYS,
+} from "./calendar-aggregation-service";
+
+export type {
+  AggregatedCalendarItem,
+  CalendarItemSource,
+  CalendarItemUrgency,
+  CalendarAggregationInput,
+  CalendarAggregationOptions,
+} from "./calendar-aggregation-service";
 
 export {
   createDevAgentJobService,

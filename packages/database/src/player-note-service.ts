@@ -1,5 +1,6 @@
 import type { Prisma, PlayerNoteStatus, PlayerNoteVisibility } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { syncPlayerNoteReview } from "./review-bridge";
 
 export type {
   PlayerNote,
@@ -263,10 +264,20 @@ export class PlayerNoteService {
   }
 
   async submitToDm(noteId: string): Promise<PlayerNoteWithRelations> {
-    return this.update(noteId, {
+    const note = await this.update(noteId, {
       status: "visible_to_dm",
       visibility: "dm_only",
     });
+
+    await syncPlayerNoteReview(this.db, {
+      noteId: note.id,
+      worldId: note.worldId,
+      userId: note.userId,
+      authorDisplayName: note.user.displayName,
+      content: note.content,
+    });
+
+    return note;
   }
 
   async accept(noteId: string): Promise<PlayerNoteWithRelations> {

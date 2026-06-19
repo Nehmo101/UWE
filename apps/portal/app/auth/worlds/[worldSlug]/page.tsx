@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
+import { PlayerDashboard } from "@/src/components/PlayerDashboard";
 import { PreviewAsPlayerForm } from "@/src/components/PreviewAsPlayerForm";
 import {
   canUsePreview,
@@ -13,10 +14,8 @@ import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import {
   EmptyState,
   GlobalSearchForm,
-  PageTypeBadge,
   SearchFilterBar,
   SearchResultsList,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
   createAuthService,
@@ -25,7 +24,6 @@ import {
   SEARCH_ENTITY_FILTERS,
   type SearchEntityFilter,
   type SearchResultItem,
-  type DbPage,
 } from "@uwe/database/server";
 
 interface Props {
@@ -48,9 +46,10 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
 
   const isSearching = Boolean(q?.trim());
 
-  let pages: DbPage[] = [];
+  let dashboard = null;
   let searchResults: SearchResultItem[] = [];
   let worldName = worldSlug;
+
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
@@ -74,7 +73,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
         entityFilter: entityFilter as SearchEntityFilter | undefined,
       });
     } else {
-      pages = await auth.listPagesForViewer(worldSlug, ctx);
+      dashboard = await auth.getPortalDashboard(worldSlug, ctx);
     }
   } finally {
     await db.$disconnect();
@@ -94,7 +93,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
 
         <h1>{worldName}</h1>
         <p className="auth-lead">
-          Sichtbarkeit: {ctx.effectiveRole}
+          Kampagnen-Dashboard
           {ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}
         </p>
 
@@ -106,7 +105,8 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
 
         <div className="auth-quick-links">
           <Link href={`/auth/worlds/${worldSlug}/sessions`}>Session-Recaps</Link>
-          <Link href={`/auth/worlds/${worldSlug}/assets`}>Assets</Link>
+          <Link href={`/auth/worlds/${worldSlug}/notes`}>Meine Notizen</Link>
+          <Link href={`/auth/worlds/${worldSlug}/assets`}>Handouts</Link>
           <Link href={`/auth/worlds/${worldSlug}/soundboard`}>Soundboard</Link>
         </div>
 
@@ -141,26 +141,12 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
             />
             <SearchResultsList results={searchResults} query={q} />
           </>
+        ) : dashboard ? (
+          <PlayerDashboard worldSlug={worldSlug} dashboard={dashboard} />
         ) : (
-          <ul className="auth-page-list">
-            {pages.map((page) => (
-              <li key={page.id}>
-                <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
-                  <strong>{page.title}</strong>
-                  <div className="auth-page-list-badges">
-                    <PageTypeBadge type={page.type} />
-                    <VisibilityBadge visibility={page.visibility} />
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {!isSearching && pages.length === 0 && (
           <EmptyState
             title="Keine Inhalte freigegeben"
-            description="Für deine Rolle sind derzeit keine Seiten sichtbar. Wende dich an deinen Spielleiter."
+            description="Für deine Rolle sind derzeit keine Inhalte sichtbar. Wende dich an deinen Spielleiter."
           />
         )}
       </section>

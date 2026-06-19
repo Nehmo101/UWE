@@ -11,6 +11,22 @@ export type ImageStudioTask =
   | "remove_background"
   | "variant";
 
+import {
+  assembleImageStudioPrompt,
+  scanPromptForPrivateDataLeak,
+  type ImageStudioPromptContextMode,
+} from "./prompt-privacy";
+
+export type { ImageStudioPromptContextMode } from "./prompt-privacy";
+export {
+  assembleImageStudioPrompt,
+  ImageStudioPrivacyError,
+  isCloudImageProvider,
+  isLocalOnlyImageContext,
+  scanPromptForPrivateDataLeak,
+  validateImageContextForProvider,
+} from "./prompt-privacy";
+
 export interface ImageStudioRequest {
   task: ImageStudioTask;
   prompt: string;
@@ -19,6 +35,9 @@ export interface ImageStudioRequest {
   maskBase64?: string;
   width?: number;
   height?: number;
+  contextMode?: ImageStudioPromptContextMode;
+  contextSnippet?: string | null;
+  cloudContextApproved?: boolean;
 }
 
 export interface ImageStudioResult {
@@ -196,11 +215,36 @@ export async function runImageStudioTask(
     };
   }
 
-  if (mode === "local_rtx") {
-    return callRtxImageAgent(resolvedConfig, request);
+  const assembled = assembleImageStudioPrompt({
+    prompt: request.prompt,
+    contextMode: request.contextMode,
+    contextSnippet: request.contextSnippet,
+    providerMode: request.providerMode ?? resolvedConfig.defaultMode,
+    resolvedProvider: mode,
+    cloudContextApproved: request.cloudContextApproved,
+  });
+
+  if (mode === "cloud") {
+    const leakWarnings = scanPromptForPrivateDataLeak(assembled.prompt);
+    if (leakWarnings.length > 0) {
+      return {
+        success: false,
+        providerUsed: "cloud",
+        error: `Cloud-Prompt enthält möglicherweise private Daten: ${leakWarnings.join(", ")}`,
+      };
+    }
   }
 
-  return callCloudImageApi(resolvedConfig, request);
+  const providerRequest: ImageStudioRequest = {
+    ...request,
+    prompt: assembled.prompt,
+  };
+
+  if (mode === "local_rtx") {
+    return callRtxImageAgent(resolvedConfig, providerRequest);
+  }
+
+  return callCloudImageApi(resolvedConfig, providerRequest);
 }
 
 export const IMAGE_STUDIO_TASK_LABELS: Record<ImageStudioTask, string> = {
