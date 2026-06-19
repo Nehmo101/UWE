@@ -6,7 +6,7 @@ import { createLifeAdminService } from "./life-admin-service";
 import type { PerfScale } from "./stress-seed-types";
 
 export type { PerfScale } from "./stress-seed-types";
-export { PERF_SMOKE_SCALE, PERF_STRESS_SCALE } from "./perf-budgets";
+export { PERF_SMOKE_SCALE, PERF_STRESS_SCALE, PERF_MEGA_SCALE, resolveStressScale } from "./perf-budgets";
 
 const PAGE_TYPES = [
   "lore",
@@ -94,29 +94,46 @@ export async function seedStressWorld(
   db: PrismaClient,
   scale: PerfScale,
 ): Promise<StressSeedResult> {
-  const world = await repo.createWorld({
-    name: "Perf Test World",
-    slug: "perf-test",
-    description:
-      "Synthetic world for performance smoke tests, tag cleanup, and scale validation.",
-  });
+  const existingWorld = await repo.getWorldBySlug("perf-test");
+  const world =
+    existingWorld ??
+    (await repo.createWorld({
+      name: "Perf Test World",
+      slug: "perf-test",
+      description:
+        "Synthetic world for performance smoke tests, tag cleanup, and scale validation.",
+    }));
 
-  const campaign = await repo.createCampaign({
-    worldId: world.id,
-    name: "Perf Campaign",
-    slug: "perf-campaign",
-    description: "Stress-test campaign with many linked pages.",
-  });
+  let campaign = await repo.getCampaignBySlug(world.slug, "perf-campaign");
+  if (!campaign) {
+    campaign = await repo.createCampaign({
+      worldId: world.id,
+      name: "Perf Campaign",
+      slug: "perf-campaign",
+      description: "Stress-test campaign with many linked pages.",
+    });
+  }
 
   const lifeAdmin = createLifeAdminService(db);
   const sessions = new GameSessionService(db);
 
-  const pageIds: string[] = [];
+  const existingPages = await db.page.findMany({
+    where: {
+      worldId: world.id,
+      slug: { startsWith: "perf-page-" },
+    },
+    select: { id: true },
+    orderBy: { slug: "asc" },
+  });
+  const pageIds: string[] = existingPages.map((page) => page.id);
+  const pageStart = pageIds.length;
   const batchSize = 25;
 
-  for (let batch = 0; batch < Math.ceil(scale.pages / batchSize); batch++) {
+  for (let batch = Math.floor(pageStart / batchSize); batch < Math.ceil(scale.pages / batchSize); batch++) {
     const start = batch * batchSize;
     const end = Math.min(start + batchSize, scale.pages);
+    if (start >= end) continue;
+
     const created = await Promise.all(
       Array.from({ length: end - start }, (_, offset) => {
         const i = start + offset;
@@ -146,8 +163,12 @@ export async function seedStressWorld(
     pageIds.push(...created.map((page) => page.id));
   }
 
-  let linkCount = 0;
-  for (let i = 0; i < scale.links; i++) {
+  const existingLinkCount = await db.pageLink.count({
+    where: { sourcePage: { worldId: world.id } },
+  });
+  let linkCount = existingLinkCount;
+  for (let i = existingLinkCount; i < scale.links; i++) {
+    if (pageIds.length < 2) break;
     const sourceIdx = i % pageIds.length;
     const targetIdx = (i * 7 + 13) % pageIds.length;
     if (sourceIdx === targetIdx) continue;
@@ -159,7 +180,10 @@ export async function seedStressWorld(
     linkCount++;
   }
 
-  for (let i = 0; i < scale.assets; i++) {
+  const existingAssetCount = await db.asset.count({
+    where: { worldId: world.id, storageKey: { startsWith: "perf-test/asset-" } },
+  });
+  for (let i = existingAssetCount; i < scale.assets; i++) {
     await repo.createAsset({
       worldId: world.id,
       campaignId: campaign.id,
@@ -173,7 +197,10 @@ export async function seedStressWorld(
     });
   }
 
-  for (let i = 0; i < scale.captures; i++) {
+  const existingCaptureCount = await db.captureEntry.count({
+    where: { title: { startsWith: "Perf Capture " } },
+  });
+  for (let i = existingCaptureCount; i < scale.captures; i++) {
     await lifeAdmin.createCapture({
       title: `Perf Capture ${i + 1}`,
       content: `Captured note ${i + 1} for triage testing.`,
@@ -184,7 +211,10 @@ export async function seedStressWorld(
     });
   }
 
-  for (let i = 0; i < scale.workshopProjects; i++) {
+  const existingWorkshopCount = await db.workshopProject.count({
+    where: { title: { startsWith: "Perf Workshop " } },
+  });
+  for (let i = existingWorkshopCount; i < scale.workshopProjects; i++) {
     await lifeAdmin.createWorkshopProject({
       title: `Perf Workshop ${i + 1}`,
       projectType: "dnd_terrain",
@@ -193,7 +223,10 @@ export async function seedStressWorld(
     });
   }
 
-  for (let i = 0; i < scale.personalBrainDocs; i++) {
+  const existingBrainDocCount = await db.personalBrainDocument.count({
+    where: { title: { startsWith: "Perf Brain Doc " } },
+  });
+  for (let i = existingBrainDocCount; i < scale.personalBrainDocs; i++) {
     await lifeAdmin.createPersonalBrainDocument({
       title: `Perf Brain Doc ${i + 1}`,
       content: `Homelab and campaign notes entry ${i + 1}.`,
@@ -202,8 +235,15 @@ export async function seedStressWorld(
     });
   }
 
-  const handoutPageIds: string[] = [];
-  for (let i = 0; i < scale.handouts; i++) {
+  const existingHandouts = await db.page.findMany({
+    where: {
+      worldId: world.id,
+      slug: { startsWith: "perf-handout-" },
+    },
+    select: { id: true },
+  });
+  const handoutPageIds: string[] = existingHandouts.map((page) => page.id);
+  for (let i = handoutPageIds.length; i < scale.handouts; i++) {
     const page = await repo.createPage({
       worldId: world.id,
       campaignId: campaign.id,
@@ -226,7 +266,10 @@ export async function seedStressWorld(
     handoutPageIds.push(page.id);
   }
 
-  for (let i = 0; i < scale.sessions; i++) {
+  const existingSessionCount = await db.gameSession.count({
+    where: { worldId: world.id, title: { startsWith: "Perf Session " } },
+  });
+  for (let i = existingSessionCount; i < scale.sessions; i++) {
     const linked = [
       pageIds[i % pageIds.length]!,
       handoutPageIds[i % handoutPageIds.length]!,
@@ -250,12 +293,12 @@ export async function seedStressWorld(
     stats: {
       pages: pageIds.length,
       links: linkCount,
-      assets: scale.assets,
-      captures: scale.captures,
-      sessions: scale.sessions,
-      handouts: scale.handouts,
-      workshopProjects: scale.workshopProjects,
-      personalBrainDocs: scale.personalBrainDocs,
+      assets: Math.max(existingAssetCount, scale.assets),
+      captures: Math.max(existingCaptureCount, scale.captures),
+      sessions: Math.max(existingSessionCount, scale.sessions),
+      handouts: handoutPageIds.length,
+      workshopProjects: Math.max(existingWorkshopCount, scale.workshopProjects),
+      personalBrainDocs: Math.max(existingBrainDocCount, scale.personalBrainDocs),
     },
   };
 }

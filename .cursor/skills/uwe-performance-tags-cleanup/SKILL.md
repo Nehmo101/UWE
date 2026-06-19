@@ -18,8 +18,10 @@ description: Performance stress seeds, tag taxonomy cleanup, CI smoke budgets, a
 ### 1. Stress data
 
 ```bash
-pnpm db:seed:stress    # full scale (~500 pages)
-pnpm test              # includes perf-smoke at PERF_SMOKE_SCALE
+pnpm db:seed:stress         # ~500 pages
+UWE_STRESS_SCALE=mega pnpm db:seed:stress   # ~10k pages (additive)
+pnpm db:seed:stress:mega    # shortcut
+pnpm test                   # includes perf-smoke at PERF_SMOKE_SCALE
 ```
 
 Constants: `packages/database/src/perf-budgets.ts`, seed: `stress-seed.ts`.
@@ -35,7 +37,7 @@ const suggestions = tags.suggestMerges(inventory);
 await tags.merge({ worldId, fromTags: ["Stadt"], toTag: "stadt" });
 ```
 
-Docs: `docs/engineering/tag-taxonomy.md`.
+Docs: `docs/engineering/tag-taxonomy.md`. Studio UI: `/admin/tags`.
 
 ### 3. Performance budgets
 

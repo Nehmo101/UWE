@@ -1,21 +1,26 @@
 import "dotenv/config";
-import { prisma } from "../src/client";
-import { createUweRepository } from "../src/repository";
-import { runSeedOnce } from "../src/seed-tracker";
-import { seedStressWorld } from "../src/stress-seed";
-import { PERF_STRESS_SCALE } from "../src/perf-budgets";
+import { prisma } from "../packages/database/src/client";
+import { createUweRepository } from "../packages/database/src/repository";
+import { runSeedOnce } from "../packages/database/src/seed-tracker";
+import { seedStressWorld } from "../packages/database/src/stress-seed";
+import { resolveStressScale } from "../packages/database/src/perf-budgets";
 
 async function main() {
+  const scale = resolveStressScale();
+  const scaleName = process.env.UWE_STRESS_SCALE?.trim().toLowerCase() || "stress";
+  const seedKey = scaleName === "mega" || scaleName === "10k" ? "stress-world-mega" : "stress-world";
+  const seedVersion = scaleName === "mega" || scaleName === "10k" ? 1 : 1;
+
   const repo = createUweRepository();
-  const { applied } = await runSeedOnce(prisma, "stress-world", 1, async () => {
-    const result = await seedStressWorld(repo, prisma, PERF_STRESS_SCALE);
-    return result.stats;
+  const { applied } = await runSeedOnce(prisma, seedKey, seedVersion, async () => {
+    const result = await seedStressWorld(repo, prisma, scale);
+    return { scale: scaleName, stats: result.stats };
   });
 
   if (applied) {
-    console.log("Seeded performance stress world (perf-test).");
+    console.log(`Seeded performance stress world (perf-test) with scale "${scaleName}".`);
   } else {
-    console.log("Performance stress world already seeded — skipped.");
+    console.log(`Performance stress world (${seedKey}) already seeded — skipped.`);
   }
 
   const world = await prisma.world.findUnique({ where: { slug: "perf-test" } });
@@ -27,6 +32,7 @@ async function main() {
       prisma.gameSession.count({ where: { worldId: world.id } }),
     ]);
     console.log(`  World: perf-test (${world.id})`);
+    console.log(`  Scale: ${scaleName} (${scale.pages} pages target)`);
     console.log(`  Pages: ${pages}, Assets: ${assets}, Captures: ${captures}, Sessions: ${sessions}`);
   }
 }

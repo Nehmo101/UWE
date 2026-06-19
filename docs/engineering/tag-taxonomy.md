@@ -49,9 +49,9 @@ await tags.merge({
 
 ## Future work
 
-- Studio admin UI at `/admin/tags` or world-scoped `/worlds/[slug]/tags`
+- ~~Studio admin UI at `/admin/tags`~~ — implemented
+- Asset and Life Brain tag inputs in Studio forms — implemented
 - Optional normalized `Tag` Prisma model if cross-world taxonomy is needed
-- Asset and Life Brain tag inputs in Studio forms
 
 ## Related
 

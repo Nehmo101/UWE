@@ -30,6 +30,34 @@ export const PERF_STRESS_SCALE = {
   tagVariants: 80,
 } as const;
 
+/** Optional mega scale — set UWE_STRESS_SCALE=mega for local profiling */
+export const PERF_MEGA_SCALE = {
+  pages: 10_000,
+  links: 40_000,
+  assets: 2_000,
+  captures: 1_000,
+  sessions: 100,
+  handouts: 200,
+  workshopProjects: 150,
+  personalBrainDocs: 300,
+  tagVariants: 120,
+} as const;
+
+export type StressScaleName = "smoke" | "stress" | "mega";
+
+export function resolveStressScale(
+  env: NodeJS.ProcessEnv = process.env,
+): typeof PERF_SMOKE_SCALE | typeof PERF_STRESS_SCALE | typeof PERF_MEGA_SCALE {
+  const scale = env.UWE_STRESS_SCALE?.trim().toLowerCase();
+  if (scale === "mega" || scale === "10k") {
+    return PERF_MEGA_SCALE;
+  }
+  if (scale === "smoke") {
+    return PERF_SMOKE_SCALE;
+  }
+  return PERF_STRESS_SCALE;
+}
+
 export const PERF_BUDGETS_MS = {
   /** Global search over smoke world */
   searchQuery: 800,

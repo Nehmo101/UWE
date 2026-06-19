@@ -432,6 +432,9 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.ok(exists("packages/database/src/perf-smoke.test.ts"));
     assert.ok(exists("packages/database/src/tag-service.ts"));
     assert.ok(exists("scripts/migration-check.mjs"));
+    assert.ok(exists("apps/studio/app/admin/tags/page.tsx"));
+    assert.ok(exists("apps/studio/app/api/admin/tags/route.ts"));
+    assert.ok(exists("scripts/bundle-budget-check.mjs"));
   });
 
   it("runs full quality gate in CI workflow", () => {
@@ -449,6 +452,7 @@ describe("integration smoke — agent CI quality gate", () => {
       "pnpm test:security",
       "pnpm audit:prod",
       "pnpm build:release",
+      "bundle-budget-check",
     ]);
   });
 

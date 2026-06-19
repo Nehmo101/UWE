@@ -344,11 +344,11 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 |-----------|--------|
 | Vorhanden | **Ja** (`tag-service.ts`) |
 | Scaffolding | Studio-Admin-UI fehlt |
-| UI | **Nein** — Service/API only |
+| UI | **Ja** — `/admin/tags` + Asset/Life-Brain Tag-Felder |
 | API | `createTagService`, `mergeTags`, `suggestTagMerges` |
 | DB | JSON-Tags (kein Tag-Model) |
 | Tests | `tag-service.test.ts` |
-| Nutzbar | **Teilweise** — Merge/Suggestions per Code |
+| Nutzbar | **Ja** — Admin-UI + Merge/Suggestions |
 | Production-ready | **Nein** — UI + Asset/Life-Brain Tag-Felder fehlen |
 
 **Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`.

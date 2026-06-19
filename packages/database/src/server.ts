@@ -193,7 +193,9 @@ export { seedStressWorld, PERF_SMOKE_SCALE, PERF_STRESS_SCALE } from "./stress-s
 export type { StressSeedResult } from "./stress-seed";
 export {
   PERF_BUDGETS_MS,
+  PERF_MEGA_SCALE,
   assertWithinBudget,
+  resolveStressScale,
 } from "./perf-budgets";
 export {
   canonicalizeTag,
