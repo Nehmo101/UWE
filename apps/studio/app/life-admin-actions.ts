@@ -6,8 +6,6 @@ import type {
   HardwareStatus,
   PersonalProjectCategory,
   PersonalProjectStatus,
-  WorkshopProjectType,
-  WorkshopStatus,
 } from "@uwe/database/server";
 import { createLifeAdminService, createSettingsService, prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -37,6 +35,9 @@ function revalidateAdminPaths() {
   revalidatePath("/capture");
   revalidatePath("/projects");
   revalidatePath("/workshop");
+  revalidatePath("/workshop/recipes");
+  revalidatePath("/workshop/rental");
+  revalidatePath("/workshop/print-profiles");
   revalidatePath("/contracts");
   revalidatePath("/hardware");
   revalidatePath("/life-brain");
@@ -79,50 +80,6 @@ export async function deleteProjectAction(formData: FormData) {
   assertStudioTrusted();
 
   await lifeAdmin().deletePersonalProject(String(formData.get("id")));
-  revalidateAdminPaths();
-}
-
-export async function createWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
-
-  await lifeAdmin().createWorkshopProject({
-    title: String(formData.get("title") || "").trim(),
-    projectType: String(formData.get("projectType") || "other") as WorkshopProjectType,
-    status: (String(formData.get("status") || "idea") as WorkshopStatus) || "idea",
-    description: String(formData.get("description") || ""),
-    nextAction: String(formData.get("nextAction") || "").trim() || null,
-    notes: String(formData.get("notes") || ""),
-    costCents: parseOptionalInt(formData.get("costCents")),
-    materialsNeeded: String(formData.get("materialsNeeded") || "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean),
-    worldId: String(formData.get("worldId") || "").trim() || null,
-  });
-  revalidateAdminPaths();
-  redirect("/workshop");
-}
-
-export async function updateWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
-
-  const id = String(formData.get("id"));
-  await lifeAdmin().updateWorkshopProject(id, {
-    title: String(formData.get("title") || "").trim(),
-    projectType: String(formData.get("projectType")) as WorkshopProjectType,
-    status: String(formData.get("status")) as WorkshopStatus,
-    description: String(formData.get("description") || ""),
-    nextAction: String(formData.get("nextAction") || "").trim() || null,
-    notes: String(formData.get("notes") || ""),
-    costCents: parseOptionalInt(formData.get("costCents")),
-  });
-  revalidateAdminPaths();
-}
-
-export async function deleteWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
-
-  await lifeAdmin().deleteWorkshopProject(String(formData.get("id")));
   revalidateAdminPaths();
 }
 

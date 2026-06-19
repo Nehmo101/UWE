@@ -20,6 +20,7 @@ import {
   deleteCaptureAction,
   updateCaptureStatusAction,
 } from "../capture-actions";
+import { promoteCaptureToWorkshopAction } from "../workshop-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -124,6 +125,16 @@ export default async function CapturePage({ searchParams }: Props) {
                           <input type="hidden" name="status" value="triaged" />
                           <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
                             Sortiert
+                          </button>
+                        </form>
+                      )}
+                      {(capture.captureType === "art_miniature_terrain" ||
+                        capture.captureType === "file_image" ||
+                        capture.captureType === "project_idea") && (
+                        <form action={promoteCaptureToWorkshopAction}>
+                          <input type="hidden" name="captureId" value={capture.id} />
+                          <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                            → Werkstatt
                           </button>
                         </form>
                       )}

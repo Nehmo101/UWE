@@ -46,4 +46,4 @@ Add `pnpm test:security` when touching auth, visibility, or API routes.
 
 Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md` — no family/meal/cat modules.
 
-Details: [references/architecture.md](references/architecture.md)
+Details: [references/architecture.md](references/architecture.md) · Workshop: [references/workshop-cockpit.md](references/workshop-cockpit.md)

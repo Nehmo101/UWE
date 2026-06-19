@@ -51,6 +51,60 @@ describe("life admin service", () => {
     assert.equal(workshop.projectType, "dnd_terrain");
   });
 
+  it("supports workshop hobby cockpit entities and capture promotion", async () => {
+    const capture = await service.createCapture({
+      title: "Goblin squad paint test",
+      content: "Contrast paints on goblins",
+      captureType: "art_miniature_terrain",
+      url: "https://example.com/ref.jpg",
+    });
+
+    const workshop = await service.promoteCaptureToWorkshop(capture.id, {
+      nextAction: "Basecoat drybrush",
+    });
+
+    assert.equal(workshop.nextAction, "Basecoat drybrush");
+    assert.ok(workshop.referenceImages);
+
+    const recipe = await service.createWorkshopPaintRecipe({
+      name: "Goblin green",
+      targetType: "miniature",
+      primer: "Chaos Black",
+      basecoat: "Warpstone Glow",
+      workshopProjectId: workshop.id,
+      rating: 4,
+    });
+
+    const profile = await service.createWorkshopPrintProfile({
+      name: "Ruin tile",
+      printer: "Bambu P1S",
+      filament: "PLA matte grey",
+      layerHeight: "0.2",
+      result: "gut",
+      workshopProjectId: workshop.id,
+    });
+
+    const rental = await service.createWorkshopTerrainRental({
+      terrainSetName: "Forest ruins",
+      boxLabel: "Box B2",
+      rentalPriceCents: 1500,
+      depositCents: 5000,
+    });
+
+    const loaded = await service.getWorkshopProject(workshop.id);
+    assert.equal(loaded?.paintRecipes.length, 1);
+    assert.equal(loaded?.printProfiles.length, 1);
+    assert.equal(recipe.name, "Goblin green");
+    assert.equal(profile.printer, "Bambu P1S");
+    assert.equal(rental.status, "available");
+
+    const tasks = await service.listWorkshopOpenTasks(5);
+    assert.ok(tasks.some((task) => task.id === workshop.id));
+
+    const links = await service.listLinksForTarget("workshop_project", workshop.id);
+    assert.ok(links.some((link) => link.sourceId === capture.id));
+  });
+
   it("creates contract and hardware records without bank data", async () => {
     const contract = await service.createContractExpense({
       name: "Cloudflare Pro",
