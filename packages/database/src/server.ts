@@ -810,6 +810,12 @@ export {
   HardwareStatusEnum,
 } from "./life-admin-service";
 
+export {
+  CAPTURE_UPLOAD_NAMESPACE,
+  resolveCaptureUploadFilePath,
+  saveCaptureUploadFile,
+} from "./capture-upload";
+
 export type {
   CreateAdminLinkInput,
   CreateCaptureInput,

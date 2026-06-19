@@ -391,6 +391,112 @@ export class LifeAdminService {
     return this.db.captureEntry.delete({ where: { id } });
   }
 
+  async getCaptureStatusCounts(): Promise<Record<CaptureStatus, number>> {
+    const rows = await this.db.captureEntry.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    });
+
+    const counts: Record<CaptureStatus, number> = {
+      inbox: 0,
+      triaged: 0,
+      linked: 0,
+      archived: 0,
+    };
+
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+    }
+
+    return counts;
+  }
+
+  async convertCaptureToProject(
+    captureId: string,
+    overrides: Partial<CreatePersonalProjectInput> = {},
+  ) {
+    const capture = await this.getCapture(captureId);
+    if (!capture) {
+      throw new Error("Capture not found");
+    }
+
+    const categoryByType: Partial<Record<CaptureType, PersonalProjectCategory>> = {
+      uwe_todo: "uwe",
+      project_idea: "uwe",
+      hardware: "hardware_homelab",
+      dnd_idea: "dnd",
+      art_miniature_terrain: "art_workshop",
+      contract_expense: "other",
+    };
+
+    const project = await this.createPersonalProject({
+      name: overrides.name ?? (capture.title || "Aus Capture"),
+      description: overrides.description ?? capture.content,
+      category: overrides.category ?? categoryByType[capture.captureType] ?? "other",
+      status: overrides.status ?? "idea",
+      notes: overrides.notes ?? `Erstellt aus Capture (${capture.id}).`,
+      worldId: capture.worldId ?? overrides.worldId,
+      pageId: capture.pageId ?? overrides.pageId,
+      metadata: overrides.metadata,
+    });
+
+    await this.createAdminLink({
+      sourceType: "capture",
+      sourceId: captureId,
+      targetType: "personal_project",
+      targetId: project.id,
+      relationType: "converted",
+      label: "Aus Capture",
+    });
+
+    await this.updateCapture(captureId, { status: "linked" });
+
+    return { capture: await this.getCapture(captureId), project };
+  }
+
+  async convertCaptureToWorkshop(
+    captureId: string,
+    overrides: Partial<CreateWorkshopProjectInput> = {},
+  ) {
+    const capture = await this.getCapture(captureId);
+    if (!capture) {
+      throw new Error("Capture not found");
+    }
+
+    const typeByCapture: Partial<Record<CaptureType, WorkshopProjectType>> = {
+      art_miniature_terrain: "miniature",
+      dnd_idea: "dnd_terrain",
+      file_image: "miniature",
+    };
+
+    const workshop = await this.createWorkshopProject({
+      title: overrides.title ?? (capture.title || "Aus Capture"),
+      projectType: overrides.projectType ?? typeByCapture[capture.captureType] ?? "other",
+      description: overrides.description ?? capture.content,
+      status: overrides.status ?? "planned",
+      notes: overrides.notes ?? `Erstellt aus Capture (${capture.id}).`,
+      referenceImages: capture.storageKey
+        ? [{ storageKey: capture.storageKey, label: capture.title }]
+        : overrides.referenceImages,
+      worldId: capture.worldId ?? overrides.worldId,
+      pageId: capture.pageId ?? overrides.pageId,
+      metadata: overrides.metadata,
+    });
+
+    await this.createAdminLink({
+      sourceType: "capture",
+      sourceId: captureId,
+      targetType: "workshop_project",
+      targetId: workshop.id,
+      relationType: "converted",
+      label: "Aus Capture",
+    });
+
+    await this.updateCapture(captureId, { status: "linked" });
+
+    return { capture: await this.getCapture(captureId), workshop };
+  }
+
   async listPersonalProjects(options: {
     status?: PersonalProjectStatus | PersonalProjectStatus[];
     category?: PersonalProjectCategory;

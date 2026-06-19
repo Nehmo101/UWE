@@ -154,4 +154,39 @@ describe("life admin service", () => {
     assert.equal(links.length, 0);
     assert.equal(await service.getCapture(capture.id), null);
   });
+
+  it("converts capture to project and links entities", async () => {
+    const capture = await service.createCapture({
+      title: "UWE feature idea",
+      content: "Capture triage workflow",
+      captureType: "project_idea",
+    });
+
+    const result = await service.convertCaptureToProject(capture.id);
+    assert.equal(result.project.name, "UWE feature idea");
+    assert.equal(result.capture?.status, "linked");
+
+    const links = await service.listLinksForSource("capture", capture.id);
+    assert.ok(links.some((link) => link.targetType === "personal_project"));
+  });
+
+  it("converts capture to workshop project", async () => {
+    const capture = await service.createCapture({
+      title: "Goblin miniature",
+      captureType: "art_miniature_terrain",
+    });
+
+    const result = await service.convertCaptureToWorkshop(capture.id);
+    assert.equal(result.workshop.title, "Goblin miniature");
+    assert.equal(result.capture?.status, "linked");
+  });
+
+  it("reports capture status counts", async () => {
+    await service.createCapture({ title: "Inbox A", status: "inbox" });
+    await service.createCapture({ title: "Archived B", status: "archived" });
+
+    const counts = await service.getCaptureStatusCounts();
+    assert.ok(counts.inbox >= 1);
+    assert.ok(counts.archived >= 1);
+  });
 });
