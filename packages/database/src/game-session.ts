@@ -301,7 +301,12 @@ export class GameSessionService {
     });
 
     if (input.date !== undefined || input.title !== undefined || input.sessionNumber !== undefined) {
-      await createCalendarService(this.db).syncSessionToCalendar(sessionId);
+      const calendar = createCalendarService(this.db);
+      if (input.date === null) {
+        await calendar.unsyncSessionFromCalendar(sessionId);
+      } else {
+        await calendar.syncSessionToCalendar(sessionId);
+      }
     }
 
     return session;

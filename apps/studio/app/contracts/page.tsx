@@ -39,7 +39,12 @@ export default async function ContractsPage() {
           <ul className="uwe-inspector-findings">
             {alerts.map((alert) => (
               <li key={`${alert.contractId}-${alert.kind}`}>
-                <strong>{alert.name}</strong> — {alert.message}
+                <strong>{alert.name}</strong> — {alert.message}{" "}
+                {alert.dueDate && (
+                  <Link href={`/mail/compose?kind=contract_reminder&sourceId=${alert.contractId}`}>
+                    Mail vorbereiten
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

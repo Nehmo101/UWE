@@ -1008,6 +1008,28 @@ export type {
 } from "./calendar-service";
 
 export {
+  createCalendarAggregationService,
+  CalendarAggregationService,
+  aggregateCalendarItems,
+  splitCalendarItemsByDay,
+  classifyUrgency,
+  readMetadataDate,
+  startOfDay,
+  endOfDay,
+  endOfWeek,
+  BACKUP_CHECK_INTERVAL_DAYS,
+  SESSION_PREP_LEAD_DAYS,
+} from "./calendar-aggregation-service";
+
+export type {
+  AggregatedCalendarItem,
+  CalendarItemSource,
+  CalendarItemUrgency,
+  CalendarAggregationInput,
+  CalendarAggregationOptions,
+} from "./calendar-aggregation-service";
+
+export {
   createDevAgentJobService,
   DevAgentJobService,
   resolveAgentJobsConfig,

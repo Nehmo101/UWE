@@ -273,8 +273,13 @@ enum MailMessageStatus {
 
 enum MailTemplateKind {
   session_recap
+  session_reminder
   handout
   share_link
+  system_warning
+  backup_warning
+  contract_reminder
+  terrain_rental
   custom
 }
 
