@@ -8,18 +8,17 @@ import {
   TopBarBrand,
 } from "@uwe/shared-ui";
 import {
+  CAPTURE_STATUS_LABELS,
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
+  getAppRepository,
   prisma,
-  type CaptureType,
 } from "@uwe/database/server";
+import { CaptureImageUpload } from "@/components/CaptureImageUpload";
+import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
-import {
-  createCaptureAction,
-  deleteCaptureAction,
-  updateCaptureStatusAction,
-} from "../capture-actions";
+import { deleteCaptureAction } from "../capture-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -27,13 +26,27 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
 });
 
 interface Props {
-  searchParams: Promise<{ quick?: string }>;
+  searchParams: Promise<{ quick?: string; status?: string }>;
+}
+
+function readIntent(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const intent = (metadata as Record<string, unknown>).captureIntent;
+  return typeof intent === "string" ? intent : null;
 }
 
 export default async function CapturePage({ searchParams }: Props) {
-  const { quick } = await searchParams;
-  const captures = await createLifeAdminService(prisma).listCaptures({ limit: 100 });
-  const showQuickForm = quick === "1";
+  const { quick, status } = await searchParams;
+  const service = createLifeAdminService(prisma);
+  const worlds = await getAppRepository().listWorldsWithGuestMode();
+  const statusFilter =
+    status === "archived"
+      ? "archived"
+      : status === "all"
+        ? undefined
+        : ("inbox" as const);
+  const captures = await service.listCaptures({ status: statusFilter, limit: 100 });
+  const showQuickForm = quick === "1" || quick === "true";
 
   return (
     <AppShell
@@ -49,93 +62,84 @@ export default async function CapturePage({ searchParams }: Props) {
         <>
           <PageHeader
             title="Capture Inbox"
-            summary="Schnell erfassen ohne RTX — Notizen, Ideen, Links und To-dos landen hier."
+            summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
           />
 
           <section className="uwe-card uwe-section">
+            <h2 className="uwe-section-title">Bild erfassen (Mobile)</h2>
+            <p className="uwe-hint">
+              Fotos von Miniaturen, Terrain oder Handouts — optional direkt als Asset in einer Welt.
+            </p>
+            <CaptureImageUpload worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))} />
+          </section>
+
+          <section className="uwe-card uwe-section uwe-capture-quick-section">
             <h2 className="uwe-section-title">
               {showQuickForm ? "Schnell erfassen" : "Neuer Capture"}
             </h2>
-            <form action={createCaptureAction} className="uwe-brain-create-form">
-              <input type="hidden" name="returnTo" value="/capture" />
-              <label>
-                Typ
-                <select name="captureType" defaultValue="quick_note">
-                  {(Object.keys(CAPTURE_TYPE_LABELS) as CaptureType[]).map((type) => (
-                    <option key={type} value={type}>
-                      {CAPTURE_TYPE_LABELS[type]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Titel (optional)
-                <input name="title" type="text" placeholder="Kurzer Titel" />
-              </label>
-              <label>
-                Inhalt
-                <textarea
-                  name="content"
-                  rows={showQuickForm ? 3 : 5}
-                  required
-                  placeholder="Was möchtest du festhalten?"
-                  autoFocus={showQuickForm}
-                />
-              </label>
-              <label>
-                Link (optional)
-                <input name="url" type="url" placeholder="https://…" />
-              </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
-                Erfassen
-              </button>
-            </form>
+            <QuickCaptureForm
+              returnTo="/capture"
+              autoFocus={showQuickForm}
+              compact={showQuickForm}
+            />
           </section>
 
           <section className="uwe-section">
-            <h2 className="uwe-section-title">Inbox ({captures.length})</h2>
+            <div className="uwe-capture-inbox-head">
+              <h2 className="uwe-section-title">Inbox ({captures.length})</h2>
+              <div className="uwe-capture-filter-tabs">
+                <Link href="/capture" data-active={!status || status === "inbox" ? "true" : "false"}>
+                  Inbox
+                </Link>
+                <Link href="/capture?status=archived" data-active={status === "archived" ? "true" : "false"}>
+                  Archiv
+                </Link>
+                <Link href="/capture?status=all" data-active={status === "all" ? "true" : "false"}>
+                  Alle
+                </Link>
+              </div>
+            </div>
+
             {captures.length === 0 ? (
               <EmptyState
                 title="Inbox leer"
-                description="Erfasse eine Notiz, Idee oder ein To-do — ohne KI, ohne RTX."
-                action={<Link href="/today">Heute öffnen</Link>}
+                description="Erfasse eine Notiz, Idee oder ein To-do — mit optionalem KI-Vorschlag zur Sortierung."
+                action={<Link href="/capture?quick=1">Schnell erfassen</Link>}
               />
             ) : (
               <div className="uwe-today-card-list">
-                {captures.map((capture) => (
-                  <article key={capture.id} className="uwe-today-card">
-                    <h3>{capture.title}</h3>
-                    <p>
-                      {CAPTURE_TYPE_LABELS[capture.captureType]} · {capture.status} ·{" "}
-                      {DATE_FORMAT.format(capture.capturedAt)}
-                    </p>
-                    {capture.content && <p>{capture.content}</p>}
-                    {capture.url && (
-                      <p>
-                        <a href={capture.url} target="_blank" rel="noreferrer">
-                          {capture.url}
-                        </a>
-                      </p>
-                    )}
-                    <div className="uwe-inline-actions">
-                      {capture.status === "inbox" && (
-                        <form action={updateCaptureStatusAction}>
+                {captures.map((capture) => {
+                  const intent = readIntent(capture.metadata);
+                  const typeLabel =
+                    intent === "life_brain"
+                      ? "Life-Brain-Fakt"
+                      : CAPTURE_TYPE_LABELS[capture.captureType];
+
+                  return (
+                    <article key={capture.id} className="uwe-today-card uwe-capture-inbox-card">
+                      <Link href={`/capture/${capture.id}`} className="uwe-capture-inbox-link">
+                        <h3>{capture.title}</h3>
+                        <p>
+                          {typeLabel} · {CAPTURE_STATUS_LABELS[capture.status]} ·{" "}
+                          {DATE_FORMAT.format(capture.capturedAt)}
+                        </p>
+                        {capture.content ? <p className="uwe-capture-snippet">{capture.content}</p> : null}
+                        {capture.storageKey ? <p className="uwe-capture-snippet">📎 Anhang</p> : null}
+                      </Link>
+                      <div className="uwe-inline-actions">
+                        <Link href={`/capture/${capture.id}`} className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                          Triage
+                        </Link>
+                        <form action={deleteCaptureAction}>
                           <input type="hidden" name="id" value={capture.id} />
-                          <input type="hidden" name="status" value="triaged" />
                           <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
-                            Sortiert
+                            Löschen
                           </button>
                         </form>
-                      )}
-                      <form action={deleteCaptureAction}>
-                        <input type="hidden" name="id" value={capture.id} />
-                        <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
-                          Löschen
-                        </button>
-                      </form>
-                    </div>
-                  </article>
-                ))}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

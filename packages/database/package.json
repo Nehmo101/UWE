@@ -12,6 +12,7 @@
     "./server": "./src/server.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",
+    "./capture-constants": "./src/capture-constants.ts",
     "./test-helpers": "./src/test-helpers.ts"
   },
   "scripts": {

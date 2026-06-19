@@ -7,10 +7,11 @@ description: Implement new UWE features following monorepo conventions — domai
 
 ## Before coding
 
-1. Read [references/architecture.md](references/architecture.md) for repo layout.
+1. Read [references/architecture.md](references/architecture.md) for repo layout — or skill `uwe-architecture` for full package map.
 2. Identify the **package** vs **app** boundary — logic belongs in `packages/`, UI/routes in `apps/`.
 3. Check existing services before adding new abstractions.
 4. For AI features: enforce Review/Apply (no auto-canonization).
+5. For collaborative edits: Co-DM and player contributions use `ContentReview` queue — see `docs/engineering/roles-review-workflow.md`.
 
 ## Implementation steps
 
@@ -44,6 +45,22 @@ Add `pnpm test:security` when touching auth, visibility, or API routes.
 
 ## Daily Admin OS
 
+Use skill `daily-admin-os` for Today, Capture, Workshop, Hardware, etc.
+
 Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md` — no family/meal/cat modules.
 
+## Life Brain / Image Studio / Calendar / Mail
+
+| Area | Skill or doc |
+|------|----------------|
+| Life Brain retrieval | `life-brain-retrieval`, `docs/life-brain-privacy.md` |
+| Image Studio | `image-studio-workflows`, `docs/IMAGE_STUDIO.md` |
+| Calendar | `docs/CALENDAR_INTEGRATION.md` |
+| Mail | `docs/ai-brain-mail/README.md` |
+| Multi-domain rollout | `docs/engineering/product-orchestrator-plan.md` |
+
 Details: [references/architecture.md](references/architecture.md)
+
+## Capture 2.0
+
+See [references/capture-patterns.md](references/capture-patterns.md) for inbox, triage, proposals, and file upload conventions.

@@ -57,13 +57,16 @@ src/security/middleware.ts(5,3): error TS2305: Module '"../runtime-config"' has 
 
 ---
 
-## CI step order (`.github/workflows/ci.yml`)
+## CI step order (`.github/workflows/ci.yml` / `pnpm quality`)
 
 1. `pnpm install --frozen-lockfile`
 2. `pnpm --filter @uwe/database db:generate`
 3. `pnpm lint`
-4. `pnpm typecheck`
-5. `pnpm test`
-6. `pnpm build:release`
+4. `pnpm secret:scan`
+5. `pnpm typecheck`
+6. `pnpm test`
+7. `pnpm test:security`
+8. `pnpm audit:prod`
+9. `pnpm build:release`
 
-Local equivalent: `pnpm quality` (after install).
+Local equivalent: `pnpm quality` (after install). Additional CI jobs (not in `quality`): `pnpm test:e2e`, Postgres smoke — see `docs/engineering/ci.md`.

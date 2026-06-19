@@ -504,6 +504,8 @@ export type {
   DungeonPrepStatus,
 } from "./dungeon-cockpit";
 
+// --- Labels (split candidate: packages/database/src/server/labels.ts) ---
+
 export {
   createLabelService,
   LabelService,
@@ -538,6 +540,30 @@ export type {
   UpdateLabelTemplateInput,
   LabelWithRelations,
 } from "./label-service";
+
+export {
+  ASSET_LINK_TARGET_LABELS,
+  adoptAssetToTarget,
+  linkAssetToTarget,
+  listAssetLinksForAsset,
+  listAssetsForTarget,
+  syncImageStudioProjectLinksToAsset,
+  unlinkAssetFromTarget,
+} from "./asset-link-service";
+
+export type { AssetLinkRecord, AssetLinkTargetType, LinkAssetInput } from "./asset-link-service";
+
+export {
+  WORKSHOP_LABEL_TEMPLATE_SLUGS,
+  buildFilamentLabelContent,
+  buildUwePageQrUrl,
+  buildWorkshopLabelContent,
+  buildWorkshopLabelLayout,
+  resolveFilamentLabelTemplateSlug,
+  resolveWorkshopLabelTemplateSlug,
+} from "./label-workshop-service";
+
+export type { FilamentEntry, MaterialEntry } from "./label-workshop-service";
 
 export {
   createPrintListService,
@@ -785,6 +811,30 @@ export type {
 } from "./player-note-service";
 
 export {
+  createReviewService,
+  ReviewService,
+  CONTENT_REVIEW_STATUS_LABELS,
+  CONTENT_REVIEW_SOURCE_LABELS,
+} from "./review-service";
+
+export type {
+  ContentReviewView,
+  ReviewCommentView,
+  CreateContentReviewInput,
+  ListReviewsOptions,
+} from "./review-service";
+
+export {
+  resolveReview,
+  syncAiProposalReview,
+  syncPlayerNoteReview,
+  createPortalUnlockReview,
+  createCoDmChangeReview,
+} from "./review-bridge";
+
+export type { ResolveReviewResult } from "./review-bridge";
+
+export {
   createSpotifyConnectionService,
   isSpotifyOAuthConfigured,
   resolveSpotifyOAuthConfig,
@@ -810,6 +860,8 @@ export type {
   JobType,
   ListJobsOptions,
 } from "./job-service";
+
+// --- Daily Admin OS / Life Admin (split candidate: life-admin-service.ts) ---
 
 export {
   createLifeAdminService,
@@ -845,6 +897,9 @@ export type {
   CreateHardwareDeviceInput,
   CreatePersonalBrainDocumentInput,
   CreatePersonalBrainFactInput,
+  PromoteCaptureToLifeBrainInput,
+  PersonalBrainDocumentDetail,
+  PersonalBrainFactDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
   ListCapturesOptions,
@@ -872,6 +927,25 @@ export type {
   GeneratorOutput,
 } from "./life-admin-service";
 
+export {
+  buildCaptureAiProposal,
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  CAPTURE_UPLOAD_NAMESPACE,
+  createCaptureTriageService,
+  CaptureTriageService,
+  parseCaptureAiProposal,
+  QUICK_CAPTURE_TYPE_OPTIONS,
+} from "./capture-triage-service";
+
+export type {
+  CaptureAiProposal,
+  CaptureProposalStatus,
+  CaptureProposalTarget,
+  CaptureTriageAction,
+  CaptureTriageOptions,
+  CaptureTriageResult,
+} from "./capture-triage-service";
+
 export type { ContractBillingInterval } from "./generated/prisma/client";
 
 export {
@@ -897,12 +971,43 @@ export type { HardwareUrlWarning } from "./hardware-utils";
 export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  loadPersonalBrainAgentContext,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainAgentContextOptions,
 } from "./personal-brain-context";
+
+export {
+  searchPersonalBrain,
+  searchPersonalBrainDocuments,
+  searchPersonalBrainFacts,
+  collectPersonalBrainTags,
+  parsePersonalBrainTags,
+} from "./personal-brain-search";
+
+export type {
+  PersonalBrainSearchOptions,
+  PersonalBrainSearchResult,
+  PersonalBrainSearchableDoc,
+  PersonalBrainSearchableFact,
+  PersonalBrainSearchHit,
+} from "./personal-brain-search";
+
+export {
+  resolveBrainCategoryForCaptureType,
+  buildLifeBrainContentFromCapture,
+} from "./personal-brain-capture";
+
+export {
+  assertPersonalBrainLocalOnly,
+  isPersonalBrainContextAllowedForProvider,
+  CLOUD_ALLOWED_CONTEXT_MODES,
+} from "./personal-brain-privacy";
+
+export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,
@@ -935,6 +1040,8 @@ export type {
   ListAiRunsOptions,
   AiRunStatus,
 } from "./ai-run-service";
+
+// --- DnD Brain store (split candidate: server/brain-store.ts) ---
 
 export {
   createBrainStoreService,

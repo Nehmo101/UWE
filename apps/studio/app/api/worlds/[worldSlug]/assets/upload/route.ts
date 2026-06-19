@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import { NextResponse } from "next/server";
 import {
-  buildStorageKey,
   ensureUploadDirectory,
   inferAssetTypeFromMime,
   inferMimeTypeFromFilename,
   resolveAssetFilePath,
+  validateUploadInput,
+  UploadValidationError,
 } from "@uwe/assets";
 import {
   getAppRepository,
@@ -69,15 +70,31 @@ export async function POST(request: Request, context: RouteContext) {
   const pageId = metadata.pageId ?? null;
 
   const mimeType = file.type || inferMimeTypeFromFilename(file.name);
-  const type =
-    (metadata.type as AssetType | undefined) || inferAssetTypeFromMime(mimeType);
+  const buffer = Buffer.from(await file.arrayBuffer());
 
-  const storageKey = buildStorageKey(world.id, file.name);
+  let validated;
+  try {
+    validated = validateUploadInput({
+      buffer,
+      originalFilename: file.name,
+      declaredMimeType: mimeType,
+      worldId: world.id,
+    });
+  } catch (error) {
+    if (error instanceof UploadValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
+
+  const type =
+    (metadata.type as AssetType | undefined) || inferAssetTypeFromMime(validated.mimeType);
+
+  const storageKey = validated.storageKey;
   const settings = await getSystemSettings();
   const uploadsRoot = resolveEffectiveUploadsPath(settings);
   ensureUploadDirectory(world.id, undefined, uploadsRoot);
   const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  const buffer = Buffer.from(await file.arrayBuffer());
   fs.writeFileSync(filePath, buffer);
 
   const asset = await repo.createAsset({
@@ -86,8 +103,8 @@ export async function POST(request: Request, context: RouteContext) {
     description,
     type,
     storageKey,
-    mimeType,
-    size: file.size,
+    mimeType: validated.mimeType,
+    size: buffer.length,
     visibility,
   });
 

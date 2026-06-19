@@ -79,17 +79,70 @@ describe("life admin service", () => {
     const doc = await service.createPersonalBrainDocument({
       title: "Homelab notes",
       content: "Router config backup location",
-      category: "homelab",
+      category: "hardware_homelab",
+      tags: ["homelab"],
     });
 
     const fact = await service.createPersonalBrainFact({
       title: "Preferred filament",
       content: "PLA matte black for terrain bases",
       factType: "material",
+      tags: ["3d-druck"],
     });
 
-    assert.equal(doc.category, "homelab");
+    assert.equal(doc.category, "hardware_homelab");
     assert.equal(fact.factType, "material");
+  });
+
+  it("searches personal brain by keyword, category, and tag", async () => {
+    await service.createPersonalBrainDocument({
+      title: "Router backup",
+      content: "NAS share for homelab configs",
+      category: "hardware_homelab",
+      tags: ["homelab"],
+    });
+    await service.createPersonalBrainFact({
+      title: "Filament stock",
+      content: "PLA matte black",
+      factType: "material",
+      tags: ["3d-druck"],
+    });
+
+    const keywordHits = await service.searchPersonalBrain({ query: "homelab" });
+    assert.ok(keywordHits.documents.length >= 1);
+
+    const categoryHits = await service.searchPersonalBrain({ category: "hardware_homelab" });
+    assert.ok(categoryHits.documents.every((hit) => hit.item.category === "hardware_homelab"));
+
+    const tagHits = await service.searchPersonalBrain({ tag: "3d-druck" });
+    assert.ok(tagHits.facts.length >= 1);
+  });
+
+  it("promotes capture into life brain and links source capture", async () => {
+    const capture = await service.createCapture({
+      title: "Filament tip",
+      content: "Use matte PLA for bases",
+      captureType: "art_miniature_terrain",
+      url: "https://example.com/filament",
+    });
+
+    const promoted = await service.promoteCaptureToLifeBrain({
+      captureId: capture.id,
+      category: "printing_3d",
+      tags: ["3d-druck"],
+    });
+
+    assert.equal(promoted.kind, "document");
+    assert.match(promoted.entry.content, /matte PLA/);
+    assert.match(promoted.entry.content, /https:\/\/example.com\/filament/);
+
+    const detail = await service.getPersonalBrainDocumentDetail(promoted.entry.id);
+    assert.ok(detail);
+    assert.equal(detail.linkedCaptures.length, 1);
+    assert.equal(detail.linkedCaptures[0]?.id, capture.id);
+
+    const updatedCapture = await service.getCapture(capture.id);
+    assert.equal(updatedCapture?.status, "linked");
   });
 
   it("links admin entities", async () => {
@@ -170,11 +223,11 @@ describe("life admin service", () => {
       tags: ["3d-print"],
     });
 
-    const results = await service.searchPersonalBrain("vlan", { limit: 5 });
-    assert.ok(results.documents.some((doc) => doc.title.includes("Router")));
+    const results = await service.searchPersonalBrain({ query: "vlan", limit: 5 });
+    assert.ok(results.documents.some((doc) => doc.item.title.includes("Router")));
 
-    const factResults = await service.searchPersonalBrain("filament", { limit: 5 });
-    assert.ok(factResults.facts.some((fact) => fact.title.includes("Filament")));
+    const factResults = await service.searchPersonalBrain({ query: "filament", limit: 5 });
+    assert.ok(factResults.facts.some((fact) => fact.item.title.includes("Filament")));
   });
 
   it("deletes capture and related links", async () => {
