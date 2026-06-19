@@ -4,7 +4,7 @@ import type { MailTemplateKind } from "./generated/prisma/client";
 import { runSeedOnce } from "./seed-tracker";
 
 export const MAIL_TEMPLATE_SEED_KEY = "mail_templates.system";
-export const MAIL_TEMPLATE_SEED_VERSION = 1;
+export const MAIL_TEMPLATE_SEED_VERSION = 2;
 
 export interface MailTemplateView {
   id: string;
@@ -67,6 +67,56 @@ const SYSTEM_TEMPLATES: Array<{
     subject: "Vorschau: {{targetLabel}}",
     bodyHtml: "<h2>{{targetLabel}}</h2>\n<p><a href=\"{{publicUrl}}\">{{publicUrl}}</a></p>",
     bodyText: "{{targetLabel}}\n\nVorschau-Link: {{publicUrl}}",
+  },
+  {
+    slug: "session-reminder",
+    kind: "session_reminder",
+    name: "Session-Erinnerung",
+    description: "Erinnerung an die nächste Spielsession.",
+    subject: "Session-Erinnerung: {{sessionTitle}}",
+    bodyHtml:
+      "<h2>Session {{sessionNumber}}: {{sessionTitle}}</h2>\n<p>Termin: {{sessionDate}}</p>\n<p>Bitte bestätige deine Teilnahme.</p>",
+    bodyText:
+      "Session {{sessionNumber}}: {{sessionTitle}}\n\nTermin: {{sessionDate}}\n\nBitte bestätige deine Teilnahme.",
+  },
+  {
+    slug: "contract-reminder",
+    kind: "contract_reminder",
+    name: "Vertragserinnerung",
+    description: "Erinnerung an Kündigungsfrist oder Zahlung.",
+    subject: "Vertrag: {{contractName}}",
+    bodyHtml:
+      "<h2>{{contractName}}</h2>\n<p>{{reminderMessage}}</p>\n<p>Fällig: {{dueDate}}</p>",
+    bodyText: "{{contractName}}\n\n{{reminderMessage}}\n\nFällig: {{dueDate}}",
+  },
+  {
+    slug: "backup-warning",
+    kind: "backup_warning",
+    name: "Backup-Warnung",
+    description: "Hinweis auf fehlendes oder veraltetes Backup.",
+    subject: "UWE Backup-Prüfung",
+    bodyHtml:
+      "<h2>Backup-Prüfung</h2>\n<p>{{message}}</p>\n<p>Letztes Backup: {{lastBackupAt}}</p>",
+    bodyText: "Backup-Prüfung\n\n{{message}}\n\nLetztes Backup: {{lastBackupAt}}",
+  },
+  {
+    slug: "system-warning",
+    kind: "system_warning",
+    name: "Systemwarnung",
+    description: "Allgemeine Systemwarnung aus dem Admin-Cockpit.",
+    subject: "UWE Systemhinweis: {{title}}",
+    bodyHtml: "<h2>{{title}}</h2>\n<p>{{message}}</p>",
+    bodyText: "{{title}}\n\n{{message}}",
+  },
+  {
+    slug: "terrain-rental",
+    kind: "terrain_rental",
+    name: "Terrain-Verleih",
+    description: "Anfrage oder Antwort zum Terrain-Verleih.",
+    subject: "Terrain-Verleih: {{projectTitle}}",
+    bodyHtml:
+      "<h2>{{projectTitle}}</h2>\n<p>{{message}}</p>\n<p>Status: {{status}}</p>",
+    bodyText: "{{projectTitle}}\n\n{{message}}\n\nStatus: {{status}}",
   },
 ];
 

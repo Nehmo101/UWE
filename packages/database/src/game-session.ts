@@ -78,7 +78,12 @@ export interface PortalGameSessionView {
   sessionNumber: number;
   date: Date | null;
   status: GameSessionStatus;
+  /** What happened — player recap narrative. */
   summaryPlayer: string | null;
+  /** What the characters know / decided (published recaps only). */
+  playerDecisions: string | null;
+  /** Open questions and plot threads (published recaps only). */
+  openPlots: string | null;
   linkedPages: LinkedPageSummary[];
   createdAt: Date;
   updatedAt: Date;
@@ -125,8 +130,9 @@ export function toDmGameSessionView(session: GameSessionWithLinks): DmGameSessio
   };
 }
 
-/** Portal view — DM-only fields are never included. */
+/** Portal view — DM prep fields (summaryDm, notes) are never included. */
 export function toPortalGameSessionView(session: GameSessionWithLinks): PortalGameSessionView {
+  const published = session.recapPublished;
   return {
     id: session.id,
     worldId: session.worldId,
@@ -135,7 +141,9 @@ export function toPortalGameSessionView(session: GameSessionWithLinks): PortalGa
     sessionNumber: session.sessionNumber,
     date: session.date,
     status: session.status,
-    summaryPlayer: session.summaryPlayer,
+    summaryPlayer: published ? session.summaryPlayer : null,
+    playerDecisions: published ? session.playerDecisions : null,
+    openPlots: published ? session.openPlots : null,
     linkedPages: mapLinkedPages(session),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -301,7 +309,12 @@ export class GameSessionService {
     });
 
     if (input.date !== undefined || input.title !== undefined || input.sessionNumber !== undefined) {
-      await createCalendarService(this.db).syncSessionToCalendar(sessionId);
+      const calendar = createCalendarService(this.db);
+      if (input.date === null) {
+        await calendar.unsyncSessionFromCalendar(sessionId);
+      } else {
+        await calendar.syncSessionToCalendar(sessionId);
+      }
     }
 
     return session;
@@ -327,10 +340,72 @@ export class GameSessionService {
   }
 
   async publishRecap(sessionId: string): Promise<GameSessionWithLinks> {
-    return this.update(sessionId, {
+    const session = await this.update(sessionId, {
       recapPublished: true,
       status: "summarized",
     });
+
+    await this.unlockLinkedSessionContent(session);
+
+    return session;
+  }
+
+  /**
+   * After a recap is published, unlock `unlock_after_session` pages linked to
+   * the session for every player in the world.
+   */
+  private async unlockLinkedSessionContent(session: GameSessionWithLinks): Promise<void> {
+    const linkedPageIds = session.linkedPages.map((link) => link.pageId);
+    if (linkedPageIds.length === 0) {
+      return;
+    }
+
+    const unlockPages = await this.db.page.findMany({
+      where: {
+        id: { in: linkedPageIds },
+        worldId: session.worldId,
+        visibility: "unlock_after_session",
+        publishStatus: "published",
+      },
+      select: { id: true },
+    });
+
+    if (unlockPages.length === 0) {
+      return;
+    }
+
+    const players = await this.db.worldMembership.findMany({
+      where: { worldId: session.worldId, role: "player" },
+      select: { userId: true },
+    });
+
+    if (players.length === 0) {
+      return;
+    }
+
+    const sessionLabel = `Session ${session.sessionNumber}: ${session.title}`;
+
+    for (const page of unlockPages) {
+      for (const membership of players) {
+        await this.db.sessionUnlock.upsert({
+          where: {
+            pageId_userId: {
+              pageId: page.id,
+              userId: membership.userId,
+            },
+          },
+          create: {
+            pageId: page.id,
+            userId: membership.userId,
+            sessionLabel,
+          },
+          update: {
+            unlockedAt: new Date(),
+            sessionLabel,
+          },
+        });
+      }
+    }
   }
 
   async listPublishedForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {

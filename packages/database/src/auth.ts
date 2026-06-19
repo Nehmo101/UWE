@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { AccessContext, AuthUser, PreviewOptions } from "@uwe/auth";
+import type { AccessContext, AuthUser, PreviewOptions, WorldMemberRole } from "@uwe/auth";
 import {
   buildAccessContext,
   canCreatePlayerNote,
@@ -59,6 +59,13 @@ import {
   type DmPlayerNoteView,
   type PortalPlayerNoteView,
 } from "./player-note-service";
+import {
+  createPortalDashboardService,
+  PortalDashboardService,
+  sessionUnlockLabel,
+  type PortalDashboardData,
+} from "./portal-dashboard-service";
+import { canEditPlayerCharacterBlock } from "@uwe/auth";
 import { logAuditEvent } from "./audit-log-service";
 import { USER_SAFE_SELECT } from "./user-service";
 
@@ -80,7 +87,7 @@ export interface UpdateUserInput {
 export interface UpsertWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: "owner" | "dm" | "player";
+  role: WorldMemberRole;
   characterName?: string | null;
 }
 
@@ -97,7 +104,7 @@ export interface AdminUserView {
   worldMemberships: Array<{
     id: string;
     worldId: string;
-    role: "owner" | "dm" | "player";
+    role: WorldMemberRole;
     characterName: string | null;
     world: { id: string; name: string; slug: string };
   }>;
@@ -106,7 +113,7 @@ export interface AdminUserView {
 export interface CreateWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: "owner" | "dm" | "player";
+  role: WorldMemberRole;
   characterName?: string | null;
 }
 
@@ -114,11 +121,13 @@ export class AuthService {
   private readonly gameSessions: GameSessionService;
   private readonly soundboard: SoundboardService;
   private readonly playerNotes: PlayerNoteService;
+  private readonly portalDashboard: PortalDashboardService;
 
   constructor(private readonly db: PrismaClient) {
     this.gameSessions = new GameSessionService(db);
     this.soundboard = new SoundboardService(db);
     this.playerNotes = new PlayerNoteService(db);
+    this.portalDashboard = createPortalDashboardService(db);
   }
 
   async createUser(input: CreateUserInput): Promise<SafeUser> {
@@ -1229,6 +1238,82 @@ export class AuthService {
     return toPortalPlayerNoteView(updated);
   }
 
+  async getPortalDashboard(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: { campaignId?: string | null },
+  ): Promise<PortalDashboardData | null> {
+    const pages = await this.listPagesForViewer(worldSlug, ctx);
+    const sessions = await this.listGameSessionsForViewer(worldSlug, ctx);
+    const notes = await this.listPlayerNotesForViewer(worldSlug, ctx, {
+      campaignId: options?.campaignId,
+    });
+
+    return this.portalDashboard.buildDashboard(worldSlug, ctx, {
+      visiblePages: pages,
+      publishedSessions: sessions,
+      playerNotes: notes,
+    });
+  }
+
+  async listNewlyUnlockedPagesForSession(
+    worldSlug: string,
+    sessionId: string,
+    ctx: AccessContext,
+  ): Promise<import("./portal-dashboard-service").PortalDashboardPage[]> {
+    const session = await this.getGameSessionForViewer(worldSlug, sessionId, ctx);
+    if (!session) {
+      return [];
+    }
+
+    const label = sessionUnlockLabel(session.sessionNumber, session.title);
+    return this.portalDashboard.listNewlyUnlockedPagesForSession(
+      worldSlug,
+      ctx,
+      session.sessionNumber,
+      label,
+    );
+  }
+
+  async updatePlayerCharacterBlockForViewer(
+    worldSlug: string,
+    pageSlug: string,
+    blockId: string,
+    content: string,
+    ctx: AccessContext,
+  ): Promise<PageWithBlocks | null> {
+    const page = await this.db.page.findFirst({
+      where: {
+        slug: pageSlug,
+        world: { slug: worldSlug },
+      },
+      include: {
+        contentBlocks: { orderBy: { sortOrder: "asc" } },
+        campaign: true,
+      },
+    });
+
+    if (!page) {
+      return null;
+    }
+
+    const block = page.contentBlocks.find((entry) => entry.id === blockId);
+    if (!block) {
+      return null;
+    }
+
+    if (!canEditPlayerCharacterBlock(ctx, page, block)) {
+      return null;
+    }
+
+    await this.db.contentBlock.update({
+      where: { id: blockId },
+      data: { content: content.trim() },
+    });
+
+    return this.getPageForViewer(worldSlug, pageSlug, ctx);
+  }
+
   async listPlayerNotesForDm(
     worldSlug: string,
     options?: { campaignId?: string | null; status?: import("./generated/prisma/client").PlayerNoteStatus },
@@ -1282,4 +1367,5 @@ export {
   canModeratePlayerNote,
   canViewPlayerNote,
   filterPlayerNotesForViewer,
+  canEditPlayerCharacterBlock,
 };

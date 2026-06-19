@@ -100,7 +100,42 @@ export const captureCreateSchema = z.object({
   title: z.string().max(500).optional().default(""),
   content: z.string().max(50_000).optional().default(""),
   captureType: z.enum(CAPTURE_TYPES).optional().default("quick_note"),
+  captureIntent: z.string().trim().max(64).optional(),
   url: z.string().trim().max(2000).optional(),
+  storageKey: z.string().trim().max(500).optional(),
+  returnTo: z.string().trim().max(500).optional().default("/capture"),
+});
+
+export const CAPTURE_TRIAGE_ACTIONS = [
+  "to_personal_project",
+  "to_workshop_project",
+  "to_dnd_page",
+  "to_hardware_device",
+  "to_contract",
+  "to_life_brain",
+  "archive",
+  "delete",
+] as const;
+
+export const captureTriageSchema = z.object({
+  id: idSchema,
+  action: z.enum(CAPTURE_TRIAGE_ACTIONS),
+  worldId: optionalNullableIdSchema,
+  pageId: optionalNullableIdSchema,
+  hardwareDeviceId: optionalNullableIdSchema,
+  workshopProjectType: z
+    .enum(["dnd_terrain", "miniature", "printing_3d", "diorama", "artwork", "other"])
+    .optional(),
+  projectCategory: z
+    .enum(["uwe", "hardware_homelab", "dnd", "art_workshop", "printing_3d", "other"])
+    .optional(),
+  lifeBrainAsDocument: formCheckboxSchema,
+  returnTo: z.string().trim().max(500).optional().default("/capture"),
+});
+
+export const captureProposalReviewSchema = z.object({
+  id: idSchema,
+  status: z.enum(["accepted", "rejected"]),
   returnTo: z.string().trim().max(500).optional().default("/capture"),
 });
 

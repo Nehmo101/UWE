@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
+import { PlayerCharacterEditPanel } from "@/src/components/PlayerCharacterEditPanel";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
-import { canCreatePlayerNote } from "@uwe/auth";
+import { canCreatePlayerNote, canEditPlayerCharacterBlock } from "@uwe/auth";
 import {
   BLOCK_TYPE_LABELS,
   PageTypeBadge,
   VisibilityBadge,
   WikiContent,
 } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient, getAppRepository } from "@uwe/database/server";
+import { createAuthService, createPrismaClient, getAppRepository, type PageWithBlocks } from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string; slug: string }>;
@@ -29,9 +30,10 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   const auth = createAuthService(db);
   const repo = getAppRepository();
 
-  let page;
+  let page: PageWithBlocks | null = null;
   let notes;
   let canComment = false;
+  let canEditCharacter = false;
   let campaignId: string | null = null;
   let worldName = worldSlug;
   let blockHtml: string[] = [];
@@ -42,20 +44,22 @@ export default async function AuthWorldPageDetail({ params }: Props) {
       notFound();
     }
 
+    const visiblePage = page;
+
     blockHtml = await Promise.all(
-      page.contentBlocks.map((block) =>
+      visiblePage.contentBlocks.map((block) =>
         auth.renderBlockContentForViewer(worldSlug, block.content, ctx),
       ),
     );
 
     campaignId =
-      page.campaignId ??
+      visiblePage.campaignId ??
       (await repo.listCampaignsByWorld(worldSlug))[0]?.id ??
       null;
 
     notes = campaignId
       ? await auth.listPlayerNotesForViewer(worldSlug, ctx, {
-          pageId: page.id,
+          pageId: visiblePage.id,
           campaignId,
         })
       : [];
@@ -66,8 +70,18 @@ export default async function AuthWorldPageDetail({ params }: Props) {
     });
     worldName = world?.name ?? worldSlug;
     canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
+
+    if (visiblePage.type === "player_character") {
+      canEditCharacter = visiblePage.contentBlocks.some((block) =>
+        canEditPlayerCharacterBlock(ctx, visiblePage, block),
+      );
+    }
   } finally {
     await db.$disconnect();
+  }
+
+  if (!page) {
+    notFound();
   }
 
   const returnPath = `/auth/worlds/${worldSlug}/${slug}`;
@@ -103,6 +117,14 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             </section>
           ))}
         </div>
+
+        {canEditCharacter && (
+          <PlayerCharacterEditPanel
+            worldSlug={worldSlug}
+            page={page}
+            returnPath={returnPath}
+          />
+        )}
 
         {campaignId && (
           <PlayerNotesPanel

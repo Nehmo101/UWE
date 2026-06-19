@@ -9,7 +9,12 @@ import type {
   WorkshopProjectType,
   WorkshopStatus,
 } from "@uwe/database/server";
-import { createLifeAdminService, createSettingsService, prisma } from "@uwe/database/server";
+import {
+  createLifeAdminService,
+  createSettingsService,
+  mergeHardwareRunbookMetadata,
+  prisma,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -178,6 +183,8 @@ export async function deleteContractAction(formData: FormData) {
 export async function createHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
+  const runbook = String(formData.get("runbook") || "").trim();
+
   await lifeAdmin().createHardwareDevice({
     name: String(formData.get("name") || "").trim(),
     role: String(formData.get("role") || ""),
@@ -193,12 +200,15 @@ export async function createHardwareAction(formData: FormData) {
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean),
-    metadata: {
-      services: String(formData.get("services") || "")
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-    },
+    metadata: mergeHardwareRunbookMetadata(
+      {
+        services: String(formData.get("services") || "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+      },
+      runbook,
+    ),
     setupSteps: String(formData.get("setupSteps") || "")
       .split("\n")
       .map((line) => line.trim())
@@ -227,6 +237,7 @@ export async function updateHardwareAction(formData: FormData) {
     device?.metadata && typeof device.metadata === "object"
       ? { ...(device.metadata as Record<string, unknown>) }
       : {};
+  const runbook = String(formData.get("runbook") || "");
 
   await lifeAdmin().updateHardwareDevice(id, {
     name: String(formData.get("name") || "").trim(),
@@ -240,10 +251,10 @@ export async function updateHardwareAction(formData: FormData) {
     specs: specsRaw.length > 0 ? specsRaw : null,
     errorNotes: String(formData.get("errorNotes") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
-    metadata: {
-      ...baseMetadata,
-      services: servicesRaw,
-    },
+    metadata: mergeHardwareRunbookMetadata(
+      { ...baseMetadata, services: servicesRaw },
+      runbook,
+    ),
   });
   revalidateAdminPaths();
 }

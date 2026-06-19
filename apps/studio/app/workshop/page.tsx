@@ -154,6 +154,11 @@ export default async function WorkshopPage({ searchParams }: Props) {
                     {WORKSHOP_STATUS_LABELS[workshop.status]}
                     {workshop.worldId ? " · DnD-verknüpft" : ""}
                   </p>
+                  <p>
+                    <Link href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}>
+                      Terrain-Verleih Mail vorbereiten
+                    </Link>
+                  </p>
                   <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
                     Speichern
                   </button>

@@ -84,3 +84,28 @@ export function countOpenSetupSteps(
     return true;
   }).length;
 }
+
+export function extractHardwareRunbook(metadata: unknown): string {
+  if (!metadata || typeof metadata !== "object" || !("runbook" in metadata)) {
+    return "";
+  }
+  const runbook = (metadata as { runbook?: unknown }).runbook;
+  return typeof runbook === "string" ? runbook : "";
+}
+
+export function mergeHardwareRunbookMetadata(
+  metadata: unknown,
+  runbook: string,
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  const trimmed = runbook.trim();
+  if (trimmed) {
+    base.runbook = trimmed;
+  } else {
+    delete base.runbook;
+  }
+  return base;
+}

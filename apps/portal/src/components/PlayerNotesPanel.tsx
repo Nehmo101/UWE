@@ -42,6 +42,12 @@ export function PlayerNotesPanel({
                 <PlayerNoteStatusBadge status={note.status} />
               </header>
               <p className="auth-note-content">{note.content}</p>
+              {note.userId === currentUserId && note.status === "visible_to_dm" && (
+                <p className="auth-muted">Wartet auf Review durch den Spielleiter.</p>
+              )}
+              {note.userId === currentUserId && note.status === "accepted" && (
+                <p className="auth-muted">Vom Spielleiter übernommen oder freigegeben.</p>
+              )}
               {note.userId === currentUserId && note.status === "draft" && (
                 <div className="auth-note-actions">
                   <form action={submitPlayerNoteAction}>
