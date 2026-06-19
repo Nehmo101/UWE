@@ -811,6 +811,30 @@ export type {
 } from "./player-note-service";
 
 export {
+  createReviewService,
+  ReviewService,
+  CONTENT_REVIEW_STATUS_LABELS,
+  CONTENT_REVIEW_SOURCE_LABELS,
+} from "./review-service";
+
+export type {
+  ContentReviewView,
+  ReviewCommentView,
+  CreateContentReviewInput,
+  ListReviewsOptions,
+} from "./review-service";
+
+export {
+  resolveReview,
+  syncAiProposalReview,
+  syncPlayerNoteReview,
+  createPortalUnlockReview,
+  createCoDmChangeReview,
+} from "./review-bridge";
+
+export type { ResolveReviewResult } from "./review-bridge";
+
+export {
   createSpotifyConnectionService,
   isSpotifyOAuthConfigured,
   resolveSpotifyOAuthConfig,
@@ -873,6 +897,9 @@ export type {
   CreateHardwareDeviceInput,
   CreatePersonalBrainDocumentInput,
   CreatePersonalBrainFactInput,
+  PromoteCaptureToLifeBrainInput,
+  PersonalBrainDocumentDetail,
+  PersonalBrainFactDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
   ListCapturesOptions,
@@ -900,6 +927,25 @@ export type {
   GeneratorOutput,
 } from "./life-admin-service";
 
+export {
+  buildCaptureAiProposal,
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  CAPTURE_UPLOAD_NAMESPACE,
+  createCaptureTriageService,
+  CaptureTriageService,
+  parseCaptureAiProposal,
+  QUICK_CAPTURE_TYPE_OPTIONS,
+} from "./capture-triage-service";
+
+export type {
+  CaptureAiProposal,
+  CaptureProposalStatus,
+  CaptureProposalTarget,
+  CaptureTriageAction,
+  CaptureTriageOptions,
+  CaptureTriageResult,
+} from "./capture-triage-service";
+
 export type { ContractBillingInterval } from "./generated/prisma/client";
 
 export {
@@ -923,12 +969,43 @@ export type { HardwareUrlWarning } from "./hardware-utils";
 export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  loadPersonalBrainAgentContext,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainAgentContextOptions,
 } from "./personal-brain-context";
+
+export {
+  searchPersonalBrain,
+  searchPersonalBrainDocuments,
+  searchPersonalBrainFacts,
+  collectPersonalBrainTags,
+  parsePersonalBrainTags,
+} from "./personal-brain-search";
+
+export type {
+  PersonalBrainSearchOptions,
+  PersonalBrainSearchResult,
+  PersonalBrainSearchableDoc,
+  PersonalBrainSearchableFact,
+  PersonalBrainSearchHit,
+} from "./personal-brain-search";
+
+export {
+  resolveBrainCategoryForCaptureType,
+  buildLifeBrainContentFromCapture,
+} from "./personal-brain-capture";
+
+export {
+  assertPersonalBrainLocalOnly,
+  isPersonalBrainContextAllowedForProvider,
+  CLOUD_ALLOWED_CONTEXT_MODES,
+} from "./personal-brain-privacy";
+
+export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,

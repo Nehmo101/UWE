@@ -11,6 +11,7 @@ description: Implement new UWE features following monorepo conventions — domai
 2. Identify the **package** vs **app** boundary — logic belongs in `packages/`, UI/routes in `apps/`.
 3. Check existing services before adding new abstractions.
 4. For AI features: enforce Review/Apply (no auto-canonization).
+5. For collaborative edits: Co-DM and player contributions use `ContentReview` queue — see `docs/engineering/roles-review-workflow.md`.
 
 ## Implementation steps
 
@@ -59,3 +60,7 @@ Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`
 | Multi-domain rollout | `docs/engineering/product-orchestrator-plan.md` |
 
 Details: [references/architecture.md](references/architecture.md)
+
+## Capture 2.0
+
+See [references/capture-patterns.md](references/capture-patterns.md) for inbox, triage, proposals, and file upload conventions.

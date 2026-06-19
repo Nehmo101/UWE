@@ -13,7 +13,7 @@ interface WorldRef {
 interface WorldMembershipView {
   id: string;
   worldId: string;
-  role: "owner" | "dm" | "player";
+  role: "owner" | "dm" | "co_dm" | "player";
   characterName: string | null;
   world: WorldRef;
 }
@@ -33,7 +33,7 @@ interface AdminUserView {
 
 const USER_ROLES = ["owner", "admin", "dm", "player", "readonly", "guest"] as const;
 const USER_STATUSES = ["invited", "active", "disabled"] as const;
-const WORLD_ROLES = ["owner", "dm", "player"] as const;
+const WORLD_ROLES = ["owner", "dm", "co_dm", "player"] as const;
 
 const STATUS_LABELS: Record<(typeof USER_STATUSES)[number], string> = {
   invited: "Eingeladen",
