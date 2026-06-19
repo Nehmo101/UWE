@@ -23,6 +23,8 @@ describe("calendar-service", () => {
     assert.equal(event.title, "Session Abend");
     const listed = await calendar.listEvents({ feedId: local.id });
     assert.ok(listed.some((entry) => entry.id === event.id));
+  });
+
   it("syncs session to calendar and removes event when date cleared", async () => {
     const calendar = createCalendarService(db);
     const world = await db.world.create({

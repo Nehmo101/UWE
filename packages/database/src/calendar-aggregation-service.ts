@@ -1,5 +1,5 @@
-import type { CalendarEventKind, PrismaClient } from "./client";
-import type { CalendarEvent } from "./generated/prisma/client";
+import type { PrismaClient } from "./client";
+import type { CalendarEvent, CalendarEventKind } from "./generated/prisma/client";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createCalendarService } from "./calendar-service";
 
