@@ -10,6 +10,8 @@ import {
 import {
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
+  PERSONAL_BRAIN_CATEGORIES,
+  PERSONAL_BRAIN_CATEGORY_LABELS,
   prisma,
   type CaptureType,
 } from "@uwe/database/server";
@@ -20,6 +22,7 @@ import {
   deleteCaptureAction,
   updateCaptureStatusAction,
 } from "../capture-actions";
+import { promoteCaptureToLifeBrainAction } from "../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -118,6 +121,29 @@ export default async function CapturePage({ searchParams }: Props) {
                       </p>
                     )}
                     <div className="uwe-inline-actions">
+                      {capture.status !== "linked" && (
+                        <form action={promoteCaptureToLifeBrainAction} className="uwe-inline-form">
+                          <input type="hidden" name="captureId" value={capture.id} />
+                          <label className="uwe-sr-only" htmlFor={`category-${capture.id}`}>
+                            Life-Brain-Kategorie
+                          </label>
+                          <select
+                            id={`category-${capture.id}`}
+                            name="category"
+                            defaultValue="personal_notes"
+                            aria-label="Life-Brain-Kategorie"
+                          >
+                            {PERSONAL_BRAIN_CATEGORIES.map((category) => (
+                              <option key={category} value={category}>
+                                {PERSONAL_BRAIN_CATEGORY_LABELS[category]}
+                              </option>
+                            ))}
+                          </select>
+                          <button type="submit" className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                            Ins Life Brain
+                          </button>
+                        </form>
+                      )}
                       {capture.status === "inbox" && (
                         <form action={updateCaptureStatusAction}>
                           <input type="hidden" name="id" value={capture.id} />

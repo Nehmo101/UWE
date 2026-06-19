@@ -819,6 +819,9 @@ export type {
   CreateHardwareDeviceInput,
   CreatePersonalBrainDocumentInput,
   CreatePersonalBrainFactInput,
+  PromoteCaptureToLifeBrainInput,
+  PersonalBrainDocumentDetail,
+  PersonalBrainFactDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
   ListCapturesOptions,
@@ -869,12 +872,43 @@ export type { HardwareUrlWarning } from "./hardware-utils";
 export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  loadPersonalBrainAgentContext,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainAgentContextOptions,
 } from "./personal-brain-context";
+
+export {
+  searchPersonalBrain,
+  searchPersonalBrainDocuments,
+  searchPersonalBrainFacts,
+  collectPersonalBrainTags,
+  parsePersonalBrainTags,
+} from "./personal-brain-search";
+
+export type {
+  PersonalBrainSearchOptions,
+  PersonalBrainSearchResult,
+  PersonalBrainSearchableDoc,
+  PersonalBrainSearchableFact,
+  PersonalBrainSearchHit,
+} from "./personal-brain-search";
+
+export {
+  resolveBrainCategoryForCaptureType,
+  buildLifeBrainContentFromCapture,
+} from "./personal-brain-capture";
+
+export {
+  assertPersonalBrainLocalOnly,
+  isPersonalBrainContextAllowedForProvider,
+  CLOUD_ALLOWED_CONTEXT_MODES,
+} from "./personal-brain-privacy";
+
+export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,

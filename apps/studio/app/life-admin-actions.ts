@@ -237,10 +237,16 @@ export async function deleteHardwareAction(formData: FormData) {
 export async function createLifeBrainDocumentAction(formData: FormData) {
   assertStudioTrusted();
 
+  const tagsRaw = String(formData.get("tags") || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
   await lifeAdmin().createPersonalBrainDocument({
     title: String(formData.get("title") || "").trim(),
     content: String(formData.get("content") || ""),
     category: String(formData.get("category") || "").trim() || null,
+    tags: tagsRaw.length > 0 ? tagsRaw : null,
   });
   revalidateAdminPaths();
   redirect("/life-brain");
@@ -249,10 +255,16 @@ export async function createLifeBrainDocumentAction(formData: FormData) {
 export async function createLifeBrainFactAction(formData: FormData) {
   assertStudioTrusted();
 
+  const tagsRaw = String(formData.get("tags") || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
   await lifeAdmin().createPersonalBrainFact({
     title: String(formData.get("title") || "").trim(),
     content: String(formData.get("content") || ""),
     factType: String(formData.get("factType") || "custom"),
+    tags: tagsRaw.length > 0 ? tagsRaw : null,
   });
   revalidateAdminPaths();
   redirect("/life-brain");
@@ -270,6 +282,30 @@ export async function deleteLifeBrainFactAction(formData: FormData) {
 
   await lifeAdmin().deletePersonalBrainFact(String(formData.get("id")));
   revalidateAdminPaths();
+}
+
+export async function promoteCaptureToLifeBrainAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const captureId = String(formData.get("captureId"));
+  const asFact = String(formData.get("asFact") || "") === "1";
+  const category = String(formData.get("category") || "").trim() || null;
+  const factType = String(formData.get("factType") || "").trim() || undefined;
+
+  const result = await lifeAdmin().promoteCaptureToLifeBrain({
+    captureId,
+    asFact,
+    category,
+    factType,
+  });
+
+  revalidateAdminPaths();
+  revalidatePath("/capture");
+
+  if (result.kind === "fact") {
+    redirect(`/life-brain/facts/${result.entry.id}`);
+  }
+  redirect(`/life-brain/documents/${result.entry.id}`);
 }
 
 export async function setFavoriteWorldAction(formData: FormData) {
