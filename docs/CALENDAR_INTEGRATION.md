@@ -37,13 +37,25 @@ Lokaler UWE-Kalender mit CalDAV/iCal-Sync, Session-Terminplanung und FamilyWall 
 
 ## Session-Termine
 
-- Art `session` oder `dnd` wählen
-- Optional `worldId` und später `sessionId` verknüpfen
-- GameSession.date kann separat gepflegt werden — Sync-Service TODO Phase 2
+- `GameSession.date` wird beim Anlegen/Aktualisieren automatisch als `CalendarEvent` (`kind: session`) im lokalen Feed gespiegelt
+- Datum entfernt → verknüpftes Kalender-Event wird gelöscht
+- `/today` aggregiert Sessions, Vertragsfristen, Werkstatt-Deadlines (`metadata.dueDate`), Hardware-Wartung (`metadata.maintenanceDueAt`), Backup-Prüfung und externe Feeds
+
+## Sync-Strategie
+
+| Modus | Richtung | Status |
+|-------|----------|--------|
+| **Lokal** | read/write | Standard-Feed `UWE Kalender` |
+| **iCal Export** | Export | `/api/calendar/events?export=ics` |
+| **iCal URL / FamilyWall** | read-only Import | `calendar_sync` Job |
+| **CalDAV** | read-only oder write-back | `CALENDAR_CALDAV_ENABLED=true`, per-Feed Credentials |
+
+FamilyWall und iCloud public feeds werden als `personal`/`external` importiert — keine Rücksync.
 
 ## Admin-UI
 
-- `/calendar` — mobile-first
+- `/calendar` — Monats-/Wochenansicht, Feed-Verwaltung
+- `/today` — aggregierte Termine und Fristen
 - Einstellungen → Integrationen
 
 ## Package
@@ -60,7 +72,6 @@ Lokaler UWE-Kalender mit CalDAV/iCal-Sync, Session-Terminplanung und FamilyWall 
 
 ## Phase 2 TODO
 
-- Pro-Feed CalDAV-Passwort (verschlüsselt)
-- Zwei-Wege-Sync für lokale Feeds
-- Monats-/Wochen-Kalender-UI
-- Session ↔ CalendarEvent Auto-Sync
+- Vollständiger CalDAV PROPFIND/REPORT Sync
+- Bidirektionale Session-Sync (Kalender-Edit → `GameSession.date`)
+- Optionale Spiegelung virtueller `/today`-Fristen in lokale CalendarEvents

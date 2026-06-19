@@ -42,7 +42,15 @@ export interface MailConfigStatus {
   message: string;
 }
 
-export type MailComposeKind = "session_recap" | "handout" | "share_link";
+export type MailComposeKind =
+  | "session_recap"
+  | "session_reminder"
+  | "handout"
+  | "share_link"
+  | "contract_reminder"
+  | "backup_warning"
+  | "system_warning"
+  | "terrain_rental";
 
 export interface MailDraft {
   kind: MailComposeKind;

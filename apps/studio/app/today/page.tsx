@@ -84,6 +84,85 @@ export default async function TodayPage() {
 
           <div className="uwe-dashboard-grid">
             <section className="uwe-card uwe-dashboard-card">
+              <h2 className="uwe-section-title">Kalender — Heute</h2>
+              {data.calendarToday.length > 0 ? (
+                <div className="uwe-today-card-list">
+                  {data.calendarToday.map((item) => (
+                    <article key={item.id} className="uwe-today-card">
+                      <h3>{item.title}</h3>
+                      <p>
+                        {item.moduleLabel}
+                        {item.allDay ? "" : ` · ${DATE_FORMAT.format(item.startAt)}`}
+                        {item.urgency === "overdue" ? " · überfällig" : ""}
+                      </p>
+                      {item.href && (
+                        <p>
+                          <Link href={item.href}>Details →</Link>
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="uwe-dashboard-muted">Keine Termine oder Fristen für heute.</p>
+              )}
+              {data.calendarThisWeek.length > 0 && (
+                <>
+                  <h3 className="uwe-section-subtitle">Diese Woche</h3>
+                  <div className="uwe-today-card-list">
+                    {data.calendarThisWeek.slice(0, 5).map((item) => (
+                      <article key={item.id} className="uwe-today-card">
+                        <h3>{item.title}</h3>
+                        <p>
+                          {item.moduleLabel} · {DATE_FORMAT.format(item.startAt)}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+              <p>
+                <Link href="/calendar">Kalender öffnen →</Link>
+              </p>
+            </section>
+
+            <section className="uwe-card uwe-dashboard-card">
+              <h2 className="uwe-section-title">Mail Center</h2>
+              {data.mailSummary.recentFailed > 0 ? (
+                <p className="uwe-form-error">
+                  {data.mailSummary.recentFailed} fehlgeschlagene Sendung(en)
+                  {data.mailSummary.latestFailedSubject
+                    ? `: ${data.mailSummary.latestFailedSubject}`
+                    : ""}
+                </p>
+              ) : (
+                <p className="uwe-dashboard-muted">Keine fehlgeschlagenen Mails.</p>
+              )}
+              {data.mailSummary.pendingCount > 0 && (
+                <p className="uwe-dashboard-muted">
+                  {data.mailSummary.pendingCount} ausstehende Log-Einträge
+                </p>
+              )}
+              <div className="uwe-today-card-list">
+                {data.nextSession && data.nextSession.date && (
+                  <p>
+                    <Link
+                      href={`/mail/compose?kind=session_reminder&worldSlug=${data.nextSession.worldSlug}&sourceId=${data.nextSession.id}`}
+                    >
+                      Session-Erinnerung vorbereiten
+                    </Link>
+                  </p>
+                )}
+                <p>
+                  <Link href="/mail/compose?kind=backup_warning">Backup-Warnung vorbereiten</Link>
+                </p>
+              </div>
+              <p>
+                <Link href="/mail">Mail Center →</Link>
+              </p>
+            </section>
+
+            <section className="uwe-card uwe-dashboard-card">
               <h2 className="uwe-section-title">DnD / Welten</h2>
               {data.preferredWorld ? (
                 <>

@@ -1,23 +1,37 @@
 import type { PrismaClient } from "@uwe/database/server";
 import {
+  createCalendarAggregationService,
   createLifeAdminService,
+  createMailLogService,
   createWorldOverviewService,
   getAppRepository,
   getSystemSettings,
+  type AggregatedCalendarItem,
 } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "./admin-dashboard-status";
+
+export interface TodayMailSummary {
+  recentFailed: number;
+  pendingCount: number;
+  latestFailedSubject: string | null;
+}
 
 export interface TodayDashboardData {
   preferredWorld: {
     slug: string;
     name: string;
+    id: string;
   } | null;
   nextSession: {
     title: string;
     sessionNumber: number;
     date: Date | null;
     worldSlug: string;
+    id: string;
   } | null;
+  calendarToday: AggregatedCalendarItem[];
+  calendarThisWeek: AggregatedCalendarItem[];
+  mailSummary: TodayMailSummary;
   lifeAdmin: Awaited<ReturnType<ReturnType<typeof createLifeAdminService>["getTodaySummary"]>>;
   systemOk: boolean;
   systemLabel: string;
@@ -63,6 +77,9 @@ export async function getTodayDashboardData(
 ): Promise<TodayDashboardData> {
   const repo = getAppRepository();
   const lifeAdmin = createLifeAdminService(db);
+  const calendarAggregation = createCalendarAggregationService(db);
+  const mailLog = createMailLogService(db);
+
   const [worlds, settings] = await Promise.all([repo.listWorlds(), getSystemSettings(db)]);
   const preferredSlug = resolvePreferredWorldSlug(worlds, {
     favoriteWorldSlug: settings.app.favoriteWorldSlug,
@@ -76,6 +93,7 @@ export async function getTodayDashboardData(
     const overview = await createWorldOverviewService(db).getWorldOverview(preferredSlug);
     if (overview?.nextSession) {
       nextSession = {
+        id: overview.nextSession.id,
         title: overview.nextSession.title,
         sessionNumber: overview.nextSession.sessionNumber,
         date: overview.nextSession.date,
@@ -84,9 +102,15 @@ export async function getTodayDashboardData(
     }
   }
 
-  const [lifeSummary, adminStatus] = await Promise.all([
+  const [lifeSummary, adminStatus, calendarSummary, failedLogs, pendingLogs] = await Promise.all([
     lifeAdmin.getTodaySummary(),
     getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
+    calendarAggregation.getTodaySummary({
+      worldId: preferredWorld?.id,
+      worldSlug: preferredSlug ?? undefined,
+    }),
+    mailLog.list({ status: "failed", limit: 5 }),
+    mailLog.list({ status: "pending", limit: 5 }),
   ]);
 
   const systemLabel = adminStatus.ok
@@ -97,9 +121,16 @@ export async function getTodayDashboardData(
 
   return {
     preferredWorld: preferredWorld
-      ? { slug: preferredWorld.slug, name: preferredWorld.name }
+      ? { slug: preferredWorld.slug, name: preferredWorld.name, id: preferredWorld.id }
       : null,
     nextSession,
+    calendarToday: calendarSummary.today,
+    calendarThisWeek: calendarSummary.thisWeek,
+    mailSummary: {
+      recentFailed: failedLogs.length,
+      pendingCount: pendingLogs.length,
+      latestFailedSubject: failedLogs[0]?.subject ?? null,
+    },
     lifeAdmin: lifeSummary,
     systemOk: adminStatus.ok,
     systemLabel,

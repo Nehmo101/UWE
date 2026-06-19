@@ -115,6 +115,16 @@ export function MailSendForm({
         />
       </label>
 
+      {initialBodyHtml && (
+        <details className="uwe-fieldset">
+          <summary>HTML-Vorschau</summary>
+          <div
+            className="uwe-mail-preview"
+            dangerouslySetInnerHTML={{ __html: initialBodyHtml }}
+          />
+        </details>
+      )}
+
       <fieldset className="uwe-fieldset">
         <legend>Empfänger</legend>
         {recipients.length === 0 ? (
