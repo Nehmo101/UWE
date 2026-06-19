@@ -25,7 +25,7 @@ export function adminSidebarNav(active: string): AdminSidebarItem[] {
     { label: "API Tokens", href: "/admin/api-tokens" },
     { label: "Webhooks", href: "/admin/webhooks" },
     { label: "Audit Log", href: "/admin/audit-log" },
-    { label: "Reviews", href: "/admin/reviews" },
+    { label: "Tags", href: "/admin/tags" },
     { label: "Backup", href: "/backup" },
     { label: "Jobs", href: "/jobs" },
     { label: "Systemstatus", href: "/admin/status" },

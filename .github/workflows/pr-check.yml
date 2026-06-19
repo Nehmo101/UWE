@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: pnpm --filter @uwe/database db:generate
+
       - name: Verify lockfile is in sync
         run: git diff --exit-code pnpm-lock.yaml
 
