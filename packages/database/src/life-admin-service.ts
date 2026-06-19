@@ -15,6 +15,8 @@ import type {
   PersonalBrainFact,
   WorkshopProjectType,
   WorkshopStatus,
+  WorkshopPaintTarget,
+  WorkshopRentalStatus,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
@@ -65,6 +67,11 @@ export type {
   AdminLinkTargetType,
   GeneratorPreset,
   GeneratorOutput,
+  WorkshopPaintRecipe,
+  WorkshopPrintProfile,
+  WorkshopTerrainRental,
+  WorkshopPaintTarget,
+  WorkshopRentalStatus,
 } from "./generated/prisma/client";
 
 export {
@@ -80,6 +87,8 @@ export {
   HardwareStatus as HardwareStatusEnum,
   AdminLinkSourceType as AdminLinkSourceTypeEnum,
   AdminLinkTargetType as AdminLinkTargetTypeEnum,
+  WorkshopPaintTarget as WorkshopPaintTargetEnum,
+  WorkshopRentalStatus as WorkshopRentalStatusEnum,
 } from "./generated/prisma/client";
 
 export const CAPTURE_STATUS_LABELS: Record<CaptureStatus, string> = {
@@ -161,6 +170,12 @@ export const WORKSHOP_STATUS_LABELS: Record<WorkshopStatus, string> = {
   archived: "Archiviert",
 };
 
+export {
+  WORKSHOP_PAINT_TARGET_LABELS,
+  WORKSHOP_RENTAL_STATUS_LABELS,
+  type WorkshopOpenTask,
+} from "./workshop-types";
+
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
   active: "Aktiv",
   cancelled: "Gekündigt",
@@ -224,12 +239,55 @@ export interface CreateWorkshopProjectInput {
   imageGallery?: unknown;
   referenceImages?: unknown;
   progressPhotos?: unknown;
+  resultPhotos?: unknown;
   costCents?: number | null;
   nextAction?: string | null;
   notes?: string;
   worldId?: string | null;
   pageId?: string | null;
   metadata?: Record<string, unknown> | null;
+}
+
+export interface CreateWorkshopPaintRecipeInput {
+  name: string;
+  targetType?: WorkshopPaintTarget;
+  primer?: string;
+  basecoat?: string;
+  wash?: string;
+  highlights?: string;
+  colorsUsed?: unknown;
+  resultPhotoUrl?: string | null;
+  rating?: number | null;
+  notes?: string;
+  workshopProjectId?: string | null;
+}
+
+export interface CreateWorkshopPrintProfileInput {
+  name?: string;
+  printer?: string;
+  nozzle?: string;
+  filament?: string;
+  layerHeight?: string;
+  supports?: string;
+  result?: string;
+  errors?: string;
+  improvements?: string;
+  notes?: string;
+  workshopProjectId?: string | null;
+}
+
+export interface CreateWorkshopTerrainRentalInput {
+  terrainSetName: string;
+  boxLabel?: string;
+  replacementValueCents?: number | null;
+  rentalPriceCents?: number | null;
+  depositCents?: number | null;
+  status?: WorkshopRentalStatus;
+  damages?: string;
+  handoverChecklist?: unknown;
+  returnChecklist?: unknown;
+  notes?: string;
+  workshopProjectId?: string | null;
 }
 
 export interface CreateContractExpenseInput {
@@ -352,6 +410,7 @@ export interface TodayAdminSummary {
   recentCaptures: Awaited<ReturnType<LifeAdminService["listCaptures"]>>;
   activeProjects: Awaited<ReturnType<LifeAdminService["listPersonalProjects"]>>;
   activeWorkshops: Awaited<ReturnType<LifeAdminService["listWorkshopProjects"]>>;
+  workshopOpenTasks: Awaited<ReturnType<LifeAdminService["listWorkshopOpenTasks"]>>;
 }
 
 export class LifeAdminService {
@@ -538,6 +597,7 @@ export class LifeAdminService {
         imageGallery: toPrismaJsonValue(input.imageGallery),
         referenceImages: toPrismaJsonValue(input.referenceImages),
         progressPhotos: toPrismaJsonValue(input.progressPhotos),
+        resultPhotos: toPrismaJsonValue(input.resultPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
         notes: input.notes ?? "",
@@ -549,7 +609,14 @@ export class LifeAdminService {
   }
 
   async getWorkshopProject(id: string) {
-    return this.db.workshopProject.findUnique({ where: { id } });
+    return this.db.workshopProject.findUnique({
+      where: { id },
+      include: {
+        paintRecipes: { orderBy: { updatedAt: "desc" } },
+        printProfiles: { orderBy: { updatedAt: "desc" } },
+        terrainRentals: { orderBy: { updatedAt: "desc" } },
+      },
+    });
   }
 
   async updateWorkshopProject(id: string, input: Partial<CreateWorkshopProjectInput>) {
@@ -568,6 +635,7 @@ export class LifeAdminService {
         imageGallery: input.imageGallery === undefined ? undefined : toPrismaJsonValue(input.imageGallery),
         referenceImages: input.referenceImages === undefined ? undefined : toPrismaJsonValue(input.referenceImages),
         progressPhotos: input.progressPhotos === undefined ? undefined : toPrismaJsonValue(input.progressPhotos),
+        resultPhotos: input.resultPhotos === undefined ? undefined : toPrismaJsonValue(input.resultPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
         notes: input.notes,
@@ -588,6 +656,215 @@ export class LifeAdminService {
       },
     });
     return this.db.workshopProject.delete({ where: { id } });
+  }
+
+  async listWorkshopOpenTasks(limit = 10) {
+    const workshops = await this.listWorkshopProjects({
+      status: ["in_progress", "material_missing", "planned"],
+      limit: 200,
+    });
+
+    return workshops
+      .filter((workshop) => Boolean(workshop.nextAction?.trim()))
+      .slice(0, limit)
+      .map((workshop) => ({
+        id: workshop.id,
+        title: workshop.title,
+        projectType: workshop.projectType,
+        status: workshop.status,
+        nextAction: workshop.nextAction!.trim(),
+        href: `/workshop/${workshop.id}`,
+      }));
+  }
+
+  async promoteCaptureToWorkshop(captureId: string, overrides: Partial<CreateWorkshopProjectInput> = {}) {
+    const capture = await this.db.captureEntry.findUnique({ where: { id: captureId } });
+    if (!capture) throw new Error("Capture not found");
+
+    const projectType =
+      capture.captureType === "art_miniature_terrain"
+        ? "miniature"
+        : capture.captureType === "file_image"
+          ? "artwork"
+          : "other";
+
+    const referenceImages = capture.url ? [{ url: capture.url, caption: capture.title || undefined }] : undefined;
+
+    const workshop = await this.createWorkshopProject({
+      title: overrides.title ?? (capture.title || "Werkstatt aus Capture"),
+      projectType: overrides.projectType ?? projectType,
+      status: overrides.status ?? "planned",
+      description: overrides.description ?? capture.content,
+      nextAction: overrides.nextAction ?? "Projekt planen und Material prüfen",
+      referenceImages: overrides.referenceImages ?? referenceImages,
+      worldId: overrides.worldId ?? capture.worldId,
+      pageId: overrides.pageId ?? capture.pageId,
+    });
+
+    await this.createAdminLink({
+      sourceType: "capture",
+      sourceId: captureId,
+      targetType: "workshop_project",
+      targetId: workshop.id,
+      relationType: "promoted_to",
+      label: "Werkstatt-Projekt",
+    });
+
+    await this.updateCapture(captureId, { status: "linked" });
+
+    return workshop;
+  }
+
+  async listWorkshopPaintRecipes(options: { workshopProjectId?: string; limit?: number } = {}) {
+    return this.db.workshopPaintRecipe.findMany({
+      where: { workshopProjectId: options.workshopProjectId },
+      orderBy: [{ updatedAt: "desc" }],
+      take: options.limit ?? 100,
+      include: { workshopProject: { select: { id: true, title: true } } },
+    });
+  }
+
+  async createWorkshopPaintRecipe(input: CreateWorkshopPaintRecipeInput) {
+    return this.db.workshopPaintRecipe.create({
+      data: {
+        name: input.name,
+        targetType: input.targetType ?? "other",
+        primer: input.primer ?? "",
+        basecoat: input.basecoat ?? "",
+        wash: input.wash ?? "",
+        highlights: input.highlights ?? "",
+        colorsUsed: toPrismaJsonValue(input.colorsUsed),
+        resultPhotoUrl: input.resultPhotoUrl ?? undefined,
+        rating: input.rating ?? undefined,
+        notes: input.notes ?? "",
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async updateWorkshopPaintRecipe(id: string, input: Partial<CreateWorkshopPaintRecipeInput>) {
+    return this.db.workshopPaintRecipe.update({
+      where: { id },
+      data: {
+        name: input.name,
+        targetType: input.targetType,
+        primer: input.primer,
+        basecoat: input.basecoat,
+        wash: input.wash,
+        highlights: input.highlights,
+        colorsUsed: input.colorsUsed === undefined ? undefined : toPrismaJsonValue(input.colorsUsed),
+        resultPhotoUrl: input.resultPhotoUrl ?? undefined,
+        rating: input.rating ?? undefined,
+        notes: input.notes,
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async deleteWorkshopPaintRecipe(id: string) {
+    return this.db.workshopPaintRecipe.delete({ where: { id } });
+  }
+
+  async listWorkshopPrintProfiles(options: { workshopProjectId?: string; limit?: number } = {}) {
+    return this.db.workshopPrintProfile.findMany({
+      where: { workshopProjectId: options.workshopProjectId },
+      orderBy: [{ updatedAt: "desc" }],
+      take: options.limit ?? 100,
+      include: { workshopProject: { select: { id: true, title: true } } },
+    });
+  }
+
+  async createWorkshopPrintProfile(input: CreateWorkshopPrintProfileInput) {
+    return this.db.workshopPrintProfile.create({
+      data: {
+        name: input.name ?? "",
+        printer: input.printer ?? "",
+        nozzle: input.nozzle ?? "",
+        filament: input.filament ?? "",
+        layerHeight: input.layerHeight ?? "",
+        supports: input.supports ?? "",
+        result: input.result ?? "",
+        errors: input.errors ?? "",
+        improvements: input.improvements ?? "",
+        notes: input.notes ?? "",
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async updateWorkshopPrintProfile(id: string, input: Partial<CreateWorkshopPrintProfileInput>) {
+    return this.db.workshopPrintProfile.update({
+      where: { id },
+      data: {
+        name: input.name,
+        printer: input.printer,
+        nozzle: input.nozzle,
+        filament: input.filament,
+        layerHeight: input.layerHeight,
+        supports: input.supports,
+        result: input.result,
+        errors: input.errors,
+        improvements: input.improvements,
+        notes: input.notes,
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async deleteWorkshopPrintProfile(id: string) {
+    return this.db.workshopPrintProfile.delete({ where: { id } });
+  }
+
+  async listWorkshopTerrainRentals(options: { status?: WorkshopRentalStatus; limit?: number } = {}) {
+    return this.db.workshopTerrainRental.findMany({
+      where: { status: options.status },
+      orderBy: [{ updatedAt: "desc" }],
+      take: options.limit ?? 100,
+      include: { workshopProject: { select: { id: true, title: true } } },
+    });
+  }
+
+  async createWorkshopTerrainRental(input: CreateWorkshopTerrainRentalInput) {
+    return this.db.workshopTerrainRental.create({
+      data: {
+        terrainSetName: input.terrainSetName,
+        boxLabel: input.boxLabel ?? "",
+        replacementValueCents: input.replacementValueCents ?? undefined,
+        rentalPriceCents: input.rentalPriceCents ?? undefined,
+        depositCents: input.depositCents ?? undefined,
+        status: input.status ?? "available",
+        damages: input.damages ?? "",
+        handoverChecklist: toPrismaJsonValue(input.handoverChecklist),
+        returnChecklist: toPrismaJsonValue(input.returnChecklist),
+        notes: input.notes ?? "",
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async updateWorkshopTerrainRental(id: string, input: Partial<CreateWorkshopTerrainRentalInput>) {
+    return this.db.workshopTerrainRental.update({
+      where: { id },
+      data: {
+        terrainSetName: input.terrainSetName,
+        boxLabel: input.boxLabel,
+        replacementValueCents: input.replacementValueCents ?? undefined,
+        rentalPriceCents: input.rentalPriceCents ?? undefined,
+        depositCents: input.depositCents ?? undefined,
+        status: input.status,
+        damages: input.damages,
+        handoverChecklist:
+          input.handoverChecklist === undefined ? undefined : toPrismaJsonValue(input.handoverChecklist),
+        returnChecklist:
+          input.returnChecklist === undefined ? undefined : toPrismaJsonValue(input.returnChecklist),
+        notes: input.notes,
+        workshopProjectId: input.workshopProjectId ?? undefined,
+      },
+    });
+  }
+
+  async deleteWorkshopTerrainRental(id: string) {
+    return this.db.workshopTerrainRental.delete({ where: { id } });
   }
 
   async listContractExpenses(options: {
@@ -1122,6 +1399,13 @@ export class LifeAdminService {
     });
   }
 
+  async listLinksForTarget(targetType: AdminLinkTargetType, targetId: string) {
+    return this.db.adminEntityLink.findMany({
+      where: { targetType, targetId },
+      orderBy: [{ createdAt: "desc" }],
+    });
+  }
+
   async listGeneratorPresets(options: { worldId?: string | null; targetType?: string } = {}) {
     return this.db.generatorPreset.findMany({
       where: {
@@ -1207,6 +1491,7 @@ export class LifeAdminService {
       recentCaptures,
       activeProjects,
       activeWorkshops,
+      workshopOpenTasks,
     ] = await Promise.all([
       this.db.captureEntry.count({ where: { status: "inbox" } }),
       this.db.personalProject.count({
@@ -1228,6 +1513,7 @@ export class LifeAdminService {
         status: ["in_progress", "material_missing", "planned"],
         limit: 5,
       }),
+      this.listWorkshopOpenTasks(8),
     ]);
 
     return {
@@ -1243,6 +1529,7 @@ export class LifeAdminService {
       recentCaptures,
       activeProjects,
       activeWorkshops,
+      workshopOpenTasks,
     };
   }
 }

@@ -9,7 +9,11 @@ Lasses privates Admin-Cockpit in UWE Studio — neben DnD-Welten für Projekte, 
 | `/today` | Daily Cockpit — System-Ampel, DnD-Favorit, Life-Admin-Karten |
 | `/capture` | Universelle mobile Inbox — Quick Capture, Triage, KI-Vorschläge (Review) |
 | `/projects` | Persönliche Projekte (UWE, Homelab, DnD, …) |
-| `/workshop` | Werkstatt / Miniaturen / Terrain / 3D-Druck |
+| `/workshop` | Werkstatt-Cockpit — Projekte, Material, Fotos, Next Actions |
+| `/workshop/[id]` | Projekt-Detail mit Materialien, Farben, Links, Rezepten |
+| `/workshop/recipes` | Paint-Rezept-Bibliothek (wiederverwendbar) |
+| `/workshop/print-profiles` | 3D-Druck-Profil-Historie |
+| `/workshop/rental` | Terrain-Verleih (optional) |
 | `/contracts` | Verträge & Monatsausgaben (manuell, keine Bank-Anbindung) |
 | `/hardware` | Homelab-Kontrollzentrum — Geräte, Service-Status, Runbooks, Security, Fehlerhistorie |
 | `/life-brain` | Persönliches Brain — Suche, Filter, Capture-Import |
@@ -55,6 +59,7 @@ Siehe [life-brain-privacy.md](./life-brain-privacy.md).
 ## Tests
 
 - `packages/database/src/life-admin-service.test.ts`
+- `packages/database/src/workshop-types.test.ts`
 - `packages/database/src/hardware-utils.test.ts`
 - `packages/database/src/homelab-cockpit.test.ts`
 - `packages/database/src/personal-brain-search.test.ts`

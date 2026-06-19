@@ -256,14 +256,29 @@ export default async function TodayPage() {
             <section className="uwe-card uwe-dashboard-card">
               <h2 className="uwe-section-title">Werkstatt</h2>
               <p>{data.lifeAdmin.activeWorkshopCount} in Arbeit / geplant</p>
-              <div className="uwe-today-card-list">
-                {data.lifeAdmin.activeWorkshops.map((workshop) => (
-                  <article key={workshop.id} className="uwe-today-card">
-                    <h3>{workshop.title}</h3>
-                    <p>{workshop.nextAction || workshop.status}</p>
-                  </article>
-                ))}
-              </div>
+              {data.lifeAdmin.workshopOpenTasks.length > 0 ? (
+                <div className="uwe-today-card-list">
+                  {data.lifeAdmin.workshopOpenTasks.map((task) => (
+                    <article key={task.id} className="uwe-today-card">
+                      <h3>
+                        <Link href={task.href}>{task.title}</Link>
+                      </h3>
+                      <p>{task.nextAction}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="uwe-today-card-list">
+                  {data.lifeAdmin.activeWorkshops.map((workshop) => (
+                    <article key={workshop.id} className="uwe-today-card">
+                      <h3>
+                        <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                      </h3>
+                      <p>{workshop.nextAction || workshop.status}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
               <p>
                 <Link href="/workshop">Werkstatt öffnen →</Link>
               </p>

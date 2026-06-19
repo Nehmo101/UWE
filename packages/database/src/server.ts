@@ -889,6 +889,8 @@ export {
   HARDWARE_STATUS_LABELS,
   PROJECT_CATEGORY_LABELS,
   WORKSHOP_TYPE_LABELS,
+  WORKSHOP_PAINT_TARGET_LABELS,
+  WORKSHOP_RENTAL_STATUS_LABELS,
   PERSONAL_BRAIN_CATEGORIES,
   PERSONAL_BRAIN_CATEGORY_LABELS,
   CaptureStatusEnum,
@@ -897,6 +899,8 @@ export {
   PersonalProjectCategoryEnum,
   WorkshopStatusEnum,
   WorkshopProjectTypeEnum,
+  WorkshopPaintTargetEnum,
+  WorkshopRentalStatusEnum,
   ContractStatusEnum,
   ContractExpenseTypeEnum,
   ContractBillingIntervalEnum,
@@ -917,8 +921,12 @@ export type {
   PersonalBrainFactDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
+  CreateWorkshopPaintRecipeInput,
+  CreateWorkshopPrintProfileInput,
+  CreateWorkshopTerrainRentalInput,
   ListCapturesOptions,
   TodayAdminSummary,
+  WorkshopOpenTask,
   CaptureEntry,
   CaptureStatus,
   CaptureType,
@@ -928,6 +936,11 @@ export type {
   WorkshopProject,
   WorkshopProjectType,
   WorkshopStatus,
+  WorkshopPaintRecipe,
+  WorkshopPrintProfile,
+  WorkshopTerrainRental,
+  WorkshopPaintTarget,
+  WorkshopRentalStatus,
   ContractExpense,
   ContractExpenseType,
   ContractStatus,
@@ -982,6 +995,32 @@ export {
 } from "./hardware-utils";
 
 export type { HardwareUrlWarning } from "./hardware-utils";
+
+export {
+  asMaterialList,
+  asColorList,
+  asFilamentList,
+  asLinkList,
+  asPhotoList,
+  asChecklist,
+  countMaterialsNeeded,
+  firstPhotoUrl,
+} from "./workshop-types";
+
+export {
+  parseMaterialsFromForm,
+  formatMaterialsForForm,
+  parseColorsFromForm,
+  formatColorsForForm,
+  parseFilamentsFromForm,
+  formatFilamentsForForm,
+  parseLinksFromForm,
+  formatLinksForForm,
+  parsePhotosFromForm,
+  formatPhotosForForm,
+  parseChecklistFromForm,
+  formatChecklistForForm,
+} from "./workshop-form-utils";
 
 export {
   aggregateAllHardwareErrorHistory,
