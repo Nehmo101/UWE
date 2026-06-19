@@ -29,6 +29,7 @@ import {
   detectHardwareUrlWarnings,
   type HardwareUrlWarning,
 } from "./hardware-utils";
+import { appendHardwareErrorEntry } from "./homelab-cockpit";
 import { DEFAULT_GENERATOR_PRESETS } from "./generator-service";
 import {
   buildLifeBrainContentFromCapture,
@@ -779,6 +780,46 @@ export class LifeAdminService {
 
     steps[stepIndex] = { ...current, done: !current.done };
     return this.updateHardwareDevice(deviceId, { setupSteps: steps });
+  }
+
+  async addHardwareErrorEntry(
+    deviceId: string,
+    input: {
+      problem: string;
+      resolution?: string;
+      affectedServices?: string[];
+    },
+  ) {
+    const device = await this.getHardwareDevice(deviceId);
+    if (!device) {
+      throw new Error(`Hardware-Gerät ${deviceId} nicht gefunden.`);
+    }
+
+    const metadata = appendHardwareErrorEntry(
+      device.metadata as Record<string, unknown> | null,
+      input,
+    );
+
+    return this.updateHardwareDevice(deviceId, { metadata });
+  }
+
+  async recordHardwareCheck(deviceId: string) {
+    const device = await this.getHardwareDevice(deviceId);
+    if (!device) {
+      throw new Error(`Hardware-Gerät ${deviceId} nicht gefunden.`);
+    }
+
+    const base =
+      device.metadata && typeof device.metadata === "object"
+        ? { ...(device.metadata as Record<string, unknown>) }
+        : {};
+
+    return this.updateHardwareDevice(deviceId, {
+      metadata: {
+        ...base,
+        lastCheckedAt: new Date().toISOString(),
+      },
+    });
   }
 
   async deleteHardwareDevice(id: string) {

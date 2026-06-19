@@ -9,6 +9,7 @@ import {
   type AggregatedCalendarItem,
 } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "./admin-dashboard-status";
+import { getHomelabCockpitData } from "./homelab-dashboard";
 
 export interface TodayMailSummary {
   recentFailed: number;
@@ -33,12 +34,16 @@ export interface TodayDashboardData {
   calendarThisWeek: AggregatedCalendarItem[];
   mailSummary: TodayMailSummary;
   lifeAdmin: Awaited<ReturnType<ReturnType<typeof createLifeAdminService>["getTodaySummary"]>>;
+  homelab: Awaited<ReturnType<typeof getHomelabCockpitData>>;
   systemOk: boolean;
   systemLabel: string;
   rtxReady: boolean;
   brainEnabled: boolean;
   mailOk: boolean;
   portalAuthRequired: boolean;
+  dbOk: boolean;
+  backupOk: boolean;
+  cloudflareOk: boolean;
 }
 
 export function resolvePreferredWorldSlug(
@@ -102,22 +107,28 @@ export async function getTodayDashboardData(
     }
   }
 
-  const [lifeSummary, adminStatus, calendarSummary, failedLogs, pendingLogs] = await Promise.all([
-    lifeAdmin.getTodaySummary(),
-    getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
-    calendarAggregation.getTodaySummary({
-      worldId: preferredWorld?.id,
-      worldSlug: preferredSlug ?? undefined,
-    }),
-    mailLog.list({ status: "failed", limit: 5 }),
-    mailLog.list({ status: "pending", limit: 5 }),
-  ]);
+  const [lifeSummary, adminStatus, homelab, calendarSummary, failedLogs, pendingLogs] =
+    await Promise.all([
+      lifeAdmin.getTodaySummary(),
+      getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
+      getHomelabCockpitData(db, { useMockInference: options.useMockInference }),
+      calendarAggregation.getTodaySummary({
+        worldId: preferredWorld?.id,
+        worldSlug: preferredSlug ?? undefined,
+      }),
+      mailLog.list({ status: "failed", limit: 5 }),
+      mailLog.list({ status: "pending", limit: 5 }),
+    ]);
 
   const systemLabel = adminStatus.ok
     ? "System OK"
     : adminStatus.studioSecurity.severity === "critical"
       ? "Security prüfen"
       : "Einschränkungen";
+
+  const dbStatus = homelab.serviceStatuses.find((status) => status.id === "database");
+  const backupStatus = homelab.serviceStatuses.find((status) => status.id === "backup");
+  const tunnelStatus = homelab.serviceStatuses.find((status) => status.id === "cloudflare_tunnel");
 
   return {
     preferredWorld: preferredWorld
@@ -132,11 +143,15 @@ export async function getTodayDashboardData(
       latestFailedSubject: failedLogs[0]?.subject ?? null,
     },
     lifeAdmin: lifeSummary,
-    systemOk: adminStatus.ok,
+    homelab,
+    systemOk: adminStatus.ok && homelab.alerts.criticalCount === 0,
     systemLabel,
     rtxReady: adminStatus.rtx.ready,
     brainEnabled: adminStatus.brain.enabled,
     mailOk: !adminStatus.mail.enabled || adminStatus.mail.ok,
     portalAuthRequired: adminStatus.auth.portalAuthRequired,
+    dbOk: dbStatus?.ok ?? false,
+    backupOk: backupStatus?.ok ?? false,
+    cloudflareOk: tunnelStatus?.ok ?? true,
   };
 }

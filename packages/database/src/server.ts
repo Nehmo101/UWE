@@ -984,6 +984,33 @@ export {
 export type { HardwareUrlWarning } from "./hardware-utils";
 
 export {
+  aggregateAllHardwareErrorHistory,
+  aggregateHomelabTodayAlerts,
+  appendHardwareErrorEntry,
+  buildHomelabRunbooks,
+  buildHomelabSecurityChecklist,
+  buildHomelabServiceStatuses,
+  buildHardwareDeviceCardView,
+  parseHardwareErrorHistory,
+  parseHardwareLastCheckedAt,
+  parseHardwareServices,
+  parseHardwareSpecsLines,
+} from "./homelab-cockpit";
+
+export type {
+  HardwareDeviceCardView,
+  HardwareErrorEntry,
+  HomelabHealthInput,
+  HomelabRunbook,
+  HomelabRunbookStep,
+  HomelabSecurityCheckItem,
+  HomelabServiceId,
+  HomelabServiceStatus,
+  HomelabSeverity,
+  HomelabTodayAlerts,
+} from "./homelab-cockpit";
+
+export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
   loadPersonalBrainAgentContext,
