@@ -16,7 +16,8 @@ Persönliches Life-Brain (`PersonalBrainDocument`, `PersonalBrainFact`) ist **st
 
 - Router: `packages/ai-brain/src/router/types.ts` — `personal_brain` in `LOCAL_ONLY_CONTEXT_MODES`
 - Privacy Guard: `validateProviderContextCombination`, `validateResolvedRouteForContext`
-- Kontext-Lader: `loadPersonalBrainPromptContext` in `@uwe/database/server`
+- Kontext-Lader: `loadPersonalBrainPromptContext` in `@uwe/database/server` — mit Retrieval wenn Prompt/Query gesetzt
+- Chunks: `PersonalBrainChunk` + `createPersonalBrainService` — Embeddings via RTX (`indexPersonalBrainDocument`)
 - Studio UI: KI-Prompt Modus „Persönliches Life-Brain“ — nur lokal, deaktiviert bei Cloud-Provider
 
 ## RTX offline

@@ -263,6 +263,13 @@ body {
   font-size: 0.85rem;
 }
 
+.uwe-life-brain-preview {
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+
 .uwe-system-ampel {
   display: flex;
   flex-wrap: wrap;

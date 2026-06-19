@@ -9,11 +9,13 @@ import {
   isRtxReady,
   resolveAiBrainSettings,
   routeAiRequest,
+  semanticSearchPersonalBrainChunks,
 } from "@uwe/ai-brain";
 import {
   createBrainStoreService,
   createJobService,
   createLifeAdminService,
+  createPersonalBrainService,
   createUweRepository,
   getSystemSettings,
   loadPersonalBrainPromptContext,
@@ -150,16 +152,45 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
   const repo = createUweRepository();
   const brainStore = createBrainStoreService();
   const lifeAdmin = createLifeAdminService(prisma);
+  const personalBrain = createPersonalBrainService(prisma);
 
   const routed = await routeAiRequest(
     {
       repo,
       brainStore,
       loadPersonalBrainContext: () =>
-        loadPersonalBrainPromptContext(
-          () => lifeAdmin.listPersonalBrainDocuments({ limit: 30 }),
-          () => lifeAdmin.listPersonalBrainFacts({ limit: 30 }),
-        ),
+        loadPersonalBrainPromptContext({
+          query: prompt,
+          retrievalLimit: 8,
+          loadDocs: () =>
+            lifeAdmin.listPersonalBrainDocuments({ limit: 30 }).then((docs) =>
+              docs.map((doc) => ({
+                title: doc.title,
+                content: doc.content,
+                category: doc.category,
+              })),
+            ),
+          loadFacts: () =>
+            lifeAdmin.listPersonalBrainFacts({ limit: 30 }).then((facts) =>
+              facts.map((fact) => ({
+                title: fact.title,
+                content: fact.content,
+                factType: fact.factType,
+              })),
+            ),
+          searchChunks: async (query, limit) => {
+            const results = await semanticSearchPersonalBrainChunks(personalBrain, {
+              query,
+              limit,
+            });
+            return results.map((entry) => ({
+              documentTitle: entry.documentTitle,
+              category: entry.category,
+              content: entry.content,
+              score: entry.score,
+            }));
+          },
+        }),
     },
     {
       providerMode: body.providerMode,

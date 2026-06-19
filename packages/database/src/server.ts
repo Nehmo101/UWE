@@ -869,12 +869,25 @@ export type { HardwareUrlWarning } from "./hardware-utils";
 export {
   serializePersonalBrainForPrompt,
   loadPersonalBrainPromptContext,
+  filterPersonalBrainFactsByQuery,
+  serializePersonalBrainRetrievalForPrompt,
 } from "./personal-brain-context";
 
 export type {
   PersonalBrainDocSlice,
   PersonalBrainFactSlice,
+  PersonalBrainRetrievedChunk,
+  LoadPersonalBrainContextOptions,
 } from "./personal-brain-context";
+
+export { createPersonalBrainService } from "./personal-brain-service";
+
+export type {
+  CreatePersonalBrainChunkInput,
+  PersonalBrainChunkRecord,
+  PersonalBrainIndexStatus,
+  PersonalBrainService,
+} from "./personal-brain-service";
 
 export {
   DEFAULT_GENERATOR_PRESETS,

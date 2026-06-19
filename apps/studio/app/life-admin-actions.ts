@@ -13,6 +13,7 @@ import { createLifeAdminService, createSettingsService, prisma } from "@uwe/data
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
+import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 function lifeAdmin() {
   return createLifeAdminService(prisma);
@@ -237,11 +238,23 @@ export async function deleteHardwareAction(formData: FormData) {
 export async function createLifeBrainDocumentAction(formData: FormData) {
   assertStudioTrusted();
 
-  await lifeAdmin().createPersonalBrainDocument({
+  const document = await lifeAdmin().createPersonalBrainDocument({
     title: String(formData.get("title") || "").trim(),
     content: String(formData.get("content") || ""),
     category: String(formData.get("category") || "").trim() || null,
   });
+
+  await enqueueAndDispatch({
+    type: "embedding",
+    title: `Life Brain Index · ${document.title}`,
+    payload: {
+      personalBrainDocumentId: document.id,
+      useMock: process.env.AI_USE_MOCK === "true",
+    },
+    relatedType: "personal_brain_document",
+    relatedId: document.id,
+  });
+
   revalidateAdminPaths();
   redirect("/life-brain");
 }
