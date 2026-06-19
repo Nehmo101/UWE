@@ -1,6 +1,6 @@
 # Cursor Workflow — Rules, Commands, and Agent PRs
 
-Stand: 2026-06-18
+Stand: 2026-06-19
 
 UWE is optimized for **Cursor Agents**, **Cloud Agents**, and local development with shared quality gates. Copilot-specific instructions are not used; project context lives in Cursor Rules and `AGENTS.md`.
 
@@ -18,23 +18,34 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 
 ### Skills (deeper workflows)
 
-`.cursor/skills/` contains task-specific skills. Agents should read the relevant skill when starting a specialized task.
+`.cursor/skills/` contains task-specific skills. Full catalog: [.cursor/skills/README.md](../../.cursor/skills/README.md).
 
-| Skill | Use when |
-|-------|----------|
+| Skill | Domain |
+|-------|--------|
 | `ci-quality-gate` | Before push / PR — full `pnpm quality` |
 | `uwe-orchestrator` | Multi-domain planning, subagent sequencing |
 | `daily-admin-os` | Today, Capture, Projects, Workshop, Contracts, Hardware |
 | `life-brain-retrieval` | Personal brain embeddings, RTX-only retrieval |
 | `image-studio-workflows` | Image Studio jobs, assets, Capture pipeline |
-| `uwe-feature-implementation` | General feature work in monorepo |
-| `security-audit` | Auth, leaks, uploads, RTX exposure |
-| `database-migration-review` | Prisma schema / migration PRs |
-| `dnd-content-consistency-check` | Canon, visibility, generator safety |
-| `deployment-cloudflare-check` | Tunnel, Access, production go-live |
-| `pr-review` | Reviewing agent or human PRs |
+| `uwe-architecture` | Monorepo layout, package boundaries |
+| `uwe-feature-implementation` | End-to-end feature delivery |
+| `api-routes` | Studio/Portal REST routes, guards |
+| `react-next-ui` | App Router, shared-ui, forms |
+| `auth-rbac-visibility` | Sessions, roles, visibility filters |
+| `ai-agent-proposal-workflow` | AI router, Review/Apply, Agent Jobs |
+| `local-first-privacy` | RTX-only, no cloud brain context |
+| `uwe-brain` | DnD Brain + Life Brain |
+| `dnd-content-consistency-check` | Canon, leaks, generator QA |
+| `portal-player-view` | Player wiki, share links |
+| `database-migration-review` | Prisma migrations |
+| `security-audit` | Structured security review |
+| `pr-review` | PR review checklist |
+| `deployment-cloudflare-check` | Tunnel + Access + ENV |
+| `hardware-homelab` | Host scripts, RTX, backups |
 
-Product rollout order: `docs/engineering/product-orchestrator-plan.md`.
+Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md). Product rollout order: [product-orchestrator-plan.md](./product-orchestrator-plan.md).
+
+Agents should read the relevant skill when starting a specialized task.
 
 ## Cursor Commands (`.cursor/commands/`)
 

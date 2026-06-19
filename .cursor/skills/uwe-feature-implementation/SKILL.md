@@ -7,7 +7,7 @@ description: Implement new UWE features following monorepo conventions — domai
 
 ## Before coding
 
-1. Read [references/architecture.md](references/architecture.md) for repo layout.
+1. Read [references/architecture.md](references/architecture.md) for repo layout — or skill `uwe-architecture` for full package map.
 2. Identify the **package** vs **app** boundary — logic belongs in `packages/`, UI/routes in `apps/`.
 3. Check existing services before adding new abstractions.
 4. For AI features: enforce Review/Apply (no auto-canonization).

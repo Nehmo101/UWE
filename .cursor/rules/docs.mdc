@@ -12,6 +12,7 @@ alwaysApply: false
 |-------|----------|
 | CI, workflows, local dev commands | `docs/engineering/ci.md` |
 | Cursor rules, commands, agent workflow | `docs/engineering/cursor-workflow.md` |
+| Technical refactor order | `docs/engineering/TECHNICAL_ROADMAP.md` |
 | Architecture overview | `docs/ARCHITECTURE.md` |
 | Domain features (auth, backup, DnD, etc.) | `docs/<topic>.md` |
 | Agent quality gate | `AGENTS.md` |
