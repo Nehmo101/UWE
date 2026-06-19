@@ -11,7 +11,7 @@ Lasses privates Admin-Cockpit in UWE Studio — neben DnD-Welten für Projekte, 
 | `/projects` | Persönliche Projekte (UWE, Homelab, DnD, …) |
 | `/workshop` | Werkstatt / Miniaturen / Terrain / 3D-Druck |
 | `/contracts` | Verträge & Monatsausgaben (manuell, keine Bank-Anbindung) |
-| `/hardware` | Homelab-Geräte, Setup-Schritte, URL-Warnungen |
+| `/hardware` | Homelab-Kontrollzentrum — Geräte, Service-Status, Runbooks, Security, Fehlerhistorie |
 | `/life-brain` | Persönliches Brain (getrennt vom DnD-Brain) |
 | `/admin/status` | Studio Security + RTX Exposure |
 
@@ -46,6 +46,18 @@ Siehe [life-brain-privacy.md](./life-brain-privacy.md).
 ## Tests
 
 - `packages/database/src/life-admin-service.test.ts`
+- `packages/database/src/hardware-utils.test.ts`
+- `packages/database/src/homelab-cockpit.test.ts`
 - `packages/database/src/studio-security.test.ts`
 - `apps/studio/src/lib/today-dashboard.test.ts`
 - `packages/ai-brain/src/router/personal-brain-privacy.test.ts`
+
+## Homelab Cockpit (`/hardware`)
+
+- **Service-Status:** UWE Studio, Portal, DB, Cloudflare Tunnel, RTX Agent, Ollama, Backup
+- **Runbooks:** Nach Neustart, UWE starten, Logs/SSH/Cloudflare/DB/RTX prüfen
+- **Security Checklist:** SSH, User, Cloudflare Access, RTX nicht öffentlich, Secrets, Firewall
+- **Fehlerhistorie:** pro Gerät in `metadata.errorHistory` — aggregiert auf der Hardware-Seite
+- **Today:** System-Ampel mit live DB/Backup/Cloudflare; kritische Homelab-Warnungen verlinken auf `/hardware`
+
+RTX-Agent und Ollama dürfen **niemals** öffentlich exponiert werden — URL-Warnungen auf Gerätekarten und in `/today`.

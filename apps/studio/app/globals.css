@@ -292,6 +292,185 @@ body {
   border-color: rgba(239, 68, 68, 0.35);
 }
 
+.uwe-homelab-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.uwe-homelab-service-card {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-card) 82%, transparent);
+}
+
+.uwe-homelab-service-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.uwe-homelab-service-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--uwe-muted);
+}
+
+.uwe-homelab-service-card[data-status="ok"] {
+  border-color: color-mix(in srgb, var(--uwe-success) 35%, transparent);
+}
+
+.uwe-homelab-service-card[data-status="warn"] {
+  border-color: rgba(234, 179, 8, 0.35);
+}
+
+.uwe-homelab-service-card[data-status="error"] {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.uwe-homelab-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.uwe-homelab-checklist li {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+  font-size: 0.85rem;
+}
+
+.uwe-homelab-checklist li span {
+  display: block;
+  color: var(--uwe-muted);
+  margin-top: 0.15rem;
+}
+
+.uwe-homelab-checklist li[data-status="ok"] {
+  border-color: color-mix(in srgb, var(--uwe-success) 35%, transparent);
+}
+
+.uwe-homelab-checklist li[data-status="warn"] {
+  border-color: rgba(234, 179, 8, 0.35);
+}
+
+.uwe-homelab-checklist li[data-status="error"] {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.uwe-homelab-runbook-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.uwe-homelab-runbook summary {
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.uwe-homelab-runbook ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.uwe-homelab-command {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--uwe-card) 60%, #000 40%);
+}
+
+.uwe-homelab-device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.uwe-homelab-device-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.uwe-homelab-device-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.uwe-homelab-device-header h3 {
+  margin: 0;
+}
+
+.uwe-hw-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.uwe-hw-badge-active {
+  border: 1px solid color-mix(in srgb, var(--uwe-success) 35%, transparent);
+}
+
+.uwe-hw-badge-error {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.uwe-hw-badge-planned {
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+
+.uwe-hw-badge-neutral {
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
+}
+
+.uwe-homelab-device-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.uwe-homelab-device-meta dt {
+  color: var(--uwe-muted);
+  font-weight: normal;
+}
+
+.uwe-homelab-device-meta dd {
+  margin: 0;
+}
+
+.uwe-homelab-urls {
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.uwe-homelab-specs {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--uwe-muted);
+}
+
+.uwe-homelab-edit-form,
+.uwe-homelab-error-form {
+  margin-top: 0.5rem;
+}
+
+.uwe-homelab-device-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .studio-auth-page {
   min-height: 100vh;
   padding: 2rem 1rem;

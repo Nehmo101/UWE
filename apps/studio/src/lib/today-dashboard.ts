@@ -6,6 +6,7 @@ import {
   getSystemSettings,
 } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "./admin-dashboard-status";
+import { getHomelabCockpitData } from "./homelab-dashboard";
 
 export interface TodayDashboardData {
   preferredWorld: {
@@ -19,12 +20,16 @@ export interface TodayDashboardData {
     worldSlug: string;
   } | null;
   lifeAdmin: Awaited<ReturnType<ReturnType<typeof createLifeAdminService>["getTodaySummary"]>>;
+  homelab: Awaited<ReturnType<typeof getHomelabCockpitData>>;
   systemOk: boolean;
   systemLabel: string;
   rtxReady: boolean;
   brainEnabled: boolean;
   mailOk: boolean;
   portalAuthRequired: boolean;
+  dbOk: boolean;
+  backupOk: boolean;
+  cloudflareOk: boolean;
 }
 
 export function resolvePreferredWorldSlug(
@@ -84,9 +89,10 @@ export async function getTodayDashboardData(
     }
   }
 
-  const [lifeSummary, adminStatus] = await Promise.all([
+  const [lifeSummary, adminStatus, homelab] = await Promise.all([
     lifeAdmin.getTodaySummary(),
     getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
+    getHomelabCockpitData(db, { useMockInference: options.useMockInference }),
   ]);
 
   const systemLabel = adminStatus.ok
@@ -95,17 +101,25 @@ export async function getTodayDashboardData(
       ? "Security prüfen"
       : "Einschränkungen";
 
+  const dbStatus = homelab.serviceStatuses.find((status) => status.id === "database");
+  const backupStatus = homelab.serviceStatuses.find((status) => status.id === "backup");
+  const tunnelStatus = homelab.serviceStatuses.find((status) => status.id === "cloudflare_tunnel");
+
   return {
     preferredWorld: preferredWorld
       ? { slug: preferredWorld.slug, name: preferredWorld.name }
       : null,
     nextSession,
     lifeAdmin: lifeSummary,
-    systemOk: adminStatus.ok,
+    homelab,
+    systemOk: adminStatus.ok && homelab.alerts.criticalCount === 0,
     systemLabel,
     rtxReady: adminStatus.rtx.ready,
     brainEnabled: adminStatus.brain.enabled,
     mailOk: !adminStatus.mail.enabled || adminStatus.mail.ok,
     portalAuthRequired: adminStatus.auth.portalAuthRequired,
+    dbOk: dbStatus?.ok ?? false,
+    backupOk: backupStatus?.ok ?? false,
+    cloudflareOk: tunnelStatus?.ok ?? true,
   };
 }

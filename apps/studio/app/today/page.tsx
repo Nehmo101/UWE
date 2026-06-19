@@ -55,8 +55,11 @@ export default async function TodayPage() {
               <span className="uwe-system-ampel-item" data-status={statusDot(data.systemOk)}>
                 UWE {data.systemLabel}
               </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(true)}>
-                DB OK
+              <span className="uwe-system-ampel-item" data-status={statusDot(data.dbOk)}>
+                DB {data.dbOk ? "OK" : "Fehler"}
+              </span>
+              <span className="uwe-system-ampel-item" data-status={statusDot(data.backupOk, true)}>
+                Backup {data.backupOk ? "OK" : "prüfen"}
               </span>
               <span className="uwe-system-ampel-item" data-status={statusDot(data.rtxReady, true)}>
                 RTX {data.rtxReady ? "bereit" : "offline"}
@@ -76,7 +79,26 @@ export default async function TodayPage() {
               >
                 Portal {data.portalAuthRequired ? "Auth" : "offen"}
               </span>
+              <span
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.cloudflareOk, !data.cloudflareOk)}
+              >
+                CF {data.cloudflareOk ? "OK" : "Tunnel"}
+              </span>
             </div>
+            {data.homelab.alerts.criticalCount > 0 && (
+              <div className="uwe-form-error uwe-section" role="alert">
+                <strong>{data.homelab.alerts.criticalCount} kritische Homelab-/Security-Probleme</strong>
+                <ul>
+                  {data.homelab.alerts.messages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+                <p>
+                  <Link href="/hardware">Hardware-Cockpit öffnen →</Link>
+                </p>
+              </div>
+            )}
             <p className="uwe-dashboard-muted">
               <Link href="/admin/status">Details im Systemstatus →</Link>
             </p>
@@ -203,10 +225,20 @@ export default async function TodayPage() {
                   ? `${data.lifeAdmin.hardwareIssues} Gerät(e) offline/defekt`
                   : "Keine akuten Hardware-Probleme"}
               </p>
+              {data.homelab.alerts.criticalCount > 0 && (
+                <p className="uwe-form-error">
+                  {data.homelab.alerts.criticalCount} kritische Warnung(en)
+                </p>
+              )}
               {data.lifeAdmin.hardwareUrlWarnings.length > 0 && (
                 <p className="uwe-form-error">
                   {data.lifeAdmin.hardwareUrlWarnings.length} URL-Warnung(en) —{" "}
                   <Link href="/hardware">Hardware prüfen</Link>
+                </p>
+              )}
+              {data.homelab.alerts.serviceIssueCount > 0 && (
+                <p className="uwe-dashboard-muted">
+                  {data.homelab.alerts.serviceIssueCount} Dienst(e) mit Problemen
                 </p>
               )}
               {data.lifeAdmin.openSetupSteps > 0 && (
