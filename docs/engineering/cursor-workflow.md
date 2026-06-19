@@ -18,7 +18,23 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 
 ### Skills (deeper workflows)
 
-`.cursor/skills/` contains task-specific skills (CI gate, security audit, feature implementation, DB migration review, etc.). Agents should read the relevant skill when starting a specialized task.
+`.cursor/skills/` contains task-specific skills. Agents should read the relevant skill when starting a specialized task.
+
+| Skill | Use when |
+|-------|----------|
+| `ci-quality-gate` | Before push / PR — full `pnpm quality` |
+| `uwe-orchestrator` | Multi-domain planning, subagent sequencing |
+| `daily-admin-os` | Today, Capture, Projects, Workshop, Contracts, Hardware |
+| `life-brain-retrieval` | Personal brain embeddings, RTX-only retrieval |
+| `image-studio-workflows` | Image Studio jobs, assets, Capture pipeline |
+| `uwe-feature-implementation` | General feature work in monorepo |
+| `security-audit` | Auth, leaks, uploads, RTX exposure |
+| `database-migration-review` | Prisma schema / migration PRs |
+| `dnd-content-consistency-check` | Canon, visibility, generator safety |
+| `deployment-cloudflare-check` | Tunnel, Access, production go-live |
+| `pr-review` | Reviewing agent or human PRs |
+
+Product rollout order: `docs/engineering/product-orchestrator-plan.md`.
 
 ## Cursor Commands (`.cursor/commands/`)
 
