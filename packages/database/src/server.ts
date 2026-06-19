@@ -189,6 +189,32 @@ export {
 export type { SeedAuthUsersResult } from "./auth-seed";
 
 export { seedTerraWorld } from "./terra-seed";
+export { seedStressWorld, PERF_SMOKE_SCALE, PERF_STRESS_SCALE } from "./stress-seed";
+export type { StressSeedResult } from "./stress-seed";
+export {
+  PERF_BUDGETS_MS,
+  PERF_MEGA_SCALE,
+  assertWithinBudget,
+  resolveStressScale,
+} from "./perf-budgets";
+export {
+  canonicalizeTag,
+  collectTagInventory,
+  createTagService,
+  findSimilarTagGroups,
+  findUnusedTags,
+  mergeTags,
+  normalizeTagKey,
+  suggestTagMerges,
+} from "./tag-service";
+export type {
+  SimilarTagGroup,
+  TagEntityType,
+  TagInventoryEntry,
+  TagMergeResult,
+  TagMergeSuggestion,
+  TagReference,
+} from "./tag-service";
 
 export {
   SEARCH_ENTITY_FILTERS,
