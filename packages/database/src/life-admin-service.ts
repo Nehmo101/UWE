@@ -686,6 +686,24 @@ export class LifeAdminService {
     });
   }
 
+  async getHardwareFilterCounts(): Promise<{
+    all: number;
+    active: number;
+    issues: number;
+    planned: number;
+  }> {
+    const [all, active, issues, planned] = await Promise.all([
+      this.db.hardwareDevice.count(),
+      this.db.hardwareDevice.count({ where: { status: "active" } }),
+      this.db.hardwareDevice.count({
+        where: { status: { in: ["offline", "broken"] } },
+      }),
+      this.db.hardwareDevice.count({ where: { status: "planned" } }),
+    ]);
+
+    return { all, active, issues, planned };
+  }
+
   async createHardwareDevice(input: CreateHardwareDeviceInput) {
     return this.db.hardwareDevice.create({
       data: {

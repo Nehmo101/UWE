@@ -69,6 +69,10 @@ describe("life admin service", () => {
     assert.equal(contract.currency, "EUR");
     assert.equal(device.status, "active");
     assert.ok(!JSON.stringify(contract).includes("iban"));
+
+    const counts = await service.getHardwareFilterCounts();
+    assert.ok(counts.all >= 1);
+    assert.ok(counts.active >= 1);
   });
 
   it("creates personal brain entries", async () => {

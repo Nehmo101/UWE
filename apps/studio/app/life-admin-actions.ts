@@ -9,7 +9,12 @@ import type {
   WorkshopProjectType,
   WorkshopStatus,
 } from "@uwe/database/server";
-import { createLifeAdminService, createSettingsService, prisma } from "@uwe/database/server";
+import {
+  createLifeAdminService,
+  createSettingsService,
+  mergeHardwareRunbookMetadata,
+  prisma,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -178,6 +183,8 @@ export async function deleteContractAction(formData: FormData) {
 export async function createHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
+  const runbook = String(formData.get("runbook") || "").trim();
+
   await lifeAdmin().createHardwareDevice({
     name: String(formData.get("name") || "").trim(),
     role: String(formData.get("role") || ""),
@@ -189,6 +196,7 @@ export async function createHardwareAction(formData: FormData) {
     operatingSystem: String(formData.get("operatingSystem") || ""),
     errorNotes: String(formData.get("errorNotes") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
+    metadata: runbook ? mergeHardwareRunbookMetadata(null, runbook) : null,
     setupSteps: String(formData.get("setupSteps") || "")
       .split("\n")
       .map((line) => line.trim())
@@ -203,6 +211,9 @@ export async function updateHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
   const id = String(formData.get("id"));
+  const device = await lifeAdmin().getHardwareDevice(id);
+  const runbook = String(formData.get("runbook") || "");
+
   await lifeAdmin().updateHardwareDevice(id, {
     name: String(formData.get("name") || "").trim(),
     role: String(formData.get("role") || ""),
@@ -214,6 +225,7 @@ export async function updateHardwareAction(formData: FormData) {
     operatingSystem: String(formData.get("operatingSystem") || ""),
     errorNotes: String(formData.get("errorNotes") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
+    metadata: mergeHardwareRunbookMetadata(device?.metadata, runbook),
   });
   revalidateAdminPaths();
 }

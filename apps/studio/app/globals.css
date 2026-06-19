@@ -263,6 +263,32 @@ body {
   font-size: 0.85rem;
 }
 
+.uwe-today-attention {
+  margin-bottom: 1rem;
+}
+
+.uwe-today-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.uwe-today-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-card);
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: var(--uwe-fg);
+}
+
+.uwe-today-quick-chip[data-severity="warn"] {
+  border-color: color-mix(in srgb, var(--uwe-warn, #c9a227) 50%, var(--uwe-border) 50%);
+}
+
 .uwe-system-ampel {
   display: flex;
   flex-wrap: wrap;
