@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthHeader } from "@/src/components/AuthHeader";
+import { PlayerCharacterEditPanel } from "@/src/components/PlayerCharacterEditPanel";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
-import { canCreatePlayerNote } from "@uwe/auth";
+import { canCreatePlayerNote, canEditPlayerCharacterBlock } from "@uwe/auth";
 import {
   BLOCK_TYPE_LABELS,
   PageTypeBadge,
@@ -32,6 +33,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let page;
   let notes;
   let canComment = false;
+  let canEditCharacter = false;
   let campaignId: string | null = null;
   let worldName = worldSlug;
   let blockHtml: string[] = [];
@@ -66,6 +68,12 @@ export default async function AuthWorldPageDetail({ params }: Props) {
     });
     worldName = world?.name ?? worldSlug;
     canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
+
+    if (page.type === "player_character") {
+      canEditCharacter = page.contentBlocks.some((block) =>
+        canEditPlayerCharacterBlock(ctx, page, block),
+      );
+    }
   } finally {
     await db.$disconnect();
   }
@@ -103,6 +111,14 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             </section>
           ))}
         </div>
+
+        {canEditCharacter && (
+          <PlayerCharacterEditPanel
+            worldSlug={worldSlug}
+            page={page}
+            returnPath={returnPath}
+          />
+        )}
 
         {campaignId && (
           <PlayerNotesPanel

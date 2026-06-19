@@ -407,6 +407,21 @@ export {
   WorldOverviewService,
 } from "./world-overview";
 
+export {
+  createPortalDashboardService,
+  PortalDashboardService,
+  sessionUnlockLabel,
+  navCategoryForPageType as portalDashboardNavCategory,
+} from "./portal-dashboard-service";
+
+export type {
+  PortalDashboardData,
+  PortalDashboardHandout,
+  PortalDashboardNote,
+  PortalDashboardPage,
+  PortalDashboardSession,
+} from "./portal-dashboard-service";
+
 export type {
   WorldOverviewData,
   WorldOverviewOpenPlot,

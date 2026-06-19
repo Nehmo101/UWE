@@ -124,6 +124,8 @@ export {
   filterPlayerNotesForViewer,
 } from "./player-note-permissions";
 
+export { canEditPlayerCharacterBlock } from "./player-character-permissions";
+
 export {
   DEFAULT_SESSION_TTL_MS,
   PREVIEW_COOKIE_NAME,
