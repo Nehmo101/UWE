@@ -41,7 +41,7 @@ export function canEditPlayerCharacterBlock(
     return false;
   }
 
-  const hasSpecificAccess = ctx.specificPlayerPageIds.includes(page.id);
+  const hasSpecificAccess = ctx.specificPlayerPageIds.has(page.id);
   if (page.visibility === "specific_players") {
     return hasSpecificAccess;
   }

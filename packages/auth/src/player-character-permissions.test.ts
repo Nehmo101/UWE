@@ -15,7 +15,6 @@ function playerCtx(pageIds: string[] = ["pc-1"]) {
   return buildAccessContext({
     user: playerUser,
     worldMembership: {
-      id: "m-1",
       userId: playerUser.id,
       worldId: "w-1",
       role: "player",

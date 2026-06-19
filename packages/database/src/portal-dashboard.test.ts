@@ -168,13 +168,16 @@ describe("portal dashboard", () => {
 
     await sessions.publishRecap(session2.id);
 
-    const after = await auth.listPagesForViewer(worldSlug, playerCtx);
+    const playerCtxAfter = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+    assert.ok(playerCtxAfter);
+
+    const after = await auth.listPagesForViewer(worldSlug, playerCtxAfter);
     assert.ok(after.some((page) => page.id === locked.id));
 
     const dashboard = createPortalDashboardService(db);
     const unlocked = await dashboard.listNewlyUnlockedPagesForSession(
       worldSlug,
-      playerCtx,
+      playerCtxAfter,
       2,
       "Session 2: Session 2",
     );
