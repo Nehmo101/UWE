@@ -232,6 +232,14 @@ export const playerNoteUpdateSchema = playerNoteIdSchema.extend({
   content: nonEmptyString.max(20_000),
 });
 
+export const playerCharacterBlockSchema = z.object({
+  worldSlug: slugSchema,
+  pageSlug: slugSchema,
+  blockId: idSchema,
+  content: nonEmptyString.max(50_000),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
 export const assetFileQuerySchema = z.object({
   world: slugSchema,
 });
