@@ -19,6 +19,8 @@ import {
 import { dispatchJob } from "@/src/lib/job-executor";
 import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
 import { z } from "zod";
+import { validateImageContextForProvider } from "@uwe/image-studio";
+import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 
 const imageStudioCreateSchema = z.object({
   worldSlug: slugSchema,
@@ -28,6 +30,9 @@ const imageStudioCreateSchema = z.object({
   providerMode: optionalString,
   linkTargetType: optionalString,
   linkTargetId: optionalString,
+  contextMode: z.enum(["prompt_only", "page_context", "brain_context", "object_context"]).optional(),
+  contextSnippet: optionalString,
+  cloudContextApproved: z.boolean().optional(),
 });
 
 export async function GET(request: Request) {
@@ -68,6 +73,21 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   const body = parsed.data;
+  const contextMode = (body.contextMode ?? "prompt_only") as ImageStudioPromptContextMode;
+
+  if (body.providerMode === "cloud" || config.allowCloud) {
+    try {
+      validateImageContextForProvider("cloud", contextMode, {
+        cloudContextApproved: body.cloudContextApproved,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Datenschutzfehler" },
+        { status: 403 },
+      );
+    }
+  }
+
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(body.worldSlug);
   if (!world) {
@@ -84,7 +104,17 @@ export async function POST(request: Request) {
   if (body.linkTargetType && body.linkTargetId) {
     await imageStudio.linkProject(
       project.id,
-      body.linkTargetType as "page" | "asset" | "label" | "game_session" | "handout" | "brain_document" | "capture",
+      body.linkTargetType as
+        | "page"
+        | "asset"
+        | "label"
+        | "game_session"
+        | "handout"
+        | "brain_document"
+        | "capture"
+        | "workshop_project"
+        | "hardware_device"
+        | "contract_expense",
       body.linkTargetId,
     );
   }
@@ -105,6 +135,9 @@ export async function POST(request: Request) {
       prompt: body.prompt,
       providerMode: body.providerMode,
       title: body.title,
+      contextMode,
+      contextSnippet: body.contextSnippet,
+      cloudContextApproved: body.cloudContextApproved,
     },
     relatedType: "image_studio_project",
     relatedId: project.id,

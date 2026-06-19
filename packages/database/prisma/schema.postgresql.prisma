@@ -124,7 +124,22 @@ enum UserStatus {
 enum WorldMemberRole {
   owner
   dm
+  co_dm
   player
+}
+
+enum ContentReviewStatus {
+  pending
+  approved
+  rejected
+  superseded
+}
+
+enum ContentReviewSourceType {
+  ai_proposal
+  co_dm_change
+  player_note
+  portal_unlock
 }
 
 enum GameSessionStatus {
@@ -451,6 +466,9 @@ model User {
   twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
   authIdentities      AuthIdentity[]
+  contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
+  contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
+  reviewComments         ReviewComment[]
 
   @@map("users")
 }
@@ -564,6 +582,7 @@ model World {
   calendarEvents      CalendarEvent[]
   dndBeyondReferences DndBeyondReference[]
   researchSessions    ResearchSession[]
+  contentReviews      ContentReview[]
 
   @@map("worlds")
 }
@@ -908,6 +927,49 @@ model PlayerNote {
   @@map("player_notes")
 }
 
+model ContentReview {
+  id               String                  @id @default(cuid())
+  worldId          String                  @map("world_id")
+  sourceType       ContentReviewSourceType @map("source_type")
+  sourceId         String                  @map("source_id")
+  status           ContentReviewStatus     @default(pending)
+  title            String
+  summary          String                  @default("")
+  diff             Json?
+  payload          Json?
+  proposedByUserId String?                 @map("proposed_by_user_id")
+  reviewedByUserId String?                 @map("reviewed_by_user_id")
+  reviewedAt       DateTime?               @map("reviewed_at")
+  rejectReason     String?                 @map("reject_reason")
+  targetHref       String?                 @map("target_href")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  world      World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  proposedBy User?           @relation("ContentReviewProposedBy", fields: [proposedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy User?           @relation("ContentReviewReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  comments   ReviewComment[]
+
+  @@unique([sourceType, sourceId])
+  @@index([worldId, status])
+  @@index([status, createdAt])
+  @@map("content_reviews")
+}
+
+model ReviewComment {
+  id        String   @id @default(cuid())
+  reviewId  String   @map("review_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review ContentReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("review_comments")
+}
+
 model ShareLink {
   id           String          @id @default(cuid())
   worldId      String          @map("world_id")
@@ -985,6 +1047,10 @@ enum ActivityAction {
   seed_applied
   ai_proposal_applied
   ai_proposal_discarded
+  review_submitted
+  review_approved
+  review_rejected
+  review_commented
   error
   warning
 }
@@ -1002,6 +1068,7 @@ enum ActivityTargetType {
   ai_proposal
   ai_run
   brain_document
+  content_review
   system
 }
 
@@ -1817,6 +1884,9 @@ enum ImageStudioLinkTargetType {
   handout
   brain_document
   capture
+  workshop_project
+  hardware_device
+  contract_expense
 }
 
 enum CalendarEventKind {

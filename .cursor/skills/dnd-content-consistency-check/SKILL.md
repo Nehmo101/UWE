@@ -10,6 +10,8 @@ description: Audit UWE DnD world content for canon conflicts, player leaks, brok
 1. **Automated Inspector** — `packages/database/src/world-inspector.ts` (read-only, no AI)
 2. **AI canon check** — Brain action `canon_check` / task `detect_contradictions` (Review/Apply required)
 
+For brain storage and Life/DnD separation, see skill `uwe-brain`.
+
 ## Workflow
 
 1. Run World Inspector for the target world (Studio: `/worlds/[slug]/inspector`).
