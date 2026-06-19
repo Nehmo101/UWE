@@ -7,7 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
-import { deleteLifeBrainDocumentAction } from "../../life-admin-actions";
+import { deleteLifeBrainDocumentAction } from "../../../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",

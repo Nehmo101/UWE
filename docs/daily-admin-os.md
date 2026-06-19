@@ -17,6 +17,13 @@ Lasses privates Admin-Cockpit in UWE Studio — neben DnD-Welten für Projekte, 
 | `/life-brain/facts/[id]` | Life-Brain-Fakt-Detail |
 | `/admin/status` | Studio Security + RTX Exposure |
 
+### Life-Brain APIs (Studio-Auth, lokal)
+
+| Route | Zweck |
+|-------|--------|
+| `/api/life-brain/search` | Stichwort-/Filter-Suche |
+| `/api/life-brain/context` | Query-fokussierter Kontext für lokale Agenten (RTX only) |
+
 ## Mobile Navigation
 
 Bottom-Nav: **Heute · Capture · Suche · KI · Mehr**

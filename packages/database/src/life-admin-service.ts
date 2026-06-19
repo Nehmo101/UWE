@@ -11,6 +11,8 @@ import type {
   PersonalProjectCategory,
   PersonalProjectStatus,
   Prisma,
+  PersonalBrainDocument,
+  PersonalBrainFact,
   WorkshopProjectType,
   WorkshopStatus,
 } from "./generated/prisma/client";
