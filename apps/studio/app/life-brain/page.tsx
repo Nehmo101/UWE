@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import {
   createLifeAdminService,
+  parseStringArray,
   PERSONAL_BRAIN_CATEGORIES,
   PERSONAL_BRAIN_CATEGORY_LABELS,
   prisma,
@@ -52,6 +53,10 @@ export default async function LifeBrainPage() {
             Inhalt
             <textarea name="content" rows={5} required />
           </label>
+          <label>
+            Tags (kommagetrennt)
+            <input name="tags" placeholder="homelab, netzwerk" />
+          </label>
           <button type="submit" className="uwe-btn uwe-btn-primary">
             Dokument speichern
           </button>
@@ -72,6 +77,10 @@ export default async function LifeBrainPage() {
           <label>
             Inhalt
             <textarea name="content" rows={3} />
+          </label>
+          <label>
+            Tags (kommagetrennt)
+            <input name="tags" placeholder="material, 3d-print" />
           </label>
           <button type="submit" className="uwe-btn uwe-btn-secondary">
             Fakt speichern
@@ -95,6 +104,8 @@ export default async function LifeBrainPage() {
                   <h3>{doc.title}</h3>
                   <p className="uwe-dashboard-muted">
                     {doc.category ? PERSONAL_BRAIN_CATEGORY_LABELS[doc.category] ?? doc.category : "Allgemein"}
+                    {parseStringArray(doc.tags).length > 0 &&
+                      ` · ${parseStringArray(doc.tags).join(", ")}`}
                   </p>
                   {doc.content && <p>{doc.content}</p>}
                   <form action={deleteLifeBrainDocumentAction}>
@@ -114,7 +125,11 @@ export default async function LifeBrainPage() {
               {facts.map((fact) => (
                 <article key={fact.id} className="uwe-today-card">
                   <h3>{fact.title}</h3>
-                  <p className="uwe-dashboard-muted">{fact.factType}</p>
+                  <p className="uwe-dashboard-muted">
+                    {fact.factType}
+                    {parseStringArray(fact.tags).length > 0 &&
+                      ` · ${parseStringArray(fact.tags).join(", ")}`}
+                  </p>
                   {fact.content && <p>{fact.content}</p>}
                   <form action={deleteLifeBrainFactAction}>
                     <input type="hidden" name="id" value={fact.id} />

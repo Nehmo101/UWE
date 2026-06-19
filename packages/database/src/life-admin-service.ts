@@ -14,7 +14,7 @@ import type {
   WorkshopStatus,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
-import { toPrismaJsonValue } from "./json-utils";
+import { parseStringArray, toPrismaJsonValue } from "./json-utils";
 import {
   buildContractAlerts,
   summarizeContractCosts,
@@ -876,6 +876,50 @@ export class LifeAdminService {
       },
     });
     return this.db.personalBrainFact.delete({ where: { id } });
+  }
+
+  async searchPersonalBrain(
+    query: string,
+    options: { category?: string; limit?: number } = {},
+  ) {
+    const normalized = query.trim().toLocaleLowerCase("de");
+    const limit = options.limit ?? 25;
+
+    if (!normalized) {
+      return { documents: [], facts: [] };
+    }
+
+    const [documents, facts] = await Promise.all([
+      this.db.personalBrainDocument.findMany({
+        where: { category: options.category },
+        orderBy: [{ updatedAt: "desc" }],
+        take: Math.min(limit * 4, 200),
+      }),
+      this.db.personalBrainFact.findMany({
+        orderBy: [{ updatedAt: "desc" }],
+        take: Math.min(limit * 4, 200),
+      }),
+    ]);
+
+    const matchesQuery = (title: string, content: string, tags: unknown) => {
+      const haystack = [
+        title,
+        content,
+        ...parseStringArray(tags),
+      ]
+        .join(" ")
+        .toLocaleLowerCase("de");
+      return haystack.includes(normalized);
+    };
+
+    return {
+      documents: documents
+        .filter((doc) => matchesQuery(doc.title, doc.content, doc.tags))
+        .slice(0, limit),
+      facts: facts
+        .filter((fact) => matchesQuery(fact.title, fact.content, fact.tags))
+        .slice(0, limit),
+    };
   }
 
   async ensureDefaultGeneratorPresets() {
