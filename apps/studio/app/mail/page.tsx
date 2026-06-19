@@ -103,6 +103,29 @@ export default async function MailCenterPage() {
           <MailTestForm />
 
           <section style={{ marginTop: "2rem" }}>
+            <h2>Kommunikations-Flows</h2>
+            <p className="uwe-hint">
+              Alle Flows erzeugen einen bearbeitbaren Entwurf mit Vorschau — Versand nur nach expliziter Freigabe.
+            </p>
+            <ul className="uwe-linked-list">
+              <li>
+                <Link href="/mail/compose?kind=backup_warning">Backup-Warnung vorbereiten</Link>
+              </li>
+              <li>
+                <Link href="/mail/compose?kind=system_warning&title=Systempr%C3%BCfung&message=Bitte%20Admin-Status%20pr%C3%BCfen.">
+                  Systemwarnung vorbereiten
+                </Link>
+              </li>
+              <li>
+                <Link href="/contracts">Vertragserinnerung (von Vertragsseite)</Link>
+              </li>
+              <li>
+                <Link href="/workshop">Terrain-Verleih (von Werkstatt-Projekt)</Link>
+              </li>
+            </ul>
+          </section>
+
+          <section style={{ marginTop: "2rem" }}>
             <h2>System-Templates</h2>
             <ul className="uwe-linked-list">
               {templates.map((template) => (

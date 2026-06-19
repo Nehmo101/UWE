@@ -35,19 +35,32 @@ export function detectHardwareUrlWarnings(
     }
 
     const role = device.role?.toLowerCase() ?? "";
-    if (
-      role.includes("rtx") &&
-      device.publicUrl?.trim() &&
-      classifyEndpointUrl(device.publicUrl) !== "private" &&
-      classifyEndpointUrl(device.publicUrl) !== "loopback"
-    ) {
-      warnings.push({
-        deviceId: device.id,
-        deviceName: device.name,
-        field: "publicUrl",
-        url: device.publicUrl,
-        message: "RTX-Gerät mit nicht-lokaler URL — nur Heimnetz erlaubt.",
-      });
+    const isRtxRole = role.includes("rtx") || role.includes("ollama") || role.includes("local-ai");
+
+    if (device.publicUrl?.trim() && isRtxRole) {
+      const kind = classifyEndpointUrl(device.publicUrl);
+      if (kind !== "private" && kind !== "loopback") {
+        warnings.push({
+          deviceId: device.id,
+          deviceName: device.name,
+          field: "publicUrl",
+          url: device.publicUrl,
+          message: "RTX-Gerät mit nicht-lokaler URL — nur Heimnetz erlaubt.",
+        });
+      }
+    }
+
+    if (device.localUrl?.trim() && isRtxRole) {
+      const kind = classifyEndpointUrl(device.localUrl);
+      if (kind === "public") {
+        warnings.push({
+          deviceId: device.id,
+          deviceName: device.name,
+          field: "localUrl",
+          url: device.localUrl,
+          message: "RTX/Ollama localUrl ist öffentlich — niemals exposen.",
+        });
+      }
     }
   }
 
@@ -70,4 +83,29 @@ export function countOpenSetupSteps(
     }
     return true;
   }).length;
+}
+
+export function extractHardwareRunbook(metadata: unknown): string {
+  if (!metadata || typeof metadata !== "object" || !("runbook" in metadata)) {
+    return "";
+  }
+  const runbook = (metadata as { runbook?: unknown }).runbook;
+  return typeof runbook === "string" ? runbook : "";
+}
+
+export function mergeHardwareRunbookMetadata(
+  metadata: unknown,
+  runbook: string,
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  const trimmed = runbook.trim();
+  if (trimmed) {
+    base.runbook = trimmed;
+  } else {
+    delete base.runbook;
+  }
+  return base;
 }

@@ -29,6 +29,8 @@ pnpm test:security   # optional pre-flight
 
 UWE surfaces deployment issues via:
 
+- `/hardware` — Homelab Cockpit (Service-Status, Runbooks, Security Checklist, RTX-URL-Warnungen)
+- `/today` — System-Ampel mit DB/Backup/Cloudflare und kritischen Homelab-Warnungen
 - `packages/database/src/production-safety.ts` — startup warnings
 - `packages/database/src/studio-security.ts` — Studio exposure assessment
 - `packages/database/src/system-status.ts` — `cloudflareTunnel`, `trustProxy` flags

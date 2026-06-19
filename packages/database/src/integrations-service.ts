@@ -144,6 +144,31 @@ export class ImageStudioService {
       where: { projectId, targetType, targetId },
     });
   }
+
+  async saveDraft(input: {
+    projectId: string;
+    prompt?: string | null;
+    title?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }) {
+    return this.db.imageStudioProject.update({
+      where: { id: input.projectId },
+      data: {
+        status: "draft",
+        prompt: input.prompt?.trim() || undefined,
+        title: input.title?.trim() || undefined,
+        metadata: input.metadata === undefined ? undefined : toPrismaJsonValue(input.metadata),
+      },
+    });
+  }
+
+  async getLatestVersion(projectId: string) {
+    return this.db.imageStudioVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: "desc" },
+      include: { asset: true },
+    });
+  }
 }
 
 export function createImageStudioService(db: PrismaClient): ImageStudioService {

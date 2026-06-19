@@ -23,10 +23,30 @@ export function portalWorldBottomNav(
 }
 
 /** Bottom navigation for authenticated Portal pages */
-export function portalAuthBottomNav(active: "worlds" | "login"): PortalBottomNavItem[] {
+export function portalAuthBottomNav(
+  worldSlug: string | null,
+  active: "worlds" | "dashboard" | "sessions" | "notes" | "login",
+): PortalBottomNavItem[] {
+  const worldBase = worldSlug ? `/auth/worlds/${worldSlug}` : null;
   return [
     { label: "Welten", href: "/auth/worlds", icon: "🌍", active: active === "worlds" },
-    { label: "Portal", href: "/worlds", icon: "⌂" },
+    ...(worldBase
+      ? [
+          { label: "Dashboard", href: worldBase, icon: "⌂", active: active === "dashboard" },
+          {
+            label: "Sessions",
+            href: `${worldBase}/sessions`,
+            icon: "📜",
+            active: active === "sessions",
+          },
+          {
+            label: "Notizen",
+            href: `${worldBase}/notes`,
+            icon: "📝",
+            active: active === "notes",
+          },
+        ]
+      : []),
     { label: "Login", href: "/login", icon: "👤", active: active === "login" },
   ];
 }

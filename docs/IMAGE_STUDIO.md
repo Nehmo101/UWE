@@ -4,14 +4,15 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 
 ## Features (Phase 1 — nutzbar)
 
-- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate` und `variant`
+- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background` (RTX)
 - Provider-Routing: RTX Agent (lokal) → optional Cloud (OpenAI DALL-E, nur generate/variant)
-- Projekt-/Versions-Tracking in SQLite
-- Ergebnis als Asset in Medienbibliothek
-- Medienzuordnung zu Seiten, Labels, Sessions (via `ImageStudioLink`, API only)
+- Projekt-/Versions-Tracking mit **reviewbare Drafts** (`metadata.reviewStatus`)
+- Ergebnis als Asset in Medienbibliothek — **automatische Verknüpfung** zu verlinkten Seiten/Entitäten
+- **Prompt-Datenschutz:** `contextMode` steuert ob Welt-/Brain-Kontext an Provider geht (Cloud: nur `prompt_only`)
+- Medienzuordnung zu Seiten, Labels, Sessions, Capture, Werkstatt, Hardware, Verträge (via `ImageStudioLink`)
 - Mobile-first Admin-UI unter `/image-studio`
 
-**Nicht in Phase 1:** Canvas-Editor, Inpainting-UI, Masken, Cloud-Bearbeitung, Asset-Integration-Links in der UI.
+**Phase 2 (neu):** Asset-Adoption Action, Capture-Bild-Upload, Workshop-Label-Templates.
 
 ## ENV
 
@@ -31,7 +32,18 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 2. **local_rtx**: Nur RTX Agent — kein Cloud-Fallback.
 3. **cloud**: Nur wenn `IMAGE_STUDIO_ALLOW_CLOUD=true` und API-Key gesetzt.
 
-Brain/Weltdaten werden **nicht** an Cloud gesendet — nur der Bild-Prompt.
+Brain/Weltdaten werden **nicht** an Cloud gesendet — nur der Bild-Prompt im Modus `prompt_only`.
+
+### Prompt-Kontext (`contextMode`)
+
+| Modus | Cloud | RTX |
+|-------|-------|-----|
+| `prompt_only` | ✅ | ✅ |
+| `page_context` | ❌ | ✅ |
+| `brain_context` | ❌ | ✅ |
+| `object_context` | ❌ | ✅ |
+
+Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImageStudioPrompt()`, `validateImageContextForProvider()`.
 
 ## RTX Agent Erweiterung
 

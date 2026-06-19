@@ -15,6 +15,7 @@ import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
 import { toPrismaJsonValue } from "./json-utils";
 import { createUndoService } from "./undo-service";
+import { syncAiProposalReview } from "./review-bridge";
 
 export interface ApplyBrainProposalInput {
   runId: string;
@@ -92,6 +93,15 @@ export class AiReviewService {
       include: { aiRun: true },
     });
 
+    await syncAiProposalReview(this.db, {
+      proposalId: proposal.id,
+      worldId: input.worldId,
+      title: input.title ?? `KI-Vorschlag (${input.taskType})`,
+      summary: input.resultText.slice(0, 200),
+      resultText: input.resultText,
+      proposedByUserId: run.userId ?? null,
+    });
+
     return {
       runId: input.aiRunId,
       proposal: this.toView(proposal),
@@ -155,6 +165,17 @@ export class AiReviewService {
           status: json.status === "applied" ? "applied" : json.status === "discarded" ? "discarded" : "pending",
         },
       });
+
+      if (json.status !== "applied" && json.status !== "discarded") {
+        await syncAiProposalReview(this.db, {
+          proposalId: json.id,
+          worldId: run.worldId,
+          title: json.label,
+          summary: json.content.slice(0, 200),
+          resultText: json.content,
+          proposedByUserId: run.userId ?? null,
+        });
+      }
     }
   }
 

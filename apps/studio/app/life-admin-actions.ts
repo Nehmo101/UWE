@@ -7,7 +7,12 @@ import type {
   PersonalProjectCategory,
   PersonalProjectStatus,
 } from "@uwe/database/server";
-import { createLifeAdminService, createSettingsService, prisma } from "@uwe/database/server";
+import {
+  createLifeAdminService,
+  createSettingsService,
+  mergeHardwareRunbookMetadata,
+  prisma,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -135,6 +140,8 @@ export async function deleteContractAction(formData: FormData) {
 export async function createHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
+  const runbook = String(formData.get("runbook") || "").trim();
+
   await lifeAdmin().createHardwareDevice({
     name: String(formData.get("name") || "").trim(),
     role: String(formData.get("role") || ""),
@@ -146,6 +153,19 @@ export async function createHardwareAction(formData: FormData) {
     operatingSystem: String(formData.get("operatingSystem") || ""),
     errorNotes: String(formData.get("errorNotes") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
+    specs: String(formData.get("specs") || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+    metadata: mergeHardwareRunbookMetadata(
+      {
+        services: String(formData.get("services") || "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+      },
+      runbook,
+    ),
     setupSteps: String(formData.get("setupSteps") || "")
       .split("\n")
       .map((line) => line.trim())
@@ -160,6 +180,22 @@ export async function updateHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
   const id = String(formData.get("id"));
+  const servicesRaw = String(formData.get("services") || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const specsRaw = String(formData.get("specs") || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const device = await lifeAdmin().getHardwareDevice(id);
+  const baseMetadata =
+    device?.metadata && typeof device.metadata === "object"
+      ? { ...(device.metadata as Record<string, unknown>) }
+      : {};
+  const runbook = String(formData.get("runbook") || "");
+
   await lifeAdmin().updateHardwareDevice(id, {
     name: String(formData.get("name") || "").trim(),
     role: String(formData.get("role") || ""),
@@ -169,9 +205,38 @@ export async function updateHardwareAction(formData: FormData) {
     localUrl: String(formData.get("localUrl") || "").trim() || null,
     publicUrl: String(formData.get("publicUrl") || "").trim() || null,
     operatingSystem: String(formData.get("operatingSystem") || ""),
+    specs: specsRaw.length > 0 ? specsRaw : null,
     errorNotes: String(formData.get("errorNotes") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
+    metadata: mergeHardwareRunbookMetadata(
+      { ...baseMetadata, services: servicesRaw },
+      runbook,
+    ),
   });
+  revalidateAdminPaths();
+}
+
+export async function addHardwareErrorAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const deviceId = String(formData.get("deviceId"));
+  const affectedRaw = String(formData.get("affectedServices") || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  await lifeAdmin().addHardwareErrorEntry(deviceId, {
+    problem: String(formData.get("problem") || "").trim(),
+    resolution: String(formData.get("resolution") || "").trim() || undefined,
+    affectedServices: affectedRaw.length > 0 ? affectedRaw : undefined,
+  });
+  revalidateAdminPaths();
+}
+
+export async function recordHardwareCheckAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await lifeAdmin().recordHardwareCheck(String(formData.get("deviceId")));
   revalidateAdminPaths();
 }
 

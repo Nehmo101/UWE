@@ -31,6 +31,10 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   seed_applied: "Seed ausgeführt",
   ai_proposal_applied: "KI-Vorschlag übernommen",
   ai_proposal_discarded: "KI-Vorschlag verworfen",
+  review_submitted: "Review eingereicht",
+  review_approved: "Review freigegeben",
+  review_rejected: "Review abgelehnt",
+  review_commented: "Review kommentiert",
   error: "Fehler",
   warning: "Warnung",
 };

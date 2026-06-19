@@ -35,6 +35,10 @@ export const assetIdParamSchema = z.object({
   assetId: idSchema,
 });
 
+export const captureIdParamSchema = z.object({
+  captureId: idSchema,
+});
+
 export const searchQuerySchema = z.object({
   q: z.string().trim().max(200).optional().default(""),
 });
@@ -226,6 +230,14 @@ export const playerNoteIdSchema = z.object({
 
 export const playerNoteUpdateSchema = playerNoteIdSchema.extend({
   content: nonEmptyString.max(20_000),
+});
+
+export const playerCharacterBlockSchema = z.object({
+  worldSlug: slugSchema,
+  pageSlug: slugSchema,
+  blockId: idSchema,
+  content: nonEmptyString.max(50_000),
+  returnPath: z.string().trim().max(500).optional(),
 });
 
 export const assetFileQuerySchema = z.object({

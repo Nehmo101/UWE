@@ -8,17 +8,29 @@ import type { MailComposeKind } from "@uwe/mail";
 import {
   guardStudioMutation,
   idSchema,
+  optionalString,
   parseBody,
   slugSchema,
 } from "@uwe/security";
 import { z } from "zod";
 
-const COMPOSE_KINDS = ["session_recap", "handout", "share_link"] as const;
+const COMPOSE_KINDS = [
+  "session_recap",
+  "session_reminder",
+  "handout",
+  "share_link",
+  "contract_reminder",
+  "backup_warning",
+  "system_warning",
+  "terrain_rental",
+] as const;
 
 const mailComposeBodySchema = z.object({
   kind: z.enum(COMPOSE_KINDS),
-  worldSlug: slugSchema,
-  sourceId: idSchema,
+  worldSlug: slugSchema.optional(),
+  sourceId: idSchema.optional(),
+  title: optionalString,
+  message: optionalString,
 });
 
 export async function POST(request: Request) {
@@ -29,12 +41,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   const compose = createMailComposeService(prisma);
-  const draft = await compose.compose(
-    parsed.data.kind as MailComposeKind,
-    parsed.data.worldSlug,
-    parsed.data.sourceId,
-    process.env.NEXT_PUBLIC_PORTAL_URL,
-  );
+  const draft = await compose.compose(parsed.data.kind as MailComposeKind, {
+    worldSlug: parsed.data.worldSlug,
+    sourceId: parsed.data.sourceId,
+    portalBaseUrl: process.env.NEXT_PUBLIC_PORTAL_URL,
+    title: parsed.data.title ?? undefined,
+    message: parsed.data.message ?? undefined,
+  });
 
   if (!draft) {
     return NextResponse.json({ error: "Quelle nicht gefunden." }, { status: 404 });

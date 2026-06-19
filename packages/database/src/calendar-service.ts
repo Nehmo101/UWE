@@ -290,12 +290,29 @@ export class CalendarService {
     return decryptSecret(feed.credentialsEnc, this.encryptionSecret);
   }
 
+  async unsyncSessionFromCalendar(sessionId: string) {
+    const linked = await this.db.calendarEvent.findMany({
+      where: { sessionId },
+      select: { id: true },
+    });
+    if (linked.length === 0) {
+      return { removed: 0 };
+    }
+    await this.db.calendarEvent.deleteMany({ where: { sessionId } });
+    return { removed: linked.length };
+  }
+
   async syncSessionToCalendar(sessionId: string) {
     const session = await this.db.gameSession.findUnique({
       where: { id: sessionId },
       include: { calendarEvents: true },
     });
-    if (!session || !session.date) {
+    if (!session) {
+      return null;
+    }
+
+    if (!session.date) {
+      await this.unsyncSessionFromCalendar(sessionId);
       return null;
     }
 

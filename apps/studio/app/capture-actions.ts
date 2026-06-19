@@ -1,7 +1,12 @@
 "use server";
 
 import type { CaptureType } from "@uwe/database/server";
-import { createLifeAdminService, prisma } from "@uwe/database/server";
+import {
+  createCaptureTriageService,
+  createLifeAdminService,
+  prisma,
+  type CaptureTriageAction,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -22,6 +27,28 @@ function lifeAdmin() {
   return createLifeAdminService(prisma);
 }
 
+function triageService() {
+  return createCaptureTriageService(prisma);
+}
+
+function revalidateCapturePaths() {
+  revalidatePath("/today");
+  revalidatePath("/capture");
+}
+
+function parseMetadataJson(raw: string | null): Record<string, unknown> | null {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export async function createCaptureAction(formData: FormData) {
   assertStudioTrusted();
 
@@ -29,22 +56,46 @@ export async function createCaptureAction(formData: FormData) {
   const content = String(formData.get("content") || "").trim();
   const captureTypeRaw = String(formData.get("captureType") || "quick_note");
   const url = String(formData.get("url") || "").trim() || null;
+  const storageKey = String(formData.get("storageKey") || "").trim() || null;
+  const captureIntent = String(formData.get("captureIntent") || "").trim();
   const captureType = VALID_CAPTURE_TYPES.has(captureTypeRaw as CaptureType)
     ? (captureTypeRaw as CaptureType)
     : "quick_note";
 
-  await lifeAdmin().createCapture({
-    title: title || content.slice(0, 80) || "Capture",
+  const metadata: Record<string, unknown> = {};
+  if (captureIntent) metadata.captureIntent = captureIntent;
+  const extraMetadata = parseMetadataJson(String(formData.get("metadataJson") || ""));
+  if (extraMetadata) Object.assign(metadata, extraMetadata);
+
+  const requiresContent = captureType !== "file_image" && captureType !== "link";
+  if (requiresContent && !content && !title) {
+    throw new Error("Inhalt oder Titel erforderlich.");
+  }
+  if (captureType === "link" && !url) {
+    throw new Error("Link-URL erforderlich.");
+  }
+  if (captureType === "file_image" && !storageKey) {
+    throw new Error("Datei-Upload erforderlich.");
+  }
+
+  const capture = await lifeAdmin().createCapture({
+    title: title || content.slice(0, 80) || url?.slice(0, 80) || "Capture",
     content,
     captureType,
     url,
+    storageKey,
+    metadata: Object.keys(metadata).length > 0 ? metadata : null,
   });
 
-  revalidatePath("/today");
-  revalidatePath("/capture");
+  await triageService().ensureAiProposal(capture.id);
+
+  revalidateCapturePaths();
 
   const returnTo = String(formData.get("returnTo") || "/capture");
-  redirect(returnTo);
+  if (returnTo.includes("/capture/")) {
+    redirect(returnTo);
+  }
+  redirect(`/capture/${capture.id}`);
 }
 
 export async function updateCaptureStatusAction(formData: FormData) {
@@ -55,8 +106,7 @@ export async function updateCaptureStatusAction(formData: FormData) {
 
   await lifeAdmin().updateCapture(id, { status });
 
-  revalidatePath("/today");
-  revalidatePath("/capture");
+  revalidateCapturePaths();
 }
 
 export async function deleteCaptureAction(formData: FormData) {
@@ -64,6 +114,65 @@ export async function deleteCaptureAction(formData: FormData) {
 
   const id = String(formData.get("id"));
   await lifeAdmin().deleteCapture(id);
-  revalidatePath("/today");
-  revalidatePath("/capture");
+  revalidateCapturePaths();
+  redirect("/capture");
+}
+
+export async function generateCaptureProposalAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  await triageService().ensureAiProposal(id);
+  revalidateCapturePaths();
+
+  const returnTo = String(formData.get("returnTo") || `/capture/${id}`);
+  redirect(returnTo);
+}
+
+export async function reviewCaptureProposalAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status")) as "accepted" | "rejected";
+  await triageService().updateAiProposalStatus(id, status);
+  revalidateCapturePaths();
+
+  const returnTo = String(formData.get("returnTo") || `/capture/${id}`);
+  redirect(returnTo);
+}
+
+export async function triageCaptureAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  const action = String(formData.get("action")) as CaptureTriageAction;
+  const worldId = String(formData.get("worldId") || "").trim() || null;
+  const pageId = String(formData.get("pageId") || "").trim() || null;
+  const hardwareDeviceId = String(formData.get("hardwareDeviceId") || "").trim() || null;
+  const workshopProjectTypeRaw = String(formData.get("workshopProjectType") || "").trim();
+  const projectCategoryRaw = String(formData.get("projectCategory") || "").trim();
+  const lifeBrainAsDocument = formData.get("lifeBrainAsDocument") === "on";
+
+  const result = await triageService().executeTriage(id, action, {
+    worldId,
+    pageId,
+    hardwareDeviceId,
+    workshopProjectType: workshopProjectTypeRaw
+      ? (workshopProjectTypeRaw as "dnd_terrain" | "miniature" | "printing_3d" | "diorama" | "artwork" | "other")
+      : undefined,
+    projectCategory: projectCategoryRaw
+      ? (projectCategoryRaw as "uwe" | "hardware_homelab" | "dnd" | "art_workshop" | "printing_3d" | "other")
+      : undefined,
+    lifeBrainAsDocument: lifeBrainAsDocument || undefined,
+  });
+
+  revalidateCapturePaths();
+  revalidatePath("/projects");
+  revalidatePath("/workshop");
+  revalidatePath("/contracts");
+  revalidatePath("/hardware");
+  revalidatePath("/life-brain");
+
+  const returnTo = String(formData.get("returnTo") || "").trim();
+  redirect(returnTo || result.redirectPath);
 }

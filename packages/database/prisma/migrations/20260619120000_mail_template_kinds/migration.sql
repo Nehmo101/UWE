@@ -1,0 +1,1 @@
+-- MailTemplateKind enum extended in Prisma schema (SQLite stores as TEXT, no column change).

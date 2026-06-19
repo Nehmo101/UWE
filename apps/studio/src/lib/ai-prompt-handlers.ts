@@ -16,7 +16,7 @@ import {
   createLifeAdminService,
   createUweRepository,
   getSystemSettings,
-  loadPersonalBrainPromptContext,
+  loadPersonalBrainAgentContext,
   prisma,
   resolveLocalOnlyMode,
 } from "@uwe/database/server";
@@ -156,9 +156,12 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
       repo,
       brainStore,
       loadPersonalBrainContext: () =>
-        loadPersonalBrainPromptContext(
-          () => lifeAdmin.listPersonalBrainDocuments({ limit: 30 }),
-          () => lifeAdmin.listPersonalBrainFacts({ limit: 30 }),
+        loadPersonalBrainAgentContext(
+          (searchQuery, limit) =>
+            lifeAdmin.searchPersonalBrainDocumentsForContext(searchQuery, limit),
+          (searchQuery, limit) =>
+            lifeAdmin.searchPersonalBrainFactsForContext(searchQuery, limit),
+          { query: prompt, limit: 12 },
         ),
     },
     {

@@ -169,6 +169,11 @@ export default async function WorkshopPage({ searchParams }: Props) {
                   <p>
                     <Link href={`/workshop/${workshop.id}`}>Cockpit öffnen →</Link>
                   </p>
+                  <p>
+                    <Link href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}>
+                      Terrain-Verleih Mail vorbereiten
+                    </Link>
+                  </p>
                 </article>
               );
             })}
