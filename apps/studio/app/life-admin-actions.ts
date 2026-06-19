@@ -126,6 +126,14 @@ export async function deleteWorkshopAction(formData: FormData) {
   revalidateAdminPaths();
 }
 
+export async function advanceWorkshopStatusAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  await lifeAdmin().advanceWorkshopStatus(id);
+  revalidateAdminPaths();
+}
+
 export async function createContractAction(formData: FormData) {
   assertStudioTrusted();
 

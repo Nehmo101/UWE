@@ -146,6 +146,23 @@ export const WORKSHOP_STATUS_LABELS: Record<WorkshopStatus, string> = {
   archived: "Archiviert",
 };
 
+/** Primary happy-path workflow for quick status advancement in the Werkstatt UI. */
+export const WORKSHOP_STATUS_FLOW: WorkshopStatus[] = [
+  "idea",
+  "planned",
+  "material_missing",
+  "in_progress",
+  "done",
+];
+
+export function getNextWorkshopStatus(current: WorkshopStatus): WorkshopStatus | null {
+  const index = WORKSHOP_STATUS_FLOW.indexOf(current);
+  if (index === -1 || index >= WORKSHOP_STATUS_FLOW.length - 1) {
+    return null;
+  }
+  return WORKSHOP_STATUS_FLOW[index + 1] ?? null;
+}
+
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
   active: "Aktiv",
   cancelled: "Gekündigt",
@@ -589,7 +606,73 @@ export class LifeAdminService {
       },
       orderBy: [{ updatedAt: "desc" }],
       take: options.limit ?? 50,
+      include: {
+        world: { select: { slug: true, name: true } },
+      },
     });
+  }
+
+  async getWorkshopStatusCounts(): Promise<Record<WorkshopStatus, number>> {
+    const rows = await this.db.workshopProject.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    });
+
+    const counts: Record<WorkshopStatus, number> = {
+      idea: 0,
+      planned: 0,
+      material_missing: 0,
+      in_progress: 0,
+      paused: 0,
+      done: 0,
+      archived: 0,
+    };
+
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+    }
+
+    return counts;
+  }
+
+  async getWorkshopFilterCounts(): Promise<{
+    all: number;
+    active: number;
+    material_missing: number;
+    done: number;
+    dnd: number;
+  }> {
+    const [all, active, materialMissing, done, dnd] = await Promise.all([
+      this.db.workshopProject.count(),
+      this.db.workshopProject.count({
+        where: { status: { in: ["in_progress", "planned", "material_missing", "idea"] } },
+      }),
+      this.db.workshopProject.count({ where: { status: "material_missing" } }),
+      this.db.workshopProject.count({ where: { status: "done" } }),
+      this.db.workshopProject.count({ where: { worldId: { not: null } } }),
+    ]);
+
+    return {
+      all,
+      active,
+      material_missing: materialMissing,
+      done,
+      dnd,
+    };
+  }
+
+  async advanceWorkshopStatus(id: string) {
+    const workshop = await this.getWorkshopProject(id);
+    if (!workshop) {
+      throw new Error("Workshop project not found");
+    }
+
+    const nextStatus = getNextWorkshopStatus(workshop.status);
+    if (!nextStatus) {
+      throw new Error("No next workshop status in workflow");
+    }
+
+    return this.updateWorkshopProject(id, { status: nextStatus });
   }
 
   async createWorkshopProject(input: CreateWorkshopProjectInput) {

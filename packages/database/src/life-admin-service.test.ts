@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { createLifeAdminService } from "./life-admin-service";
+import { createLifeAdminService, getNextWorkshopStatus } from "./life-admin-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 describe("life admin service", () => {
@@ -188,5 +188,17 @@ describe("life admin service", () => {
     const counts = await service.getCaptureStatusCounts();
     assert.ok(counts.inbox >= 1);
     assert.ok(counts.archived >= 1);
+  });
+
+  it("advances workshop status along workflow", async () => {
+    const workshop = await service.createWorkshopProject({
+      title: "Hill tile",
+      projectType: "dnd_terrain",
+      status: "idea",
+    });
+
+    const advanced = await service.advanceWorkshopStatus(workshop.id);
+    assert.equal(advanced.status, "planned");
+    assert.equal(getNextWorkshopStatus("idea"), "planned");
   });
 });
