@@ -139,6 +139,40 @@ describe("life admin service", () => {
     assert.ok(Array.isArray(summary.recentCaptures));
   });
 
+  it("updates capture linked status and sets triagedAt", async () => {
+    const capture = await service.createCapture({ title: "Linked capture" });
+    const updated = await service.updateCapture(capture.id, { status: "linked" });
+    assert.equal(updated.status, "linked");
+    assert.ok(updated.triagedAt);
+  });
+
+  it("archives capture without triagedAt bump", async () => {
+    const capture = await service.createCapture({ title: "Archive me" });
+    const updated = await service.updateCapture(capture.id, { status: "archived" });
+    assert.equal(updated.status, "archived");
+  });
+
+  it("searches personal brain documents and facts", async () => {
+    await service.createPersonalBrainDocument({
+      title: "Router VLAN setup",
+      content: "VLAN 10 for gaming, VLAN 20 for IoT",
+      category: "homelab",
+      tags: ["network", "homelab"],
+    });
+    await service.createPersonalBrainFact({
+      title: "Filament brand",
+      content: "Use matte PLA for terrain bases",
+      factType: "material",
+      tags: ["3d-print"],
+    });
+
+    const results = await service.searchPersonalBrain("vlan", { limit: 5 });
+    assert.ok(results.documents.some((doc) => doc.title.includes("Router")));
+
+    const factResults = await service.searchPersonalBrain("filament", { limit: 5 });
+    assert.ok(factResults.facts.some((fact) => fact.title.includes("Filament")));
+  });
+
   it("deletes capture and related links", async () => {
     const capture = await service.createCapture({ title: "Delete me" });
     const project = await service.createPersonalProject({ name: "Target" });
