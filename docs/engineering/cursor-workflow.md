@@ -22,6 +22,11 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 
 | Skill | Domain |
 |-------|--------|
+| `ci-quality-gate` | Before push / PR — full `pnpm quality` |
+| `uwe-orchestrator` | Multi-domain planning, subagent sequencing |
+| `daily-admin-os` | Today, Capture, Projects, Workshop, Contracts, Hardware |
+| `life-brain-retrieval` | Personal brain embeddings, RTX-only retrieval |
+| `image-studio-workflows` | Image Studio jobs, assets, Capture pipeline |
 | `uwe-architecture` | Monorepo layout, package boundaries |
 | `uwe-feature-implementation` | End-to-end feature delivery |
 | `api-routes` | Studio/Portal REST routes, guards |
@@ -33,13 +38,12 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `dnd-content-consistency-check` | Canon, leaks, generator QA |
 | `portal-player-view` | Player wiki, share links |
 | `database-migration-review` | Prisma migrations |
-| `ci-quality-gate` | `pnpm quality` before push |
 | `security-audit` | Structured security review |
 | `pr-review` | PR review checklist |
 | `deployment-cloudflare-check` | Tunnel + Access + ENV |
 | `hardware-homelab` | Host scripts, RTX, backups |
 
-Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md).
+Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md). Product rollout order: [product-orchestrator-plan.md](./product-orchestrator-plan.md).
 
 Agents should read the relevant skill when starting a specialized task.
 
