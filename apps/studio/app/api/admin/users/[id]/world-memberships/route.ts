@@ -7,7 +7,7 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-const VALID_WORLD_ROLES = ["owner", "dm", "player"] as const;
+const VALID_WORLD_ROLES = ["owner", "dm", "co_dm", "player"] as const;
 
 export async function POST(request: Request, context: RouteContext) {
   const authContext = await resolveStudioApiAuthContext(request);

@@ -504,6 +504,8 @@ export type {
   DungeonPrepStatus,
 } from "./dungeon-cockpit";
 
+// --- Labels (split candidate: packages/database/src/server/labels.ts) ---
+
 export {
   createLabelService,
   LabelService,
@@ -785,6 +787,30 @@ export type {
 } from "./player-note-service";
 
 export {
+  createReviewService,
+  ReviewService,
+  CONTENT_REVIEW_STATUS_LABELS,
+  CONTENT_REVIEW_SOURCE_LABELS,
+} from "./review-service";
+
+export type {
+  ContentReviewView,
+  ReviewCommentView,
+  CreateContentReviewInput,
+  ListReviewsOptions,
+} from "./review-service";
+
+export {
+  resolveReview,
+  syncAiProposalReview,
+  syncPlayerNoteReview,
+  createPortalUnlockReview,
+  createCoDmChangeReview,
+} from "./review-bridge";
+
+export type { ResolveReviewResult } from "./review-bridge";
+
+export {
   createSpotifyConnectionService,
   isSpotifyOAuthConfigured,
   resolveSpotifyOAuthConfig,
@@ -810,6 +836,8 @@ export type {
   JobType,
   ListJobsOptions,
 } from "./job-service";
+
+// --- Daily Admin OS / Life Admin (split candidate: life-admin-service.ts) ---
 
 export {
   createLifeAdminService,
@@ -874,6 +902,25 @@ export type {
   GeneratorPreset,
   GeneratorOutput,
 } from "./life-admin-service";
+
+export {
+  buildCaptureAiProposal,
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  CAPTURE_UPLOAD_NAMESPACE,
+  createCaptureTriageService,
+  CaptureTriageService,
+  parseCaptureAiProposal,
+  QUICK_CAPTURE_TYPE_OPTIONS,
+} from "./capture-triage-service";
+
+export type {
+  CaptureAiProposal,
+  CaptureProposalStatus,
+  CaptureProposalTarget,
+  CaptureTriageAction,
+  CaptureTriageOptions,
+  CaptureTriageResult,
+} from "./capture-triage-service";
 
 export type { ContractBillingInterval } from "./generated/prisma/client";
 
@@ -967,6 +1014,8 @@ export type {
   ListAiRunsOptions,
   AiRunStatus,
 } from "./ai-run-service";
+
+// --- DnD Brain store (split candidate: server/brain-store.ts) ---
 
 export {
   createBrainStoreService,
