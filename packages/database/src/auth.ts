@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { AccessContext, AuthUser, PreviewOptions } from "@uwe/auth";
+import type { AccessContext, AuthUser, PreviewOptions, WorldMemberRole } from "@uwe/auth";
 import {
   buildAccessContext,
   canCreatePlayerNote,
@@ -80,7 +80,7 @@ export interface UpdateUserInput {
 export interface UpsertWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: "owner" | "dm" | "player";
+  role: WorldMemberRole;
   characterName?: string | null;
 }
 
@@ -97,7 +97,7 @@ export interface AdminUserView {
   worldMemberships: Array<{
     id: string;
     worldId: string;
-    role: "owner" | "dm" | "player";
+    role: WorldMemberRole;
     characterName: string | null;
     world: { id: string; name: string; slug: string };
   }>;
@@ -106,7 +106,7 @@ export interface AdminUserView {
 export interface CreateWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: "owner" | "dm" | "player";
+  role: WorldMemberRole;
   characterName?: string | null;
 }
 

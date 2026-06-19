@@ -787,6 +787,30 @@ export type {
 } from "./player-note-service";
 
 export {
+  createReviewService,
+  ReviewService,
+  CONTENT_REVIEW_STATUS_LABELS,
+  CONTENT_REVIEW_SOURCE_LABELS,
+} from "./review-service";
+
+export type {
+  ContentReviewView,
+  ReviewCommentView,
+  CreateContentReviewInput,
+  ListReviewsOptions,
+} from "./review-service";
+
+export {
+  resolveReview,
+  syncAiProposalReview,
+  syncPlayerNoteReview,
+  createPortalUnlockReview,
+  createCoDmChangeReview,
+} from "./review-bridge";
+
+export type { ResolveReviewResult } from "./review-bridge";
+
+export {
   createSpotifyConnectionService,
   isSpotifyOAuthConfigured,
   resolveSpotifyOAuthConfig,
