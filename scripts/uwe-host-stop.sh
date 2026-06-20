@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop UWE home-host processes without killing unrelated Node apps.
+# Stop UWE via the official production systemd service (uwe.service).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,31 +13,34 @@ PORTAL_PORT="${PORTAL_PORT:-3001}"
 
 stopped=0
 
-if uwe_host_systemd_active; then
-  if [[ "${EUID:-$(id -u)}" -eq 0 ]] || command -v sudo >/dev/null 2>&1; then
-    uwe_host_info "Stoppe systemd-Dienst $SYSTEMD_UNIT …"
+# Stop legacy service if still running (prevent parallel services)
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl is-active --quiet "$LEGACY_SYSTEMD_UNIT" 2>/dev/null; then
+    uwe_host_warn "Veralteter Dienst $LEGACY_SYSTEMD_UNIT läuft noch — stoppe …"
     if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-      systemctl stop "$SYSTEMD_UNIT"
+      systemctl stop "$LEGACY_SYSTEMD_UNIT" || true
     else
-      sudo systemctl stop "$SYSTEMD_UNIT"
+      sudo systemctl stop "$LEGACY_SYSTEMD_UNIT" || true
     fi
     stopped=1
-  else
-    uwe_host_warn "systemd-Dienst $SYSTEMD_UNIT läuft — stoppen mit: sudo systemctl stop $SYSTEMD_UNIT"
   fi
 fi
 
-if uwe_host_is_running || [[ -f "$UWE_HOST_SUPERVISOR_PID_FILE" ]]; then
-  uwe_host_stop_manual_processes
-  uwe_host_stop_uwe_processes_by_cmdline
+if uwe_host_systemd_active; then
+  uwe_host_info "Stoppe $SYSTEMD_UNIT …"
+  uwe_host_run_systemctl stop
   stopped=1
+elif uwe_host_systemd_exists; then
+  uwe_host_info "$SYSTEMD_UNIT ist bereits gestoppt."
+else
+  uwe_host_warn "Service $SYSTEMD_UNIT nicht gefunden."
 fi
 
 sleep 1
 
 if uwe_host_port_listening "$STUDIO_PORT" || uwe_host_port_listening "$PORTAL_PORT"; then
   uwe_host_warn "Port ${STUDIO_PORT} oder ${PORTAL_PORT} ist noch belegt."
-  echo "Manuell prüfen: ss -ltnp | grep -E ':${STUDIO_PORT}|:${PORTAL_PORT}'" >&2
+  echo "Prüfen: ss -ltnp | grep -E ':${STUDIO_PORT}|:${PORTAL_PORT}'" >&2
   exit 1
 fi
 

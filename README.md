@@ -114,7 +114,7 @@ Einmaliges bzw. wiederholbares Linux-Host-Setup für den **alten UWE-Host-Laptop
 | Voraussetzung | Hinweis |
 |---------------|---------|
 | Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
-| Node.js ≥ 20 | Runtime für Build; Production nutzt standalone |
+| Node.js 22 (Host) | Production-Setup installiert Node 22; Projekt-Runtime ≥ 20 |
 | pnpm ≥ 10 | `corepack enable && corepack prepare pnpm@latest --activate` |
 | git | Repository typischerweise unter `/opt/uwe` |
 | root/sudo | Script muss als root laufen |
@@ -168,15 +168,17 @@ Details: [docs/PRODUCTION.md](docs/PRODUCTION.md), [docs/SECURITY_QA_MATRIX.md](
 
 ### Was das Script macht
 
-1. Prüft root, Node/pnpm/git und erkennt das Repo (`/opt/uwe` oder Pfad relativ zum Script)
-2. Legt User `uwe`, Verzeichnisse `/etc/uwe`, `/var/lib/uwe`, `/var/log/uwe`, `/var/backups/uwe` an
-3. Erzeugt oder aktualisiert `/etc/uwe/uwe.env` (Platzhalter aus `.env.production.example`, falls vorhanden)
-4. Setzt `HOST=0.0.0.0`, `HOSTNAME=0.0.0.0`, `DATABASE_URL=file:/var/lib/uwe/uwe.db` und korrekte Rechte (`root:uwe`, `640` auf der Env-Datei)
-5. Führt `pnpm install`, Prisma `generate` (mit gefundenem `schema.prisma`), `migrate deploy` und `pnpm build` aus
-6. Installiert/aktualisiert `uwe.service` und `deploy/scripts/start-uwe.sh` (kein hartes `127.0.0.1`)
-7. Startet systemd, optional UFW-Regel, gibt Status und URLs aus
+1. Prüft root, erkennt das Repo (`/opt/uwe` oder Pfad relativ zum Script)
+2. Migriert ggf. veralteten `uwe-host.service` → `uwe.service`
+3. Legt User `uwe`, Verzeichnisse `/etc/uwe`, `/var/lib/uwe`, `/var/log/uwe`, `/var/backups/uwe` an
+4. Ergänzt `/etc/uwe/uwe.env` (fehlende Variablen/Secrets — **überschreibt keine** bestehenden Werte)
+5. Führt `pnpm install`, Prisma `generate`, `migrate deploy` und `pnpm build` aus
+6. Installiert/aktualisiert `uwe.service` (LAN-Bind `0.0.0.0`, kein `127.0.0.1`)
+7. Startet systemd, optional UFW-Regel, Status und URLs
 
-Details zur Härtung mit Cloudflare Tunnel: [docs/deployment-hardening.md](docs/deployment-hardening.md).
+**Modi:** `--quick` (schnelles Update), `--repair` (Node/pnpm + node_modules), `--healthcheck` (read-only), `--fresh` (Reset mit `DELETE-UWE`-Bestätigung).
+
+Details: [docs/UWE_HOST_LINUX_STARTUP.md](docs/UWE_HOST_LINUX_STARTUP.md), Cloudflare: [docs/deployment-hardening.md](docs/deployment-hardening.md).
 
 ### Troubleshooting
 
@@ -196,7 +198,10 @@ curl -i http://127.0.0.1:3000/
 sudo -u uwe test -r /etc/uwe/uwe.env && echo OK
 
 # Setup erneut ausführen (idempotent)
-sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh
+sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh --quick
+
+# Healthcheck (read-only)
+sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh --healthcheck
 ```
 
 ### Nach Git-Pull neu bauen
@@ -204,26 +209,28 @@ sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh
 ```bash
 cd /opt/uwe
 git pull
-sudo bash ./deploy/scripts/setup-uwe-host.sh
+sudo bash ./deploy/scripts/setup-uwe-host.sh --quick
 ```
+
+Weitere Modi: `--repair` (gründliche Reparatur), `--healthcheck` (read-only), `--fresh` (destruktiver Reset). Siehe [docs/UWE_HOST_LINUX_STARTUP.md](docs/UWE_HOST_LINUX_STARTUP.md).
 
 ---
 
-## Linux Homelab (pnpm host scripts)
+## Linux Production Host (pnpm host scripts)
 
-Leichtgewichtiges Start/Stop für einen Linux-Rechner im Heimnetz — ohne systemd-Setup, direkt aus dem geklonten Repo. Nutzt `.env`, baut bei Bedarf, startet Studio + Portal im LAN (`0.0.0.0`).
+Convenience-Wrapper um den offiziellen **Production-Flow** (`uwe.service` + `/etc/uwe/uwe.env`). Startet **keinen** parallelen Legacy-Prozess.
 
 ```bash
-cd /opt/uwe   # oder dein Klone
-cp .env.example .env
-pnpm install --frozen-lockfile
-pnpm host:start          # Studio :3000, Portal :3001
-pnpm host:status         # URLs + Prozess-Status
-pnpm host:stop           # sauber stoppen
-pnpm host:install-autostart   # optional: systemd user/service
+cd /opt/uwe
+pnpm host:start          # sudo systemctl start uwe
+pnpm host:status         # Service-Status + Erreichbarkeit
+pnpm host:stop           # sudo systemctl stop uwe
+pnpm host:install-autostart   # ruft setup-uwe-host.sh auf
 ```
 
-Persistente Daten wie in der Docker-Sektion (`./data/*`, `./exports`). Für produktionsnahes systemd unter `/var/lib/uwe` siehe [UWE Host One-Shot Setup](#uwe-host-one-shot-setup) oben.
+Erstinstallation und Updates: [UWE Host One-Shot Setup](#uwe-host-one-shot-setup) oben bzw. `docs/UWE_HOST_LINUX_STARTUP.md`.
+
+Persistente Produktionsdaten: `/var/lib/uwe` (DB, Uploads), `/var/backups/uwe` (Backups).
 
 ---
 

@@ -16,6 +16,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
+    // Legacy unit kept for migration docs only — production uses uwe.service
     assert.ok(fs.existsSync(path.join(root, "deploy/linux/uwe-host.service")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-stop.sh")));
@@ -23,6 +24,22 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "scripts/install-uwe-autostart.sh")));
     assert.ok(fs.existsSync(path.join(root, "VERSION")));
     assert.ok(fs.existsSync(path.join(root, "scripts/docker-entrypoint.sh")));
+  });
+
+  it("setup-uwe-host.sh supports production modes", () => {
+    const setup = fs.readFileSync(path.join(root, "deploy/scripts/setup-uwe-host.sh"), "utf8");
+    for (const flag of ["--quick", "--repair", "--fresh", "--healthcheck"]) {
+      assert.match(setup, new RegExp(flag.replace("-", "\\-")));
+    }
+    assert.match(setup, /SYSTEMD_UNIT="uwe\.service"/);
+    assert.match(setup, /UWE_ENV_FILE="\/etc\/uwe\/uwe\.env"/);
+  });
+
+  it("host scripts target uwe.service not uwe-host.service", () => {
+    const lib = fs.readFileSync(path.join(root, "scripts/uwe-host-lib.sh"), "utf8");
+    assert.match(lib, /SYSTEMD_UNIT="\$\{SYSTEMD_UNIT:-uwe\.service\}"/);
+    const start = fs.readFileSync(path.join(root, "scripts/uwe-host-start.sh"), "utf8");
+    assert.doesNotMatch(start, /nohup.*uwe-host-run/);
   });
 
   it("defines host convenience scripts in root package.json", () => {

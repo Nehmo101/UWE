@@ -42,9 +42,18 @@ Details: [docs/windows-install.md](windows-install.md)
 
 Siehe [Schnellstart (Docker)](#schnellstart-docker--empfohlen) unten. Daten bleiben in Docker-Volume und Bind-Mounts erhalten.
 
-### Option C: Manueller Production-Build (Node.js)
+### Option C: Linux Production Host (systemd)
 
-**Linux Host-Laptop (Heimnetz, einfacher Start):** siehe [docs/UWE_HOST_LINUX_STARTUP.md](UWE_HOST_LINUX_STARTUP.md) — `pnpm host:start`, Autostart via systemd, LAN-Erreichbarkeit auf `0.0.0.0`.
+**Empfohlen für dauerhaften Betrieb auf einem Linux-Host-Laptop:** siehe [docs/UWE_HOST_LINUX_STARTUP.md](UWE_HOST_LINUX_STARTUP.md).
+
+```bash
+cd /opt/uwe
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
+
+Offizielle Pfade: `/etc/uwe/uwe.env`, `/var/lib/uwe`, Service `uwe.service`. Convenience: `pnpm host:start`, `pnpm host:status`.
+
+### Option D: Manueller Production-Build (Entwicklung/Ad-hoc)
 
 ```bash
 git clone <repository-url> uwe

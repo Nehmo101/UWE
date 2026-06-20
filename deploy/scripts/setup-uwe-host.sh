@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
-# Idempotent one-shot setup for UWE on a Linux host (systemd + LAN bind).
-# Usage: sudo bash ./deploy/scripts/setup-uwe-host.sh
+# Idempotent Linux production host setup for UWE (systemd + /etc/uwe/uwe.env).
+#
+# Usage:
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh              # safe update/repair (default)
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --quick      # fast update after git pull
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --repair     # rebuild deps + rewrite systemd
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --healthcheck
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --fresh      # destructive reset (requires confirmation)
+#
+# Official paths:
+#   Repo:    /opt/uwe
+#   Env:     /etc/uwe/uwe.env
+#   Data:    /var/lib/uwe
+#   Logs:    /var/log/uwe
+#   Backups: /var/backups/uwe
+#   Service: uwe.service
 set -euo pipefail
 
 readonly SERVICE_USER="uwe"
@@ -12,12 +26,17 @@ readonly UWE_LOG_DIR="/var/log/uwe"
 readonly UWE_BACKUP_DIR="/var/backups/uwe"
 readonly DEFAULT_UWE_HOME="/opt/uwe"
 readonly STUDIO_PORT="3000"
+readonly PORTAL_PORT="3001"
 readonly SYSTEMD_UNIT="uwe.service"
+readonly LEGACY_SYSTEMD_UNIT="uwe-host.service"
 readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
 readonly NODE_MAJOR="22"
 readonly DEFAULT_PNPM_VERSION="10.12.1"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+MODE="default"
+FRESH_CONFIRMED=0
 
 log() {
   echo "==> $*"
@@ -30,6 +49,61 @@ warn() {
 die() {
   echo "FEHLER: $*" >&2
   exit 1
+}
+
+usage() {
+  cat <<EOF
+UWE Linux Production Host Setup
+
+Usage: sudo bash $0 [MODE]
+
+Modes (mutually exclusive):
+  (default)           Safe, idempotent update/repair — no data or secrets deleted
+  --quick             Fast update: git check, pnpm install, prisma, build, restart
+  --repair            Thorough repair: validate/reinstall Node/pnpm, clean node_modules, rewrite systemd
+  --fresh             Destructive full reset — requires typing DELETE-UWE to confirm
+  --wipe-and-reinstall  Alias for --fresh
+  --healthcheck       Read-only status checks (no changes)
+  -h, --help          Show this help
+
+Official production paths:
+  Repository:  /opt/uwe
+  Environment: /etc/uwe/uwe.env
+  Data:        /var/lib/uwe
+  Logs:        /var/log/uwe
+  Backups:     /var/backups/uwe
+  Service:     uwe.service
+
+After git pull:
+  cd /opt/uwe && git pull && sudo bash ./deploy/scripts/setup-uwe-host.sh --quick
+EOF
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --quick)
+        MODE="quick"
+        ;;
+      --repair)
+        MODE="repair"
+        ;;
+      --fresh | --wipe-and-reinstall)
+        MODE="fresh"
+        ;;
+      --healthcheck)
+        MODE="healthcheck"
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "Unbekanntes Argument: $1 (siehe --help)"
+        ;;
+    esac
+    shift
+  done
 }
 
 require_root() {
@@ -105,7 +179,7 @@ remove_stale_node_binaries() {
 }
 
 remove_node_caches_and_workspace_modules() {
-  log "Entferne alte pnpm/Corepack-Caches und Workspace-node_modules …"
+  log "Entferne Build-Caches und Workspace-node_modules …"
 
   remove_path_if_present "$UWE_HOME/node_modules"
   remove_path_if_present "$UWE_HOME/.pnpm-store"
@@ -134,12 +208,13 @@ reset_system_dependencies() {
   local pnpm_version
   pnpm_version="$(get_required_pnpm_version)"
 
-  log "Setze Host-Abhängigkeiten hart zurück: Node.js ${NODE_MAJOR}.x, pnpm ${pnpm_version}, Build-Tools …"
+  log "Setze Host-Abhängigkeiten zurück: Node.js ${NODE_MAJOR}.x, pnpm ${pnpm_version}, Build-Tools …"
 
   export DEBIAN_FRONTEND=noninteractive
 
-  if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files "$SYSTEMD_UNIT" >/dev/null 2>&1; then
+  if command -v systemctl >/dev/null 2>&1; then
     systemctl stop "$SYSTEMD_UNIT" >/dev/null 2>&1 || true
+    systemctl stop "$LEGACY_SYSTEMD_UNIT" >/dev/null 2>&1 || true
   fi
 
   apt-get update
@@ -200,23 +275,68 @@ reset_system_dependencies() {
 
 check_prerequisites() {
   require_command git "Git installieren: sudo apt install git"
-  require_command node "Node.js ${NODE_MAJOR}.x installieren."
-  require_command npm "npm installieren."
-  require_command corepack "Corepack installieren."
-  require_command pnpm "pnpm installieren."
   require_command curl "curl installieren: sudo apt install curl"
   require_command ss "ss installieren (Paket iproute2): sudo apt install iproute2"
 
-  local node_major pnpm_version required_pnpm_version
+  if ! command -v node >/dev/null 2>&1; then
+    die "Node.js ${NODE_MAJOR}.x fehlt. Ausführen: sudo bash $0 --repair"
+  fi
+
+  if ! command -v pnpm >/dev/null 2>&1; then
+    die "pnpm fehlt. Ausführen: sudo bash $0 --repair"
+  fi
+
+  local node_major required_pnpm_version pnpm_version
   node_major="$(node -p 'process.versions.node.split(".")[0]')"
-  if [[ "$node_major" != "$NODE_MAJOR" ]]; then
-    die "Falsche Node.js-Version aktiv: $(node -v). Erwartet: v${NODE_MAJOR}.x"
+  if [[ "$node_major" -lt 20 ]]; then
+    die "Node.js zu alt: $(node -v). Mindestens v20, empfohlen v${NODE_MAJOR}.x — siehe: sudo bash $0 --repair"
   fi
 
   required_pnpm_version="$(get_required_pnpm_version)"
   pnpm_version="$(pnpm -v)"
   if [[ "$pnpm_version" != "$required_pnpm_version" ]]; then
-    die "Falsche pnpm-Version aktiv: ${pnpm_version}. Erwartet: ${required_pnpm_version}"
+    warn "pnpm-Version ${pnpm_version} weicht ab (erwartet ${required_pnpm_version}). Reparieren: sudo bash $0 --repair"
+  fi
+}
+
+git_safety_check() {
+  if [[ ! -d "$UWE_HOME/.git" ]]; then
+    warn "Kein Git-Repository unter $UWE_HOME — überspringe Git-Prüfung."
+    return 0
+  fi
+
+  log "Git-Status prüfen …"
+  local branch dirty
+  branch="$(git -C "$UWE_HOME" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  dirty="$(git -C "$UWE_HOME" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+
+  if [[ "$dirty" != "0" ]]; then
+    warn "Uncommitted changes in $UWE_HOME (Branch: $branch, $dirty Datei(en))."
+    warn "Für reproduzierbare Deployments: git stash oder commit vor dem Update."
+  else
+    log "Git-Working-Tree sauber (Branch: $branch)."
+  fi
+}
+
+migrate_legacy_service() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if systemctl list-unit-files "$LEGACY_SYSTEMD_UNIT" >/dev/null 2>&1; then
+    if systemctl is-active --quiet "$LEGACY_SYSTEMD_UNIT" 2>/dev/null; then
+      log "Stoppe veralteten Dienst $LEGACY_SYSTEMD_UNIT …"
+      systemctl stop "$LEGACY_SYSTEMD_UNIT" || true
+    fi
+    if systemctl is-enabled --quiet "$LEGACY_SYSTEMD_UNIT" 2>/dev/null; then
+      log "Deaktiviere veralteten Dienst $LEGACY_SYSTEMD_UNIT …"
+      systemctl disable "$LEGACY_SYSTEMD_UNIT" || true
+    fi
+    if [[ -f "/etc/systemd/system/$LEGACY_SYSTEMD_UNIT" ]]; then
+      log "Entferne veraltete Unit-Datei $LEGACY_SYSTEMD_UNIT …"
+      rm -f "/etc/systemd/system/$LEGACY_SYSTEMD_UNIT"
+      systemctl daemon-reload || true
+    fi
   fi
 }
 
@@ -236,6 +356,17 @@ ensure_directories() {
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_DATA_DIR"/{uploads,exports}
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_LOG_DIR"
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_BACKUP_DIR"
+}
+
+upsert_env_var_if_missing() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+
+  if grep -q "^${key}=" "$file" 2>/dev/null; then
+    return 0
+  fi
+  printf '%s=%s\n' "$key" "$value" >>"$file"
 }
 
 upsert_env_var() {
@@ -266,14 +397,38 @@ UWE_UPLOADS_DIR=${UWE_DATA_DIR}/uploads
 UWE_EXPORT_DIR=${UWE_DATA_DIR}/exports
 UWE_BACKUP_DIR=${UWE_BACKUP_DIR}
 STUDIO_PORT=${STUDIO_PORT}
-PORTAL_PORT=3001
+PORTAL_PORT=${PORTAL_PORT}
 RUN_DB_SEED=false
 AUTH_SECRET=CHANGE_ME_generate_with_openssl_rand_base64_32
 EOF
 }
 
+ensure_secret_var() {
+  local key="$1"
+  local generator="$2"
+  local file="$3"
+  local force="${4:-0}"
+
+  local current=""
+  if grep -q "^${key}=" "$file" 2>/dev/null; then
+    current="$(grep "^${key}=" "$file" | head -n 1 | cut -d= -f2-)"
+  fi
+
+  if [[ "$force" -eq 1 ]] || [[ -z "$current" ]] || [[ "$current" == CHANGE_ME* ]]; then
+    local value
+    value="$(eval "$generator")"
+    upsert_env_var "$key" "$value" "$file"
+    log "Secret $key ergänzt oder erneuert."
+  fi
+}
+
 ensure_env_file() {
-  if [[ ! -f "$UWE_ENV_FILE" ]]; then
+  local force_recreate="${1:-0}"
+
+  if [[ "$force_recreate" -eq 1 ]]; then
+    log "Erzeuge $UWE_ENV_FILE neu (--fresh) …"
+    create_minimal_env
+  elif [[ ! -f "$UWE_ENV_FILE" ]]; then
     log "Erzeuge $UWE_ENV_FILE …"
     if [[ -f "$UWE_HOME/.env.production.example" ]]; then
       install -m 640 -o root -g "$SERVICE_GROUP" "$UWE_HOME/.env.production.example" "$UWE_ENV_FILE"
@@ -283,16 +438,29 @@ ensure_env_file() {
       create_minimal_env
     fi
   else
-    log "$UWE_ENV_FILE existiert bereits — behalte vorhandene Secrets bei."
+    log "$UWE_ENV_FILE existiert bereits — behalte vorhandene Werte bei."
   fi
 
-  upsert_env_var NODE_ENV production "$UWE_ENV_FILE"
-  upsert_env_var PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
-  upsert_env_var HOST "0.0.0.0" "$UWE_ENV_FILE"
-  upsert_env_var HOSTNAME "0.0.0.0" "$UWE_ENV_FILE"
-  upsert_env_var DATABASE_URL "file:${UWE_DATA_DIR}/uwe.db" "$UWE_ENV_FILE"
-  upsert_env_var UWE_HOME "$UWE_HOME" "$UWE_ENV_FILE"
-  upsert_env_var UWE_ENV "$UWE_ENV_FILE" "$UWE_ENV_FILE"
+  # Pflichtvariablen nur ergänzen, wenn sie fehlen (kein Überschreiben bei normalen Läufen)
+  upsert_env_var_if_missing NODE_ENV production "$UWE_ENV_FILE"
+  upsert_env_var_if_missing PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing HOST "0.0.0.0" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing HOSTNAME "0.0.0.0" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing DATABASE_URL "file:${UWE_DATA_DIR}/uwe.db" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_HOME "$UWE_HOME" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_ENV "$UWE_ENV_FILE" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_DATA_DIR "$UWE_DATA_DIR" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_UPLOADS_DIR "${UWE_DATA_DIR}/uploads" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_EXPORT_DIR "${UWE_DATA_DIR}/exports" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_BACKUP_DIR "$UWE_BACKUP_DIR" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing STUDIO_PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing PORTAL_PORT "$PORTAL_PORT" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing RUN_DB_SEED false "$UWE_ENV_FILE"
+
+  # Secrets nur erzeugen wenn fehlend oder Platzhalter (--fresh erzwingt Neu)
+  ensure_secret_var AUTH_SECRET "openssl rand -base64 32" "$UWE_ENV_FILE" "$force_recreate"
+  ensure_secret_var UWE_SETUP_TOKEN "openssl rand -hex 32" "$UWE_ENV_FILE" "$force_recreate"
+  ensure_secret_var STUDIO_API_TOKEN "openssl rand -base64 32" "$UWE_ENV_FILE" "$force_recreate"
 
   chown root:"$SERVICE_GROUP" "$UWE_ENV_FILE"
   chmod 640 "$UWE_ENV_FILE"
@@ -335,7 +503,7 @@ run_as_uwe() {
 }
 
 install_dependencies() {
-  log "Installiere npm-Abhängigkeiten (pnpm install inkl. Build-/Dev-Tools) …"
+  log "Installiere npm-Abhängigkeiten (pnpm install) …"
   run_as_uwe "corepack prepare 'pnpm@$(get_required_pnpm_version)' --activate >/dev/null 2>&1 || true; pnpm install --frozen-lockfile --prod=false"
 }
 
@@ -379,7 +547,7 @@ write_systemd_unit() {
   cat >"$unit_path" <<EOF
 [Unit]
 Description=UWE — Universeller Welten-Editor (Studio + Portal)
-Documentation=file://${UWE_HOME}/docs/deployment-hardening.md
+Documentation=file://${UWE_HOME}/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
 
@@ -428,8 +596,9 @@ configure_firewall() {
   fi
 
   if ufw status 2>/dev/null | grep -qi 'Status: active'; then
-    log "UFW ist aktiv — erlaube Port ${STUDIO_PORT}/tcp …"
-    ufw allow "${STUDIO_PORT}/tcp" >/dev/null || ufw allow "${STUDIO_PORT}/tcp"
+    log "UFW ist aktiv — erlaube Port ${STUDIO_PORT}/tcp und ${PORTAL_PORT}/tcp …"
+    ufw allow "${STUDIO_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${STUDIO_PORT}/tcp"
+    ufw allow "${PORTAL_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${PORTAL_PORT}/tcp"
   else
     log "UFW ist nicht aktiv — überspringe Firewall-Regel."
   fi
@@ -440,7 +609,8 @@ service_active() {
 }
 
 listening_on_all_interfaces() {
-  ss -tulpn 2>/dev/null | grep -E ":${STUDIO_PORT}\b" | grep -qE '0\.0\.0\.0|\*'
+  local port="$1"
+  ss -tulpn 2>/dev/null | grep -E ":${port}\b" | grep -qE '0\.0\.0\.0|\*'
 }
 
 get_lan_ip() {
@@ -457,27 +627,121 @@ get_lan_ip() {
   printf '%s\n' "$ip"
 }
 
+http_status_code() {
+  local url="$1"
+  curl -sS --max-time 8 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo "000"
+}
+
 http_reachable() {
   local url="$1"
   local code
-  code="$(curl -sS --max-time 8 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo "000")"
+  code="$(http_status_code "$url")"
   [[ "$code" =~ ^[23] ]]
 }
 
-check_reachability() {
-  local urls=(
-    "http://127.0.0.1:${STUDIO_PORT}/studio"
-    "http://127.0.0.1:${STUDIO_PORT}/"
-    "http://127.0.0.1:${STUDIO_PORT}/api/health"
-  )
-  local url
-  for url in "${urls[@]}"; do
-    if http_reachable "$url"; then
-      printf '%s\n' "$url"
-      return 0
+confirm_fresh_reset() {
+  echo ""
+  echo "========================================"
+  echo " WARNUNG: Destruktiver Reset (--fresh)"
+  echo "========================================"
+  echo " Dies löscht:"
+  echo "   - $UWE_DATA_DIR (Datenbank, Uploads, Exports)"
+  echo "   - $UWE_ENV_FILE (Konfiguration und Secrets)"
+  echo "   - Build-Artefakte im Repository"
+  echo ""
+  echo " Vor dem Löschen wird ein Backup nach"
+  echo " $UWE_BACKUP_DIR/<timestamp>/ angelegt, soweit möglich."
+  echo ""
+  echo " Zum Fortfahren eingeben: DELETE-UWE"
+  echo " (Abbruch mit Strg+C oder leerer Eingabe)"
+  echo "========================================"
+  echo -n "Bestätigung: "
+  local answer
+  read -r answer
+  if [[ "$answer" != "DELETE-UWE" ]]; then
+    die "Abgebrochen — Bestätigung nicht korrekt."
+  fi
+  FRESH_CONFIRMED=1
+}
+
+backup_before_fresh() {
+  local timestamp backup_dir
+  timestamp="$(date +%Y%m%d-%H%M%S)"
+  backup_dir="${UWE_BACKUP_DIR}/${timestamp}-pre-fresh"
+
+  log "Erstelle Backup vor Reset nach $backup_dir …"
+  install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$backup_dir"
+
+  if [[ -f "$UWE_ENV_FILE" ]]; then
+    cp -a "$UWE_ENV_FILE" "$backup_dir/uwe.env" 2>/dev/null || warn "Env-Backup fehlgeschlagen."
+  fi
+
+  if [[ -d "$UWE_DATA_DIR" ]]; then
+    if command -v tar >/dev/null 2>&1; then
+      tar -czf "$backup_dir/uwe-data.tar.gz" -C "$(dirname "$UWE_DATA_DIR")" "$(basename "$UWE_DATA_DIR")" 2>/dev/null \
+        || warn "Daten-Backup fehlgeschlagen."
+    else
+      cp -a "$UWE_DATA_DIR" "$backup_dir/data" 2>/dev/null || warn "Daten-Backup fehlgeschlagen."
     fi
+  fi
+
+  log "Backup abgeschlossen: $backup_dir"
+}
+
+run_fresh_wipe() {
+  log "Stoppe Dienste …"
+  systemctl stop "$SYSTEMD_UNIT" >/dev/null 2>&1 || true
+  systemctl stop "$LEGACY_SYSTEMD_UNIT" >/dev/null 2>&1 || true
+
+  log "Entferne Produktionsdaten …"
+  remove_path_if_present "$UWE_DATA_DIR"
+  remove_path_if_present "$UWE_ENV_FILE"
+  remove_node_caches_and_workspace_modules
+}
+
+run_healthcheck() {
+  local lan_ip
+  lan_ip="$(get_lan_ip)"
+
+  echo ""
+  echo "========================================"
+  echo " UWE Healthcheck (read-only)"
+  echo "========================================"
+  echo ""
+
+  log "systemctl status $SYSTEMD_UNIT"
+  systemctl status "$SYSTEMD_UNIT" --no-pager || true
+  echo ""
+
+  log "Lauschende Ports (ss -ltnp)"
+  ss -ltnp 2>/dev/null | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}" || warn "Kein Prozess auf Port ${STUDIO_PORT}/${PORTAL_PORT}."
+  echo ""
+
+  local url code
+  for url in \
+    "http://127.0.0.1:${STUDIO_PORT}/" \
+    "http://127.0.0.1:${STUDIO_PORT}/setup" \
+    "http://127.0.0.1:${STUDIO_PORT}/api/health"; do
+    code="$(http_status_code "$url")"
+    echo "curl -i $url  →  HTTP $code"
+    curl -i --max-time 8 "$url" 2>/dev/null | head -n 15 || true
+    echo ""
   done
-  return 1
+
+  echo "hostname -I:"
+  hostname -I 2>/dev/null || true
+  echo ""
+
+  echo "Lokale URLs:"
+  echo "  Studio:  http://127.0.0.1:${STUDIO_PORT}/"
+  echo "  Setup:   http://127.0.0.1:${STUDIO_PORT}/setup"
+  echo "  Portal:  http://127.0.0.1:${PORTAL_PORT}/"
+  echo ""
+  echo "LAN URLs:"
+  echo "  Studio:  http://${lan_ip}:${STUDIO_PORT}/"
+  echo "  Setup:   http://${lan_ip}:${STUDIO_PORT}/setup"
+  echo "  Portal:  http://${lan_ip}:${PORTAL_PORT}/"
+  echo "========================================"
 }
 
 print_diagnostics() {
@@ -486,11 +750,10 @@ print_diagnostics() {
   echo ""
   systemctl status "$SYSTEMD_UNIT" --no-pager || true
   echo ""
-  ss -tulpn | grep ":${STUDIO_PORT}" || warn "Kein Prozess lauscht auf Port ${STUDIO_PORT}."
+  ss -tulpn | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}" || warn "Kein Prozess lauscht auf Port ${STUDIO_PORT}/${PORTAL_PORT}."
   echo ""
-  log "HTTP-Test (Studio)"
-  curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/studio" 2>/dev/null || \
-    curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/" 2>/dev/null || \
+  log "HTTP-Test"
+  curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/" 2>/dev/null | head -n 20 || \
     warn "HTTP-Test fehlgeschlagen — siehe journalctl -u ${SYSTEMD_UNIT} -n 50"
 }
 
@@ -504,12 +767,12 @@ print_summary() {
   fi
 
   if ss -tulpn 2>/dev/null | grep -E ":${STUDIO_PORT}\b" | grep -q '127.0.0.1'; then
-    if listening_on_all_interfaces; then
+    if listening_on_all_interfaces "$STUDIO_PORT"; then
       bind_mode="0.0.0.0:${STUDIO_PORT} (und ggf. 127.0.0.1)"
     else
-      bind_mode="nur 127.0.0.1:${STUDIO_PORT}"
+      bind_mode="nur 127.0.0.1:${STUDIO_PORT} — LAN-Zugriff blockiert!"
     fi
-  elif listening_on_all_interfaces; then
+  elif listening_on_all_interfaces "$STUDIO_PORT"; then
     bind_mode="0.0.0.0:${STUDIO_PORT}"
   elif ss -tulpn 2>/dev/null | grep -q ":${STUDIO_PORT}"; then
     bind_mode="Port ${STUDIO_PORT} (Adresse prüfen mit: ss -tulpn | grep ${STUDIO_PORT})"
@@ -527,46 +790,51 @@ print_summary() {
   echo "========================================"
   echo " UWE Host Setup — Zusammenfassung"
   echo "========================================"
-  echo " Service aktiv:        $active"
-  echo " Lauscht auf:          $bind_mode"
-  echo " HTTP erreichbar:      $reachable_url"
-  echo " Lokale Studio-URL:    http://127.0.0.1:${STUDIO_PORT}/studio"
-  echo " LAN Studio-URL:       http://${lan_ip}:${STUDIO_PORT}/studio"
-  echo " Portal (LAN):         http://${lan_ip}:3001"
-  echo " Env-Datei:            $UWE_ENV_FILE"
-  echo " Repository:           $UWE_HOME"
-  echo " Node.js:              $(node -v 2>/dev/null || echo unbekannt)"
-  echo " pnpm:                 $(pnpm -v 2>/dev/null || echo unbekannt)"
+  echo " Modus:               $MODE"
+  echo " Service aktiv:       $active"
+  echo " Lauscht auf:         $bind_mode"
+  echo " HTTP erreichbar:     $reachable_url"
+  echo " Lokale Studio-URL:   http://127.0.0.1:${STUDIO_PORT}/"
+  echo " LAN Studio-URL:      http://${lan_ip}:${STUDIO_PORT}/"
+  echo " Setup (lokal):       http://127.0.0.1:${STUDIO_PORT}/setup"
+  echo " Setup (LAN):         http://${lan_ip}:${STUDIO_PORT}/setup"
+  echo " Portal (LAN):        http://${lan_ip}:${PORTAL_PORT}/"
+  echo " Env-Datei:           $UWE_ENV_FILE"
+  echo " Repository:          $UWE_HOME"
+  echo " Node.js:             $(node -v 2>/dev/null || echo unbekannt)"
+  echo " pnpm:                $(pnpm -v 2>/dev/null || echo unbekannt)"
   echo ""
-  echo " Nächste manuelle Schritte:"
-  echo "  1. Secrets in $UWE_ENV_FILE setzen:"
-  echo "       AUTH_SECRET=\$(openssl rand -base64 32)"
-  echo "       UWE_SETUP_TOKEN=\$(openssl rand -hex 32)"
-  echo "       STUDIO_API_TOKEN=\$(openssl rand -base64 32)   # empfohlen"
-  echo "     Danach: sudo systemctl restart uwe.service"
-  echo "  2. Erstes Setup im Browser: http://127.0.0.1:${STUDIO_PORT}/setup"
-  echo "     (Setup-Token aus UWE_SETUP_TOKEN eingeben, Owner anlegen)"
-  echo "  3. Optional: Cloudflare Tunnel + Access für Internet-Zugriff"
-  echo "  4. RTX-Agent nur im Heimnetz — niemals öffentlich freigeben"
-  echo ""
-  echo " Nach Git-Pull neu deployen:"
-  echo "   cd $UWE_HOME && git pull && sudo bash ./deploy/scripts/setup-uwe-host.sh"
+  echo " Nächste Schritte:"
+  echo "  1. Erstes Setup: http://127.0.0.1:${STUDIO_PORT}/setup"
+  echo "     (Setup-Token aus UWE_SETUP_TOKEN in $UWE_ENV_FILE)"
+  echo "  2. Healthcheck:  sudo bash $0 --healthcheck"
+  echo "  3. Quick-Update: sudo bash $0 --quick"
   echo "========================================"
 }
 
-main() {
-  require_root
-  UWE_HOME="$(detect_uwe_home)"
-  export UWE_HOME
+check_reachability() {
+  local urls=(
+    "http://127.0.0.1:${STUDIO_PORT}/"
+    "http://127.0.0.1:${STUDIO_PORT}/api/health"
+  )
+  local url
+  for url in "${urls[@]}"; do
+    if http_reachable "$url"; then
+      printf '%s\n' "$url"
+      return 0
+    fi
+  done
+  return 1
+}
 
-  log "UWE Host Setup — Repository: $UWE_HOME"
-  reset_system_dependencies
-  check_prerequisites
-  ensure_service_user
-  ensure_directories
-  chown -R "$SERVICE_USER:$SERVICE_GROUP" "$UWE_HOME"
-  ensure_env_file
+start_or_restart_service() {
+  log "systemd neu laden und Service starten …"
+  systemctl daemon-reload
+  systemctl enable "$SYSTEMD_UNIT"
+  systemctl restart "$SYSTEMD_UNIT"
+}
 
+run_deploy_steps() {
   local schema
   schema="$(find_prisma_schema)"
 
@@ -575,17 +843,72 @@ main() {
   run_migrations "$schema"
   run_build
   ensure_start_script
-  write_systemd_unit
+}
 
-  log "systemd neu laden und Service starten …"
-  systemctl daemon-reload
-  systemctl enable "$SYSTEMD_UNIT"
-  systemctl restart "$SYSTEMD_UNIT"
+main() {
+  parse_args "$@"
+  require_root
+  UWE_HOME="$(detect_uwe_home)"
+  export UWE_HOME
 
+  if [[ "$MODE" == "healthcheck" ]]; then
+    run_healthcheck
+    exit 0
+  fi
+
+  log "UWE Host Setup — Modus: $MODE — Repository: $UWE_HOME"
+
+  migrate_legacy_service
+
+  case "$MODE" in
+    fresh)
+      confirm_fresh_reset
+      backup_before_fresh
+      run_fresh_wipe
+      reset_system_dependencies
+      ;;
+    repair)
+      reset_system_dependencies
+      remove_node_caches_and_workspace_modules
+      ;;
+    quick)
+      check_prerequisites
+      git_safety_check
+      ;;
+    default)
+      check_prerequisites
+      git_safety_check
+      ;;
+  esac
+
+  ensure_service_user
+  ensure_directories
+
+  if [[ "$MODE" == "fresh" ]]; then
+    ensure_env_file 1
+  else
+    ensure_env_file 0
+  fi
+
+  chown -R "$SERVICE_USER:$SERVICE_GROUP" "$UWE_HOME"
+
+  run_deploy_steps
+
+  if [[ ! -f "/etc/systemd/system/$SYSTEMD_UNIT" ]]; then
+    write_systemd_unit
+  elif [[ "$MODE" == "repair" || "$MODE" == "fresh" || "$MODE" == "default" ]]; then
+    write_systemd_unit
+  fi
+
+  start_or_restart_service
   configure_firewall
   sleep 2
   print_diagnostics
   print_summary
+
+  if [[ "$MODE" == "quick" ]]; then
+    run_healthcheck
+  fi
 }
 
 main "$@"

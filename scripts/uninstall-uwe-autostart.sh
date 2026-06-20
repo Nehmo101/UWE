@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Remove systemd autostart for UWE home host.
+# Disable UWE production autostart (uwe.service). Does NOT delete data.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,22 +19,30 @@ if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   exec sudo -E "$0" "$@"
 fi
 
-SERVICE_DEST="/etc/systemd/system/uwe-host.service"
+for unit in "$SYSTEMD_UNIT" "$LEGACY_SYSTEMD_UNIT"; do
+  if systemctl is-active --quiet "$unit" 2>/dev/null; then
+    uwe_host_info "Stoppe $unit …"
+    systemctl stop "$unit"
+  fi
 
-if systemctl is-active --quiet uwe-host.service 2>/dev/null; then
-  uwe_host_info "Stoppe uwe-host.service …"
-  systemctl stop uwe-host.service
-fi
+  if systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+    uwe_host_info "Deaktiviere Autostart für $unit …"
+    systemctl disable "$unit"
+  fi
 
-if systemctl is-enabled --quiet uwe-host.service 2>/dev/null; then
-  systemctl disable uwe-host.service
-fi
-
-if [[ -f "$SERVICE_DEST" ]]; then
-  rm -f "$SERVICE_DEST"
-fi
+  if [[ -f "/etc/systemd/system/$unit" && "$unit" == "$LEGACY_SYSTEMD_UNIT" ]]; then
+    uwe_host_info "Entferne veraltete Unit-Datei $unit …"
+    rm -f "/etc/systemd/system/$unit"
+  fi
+done
 
 systemctl daemon-reload
 
 uwe_host_info "Autostart deinstalliert."
-echo "Manuell starten: pnpm host:start"
+echo ""
+echo "Daten bleiben erhalten unter:"
+echo "  $UWE_DATA_DIR"
+echo "  $UWE_ENV_FILE"
+echo ""
+echo "Manuell starten:  sudo systemctl start $SYSTEMD_UNIT"
+echo "Erneut aktivieren: sudo bash $SETUP_SCRIPT"

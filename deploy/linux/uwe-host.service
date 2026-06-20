@@ -1,5 +1,19 @@
+# DEPRECATED — use uwe.service instead
+#
+# This unit file was used by the legacy home-host flow (repo-local .env, .uwe-host state).
+# The official Linux production flow is:
+#
+#   sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh
+#
+# That installs uwe.service with /etc/uwe/uwe.env and /var/lib/uwe.
+# Do NOT install uwe-host.service alongside uwe.service — only one service should run.
+#
+# Migration: run setup-uwe-host.sh — it stops and removes uwe-host.service automatically.
+#
+# --- Original template (do not use for new installs) ---
+
 [Unit]
-Description=UWE Home Host (Studio + Portal, Heimnetz)
+Description=DEPRECATED — UWE Home Host (use uwe.service)
 Documentation=file://@UWE_HOME@/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
@@ -15,7 +29,6 @@ Environment=HOST_BIND=0.0.0.0
 EnvironmentFile=-@UWE_HOME@/.env
 EnvironmentFile=-@UWE_HOME@/.env.local
 
-# Foreground supervisor — Studio + Portal, lauscht auf 0.0.0.0 (Heimnetz).
 ExecStart=@UWE_HOME@/scripts/uwe-host-run.sh
 
 Restart=on-failure

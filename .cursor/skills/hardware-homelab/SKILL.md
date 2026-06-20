@@ -11,20 +11,31 @@ description: Operate UWE on self-hosted hardware — Linux host scripts, Docker,
 |-----------|----------|----------|
 | UWE Studio | `:3000` | Cloudflare Tunnel (protected) |
 | UWE Portal | `:3001` | Cloudflare Tunnel (public wiki) |
-| SQLite DB | `data/uwe.db` or Docker volume | Local only |
-| Uploads / backups | `data/uploads`, `data/backups` | Local only |
+| SQLite DB | `/var/lib/uwe/uwe.db` (production) or `data/uwe.db` (dev/docker) | Local only |
+| Uploads / backups | `/var/lib/uwe/uploads`, `/var/backups/uwe` | Local only |
 | RTX Agent | Private LAN IP | **Never public** |
 
-## Host scripts (Linux)
+## Linux production host (official)
+
+| Path / Service | Purpose |
+|----------------|---------|
+| `/opt/uwe` | Git repository |
+| `/etc/uwe/uwe.env` | Production env (only official env file) |
+| `/var/lib/uwe` | DB, uploads, exports |
+| `uwe.service` | systemd unit (only official service) |
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm host:start` | Start Studio + Portal via `scripts/uwe-host-start.sh` |
-| `pnpm host:stop` | Stop services |
-| `pnpm host:status` | Health check |
-| `pnpm host:install-autostart` | systemd user service |
+| `sudo bash deploy/scripts/setup-uwe-host.sh` | Install / update / repair |
+| `sudo bash deploy/scripts/setup-uwe-host.sh --quick` | Fast update after git pull |
+| `sudo bash deploy/scripts/setup-uwe-host.sh --healthcheck` | Read-only status |
+| `pnpm host:start` | `systemctl start uwe` |
+| `pnpm host:stop` | `systemctl stop uwe` |
+| `pnpm host:status` | Service status + reachability |
 
 Docs: `docs/UWE_HOST_LINUX_STARTUP.md`, `docs/PRODUCTION.md`.
+
+**Deprecated:** `uwe-host.service`, repo-local `.env` for production, `.uwe-host` state dir.
 
 ## Docker
 
@@ -49,7 +60,7 @@ pnpm backup:create
 # or Windows: pnpm backup / pnpm restore
 ```
 
-See `docs/BACKUP.md`, `docs/backup-restore.md`. Test restore on homelab before relying on backups.
+See `docs/BACKUP.md`, `docs/backup-restore.md`. Production backups: `/var/backups/uwe`.
 
 ## Self-hosted CI (planned)
 

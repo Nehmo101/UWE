@@ -1,10 +1,26 @@
 #!/usr/bin/env bash
-# Show UWE home-host status, ports, LAN URLs, and recent logs.
+# Show UWE production host status via systemd and optional healthcheck.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/uwe-host-lib.sh"
+
+RUN_HEALTHCHECK=0
+for arg in "$@"; do
+  case "$arg" in
+    --healthcheck) RUN_HEALTHCHECK=1 ;;
+    --help|-h)
+      echo "Verwendung: $0 [--healthcheck]"
+      echo "  --healthcheck  Zusätzlich deploy/scripts/setup-uwe-host.sh --healthcheck ausführen"
+      exit 0
+      ;;
+    *)
+      uwe_host_error "Unbekanntes Argument: $arg"
+      exit 1
+      ;;
+  esac
+done
 
 cd "$UWE_HOME"
 uwe_host_load_env 2>/dev/null || true
@@ -12,8 +28,11 @@ STUDIO_PORT="${STUDIO_PORT:-3000}"
 PORTAL_PORT="${PORTAL_PORT:-3001}"
 LAN_IP="$(uwe_host_get_lan_ip)"
 
-echo "=== UWE Host-Status ==="
+echo "=== UWE Production Host Status ==="
 echo "Projekt:     $UWE_HOME"
+echo "Env-Datei:   $UWE_ENV_FILE"
+echo "Daten:       $UWE_DATA_DIR"
+echo "Service:     $SYSTEMD_UNIT"
 echo "LAN-IP:      $LAN_IP"
 echo "Studio-Port: $STUDIO_PORT"
 echo "Portal-Port: $PORTAL_PORT"
@@ -27,29 +46,13 @@ else
   echo "systemd:     inaktiv"
 fi
 
-supervisor_pid=""
-studio_pid=""
-portal_pid=""
-
-if supervisor_pid="$(uwe_host_read_pid "$UWE_HOST_SUPERVISOR_PID_FILE" 2>/dev/null)"; then
-  echo "Supervisor:  läuft (PID $supervisor_pid)"
-  running=1
-else
-  echo "Supervisor:  gestoppt"
-fi
-
-if studio_pid="$(uwe_host_read_pid "$UWE_HOST_STUDIO_PID_FILE" 2>/dev/null)"; then
-  echo "Studio:      läuft (PID $studio_pid)"
-  running=1
-else
-  echo "Studio:      gestoppt"
-fi
-
-if portal_pid="$(uwe_host_read_pid "$UWE_HOST_PORTAL_PID_FILE" 2>/dev/null)"; then
-  echo "Portal:      läuft (PID $portal_pid)"
-  running=1
-else
-  echo "Portal:      gestoppt"
+if command -v systemctl >/dev/null 2>&1; then
+  echo ""
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    systemctl status "$SYSTEMD_UNIT" --no-pager 2>/dev/null || true
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo systemctl status "$SYSTEMD_UNIT" --no-pager 2>/dev/null || true
+  fi
 fi
 
 echo ""
@@ -81,24 +84,33 @@ else
 fi
 
 echo ""
-echo "URLs (dieser Laptop):"
-echo "  Studio:  http://localhost:${STUDIO_PORT}"
-echo "  Portal:  http://localhost:${PORTAL_PORT}"
+echo "URLs (lokal):"
+echo "  Studio:  http://127.0.0.1:${STUDIO_PORT}/"
+echo "  Setup:   http://127.0.0.1:${STUDIO_PORT}/setup"
+echo "  Portal:  http://127.0.0.1:${PORTAL_PORT}/"
 echo ""
-echo "URLs (Handy / anderer PC im Heimnetz):"
-echo "  Studio:  http://${LAN_IP}:${STUDIO_PORT}"
-echo "  Portal:  http://${LAN_IP}:${PORTAL_PORT}"
-echo ""
-echo "IP finden: hostname -I   oder: ip -4 addr show"
+echo "URLs (LAN):"
+echo "  Studio:  http://${LAN_IP}:${STUDIO_PORT}/"
+echo "  Setup:   http://${LAN_IP}:${STUDIO_PORT}/setup"
+echo "  Portal:  http://${LAN_IP}:${PORTAL_PORT}/"
 
-if [[ -f "$UWE_HOST_LOG_FILE" ]]; then
+if [[ "$RUN_HEALTHCHECK" -eq 1 && -f "$SETUP_SCRIPT" ]]; then
   echo ""
-  echo "Letzte Logzeilen ($UWE_HOST_LOG_FILE):"
-  tail -n 15 "$UWE_HOST_LOG_FILE" 2>/dev/null || true
+  uwe_host_info "Erweiterter Healthcheck …"
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    bash "$SETUP_SCRIPT" --healthcheck
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo bash "$SETUP_SCRIPT" --healthcheck
+  else
+    uwe_host_warn "Root-Rechte für --healthcheck erforderlich: sudo bash $SETUP_SCRIPT --healthcheck"
+  fi
 fi
 
 if [[ "$running" -eq 0 ]]; then
   echo ""
-  echo "UWE läuft nicht. Starten mit: pnpm host:start"
+  echo "UWE läuft nicht. Starten mit:"
+  echo "  sudo systemctl start $SYSTEMD_UNIT"
+  echo "  oder: pnpm host:start"
+  echo "Erstinstallation: sudo bash $SETUP_SCRIPT"
   exit 1
 fi

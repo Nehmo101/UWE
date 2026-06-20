@@ -1,6 +1,6 @@
-# UWE auf Linux — Host-Laptop starten (Heimnetz)
+# UWE auf Linux — Production Host (systemd)
 
-Praktische Anleitung für den **UWE-Host-Laptop** unter Linux (Ubuntu, Lubuntu, Linux Mint, …).
+Offizielle Anleitung für den **UWE Production Host** unter Linux (Ubuntu, Debian, Lubuntu, …).
 
 UWE besteht aus zwei Web-Apps:
 
@@ -9,7 +9,22 @@ UWE besteht aus zwei Web-Apps:
 | **Studio** | 3000 | Spielleiter-Editor (DM) |
 | **Portal** | 3001 | Spieler-Wiki |
 
-Nach dem Start sind beide im **Heimnetz** erreichbar (nicht nur auf dem Laptop selbst).
+Nach dem Setup sind beide im **Heimnetz** erreichbar (`HOST=0.0.0.0`).
+
+---
+
+## Offizielle Pfade
+
+| Pfad | Inhalt |
+|------|--------|
+| `/opt/uwe` | Git-Repository |
+| `/etc/uwe/uwe.env` | **Einzige** produktive Env-Datei (Secrets, DB-Pfad) |
+| `/var/lib/uwe` | SQLite-Datenbank, Uploads, Exports |
+| `/var/log/uwe` | Anwendungslogs |
+| `/var/backups/uwe` | Backups |
+| `uwe.service` | **Einziger** offizieller systemd-Dienst |
+
+Es gibt **keinen** parallelen Legacy-Flow mehr (`uwe-host.service`, `.uwe-host`, repo-lokale `.env` für Production).
 
 ---
 
@@ -17,319 +32,242 @@ Nach dem Start sind beide im **Heimnetz** erreichbar (nicht nur auf dem Laptop s
 
 | Situation | Befehl |
 |-----------|--------|
-| Einmal starten (ohne Autostart) | `pnpm host:start` |
-| Status prüfen | `pnpm host:status` |
-| Stoppen | `pnpm host:stop` |
-| Autostart einrichten (einmalig) | `pnpm host:install-autostart` |
-| Autostart entfernen | `pnpm host:uninstall-autostart` |
+| Erstinstallation / Update | `sudo bash ./deploy/scripts/setup-uwe-host.sh` |
+| Schnelles Update nach `git pull` | `sudo bash ./deploy/scripts/setup-uwe-host.sh --quick` |
+| Gründliche Reparatur | `sudo bash ./deploy/scripts/setup-uwe-host.sh --repair` |
+| Status (read-only) | `sudo bash ./deploy/scripts/setup-uwe-host.sh --healthcheck` |
+| Kompletter Reset (destruktiv) | `sudo bash ./deploy/scripts/setup-uwe-host.sh --fresh` |
+| Service starten | `sudo systemctl start uwe` |
+| Service stoppen | `sudo systemctl stop uwe` |
+| Service-Status | `sudo systemctl status uwe --no-pager` |
+| Convenience (ohne sudo) | `pnpm host:start` / `host:stop` / `host:status` |
 
-Alle Befehle im **UWE-Projektordner** ausführen (dort wo `package.json` liegt).
-
----
-
-## Erstes Mal einrichten (einmalig)
-
-1. **Node.js 20+** und **pnpm** installieren:
-
-   ```bash
-   # Node.js (Beispiel Ubuntu/Debian)
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   sudo apt install -y nodejs
-
-   # pnpm
-   corepack enable
-   corepack prepare pnpm@10.12.1 --activate
-   ```
-
-2. Repository klonen oder entpacken, z. B. nach `~/UWE`:
-
-   ```bash
-   cd ~/UWE
-   ```
-
-3. **Umgebungsdatei** anlegen:
-
-   ```bash
-   cp .env.example .env
-   nano .env   # mindestens SESSION_SECRET anpassen
-   ```
-
-   Geheimnis erzeugen: `openssl rand -base64 32`
-
-4. **Erstes Owner-Setup** (Produktion ohne Demo-Seed):
-
-   ```bash
-   # In .env setzen:
-   # UWE_SETUP_TOKEN=$(openssl rand -hex 32)
-   # RUN_DB_SEED=false
-   # STUDIO_API_TOKEN=$(openssl rand -base64 32)   # empfohlen — blockiert /setup nicht
-   ```
-
-   Browser: **`http://127.0.0.1:3000/setup`** — Setup-Token eingeben, Owner anlegen.  
-   Danach ist `/setup` nicht mehr verfügbar (Weiterleitung zur Anmeldung). Details: [PRODUCTION.md](./PRODUCTION.md).
-
-5. **Teststart**:
-
-   ```bash
-   pnpm host:start
-   pnpm host:status
-   ```
-
-6. Optional **Autostart nach Neustart** (siehe Abschnitt C).
+Alle Befehle im Repository unter `/opt/uwe` (oder Ihrem Klone) ausführen.
 
 ---
 
-## A) Laptop neu gestartet — Autostart ist aktiv
+## Erstinstallation
 
-1. Am Host-Laptop **einloggen** (einmalig nach Neustart reicht oft schon).
-2. **Terminal** öffnen.
-3. **Status prüfen**:
+### Voraussetzungen
 
-   ```bash
-   cd ~/UWE          # Ihren UWE-Ordner einsetzen
-   pnpm host:status
-   ```
+| Voraussetzung | Hinweis |
+|---------------|---------|
+| Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
+| Node.js 22 | Wird bei `--repair` / Erstsetup installiert (Projekt unterstützt ≥ 20) |
+| git | Repository unter `/opt/uwe` |
+| root/sudo | Setup-Script muss als root laufen |
 
-   Oder mit systemd:
-
-   ```bash
-   sudo systemctl status uwe-host
-   ```
-
-4. Auf **Haupt-PC oder Handy** (gleiches WLAN) im Browser öffnen:
-
-   ```
-   http://<IP-DES-HOST-LAPTOPS>:3000
-   ```
-
-   Die IP steht in der Ausgabe von `pnpm host:status` unter **LAN-IP**.
-
-### IP des Host-Laptops finden
-
-Am Host-Laptop im Terminal:
+### Einmaliger Befehl
 
 ```bash
-hostname -I
+sudo mkdir -p /opt
+sudo git clone https://github.com/nehmo101/uwe /opt/uwe
+cd /opt/uwe
+sudo bash ./deploy/scripts/setup-uwe-host.sh
 ```
 
-Erste angezeigte Adresse verwenden (z. B. `192.168.1.42`).
+Das Script ist **idempotent** — kann beliebig oft ausgeführt werden, ohne Daten oder Secrets zu löschen.
 
-Alternativ:
+### Erstes Owner-Setup
 
-```bash
-ip -4 addr show | grep inet
-```
+1. Secrets in `/etc/uwe/uwe.env` prüfen (werden bei fehlenden Werten automatisch ergänzt):
 
-### Vom Haupt-PC / Handy öffnen
+   ```bash
+   sudo nano /etc/uwe/uwe.env
+   # AUTH_SECRET, UWE_SETUP_TOKEN, STUDIO_API_TOKEN
+   sudo systemctl restart uwe
+   ```
 
-Beide Geräte müssen im **gleichen Heimnetz/WLAN** sein.
+2. Browser: **`http://127.0.0.1:3000/setup`** — Setup-Token aus `UWE_SETUP_TOKEN` eingeben, Owner anlegen.
 
-| Was | URL |
-|-----|-----|
-| Studio (DM) | `http://192.168.x.x:3000` |
-| Portal (Spieler) | `http://192.168.x.x:3001` |
+3. Nach erfolgreichem Setup leitet `/setup` zur Anmeldung um.
 
-`192.168.x.x` durch die LAN-IP aus `hostname -I` ersetzen.
+`/setup` ist **ohne** Studio-API-Bearer-Token erreichbar, solange noch kein Master-Admin existiert. Danach sind Studio-/Admin-APIs weiterhin geschützt.
 
 ---
 
-## B) Autostart ist **nicht** aktiv — manueller Start
+## Nach Git-Pull aktualisieren
 
-1. Terminal öffnen.
-2. In den UWE-Ordner wechseln:
+```bash
+cd /opt/uwe
+git pull
+sudo bash ./deploy/scripts/setup-uwe-host.sh --quick
+```
 
-   ```bash
-   cd ~/UWE
-   ```
+Oder ohne `--quick` (konservatives Update, schreibt systemd-Unit neu):
 
-3. Starten:
-
-   ```bash
-   pnpm host:start
-   ```
-
-4. Status prüfen:
-
-   ```bash
-   pnpm host:status
-   ```
-
-5. URLs aus der Ausgabe im Browser öffnen (lokal oder im Heimnetz).
-
-**Hinweis:** Nach Schließen des Terminals läuft UWE weiter (Hintergrund). Zum Stoppen: `pnpm host:stop`.
+```bash
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
 
 ---
 
-## C) Autostart einmalig einrichten
+## Setup-Modi
 
-UWE startet dann **automatisch nach jedem Neustart** (systemd-Systemdienst).
+### Default (ohne Flag)
 
-1. In den UWE-Ordner wechseln:
+- Sicherer, wiederholbarer Update-/Repair-Lauf
+- Ergänzt fehlende Env-Variablen, **überschreibt keine** bestehenden Secrets
+- Keine destruktiven Aktionen
+- Schreibt `uwe.service` neu (idempotent)
 
-   ```bash
-   cd ~/UWE
-   ```
+### `--quick`
 
-2. Autostart installieren (fragt nach sudo-Passwort):
+- Schneller Update-Lauf nach `git pull`
+- Kein Node-Reinstall, kein aggressives Cache-Löschen
+- Git-Status-Warnung, `pnpm install`, Prisma generate/migrate, Build, Service-Restart
 
-   ```bash
-   pnpm host:install-autostart
-   ```
+### `--repair`
 
-   Das Skript richtet Abhängigkeiten, Datenbank und Build ein, kopiert die Service-Datei nach `/etc/systemd/system/uwe-host.service` und aktiviert den Dienst.
+- Validiert/repariert Node.js 22, pnpm, corepack
+- Entfernt `node_modules` und Build-Caches, saubere Neuinstallation
+- Schreibt systemd-Unit neu
+- **Löscht keine** Datenbank, Uploads oder Secrets
 
-3. **Neustart testen**:
+### `--fresh` / `--wipe-and-reinstall`
 
-   ```bash
-   sudo reboot
-   ```
+- **Destruktiv** — nur mit Bestätigung `DELETE-UWE`
+- Legt vor dem Löschen Backup unter `/var/backups/uwe/<timestamp>-pre-fresh/` an
+- Entfernt `/var/lib/uwe` und `/etc/uwe/uwe.env`, setzt neu auf
 
-4. Nach dem Neustart prüfen:
+### `--healthcheck`
 
-   ```bash
-   pnpm host:status
-   ```
-
-### Manueller Start vs. Autostart
-
-| | Manuell (`pnpm host:start`) | Autostart (systemd) |
-|--|----------------------------|---------------------|
-| Wann starten | Jedes Mal per Befehl | Automatisch nach Boot |
-| Logs | `.uwe-host/logs/host.log` | `journalctl -u uwe-host` |
-| Stoppen | `pnpm host:stop` | `sudo systemctl stop uwe-host` |
-| Neustart | `pnpm host:start -- --restart` | `sudo systemctl restart uwe-host` |
-
-**Warum systemd-Systemdienst?** Startet ohne weiteren Klick nach Reboot, überlebt Abstürze (`Restart=on-failure`), Logs zentral in journald. Die Vorlage liegt unter `deploy/linux/uwe-host.service` — Pfade werden beim Installieren automatisch gesetzt (kein hart codierter `/home/uwe/UWE`).
+- Verändert nichts
+- Prüft: `systemctl status uwe`, Ports, `curl` auf `/`, `/setup`, `/api/health`
+- Gibt lokale und LAN-URLs aus
 
 ---
 
-## D) Fehlerbehebung
+## Autostart nach Neustart
 
-### Keine IP sichtbar / `<LAN-IP>` in der Ausgabe
+`setup-uwe-host.sh` aktiviert `uwe.service` automatisch (`systemctl enable`).
 
-```bash
-hostname -I
-ip -4 route get 1.1.1.1
-```
-
-WLAN/Ethernet prüfen. Router muss Geräte im gleichen Subnetz sehen.
-
-### Port 3000 oder 3001 belegt
+Nach Reboot prüfen:
 
 ```bash
-ss -ltnp | grep -E ':3000|:3001'
-pnpm host:stop
-```
-
-Falls weiter belegt: fremden Prozess identifizieren und beenden (nicht wahllos alle Node-Prozesse killen).
-
-### `pnpm` nicht gefunden
-
-```bash
-corepack enable
-corepack prepare pnpm@10.12.1 --activate
-```
-
-Terminal neu öffnen.
-
-### `node` nicht gefunden
-
-Node.js 20+ installieren (siehe Erstes Mal einrichten).
-
-### `.env` fehlt
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-`.env` wird **nie** vom Skript überschrieben.
-
-### Datenbank nicht erreichbar / Migrationsfehler
-
-```bash
-pnpm --filter @uwe/database db:generate
-pnpm --filter @uwe/database db:deploy
-```
-
-Datenbankpfad steht in `.env` (`DATABASE_URL`). Standard: `file:./data/uwe.db` relativ zu `packages/database`.
-
-### UWE startet, aber Haupt-PC/Handy erreicht es nicht
-
-1. Gleiches WLAN?
-2. Firewall am Host-Laptop:
-
-   ```bash
-   sudo ufw status
-   sudo ufw allow 3000/tcp
-   sudo ufw allow 3001/tcp
-   ```
-
-3. Lauscht UWE auf allen Interfaces?
-
-   ```bash
-   ss -ltnp | grep -E ':3000|:3001'
-   ```
-
-   Erwartung: `0.0.0.0:3000` und `0.0.0.0:3001` (Heimnetz-Modus).
-
-4. IP mit `hostname -I` am **Host-Laptop** prüfen, nicht am Haupt-PC.
-
-### Logs anzeigen
-
-**Manueller Start:**
-
-```bash
-tail -f .uwe-host/logs/host.log
-```
-
-**Autostart (systemd):**
-
-```bash
-sudo journalctl -u uwe-host -f
-```
-
-### Service neustarten
-
-```bash
-sudo systemctl restart uwe-host
+sudo systemctl status uwe --no-pager
 pnpm host:status
 ```
 
-### UWE sauber stoppen
+Autostart deaktivieren (Daten bleiben erhalten):
 
 ```bash
-pnpm host:stop
-# oder bei Autostart:
-sudo systemctl stop uwe-host
+pnpm host:uninstall-autostart
+# oder: sudo systemctl disable uwe
 ```
 
 ---
 
-## Sicherheit (wichtig)
+## Convenience-Scripts (`pnpm host:*`)
 
-- UWE lauscht im Host-Modus auf **0.0.0.0** — erreichbar für alle Geräte im **Heimnetz**.
-- **Nicht** ohne Schutz direkt ins Internet stellen (kein Port-Forwarding auf die WAN-Seite).
-- Für öffentliche Erreichbarkeit später: **Cloudflare Tunnel**, Reverse Proxy mit Auth, VPN oder echtes Login — siehe `docs/deployment-hardening.md` und `docs/cloudflare-access.md`.
-- Keine `.env`-Dateien teilen oder ins Git committen.
-- `SESSION_SECRET` in Production stark setzen (`RUN_DB_SEED=false` nach erstem Setup empfohlen).
+Die `host:*`-Scripts leiten auf den Production-Flow um — sie starten **keinen** parallelen Legacy-Prozess mehr.
+
+| Script | Verhalten |
+|--------|-----------|
+| `pnpm host:start` | `sudo systemctl start uwe` |
+| `pnpm host:stop` | `sudo systemctl stop uwe` |
+| `pnpm host:status` | `systemctl status uwe` + Erreichbarkeit |
+| `pnpm host:install-autostart` | Ruft `setup-uwe-host.sh` auf |
+| `pnpm host:uninstall-autostart` | `systemctl disable uwe` (keine Datenlöschung) |
 
 ---
 
-## Technische Details (optional)
+## Fehlerbehebung
+
+### Service läuft nicht
+
+```bash
+sudo systemctl status uwe --no-pager
+journalctl -u uwe -n 80 --no-pager
+sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
+```
+
+### Port 3000 nicht offen
+
+```bash
+ss -ltnp | grep 3000
+sudo systemctl restart uwe
+```
+
+### App hört nur auf 127.0.0.1 statt 0.0.0.0
+
+In `/etc/uwe/uwe.env` prüfen:
+
+```
+HOST=0.0.0.0
+HOSTNAME=0.0.0.0
+```
+
+Dann `sudo systemctl restart uwe` und `ss -ltnp | grep 3000` — erwartet `0.0.0.0:3000`.
+
+### `/setup` zeigt „Studio-API-Token erforderlich“
+
+Das sollte **vor** abgeschlossenem Owner-Setup nicht passieren. Prüfen:
+
+```bash
+curl -s http://127.0.0.1:3000/api/auth/setup
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/setup
+```
+
+Falls blockiert: `STUDIO_API_TOKEN` in `/etc/uwe/uwe.env` setzen und Service neu starten. `/setup` bleibt ohne Bearer-Token erreichbar, solange kein Owner existiert.
+
+### Zugriff vom anderen PC im LAN klappt nicht
+
+1. Gleiches WLAN?
+2. Firewall: `sudo ufw allow 3000/tcp && sudo ufw allow 3001/tcp`
+3. Lauscht auf `0.0.0.0`? (siehe oben)
+4. IP am **Host** prüfen: `hostname -I`
+
+### Unterschied Setup / Quick / Repair / Fresh
+
+| Modus | Node-Reinstall | Cache-Löschung | Daten/Secrets | systemd neu |
+|-------|----------------|----------------|---------------|-------------|
+| default | nein | nein | behalten | ja |
+| `--quick` | nein | nein | behalten | nur wenn fehlt |
+| `--repair` | ja | ja (node_modules) | behalten | ja |
+| `--fresh` | ja | ja | **gelöscht** | ja |
+
+### Legacy `uwe-host.service` noch aktiv
+
+```bash
+sudo systemctl stop uwe-host
+sudo systemctl disable uwe-host
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
+
+Das Setup-Script migriert automatisch von `uwe-host.service` zu `uwe.service`.
+
+---
+
+## Logs
+
+```bash
+journalctl -u uwe -f
+journalctl -u uwe -n 100 --no-pager
+```
+
+Datei-Logs (falls konfiguriert): `/var/log/uwe/`
+
+---
+
+## Sicherheit
+
+- UWE lauscht auf **0.0.0.0** — erreichbar im **Heimnetz**
+- **Nicht** ohne Schutz ins Internet stellen
+- Für öffentlichen Zugriff: Cloudflare Tunnel + Access — siehe [deployment-hardening.md](./deployment-hardening.md)
+- Secrets nur in `/etc/uwe/uwe.env` — nie ins Git committen
+- Normale Setup-Läufe löschen **niemals** Daten oder Secrets
+
+---
+
+## Technische Referenz
 
 | Datei | Zweck |
 |-------|-------|
-| `scripts/uwe-host-start.sh` | Start mit Prüfungen, Build, Hintergrund |
-| `scripts/uwe-host-stop.sh` | Stoppt nur UWE-Prozesse (PID-Dateien) |
-| `scripts/uwe-host-status.sh` | Status, Ports, LAN-URLs, Logs |
-| `scripts/uwe-host-run.sh` | Foreground-Runner (systemd) |
-| `deploy/linux/uwe-host.service` | systemd-Vorlage |
+| `deploy/scripts/setup-uwe-host.sh` | Offizieller Einstiegspunkt (Setup/Update/Repair) |
+| `deploy/scripts/start-uwe.sh` | Startet Studio + Portal (von systemd aufgerufen) |
+| `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
+| `deploy/linux/uwe-host.service` | **Deprecated** — nur noch für Migration dokumentiert |
+| `scripts/uwe-host-*.sh` | Convenience-Wrapper um `uwe.service` |
 
-Skripte ausführbar machen (falls nötig):
-
-```bash
-chmod +x scripts/uwe-host-*.sh scripts/install-uwe-autostart.sh scripts/uninstall-uwe-autostart.sh
-```
-
-Weitere Production-Optionen: `docs/PRODUCTION.md`, Docker: `docker compose up -d`.
+Weitere Production-Optionen: [PRODUCTION.md](./PRODUCTION.md), Docker: `docker compose up -d`.
