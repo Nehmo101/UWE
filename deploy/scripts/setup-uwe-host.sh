@@ -36,7 +36,6 @@ readonly DEFAULT_PNPM_VERSION="10.12.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 MODE="default"
-FRESH_CONFIRMED=0
 
 log() {
   echo "==> $*"
@@ -661,7 +660,6 @@ confirm_fresh_reset() {
   if [[ "$answer" != "DELETE-UWE" ]]; then
     die "Abgebrochen — Bestätigung nicht korrekt."
   fi
-  FRESH_CONFIRMED=1
 }
 
 backup_before_fresh() {

@@ -16,6 +16,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/uwe-host-setup.sh")));
     // Legacy unit kept for migration docs only — production uses uwe.service
     assert.ok(fs.existsSync(path.join(root, "deploy/linux/uwe-host.service")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
@@ -95,5 +96,18 @@ describe("self-hosting setup", () => {
         AUTH_SECRET: "test-secret",
       },
     });
+  });
+
+  it("passes shellcheck on host setup scripts when shellcheck is available", () => {
+    try {
+      execSync("shellcheck --version", { stdio: "pipe" });
+    } catch {
+      return;
+    }
+
+    execSync(
+      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh",
+      { cwd: root, stdio: "pipe" },
+    );
   });
 });
