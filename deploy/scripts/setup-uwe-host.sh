@@ -14,6 +14,8 @@ readonly DEFAULT_UWE_HOME="/opt/uwe"
 readonly STUDIO_PORT="3000"
 readonly SYSTEMD_UNIT="uwe.service"
 readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
+readonly NODE_MAJOR="22"
+readonly DEFAULT_PNPM_VERSION="10.12.1"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -65,12 +67,157 @@ require_command() {
   fi
 }
 
+get_required_pnpm_version() {
+  local version=""
+  if [[ -f "$UWE_HOME/package.json" ]]; then
+    version="$(sed -n 's/.*"packageManager"[[:space:]]*:[[:space:]]*"pnpm@\([^"]*\)".*/\1/p' "$UWE_HOME/package.json" | head -n 1 || true)"
+  fi
+
+  if [[ -z "$version" ]]; then
+    version="$DEFAULT_PNPM_VERSION"
+  fi
+
+  printf '%s\n' "$version"
+}
+
+remove_path_if_present() {
+  local target="$1"
+  if [[ -e "$target" || -L "$target" ]]; then
+    rm -rf "$target"
+  fi
+}
+
+remove_stale_node_binaries() {
+  log "Entferne alte Node/npm/pnpm/corepack-Binaries und Shims …"
+  local bin path
+  for bin in node npm npx pnpm corepack yarn yarnpkg; do
+    for path in "/usr/local/bin/$bin" "/usr/bin/$bin" "/bin/$bin"; do
+      remove_path_if_present "$path"
+    done
+  done
+
+  remove_path_if_present "/usr/local/lib/node_modules/pnpm"
+  remove_path_if_present "/usr/local/lib/node_modules/corepack"
+  remove_path_if_present "/usr/local/lib/node_modules/npm"
+  remove_path_if_present "/opt/pnpm"
+
+  hash -r || true
+}
+
+remove_node_caches_and_workspace_modules() {
+  log "Entferne alte pnpm/Corepack-Caches und Workspace-node_modules …"
+
+  remove_path_if_present "$UWE_HOME/node_modules"
+  remove_path_if_present "$UWE_HOME/.pnpm-store"
+  remove_path_if_present "$UWE_HOME/.turbo"
+  remove_path_if_present "$UWE_HOME/.next"
+
+  find "$UWE_HOME" \
+    -path '*/.git/*' -prune -o \
+    -type d -name node_modules -prune -exec rm -rf {} + 2>/dev/null || true
+
+  remove_path_if_present "/root/.local/share/pnpm"
+  remove_path_if_present "/root/.cache/node/corepack"
+  remove_path_if_present "/root/.npm"
+  remove_path_if_present "$UWE_HOME/.local/share/pnpm"
+  remove_path_if_present "$UWE_HOME/.cache/node/corepack"
+  remove_path_if_present "$UWE_HOME/.npm"
+
+  if [[ -d /home ]]; then
+    find /home -mindepth 2 -maxdepth 4 \
+      \( -path '*/.local/share/pnpm' -o -path '*/.cache/node/corepack' -o -path '*/.npm' \) \
+      -prune -exec rm -rf {} + 2>/dev/null || true
+  fi
+}
+
+reset_system_dependencies() {
+  local pnpm_version
+  pnpm_version="$(get_required_pnpm_version)"
+
+  log "Setze Host-Abhängigkeiten hart zurück: Node.js ${NODE_MAJOR}.x, pnpm ${pnpm_version}, Build-Tools …"
+
+  export DEBIAN_FRONTEND=noninteractive
+
+  if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files "$SYSTEMD_UNIT" >/dev/null 2>&1; then
+    systemctl stop "$SYSTEMD_UNIT" >/dev/null 2>&1 || true
+  fi
+
+  apt-get update
+  apt-get install -y curl ca-certificates gnupg lsb-release apt-transport-https
+
+  apt-get remove -y nodejs npm pnpm yarn yarnpkg corepack libnode-dev 2>/dev/null || true
+  apt-get purge -y nodejs npm pnpm yarn yarnpkg corepack libnode-dev 2>/dev/null || true
+  apt-get autoremove -y || true
+
+  remove_stale_node_binaries
+  remove_node_caches_and_workspace_modules
+
+  rm -f /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/nodesource.list.save
+  rm -f /etc/apt/keyrings/nodesource.gpg /usr/share/keyrings/nodesource.gpg
+
+  log "Installiere Node.js ${NODE_MAJOR}.x über NodeSource …"
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
+  apt-get install -y nodejs
+
+  hash -r || true
+
+  require_command node "Node.js ${NODE_MAJOR}.x Installation fehlgeschlagen."
+  require_command npm "npm wurde mit Node.js nicht installiert."
+
+  local installed_node_major
+  installed_node_major="$(node -p 'process.versions.node.split(".")[0]')"
+  if [[ "$installed_node_major" != "$NODE_MAJOR" ]]; then
+    echo "Gefundene node-Binaries:" >&2
+    type -a node >&2 || true
+    die "Falsche Node.js-Version aktiv: $(node -v). Erwartet: v${NODE_MAJOR}.x"
+  fi
+
+  if ! command -v corepack >/dev/null 2>&1; then
+    log "Corepack fehlt — installiere Corepack global über npm …"
+    npm install -g corepack
+    hash -r || true
+  fi
+
+  require_command corepack "Corepack konnte nicht installiert werden."
+
+  log "Aktiviere Corepack und pnpm ${pnpm_version} …"
+  corepack enable
+  corepack prepare "pnpm@${pnpm_version}" --activate
+  hash -r || true
+
+  require_command pnpm "pnpm ${pnpm_version} konnte nicht aktiviert werden."
+
+  local installed_pnpm_version
+  installed_pnpm_version="$(pnpm -v)"
+  if [[ "$installed_pnpm_version" != "$pnpm_version" ]]; then
+    die "Falsche pnpm-Version aktiv: ${installed_pnpm_version}. Erwartet: ${pnpm_version}"
+  fi
+
+  apt-get install -y git curl ca-certificates gnupg iproute2 openssl sqlite3 build-essential python3
+
+  log "Dependency-Reset abgeschlossen: node $(node -v), npm $(npm -v), pnpm $(pnpm -v)."
+}
+
 check_prerequisites() {
   require_command git "Git installieren: sudo apt install git"
-  require_command node "Node.js 20+ installieren: https://nodejs.org/ oder sudo apt install nodejs"
-  require_command pnpm "pnpm installieren: corepack enable && corepack prepare pnpm@latest --activate"
+  require_command node "Node.js ${NODE_MAJOR}.x installieren."
+  require_command npm "npm installieren."
+  require_command corepack "Corepack installieren."
+  require_command pnpm "pnpm installieren."
   require_command curl "curl installieren: sudo apt install curl"
   require_command ss "ss installieren (Paket iproute2): sudo apt install iproute2"
+
+  local node_major pnpm_version required_pnpm_version
+  node_major="$(node -p 'process.versions.node.split(".")[0]')"
+  if [[ "$node_major" != "$NODE_MAJOR" ]]; then
+    die "Falsche Node.js-Version aktiv: $(node -v). Erwartet: v${NODE_MAJOR}.x"
+  fi
+
+  required_pnpm_version="$(get_required_pnpm_version)"
+  pnpm_version="$(pnpm -v)"
+  if [[ "$pnpm_version" != "$required_pnpm_version" ]]; then
+    die "Falsche pnpm-Version aktiv: ${pnpm_version}. Erwartet: ${required_pnpm_version}"
+  fi
 }
 
 ensure_service_user() {
@@ -175,6 +322,7 @@ run_as_uwe() {
   local cmd="$1"
   sudo -u "$SERVICE_USER" bash -lc "
     set -euo pipefail
+    export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:'\"\\${PATH:-}\"
     cd '$UWE_HOME'
     if [[ -f '$UWE_ENV_FILE' ]]; then
       set -a
@@ -188,7 +336,7 @@ run_as_uwe() {
 
 install_dependencies() {
   log "Installiere npm-Abhängigkeiten (pnpm install inkl. Build-/Dev-Tools) …"
-  run_as_uwe "corepack enable >/dev/null 2>&1 || true; pnpm install --frozen-lockfile --prod=false"
+  run_as_uwe "corepack prepare 'pnpm@$(get_required_pnpm_version)' --activate >/dev/null 2>&1 || true; pnpm install --frozen-lockfile --prod=false"
 }
 
 run_prisma_generate() {
@@ -387,6 +535,8 @@ print_summary() {
   echo " Portal (LAN):         http://${lan_ip}:3001"
   echo " Env-Datei:            $UWE_ENV_FILE"
   echo " Repository:           $UWE_HOME"
+  echo " Node.js:              $(node -v 2>/dev/null || echo unbekannt)"
+  echo " pnpm:                 $(pnpm -v 2>/dev/null || echo unbekannt)"
   echo ""
   echo " Nächste manuelle Schritte:"
   echo "  1. Secrets in $UWE_ENV_FILE setzen (AUTH_SECRET, ggf. STUDIO_API_TOKEN)"
@@ -405,6 +555,7 @@ main() {
   export UWE_HOME
 
   log "UWE Host Setup — Repository: $UWE_HOME"
+  reset_system_dependencies
   check_prerequisites
   ensure_service_user
   ensure_directories
