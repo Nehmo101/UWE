@@ -3,16 +3,15 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  # On PRs, cancel superseded runs. On main pushes, keep each run (avoids merge storms cancelling jobs).
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Cancel superseded main pushes to avoid duplicate full-gate runs.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -116,11 +115,7 @@ jobs:
         id: docker_changes
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
-          else
-            base="${{ github.event.before }}"
-          fi
+          base="${{ github.event.before }}"
 
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -150,7 +145,7 @@ jobs:
           target: studio
           push: false
           cache-from: type=gha,scope=uwe-docker-studio
-          cache-to: type=gha,mode=max,scope=uwe-docker-studio
+          cache-to: type=gha,mode=min,scope=uwe-docker-studio
 
       - name: Docker build (portal)
         if: steps.docker_changes.outputs.changed == 'true'
@@ -160,4 +155,4 @@ jobs:
           target: portal
           push: false
           cache-from: type=gha,scope=uwe-docker-portal
-          cache-to: type=gha,mode=max,scope=uwe-docker-portal
+          cache-to: type=gha,mode=min,scope=uwe-docker-portal

@@ -9,6 +9,7 @@
     "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
     "lint": "eslint --max-warnings 0 .",
     "ci:check": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
+    "ci:light": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm typecheck && pnpm test:ci && pnpm secret:scan && pnpm docs:check",
     "quality": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm secret:scan && pnpm typecheck && pnpm test && pnpm test:security && pnpm audit:prod && pnpm build:release && node scripts/bundle-budget-check.mjs",
     "test:ci": "pnpm --filter @uwe/database db:generate && node scripts/migration-check.mjs && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/windows-installer.test.ts scripts/integration-smoke.test.ts",
     "security:audit": "pnpm audit:prod",

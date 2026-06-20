@@ -3,16 +3,10 @@ name: Windows Installer
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths:
-      - "tools/windows-installer/**"
-      - "scripts/windows/**"
-      - ".github/workflows/windows-installer.yml"
-  pull_request:
-    paths:
-      - "tools/windows-installer/**"
-      - "scripts/windows/**"
-      - ".github/workflows/windows-installer.yml"
+    tags:
+      - "v*"
+    branches:
+      - "release/**"
 
 jobs:
   test:
@@ -32,17 +26,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Build installer package
+        run: pnpm --filter @uwe/windows-installer run build
 
-      - name: Generate Prisma client
-        run: pnpm --filter @uwe/database db:generate
+      - name: Installer typecheck
+        run: pnpm --filter @uwe/windows-installer run typecheck
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Installer unit tests
+        run: pnpm --filter @uwe/windows-installer test
 
-      - name: Test
-        run: pnpm test
+      - name: Installer scaffolding tests
+        run: node --import tsx --test scripts/windows-installer.test.ts
 
       - name: Windows installer dry-run
         run: pnpm installer:windows:dry-run
@@ -80,3 +74,4 @@ jobs:
           name: uwe-windows-setup-exe
           path: tools/windows-installer/dist/exe/UWE-Setup.exe
           if-no-files-found: warn
+          retention-days: 3

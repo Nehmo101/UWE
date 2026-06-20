@@ -202,8 +202,8 @@ pnpm dev:portal   # http://localhost:3001
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm ci:check           # fast gate: lint, typecheck, test:ci, build
-pnpm quality            # full gate (same as CI) — run before PR
+pnpm ci:light           # PR gate (matches pr-check.yml)
+pnpm quality            # full gate (matches main CI) — run before merge
 pnpm build:release      # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
@@ -212,7 +212,7 @@ pnpm docs:check         # required docs + markdown sanity
 pnpm release:check      # validate release files and version sync
 ```
 
-Pull requests and pushes to `main` run CI in GitHub Actions (`.github/workflows/ci.yml` — full `pnpm quality`). Fast PR feedback: `pr-check.yml`. Security and docs: `security.yml`, `docs-check.yml`. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality`, E2E, Postgres smoke, conditional Docker). Security runs on `main` and weekly; Windows installer and Cursor agent are manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
