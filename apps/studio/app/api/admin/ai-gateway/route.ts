@@ -6,6 +6,7 @@ import {
   getAiGatewayUsage,
   patchAiGatewayConfig,
   postAiGatewayFallbackTest,
+  postAiGatewaySimulate,
   upsertAiCloudProvider,
   upsertAiUserGrant,
 } from "@/src/lib/ai-gateway-handlers";
@@ -65,6 +66,8 @@ export async function POST(request: Request) {
       return upsertAiUserGrant(user, body as Parameters<typeof upsertAiUserGrant>[1]);
     case "fallback-test":
       return postAiGatewayFallbackTest(user);
+    case "simulate":
+      return postAiGatewaySimulate(user, body as Parameters<typeof postAiGatewaySimulate>[1]);
     default:
       return Response.json({ error: "Unbekannte Aktion." }, { status: 400 });
   }

@@ -13,6 +13,7 @@ import {
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
   checkRtxHealth,
+  simulateGatewayRouting,
 } from "@uwe/ai-brain";
 import type { AuthUser } from "@uwe/auth";
 import { jsonError } from "./api-response";
@@ -231,6 +232,51 @@ export async function postAiGatewayFallbackTest(user: AuthUser | null) {
     ...result,
     rtxHealth,
   });
+}
+
+export async function postAiGatewaySimulate(
+  user: AuthUser | null,
+  body: {
+    simulateRtxOffline?: boolean;
+    userId?: string;
+    privacyFeature?: AiFeatureCategory;
+  } = {},
+) {
+  const denied = requireMasterAdmin(user);
+  if (denied) return denied;
+
+  const service = gatewayService();
+  const status = await getAiGatewayStatusForClient(service);
+  const privacyFeature = body.privacyFeature ?? "general_chat";
+  const privacyLevel =
+    status.config.privacyRules[privacyFeature] ??
+    status.config.privacyRules.general_chat;
+
+  let userCloudFallbackEnabled = false;
+  if (body.userId) {
+    const grant = await service.getUserGrant(body.userId);
+    userCloudFallbackEnabled = grant?.cloudFallbackAllowed ?? false;
+  }
+
+  const cases = simulateGatewayRouting({
+    config: {
+      ...status.config,
+      updatedAt: new Date(status.config.updatedAt),
+    },
+    rtxOnline: status.rtxHealth.ready,
+    cloudProviders: status.providers.map((provider) => ({
+      label: provider.label,
+      hasApiKey: provider.hasApiKey,
+      isEnabled: provider.isEnabled,
+    })),
+    budgetWithinLimit: status.budget.withinBudget,
+    privacyFeature,
+    privacyLevel,
+    userCloudFallbackEnabled,
+    simulateRtxOffline: body.simulateRtxOffline ?? !status.rtxHealth.ready,
+  });
+
+  return NextResponse.json({ cases });
 }
 
 export async function getAiGatewayUsage(

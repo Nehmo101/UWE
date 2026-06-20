@@ -239,6 +239,7 @@ export {
   createGatewayApiKeyStore,
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
+  simulateGatewayRouting,
   AiGatewayAccessDeniedError,
   AiGatewayBudgetExceededError,
   AiGatewayDisabledError,
@@ -260,4 +261,5 @@ export {
   type AiPrivacyLevel,
   type AiFeatureCategory,
   type AiFeaturePermission,
+  type AiGatewaySimulationCase,
 } from "./gateway";

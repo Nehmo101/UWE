@@ -122,6 +122,15 @@ export function AiGatewayWizard() {
   });
   const [filteredUsage, setFilteredUsage] = useState<UsageLogEntry[] | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [simulationForm, setSimulationForm] = useState({
+    simulateRtxOffline: true,
+    privacyFeature: "general_chat",
+    userId: "",
+  });
+  const [simulationCases, setSimulationCases] = useState<
+    Array<{ id: string; label: string; passed: boolean; detail: string }> | null
+  >(null);
+  const [simulationLoading, setSimulationLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -266,6 +275,34 @@ export function AiGatewayWizard() {
     const res = await fetch("/api/admin/ai-gateway?action=fallback-test", { method: "POST" });
     const body = (await res.json()) as { message?: string; error?: string };
     setMessage(body.message ?? body.error ?? "Test abgeschlossen.");
+  }
+
+  async function runRoutingSimulation() {
+    setSimulationLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/ai-gateway?action=simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          simulateRtxOffline: simulationForm.simulateRtxOffline,
+          privacyFeature: simulationForm.privacyFeature,
+          userId: simulationForm.userId || undefined,
+        }),
+      });
+      const body = (await res.json()) as {
+        cases?: Array<{ id: string; label: string; passed: boolean; detail: string }>;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(body.error ?? "Simulation fehlgeschlagen.");
+      }
+      setSimulationCases(body.cases ?? []);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Simulation fehlgeschlagen.");
+    } finally {
+      setSimulationLoading(false);
+    }
   }
 
   if (loading && !data) {
@@ -583,9 +620,79 @@ export function AiGatewayWizard() {
 
       {step === 7 && (
         <section className="uwe-card uwe-section">
-          <h2>Fallback-Test &amp; Usage Logs</h2>
+          <h2>Routing-Simulation, Fallback-Test &amp; Usage Logs</h2>
+
+          <div className="uwe-section">
+            <h3>Routing-Simulation</h3>
+            <p className="uwe-muted">
+              Prüft offline, welcher Pfad (RTX vs. Cloud) für die aktuelle Konfiguration greifen würde — ohne echten API-Call.
+            </p>
+            <div className="uwe-form-grid">
+              <label className="uwe-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={simulationForm.simulateRtxOffline}
+                  onChange={(e) =>
+                    setSimulationForm((f) => ({ ...f, simulateRtxOffline: e.target.checked }))
+                  }
+                />
+                RTX offline simulieren
+              </label>
+              <label className="uwe-field">
+                Privacy-Feature
+                <select
+                  className="uwe-input"
+                  value={simulationForm.privacyFeature}
+                  onChange={(e) =>
+                    setSimulationForm((f) => ({ ...f, privacyFeature: e.target.value }))
+                  }
+                >
+                  {Object.keys(data.config.privacyRules).map((feature) => (
+                    <option key={feature} value={feature}>
+                      {feature}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="uwe-field">
+                User (Cloud-Fallback-Toggle)
+                <select
+                  className="uwe-input"
+                  value={simulationForm.userId}
+                  onChange={(e) =>
+                    setSimulationForm((f) => ({ ...f, userId: e.target.value }))
+                  }
+                >
+                  <option value="">— kein User —</option>
+                  {adminUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="uwe-button-secondary"
+              onClick={() => void runRoutingSimulation()}
+              disabled={simulationLoading}
+            >
+              {simulationLoading ? "Simuliere…" : "Routing simulieren"}
+            </button>
+            {simulationCases && (
+              <ul className="uwe-section">
+                {simulationCases.map((simCase) => (
+                  <li key={simCase.id}>
+                    {simCase.passed ? "✓" : "✗"} <strong>{simCase.label}</strong> — {simCase.detail}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <button type="button" className="uwe-button-secondary" onClick={() => void runFallbackTest()}>
-            Fallback-Test ausführen
+            Live-Fallback-Test ausführen
           </button>
 
           <div className="uwe-form-grid uwe-section">

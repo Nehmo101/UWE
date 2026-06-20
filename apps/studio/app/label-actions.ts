@@ -15,6 +15,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function labels() {
@@ -225,8 +226,12 @@ export async function updateLabelAction(formData: FormData) {
     content = restoreOriginalText(content);
   } else if (action === "ai_shorten") {
     const sourceText = content.originalText || content.text || "";
+    const actor = await getCurrentAuthUser();
     const { tryAiShortenLabelText } = await import("@/src/lib/label-ai-shorten");
-    const shortened = await tryAiShortenLabelText(sourceText);
+    const shortened = await tryAiShortenLabelText(sourceText, {
+      userId: actor?.id,
+      role: actor?.role,
+    });
     if (shortened) {
       content = {
         ...content,

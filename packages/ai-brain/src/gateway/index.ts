@@ -28,3 +28,8 @@ export {
   type AiFeaturePermission,
   type AiGatewayConfigRecord,
 } from "./aiGateway";
+export {
+  simulateGatewayRouting,
+  type AiGatewaySimulationCase,
+  type GatewaySimulationInput,
+} from "./simulate";

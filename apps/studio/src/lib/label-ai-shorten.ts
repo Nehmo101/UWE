@@ -1,8 +1,5 @@
-import {
-  createApiKeyStoreFromEnv,
-  createProvider,
-  resolveAiBrainSettings,
-} from "@uwe/ai-brain";
+import { executeAiGatewayRequest } from "@uwe/ai-brain";
+import { createAiGatewayService, createUweRepository, prisma } from "@uwe/database/server";
 
 const SHORTEN_PROMPT = `Kürze den folgenden Text für ein 6×4-Zoll Spieler-Handout.
 Regeln:
@@ -16,43 +13,36 @@ Text:
 
 export async function tryAiShortenLabelText(
   text: string,
-  _options: { localOnly?: boolean } = {},
+  options: { userId?: string; role?: string } = {},
 ): Promise<string | null> {
   const trimmed = text.trim();
-  if (!trimmed) return null;
+  if (!trimmed || !options.userId || !options.role) {
+    return null;
+  }
 
   try {
-    const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), {
-      enabled: process.env.AI_BRAIN_ENABLED !== "false",
-      localOnly: true,
-    });
+    const gatewayService = createAiGatewayService(prisma);
+    const result = await executeAiGatewayRequest(
+      { gatewayService, repo: createUweRepository() },
+      {
+        user: { userId: options.userId, role: options.role },
+        providerMode: "local_rtx",
+        contextMode: "general_chat",
+        taskType: "summarize_page",
+        userPrompt: `${SHORTEN_PROMPT}${trimmed}`,
+        useMock: process.env.AI_USE_MOCK === "true",
+        feature: "AI_SUMMARY_USE",
+        options: {
+          localOnly: true,
+          datenschutzMode: true,
+        },
+      },
+    );
 
-    if (!settings.enabled) return null;
-
-    const providerId = settings.defaultProvider;
-    if (!settings.providers.find((p) => p.id === providerId)?.isLocal) {
+    const shortened = result.result.text.trim();
+    if (!shortened || shortened.length >= trimmed.length) {
       return null;
     }
-    const provider = createProvider(providerId, createApiKeyStoreFromEnv(), {
-      useMock: process.env.AI_USE_MOCK === "true",
-    });
-
-    const health = await provider.healthCheck();
-    if (!health.ok) return null;
-
-    const models = await provider.listModels();
-    const model = models[0]?.id;
-    if (!model) return null;
-
-    const response = await provider.generateText({
-      model,
-      prompt: `${SHORTEN_PROMPT}${trimmed}`,
-      maxTokens: 800,
-      temperature: 0.3,
-    });
-
-    const shortened = response.text.trim();
-    if (!shortened || shortened.length >= trimmed.length) return null;
     return shortened;
   } catch {
     return null;
