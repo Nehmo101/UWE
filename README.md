@@ -136,6 +136,36 @@ Danach ist UWE lokal und im LAN erreichbar, z. B.:
 
 Production-Env und Secrets liegen unter **`/etc/uwe/uwe.env`** (nicht im Git). Vor Internet-Exposure: `AUTH_SECRET` setzen, siehe [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
+### Erstes Setup (Owner anlegen)
+
+Nach dem Host-Setup ist Studio erreichbar, aber noch **kein Benutzer** angelegt. `/setup` ist ohne `Authorization`-Header zugänglich, solange kein Owner existiert (auch wenn `STUDIO_API_TOKEN` gesetzt ist).
+
+1. Secrets in `/etc/uwe/uwe.env` setzen und Service neu starten:
+
+   ```bash
+   sudo nano /etc/uwe/uwe.env
+   # AUTH_SECRET=<openssl rand -base64 32>
+   # UWE_SETUP_TOKEN=<openssl rand -hex 32>
+   # STUDIO_API_TOKEN=<openssl rand -base64 32>   # empfohlen
+   # RUN_DB_SEED=false
+   sudo systemctl restart uwe.service
+   ```
+
+2. Browser öffnen: **`http://127.0.0.1:3000/setup`** (LAN: `http://<HOST-IP>:3000/setup`)
+
+3. Setup-Token aus `UWE_SETUP_TOKEN` eingeben und Owner-Konto anlegen.
+
+4. Nach erfolgreichem Setup leitet `/setup` zur Anmeldung um; erneutes Setup ist blockiert.
+
+Prüfen (ohne Bearer-Token — sollte JSON mit `setupAvailable` liefern):
+
+```bash
+curl -s http://127.0.0.1:3000/api/auth/setup
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/setup   # 200 vor Setup
+```
+
+Details: [docs/PRODUCTION.md](docs/PRODUCTION.md), [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+
 ### Was das Script macht
 
 1. Prüft root, Node/pnpm/git und erkennt das Repo (`/opt/uwe` oder Pfad relativ zum Script)

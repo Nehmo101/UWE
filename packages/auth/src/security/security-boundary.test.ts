@@ -59,6 +59,22 @@ describe("security boundary", () => {
     assert.equal(decision.status, 401);
   });
 
+  it("allows /setup without Authorization when publicly exposed with STUDIO_API_TOKEN", () => {
+    assert.equal(isPublicRoute("/setup", "studio"), true);
+
+    const decision = evaluateStudioMiddleware(
+      makeMiddlewareRequest("/setup", { host: "127.0.0.1:3000" }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "test-token",
+      },
+    );
+    assert.equal(decision.action, "allow");
+  });
+
   it("blocks protected APIs without auth", () => {
     process.env.STUDIO_API_TOKEN = "test-token";
 

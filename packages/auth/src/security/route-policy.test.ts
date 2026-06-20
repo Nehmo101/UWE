@@ -26,6 +26,15 @@ describe("route policy", () => {
     assert.equal(classifyRoute("/api/auth/two-factor/setup", "portal").access, "protected-session");
   });
 
+  it("treats studio auth pages as public", () => {
+    assert.equal(isPublicRoute("/setup", "studio"), true);
+    assert.equal(isPublicRoute("/login", "studio"), true);
+    assert.equal(isPublicRoute("/forgot-password", "studio"), true);
+    assert.equal(isPublicRoute("/reset-password", "studio"), true);
+    assert.equal(isPublicRoute("/logout", "studio"), true);
+    assert.equal(requiresStudioAuth("/setup"), false);
+  });
+
   it("treats studio admin and brain APIs as protected", () => {
     assert.equal(requiresStudioAuth("/admin/status"), true);
     assert.equal(requiresStudioAuth("/api/brain/run"), true);

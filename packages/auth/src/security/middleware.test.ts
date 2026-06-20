@@ -88,4 +88,87 @@ describe("middleware evaluation", () => {
     });
     assert.equal(decision.action, "allow");
   });
+
+  it("allows /setup without Authorization when STUDIO_API_TOKEN is configured", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/setup", { headers: { host: "127.0.0.1:3000" } }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "allow");
+  });
+
+  it("allows GET /api/auth/setup without Authorization when STUDIO_API_TOKEN is configured", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/api/auth/setup", { headers: { host: "127.0.0.1:3000" } }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "allow");
+  });
+
+  it("blocks protected studio API without bearer token when STUDIO_API_TOKEN is configured", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/api/brain/run", { headers: { host: "127.0.0.1:3000" } }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "block");
+    assert.equal(decision.status, 401);
+    assert.match(decision.error ?? "", /Studio-API-Token erforderlich/);
+  });
+
+  it("rejects invalid bearer token on protected studio API routes", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/api/brain/run", {
+        headers: {
+          host: "127.0.0.1:3000",
+          authorization: "Bearer wrong-token",
+        },
+      }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "block");
+    assert.equal(decision.status, 401);
+  });
+
+  it("allows protected studio API with valid bearer token", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/api/brain/run", {
+        headers: {
+          host: "127.0.0.1:3000",
+          authorization: "Bearer secret",
+        },
+      }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "allow");
+  });
 });

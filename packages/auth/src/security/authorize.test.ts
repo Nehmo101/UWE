@@ -36,6 +36,21 @@ describe("authorize", () => {
     assert.equal(denied?.status, 404);
   });
 
+  it("allows public studio auth routes without bearer token when STUDIO_API_TOKEN is configured", () => {
+    process.env.STUDIO_API_TOKEN = "secret-token";
+
+    for (const pathname of ["/setup", "/api/auth/setup"]) {
+      const denied = authorize({
+        scope: pathname.startsWith("/api/") ? "studio-api" : "studio-action",
+        request: makeRequest(pathname, { host: "127.0.0.1:3000" }),
+        pathname,
+      });
+      assert.equal(denied, null, pathname);
+    }
+
+    delete process.env.STUDIO_API_TOKEN;
+  });
+
   it("blocks protected studio API without auth when token is configured", () => {
     process.env.STUDIO_API_TOKEN = "secret-token";
 

@@ -53,6 +53,15 @@ describe("owner bootstrap setup", () => {
     await db.$disconnect();
   });
 
+  it("returns setupAvailable false after owner bootstrap", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    assert.equal(await auth.isSetupAvailable(), false);
+
+    await db.$disconnect();
+  });
+
   it("authenticates with hashed password and rejects wrong password generically", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);

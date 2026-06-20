@@ -179,8 +179,8 @@ AUTH_REQUIRED=true
 **Erster Owner (Produktion ohne Demo-Seed):**
 
 1. `UWE_SETUP_TOKEN` in `.env` setzen und Server neu starten
-2. Studio öffnen: http://localhost:3000/setup
-3. Owner-Konto anlegen (Setup ist danach dauerhaft deaktiviert)
+2. Studio öffnen: http://localhost:3000/setup (kein `Authorization`-Header nötig, auch wenn `STUDIO_API_TOKEN` gesetzt ist)
+3. Owner-Konto anlegen (Setup ist danach dauerhaft deaktiviert; `/setup` leitet zur Anmeldung um)
 4. Optional: SMTP konfigurieren für Passwort-Reset-Mails (`SMTP_HOST`, `MAIL_ENABLED=true`)
 
 **Wichtig — Studio absichern:** UWE Studio hat **Session-Login** (owner/admin/dm) plus optionale äußere Schutzschichten. Betreiben Sie Studio **niemals** ohne zusätzliche Absicherung direkt öffentlich im Internet:

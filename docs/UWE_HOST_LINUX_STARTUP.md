@@ -56,14 +56,26 @@ Alle Befehle im **UWE-Projektordner** ausführen (dort wo `package.json` liegt).
 
    Geheimnis erzeugen: `openssl rand -base64 32`
 
-4. **Teststart**:
+4. **Erstes Owner-Setup** (Produktion ohne Demo-Seed):
+
+   ```bash
+   # In .env setzen:
+   # UWE_SETUP_TOKEN=$(openssl rand -hex 32)
+   # RUN_DB_SEED=false
+   # STUDIO_API_TOKEN=$(openssl rand -base64 32)   # empfohlen — blockiert /setup nicht
+   ```
+
+   Browser: **`http://127.0.0.1:3000/setup`** — Setup-Token eingeben, Owner anlegen.  
+   Danach ist `/setup` nicht mehr verfügbar (Weiterleitung zur Anmeldung). Details: [PRODUCTION.md](./PRODUCTION.md).
+
+5. **Teststart**:
 
    ```bash
    pnpm host:start
    pnpm host:status
    ```
 
-5. Optional **Autostart nach Neustart** (siehe Abschnitt C).
+6. Optional **Autostart nach Neustart** (siehe Abschnitt C).
 
 ---
 

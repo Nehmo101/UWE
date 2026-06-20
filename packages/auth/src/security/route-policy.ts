@@ -24,6 +24,8 @@ export interface RouteClassification {
 export const PUBLIC_PLAYER_APP_ROUTES = [
   "/",
   "/login",
+  "/logout",
+  "/setup",
   "/forgot-password",
   "/reset-password",
   "/portal",
