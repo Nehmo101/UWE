@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TwoFactorSetupForm } from "@uwe/shared-ui";
+import { AuthCard, AuthPageLayout, TwoFactorSetupForm } from "@uwe/shared-ui";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export default async function AccountSecurityPage() {
@@ -10,18 +10,15 @@ export default async function AccountSecurityPage() {
   }
 
   return (
-    <main className="studio-auth-page">
-      <section className="studio-auth-card">
-        <h1>Sicherheit</h1>
-        <p className="studio-auth-lead">
-          Angemeldet als {user.displayName}
-          {user.email ? ` (${user.email})` : ""}.
-        </p>
+    <AuthPageLayout variant="studio" compact>
+      <AuthCard
+        variant="studio"
+        title="Sicherheit"
+        lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
+        footer={<Link href="/account/password">Passwort ändern</Link>}
+      >
         <TwoFactorSetupForm variant="studio" backHref="/account/password" />
-        <p className="studio-auth-footer">
-          <Link href="/account/password">Passwort ändern</Link>
-        </p>
-      </section>
-    </main>
+      </AuthCard>
+    </AuthPageLayout>
   );
 }

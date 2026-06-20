@@ -1162,6 +1162,357 @@ html[data-theme="light"] {
   text-decoration: none;
 }
 
+/* ── Auth shell (login, password reset, setup) ── */
+.uwe-auth-shell {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: stretch;
+  overflow-x: clip;
+  background:
+    radial-gradient(ellipse 80% 50% at 15% -10%, var(--uwe-shell-gradient-start), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 95% 5%, var(--uwe-shell-gradient-mid), transparent 45%),
+    linear-gradient(180deg, var(--uwe-bg-elevated) 0%, var(--uwe-shell-gradient-end) 100%);
+  color: var(--uwe-fg);
+}
+
+.uwe-auth-shell-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--uwe-accent) 18%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--uwe-info) 10%, transparent), transparent 40%);
+  z-index: 0;
+}
+
+.uwe-auth-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-right: 1px solid var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-panel) 55%, transparent);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+}
+
+.uwe-auth-brand-inner {
+  width: min(100%, 26rem);
+}
+
+.uwe-auth-brand-kicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--uwe-accent) 78%, white 22%);
+}
+
+.uwe-auth-brand-title {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0 0 0.35rem;
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--uwe-fg);
+}
+
+.uwe-auth-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  border-radius: 0.35em;
+  background: linear-gradient(135deg, var(--uwe-accent), color-mix(in srgb, var(--uwe-accent) 70%, #312e81));
+  color: white;
+  font-size: 0.72em;
+  font-weight: 800;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+}
+
+.uwe-auth-brand-subtitle {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: var(--uwe-fg-muted);
+  letter-spacing: 0.02em;
+}
+
+.uwe-auth-brand-desc {
+  margin: 0 0 1.5rem;
+  line-height: 1.65;
+  font-size: 0.92rem;
+  color: color-mix(in srgb, var(--uwe-fg-muted) 88%, var(--uwe-fg) 12%);
+}
+
+.uwe-auth-feature-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.uwe-auth-feature-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-surface) 85%, transparent);
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uwe-auth-feature-item:hover {
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-border-muted));
+  background: color-mix(in srgb, var(--uwe-accent-muted) 45%, var(--uwe-surface));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.uwe-auth-feature-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--uwe-fg);
+}
+
+.uwe-auth-feature-detail {
+  font-size: 0.72rem;
+  color: var(--uwe-fg-subtle);
+}
+
+.uwe-auth-brand-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--uwe-fg-subtle);
+}
+
+.uwe-auth-brand-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 40%, transparent);
+  background: var(--uwe-accent-muted);
+  color: color-mix(in srgb, var(--uwe-accent) 75%, white 25%);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.uwe-auth-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2rem);
+}
+
+.uwe-auth-card {
+  width: min(100%, 28rem);
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--uwe-panel) 88%, transparent);
+  border: 1px solid var(--uwe-border);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 0 0 1px color-mix(in srgb, var(--uwe-accent) 8%, transparent) inset;
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.uwe-auth-card:hover {
+  border-color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-border));
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    0 0 0 1px color-mix(in srgb, var(--uwe-accent) 12%, transparent) inset;
+}
+
+.uwe-auth-card-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--uwe-fg);
+}
+
+.uwe-auth-lead {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.uwe-auth-card-body {
+  margin-top: 1.25rem;
+}
+
+.uwe-auth-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.uwe-auth-form label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--uwe-fg);
+}
+
+.uwe-auth-form input {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-bg) 75%, var(--uwe-bg-elevated) 25%);
+  color: var(--uwe-fg);
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uwe-auth-form input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--uwe-accent) 22%, transparent);
+}
+
+.uwe-auth-form input:focus-visible {
+  outline: 2px solid var(--uwe-accent);
+  outline-offset: 2px;
+}
+
+.uwe-auth-form .uwe-btn-primary {
+  margin-top: 0.35rem;
+}
+
+.uwe-auth-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.uwe-auth-link {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--uwe-accent) 80%, var(--uwe-fg) 20%);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.uwe-auth-link:hover {
+  color: var(--uwe-accent-hover);
+  text-decoration: underline;
+}
+
+.uwe-auth-link:focus-visible {
+  outline: 2px solid var(--uwe-accent);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+.uwe-auth-footer {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--uwe-border-muted);
+  font-size: 0.875rem;
+}
+
+.uwe-auth-footer a {
+  color: color-mix(in srgb, var(--uwe-accent) 75%, var(--uwe-fg) 25%);
+  text-decoration: none;
+}
+
+.uwe-auth-footer a:hover {
+  color: var(--uwe-accent-hover);
+  text-decoration: underline;
+}
+
+.uwe-auth-message {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.55rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.uwe-auth-message-error {
+  border: 1px solid color-mix(in srgb, var(--uwe-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-danger) 12%, transparent);
+  color: var(--uwe-danger);
+}
+
+.uwe-auth-message-success {
+  border: 1px solid color-mix(in srgb, var(--uwe-success) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-success) 12%, transparent);
+  color: var(--uwe-success);
+}
+
+.uwe-auth-loading {
+  margin: 0;
+  color: var(--uwe-fg-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .uwe-auth-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .uwe-auth-brand {
+    border-right: none;
+    border-bottom: 1px solid var(--uwe-border-muted);
+    padding: 1.5rem 1.25rem;
+  }
+
+  .uwe-auth-brand-inner {
+    width: min(100%, 32rem);
+    margin: 0 auto;
+  }
+
+  .uwe-auth-feature-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .uwe-auth-content {
+    padding: 1.25rem 1rem 2rem;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .uwe-auth-feature-list {
+    grid-template-columns: 1fr;
+  }
+
+  .uwe-auth-card {
+    border-radius: 0.85rem;
+  }
+}
+
+.uwe-auth-shell-compact {
+  grid-template-columns: 1fr;
+}
+
+.uwe-auth-shell-compact .uwe-auth-content {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .uwe-portal-hero {
   position: relative;
   padding: 2.5rem 0 2rem;
@@ -1230,6 +1581,68 @@ html[data-theme="light"] {
   align-items: center;
   justify-content: center;
   padding: 1.5rem 1rem 3rem;
+}
+
+.uwe-landing-shell .uwe-landing-brand {
+  /* inherits uwe-auth-brand */
+}
+
+.uwe-landing-content {
+  align-items: center;
+}
+
+.uwe-landing-card {
+  width: min(100%, 30rem);
+}
+
+.uwe-landing-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.uwe-landing-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.uwe-landing-action-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.uwe-landing-action-detail {
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.uwe-landing-action-logout {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.uwe-landing-action-logout button {
+  width: 100%;
+  justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.85rem 1rem;
+  height: auto;
+}
+
+.uwe-landing-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: none;
+  text-align: center;
 }
 
 .uwe-landing-hero {
