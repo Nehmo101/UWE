@@ -13,6 +13,7 @@ readonly UWE_BACKUP_DIR="/var/backups/uwe"
 readonly DEFAULT_UWE_HOME="/opt/uwe"
 readonly STUDIO_PORT="3000"
 readonly SYSTEMD_UNIT="uwe.service"
+readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -186,14 +187,14 @@ run_as_uwe() {
 }
 
 install_dependencies() {
-  log "Installiere npm-Abhängigkeiten (pnpm install) …"
-  run_as_uwe "corepack enable >/dev/null 2>&1 || true; pnpm install --frozen-lockfile"
+  log "Installiere npm-Abhängigkeiten (pnpm install inkl. Build-/Dev-Tools) …"
+  run_as_uwe "corepack enable >/dev/null 2>&1 || true; pnpm install --frozen-lockfile --prod=false"
 }
 
 run_prisma_generate() {
   local schema="$1"
   log "Generiere Prisma Client ($schema) …"
-  run_as_uwe "pnpm exec prisma generate --schema '$schema'"
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma generate --schema '$schema'"
 }
 
 run_migrations() {
@@ -207,7 +208,7 @@ run_migrations() {
   fi
 
   log "Wende Datenbank-Migrationen an (prisma migrate deploy) …"
-  run_as_uwe "pnpm exec prisma migrate deploy --schema '$schema'"
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma migrate deploy --schema '$schema'"
 }
 
 run_build() {
