@@ -1,16 +1,19 @@
 # UWE — Universeller Welten-Editor
 
-**UWE** is a self-hosted campaign brain and world wiki for D&D and tabletop RPGs.
+**UWE** is a self-hosted **Alltags- und Hobby-Betriebssystem**: Daily Admin OS, DnD campaign brain, player portal, and optional local AI — all on your own hardware.
 
 | Component | Name | Purpose |
 |-----------|------|---------|
 | Product | **UWE** | Overall platform |
-| DM App | **UWE Studio** | World and campaign editor (DM-only knowledge) |
+| DM App | **UWE Studio** | World/campaign editor, Daily Admin OS, AI workflows (DM-only) |
 | Player App | **UWE Portal** | Player-facing wiki and handouts (live web app + API) |
 | Export | **Static Export** | Player-safe HTML export for simple hosting |
 | Backend | **UWE Core** | Shared data layer, auth, wiki engine (packages) |
+| Integrations | **RTX, Mail, Calendar, …** | Optional local AI, SMTP, calendar feeds, DnD APIs |
 
-> Self-hosted campaign brain and world wiki — no cloud required.
+> Self-hosted Daily Admin OS and campaign brain — no cloud required for core data.
+
+Architektur: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ### Daily Admin OS
 
@@ -20,8 +23,10 @@ UWE ist ein **tägliches privates Admin-Cockpit** neben dem DnD-Editor: Heute-Da
 |---------|--------|
 | DnD-Welten, Brain, KI-Router, Admin Status | ✅ done |
 | Mobile Bottom Nav, KI-Prompt, Capture FAB | ✅ done |
-| `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain` | ✅ done (Basis-UI; Lücken: Kalender auf `/today`, Capture-Bild-Upload) |
-| Life-Brain RTX-Offline-Queue, erweiterte Mobile-Views | 🔶 partial |
+| `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain` | ✅ done (Basis-UI) |
+| Mail Center, Kalender, Image Studio (Studio-only) | ✅ done (Kern) |
+| Kalender-Widget auf `/today`, Capture-Bild-Upload, Life-Brain-Retrieval | 🔶 partial |
+| Erweiterte Mobile-Views auf allen Welt-Unterseiten | 🔶 partial |
 
 Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · Reifegrad: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
 
@@ -174,6 +179,24 @@ sudo bash ./deploy/scripts/setup-uwe-host.sh
 
 ---
 
+## Linux Homelab (pnpm host scripts)
+
+Leichtgewichtiges Start/Stop für einen Linux-Rechner im Heimnetz — ohne systemd-Setup, direkt aus dem geklonten Repo. Nutzt `.env`, baut bei Bedarf, startet Studio + Portal im LAN (`0.0.0.0`).
+
+```bash
+cd /opt/uwe   # oder dein Klone
+cp .env.example .env
+pnpm install --frozen-lockfile
+pnpm host:start          # Studio :3000, Portal :3001
+pnpm host:status         # URLs + Prozess-Status
+pnpm host:stop           # sauber stoppen
+pnpm host:install-autostart   # optional: systemd user/service
+```
+
+Persistente Daten wie in der Docker-Sektion (`./data/*`, `./exports`). Für produktionsnahes systemd unter `/var/lib/uwe` siehe [UWE Host One-Shot Setup](#uwe-host-one-shot-setup) oben.
+
+---
+
 ## Alternative: Lokale Entwicklung (ohne Docker)
 
 ### Prerequisites
@@ -203,7 +226,7 @@ pnpm dev:portal   # http://localhost:3001
 ```bash
 pnpm install --frozen-lockfile
 pnpm ci:light           # PR gate (matches pr-check.yml)
-pnpm quality            # full gate (matches main CI) — run before merge
+pnpm quality            # full gate (matches main CI) — lint, tests, security, audit, build, bundle budget
 pnpm build:release      # production build (includes Prisma generate)
 pnpm test
 pnpm typecheck
@@ -212,7 +235,7 @@ pnpm docs:check         # required docs + markdown sanity
 pnpm release:check      # validate release files and version sync
 ```
 
-Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality`, E2E, Postgres smoke, conditional Docker). Security runs on `main` and weekly; Windows installer and Cursor agent are manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality` including bundle budget check, E2E, Postgres smoke, conditional Docker). Security runs on `main` and weekly; Windows installer and Cursor agent are manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
@@ -232,6 +255,10 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 - **World Inspector with fix actions** — `/worlds/[slug]/inspector` audits what players can actually see: portal-visible pages/blocks/assets, share links (password/expiry), safety findings (e.g. player-visible GM notes), and canon warnings (broken wiki links, duplicate names, contradictions, orphan pages, unassigned pages). Findings link directly to the affected page/block and offer one-click fixes (e.g. set block to DM-only, convert broken wikilinks to text) — every fix is logged and undoable.
 - **Activity Log & Next Actions** — the Studio dashboard shows an audit log (content/visibility changes, inspector fixes, template usage, imports/exports, backups, errors) with links to affected objects and inline undo, plus a "Next Actions" section (open findings, backup age, unassigned content, publicly visible player content, seed/migration problems).
 - **Label-Druck** — `/worlds/[slug]/labels`: visueller 6×4-Zoll-Editor, Templates, Drucklisten, PDF/HTML-Export, DM/Player-Sicherheit. Details: [docs/LABELS.md](docs/LABELS.md).
+- **Image Studio** — `/image-studio`: Bildgenerierung, Varianten und Inpaint (RTX bevorzugt, optional Cloud nur für `generate`/`variant`). Details: [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md).
+- **Kalender** — `/calendar`: lokaler Kalender, iCal/CalDAV/FamilyWall-Feeds, Monats- und Wochenansicht. Details: [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md).
+- **Mail Center** — `/mail`: SMTP-Vorlagen für Session-Erinnerungen, Backup-Warnungen, Vertrags-Hinweise (self-hosted, Studio-only). Details: [docs/ai-brain-mail/README.md](docs/ai-brain-mail/README.md).
+- **DnD API** — Open5e/SRD-Suche und Statblock-Import in Studio (dm_only). Details: [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md).
 
 ---
 
@@ -264,7 +291,9 @@ Only **published** pages with visibility `public` or `player_visible` appear in 
 | `/setup` | Studio | One-time owner bootstrap (requires `UWE_SETUP_TOKEN`) |
 | `/forgot-password`, `/reset-password` | Studio, Portal | Self-service password reset |
 | `/account/password` | Studio | Change password (logged-in) |
+| `/account/security` | Studio | TOTP 2FA setup and disable |
 | `/auth/account/password` | Portal | Change password (logged-in) |
+| `/auth/account/security` | Portal | TOTP 2FA setup and disable |
 
 **First-run (production):** Set `UWE_SETUP_TOKEN` and `RUN_DB_SEED=false`, open Studio `/setup`, create the owner account. Setup is disabled automatically once an owner exists. See [docs/PRODUCTION.md](docs/PRODUCTION.md) and [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
@@ -535,85 +564,110 @@ npx serve exports/terra-static
 
 ## Feature-Status (Kurzüberblick)
 
+Stand: Juni 2026 · Details: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md), [docs/ROADMAP.md](docs/ROADMAP.md)
+
 | Bereich | Status | Hinweis |
 |---------|--------|---------|
 | Studio/Portal Session-Login, Setup, Passwort-Reset | ✅ done | `/login`, `/setup`, `/forgot-password` |
+| TOTP 2FA | ✅ done | `/account/security` (Studio + Portal) |
 | Rollen (owner/admin/dm/player) | ✅ done | [SECURITY.md](SECURITY.md) |
 | DM-only / Portal-Leak-Schutz | ✅ done | Hard tests + Inspector + Leak Scanner |
-| Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Mobile auf einigen Welt-Views noch lückenhaft |
+| Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Kalender-Widget/Capture-Bild noch offen |
 | DnD-KI-Generator, Brain, RTX-Router | ✅ done | Cloud nur für Allgemeinen Chat |
 | Static HTML Export | ✅ done | `pnpm export:static` |
+| Markdown/HTML Wiki-Export | ✅ done | `pnpm export:wiki` |
 | Label-Druck (6×4, PDF/HTML) | ✅ done | [docs/LABELS.md](docs/LABELS.md) |
-| Backup/Restore (API, CLI, Windows) | 🔶 partial | Kernfunktionen da; einige Metadaten noch nicht im Backup — [docs/BACKUP.md](docs/BACKUP.md) |
-| Image Studio | 🔶 partial | Phase 2 (Inpaint, Varianten); kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
-| Kalender | 🔶 partial | Phase 2 (Wochenansicht, Feeds); CalDAV Write-back offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
-| DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import; Encounter-Builder offen — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
+| Backup/Restore (API, CLI, Windows) | ✅ done | Kern vollständig; Auto-Backup-Scheduler optional — [docs/BACKUP.md](docs/BACKUP.md) |
+| Image Studio | 🔶 partial | Generate/Variant/Inpaint; kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
+| Kalender | 🔶 partial | Monats-/Wochenansicht, Feeds; vollständiger CalDAV-Sync offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
+| DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import + Encounter-Builder — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
 | Agent Jobs (GitHub Actions) | 🔶 partial | Dispatch + Polling; kein Auto-Merge — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
-| 2FA | 🔲 planned | Schema vorbereitet, Login-Flow fehlt |
+| Mail Center (SMTP) | ✅ done | Studio-only — [docs/ai-brain-mail/README.md](docs/ai-brain-mail/README.md) |
+| Tag-/Taxonomie-Aufräumer | 🔶 partial | `/admin/tags` + Merge-API; zentrales Tag-Model optional — [docs/engineering/tag-taxonomy.md](docs/engineering/tag-taxonomy.md) |
+| Secrets/Reveal (Spoiler-System) | 🔶 partial | Backend + Leak-Schutz; Studio-Editor-UI fehlt — [docs/secrets.md](docs/secrets.md) |
+| Performance-Budget + Stress-Seed | 🔶 partial | CI smoke + Bundle-Budget; keine Browser-LCP-Gates — [docs/engineering/performance.md](docs/engineering/performance.md) |
 | E2E-Tests Auth-Flows | ✅ done | Playwright-Baseline (`e2e/`) im CI |
 | PostgreSQL-Option | ✅ done | Dual-Client + Baseline-Migration — [docs/postgresql.md](docs/postgresql.md) |
-| Markdown/HTML Export | ✅ done | `pnpm export:wiki` (Portal + DM-Kontext) |
 | Asset-Datei-Import (Bulk) | 🔲 planned | Einzel-Upload vorhanden |
-| Code Cleanup / Doku-Drift | 🔶 partial | Laufend |
+| Import Undo | 🔲 planned | Preview vorhanden; kein Import-Rollback |
 
 ---
 
 ## Roadmap
 
+Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
+
 ### Done
 
 - [x] Docker Compose für Studio + Portal + persistente Datenbank
-- [x] Native Auth: Login, Setup, Passwort-Reset, Rollen
-- [x] Static HTML Export für player-sichere Wiki-Seiten
+- [x] Native Auth: Login, Setup, Passwort-Reset, Rollen, TOTP 2FA
+- [x] Static HTML Export und Markdown/HTML Wiki-Export für player-sichere Ausgabe
 - [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung
 - [x] Session Management für Welten und Kampagnen
 - [x] Soundboard (lokale Sounds, YouTube, Spotify OAuth + Web-API-Playback im Studio)
 - [x] Label-Druck, World Inspector, Activity Log, Command Palette
 - [x] Daily Admin OS Basis (Today, Capture, Projekte, Werkstatt, Verträge, Hardware, Life-Brain)
+- [x] Mail Center, Kalender (Kern), Image Studio (Generate/Variant/Inpaint), DnD API (Kern)
+- [x] Backup/Restore (Welten, Templates, ShareLinks, Verschlüsselung, Pre-Restore-Safety)
+- [x] PostgreSQL dual-client, E2E Auth-Baseline, CI Bundle-Budget + Performance-Smoke
 
 ### Partial / in progress
 
-Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md)
-
 - [ ] Image Studio — Canvas-Editor, Cloud-Edit-Härtung
-- [ ] Kalender — CalDAV Write-back, Session ↔ Event Auto-Sync
+- [ ] Kalender — vollständiger CalDAV-Sync, Session ↔ Event Auto-Sync
 - [ ] Agent Jobs — Completion-Callback, Cursor CLI Härtung
-- [ ] Backup/Restore-Vollständigkeit (PageTemplates, ShareLinks ohne Tokens, Auto-Scheduler)
-- [ ] Mobile-UI für alle Welt-Unterseiten
+- [ ] Daily Admin OS — Kalender auf `/today`, Capture-Bild-Upload, Mobile auf allen Welt-Views
 - [ ] Secrets/Reveal Studio-UI, Import Undo
+- [ ] Tag-Taxonomie — optionales zentrales Tag-Model, Asset/Life-Brain Tag-Felder
+- [ ] Performance — größere Stress-Welt, Browser-LCP-Gates
 
 ### Planned / not started
 
-- [ ] 2FA-Aktivierung (TOTP-Login-Integration)
 - [ ] Asset-Datei-Import (Karten, Sounds, Handouts als Bulk)
-- [ ] Performance-Budget + Stress-Testwelt
-- [ ] Tag-/Taxonomie-Aufräumer
+- [ ] Geplanter Auto-Backup-Scheduler (`autoBackupEnabled`)
+- [ ] Distributed Session Store bei horizontaler Skalierung
 - [ ] Code Cleanup / Reduction (Legacy-Pfade, tote CSS)
 
 ---
 
 ## Architecture
 
-UWE is a **pnpm monorepo** with **Turborepo**:
+UWE is a **pnpm monorepo** with **Turborepo**. Full overview: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
 apps/
-  studio/          # UWE Studio — DM editor (port 3000)
+  studio/          # UWE Studio — DM editor + Daily Admin OS (port 3000)
   portal/          # UWE Portal — player wiki (port 3001)
 
 packages/
   config/          # Shared TypeScript configs
-  shared-ui/       # Shared React components
-  database/        # Prisma schema, repository, page rendering
-  static-export/   # Static HTML export generator
+  env/             # ENV parsing and guards
+  shared-ui/       # Shared React components (Auth shell, MobileBottomNav, …)
+  database/        # Prisma schema, repositories, domain services
+  auth/            # Sessions, roles, route policy
+  security/        # Security helpers
+  security-tests/  # Authz and leak scanner tests
   wiki-engine/     # Wikilink parsing
-  auth/            # Roles and permissions
-  assets/          # Asset upload paths and MIME helpers
-  soundboard/      # Active sound state + Spotify Web API adapter (Studio OAuth)
-  ai-brain/        # Local AI integration (Studio)
+  static-export/   # Static HTML + wiki export
+  assets/          # Upload paths, MIME validation, storage keys
+  backup/          # Backup/restore CLI and bundle format
+  soundboard/      # Active sound state + Spotify Web API (Studio OAuth)
+  ai-brain/        # AI gateway, DnD generator, brain retrieval, RTX routing
+  image-studio/    # Image generation jobs and RTX/cloud routing
+  calendar/        # Calendar feeds, iCal/CalDAV
+  mail/            # SMTP compose and templates
+  dnd-api/         # Open5e/SRD integration
+  knoteforge-import/  # JSON import pipeline
+  agent-jobs/      # GitHub Actions agent dispatch
+  cookbook/        # Admin setup wizards (AI gateway, …)
+  web-search/      # Research helpers (Studio-only)
+
+tools/
+  uwe-rtx-agent/   # Local RTX inference worker (home network only)
+  windows-installer/  # Windows one-click setup and maintenance CLI
 ```
 
-Stack: Next.js 15, React 19, TypeScript, Prisma 7, SQLite (libsql).
+Stack: Next.js 15, React 19, TypeScript, Prisma 7, SQLite (libsql) with optional PostgreSQL.
 
 ---
 
@@ -655,7 +709,7 @@ Weitere Brain-/Inferenz-Variablen: siehe `.env.example` und Abschnitt [KI-System
 | Windows Steuerung | Desktop „UWE Steuerung“ → Backup erstellen |
 | Architektur & Rollen | [docs/BACKUP.md](docs/BACKUP.md) · [docs/backup-restore.md](docs/backup-restore.md) |
 
-Backups enthalten Welten, Seiten, Uploads und Settings (sanitized). **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`.
+Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized). ShareLinks werden ohne Tokens exportiert; Restore regeneriert Tokens. **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`. Optional: Auto-Backup-Scheduler noch in Arbeit — siehe [docs/BACKUP.md](docs/BACKUP.md).
 
 ---
 
@@ -687,10 +741,14 @@ Private project — all rights reserved.
 | Document | Purpose |
 |----------|---------|
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Product and repository architecture |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | Production deployment, updates, backup |
 | [SECURITY.md](SECURITY.md) | Security policy and checklist |
 | [SECURITY_NOTES.md](SECURITY_NOTES.md) | KI-Datenschutz, RTX-Agent, Cloud-Regeln |
-| [docs/daily-admin-os.md](docs/daily-admin-os.md) | Daily Admin OS — Zielstruktur und Integrationsstatus |
-| [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) | DnD-KI-Generator — Aktionen, Review, Player-Safety |
-| [docs/life-brain-privacy.md](docs/life-brain-privacy.md) | Privacy-Regeln für persönliches Brain |
+| [docs/daily-admin-os.md](docs/daily-admin-os.md) | Daily Admin OS — routes and integration status |
+| [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) | DnD-KI-Generator — actions, review, player safety |
+| [docs/life-brain-privacy.md](docs/life-brain-privacy.md) | Privacy rules for personal brain |
+| [docs/engineering/ci.md](docs/engineering/ci.md) | CI workflows and local quality gates |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Planned and in-progress features |
+| [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md) | Honest feature maturity assessment |
 | [VERSION](VERSION) | Current product version |
