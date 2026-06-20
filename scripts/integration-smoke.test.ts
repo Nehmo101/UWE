@@ -441,9 +441,28 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.ok(exists("scripts/bundle-budget-check.mjs"));
   });
 
-  it("runs full quality gate in CI workflow", () => {
+  it("exposes pnpm ci:light script for PR gate", () => {
+    assertScriptIncludesInOrder("ci:light", [
+      "pnpm --filter @uwe/database db:generate",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test:ci",
+      "pnpm secret:scan",
+      "pnpm docs:check",
+    ]);
+  });
+
+  it("runs light gate in PR check workflow", () => {
+    const prCheck = read(".github/workflows/pr-check.yml");
+    assert.match(prCheck, /pull_request:/);
+    assert.match(prCheck, /pnpm ci:light/);
+    assert.doesNotMatch(prCheck, /pnpm quality/);
+  });
+
+  it("runs full quality gate only on main CI workflow", () => {
     const ci = read(".github/workflows/ci.yml");
     assert.match(ci, /pnpm quality/);
+    assert.doesNotMatch(ci, /pull_request:/);
     const qualityIndex = ci.indexOf("pnpm quality");
     const dockerIndex = ci.indexOf("docker-build:");
     assert.ok(qualityIndex >= 0, "CI must run pnpm quality");
@@ -467,13 +486,13 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.match(ci, /docker\/build-push-action@v6/);
   });
 
-  it("runs quality gate in cursor-agent workflow before push", () => {
+  it("runs light gate in cursor-agent workflow before push", () => {
     const workflow = read(".github/workflows/cursor-agent.yml");
-    assert.match(workflow, /pnpm quality/);
-    const qualityIndex = workflow.indexOf("pnpm quality");
+    assert.match(workflow, /pnpm ci:light/);
+    const gateIndex = workflow.indexOf("pnpm ci:light");
     const pushIndex = workflow.indexOf("git push");
-    assert.ok(qualityIndex >= 0 && pushIndex >= 0);
-    assert.ok(qualityIndex < pushIndex, "quality must run before push");
+    assert.ok(gateIndex >= 0 && pushIndex >= 0);
+    assert.ok(gateIndex < pushIndex, "ci:light must run before push");
   });
 });
 

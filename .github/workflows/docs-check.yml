@@ -1,5 +1,9 @@
 name: Docs Check
 
+# Supplemental docs validation — not a required PR gate.
+# PRs already run pnpm docs:check in pr-check.yml (fast-checks).
+# This workflow adds broken-link scanning on main doc changes and manual runs.
+
 on:
   push:
     branches: [main]
@@ -10,14 +14,7 @@ on:
       - "AGENTS.md"
       - "scripts/docs-check.mjs"
       - ".github/workflows/docs-check.yml"
-  pull_request:
-    paths:
-      - "docs/**"
-      - ".cursor/**"
-      - "README.md"
-      - "AGENTS.md"
-      - "scripts/docs-check.mjs"
-      - ".github/workflows/docs-check.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read

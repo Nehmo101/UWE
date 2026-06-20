@@ -50,16 +50,20 @@ Admin-Portal (/admin/agent-jobs)
 `.github/workflows/cursor-agent.yml` — `workflow_dispatch` mit Inputs:
 - `prompt`, `title`, `job_id`, `branch_name`
 
-Der Workflow führt `pnpm quality` (Prisma generate → lint → secret scan → typecheck → test → security → production audit → build) **vor** dem Push aus. Fehlgeschlagene Quality-Checks blockieren den PR.
+Der Workflow führt `pnpm ci:light` (nicht volles `pnpm quality`) vor dem Push aus, um GitHub-hosted Minuten zu sparen. Das geöffnete PR wird von `pr-check.yml` geprüft; das volle Gate läuft nach Merge auf `main` via `ci.yml`.
+
+**Bevorzugt lokal/self-hosted:** `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` (oder Self-hosted Runner) statt `github_actions` für routinemäßige Agent-Jobs.
 
 ## Agent Quality Gate
 
-Alle Agenten (Cloud, CLI, Subagents) müssen dieselben Checks lokal bestehen, bevor sie pushen:
+Alle Agenten (Cloud, CLI, Subagents) müssen die Checks lokal bestehen, bevor sie pushen:
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm quality
 ```
+
+GitHub-Actions-Agent-Jobs nutzen das leichtere `pnpm ci:light`; Entwickler und Cloud-Agenten sollten vor dem Merge weiterhin `pnpm quality` lokal ausführen.
 
 Siehe `AGENTS.md` und `.cursor/skills/ci-quality-gate/` für wiederkehrende Fehlermuster (unused imports, Auth-Import-Pfade).
 

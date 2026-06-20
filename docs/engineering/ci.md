@@ -1,21 +1,63 @@
 # CI — Workflows, Scripts, and Debugging
 
-Stand: 2026-06-18
+Stand: 2026-06-20
 
 UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) and **Turbo** for the monorepo. CI runs on **Node 22** in GitHub Actions.
 
+## Cost strategy
+
+GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks run on **`main`**, on a **schedule**, or **manually** — not on every pull request.
+
+| Event | Workflow | Gate |
+|-------|----------|------|
+| **Pull request** | `pr-check.yml` | `pnpm ci:light` (lint, typecheck, test:ci, secret scan, docs) |
+| **Push `main`** | `ci.yml` | Full `pnpm quality` + E2E + PostgreSQL smoke + conditional Docker |
+| **Push `main`** | `security.yml` | Secret scan, prod audit, security tests |
+| **Monday 06:00 UTC** | `security.yml` | Weekly dependency monitoring |
+| **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
+| **Manual / release tags** | `windows-installer.yml` | Windows EXE build |
+| **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
+
 ## Workflows
 
-| Workflow | File | Trigger | Purpose | Blocking |
-|----------|------|---------|---------|----------|
-| **CI** | `.github/workflows/ci.yml` | Push `main`, all PRs, manual | Full `pnpm quality`, E2E, conditional Docker builds | Yes |
-| **PR Check** | `.github/workflows/pr-check.yml` | All PRs | Fast lint, typecheck, test:ci, lockfile check, docs | Yes |
-| **Security** | `.github/workflows/security.yml` | Push `main`, PRs, weekly Mon 06:00 UTC | Secret scan, prod audit, security tests | Yes (audit warns on schedule) |
-| **Docs Check** | `.github/workflows/docs-check.yml` | PR/push when docs/cursor paths change | Required docs + Markdown sanity | Yes |
-| **Cursor Agent** | `.github/workflows/cursor-agent.yml` | `workflow_dispatch` | Agent jobs from Studio admin | Yes (`pnpm quality` before push) |
-| **Windows Installer** | `.github/workflows/windows-installer.yml` | Path-filtered | Windows installer build/test | Yes (scoped) |
+| Workflow | File | Trigger | Purpose | Required on PR? |
+|----------|------|---------|---------|-----------------|
+| **PR Check** | `.github/workflows/pr-check.yml` | All PRs | Cheap gate: `pnpm ci:light` + lockfile check | **Yes** |
+| **CI** | `.github/workflows/ci.yml` | Push `main`, manual | Full `pnpm quality`, E2E, Postgres smoke, conditional Docker | No |
+| **Security** | `.github/workflows/security.yml` | Push `main`, weekly, manual | Audit + security tests (secret scan also in PR) | No |
+| **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
+| **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
+| **Windows Installer** | `.github/workflows/windows-installer.yml` | Manual, `v*` tags, `release/**` | Windows installer build/test | No |
+
+### Branch protection (recommended)
+
+**Required status checks** — only these should block merges:
+
+- `fast-checks` (job in `pr-check.yml`)
+
+**Do not mark as required** (path-filtered, expensive, or post-merge gates):
+
+- `quality`, `e2e`, `postgres-smoke`, `docker-build` (CI on `main`)
+- `security-scan`, `security-tests` (Security)
+- `docs` (Docs Check)
+- `test`, `build-exe` (Windows Installer)
+
+Configure in GitHub: **Settings → Branches → Branch protection rules → `main` → Require status checks**.
+
+### PR Check (`pr-check.yml`)
+
+The only automatic workflow on pull requests:
+
+1. `pnpm install --frozen-lockfile`
+2. `pnpm --filter @uwe/database db:generate`
+3. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
+4. `pnpm ci:light` — lint, typecheck, test:ci, secret scan, docs:check
+
+No `pnpm quality`, no E2E, no Docker, no Windows build, no security tests, no release build.
 
 ### CI (`ci.yml`)
+
+Runs only on push to `main` or `workflow_dispatch`:
 
 1. Install with frozen lockfile
 2. `pnpm quality` — full gate:
@@ -29,17 +71,9 @@ UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) a
    - Release build
 3. **E2E tests** (`pnpm test:e2e`) — Playwright, runs after quality passes
 4. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + owner setup against a Postgres 16 service container
-5. Docker build (studio + portal) — only when Docker-related files changed
+5. Docker build (studio + portal) — only when Docker-related files changed; cache writes use `mode=min` to reduce GHA cache storage costs
 
-### PR Check (`pr-check.yml`)
-
-Faster feedback parallel to full CI:
-
-- Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test:ci`
-- `pnpm docs:check`
+Concurrency cancels superseded `main` pushes to avoid duplicate full-gate runs.
 
 ### Security (`security.yml`)
 
@@ -47,19 +81,37 @@ Faster feedback parallel to full CI:
 - `pnpm security:audit` (alias for `pnpm audit:prod`)
 - `pnpm test:security`
 
-Scheduled runs use the same checks for weekly dependency monitoring.
+Triggers: push `main`, weekly Monday 06:00 UTC, `workflow_dispatch`. Secret scan also runs in PR Check.
 
 ### Docs Check (`docs-check.yml`)
 
+Supplemental only — PRs already run `pnpm docs:check` in `pr-check.yml`.
+
 - `pnpm docs:check` — required files, Markdown structure
 - Basic internal link scan (warnings only for broken relative links)
+
+Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
+
+### Windows Installer (`windows-installer.yml`)
+
+- Linux job: installer package build, typecheck, unit tests, scaffolding tests, dry-run
+- Windows job: EXE build + artifact upload (3-day retention)
+- Triggers: `workflow_dispatch`, `v*` tags, `release/**` branches — **not** on normal PRs
+
+### Cursor Agent (`cursor-agent.yml`)
+
+- Runs `pnpm ci:light` before push (not full `pnpm quality`)
+- PR gate (`pr-check.yml`) validates the opened PR
+- Full gate runs after merge to `main` via `ci.yml`
+- Prefer `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` or a self-hosted runner for routine agent work
 
 ## Local commands
 
 | Script | Equivalent CI step |
 |--------|-------------------|
-| `pnpm ci:check` | PR fast path: lint → typecheck → test:ci → build:release |
-| `pnpm quality` | Full CI quality job |
+| `pnpm ci:light` | PR gate: db:generate → lint → typecheck → test:ci → secret scan → docs |
+| `pnpm ci:check` | Local fast path with release build: lint → typecheck → test:ci → build:release |
+| `pnpm quality` | Full CI quality job (main gate) |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Turbo typecheck |
 | `pnpm test` | Unit + integration smoke |
@@ -79,11 +131,14 @@ pnpm install --frozen-lockfile
 # During development (faster)
 pnpm lint && pnpm typecheck
 
-# Before PR (full gate — same as CI)
+# Before PR (matches GitHub PR gate)
+pnpm ci:light
+
+# Before merge / after large changes (matches main CI)
 pnpm quality
 ```
 
-**Note:** Use `pnpm ci:check` for the local fast gate (avoids conflict with pnpm's built-in `pnpm ci` install command).
+**Note:** Use `pnpm ci:check` when you also want a local release build. Use `pnpm ci:light` to mirror the PR workflow exactly.
 
 ## Debugging common failures
 
@@ -137,15 +192,13 @@ pnpm docker:build:ci
 
 ## What is blocking?
 
-All workflows above are **blocking** on PRs except:
+Only **`fast-checks`** in `pr-check.yml` should block PR merges.
 
-- Docker build in CI — skipped when no Docker-related files changed
-- Docs link scan — broken links emit **warnings**, not failures
-- Security audit on scheduled runs — may warn without blocking (full CI still enforces on PRs)
+Post-merge gates on `main` (CI, Security) catch issues after merge — run `pnpm quality` locally before merging when possible.
 
 ## Related
 
-- `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, 4 GB Laptop, Billing-Alternativen (geplant für später)
-- `AGENTS.md` — agent quality gate
+- `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, cost alternatives
+- `AGENTS.md` — agent quality gate (local `pnpm quality` before push)
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed failure patterns
 - `docs/AGENT_JOBS.md` — Cursor agent GitHub Actions integration

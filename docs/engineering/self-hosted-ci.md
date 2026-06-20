@@ -1,12 +1,44 @@
 # Self-Hosted CI & GitHub Actions — Strategie und Hardware
 
-Stand: 2026-06-18
+Stand: 2026-06-20
 
 Dieses Dokument hält Entscheidungen und Planung für **CI ohne GitHub Actions Minuten** fest — für den Fall, dass Billing-Limits erreicht sind oder keine weiteren Kosten gewünscht sind.
 
-**Aktuelle Entscheidung (Step 1):** GitHub-hosted Actions nutzen (Spending Limit / Free-Tier auffüllen). Self-hosted Runner ist **geplant für später**, nicht aktiv.
+**Aktuelle Entscheidung (Step 2):** GitHub-hosted Actions mit **kostenoptimierter Aufteilung** — günstiges PR-Gate, volles Gate nur auf `main`. Self-hosted Runner bleibt **optional für später**.
 
 Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workflow.md).
+
+---
+
+## Kostenstrategie (aktiv)
+
+| Event | Workflow | Inhalt | GitHub-Minuten |
+|-------|----------|--------|----------------|
+| **Pull Request** | `pr-check.yml` | `pnpm ci:light` + Lockfile | günstig (~3–5 Min.) |
+| **Push `main`** | `ci.yml` | `pnpm quality` + E2E + Postgres + Docker | teuer (~15–25 Min.) |
+| **Push `main` / Schedule** | `security.yml` | Audit + Security Tests | mittel |
+| **Manuell / Release** | `windows-installer.yml` | Windows EXE | teuer (Windows-Runner) |
+| **Manuell** | `cursor-agent.yml` | Agent + `ci:light` | mittel |
+
+### Was auf PRs **nicht** mehr läuft
+
+- `ci.yml` (volles `pnpm quality`, E2E, Docker)
+- `security.yml` (Audit, Security Tests — Secret Scan bleibt in PR)
+- `docs-check.yml` (läuft in `pr-check.yml` via `pnpm docs:check`)
+- `windows-installer.yml`
+
+### Branch Protection
+
+**Required** (einziger PR-Blocker):
+
+- `fast-checks` (`pr-check.yml`)
+
+**Nicht required** (sonst hängen PRs bei path-gefilterten oder post-merge Checks):
+
+- CI: `quality`, `e2e`, `postgres-smoke`, `docker-build`
+- Security: `security-scan`, `security-tests`
+- Docs Check: `docs`
+- Windows Installer: `test`, `build-exe`
 
 ---
 
@@ -18,7 +50,7 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 | Limit erreicht → Jobs starten nicht (`runner_id: 0`, 0 Steps) | Läuft auf eigenem Linux-Host |
 | „Pay to Win“ bei private Repos | Strom + eigene Hardware |
 
-Die **Qualitäts-Pipeline** (`pnpm quality`, `pnpm ci:check`) ist unabhängig von GitHub — lokal identisch. GitHub Actions ist nur der **Automatisierungs-Ort**.
+Die **Qualitäts-Pipeline** (`pnpm quality`, `pnpm ci:light`) ist unabhängig von GitHub — lokal identisch. GitHub Actions ist nur der **Automatisierungs-Ort**.
 
 ---
 
@@ -31,15 +63,22 @@ Die **Qualitäts-Pipeline** (`pnpm quality`, `pnpm ci:check`) ist unabhängig vo
 - Workflows: `runs-on: self-hosted` (statt `ubuntu-latest`)
 - GitHub rechnet **keine Minuten** ab; CPU/RAM/Disk sind lokal
 
+Empfohlene Zuordnung:
+
+| Runner | Workflows |
+|--------|-----------|
+| Schwacher Runner (4–8 GB) | `pr-check.yml` (`pnpm ci:light`) |
+| Starker Runner (16+ GB) | `ci.yml` auf `main`, optional `cursor-agent.yml` |
+
 ### Option B — GitHub Actions deaktivieren, nur lokal
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm quality   # vor jedem Merge
+pnpm ci:light   # vor PR
+pnpm quality    # vor Merge
 ```
 
-- Branch protection: Required status checks **entfernen**
-- Optional: pre-push Hook für `pnpm ci:check`
+- Branch protection: Required status checks **entfernen** oder durch lokale Hooks ersetzen
 - Agent Jobs: `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` statt `github_actions`
 
 ### Option C — Öffentliches Repo
@@ -52,13 +91,13 @@ Unbegrenzte GitHub Actions Minuten auf Free-Tier — für privates UWE meist **k
 
 | Job | Inhalt | Spitzenlast |
 |-----|--------|-------------|
+| `pnpm ci:light` | Lint, typecheck, test:ci, secret scan, docs | gering |
 | `pnpm quality` | Lint, Tests, Security, 2× Next.js Build | CPU + RAM |
-| `pnpm ci:check` | Lint, Typecheck, Tests, Build | etwas weniger |
 | E2E (`pnpm test:e2e`) | Playwright + Studio + Portal | RAM |
 | PostgreSQL-Smoke | Postgres-Container + Test | gering |
 | Docker-Build | Studio + Portal Images | RAM + Disk |
 
-### Stufe 1 — Leichtes PR-Gate (`ci:check` ohne Full-Build)
+### Stufe 1 — PR-Gate (`pnpm ci:light`)
 
 | | |
 |--|--|
@@ -76,7 +115,7 @@ Unbegrenzte GitHub Actions Minuten auf Free-Tier — für privates UWE meist **k
 | Disk | **80–100 GB** SSD |
 | OS | Linux x64, Node 22 |
 
-### Stufe 3 — Wie `ci.yml` heute (Quality + E2E + Postgres + Docker)
+### Stufe 3 — Wie `ci.yml` auf `main` (Quality + E2E + Postgres + Docker)
 
 | | |
 |--|--|
@@ -100,7 +139,7 @@ SSD empfohlen — Builds auf HDD sind sehr langsam.
 
 ## Linux-Laptop mit 4 GB RAM (Homelab-Host)
 
-**Kurz:** Für **volles CI nicht geeignet**. Für **reduziertes Gate** möglich.
+**Kurz:** Für **volles CI nicht geeignet**. Für **PR-Gate (`ci:light`)** möglich.
 
 ### UWE + CI auf dem **gleichen** Gerät
 
@@ -116,55 +155,32 @@ SSD empfohlen — Builds auf HDD sind sehr langsam.
 
 | Job | 4 GB |
 |-----|------|
-| `pnpm lint`, `secret:scan`, `docs:check` | ✅ |
-| `pnpm typecheck` | ⚠️ oft ok |
+| `pnpm ci:light` (lint, secret:scan, typecheck, test:ci, docs) | ⚠️ oft ok |
 | `pnpm build:release` / `pnpm quality` | ❌ (Spitzen ~4–6 GB+) |
 | E2E, Docker-Build | ❌ |
 
 ### Workarounds auf 4 GB
 
-1. **Leichtes Gate:** lint + secret:scan + typecheck + docs (ohne Build)
+1. **PR-Gate:** `pnpm ci:light` (ohne Build)
 2. **Swap** (z. B. 8 GB auf SSD) — langsam, 30–90+ Min pro Run
 3. **UWE stoppen**, CI laufen lassen, UWE wieder starten
 4. RAM-Upgrade auf **8 GB** falls Laptop upgradefähig
-
-### Geplantes `ci-light` für schwache Runner (noch nicht implementiert)
-
-```bash
-pnpm lint && pnpm secret:scan && pnpm typecheck && pnpm docs:check
-# kein build:release, kein E2E, kein Docker in CI
-```
 
 ---
 
 ## UWE-Host + Runner auf einem Rechner
 
-| Gesamt-RAM | + `pnpm quality` | + Full CI (E2E/Docker) |
-|------------|------------------|------------------------|
-| 8 GB | knapp | nicht empfohlen |
-| 16 GB | ok | grenzwertig |
-| 32 GB | komfortabel | ok |
+| Gesamt-RAM | + `pnpm ci:light` | + `pnpm quality` | + Full CI (E2E/Docker) |
+|------------|-------------------|------------------|------------------------|
+| 8 GB | ok | knapp | nicht empfohlen |
+| 16 GB | komfortabel | ok | grenzwertig |
+| 32 GB | komfortabel | komfortabel | ok |
 
 ---
 
-## Minuten sparen (falls wieder GitHub-hosted, ohne Extra-Kosten)
+## Docker GHA Cache
 
-Aktuell laufen auf **jedem PR** mehrere Workflows parallel — das verbraucht schnell Free-Tier:
-
-| Workflow | PR | Inhalt |
-|----------|-----|--------|
-| `ci.yml` | ✅ | volles `pnpm quality` (~10+ Min.) |
-| `pr-check.yml` | ✅ | lint, typecheck, test:ci |
-| `security.yml` | ✅ | secret scan, audit, security tests |
-| `docs-check.yml` | ✅ (Doc-Pfade) | docs:check |
-
-**Empfohlene Aufteilung:**
-
-| Event | Workflow |
-|-------|----------|
-| Pull Request | nur `pr-check.yml` (`pnpm ci:check` + docs) |
-| Push `main` | `ci.yml` (volles Gate + E2E + …) |
-| Security | nur `schedule` + `push main`, **nicht** jedes PR |
+`ci.yml` schreibt Docker-Build-Cache mit `mode=min` (statt `mode=max`) — weniger Cache-Speicherkosten bei GitHub. `cache-from` bleibt für schnellere Builds auf `main`.
 
 ---
 
@@ -176,34 +192,34 @@ Aktuell laufen auf **jedem PR** mehrere Workflows parallel — das verbraucht sc
 4. Labels setzen, z. B. `self-hosted`, `linux`, `x64`, optional `4gb` / `16gb`
 5. Workflows anpassen:
    - `runs-on: [self-hosted, linux]` statt `ubuntu-latest`
-   - Schwache Runner: nur `ci-light` / `pr-check.yml`
+   - Schwache Runner: nur `pr-check.yml` / `pnpm ci:light`
    - Starke Runner oder nur `main`: volles `ci.yml`
-6. Branch protection: Check-Namen auf neue Job-Namen prüfen
+6. Branch protection: nur `fast-checks` als required check
 7. `docs/engineering/ci.md` aktualisieren
 
 ### Agent Jobs
 
-`cursor-agent.yml` nutzt heute GitHub-hosted Runner. Für Self-hosted:
+`cursor-agent.yml` nutzt heute GitHub-hosted Runner mit `pnpm ci:light`. Für Self-hosted:
 
-- Runner mit ausreichend RAM für `pnpm quality`
-- oder `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` in Studio-ENV
+- Runner mit ausreichend RAM für `pnpm ci:light` (oder `pnpm quality` wenn gewünscht)
+- **Bevorzugt:** `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` in Studio-ENV — Agent läuft lokal, PR-Gate übernimmt `pr-check.yml`
 
 ---
 
-## Billing kurz freischalten (aktueller Step 1)
+## Billing kurz freischalten (falls Limit erreicht)
 
 Wenn Jobs sofort fehlschlagen (5 s, keine Steps):
 
 1. **Settings → Billing → Spending limits** — Limit erhöhen oder Zyklus abwarten
-2. **Branch protection** — Required checks passend zu Job-Namen (`quality`, `fast-checks`, …)
-3. Test: **Actions → CI → Run workflow**
-4. Lokal parallel: `pnpm quality`
+2. **Branch protection** — Required check: `fast-checks` (nicht alte CI-Job-Namen)
+3. Test: **Actions → PR Check → Run workflow** (via Test-PR) oder **CI → Run workflow** auf `main`
+4. Lokal parallel: `pnpm ci:light` (PR) bzw. `pnpm quality` (vor Merge)
 
 ---
 
 ## Raspberry Pi
 
-- Pi 4 (4 GB): nur leichtes Gate, langsam
+- Pi 4 (4 GB): `pnpm ci:light` möglich, langsam
 - Pi 5 (8 GB): `pnpm quality` möglich, geduldig
 - ARM64 — Build-Zeiten und Docker-Kompatibilität schlechter als x64-NUC
 
@@ -213,10 +229,10 @@ Wenn Jobs sofort fehlschlagen (5 s, keine Steps):
 
 | Datei | Zweck |
 |-------|--------|
+| `.github/workflows/pr-check.yml` | Günstiges PR-Gate |
 | `.github/workflows/ci.yml` | Volles Gate auf `main` |
-| `.github/workflows/pr-check.yml` | Schnelles PR-Gate |
-| `package.json` | `quality`, `ci:check`, `test:ci` |
-| `AGENTS.md` | Agent Quality Gate |
+| `package.json` | `ci:light`, `quality`, `ci:check`, `test:ci` |
+| `AGENTS.md` | Agent Quality Gate (lokal `pnpm quality`) |
 | `scripts/docs-check.mjs` | Docs-Validierung |
 
 ---
@@ -226,3 +242,4 @@ Wenn Jobs sofort fehlschlagen (5 s, keine Steps):
 | Datum | Entscheidung |
 |-------|--------------|
 | 2026-06-18 | GitHub-hosted Actions (Billing) als Step 1; Self-hosted + Hardware-Notes für später dokumentiert |
+| 2026-06-20 | Kostenoptimierung: PR = `ci:light` only; main = volles Gate; Security scheduled/main; Windows/Agent manuell |

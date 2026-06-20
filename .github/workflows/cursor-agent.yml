@@ -1,5 +1,9 @@
 name: Cursor Agent Job
 
+# Cost note: this workflow uses GitHub-hosted minutes. For routine agent work,
+# prefer AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local or a self-hosted runner.
+# The PR gate (pr-check.yml / pnpm ci:light) runs after the agent opens a PR.
+
 on:
   workflow_dispatch:
     inputs:
@@ -68,8 +72,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Quality gate (lint, typecheck, test, security, build)
-        run: pnpm quality
+      - name: Light CI gate (PR check will enforce on the opened PR)
+        run: pnpm ci:light
 
       - name: Push branch
         run: git push -u origin "${{ github.event.inputs.branch_name }}"
@@ -82,5 +86,5 @@ jobs:
             --base main \
             --head "${{ github.event.inputs.branch_name }}" \
             --title "${{ github.event.inputs.title }}" \
-            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge." \
+            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge. Full gate runs on merge to main." \
             --draft || echo "PR may already exist"
