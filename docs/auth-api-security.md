@@ -136,6 +136,23 @@ Studio and Portal expose matching flows:
 - Reset tokens are opaque, hashed at rest, 1-hour TTL; all sessions invalidated on success
 - When SMTP is configured (`SMTP_HOST`, `MAIL_ENABLED=true`), reset links are emailed; in development without SMTP, the server logs the link once (never in API responses)
 - Admin-initiated reset remains at `POST /api/admin/users/[id]/reset-password`
+- The reset form sends `resetToken` (from the `token` query parameter in the emailed link)
+
+### Auth UI (shared)
+
+Public auth pages use the dark UWE shell from `@uwe/shared-ui`:
+
+| Component | Location | Used on |
+|-----------|----------|---------|
+| `AuthPageLayout` | `packages/shared-ui/src/auth/AuthPageLayout.tsx` | Login, forgot/reset password, setup, account (compact) |
+| `AuthBrandingPanel` | `packages/shared-ui/src/auth/AuthBrandingPanel.tsx` | Branding column with UWE logo, feature hints, self-hosted note |
+| `AuthCard` | same as layout | Form card shell |
+| `LoginForm`, `ForgotPasswordForm`, `ResetPasswordForm` | `packages/shared-ui/src/auth/` | Both apps |
+| `UweLandingPage` | `packages/shared-ui/src/auth/UweLandingPage.tsx` | `/` start page (Studio & Portal) |
+
+Styles: `packages/shared-ui/src/uwe.css` (`.uwe-auth-shell`, `.uwe-auth-card`, …) plus app-specific `.studio-auth-*` / `.auth-*` in each app's `globals.css`.
+
+**Not yet styled with the auth shell:** Portal logged-in account pages (`/auth/account/*`) keep `AuthHeader` navigation; invite acceptance has no public page yet (backend only).
 
 ## Localhost / LAN Safety
 

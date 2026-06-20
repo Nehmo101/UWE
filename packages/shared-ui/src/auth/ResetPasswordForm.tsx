@@ -56,7 +56,7 @@ function ResetPasswordFormInner({ variant }: ResetPasswordFormProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email.trim(),
-        token,
+        resetToken: token,
         newPassword,
       }),
     });
@@ -150,7 +150,7 @@ export function ResetPasswordForm({ variant }: ResetPasswordFormProps) {
       <Suspense
         fallback={
           <section className={classes.card}>
-            <p className={classes.lead}>Lade Formular…</p>
+            <p className="uwe-auth-loading">Lade Formular…</p>
           </section>
         }
       >

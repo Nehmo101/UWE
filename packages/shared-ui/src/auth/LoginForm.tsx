@@ -162,21 +162,23 @@ function LoginFormInner({
             </p>
           )}
 
-          <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
-            {loading ? "Prüfe…" : "Bestätigen"}
-          </button>
-          <button
-            type="button"
-            className="uwe-btn"
-            disabled={loading}
-            onClick={() => {
-              setTwoFactorChallenge(null);
-              setTwoFactorCode("");
-              setError(null);
-            }}
-          >
-            Zurück
-          </button>
+          <div className="uwe-auth-form-actions">
+            <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+              {loading ? "Prüfe…" : "Bestätigen"}
+            </button>
+            <button
+              type="button"
+              className="uwe-btn uwe-btn-ghost"
+              disabled={loading}
+              onClick={() => {
+                setTwoFactorChallenge(null);
+                setTwoFactorCode("");
+                setError(null);
+              }}
+            >
+              Zurück
+            </button>
+          </div>
         </form>
       </AuthCard>
     );
@@ -222,14 +224,15 @@ function LoginFormInner({
           </p>
         )}
 
-        <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
-          {loading ? "Anmelden…" : "Anmelden"}
-        </button>
+        <div className="uwe-auth-form-actions">
+          <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+            {loading ? "Anmelden…" : "Anmelden"}
+          </button>
+          <Link className={classes.link} href="/forgot-password">
+            Passwort vergessen?
+          </Link>
+        </div>
       </form>
-
-      <p className={classes.footer}>
-        <Link href="/forgot-password">Passwort vergessen?</Link>
-      </p>
 
       {SHOW_DEV_CREDENTIALS && devCredentials}
     </AuthCard>
@@ -244,7 +247,7 @@ export function LoginForm(props: LoginFormProps) {
       <Suspense
         fallback={
           <section className={classes.card}>
-            <p className={classes.lead}>Lade Anmeldung…</p>
+            <p className="uwe-auth-loading">Lade Anmeldung…</p>
           </section>
         }
       >

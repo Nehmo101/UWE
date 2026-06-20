@@ -270,6 +270,8 @@ Only **published** pages with visibility `public` or `player_visible` appear in 
 
 **Password reset:** Self-service via `/forgot-password` and `/reset-password` (both apps). Admins can also reset via Studio (`/api/admin/users/[id]/reset-password`). Details: [docs/auth-api-security.md](docs/auth-api-security.md).
 
+**Auth UI:** Login, landing, password reset, and first-run setup share the dark UWE auth shell (`AuthPageLayout`, `AuthBrandingPanel` in `@uwe/shared-ui`). See [docs/auth-api-security.md](docs/auth-api-security.md#auth-ui-shared).
+
 **Roles:** `owner` / `admin` / `dm` → Studio; `player` → Portal only; `guest` / `readonly` → public wiki.
 
 **Protected vs public routes:** Central policy in `@uwe/auth` (`route-policy.ts`). Security QA matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).

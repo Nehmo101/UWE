@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AuthCard, AuthPageLayout } from "@uwe/shared-ui";
 import { createPrismaClient, createUserService } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -28,22 +29,19 @@ export default async function AccountPasswordPage() {
   }
 
   return (
-    <main className="studio-auth-page">
-      <section className="studio-auth-card">
-        <h1>Passwort ändern</h1>
-        <p className="studio-auth-lead">
-          Angemeldet als {user.displayName}
-          {user.email ? ` (${user.email})` : ""}.
-        </p>
+    <AuthPageLayout variant="studio" compact>
+      <AuthCard
+        variant="studio"
+        title="Passwort ändern"
+        lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
+        footer={<Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>}
+      >
         <ChangePasswordForm
           backHref="/"
           forcePasswordChange={forcePasswordChange}
           initialPasswordOnly={initialPasswordOnly}
         />
-        <p className="studio-auth-footer">
-          <Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
-        </p>
-      </section>
-    </main>
+      </AuthCard>
+    </AuthPageLayout>
   );
 }

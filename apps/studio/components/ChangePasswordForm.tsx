@@ -108,14 +108,14 @@ export function ChangePasswordForm({
         required
       />
 
-      {error && <p className="studio-auth-error">{error}</p>}
+      {error && <p className="studio-auth-error uwe-auth-message uwe-auth-message-error">{error}</p>}
       {success && (
-        <p className="studio-auth-lead" role="status">
+        <p className="studio-auth-success uwe-auth-message uwe-auth-message-success" role="status">
           {success}
         </p>
       )}
 
-      <button type="submit" disabled={loading}>
+      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
         {loading ? "Speichern…" : initialPasswordOnly ? "Passwort festlegen" : "Passwort ändern"}
       </button>
 

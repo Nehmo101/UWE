@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { AuthCard, AuthPageLayout, authClasses } from "@uwe/shared-ui";
 
 export default function SetupPage() {
   const router = useRouter();
+  const classes = authClasses("studio");
   const [setupAvailable, setSetupAvailable] = useState<boolean | null>(null);
   const [setupConfigured, setSetupConfigured] = useState(true);
   const [setupToken, setSetupToken] = useState("");
@@ -50,43 +52,46 @@ export default function SetupPage() {
 
   if (setupAvailable === null) {
     return (
-      <main className="studio-auth-page">
-        <section className="studio-auth-card">
-          <p>Setup wird geprüft…</p>
+      <AuthPageLayout variant="studio">
+        <section className={classes.card}>
+          <p className="uwe-auth-loading">Setup wird geprüft…</p>
         </section>
-      </main>
+      </AuthPageLayout>
     );
   }
 
   if (!setupAvailable) {
     return (
-      <main className="studio-auth-page">
-        <section className="studio-auth-card">
-          <h1>Setup abgeschlossen</h1>
-          <p className="studio-auth-lead">
-            Ein Owner-Konto existiert bereits. Das einmalige Setup ist deaktiviert.
-          </p>
-          <p className="studio-auth-footer">
-            <Link href="/login">Zur Anmeldung</Link>
-            {" · "}
-            <Link href="/forgot-password">Passwort vergessen?</Link>
-          </p>
-        </section>
-      </main>
+      <AuthPageLayout variant="studio">
+        <AuthCard
+          variant="studio"
+          title="Setup abgeschlossen"
+          lead="Ein Owner-Konto existiert bereits. Das einmalige Setup ist deaktiviert."
+          footer={
+            <>
+              <Link href="/login">Zur Anmeldung</Link>
+              {" · "}
+              <Link href="/forgot-password">Passwort vergessen?</Link>
+            </>
+          }
+        />
+      </AuthPageLayout>
     );
   }
 
   return (
-    <main className="studio-auth-page">
-      <section className="studio-auth-card">
-        <h1>UWE Studio — Erstes Setup</h1>
-        <p className="studio-auth-lead">
-          Lege den ersten Owner an. Dieser Schritt ist nur einmal möglich und erfordert das
-          Setup-Token aus <code>UWE_SETUP_TOKEN</code> in deiner <code>.env</code>.
-        </p>
-
+    <AuthPageLayout variant="studio">
+      <AuthCard
+        variant="studio"
+        title="UWE Studio — Erstes Setup"
+        lead={
+          "Lege den ersten Owner an. Dieser Schritt ist nur einmal möglich und erfordert das " +
+          "Setup-Token aus UWE_SETUP_TOKEN in deiner .env."
+        }
+        footer={<Link href="/login">Bereits ein Konto? Anmelden</Link>}
+      >
         {!setupConfigured && (
-          <p className="studio-auth-error">
+          <p className={classes.error} role="alert">
             <code>UWE_SETUP_TOKEN</code> ist nicht gesetzt. Generiere ein Token (z. B.{" "}
             <code>openssl rand -hex 32</code>), trage es in <code>.env</code> ein und starte den
             Server neu.
@@ -103,11 +108,13 @@ export default function SetupPage() {
             <li>
               <code>RUN_DB_SEED=false</code> in Produktion — keine Demo-Benutzer
             </li>
-            <li>Portal: <code>AUTH_REQUIRED=true</code> für öffentliche Deployments</li>
+            <li>
+              Portal: <code>AUTH_REQUIRED=true</code> für öffentliche Deployments
+            </li>
           </ol>
         </div>
 
-        <form className="studio-auth-form" onSubmit={handleSubmit}>
+        <form className={classes.form} onSubmit={handleSubmit}>
           <label htmlFor="setupToken">Setup-Token</label>
           <input
             id="setupToken"
@@ -156,17 +163,21 @@ export default function SetupPage() {
             disabled={!setupConfigured}
           />
 
-          {error && <p className="studio-auth-error">{error}</p>}
+          {error && (
+            <p className={classes.error} role="alert">
+              {error}
+            </p>
+          )}
 
-          <button type="submit" disabled={loading || !setupConfigured}>
+          <button
+            type="submit"
+            className="uwe-btn uwe-btn-primary"
+            disabled={loading || !setupConfigured}
+          >
             {loading ? "Owner anlegen…" : "Owner anlegen"}
           </button>
         </form>
-
-        <p className="studio-auth-footer">
-          <Link href="/login">Bereits ein Konto? Anmelden</Link>
-        </p>
-      </section>
-    </main>
+      </AuthCard>
+    </AuthPageLayout>
   );
 }

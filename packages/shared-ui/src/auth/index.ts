@@ -1,3 +1,4 @@
+export { AuthBrandingPanel } from "./AuthBrandingPanel";
 export { authClasses, AuthCard, AuthPageLayout, type AuthUiVariant } from "./AuthPageLayout";
 export { ForgotPasswordForm } from "./ForgotPasswordForm";
 export { LoginForm } from "./LoginForm";
