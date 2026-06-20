@@ -62,11 +62,17 @@ export interface GenerateTextOptions {
   maxTokens?: number;
 }
 
+export interface GenerateTextUsage {
+  promptTokens: number;
+  completionTokens: number;
+}
+
 export interface GenerateTextResult {
   text: string;
   model: string;
   provider: AiProviderId;
   finishReason?: string;
+  usage?: GenerateTextUsage;
 }
 
 export interface AiHealthCheckResult {

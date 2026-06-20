@@ -121,3 +121,18 @@ Add entries to `COOKBOOK_MODEL_REGISTRY` in `packages/cookbook/src/model-registr
 - `engines` the model supports
 
 Re-run `pnpm --filter @uwe/cookbook test` after changes.
+
+## Admin Setup: KI & RTX Fallback
+
+Master-Admin-Wizard unter **`/admin/ai-gateway`** (Cookbook → KI & RTX Fallback):
+
+1. **RTX verbinden** — `RTX_AGENT_URL` + Token prüfen, Health-Check
+2. **Routing-Modus** — `LOCAL_ONLY`, `LOCAL_THEN_CLOUD` (Standard), `CLOUD_ONLY`, `DISABLED`
+3. **Cloud-Fallback** — global aktivieren/deaktivieren (Owner only)
+4. **Provider einrichten** — OpenAI, Anthropic, Gemini, OpenRouter; API-Key sicher setzen
+5. **Privacy-Regeln** — welche Kontext-Kategorien Cloud erlauben
+6. **Budgets** — Tages-/Monats-/User-Limits
+7. **User freischalten** — z. B. Carina mit `AI_CHAT_USE`, optional Cloud-Fallback pro User
+8. **Fallback-Test & Usage Logs** — Diagnose und Kostenübersicht
+
+Siehe [docs/ai-gateway.md](./ai-gateway.md) und [docs/ai-troubleshooting.md](./ai-troubleshooting.md).

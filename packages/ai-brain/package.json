@@ -14,7 +14,8 @@
     "./rtx-agent-config": "./src/rtx-agent-config.ts",
     "./types": "./src/types.ts",
     "./router": "./src/router/index.ts",
-    "./cookbook-bridge": "./src/cookbook-bridge.ts"
+    "./cookbook-bridge": "./src/cookbook-bridge.ts",
+    "./gateway": "./src/gateway/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -22,7 +23,8 @@
   },
   "dependencies": {
     "@uwe/cookbook": "workspace:*",
-    "@uwe/database": "workspace:*"
+    "@uwe/database": "workspace:*",
+    "@uwe/image-studio": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

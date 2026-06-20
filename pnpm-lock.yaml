@@ -211,6 +211,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/image-studio':
+        specifier: workspace:*
+        version: link:../image-studio
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

@@ -4,6 +4,7 @@ import {
   providerIdToMode,
   routeAiRequest,
 } from "./router";
+import { executeAiGatewayRequest, type AiGatewayUserContext, type AiGatewayDeps } from "./gateway";
 import {
   createApiKeyStoreFromEnv,
   resolveAiBrainSettings,
@@ -108,6 +109,9 @@ export interface GenerateAiTaskInput {
   options?: BuildAiContextOptions;
   apiKeyStore?: ApiKeyStore;
   useMock?: boolean;
+  /** When set, routes through AI Gateway (permissions, budget, logging). */
+  user?: AiGatewayUserContext;
+  feature?: string;
 }
 
 export interface GenerateAiTaskBySlugInput extends Omit<GenerateAiTaskInput, "worldId" | "pageId"> {
@@ -148,22 +152,30 @@ export async function generateAiTask(
     input.pageId,
   );
 
-  const routed = await routeAiRequest(
-    { repo },
-    {
-      providerMode: providerIdToMode(input.providerId),
-      contextMode: legacyContextMode({ withBrain: false }),
-      taskType: input.taskType,
-      worldSlug,
-      pageSlug,
-      model: input.model,
-      cloudProviderId: providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
-      userPrompt: input.userPrompt,
-      useMock: input.useMock,
-      apiKeyStore: input.apiKeyStore,
-      options: input.options,
-    },
-  );
+  const routerRequest = {
+    providerMode: providerIdToMode(input.providerId),
+    contextMode: legacyContextMode({ withBrain: false }),
+    taskType: input.taskType,
+    worldSlug,
+    pageSlug,
+    model: input.model,
+    cloudProviderId: providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
+    userPrompt: input.userPrompt,
+    useMock: input.useMock,
+    apiKeyStore: input.apiKeyStore,
+    options: input.options,
+  };
+
+  const routed = input.user
+    ? await executeAiGatewayRequest(
+        { repo } as AiGatewayDeps,
+        {
+          ...routerRequest,
+          user: input.user,
+          feature: input.feature ?? "AI_DND_USE",
+        },
+      )
+    : await routeAiRequest({ repo }, routerRequest);
 
   return {
     context: routed.context,
@@ -220,3 +232,32 @@ export {
 export { runBrainAction, type RunBrainActionInput, type RunBrainActionResult } from "./brain-action-runner";
 export { applyProposal, discardRun, type ApplyProposalInput, type ApplyProposalResult } from "./apply-proposal";
 export { createDbBrainKnowledgeSource } from "./context/db-brain-knowledge-source";
+export {
+  executeAiGatewayRequest,
+  executeAiGatewayImageRequest,
+  executeAiGatewayResearchJob,
+  createGatewayApiKeyStore,
+  getAiGatewayStatusForClient,
+  runAiGatewayFallbackTest,
+  AiGatewayAccessDeniedError,
+  AiGatewayBudgetExceededError,
+  AiGatewayDisabledError,
+  DEFAULT_PRIVACY_RULES,
+  AI_FEATURE_PERMISSIONS,
+  AI_FEATURE_PERMISSION_LABELS,
+  MASTER_ADMIN_PERMISSIONS,
+  resolveFeatureCategory,
+  resolveRequiredPermission,
+  isMasterAdminRole,
+  type AiGatewayRequest,
+  type AiGatewayResult,
+  type AiGatewayImageRequest,
+  type AiGatewayImageResult,
+  type AiGatewayResearchContext,
+  type AiGatewayDeps,
+  type AiGatewayUserContext,
+  type AiRoutingMode,
+  type AiPrivacyLevel,
+  type AiFeatureCategory,
+  type AiFeaturePermission,
+} from "./gateway";

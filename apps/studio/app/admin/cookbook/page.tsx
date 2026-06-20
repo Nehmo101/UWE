@@ -51,6 +51,7 @@ export default async function CookbookAdminPage() {
             items={[
               { label: "← Dashboard", href: "/studio" },
               { label: "Cookbook", href: "/admin/cookbook", active: true },
+              { label: "KI & RTX Fallback", href: "/admin/ai-gateway" },
               { label: "Systemstatus", href: "/admin/status" },
               { label: "KI-Prompt", href: "/admin/ai-prompt" },
               { label: "Einstellungen", href: "/settings" },

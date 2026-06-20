@@ -15,6 +15,7 @@ import {
   providerIdToMode,
   routeAiRequest,
 } from "./router";
+import { executeAiGatewayRequest, type AiGatewayUserContext } from "./gateway";
 import { createApiKeyStoreFromEnv, resolveAiBrainSettings } from "./settings";
 import type {
   AiContext,
@@ -35,6 +36,7 @@ export interface RunBrainActionInput {
   allowDmOnly?: boolean;
   useMock?: boolean;
   userId?: string;
+  gatewayUser?: AiGatewayUserContext;
   options?: BuildAiContextOptions;
   apiKeyStore?: ApiKeyStore;
 }
@@ -140,24 +142,32 @@ export async function runBrainAction(
       allowDmOnly: resolveServerAllowDmOnly(settings, false, action.playerSafe),
     };
 
-    const routed = await routeAiRequest(
-      { repo: deps.repo, brainStore: deps.brainStore },
-      {
-        providerMode: providerIdToMode(input.providerId),
-        contextMode: legacyContextMode({ withBrain: true }),
-        taskType: action.taskType,
-        worldSlug: input.worldSlug,
-        pageSlug: anchor.pageSlug,
-        sessionId: input.sessionId,
-        model: input.model,
-        cloudProviderId:
-          providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
-        userPrompt: input.userPrompt,
-        useMock: input.useMock,
-        apiKeyStore,
-        options: contextOptions,
-      },
-    );
+    const routerInput = {
+      providerMode: providerIdToMode(input.providerId),
+      contextMode: legacyContextMode({ withBrain: true }),
+      taskType: action.taskType,
+      worldSlug: input.worldSlug,
+      pageSlug: anchor.pageSlug,
+      sessionId: input.sessionId,
+      model: input.model,
+      cloudProviderId:
+        providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
+      userPrompt: input.userPrompt,
+      useMock: input.useMock,
+      apiKeyStore,
+      options: contextOptions,
+    };
+
+    const routed = input.gatewayUser
+      ? await executeAiGatewayRequest(
+          { repo: deps.repo, brainStore: deps.brainStore },
+          {
+            ...routerInput,
+            user: input.gatewayUser,
+            feature: "AI_DND_USE",
+          },
+        )
+      : await routeAiRequest({ repo: deps.repo, brainStore: deps.brainStore }, routerInput);
 
     const { context, result, prompts } = routed;
     const { systemPrompt, userPrompt } = prompts;

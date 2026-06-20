@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createJobService, createResearchService, prisma } from "@uwe/database/server";
 import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
@@ -46,11 +47,13 @@ export async function POST(request: Request) {
       contextMode: body.contextMode,
     });
 
+    const actor = await getCurrentAuthUser();
     const jobs = createJobService(prisma);
     const job = await jobs.enqueue({
       type: "research",
       title: `Research — ${session.query.slice(0, 60)}`,
       worldId: body.worldId ?? null,
+      userId: actor?.id ?? null,
       payload: { sessionId: session.id },
       relatedType: "research_session",
       relatedId: session.id,

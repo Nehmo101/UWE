@@ -130,10 +130,19 @@ export function buildChatCompletionBody(options: GenerateTextOptions) {
 
 export function extractOpenAiText(data: {
   choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
-}): { text: string; finishReason?: string } {
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}): { text: string; finishReason?: string; usage?: { promptTokens: number; completionTokens: number } } {
   const choice = data.choices?.[0];
+  const usage =
+    data.usage?.prompt_tokens != null || data.usage?.completion_tokens != null
+      ? {
+          promptTokens: data.usage?.prompt_tokens ?? 0,
+          completionTokens: data.usage?.completion_tokens ?? 0,
+        }
+      : undefined;
   return {
     text: choice?.message?.content ?? "",
     finishReason: choice?.finish_reason,
+    usage,
   };
 }

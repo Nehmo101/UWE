@@ -116,6 +116,7 @@ export class OpenAiCompatibleProvider extends BaseHttpProvider {
     const data = await this.fetchJson<{
       choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
       model?: string;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     }>("/chat/completions", {
       method: "POST",
       body: JSON.stringify(buildChatCompletionBody(options)),
@@ -126,6 +127,7 @@ export class OpenAiCompatibleProvider extends BaseHttpProvider {
       model: data.model ?? options.model,
       provider: this.id,
       finishReason: extracted.finishReason,
+      usage: extracted.usage,
     };
   }
 
@@ -149,6 +151,7 @@ export class OpenAiProvider extends BaseHttpProvider {
     const data = await this.fetchJson<{
       choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
       model?: string;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     }>("/chat/completions", {
       method: "POST",
       body: JSON.stringify(buildChatCompletionBody(options)),
@@ -159,6 +162,7 @@ export class OpenAiProvider extends BaseHttpProvider {
       model: data.model ?? options.model,
       provider: this.id,
       finishReason: extracted.finishReason,
+      usage: extracted.usage,
     };
   }
 
@@ -182,6 +186,7 @@ export class OpenRouterProvider extends BaseHttpProvider {
     const data = await this.fetchJson<{
       choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
       model?: string;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     }>("/chat/completions", {
       method: "POST",
       body: JSON.stringify(buildChatCompletionBody(options)),
@@ -192,6 +197,7 @@ export class OpenRouterProvider extends BaseHttpProvider {
       model: data.model ?? options.model,
       provider: this.id,
       finishReason: extracted.finishReason,
+      usage: extracted.usage,
     };
   }
 

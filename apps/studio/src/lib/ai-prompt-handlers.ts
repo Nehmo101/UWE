@@ -8,7 +8,10 @@ import {
   InferenceUrlBlockedError,
   isRtxReady,
   resolveAiBrainSettings,
-  routeAiRequest,
+  executeAiGatewayRequest,
+  AiGatewayAccessDeniedError,
+  AiGatewayBudgetExceededError,
+  AiGatewayDisabledError,
   semanticSearchPersonalBrainChunks,
 } from "@uwe/ai-brain";
 import {
@@ -82,7 +85,10 @@ export type AiPromptExecutionResult =
       message: string;
     };
 
-export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiPromptExecutionResult> {
+export async function executeAiPrompt(
+  body: AiPromptRequestBody,
+  user?: { userId: string; role: string },
+): Promise<AiPromptExecutionResult> {
   const prompt = body.prompt?.trim();
   if (!prompt) {
     throw new Error("prompt ist erforderlich.");
@@ -129,6 +135,7 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
         type: "ai_run",
         title: `KI-Prompt (${body.contextMode}) — wartet auf RTX`,
         worldSlug: body.worldSlug?.trim() || null,
+        userId: user?.userId ?? null,
         payload: {
           deferredAiPrompt: true,
           prompt: body.prompt,
@@ -154,7 +161,15 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
   const lifeAdmin = createLifeAdminService(prisma);
   const personalBrain = createPersonalBrainService(prisma);
 
-  const routed = await routeAiRequest(
+  if (!user) {
+    throw new AiGatewayAccessDeniedError(
+      "Authentifizierung erforderlich für KI-Anfragen.",
+    );
+  }
+
+  const gatewayUser = { userId: user.userId, role: user.role };
+
+  const routed = await executeAiGatewayRequest(
     {
       repo,
       brainStore,
@@ -193,6 +208,7 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
         }),
     },
     {
+      user: gatewayUser,
       providerMode: body.providerMode,
       contextMode: body.contextMode,
       taskType: resolvePromptTaskType(body.contextMode),
@@ -200,7 +216,7 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
       pageSlug: body.pageSlug?.trim() || undefined,
       userPrompt: prompt,
       useMock: body.useMock,
-      apiKeyStore,
+      feature: "AI_CHAT_USE",
       options: {
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
@@ -219,9 +235,12 @@ export async function executeAiPrompt(body: AiPromptRequestBody): Promise<AiProm
   };
 }
 
-export async function postAiPrompt(body: AiPromptRequestBody) {
+export async function postAiPrompt(
+  body: AiPromptRequestBody,
+  user?: { userId: string; role: string },
+) {
   try {
-    const result = await executeAiPrompt(body);
+    const result = await executeAiPrompt(body, user);
 
     if (result.kind === "deferred") {
       return NextResponse.json(
@@ -246,7 +265,10 @@ export async function postAiPrompt(body: AiPromptRequestBody) {
     if (
       error instanceof AiAccessDeniedError ||
       error instanceof AiPolicyViolationError ||
-      error instanceof RtxBoundaryError
+      error instanceof RtxBoundaryError ||
+      error instanceof AiGatewayAccessDeniedError ||
+      error instanceof AiGatewayBudgetExceededError ||
+      error instanceof AiGatewayDisabledError
     ) {
       return aiPolicyErrorResponse(error);
     }

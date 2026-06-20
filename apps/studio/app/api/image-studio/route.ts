@@ -18,6 +18,7 @@ import {
 } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import { z } from "zod";
 import { validateImageContextForProvider } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -121,12 +122,14 @@ export async function POST(request: Request) {
 
   await imageStudio.updateProjectStatus(project.id, "processing");
 
+  const actor = await getCurrentAuthUser();
   const jobs = createJobService(prisma);
   const job = await jobs.enqueue({
     type: "image_studio",
     title: `Image Studio: ${body.task}`,
     worldId: world.id,
     worldSlug: world.slug,
+    userId: actor?.id ?? null,
     payload: {
       projectId: project.id,
       worldId: world.id,

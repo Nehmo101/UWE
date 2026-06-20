@@ -1340,3 +1340,32 @@ export type { PageVersionRecord } from "./page-version-service";
 
 export { createResearchService, ResearchService, assertResearchQuerySafe } from "./research-service";
 export type { StartResearchInput } from "./research-service";
+
+export {
+  AiGatewayService,
+  createAiGatewayService,
+  AiGatewayAccessDeniedError,
+  AiGatewayBudgetExceededError,
+  AiGatewayDisabledError,
+  AI_FEATURE_PERMISSIONS,
+  AI_FEATURE_PERMISSION_LABELS,
+  MASTER_ADMIN_PERMISSIONS,
+  DEFAULT_PRIVACY_RULES,
+  resolveFeatureCategory,
+  resolveRequiredPermission,
+  isMasterAdminRole,
+} from "./ai-gateway-service";
+export type {
+  AiRoutingMode,
+  AiPrivacyLevel,
+  AiFeatureCategory,
+  AiFeaturePermission,
+  AiGatewayConfigRecord,
+  AiCloudProviderRecord,
+  AiUserGrantRecord,
+  AiUsageLogRecord,
+  AiBudgetStatus,
+  CreateUsageLogInput,
+  UpsertCloudProviderInput,
+  UpsertUserGrantInput,
+} from "./ai-gateway-service";

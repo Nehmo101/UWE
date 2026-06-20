@@ -1,4 +1,5 @@
 import { postGenerate } from "../../../../src/lib/ai-handlers";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import {
   aiGenerateBodySchema,
   guardStudioMutation,
@@ -12,5 +13,6 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, aiGenerateBodySchema);
   if (!parsed.success) return parsed.response;
 
-  return postGenerate(parsed.data);
+  const user = await getCurrentAuthUser();
+  return postGenerate(parsed.data, user?.id ?? null);
 }

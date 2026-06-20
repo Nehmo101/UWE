@@ -51,6 +51,7 @@ export class AnthropicProvider implements AiProvider {
       content?: Array<{ type: string; text?: string }>;
       model?: string;
       stop_reason?: string;
+      usage?: { input_tokens?: number; output_tokens?: number };
     }>("/messages", {
       method: "POST",
       body: JSON.stringify({
@@ -63,11 +64,19 @@ export class AnthropicProvider implements AiProvider {
     });
 
     const text = data.content?.find((part) => part.type === "text")?.text ?? "";
+    const usage =
+      data.usage?.input_tokens != null || data.usage?.output_tokens != null
+        ? {
+            promptTokens: data.usage?.input_tokens ?? 0,
+            completionTokens: data.usage?.output_tokens ?? 0,
+          }
+        : undefined;
     return {
       text,
       model: data.model ?? options.model,
       provider: this.id,
       finishReason: data.stop_reason,
+      usage,
     };
   }
 
@@ -127,13 +136,23 @@ export class GeminiProvider implements AiProvider {
 
     const data = (await response.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    const usage =
+      data.usageMetadata?.promptTokenCount != null ||
+      data.usageMetadata?.candidatesTokenCount != null
+        ? {
+            promptTokens: data.usageMetadata?.promptTokenCount ?? 0,
+            completionTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+          }
+        : undefined;
 
     return {
       text,
       model: options.model,
       provider: this.id,
+      usage,
     };
   }
 

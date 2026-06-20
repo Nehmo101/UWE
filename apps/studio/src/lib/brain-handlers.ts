@@ -13,6 +13,9 @@ import {
   BRAIN_ACTION_LIST,
   discardRun,
   isBrainActionId,
+  AiGatewayAccessDeniedError,
+  AiGatewayBudgetExceededError,
+  AiGatewayDisabledError,
   type AiProviderId,
 } from "@uwe/ai-brain";
 import { enqueueAndDispatch, runJob } from "./job-executor";
@@ -23,6 +26,13 @@ function handleBrainError(error: unknown) {
     return jsonError(error.message, 403);
   }
   if (error instanceof AiRouterError) {
+    return jsonError(error.message, 403);
+  }
+  if (
+    error instanceof AiGatewayAccessDeniedError ||
+    error instanceof AiGatewayBudgetExceededError ||
+    error instanceof AiGatewayDisabledError
+  ) {
     return jsonError(error.message, 403);
   }
   if (error instanceof Error) {
@@ -44,18 +54,21 @@ export async function getBrainActions() {
   return NextResponse.json({ actions: BRAIN_ACTION_LIST });
 }
 
-export async function postBrainRun(body: {
-  actionId: string;
-  worldSlug: string;
-  pageSlug?: string;
-  providerId: AiProviderId;
-  model: string;
-  userPrompt?: string;
-  sessionId?: string;
-  allowDmOnly?: boolean;
-  useMock?: boolean;
-  sync?: boolean;
-}) {
+export async function postBrainRun(
+  body: {
+    actionId: string;
+    worldSlug: string;
+    pageSlug?: string;
+    providerId: AiProviderId;
+    model: string;
+    userPrompt?: string;
+    sessionId?: string;
+    allowDmOnly?: boolean;
+    useMock?: boolean;
+    sync?: boolean;
+  },
+  actorUserId?: string | null,
+) {
   try {
     if (!isBrainActionId(body.actionId)) {
       return jsonError(`Unbekannte Brain-Aktion: ${body.actionId}`);
@@ -70,6 +83,7 @@ export async function postBrainRun(body: {
         type: "ai_run",
         title,
         worldSlug: body.worldSlug,
+        userId: actorUserId ?? null,
         payload: body,
       });
       const completed = await runJob(job.id);
@@ -84,6 +98,7 @@ export async function postBrainRun(body: {
       type: "ai_run",
       title,
       worldSlug: body.worldSlug,
+      userId: actorUserId ?? null,
       payload: body,
     });
 

@@ -483,6 +483,8 @@ model User {
   authIdentities      AuthIdentity[]
   contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
   contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
+  aiUserGrant          AiUserGrant?
+  aiUsageLogs          AiUsageLog[]
   reviewComments         ReviewComment[]
 
   @@map("users")
@@ -2409,4 +2411,98 @@ model ResearchSource {
 
   @@index([sessionId])
   @@map("research_sources")
+}
+
+// --- AI Gateway (RTX fallback, permissions, budgets, usage logs) ---
+
+enum AiRoutingMode {
+  LOCAL_ONLY
+  LOCAL_THEN_CLOUD
+  CLOUD_ONLY
+  DISABLED
+}
+
+enum AiPrivacyLevel {
+  CLOUD_ALLOWED
+  CLOUD_FORBIDDEN
+  LOCAL_REQUIRED
+}
+
+enum AiFeatureCategory {
+  general_chat
+  dnd_world
+  personal_brain
+  private_notes
+  admin_diagnostics
+  image_generation
+}
+
+model AiGatewayConfig {
+  id                   String        @id @default("default")
+  routingMode          AiRoutingMode @default(LOCAL_THEN_CLOUD) @map("routing_mode")
+  cloudFallbackEnabled Boolean       @default(false) @map("cloud_fallback_enabled")
+  privacyRules         Json          @default("{}") @map("privacy_rules")
+  dailyBudgetUsd       Float?        @map("daily_budget_usd")
+  monthlyBudgetUsd     Float?        @map("monthly_budget_usd")
+  perUserDailyBudgetUsd Float?       @map("per_user_daily_budget_usd")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@map("ai_gateway_config")
+}
+
+model AiCloudProvider {
+  id           String   @id @default(cuid())
+  providerId   String   @map("provider_id")
+  label        String
+  baseUrl      String?  @map("base_url")
+  defaultModel String?  @map("default_model")
+  apiKeyEnc    String?  @map("api_key_enc")
+  isEnabled    Boolean  @default(true) @map("is_enabled")
+  priority     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([providerId])
+  @@index([isEnabled, priority])
+  @@map("ai_cloud_providers")
+}
+
+model AiUserGrant {
+  id                   String   @id @default(cuid())
+  userId               String   @unique @map("user_id")
+  permissions          Json     @default("[]")
+  cloudFallbackAllowed Boolean  @default(false) @map("cloud_fallback_allowed")
+  dailyBudgetUsd       Float?   @map("daily_budget_usd")
+  grantedBy            String?  @map("granted_by")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_user_grants")
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  userId           String?  @map("user_id")
+  feature          String
+  taskType         String?  @map("task_type")
+  provider         String
+  model            String
+  route            String
+  contextMode      String?  @map("context_mode")
+  inputTokens      Int?     @map("input_tokens")
+  outputTokens     Int?     @map("output_tokens")
+  estimatedCostUsd Float?   @map("estimated_cost_usd")
+  success          Boolean  @default(true)
+  errorMessage     String?  @map("error_message")
+  durationMs       Int?     @map("duration_ms")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([feature, createdAt])
+  @@map("ai_usage_logs")
 }

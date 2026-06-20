@@ -19,10 +19,16 @@ import {
 } from "@uwe/database/server";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchCalDavEvents, fetchIcalFeed, parseIcalEvents, putCalDavEvent } from "@uwe/calendar";
-import { runImageStudioTask, type ImageStudioTask } from "@uwe/image-studio";
+import {
+  executeAiGatewayImageRequest,
+  executeAiGatewayResearchJob,
+  AiGatewayAccessDeniedError,
+} from "@uwe/ai-brain";
+import type { ImageStudioTask } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
 import type { JobRunnerContext } from "./job-runners";
+import { resolveGatewayUserById } from "./ai-gateway-user";
 
 async function assertNotCancelled(jobs: JobService, jobId: string): Promise<void> {
   if (await jobs.isCancelled(jobId)) {
@@ -50,6 +56,13 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
     throw new Error("Image-Studio-Job: prompt und task sind erforderlich.");
   }
 
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    throw new AiGatewayAccessDeniedError(
+      "Authentifizierung erforderlich für Image Studio (job.userId fehlt).",
+    );
+  }
+
   const db = createPrismaClient();
   const imageStudio = createImageStudioService(db);
   const projectId = payload.projectId;
@@ -58,7 +71,9 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
     await ctx.jobs.updateProgress(ctx.jobId, 10, "Provider auswählen");
     await assertNotCancelled(ctx.jobs, ctx.jobId);
 
-    const result = await runImageStudioTask({
+    const result = await executeAiGatewayImageRequest({
+      user: gatewayUser,
+      feature: "AI_IMAGE_USE",
       task: payload.task,
       prompt: payload.prompt,
       providerMode: payload.providerMode as "auto" | "local_rtx" | "cloud" | undefined,
@@ -234,6 +249,14 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
     throw new Error("Research-Session nicht gefunden.");
   }
 
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    await db.$disconnect();
+    throw new AiGatewayAccessDeniedError(
+      "Authentifizierung erforderlich für Research (job.userId fehlt).",
+    );
+  }
+
   await research.markRunning(session.id);
   await ctx.jobs.updateProgress(ctx.jobId, 20, "Web-Suche starten");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
@@ -246,26 +269,37 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
   }
 
   try {
-    const results = await searchSearxng({
-      baseUrl: searxngUrl,
-      query: session.query,
-      limit: 8,
-    });
+    const researchResult = await executeAiGatewayResearchJob(
+      {
+        user: gatewayUser,
+        contextMode: session.contextMode as "dnd_brain" | "life_brain" | "open_web",
+        queryChars: session.query.length,
+      },
+      async () => {
+        const results = await searchSearxng({
+          baseUrl: searxngUrl,
+          query: session.query,
+          limit: 8,
+        });
 
-    await ctx.jobs.updateProgress(ctx.jobId, 70, "Report erstellen");
-    const reportMd = buildResearchReport(session.query, results);
-    await research.complete(
-      session.id,
-      reportMd,
-      results.map((result) => ({
-        url: result.url,
-        title: result.title,
-        snippet: result.snippet,
-      })),
+        await ctx.jobs.updateProgress(ctx.jobId, 70, "Report erstellen");
+        const reportMd = buildResearchReport(session.query, results);
+        await research.complete(
+          session.id,
+          reportMd,
+          results.map((result) => ({
+            url: result.url,
+            title: result.title,
+            snippet: result.snippet,
+          })),
+        );
+
+        return { sourceCount: results.length };
+      },
     );
 
     await db.$disconnect();
-    return { sessionId: session.id, sourceCount: results.length };
+    return { sessionId: session.id, sourceCount: researchResult.sourceCount };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await research.fail(session.id, message);

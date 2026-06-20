@@ -1,4 +1,5 @@
 import { postAiPrompt, type AiPromptRequestBody } from "@/src/lib/ai-prompt-handlers";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import {
   aiPromptBodySchema,
   guardStudioMutation,
@@ -12,5 +13,8 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, aiPromptBodySchema);
   if (!parsed.success) return parsed.response;
 
-  return postAiPrompt(parsed.data as unknown as AiPromptRequestBody);
+  const user = await getCurrentAuthUser();
+  const gatewayUser = user ? { userId: user.id, role: user.role } : undefined;
+
+  return postAiPrompt(parsed.data as unknown as AiPromptRequestBody, gatewayUser);
 }

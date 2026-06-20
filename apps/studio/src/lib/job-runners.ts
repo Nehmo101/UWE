@@ -37,6 +37,7 @@ import {
   type ImportExecuteOptions,
   type ImportFormat,
 } from "@uwe/knoteforge-import";
+import { resolveGatewayUserById } from "./ai-gateway-user";
 import {
   runAgentJob,
   runCalendarSyncJob,
@@ -216,6 +217,8 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
   await ctx.jobs.updateProgress(ctx.jobId, 15, "Brain-Aktion starten");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+
   const result = await runBrainAction(deps, {
     actionId: payload.actionId,
     worldSlug: payload.worldSlug,
@@ -224,6 +227,8 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
     model: payload.model,
     userPrompt: payload.userPrompt,
     sessionId: payload.sessionId,
+    userId: ctx.job.userId ?? undefined,
+    gatewayUser: gatewayUser ?? undefined,
     useMock,
     options: {
       allowDmOnly: settings.localOnly,
@@ -296,15 +301,23 @@ async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<str
   await ctx.jobs.updateProgress(ctx.jobId, 10, "Warte auf RTX…");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    throw new Error("Deferred KI-Prompt: job.userId fehlt — Gateway-Kontext nicht verfügbar.");
+  }
+
   const { executeAiPrompt } = await import("./ai-prompt-handlers");
-  const result = await executeAiPrompt({
-    prompt: payload.prompt,
-    providerMode: payload.providerMode,
-    contextMode: payload.contextMode,
-    worldSlug: payload.worldSlug,
-    pageSlug: payload.pageSlug,
-    useMock: payload.useMock,
-  });
+  const result = await executeAiPrompt(
+    {
+      prompt: payload.prompt,
+      providerMode: payload.providerMode,
+      contextMode: payload.contextMode,
+      worldSlug: payload.worldSlug,
+      pageSlug: payload.pageSlug,
+      useMock: payload.useMock,
+    },
+    gatewayUser,
+  );
 
   if (result.kind === "deferred") {
     throw new Error("RTX weiterhin offline — Job wird erneut versucht.");
@@ -385,6 +398,12 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
 
   const started = Date.now();
 
+  let gatewayUser: { userId: string; role: string } | undefined;
+  const resolved = await resolveGatewayUserById(ctx.job.userId);
+  if (resolved) {
+    gatewayUser = resolved;
+  }
+
   try {
     const generated = await generateAiTaskBySlug(repo, {
       taskType: payload.taskType,
@@ -393,6 +412,8 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       providerId: payload.providerId,
       model: payload.model,
       userPrompt: payload.userPrompt,
+      user: gatewayUser,
+      feature: "AI_DND_USE",
       options: {
         allowDmOnly: settings.localOnly,
         datenschutzMode: settings.datenschutzMode,

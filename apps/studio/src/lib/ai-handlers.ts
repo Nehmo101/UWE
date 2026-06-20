@@ -154,19 +154,22 @@ export async function postContext(body: {
   }
 }
 
-export async function postGenerate(body: {
-  taskType: AiTaskType;
-  worldSlug: string;
-  pageSlug: string;
-  providerId: AiProviderId;
-  model: string;
-  userPrompt?: string;
-  allowDmOnly?: boolean;
-  sessionId?: string;
-  useMock?: boolean;
-  discardProposalId?: string;
-  sync?: boolean;
-}) {
+export async function postGenerate(
+  body: {
+    taskType: AiTaskType;
+    worldSlug: string;
+    pageSlug: string;
+    providerId: AiProviderId;
+    model: string;
+    userPrompt?: string;
+    allowDmOnly?: boolean;
+    sessionId?: string;
+    useMock?: boolean;
+    discardProposalId?: string;
+    sync?: boolean;
+  },
+  actorUserId?: string | null,
+) {
   const repo = createUweRepository();
   const world = await repo.getWorldBySlug(body.worldSlug);
   const page = await repo.getPageBySlug(body.worldSlug, body.pageSlug);
@@ -184,6 +187,7 @@ export async function postGenerate(body: {
         type: "ai_run",
         title,
         worldSlug: body.worldSlug,
+        userId: actorUserId ?? null,
         payload: body,
       });
       const completed = await runJob(job.id);
@@ -203,6 +207,7 @@ export async function postGenerate(body: {
       type: "ai_run",
       title,
       worldSlug: body.worldSlug,
+      userId: actorUserId ?? null,
       payload: body,
     });
 

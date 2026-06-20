@@ -317,6 +317,39 @@ DM-only soundboard buttons are filtered for the Player Portal via the same visib
 
 UWE Studio bietet ein **lokales Brain** (DnD-/World-Wissen, Sessions, Kanon) und optional **Cloud-KI** nur für allgemeine Fragen ohne Kampagnendaten. Inferenz läuft bevorzugt über einen **RTX-Agent** im Heimnetz (Ollama/LM Studio auf dem RTX-Rechner).
 
+### AI Gateway & RTX-Fallback
+
+Alle KI-Aufrufe laufen über das **zentrale AI Gateway** (`packages/ai-brain/src/gateway/`):
+
+```txt
+Permission → Privacy → Budget → RTX Health → Provider → Usage Log
+```
+
+| Thema | Details |
+|-------|---------|
+| **Standard** | Lokale RTX bevorzugt (`LOCAL_THEN_CLOUD`) |
+| **Cloud-Fallback** | Nur wenn Master-Admin (Owner) global freigibt |
+| **Provider & API-Keys** | Nur Master-Admin — verschlüsselt in DB, nie im Frontend |
+| **User-Freigaben** | z. B. Carina gezielt für KI-Features freischalten |
+| **Privacy** | Brain, Life Brain, private Notizen → standardmäßig **kein Cloud** |
+| **Budgets & Logs** | Tages-/Monats-/User-Limits, vollständige Nutzungsprotokolle |
+
+**Setup:** Studio → Cookbook → **KI & RTX Fallback** (`/admin/ai-gateway`) — geführter Master-Admin-Wizard.
+
+Dokumentation: [docs/ai-gateway.md](docs/ai-gateway.md) · [docs/ai-provider-setup.md](docs/ai-provider-setup.md) · [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md) · [docs/ai-troubleshooting.md](docs/ai-troubleshooting.md)
+
+**Wichtig:** DnD-Weltwissen, persönliches Life-Brain und private Notizen dürfen standardmäßig **nicht** an Cloud-Provider — siehe Privacy-Regeln im Admin-Wizard.
+
+**ENV (Beispiele, keine echten Secrets):**
+
+```env
+RTX_AGENT_URL=http://192.168.x.x:8787
+RTX_AGENT_TOKEN=<generiertes-geheimnis>
+# Optional Cloud-Fallback (zusätzlich im Admin-Wizard konfigurierbar):
+OPENAI_API_KEY=<optional>
+CLOUD_AI_PROVIDER=openai
+```
+
 | Rolle | Rechner | Aufgabe |
 |-------|---------|---------|
 | **UWE Host** | Alter Laptop / Self-Host | Datenbank, Brain, Mail, Studio — **alle persistenten Daten** |

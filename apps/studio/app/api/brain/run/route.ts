@@ -1,4 +1,5 @@
 import { postBrainRun } from "../../../../src/lib/brain-handlers";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import {
   brainRunBodySchema,
   guardStudioMutation,
@@ -12,5 +13,6 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, brainRunBodySchema);
   if (!parsed.success) return parsed.response;
 
-  return postBrainRun(parsed.data);
+  const user = await getCurrentAuthUser();
+  return postBrainRun(parsed.data, user?.id ?? null);
 }
