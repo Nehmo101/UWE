@@ -58,40 +58,51 @@ function LoginFormInner({
     setLoading(true);
     setError(null);
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    setLoading(false);
+      let payload: {
+        error?: string;
+        forcePasswordChange?: boolean;
+        requiresTwoFactor?: boolean;
+        challengeToken?: string;
+      };
 
-    const payload = (await response.json()) as {
-      error?: string;
-      forcePasswordChange?: boolean;
-      requiresTwoFactor?: boolean;
-      challengeToken?: string;
-    };
+      try {
+        payload = (await response.json()) as typeof payload;
+      } catch {
+        setError("Unerwartete Server-Antwort. Bitte erneut versuchen.");
+        return;
+      }
 
-    if (!response.ok) {
-      setError(payload.error ?? "Ungültige Anmeldedaten.");
-      return;
-    }
+      if (!response.ok) {
+        setError(payload.error ?? "Ungültige Anmeldedaten.");
+        return;
+      }
 
-    if (payload.requiresTwoFactor && payload.challengeToken) {
-      setTwoFactorChallenge({ challengeToken: payload.challengeToken });
-      setTwoFactorCode("");
-      return;
-    }
+      if (payload.requiresTwoFactor && payload.challengeToken) {
+        setTwoFactorChallenge({ challengeToken: payload.challengeToken });
+        setTwoFactorCode("");
+        return;
+      }
 
-    if (payload.forcePasswordChange) {
-      router.push(forcePasswordRedirect);
+      if (payload.forcePasswordChange) {
+        router.push(forcePasswordRedirect);
+        router.refresh();
+        return;
+      }
+
+      router.push(redirectTo);
       router.refresh();
-      return;
+    } catch {
+      setError("Verbindung zum Server fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push(redirectTo);
-    router.refresh();
   }
 
   async function handleTwoFactorSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -101,35 +112,46 @@ function LoginFormInner({
     setLoading(true);
     setError(null);
 
-    const response = await fetch("/api/auth/two-factor/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        challengeToken: twoFactorChallenge.challengeToken,
-        code: twoFactorCode.trim(),
-      }),
-    });
+    try {
+      const response = await fetch("/api/auth/two-factor/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeToken: twoFactorChallenge.challengeToken,
+          code: twoFactorCode.trim(),
+        }),
+      });
 
-    setLoading(false);
+      let payload: {
+        error?: string;
+        forcePasswordChange?: boolean;
+      };
 
-    const payload = (await response.json()) as {
-      error?: string;
-      forcePasswordChange?: boolean;
-    };
+      try {
+        payload = (await response.json()) as typeof payload;
+      } catch {
+        setError("Unerwartete Server-Antwort. Bitte erneut versuchen.");
+        return;
+      }
 
-    if (!response.ok) {
-      setError(payload.error ?? "Ungültiger 2FA-Code.");
-      return;
-    }
+      if (!response.ok) {
+        setError(payload.error ?? "Ungültiger 2FA-Code.");
+        return;
+      }
 
-    if (payload.forcePasswordChange) {
-      router.push(forcePasswordRedirect);
+      if (payload.forcePasswordChange) {
+        router.push(forcePasswordRedirect);
+        router.refresh();
+        return;
+      }
+
+      router.push(redirectTo);
       router.refresh();
-      return;
+    } catch {
+      setError("Verbindung zum Server fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push(redirectTo);
-    router.refresh();
   }
 
   if (twoFactorChallenge) {

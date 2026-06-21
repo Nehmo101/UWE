@@ -7,7 +7,7 @@ import {
 } from "@uwe/database/server";
 import {
   canAccessStudio,
-  getSessionCookieOptions,
+  getSessionCookieOptionsForRequest,
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
 } from "@uwe/auth";
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      ...getSessionCookieOptions(),
+      ...getSessionCookieOptionsForRequest(request),
       expires: sessionExpiresAt(),
     });
 

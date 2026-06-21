@@ -3,7 +3,7 @@ import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import {
-  getSessionCookieOptions,
+  getSessionCookieOptionsForRequest,
   PREVIEW_COOKIE_NAME,
   canPreviewAsPlayer,
 } from "@uwe/auth";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   if (previewAsUserId) {
     cookieStore.set(PREVIEW_COOKIE_NAME, previewAsUserId, {
-      ...getSessionCookieOptions(),
+      ...getSessionCookieOptionsForRequest(request),
     });
   } else {
     cookieStore.delete(PREVIEW_COOKIE_NAME);

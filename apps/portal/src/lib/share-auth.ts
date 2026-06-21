@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { getSessionCookieOptions } from "@uwe/auth";
+import type { SessionCookieOptions } from "@uwe/auth";
+import { getSessionCookieOptions, getSessionCookieOptionsForRequest } from "@uwe/auth";
 
 export const SHARE_AUTH_COOKIE_PREFIX = "uwe_share_";
 
@@ -12,8 +13,11 @@ export async function isSharePasswordVerified(token: string): Promise<boolean> {
   return store.get(shareAuthCookieName(token))?.value === "ok";
 }
 
-export function shareAuthCookieOptions(token: string, maxAgeSeconds = 60 * 60 * 24) {
-  const cookie = getSessionCookieOptions();
+function buildShareAuthCookieOptions(
+  token: string,
+  cookie: SessionCookieOptions,
+  maxAgeSeconds: number,
+) {
   return {
     name: shareAuthCookieName(token),
     value: "ok",
@@ -25,4 +29,15 @@ export function shareAuthCookieOptions(token: string, maxAgeSeconds = 60 * 60 * 
     path: cookie.path,
     maxAge: maxAgeSeconds,
   };
+}
+
+export function shareAuthCookieOptions(
+  token: string,
+  maxAgeSeconds = 60 * 60 * 24,
+  request?: Pick<Request, "url" | "headers">,
+) {
+  const cookie = request
+    ? getSessionCookieOptionsForRequest(request)
+    : getSessionCookieOptions();
+  return buildShareAuthCookieOptions(token, cookie, maxAgeSeconds);
 }

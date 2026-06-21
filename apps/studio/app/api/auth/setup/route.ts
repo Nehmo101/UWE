@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { timingSafeEqual } from "node:crypto";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import {
-  getSessionCookieOptions,
+  getSessionCookieOptionsForRequest,
   getUweRuntimeConfig,
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      ...getSessionCookieOptions(),
+      ...getSessionCookieOptionsForRequest(request),
       expires: sessionExpiresAt(),
     });
 

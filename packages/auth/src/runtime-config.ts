@@ -102,7 +102,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
 
   const sessionCookieSecure = parseBoolEnv(
     env.SESSION_COOKIE_SECURE,
-    isProduction || publicHttps,
+    publicHttps,
   );
 
   const setupToken = env.UWE_SETUP_TOKEN?.trim() || null;
@@ -139,6 +139,64 @@ export function getSessionCookieOptions(
     secure: config.sessionCookieSecure,
     path: "/",
   };
+}
+
+export interface RequestLikeForCookieOptions {
+  url: string;
+  headers: Headers;
+}
+
+/**
+ * Whether the incoming request was made over HTTPS (directly or via trusted proxy headers).
+ */
+export function isRequestSecure(
+  request: RequestLikeForCookieOptions,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const { trustProxy } = getUweRuntimeConfig(env);
+
+  if (trustProxy) {
+    const forwardedProto = request.headers
+      .get("x-forwarded-proto")
+      ?.split(",")[0]
+      ?.trim()
+      .toLowerCase();
+    if (forwardedProto === "https") {
+      return true;
+    }
+    if (forwardedProto === "http") {
+      return false;
+    }
+  }
+
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Session cookie options adjusted for the actual request transport.
+ * Browsers ignore Secure cookies on plain HTTP — without this, login appears to succeed
+ * but the session is never stored (silent redirect loop back to /login).
+ */
+export function getSessionCookieOptionsForRequest(
+  request: RequestLikeForCookieOptions,
+  env: NodeJS.ProcessEnv = process.env,
+): SessionCookieOptions {
+  const base = getSessionCookieOptions(env);
+  const requestSecure = isRequestSecure(request, env);
+
+  if (base.secure && !requestSecure) {
+    return {
+      ...base,
+      secure: false,
+      sameSite: base.sameSite === "none" ? "lax" : base.sameSite,
+    };
+  }
+
+  return base;
 }
 
 export function getOAuthStateCookieOptions(

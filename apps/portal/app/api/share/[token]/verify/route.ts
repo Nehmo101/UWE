@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const response = NextResponse.json({ ok: true });
-    response.cookies.set(shareAuthCookieOptions(token));
+    response.cookies.set(shareAuthCookieOptions(token, 60 * 60 * 24, request));
     return response;
   } finally {
     await db.$disconnect();

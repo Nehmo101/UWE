@@ -8,7 +8,7 @@ import {
   createTwoFactorService,
   logAuditEvent,
 } from "@uwe/database/server";
-import { getSessionCookieOptions, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
+import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
 import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      ...getSessionCookieOptions(),
+      ...getSessionCookieOptionsForRequest(request),
       expires: sessionExpiresAt(),
     });
 

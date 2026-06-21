@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { getSessionCookieOptions, PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { getSessionCookieOptionsForRequest, PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "@uwe/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const cookieOptions = getSessionCookieOptions();
+  const cookieOptions = getSessionCookieOptionsForRequest(request);
 
   if (token) {
     const db = createPrismaClient();

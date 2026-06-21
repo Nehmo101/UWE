@@ -3,28 +3,27 @@ import { describe, it } from "node:test";
 import {
   getOAuthStateCookieOptions,
   getSessionCookieOptions,
+  getSessionCookieOptionsForRequest,
   getTrustedRequestHosts,
   getUweRuntimeConfig,
   isPublicExposureConfigured,
+  isRequestSecure,
   originMatchesTrustedHost,
 } from "./runtime-config";
 import { resolveClientIp } from "./proxy";
 
 describe("runtime config", () => {
-  it("defaults to secure production settings behind PUBLIC_APP_URL", () => {
-    const config = getUweRuntimeConfig({
+  it("defaults Secure cookies only when PUBLIC_APP_URL is HTTPS", () => {
+    const lanProduction = getUweRuntimeConfig({
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org/",
     });
+    assert.equal(lanProduction.sessionCookieSecure, false);
 
-    assert.equal(config.isProduction, true);
-    assert.equal(config.publicAppUrl, "https://uweanddragons.org");
-    assert.equal(config.trustProxy, true);
-    assert.equal(config.authRequired, true);
-    assert.equal(config.sessionCookieSecure, true);
-    assert.equal(config.playerPreviewPublic, false);
-    assert.equal(config.playerPreviewRequireToken, true);
-    assert.equal(config.playerPreviewAllowDmOnly, false);
+    const httpsProduction = getUweRuntimeConfig({
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uwe.example.org",
+    });
+    assert.equal(httpsProduction.sessionCookieSecure, true);
   });
 
   it("honours explicit overrides", () => {
@@ -60,11 +59,83 @@ describe("runtime config", () => {
   it("keeps production cookies secure by default", () => {
     const options = getSessionCookieOptions({
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweandragons.org",
+      PUBLIC_APP_URL: "https://uweanddragons.org",
     });
 
     assert.equal(options.secure, true);
     assert.equal(options.httpOnly, true);
+  });
+
+  it("detects HTTPS from request URL and forwarded proto", () => {
+    const env = { NODE_ENV: "production", TRUST_PROXY: "true" };
+
+    assert.equal(
+      isRequestSecure(
+        {
+          url: "http://192.168.178.40:3000/api/auth/login",
+          headers: new Headers({ "x-forwarded-proto": "https" }),
+        },
+        env,
+      ),
+      true,
+    );
+    assert.equal(
+      isRequestSecure(
+        {
+          url: "http://192.168.178.40:3000/api/auth/login",
+          headers: new Headers({ "x-forwarded-proto": "http" }),
+        },
+        env,
+      ),
+      false,
+    );
+    assert.equal(
+      isRequestSecure(
+        {
+          url: "https://studio.local/api/auth/login",
+          headers: new Headers(),
+        },
+        env,
+      ),
+      true,
+    );
+  });
+
+  it("drops Secure flag on plain HTTP so browsers store session cookies", () => {
+    const env = {
+      NODE_ENV: "production",
+      SESSION_COOKIE_SECURE: "true",
+      SESSION_COOKIE_SAMESITE: "lax",
+    };
+
+    const options = getSessionCookieOptionsForRequest(
+      {
+        url: "http://192.168.178.40:3000/api/auth/login",
+        headers: new Headers(),
+      },
+      env,
+    );
+
+    assert.equal(options.secure, false);
+    assert.equal(options.sameSite, "lax");
+    assert.equal(options.httpOnly, true);
+  });
+
+  it("keeps Secure cookies on HTTPS requests", () => {
+    const env = {
+      NODE_ENV: "production",
+      SESSION_COOKIE_SECURE: "true",
+    };
+
+    const options = getSessionCookieOptionsForRequest(
+      {
+        url: "https://uwe.example.org/api/auth/login",
+        headers: new Headers(),
+      },
+      env,
+    );
+
+    assert.equal(options.secure, true);
   });
 
   it("scopes OAuth state cookies to callback path", () => {

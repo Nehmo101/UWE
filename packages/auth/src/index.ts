@@ -160,10 +160,12 @@ export {
   getAllowedCorsOrigins,
   getOAuthStateCookieOptions,
   getSessionCookieOptions,
+  getSessionCookieOptionsForRequest,
   getTrustedRequestHosts,
   getUweRuntimeConfig,
   isProductionEnv,
   isPublicExposureConfigured,
+  isRequestSecure,
   originMatchesTrustedHost,
 } from "./runtime-config";
 
