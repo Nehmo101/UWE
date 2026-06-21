@@ -11,7 +11,6 @@ Type=simple
 User=uwe
 Group=uwe
 WorkingDirectory=/opt/uwe
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=UWE_HOME=/opt/uwe
 Environment=UWE_ENV=/etc/uwe/uwe.env
 Environment=NODE_ENV=production
@@ -19,6 +18,8 @@ Environment=HOST=0.0.0.0
 Environment=HOSTNAME=0.0.0.0
 Environment=PORT=3000
 EnvironmentFile=-/etc/uwe/uwe.env
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=NODE_BIN=/usr/bin/node
 
 # Binds to 0.0.0.0 for LAN access; restrict exposure via firewall/Cloudflare Access.
 ExecStart=/opt/uwe/deploy/scripts/start-uwe.sh

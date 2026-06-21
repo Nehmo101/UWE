@@ -321,17 +321,16 @@ Nicht verwenden: `pnpm exec prisma … --schema ./packages/database/prisma/schem
 
 ### systemd PATH Probleme
 
-`uwe.service` setzt explizit:
+`uwe.service` lädt zuerst `/etc/uwe/uwe.env` und setzt danach explizit:
 
 ```
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-StartLimitIntervalSec=300
-StartLimitBurst=5
-Restart=on-failure
-RestartSec=5
+Environment=NODE_BIN=/usr/bin/node
 ```
 
-`start-uwe.sh` prüft vor dem Start `command -v node` und bricht mit klarer Meldung ab:
+So kann ein versehentliches `PATH=` in `uwe.env` (z. B. von nvm) den Dienst nicht mehr kaputt machen. Das Setup-Script entfernt `PATH=` aus `/etc/uwe/uwe.env` automatisch.
+
+`start-uwe.sh` prüft vor dem Start `command -v node`, fällt auf `/usr/bin/node` zurück und bricht mit klarer Meldung ab:
 
 ```
 Node.js not found in systemd PATH. Run: sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh --repair

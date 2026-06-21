@@ -129,6 +129,19 @@ upsert_env_var_if_missing() {
   printf '%s=%s\n' "$key" "$value" >>"$file"
 }
 
+sanitize_env_file_for_systemd() {
+  local file="$1"
+
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+
+  if grep -q '^PATH=' "$file" 2>/dev/null; then
+    warn "$file enthält PATH= — entferne Eintrag (systemd setzt PATH explizit)."
+    sed -i '/^PATH=/d' "$file"
+  fi
+}
+
 upsert_env_var() {
   local key="$1"
   local value="$2"
@@ -224,6 +237,8 @@ ensure_env_file() {
   chmod 640 "$UWE_ENV_FILE"
   chown root:"$SERVICE_GROUP" "$UWE_ENV_DIR"
   chmod 750 "$UWE_ENV_DIR"
+
+  sanitize_env_file_for_systemd "$UWE_ENV_FILE"
 }
 
 verify_http_healthchecks() {
@@ -256,6 +271,12 @@ ensure_start_script() {
 
 write_systemd_unit() {
   local unit_path="/etc/systemd/system/$SYSTEMD_UNIT"
+  local node_bin
+  node_bin="$(find_node_binary)"
+  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
+    node_bin="/usr/bin/node"
+  fi
+
   log "Schreibe systemd Unit nach $unit_path …"
 
   cat >"$unit_path" <<EOF
@@ -272,7 +293,6 @@ Type=simple
 User=${SERVICE_USER}
 Group=${SERVICE_GROUP}
 WorkingDirectory=${UWE_HOME}
-Environment=PATH=${SYSTEMD_PATH}
 Environment=UWE_HOME=${UWE_HOME}
 Environment=UWE_ENV=${UWE_ENV_FILE}
 Environment=NODE_ENV=production
@@ -280,6 +300,8 @@ Environment=HOST=0.0.0.0
 Environment=HOSTNAME=0.0.0.0
 Environment=PORT=${STUDIO_PORT}
 EnvironmentFile=-${UWE_ENV_FILE}
+Environment=PATH=${SYSTEMD_PATH}
+Environment=NODE_BIN=${node_bin}
 
 ExecStart=${UWE_HOME}/deploy/scripts/start-uwe.sh
 
@@ -639,6 +661,7 @@ main() {
 
   run_deploy_steps "$quick_flag"
   ensure_start_script
+  verify_service_node_access
   write_systemd_unit
   start_or_restart_service
 

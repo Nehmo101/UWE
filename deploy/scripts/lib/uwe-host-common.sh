@@ -160,6 +160,71 @@ find_node_binary() {
   command -v node 2>/dev/null || true
 }
 
+resolve_node_binary() {
+  local node_bin="${NODE_BIN:-}"
+
+  export_system_path
+
+  if [[ -n "$node_bin" && -x "$node_bin" ]]; then
+    printf '%s\n' "$node_bin"
+    return 0
+  fi
+
+  node_bin="$(command -v node 2>/dev/null || true)"
+  if [[ -n "$node_bin" && -x "$node_bin" ]]; then
+    printf '%s\n' "$node_bin"
+    return 0
+  fi
+
+  if [[ -x "/usr/bin/node" ]]; then
+    printf '%s\n' "/usr/bin/node"
+    return 0
+  fi
+
+  return 1
+}
+
+apply_systemd_path() {
+  export PATH="$SYSTEMD_PATH"
+}
+
+source_uwe_env_file() {
+  local env_file="${1:-$UWE_ENV_FILE}"
+
+  if [[ ! -f "$env_file" ]]; then
+    return 0
+  fi
+
+  set -a
+  # shellcheck disable=SC1090
+  source "$env_file"
+  set +a
+
+  # uwe.env must not override the systemd PATH (e.g. nvm/home paths break the service user).
+  apply_systemd_path
+}
+
+run_as_uwe_systemd_env() {
+  local cmd="$1"
+  sudo -u "$SERVICE_USER" env \
+    PATH="$SYSTEMD_PATH" \
+    HOME="$UWE_HOME" \
+    UWE_HOME="$UWE_HOME" \
+    UWE_ENV="$UWE_ENV_FILE" \
+    bash -c "
+      set -euo pipefail
+      cd '$UWE_HOME'
+      if [[ -f '$UWE_ENV_FILE' ]]; then
+        set -a
+        # shellcheck disable=SC1090
+        source '$UWE_ENV_FILE'
+        set +a
+      fi
+      export PATH='$SYSTEMD_PATH'
+      $cmd
+    "
+}
+
 find_pnpm_binary() {
   export_system_path
   command -v pnpm 2>/dev/null || true
@@ -202,16 +267,23 @@ listening_on_all_interfaces() {
 
 run_as_uwe() {
   local cmd="$1"
-  sudo -u "$SERVICE_USER" bash -lc "
-    set -euo pipefail
-    export PATH='$SYSTEMD_PATH:'\"\\${PATH:-}\"
-    cd '$UWE_HOME'
-    if [[ -f '$UWE_ENV_FILE' ]]; then
-      set -a
-      # shellcheck disable=SC1090
-      source '$UWE_ENV_FILE'
-      set +a
-    fi
-    $cmd
-  "
+  sudo -u "$SERVICE_USER" env \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    PATH="$SYSTEMD_PATH" \
+    HOME="$UWE_HOME" \
+    UWE_HOME="$UWE_HOME" \
+    UWE_ENV="$UWE_ENV_FILE" \
+    bash -c "
+      set -euo pipefail
+      cd '$UWE_HOME'
+      if [[ -f '$UWE_ENV_FILE' ]]; then
+        set -a
+        # shellcheck disable=SC1090
+        source '$UWE_ENV_FILE'
+        set +a
+      fi
+      export PATH='$SYSTEMD_PATH'
+      export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+      $cmd
+    "
 }

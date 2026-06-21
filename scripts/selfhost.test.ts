@@ -41,6 +41,7 @@ describe("self-hosting setup", () => {
     assert.match(setup, /RestartSec=5/);
     assert.match(setup, /run_deploy_steps/);
     assert.match(deps, /verify_all_standalone_runtime_deps/);
+    assert.match(deps, /verify_service_node_access/);
 
     for (const lib of [
       "deploy/scripts/lib/uwe-host-common.sh",
@@ -60,7 +61,9 @@ describe("self-hosting setup", () => {
   it("start-uwe.sh resolves node via absolute path and stable PATH", () => {
     const start = fs.readFileSync(path.join(root, "deploy/scripts/start-uwe.sh"), "utf8");
     assert.match(start, /set -Eeuo pipefail/);
-    assert.match(start, /NODE_BIN="\$\(command -v node/);
+    assert.match(start, /resolve_node_binary/);
+    assert.match(start, /\/usr\/bin\/node/);
+    assert.match(start, /NODE_BIN="\$\(resolve_node_binary/);
     assert.match(start, /exec "\$NODE_BIN"/);
     assert.match(start, /Node\.js not found in systemd PATH/);
     assert.match(start, /setup-uwe-host\.sh --repair/);
@@ -69,12 +72,17 @@ describe("self-hosting setup", () => {
     assert.doesNotMatch(start, /pnpm not found/);
   });
 
-  it("uwe.service reference unit limits restart loops", () => {
+  it("uwe.service reference unit limits restart loops and pins node path", () => {
     const unit = fs.readFileSync(path.join(root, "deploy/systemd/uwe.service"), "utf8");
     assert.match(unit, /StartLimitIntervalSec=300/);
     assert.match(unit, /StartLimitBurst=5/);
     assert.match(unit, /RestartSec=5/);
+    assert.match(unit, /EnvironmentFile=-\/etc\/uwe\/uwe\.env/);
     assert.match(unit, /Environment=PATH=/);
+    assert.match(unit, /Environment=NODE_BIN=/);
+    const envFileIndex = unit.indexOf("EnvironmentFile=-/etc/uwe/uwe.env");
+    const pathIndex = unit.indexOf("Environment=PATH=");
+    assert.ok(envFileIndex >= 0 && pathIndex > envFileIndex, "PATH must come after EnvironmentFile");
   });
 
   it("includes standalone Prisma runtime scripts and next tracing config", () => {

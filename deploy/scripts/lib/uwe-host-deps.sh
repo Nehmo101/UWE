@@ -242,6 +242,7 @@ ensure_pnpm() {
   local required version pnpm_bin
 
   export_system_path
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
   required="$(get_required_pnpm_version)"
 
   if [[ "$force" -eq 0 ]]; then
@@ -420,6 +421,22 @@ verify_standalone_runtime_deps() {
   if ! run_as_uwe "node '$check_script' '$app'"; then
     die "Standalone-Runtime-Dependencies fehlen für $app. Build erneut ausführen oder --repair."
   fi
+}
+
+verify_service_node_access() {
+  local node_bin
+
+  node_bin="$(find_node_binary)"
+  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
+    die "Node.js nicht gefunden. Ausführen: sudo bash $UWE_HOME/deploy/scripts/setup-uwe-host.sh --repair"
+  fi
+
+  log "Prüfe Node.js für Service-User $SERVICE_USER (systemd-PATH) …"
+  if ! run_as_uwe_systemd_env "node_bin=\$(command -v node 2>/dev/null || true); if [[ -z \"\$node_bin\" && -x /usr/bin/node ]]; then node_bin=/usr/bin/node; fi; [[ -n \"\$node_bin\" && -x \"\$node_bin\" ]]"; then
+    die "Node.js ist für $SERVICE_USER unter systemd-PATH nicht ausführbar. Ausführen: sudo bash $UWE_HOME/deploy/scripts/setup-uwe-host.sh --repair"
+  fi
+
+  ok "Node.js für $SERVICE_USER unter systemd-PATH verfügbar."
 }
 
 verify_all_standalone_runtime_deps() {

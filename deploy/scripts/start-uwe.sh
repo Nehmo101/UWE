@@ -4,15 +4,46 @@ set -Eeuo pipefail
 
 UWE_HOME="${UWE_HOME:-/opt/uwe}"
 UWE_ENV="${UWE_ENV:-/etc/uwe/uwe.env}"
+SYSTEMD_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # systemd does not load login shells — use a stable PATH before any command lookup.
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+apply_systemd_path() {
+  export PATH="$SYSTEMD_PATH"
+}
+
+resolve_node_binary() {
+  local node_bin="${NODE_BIN:-}"
+
+  apply_systemd_path
+
+  if [[ -n "$node_bin" && -x "$node_bin" ]]; then
+    printf '%s\n' "$node_bin"
+    return 0
+  fi
+
+  node_bin="$(command -v node 2>/dev/null || true)"
+  if [[ -n "$node_bin" && -x "$node_bin" ]]; then
+    printf '%s\n' "$node_bin"
+    return 0
+  fi
+
+  if [[ -x "/usr/bin/node" ]]; then
+    printf '%s\n' "/usr/bin/node"
+    return 0
+  fi
+
+  return 1
+}
+
+apply_systemd_path
 
 if [[ -f "$UWE_ENV" ]]; then
   set -a
   # shellcheck disable=SC1090
   source "$UWE_ENV"
   set +a
+  # uwe.env must not override the systemd PATH (e.g. nvm/home paths break the service user).
+  apply_systemd_path
 fi
 
 UWE_HOME="${UWE_HOME:-/opt/uwe}"
@@ -25,7 +56,7 @@ STUDIO_SERVER="$STUDIO_DIR/apps/studio/server.js"
 PORTAL_SERVER="$PORTAL_DIR/apps/portal/server.js"
 REPAIR_CMD="sudo bash ${UWE_HOME}/deploy/scripts/setup-uwe-host.sh --repair"
 
-NODE_BIN="$(command -v node || true)"
+NODE_BIN="$(resolve_node_binary || true)"
 if [[ -z "$NODE_BIN" ]]; then
   echo "Node.js not found in systemd PATH. Run: ${REPAIR_CMD}" >&2
   exit 127
