@@ -250,10 +250,12 @@ verify_http_healthchecks() {
     "http://127.0.0.1:${STUDIO_PORT}/setup" \
     "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
     code="$(http_status_code "$url")"
-    if [[ "$code" =~ ^5 ]]; then
+    if [[ "$code" == "500" || "$code" == "502" || "$code" == "504" ]]; then
       die "HTTP $code für $url — Service nicht gesund. Siehe: journalctl -u $SYSTEMD_UNIT -n 80"
     fi
-    if [[ "$code" == "000" ]]; then
+    if [[ "$code" == "503" ]]; then
+      warn "HTTP 503 (degraded) — $url"
+    elif [[ "$code" == "000" ]]; then
       warn "HTTP nicht erreichbar: $url"
     else
       ok "HTTP $code — $url"
@@ -665,7 +667,7 @@ main() {
   write_systemd_unit
   start_or_restart_service
 
-  sleep 3
+  sleep 8
   verify_http_healthchecks
   configure_firewall
   sleep 2

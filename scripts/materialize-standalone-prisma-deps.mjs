@@ -2,6 +2,8 @@
 /**
  * Merge @uwe/database runtime dependencies into Next.js standalone node_modules.
  * Mirrors the Docker production image strategy (pnpm deploy --prod + copy).
+ *
+ * Important: preserve pnpm symlinks (cp -a). Dereferencing breaks @libsql/core resolution.
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -12,15 +14,14 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const APPS = ["studio", "portal"];
 const DEPLOY_DIR = path.join(ROOT, ".cache", "standalone-prisma-deps");
 
-/** Top-level node_modules entries copied from the prod deploy tree. */
-const TOP_LEVEL_RUNTIME_ENTRIES = ["@prisma", "@libsql", "pg", "libsql"];
-
-function copyDereferenced(src, dest) {
+function copyPath(src, dest, { dereference = false } = {}) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   if (fs.existsSync(dest)) {
     fs.rmSync(dest, { recursive: true, force: true });
   }
-  execFileSync("cp", ["-rL", src, dest], { stdio: "inherit" });
+
+  const flags = dereference ? ["-rL"] : ["-a"];
+  execFileSync("cp", [...flags, src, dest], { stdio: "inherit" });
 }
 
 function mergePnpmStore(srcStore, destStore) {
@@ -36,11 +37,11 @@ function mergePnpmStore(srcStore, destStore) {
       continue;
     }
 
-    copyDereferenced(path.join(srcStore, entry), path.join(destStore, entry));
+    copyPath(path.join(srcStore, entry), path.join(destStore, entry));
   }
 }
 
-function materializeRuntimeNodeModules(srcRoot, destRoot) {
+function mergeDeployNodeModules(srcRoot, destRoot) {
   const srcNodeModules = path.join(srcRoot, "node_modules");
   const destNodeModules = path.join(destRoot, "node_modules");
 
@@ -50,13 +51,37 @@ function materializeRuntimeNodeModules(srcRoot, destRoot) {
 
   mergePnpmStore(path.join(srcNodeModules, ".pnpm"), path.join(destNodeModules, ".pnpm"));
 
-  for (const entry of TOP_LEVEL_RUNTIME_ENTRIES) {
-    const src = path.join(srcNodeModules, entry);
-    if (!fs.existsSync(src)) {
+  for (const entry of fs.readdirSync(srcNodeModules)) {
+    if (entry === ".pnpm" || entry === "node_modules") {
       continue;
     }
-    copyDereferenced(src, path.join(destNodeModules, entry));
+
+    if (entry === "@prisma") {
+      const destScope = path.join(destNodeModules, "@prisma");
+      fs.mkdirSync(destScope, { recursive: true });
+      for (const pkg of ["adapter-libsql", "adapter-pg"]) {
+        const srcPkg = path.join(srcNodeModules, "@prisma", pkg);
+        if (fs.existsSync(srcPkg)) {
+          copyPath(srcPkg, path.join(destScope, pkg));
+        }
+      }
+      continue;
+    }
+
+    copyPath(path.join(srcNodeModules, entry), path.join(destNodeModules, entry));
   }
+}
+
+function materializeStaticAssets(app, standaloneDir) {
+  const staticSrc = path.join(ROOT, "apps", app, ".next", "static");
+  const staticDest = path.join(standaloneDir, "apps", app, ".next", "static");
+
+  if (!fs.existsSync(staticSrc)) {
+    console.warn(`[materialize] Skipping ${app} static assets: ${staticSrc} not found`);
+    return;
+  }
+
+  copyPath(staticSrc, staticDest, { dereference: true });
 }
 
 function materializeApp(app) {
@@ -66,13 +91,15 @@ function materializeApp(app) {
     return false;
   }
 
-  materializeRuntimeNodeModules(DEPLOY_DIR, standaloneDir);
+  mergeDeployNodeModules(DEPLOY_DIR, standaloneDir);
 
   const generatedSrc = path.join(ROOT, "packages", "database", "src", "generated");
   const generatedDest = path.join(standaloneDir, "packages", "database", "src", "generated");
   if (fs.existsSync(generatedSrc)) {
-    copyDereferenced(generatedSrc, generatedDest);
+    copyPath(generatedSrc, generatedDest, { dereference: true });
   }
+
+  materializeStaticAssets(app, standaloneDir);
 
   console.log(`[materialize] Updated standalone runtime deps for ${app}`);
   return true;

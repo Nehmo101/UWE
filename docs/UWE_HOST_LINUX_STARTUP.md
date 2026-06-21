@@ -243,11 +243,11 @@ Die `host:*`-Scripts leiten auf den Production-Flow um — sie starten **keinen*
 
 ## Fehlerbehebung
 
-### `Cannot find module '@prisma/adapter-libsql'` (HTTP 500 auf `/api/health` oder `/setup`)
+### `Cannot find module '@prisma/adapter-libsql'` oder `@libsql/core/config` (HTTP 500 auf `/api/health` oder `/setup`)
 
-Der Next.js-Standalone-Output enthält nicht alle Prisma-Runtime-Dependencies. Das passiert typischerweise nach einem Build ohne Monorepo-Tracing oder fehlendem Post-Build-Schritt.
+Der Next.js-Standalone-Output enthält nicht alle Prisma/LibSQL-Runtime-Dependencies. Typisch nach Build ohne Post-Build-Materialize oder wenn pnpm-Symlinks beim Kopieren dereferenziert wurden (`cp -rL`).
 
-**Symptome:** `journalctl -u uwe` zeigt `Error: Cannot find module '@prisma/adapter-libsql'`, Studio antwortet mit HTTP 500.
+**Symptome:** `journalctl -u uwe` zeigt `Error: Cannot find module '@prisma/adapter-libsql'` oder `Cannot find module '@libsql/core/config'`, Studio antwortet mit HTTP 500.
 
 **Reparatur:**
 
@@ -256,6 +256,8 @@ cd /opt/uwe
 git pull
 sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
 ```
+
+Das Setup-Script prüft jetzt per `require()` (nicht nur `resolve()`), ob `@prisma/adapter-libsql` und `@libsql/client` wirklich ladbar sind, und kopiert `.next/static` in den Standalone-Output.
 
 **Manuelle Prüfung nach Build:**
 

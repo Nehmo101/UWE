@@ -90,6 +90,17 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "scripts/materialize-standalone-prisma-deps.mjs")));
     assert.ok(fs.existsSync(path.join(root, "packages/config/next-standalone.ts")));
 
+    const materialize = fs.readFileSync(
+      path.join(root, "scripts/materialize-standalone-prisma-deps.mjs"),
+      "utf8",
+    );
+    assert.match(materialize, /adapter-libsql/);
+    assert.match(materialize, /materializeStaticAssets/);
+
+    const check = fs.readFileSync(path.join(root, "scripts/check-standalone-prisma-deps.mjs"), "utf8");
+    assert.match(check, /requireFromStandalone\(moduleName\)/);
+    assert.match(check, /static assets/);
+
     const studioNext = fs.readFileSync(path.join(root, "apps/studio/next.config.ts"), "utf8");
     assert.match(studioNext, /getUweStandaloneNextConfig/);
     assert.match(studioNext, /output:\s*"standalone"/);

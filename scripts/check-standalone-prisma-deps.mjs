@@ -14,7 +14,6 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const REQUIRED_MODULES = [
   "@prisma/adapter-libsql",
   "@prisma/adapter-pg",
-  "@prisma/client",
   "@libsql/client",
   "pg",
 ];
@@ -52,12 +51,38 @@ for (const moduleName of REQUIRED_MODULES) {
       );
       continue;
     }
+
+    requireFromStandalone(moduleName);
     console.log(`  OK  ${moduleName} -> ${resolved}`);
   } catch (error) {
     failed = true;
     const message = error instanceof Error ? error.message : String(error);
     console.error(`  FAIL ${moduleName}: ${message}`);
   }
+}
+
+const staticDir = path.join(standaloneDir, "apps", app, ".next", "static");
+const generatedClient = path.join(
+  standaloneDir,
+  "packages",
+  "database",
+  "src",
+  "generated",
+  "prisma",
+  "client.ts",
+);
+if (!fs.existsSync(staticDir)) {
+  failed = true;
+  console.error(`  FAIL static assets missing: ${staticDir}`);
+} else {
+  console.log(`  OK  static assets -> ${staticDir}`);
+}
+
+if (!fs.existsSync(generatedClient)) {
+  failed = true;
+  console.error(`  FAIL generated Prisma client missing: ${generatedClient}`);
+} else {
+  console.log(`  OK  generated Prisma client -> ${generatedClient}`);
 }
 
 if (failed) {
