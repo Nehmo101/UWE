@@ -174,9 +174,10 @@ Details: [docs/PRODUCTION.md](docs/PRODUCTION.md), [docs/SECURITY_QA_MATRIX.md](
 2. Migriert ggf. veralteten `uwe-host.service` → `uwe.service`
 3. Legt User `uwe`, Verzeichnisse `/etc/uwe`, `/var/lib/uwe`, `/var/log/uwe`, `/var/backups/uwe` an
 4. Ergänzt `/etc/uwe/uwe.env` (fehlende Variablen/Secrets — **überschreibt keine** bestehenden Werte)
-5. Führt `pnpm install`, Prisma `generate`, `migrate deploy` und `pnpm build` aus
-6. Installiert/aktualisiert `uwe.service` (LAN-Bind `0.0.0.0`, kein `127.0.0.1`)
-7. Startet systemd, optional UFW-Regel, Status und URLs
+5. Führt `pnpm install`, `pnpm --filter @uwe/database db:generate`, `db:deploy` und `pnpm build` aus (inkl. Standalone-Prisma-Runtime)
+6. Prüft Standalone-Module (`@prisma/adapter-libsql`, `pg`, …) — bricht ab, wenn Dependencies fehlen
+7. Installiert/aktualisiert `uwe.service` (LAN-Bind `0.0.0.0`, systemd PATH, kein `127.0.0.1`)
+8. Startet systemd, HTTP-Healthchecks, optional UFW-Regel, Status und URLs
 
 **Modi:** `--quick` (schnelles Update), `--repair` (Node/pnpm + node_modules), `--healthcheck` (read-only), `--fresh` (Reset mit `DELETE-UWE`-Bestätigung).
 
@@ -184,17 +185,32 @@ Details: [docs/UWE_HOST_LINUX_STARTUP.md](docs/UWE_HOST_LINUX_STARTUP.md), Cloud
 
 ### Troubleshooting
 
+| Problem | Reparatur |
+|---------|-----------|
+| `Cannot find module '@prisma/adapter-libsql'` | `sudo bash ./deploy/scripts/setup-uwe-host.sh --repair` |
+| `exec: node: not found` | `--repair` (NodeSource Node 22 + systemd PATH) |
+| HTTP 500 auf `/api/health` oder `/setup` | Logs + Standalone-Checks, dann `--repair` |
+| Prisma command not found | `pnpm --filter @uwe/database db:generate` / `db:deploy` |
+
+Details: [docs/UWE_HOST_LINUX_STARTUP.md](docs/UWE_HOST_LINUX_STARTUP.md#fehlerbehebung)
+
 ```bash
 # Service-Status und Logs
 sudo systemctl status uwe.service --no-pager
 journalctl -u uwe.service -n 80 --no-pager
 
+# Standalone-Runtime nach Build prüfen
+cd /opt/uwe
+node scripts/check-standalone-prisma-deps.mjs studio
+node scripts/check-standalone-prisma-deps.mjs portal
+
 # Lauscht Studio auf 0.0.0.0:3000?
 ss -tulpn | grep 3000
 
 # HTTP-Test (Studio-Pfad oder Root)
-curl -i http://127.0.0.1:3000/studio
-curl -i http://127.0.0.1:3000/
+curl -i http://127.0.0.1:3000/api/health
+curl -i http://127.0.0.1:3000/setup
+curl -i http://127.0.0.1:3001/api/health
 
 # Env lesbar für User uwe?
 sudo -u uwe test -r /etc/uwe/uwe.env && echo OK

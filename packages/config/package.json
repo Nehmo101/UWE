@@ -5,10 +5,12 @@
   "description": "Shared TypeScript and tooling configuration for UWE",
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./tsconfig.next.json": "./tsconfig.next.json"
+    "./tsconfig.next.json": "./tsconfig.next.json",
+    "./next-standalone": "./next-standalone.ts"
   },
   "files": [
     "tsconfig.base.json",
-    "tsconfig.next.json"
+    "tsconfig.next.json",
+    "next-standalone.ts"
   ]
 }

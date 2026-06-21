@@ -34,6 +34,34 @@ describe("self-hosting setup", () => {
     }
     assert.match(setup, /SYSTEMD_UNIT="uwe\.service"/);
     assert.match(setup, /UWE_ENV_FILE="\/etc\/uwe\/uwe\.env"/);
+    assert.match(setup, /db:generate/);
+    assert.match(setup, /db:deploy/);
+    assert.match(setup, /verify_all_standalone_runtime_deps/);
+    assert.match(setup, /Environment=PATH=/);
+  });
+
+  it("start-uwe.sh resolves node via absolute path and stable PATH", () => {
+    const start = fs.readFileSync(path.join(root, "deploy/scripts/start-uwe.sh"), "utf8");
+    assert.match(start, /set -Eeuo pipefail/);
+    assert.match(start, /NODE_BIN="\$\(command -v node/);
+    assert.match(start, /exec "\$NODE_BIN"/);
+    assert.match(start, /Node\.js not found in systemd PATH/);
+  });
+
+  it("includes standalone Prisma runtime scripts and next tracing config", () => {
+    assert.ok(fs.existsSync(path.join(root, "scripts/check-standalone-prisma-deps.mjs")));
+    assert.ok(fs.existsSync(path.join(root, "scripts/materialize-standalone-prisma-deps.mjs")));
+    assert.ok(fs.existsSync(path.join(root, "packages/config/next-standalone.ts")));
+
+    const studioNext = fs.readFileSync(path.join(root, "apps/studio/next.config.ts"), "utf8");
+    assert.match(studioNext, /getUweStandaloneNextConfig/);
+    assert.match(studioNext, /output:\s*"standalone"/);
+
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    assert.match(pkg.scripts.build, /materialize-standalone-prisma-deps/);
+    assert.match(pkg.scripts["build:standalone-check"], /check-standalone-prisma-deps/);
   });
 
   it("host scripts target uwe.service not uwe-host.service", () => {

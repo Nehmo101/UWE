@@ -1,6 +1,6 @@
 [Unit]
 Description=UWE — Universeller Welten-Editor (Studio + Portal)
-Documentation=file:///opt/uwe/docs/deployment-hardening.md
+Documentation=file:///opt/uwe/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
 
@@ -9,6 +9,7 @@ Type=simple
 User=uwe
 Group=uwe
 WorkingDirectory=/opt/uwe
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=UWE_HOME=/opt/uwe
 Environment=UWE_ENV=/etc/uwe/uwe.env
 Environment=NODE_ENV=production

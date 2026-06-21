@@ -32,6 +32,7 @@ readonly LEGACY_SYSTEMD_UNIT="uwe-host.service"
 readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
 readonly NODE_MAJOR="22"
 readonly DEFAULT_PNPM_VERSION="10.12.1"
+readonly SYSTEMD_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -140,6 +141,28 @@ require_command() {
   fi
 }
 
+validate_node_binary() {
+  local node_bin pnpm_bin
+  export PATH="$SYSTEMD_PATH:${PATH:-}"
+
+  node_bin="$(command -v node || true)"
+  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
+    die "Node.js nicht gefunden. Ausführen: sudo bash $0 --repair"
+  fi
+
+  pnpm_bin="$(command -v pnpm || true)"
+  if [[ -z "$pnpm_bin" || ! -x "$pnpm_bin" ]]; then
+    die "pnpm nicht gefunden. Ausführen: sudo bash $0 --repair"
+  fi
+
+  log "Node.js: $("$node_bin" --version) ($node_bin)"
+  log "pnpm: $("$pnpm_bin" --version) ($pnpm_bin)"
+
+  if [[ ! -x "/usr/bin/node" ]]; then
+    warn "Node.js liegt nicht unter /usr/bin/node — systemd PATH kann Probleme verursachen. --repair ausführen."
+  fi
+}
+
 get_required_pnpm_version() {
   local version=""
   if [[ -f "$UWE_HOME/package.json" ]]; then
@@ -238,6 +261,10 @@ reset_system_dependencies() {
   require_command node "Node.js ${NODE_MAJOR}.x Installation fehlgeschlagen."
   require_command npm "npm wurde mit Node.js nicht installiert."
 
+  if [[ ! -x "/usr/bin/node" ]]; then
+    die "Node.js wurde installiert, aber /usr/bin/node fehlt. NodeSource-Installation prüfen."
+  fi
+
   local installed_node_major
   installed_node_major="$(node -p 'process.versions.node.split(".")[0]')"
   if [[ "$installed_node_major" != "$NODE_MAJOR" ]]; then
@@ -273,17 +300,12 @@ reset_system_dependencies() {
 }
 
 check_prerequisites() {
+  export PATH="$SYSTEMD_PATH:${PATH:-}"
   require_command git "Git installieren: sudo apt install git"
   require_command curl "curl installieren: sudo apt install curl"
   require_command ss "ss installieren (Paket iproute2): sudo apt install iproute2"
 
-  if ! command -v node >/dev/null 2>&1; then
-    die "Node.js ${NODE_MAJOR}.x fehlt. Ausführen: sudo bash $0 --repair"
-  fi
-
-  if ! command -v pnpm >/dev/null 2>&1; then
-    die "pnpm fehlt. Ausführen: sudo bash $0 --repair"
-  fi
+  validate_node_binary
 
   local node_major required_pnpm_version pnpm_version
   node_major="$(node -p 'process.versions.node.split(".")[0]')"
@@ -489,7 +511,7 @@ run_as_uwe() {
   local cmd="$1"
   sudo -u "$SERVICE_USER" bash -lc "
     set -euo pipefail
-    export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:'\"\\${PATH:-}\"
+    export PATH='$SYSTEMD_PATH:'\"\\${PATH:-}\"
     cd '$UWE_HOME'
     if [[ -f '$UWE_ENV_FILE' ]]; then
       set -a
@@ -507,9 +529,8 @@ install_dependencies() {
 }
 
 run_prisma_generate() {
-  local schema="$1"
-  log "Generiere Prisma Client ($schema) …"
-  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma generate --schema '$schema'"
+  log "Generiere Prisma Client (pnpm --filter $DATABASE_WORKSPACE_FILTER db:generate) …"
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:generate"
 }
 
 run_migrations() {
@@ -518,17 +539,65 @@ run_migrations() {
   migrations_dir="$(dirname "$schema")/migrations"
 
   if [[ ! -d "$migrations_dir" ]] || [[ -z "$(find "$migrations_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1 || true)" ]]; then
-    warn "Keine Prisma-Migrationen unter $migrations_dir gefunden — überspringe prisma migrate deploy."
+    warn "Keine Prisma-Migrationen unter $migrations_dir gefunden — überspringe db:deploy."
     return 0
   fi
 
-  log "Wende Datenbank-Migrationen an (prisma migrate deploy) …"
-  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma migrate deploy --schema '$schema'"
+  log "Wende Datenbank-Migrationen an (pnpm --filter $DATABASE_WORKSPACE_FILTER db:deploy) …"
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy"
 }
 
 run_build() {
-  log "Baue UWE (pnpm build) …"
+  log "Baue UWE (pnpm build — inkl. Standalone-Prisma-Runtime) …"
   run_as_uwe "pnpm build"
+}
+
+verify_standalone_runtime_deps() {
+  local app="$1"
+  local standalone_dir="$UWE_HOME/apps/$app/.next/standalone"
+  local check_script="$UWE_HOME/scripts/check-standalone-prisma-deps.mjs"
+
+  if [[ ! -d "$standalone_dir" ]]; then
+    die "Standalone-Build fehlt für $app: $standalone_dir"
+  fi
+
+  if [[ ! -f "$check_script" ]]; then
+    die "Standalone-Prüfskript fehlt: $check_script"
+  fi
+
+  log "Prüfe Standalone-Runtime-Dependencies für $app …"
+  if ! run_as_uwe "node '$check_script' '$app'"; then
+    die "Standalone-Runtime-Dependencies fehlen für $app. Build erneut ausführen oder --repair."
+  fi
+}
+
+verify_all_standalone_runtime_deps() {
+  verify_standalone_runtime_deps "studio"
+  if [[ -d "$UWE_HOME/apps/portal/.next/standalone" ]]; then
+    verify_standalone_runtime_deps "portal"
+  else
+    warn "Portal-Standalone fehlt — überspringe Portal-Runtime-Prüfung."
+  fi
+}
+
+verify_http_healthchecks() {
+  local url code
+  log "HTTP-Healthchecks nach Build …"
+
+  for url in \
+    "http://127.0.0.1:${STUDIO_PORT}/api/health" \
+    "http://127.0.0.1:${STUDIO_PORT}/setup" \
+    "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
+    code="$(http_status_code "$url")"
+    if [[ "$code" =~ ^5 ]]; then
+      die "HTTP $code für $url — Service nicht starten. Siehe journalctl -u $SYSTEMD_UNIT"
+    fi
+    if [[ "$code" == "000" ]]; then
+      warn "HTTP nicht erreichbar (noch kein Service?): $url"
+    else
+      log "HTTP $code — $url"
+    fi
+  done
 }
 
 ensure_start_script() {
@@ -555,6 +624,7 @@ Type=simple
 User=${SERVICE_USER}
 Group=${SERVICE_GROUP}
 WorkingDirectory=${UWE_HOME}
+Environment=PATH=${SYSTEMD_PATH}
 Environment=UWE_HOME=${UWE_HOME}
 Environment=UWE_ENV=${UWE_ENV_FILE}
 Environment=NODE_ENV=production
@@ -719,7 +789,8 @@ run_healthcheck() {
   for url in \
     "http://127.0.0.1:${STUDIO_PORT}/" \
     "http://127.0.0.1:${STUDIO_PORT}/setup" \
-    "http://127.0.0.1:${STUDIO_PORT}/api/health"; do
+    "http://127.0.0.1:${STUDIO_PORT}/api/health" \
+    "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
     code="$(http_status_code "$url")"
     echo "curl -i $url  →  HTTP $code"
     curl -i --max-time 8 "$url" 2>/dev/null | head -n 15 || true
@@ -836,10 +907,12 @@ run_deploy_steps() {
   local schema
   schema="$(find_prisma_schema)"
 
+  validate_node_binary
   install_dependencies
-  run_prisma_generate "$schema"
+  run_prisma_generate
   run_migrations "$schema"
   run_build
+  verify_all_standalone_runtime_deps
   ensure_start_script
 }
 
@@ -899,6 +972,8 @@ main() {
   fi
 
   start_or_restart_service
+  sleep 3
+  verify_http_healthchecks
   configure_firewall
   sleep 2
   print_diagnostics

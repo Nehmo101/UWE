@@ -1,8 +1,15 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import { getUweSecurityHeaderEntries } from "@uwe/auth/security-headers";
+import { getUweStandaloneNextConfig } from "@uwe/config/next-standalone";
+
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const standalone = getUweStandaloneNextConfig(appDir);
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  ...standalone,
   transpilePackages: [
     "@uwe/shared-ui",
     "@uwe/ai-brain",
@@ -17,13 +24,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  serverExternalPackages: [
-    "@libsql/client",
-    "@prisma/adapter-libsql",
-    "@prisma/client",
-    "libsql",
-    "better-sqlite3",
-  ],
   webpack: (config, { isServer, webpack }) => {
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -39,7 +39,10 @@ const nextConfig: NextConfig = {
           : [config.externals].filter(Boolean)),
         "@libsql/client",
         "@prisma/adapter-libsql",
+        "@prisma/adapter-pg",
+        "@prisma/client",
         "libsql",
+        "pg",
       ];
     }
 

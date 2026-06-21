@@ -174,6 +174,86 @@ Die `host:*`-Scripts leiten auf den Production-Flow um — sie starten **keinen*
 
 ## Fehlerbehebung
 
+### `Cannot find module '@prisma/adapter-libsql'` (HTTP 500 auf `/api/health` oder `/setup`)
+
+Der Next.js-Standalone-Output enthält nicht alle Prisma-Runtime-Dependencies. Das passiert typischerweise nach einem Build ohne Monorepo-Tracing oder fehlendem Post-Build-Schritt.
+
+**Symptome:** `journalctl -u uwe` zeigt `Error: Cannot find module '@prisma/adapter-libsql'`, Studio antwortet mit HTTP 500.
+
+**Reparatur:**
+
+```bash
+cd /opt/uwe
+git pull
+sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
+```
+
+**Manuelle Prüfung nach Build:**
+
+```bash
+cd /opt/uwe/apps/studio/.next/standalone
+node -e "console.log(require.resolve('@prisma/adapter-libsql'))"
+node -e "console.log(require.resolve('@prisma/adapter-pg'))"
+node -e "console.log(require.resolve('@prisma/client'))"
+node -e "console.log(require.resolve('@libsql/client'))"
+node -e "console.log(require.resolve('pg'))"
+```
+
+Gleiche Checks für Portal unter `apps/portal/.next/standalone`. Das Setup-Script bricht ab, wenn diese Module fehlen — statt einen kaputten Service zu starten.
+
+### `exec: node: not found` (Service exit 127)
+
+systemd lädt keine interaktive Shell — `node` muss im systemd-PATH liegen (typisch `/usr/bin/node` via NodeSource).
+
+**Symptome:** `journalctl -u uwe` zeigt `/opt/uwe/deploy/scripts/start-uwe.sh: exec: node: not found`.
+
+**Reparatur:**
+
+```bash
+sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
+```
+
+Das Script installiert Node.js 22 über NodeSource, setzt `Environment=PATH=…` in `uwe.service` und nutzt in `start-uwe.sh` den absoluten Node-Pfad.
+
+### `Prisma command not found` oder falsches Schema
+
+Prisma-Befehle immer über das Workspace-Paket ausführen (vom Repo-Root `/opt/uwe`):
+
+```bash
+pnpm --filter @uwe/database db:generate
+pnpm --filter @uwe/database db:deploy
+```
+
+Nicht verwenden: `pnpm exec prisma … --schema ./packages/database/prisma/schema.prisma` (fragiler Pfad).
+
+### HTTP 500 auf `/api/health` oder `/setup`
+
+1. Logs prüfen: `journalctl -u uwe -n 80 --no-pager`
+2. Standalone-Module prüfen (siehe oben)
+3. Node/PATH prüfen: `command -v node && node --version`
+4. Repair: `sudo bash ./deploy/scripts/setup-uwe-host.sh --repair`
+
+### systemd PATH Probleme
+
+`uwe.service` setzt explizit:
+
+```
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
+`start-uwe.sh` prüft vor dem Start `command -v node` und bricht mit klarer Meldung ab, wenn Node fehlt.
+
+### Standalone Output fehlt Dependencies
+
+Nach `pnpm build` materialisiert `scripts/materialize-standalone-prisma-deps.mjs` die Prisma-Runtime in den Standalone-`node_modules` (wie im Docker-Image). Validierung:
+
+```bash
+pnpm build:standalone-check
+# oder einzeln:
+node scripts/check-standalone-prisma-deps.mjs studio
+node scripts/check-standalone-prisma-deps.mjs portal
+```
+
 ### Service läuft nicht
 
 ```bash

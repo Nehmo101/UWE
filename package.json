@@ -5,8 +5,9 @@
   "description": "Universeller Welten-Editor — self-hosted campaign brain and world wiki",
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build",
-    "build:release": "pnpm --filter @uwe/database db:generate && turbo run build",
+    "build": "turbo run build && node scripts/materialize-standalone-prisma-deps.mjs",
+    "build:release": "pnpm --filter @uwe/database db:generate && pnpm build && pnpm build:standalone-check",
+    "build:standalone-check": "node scripts/check-standalone-prisma-deps.mjs studio && node scripts/check-standalone-prisma-deps.mjs portal",
     "lint": "eslint --max-warnings 0 .",
     "ci:check": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
     "ci:light": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm typecheck && pnpm test:ci && pnpm secret:scan && pnpm docs:check",
