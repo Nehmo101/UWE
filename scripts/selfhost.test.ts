@@ -27,17 +27,34 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "scripts/docker-entrypoint.sh")));
   });
 
-  it("setup-uwe-host.sh supports production modes", () => {
+  it("setup-uwe-host.sh supports production modes and lib modules", () => {
     const setup = fs.readFileSync(path.join(root, "deploy/scripts/setup-uwe-host.sh"), "utf8");
+    const deps = fs.readFileSync(path.join(root, "deploy/scripts/lib/uwe-host-deps.sh"), "utf8");
     for (const flag of ["--quick", "--repair", "--fresh", "--healthcheck"]) {
       assert.match(setup, new RegExp(flag.replace("-", "\\-")));
     }
-    assert.match(setup, /SYSTEMD_UNIT="uwe\.service"/);
-    assert.match(setup, /UWE_ENV_FILE="\/etc\/uwe\/uwe\.env"/);
-    assert.match(setup, /db:generate/);
-    assert.match(setup, /db:deploy/);
-    assert.match(setup, /verify_all_standalone_runtime_deps/);
-    assert.match(setup, /Environment=PATH=/);
+    assert.match(setup, /source "\$LIB_DIR\/uwe-host-preflight\.sh"/);
+    assert.match(setup, /source "\$LIB_DIR\/uwe-host-deps\.sh"/);
+    assert.match(setup, /run_preflight/);
+    assert.match(setup, /StartLimitIntervalSec=300/);
+    assert.match(setup, /StartLimitBurst=5/);
+    assert.match(setup, /RestartSec=5/);
+    assert.match(setup, /run_deploy_steps/);
+    assert.match(deps, /verify_all_standalone_runtime_deps/);
+
+    for (const lib of [
+      "deploy/scripts/lib/uwe-host-common.sh",
+      "deploy/scripts/lib/uwe-host-preflight.sh",
+      "deploy/scripts/lib/uwe-host-deps.sh",
+      "deploy/scripts/lib/uwe-host-ai-diagnostics.sh",
+    ]) {
+      assert.ok(fs.existsSync(path.join(root, lib)), `missing ${lib}`);
+    }
+
+    assert.match(deps, /install_node_from_nodesource/);
+    assert.match(deps, /diagnose_node_install_failure/);
+    assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:generate/);
+    assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:deploy/);
   });
 
   it("start-uwe.sh resolves node via absolute path and stable PATH", () => {
@@ -46,6 +63,18 @@ describe("self-hosting setup", () => {
     assert.match(start, /NODE_BIN="\$\(command -v node/);
     assert.match(start, /exec "\$NODE_BIN"/);
     assert.match(start, /Node\.js not found in systemd PATH/);
+    assert.match(start, /setup-uwe-host\.sh --repair/);
+    assert.match(start, /Starting Studio on PORT=/);
+    assert.match(start, /Starting Portal on PORT=/);
+    assert.doesNotMatch(start, /pnpm not found/);
+  });
+
+  it("uwe.service reference unit limits restart loops", () => {
+    const unit = fs.readFileSync(path.join(root, "deploy/systemd/uwe.service"), "utf8");
+    assert.match(unit, /StartLimitIntervalSec=300/);
+    assert.match(unit, /StartLimitBurst=5/);
+    assert.match(unit, /RestartSec=5/);
+    assert.match(unit, /Environment=PATH=/);
   });
 
   it("includes standalone Prisma runtime scripts and next tracing config", () => {
@@ -134,7 +163,7 @@ describe("self-hosting setup", () => {
     }
 
     execSync(
-      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh",
+      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh",
       { cwd: root, stdio: "pipe" },
     );
   });

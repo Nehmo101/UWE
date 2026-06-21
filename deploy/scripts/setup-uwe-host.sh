@@ -17,67 +17,19 @@
 #   Service: uwe.service
 set -euo pipefail
 
-readonly SERVICE_USER="uwe"
-readonly SERVICE_GROUP="uwe"
-readonly UWE_ENV_DIR="/etc/uwe"
-readonly UWE_ENV_FILE="/etc/uwe/uwe.env"
-readonly UWE_DATA_DIR="/var/lib/uwe"
-readonly UWE_LOG_DIR="/var/log/uwe"
-readonly UWE_BACKUP_DIR="/var/backups/uwe"
-readonly DEFAULT_UWE_HOME="/opt/uwe"
-readonly STUDIO_PORT="3000"
-readonly PORTAL_PORT="3001"
-readonly SYSTEMD_UNIT="uwe.service"
-readonly LEGACY_SYSTEMD_UNIT="uwe-host.service"
-readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
-readonly NODE_MAJOR="22"
-readonly DEFAULT_PNPM_VERSION="10.12.1"
-readonly SYSTEMD_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/lib"
+
+# shellcheck source=lib/uwe-host-common.sh
+source "$LIB_DIR/uwe-host-common.sh"
+# shellcheck source=lib/uwe-host-preflight.sh
+source "$LIB_DIR/uwe-host-preflight.sh"
+# shellcheck source=lib/uwe-host-deps.sh
+source "$LIB_DIR/uwe-host-deps.sh"
+# shellcheck source=lib/uwe-host-ai-diagnostics.sh
+source "$LIB_DIR/uwe-host-ai-diagnostics.sh"
 
 MODE="default"
-
-log() {
-  echo "==> $*"
-}
-
-warn() {
-  echo "WARN: $*" >&2
-}
-
-die() {
-  echo "FEHLER: $*" >&2
-  exit 1
-}
-
-usage() {
-  cat <<EOF
-UWE Linux Production Host Setup
-
-Usage: sudo bash $0 [MODE]
-
-Modes (mutually exclusive):
-  (default)           Safe, idempotent update/repair — no data or secrets deleted
-  --quick             Fast update: git check, pnpm install, prisma, build, restart
-  --repair            Thorough repair: validate/reinstall Node/pnpm, clean node_modules, rewrite systemd
-  --fresh             Destructive full reset — requires typing DELETE-UWE to confirm
-  --wipe-and-reinstall  Alias for --fresh
-  --healthcheck       Read-only status checks (no changes)
-  -h, --help          Show this help
-
-Official production paths:
-  Repository:  /opt/uwe
-  Environment: /etc/uwe/uwe.env
-  Data:        /var/lib/uwe
-  Logs:        /var/log/uwe
-  Backups:     /var/backups/uwe
-  Service:     uwe.service
-
-After git pull:
-  cd /opt/uwe && git pull && sudo bash ./deploy/scripts/setup-uwe-host.sh --quick
-EOF
-}
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
@@ -95,7 +47,7 @@ parse_args() {
         MODE="healthcheck"
         ;;
       -h | --help)
-        usage
+        usage "$0"
         exit 0
         ;;
       *)
@@ -104,220 +56,6 @@ parse_args() {
     esac
     shift
   done
-}
-
-require_root() {
-  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    die "Dieses Script muss als root ausgeführt werden: sudo bash $0"
-  fi
-}
-
-detect_uwe_home() {
-  if [[ -n "${UWE_HOME:-}" && -f "${UWE_HOME}/package.json" ]]; then
-    printf '%s\n' "$UWE_HOME"
-    return 0
-  fi
-
-  local candidate
-  candidate="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  if [[ -f "$candidate/package.json" ]]; then
-    printf '%s\n' "$candidate"
-    return 0
-  fi
-
-  if [[ -f "$DEFAULT_UWE_HOME/package.json" ]]; then
-    printf '%s\n' "$DEFAULT_UWE_HOME"
-    return 0
-  fi
-
-  die "UWE-Repository nicht gefunden. Erwartet unter $DEFAULT_UWE_HOME oder neben deploy/scripts/."
-}
-
-require_command() {
-  local cmd="$1"
-  local hint="$2"
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    die "$cmd nicht gefunden. $hint"
-  fi
-}
-
-validate_node_binary() {
-  local node_bin pnpm_bin
-  export PATH="$SYSTEMD_PATH:${PATH:-}"
-
-  node_bin="$(command -v node || true)"
-  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
-    die "Node.js nicht gefunden. Ausführen: sudo bash $0 --repair"
-  fi
-
-  pnpm_bin="$(command -v pnpm || true)"
-  if [[ -z "$pnpm_bin" || ! -x "$pnpm_bin" ]]; then
-    die "pnpm nicht gefunden. Ausführen: sudo bash $0 --repair"
-  fi
-
-  log "Node.js: $("$node_bin" --version) ($node_bin)"
-  log "pnpm: $("$pnpm_bin" --version) ($pnpm_bin)"
-
-  if [[ ! -x "/usr/bin/node" ]]; then
-    warn "Node.js liegt nicht unter /usr/bin/node — systemd PATH kann Probleme verursachen. --repair ausführen."
-  fi
-}
-
-get_required_pnpm_version() {
-  local version=""
-  if [[ -f "$UWE_HOME/package.json" ]]; then
-    version="$(sed -n 's/.*"packageManager"[[:space:]]*:[[:space:]]*"pnpm@\([^"]*\)".*/\1/p' "$UWE_HOME/package.json" | head -n 1 || true)"
-  fi
-
-  if [[ -z "$version" ]]; then
-    version="$DEFAULT_PNPM_VERSION"
-  fi
-
-  printf '%s\n' "$version"
-}
-
-remove_path_if_present() {
-  local target="$1"
-  if [[ -e "$target" || -L "$target" ]]; then
-    rm -rf "$target"
-  fi
-}
-
-remove_stale_node_binaries() {
-  log "Entferne alte Node/npm/pnpm/corepack-Binaries und Shims …"
-  local bin path
-  for bin in node npm npx pnpm corepack yarn yarnpkg; do
-    for path in "/usr/local/bin/$bin" "/usr/bin/$bin" "/bin/$bin"; do
-      remove_path_if_present "$path"
-    done
-  done
-
-  remove_path_if_present "/usr/local/lib/node_modules/pnpm"
-  remove_path_if_present "/usr/local/lib/node_modules/corepack"
-  remove_path_if_present "/usr/local/lib/node_modules/npm"
-  remove_path_if_present "/opt/pnpm"
-
-  hash -r || true
-}
-
-remove_node_caches_and_workspace_modules() {
-  log "Entferne Build-Caches und Workspace-node_modules …"
-
-  remove_path_if_present "$UWE_HOME/node_modules"
-  remove_path_if_present "$UWE_HOME/.pnpm-store"
-  remove_path_if_present "$UWE_HOME/.turbo"
-  remove_path_if_present "$UWE_HOME/.next"
-
-  find "$UWE_HOME" \
-    -path '*/.git/*' -prune -o \
-    -type d -name node_modules -prune -exec rm -rf {} + 2>/dev/null || true
-
-  remove_path_if_present "/root/.local/share/pnpm"
-  remove_path_if_present "/root/.cache/node/corepack"
-  remove_path_if_present "/root/.npm"
-  remove_path_if_present "$UWE_HOME/.local/share/pnpm"
-  remove_path_if_present "$UWE_HOME/.cache/node/corepack"
-  remove_path_if_present "$UWE_HOME/.npm"
-
-  if [[ -d /home ]]; then
-    find /home -mindepth 2 -maxdepth 4 \
-      \( -path '*/.local/share/pnpm' -o -path '*/.cache/node/corepack' -o -path '*/.npm' \) \
-      -prune -exec rm -rf {} + 2>/dev/null || true
-  fi
-}
-
-reset_system_dependencies() {
-  local pnpm_version
-  pnpm_version="$(get_required_pnpm_version)"
-
-  log "Setze Host-Abhängigkeiten zurück: Node.js ${NODE_MAJOR}.x, pnpm ${pnpm_version}, Build-Tools …"
-
-  export DEBIAN_FRONTEND=noninteractive
-
-  if command -v systemctl >/dev/null 2>&1; then
-    systemctl stop "$SYSTEMD_UNIT" >/dev/null 2>&1 || true
-    systemctl stop "$LEGACY_SYSTEMD_UNIT" >/dev/null 2>&1 || true
-  fi
-
-  apt-get update
-  apt-get install -y curl ca-certificates gnupg lsb-release apt-transport-https
-
-  apt-get remove -y nodejs npm pnpm yarn yarnpkg corepack libnode-dev 2>/dev/null || true
-  apt-get purge -y nodejs npm pnpm yarn yarnpkg corepack libnode-dev 2>/dev/null || true
-  apt-get autoremove -y || true
-
-  remove_stale_node_binaries
-  remove_node_caches_and_workspace_modules
-
-  rm -f /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/nodesource.list.save
-  rm -f /etc/apt/keyrings/nodesource.gpg /usr/share/keyrings/nodesource.gpg
-
-  log "Installiere Node.js ${NODE_MAJOR}.x über NodeSource …"
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
-  apt-get install -y nodejs
-
-  hash -r || true
-
-  require_command node "Node.js ${NODE_MAJOR}.x Installation fehlgeschlagen."
-  require_command npm "npm wurde mit Node.js nicht installiert."
-
-  if [[ ! -x "/usr/bin/node" ]]; then
-    die "Node.js wurde installiert, aber /usr/bin/node fehlt. NodeSource-Installation prüfen."
-  fi
-
-  local installed_node_major
-  installed_node_major="$(node -p 'process.versions.node.split(".")[0]')"
-  if [[ "$installed_node_major" != "$NODE_MAJOR" ]]; then
-    echo "Gefundene node-Binaries:" >&2
-    type -a node >&2 || true
-    die "Falsche Node.js-Version aktiv: $(node -v). Erwartet: v${NODE_MAJOR}.x"
-  fi
-
-  if ! command -v corepack >/dev/null 2>&1; then
-    log "Corepack fehlt — installiere Corepack global über npm …"
-    npm install -g corepack
-    hash -r || true
-  fi
-
-  require_command corepack "Corepack konnte nicht installiert werden."
-
-  log "Aktiviere Corepack und pnpm ${pnpm_version} …"
-  corepack enable
-  corepack prepare "pnpm@${pnpm_version}" --activate
-  hash -r || true
-
-  require_command pnpm "pnpm ${pnpm_version} konnte nicht aktiviert werden."
-
-  local installed_pnpm_version
-  installed_pnpm_version="$(pnpm -v)"
-  if [[ "$installed_pnpm_version" != "$pnpm_version" ]]; then
-    die "Falsche pnpm-Version aktiv: ${installed_pnpm_version}. Erwartet: ${pnpm_version}"
-  fi
-
-  apt-get install -y git curl ca-certificates gnupg iproute2 openssl sqlite3 build-essential python3
-
-  log "Dependency-Reset abgeschlossen: node $(node -v), npm $(npm -v), pnpm $(pnpm -v)."
-}
-
-check_prerequisites() {
-  export PATH="$SYSTEMD_PATH:${PATH:-}"
-  require_command git "Git installieren: sudo apt install git"
-  require_command curl "curl installieren: sudo apt install curl"
-  require_command ss "ss installieren (Paket iproute2): sudo apt install iproute2"
-
-  validate_node_binary
-
-  local node_major required_pnpm_version pnpm_version
-  node_major="$(node -p 'process.versions.node.split(".")[0]')"
-  if [[ "$node_major" -lt 20 ]]; then
-    die "Node.js zu alt: $(node -v). Mindestens v20, empfohlen v${NODE_MAJOR}.x — siehe: sudo bash $0 --repair"
-  fi
-
-  required_pnpm_version="$(get_required_pnpm_version)"
-  pnpm_version="$(pnpm -v)"
-  if [[ "$pnpm_version" != "$required_pnpm_version" ]]; then
-    warn "pnpm-Version ${pnpm_version} weicht ab (erwartet ${required_pnpm_version}). Reparieren: sudo bash $0 --repair"
-  fi
 }
 
 git_safety_check() {
@@ -335,7 +73,7 @@ git_safety_check() {
     warn "Uncommitted changes in $UWE_HOME (Branch: $branch, $dirty Datei(en))."
     warn "Für reproduzierbare Deployments: git stash oder commit vor dem Update."
   else
-    log "Git-Working-Tree sauber (Branch: $branch)."
+    ok "Git-Working-Tree sauber (Branch: $branch)."
   fi
 }
 
@@ -363,7 +101,7 @@ migrate_legacy_service() {
 
 ensure_service_user() {
   if id "$SERVICE_USER" >/dev/null 2>&1; then
-    log "Service-User $SERVICE_USER existiert bereits."
+    ok "Service-User $SERVICE_USER existiert."
     return 0
   fi
 
@@ -377,6 +115,7 @@ ensure_directories() {
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_DATA_DIR"/{uploads,exports}
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_LOG_DIR"
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_BACKUP_DIR"
+  install -d -m 750 -o root -g "$SERVICE_GROUP" "$UWE_DIAG_DIR" 2>/dev/null || install -d -m 755 "$UWE_DIAG_DIR"
 }
 
 upsert_env_var_if_missing() {
@@ -459,10 +198,9 @@ ensure_env_file() {
       create_minimal_env
     fi
   else
-    log "$UWE_ENV_FILE existiert bereits — behalte vorhandene Werte bei."
+    ok "$UWE_ENV_FILE existiert — behalte vorhandene Werte bei."
   fi
 
-  # Pflichtvariablen nur ergänzen, wenn sie fehlen (kein Überschreiben bei normalen Läufen)
   upsert_env_var_if_missing NODE_ENV production "$UWE_ENV_FILE"
   upsert_env_var_if_missing PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing HOST "0.0.0.0" "$UWE_ENV_FILE"
@@ -478,7 +216,6 @@ ensure_env_file() {
   upsert_env_var_if_missing PORTAL_PORT "$PORTAL_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing RUN_DB_SEED false "$UWE_ENV_FILE"
 
-  # Secrets nur erzeugen wenn fehlend oder Platzhalter (--fresh erzwingt Neu)
   ensure_secret_var AUTH_SECRET "openssl rand -base64 32" "$UWE_ENV_FILE" "$force_recreate"
   ensure_secret_var UWE_SETUP_TOKEN "openssl rand -hex 32" "$UWE_ENV_FILE" "$force_recreate"
   ensure_secret_var STUDIO_API_TOKEN "openssl rand -base64 32" "$UWE_ENV_FILE" "$force_recreate"
@@ -489,100 +226,9 @@ ensure_env_file() {
   chmod 750 "$UWE_ENV_DIR"
 }
 
-find_prisma_schema() {
-  local preferred="$UWE_HOME/packages/database/prisma/schema.prisma"
-  if [[ -f "$preferred" ]]; then
-    printf '%s\n' "$preferred"
-    return 0
-  fi
-
-  local found
-  found="$(find "$UWE_HOME" -path '*/node_modules/*' -prune -o -name 'schema.prisma' -print 2>/dev/null | head -n 1 || true)"
-  if [[ -n "$found" && -f "$found" ]]; then
-    warn "Bevorzugtes Schema nicht gefunden — verwende: $found"
-    printf '%s\n' "$found"
-    return 0
-  fi
-
-  die "Keine schema.prisma gefunden unter $UWE_HOME"
-}
-
-run_as_uwe() {
-  local cmd="$1"
-  sudo -u "$SERVICE_USER" bash -lc "
-    set -euo pipefail
-    export PATH='$SYSTEMD_PATH:'\"\\${PATH:-}\"
-    cd '$UWE_HOME'
-    if [[ -f '$UWE_ENV_FILE' ]]; then
-      set -a
-      # shellcheck disable=SC1090
-      source '$UWE_ENV_FILE'
-      set +a
-    fi
-    $cmd
-  "
-}
-
-install_dependencies() {
-  log "Installiere npm-Abhängigkeiten (pnpm install) …"
-  run_as_uwe "corepack prepare 'pnpm@$(get_required_pnpm_version)' --activate >/dev/null 2>&1 || true; pnpm install --frozen-lockfile --prod=false"
-}
-
-run_prisma_generate() {
-  log "Generiere Prisma Client (pnpm --filter $DATABASE_WORKSPACE_FILTER db:generate) …"
-  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:generate"
-}
-
-run_migrations() {
-  local schema="$1"
-  local migrations_dir
-  migrations_dir="$(dirname "$schema")/migrations"
-
-  if [[ ! -d "$migrations_dir" ]] || [[ -z "$(find "$migrations_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1 || true)" ]]; then
-    warn "Keine Prisma-Migrationen unter $migrations_dir gefunden — überspringe db:deploy."
-    return 0
-  fi
-
-  log "Wende Datenbank-Migrationen an (pnpm --filter $DATABASE_WORKSPACE_FILTER db:deploy) …"
-  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy"
-}
-
-run_build() {
-  log "Baue UWE (pnpm build — inkl. Standalone-Prisma-Runtime) …"
-  run_as_uwe "pnpm build"
-}
-
-verify_standalone_runtime_deps() {
-  local app="$1"
-  local standalone_dir="$UWE_HOME/apps/$app/.next/standalone"
-  local check_script="$UWE_HOME/scripts/check-standalone-prisma-deps.mjs"
-
-  if [[ ! -d "$standalone_dir" ]]; then
-    die "Standalone-Build fehlt für $app: $standalone_dir"
-  fi
-
-  if [[ ! -f "$check_script" ]]; then
-    die "Standalone-Prüfskript fehlt: $check_script"
-  fi
-
-  log "Prüfe Standalone-Runtime-Dependencies für $app …"
-  if ! run_as_uwe "node '$check_script' '$app'"; then
-    die "Standalone-Runtime-Dependencies fehlen für $app. Build erneut ausführen oder --repair."
-  fi
-}
-
-verify_all_standalone_runtime_deps() {
-  verify_standalone_runtime_deps "studio"
-  if [[ -d "$UWE_HOME/apps/portal/.next/standalone" ]]; then
-    verify_standalone_runtime_deps "portal"
-  else
-    warn "Portal-Standalone fehlt — überspringe Portal-Runtime-Prüfung."
-  fi
-}
-
 verify_http_healthchecks() {
   local url code
-  log "HTTP-Healthchecks nach Build …"
+  log "HTTP-Healthchecks …"
 
   for url in \
     "http://127.0.0.1:${STUDIO_PORT}/api/health" \
@@ -590,12 +236,12 @@ verify_http_healthchecks() {
     "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
     code="$(http_status_code "$url")"
     if [[ "$code" =~ ^5 ]]; then
-      die "HTTP $code für $url — Service nicht starten. Siehe journalctl -u $SYSTEMD_UNIT"
+      die "HTTP $code für $url — Service nicht gesund. Siehe: journalctl -u $SYSTEMD_UNIT -n 80"
     fi
     if [[ "$code" == "000" ]]; then
-      warn "HTTP nicht erreichbar (noch kein Service?): $url"
+      warn "HTTP nicht erreichbar: $url"
     else
-      log "HTTP $code — $url"
+      ok "HTTP $code — $url"
     fi
   done
 }
@@ -618,6 +264,8 @@ Description=UWE — Universeller Welten-Editor (Studio + Portal)
 Documentation=file://${UWE_HOME}/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -636,7 +284,7 @@ EnvironmentFile=-${UWE_ENV_FILE}
 ExecStart=${UWE_HOME}/deploy/scripts/start-uwe.sh
 
 Restart=on-failure
-RestartSec=10
+RestartSec=5
 TimeoutStopSec=30
 
 NoNewPrivileges=true
@@ -669,43 +317,8 @@ configure_firewall() {
     ufw allow "${STUDIO_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${STUDIO_PORT}/tcp"
     ufw allow "${PORTAL_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${PORTAL_PORT}/tcp"
   else
-    log "UFW ist nicht aktiv — überspringe Firewall-Regel."
+    ok "UFW ist nicht aktiv — überspringe Firewall-Regel."
   fi
-}
-
-service_active() {
-  systemctl is-active --quiet "$SYSTEMD_UNIT" 2>/dev/null
-}
-
-listening_on_all_interfaces() {
-  local port="$1"
-  ss -tulpn 2>/dev/null | grep -E ":${port}\b" | grep -qE '0\.0\.0\.0|\*'
-}
-
-get_lan_ip() {
-  local ip=""
-  if command -v hostname >/dev/null 2>&1; then
-    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
-  fi
-  if [[ -z "$ip" ]] && command -v ip >/dev/null 2>&1; then
-    ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i=="src") print $(i+1); exit}')"
-  fi
-  if [[ -z "$ip" ]]; then
-    ip="<LAN-IP>"
-  fi
-  printf '%s\n' "$ip"
-}
-
-http_status_code() {
-  local url="$1"
-  curl -sS --max-time 8 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo "000"
-}
-
-http_reachable() {
-  local url="$1"
-  local code
-  code="$(http_status_code "$url")"
-  [[ "$code" =~ ^[23] ]]
 }
 
 confirm_fresh_reset() {
@@ -753,7 +366,7 @@ backup_before_fresh() {
     fi
   fi
 
-  log "Backup abgeschlossen: $backup_dir"
+  ok "Backup abgeschlossen: $backup_dir"
 }
 
 run_fresh_wipe() {
@@ -767,8 +380,21 @@ run_fresh_wipe() {
   remove_node_caches_and_workspace_modules
 }
 
+healthcheck_item() {
+  local label="$1"
+  local status="$2"
+  local detail="${3:-}"
+  if [[ "$status" == "ok" ]]; then
+    ok "$label${detail:+ — $detail}"
+  elif [[ "$status" == "warn" ]]; then
+    warn "$label${detail:+ — $detail}"
+  else
+    fail "$label${detail:+ — $detail}"
+  fi
+}
+
 run_healthcheck() {
-  local lan_ip
+  local lan_ip node_bin pnpm_bin code
   lan_ip="$(get_lan_ip)"
 
   echo ""
@@ -777,39 +403,77 @@ run_healthcheck() {
   echo "========================================"
   echo ""
 
-  log "systemctl status $SYSTEMD_UNIT"
-  systemctl status "$SYSTEMD_UNIT" --no-pager || true
-  echo ""
+  export_system_path
+  node_bin="$(find_node_binary)"
+  if [[ -n "$node_bin" ]] && node_version_ok "$node_bin"; then
+    healthcheck_item "node" ok "$("$node_bin" --version) $node_bin"
+  else
+    healthcheck_item "node" fail "${node_bin:-missing}"
+  fi
 
-  log "Lauschende Ports (ss -ltnp)"
-  ss -ltnp 2>/dev/null | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}" || warn "Kein Prozess auf Port ${STUDIO_PORT}/${PORTAL_PORT}."
-  echo ""
+  if command -v npm >/dev/null 2>&1; then
+    healthcheck_item "npm" ok "$(npm --version)"
+  else
+    healthcheck_item "npm" fail "missing"
+  fi
 
-  local url code
+  pnpm_bin="$(find_pnpm_binary)"
+  if [[ -n "$pnpm_bin" ]]; then
+    healthcheck_item "pnpm" ok "$("$pnpm_bin" --version) $pnpm_bin"
+  else
+    healthcheck_item "pnpm" fail "missing"
+  fi
+
+  if systemctl is-active --quiet "$SYSTEMD_UNIT" 2>/dev/null; then
+    healthcheck_item "systemd uwe.service" ok "active"
+  else
+    healthcheck_item "systemd uwe.service" fail "$(systemctl is-active "$SYSTEMD_UNIT" 2>/dev/null || echo inactive)"
+  fi
+
+  if ss -ltnp 2>/dev/null | grep -q ":${STUDIO_PORT}\b"; then
+    healthcheck_item "Port ${STUDIO_PORT}" ok "listening"
+  else
+    healthcheck_item "Port ${STUDIO_PORT}" fail "not listening"
+  fi
+
+  if ss -ltnp 2>/dev/null | grep -q ":${PORTAL_PORT}\b"; then
+    healthcheck_item "Port ${PORTAL_PORT}" ok "listening"
+  else
+    healthcheck_item "Port ${PORTAL_PORT}" fail "not listening"
+  fi
+
   for url in \
-    "http://127.0.0.1:${STUDIO_PORT}/" \
-    "http://127.0.0.1:${STUDIO_PORT}/setup" \
     "http://127.0.0.1:${STUDIO_PORT}/api/health" \
+    "http://127.0.0.1:${STUDIO_PORT}/setup" \
     "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
     code="$(http_status_code "$url")"
-    echo "curl -i $url  →  HTTP $code"
-    curl -i --max-time 8 "$url" 2>/dev/null | head -n 15 || true
-    echo ""
+    if [[ "$code" =~ ^[23] ]]; then
+      healthcheck_item "HTTP $url" ok "$code"
+    elif [[ "$code" =~ ^5 ]]; then
+      healthcheck_item "HTTP $url" fail "HTTP $code"
+    else
+      healthcheck_item "HTTP $url" warn "HTTP $code"
+    fi
   done
 
-  echo "hostname -I:"
-  hostname -I 2>/dev/null || true
-  echo ""
+  if [[ -f "$UWE_HOME/scripts/check-standalone-prisma-deps.mjs" ]] && id "$SERVICE_USER" >/dev/null 2>&1; then
+    for app in studio portal; do
+      if [[ -d "$UWE_HOME/apps/$app/.next/standalone" ]]; then
+        if run_as_uwe "node '$UWE_HOME/scripts/check-standalone-prisma-deps.mjs' '$app'" >/dev/null 2>&1; then
+          healthcheck_item "Standalone Prisma ($app)" ok "modules resolve"
+        else
+          healthcheck_item "Standalone Prisma ($app)" fail "missing modules"
+        fi
+      else
+        healthcheck_item "Standalone Prisma ($app)" warn "standalone output missing"
+      fi
+    done
+  fi
 
-  echo "Lokale URLs:"
-  echo "  Studio:  http://127.0.0.1:${STUDIO_PORT}/"
-  echo "  Setup:   http://127.0.0.1:${STUDIO_PORT}/setup"
-  echo "  Portal:  http://127.0.0.1:${PORTAL_PORT}/"
   echo ""
-  echo "LAN URLs:"
-  echo "  Studio:  http://${lan_ip}:${STUDIO_PORT}/"
-  echo "  Setup:   http://${lan_ip}:${STUDIO_PORT}/setup"
-  echo "  Portal:  http://${lan_ip}:${PORTAL_PORT}/"
+  echo "LAN Setup-URL: http://${lan_ip}:${STUDIO_PORT}/setup"
+  echo "LAN Studio:    http://${lan_ip}:${STUDIO_PORT}/"
+  echo "LAN Portal:    http://${lan_ip}:${PORTAL_PORT}/"
   echo "========================================"
 }
 
@@ -822,8 +486,23 @@ print_diagnostics() {
   ss -tulpn | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}" || warn "Kein Prozess lauscht auf Port ${STUDIO_PORT}/${PORTAL_PORT}."
   echo ""
   log "HTTP-Test"
-  curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/" 2>/dev/null | head -n 20 || \
+  curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/api/health" 2>/dev/null | head -n 20 || \
     warn "HTTP-Test fehlgeschlagen — siehe journalctl -u ${SYSTEMD_UNIT} -n 50"
+}
+
+check_reachability() {
+  local urls=(
+    "http://127.0.0.1:${STUDIO_PORT}/"
+    "http://127.0.0.1:${STUDIO_PORT}/api/health"
+  )
+  local url
+  for url in "${urls[@]}"; do
+    if http_reachable "$url"; then
+      printf '%s\n' "$url"
+      return 0
+    fi
+  done
+  return 1
 }
 
 print_summary() {
@@ -837,14 +516,14 @@ print_summary() {
 
   if ss -tulpn 2>/dev/null | grep -E ":${STUDIO_PORT}\b" | grep -q '127.0.0.1'; then
     if listening_on_all_interfaces "$STUDIO_PORT"; then
-      bind_mode="0.0.0.0:${STUDIO_PORT} (und ggf. 127.0.0.1)"
+      bind_mode="0.0.0.0:${STUDIO_PORT}"
     else
       bind_mode="nur 127.0.0.1:${STUDIO_PORT} — LAN-Zugriff blockiert!"
     fi
   elif listening_on_all_interfaces "$STUDIO_PORT"; then
     bind_mode="0.0.0.0:${STUDIO_PORT}"
   elif ss -tulpn 2>/dev/null | grep -q ":${STUDIO_PORT}"; then
-    bind_mode="Port ${STUDIO_PORT} (Adresse prüfen mit: ss -tulpn | grep ${STUDIO_PORT})"
+    bind_mode="Port ${STUDIO_PORT} (Adresse prüfen)"
   else
     bind_mode="Port ${STUDIO_PORT} nicht aktiv"
   fi
@@ -874,60 +553,46 @@ print_summary() {
   echo " pnpm:                $(pnpm -v 2>/dev/null || echo unbekannt)"
   echo ""
   echo " Nächste Schritte:"
-  echo "  1. Erstes Setup: http://127.0.0.1:${STUDIO_PORT}/setup"
-  echo "     (Setup-Token aus UWE_SETUP_TOKEN in $UWE_ENV_FILE)"
+  echo "  1. Erstes Setup: http://${lan_ip}:${STUDIO_PORT}/setup"
   echo "  2. Healthcheck:  sudo bash $0 --healthcheck"
   echo "  3. Quick-Update: sudo bash $0 --quick"
   echo "========================================"
-}
-
-check_reachability() {
-  local urls=(
-    "http://127.0.0.1:${STUDIO_PORT}/"
-    "http://127.0.0.1:${STUDIO_PORT}/api/health"
-  )
-  local url
-  for url in "${urls[@]}"; do
-    if http_reachable "$url"; then
-      printf '%s\n' "$url"
-      return 0
-    fi
-  done
-  return 1
 }
 
 start_or_restart_service() {
   log "systemd neu laden und Service starten …"
   systemctl daemon-reload
   systemctl enable "$SYSTEMD_UNIT"
+  systemctl reset-failed "$SYSTEMD_UNIT" 2>/dev/null || true
   systemctl restart "$SYSTEMD_UNIT"
 }
 
-run_deploy_steps() {
-  local schema
-  schema="$(find_prisma_schema)"
-
-  validate_node_binary
-  install_dependencies
-  run_prisma_generate
-  run_migrations "$schema"
-  run_build
-  verify_all_standalone_runtime_deps
-  ensure_start_script
+handle_setup_failure() {
+  local exit_code=$?
+  echo ""
+  fail "Setup fehlgeschlagen (exit $exit_code)."
+  if declare -F uwe_ai_diagnostics_offer >/dev/null 2>&1; then
+    uwe_ai_diagnostics_offer "setup" "Setup script failed with exit code $exit_code"
+  fi
+  exit "$exit_code"
 }
 
 main() {
   parse_args "$@"
   require_root
-  UWE_HOME="$(detect_uwe_home)"
+  UWE_HOME="$(detect_uwe_home "$SCRIPT_DIR")"
   export UWE_HOME
 
   if [[ "$MODE" == "healthcheck" ]]; then
+    run_preflight 1
     run_healthcheck
     exit 0
   fi
 
   log "UWE Host Setup — Modus: $MODE — Repository: $UWE_HOME"
+  run_preflight 0
+
+  trap handle_setup_failure ERR
 
   migrate_legacy_service
 
@@ -943,11 +608,15 @@ main() {
       remove_node_caches_and_workspace_modules
       ;;
     quick)
-      check_prerequisites
+      if node_needs_install_or_repair; then
+        ensure_system_dependencies 1 0
+      else
+        ensure_system_dependencies 0 0
+      fi
       git_safety_check
       ;;
     default)
-      check_prerequisites
+      ensure_system_dependencies 0 0
       git_safety_check
       ;;
   esac
@@ -963,15 +632,16 @@ main() {
 
   chown -R "$SERVICE_USER:$SERVICE_GROUP" "$UWE_HOME"
 
-  run_deploy_steps
-
-  if [[ ! -f "/etc/systemd/system/$SYSTEMD_UNIT" ]]; then
-    write_systemd_unit
-  elif [[ "$MODE" == "repair" || "$MODE" == "fresh" || "$MODE" == "default" ]]; then
-    write_systemd_unit
+  local quick_flag=0
+  if [[ "$MODE" == "quick" ]]; then
+    quick_flag=1
   fi
 
+  run_deploy_steps "$quick_flag"
+  ensure_start_script
+  write_systemd_unit
   start_or_restart_service
+
   sleep 3
   verify_http_healthchecks
   configure_firewall
@@ -979,7 +649,7 @@ main() {
   print_diagnostics
   print_summary
 
-  if [[ "$MODE" == "quick" ]]; then
+  if [[ "$MODE" == "quick" || "$MODE" == "repair" ]]; then
     run_healthcheck
   fi
 }

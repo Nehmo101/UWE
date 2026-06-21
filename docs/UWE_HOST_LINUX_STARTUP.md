@@ -53,9 +53,15 @@ Alle Befehle im Repository unter `/opt/uwe` (oder Ihrem Klone) ausführen.
 | Voraussetzung | Hinweis |
 |---------------|---------|
 | Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
-| Node.js 22 | Wird bei `--repair` / Erstsetup installiert (Projekt unterstützt ≥ 20) |
-| git | Repository unter `/opt/uwe` |
+| Node.js 22 | Wird vom Setup-Script automatisch installiert (systemweit unter `/usr/bin/node`) |
+| git, curl, apt | Werden vom Setup-Script installiert, falls fehlend |
 | root/sudo | Setup-Script muss als root laufen |
+
+**Sie müssen Node, pnpm, Prisma oder systemd nicht manuell installieren.** Ein Befehl reicht:
+
+```bash
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
 
 ### Einmaliger Befehl
 
@@ -102,26 +108,56 @@ sudo bash ./deploy/scripts/setup-uwe-host.sh
 
 ---
 
+## Preflight / Dependency Doctor
+
+Jeder Setup-Lauf beginnt mit einer **Preflight-Phase**. Das Script prüft und protokolliert u. a.:
+
+- Betriebssystem, Architektur, User, Root-Status
+- Repository-Pfad, Git-Branch, letzter Commit
+- Disk Space, RAM, DNS (github.com, deb.nodesource.com, registry.npmjs.org)
+- apt, curl, ca-certificates, gnupg, git
+- node/npm/pnpm/corepack/systemd
+- `/etc/uwe/uwe.env`, `/opt/uwe`
+
+Ausgabeformat:
+
+```
+[OK]   …
+[FIX]  …  (wird im selben Lauf behoben)
+[WARN] …
+[FAIL] …
+```
+
+Fehlende Dependencies werden **automatisch installiert** — ohne nvm, ohne `.bashrc`, ohne interaktive Shell. Node.js 22 landet systemweit unter `/usr/bin/node` (NodeSource, kein blindes `curl | bash`).
+
+Bei NodeSource-Fehlern bricht das Script **vor** dem Service-Start ab und gibt Diagnose aus (OS, Architektur, `apt-cache policy nodejs`, apt-Logs, NodeSource-Erreichbarkeit).
+
+---
+
 ## Setup-Modi
 
 ### Default (ohne Flag)
 
+- Preflight + automatische Dependency-Reparatur (Node/pnpm nur wenn nötig)
 - Sicherer, wiederholbarer Update-/Repair-Lauf
 - Ergänzt fehlende Env-Variablen, **überschreibt keine** bestehenden Secrets
 - Keine destruktiven Aktionen
 - Schreibt `uwe.service` neu (idempotent)
+- Prisma über Workspace: `pnpm --filter @uwe/database db:generate` / `db:deploy`
+- Standalone-Prisma-Runtime-Check vor Service-Start
 
 ### `--quick`
 
-- Schneller Update-Lauf nach `git pull`
-- Kein Node-Reinstall, kein aggressives Cache-Löschen
-- Git-Status-Warnung, `pnpm install`, Prisma generate/migrate, Build, Service-Restart
+- Preflight, dann schneller Update-Lauf nach `git pull`
+- **Kein** NodeSource-Neuaufbau, außer Node fehlt oder ist nicht v22.x
+- `pnpm install` nur wenn Lockfile/package geändert oder `node_modules` fehlt
+- Prisma generate/deploy, Build, Restart, Healthcheck
 
 ### `--repair`
 
-- Validiert/repariert Node.js 22, pnpm, corepack
-- Entfernt `node_modules` und Build-Caches, saubere Neuinstallation
-- Schreibt systemd-Unit neu
+- Gründlicher Dependency-Repair: Node.js 22 + pnpm/corepack neu
+- Entfernt `node_modules` und Build-Caches
+- Standalone-Checks, systemd-Repair, Restart, Healthcheck
 - **Löscht keine** Datenbank, Uploads oder Secrets
 
 ### `--fresh` / `--wipe-and-reinstall`
@@ -132,9 +168,42 @@ sudo bash ./deploy/scripts/setup-uwe-host.sh
 
 ### `--healthcheck`
 
-- Verändert nichts
-- Prüft: `systemctl status uwe`, Ports, `curl` auf `/`, `/setup`, `/api/health`
+- Verändert nichts (read-only)
+- Checkliste: node/npm/pnpm, systemd, Ports 3000/3001, `/api/health`, `/setup`, Standalone-Module
 - Gibt lokale und LAN-URLs aus
+
+---
+
+## Node.js 22, pnpm und Prisma (automatisch)
+
+| Komponente | Verhalten |
+|------------|-----------|
+| **Node.js 22** | NodeSource-Repo (manuell konfiguriert, validiert), Ziel: `/usr/bin/node` |
+| **pnpm** | Version aus `packageManager` in root `package.json` (z. B. `pnpm@10.12.1`) via corepack; Fallback: `npm install -g pnpm` |
+| **Prisma** | Immer workspace-sicher vom Repo-Root: `pnpm --filter @uwe/database db:generate` und `db:deploy` |
+| **systemd PATH** | `Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` |
+| **Restart-Limit** | `StartLimitIntervalSec=300`, `StartLimitBurst=5`, `RestartSec=5` — verhindert tausende Restart-Schleifen |
+
+---
+
+## Optionale AI-Diagnose
+
+Bei Setup-Fehlern kann optional eine OpenAI/Cursor-kompatible API Logs zusammenfassen. **Standard: deaktiviert** — die Installation hängt nicht davon ab.
+
+| Variable | Bedeutung |
+|----------|-----------|
+| `UWE_AI_DIAG_ENABLED=1` | AI-Diagnose aktivieren (non-interaktiv) |
+| `UWE_AI_DIAG_PROVIDER=openai` | Provider |
+| `UWE_AI_DIAG_API_KEY=…` | API-Key (niemals loggen) |
+| `UWE_AI_DIAG_MODEL=gpt-4o-mini` | Modell |
+
+Interaktiv: Bei Fehlern fragt das Script nach Zustimmung und API-Key.
+
+**Niemals gesendet:** vollständige `/etc/uwe/uwe.env`, `DATABASE_URL`, Secrets, Tokens, Passwörter, API-Keys. Logs werden vor dem Senden geschwärzt.
+
+Reports optional unter `/var/log/uwe/diagnostics/<timestamp>.md`.
+
+Implementierung: `deploy/scripts/lib/uwe-host-ai-diagnostics.sh`
 
 ---
 
@@ -205,15 +274,32 @@ Gleiche Checks für Portal unter `apps/portal/.next/standalone`. Das Setup-Scrip
 
 systemd lädt keine interaktive Shell — `node` muss im systemd-PATH liegen (typisch `/usr/bin/node` via NodeSource).
 
-**Symptome:** `journalctl -u uwe` zeigt `/opt/uwe/deploy/scripts/start-uwe.sh: exec: node: not found`.
+**Symptome:** `journalctl -u uwe` zeigt `Node.js not found in systemd PATH` oder `exec: node: not found`.
 
-**Reparatur:**
+**Reparatur (ein Befehl):**
 
 ```bash
 sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
 ```
 
-Das Script installiert Node.js 22 über NodeSource, setzt `Environment=PATH=…` in `uwe.service` und nutzt in `start-uwe.sh` den absoluten Node-Pfad.
+Das Script installiert Node.js 22 systemweit, setzt `Environment=PATH=…` in `uwe.service`, begrenzt Restart-Schleifen und validiert vor dem Start.
+
+### systemd Restart-Schleife (tausende Restarts)
+
+`uwe.service` setzt jetzt explizit:
+
+```
+StartLimitIntervalSec=300
+StartLimitBurst=5
+RestartSec=5
+```
+
+Nach 5 Fehlstarts in 5 Minuten stoppt systemd den Dienst. Ursache beheben (`--repair`), dann:
+
+```bash
+sudo systemctl reset-failed uwe
+sudo bash ./deploy/scripts/setup-uwe-host.sh --repair
+```
 
 ### `Prisma command not found` oder falsches Schema
 
@@ -239,9 +325,17 @@ Nicht verwenden: `pnpm exec prisma … --schema ./packages/database/prisma/schem
 
 ```
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+StartLimitIntervalSec=300
+StartLimitBurst=5
+Restart=on-failure
+RestartSec=5
 ```
 
-`start-uwe.sh` prüft vor dem Start `command -v node` und bricht mit klarer Meldung ab, wenn Node fehlt.
+`start-uwe.sh` prüft vor dem Start `command -v node` und bricht mit klarer Meldung ab:
+
+```
+Node.js not found in systemd PATH. Run: sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh --repair
+```
 
 ### Standalone Output fehlt Dependencies
 
@@ -345,6 +439,9 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 | Datei | Zweck |
 |-------|-------|
 | `deploy/scripts/setup-uwe-host.sh` | Offizieller Einstiegspunkt (Setup/Update/Repair) |
+| `deploy/scripts/lib/uwe-host-preflight.sh` | Preflight/Doctor-Checks |
+| `deploy/scripts/lib/uwe-host-deps.sh` | Node/pnpm/Prisma/Build-Dependencies |
+| `deploy/scripts/lib/uwe-host-ai-diagnostics.sh` | Optionale AI-Fehleranalyse |
 | `deploy/scripts/start-uwe.sh` | Startet Studio + Portal (von systemd aufgerufen) |
 | `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
 | `deploy/linux/uwe-host.service` | **Deprecated** — nur noch für Migration dokumentiert |
