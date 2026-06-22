@@ -270,13 +270,90 @@ export interface ImageStudioConfig {
   backgroundRemovalEnabled: boolean;
 }
 
-export function resolveImageStudioConfig(env: NodeJS.ProcessEnv = process.env): ImageStudioConfig {
+export interface ImageStudioConfigStatus extends ImageStudioConfig {
+  rtxAgentConfigured: boolean;
+  cloudApiKeyConfigured: boolean;
+  source: "portal" | "env";
+  message: string;
+}
+
+export interface ImageStudioPortalOverrides {
+  enabled?: boolean;
+  defaultProviderMode?: ImageStudioConfig["defaultProviderMode"];
+  allowCloud?: boolean;
+  backgroundRemovalEnabled?: boolean;
+}
+
+const IMAGE_STUDIO_PROVIDER_MODES = new Set<ImageStudioConfig["defaultProviderMode"]>([
+  "auto",
+  "local_rtx",
+  "cloud",
+]);
+
+function resolveEnvImageStudioConfig(env: NodeJS.ProcessEnv): ImageStudioConfig {
+  const provider = env.IMAGE_STUDIO_DEFAULT_PROVIDER?.trim() as ImageStudioConfig["defaultProviderMode"];
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
     defaultProviderMode:
-      (env.IMAGE_STUDIO_DEFAULT_PROVIDER?.trim() as ImageStudioConfig["defaultProviderMode"]) || "auto",
+      provider && IMAGE_STUDIO_PROVIDER_MODES.has(provider) ? provider : "auto",
     allowCloud: env.IMAGE_STUDIO_ALLOW_CLOUD === "true",
     backgroundRemovalEnabled: env.IMAGE_STUDIO_BG_REMOVAL !== "false",
+  };
+}
+
+export function resolveImageStudioConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  portal?: ImageStudioPortalOverrides | null,
+): ImageStudioConfig {
+  const envConfig = resolveEnvImageStudioConfig(env);
+  if (!portal) {
+    return envConfig;
+  }
+
+  const provider = portal.defaultProviderMode;
+  return {
+    enabled: portal.enabled ?? envConfig.enabled,
+    defaultProviderMode:
+      provider && IMAGE_STUDIO_PROVIDER_MODES.has(provider)
+        ? provider
+        : envConfig.defaultProviderMode,
+    allowCloud: portal.allowCloud ?? envConfig.allowCloud,
+    backgroundRemovalEnabled:
+      portal.backgroundRemovalEnabled ?? envConfig.backgroundRemovalEnabled,
+  };
+}
+
+export function resolveImageStudioConfigStatus(
+  env: NodeJS.ProcessEnv = process.env,
+  portal?: ImageStudioPortalOverrides | null,
+): ImageStudioConfigStatus {
+  const config = resolveImageStudioConfig(env, portal);
+  const rtxAgentConfigured = Boolean(env.RTX_AGENT_URL?.trim());
+  const cloudApiKeyConfigured = Boolean(
+    env.CLOUD_AI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim(),
+  );
+  const fromPortal = portal !== undefined && portal !== null;
+
+  let message = "Konfiguration aus Umgebungsvariablen.";
+  if (fromPortal) {
+    message = "Portal-Einstellungen aktiv — ENV-Werte als Fallback.";
+  }
+  if (!config.enabled) {
+    message = "Image Studio ist deaktiviert.";
+  } else if (!rtxAgentConfigured && !config.allowCloud) {
+    message = "RTX_AGENT_URL fehlt und Cloud ist deaktiviert — keine Bildgenerierung möglich.";
+  } else if (!rtxAgentConfigured && config.allowCloud && !cloudApiKeyConfigured) {
+    message = "RTX fehlt — Cloud erlaubt, aber kein API-Key konfiguriert.";
+  } else if (rtxAgentConfigured) {
+    message = "RTX Agent konfiguriert.";
+  }
+
+  return {
+    ...config,
+    rtxAgentConfigured,
+    cloudApiKeyConfigured,
+    source: fromPortal ? "portal" : "env",
+    message,
   };
 }
 

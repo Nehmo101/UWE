@@ -25,7 +25,6 @@ import {
   resolveAgentJobsConfig,
   resolveCalendarConfig,
   resolveDndApiConfig,
-  resolveImageStudioConfig,
   VisibilityEnum,
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
@@ -41,6 +40,7 @@ const TABS = [
   { id: "storage", label: "Storage" },
   { id: "ai", label: "AI" },
   { id: "integrations", label: "Integrationen" },
+  { id: "image-studio", label: "Image Studio" },
   { id: "mail", label: "Mail" },
   { id: "backup", label: "Backup" },
   { id: "status", label: "Systemstatus" },
@@ -70,7 +70,7 @@ export default async function SettingsPage({ searchParams }: Props) {
   const backupsPath = resolveEffectiveBackupsPath(settings);
   const exportsPath = resolveEffectiveExportsPath(settings);
   const paths = getPersistentPathConfiguration(settings);
-  const imageStudioConfig = resolveImageStudioConfig();
+  const imageStudioConfig = settings.imageStudio;
   const calendarConfig = resolveCalendarConfig();
   const dndApiConfig = resolveDndApiConfig();
   const agentJobsConfig = resolveAgentJobsConfig();
@@ -714,6 +714,99 @@ export default async function SettingsPage({ searchParams }: Props) {
                   <input type="checkbox" name="clearPortalSmtp" />
                   Portal-SMTP löschen und .env-Fallback nutzen
                 </label>
+              </section>
+
+              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
+                <h3>IMAP / Posteingang</h3>
+                <p className="uwe-hint">
+                  IMAP-Konten werden im{" "}
+                  <Link href="/admin/mail">Mail Portal</Link> verwaltet (verschlüsselte App-Passwörter).
+                  Der <Link href="/mail?tab=inbox">Mail Center Posteingang</Link> zeigt synchronisierte
+                  Nachrichten; Smart Inbox und KI-Entwürfe nur im Mail Portal.
+                </p>
+                <p>
+                  <Link href="/admin/mail" className="uwe-btn uwe-btn-secondary">
+                    Mail Portal — Konten einrichten
+                  </Link>
+                </p>
+              </section>
+
+              <button type="submit" className="uwe-btn uwe-btn-primary">
+                Speichern
+              </button>
+            </form>
+          )}
+
+          {activeTab === "image-studio" && (
+            <form action={updateSettingsAction} className="uwe-form">
+              <input type="hidden" name="tab" value="image-studio" />
+              <h2>Image Studio</h2>
+              <p className="uwe-hint">
+                Odysseus-inspirierte Bild-Pipeline: RTX Agent lokal, optional Cloud nur für generate/variant.
+                RTX-URL und API-Keys bleiben in <code>.env</code> — hier steuern Sie Verhalten und Defaults.
+              </p>
+
+              <p className="uwe-notice">
+                {imageStudioConfig.message}
+                {" · "}
+                RTX: {imageStudioConfig.rtxAgentConfigured ? "konfiguriert" : "fehlt"}
+                {" · "}
+                Cloud-Key: {imageStudioConfig.cloudApiKeyConfigured ? "vorhanden" : "fehlt"}
+              </p>
+
+              <label className="uwe-checkbox">
+                <input
+                  type="checkbox"
+                  name="imageStudioEnabled"
+                  defaultChecked={imageStudioConfig.enabled}
+                />
+                Image Studio aktiv
+              </label>
+
+              <label>
+                Standard-Provider
+                <select
+                  name="imageStudioDefaultProvider"
+                  className="uwe-input"
+                  defaultValue={imageStudioConfig.defaultProviderMode}
+                >
+                  <option value="auto">auto (RTX, sonst Cloud wenn erlaubt)</option>
+                  <option value="local_rtx">local_rtx (nur RTX)</option>
+                  <option value="cloud">cloud</option>
+                </select>
+              </label>
+
+              <label className="uwe-checkbox">
+                <input
+                  type="checkbox"
+                  name="imageStudioAllowCloud"
+                  defaultChecked={imageStudioConfig.allowCloud}
+                />
+                Cloud-KI erlauben (IMAGE_STUDIO_ALLOW_CLOUD — Datenschutz prüfen)
+              </label>
+
+              <label className="uwe-checkbox">
+                <input
+                  type="checkbox"
+                  name="imageStudioBgRemoval"
+                  defaultChecked={imageStudioConfig.backgroundRemovalEnabled}
+                />
+                Hintergrund-Entfernung erlauben
+              </label>
+
+              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
+                <h3>RTX / Diffusion</h3>
+                <p className="uwe-hint">
+                  Setze <code>RTX_AGENT_URL</code> und optional <code>RTX_AGENT_TOKEN</code> in{" "}
+                  <code>.env</code>. Diagnose unter{" "}
+                  <Link href="/admin/cookbook">Cookbook</Link> und{" "}
+                  <Link href="/admin/status">Systemstatus</Link>.
+                </p>
+                <p>
+                  <Link href="/image-studio" className="uwe-btn uwe-btn-secondary">
+                    Image Studio öffnen
+                  </Link>
+                </p>
               </section>
 
               <button type="submit" className="uwe-btn uwe-btn-primary">

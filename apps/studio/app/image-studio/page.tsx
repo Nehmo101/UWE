@@ -6,7 +6,6 @@ import {
   IMAGE_STUDIO_OPERATION_LABELS,
   IMAGE_STUDIO_STATUS_LABELS,
   prisma,
-  resolveImageStudioConfig,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
@@ -19,9 +18,10 @@ interface Props {
 
 export default async function ImageStudioPage({ searchParams }: Props) {
   const { pageId } = await searchParams;
-  const config = resolveImageStudioConfig();
-  const imageStudio = createImageStudioService(prisma);
   const repo = getAppRepository();
+  const settings = await repo.getSystemSettings();
+  const config = settings.imageStudio;
+  const imageStudio = createImageStudioService(prisma);
   const [projects, worlds] = await Promise.all([
     imageStudio.listProjects(),
     repo.listWorldsWithGuestMode(),
@@ -45,10 +45,16 @@ export default async function ImageStudioPage({ searchParams }: Props) {
       activePath="/image-studio"
       title="Image Studio"
       summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
+      actions={
+        <Link href="/settings?tab=image-studio" className="uwe-btn uwe-btn-secondary">
+          Einstellungen
+        </Link>
+      }
     >
       {!config.enabled && (
         <p className="uwe-notice uwe-notice-warn">
-          Image Studio ist deaktiviert. Setze IMAGE_STUDIO_ENABLED=true in der Umgebung.
+          Image Studio ist deaktiviert. Aktiviere unter{" "}
+          <Link href="/settings?tab=image-studio">Einstellungen → Image Studio</Link>.
         </p>
       )}
 
@@ -83,6 +89,7 @@ export default async function ImageStudioPage({ searchParams }: Props) {
                     Vorschau
                   </Link>
                 )}
+                <Link href={`/image-studio/${project.id}`}>Projekt öffnen</Link>
               </li>
             ))}
           </ul>

@@ -8,6 +8,7 @@ import {
   resolveUploadsDirFromEnv,
 } from "@uwe/assets";
 import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail";
+import { resolveImageStudioConfigStatus } from "./integrations-service";
 import { prisma } from "./client";
 import {
   decryptSecret,
@@ -141,6 +142,24 @@ export interface MailSettings {
   smtpCredentials?: MailSmtpStoredCredentials | null;
 }
 
+export interface ImageStudioPortalSettings {
+  enabled?: boolean;
+  defaultProviderMode?: "auto" | "local_rtx" | "cloud";
+  allowCloud?: boolean;
+  backgroundRemovalEnabled?: boolean;
+}
+
+export interface ImageStudioSettings {
+  enabled: boolean;
+  defaultProviderMode: "auto" | "local_rtx" | "cloud";
+  allowCloud: boolean;
+  backgroundRemovalEnabled: boolean;
+  rtxAgentConfigured: boolean;
+  cloudApiKeyConfigured: boolean;
+  source: "portal" | "env";
+  message: string;
+}
+
 export interface UweSystemSettings {
   app: AppSettings;
   worlds: WorldSettings;
@@ -148,6 +167,7 @@ export interface UweSystemSettings {
   portal: PortalSettings;
   ai: AiSettings;
   mail: MailSettings;
+  imageStudio: ImageStudioSettings;
   storage: StorageSettings;
   backup: BackupSettings;
   privacy: PrivacySettings;
@@ -161,6 +181,7 @@ export type UweSystemSettingsUpdate = {
   portal?: Partial<PortalSettings>;
   ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled">>;
   mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "smtpCredentials">>;
+  imageStudio?: Partial<ImageStudioPortalSettings>;
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
   privacy?: Partial<PrivacySettings>;
@@ -174,6 +195,40 @@ interface MailSettingsInput {
   fromDisplayName?: string;
   logBody?: boolean;
   smtpCredentials?: MailSmtpStoredCredentials | null;
+}
+
+function readImageStudioSettingsInput(stored: unknown): ImageStudioPortalSettings | undefined {
+  if (!isRecord(stored)) {
+    return undefined;
+  }
+  const imageStudio = stored as Record<string, unknown>;
+  const provider = imageStudio.defaultProviderMode;
+  return {
+    enabled: typeof imageStudio.enabled === "boolean" ? imageStudio.enabled : undefined,
+    defaultProviderMode:
+      provider === "auto" || provider === "local_rtx" || provider === "cloud"
+        ? provider
+        : undefined,
+    allowCloud: typeof imageStudio.allowCloud === "boolean" ? imageStudio.allowCloud : undefined,
+    backgroundRemovalEnabled:
+      typeof imageStudio.backgroundRemovalEnabled === "boolean"
+        ? imageStudio.backgroundRemovalEnabled
+        : undefined,
+  };
+}
+
+function buildImageStudioSettings(stored?: ImageStudioPortalSettings): ImageStudioSettings {
+  const status = resolveImageStudioConfigStatus(process.env, stored);
+  return {
+    enabled: status.enabled,
+    defaultProviderMode: status.defaultProviderMode,
+    allowCloud: status.allowCloud,
+    backgroundRemovalEnabled: status.backgroundRemovalEnabled,
+    rtxAgentConfigured: status.rtxAgentConfigured,
+    cloudApiKeyConfigured: status.cloudApiKeyConfigured,
+    source: status.source,
+    message: status.message,
+  };
 }
 
 function readMailSettingsInput(stored: unknown): MailSettingsInput | undefined {
@@ -351,6 +406,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     providerKeyPlaceholders: buildProviderKeyPlaceholders(),
   },
   mail: buildMailSettings(),
+  imageStudio: buildImageStudioSettings(),
   storage: {
     uploadsPath: "",
     exportsPath: "",
@@ -425,6 +481,7 @@ function mergeSettings(
       providerKeyPlaceholders: buildProviderKeyPlaceholders(),
     },
     mail: buildMailSettings(readMailSettingsInput(stored.mail)),
+    imageStudio: buildImageStudioSettings(readImageStudioSettingsInput(stored.imageStudio)),
     storage: {
       ...base.storage,
       ...(isRecord(stored.storage) ? (stored.storage as unknown as StorageSettings) : {}),
@@ -463,6 +520,12 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       fromDisplayName: settings.mail.fromDisplayName,
       logBody: settings.mail.logBody,
       smtpCredentials: settings.mail.smtpCredentials,
+    }),
+    imageStudio: buildImageStudioSettings({
+      enabled: settings.imageStudio.enabled,
+      defaultProviderMode: settings.imageStudio.defaultProviderMode,
+      allowCloud: settings.imageStudio.allowCloud,
+      backgroundRemovalEnabled: settings.imageStudio.backgroundRemovalEnabled,
     }),
     privacy: {
       ...settings.privacy,
@@ -706,6 +769,15 @@ export class SettingsService {
           update.mail?.smtpCredentials !== undefined
             ? update.mail.smtpCredentials
             : current.mail.smtpCredentials,
+      }),
+      imageStudio: buildImageStudioSettings({
+        enabled: update.imageStudio?.enabled ?? current.imageStudio.enabled,
+        defaultProviderMode:
+          update.imageStudio?.defaultProviderMode ?? current.imageStudio.defaultProviderMode,
+        allowCloud: update.imageStudio?.allowCloud ?? current.imageStudio.allowCloud,
+        backgroundRemovalEnabled:
+          update.imageStudio?.backgroundRemovalEnabled ??
+          current.imageStudio.backgroundRemovalEnabled,
       }),
       storage: { ...current.storage, ...update.storage },
       backup: { ...current.backup, ...update.backup },
