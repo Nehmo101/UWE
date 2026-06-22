@@ -1,3 +1,5 @@
+"use server";
+
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   buildPageUrl,
@@ -309,6 +311,3 @@ export async function deleteContentBlockAction(formData: FormData) {
   redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?saved=1`);
 }
 
-export function pagePreviewHref(worldSlug: string, type: PageType, slug: string) {
-  return `${buildPageUrl(worldSlug, type, slug)}?preview=player`;
-}

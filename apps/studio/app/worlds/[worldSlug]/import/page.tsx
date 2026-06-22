@@ -53,12 +53,12 @@ export default async function StudioImportPage({ params }: Props) {
             items={[
               { label: "Dashboard", href: "/studio" },
               { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "KnoteForge Import" },
+              { label: "Import" },
             ]}
           />
           <PageHeader
-            title="KnoteForge Import"
-            summary="Daten aus KnoteForge Local importieren — zuerst Vorschau, dann bestätigter Import."
+            title="Import"
+            summary="KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import."
           />
 
           <ImportWorkspace
@@ -74,7 +74,9 @@ export default async function StudioImportPage({ params }: Props) {
             <li>Import ist einseitig (KnoteForge → UWE).</li>
             <li>Die Vorschau schreibt keine Daten.</li>
             <li>Konflikte und Duplikate werden vor dem Import angezeigt.</li>
-            <li>Markdown/HTML folgen in Phase 2.</li>
+            <li>JSON: strukturierter KnoteForge-Export.</li>
+            <li>Markdown/TXT: mehrere Texte, getrennt durch <code>---</code> oder Mehrfachauswahl.</li>
+            <li>HTML-Import folgt in einer späteren Phase.</li>
           </ul>
         </SidebarSection>
       }
