@@ -83,7 +83,9 @@ Bei Slug-Kollisionen innerhalb eines Imports oder mit bestehenden Seiten:
 
 ### Phase 1: JSON (implementiert)
 
-Schema `KnoteForgeExport` v1.0 — siehe `src/types.ts`. Beispiel:
+Zwei kompatible Formate:
+
+**A) UWE-Importformat (`KnoteForgeExport` v1.0)** — siehe `src/types.ts`. Beispiel:
 
 ```json
 {
@@ -100,6 +102,25 @@ Schema `KnoteForgeExport` v1.0 — siehe `src/types.ts`. Beispiel:
   ]
 }
 ```
+
+**B) KnoteForge-Eingang-Export** (`eingang_export.json`) — JSON-Array aus KnoteForge Local:
+
+```json
+[
+  {
+    "id": 12,
+    "title": "Dungeon-Idee",
+    "source": "manual",
+    "status": "new",
+    "priority": "high",
+    "raw_text": "Rohtext …",
+    "created_at": "2026-06-11T10:00:00.000Z",
+    "updated_at": "2026-06-11T10:05:00.000Z"
+  }
+]
+```
+
+Eingang-Einträge werden als `session_notiz`-Seiten importiert (`raw_text` → Inhalt, optionale `structured_preview` → GM-Notiz).
 
 ### Phase 2: Markdown / HTML (vorbereitet)
 

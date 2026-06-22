@@ -109,6 +109,49 @@ describe("KnoteForge import", () => {
     assert.equal(validationErrors.length, 0);
   });
 
+  it("parses KnoteForge Eingang JSON array export", () => {
+    const eingangExport = JSON.stringify([
+      {
+        id: 12,
+        title: "Dungeon-Idee",
+        source: "manual",
+        status: "new",
+        priority: "high",
+        raw_text: "Eine verlassene Zwergenmine mit Falle.",
+        created_at: "2026-06-11T10:00:00.000Z",
+        updated_at: "2026-06-11T10:05:00.000Z",
+      },
+      {
+        id: 13,
+        title: "",
+        source: "file:md",
+        status: "review",
+        priority: "normal",
+        raw_text: "Spielerhinweis\n\nIhr seht Fackeln an der Wand.",
+        structured_preview: "Strukturierte Vorschau für den SL.",
+        created_at: "2026-06-11T11:00:00.000Z",
+        updated_at: "2026-06-11T11:10:00.000Z",
+      },
+    ]);
+
+    const { bundle, validationErrors } = parseImportContent("json", eingangExport);
+    assert.equal(validationErrors.length, 0);
+    assert.equal(bundle.entities.length, 2);
+    assert.equal(bundle.entities[0]?.id, "eingang-12");
+    assert.equal(bundle.entities[0]?.type, "session_notiz");
+    assert.equal(bundle.entities[0]?.title, "Dungeon-Idee");
+    assert.equal(bundle.entities[0]?.content, "Eine verlassene Zwergenmine mit Falle.");
+    assert.equal(bundle.entities[1]?.title, "Spielerhinweis");
+    assert.equal(bundle.entities[1]?.gmContent, "Strukturierte Vorschau für den SL.");
+  });
+
+  it("rejects unknown JSON array formats", () => {
+    assert.throws(
+      () => parseImportContent("json", JSON.stringify([1, 2, 3])),
+      /nicht im erkannten KnoteForge-Eingang-Format/,
+    );
+  });
+
   it("does not crash on invalid JSON", () => {
     assert.throws(
       () => parseImportContent("json", "{ invalid"),
