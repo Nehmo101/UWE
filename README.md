@@ -25,6 +25,7 @@ UWE ist ein **tägliches privates Admin-Cockpit** neben dem DnD-Editor: Heute-Da
 | Mobile Bottom Nav, KI-Prompt, Capture FAB | ✅ done |
 | `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain` | ✅ done (Basis-UI) |
 | Mail Center, Kalender, Image Studio (Studio-only) | ✅ done (Kern) |
+| Admin Mail Portal (`/admin/mail`) | ✅ done (Basis: IMAP/SMTP, Inbox, Priorisierung, KI-Entwürfe) |
 | Kalender-Widget auf `/today`, Capture-Bild-Upload, Life-Brain-Retrieval | 🔶 partial |
 | Erweiterte Mobile-Views auf allen Welt-Unterseiten | 🔶 partial |
 
@@ -137,6 +138,19 @@ Danach ist UWE lokal und im LAN erreichbar, z. B.:
 - **Studio (LAN):** `http://<HOST-IP>:3000/studio` (IP mit `hostname -I`)
 
 Production-Env und Secrets liegen unter **`/etc/uwe/uwe.env`** (nicht im Git). Vor Internet-Exposure: `AUTH_SECRET` setzen, siehe [docs/PRODUCTION.md](docs/PRODUCTION.md).
+
+### Nach Neustart starten
+
+| Umgebung | Befehl |
+|----------|--------|
+| **Linux systemd (Production)** | `sudo systemctl start uwe.service` — Autostart: `sudo systemctl enable uwe.service` |
+| **Status prüfen** | `sudo bash ./scripts/uwe-host-status.sh --healthcheck` |
+| **Docker** | `docker compose up -d` im Repo-Verzeichnis |
+| **Entwicklung** | `pnpm dev` (Studio `:3000`, Portal `:3001`) |
+
+### Cloudflare + lokale Services
+
+Typisches Setup: **Cloudflare Tunnel** leitet öffentliche Hostnames auf lokale Ports — Studio `:3000`, Portal `:3001`. Pfade (`STUDIO_PATH`, `PORTAL_PATH`) und Access-Policies sind in [docs/cloudflare-access.md](docs/cloudflare-access.md) dokumentiert. Der Admin-Status unter `/admin/status` zeigt erwartete URLs, Proxy-Flags und Healthchecks (ohne Secrets). `cloudflared` wird nicht vom Setup-Script installiert — siehe [docs/deployment-hardening.md](docs/deployment-hardening.md).
 
 ### Erstes Setup (Owner anlegen)
 

@@ -7,6 +7,8 @@
 #   sudo bash ./deploy/scripts/setup-uwe-host.sh --repair     # rebuild deps + rewrite systemd
 #   sudo bash ./deploy/scripts/setup-uwe-host.sh --healthcheck
 #   sudo bash ./deploy/scripts/setup-uwe-host.sh --fresh      # destructive reset (requires confirmation)
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --reset      # alias for --fresh
+#   sudo bash ./deploy/scripts/setup-uwe-host.sh --full-reinstall  # alias for --fresh
 #
 # Official paths:
 #   Repo:    /opt/uwe
@@ -42,7 +44,7 @@ parse_args() {
       --repair)
         MODE="repair"
         ;;
-      --fresh | --wipe-and-reinstall)
+      --fresh | --wipe-and-reinstall | --reset | --full-reinstall)
         MODE="fresh"
         ;;
       --healthcheck)

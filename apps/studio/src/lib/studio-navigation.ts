@@ -98,6 +98,7 @@ const STUDIO_NAV_SECTIONS: { id: StudioNavSectionId; title: string; items: { lab
       title: "Admin",
       items: [
         { label: "Admin Übersicht", href: "/admin" },
+        { label: "Mail Portal", href: "/admin/mail" },
         { label: "Security", href: "/admin/security" },
         { label: "Audit Log", href: "/admin/audit-log" },
         { label: "Tags", href: "/admin/tags" },

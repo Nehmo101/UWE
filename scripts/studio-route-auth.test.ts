@@ -34,7 +34,7 @@ const TWO_FACTOR_ROUTES_HELPER = path.join(
 );
 
 const AUTH_GUARD_PATTERN =
-  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth/;
+  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation/;
 
 function listRouteFiles(dir: string, prefix = ""): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

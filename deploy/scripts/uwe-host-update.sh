@@ -100,7 +100,7 @@ main() {
 
   local job_id
   job_id="$(node -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).jobId||'')}catch{}" "$STATE_FILE")"
-  log_line "Host-Update gestartet (Job ${job_id:-unbekannt})."
+  log_line "Host-Update gestartet (Job ${job_id:-unbekannt}, unit ${UPDATE_UNIT})."
   log_line "Repository: $UWE_HOME"
 
   set +e

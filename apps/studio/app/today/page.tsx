@@ -10,6 +10,7 @@ import { CAPTURE_TYPE_LABELS, formatEuroFromCents, prisma } from "@uwe/database/
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -23,6 +24,7 @@ function statusDot(ok: boolean, warn = false): "ok" | "warn" | "error" {
 
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
+  const user = await getCurrentAuthUser();
   const data = await getTodayDashboardData(prisma, { useMockInference });
 
   return (
@@ -44,7 +46,7 @@ export default async function TodayPage() {
       }}
       sidebar={
         <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/today")} />
+          <SidebarNav items={adminSidebarNav("/today", { user })} />
         </SidebarSection>
       }
       main={

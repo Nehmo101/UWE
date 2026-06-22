@@ -2872,6 +2872,18 @@ html[data-theme="light"] {
   font-size: 0.8rem;
 }
 
+.uwe-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.uwe-inline-actions > .uwe-btn,
+.uwe-inline-actions > a.uwe-btn {
+  flex-shrink: 0;
+}
+
 .uwe-text-warning {
   color: color-mix(in srgb, var(--uwe-warning) 90%, white 10%);
 }
@@ -3729,4 +3741,71 @@ li[data-severity="warning"] .uwe-inspector-severity {
   .uwe-skip-link {
     transition: none;
   }
+}
+
+.uwe-mail-portal-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(320px, 2fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .uwe-mail-portal-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.uwe-mail-message-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.uwe-mail-message-item {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--uwe-border-subtle, rgba(148, 163, 184, 0.14));
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.uwe-mail-message-item.active {
+  border-color: var(--uwe-border-accent, rgba(129, 140, 248, 0.32));
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.uwe-mail-message-item.unread .uwe-mail-message-subject {
+  font-weight: 700;
+}
+
+.uwe-mail-reader-body {
+  margin: 1rem 0;
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.uwe-mail-plain {
+  white-space: pre-wrap;
+  font-family: inherit;
+  margin: 0;
+}
+
+.uwe-mail-priority-explain {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.uwe-input-inline {
+  width: auto;
+  min-width: 8rem;
 }
