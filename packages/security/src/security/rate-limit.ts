@@ -152,6 +152,7 @@ export const RATE_LIMIT_PRESETS = {
   upload: { maxAttempts: 20, windowMs: 60_000 },
   search: { maxAttempts: 60, windowMs: 60_000 },
   shareVerify: { maxAttempts: 10, windowMs: 60_000 },
+  hostUpdate: { maxAttempts: 2, windowMs: 60 * 60_000 },
 } as const satisfies Record<string, RateLimitOptions>;
 
 export type RateLimitPreset = keyof typeof RATE_LIMIT_PRESETS;

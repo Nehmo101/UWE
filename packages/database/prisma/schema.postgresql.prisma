@@ -1156,6 +1156,9 @@ enum AuditAction {
   mfa_disabled
   mfa_challenge_failed
   security_warning_dismissed
+  host_update_started
+  host_update_completed
+  host_update_failed
 }
 
 enum AuditTargetType {

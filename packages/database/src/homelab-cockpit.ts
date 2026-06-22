@@ -285,6 +285,35 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
       ],
     },
     {
+      id: "update_uwe",
+      title: "UWE aktualisieren",
+      summary: "Neue Version vom Git-Remote auf den Linux-Production-Host holen.",
+      steps: [
+        {
+          order: 1,
+          instruction: "Optional: Backup erstellen",
+          command: "/backup",
+        },
+        {
+          order: 2,
+          instruction:
+            "Studio: Hardware / Homelab → UWE Host-Update (Owner, UWE_HOST_UPDATE_ENABLED=true)",
+          command: "/hardware",
+        },
+        {
+          order: 3,
+          instruction: "Alternativ per SSH auf dem Host",
+          command:
+            "cd /opt/uwe && git pull && sudo bash ./deploy/scripts/setup-uwe-host.sh --quick",
+        },
+        {
+          order: 4,
+          instruction: "Nach dem Update Health prüfen",
+          command: "curl -s http://127.0.0.1:3000/api/health",
+        },
+      ],
+    },
+    {
       id: "check_logs",
       title: "Logs prüfen",
       summary: "Typische Log-Quellen bei Fehlern.",

@@ -775,6 +775,14 @@ html[data-theme="light"] {
   margin: 0 0.35rem;
 }
 
+.uwe-section-header {
+  margin-bottom: 1.25rem;
+}
+
+.uwe-section-header .uwe-page-header {
+  margin-bottom: 0;
+}
+
 .uwe-back-link {
   display: inline-flex;
   align-items: center;

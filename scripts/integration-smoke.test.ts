@@ -125,7 +125,7 @@ describe("integration smoke — Portal routes", () => {
     "apps/portal/app/login/page.tsx",
     "apps/portal/app/worlds/page.tsx",
     "apps/portal/app/worlds/[worldSlug]/page.tsx",
-    "apps/portal/app/auth/worlds/page.tsx",
+    "apps/portal/app/auth/worlds/(hub)/page.tsx",
   ];
 
   for (const route of portalRoutes) {

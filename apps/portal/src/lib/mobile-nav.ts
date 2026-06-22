@@ -25,14 +25,14 @@ export function portalWorldBottomNav(
 /** Bottom navigation for authenticated Portal pages */
 export function portalAuthBottomNav(
   worldSlug: string | null,
-  active: "worlds" | "dashboard" | "sessions" | "notes" | "login",
+  active: "worlds" | "dashboard" | "sessions" | "notes" | "handouts" | "account",
 ): PortalBottomNavItem[] {
   const worldBase = worldSlug ? `/auth/worlds/${worldSlug}` : null;
   return [
     { label: "Welten", href: "/auth/worlds", icon: "🌍", active: active === "worlds" },
     ...(worldBase
       ? [
-          { label: "Dashboard", href: worldBase, icon: "⌂", active: active === "dashboard" },
+          { label: "Start", href: worldBase, icon: "⌂", active: active === "dashboard" },
           {
             label: "Sessions",
             href: `${worldBase}/sessions`,
@@ -45,8 +45,19 @@ export function portalAuthBottomNav(
             icon: "📝",
             active: active === "notes",
           },
+          {
+            label: "Handouts",
+            href: `${worldBase}/assets`,
+            icon: "🎨",
+            active: active === "handouts",
+          },
         ]
       : []),
-    { label: "Login", href: "/login", icon: "👤", active: active === "login" },
+    {
+      label: "Account",
+      href: "/auth/account/password",
+      icon: "👤",
+      active: active === "account",
+    },
   ];
 }

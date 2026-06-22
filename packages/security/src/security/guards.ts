@@ -116,6 +116,34 @@ export function requireRestoreOwnerAuth(request: Request): Response | null {
   return forbidden("Restore erfordert Owner-Token (Authorization: Bearer …).");
 }
 
+/**
+ * Owner-only Studio API guard (session login required; API/env tokens rejected).
+ */
+export function requireOwnerApiAuth(
+  request: Request,
+  context: ApiAuthContext,
+  options: StudioGuardOptions = {},
+): Response | null {
+  const base = requireStudioApiAuth(request, options);
+  if (base) {
+    return base;
+  }
+
+  if (context.authMethod === "env_token" || context.authMethod === "api_token") {
+    return forbidden("Host-Update erfordert Owner-Session (kein API-Token).");
+  }
+
+  if (!context.user) {
+    return unauthorized("Owner-Zugriff erfordert Anmeldung.");
+  }
+
+  if (context.user.role !== "owner") {
+    return forbidden("Nur OWNER darf Host-Updates auslösen.");
+  }
+
+  return null;
+}
+
 export interface PortalGuardOptions {
   requireSession?: boolean;
   rateLimit?: RateLimitPreset;

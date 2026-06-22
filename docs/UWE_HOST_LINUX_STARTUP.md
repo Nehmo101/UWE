@@ -106,6 +106,18 @@ Oder ohne `--quick` (konservatives Update, schreibt systemd-Unit neu):
 sudo bash ./deploy/scripts/setup-uwe-host.sh
 ```
 
+### Update aus dem Studio (Owner)
+
+Auf dem Linux-Production-Host kann der **Owner** das gleiche Update auch unter **Hardware / Homelab → UWE Host-Update** auslösen.
+
+Voraussetzungen:
+
+1. `UWE_HOST_UPDATE_ENABLED=true` in `/etc/uwe/uwe.env`
+2. Einmalig: `sudo bash ./deploy/scripts/setup-uwe-host.sh` (installiert `uwe-host-update.service` und sudoers-Regel)
+3. Owner-Session im Studio (kein API-Token)
+
+Der Button führt asynchron `git pull` und `setup-uwe-host.sh --quick` aus. Fortschritt: `/var/log/uwe/host-update.log` und die UI auf `/hardware`.
+
 ---
 
 ## Preflight / Dependency Doctor
