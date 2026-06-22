@@ -47,6 +47,8 @@ describe("uwe theme system", () => {
     assert.match(script, /uwe-theme-preferences-studio/);
     assert.match(script, /localStorage/);
     assert.match(script, /--uwe-bg/);
+    assert.match(script, /--uwe-sidebar-bg/);
+    assert.match(script, /--uwe-radius-sm/);
     assert.match(script, /uwe-default/);
     assert.match(script, /uwe-portal-purple/);
     assert.match(script, /odysseus-dark-inspired/);

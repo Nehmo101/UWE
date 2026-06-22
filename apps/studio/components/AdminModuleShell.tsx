@@ -1,9 +1,7 @@
 import {
-  AppShell,
-  PageHeader,
+  AdminShell,
   SidebarNav,
   SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
@@ -27,20 +25,23 @@ export function AdminModuleShell({
   children,
 }: AdminModuleShellProps) {
   return (
-    <AppShell
+    <AdminShell
+      activePath={activePath}
+      navItems={adminSidebarNav(activePath)}
+      title={title}
+      summary={summary}
+      actions={actions}
       bottomNav={studioGlobalBottomNav(bottomNav)}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={title} href="/today" />}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav(activePath)} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader title={title} summary={summary} actions={actions} />
-          {children}
-        </>
-      }
+      main={children}
     />
+  );
+}
+
+/** Legacy sidebar block for pages not yet on AdminShell. */
+export function AdminSidebarBlock({ activePath }: { activePath: string }) {
+  return (
+    <SidebarSection title="UWE Admin">
+      <SidebarNav items={adminSidebarNav(activePath)} />
+    </SidebarSection>
   );
 }

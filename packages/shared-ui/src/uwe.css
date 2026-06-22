@@ -208,6 +208,7 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
 }
 
 @import "./uwe-visual-polish.css";
+@import "./uwe-components.css";
 
 /* === UWE component styles === */
 

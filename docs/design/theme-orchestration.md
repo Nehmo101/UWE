@@ -2,6 +2,15 @@
 
 Dieses Dokument definiert die **verbindliche Ausführungsreihenfolge** für Cloud-Agents und Subagents beim UWE-Theme-System. Odysseus dient nur als **UX-Referenz** (AGPL-3.0) — kein Code-Copy, keine Odysseus-Lizenz im Produkt-UI.
 
+## UI-System Fortsetzung (nach Theme-Orchestrierung)
+
+Shells, ToolWindows und Shared-UI-Primitives folgen einem separaten Phasenplan:
+
+- **Phase 1:** [odysseus-ui-architecture-analysis.md](./odysseus-ui-architecture-analysis.md) — Analyse + UWE-Konzept
+- **Phase 2–5:** Theme-Token-Erweiterung, `StudioShell`/`PortalShell`/`AdminShell`, Seiten-Migration, `ToolWindow`
+
+Theme-Orchestrierung (#107–#128) bleibt abgeschlossen; die UI-Shell-Pipeline baut darauf auf.
+
 ## Status auf `main` (Stand: nach Orchestrierung #123–#127)
 
 | Schritt | Agent | Artefakt | Status |

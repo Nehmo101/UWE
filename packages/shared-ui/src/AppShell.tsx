@@ -13,12 +13,15 @@ import {
   SidebarContextProvider,
   type BottomNavItem,
 } from "./MobileComponents";
+import { SidebarItem } from "./components/SidebarItem";
 
 export interface AppShellProps {
   sidebar?: ReactNode;
   main: ReactNode;
   context?: ReactNode;
   topBar?: ReactNode;
+  /** Optional desktop icon rail (left of sidebar) */
+  rail?: ReactNode;
   /** Optional bottom navigation bar (shown on mobile only) */
   bottomNav?: BottomNavItem[];
   /** Title for collapsible context panel on mobile */
@@ -30,12 +33,14 @@ export function AppShell({
   main,
   context,
   topBar,
+  rail,
   bottomNav,
   contextTitle = "Details & Kontext",
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasSidebar = Boolean(sidebar);
   const hasContext = Boolean(context);
+  const hasRail = Boolean(rail);
   const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -101,7 +106,9 @@ export function AppShell({
           className="uwe-shell-body"
           data-has-sidebar={hasSidebar ? "true" : "false"}
           data-has-context={hasContext ? "true" : "false"}
+          data-has-rail={hasRail ? "true" : "false"}
         >
+          {hasRail && <div className="uwe-icon-rail-wrap">{rail}</div>}
           {hasSidebar && (
             <>
               <button
@@ -156,12 +163,7 @@ export function SidebarNav({
     <nav className="uwe-sidebar-nav" aria-label="Seitennavigation">
       <ul>
         {items.map((item) => (
-          <li key={item.href}>
-            <a href={item.href} className={item.active ? "active" : undefined}>
-              {item.label}
-              {item.badge && <span className="uwe-nav-badge">{item.badge}</span>}
-            </a>
-          </li>
+          <SidebarItem key={item.href} {...item} />
         ))}
       </ul>
     </nav>

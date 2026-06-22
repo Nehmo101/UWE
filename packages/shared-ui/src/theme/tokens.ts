@@ -23,6 +23,17 @@ export const CSS_VARS = {
   shellGradientStart: "--uwe-shell-gradient-start",
   shellGradientMid: "--uwe-shell-gradient-mid",
   shellGradientEnd: "--uwe-shell-gradient-end",
+  sidebarBg: "--uwe-sidebar-bg",
+  cardBg: "--uwe-card-bg",
+  inputBg: "--uwe-input-bg",
+  focusRing: "--uwe-focus-ring",
+  focusShadow: "--uwe-focus-shadow",
+  radiusSm: "--uwe-radius-sm",
+  radiusMd: "--uwe-radius-md",
+  radiusLg: "--uwe-radius-lg",
+  shadowSm: "--uwe-shadow-sm",
+  shadowMd: "--uwe-shadow-md",
+  shadowLg: "--uwe-shadow-lg",
   fontFamily: "--uwe-font-family",
   densityScale: "--uwe-density-scale",
   uiScale: "--uwe-ui-scale",
@@ -54,7 +65,26 @@ export type ThemeColorTokens = {
   shellGradientStart: string;
   shellGradientMid: string;
   shellGradientEnd: string;
+  /** Optional — derived from panel when omitted */
+  sidebarBg?: string;
+  /** Optional — derived from surface when omitted */
+  cardBg?: string;
+  /** Optional — derived from bgElevated when omitted */
+  inputBg?: string;
+  /** Optional — derived from accent when omitted */
+  focusRing?: string;
+  focusShadow?: string;
 };
+
+/** Static layout tokens (not per-preset). */
+export const LAYOUT_TOKENS = {
+  radiusSm: "0.375rem",
+  radiusMd: "0.5rem",
+  radiusLg: "0.75rem",
+  shadowSm: "0 1px 2px rgba(0, 0, 0, 0.22)",
+  shadowMd: "0 4px 14px rgba(0, 0, 0, 0.28)",
+  shadowLg: "0 16px 40px rgba(0, 0, 0, 0.38)",
+} as const;
 
 export type FontFamilyId = "mono" | "sans" | "serif";
 

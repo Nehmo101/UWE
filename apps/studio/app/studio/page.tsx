@@ -1,15 +1,12 @@
 import Link from "next/link";
 import {
-  AppShell,
   EmptyState,
-  PageHeader,
   PageTypeBadge,
   PublishBadge,
-  SearchField,
-  SidebarNav,
   SidebarSection,
   StatGrid,
-  TopBarBrand,
+  StudioNavSidebar,
+  StudioShell,
 } from "@uwe/shared-ui";
 import {
   ACTIVITY_ACTION_LABELS,
@@ -51,45 +48,38 @@ export default async function StudioDashboard({ searchParams }: Props) {
   );
 
   return (
-    <AppShell
+    <StudioShell
+      showRail
+      showSearch
+      railActiveId="more"
+      subtitle="Dungeon Master Workspace"
       bottomNav={studioGlobalBottomNav("more")}
       contextTitle="Schnellaktionen"
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle="Dungeon Master Workspace" />
-          <SearchField action="/search" placeholder="Global suchen…" />
-        </>
-      }
+      pageHeader={{
+        title: "Dashboard",
+        summary: "Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff.",
+      }}
       sidebar={
-        <>
-          <SidebarSection title="Navigation">
-            <SidebarNav
-              items={[
-                { label: "Dashboard", href: STUDIO_DASHBOARD_PATH, active: true },
-                { label: "Welten", href: "/worlds" },
-                { label: "Admin", href: "/admin" },
-                { label: "Brain Store", href: "/brain" },
-                { label: "Templates", href: "/templates" },
-                { label: "Mail Center", href: "/mail" },
-                { label: "Backup", href: "/backup" },
-                { label: "Jobs", href: "/jobs" },
-                { label: "Systemstatus", href: "/admin/status" },
-                { label: "KI-Prompt", href: "/admin/ai-prompt" },
-                { label: "Einstellungen", href: "/settings" },
-                { label: "Passwort ändern", href: "/account/password" },
-                { label: "Sicherheit (2FA)", href: "/account/security" },
-              ]}
-            />
-          </SidebarSection>
-        </>
+        <StudioNavSidebar
+          items={[
+            { label: "Dashboard", href: STUDIO_DASHBOARD_PATH, active: true },
+            { label: "Welten", href: "/worlds" },
+            { label: "Admin", href: "/admin" },
+            { label: "Brain Store", href: "/brain" },
+            { label: "Templates", href: "/templates" },
+            { label: "Mail Center", href: "/mail" },
+            { label: "Backup", href: "/backup" },
+            { label: "Jobs", href: "/jobs" },
+            { label: "Systemstatus", href: "/admin/status" },
+            { label: "KI-Prompt", href: "/admin/ai-prompt" },
+            { label: "Einstellungen", href: "/settings" },
+            { label: "Passwort ändern", href: "/account/password" },
+            { label: "Sicherheit (2FA)", href: "/account/security" },
+          ]}
+        />
       }
       main={
         <>
-          <PageHeader
-            title="Dashboard"
-            summary="Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff."
-          />
-
           {criticalProductionWarnings.length > 0 && (
             <div className="uwe-form-error" role="alert">
               <strong>Produktions-/Selfhosting-Warnung:</strong>

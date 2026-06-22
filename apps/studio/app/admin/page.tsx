@@ -1,11 +1,9 @@
 import Link from "next/link";
 import {
-  AppShell,
+  AdminShell,
+  AdminStatusCard,
+  AdminStatusGrid,
   HealthBadge,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
   getAppRepository,
@@ -44,29 +42,20 @@ export default async function AdminOverviewPage() {
         : "error";
 
   return (
-    <AppShell
+    <AdminShell
+      activePath="/admin"
+      navItems={adminSidebarNav("/admin")}
+      title="Admin-Übersicht"
+      summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
       bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Admin" href="/studio" />}
-      sidebar={
-        <>
-          <SidebarSection title="Admin">
-            <SidebarNav items={adminSidebarNav("/admin")} />
-          </SidebarSection>
-        </>
+      actions={
+        <HealthBadge
+          status={dashboard.ok ? "ok" : "degraded"}
+          label={dashboard.ok ? "System OK" : "Einschränkungen"}
+        />
       }
       main={
         <>
-          <PageHeader
-            title="Admin-Übersicht"
-            summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
-            actions={
-              <HealthBadge
-                status={dashboard.ok ? "ok" : "degraded"}
-                label={dashboard.ok ? "System OK" : "Einschränkungen"}
-              />
-            }
-          />
-
           {criticalWarnings.length > 0 && (
             <div className="uwe-form-error" role="alert" style={{ marginBottom: "1rem" }}>
               <strong>Kritische Hinweise:</strong>
@@ -119,17 +108,15 @@ export default async function AdminOverviewPage() {
             </div>
           </section>
 
-          <div className="uwe-dashboard-grid">
-            <article className="uwe-card">
-              <h3>Studio Security</h3>
+          <AdminStatusGrid>
+            <AdminStatusCard title="Studio Security">
               <HealthBadge status={securityBadge} label={studioSecurity.label} />
               <p className="uwe-dashboard-muted" style={{ marginTop: "0.75rem" }}>
                 {studioSecurity.message}
               </p>
-            </article>
+            </AdminStatusCard>
 
-            <article className="uwe-card">
-              <h3>Cloudflare / Proxy</h3>
+            <AdminStatusCard title="Cloudflare / Proxy">
               <dl className="uwe-dl">
                 <div>
                   <dt>Public Base URL</dt>
@@ -164,10 +151,9 @@ export default async function AdminOverviewPage() {
                   <dd>{system.trust.studioApiTokenConfigured ? "gesetzt" : "fehlt"}</dd>
                 </div>
               </dl>
-            </article>
+            </AdminStatusCard>
 
-            <article className="uwe-card">
-              <h3>Auth &amp; Portal</h3>
+            <AdminStatusCard title="Auth &amp; Portal">
               <dl className="uwe-dl">
                 <div>
                   <dt>Portal AUTH_REQUIRED</dt>
@@ -194,10 +180,16 @@ export default async function AdminOverviewPage() {
                   </dd>
                 </div>
               </dl>
-            </article>
+            </AdminStatusCard>
 
-            <article className="uwe-card">
-              <h3>Backup</h3>
+            <AdminStatusCard
+              title="Backup"
+              actions={
+                <Link className="uwe-btn uwe-btn-ghost" href="/backup">
+                  Backup verwalten
+                </Link>
+              }
+            >
               <dl className="uwe-dl">
                 <div>
                   <dt>Anzahl Backups</dt>
@@ -216,11 +208,8 @@ export default async function AdminOverviewPage() {
                   <dd>{backup.readable ? "ja" : "nein"}</dd>
                 </div>
               </dl>
-              <Link className="uwe-btn uwe-btn-ghost" href="/backup">
-                Backup verwalten
-              </Link>
-            </article>
-          </div>
+            </AdminStatusCard>
+          </AdminStatusGrid>
         </>
       }
     />

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import {
-  AppShell,
   EmptyState,
   HealthBadge,
-  PageHeader,
   SidebarNav,
   SidebarSection,
-  TopBarBrand,
+  StudioShell,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS, formatEuroFromCents, prisma } from "@uwe/database/server";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
@@ -28,10 +26,22 @@ export default async function TodayPage() {
   const data = await getTodayDashboardData(prisma, { useMockInference });
 
   return (
-    <AppShell
+    <StudioShell
+      showRail
+      railActiveId="today"
+      subtitle="Heute"
+      brandHref="/today"
       bottomNav={studioGlobalBottomNav("today")}
       contextTitle="Admin Cockpit"
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Heute" href="/today" />}
+      pageHeader={{
+        title: "Heute",
+        summary: "Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick.",
+        actions: (
+          <Link href="/capture?quick=1" className="uwe-btn uwe-btn-primary">
+            + Capture
+          </Link>
+        ),
+      }}
       sidebar={
         <SidebarSection title="UWE Admin">
           <SidebarNav items={adminSidebarNav("/today")} />
@@ -39,16 +49,6 @@ export default async function TodayPage() {
       }
       main={
         <>
-          <PageHeader
-            title="Heute"
-            summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
-            actions={
-              <Link href="/capture?quick=1" className="uwe-btn uwe-btn-primary">
-                + Capture
-              </Link>
-            }
-          />
-
           <section className="uwe-section">
             <h2 className="uwe-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">

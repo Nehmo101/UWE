@@ -1,5 +1,6 @@
 import { LEGACY_THEME_ID_MAP, UWE_THEMES } from "./themes";
-import { CSS_VARS } from "./tokens";
+import { CSS_VARS, LAYOUT_TOKENS } from "./tokens";
+import { resolveThemeColorTokens } from "./resolveColorTokens";
 import type { UweThemePreferences } from "./storage";
 
 export interface ThemeBootstrapOptions {
@@ -21,30 +22,36 @@ export function buildThemeBootstrapScript(
 
   const colorMap: Record<string, Record<string, string>> = {};
   for (const theme of Object.values(UWE_THEMES)) {
+    const resolved = resolveThemeColorTokens(theme.colors);
     colorMap[theme.id] = {
-      bg: theme.colors.bg,
-      bgElevated: theme.colors.bgElevated,
-      surface: theme.colors.surface,
-      panel: theme.colors.panel,
-      border: theme.colors.border,
-      borderMuted: theme.colors.borderMuted,
-      fg: theme.colors.fg,
-      fgMuted: theme.colors.fgMuted,
-      fgSubtle: theme.colors.fgSubtle,
-      accent: theme.colors.accent,
-      accentHover: theme.colors.accentHover,
-      accentMuted: theme.colors.accentMuted,
-      danger: theme.colors.danger,
-      warning: theme.colors.warning,
-      success: theme.colors.success,
-      info: theme.colors.info,
-      wikiLink: theme.colors.wikiLink,
-      wikiLinkHover: theme.colors.wikiLinkHover,
-      dmOnly: theme.colors.dmOnly,
-      playerVisible: theme.colors.playerVisible,
-      shellGradientStart: theme.colors.shellGradientStart,
-      shellGradientMid: theme.colors.shellGradientMid,
-      shellGradientEnd: theme.colors.shellGradientEnd,
+      bg: resolved.bg,
+      bgElevated: resolved.bgElevated,
+      surface: resolved.surface,
+      panel: resolved.panel,
+      border: resolved.border,
+      borderMuted: resolved.borderMuted,
+      fg: resolved.fg,
+      fgMuted: resolved.fgMuted,
+      fgSubtle: resolved.fgSubtle,
+      accent: resolved.accent,
+      accentHover: resolved.accentHover,
+      accentMuted: resolved.accentMuted,
+      danger: resolved.danger,
+      warning: resolved.warning,
+      success: resolved.success,
+      info: resolved.info,
+      wikiLink: resolved.wikiLink,
+      wikiLinkHover: resolved.wikiLinkHover,
+      dmOnly: resolved.dmOnly,
+      playerVisible: resolved.playerVisible,
+      shellGradientStart: resolved.shellGradientStart,
+      shellGradientMid: resolved.shellGradientMid,
+      shellGradientEnd: resolved.shellGradientEnd,
+      sidebarBg: resolved.sidebarBg,
+      cardBg: resolved.cardBg,
+      inputBg: resolved.inputBg,
+      focusRing: resolved.focusRing,
+      focusShadow: resolved.focusShadow,
     };
   }
 
@@ -72,6 +79,11 @@ export function buildThemeBootstrapScript(
     shellGradientStart: CSS_VARS.shellGradientStart,
     shellGradientMid: CSS_VARS.shellGradientMid,
     shellGradientEnd: CSS_VARS.shellGradientEnd,
+    sidebarBg: CSS_VARS.sidebarBg,
+    cardBg: CSS_VARS.cardBg,
+    inputBg: CSS_VARS.inputBg,
+    focusRing: CSS_VARS.focusRing,
+    focusShadow: CSS_VARS.focusShadow,
   });
 
   return `(function(){
@@ -82,6 +94,7 @@ export function buildThemeBootstrapScript(
   var FONTS={mono:"ui-monospace, 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",sans:"system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",serif:"Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif"};
   var DENSITY={compact:0.92,comfortable:1,spacious:1.08};
   var LEGACY=${JSON.stringify(LEGACY_THEME_ID_MAP)};
+  var LAYOUT=${JSON.stringify(LAYOUT_TOKENS)};
   var SERVER_PREFS=${JSON.stringify(options?.serverPreferences ?? null)};
   var SERVER_UPDATED_AT=${JSON.stringify(options?.serverUpdatedAt ?? null)};
   var SYNC_KEY=${JSON.stringify(scope === "portal" ? "uwe-theme-sync-at-portal" : "uwe-theme-sync-at-studio")};
@@ -100,6 +113,12 @@ export function buildThemeBootstrapScript(
       var pair=VARS[i];
       if(colors[pair[0]]) style.setProperty(pair[1],colors[pair[0]]);
     }
+    style.setProperty('--uwe-radius-sm',LAYOUT.radiusSm);
+    style.setProperty('--uwe-radius-md',LAYOUT.radiusMd);
+    style.setProperty('--uwe-radius-lg',LAYOUT.radiusLg);
+    style.setProperty('--uwe-shadow-sm',LAYOUT.shadowSm);
+    style.setProperty('--uwe-shadow-md',LAYOUT.shadowMd);
+    style.setProperty('--uwe-shadow-lg',LAYOUT.shadowLg);
     root.dataset.uweTheme=themeId;
     if(prefs&&prefs.font&&FONTS[prefs.font]) style.setProperty('--uwe-font-family',FONTS[prefs.font]);
     if(prefs&&prefs.density&&DENSITY[prefs.density]!=null) style.setProperty('--uwe-density-scale',String(DENSITY[prefs.density]));

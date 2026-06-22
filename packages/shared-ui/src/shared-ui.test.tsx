@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  Button,
   EmptyState,
   ErrorAlert,
   LoadingSpinner,
@@ -13,7 +14,9 @@ import {
   SidebarContextProvider,
   SidebarNav,
   StickyActionBar,
+  StudioShell,
   ThemePicker,
+  ToolWindow,
 } from "./index";
 import {
   PageTypeBadge,
@@ -25,6 +28,7 @@ import { filterPaletteCommands } from "./CommandPalette";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uweCss = readFileSync(path.join(__dirname, "uwe.css"), "utf8");
+const uweComponentsCss = readFileSync(path.join(__dirname, "uwe-components.css"), "utf8");
 
 describe("shared-ui components", () => {
   it("renders page header with title and summary", () => {
@@ -179,6 +183,45 @@ describe("shared-ui components", () => {
     );
     assert.match(html, /uwe-sticky-action-bar/);
     assert.match(html, /role="toolbar"/);
+  });
+
+  it("renders Button variants with uwe classes", () => {
+    const html = renderToStaticMarkup(
+      <>
+        <Button variant="primary">Speichern</Button>
+        <Button variant="danger">Löschen</Button>
+      </>,
+    );
+    assert.match(html, /uwe-btn-primary/);
+    assert.match(html, /uwe-btn-danger/);
+    assert.match(html, /Speichern/);
+  });
+
+  it("renders StudioShell with icon rail flag", () => {
+    const html = renderToStaticMarkup(
+      <StudioShell
+        showRail
+        railActiveId="today"
+        main={<p>Arbeitsfläche</p>}
+      />,
+    );
+    assert.match(html, /data-has-rail="true"/);
+    assert.match(html, /Arbeitsfläche/);
+  });
+
+  it("renders closed ToolWindow as empty", () => {
+    const html = renderToStaticMarkup(
+      <ToolWindow open={false} onClose={() => {}} title="Test">
+        Inhalt
+      </ToolWindow>,
+    );
+    assert.equal(html, "");
+  });
+
+  it("includes native UI component styles", () => {
+    assert.match(uweComponentsCss, /uwe-toolwindow/);
+    assert.match(uweComponentsCss, /uwe-icon-rail/);
+    assert.match(uweComponentsCss, /--uwe-radius-md/);
   });
 });
 

@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
   EmptyState,
   GlobalSearchForm,
   PortalNavByType,
+  PortalNavSidebar,
+  PortalShell,
   PortalWorldHero,
   SearchFilterBar,
   SearchResultsList,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
@@ -72,23 +71,21 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
   }));
 
   return (
-    <AppShell
+    <PortalShell
+      worldName={world.name}
+      brandHref="/"
       bottomNav={portalWorldBottomNav(worldSlug, isSearching ? "search" : "home")}
-      contextTitle="Navigation"
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
-          <div id="search">
-            <GlobalSearchForm
-              action={`/worlds/${worldSlug}`}
-              query={q ?? ""}
-              placeholder="In dieser Welt suchen…"
-            />
-          </div>
-        </>
+      topBarExtra={
+        <div id="search">
+          <GlobalSearchForm
+            action={`/worlds/${worldSlug}`}
+            query={q ?? ""}
+            placeholder="In dieser Welt suchen…"
+          />
+        </div>
       }
       sidebar={
-        <SidebarSection title="Navigation">
+        <PortalNavSidebar>
           <Link href="/worlds" className="uwe-sidebar-back-link">
             ← Alle Welten
           </Link>
@@ -99,7 +96,7 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
               activeCategory={type as NavCategory | undefined}
             />
           )}
-        </SidebarSection>
+        </PortalNavSidebar>
       }
       main={
         <>
