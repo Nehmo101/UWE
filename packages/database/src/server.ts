@@ -691,6 +691,7 @@ export {
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
   resolveEffectiveSmtpConfig,
+  resolveSessionInactivityTimeoutMs,
   buildMailSmtpCredentialsUpdate,
   getPersistentPathConfiguration,
   isGuestPortalAccessAllowed,

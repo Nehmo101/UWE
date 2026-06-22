@@ -1,14 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
-import {
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
@@ -18,6 +10,8 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { updateBrainDocumentAction } from "../../../../brain-actions";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string; entryId: string }>;
@@ -40,115 +34,108 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
   await db.$disconnect();
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
-      sidebar={
-        <SidebarSection title="Brain">
-          <SidebarNav
-            items={[
-              { label: "← Brain Store", href: `/worlds/${worldSlug}/brain` },
-            ]}
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="brain"
+      backLink={{ label: "← Brain Store", href: `/worlds/${worldSlug}/brain` }}
+      breadcrumb={worldDetailBreadcrumb(
+        world.name,
+        worldSlug,
+        "Brain Store",
+        `/worlds/${worldSlug}/brain`,
+        document.title,
+      )}
+      pageHeader={{
+        title: document.title,
+        summary: "Brain-Dokument bearbeiten",
+      }}
+      showSearch={false}
+    >
+      <form action={updateBrainDocumentAction} className="uwe-brain-edit-form">
+        <input type="hidden" name="worldSlug" value={worldSlug} />
+        <input type="hidden" name="documentId" value={document.id} />
+
+        <label>
+          Titel
+          <input name="title" defaultValue={document.title} required className="uwe-input" />
+        </label>
+
+        <label>
+          Inhalt
+          <textarea
+            name="content"
+            defaultValue={document.content}
+            className="uwe-input"
+            rows={12}
           />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Brain Store", href: `/worlds/${worldSlug}/brain` },
-              { label: document.title },
-            ]}
-          />
-          <PageHeader title={document.title} summary="Brain-Dokument bearbeiten" />
+        </label>
 
-          <form action={updateBrainDocumentAction} className="uwe-brain-edit-form">
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="documentId" value={document.id} />
+        <label>
+          Typ
+          <select name="documentType" defaultValue={document.documentType} className="uwe-input">
+            {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-            <label>
-              Titel
-              <input name="title" defaultValue={document.title} required className="uwe-input" />
-            </label>
+        <label>
+          Sichtbarkeit
+          <select name="visibility" defaultValue={document.visibility} className="uwe-input">
+            {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-            <label>
-              Inhalt
-              <textarea
-                name="content"
-                defaultValue={document.content}
-                className="uwe-input"
-                rows={12}
-              />
-            </label>
+        <label>
+          Status
+          <select name="status" defaultValue={document.status} className="uwe-input">
+            {Object.entries(BRAIN_STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-            <label>
-              Typ
-              <select name="documentType" defaultValue={document.documentType} className="uwe-input">
-                {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Sichtbarkeit
-              <select name="visibility" defaultValue={document.visibility} className="uwe-input">
-                {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Status
-              <select name="status" defaultValue={document.status} className="uwe-input">
-                {Object.entries(BRAIN_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <p className="uwe-brain-meta">
-              Quelle: {BRAIN_SOURCE_LABELS[document.source]} ·{" "}
-              {document.chunks.length} Chunks
-              {document.page && (
-                <>
-                  {" "}
-                  · Seite:{" "}
-                  <Link href={`/worlds/${worldSlug}/pages/${document.page.slug}`}>
-                    {document.page.title}
-                  </Link>
-                </>
-              )}
-            </p>
-
-            <button type="submit" className="uwe-btn uwe-btn-primary">
-              Speichern
-            </button>
-          </form>
-
-          {links.length > 0 && (
-            <section className="uwe-brain-section">
-              <h2>Links</h2>
-              <ul>
-                {links.map((link) => (
-                  <li key={link.id}>
-                    {link.relationType}: {link.targetType} → {link.targetId}
-                    {link.label ? ` (${link.label})` : ""}
-                  </li>
-                ))}
-              </ul>
-            </section>
+        <p className="uwe-brain-meta">
+          Quelle: {BRAIN_SOURCE_LABELS[document.source]} ·{" "}
+          {document.chunks.length} Chunks
+          {document.page && (
+            <>
+              {" "}
+              · Seite:{" "}
+              <Link href={`/worlds/${worldSlug}/pages/${document.page.slug}`}>
+                {document.page.title}
+              </Link>
+            </>
           )}
-        </>
-      }
-    />
+        </p>
+
+        <button type="submit" className="uwe-btn uwe-btn-primary">
+          Speichern
+        </button>
+      </form>
+
+      {links.length > 0 && (
+        <section className="uwe-brain-section">
+          <h2>Links</h2>
+          <ul>
+            {links.map((link) => (
+              <li key={link.id}>
+                {link.relationType}: {link.targetType} → {link.targetId}
+                {link.label ? ` (${link.label})` : ""}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </WorldModuleShell>
   );
 }

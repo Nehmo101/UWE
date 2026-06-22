@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
   GraphRelationList,
   GraphView,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -20,6 +14,8 @@ import {
   type GraphViewMode,
   type Visibility,
 } from "@uwe/database/server";
+import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -100,6 +96,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
 
   const nodeTitles = Object.fromEntries(graph.nodes.map((node) => [node.id, node.title]));
   const previewSuffix = isPlayerPreview ? "?preview=player" : "";
+  const graphBase = `/worlds/${worldSlug}/graph`;
 
   return (
     <>
@@ -108,150 +105,127 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
           Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
         </div>
       )}
-      <AppShell
-        topBar={
-          <>
-            <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
-            {!isPlayerPreview ? (
-              <Link
-                className="uwe-btn uwe-btn-ghost"
-                href={`/worlds/${worldSlug}/graph?preview=player`}
-              >
-                Vorschau als Spieler
-              </Link>
-            ) : (
-              <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/graph`}>
-                Zurück zur DM-Ansicht
-              </Link>
-            )}
-          </>
+      <WorldModuleShell
+        worldSlug={worldSlug}
+        worldName={world.name}
+        activeNav="graph"
+        breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Graph", graphBase)}
+        pageHeader={{
+          title: "Link-Graph",
+          summary: "Seiten als Knoten, Wikilinks und Relationen als Kanten.",
+        }}
+        topBarExtra={
+          !isPlayerPreview ? (
+            <Link
+              className="uwe-btn uwe-btn-ghost"
+              href={`${graphBase}?preview=player`}
+            >
+              Vorschau als Spieler
+            </Link>
+          ) : (
+            <Link className="uwe-btn uwe-btn-ghost" href={graphBase}>
+              Zurück zur DM-Ansicht
+            </Link>
+          )
         }
-        sidebar={
-          <>
-            <SidebarSection title="Navigation">
-              <SidebarNav
-                items={[
-                  { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
-                  { label: "Graph", href: `/worlds/${worldSlug}/graph`, active: true },
-                ]}
-              />
-            </SidebarSection>
-            <SidebarSection title="Kampagnen">
-              <SidebarNav
-                items={[
-                  {
-                    label: "Alle",
-                    href: `/worlds/${worldSlug}/graph${previewSuffix}`,
-                    active: !query.campaign,
-                  },
-                  ...campaigns.map((campaign) => ({
-                    label: campaign.name,
-                    href: `/worlds/${worldSlug}/graph?campaign=${campaign.slug}${isPlayerPreview ? "&preview=player" : ""}`,
-                    active: query.campaign === campaign.slug,
-                  })),
-                ]}
-              />
-            </SidebarSection>
-          </>
-        }
-        main={
-          <>
-            <Breadcrumb
-              items={[
-                { label: "Dashboard", href: "/studio" },
-                { label: world.name, href: `/worlds/${worldSlug}` },
-                { label: "Graph" },
-              ]}
-            />
-            <PageHeader
-              title="Link-Graph"
-              summary="Seiten als Knoten, Wikilinks und Relationen als Kanten."
-            />
-
-            <form method="get" className="uwe-graph-filters">
-              {isPlayerPreview && <input type="hidden" name="preview" value="player" />}
-              {query.campaign && <input type="hidden" name="campaign" value={query.campaign} />}
-
-              <label>
-                Typ
-                <select name="category" defaultValue={categories?.[0] ?? ""}>
-                  <option value="">Alle Typen</option>
-                  {GRAPH_NODE_CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {GRAPH_NODE_CATEGORY_LABELS[category]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Tag
-                <select name="tag" defaultValue={query.tag ?? ""}>
-                  <option value="">Alle Tags</option>
-                  {allTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Sichtbarkeit
-                <select name="visibility" defaultValue={visibilities?.[0] ?? ""}>
-                  <option value="">Alle</option>
-                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Modus
-                <select name="mode" defaultValue={mode}>
-                  <option value="full">Gesamter Graph</option>
-                  <option value="focus">Nur Fokus-Seite</option>
-                  <option value="neighbors">Nachbarn</option>
-                  <option value="backlinks">Backlinks</option>
-                </select>
-              </label>
-
-              <label>
-                Fokus-Seite
-                <select name="focusPageId" defaultValue={query.focusPageId ?? ""}>
-                  <option value="">Kein Fokus</option>
-                  {focusOptions.map((page) => (
-                    <option key={page.id} value={page.id}>
-                      {page.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <button type="submit" className="uwe-btn uwe-btn-primary">
-                Filter anwenden
-              </button>
-            </form>
-
-            <GraphView nodes={graph.nodes} edges={graph.edges} />
-
-            <p className="uwe-empty" style={{ marginTop: "1rem" }}>
-              {graph.nodes.length} Knoten · {graph.edges.length} Kanten
-            </p>
-          </>
+        sidebarExtra={
+          <WorldCampaignSidebar
+            items={[
+              {
+                label: "Alle Kampagnen",
+                href: `${graphBase}${previewSuffix}`,
+                active: !query.campaign,
+              },
+              ...campaigns.map((campaign) => ({
+                label: campaign.name,
+                href: `${graphBase}?campaign=${campaign.slug}${isPlayerPreview ? "&preview=player" : ""}`,
+                active: query.campaign === campaign.slug,
+              })),
+            ]}
+          />
         }
         context={
-          <SidebarSection title="Relationen">
-            <GraphRelationList
-              edges={graph.edges}
-              focusPageId={graph.focusPageId}
-              nodeTitles={nodeTitles}
-            />
-          </SidebarSection>
+          <GraphRelationList
+            edges={graph.edges}
+            focusPageId={graph.focusPageId}
+            nodeTitles={nodeTitles}
+          />
         }
-      />
+        contextTitle="Relationen"
+      >
+        <form method="get" className="uwe-graph-filters">
+          {isPlayerPreview && <input type="hidden" name="preview" value="player" />}
+          {query.campaign && <input type="hidden" name="campaign" value={query.campaign} />}
+
+          <label>
+            Typ
+            <select name="category" defaultValue={categories?.[0] ?? ""}>
+              <option value="">Alle Typen</option>
+              {GRAPH_NODE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {GRAPH_NODE_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Tag
+            <select name="tag" defaultValue={query.tag ?? ""}>
+              <option value="">Alle Tags</option>
+              {allTags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Sichtbarkeit
+            <select name="visibility" defaultValue={visibilities?.[0] ?? ""}>
+              <option value="">Alle</option>
+              {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Modus
+            <select name="mode" defaultValue={mode}>
+              <option value="full">Gesamter Graph</option>
+              <option value="focus">Nur Fokus-Seite</option>
+              <option value="neighbors">Nachbarn</option>
+              <option value="backlinks">Backlinks</option>
+            </select>
+          </label>
+
+          <label>
+            Fokus-Seite
+            <select name="focusPageId" defaultValue={query.focusPageId ?? ""}>
+              <option value="">Kein Fokus</option>
+              {focusOptions.map((page) => (
+                <option key={page.id} value={page.id}>
+                  {page.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button type="submit" className="uwe-btn uwe-btn-primary">
+            Filter anwenden
+          </button>
+        </form>
+
+        <GraphView nodes={graph.nodes} edges={graph.edges} />
+
+        <p className="uwe-empty" style={{ marginTop: "1rem" }}>
+          {graph.nodes.length} Knoten · {graph.edges.length} Kanten
+        </p>
+      </WorldModuleShell>
     </>
   );
 }

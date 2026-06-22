@@ -215,4 +215,66 @@ describe("UWE auth and permissions", () => {
 
     await db.$disconnect();
   });
+
+  it("expires sessions after configured inactivity timeout", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const user = await auth.authenticate("aman@uwe.local", "uwe-dev");
+    assert.ok(user);
+
+    const session = await auth.createSession(user.id);
+    await db.systemSettings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        settings: {
+          auth: { sessionInactivityTimeoutMinutes: 5 },
+        },
+      },
+      update: {
+        settings: {
+          auth: { sessionInactivityTimeoutMinutes: 5 },
+        },
+      },
+    });
+
+    await db.session.update({
+      where: { id: session.id },
+      data: { lastActiveAt: new Date(Date.now() - 6 * 60 * 1000) },
+    });
+
+    assert.equal(await auth.getSessionByToken(session.token), null);
+
+    await db.$disconnect();
+  });
+
+  it("touchSession keeps an active session valid", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const user = await auth.authenticate("aman@uwe.local", "uwe-dev");
+    assert.ok(user);
+
+    const session = await auth.createSession(user.id);
+    await db.systemSettings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        settings: {
+          auth: { sessionInactivityTimeoutMinutes: 5 },
+        },
+      },
+      update: {
+        settings: {
+          auth: { sessionInactivityTimeoutMinutes: 5 },
+        },
+      },
+    });
+
+    assert.equal(await auth.touchSession(session.token), true);
+    assert.ok(await auth.getSessionByToken(session.token));
+
+    await db.$disconnect();
+  });
 });

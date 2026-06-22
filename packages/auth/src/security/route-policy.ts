@@ -66,6 +66,7 @@ export const PORTAL_SESSION_APP_ROUTES = [
 /** Portal API routes that require a logged-in player session. */
 export const PORTAL_SESSION_API_ROUTES = [
   "/api/auth/change-password",
+  "/api/auth/session/touch",
   "/api/auth/two-factor",
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
@@ -76,6 +77,7 @@ export const PORTAL_SESSION_API_ROUTES = [
 /** Studio API routes that require a logged-in session (not Bearer token). */
 export const STUDIO_SESSION_API_ROUTES = [
   "/api/auth/change-password",
+  "/api/auth/session/touch",
   "/api/auth/two-factor",
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
