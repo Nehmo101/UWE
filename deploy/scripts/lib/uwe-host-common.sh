@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared constants and helpers for UWE Linux host setup.
 # shellcheck shell=bash
+# shellcheck disable=SC2034  # constants are consumed by scripts that source this file
 
 readonly SERVICE_USER="uwe"
 readonly SERVICE_GROUP="uwe"
