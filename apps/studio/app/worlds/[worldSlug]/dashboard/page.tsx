@@ -1,18 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
   EmptyState,
   GAME_SESSION_STATUS_LABELS,
-  GlobalSearchForm,
-  PageHeader,
   PageTypeBadge,
   PublishBadge,
-  SidebarNav,
   SidebarSection,
   StatGrid,
-  TopBarBrand,
   VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
@@ -21,8 +15,8 @@ import {
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { worldNavItems } from "@/src/lib/world-nav";
-import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -57,159 +51,21 @@ export default async function WorldDashboardPage({ params }: Props) {
   ];
 
   return (
-    <AppShell
-      bottomNav={studioWorldBottomNav(worldSlug, "overview")}
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="overview"
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Übersicht")}
       contextTitle="Quick Create"
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
-          <GlobalSearchForm
-            action={`/worlds/${worldSlug}`}
-            query=""
-            placeholder="In dieser Welt suchen…"
-          />
-        </>
-      }
-      sidebar={
-        <SidebarSection title="Welt">
-          <SidebarNav items={[{ label: "← Dashboard", href: "/studio" }, ...worldNavItems(worldSlug, "overview")]} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Übersicht" },
-            ]}
-          />
-
-          <PageHeader
-            title={world.name}
-            summary={world.description}
-            actions={
-              <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
-                Seite erstellen
-              </Link>
-            }
-          />
-
-          <StatGrid
-            stats={[
-              { label: "Seiten", value: overview.counts.pages },
-              { label: "NPCs", value: overview.counts.byCategory.npcs },
-              { label: "Orte", value: overview.counts.byCategory.orte },
-              { label: "Fraktionen", value: overview.counts.byCategory.fraktionen },
-              { label: "Sessions", value: overview.counts.gameSessions },
-              {
-                label: "Im Portal sichtbar",
-                value: overview.portal.visiblePageCount,
-                hint: `${overview.counts.drafts} Entwürfe`,
-              },
-            ]}
-          />
-
-          <div className="uwe-dashboard-grid">
-            <section className="uwe-card uwe-dashboard-card">
-              <h2 className="uwe-section-title">Nächste Session</h2>
-              {overview.nextSession ? (
-                <>
-                  <p className="uwe-dashboard-highlight">
-                    <Link href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}>
-                      #{overview.nextSession.sessionNumber} — {overview.nextSession.title}
-                    </Link>
-                  </p>
-                  <p className="uwe-dashboard-muted">
-                    {overview.nextSession.date
-                      ? DATE_FORMAT.format(overview.nextSession.date)
-                      : "Noch kein Termin"}{" "}
-                    · {GAME_SESSION_STATUS_LABELS[overview.nextSession.status]}
-                  </p>
-                  <Link
-                    className="uwe-btn uwe-btn-ghost"
-                    href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}
-                  >
-                    Session vorbereiten →
-                  </Link>
-                </>
-              ) : (
-                <EmptyState
-                  title="Keine Session geplant"
-                  action={
-                    <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
-                      Session planen
-                    </Link>
-                  }
-                />
-              )}
-            </section>
-
-            <section className="uwe-card uwe-dashboard-card">
-              <h2 className="uwe-section-title">Offene Plots</h2>
-              {overview.openPlots.length === 0 ? (
-                <p className="uwe-dashboard-muted">
-                  Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots&ldquo;.
-                </p>
-              ) : (
-                <ul className="uwe-dashboard-list">
-                  {overview.openPlots.map((plot) => (
-                    <li key={plot.sessionId}>
-                      <Link href={`/worlds/${worldSlug}/sessions/${plot.sessionId}`}>
-                        Session #{plot.sessionNumber}
-                      </Link>
-                      <p>{plot.openPlots}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            <section className="uwe-card uwe-dashboard-card uwe-dashboard-card-wide">
-              <h2 className="uwe-section-title">Zuletzt bearbeitet</h2>
-              {overview.recentPages.length === 0 ? (
-                <EmptyState
-                  title="Noch keine Seiten"
-                  action={
-                    <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
-                      Erste Seite erstellen
-                    </Link>
-                  }
-                />
-              ) : (
-                <table className="uwe-page-table">
-                  <thead>
-                    <tr>
-                      <th>Titel</th>
-                      <th>Typ</th>
-                      <th>Sichtbarkeit</th>
-                      <th>Publish</th>
-                      <th>Geändert</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overview.recentPages.map((page) => (
-                      <tr key={page.id}>
-                        <td>
-                          <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                            {page.title}
-                          </Link>
-                        </td>
-                        <td><PageTypeBadge type={page.type} /></td>
-                        <td><VisibilityBadge visibility={page.visibility} /></td>
-                        <td><PublishBadge status={page.publishStatus} /></td>
-                        <td className="uwe-dashboard-muted">
-                          {RELATIVE_FORMAT.format(page.updatedAt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          </div>
-        </>
-      }
+      pageHeader={{
+        title: world.name,
+        summary: world.description,
+        actions: (
+          <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+            Seite erstellen
+          </Link>
+        ),
+      }}
       context={
         <>
           <SidebarSection title="Schnell erstellen">
@@ -257,6 +113,120 @@ export default async function WorldDashboardPage({ params }: Props) {
           )}
         </>
       }
-    />
+    >
+      <StatGrid
+        stats={[
+          { label: "Seiten", value: overview.counts.pages },
+          { label: "NPCs", value: overview.counts.byCategory.npcs },
+          { label: "Orte", value: overview.counts.byCategory.orte },
+          { label: "Fraktionen", value: overview.counts.byCategory.fraktionen },
+          { label: "Sessions", value: overview.counts.gameSessions },
+          {
+            label: "Im Portal sichtbar",
+            value: overview.portal.visiblePageCount,
+            hint: `${overview.counts.drafts} Entwürfe`,
+          },
+        ]}
+      />
+
+      <div className="uwe-dashboard-grid">
+        <section className="uwe-card uwe-dashboard-card">
+          <h2 className="uwe-section-title">Nächste Session</h2>
+          {overview.nextSession ? (
+            <>
+              <p className="uwe-dashboard-highlight">
+                <Link href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}>
+                  #{overview.nextSession.sessionNumber} — {overview.nextSession.title}
+                </Link>
+              </p>
+              <p className="uwe-dashboard-muted">
+                {overview.nextSession.date
+                  ? DATE_FORMAT.format(overview.nextSession.date)
+                  : "Noch kein Termin"}{" "}
+                · {GAME_SESSION_STATUS_LABELS[overview.nextSession.status]}
+              </p>
+              <Link
+                className="uwe-btn uwe-btn-ghost"
+                href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}
+              >
+                Session vorbereiten →
+              </Link>
+            </>
+          ) : (
+            <EmptyState
+              title="Keine Session geplant"
+              action={
+                <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
+                  Session planen
+                </Link>
+              }
+            />
+          )}
+        </section>
+
+        <section className="uwe-card uwe-dashboard-card">
+          <h2 className="uwe-section-title">Offene Plots</h2>
+          {overview.openPlots.length === 0 ? (
+            <p className="uwe-dashboard-muted">
+              Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots&ldquo;.
+            </p>
+          ) : (
+            <ul className="uwe-dashboard-list">
+              {overview.openPlots.map((plot) => (
+                <li key={plot.sessionId}>
+                  <Link href={`/worlds/${worldSlug}/sessions/${plot.sessionId}`}>
+                    Session #{plot.sessionNumber}
+                  </Link>
+                  <p>{plot.openPlots}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="uwe-card uwe-dashboard-card uwe-dashboard-card-wide">
+          <h2 className="uwe-section-title">Zuletzt bearbeitet</h2>
+          {overview.recentPages.length === 0 ? (
+            <EmptyState
+              title="Noch keine Seiten"
+              action={
+                <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+                  Erste Seite erstellen
+                </Link>
+              }
+            />
+          ) : (
+            <table className="uwe-page-table">
+              <thead>
+                <tr>
+                  <th>Titel</th>
+                  <th>Typ</th>
+                  <th>Sichtbarkeit</th>
+                  <th>Publish</th>
+                  <th>Geändert</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.recentPages.map((page) => (
+                  <tr key={page.id}>
+                    <td>
+                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                        {page.title}
+                      </Link>
+                    </td>
+                    <td><PageTypeBadge type={page.type} /></td>
+                    <td><VisibilityBadge visibility={page.visibility} /></td>
+                    <td><PublishBadge status={page.publishStatus} /></td>
+                    <td className="uwe-dashboard-muted">
+                      {RELATIVE_FORMAT.format(page.updatedAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
+    </WorldModuleShell>
   );
 }

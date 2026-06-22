@@ -1,15 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
   EmptyState,
-  GlobalSearchForm,
-  PageHeader,
-  SidebarNav,
   SidebarSection,
   StatGrid,
-  TopBarBrand,
   VisibilityBadge,
   ASSET_TYPE_LABELS,
 } from "@uwe/shared-ui";
@@ -20,8 +14,8 @@ import {
   type InspectorFinding,
   type InspectorSeverity,
 } from "@uwe/database/server";
-import { worldNavItems } from "@/src/lib/world-nav";
-import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { applyInspectorFixAction } from "../../../inspector-actions";
 
 interface Props {
@@ -110,151 +104,17 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
   const activeShareLinks = report.shareLinks.filter((link) => link.active);
 
   return (
-    <AppShell
-      bottomNav={studioWorldBottomNav(worldSlug, "inspector")}
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="inspector"
+      bottomNavActive="inspector"
       contextTitle="Inspektor-Hilfe"
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />
-          <GlobalSearchForm
-            action={`/worlds/${worldSlug}`}
-            query=""
-            placeholder="In dieser Welt suchen…"
-          />
-        </>
-      }
-      sidebar={
-        <SidebarSection title="Welt">
-          <SidebarNav items={[{ label: "← Dashboard", href: "/studio" }, ...worldNavItems(worldSlug, "inspector")]} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Inspektor" },
-            ]}
-          />
-
-          <PageHeader
-            title="Inspektor"
-            summary="Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log)."
-          />
-
-          {fixApplied && (
-            <p className="uwe-inspector-ok" role="status">✓ {fixApplied}</p>
-          )}
-          {fixError && (
-            <p className="uwe-form-error" role="alert">Fix fehlgeschlagen: {fixError}</p>
-          )}
-
-          <StatGrid
-            stats={[
-              { label: "Kritisch", value: criticalCount },
-              { label: "Warnungen", value: warningCount },
-              { label: "Sichtbare Seiten", value: report.visiblePages.length },
-              { label: "Aktive Share-Links", value: activeShareLinks.length },
-            ]}
-          />
-
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Portal-Sicherheit</h2>
-            <FindingList
-              findings={report.safetyFindings}
-              emptyText="Keine Auffälligkeiten — DM-Inhalte bleiben verborgen."
-              worldSlug={worldSlug}
-            />
-          </section>
-
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Im Portal sichtbare Seiten</h2>
-            {report.visiblePages.length === 0 ? (
-              <EmptyState
-                title="Nichts veröffentlicht"
-                description="Aktuell ist keine Seite dieser Welt im Player Portal sichtbar."
-              />
-            ) : (
-              <table className="uwe-page-table">
-                <thead>
-                  <tr>
-                    <th>Titel</th>
-                    <th>Sichtbarkeit</th>
-                    <th>Sichtbare Blöcke</th>
-                    <th>Gefilterte Blöcke</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.visiblePages.map((page) => (
-                    <tr key={page.href}>
-                      <td><Link href={page.href}>{page.title}</Link></td>
-                      <td><VisibilityBadge visibility={page.visibility} /></td>
-                      <td>{page.visibleBlockCount}</td>
-                      <td>{page.hiddenBlockCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Share-Links</h2>
-            {report.shareLinks.length === 0 ? (
-              <p className="uwe-inspector-ok">✓ Keine Share-Links vorhanden.</p>
-            ) : (
-              <table className="uwe-page-table">
-                <thead>
-                  <tr>
-                    <th>Ziel</th>
-                    <th>Status</th>
-                    <th>Passwort</th>
-                    <th>Ablauf</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.shareLinks.map((link) => (
-                    <tr key={link.id}>
-                      <td>{link.targetTitle}</td>
-                      <td>{link.active ? "Aktiv" : "Inaktiv"}</td>
-                      <td>{link.hasPassword ? "Ja" : "Nein"}</td>
-                      <td>{link.expiresAt ? DATE_FORMAT.format(link.expiresAt) : "Nie"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Sichtbare Assets</h2>
-            {report.visibleAssets.length === 0 ? (
-              <p className="uwe-inspector-ok">
-                ✓ Keine Assets im Portal sichtbar ({report.dmOnlyAssetCount} DM-only).
-              </p>
-            ) : (
-              <ul className="uwe-inspector-assets">
-                {report.visibleAssets.map((asset, index) => (
-                  <li key={`${asset.title}-${index}`}>
-                    {asset.title}{" "}
-                    <span className="uwe-dashboard-muted">({ASSET_TYPE_LABELS[asset.type]})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Kanon-Warnungen</h2>
-            <FindingList
-              findings={report.canonFindings}
-              emptyText="Keine Widersprüche, toten Links oder Duplikate gefunden."
-              worldSlug={worldSlug}
-            />
-          </section>
-        </>
-      }
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Inspektor", `/worlds/${worldSlug}/inspector`)}
+      pageHeader={{
+        title: "Inspektor",
+        summary: "Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log).",
+      }}
       context={
         <SidebarSection title="Portal-Konfiguration">
           <ul className="uwe-sidebar-links">
@@ -274,6 +134,117 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           </ul>
         </SidebarSection>
       }
-    />
+    >
+      {fixApplied && (
+        <p className="uwe-inspector-ok" role="status">✓ {fixApplied}</p>
+      )}
+      {fixError && (
+        <p className="uwe-form-error" role="alert">Fix fehlgeschlagen: {fixError}</p>
+      )}
+
+      <StatGrid
+        stats={[
+          { label: "Kritisch", value: criticalCount },
+          { label: "Warnungen", value: warningCount },
+          { label: "Sichtbare Seiten", value: report.visiblePages.length },
+          { label: "Aktive Share-Links", value: activeShareLinks.length },
+        ]}
+      />
+
+      <section className="uwe-section">
+        <h2 className="uwe-section-title">Portal-Sicherheit</h2>
+        <FindingList
+          findings={report.safetyFindings}
+          emptyText="Keine Auffälligkeiten — DM-Inhalte bleiben verborgen."
+          worldSlug={worldSlug}
+        />
+      </section>
+
+      <section className="uwe-section">
+        <h2 className="uwe-section-title">Im Portal sichtbare Seiten</h2>
+        {report.visiblePages.length === 0 ? (
+          <EmptyState
+            title="Nichts veröffentlicht"
+            description="Aktuell ist keine Seite dieser Welt im Player Portal sichtbar."
+          />
+        ) : (
+          <table className="uwe-page-table">
+            <thead>
+              <tr>
+                <th>Titel</th>
+                <th>Sichtbarkeit</th>
+                <th>Sichtbare Blöcke</th>
+                <th>Gefilterte Blöcke</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.visiblePages.map((page) => (
+                <tr key={page.href}>
+                  <td><Link href={page.href}>{page.title}</Link></td>
+                  <td><VisibilityBadge visibility={page.visibility} /></td>
+                  <td>{page.visibleBlockCount}</td>
+                  <td>{page.hiddenBlockCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="uwe-section">
+        <h2 className="uwe-section-title">Share-Links</h2>
+        {report.shareLinks.length === 0 ? (
+          <p className="uwe-inspector-ok">✓ Keine Share-Links vorhanden.</p>
+        ) : (
+          <table className="uwe-page-table">
+            <thead>
+              <tr>
+                <th>Ziel</th>
+                <th>Status</th>
+                <th>Passwort</th>
+                <th>Ablauf</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.shareLinks.map((link) => (
+                <tr key={link.id}>
+                  <td>{link.targetTitle}</td>
+                  <td>{link.active ? "Aktiv" : "Inaktiv"}</td>
+                  <td>{link.hasPassword ? "Ja" : "Nein"}</td>
+                  <td>{link.expiresAt ? DATE_FORMAT.format(link.expiresAt) : "Nie"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="uwe-section">
+        <h2 className="uwe-section-title">Sichtbare Assets</h2>
+        {report.visibleAssets.length === 0 ? (
+          <p className="uwe-inspector-ok">
+            ✓ Keine Assets im Portal sichtbar ({report.dmOnlyAssetCount} DM-only).
+          </p>
+        ) : (
+          <ul className="uwe-inspector-assets">
+            {report.visibleAssets.map((asset, index) => (
+              <li key={`${asset.title}-${index}`}>
+                {asset.title}{" "}
+                <span className="uwe-dashboard-muted">({ASSET_TYPE_LABELS[asset.type]})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="uwe-section">
+        <h2 className="uwe-section-title">Kanon-Warnungen</h2>
+        <FindingList
+          findings={report.canonFindings}
+          emptyText="Keine Widersprüche, toten Links oder Duplikate gefunden."
+          worldSlug={worldSlug}
+        />
+      </section>
+    </WorldModuleShell>
   );
 }

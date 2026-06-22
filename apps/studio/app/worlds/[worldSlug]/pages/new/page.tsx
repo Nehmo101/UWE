@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
   PAGE_TYPE_LABELS,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
   VISIBILITY_LABELS,
   PUBLISH_LABELS,
   CANONICAL_LABELS,
@@ -21,6 +15,8 @@ import {
   PublishStatusEnum,
   CanonicalStatusEnum,
 } from "@uwe/database/server";
+import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createPageAction } from "../../../../actions";
 
 interface Props {
@@ -61,169 +57,159 @@ export default async function NewPageForm({ params, searchParams }: Props) {
   }
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Neue Seite" href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
-              { label: "Seitenliste", href: `/worlds/${worldSlug}` },
-            ]}
-          />
-        </SidebarSection>
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="new-page"
+      campaignSlug={campaignSlug}
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")}
+      pageHeader={{
+        title: "Neue Seite",
+        summary: "Wähle eine Vorlage und lege los — Slug und DM-Notizblöcke werden automatisch angelegt.",
+      }}
+      sidebarExtra={
+        <WorldContextSidebar
+          items={[
+            { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
+            { label: "Seitenliste", href: `/worlds/${worldSlug}` },
+          ]}
+        />
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Neue Seite" },
-            ]}
-          />
+      showSearch={false}
+    >
+      <div className="uwe-template-grid" role="group" aria-label="Seitenvorlagen">
+        {templates.map((entry) => (
+          <Link
+            key={entry.id}
+            href={templateHref(entry.slug)}
+            className={`uwe-template-card${entry.id === template.id ? " active" : ""}`}
+          >
+            <strong>{entry.name}</strong>
+            <span>{entry.description}</span>
+          </Link>
+        ))}
+      </div>
 
-          <PageHeader
-            title="Neue Seite"
-            summary="Wähle eine Vorlage und lege los — Slug und DM-Notizblöcke werden automatisch angelegt."
-          />
+      <p className="uwe-form-hint">
+        <Link href="/templates">Templates verwalten →</Link>
+      </p>
 
-          <div className="uwe-template-grid" role="group" aria-label="Seitenvorlagen">
-            {templates.map((entry) => (
-              <Link
-                key={entry.id}
-                href={templateHref(entry.slug)}
-                className={`uwe-template-card${entry.id === template.id ? " active" : ""}`}
-              >
-                <strong>{entry.name}</strong>
-                <span>{entry.description}</span>
-              </Link>
+      <form action={createPageAction} className="uwe-form" key={template.id}>
+        <input type="hidden" name="worldSlug" value={worldSlug} />
+        <input type="hidden" name="template" value={template.slug} />
+
+        <label>
+          Titel
+          <input name="title" required placeholder={template.titlePlaceholder} />
+        </label>
+
+        {campaigns.length > 0 && (
+          <label>
+            Kampagne
+            <select name="campaignId" defaultValue={selectedCampaign?.id ?? ""}>
+              <option value="">Keine Kampagne (weltweit)</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <label>
+          Slug (optional)
+          <input name="slug" placeholder="leer lassen für automatischen Slug" />
+        </label>
+
+        <label>
+          Typ
+          <select name="type" defaultValue={template.pageType}>
+            {Object.values(PageTypeEnum).map((type) => (
+              <option key={type} value={type}>
+                {PAGE_TYPE_LABELS[type]}
+              </option>
             ))}
-          </div>
+          </select>
+        </label>
 
+        <label>
+          Zusammenfassung
+          <textarea name="summary" rows={3} />
+        </label>
+
+        <label>
+          Sichtbarkeit
+          <select
+            name="visibility"
+            defaultValue={
+              template.slug === "blank"
+                ? settings.worlds.defaultVisibility
+                : template.defaultVisibility
+            }
+          >
+            {Object.values(VisibilityEnum).map((v) => (
+              <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
+            ))}
+          </select>
+          <small className="uwe-field-hint">
+            „Portal (ohne Login)“ und „Öffentlich (Share-Link)“ sind nach dem
+            Veröffentlichen ohne Login über die Player-Routen (/worlds/…) sichtbar.
+            „Nur GM“ erscheint dort niemals.
+          </small>
+        </label>
+
+        <label>
+          Publish Status
+          <select name="publishStatus" defaultValue="draft">
+            {Object.values(PublishStatusEnum).map((v) => (
+              <option key={v} value={v}>{PUBLISH_LABELS[v]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Canonical Status
+          <select name="canonicalStatus" defaultValue={settings.worlds.defaultCanonicalStatus}>
+            {Object.values(CanonicalStatusEnum).map((v) => (
+              <option key={v} value={v}>{CANONICAL_LABELS[v]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Tags (kommagetrennt)
+          <input name="tags" placeholder="tag1, tag2" />
+        </label>
+
+        <label>
+          Erster Inhaltsblock
+          <textarea
+            name="initialContent"
+            rows={template.slug === "blank" ? 6 : 12}
+            defaultValue={template.blocks[0]?.content ?? ""}
+            placeholder="[[Wikilinks]] unterstützt"
+          />
+        </label>
+
+        {extraBlocks.length > 0 && (
           <p className="uwe-form-hint">
-            <Link href="/templates">Templates verwalten →</Link>
+            Diese Vorlage legt zusätzlich {extraBlocks.length}{" "}
+            {extraBlocks.length === 1 ? "Block" : "Blöcke"} an:{" "}
+            {extraBlocks
+              .map((block) =>
+                block.type === "gm_note" ? "DM-Notiz (nur für dich)" : "Inhaltsblock",
+              )
+              .join(", ")}
+            .
           </p>
+        )}
 
-          <form action={createPageAction} className="uwe-form" key={template.id}>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="template" value={template.slug} />
-            {/* Campaign is chosen via the visible select below — no hidden default. */}
-
-            <label>
-              Titel
-              <input name="title" required placeholder={template.titlePlaceholder} />
-            </label>
-
-            {campaigns.length > 0 && (
-              <label>
-                Kampagne
-                <select name="campaignId" defaultValue={selectedCampaign?.id ?? ""}>
-                  <option value="">Keine Kampagne (weltweit)</option>
-                  {campaigns.map((campaign) => (
-                    <option key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <label>
-              Slug (optional)
-              <input name="slug" placeholder="leer lassen für automatischen Slug" />
-            </label>
-
-            <label>
-              Typ
-              <select name="type" defaultValue={template.pageType}>
-                {Object.values(PageTypeEnum).map((type) => (
-                  <option key={type} value={type}>
-                    {PAGE_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Zusammenfassung
-              <textarea name="summary" rows={3} />
-            </label>
-
-            <label>
-              Sichtbarkeit
-              <select
-                name="visibility"
-                defaultValue={
-                  template.slug === "blank"
-                    ? settings.worlds.defaultVisibility
-                    : template.defaultVisibility
-                }
-              >
-                {Object.values(VisibilityEnum).map((v) => (
-                  <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
-                ))}
-              </select>
-              <small className="uwe-field-hint">
-                „Portal (ohne Login)“ und „Öffentlich (Share-Link)“ sind nach dem
-                Veröffentlichen ohne Login über die Player-Routen (/worlds/…) sichtbar.
-                „Nur GM“ erscheint dort niemals.
-              </small>
-            </label>
-
-            <label>
-              Publish Status
-              <select name="publishStatus" defaultValue="draft">
-                {Object.values(PublishStatusEnum).map((v) => (
-                  <option key={v} value={v}>{PUBLISH_LABELS[v]}</option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Canonical Status
-              <select name="canonicalStatus" defaultValue={settings.worlds.defaultCanonicalStatus}>
-                {Object.values(CanonicalStatusEnum).map((v) => (
-                  <option key={v} value={v}>{CANONICAL_LABELS[v]}</option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Tags (kommagetrennt)
-              <input name="tags" placeholder="tag1, tag2" />
-            </label>
-
-            <label>
-              Erster Inhaltsblock
-              <textarea
-                name="initialContent"
-                rows={template.slug === "blank" ? 6 : 12}
-                defaultValue={template.blocks[0]?.content ?? ""}
-                placeholder="[[Wikilinks]] unterstützt"
-              />
-            </label>
-
-            {extraBlocks.length > 0 && (
-              <p className="uwe-form-hint">
-                Diese Vorlage legt zusätzlich {extraBlocks.length}{" "}
-                {extraBlocks.length === 1 ? "Block" : "Blöcke"} an:{" "}
-                {extraBlocks
-                  .map((block) =>
-                    block.type === "gm_note" ? "DM-Notiz (nur für dich)" : "Inhaltsblock",
-                  )
-                  .join(", ")}
-                .
-              </p>
-            )}
-
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="submit" className="uwe-btn uwe-btn-primary">Seite erstellen</button>
-              <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
-            </div>
-          </form>
-        </>
-      }
-    />
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button type="submit" className="uwe-btn uwe-btn-primary">Seite erstellen</button>
+          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
+        </div>
+      </form>
+    </WorldModuleShell>
   );
 }
