@@ -15,10 +15,10 @@ export const importSourceRegistry: ImportSourceRegistry = {
     return sources[format];
   },
   supportedFormats(): ImportFormat[] {
-    return ["json"];
+    return ["json", "markdown"];
   },
   plannedFormats(): ImportFormat[] {
-    return ["markdown", "html"];
+    return ["html"];
   },
 };
 

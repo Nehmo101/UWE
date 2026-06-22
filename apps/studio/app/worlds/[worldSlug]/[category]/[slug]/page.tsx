@@ -26,7 +26,7 @@ import {
   type ShareTargetType,
 } from "@uwe/database/server";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
-import { pagePreviewHref } from "../../../../actions";
+import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 

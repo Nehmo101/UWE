@@ -1,3 +1,5 @@
+import { resolveUweAppUrls } from "@uwe/auth";
+
 export type UweAuthApp = "studio" | "portal";
 
 export interface AuthLinkTargets {
@@ -6,6 +8,9 @@ export interface AuthLinkTargets {
   loginHref: string;
   logoutHref: string;
 }
+
+const DEV_STUDIO_URL = "http://localhost:3000";
+const DEV_PORTAL_URL = "http://localhost:3001";
 
 function trimBaseUrl(url: string | undefined): string {
   return url?.replace(/\/$/, "") ?? "";
@@ -43,9 +48,13 @@ export function resolveAuthLinks(options: {
   };
 }
 
-export function readPublicAppUrls(): { studioBaseUrl: string; portalBaseUrl: string } {
+export function readPublicAppUrls(
+  env: NodeJS.ProcessEnv = process.env,
+): { studioBaseUrl: string; portalBaseUrl: string } {
+  const urls = resolveUweAppUrls(env);
+
   return {
-    studioBaseUrl: trimBaseUrl(process.env.NEXT_PUBLIC_STUDIO_URL),
-    portalBaseUrl: trimBaseUrl(process.env.NEXT_PUBLIC_PORTAL_URL),
+    studioBaseUrl: urls.studioUrl ?? DEV_STUDIO_URL,
+    portalBaseUrl: urls.portalUrl ?? DEV_PORTAL_URL,
   };
 }

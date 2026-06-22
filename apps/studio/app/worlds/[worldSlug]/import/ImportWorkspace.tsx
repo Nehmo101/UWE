@@ -42,10 +42,44 @@ function defaultSelectedIds(items: ImportItemPreview[]): Set<string> {
   return new Set(items.filter((item) => isSelectable(item.status)).map((item) => item.itemId));
 }
 
+function formatFromFileName(fileName: string): ImportFormat | null {
+  const lower = fileName.toLocaleLowerCase("de");
+  if (lower.endsWith(".json")) return "json";
+  if (lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt")) {
+    return "markdown";
+  }
+  return null;
+}
+
+function buildMarkdownDocumentFromFile(fileName: string, text: string): string {
+  const title = fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("---")) {
+    return trimmed;
+  }
+
+  return `---
+title: ${title}
+source: ${fileName}
+---
+
+${trimmed}`;
+}
+
+function combineImportFiles(files: Array<{ name: string; text: string }>): string {
+  return files
+    .map((file) => buildMarkdownDocumentFromFile(file.name, file.text))
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+}
+
 export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }: Props) {
   const [format, setFormat] = useState<ImportFormat>(supportedFormats[0] ?? "json");
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileCount, setFileCount] = useState(0);
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<ImportExecuteResult | null>(null);
@@ -62,20 +96,51 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
   }, [preview]);
 
   const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = [...(event.target.files ?? [])];
+    if (files.length === 0) return;
 
-    setFileName(file.name);
     setError(null);
     setResult(null);
 
-    const text = await file.text();
-    setContent(text);
+    const loaded = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        text: await file.text(),
+      })),
+    );
+
+    const detectedFormat = formatFromFileName(files[0]!.name);
+    if (detectedFormat) {
+      setFormat(detectedFormat);
+    }
+
+    if (files.length === 1 && detectedFormat === "json") {
+      setFileName(files[0]!.name);
+      setFileCount(1);
+      setContent(loaded[0]!.text);
+      return;
+    }
+
+    const combined = combineImportFiles(loaded);
+    setFormat("markdown");
+    setFileName(
+      files.length === 1 ? files[0]!.name : `${files.length} Dateien`,
+    );
+    setFileCount(files.length);
+    setContent(combined);
+  }, []);
+
+  const handleContentChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(event.target.value);
+    setFileName(null);
+    setFileCount(0);
+    setError(null);
+    setResult(null);
   }, []);
 
   const handlePreview = useCallback(async () => {
     if (!content.trim()) {
-      setError("Bitte zuerst eine Import-Datei auswählen.");
+      setError("Bitte zuerst Text einfügen oder eine Import-Datei auswählen.");
       return;
     }
 
@@ -213,10 +278,12 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
   return (
     <div className="uwe-import-workspace">
       <section className="uwe-panel">
-        <h2>Import-Datei</h2>
+        <h2>Import-Quelle</h2>
         <p className="uwe-panel-intro">
-          Export aus KnoteForge Local als JSON hochladen. Markdown und HTML sind vorbereitet,
-          aber noch nicht verfügbar.
+          KnoteForge-Export als JSON — entweder das UWE-Importformat (Objekt mit{" "}
+          <code>entities</code>) oder einen Eingang-Export (<code>eingang_export.json</code>).
+          Alternativ mehrere unstrukturierte Texte als Markdown/TXT: getrennt durch{" "}
+          <code>---</code> in einer Datei oder als Mehrfachauswahl.
         </p>
 
         <div className="uwe-form-grid">
@@ -228,7 +295,7 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
             >
               {supportedFormats.map((entry) => (
                 <option key={entry} value={entry}>
-                  {entry.toUpperCase()}
+                  {entry === "markdown" ? "MARKDOWN / TEXT" : entry.toUpperCase()}
                 </option>
               ))}
               {plannedFormats.map((entry) => (
@@ -240,14 +307,30 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
           </label>
 
           <label>
-            Datei
-            <input type="file" accept=".json,application/json" onChange={handleFileChange} />
+            Datei(en)
+            <input
+              type="file"
+              accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain"
+              multiple
+              onChange={handleFileChange}
+            />
           </label>
         </div>
 
+        <label>
+          Text einfügen (optional)
+          <textarea
+            rows={8}
+            value={content}
+            onChange={handleContentChange}
+            placeholder={`# Lore-Fragment\n\nUnstrukturierter Text mit [[Wikilinks]].\n\n---\n\n# Zweites Fragment\n\nWeiterer Text …`}
+          />
+        </label>
+
         {fileName && (
           <p className="uwe-table-sub">
-            Ausgewählt: {fileName} ({Math.round(content.length / 1024)} KB)
+            Ausgewählt: {fileName}
+            {fileCount > 1 ? ` (${fileCount} Dateien)` : ""} ({Math.round(content.length / 1024)} KB)
           </p>
         )}
 

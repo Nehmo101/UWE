@@ -28,8 +28,8 @@ import {
   updateContentBlockAction,
   createContentBlockAction,
   deleteContentBlockAction,
-  pagePreviewHref,
 } from "../../../../../actions";
+import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
