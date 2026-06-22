@@ -6,7 +6,8 @@ import {
   createAuthService,
   createPrismaClient,
   createTwoFactorService,
-  logAuditEvent,
+  logLoginAttempt,
+  resolveLoginFailureReason,
 } from "@uwe/database/server";
 import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
 import { checkRateLimitAsync, clientIpFromHeaders, resetRateLimitAsync } from "@/src/lib/rate-limit";
@@ -15,11 +16,27 @@ export async function POST(request: Request) {
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
 
+  const auditRequest = auditRequestFromHeaders(request.headers);
   const body = (await request.json()) as { email?: string; password?: string };
   const email = body.email?.trim();
   const password = body.password;
 
   if (!email || !password) {
+    const db = createPrismaClient();
+    try {
+      await logLoginAttempt({
+        db,
+        surface: "portal",
+        request: auditRequest,
+        email,
+        reason: "missing_credentials",
+        httpStatus: 400,
+        errorMessage: "E-Mail und Passwort sind erforderlich.",
+      });
+    } finally {
+      await db.$disconnect();
+    }
+
     return NextResponse.json({ error: "E-Mail und Passwort sind erforderlich." }, { status: 400 });
   }
 
@@ -29,11 +46,15 @@ export async function POST(request: Request) {
   if (!rate.allowed) {
     const db = createPrismaClient();
     try {
-      await logAuditEvent(db, {
-        action: "rate_limit_hit",
-        targetType: "session",
-        request: auditRequestFromHeaders(request.headers),
-        metadata: { endpoint: "login", email },
+      await logLoginAttempt({
+        db,
+        surface: "portal",
+        request: auditRequest,
+        email,
+        reason: "rate_limited",
+        httpStatus: 429,
+        errorMessage: "Zu viele Anmeldeversuche. Bitte warte einen Moment.",
+        extraMetadata: { retryAfterSeconds: rate.retryAfterSeconds },
       });
     } finally {
       await db.$disconnect();
@@ -48,16 +69,33 @@ export async function POST(request: Request) {
   const db = createPrismaClient();
   const auth = createAuthService(db);
   const twoFactor = createTwoFactorService(db);
-  const auditRequest = auditRequestFromHeaders(request.headers);
 
   try {
+    const normalizedEmail = email.toLowerCase();
+    const existingUser = await db.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, status: true },
+    });
+
     const user = await auth.authenticate(email, password);
     if (!user) {
-      await logAuditEvent(db, {
-        action: "login_failed",
-        targetType: "session",
+      const reason = resolveLoginFailureReason({
+        surface: "portal",
+        email: normalizedEmail,
+        userFound: Boolean(existingUser),
+        userActive: existingUser?.status === "active",
+        passwordValid: false,
+      });
+
+      await logLoginAttempt({
+        db,
+        surface: "portal",
         request: auditRequest,
-        metadata: { email },
+        email: normalizedEmail,
+        actorUserId: existingUser?.id ?? null,
+        reason,
+        httpStatus: 401,
+        errorMessage: "Ungültige Anmeldedaten.",
       });
 
       return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
@@ -67,6 +105,17 @@ export async function POST(request: Request) {
 
     if (await twoFactor.isEnabled(user.id)) {
       const challenge = await twoFactor.createLoginChallenge(user.id);
+      await logLoginAttempt({
+        db,
+        surface: "portal",
+        request: auditRequest,
+        email: user.email,
+        actorUserId: user.id,
+        reason: "two_factor_required",
+        httpStatus: 200,
+        extraMetadata: { challengeExpiresAt: challenge.expiresAt.toISOString() },
+      });
+
       return NextResponse.json({
         requiresTwoFactor: true,
         challengeToken: challenge.challengeToken,
@@ -83,13 +132,14 @@ export async function POST(request: Request) {
       expires: sessionExpiresAt(),
     });
 
-    await logAuditEvent(db, {
-      actorUserId: user.id,
-      action: "login_success",
-      targetType: "session",
-      targetId: session.id,
+    await logLoginAttempt({
+      db,
+      surface: "portal",
       request: auditRequest,
-      metadata: { email: user.email },
+      email: user.email,
+      actorUserId: user.id,
+      sessionId: session.id,
+      httpStatus: 200,
     });
 
     return NextResponse.json({
@@ -101,6 +151,23 @@ export async function POST(request: Request) {
       },
       forcePasswordChange: user.forcePasswordChange ?? false,
     });
+  } catch (error) {
+    await logLoginAttempt({
+      db,
+      surface: "portal",
+      request: auditRequest,
+      email,
+      reason: "server_error",
+      httpStatus: 500,
+      errorMessage: "Anmeldung vorübergehend nicht möglich.",
+      serverError: error,
+    });
+
+    console.error("[uwe] portal login failed:", error);
+    return NextResponse.json(
+      { error: "Anmeldung vorübergehend nicht möglich." },
+      { status: 500 },
+    );
   } finally {
     await db.$disconnect();
   }

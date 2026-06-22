@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   AUDIT_ACTION_LABELS,
   createAuditLogService,
+  LOGIN_AUDIT_REASON_LABELS,
   prisma,
   type AuditAction,
 } from "@uwe/database/server";
@@ -61,5 +62,6 @@ export async function GET(request: Request) {
     })),
     total,
     actionLabels: AUDIT_ACTION_LABELS,
+    loginReasonLabels: LOGIN_AUDIT_REASON_LABELS,
   });
 }
