@@ -123,6 +123,16 @@ describe("shared-ui components", () => {
     assert.doesNotMatch(html, /Geheim/);
   });
 
+  it("declares CSS imports before other rules so bundlers include component styles", () => {
+    const componentsImport = uweCss.indexOf('@import "./uwe-components.css"');
+    const polishImport = uweCss.indexOf('@import "./uwe-visual-polish.css"');
+    const rootIndex = uweCss.indexOf(":root {");
+    assert.ok(componentsImport >= 0);
+    assert.ok(polishImport >= 0);
+    assert.ok(componentsImport < rootIndex);
+    assert.ok(polishImport < rootIndex);
+  });
+
   it("includes mobile navigation styles in shared CSS", () => {
     assert.match(uweCss, /uwe-mobile-nav-toggle/);
     assert.match(uweCss, /max-width: 960px/);

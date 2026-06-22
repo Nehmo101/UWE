@@ -2,15 +2,11 @@ import Link from "next/link";
 import {
   EmptyState,
   HealthBadge,
-  SidebarNav,
-  SidebarSection,
-  StudioShell,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS, formatEuroFromCents, prisma } from "@uwe/database/server";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { StudioAppShell } from "@/components/StudioAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
-import { getCurrentAuthUser } from "@/src/lib/auth";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -24,33 +20,23 @@ function statusDot(ok: boolean, warn = false): "ok" | "warn" | "error" {
 
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
-  const user = await getCurrentAuthUser();
   const data = await getTodayDashboardData(prisma, { useMockInference });
 
   return (
-    <StudioShell
+    <StudioAppShell
+      variant="module"
+      activePath="/today"
       showRail
       railActiveId="today"
-      subtitle="Heute"
-      brandHref="/today"
-      bottomNav={studioGlobalBottomNav("today")}
-      contextTitle="Admin Cockpit"
-      pageHeader={{
-        title: "Heute",
-        summary: "Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick.",
-        actions: (
-          <Link href="/capture?quick=1" className="uwe-btn uwe-btn-primary">
-            + Capture
-          </Link>
-        ),
-      }}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/today", { user })} />
-        </SidebarSection>
+      title="Heute"
+      summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
+      actions={
+        <Link href="/capture?quick=1" className="uwe-btn uwe-btn-primary">
+          + Capture
+        </Link>
       }
-      main={
-        <>
+      bottomNav={studioGlobalBottomNav("today")}
+    >
           <section className="uwe-section">
             <h2 className="uwe-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">
@@ -351,8 +337,6 @@ export default async function TodayPage() {
           <p className="uwe-dashboard-muted">
             <HealthBadge status={data.systemOk ? "ok" : "degraded"} label={data.systemLabel} />
           </p>
-        </>
-      }
-    />
+    </StudioAppShell>
   );
 }

@@ -1,5 +1,8 @@
 /* UWE shared workspace design — token-driven theme system */
 
+@import "./uwe-visual-polish.css";
+@import "./uwe-components.css";
+
 :root {
   /* Core palette (overridden at runtime by theme engine) */
   --uwe-bg: #0b1220;
@@ -206,9 +209,6 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
   --uwe-success: #86efac;
   --uwe-info: #c4b5fd;
 }
-
-@import "./uwe-visual-polish.css";
-@import "./uwe-components.css";
 
 /* === UWE component styles === */
 

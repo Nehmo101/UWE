@@ -1,11 +1,6 @@
 import Link from "next/link";
 import {
-  AppShell,
   EmptyState,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
   CAPTURE_STATUS_LABELS,
@@ -16,8 +11,7 @@ import {
 } from "@uwe/database/server";
 import { CaptureImageUpload } from "@/components/CaptureImageUpload";
 import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { deleteCaptureAction } from "../capture-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -49,22 +43,12 @@ export default async function CapturePage({ searchParams }: Props) {
   const showQuickForm = quick === "1" || quick === "true";
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("capture")}
-      contextTitle="Capture"
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Capture Inbox" href="/today" />}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/capture")} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader
-            title="Capture Inbox"
-            summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
-          />
-
+    <AdminModuleShell
+      activePath="/capture"
+      title="Capture Inbox"
+      summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
+      bottomNav="capture"
+    >
           <section className="uwe-card uwe-section">
             <h2 className="uwe-section-title">Bild erfassen (Mobile)</h2>
             <p className="uwe-hint">
@@ -147,8 +131,6 @@ export default async function CapturePage({ searchParams }: Props) {
           <p className="uwe-dashboard-muted">
             <Link href="/today">← Zurück zu Heute</Link>
           </p>
-        </>
-      }
-    />
+    </AdminModuleShell>
   );
 }

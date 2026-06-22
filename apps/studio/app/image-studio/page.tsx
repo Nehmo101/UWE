@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  EmptyState,
-  SidebarNav,
-  SidebarSection,
-  StudioShell,
-} from "@uwe/shared-ui";
+import { EmptyState } from "@uwe/shared-ui";
 import {
   createImageStudioService,
   getAppRepository,
@@ -13,10 +8,9 @@ import {
   prisma,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createImageStudioJobAction } from "../integration-actions";
 
 interface Props {
@@ -47,68 +41,53 @@ export default async function ImageStudioPage({ searchParams }: Props) {
   );
 
   return (
-    <StudioShell
-      showRail
-      railActiveId="image-studio"
-      subtitle="Image Studio"
-      brandHref="/image-studio"
-      bottomNav={studioGlobalBottomNav("more")}
-      pageHeader={{
-        title: "Image Studio",
-        summary:
-          "Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant.",
-      }}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/image-studio")} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          {!config.enabled && (
-            <p className="uwe-notice uwe-notice-warn">
-              Image Studio ist deaktiviert. Setze IMAGE_STUDIO_ENABLED=true in der Umgebung.
-            </p>
-          )}
+    <AdminModuleShell
+      activePath="/image-studio"
+      title="Image Studio"
+      summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
+    >
+      {!config.enabled && (
+        <p className="uwe-notice uwe-notice-warn">
+          Image Studio ist deaktiviert. Setze IMAGE_STUDIO_ENABLED=true in der Umgebung.
+        </p>
+      )}
 
-          {pageId && (
-            <p className="uwe-notice">
-              Verknüpft mit Seite <code>{pageId}</code> — Ergebnis wird automatisch verlinkt.
-            </p>
-          )}
+      {pageId && (
+        <p className="uwe-notice">
+          Verknüpft mit Seite <code>{pageId}</code> — Ergebnis wird automatisch verlinkt.
+        </p>
+      )}
 
-          <ImageStudioWorkspace inlineForm={jobForm} disabled={!config.enabled} />
+      <ImageStudioWorkspace inlineForm={jobForm} disabled={!config.enabled} />
 
-          <section>
-            <h2 className="uwe-section-title">Projekte</h2>
-            {projects.length === 0 ? (
-              <EmptyState
-                title="Noch keine Image-Studio-Projekte"
-                description="Starte oben mit einem Prompt."
-              />
-            ) : (
-              <ul className="uwe-list-cards">
-                {projects.map((project) => (
-                  <li key={project.id} className="uwe-list-card">
-                    <strong>{project.title}</strong>
-                    <span className="uwe-badge">
-                      {IMAGE_STUDIO_STATUS_LABELS[project.status]}
-                    </span>
-                    {project.prompt && (
-                      <p className="uwe-dashboard-muted">{project.prompt.slice(0, 120)}</p>
-                    )}
-                    {project.versions[0]?.assetId && (
-                      <Link href={`/api/assets/${project.versions[0].assetId}/file`} target="_blank">
-                        Vorschau
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      }
-    />
+      <section>
+        <h2 className="uwe-section-title">Projekte</h2>
+        {projects.length === 0 ? (
+          <EmptyState
+            title="Noch keine Image-Studio-Projekte"
+            description="Starte oben mit einem Prompt."
+          />
+        ) : (
+          <ul className="uwe-list-cards">
+            {projects.map((project) => (
+              <li key={project.id} className="uwe-list-card">
+                <strong>{project.title}</strong>
+                <span className="uwe-badge">
+                  {IMAGE_STUDIO_STATUS_LABELS[project.status]}
+                </span>
+                {project.prompt && (
+                  <p className="uwe-dashboard-muted">{project.prompt.slice(0, 120)}</p>
+                )}
+                {project.versions[0]?.assetId && (
+                  <Link href={`/api/assets/${project.versions[0].assetId}/file`} target="_blank">
+                    Vorschau
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </AdminModuleShell>
   );
 }
