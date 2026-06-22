@@ -12,6 +12,8 @@ export type WorldNavKey =
   | "import"
   | "dnd-api"
   | "backup"
+  | "brain"
+  | "ai-runs"
   | "new-page";
 
 /** Canonical world sidebar for Studio. */
@@ -28,6 +30,8 @@ export function worldNavItems(worldSlug: string, active?: WorldNavKey) {
     { key: "notes", label: "Spielernotizen", href: `${base}/notes` },
     { key: "soundboard", label: "Soundboard", href: `${base}/soundboard` },
     { key: "graph", label: "Graph", href: `${base}/graph` },
+    { key: "brain", label: "Brain", href: `${base}/brain` },
+    { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
     { key: "inspector", label: "Inspektor", href: `${base}/inspector` },
     { key: "import", label: "Import", href: `${base}/import` },
     { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },

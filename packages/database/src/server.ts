@@ -1331,6 +1331,8 @@ export type {
 export { createMailComposeService, MailComposeService } from "./mail-compose-service";
 
 export { createMailAccountService, MailAccountService } from "./mail-account-service";
+export { createMailPortalService, MailPortalService } from "./mail-portal-service";
+export { scoreMailPriority } from "./mail-priority-service";
 export type { CreateMailAccountInput, CreateMailDraftInput } from "./mail-account-service";
 
 export {

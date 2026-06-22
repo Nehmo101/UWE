@@ -1586,46 +1586,180 @@ model MailMessageLog {
 }
 
 model MailAccount {
-  id            String    @id @default(cuid())
-  label         String
-  imapHost      String?   @map("imap_host")
-  imapPort      Int?      @map("imap_port")
-  smtpHost      String    @map("smtp_host")
-  smtpPort      Int?      @map("smtp_port")
-  username      String
-  passwordEnc   String    @map("password_enc")
-  isDefault     Boolean   @default(false) @map("is_default")
-  ownerId       String?   @map("owner_id")
-  lastImapSyncAt DateTime? @map("last_imap_sync_at")
-  imapSyncError String?   @map("imap_sync_error")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  label           String
+  providerPreset  String    @default("generic") @map("provider_preset")
+  imapHost        String?   @map("imap_host")
+  imapPort        Int?      @map("imap_port")
+  imapMailbox     String    @default("INBOX") @map("imap_mailbox")
+  smtpHost        String    @map("smtp_host")
+  smtpPort        Int?      @map("smtp_port")
+  username        String
+  passwordEnc     String    @map("password_enc")
+  oauthProvider   String?   @map("oauth_provider")
+  oauthTokenEnc   String?   @map("oauth_token_enc")
+  isDefault       Boolean   @default(false) @map("is_default")
+  ownerId         String?   @map("owner_id")
+  lastImapSyncAt  DateTime? @map("last_imap_sync_at")
+  imapSyncError   String?   @map("imap_sync_error")
+  syncEnabled     Boolean   @default(true) @map("sync_enabled")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   drafts        MailDraft[]
   inboxMessages MailInboxMessage[]
+  folders       MailFolder[]
+  auditLogs     MailAuditLog[]
 
   @@map("mail_accounts")
+}
+
+model MailFolder {
+  id           String   @id @default(cuid())
+  accountId    String   @map("account_id")
+  imapPath     String   @map("imap_path")
+  displayName  String   @map("display_name")
+  uidValidity  String?  @map("uid_validity")
+  messageCount Int      @default(0) @map("message_count")
+  syncedAt     DateTime @default(now()) @map("synced_at")
+
+  account  MailAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages MailInboxMessage[]
+
+  @@unique([accountId, imapPath])
+  @@map("mail_folders")
 }
 
 model MailInboxMessage {
   id          String   @id @default(cuid())
   accountId   String   @map("account_id")
+  folderId    String?  @map("folder_id")
   imapUid     String   @map("imap_uid")
   messageId   String?  @map("message_id")
+  inReplyTo   String?  @map("in_reply_to")
   subject     String   @default("")
   fromAddress String   @map("from_address")
   toAddresses Json?    @map("to_addresses")
+  ccAddresses Json?    @map("cc_addresses")
   snippet     String?
   bodyText    String?  @map("body_text")
+  bodyHtml    String?  @map("body_html")
+  hasAttachments Boolean @default(false) @map("has_attachments")
   receivedAt  DateTime @map("received_at")
   isRead      Boolean  @default(false) @map("is_read")
   syncedAt    DateTime @default(now()) @map("synced_at")
 
-  account MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account     MailAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  folder      MailFolder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  attachments MailAttachment[]
+  priority    MailPriorityScore?
+  aiActions   MailAiAction[]
 
   @@unique([accountId, imapUid])
   @@index([accountId, receivedAt])
+  @@index([accountId, subject])
+  @@index([accountId, fromAddress])
   @@map("mail_inbox_messages")
+}
+
+model MailAttachment {
+  id          String   @id @default(cuid())
+  messageId   String   @map("message_id")
+  filename    String
+  mimeType    String   @map("mime_type")
+  sizeBytes   Int      @default(0) @map("size_bytes")
+  contentId   String?  @map("content_id")
+  storageKey  String?  @map("storage_key")
+  downloaded  Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  message MailInboxMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("mail_attachments")
+}
+
+enum MailPriorityCategory {
+  urgent
+  reply_needed
+  today
+  waiting
+  info
+  newsletter
+  suspicious
+}
+
+model MailPriorityScore {
+  id               String               @id @default(cuid())
+  messageId        String               @unique @map("message_id")
+  priority         Int                  @default(50)
+  category         MailPriorityCategory @default(info)
+  confidence       Float                @default(0.5)
+  explanation      String               @default("")
+  ruleSignals      Json?                @map("rule_signals")
+  extractedActions Json?                @map("extracted_actions")
+  modelProvider    String?              @map("model_provider")
+  modelName        String?              @map("model_name")
+  scoredAt         DateTime             @default(now()) @map("scored_at")
+
+  message MailInboxMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([category, priority])
+  @@map("mail_priority_scores")
+}
+
+enum MailAiActionKind {
+  summarize
+  reply_draft
+  prioritize
+}
+
+model MailAiAction {
+  id           String           @id @default(cuid())
+  messageId    String           @map("message_id")
+  kind         MailAiActionKind
+  inputHash    String?          @map("input_hash")
+  outputText   String?          @map("output_text")
+  tone         String?
+  modelProvider String?         @map("model_provider")
+  modelName    String?          @map("model_name")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  message MailInboxMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, kind])
+  @@map("mail_ai_actions")
+}
+
+enum MailAuditAction {
+  account_create
+  account_update
+  account_delete
+  sync
+  read
+  search
+  draft_create
+  draft_update
+  send
+  prioritize
+  ai_summarize
+  ai_reply_draft
+}
+
+model MailAuditLog {
+  id        String          @id @default(cuid())
+  accountId String?         @map("account_id")
+  messageId String?         @map("message_id")
+  userId    String?         @map("user_id")
+  action    MailAuditAction
+  detail    String?
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  account MailAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([accountId, action])
+  @@map("mail_audit_log")
 }
 
 enum MailDraftStatus {
@@ -1635,15 +1769,18 @@ enum MailDraftStatus {
 }
 
 model MailDraft {
-  id        String          @id @default(cuid())
-  accountId String?         @map("account_id")
-  worldId   String?         @map("world_id")
-  subject   String
-  bodyText  String?         @map("body_text")
-  bodyHtml  String?         @map("body_html")
-  status    MailDraftStatus @default(draft)
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
+  id              String          @id @default(cuid())
+  accountId       String?         @map("account_id")
+  worldId         String?         @map("world_id")
+  replyToMessageId String?        @map("reply_to_message_id")
+  subject         String
+  bodyText        String?         @map("body_text")
+  bodyHtml        String?         @map("body_html")
+  toAddresses     Json?           @map("to_addresses")
+  ccAddresses     Json?           @map("cc_addresses")
+  status          MailDraftStatus @default(draft)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
 
   account MailAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
   world   World?       @relation(fields: [worldId], references: [id], onDelete: SetNull)

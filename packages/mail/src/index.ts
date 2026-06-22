@@ -43,6 +43,19 @@ export {
   type FetchedInboxMessage,
 } from "./imap-sync";
 
+export {
+  MAIL_PROVIDER_PRESETS,
+  MAIL_PRIORITY_CATEGORIES,
+  MAIL_PRIORITY_LABELS,
+  MAIL_REPLY_TONES,
+  MAIL_REPLY_TONE_LABELS,
+  sanitizeMailHtml,
+  mailBodyForProcessing,
+  type MailProviderPreset,
+  type MailPriorityCategory,
+  type MailReplyTone,
+} from "./mail-portal-types";
+
 export type {
   MailAddress,
   MailMessage,

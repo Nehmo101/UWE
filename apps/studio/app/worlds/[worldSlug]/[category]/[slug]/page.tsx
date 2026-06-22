@@ -31,7 +31,7 @@ import {
   type ShareTargetType,
 } from "@uwe/database/server";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
-import { pagePreviewHref } from "../../../../actions";
+import { pagePreviewHref } from "@/src/lib/page-preview";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
