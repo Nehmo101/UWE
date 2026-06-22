@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getAppRepository, getSystemSettingsSnapshot, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
   ThemeBootstrapScript,
+  TopBarSessionMount,
   buildVisualThemeHtmlAttributes,
   toUweThemePreferences,
   type ThemeAppearance,
@@ -83,7 +84,9 @@ export default async function RootLayout({
           {children}
           <GlobalCaptureFab />
           <StudioCommandPalette worlds={worlds} />
-          <StudioSessionChrome />
+          <TopBarSessionMount>
+            <StudioSessionChrome />
+          </TopBarSessionMount>
         </StudioThemeSyncProvider>
       </body>
     </html>
