@@ -12,6 +12,7 @@ import {
   createPrismaClient,
   GameSessionStatusEnum,
   getAppRepository,
+  navCategoryForPageType,
 } from "@uwe/database/server";
 import {
   linkPageToSessionAction,
@@ -20,19 +21,27 @@ import {
   updateGameSessionAction,
 } from "../../../../session-actions";
 import { AiContextPanel } from "@/components/AiContextPanel";
+import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { preparePrintListFromSessionAction } from "@/app/label-actions";
 import { pageLabelNewHref } from "@/src/lib/label-links";
+import { isLikelyGameSessionId } from "@/src/lib/session-route";
 import { WorldModuleShell } from "@/components/WorldModuleShell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
-  searchParams: Promise<{ saved?: string; published?: string; linked?: string; unlinked?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    published?: string;
+    linked?: string;
+    unlinked?: string;
+    preview?: string;
+  }>;
 }
 
 export default async function StudioSessionDetailPage({ params, searchParams }: Props) {
   const { worldSlug, sessionId } = await params;
-  const { saved, published, linked, unlinked } = await searchParams;
+  const { saved, published, linked, unlinked, preview } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -40,10 +49,25 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
-  const session = await auth.getGameSessionForDm(worldSlug, sessionId);
+  const session = isLikelyGameSessionId(sessionId)
+    ? await auth.getGameSessionForDm(worldSlug, sessionId)
+    : null;
   await db.$disconnect();
 
-  if (!session) notFound();
+  if (!session) {
+    const rawPage = await repo.getPageBySlug(worldSlug, sessionId);
+    if (rawPage && navCategoryForPageType(rawPage.type) === "sessions") {
+      return (
+        <StudioWikiPageView
+          worldSlug={worldSlug}
+          category="sessions"
+          slug={sessionId}
+          preview={preview}
+        />
+      );
+    }
+    notFound();
+  }
 
   const allPages = await repo.listPagesByWorld(worldSlug, {
     campaignId: session.campaignId,

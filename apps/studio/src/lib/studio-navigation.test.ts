@@ -26,6 +26,14 @@ describe("studio navigation", () => {
   it("resolves world nav keys for nested routes", () => {
     assert.equal(resolveWorldNavKey("/worlds/terra/brain/doc-1", "terra"), "brain");
     assert.equal(resolveWorldNavKey("/worlds/terra/ai-runs/run-1", "terra"), "ai-runs");
+    assert.equal(
+      resolveWorldNavKey("/worlds/terra/sessions/2025-01-14-session-ftkj", "terra"),
+      "pages",
+    );
+    assert.equal(
+      resolveWorldNavKey("/worlds/terra/sessions/clxyz1234567890abcdefghij", "terra"),
+      "sessions",
+    );
   });
 
   it("provides compact dashboard nav", () => {

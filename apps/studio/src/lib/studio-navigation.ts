@@ -296,6 +296,8 @@ export function campaignNavItems(
   ];
 }
 
+import { isLikelyGameSessionId } from "./session-route";
+
 /** Resolve active world nav from pathname. */
 export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNavKey {
   const base = `/worlds/${worldSlug}`;
@@ -303,6 +305,11 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
 
   if (normalized === `${base}/dashboard`) return "overview";
   if (normalized === base) return "pages";
+  const sessionDetailMatch = normalized.match(new RegExp(`^${base}/sessions/([^/]+)$`));
+  if (sessionDetailMatch) {
+    const segment = sessionDetailMatch[1] ?? "";
+    return isLikelyGameSessionId(segment) ? "sessions" : "pages";
+  }
   if (normalized.startsWith(`${base}/sessions`)) return "sessions";
   if (normalized.startsWith(`${base}/dungeons`)) return "dungeons";
   if (normalized.startsWith(`${base}/assets`)) return "assets";
