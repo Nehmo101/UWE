@@ -8,6 +8,7 @@ export { Badge, type BadgeProps, type BadgeVariant } from "./Badge";
 export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Dialog, type DialogProps, type DialogSize } from "./Dialog";
 export { ToolWindow, type ToolWindowProps, type ToolWindowSize } from "./ToolWindow";
+export { Collapsible, type CollapsibleProps } from "./Collapsible";
 export {
   Table,
   TableBody,

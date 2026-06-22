@@ -4,8 +4,6 @@ import {
   BACKGROUND_PATTERN_LABELS,
   CANONICAL_LABELS,
   PageHeader,
-  SidebarNav,
-  SidebarSection,
   SettingToggleRow,
   SettingsToggleGroup,
   ThemeSettingsPanel,
@@ -14,6 +12,7 @@ import {
   VISIBILITY_LABELS,
   VisualThemePreview,
 } from "@uwe/shared-ui";
+import { SettingsCollapsiblePanel } from "../../components/SettingsCollapsiblePanel";
 import {
   BACKGROUND_PATTERN_VALUES,
   CanonicalStatusEnum,
@@ -29,6 +28,7 @@ import {
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
+import { SettingsPageSidebar } from "../../components/SettingsPageSidebar";
 import { resolveThemePreferencesForScope } from "@uwe/database/server";
 
 const TABS = [
@@ -88,28 +88,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           <TopBarBrand appName="UWE Studio" subtitle="Einstellungen" href="/studio" />
         </>
       }
-      sidebar={
-        <>
-          <SidebarSection title="Navigation">
-            <SidebarNav
-              items={[
-                { label: "← Dashboard", href: "/studio" },
-                { label: "Admin", href: "/admin" },
-                { label: "Einstellungen", href: "/settings", active: true },
-              ]}
-            />
-          </SidebarSection>
-          <SidebarSection title="Bereiche">
-            <SidebarNav
-              items={TABS.map((tab) => ({
-                label: tab.label,
-                href: `/settings?tab=${tab.id}`,
-                active: activeTab === tab.id,
-              }))}
-            />
-          </SidebarSection>
-        </>
-      }
+      sidebar={<SettingsPageSidebar activeTab={activeTab} />}
       main={
         <>
           <PageHeader
@@ -149,87 +128,91 @@ export default async function SettingsPage({ searchParams }: Props) {
           )}
 
           {activeTab === "appearance" && (
-            <>
+            <div className="uwe-settings-stack">
               <ThemeSettingsPanel />
-              <div style={{ marginTop: "2rem" }}>
+              <SettingsCollapsiblePanel
+                title="Portal-Erscheinungsbild"
+                summary="Separates Theme für das Spieler-Portal"
+                defaultOpen
+              >
                 <PortalThemeSettingsSection
                   initialPreferences={resolveThemePreferencesForScope(settings.app, "portal")}
                 />
-              </div>
-              <form
-                id="uwe-visual-settings-form"
-                action={updateSettingsAction}
-                className="uwe-form"
-                style={{ marginTop: "2rem" }}
+              </SettingsCollapsiblePanel>
+              <SettingsCollapsiblePanel
+                title="SSR-Visual-Standards"
+                summary="Dark/Light, Muster, Motion beim ersten Paint"
+                defaultOpen={false}
               >
-                <input type="hidden" name="tab" value="general" />
-                <h2>SSR-Visual-Standards</h2>
-                <p className="uwe-hint">
-                  Dark/Light/System und Motion für <code>data-uwe-*</code>-Attribute beim
-                  ersten Paint. Preset-Themes und erweiterte Optionen werden über die Panels
-                  oben synchronisiert.
-                </p>
-                <div className="uwe-visual-settings-grid">
-                  <div>
-                    <ThemePicker defaultValue={settings.app.theme} preview />
-                    <label>
-                      Hintergrundmuster
-                      <select
-                        name="backgroundPattern"
-                        defaultValue={settings.app.backgroundPattern}
-                      >
-                        {BACKGROUND_PATTERN_VALUES.map((pattern) => (
-                          <option key={pattern} value={pattern}>
-                            {BACKGROUND_PATTERN_LABELS[pattern]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <p className="uwe-hint">
-                      Reine CSS-Muster ohne Canvas — abschaltbar über „Keins“. Auf Mobilgeräten
-                      keine Daueranimationen.
-                    </p>
-                    <label className="uwe-checkbox-row">
-                      <input
-                        type="checkbox"
-                        name="frostedGlass"
-                        value="on"
-                        defaultChecked={settings.app.frostedGlass}
-                      />
-                      Frosted Glass (Milchglas-Oberflächen)
-                    </label>
-                    <p className="uwe-hint">
-                      Aus = undurchsichtige Panels für maximale Lesbarkeit. An = dezenter
-                      Backdrop-Blur auf Karten, Leisten und Modals.
-                    </p>
-                    <label className="uwe-checkbox-row">
-                      <input
-                        type="checkbox"
-                        name="motionEnabled"
-                        value="on"
-                        defaultChecked={settings.app.motionEnabled}
-                      />
-                      Dezente UI-Animationen
-                    </label>
-                    <p className="uwe-hint">
-                      Respektiert immer <code>prefers-reduced-motion</code> des Systems.
-                    </p>
+                <form id="uwe-visual-settings-form" action={updateSettingsAction} className="uwe-form">
+                  <input type="hidden" name="tab" value="general" />
+                  <p className="uwe-hint">
+                    Dark/Light/System und Motion für <code>data-uwe-*</code>-Attribute beim
+                    ersten Paint. Preset-Themes und erweiterte Optionen werden über das
+                    Studio-Panel oben synchronisiert.
+                  </p>
+                  <div className="uwe-visual-settings-grid">
+                    <div>
+                      <ThemePicker defaultValue={settings.app.theme} preview />
+                      <label>
+                        Hintergrundmuster
+                        <select
+                          name="backgroundPattern"
+                          defaultValue={settings.app.backgroundPattern}
+                        >
+                          {BACKGROUND_PATTERN_VALUES.map((pattern) => (
+                            <option key={pattern} value={pattern}>
+                              {BACKGROUND_PATTERN_LABELS[pattern]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="uwe-hint">
+                        Reine CSS-Muster ohne Canvas — abschaltbar über „Keins“. Auf Mobilgeräten
+                        keine Daueranimationen.
+                      </p>
+                      <label className="uwe-checkbox-row">
+                        <input
+                          type="checkbox"
+                          name="frostedGlass"
+                          value="on"
+                          defaultChecked={settings.app.frostedGlass}
+                        />
+                        Frosted Glass (Milchglas-Oberflächen)
+                      </label>
+                      <p className="uwe-hint">
+                        Aus = undurchsichtige Panels für maximale Lesbarkeit. An = dezenter
+                        Backdrop-Blur auf Karten, Leisten und Modals.
+                      </p>
+                      <label className="uwe-checkbox-row">
+                        <input
+                          type="checkbox"
+                          name="motionEnabled"
+                          value="on"
+                          defaultChecked={settings.app.motionEnabled}
+                        />
+                        Dezente UI-Animationen
+                      </label>
+                      <p className="uwe-hint">
+                        Respektiert immer <code>prefers-reduced-motion</code> des Systems.
+                      </p>
+                    </div>
+                    <VisualThemePreview
+                      formId="uwe-visual-settings-form"
+                      initial={{
+                        theme: settings.app.theme,
+                        backgroundPattern: settings.app.backgroundPattern,
+                        frostedGlass: settings.app.frostedGlass,
+                        motionEnabled: settings.app.motionEnabled,
+                      }}
+                    />
                   </div>
-                  <VisualThemePreview
-                    formId="uwe-visual-settings-form"
-                    initial={{
-                      theme: settings.app.theme,
-                      backgroundPattern: settings.app.backgroundPattern,
-                      frostedGlass: settings.app.frostedGlass,
-                      motionEnabled: settings.app.motionEnabled,
-                    }}
-                  />
-                </div>
-                <button type="submit" className="uwe-btn uwe-btn-primary">
-                  Server-Standards speichern
-                </button>
-              </form>
-            </>
+                  <button type="submit" className="uwe-btn uwe-btn-primary">
+                    Server-Standards speichern
+                  </button>
+                </form>
+              </SettingsCollapsiblePanel>
+            </div>
           )}
 
           {activeTab === "worlds" && (
@@ -544,101 +527,113 @@ export default async function SettingsPage({ searchParams }: Props) {
           )}
 
           {activeTab === "integrations" && (
-            <section className="uwe-form">
-              <h2>Integrationen (ENV-gesteuert)</h2>
-              <p className="uwe-hint">
-                Alle externen Integrationen sind deaktivierbar. Secrets nur serverseitig in .env —
-                nie im Frontend.
-              </p>
-              <table className="uwe-table" style={{ width: "100%", marginTop: "1rem" }}>
-                <thead>
-                  <tr>
-                    <th>Feature</th>
-                    <th>Status</th>
-                    <th>Admin-Seite</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Image Studio</td>
-                    <td>{imageStudioConfig.enabled ? "aktiv" : "deaktiviert"}</td>
-                    <td>
-                      <Link href="/image-studio">/image-studio</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Kalender</td>
-                    <td>{calendarConfig.enabled ? "aktiv" : "deaktiviert"}</td>
-                    <td>
-                      <Link href="/calendar">/calendar</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>DnD API (Open5e/SRD)</td>
-                    <td>
-                      Open5e: {dndApiConfig.open5eEnabled ? "an" : "aus"} · SRD:{" "}
-                      {dndApiConfig.dnd5eSrdEnabled ? "an" : "aus"}
-                    </td>
-                    <td>Welt → DnD API</td>
-                  </tr>
-                  <tr>
-                    <td>Agent Jobs</td>
-                    <td>
-                      {agentJobsConfig.enabled ? "aktiv" : "deaktiviert"} · Token:{" "}
-                      {agentJobsConfig.githubTokenConfigured ? "OK" : "fehlt"}
-                    </td>
-                    <td>
-                      <Link href="/admin/agent-jobs">/admin/agent-jobs</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Spotify Soundboard</td>
-                    <td>
-                      OAuth über <code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code> in
-                      .env
-                    </td>
-                    <td>
-                      <Link href="/worlds">Welten</Link> → Soundboard (pro Welt, Spotify Premium)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <p className="uwe-hint" style={{ marginTop: "1rem" }}>
-                Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_*,
-                SPOTIFY_* und CALDAV_PASSWORD. Mail-SMTP kann alternativ unter Tab Mail im Portal
-                konfiguriert werden.
-              </p>
-            </section>
+            <SettingsCollapsiblePanel
+              title="Aktive Integrationen"
+              summary="ENV-gesteuerte Features und Admin-Links"
+              defaultOpen
+            >
+              <section className="uwe-form">
+                <p className="uwe-hint">
+                  Alle externen Integrationen sind deaktivierbar. Secrets nur serverseitig in .env —
+                  nie im Frontend.
+                </p>
+                <table className="uwe-table" style={{ width: "100%", marginTop: "1rem" }}>
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Status</th>
+                      <th>Admin-Seite</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Image Studio</td>
+                      <td>{imageStudioConfig.enabled ? "aktiv" : "deaktiviert"}</td>
+                      <td>
+                        <Link href="/image-studio">/image-studio</Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Kalender</td>
+                      <td>{calendarConfig.enabled ? "aktiv" : "deaktiviert"}</td>
+                      <td>
+                        <Link href="/calendar">/calendar</Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>DnD API (Open5e/SRD)</td>
+                      <td>
+                        Open5e: {dndApiConfig.open5eEnabled ? "an" : "aus"} · SRD:{" "}
+                        {dndApiConfig.dnd5eSrdEnabled ? "an" : "aus"}
+                      </td>
+                      <td>Welt → DnD API</td>
+                    </tr>
+                    <tr>
+                      <td>Agent Jobs</td>
+                      <td>
+                        {agentJobsConfig.enabled ? "aktiv" : "deaktiviert"} · Token:{" "}
+                        {agentJobsConfig.githubTokenConfigured ? "OK" : "fehlt"}
+                      </td>
+                      <td>
+                        <Link href="/admin/agent-jobs">/admin/agent-jobs</Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Spotify Soundboard</td>
+                      <td>
+                        OAuth über <code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code> in
+                        .env
+                      </td>
+                      <td>
+                        <Link href="/worlds">Welten</Link> → Soundboard (pro Welt, Spotify Premium)
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="uwe-hint" style={{ marginTop: "1rem" }}>
+                  Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_*,
+                  SPOTIFY_* und CALDAV_PASSWORD. Mail-SMTP kann alternativ unter Tab Mail im Portal
+                  konfiguriert werden.
+                </p>
+              </section>
+            </SettingsCollapsiblePanel>
           )}
 
           {activeTab === "mail" && (
-            <form action={updateSettingsAction} className="uwe-form">
+            <form action={updateSettingsAction} className="uwe-form uwe-settings-stack">
               <input type="hidden" name="tab" value="mail" />
-              <h2>Mail Settings</h2>
-              <p className="uwe-hint">
-                SMTP kann hier im Admin Portal konfiguriert werden (verschlüsselt gespeichert) oder weiterhin
-                über <code>.env</code> als Fallback. Versand erfolgt ausschließlich nach expliziter Aktion im{" "}
-                <Link href="/mail">Mail Center</Link>.
-              </p>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="mailEnabled" defaultChecked={settings.mail.enabled} />
-                Mail Center aktiv
-              </label>
-              <label>
-                Absender-Anzeigename (optional)
-                <input
-                  name="fromDisplayName"
-                  defaultValue={settings.mail.fromDisplayName}
-                  placeholder="z. B. UWE Kampagne"
-                />
-              </label>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="mailLogBody" defaultChecked={settings.mail.logBody} />
-                Mail-Body in Logs speichern (nur für Diagnose — in Production eher aus)
-              </label>
+              <SettingsCollapsiblePanel title="Mail Center" summary="Aktivierung und Absender" defaultOpen>
+                <p className="uwe-hint">
+                  Versand erfolgt ausschließlich nach expliziter Aktion im{" "}
+                  <Link href="/mail">Mail Center</Link>.
+                </p>
+                <label className="uwe-checkbox">
+                  <input type="checkbox" name="mailEnabled" defaultChecked={settings.mail.enabled} />
+                  Mail Center aktiv
+                </label>
+                <label>
+                  Absender-Anzeigename (optional)
+                  <input
+                    name="fromDisplayName"
+                    defaultValue={settings.mail.fromDisplayName}
+                    placeholder="z. B. UWE Kampagne"
+                  />
+                </label>
+                <label className="uwe-checkbox">
+                  <input type="checkbox" name="mailLogBody" defaultChecked={settings.mail.logBody} />
+                  Mail-Body in Logs speichern (nur für Diagnose — in Production eher aus)
+                </label>
+              </SettingsCollapsiblePanel>
 
-              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
-                <h3>SMTP (Admin Portal)</h3>
+              <SettingsCollapsiblePanel
+                title="SMTP (Admin Portal)"
+                summary="Verschlüsselt gespeichert oder .env-Fallback"
+                defaultOpen
+              >
+                <p className="uwe-hint">
+                  SMTP kann hier im Admin Portal konfiguriert werden (verschlüsselt gespeichert) oder
+                  weiterhin über <code>.env</code> als Fallback.
+                </p>
                 <p className="uwe-hint">
                   Aktive Quelle:{" "}
                   <strong>{settings.mail.smtp.source === "portal" ? "Admin Portal" : ".env Fallback"}</strong>
@@ -714,10 +709,13 @@ export default async function SettingsPage({ searchParams }: Props) {
                   <input type="checkbox" name="clearPortalSmtp" />
                   Portal-SMTP löschen und .env-Fallback nutzen
                 </label>
-              </section>
+              </SettingsCollapsiblePanel>
 
-              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
-                <h3>IMAP / Posteingang</h3>
+              <SettingsCollapsiblePanel
+                title="IMAP / Posteingang"
+                summary="Konten im Mail Portal verwalten"
+                defaultOpen={false}
+              >
                 <p className="uwe-hint">
                   IMAP-Konten werden im{" "}
                   <Link href="/admin/mail">Mail Portal</Link> verwaltet (verschlüsselte App-Passwörter).
@@ -729,7 +727,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                     Mail Portal — Konten einrichten
                   </Link>
                 </p>
-              </section>
+              </SettingsCollapsiblePanel>
 
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern
@@ -738,64 +736,67 @@ export default async function SettingsPage({ searchParams }: Props) {
           )}
 
           {activeTab === "image-studio" && (
-            <form action={updateSettingsAction} className="uwe-form">
+            <form action={updateSettingsAction} className="uwe-form uwe-settings-stack">
               <input type="hidden" name="tab" value="image-studio" />
-              <h2>Image Studio</h2>
-              <p className="uwe-hint">
-                Odysseus-inspirierte Bild-Pipeline: RTX Agent lokal, optional Cloud nur für generate/variant.
-                RTX-URL und API-Keys bleiben in <code>.env</code> — hier steuern Sie Verhalten und Defaults.
-              </p>
+              <SettingsCollapsiblePanel
+                title="Image Studio — Allgemein"
+                summary="Aktivierung, Provider, Cloud & Hintergrund"
+                defaultOpen
+              >
+                <p className="uwe-hint">
+                  Odysseus-inspirierte Bild-Pipeline: RTX Agent lokal, optional Cloud nur für
+                  generate/variant. RTX-URL und API-Keys bleiben in <code>.env</code>.
+                </p>
+                <p className="uwe-notice">
+                  {imageStudioConfig.message}
+                  {" · "}
+                  RTX: {imageStudioConfig.rtxAgentConfigured ? "konfiguriert" : "fehlt"}
+                  {" · "}
+                  Cloud-Key: {imageStudioConfig.cloudApiKeyConfigured ? "vorhanden" : "fehlt"}
+                </p>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="imageStudioEnabled"
+                    defaultChecked={imageStudioConfig.enabled}
+                  />
+                  Image Studio aktiv
+                </label>
+                <label>
+                  Standard-Provider
+                  <select
+                    name="imageStudioDefaultProvider"
+                    className="uwe-input"
+                    defaultValue={imageStudioConfig.defaultProviderMode}
+                  >
+                    <option value="auto">auto (RTX, sonst Cloud wenn erlaubt)</option>
+                    <option value="local_rtx">local_rtx (nur RTX)</option>
+                    <option value="cloud">cloud</option>
+                  </select>
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="imageStudioAllowCloud"
+                    defaultChecked={imageStudioConfig.allowCloud}
+                  />
+                  Cloud-KI erlauben (IMAGE_STUDIO_ALLOW_CLOUD — Datenschutz prüfen)
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="imageStudioBgRemoval"
+                    defaultChecked={imageStudioConfig.backgroundRemovalEnabled}
+                  />
+                  Hintergrund-Entfernung erlauben
+                </label>
+              </SettingsCollapsiblePanel>
 
-              <p className="uwe-notice">
-                {imageStudioConfig.message}
-                {" · "}
-                RTX: {imageStudioConfig.rtxAgentConfigured ? "konfiguriert" : "fehlt"}
-                {" · "}
-                Cloud-Key: {imageStudioConfig.cloudApiKeyConfigured ? "vorhanden" : "fehlt"}
-              </p>
-
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
-                  name="imageStudioEnabled"
-                  defaultChecked={imageStudioConfig.enabled}
-                />
-                Image Studio aktiv
-              </label>
-
-              <label>
-                Standard-Provider
-                <select
-                  name="imageStudioDefaultProvider"
-                  className="uwe-input"
-                  defaultValue={imageStudioConfig.defaultProviderMode}
-                >
-                  <option value="auto">auto (RTX, sonst Cloud wenn erlaubt)</option>
-                  <option value="local_rtx">local_rtx (nur RTX)</option>
-                  <option value="cloud">cloud</option>
-                </select>
-              </label>
-
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
-                  name="imageStudioAllowCloud"
-                  defaultChecked={imageStudioConfig.allowCloud}
-                />
-                Cloud-KI erlauben (IMAGE_STUDIO_ALLOW_CLOUD — Datenschutz prüfen)
-              </label>
-
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
-                  name="imageStudioBgRemoval"
-                  defaultChecked={imageStudioConfig.backgroundRemovalEnabled}
-                />
-                Hintergrund-Entfernung erlauben
-              </label>
-
-              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
-                <h3>RTX / Diffusion</h3>
+              <SettingsCollapsiblePanel
+                title="RTX / Diffusion"
+                summary="Agent-URL in .env, Diagnose-Links"
+                defaultOpen={false}
+              >
                 <p className="uwe-hint">
                   Setze <code>RTX_AGENT_URL</code> und optional <code>RTX_AGENT_TOKEN</code> in{" "}
                   <code>.env</code>. Diagnose unter{" "}
@@ -807,7 +808,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                     Image Studio öffnen
                   </Link>
                 </p>
-              </section>
+              </SettingsCollapsiblePanel>
 
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern

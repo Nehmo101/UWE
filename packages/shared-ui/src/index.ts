@@ -25,6 +25,7 @@ export { TopBarSessionMount } from "./TopBarSessionMount";
 
 export {
   NavSidebarSections,
+  CollapsibleNavSidebar,
   SectionHeader,
   type BreadcrumbItem,
   type NavSection,
@@ -41,6 +42,7 @@ export {
   Tabs,
   Dialog,
   ToolWindow,
+  Collapsible,
   Table,
   TableBody,
   TableCaption,
@@ -66,6 +68,7 @@ export {
   type BadgeVariant,
   type TabItem,
   type DialogProps,
+  type CollapsibleProps,
   type ToolWindowProps,
   type ToastMessage,
 } from "./components";

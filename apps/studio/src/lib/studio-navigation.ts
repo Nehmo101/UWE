@@ -1,5 +1,7 @@
 /** Studio information architecture — DM, creator, owner, and admin navigation. */
 
+import { isLikelyGameSessionId } from "./session-route";
+
 export type StudioNavSectionId =
   | "dashboard"
   | "worlds"
@@ -296,7 +298,16 @@ export function campaignNavItems(
   ];
 }
 
-import { isLikelyGameSessionId } from "./session-route";
+/** Resolve icon-rail active id from Studio path. */
+export function resolveStudioRailActiveId(activePath: string): string | undefined {
+  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/studio";
+  if (normalized.startsWith("/today")) return "today";
+  if (normalized.startsWith("/capture")) return "capture";
+  if (normalized.startsWith("/search")) return "search";
+  if (normalized.startsWith("/image-studio")) return "image-studio";
+  if (normalized.startsWith("/ai")) return "ai";
+  return undefined;
+}
 
 /** Resolve active world nav from pathname. */
 export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNavKey {

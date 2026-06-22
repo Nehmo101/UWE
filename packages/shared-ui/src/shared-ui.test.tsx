@@ -6,6 +6,8 @@ import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   Button,
+  Collapsible,
+  CollapsibleNavSidebar,
   EmptyState,
   ErrorAlert,
   LoadingSpinner,
@@ -228,10 +230,46 @@ describe("shared-ui components", () => {
     assert.equal(html, "");
   });
 
+  it("renders collapsible sidebar section with trigger and body", () => {
+    const html = renderToStaticMarkup(
+      <Collapsible variant="sidebar" title="Dashboard" defaultOpen>
+        <p>Nav-Inhalt</p>
+      </Collapsible>,
+    );
+    assert.match(html, /uwe-collapsible-sidebar/);
+    assert.match(html, /uwe-sidebar-section-trigger/);
+    assert.match(html, /aria-expanded="true"/);
+    assert.match(html, /Nav-Inhalt/);
+  });
+
+  it("renders collapsible nav sidebar with grouped sections", () => {
+    const html = renderToStaticMarkup(
+      <CollapsibleNavSidebar
+        sections={[
+          {
+            title: "Dashboard",
+            items: [{ label: "Studio", href: "/studio", active: true }],
+          },
+          {
+            title: "Welten",
+            items: [{ label: "Welten", href: "/worlds" }],
+          },
+        ]}
+        defaultOpenTitles={["Dashboard"]}
+      />,
+    );
+    assert.match(html, /Dashboard/);
+    assert.match(html, /class="active"/);
+    assert.match(html, /Welten/);
+  });
+
   it("includes native UI component styles", () => {
     assert.match(uweComponentsCss, /uwe-toolwindow/);
     assert.match(uweComponentsCss, /uwe-icon-rail/);
     assert.match(uweComponentsCss, /--uwe-radius-md/);
+    assert.match(uweComponentsCss, /uwe-sidebar-collapse-toggle/);
+    assert.match(uweComponentsCss, /uwe-collapsible-sidebar/);
+    assert.match(uweComponentsCss, /data-sidebar-collapsed/);
   });
 });
 

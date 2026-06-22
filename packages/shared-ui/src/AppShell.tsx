@@ -38,6 +38,7 @@ export function AppShell({
   contextTitle = "Details & Kontext",
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const hasSidebar = Boolean(sidebar);
   const hasContext = Boolean(context);
   const hasRail = Boolean(rail);
@@ -65,6 +66,26 @@ export function AppShell({
     return () => document.removeEventListener("uwe:toggle-sidebar", onToggleSidebar);
   }, [toggleSidebar]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("uwe:sidebar-collapsed");
+    if (stored === "true") {
+      setSidebarCollapsed(true);
+    }
+  }, []);
+
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      try {
+        window.localStorage.setItem("uwe:sidebar-collapsed", next ? "true" : "false");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
   /* Lock body scroll when mobile drawer is open */
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -83,21 +104,34 @@ export function AppShell({
       <div
         className="uwe-shell"
         data-sidebar-open={sidebarOpen ? "true" : "false"}
+        data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
         data-has-bottom-nav={hasBottomNav ? "true" : "false"}
       >
         {topBar && (
           <header className="uwe-topbar">
             {hasSidebar && (
-              <button
-                type="button"
-                className="uwe-mobile-nav-toggle"
-                aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
-                aria-expanded={sidebarOpen}
-                aria-controls="uwe-sidebar"
-                onClick={toggleSidebar}
-              >
-                <span className="uwe-mobile-nav-icon" aria-hidden />
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="uwe-mobile-nav-toggle"
+                  aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
+                  aria-expanded={sidebarOpen}
+                  aria-controls="uwe-sidebar"
+                  onClick={toggleSidebar}
+                >
+                  <span className="uwe-mobile-nav-icon" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className="uwe-sidebar-collapse-toggle"
+                  aria-label={sidebarCollapsed ? "Menüband einblenden" : "Menüband einklappen"}
+                  aria-pressed={sidebarCollapsed}
+                  onClick={toggleSidebarCollapsed}
+                  title={sidebarCollapsed ? "Menüband einblenden" : "Menüband einklappen"}
+                >
+                  <span className="uwe-sidebar-collapse-icon" aria-hidden />
+                </button>
+              </>
             )}
             <div className="uwe-topbar-inner">
               {topBar}
@@ -110,6 +144,7 @@ export function AppShell({
           data-has-sidebar={hasSidebar ? "true" : "false"}
           data-has-context={hasContext ? "true" : "false"}
           data-has-rail={hasRail ? "true" : "false"}
+          data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
         >
           {hasRail && <div className="uwe-icon-rail-wrap">{rail}</div>}
           {hasSidebar && (
