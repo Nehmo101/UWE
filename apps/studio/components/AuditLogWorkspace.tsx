@@ -21,6 +21,47 @@ interface AuditLogResponse {
   entries: AuditEntry[];
   total: number;
   actionLabels?: Record<string, string>;
+  loginReasonLabels?: Record<string, string>;
+}
+
+function formatAuditMetadata(
+  metadata: unknown,
+  loginReasonLabels: Record<string, string>,
+): string {
+  if (!metadata || typeof metadata !== "object") {
+    return "—";
+  }
+
+  const record = metadata as Record<string, unknown>;
+  const parts: string[] = [];
+
+  if (typeof record.surface === "string") {
+    parts.push(`App: ${record.surface}`);
+  }
+
+  if (typeof record.email === "string") {
+    parts.push(`E-Mail: ${record.email}`);
+  }
+
+  if (typeof record.reason === "string") {
+    const reasonLabel = loginReasonLabels[record.reason] ?? record.reason;
+    parts.push(`Grund: ${reasonLabel}`);
+  }
+
+  if (typeof record.errorMessage === "string") {
+    parts.push(`Fehler: ${record.errorMessage}`);
+  }
+
+  if (typeof record.serverError === "string") {
+    parts.push(`Server: ${record.serverError}`);
+  }
+
+  if (parts.length > 0) {
+    return parts.join(" · ");
+  }
+
+  const serialized = JSON.stringify(metadata);
+  return serialized.length > 160 ? `${serialized.slice(0, 160)}…` : serialized;
 }
 
 export function AuditLogWorkspace() {
@@ -35,6 +76,7 @@ export function AuditLogWorkspace() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [actionLabels, setActionLabels] = useState<Record<string, string>>({});
+  const [loginReasonLabels, setLoginReasonLabels] = useState<Record<string, string>>({});
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -58,6 +100,9 @@ export function AuditLogWorkspace() {
       setTotal(data.total);
       if (data.actionLabels) {
         setActionLabels(data.actionLabels);
+      }
+      if (data.loginReasonLabels) {
+        setLoginReasonLabels(data.loginReasonLabels);
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unbekannter Fehler");
@@ -137,7 +182,7 @@ export function AuditLogWorkspace() {
                   <th>Target</th>
                   <th>World</th>
                   <th>IP-Hash</th>
-                  <th>Metadata</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,13 +199,7 @@ export function AuditLogWorkspace() {
                     <td>
                       <code>{entry.ipHash ? entry.ipHash.slice(0, 12) : "—"}</code>
                     </td>
-                    <td>
-                      <code style={{ fontSize: "0.75rem" }}>
-                        {entry.metadataJson
-                          ? JSON.stringify(entry.metadataJson).slice(0, 120)
-                          : "—"}
-                      </code>
-                    </td>
+                    <td>{formatAuditMetadata(entry.metadataJson, loginReasonLabels)}</td>
                   </tr>
                 ))}
               </tbody>

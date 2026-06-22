@@ -284,6 +284,19 @@ export {
   redactAuditMetadata,
 } from "./audit-log-service";
 
+export {
+  LOGIN_AUDIT_REASON_LABELS,
+  logLoginAttempt,
+  resolveLoginFailureReason,
+} from "./login-audit";
+
+export type {
+  LoginAuditReason,
+  LoginAuditSurface,
+  LogLoginAttemptInput,
+  ResolveLoginFailureReasonInput,
+} from "./login-audit";
+
 export type {
   AuditLogEntryView,
   AuditRequestContext,
