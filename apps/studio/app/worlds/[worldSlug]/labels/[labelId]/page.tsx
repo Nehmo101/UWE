@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
+  ContextActions,
   SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
   analyzeLabelExportWarnings,
@@ -18,7 +15,6 @@ import {
   normalizeLabel,
 } from "@uwe/database/server";
 import { isLabelAiShortenAvailable } from "@/src/lib/label-ai-shorten";
-import { worldSidebar } from "../page";
 import { LabelEditWorkspace } from "@/components/LabelEditWorkspace";
 import {
   addLabelToPrintListAction,
@@ -29,6 +25,8 @@ import {
   setLabelPrintStatusAction,
   updateLabelAction,
 } from "@/app/label-actions";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
@@ -69,23 +67,25 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
     }));
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
-      sidebar={worldSidebar(worldSlug, "labels")}
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Labels", href: `/worlds/${worldSlug}/labels` },
-              { label: label.title },
-            ]}
-          />
-          <PageHeader
-            title={label.title}
-            summary={`Quelle: ${LABEL_SOURCE_TYPE_LABELS[label.sourceType]} · Vorlage: ${label.template.name} · Status: ${LABEL_PRINT_STATUS_LABELS[label.printStatus]}`}
-            actions={
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="labels"
+      backLink={{ label: "← Labels", href: `/worlds/${worldSlug}/labels` }}
+      breadcrumb={worldDetailBreadcrumb(
+        world.name,
+        worldSlug,
+        "Labels",
+        `/worlds/${worldSlug}/labels`,
+        label.title,
+        `/worlds/${worldSlug}/labels/${labelId}`,
+      )}
+      pageHeader={{
+        title: label.title,
+        summary: `Quelle: ${LABEL_SOURCE_TYPE_LABELS[label.sourceType]} · Vorlage: ${label.template.name} · Status: ${LABEL_PRINT_STATUS_LABELS[label.printStatus]}`,
+        actions: (
+          <ContextActions
+            secondary={
               <>
                 <Link
                   href={`/worlds/${worldSlug}/labels/${labelId}/preview`}
@@ -103,192 +103,16 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
                 </a>
               </>
             }
-          />
-
-          {(saved || created || duplicated || reset || status) && (
-            <p className="uwe-flash uwe-flash-success">
-              {created
-                ? "Label erstellt."
-                : duplicated
-                  ? "Label dupliziert."
-                  : reset
-                    ? "Layout auf Vorlage zurückgesetzt."
-                    : status
-                      ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS] ?? status}`
-                      : "Gespeichert."}
-            </p>
-          )}
-
-          {safety.warnings.map((warning) => (
-            <p key={warning.code} className="uwe-flash uwe-flash-warning">
-              {warning.message}
-            </p>
-          ))}
-
-          {exportWarnings.map((warning) => (
-            <p key={`export-${warning.code}-${warning.message}`} className="uwe-flash uwe-flash-warning">
-              Export: {warning.message}
-            </p>
-          ))}
-
-          <section className="uwe-panel">
-            <h2>Visueller Label-Editor</h2>
-            <form action={updateLabelAction} className="uwe-form-grid">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-
-              <div className="uwe-form-row uwe-form-row-2">
-                <label>
-                  Titel
-                  <input type="text" name="title" defaultValue={label.title} required />
-                </label>
-                <label>
-                  Vorlage
-                  <select name="templateId" defaultValue={label.templateId}>
-                    {templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <input type="hidden" name="contentTitle" value={parsed.content.title} />
-              <input type="hidden" name="text" value={parsed.content.text} />
-
-              <fieldset className="uwe-fieldset">
-                <legend>Layout & Kürzung</legend>
-                <div className="uwe-form-row uwe-form-row-3">
-                  <label>
-                    Modus
-                    <select name="layoutMode" defaultValue={parsed.layoutSettings.mode}>
-                      <option value="image_text">Bild + Text</option>
-                      <option value="text_only">Nur Text</option>
-                      <option value="image_only">Nur Bild</option>
-                    </select>
-                  </label>
-                  <label>
-                    Kürzmodus
-                    <select name="fitMode" defaultValue={parsed.layoutSettings.fitMode ?? "normal"}>
-                      <option value="conservative">Konservativ</option>
-                      <option value="normal">Normal</option>
-                      <option value="aggressive">Aggressiv</option>
-                    </select>
-                  </label>
-                  <label className="uwe-checkbox">
-                    <input
-                      type="checkbox"
-                      name="snapToGrid"
-                      defaultChecked={parsed.layoutSettings.snapToGrid ?? true}
-                    />
-                    Snap-to-Grid (0.1 in)
-                  </label>
-                </div>
-                <label className="uwe-checkbox">
-                  <input
-                    type="checkbox"
-                    name="truncateToPage"
-                    defaultChecked={parsed.layoutSettings.truncateToPage}
-                  />
-                  Inhalt auf eine Seite kürzen
-                </label>
-                <label className="uwe-checkbox">
-                  <input
-                    type="checkbox"
-                    name="truncateLongWords"
-                    defaultChecked={parsed.layoutSettings.truncateLongWords}
-                  />
-                  Lange Wörter kürzen
-                </label>
-                <label className="uwe-checkbox">
-                  <input
-                    type="checkbox"
-                    name="showSafeArea"
-                    defaultChecked={parsed.layoutSettings.showSafeArea ?? true}
-                  />
-                  Safe Area anzeigen
-                </label>
-                <label className="uwe-checkbox">
-                  <input
-                    type="checkbox"
-                    name="showCropMarks"
-                    defaultChecked={parsed.layoutSettings.showCropMarks ?? false}
-                  />
-                  Schnittmarken im Export
-                </label>
-              </fieldset>
-
-              <LabelEditWorkspace
-                initialElements={parsed.content.elements ?? []}
-                imageAssets={imageAssets}
-                worldSlug={worldSlug}
-                originalText={parsed.content.originalText ?? parsed.content.text}
-                currentText={parsed.content.text ?? ""}
-                fitStatus={parsed.content.fitStatus ?? "fits"}
-                fitApplied={parsed.content.fitApplied}
-                snapToGrid={parsed.layoutSettings.snapToGrid ?? true}
-                gridSize={parsed.layoutSettings.gridSize ?? 0.1}
-                showSafeArea={parsed.layoutSettings.showSafeArea ?? true}
-                aiAvailable={isLabelAiShortenAvailable()}
-              />
-
-              <div className="uwe-form-actions">
-                <button type="submit" name="action" value="save" className="uwe-btn uwe-btn-primary">
-                  Speichern
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="uwe-panel">
-            <h2>Druckliste</h2>
-            {lists.length === 0 ? (
-              <p className="uwe-table-sub">
-                Noch keine Drucklisten.{" "}
-                <Link href={`/worlds/${worldSlug}/labels?tab=print-lists`}>Druckliste erstellen</Link>
-              </p>
-            ) : (
-              <form action={addLabelToPrintListAction} className="uwe-form-inline">
+            danger={
+              <form action={deleteLabelAction} style={{ display: "inline" }}>
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="labelId" value={labelId} />
-                <select name="printListId" required>
-                  {lists.map((list) => (
-                    <option key={list.id} value={list.id}>
-                      {list.name}
-                    </option>
-                  ))}
-                </select>
-                <input type="number" name="copies" defaultValue={1} min={1} max={99} style={{ width: "4rem" }} />
-                <button type="submit" className="uwe-btn uwe-btn-sm">
-                  Zur Druckliste hinzufügen
-                </button>
+                <button type="submit" className="uwe-btn uwe-btn-danger">Löschen</button>
               </form>
-            )}
-          </section>
-
-          <div className="uwe-form-actions">
-            <form action={duplicateLabelAction} style={{ display: "inline" }}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-              <button type="submit" className="uwe-btn">Duplizieren</button>
-            </form>
-            <form action={resetLabelToTemplateAction} style={{ display: "inline" }}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-              <button type="submit" className="uwe-btn">Auf Vorlage zurücksetzen</button>
-            </form>
-            <form action={deleteLabelAction} style={{ display: "inline" }}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-              <button type="submit" className="uwe-btn uwe-btn-danger">Löschen</button>
-            </form>
-            <Link href={`/worlds/${worldSlug}/labels`} className="uwe-btn">
-              ← Bibliothek
-            </Link>
-          </div>
-        </>
-      }
+            }
+          />
+        ),
+      }}
       context={
         <>
           <SidebarSection title="Export">
@@ -343,6 +167,181 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           </SidebarSection>
         </>
       }
-    />
+    >
+      {(saved || created || duplicated || reset || status) && (
+        <p className="uwe-flash uwe-flash-success">
+          {created
+            ? "Label erstellt."
+            : duplicated
+              ? "Label dupliziert."
+              : reset
+                ? "Layout auf Vorlage zurückgesetzt."
+                : status
+                  ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS] ?? status}`
+                  : "Gespeichert."}
+        </p>
+      )}
+
+      {safety.warnings.map((warning) => (
+        <p key={warning.code} className="uwe-flash uwe-flash-warning">
+          {warning.message}
+        </p>
+      ))}
+
+      {exportWarnings.map((warning) => (
+        <p key={`export-${warning.code}-${warning.message}`} className="uwe-flash uwe-flash-warning">
+          Export: {warning.message}
+        </p>
+      ))}
+
+      <section className="uwe-panel">
+        <h2>Visueller Label-Editor</h2>
+        <form action={updateLabelAction} className="uwe-form-grid">
+          <input type="hidden" name="worldSlug" value={worldSlug} />
+          <input type="hidden" name="labelId" value={labelId} />
+
+          <div className="uwe-form-row uwe-form-row-2">
+            <label>
+              Titel
+              <input type="text" name="title" defaultValue={label.title} required />
+            </label>
+            <label>
+              Vorlage
+              <select name="templateId" defaultValue={label.templateId}>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <input type="hidden" name="contentTitle" value={parsed.content.title} />
+          <input type="hidden" name="text" value={parsed.content.text} />
+
+          <fieldset className="uwe-fieldset">
+            <legend>Layout & Kürzung</legend>
+            <div className="uwe-form-row uwe-form-row-3">
+              <label>
+                Modus
+                <select name="layoutMode" defaultValue={parsed.layoutSettings.mode}>
+                  <option value="image_text">Bild + Text</option>
+                  <option value="text_only">Nur Text</option>
+                  <option value="image_only">Nur Bild</option>
+                </select>
+              </label>
+              <label>
+                Kürzmodus
+                <select name="fitMode" defaultValue={parsed.layoutSettings.fitMode ?? "normal"}>
+                  <option value="conservative">Konservativ</option>
+                  <option value="normal">Normal</option>
+                  <option value="aggressive">Aggressiv</option>
+                </select>
+              </label>
+              <label className="uwe-checkbox">
+                <input
+                  type="checkbox"
+                  name="snapToGrid"
+                  defaultChecked={parsed.layoutSettings.snapToGrid ?? true}
+                />
+                Snap-to-Grid (0.1 in)
+              </label>
+            </div>
+            <label className="uwe-checkbox">
+              <input
+                type="checkbox"
+                name="truncateToPage"
+                defaultChecked={parsed.layoutSettings.truncateToPage}
+              />
+              Inhalt auf eine Seite kürzen
+            </label>
+            <label className="uwe-checkbox">
+              <input
+                type="checkbox"
+                name="truncateLongWords"
+                defaultChecked={parsed.layoutSettings.truncateLongWords}
+              />
+              Lange Wörter kürzen
+            </label>
+            <label className="uwe-checkbox">
+              <input
+                type="checkbox"
+                name="showSafeArea"
+                defaultChecked={parsed.layoutSettings.showSafeArea ?? true}
+              />
+              Safe Area anzeigen
+            </label>
+            <label className="uwe-checkbox">
+              <input
+                type="checkbox"
+                name="showCropMarks"
+                defaultChecked={parsed.layoutSettings.showCropMarks ?? false}
+              />
+              Schnittmarken im Export
+            </label>
+          </fieldset>
+
+          <LabelEditWorkspace
+            initialElements={parsed.content.elements ?? []}
+            imageAssets={imageAssets}
+            worldSlug={worldSlug}
+            originalText={parsed.content.originalText ?? parsed.content.text}
+            currentText={parsed.content.text ?? ""}
+            fitStatus={parsed.content.fitStatus ?? "fits"}
+            fitApplied={parsed.content.fitApplied}
+            snapToGrid={parsed.layoutSettings.snapToGrid ?? true}
+            gridSize={parsed.layoutSettings.gridSize ?? 0.1}
+            showSafeArea={parsed.layoutSettings.showSafeArea ?? true}
+            aiAvailable={isLabelAiShortenAvailable()}
+          />
+
+          <div className="uwe-form-actions">
+            <button type="submit" name="action" value="save" className="uwe-btn uwe-btn-primary">
+              Speichern
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="uwe-panel">
+        <h2>Druckliste</h2>
+        {lists.length === 0 ? (
+          <p className="uwe-table-sub">
+            Noch keine Drucklisten.{" "}
+            <Link href={`/worlds/${worldSlug}/labels?tab=print-lists`}>Druckliste erstellen</Link>
+          </p>
+        ) : (
+          <form action={addLabelToPrintListAction} className="uwe-form-inline">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="labelId" value={labelId} />
+            <select name="printListId" required>
+              {lists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+            <input type="number" name="copies" defaultValue={1} min={1} max={99} style={{ width: "4rem" }} />
+            <button type="submit" className="uwe-btn uwe-btn-sm">
+              Zur Druckliste hinzufügen
+            </button>
+          </form>
+        )}
+      </section>
+
+      <div className="uwe-form-actions">
+        <form action={duplicateLabelAction} style={{ display: "inline" }}>
+          <input type="hidden" name="worldSlug" value={worldSlug} />
+          <input type="hidden" name="labelId" value={labelId} />
+          <button type="submit" className="uwe-btn">Duplizieren</button>
+        </form>
+        <form action={resetLabelToTemplateAction} style={{ display: "inline" }}>
+          <input type="hidden" name="worldSlug" value={worldSlug} />
+          <input type="hidden" name="labelId" value={labelId} />
+          <button type="submit" className="uwe-btn">Auf Vorlage zurücksetzen</button>
+        </form>
+      </div>
+    </WorldModuleShell>
   );
 }

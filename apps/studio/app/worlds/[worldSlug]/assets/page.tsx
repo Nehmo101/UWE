@@ -1,14 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
   ASSET_TYPE_LABELS,
   AssetTypeBadge,
-  Breadcrumb,
-  PageHeader,
-  SidebarNav,
   SidebarSection,
-  TopBarBrand,
   VISIBILITY_LABELS,
   VisibilityBadge,
 } from "@uwe/shared-ui";
@@ -24,6 +19,8 @@ import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
 import { linkAssetToPageAction, updateAssetAction } from "@/app/asset-actions";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -77,40 +74,26 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
   const shareByAssetId = new Map(assetShareData.map((item) => [item.assetId, item]));
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
-      sidebar={
-        <>
-          <SidebarSection title="Welt">
-            <SidebarNav
-              items={[
-                { label: "← Dashboard", href: "/studio" },
-                { label: "Seiten", href: `/worlds/${worldSlug}` },
-                { label: "Assets", href: `/worlds/${worldSlug}/assets`, active: true },
-                { label: "Labels", href: `/worlds/${worldSlug}/labels` },
-                { label: "Neue Seite", href: `/worlds/${worldSlug}/pages/new` },
-              ]}
-            />
-          </SidebarSection>
-        </>
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="assets"
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Assets", `/worlds/${worldSlug}/assets`)}
+      pageHeader={{
+        title: "Asset-Bibliothek",
+        summary: "Bilder, Karten, Handouts und Medien zentral verwalten.",
+      }}
+      context={
+        <SidebarSection title="Kontext">
+          <p className="uwe-hint" style={{ margin: 0 }}>
+            {assets.length} Assets
+          </p>
+        </SidebarSection>
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Assets" },
-            ]}
-          />
-          <PageHeader
-            title="Asset-Bibliothek"
-            summary="Bilder, Karten, Handouts und Medien zentral verwalten."
-          />
-
-          {(uploaded || linked || saved) && (
-            <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
-          )}
+    >
+      {(uploaded || linked || saved) && (
+        <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
+      )}
 
           <section className="uwe-panel">
             <h2>Asset hochladen</h2>
@@ -371,16 +354,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
               </form>
             </section>
           )}
-        </>
-      }
-      context={
-        <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {assets.length} Assets
-          </p>
-        </SidebarSection>
-      }
-    />
+    </WorldModuleShell>
   );
 }
 

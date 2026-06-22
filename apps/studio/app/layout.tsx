@@ -8,6 +8,7 @@ import {
   type ThemeAppearance,
 } from "@uwe/shared-ui";
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
+import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { ThemeDocumentSync } from "../components/ThemeDocumentSync";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
@@ -82,6 +83,7 @@ export default async function RootLayout({
           {children}
           <GlobalCaptureFab />
           <StudioCommandPalette worlds={worlds} />
+          <StudioSessionChrome />
         </StudioThemeSyncProvider>
       </body>
     </html>

@@ -2,20 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AI_TASK_LABELS } from "@uwe/ai-brain";
 import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
-import {
   AI_RUN_STATUS_LABELS,
   createAiRunServiceFromClient,
   createPrismaClient,
   getAppRepository,
   type AiRunStatus,
 } from "@uwe/database/server";
+import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { formatStudioDate } from "@/src/lib/format";
 
 interface Props {
@@ -47,88 +41,67 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
     { label: "Übernommen", value: "applied" },
     { label: "Verworfen", value: "discarded" },
   ];
+  const runsBase = `/worlds/${worldSlug}/ai-runs`;
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={world.name} href="/studio" />}
-      sidebar={
-        <>
-          <SidebarSection title="Welt">
-            <SidebarNav
-              items={[
-                { label: "← Dashboard", href: "/studio" },
-                { label: "Seiten", href: `/worlds/${worldSlug}` },
-                { label: "AI Runs", href: `/worlds/${worldSlug}/ai-runs`, active: true },
-              ]}
-            />
-          </SidebarSection>
-          <SidebarSection title="Status">
-            <SidebarNav
-              items={statusFilters.map((filter) => ({
-                label: filter.label,
-                href: filter.value
-                  ? `/worlds/${worldSlug}/ai-runs?status=${filter.value}`
-                  : `/worlds/${worldSlug}/ai-runs`,
-                active: statusFilter === filter.value || (!statusFilter && !filter.value),
-              }))}
-            />
-          </SidebarSection>
-        </>
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="ai-runs"
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "KI-Läufe", runsBase)}
+      pageHeader={{
+        title: "AI Run History",
+        summary: `${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen.`,
+      }}
+      sidebarExtra={
+        <WorldContextSidebar
+          title="Status"
+          items={statusFilters.map((filter) => ({
+            label: filter.label,
+            href: filter.value ? `${runsBase}?status=${filter.value}` : runsBase,
+            active: statusFilter === filter.value || (!statusFilter && !filter.value),
+          }))}
+        />
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "AI Runs" },
-            ]}
-          />
-          <PageHeader
-            title="AI Run History"
-            summary={`${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen.`}
-          />
-
-          {runs.length === 0 ? (
-            <p className="uwe-empty-state">Noch keine AI Runs für diese Welt.</p>
-          ) : (
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>Zeit</th>
-                  <th>Aufgabe</th>
-                  <th>Status</th>
-                  <th>Provider / Modell</th>
-                  <th>Seite</th>
-                  <th>Dauer</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr key={run.id}>
-                    <td>{formatStudioDate(run.createdAt, "short")}</td>
-                    <td>
-                      {AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
-                    </td>
-                    <td>{AI_RUN_STATUS_LABELS[run.status]}</td>
-                    <td>
-                      {run.provider}
-                      <br />
-                      <span className="uwe-meta">{run.model}</span>
-                    </td>
-                    <td>{run.pageTitle ?? "—"}</td>
-                    <td>{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
-                    <td>
-                      <Link href={`/worlds/${worldSlug}/ai-runs/${run.id}`}>Details</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </>
-      }
-    />
+    >
+      {runs.length === 0 ? (
+        <p className="uwe-empty-state">Noch keine AI Runs für diese Welt.</p>
+      ) : (
+        <table className="uwe-page-table">
+          <thead>
+            <tr>
+              <th>Zeit</th>
+              <th>Aufgabe</th>
+              <th>Status</th>
+              <th>Provider / Modell</th>
+              <th>Seite</th>
+              <th>Dauer</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.id}>
+                <td>{formatStudioDate(run.createdAt, "short")}</td>
+                <td>
+                  {AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
+                </td>
+                <td>{AI_RUN_STATUS_LABELS[run.status]}</td>
+                <td>
+                  {run.provider}
+                  <br />
+                  <span className="uwe-meta">{run.model}</span>
+                </td>
+                <td>{run.pageTitle ?? "—"}</td>
+                <td>{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
+                <td>
+                  <Link href={`/worlds/${worldSlug}/ai-runs/${run.id}`}>Details</Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </WorldModuleShell>
   );
 }

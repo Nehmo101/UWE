@@ -102,6 +102,11 @@ export interface PrivacySettings {
   restrictPublicExport: boolean;
 }
 
+export interface AuthSettings {
+  /** Auto-logout after this many minutes of inactivity. 0 = disabled. */
+  sessionInactivityTimeoutMinutes: number;
+}
+
 export interface MailSmtpStatus {
   host: string | null;
   port: number | null;
@@ -146,6 +151,7 @@ export interface UweSystemSettings {
   storage: StorageSettings;
   backup: BackupSettings;
   privacy: PrivacySettings;
+  auth: AuthSettings;
 }
 
 export type UweSystemSettingsUpdate = {
@@ -158,6 +164,7 @@ export type UweSystemSettingsUpdate = {
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
   privacy?: Partial<PrivacySettings>;
+  auth?: Partial<AuthSettings>;
 };
 
 const SETTINGS_ID = "default";
@@ -357,6 +364,9 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     maskSecretsInUi: true,
     restrictPublicExport: false,
   },
+  auth: {
+    sessionInactivityTimeoutMinutes: 30,
+  },
 };
 
 function buildProviderKeyPlaceholders(): AiProviderKeyPlaceholder[] {
@@ -427,6 +437,10 @@ function mergeSettings(
       ...base.privacy,
       ...(isRecord(stored.privacy) ? (stored.privacy as unknown as PrivacySettings) : {}),
     },
+    auth: {
+      ...base.auth,
+      ...(isRecord(stored.auth) ? (stored.auth as unknown as AuthSettings) : {}),
+    },
   };
 
   return normalizeSettings(merged);
@@ -454,7 +468,52 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       ...settings.privacy,
       maskSecretsInUi: true,
     },
+    auth: {
+      ...DEFAULT_SYSTEM_SETTINGS.auth,
+      ...settings.auth,
+      sessionInactivityTimeoutMinutes: normalizeSessionInactivityTimeoutMinutes(
+        settings.auth?.sessionInactivityTimeoutMinutes,
+      ),
+    },
   };
+}
+
+function normalizeSessionInactivityTimeoutMinutes(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_SYSTEM_SETTINGS.auth.sessionInactivityTimeoutMinutes;
+  }
+  const rounded = Math.round(value);
+  if (rounded < 0) {
+    return 0;
+  }
+  if (rounded > 24 * 60) {
+    return 24 * 60;
+  }
+  return rounded;
+}
+
+export function resolveSessionInactivityTimeoutMs(
+  settings: UweSystemSettings,
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const fromSettings = normalizeSessionInactivityTimeoutMinutes(
+    settings.auth?.sessionInactivityTimeoutMinutes,
+  );
+  if (fromSettings > 0) {
+    return fromSettings * 60 * 1000;
+  }
+
+  const envRaw = env.SESSION_INACTIVITY_TIMEOUT_MINUTES?.trim();
+  if (!envRaw) {
+    return 0;
+  }
+
+  const fromEnv = Number.parseInt(envRaw, 10);
+  if (!Number.isFinite(fromEnv) || fromEnv <= 0) {
+    return 0;
+  }
+
+  return Math.min(fromEnv, 24 * 60) * 60 * 1000;
 }
 
 export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSystemSettings {
@@ -651,6 +710,7 @@ export class SettingsService {
       storage: { ...current.storage, ...update.storage },
       backup: { ...current.backup, ...update.backup },
       privacy: { ...current.privacy, ...update.privacy },
+      auth: { ...current.auth, ...update.auth },
     });
 
     await this.db.systemSettings.upsert({

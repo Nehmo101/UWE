@@ -5,6 +5,7 @@ import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
+import { PortalSessionChrome } from "../components/PortalSessionChrome";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,10 @@ export default async function RootLayout({
           serverUpdatedAt={updatedAt}
         >
           {portalEnabled ? (
-            children
+            <>
+              {children}
+              <PortalSessionChrome />
+            </>
           ) : (
             <main className="page">
               <div className="card">

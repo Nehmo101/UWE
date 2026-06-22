@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { SESSION_COOKIE_NAME } from "@uwe/auth";
+import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME } from "@uwe/auth";
 
-export async function POST() {
+export async function POST(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const cookieOptions = getSessionCookieOptionsForRequest(request);
 
   if (token) {
     const db = createPrismaClient();
@@ -17,7 +18,7 @@ export async function POST() {
     }
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.set(SESSION_COOKIE_NAME, "", { ...cookieOptions, maxAge: 0 });
 
   return NextResponse.json({ ok: true });
 }

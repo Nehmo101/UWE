@@ -34,6 +34,7 @@ const TOP_LEVEL_KEYS = new Set([
   "storage",
   "backup",
   "privacy",
+  "auth",
 ]);
 
 const APP_KEYS = new Set([
@@ -52,6 +53,7 @@ const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody"]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
+const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
 
 const UNSAFE_PATH_PATTERNS = [
   /\0/,
@@ -462,6 +464,36 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (Object.keys(privacy).length > 0) {
         update.privacy = privacy;
+      }
+    }
+  }
+
+  if ("auth" in body) {
+    const sectionErrors = validateSection(body.auth, AUTH_KEYS, "settings.auth", (key, value, sectionErrors) => {
+      if (key === "sessionInactivityTimeoutMinutes") {
+        const minutes = typeof value === "number" ? value : Number(value);
+        if (!Number.isFinite(minutes)) {
+          sectionErrors.push("settings.auth.sessionInactivityTimeoutMinutes muss eine Zahl sein.");
+          return;
+        }
+        const rounded = Math.round(minutes);
+        if (rounded < 0 || rounded > 24 * 60) {
+          sectionErrors.push(
+            "settings.auth.sessionInactivityTimeoutMinutes muss zwischen 0 und 1440 liegen (0 = deaktiviert).",
+          );
+        }
+      }
+    });
+    errors.push(...sectionErrors);
+    if (sectionErrors.length === 0 && isRecord(body.auth)) {
+      const auth: NonNullable<UweSystemSettingsUpdate["auth"]> = {};
+      if (body.auth.sessionInactivityTimeoutMinutes !== undefined) {
+        auth.sessionInactivityTimeoutMinutes = Math.round(
+          body.auth.sessionInactivityTimeoutMinutes as number,
+        );
+      }
+      if (Object.keys(auth).length > 0) {
+        update.auth = auth;
       }
     }
   }
