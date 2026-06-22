@@ -11,13 +11,14 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/shared-ui.test.tsx src/theme/theme.test.ts src/theme/resolveColorTokens.test.ts src/theme/sync.test.ts"
+    "test": "node --import tsx --test src/shared-ui.test.tsx src/auth/auth-links.test.ts src/theme/theme.test.ts src/theme/resolveColorTokens.test.ts src/theme/sync.test.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "next": "^15.3.4"
