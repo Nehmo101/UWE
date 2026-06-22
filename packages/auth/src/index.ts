@@ -167,7 +167,10 @@ export {
   isPublicExposureConfigured,
   isRequestSecure,
   originMatchesTrustedHost,
+  resolveUweAppUrls,
 } from "./runtime-config";
+
+export type { UweAppUrls } from "./runtime-config";
 
 export type { EnvValidationIssue, EnvValidationSeverity } from "./env-validation";
 export { hasBlockingEnvIssues, validateUweEnvironment } from "./env-validation";

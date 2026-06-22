@@ -22,6 +22,11 @@ export {
 } from "./AppShell";
 
 export {
+  SettingToggleRow,
+  SettingsToggleGroup,
+} from "./SettingToggleRow";
+
+export {
   CollapsibleSection,
   MobileBottomNav,
   MobileContextPanel,

@@ -71,7 +71,7 @@ export function ThemePicker({
                 aria-label={`${option.label}: ${option.description}`}
               />
               <span
-                className={`uwe-theme-swatch uwe-theme-swatch-${option.value}`}
+                className={`uwe-theme-picker-dot uwe-theme-picker-dot-${option.value}`}
                 aria-hidden="true"
               />
               <span className="uwe-theme-picker-label">{option.label}</span>

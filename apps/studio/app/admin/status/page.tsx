@@ -220,9 +220,18 @@ export default async function AdminStatusPage() {
                 { label: "TRUST_PROXY", value: studioSecurity.proxyIndicators.trustProxy },
                 { label: "CLOUDFLARE_TUNNEL", value: studioSecurity.proxyIndicators.cloudflareTunnel },
                 {
+                  label: "Cloudflare Access (ENV)",
+                  value: studioSecurity.proxyIndicators.cloudflareAccessConfigured,
+                },
+                {
                   label: "Netzwerk-Schutz (Heuristik)",
                   value: studioSecurity.proxyIndicators.networkProtectionLikely,
                 },
+                { label: "Public Base URL", value: system.proxy.publicAppUrl ?? "—" },
+                { label: "Studio URL", value: system.proxy.studioUrl ?? "—" },
+                { label: "Portal URL", value: system.proxy.portalUrl ?? "—" },
+                { label: "Studio-Pfad", value: system.proxy.studioPath },
+                { label: "Portal-Pfad", value: system.proxy.portalPath },
                 { label: "STUDIO_API_TOKEN", value: studioSecurity.checks.studioApiTokenConfigured },
                 { label: "Portal AUTH_REQUIRED", value: studioSecurity.checks.portalAuthRequired },
                 { label: "AUTH_SECRET schwach", value: studioSecurity.checks.authSecretLooksWeak },

@@ -124,9 +124,13 @@ body {
 
 .uwe-settings-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
 }
 
 .uwe-settings-tabs a {
@@ -136,6 +140,8 @@ body {
   color: var(--uwe-muted);
   text-decoration: none;
   font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .uwe-settings-tabs a.active,

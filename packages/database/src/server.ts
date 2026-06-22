@@ -41,6 +41,13 @@ export {
   isPublishedForPortal,
 } from "./repository";
 
+export {
+  WorldCreationService,
+  createWorldCreationService,
+} from "./world-creation-service";
+
+export type { CreateWorldRequest, CreatedWorldResult } from "./world-creation-service";
+
 export type {
   Campaign as DbCampaign,
   Asset as DbAsset,
@@ -731,6 +738,7 @@ export type {
 } from "./settings-validation";
 
 export {
+  getBackupFreshnessStatus,
   getProductionSafetyWarnings,
   isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,

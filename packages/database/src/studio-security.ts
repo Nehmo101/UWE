@@ -31,7 +31,8 @@ export interface StudioSecurityAssessment {
   proxyIndicators: {
     trustProxy: boolean;
     cloudflareTunnel: boolean;
-    /** Heuristic — true when proxy/tunnel flags suggest network-level protection. */
+    cloudflareAccessConfigured: boolean;
+    /** Heuristic — true when proxy/tunnel/access flags suggest network-level protection. */
     networkProtectionLikely: boolean;
   };
   checks: {
@@ -136,7 +137,11 @@ export function assessStudioSecurity(
   const authSecretConfigured = Boolean(authSecret?.trim());
   const authSecretLooksWeak = isWeakAuthSecret(authSecret);
   const runDbSeedDisabled = (env.RUN_DB_SEED ?? "auto") === "false";
-  const networkProtectionLikely = runtime.trustProxy || runtime.cloudflareTunnel;
+  const cloudflareAccessConfigured =
+    runtime.cloudflareAccessEnabled ||
+    Boolean(env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim());
+  const networkProtectionLikely =
+    runtime.trustProxy || runtime.cloudflareTunnel || cloudflareAccessConfigured;
 
   const misconfigurations: string[] = [];
   const nextSteps: string[] = [];
@@ -197,14 +202,21 @@ export function assessStudioSecurity(
       nextSteps.push("Setze STUDIO_API_TOKEN für sensible Studio-APIs.");
     }
   } else if (!studioApiTokenConfigured) {
-    level = "unsafe";
-    severity = "critical";
-    message =
-      "Proxy/Tunnel erkannt, aber STUDIO_API_TOKEN fehlt — sensible APIs (Backup, AI, Settings) sind ohne Bearer-Token erreichbar.";
+    level = cloudflareAccessConfigured ? "protected" : "unsafe";
+    severity = cloudflareAccessConfigured ? "warning" : "critical";
+    message = cloudflareAccessConfigured
+      ? "Cloudflare Access/Proxy erkannt — STUDIO_API_TOKEN fehlt noch für sensible Studio-APIs (Backup, Settings, AI)."
+      : "Proxy/Tunnel erkannt, aber STUDIO_API_TOKEN fehlt — sensible APIs (Backup, AI, Settings) sind ohne Bearer-Token erreichbar.";
     nextSteps.push("Setze STUDIO_API_TOKEN in .env und nutze es für Skripte/API-Clients.");
-    nextSteps.push(
-      "Bestätige, dass Cloudflare Access oder Reverse-Proxy-Auth die Studio-Oberfläche schützt (nicht serverseitig prüfbar).",
-    );
+    if (cloudflareAccessConfigured) {
+      nextSteps.push(
+        "Cloudflare Access vor Studio ist konfiguriert — bestätige die Access-Policy manuell in Cloudflare.",
+      );
+    } else {
+      nextSteps.push(
+        "Bestätige, dass Cloudflare Access oder Reverse-Proxy-Auth die Studio-Oberfläche schützt (nicht serverseitig prüfbar).",
+      );
+    }
   } else if (!runtime.authRequired) {
     level = "protected";
     severity = "warning";
@@ -236,6 +248,7 @@ export function assessStudioSecurity(
     proxyIndicators: {
       trustProxy: runtime.trustProxy,
       cloudflareTunnel: runtime.cloudflareTunnel,
+      cloudflareAccessConfigured,
       networkProtectionLikely,
     },
     checks: {

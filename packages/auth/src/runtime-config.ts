@@ -9,6 +9,9 @@ export interface UweRuntimeConfig {
   publicAppUrl: string | null;
   trustProxy: boolean;
   cloudflareTunnel: boolean;
+  cloudflareAccessEnabled: boolean;
+  studioPath: string;
+  portalPath: string;
   authRequired: boolean;
   sessionCookieSecure: boolean;
   sessionCookieSameSite: SessionCookieSameSite;
@@ -17,6 +20,14 @@ export interface UweRuntimeConfig {
   playerPreviewPublic: boolean;
   playerPreviewRequireToken: boolean;
   playerPreviewAllowDmOnly: boolean;
+}
+
+export interface UweAppUrls {
+  publicBaseUrl: string | null;
+  studioUrl: string | null;
+  portalUrl: string | null;
+  studioPath: string;
+  portalPath: string;
 }
 
 export interface SessionCookieOptions {
@@ -90,6 +101,53 @@ export function isProductionEnv(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.NODE_ENV?.trim() === "production";
 }
 
+function normalizeAppPath(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === "/") {
+    return fallback;
+  }
+  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeading.replace(/\/+$/, "") || fallback;
+}
+
+export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppUrls {
+  const runtime = getUweRuntimeConfig(env);
+  const studioPath = runtime.studioPath;
+  const portalPath = runtime.portalPath;
+
+  const explicitStudio = env.NEXT_PUBLIC_STUDIO_URL?.trim()?.replace(/\/$/, "");
+  const explicitPortal = env.NEXT_PUBLIC_PORTAL_URL?.trim()?.replace(/\/$/, "");
+
+  if (explicitStudio && explicitPortal) {
+    return {
+      publicBaseUrl: runtime.publicAppUrl,
+      studioUrl: explicitStudio,
+      portalUrl: explicitPortal,
+      studioPath,
+      portalPath,
+    };
+  }
+
+  if (runtime.publicAppUrl) {
+    const base = runtime.publicAppUrl.replace(/\/$/, "");
+    return {
+      publicBaseUrl: base,
+      studioUrl: `${base}${studioPath}`,
+      portalUrl: `${base}${portalPath}`,
+      studioPath,
+      portalPath,
+    };
+  }
+
+  return {
+    publicBaseUrl: null,
+    studioUrl: explicitStudio ?? null,
+    portalUrl: explicitPortal ?? null,
+    studioPath,
+    portalPath,
+  };
+}
+
 export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRuntimeConfig {
   const isProduction = isProductionEnv(env);
   const publicAppUrl = normalizePublicAppUrl(
@@ -99,6 +157,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
 
   const trustProxy = parseBoolEnv(env.TRUST_PROXY, isProduction && Boolean(publicAppUrl));
   const cloudflareTunnel = parseBoolEnv(env.CLOUDFLARE_TUNNEL, trustProxy);
+  const cloudflareAccessEnabled = parseBoolEnv(env.CLOUDFLARE_ACCESS_ENABLED, false);
 
   const sessionCookieSecure = parseBoolEnv(
     env.SESSION_COOKIE_SECURE,
@@ -112,6 +171,9 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     publicAppUrl,
     trustProxy,
     cloudflareTunnel,
+    cloudflareAccessEnabled,
+    studioPath: normalizeAppPath(env.STUDIO_PATH, "/studio"),
+    portalPath: normalizeAppPath(env.PORTAL_PATH, "/portal"),
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),
     sessionCookieSecure,
     sessionCookieSameSite: parseSameSite(env.SESSION_COOKIE_SAMESITE),

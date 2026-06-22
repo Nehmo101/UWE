@@ -27,6 +27,7 @@ import {
 import {
   getUweRuntimeConfig,
   isPublicExposureConfigured,
+  resolveUweAppUrls,
 } from "@uwe/auth";
 import { UWE_VERSION } from "./version";
 
@@ -63,6 +64,12 @@ export interface ProxyStatus {
   publicAppUrl: string | null;
   trustProxy: boolean;
   cloudflareTunnel: boolean;
+  cloudflareAccessEnabled: boolean;
+  cloudflareAccessAllowlistConfigured: boolean;
+  studioPath: string;
+  portalPath: string;
+  studioUrl: string | null;
+  portalUrl: string | null;
   authRequired: boolean;
   sessionCookieSecure: boolean;
   playerPreviewPublic: boolean;
@@ -183,11 +190,20 @@ export function getAppRuntimeStatus(): AppRuntimeStatus {
 
 export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatus {
   const runtime = getUweRuntimeConfig(env);
+  const urls = resolveUweAppUrls(env);
+  const allowlistRaw =
+    env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim() || "";
 
   return {
     publicAppUrl: runtime.publicAppUrl,
     trustProxy: runtime.trustProxy,
     cloudflareTunnel: runtime.cloudflareTunnel,
+    cloudflareAccessEnabled: runtime.cloudflareAccessEnabled,
+    cloudflareAccessAllowlistConfigured: Boolean(allowlistRaw),
+    studioPath: urls.studioPath,
+    portalPath: urls.portalPath,
+    studioUrl: urls.studioUrl,
+    portalUrl: urls.portalUrl,
     authRequired: runtime.authRequired,
     sessionCookieSecure: runtime.sessionCookieSecure,
     playerPreviewPublic: runtime.playerPreviewPublic,

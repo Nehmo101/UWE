@@ -46,6 +46,12 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
       publicAppUrl: null,
       trustProxy: false,
       cloudflareTunnel: false,
+      cloudflareAccessEnabled: false,
+      cloudflareAccessAllowlistConfigured: false,
+      studioPath: "/studio",
+      portalPath: "/portal",
+      studioUrl: null,
+      portalUrl: null,
       authRequired: true,
       sessionCookieSecure: false,
       playerPreviewPublic: false,
@@ -68,6 +74,7 @@ const studioSecurity = {
   proxyIndicators: {
     trustProxy: false,
     cloudflareTunnel: false,
+    cloudflareAccessConfigured: false,
     networkProtectionLikely: false,
   },
   checks: {

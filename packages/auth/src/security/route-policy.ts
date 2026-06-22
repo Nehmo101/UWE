@@ -70,6 +70,17 @@ export const PORTAL_SESSION_API_ROUTES = [
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
+  "/api/worlds",
+] as const;
+
+/** Studio API routes that require a logged-in session (not Bearer token). */
+export const STUDIO_SESSION_API_ROUTES = [
+  "/api/auth/change-password",
+  "/api/auth/two-factor",
+  "/api/auth/two-factor/setup",
+  "/api/auth/two-factor/activate",
+  "/api/auth/two-factor/disable",
+  "/api/worlds",
 ] as const;
 
 /** Studio/Admin prefixes in unified proxy layouts. */
@@ -255,6 +266,10 @@ function classifyApiRoute(resolved: string, surface: UweAppSurface): RouteClassi
 
   if (matchesAny(resolved, PUBLIC_STUDIO_API_ROUTES)) {
     return { access: "public", unknownApi: false, pathname: resolved };
+  }
+
+  if (matchesAny(resolved, STUDIO_SESSION_API_ROUTES)) {
+    return { access: "protected-session", unknownApi: false, pathname: resolved };
   }
 
   if (matchesAny(resolved, PROTECTED_ROUTE_PREFIXES)) {

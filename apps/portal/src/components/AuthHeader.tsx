@@ -9,9 +9,11 @@ interface AuthHeaderProps {
     displayName: string;
     email: string | null;
   } | null;
+  canAccessAdmin?: boolean;
+  studioSettingsUrl?: string;
 }
 
-export function AuthHeader({ user }: AuthHeaderProps) {
+export function AuthHeader({ user, canAccessAdmin = false, studioSettingsUrl }: AuthHeaderProps) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
@@ -33,6 +35,11 @@ export function AuthHeader({ user }: AuthHeaderProps) {
         <Link href="/auth/worlds" onClick={() => setNavOpen(false)}>
           Welten
         </Link>
+        {canAccessAdmin && studioSettingsUrl ? (
+          <a href={studioSettingsUrl} onClick={() => setNavOpen(false)}>
+            Admin / Einstellungen
+          </a>
+        ) : null}
         {user ? (
           <>
             <Link href="/auth/account/password" onClick={() => setNavOpen(false)}>

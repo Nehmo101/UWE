@@ -6,6 +6,8 @@ import {
   PageHeader,
   SidebarNav,
   SidebarSection,
+  SettingToggleRow,
+  SettingsToggleGroup,
   ThemeSettingsPanel,
   ThemePicker,
   TopBarBrand,
@@ -92,6 +94,7 @@ export default async function SettingsPage({ searchParams }: Props) {
             <SidebarNav
               items={[
                 { label: "← Dashboard", href: "/studio" },
+                { label: "Admin", href: "/admin" },
                 { label: "Einstellungen", href: "/settings", active: true },
               ]}
             />
@@ -339,30 +342,30 @@ export default async function SettingsPage({ searchParams }: Props) {
             <form action={updateSettingsAction} className="uwe-form">
               <input type="hidden" name="tab" value="portal" />
               <h2>Portal Settings</h2>
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
+              <p className="uwe-hint">
+                Steuert Sichtbarkeit und Zugang zum Spieler-Portal. Änderungen wirken sofort nach
+                Speichern.
+              </p>
+              <SettingsToggleGroup title="Portal-Zugang">
+                <SettingToggleRow
                   name="portalEnabled"
+                  label="Portal aktiv"
+                  hint="Schaltet das Spieler-Portal ein oder aus. Deaktiviert = keine Wiki-Ausgabe für Spieler."
                   defaultChecked={settings.portal.portalEnabled}
                 />
-                Portal aktiv
-              </label>
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
+                <SettingToggleRow
                   name="guestAccessEnabled"
+                  label="Guest Access aktiv"
+                  hint="Erlaubt anonymen Lesezugriff auf Welten im Gastmodus (nur player_visible Inhalte)."
                   defaultChecked={settings.portal.guestAccessEnabled}
                 />
-                Guest Access aktiv
-              </label>
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
+                <SettingToggleRow
                   name="publicSharingEnabled"
+                  label="Public Sharing aktiv"
+                  hint="Erlaubt öffentliche Share-Links für Handouts — prüfe bewusst, welche Inhalte geteilt werden."
                   defaultChecked={settings.portal.publicSharingEnabled}
                 />
-                Public Sharing aktiv
-              </label>
+              </SettingsToggleGroup>
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern
               </button>

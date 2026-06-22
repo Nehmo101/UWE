@@ -6,6 +6,7 @@ export interface AdminSidebarItem {
 
 export function adminSidebarNav(active: string): AdminSidebarItem[] {
   const items: AdminSidebarItem[] = [
+    { label: "Admin Übersicht", href: "/admin" },
     { label: "Heute", href: "/today" },
     { label: "Capture", href: "/capture" },
     { label: "Dashboard", href: "/" },

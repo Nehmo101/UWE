@@ -24,6 +24,15 @@ describe("route policy", () => {
     assert.equal(authWorlds.access, "protected-session");
     assert.equal(classifyRoute("/api/auth/two-factor", "portal").access, "protected-session");
     assert.equal(classifyRoute("/api/auth/two-factor/setup", "portal").access, "protected-session");
+    assert.equal(classifyRoute("/api/worlds", "portal").access, "protected-session");
+  });
+
+  it("treats studio session auth routes as protected-session", () => {
+    assert.equal(classifyRoute("/api/auth/two-factor", "studio").access, "protected-session");
+    assert.equal(classifyRoute("/api/auth/two-factor/setup", "studio").access, "protected-session");
+    assert.equal(classifyRoute("/api/auth/change-password", "studio").access, "protected-session");
+    assert.equal(classifyRoute("/api/worlds", "studio").access, "protected-session");
+    assert.equal(isUnknownProtectedApi("/api/auth/two-factor", "studio"), false);
   });
 
   it("treats studio auth pages as public", () => {

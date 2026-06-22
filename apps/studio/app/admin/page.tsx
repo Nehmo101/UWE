@@ -1,0 +1,228 @@
+import Link from "next/link";
+import {
+  AppShell,
+  HealthBadge,
+  PageHeader,
+  SidebarNav,
+  SidebarSection,
+  TopBarBrand,
+} from "@uwe/shared-ui";
+import {
+  getAppRepository,
+  getBackupFreshnessStatus,
+  getProductionSafetyWarnings,
+  getSystemStatus,
+  prisma,
+  assessStudioSecurity,
+  type ProductionSafetyWarning,
+} from "@uwe/database/server";
+import { resolveUweAppUrls } from "@uwe/auth";
+import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
+import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+
+export default async function AdminOverviewPage() {
+  const [dashboard, system, backup, productionWarnings, settings] = await Promise.all([
+    getAdminDashboardStatus(prisma),
+    getSystemStatus(prisma),
+    Promise.resolve(getBackupFreshnessStatus()),
+    getProductionSafetyWarnings(prisma),
+    getAppRepository().getSystemSettings(),
+  ]);
+
+  const studioSecurity = assessStudioSecurity(system);
+  const appUrls = resolveUweAppUrls();
+  const criticalWarnings = productionWarnings.filter(
+    (w: ProductionSafetyWarning) => w.severity === "critical",
+  );
+
+  const securityBadge =
+    studioSecurity.severity === "ok"
+      ? "ok"
+      : studioSecurity.severity === "warning"
+        ? "degraded"
+        : "error";
+
+  return (
+    <AppShell
+      bottomNav={studioGlobalBottomNav("more")}
+      topBar={<TopBarBrand appName="UWE Studio" subtitle="Admin" href="/studio" />}
+      sidebar={
+        <>
+          <SidebarSection title="Admin">
+            <SidebarNav items={adminSidebarNav("/admin")} />
+          </SidebarSection>
+        </>
+      }
+      main={
+        <>
+          <PageHeader
+            title="Admin-Übersicht"
+            summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
+            actions={
+              <HealthBadge
+                status={dashboard.ok ? "ok" : "degraded"}
+                label={dashboard.ok ? "System OK" : "Einschränkungen"}
+              />
+            }
+          />
+
+          {criticalWarnings.length > 0 && (
+            <div className="uwe-form-error" role="alert" style={{ marginBottom: "1rem" }}>
+              <strong>Kritische Hinweise:</strong>
+              <ul className="uwe-inspector-findings">
+                {criticalWarnings.map((warning: ProductionSafetyWarning) => (
+                  <li key={warning.id}>
+                    {warning.href ? (
+                      <Link href={warning.href}>
+                        <strong>{warning.title}</strong>
+                      </Link>
+                    ) : (
+                      <strong>{warning.title}</strong>
+                    )}{" "}
+                    <span className="uwe-dashboard-muted">{warning.description}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <section className="uwe-section">
+            <h2 className="uwe-section-title">Schnellaktionen</h2>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+              <Link className="uwe-btn uwe-btn-primary" href="/worlds">
+                Welten verwalten
+              </Link>
+              <Link className="uwe-btn" href="/backup">
+                Backup erstellen
+              </Link>
+              <Link className="uwe-btn" href="/settings">
+                Einstellungen
+              </Link>
+              <Link className="uwe-btn" href="/admin/status">
+                Systemstatus
+              </Link>
+              {appUrls.portalUrl ? (
+                <a className="uwe-btn" href={appUrls.portalUrl} target="_blank" rel="noreferrer">
+                  Portal öffnen
+                </a>
+              ) : (
+                <Link className="uwe-btn" href="/settings?tab=portal">
+                  Portal konfigurieren
+                </Link>
+              )}
+              {appUrls.studioUrl ? (
+                <a className="uwe-btn" href={appUrls.studioUrl}>
+                  Studio öffnen
+                </a>
+              ) : null}
+            </div>
+          </section>
+
+          <div className="uwe-dashboard-grid">
+            <article className="uwe-card">
+              <h3>Studio Security</h3>
+              <HealthBadge status={securityBadge} label={studioSecurity.label} />
+              <p className="uwe-dashboard-muted" style={{ marginTop: "0.75rem" }}>
+                {studioSecurity.message}
+              </p>
+            </article>
+
+            <article className="uwe-card">
+              <h3>Cloudflare / Proxy</h3>
+              <dl className="uwe-dl">
+                <div>
+                  <dt>Public Base URL</dt>
+                  <dd>{system.proxy.publicAppUrl ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Studio URL</dt>
+                  <dd>{system.proxy.studioUrl ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Portal URL</dt>
+                  <dd>{system.proxy.portalUrl ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>TRUST_PROXY</dt>
+                  <dd>{system.proxy.trustProxy ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>CLOUDFLARE_TUNNEL</dt>
+                  <dd>{system.proxy.cloudflareTunnel ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>Cloudflare Access (ENV)</dt>
+                  <dd>{system.proxy.cloudflareAccessEnabled ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>Access-Allowlist</dt>
+                  <dd>{system.proxy.cloudflareAccessAllowlistConfigured ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>STUDIO_API_TOKEN</dt>
+                  <dd>{system.trust.studioApiTokenConfigured ? "gesetzt" : "fehlt"}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article className="uwe-card">
+              <h3>Auth &amp; Portal</h3>
+              <dl className="uwe-dl">
+                <div>
+                  <dt>Portal AUTH_REQUIRED</dt>
+                  <dd>{system.proxy.authRequired ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>Portal aktiv</dt>
+                  <dd>{settings.portal.portalEnabled ? "ja" : "nein"}</dd>
+                </div>
+                <div>
+                  <dt>Öffentliche Portal-Freigabe</dt>
+                  <dd>{system.trust.publicPortalSharingEnabled ? "aktiv" : "inaktiv"}</dd>
+                </div>
+                <div>
+                  <dt>Benutzer (Studio)</dt>
+                  <dd>
+                    <Link href="/admin/users">Benutzer verwalten</Link>
+                  </dd>
+                </div>
+                <div>
+                  <dt>2FA / Sicherheit</dt>
+                  <dd>
+                    <Link href="/account/security">Konto-Sicherheit</Link>
+                  </dd>
+                </div>
+              </dl>
+            </article>
+
+            <article className="uwe-card">
+              <h3>Backup</h3>
+              <dl className="uwe-dl">
+                <div>
+                  <dt>Anzahl Backups</dt>
+                  <dd>{backup.backupCount}</dd>
+                </div>
+                <div>
+                  <dt>Letztes Backup</dt>
+                  <dd>
+                    {backup.latestBackupAt
+                      ? backup.latestBackupAt.toLocaleString("de-DE")
+                      : "keines gefunden"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Verzeichnis lesbar</dt>
+                  <dd>{backup.readable ? "ja" : "nein"}</dd>
+                </div>
+              </dl>
+              <Link className="uwe-btn uwe-btn-ghost" href="/backup">
+                Backup verwalten
+              </Link>
+            </article>
+          </div>
+        </>
+      }
+    />
+  );
+}

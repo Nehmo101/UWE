@@ -9,6 +9,8 @@ import {
   getUweRuntimeConfig,
   isPublicExposureConfigured,
 } from "@uwe/auth";
+import { assessStudioSecurity } from "./studio-security";
+import { getSystemStatus } from "./system-status";
 
 export interface ProductionSafetyWarning {
   id: string;
@@ -201,14 +203,41 @@ export async function getProductionSafetyWarnings(
     });
   }
 
-  warnings.push({
-    id: "production:studio-exposure",
-    severity: isPublicExposureConfigured() ? "critical" : "critical",
-    title: "Studio ohne Login — nur hinter Schutz betreiben",
-    description: isPublicExposureConfigured()
-      ? "Studio ist über Cloudflare/Proxy erreichbar, hat aber kein Benutzer-Login. Nutze Cloudflare Access, Reverse-Proxy-Auth oder VPN — und setze STUDIO_API_TOKEN."
-      : "Studio niemals direkt öffentlich erreichbar machen. Nutze Reverse-Proxy-Auth, VPN oder Cloudflare Access.",
-  });
+  const system = await getSystemStatus(db);
+  const studioSecurity = assessStudioSecurity(system);
+  const studioWarningSeverity: InspectorSeverity =
+    studioSecurity.severity === "ok"
+      ? studioSecurity.level === "local_only"
+        ? "info"
+        : "info"
+      : studioSecurity.severity === "warning"
+        ? "warning"
+        : "critical";
+
+  if (studioSecurity.level !== "protected" || studioSecurity.severity !== "ok") {
+    warnings.push({
+      id: "production:studio-exposure",
+      severity: studioWarningSeverity,
+      title:
+        studioSecurity.level === "local_only"
+          ? "Studio nur lokal — bei Exposition Schutz einplanen"
+          : studioSecurity.level === "protected" && studioSecurity.severity === "warning"
+            ? "Studio teilweise abgesichert"
+            : studioSecurity.level === "misconfigured"
+              ? "Studio-Konfiguration widersprüchlich"
+              : "Studio möglicherweise ungeschützt",
+      description: studioSecurity.message,
+      href: "/admin/status",
+    });
+  } else if (studioSecurity.level === "protected" && studioSecurity.severity === "ok") {
+    warnings.push({
+      id: "production:studio-exposure",
+      severity: "info",
+      title: "Studio geschützt",
+      description: studioSecurity.message,
+      href: "/admin/status",
+    });
+  }
 
   if (isPublicPortalExposureEnabled(settings)) {
     const enabled: string[] = [];
