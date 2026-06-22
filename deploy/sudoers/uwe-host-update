@@ -1,0 +1,6 @@
+# UWE host update — allow service user to start the privileged update trigger only.
+# Installed by deploy/scripts/setup-uwe-host.sh as /etc/sudoers.d/uwe-host-update
+#
+# Validate after install: visudo -cf /etc/sudoers.d/uwe-host-update
+Defaults!/opt/uwe/deploy/scripts/uwe-host-update-trigger.sh !requiretty
+uwe ALL=(root) NOPASSWD: /opt/uwe/deploy/scripts/uwe-host-update-trigger.sh

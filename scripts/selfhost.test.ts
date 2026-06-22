@@ -112,6 +112,24 @@ describe("self-hosting setup", () => {
     assert.match(pkg.scripts["build:standalone-check"], /check-standalone-prisma-deps/);
   });
 
+  it("includes host update scripts and systemd unit", () => {
+    for (const file of [
+      "deploy/scripts/uwe-host-update.sh",
+      "deploy/scripts/uwe-host-update-trigger.sh",
+      "deploy/systemd/uwe-host-update.service",
+      "deploy/sudoers/uwe-host-update",
+      "deploy/scripts/lib/uwe-host-update-install.sh",
+    ]) {
+      assert.ok(fs.existsSync(path.join(root, file)), `missing ${file}`);
+    }
+
+    const setup = fs.readFileSync(path.join(root, "deploy/scripts/setup-uwe-host.sh"), "utf8");
+    assert.match(setup, /install_host_update_assets/);
+    const update = fs.readFileSync(path.join(root, "deploy/scripts/uwe-host-update.sh"), "utf8");
+    assert.match(update, /setup-uwe-host\.sh --quick/);
+    assert.doesNotMatch(update, /--fresh/);
+  });
+
   it("host scripts target uwe.service not uwe-host.service", () => {
     const lib = fs.readFileSync(path.join(root, "scripts/uwe-host-lib.sh"), "utf8");
     assert.match(lib, /SYSTEMD_UNIT="\$\{SYSTEMD_UNIT:-uwe\.service\}"/);
@@ -182,7 +200,7 @@ describe("self-hosting setup", () => {
     }
 
     execSync(
-      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh",
+      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh deploy/scripts/uwe-host-update.sh deploy/scripts/uwe-host-update-trigger.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh deploy/scripts/lib/uwe-host-update-install.sh",
       { cwd: root, stdio: "pipe" },
     );
   });

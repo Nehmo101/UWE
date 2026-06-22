@@ -3,7 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import { z } from "zod";
 import { isCrossSiteBrowserRequest, requireSameOriginMutation } from "./csrf";
 import { validationError } from "./errors";
-import { guardStudioMutation, requireStudioApiAuth } from "./guards";
+import { guardStudioMutation, requireOwnerApiAuth, requireStudioApiAuth } from "./guards";
 import {
   enforceRateLimit,
   resetRateLimitStore,
@@ -172,6 +172,51 @@ describe("rate limiter store", () => {
     const blocked = enforceRateLimit(new Request("http://localhost/api"), key, "setup");
     assert.ok(blocked);
     assert.equal(blocked?.status, 429);
+  });
+});
+
+describe("owner API guard", () => {
+  it("rejects admin session for owner-only host update", () => {
+    const result = requireOwnerApiAuth(
+      new Request("http://studio.local/api/admin/host-update", {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-origin", host: "studio.local" },
+      }),
+      {
+        user: {
+          id: "admin-1",
+          displayName: "Admin",
+          email: "admin@uwe.local",
+          role: "admin",
+        },
+        apiTokenId: null,
+        apiTokenScopes: null,
+        authMethod: "session",
+      },
+    );
+    assert.ok(result);
+    assert.equal(result?.status, 403);
+  });
+
+  it("allows owner session for host update", () => {
+    const result = requireOwnerApiAuth(
+      new Request("http://studio.local/api/admin/host-update", {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-origin", host: "studio.local" },
+      }),
+      {
+        user: {
+          id: "owner-1",
+          displayName: "Owner",
+          email: "owner@uwe.local",
+          role: "owner",
+        },
+        apiTokenId: null,
+        apiTokenScopes: null,
+        authMethod: "session",
+      },
+    );
+    assert.equal(result, null);
   });
 });
 

@@ -1,0 +1,1 @@
+-- AuditAction enum extension: host_update_* (SQLite stores action as TEXT; no DDL required).

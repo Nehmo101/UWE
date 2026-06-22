@@ -1055,6 +1055,26 @@ export {
   parseHardwareSpecsLines,
 } from "./homelab-cockpit";
 
+export {
+  HostUpdateError,
+  getHostGitInfo,
+  getHostUpdateDashboard,
+  isHostUpdateRequestFresh,
+  readHostUpdateState,
+  resolveHostUpdateAvailability,
+  triggerHostUpdate,
+} from "./host-update-service";
+
+export type {
+  HostGitInfo,
+  HostUpdateAvailability,
+  HostUpdateDashboard,
+  HostUpdateState,
+  HostUpdateStatus,
+  TriggerHostUpdateInput,
+  TriggerHostUpdateResult,
+} from "./host-update-service";
+
 export type {
   HardwareDeviceCardView,
   HardwareErrorEntry,
