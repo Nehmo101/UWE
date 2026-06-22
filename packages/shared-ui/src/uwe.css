@@ -309,6 +309,26 @@ html[data-theme="light"] {
   min-width: 0;
 }
 
+.uwe-session-chrome {
+  position: fixed;
+  top: calc(0.5rem + var(--uwe-safe-top, 0px));
+  right: 0.75rem;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--uwe-radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--uwe-panel) 92%, transparent);
+  border: 1px solid var(--uwe-border-muted);
+  box-shadow: var(--uwe-shadow-sm, 0 1px 2px rgb(0 0 0 / 0.08));
+}
+
+.uwe-session-logout {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
 .uwe-mobile-nav-toggle {
   display: none;
   flex-shrink: 0;

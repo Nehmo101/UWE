@@ -82,6 +82,18 @@ export async function updateSettingsAction(formData: FormData) {
       update.privacy = {
         restrictPublicExport: parseBoolean(formData.get("restrictPublicExport")),
       };
+      update.auth = {
+        sessionInactivityTimeoutMinutes: (() => {
+          const minutes = Number.parseInt(
+            String(formData.get("sessionInactivityTimeoutMinutes") || "0"),
+            10,
+          );
+          if (!Number.isFinite(minutes)) {
+            return 0;
+          }
+          return Math.max(0, Math.min(24 * 60, Math.round(minutes)));
+        })(),
+      };
       break;
     case "storage":
       update.storage = {

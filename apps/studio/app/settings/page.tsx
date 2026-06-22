@@ -392,6 +392,25 @@ export default async function SettingsPage({ searchParams }: Props) {
                 />
                 Öffentlichen Export einschränken
               </label>
+
+              <h3 style={{ marginTop: "1.5rem" }}>Session &amp; Abmeldung</h3>
+              <p className="uwe-hint">
+                Nach der eingestellten Inaktivitätszeit werden Benutzer automatisch abgemeldet
+                (Studio und Portal). 0 = deaktiviert. Alternativ per ENV{" "}
+                <code>SESSION_INACTIVITY_TIMEOUT_MINUTES</code>, wenn hier 0 gesetzt ist.
+              </p>
+              <label>
+                Inaktivitäts-Timeout (Minuten)
+                <input
+                  type="number"
+                  name="sessionInactivityTimeoutMinutes"
+                  min={0}
+                  max={1440}
+                  step={5}
+                  defaultValue={settings.auth.sessionInactivityTimeoutMinutes}
+                />
+              </label>
+
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern
               </button>

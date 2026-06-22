@@ -36,7 +36,7 @@ import {
 } from "./page-service";
 import { parseStringArray } from "./json-utils";
 import { searchForAuthContext, type SearchOptions, type SearchResultItem } from "./search-service";
-import { SettingsService, isGuestPortalAccessAllowed } from "./settings-service";
+import { SettingsService, isGuestPortalAccessAllowed, resolveSessionInactivityTimeoutMs } from "./settings-service";
 import {
   GameSessionService,
   toDmGameSessionView,
@@ -68,6 +68,8 @@ import {
 import { canEditPlayerCharacterBlock } from "@uwe/auth";
 import { logAuditEvent } from "./audit-log-service";
 import { USER_SAFE_SELECT } from "./user-service";
+
+const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 
 export interface CreateUserInput {
   displayName: string;
@@ -643,7 +645,8 @@ export class AuthService {
     };
   }
 
-  async getSessionByToken(token: string) {
+  async getSessionByToken(token: string, options: { touch?: boolean } = {}) {
+    const touch = options.touch !== false;
     const tokenHash = hashOpaqueToken(token);
     const session = await this.db.session.findUnique({
       where: { tokenHash },
@@ -663,11 +666,34 @@ export class AuthService {
       return null;
     }
 
+    const lastActiveAt = session.lastActiveAt ?? session.createdAt;
+    const systemSettings = await new SettingsService(this.db).getSettings();
+    const inactivityMs = resolveSessionInactivityTimeoutMs(systemSettings);
+    if (inactivityMs > 0 && Date.now() - lastActiveAt.getTime() >= inactivityMs) {
+      await this.db.session.delete({ where: { id: session.id } });
+      return null;
+    }
+
+    if (touch) {
+      const now = new Date();
+      if (now.getTime() - lastActiveAt.getTime() >= SESSION_ACTIVITY_TOUCH_THROTTLE_MS) {
+        await this.db.session.update({
+          where: { id: session.id },
+          data: { lastActiveAt: now },
+        });
+      }
+    }
+
     return {
       ...session,
       token,
       user: toSafeUser(session.user as Record<string, unknown>),
     };
+  }
+
+  async touchSession(token: string): Promise<boolean> {
+    const session = await this.getSessionByToken(token, { touch: true });
+    return session !== null;
   }
 
   async deleteSession(token: string) {
