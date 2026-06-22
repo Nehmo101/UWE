@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import type { AuthUiVariant } from "./AuthPageLayout";
+import { readFormFieldValue, redirectAfterAuth } from "./auth-form-utils";
 import { AuthCard, AuthPageLayout, authClasses } from "./AuthPageLayout";
 
 const SHOW_DEV_CREDENTIALS = process.env.NODE_ENV === "development";
@@ -31,7 +32,6 @@ function LoginFormInner({
   devDefaultEmail,
   devDefaultPassword,
 }: LoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? defaultRedirect;
   const forbidden = searchParams.get("error") === "forbidden";
@@ -58,12 +58,16 @@ function LoginFormInner({
     setLoading(true);
     setError(null);
 
+    const form = event.currentTarget;
+    const submittedEmail = readFormFieldValue(form, "email", email).trim();
+    const submittedPassword = readFormFieldValue(form, "password", password);
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: submittedEmail, password: submittedPassword }),
       });
 
       let payload: {
@@ -92,13 +96,11 @@ function LoginFormInner({
       }
 
       if (payload.forcePasswordChange) {
-        router.push(forcePasswordRedirect);
-        router.refresh();
+        redirectAfterAuth(forcePasswordRedirect);
         return;
       }
 
-      router.push(redirectTo);
-      router.refresh();
+      redirectAfterAuth(redirectTo);
     } catch {
       setError("Verbindung zum Server fehlgeschlagen. Bitte erneut versuchen.");
     } finally {
@@ -113,6 +115,9 @@ function LoginFormInner({
     setLoading(true);
     setError(null);
 
+    const form = event.currentTarget;
+    const submittedCode = readFormFieldValue(form, "code", twoFactorCode).trim();
+
     try {
       const response = await fetch("/api/auth/two-factor/verify", {
         method: "POST",
@@ -120,7 +125,7 @@ function LoginFormInner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           challengeToken: twoFactorChallenge.challengeToken,
-          code: twoFactorCode.trim(),
+          code: submittedCode,
         }),
       });
 
@@ -142,13 +147,11 @@ function LoginFormInner({
       }
 
       if (payload.forcePasswordChange) {
-        router.push(forcePasswordRedirect);
-        router.refresh();
+        redirectAfterAuth(forcePasswordRedirect);
         return;
       }
 
-      router.push(redirectTo);
-      router.refresh();
+      redirectAfterAuth(redirectTo);
     } catch {
       setError("Verbindung zum Server fehlgeschlagen. Bitte erneut versuchen.");
     } finally {
