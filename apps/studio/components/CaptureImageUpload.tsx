@@ -49,7 +49,7 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
 
   return (
     <form onSubmit={handleSubmit} className="uwe-brain-create-form" encType="multipart/form-data">
-      <label>
+      <label className="uwe-capture-field">
         Welt (optional — erstellt Asset in Medienbibliothek)
         <select name="worldSlug" defaultValue="">
           <option value="">Nur Capture (ohne Asset)</option>
@@ -60,15 +60,15 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
           ))}
         </select>
       </label>
-      <label>
+      <label className="uwe-capture-field">
         Titel
         <input name="title" type="text" placeholder="Miniatur Foto / Terrain Scan" />
       </label>
-      <label>
+      <label className="uwe-capture-field">
         Notiz (optional)
         <textarea name="content" rows={2} placeholder="Kontext zum Bild" />
       </label>
-      <label>
+      <label className="uwe-capture-field">
         Bild
         <input name="file" type="file" accept="image/*" capture="environment" required />
       </label>

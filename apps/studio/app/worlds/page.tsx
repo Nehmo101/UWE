@@ -1,58 +1,48 @@
 import Link from "next/link";
-import {
-  AppShell,
-  EmptyState,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
+import { EmptyState } from "@uwe/shared-ui";
 import { getAppRepository } from "@uwe/database/server";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { CreateWorldForm } from "@/components/CreateWorldForm";
 
 export default async function WorldsPage() {
   const worlds = await getAppRepository().listWorlds();
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Welten" href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Welten", href: "/worlds", active: true },
-            ]}
-          />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader title="Welten" summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung." />
-          {worlds.length === 0 ? (
-            <EmptyState
-              title="Noch keine Welten"
-              description="Lege deine erste Welt per Datenbank-Seed oder Import an — danach erscheint sie hier zur Bearbeitung."
-              action={
-                <Link className="uwe-btn uwe-btn-primary" href="/studio">
-                  Zum Dashboard
-                </Link>
-              }
-            />
-          ) : (
-            <div className="wiki-world-grid">
-              {worlds.map((world) => (
-                <article key={world.id} className="wiki-world-card">
-                  <h2>{world.name}</h2>
-                  {world.description && <p>{world.description}</p>}
-                  <Link href={`/worlds/${world.slug}/dashboard`}>Welt verwalten →</Link>
-                </article>
-              ))}
-            </div>
-          )}
-        </>
-      }
-    />
+    <AdminModuleShell
+      activePath="/worlds"
+      title="Welten"
+      summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung — oder lege eine neue an."
+    >
+      <section className="uwe-card uwe-section">
+        <CreateWorldForm />
+      </section>
+
+      {worlds.length === 0 ? (
+        <EmptyState
+          title="Noch keine Welten"
+          description="Erstelle oben deine erste Welt — oder importiere später Inhalte über Welt → Import."
+        />
+      ) : (
+        <section className="uwe-section">
+          <h2 className="uwe-section-title">Deine Welten</h2>
+          <div className="wiki-world-grid">
+            {worlds.map((world) => (
+              <article key={world.id} className="wiki-world-card">
+                <h2>{world.name}</h2>
+                {world.description && <p>{world.description}</p>}
+                <div className="uwe-inline-actions">
+                  <Link className="uwe-btn uwe-btn-primary uwe-btn-sm" href={`/worlds/${world.slug}/dashboard`}>
+                    Welt verwalten
+                  </Link>
+                  <Link className="uwe-btn uwe-btn-secondary uwe-btn-sm" href={`/worlds/${world.slug}/soundboard`}>
+                    Soundboard
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+    </AdminModuleShell>
   );
 }

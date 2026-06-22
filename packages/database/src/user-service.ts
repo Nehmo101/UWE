@@ -298,6 +298,42 @@ export class UserService {
     return true;
   }
 
+  async deleteUser(userId: string, actorUserId?: string | null): Promise<boolean> {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    if (actorUserId && actorUserId === userId) {
+      throw new Error("CANNOT_DELETE_SELF");
+    }
+
+    if (user.role === "owner") {
+      const activeOwners = await this.db.user.count({
+        where: { role: "owner", status: "active", id: { not: userId } },
+      });
+      if (activeOwners === 0) {
+        throw new Error("LAST_OWNER");
+      }
+    }
+
+    await this.db.user.delete({ where: { id: userId } });
+
+    await logAuditEvent(this.db, {
+      actorUserId: actorUserId ?? undefined,
+      action: "user_deleted",
+      targetType: "user",
+      targetId: userId,
+      metadata: {
+        displayName: user.displayName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+
+    return true;
+  }
+
   async enableUser(userId: string, actorUserId?: string | null): Promise<boolean> {
     const user = await this.db.user.findUnique({ where: { id: userId } });
     if (!user) {

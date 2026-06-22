@@ -1,0 +1,1 @@
+-- AuditAction enum extension: user_deleted (SQLite stores action as TEXT; no DDL required).

@@ -2,6 +2,8 @@ export {
   resolveSmtpConfig,
   isSmtpConfigured,
   getMailConfigStatus,
+  getMailConfigStatusFromSmtpConfig,
+  mergeSmtpConfig,
 } from "./config";
 
 export {

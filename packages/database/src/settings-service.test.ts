@@ -6,6 +6,7 @@ import { createPrismaClient } from "./client";
 import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
+  buildMailSmtpCredentialsUpdate,
   createSettingsService,
   getPersistentPathConfiguration,
   isGuestPortalAccessAllowed,
@@ -275,5 +276,36 @@ describe("SettingsService", () => {
         process.env.SMTP_HOST = originalHost;
       }
     }
+  });
+
+  it("stores portal SMTP credentials encrypted and never exposes password to clients", async () => {
+    const service = createSettingsService(createPrismaClient(databaseUrl));
+    const credentials = buildMailSmtpCredentialsUpdate({
+      host: "smtp.portal.example",
+      port: 587,
+      secure: false,
+      user: "portal@example.org",
+      password: "portal-smtp-secret-do-not-leak",
+      from: "UWE <portal@example.org>",
+      useMock: false,
+    });
+
+    const updated = await service.updateSettings({
+      mail: {
+        enabled: true,
+        fromDisplayName: "UWE Test",
+        logBody: false,
+        smtpCredentials: credentials,
+      },
+    });
+
+    assert.equal(updated.mail.smtp.source, "portal");
+    assert.equal(updated.mail.smtp.host, "smtp.portal.example");
+    assert.equal(updated.mail.smtp.username, "portal@example.org");
+
+    const clientSettings = await service.getSettingsForClient();
+    const serialized = JSON.stringify(clientSettings);
+    assert.ok(!serialized.includes("portal-smtp-secret-do-not-leak"));
+    assert.equal(clientSettings.mail.smtp.source, "portal");
   });
 });

@@ -1121,6 +1121,7 @@ enum AuditAction {
   setup_owner_created
   user_created
   user_disabled
+  user_deleted
   user_enabled
   password_reset
   user_role_changed

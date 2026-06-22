@@ -47,6 +47,10 @@ export function getMailConfigStatus(
   overrides?: Partial<Pick<SmtpConfig, "enabled" | "logBody" | "useMock">>,
 ): MailConfigStatus {
   const config = resolveSmtpConfig(env, overrides);
+  return getMailConfigStatusFromSmtpConfig(config);
+}
+
+export function getMailConfigStatusFromSmtpConfig(config: SmtpConfig): MailConfigStatus {
   const configured = isSmtpConfigured(config);
 
   let message: string;
@@ -76,5 +80,28 @@ export function getMailConfigStatus(
     logBody: config.logBody,
     useMock: config.useMock,
     message,
+  };
+}
+
+export function mergeSmtpConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  portal?: Partial<SmtpConfig> | null,
+  overrides?: Partial<Pick<SmtpConfig, "enabled" | "logBody" | "useMock">>,
+): SmtpConfig {
+  const envConfig = resolveSmtpConfig(env, overrides);
+  if (!portal?.host?.trim() && !portal?.useMock) {
+    return envConfig;
+  }
+
+  return {
+    enabled: overrides?.enabled ?? portal.enabled ?? envConfig.enabled,
+    host: portal.host?.trim() ?? envConfig.host,
+    port: portal.port ?? envConfig.port,
+    secure: portal.secure ?? envConfig.secure,
+    user: portal.user?.trim() ?? envConfig.user,
+    password: portal.password ?? envConfig.password,
+    from: portal.from?.trim() ?? envConfig.from,
+    logBody: overrides?.logBody ?? portal.logBody ?? envConfig.logBody,
+    useMock: overrides?.useMock ?? portal.useMock ?? envConfig.useMock,
   };
 }

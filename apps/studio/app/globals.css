@@ -192,11 +192,55 @@ body {
 .uwe-brain-edit-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 1rem;
+  padding: 1.25rem;
   border-radius: 0.75rem;
-  background: var(--uwe-card);
+  background: color-mix(in srgb, var(--uwe-card) 92%, var(--uwe-bg) 8%);
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
+}
+
+.uwe-brain-create-form label,
+.uwe-brain-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--uwe-muted);
+}
+
+.uwe-brain-create-form input,
+.uwe-brain-create-form select,
+.uwe-brain-create-form textarea,
+.uwe-brain-edit-form input,
+.uwe-brain-edit-form select,
+.uwe-brain-edit-form textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  min-height: var(--uwe-touch-min, 2.75rem);
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 150%, var(--uwe-muted) 0%);
+  background: var(--uwe-bg);
+  color: var(--uwe-fg);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uwe-brain-create-form input:focus,
+.uwe-brain-create-form select:focus,
+.uwe-brain-create-form textarea:focus,
+.uwe-brain-edit-form input:focus,
+.uwe-brain-edit-form select:focus,
+.uwe-brain-edit-form textarea:focus {
+  outline: none;
+  border-color: var(--uwe-focus-ring);
+  box-shadow: 0 0 0 3px var(--uwe-focus-shadow);
+}
+
+.uwe-brain-create-form textarea,
+.uwe-brain-edit-form textarea {
+  min-height: 5rem;
+  resize: vertical;
 }
 
 .uwe-brain-create-form h2,

@@ -96,7 +96,8 @@ export default async function MailCenterPage() {
               </div>
             </dl>
             <p className="uwe-hint">
-              SMTP-Zugangsdaten werden nur serverseitig aus <code>.env</code> gelesen — nie im Frontend.
+              SMTP-Zugangsdaten werden serverseitig aus Admin Portal oder <code>.env</code> gelesen — nie im
+              Frontend.
             </p>
           </section>
 

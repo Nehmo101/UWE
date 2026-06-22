@@ -55,6 +55,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   setup_owner_created: "Owner eingerichtet",
   user_created: "Benutzer erstellt",
   user_disabled: "Benutzer deaktiviert",
+  user_deleted: "Benutzer gelöscht",
   user_enabled: "Benutzer reaktiviert",
   password_reset: "Passwort zurückgesetzt",
   user_role_changed: "Rolle geändert",

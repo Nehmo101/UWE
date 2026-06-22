@@ -6,6 +6,7 @@ import {
   getAppRepository,
   mapServerBackgroundToClient,
   resolveThemePreferencesForScope,
+  buildMailSmtpCredentialsUpdate,
   type BackgroundPattern,
   type UweSystemSettingsUpdate,
   type Visibility,
@@ -94,13 +95,47 @@ export async function updateSettingsAction(formData: FormData) {
         localOnlyMode: parseBoolean(formData.get("localOnlyMode")),
       };
       break;
-    case "mail":
+    case "mail": {
+      const current = await repo().getSystemSettings();
+      const smtpPortRaw = Number.parseInt(String(formData.get("smtpPort") || "587"), 10);
+      const smtpPassword = String(formData.get("smtpPassword") || "");
+      const clearPortalSmtp = parseBoolean(formData.get("clearPortalSmtp"));
+      let smtpCredentials = current.mail.smtpCredentials ?? null;
+
+      if (clearPortalSmtp) {
+        smtpCredentials = null;
+      } else {
+        const smtpHost = String(formData.get("smtpHost") || "").trim();
+        const smtpUseMock = parseBoolean(formData.get("smtpUseMock"));
+        if (smtpHost || smtpUseMock || current.mail.smtpCredentials) {
+          try {
+            smtpCredentials = buildMailSmtpCredentialsUpdate({
+              host: smtpHost,
+              port: Number.isFinite(smtpPortRaw) && smtpPortRaw > 0 ? smtpPortRaw : 587,
+              secure: parseBoolean(formData.get("smtpSecure")),
+              user: String(formData.get("smtpUser") || ""),
+              password: smtpPassword || undefined,
+              from: String(formData.get("mailFrom") || ""),
+              useMock: smtpUseMock,
+              existing: current.mail.smtpCredentials,
+            });
+          } catch (error) {
+            if (error instanceof Error && error.message === "SMTP_PASSWORD_REQUIRED") {
+              throw new Error("SMTP-Passwort ist erforderlich (oder bestehendes Passwort beibehalten).");
+            }
+            throw error;
+          }
+        }
+      }
+
       update.mail = {
         enabled: parseBoolean(formData.get("mailEnabled")),
         fromDisplayName: String(formData.get("fromDisplayName") || ""),
         logBody: parseBoolean(formData.get("mailLogBody")),
+        smtpCredentials,
       };
       break;
+    }
     case "backup":
       update.backup = {
         backupsPath: String(formData.get("backupsPath") || ""),

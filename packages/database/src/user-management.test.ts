@@ -181,6 +181,27 @@ describe("user management and login hardening", () => {
     await db.$disconnect();
   });
 
+  it("lets admin permanently delete non-owner users", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createUserService(db);
+    const auth = createAuthService(db);
+
+    const created = await auth.createUser({
+      displayName: "Delete Me",
+      email: "delete-me@uwe.local",
+      password: TEST_PASSWORD,
+      role: "player",
+      status: "active",
+    });
+
+    const deleted = await service.deleteUser(created.id, adminUserId);
+    assert.equal(deleted, true);
+
+    const missing = await auth.findUserById(created.id);
+    assert.equal(missing, null);
+    await db.$disconnect();
+  });
+
   it("hides worlds without membership from players", async () => {
     const db = createPrismaClient(databaseUrl);
     const service = createAuthService(db);

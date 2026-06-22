@@ -7,8 +7,13 @@ import {
   resolveExportsDirFromEnv,
   resolveUploadsDirFromEnv,
 } from "@uwe/assets";
-import { getMailConfigStatus } from "@uwe/mail";
+import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail";
 import { prisma } from "./client";
+import {
+  decryptSecret,
+  encryptSecret,
+  resolveTokenEncryptionSecret,
+} from "./token-crypto";
 import {
   mapClientBackgroundToServer,
   normalizeAppThemePreferences,
@@ -103,10 +108,24 @@ export interface MailSmtpStatus {
   secure: boolean;
   userConfigured: boolean;
   passwordConfigured: boolean;
+  username: string | null;
   fromAddress: string | null;
   configured: boolean;
   useMock: boolean;
   message: string;
+  /** Whether SMTP is loaded from Admin Portal settings or .env fallback. */
+  source: "portal" | "env";
+}
+
+/** Encrypted SMTP credentials stored in system settings (never sent to clients). */
+export interface MailSmtpStoredCredentials {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  passwordEnc: string;
+  from: string;
+  useMock: boolean;
 }
 
 export interface MailSettings {
@@ -114,6 +133,7 @@ export interface MailSettings {
   fromDisplayName: string;
   logBody: boolean;
   smtp: MailSmtpStatus;
+  smtpCredentials?: MailSmtpStoredCredentials | null;
 }
 
 export interface UweSystemSettings {
@@ -134,7 +154,7 @@ export type UweSystemSettingsUpdate = {
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
   ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled">>;
-  mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody">>;
+  mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "smtpCredentials">>;
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
   privacy?: Partial<PrivacySettings>;
@@ -142,29 +162,138 @@ export type UweSystemSettingsUpdate = {
 
 const SETTINGS_ID = "default";
 
-function buildMailSettings(
-  stored?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody">>,
-): MailSettings {
-  const smtpStatus = getMailConfigStatus(process.env, {
-    enabled: stored?.enabled,
-    logBody: stored?.logBody,
-  });
+interface MailSettingsInput {
+  enabled?: boolean;
+  fromDisplayName?: string;
+  logBody?: boolean;
+  smtpCredentials?: MailSmtpStoredCredentials | null;
+}
+
+function readMailSettingsInput(stored: unknown): MailSettingsInput | undefined {
+  if (!isRecord(stored)) {
+    return undefined;
+  }
+
+  const mail = stored as Record<string, unknown>;
+  const smtpCredentials = mail.smtpCredentials;
+  return {
+    enabled: typeof mail.enabled === "boolean" ? mail.enabled : undefined,
+    fromDisplayName: typeof mail.fromDisplayName === "string" ? mail.fromDisplayName : undefined,
+    logBody: typeof mail.logBody === "boolean" ? mail.logBody : undefined,
+    smtpCredentials:
+      smtpCredentials === null
+        ? null
+        : isRecord(smtpCredentials)
+          ? (smtpCredentials as unknown as MailSmtpStoredCredentials)
+          : undefined,
+  };
+}
+
+function buildMailSettings(stored?: MailSettingsInput): MailSettings {
+  const enabled = stored?.enabled;
+  const logBody = stored?.logBody;
+  const portalConfig = stored?.smtpCredentials
+    ? {
+        enabled: enabled ?? true,
+        host: stored.smtpCredentials.host,
+        port: stored.smtpCredentials.port,
+        secure: stored.smtpCredentials.secure,
+        user: stored.smtpCredentials.user,
+        password: decryptSecret(stored.smtpCredentials.passwordEnc, resolveTokenEncryptionSecret()),
+        from: stored.smtpCredentials.from,
+        logBody: logBody ?? false,
+        useMock: stored.smtpCredentials.useMock,
+      }
+    : null;
+  const effectiveConfig = mergeSmtpConfig(process.env, portalConfig, { enabled, logBody });
+  const smtpFromPortal = Boolean(stored?.smtpCredentials);
+  const baseStatus = getMailConfigStatusFromSmtpConfig(effectiveConfig);
+  const envStatus = getMailConfigStatus(process.env, { enabled, logBody });
+
+  const status: MailSmtpStatus = smtpFromPortal
+    ? {
+        ...baseStatus,
+        username: effectiveConfig.user || null,
+        source: "portal",
+        message: effectiveConfig.useMock
+          ? "Mock-Modus aktiv — keine echte SMTP-Verbindung."
+          : effectiveConfig.user && effectiveConfig.password
+            ? "SMTP über Admin Portal konfiguriert."
+            : "SMTP-Host gesetzt — Anmeldedaten unvollständig.",
+      }
+    : {
+        ...envStatus,
+        username: process.env.SMTP_USER?.trim() || null,
+        source: "env",
+      };
 
   return {
-    enabled: stored?.enabled ?? smtpStatus.enabled,
+    enabled: enabled ?? envStatus.enabled,
     fromDisplayName: stored?.fromDisplayName?.trim() ?? "",
-    logBody: stored?.logBody ?? smtpStatus.logBody,
-    smtp: {
-      host: smtpStatus.host,
-      port: smtpStatus.port,
-      secure: smtpStatus.secure,
-      userConfigured: smtpStatus.userConfigured,
-      passwordConfigured: smtpStatus.passwordConfigured,
-      fromAddress: smtpStatus.fromAddress,
-      configured: smtpStatus.configured,
-      useMock: smtpStatus.useMock,
-      message: smtpStatus.message,
-    },
+    logBody: logBody ?? envStatus.logBody,
+    smtp: status,
+    smtpCredentials: stored?.smtpCredentials ?? null,
+  };
+}
+
+export function resolveEffectiveSmtpConfig(
+  settings: UweSystemSettings,
+  env: NodeJS.ProcessEnv = process.env,
+): import("@uwe/mail").SmtpConfig {
+  const creds = settings.mail.smtpCredentials;
+  const portalConfig = creds?.host
+    ? {
+        enabled: settings.mail.enabled,
+        host: creds.host,
+        port: creds.port,
+        secure: creds.secure,
+        user: creds.user,
+        password: decryptSecret(creds.passwordEnc, resolveTokenEncryptionSecret()),
+        from: creds.from,
+        logBody: settings.mail.logBody,
+        useMock: creds.useMock,
+      }
+    : null;
+
+  return mergeSmtpConfig(env, portalConfig, {
+    enabled: settings.mail.enabled,
+    logBody: settings.mail.logBody,
+  });
+}
+
+export function buildMailSmtpCredentialsUpdate(input: {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password?: string;
+  from: string;
+  useMock: boolean;
+  existing?: MailSmtpStoredCredentials | null;
+}): MailSmtpStoredCredentials | null {
+  const host = input.host.trim();
+  if (!host && !input.useMock) {
+    return null;
+  }
+
+  const password = input.password?.trim();
+  const passwordEnc =
+    password && password.length > 0
+      ? encryptSecret(password, resolveTokenEncryptionSecret())
+      : input.existing?.passwordEnc;
+
+  if (!passwordEnc && !input.useMock) {
+    throw new Error("SMTP_PASSWORD_REQUIRED");
+  }
+
+  return {
+    host,
+    port: input.port,
+    secure: input.secure,
+    user: input.user.trim(),
+    passwordEnc: passwordEnc ?? "",
+    from: input.from.trim(),
+    useMock: input.useMock,
   };
 }
 
@@ -285,9 +414,7 @@ function mergeSettings(
         : {}),
       providerKeyPlaceholders: buildProviderKeyPlaceholders(),
     },
-    mail: buildMailSettings(
-      isRecord(stored.mail) ? (stored.mail as unknown as MailSettings) : undefined,
-    ),
+    mail: buildMailSettings(readMailSettingsInput(stored.mail)),
     storage: {
       ...base.storage,
       ...(isRecord(stored.storage) ? (stored.storage as unknown as StorageSettings) : {}),
@@ -321,6 +448,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       enabled: settings.mail.enabled,
       fromDisplayName: settings.mail.fromDisplayName,
       logBody: settings.mail.logBody,
+      smtpCredentials: settings.mail.smtpCredentials,
     }),
     privacy: {
       ...settings.privacy,
@@ -333,6 +461,10 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
   const normalized = normalizeSettings(settings);
   return {
     ...normalized,
+    mail: {
+      ...normalized.mail,
+      smtpCredentials: undefined,
+    },
     ai: {
       ...normalized.ai,
       providerKeyPlaceholders: normalized.ai.providerKeyPlaceholders.map((placeholder) => ({
@@ -511,6 +643,10 @@ export class SettingsService {
         enabled: update.mail?.enabled ?? current.mail.enabled,
         fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,
         logBody: update.mail?.logBody ?? current.mail.logBody,
+        smtpCredentials:
+          update.mail?.smtpCredentials !== undefined
+            ? update.mail.smtpCredentials
+            : current.mail.smtpCredentials,
       }),
       storage: { ...current.storage, ...update.storage },
       backup: { ...current.backup, ...update.backup },

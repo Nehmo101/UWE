@@ -572,11 +572,22 @@ export default async function SettingsPage({ searchParams }: Props) {
                       <Link href="/admin/agent-jobs">/admin/agent-jobs</Link>
                     </td>
                   </tr>
+                  <tr>
+                    <td>Spotify Soundboard</td>
+                    <td>
+                      OAuth über <code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code> in
+                      .env
+                    </td>
+                    <td>
+                      <Link href="/worlds">Welten</Link> → Soundboard (pro Welt, Spotify Premium)
+                    </td>
+                  </tr>
                 </tbody>
               </table>
               <p className="uwe-hint" style={{ marginTop: "1rem" }}>
-                Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_* und
-                CALDAV_PASSWORD.
+                Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_*,
+                SPOTIFY_* und CALDAV_PASSWORD. Mail-SMTP kann alternativ unter Tab Mail im Portal
+                konfiguriert werden.
               </p>
             </section>
           )}
@@ -586,8 +597,8 @@ export default async function SettingsPage({ searchParams }: Props) {
               <input type="hidden" name="tab" value="mail" />
               <h2>Mail Settings</h2>
               <p className="uwe-hint">
-                SMTP-Host, Benutzer und Passwort werden nur über <code>.env</code> konfiguriert.
-                Versand erfolgt ausschließlich nach expliziter Aktion im{" "}
+                SMTP kann hier im Admin Portal konfiguriert werden (verschlüsselt gespeichert) oder weiterhin
+                über <code>.env</code> als Fallback. Versand erfolgt ausschließlich nach expliziter Aktion im{" "}
                 <Link href="/mail">Mail Center</Link>.
               </p>
               <label className="uwe-checkbox">
@@ -606,35 +617,86 @@ export default async function SettingsPage({ searchParams }: Props) {
                 <input type="checkbox" name="mailLogBody" defaultChecked={settings.mail.logBody} />
                 Mail-Body in Logs speichern (nur für Diagnose — in Production eher aus)
               </label>
-              <section style={{ marginTop: "1.5rem" }}>
-                <h3>SMTP-Status (aus ENV)</h3>
-                <dl className="uwe-dl">
-                  <div>
-                    <dt>Host</dt>
-                    <dd>{settings.mail.smtp.host ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>Port</dt>
-                    <dd>{settings.mail.smtp.port ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>From</dt>
-                    <dd>{settings.mail.smtp.fromAddress ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>User konfiguriert</dt>
-                    <dd>{settings.mail.smtp.userConfigured ? "Ja" : "Nein"}</dd>
-                  </div>
-                  <div>
-                    <dt>Passwort konfiguriert</dt>
-                    <dd>{settings.mail.smtp.passwordConfigured ? "Ja" : "Nein"}</dd>
-                  </div>
-                  <div>
-                    <dt>Diagnose</dt>
-                    <dd>{settings.mail.smtp.message}</dd>
-                  </div>
-                </dl>
+
+              <section className="uwe-section" style={{ marginTop: "1.5rem" }}>
+                <h3>SMTP (Admin Portal)</h3>
+                <p className="uwe-hint">
+                  Aktive Quelle:{" "}
+                  <strong>{settings.mail.smtp.source === "portal" ? "Admin Portal" : ".env Fallback"}</strong>
+                  {" · "}
+                  {settings.mail.smtp.message}
+                </p>
+                <label>
+                  SMTP-Host
+                  <input
+                    name="smtpHost"
+                    defaultValue={settings.mail.smtp.host ?? ""}
+                    placeholder="smtp.example.com"
+                  />
+                </label>
+                <div className="uwe-form-row uwe-form-row-2">
+                  <label>
+                    Port
+                    <input
+                      name="smtpPort"
+                      type="number"
+                      min={1}
+                      defaultValue={settings.mail.smtp.port ?? 587}
+                    />
+                  </label>
+                  <label>
+                    Absender (MAIL_FROM)
+                    <input
+                      name="mailFrom"
+                      defaultValue={settings.mail.smtp.fromAddress ?? ""}
+                      placeholder="UWE <noreply@example.org>"
+                    />
+                  </label>
+                </div>
+                <label>
+                  SMTP-Benutzer
+                  <input
+                    name="smtpUser"
+                    defaultValue={settings.mail.smtp.username ?? ""}
+                    placeholder="mailer@example.org"
+                    autoComplete="off"
+                  />
+                </label>
+                <label>
+                  SMTP-Passwort
+                  <input
+                    name="smtpPassword"
+                    type="password"
+                    placeholder={
+                      settings.mail.smtp.passwordConfigured
+                        ? "Leer lassen = bestehendes Passwort behalten"
+                        : "Passwort eingeben"
+                    }
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="smtpSecure"
+                    defaultChecked={settings.mail.smtp.secure}
+                  />
+                  TLS/SSL (SMTP_SECURE)
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="smtpUseMock"
+                    defaultChecked={settings.mail.smtp.useMock}
+                  />
+                  Mock-Modus (keine echte SMTP-Verbindung)
+                </label>
+                <label className="uwe-checkbox">
+                  <input type="checkbox" name="clearPortalSmtp" />
+                  Portal-SMTP löschen und .env-Fallback nutzen
+                </label>
               </section>
+
               <button type="submit" className="uwe-btn uwe-btn-primary">
                 Speichern
               </button>

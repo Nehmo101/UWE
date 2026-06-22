@@ -1,8 +1,8 @@
 import {
   createMailTransport,
   getMailConfigStatus,
+  getMailConfigStatusFromSmtpConfig,
   redactSecrets,
-  resolveSmtpConfig,
   type MailAddress,
   type MailConfigStatus,
   type MailSendResult,
@@ -11,7 +11,7 @@ import {
 } from "@uwe/mail";
 import type { PrismaClient } from "./client";
 import { createMailLogService, type MailLogEntry } from "./mail-log-service";
-import { createSettingsService } from "./settings-service";
+import { createSettingsService, resolveEffectiveSmtpConfig } from "./settings-service";
 
 export interface SendMailInput {
   to: MailAddress[];
@@ -61,21 +61,16 @@ export class MailService {
 
   async getConfigStatus(env: NodeJS.ProcessEnv = process.env): Promise<MailConfigStatus> {
     const settings = await createSettingsService(this.db).getSettings();
-    return getMailConfigStatus(env, {
-      enabled: settings.mail.enabled,
-      logBody: settings.mail.logBody,
-    });
+    const config = resolveEffectiveSmtpConfig(settings, env);
+    return getMailConfigStatusFromSmtpConfig(config);
   }
 
   async verifyConnection(env: NodeJS.ProcessEnv = process.env): Promise<MailSendResult> {
     const settings = await createSettingsService(this.db).getSettings();
-    const config = resolveSmtpConfig(env, {
-      enabled: settings.mail.enabled,
-      logBody: settings.mail.logBody,
-    });
+    const config = resolveEffectiveSmtpConfig(settings, env);
 
     if (!settings.mail.enabled) {
-      return { ok: false, error: "Mail ist deaktiviert (MAIL_ENABLED=false)." };
+      return { ok: false, error: "Mail ist deaktiviert." };
     }
 
     return this.transportFactory(config).verify();
@@ -107,10 +102,7 @@ export class MailService {
 
   async sendMail(input: SendMailInput, env: NodeJS.ProcessEnv = process.env): Promise<SendMailResult> {
     const settings = await createSettingsService(this.db).getSettings();
-    const config = resolveSmtpConfig(env, {
-      enabled: settings.mail.enabled,
-      logBody: settings.mail.logBody,
-    });
+    const config = resolveEffectiveSmtpConfig(settings, env);
     const logService = createMailLogService(this.db);
     const fromAddress = config.from || "unknown@uwe.local";
     const toAddresses = input.to.map((recipient) => recipient.email);

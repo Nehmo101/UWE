@@ -20,6 +20,49 @@ interface ImageStudioJobFormProps {
 
 const INPAINT_TASKS = new Set(["inpaint", "edit", "remove_background", "variant"]);
 
+async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Bild konnte nicht geladen werden."));
+      image.src = url;
+    });
+    return image;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function compositeLayerImages(files: File[]): Promise<{ preview: string; base64: string }> {
+  if (files.length === 0) {
+    throw new Error("Keine Layer-Bilder ausgewählt.");
+  }
+
+  const images = await Promise.all(files.map((file) => loadImageFromFile(file)));
+  const width = Math.max(...images.map((image) => image.naturalWidth || image.width));
+  const height = Math.max(...images.map((image) => image.naturalHeight || image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Canvas nicht verfügbar.");
+  }
+
+  ctx.clearRect(0, 0, width, height);
+  for (const image of images) {
+    ctx.drawImage(image, 0, 0, width, height);
+  }
+
+  const preview = canvas.toDataURL("image/png");
+  return {
+    preview,
+    base64: preview.split(",")[1] ?? "",
+  };
+}
+
 export function ImageStudioJobForm({
   action,
   worlds,
@@ -35,6 +78,8 @@ export function ImageStudioJobForm({
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
   const [sourceBase64, setSourceBase64] = useState("");
   const [maskBase64, setMaskBase64] = useState("");
+  const [layerMode, setLayerMode] = useState(false);
+  const [layerStatus, setLayerStatus] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
 
@@ -61,6 +106,29 @@ export function ImageStudioJobForm({
       }
     };
     reader.readAsDataURL(file);
+  }
+
+  async function handleLayerFilesChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+
+    setLayerStatus("Layer werden zusammengefügt…");
+    try {
+      const composite = await compositeLayerImages(files);
+      setSourceBase64(composite.base64);
+      setSourcePreview(composite.preview);
+      setLayerStatus(`${files.length} Layer zu einem Quellbild kombiniert.`);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          setMaskBase64("");
+        }
+      }
+    } catch {
+      setLayerStatus("Layer konnten nicht kombiniert werden.");
+    }
   }
 
   function pointerPos(event: React.PointerEvent<HTMLCanvasElement>) {
@@ -152,10 +220,26 @@ export function ImageStudioJobForm({
 
       {showInpaintFields && (
         <>
-          <label>
-            Quellbild
-            <input type="file" accept="image/*" onChange={handleSourceFileChange} />
+          <label className="uwe-checkbox-row">
+            <input
+              type="checkbox"
+              checked={layerMode}
+              onChange={(event) => setLayerMode(event.target.checked)}
+            />
+            Layering-Modus (mehrere Bilder übereinander legen)
           </label>
+          {layerMode ? (
+            <label>
+              Layer-Bilder (Reihenfolge = Stapel von unten nach oben)
+              <input type="file" accept="image/*" multiple onChange={(event) => void handleLayerFilesChange(event)} />
+            </label>
+          ) : (
+            <label>
+              Quellbild
+              <input type="file" accept="image/*" onChange={handleSourceFileChange} />
+            </label>
+          )}
+          {layerStatus && <p className="uwe-hint">{layerStatus}</p>}
           {sourcePreview && (
             <div
               role="img"

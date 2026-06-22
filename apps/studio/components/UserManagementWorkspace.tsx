@@ -182,6 +182,23 @@ export function UserManagementWorkspace() {
     await loadUsers();
   }
 
+  async function deleteUser(user: AdminUserView) {
+    const confirmed = window.confirm(
+      `Benutzer „${user.displayName}“ endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+    );
+    if (!confirmed) return;
+
+    setError(null);
+    const response = await fetch(`/api/admin/users/${user.id}/delete`, { method: "POST" });
+    const data = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(data.error ?? "Benutzer konnte nicht gelöscht werden.");
+      return;
+    }
+    setSelectedUserId(null);
+    await loadUsers();
+  }
+
   async function addMembership() {
     if (!selectedUser || !membershipForm.worldId) return;
     setError(null);
@@ -421,6 +438,13 @@ export function UserManagementWorkspace() {
               onClick={() => void toggleUserStatus(selectedUser)}
             >
               {selectedUser.status === "disabled" ? "Reaktivieren" : "Deaktivieren"}
+            </button>
+            <button
+              type="button"
+              className="uwe-btn uwe-btn-danger"
+              onClick={() => void deleteUser(selectedUser)}
+            >
+              Endgültig löschen
             </button>
             <button
               type="button"
