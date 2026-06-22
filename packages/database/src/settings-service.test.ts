@@ -12,6 +12,7 @@ import {
   isGuestPortalAccessAllowed,
   resolveEffectiveExportsPath,
   resolveLocalOnlyMode,
+  resolveSessionInactivityTimeoutMs,
 } from "./settings-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -307,5 +308,31 @@ describe("SettingsService", () => {
     const serialized = JSON.stringify(clientSettings);
     assert.ok(!serialized.includes("portal-smtp-secret-do-not-leak"));
     assert.equal(clientSettings.mail.smtp.source, "portal");
+  });
+
+  it("resolves session inactivity timeout from settings and env fallback", () => {
+    const settings = {
+      ...DEFAULT_SYSTEM_SETTINGS,
+      auth: { sessionInactivityTimeoutMinutes: 15 },
+    };
+
+    assert.equal(resolveSessionInactivityTimeoutMs(settings), 15 * 60 * 1000);
+    assert.equal(
+      resolveSessionInactivityTimeoutMs({
+        ...settings,
+        auth: { sessionInactivityTimeoutMinutes: 0 },
+      }),
+      0,
+    );
+    assert.equal(
+      resolveSessionInactivityTimeoutMs(
+        {
+          ...settings,
+          auth: { sessionInactivityTimeoutMinutes: 0 },
+        },
+        { SESSION_INACTIVITY_TIMEOUT_MINUTES: "45" },
+      ),
+      45 * 60 * 1000,
+    );
   });
 });
