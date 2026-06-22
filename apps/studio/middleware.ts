@@ -48,6 +48,9 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
       { error: "Cross-Origin-Anfragen an die Studio-API sind nicht erlaubt." },
       { status: 403 },
     ),
+    process.env,
+    { allowYouTubeEmbeds: true },
+    request,
   );
 }
 
@@ -68,13 +71,21 @@ export function middleware(request: NextRequest) {
       if (pathname.startsWith("/api/")) {
         return applySecurityHeaders(
           NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 }),
+          process.env,
+          { allowYouTubeEmbeds: true },
+          request,
         );
       }
 
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("redirect", pathname);
-      return applySecurityHeaders(NextResponse.redirect(loginUrl));
+      return applySecurityHeaders(
+        NextResponse.redirect(loginUrl),
+        process.env,
+        { allowYouTubeEmbeds: true },
+        request,
+      );
     }
   }
 
@@ -86,12 +97,20 @@ export function middleware(request: NextRequest) {
   });
 
   if (decision.action === "allow") {
-    return applySecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
+    return applySecurityHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
   }
 
   if (decision.status === 404) {
     return applySecurityHeaders(
       NextResponse.json({ error: decision.error ?? "Nicht gefunden." }, { status: 404 }),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
     );
   }
 
@@ -100,6 +119,9 @@ export function middleware(request: NextRequest) {
       { error: decision.error ?? "Zugriff verweigert." },
       { status: decision.status ?? 401 },
     ),
+    process.env,
+    { allowYouTubeEmbeds: true },
+    request,
   );
 }
 

@@ -188,6 +188,8 @@ export {
   buildContentSecurityPolicy,
   getUweSecurityHeaderEntries,
   getUweSecurityHeaders,
+  shouldSendStrictTransportSecurityForRequest,
+  wantsStrictTransportSecurity,
 } from "./security-headers";
 
 export { resolveClientIp } from "./proxy";

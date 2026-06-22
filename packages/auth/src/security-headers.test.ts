@@ -5,6 +5,8 @@ import {
   buildContentSecurityPolicy,
   getUweSecurityHeaderEntries,
   getUweSecurityHeaders,
+  shouldSendStrictTransportSecurityForRequest,
+  wantsStrictTransportSecurity,
 } from "./security-headers";
 
 describe("security headers", () => {
@@ -30,24 +32,67 @@ describe("security headers", () => {
     assert.match(csp, /script-src 'self' 'unsafe-inline'/);
   });
 
-  it("sends HSTS only in production behind HTTPS", () => {
+  it("does not send HSTS from static header builders (Next.js config)", () => {
     const devHeaders = getUweSecurityHeaders({ NODE_ENV: "development" });
     assert.equal(devHeaders["Strict-Transport-Security"], undefined);
-
-    const prodHttp = getUweSecurityHeaders({
-      NODE_ENV: "production",
-      SESSION_COOKIE_SECURE: "false",
-      PUBLIC_APP_URL: "",
-    });
-    assert.equal(prodHttp["Strict-Transport-Security"], undefined);
 
     const prodHttps = getUweSecurityHeaders({
       NODE_ENV: "production",
       PUBLIC_APP_URL: "https://uweandragons.org",
       SESSION_COOKIE_SECURE: "true",
     });
+    assert.equal(prodHttps["Strict-Transport-Security"], undefined);
+  });
+
+  it("wants HSTS only in production behind HTTPS configuration", () => {
+    assert.equal(wantsStrictTransportSecurity({ NODE_ENV: "development" }), false);
     assert.equal(
-      prodHttps["Strict-Transport-Security"],
+      wantsStrictTransportSecurity({
+        NODE_ENV: "production",
+        SESSION_COOKIE_SECURE: "false",
+        PUBLIC_APP_URL: "",
+      }),
+      false,
+    );
+    assert.equal(
+      wantsStrictTransportSecurity({
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweandragons.org",
+        SESSION_COOKIE_SECURE: "true",
+      }),
+      true,
+    );
+  });
+
+  it("sends HSTS only on secure requests (Cloudflare / HTTPS)", () => {
+    const env = {
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uweandragons.org",
+      SESSION_COOKIE_SECURE: "true",
+      TRUST_PROXY: "true",
+    };
+
+    const lanHttpRequest = {
+      url: "http://192.168.178.40:3000/login",
+      headers: new Headers(),
+    };
+    assert.equal(shouldSendStrictTransportSecurityForRequest(lanHttpRequest, env), false);
+    assert.equal(
+      getUweSecurityHeaders(env, { allowYouTubeEmbeds: true }, lanHttpRequest)[
+        "Strict-Transport-Security"
+      ],
+      undefined,
+    );
+
+    const proxiedHttpsRequest = {
+      url: "http://127.0.0.1:3000/login",
+      headers: new Headers({ "x-forwarded-proto": "https" }),
+    };
+    assert.equal(shouldSendStrictTransportSecurityForRequest(proxiedHttpsRequest, env), true);
+    assert.equal(
+      getUweSecurityHeaders(env, { allowYouTubeEmbeds: true }, proxiedHttpsRequest)[
+        "Strict-Transport-Security"
+      ],
       "max-age=31536000; includeSubDomains",
     );
   });
@@ -56,6 +101,10 @@ describe("security headers", () => {
     const entries = getUweSecurityHeaderEntries({ NODE_ENV: "development" });
     assert.ok(entries.some((entry) => entry.key === "Content-Security-Policy"));
     assert.ok(entries.some((entry) => entry.key === "X-Content-Type-Options"));
+    assert.equal(
+      entries.some((entry) => entry.key === "Strict-Transport-Security"),
+      false,
+    );
   });
 
   it("applies headers to an existing response", () => {
@@ -64,5 +113,6 @@ describe("security headers", () => {
 
     assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
     assert.ok(response.headers.get("Content-Security-Policy"));
+    assert.equal(response.headers.get("Strict-Transport-Security"), null);
   });
 });

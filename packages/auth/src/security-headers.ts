@@ -1,4 +1,9 @@
-import { getUweRuntimeConfig, isProductionEnv } from "./runtime-config";
+import {
+  getUweRuntimeConfig,
+  isProductionEnv,
+  isRequestSecure,
+  type RequestLikeForCookieOptions,
+} from "./runtime-config";
 
 export interface SecurityHeaderOptions {
   /**
@@ -12,6 +17,8 @@ export interface SecurityHeader {
   key: string;
   value: string;
 }
+
+const STRICT_TRANSPORT_SECURITY_VALUE = "max-age=31536000; includeSubDomains";
 
 /**
  * Builds a strict Content-Security-Policy for UWE.
@@ -50,7 +57,12 @@ export function buildContentSecurityPolicy(
   return directives.join("; ");
 }
 
-function shouldSendStrictTransportSecurity(env: NodeJS.ProcessEnv): boolean {
+/**
+ * Whether the deployment is configured for HTTPS (public URL or secure cookies).
+ * HSTS must still only be sent on actually secure requests — see
+ * shouldSendStrictTransportSecurityForRequest.
+ */
+export function wantsStrictTransportSecurity(env: NodeJS.ProcessEnv = process.env): boolean {
   if (!isProductionEnv(env)) {
     return false;
   }
@@ -59,9 +71,23 @@ function shouldSendStrictTransportSecurity(env: NodeJS.ProcessEnv): boolean {
   return config.sessionCookieSecure || (config.publicAppUrl?.startsWith("https://") ?? false);
 }
 
+/**
+ * Send HSTS only when the incoming request is HTTPS (directly or via trusted proxy).
+ * Without this, production hosts with PUBLIC_APP_URL=https://… still serve plain HTTP
+ * on LAN IPs; browsers cache HSTS for that host and upgrade login POSTs to HTTPS,
+ * which fails on self-hosted HTTP and surfaces as "Verbindung zum Server fehlgeschlagen".
+ */
+export function shouldSendStrictTransportSecurityForRequest(
+  request: RequestLikeForCookieOptions,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return wantsStrictTransportSecurity(env) && isRequestSecure(request, env);
+}
+
 export function getUweSecurityHeaders(
   env: NodeJS.ProcessEnv = process.env,
   options: SecurityHeaderOptions = { allowYouTubeEmbeds: true },
+  request?: RequestLikeForCookieOptions,
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Security-Policy": buildContentSecurityPolicy(options),
@@ -74,8 +100,8 @@ export function getUweSecurityHeaders(
     "Cross-Origin-Resource-Policy": "same-origin",
   };
 
-  if (shouldSendStrictTransportSecurity(env)) {
-    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+  if (request && shouldSendStrictTransportSecurityForRequest(request, env)) {
+    headers["Strict-Transport-Security"] = STRICT_TRANSPORT_SECURITY_VALUE;
   }
 
   return headers;
@@ -95,8 +121,9 @@ export function applySecurityHeaders<T extends Response>(
   response: T,
   env: NodeJS.ProcessEnv = process.env,
   options: SecurityHeaderOptions = { allowYouTubeEmbeds: true },
+  request?: RequestLikeForCookieOptions,
 ): T {
-  for (const [key, value] of Object.entries(getUweSecurityHeaders(env, options))) {
+  for (const [key, value] of Object.entries(getUweSecurityHeaders(env, options, request))) {
     response.headers.set(key, value);
   }
   return response;

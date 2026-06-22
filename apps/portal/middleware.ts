@@ -20,6 +20,9 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
       { error: "Cross-Origin-Anfragen an die Portal-API sind nicht erlaubt." },
       { status: 403 },
     ),
+    process.env,
+    { allowYouTubeEmbeds: true },
+    request,
   );
 }
 
@@ -37,19 +40,32 @@ export function middleware(request: NextRequest) {
   });
 
   if (decision.action === "allow") {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(
+      NextResponse.next(),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
   }
 
   if (decision.action === "redirect-login") {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = decision.redirectPath ?? "/login";
     loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
-    return applySecurityHeaders(NextResponse.redirect(loginUrl));
+    return applySecurityHeaders(
+      NextResponse.redirect(loginUrl),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
   }
 
   if (decision.status === 404) {
     return applySecurityHeaders(
       NextResponse.json({ error: decision.error ?? "Nicht gefunden." }, { status: 404 }),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
     );
   }
 
@@ -58,6 +74,9 @@ export function middleware(request: NextRequest) {
       { error: decision.error ?? "Zugriff verweigert." },
       { status: decision.status ?? 403 },
     ),
+    process.env,
+    { allowYouTubeEmbeds: true },
+    request,
   );
 }
 
