@@ -67,3 +67,59 @@ After adding dependencies: `pnpm install` and commit `pnpm-lock.yaml`. CI uses `
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed quality workflow
 - `docs/AGENT_JOBS.md` — GitHub Actions agent job integration
 - `docs/TEST_PLAN.md` — manual QA checklist
+
+## Cursor Cloud specific instructions
+
+The startup update script already runs `pnpm install --frozen-lockfile` and
+`pnpm --filter @uwe/database db:generate`. The notes below cover non-obvious
+run/test caveats; standard commands live in `README.md` and root `package.json`.
+
+### Services & how to run them (development)
+
+- `pnpm dev` runs both apps via Turbo: **Studio** on `:3000`, **Portal** on `:3001`
+  (or `pnpm dev:studio` / `pnpm dev:portal`). Health: `GET /api/health` on each.
+- Lint/typecheck/test/build are the root scripts (`pnpm lint`, `pnpm typecheck`,
+  `pnpm test`, `pnpm test:security`, `pnpm build:release`); the full gate is
+  `pnpm quality` (see top of this file). All currently pass.
+
+### First-run database setup (DB file is git-ignored, not in the update script)
+
+A fresh VM has no local DB. Once per VM, create env + database:
+
+```bash
+cp -n .env.example .env
+pnpm --filter @uwe/database db:deploy   # apply migrations (idempotent)
+pnpm --filter @uwe/database db:seed     # demo world "Terra" + users
+```
+
+- SQLite lives at `packages/database/data/uwe.db`. `resolveDatabaseUrl` always
+  resolves a relative `file:` `DATABASE_URL` to that path regardless of CWD, so
+  every process (dev, scripts, standalone) shares the same seeded DB.
+- Seeded dev/demo login: **`dm@uwe.local` / `uwe-dev`** (Studio DM). Other seeded
+  player accounts also use `uwe-dev`.
+
+### Known dev-mode gotcha: strict CSP blocks `next dev` hydration
+
+The committed CSP (`packages/auth/src/security-headers.ts`) sets
+`script-src 'self' 'unsafe-inline'` (no `'unsafe-eval'`). This is correct for
+production, but Next.js **dev** mode (`next dev`) needs `'unsafe-eval'` for Fast
+Refresh/HMR. In a browser against `pnpm dev`, client hydration fails
+(`EvalError: ... 'unsafe-eval' is not an allowed source`) and the login form
+falls back to a broken native GET — i.e. interactive UI does not work in dev.
+
+- Production builds are unaffected. The project's E2E harness
+  (`scripts/e2e-servers.mjs`) runs `next build` + `next start` with
+  `NODE_ENV=production`, where the strict CSP works; that is how `pnpm test:e2e`
+  verifies auth flows.
+- For manual browser testing in dev, temporarily add `'unsafe-eval'` to the
+  dev branch of the CSP in `security-headers.ts` (production unchanged) and
+  revert before committing — CSP changes need explicit security review per
+  `.cursor/rules/security.mdc`.
+
+### Known broken route (pre-existing)
+
+`/worlds/[worldSlug]/pages/new` errors at render: `createPageAction` in
+`apps/studio/app/actions.ts` is passed to `<form action={...}>` but that file
+is missing the `"use server"` directive, so the page hangs on the
+`Studio wird geladen…` loader. Other write flows (e.g. `/capture`, which uses
+`apps/studio/app/capture-actions.ts`) are proper server actions and work.
