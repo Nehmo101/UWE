@@ -280,8 +280,9 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
       <section className="uwe-panel">
         <h2>Import-Quelle</h2>
         <p className="uwe-panel-intro">
-          KnoteForge-Export als JSON oder mehrere unstrukturierte Texte als Markdown/TXT.
-          Mehrere Dateien werden automatisch zu einzelnen Seiten — getrennt durch{" "}
+          KnoteForge-Export als JSON — entweder das UWE-Importformat (Objekt mit{" "}
+          <code>entities</code>) oder einen Eingang-Export (<code>eingang_export.json</code>).
+          Alternativ mehrere unstrukturierte Texte als Markdown/TXT: getrennt durch{" "}
           <code>---</code> in einer Datei oder als Mehrfachauswahl.
         </p>
 
