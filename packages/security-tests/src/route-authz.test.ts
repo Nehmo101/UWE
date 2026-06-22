@@ -125,7 +125,7 @@ const PORTAL_AUTH_ROUTES = [
   "apps/portal/app/forgot-password/page.tsx",
   "apps/portal/app/reset-password/page.tsx",
   "apps/portal/app/portal/page.tsx",
-  "apps/portal/app/auth/worlds/page.tsx",
+  "apps/portal/app/auth/worlds/(hub)/page.tsx",
   "apps/portal/app/auth/worlds/[worldSlug]/page.tsx",
   "apps/portal/app/api/auth/login/route.ts",
   "apps/portal/app/api/auth/logout/route.ts",

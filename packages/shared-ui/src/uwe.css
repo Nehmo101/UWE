@@ -755,6 +755,28 @@ html[data-theme="light"] {
   margin: 0 0.35rem;
 }
 
+.uwe-section-header {
+  margin-bottom: 1.25rem;
+}
+
+.uwe-section-header .uwe-page-header {
+  margin-bottom: 0;
+}
+
+.uwe-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--uwe-info);
+  text-decoration: none;
+}
+
+.uwe-back-link:hover {
+  text-decoration: underline;
+}
+
 .uwe-badge {
   display: inline-flex;
   align-items: center;

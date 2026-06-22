@@ -22,6 +22,14 @@ export {
 } from "./AppShell";
 
 export {
+  NavSidebarSections,
+  SectionHeader,
+  type BreadcrumbItem,
+  type NavSection,
+  type SectionHeaderProps,
+} from "./navigation";
+
+export {
   Button,
   Card,
   Input,
