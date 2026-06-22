@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import type { AiBrainSettings } from "@uwe/ai-brain";
 import {
@@ -78,8 +79,8 @@ export function useAiPromptCapabilities(
   const loadStatus = useCallback(async () => {
     try {
       const [adminRes, settingsRes] = await Promise.all([
-        fetch("/api/admin/status"),
-        fetch("/api/ai/settings"),
+        fetch(studioApiUrl("/api/admin/status")),
+        fetch(studioApiUrl("/api/ai/settings")),
       ]);
 
       if (!adminRes.ok || !settingsRes.ok) {

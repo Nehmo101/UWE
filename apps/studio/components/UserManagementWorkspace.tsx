@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { SECURITY_ROLE_LABELS } from "@uwe/auth";
 import { formatStudioDateOrDash } from "@/src/lib/format";
@@ -76,7 +77,7 @@ export function UserManagementWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/users");
+      const response = await fetch(studioApiUrl("/api/admin/users"));
       if (!response.ok) {
         throw new Error(`Benutzer konnten nicht geladen werden (${response.status}).`);
       }
@@ -110,7 +111,7 @@ export function UserManagementWorkspace() {
 
   async function createUser() {
     setError(null);
-    const response = await fetch("/api/admin/users", {
+    const response = await fetch(studioApiUrl("/api/admin/users"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(createForm),
@@ -134,7 +135,7 @@ export function UserManagementWorkspace() {
     if (!selectedUser) return;
     setError(null);
 
-    const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+    const response = await fetch(studioApiUrl(`/api/admin/users/${selectedUser.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -151,7 +152,7 @@ export function UserManagementWorkspace() {
     }
 
     if (editForm.password.trim().length >= 8) {
-      const passwordResponse = await fetch(`/api/admin/users/${selectedUser.id}/reset-password`, {
+      const passwordResponse = await fetch(studioApiUrl(`/api/admin/users/${selectedUser.id}/reset-password`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPassword: editForm.password }),
@@ -173,7 +174,7 @@ export function UserManagementWorkspace() {
       user.status === "disabled"
         ? `/api/admin/users/${user.id}/enable`
         : `/api/admin/users/${user.id}/disable`;
-    const response = await fetch(endpoint, { method: "POST" });
+    const response = await fetch(studioApiUrl(endpoint), { method: "POST" });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
       setError(data.error ?? "Status konnte nicht geändert werden.");
@@ -189,7 +190,7 @@ export function UserManagementWorkspace() {
     if (!confirmed) return;
 
     setError(null);
-    const response = await fetch(`/api/admin/users/${user.id}/delete`, { method: "POST" });
+    const response = await fetch(studioApiUrl(`/api/admin/users/${user.id}/delete`), { method: "POST" });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
       setError(data.error ?? "Benutzer konnte nicht gelöscht werden.");
@@ -202,7 +203,7 @@ export function UserManagementWorkspace() {
   async function addMembership() {
     if (!selectedUser || !membershipForm.worldId) return;
     setError(null);
-    const response = await fetch(`/api/admin/users/${selectedUser.id}/world-memberships`, {
+    const response = await fetch(studioApiUrl(`/api/admin/users/${selectedUser.id}/world-memberships`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(membershipForm),
@@ -220,7 +221,7 @@ export function UserManagementWorkspace() {
     if (!selectedUser) return;
     setError(null);
     const response = await fetch(
-      `/api/admin/users/${selectedUser.id}/world-memberships/${worldId}`,
+      studioApiUrl(`/api/admin/users/${selectedUser.id}/world-memberships/${worldId}`),
       { method: "DELETE" },
     );
     const data = (await response.json()) as { error?: string };

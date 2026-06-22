@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 
 interface TagReference {
@@ -62,7 +63,7 @@ export function TagAdminWorkspace() {
     if (worldId) params.set("worldId", worldId);
 
     try {
-      const response = await fetch(`/api/admin/tags?${params.toString()}`);
+      const response = await fetch(studioApiUrl(`/api/admin/tags?${params.toString()}`));
       if (!response.ok) {
         throw new Error(`Tags konnten nicht geladen werden (${response.status}).`);
       }
@@ -84,7 +85,7 @@ export function TagAdminWorkspace() {
     setMergeStatus(null);
 
     try {
-      const response = await fetch("/api/admin/tags", {
+      const response = await fetch(studioApiUrl("/api/admin/tags"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

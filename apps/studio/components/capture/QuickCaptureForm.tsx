@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useMemo, useState, useTransition } from "react";
 import { QUICK_CAPTURE_TYPE_OPTIONS } from "@uwe/database/capture-constants";
 import { createCaptureAction } from "@/app/capture-actions";
@@ -40,7 +41,7 @@ export function QuickCaptureForm({
     startUpload(async () => {
       const body = new FormData();
       body.append("file", file);
-      const response = await fetch("/api/capture/upload", { method: "POST", body });
+      const response = await fetch(studioApiUrl("/api/capture/upload"), { method: "POST", body });
       const payload = (await response.json()) as {
         storageKey?: string;
         originalFilename?: string;

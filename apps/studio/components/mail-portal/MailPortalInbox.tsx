@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MAIL_PRIORITY_LABELS, MAIL_REPLY_TONE_LABELS, type MailReplyTone } from "@uwe/mail/portal-types";
@@ -53,7 +54,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
 
   async function runAi(path: string, body: Record<string, unknown>) {
     setStatus(null);
-    const response = await fetch(path, {
+    const response = await fetch(studioApiUrl(path), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 
 interface SpotifyStatusResponse {
@@ -24,7 +25,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/worlds/${encodeURIComponent(worldSlug)}/spotify/status`);
+      const response = await fetch(studioApiUrl(`/api/worlds/${encodeURIComponent(worldSlug)}/spotify/status`));
       const payload = (await response.json()) as SpotifyStatusResponse;
       setStatus(payload);
     } catch {
@@ -44,7 +45,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
 
     try {
       const response = await fetch(
-        `/api/worlds/${encodeURIComponent(worldSlug)}/spotify/disconnect`,
+        studioApiUrl(`/api/worlds/${encodeURIComponent(worldSlug)}/spotify/disconnect`),
         { method: "POST" },
       );
 

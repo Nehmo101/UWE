@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 export interface PollableJob {
   id: string;
   status: string;
@@ -8,7 +9,7 @@ export interface PollableJob {
 }
 
 export async function fetchJob(jobId: string): Promise<PollableJob | null> {
-  const response = await fetch(`/api/jobs/${jobId}`);
+  const response = await fetch(studioApiUrl(`/api/jobs/${jobId}`));
   const data = await response.json();
   if (!response.ok) return null;
   return data.job as PollableJob;

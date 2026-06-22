@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -68,7 +69,7 @@ function statusClass(status: string): string {
 }
 
 async function pollJob(jobId: string): Promise<JobItem | null> {
-  const response = await fetch(`/api/jobs/${jobId}`);
+  const response = await fetch(studioApiUrl(`/api/jobs/${jobId}`));
   const data = await response.json();
   if (!response.ok) return null;
   return data.job as JobItem;
@@ -98,7 +99,7 @@ export function JobsWorkspace({
     if (statusFilter) params.set("status", statusFilter);
     if (worldSlug) params.set("worldSlug", worldSlug);
 
-    const response = await fetch(`/api/jobs?${params.toString()}`);
+    const response = await fetch(studioApiUrl(`/api/jobs?${params.toString()}`));
     const data = await response.json();
     if (response.ok) {
       setJobs(data.jobs ?? []);
@@ -145,7 +146,7 @@ export function JobsWorkspace({
     setBusy(jobId);
     setError(null);
     try {
-      const response = await fetch(`/api/jobs/${jobId}`, {
+      const response = await fetch(studioApiUrl(`/api/jobs/${jobId}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "retry" }),
@@ -167,7 +168,7 @@ export function JobsWorkspace({
     setBusy(jobId);
     setError(null);
     try {
-      const response = await fetch(`/api/jobs/${jobId}`, {
+      const response = await fetch(studioApiUrl(`/api/jobs/${jobId}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel" }),

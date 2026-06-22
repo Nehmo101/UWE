@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
@@ -81,7 +82,7 @@ export function AiBrainSidebar({
   }, [settings]);
 
   const loadSettings = useCallback(async () => {
-    const response = await fetch("/api/ai/settings");
+    const response = await fetch(studioApiUrl("/api/ai/settings"));
     const data = (await response.json()) as { settings: AiBrainSettings };
     setSettings(data.settings);
     setAllowDmOnly(data.settings.localOnly);
@@ -94,7 +95,7 @@ export function AiBrainSidebar({
   }, []);
 
   const loadActions = useCallback(async () => {
-    const response = await fetch("/api/brain/actions");
+    const response = await fetch(studioApiUrl("/api/brain/actions"));
     if (!response.ok) return;
     const data = (await response.json()) as { actions: BrainActionDefinition[] };
     setActions(data.actions);
@@ -111,7 +112,9 @@ export function AiBrainSidebar({
     if (!pageSlug) return;
 
     const response = await fetch(
-      `/api/ai/sessions?worldSlug=${encodeURIComponent(worldSlug)}&pageSlug=${encodeURIComponent(pageSlug)}`,
+      studioApiUrl(
+        `/api/ai/sessions?worldSlug=${encodeURIComponent(worldSlug)}&pageSlug=${encodeURIComponent(pageSlug)}`,
+      ),
     );
     if (!response.ok) return;
     const data = (await response.json()) as { sessions: SessionOption[] };
@@ -128,7 +131,7 @@ export function AiBrainSidebar({
     });
     if (pageSlug) params.set("pageSlug", pageSlug);
 
-    const response = await fetch(`/api/brain/runs?${params.toString()}`);
+    const response = await fetch(studioApiUrl(`/api/brain/runs?${params.toString()}`));
     if (!response.ok) return;
     const data = (await response.json()) as { runs: AiRunView[] };
     setRecentRuns(data.runs);
@@ -137,7 +140,9 @@ export function AiBrainSidebar({
   const loadModels = useCallback(async (selectedProvider: AiProviderId) => {
     const useMock = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
     const response = await fetch(
-      `/api/ai/models?provider=${selectedProvider}${useMock ? "&mock=true" : ""}`,
+      studioApiUrl(
+        `/api/ai/models?provider=${selectedProvider}${useMock ? "&mock=true" : ""}`,
+      ),
     );
     if (!response.ok) {
       setModels([{ id: "mock-model", name: "Mock Model (offline)" }]);
@@ -182,7 +187,7 @@ export function AiBrainSidebar({
     try {
       const useMock =
         process.env.NEXT_PUBLIC_AI_USE_MOCK === "true" || model === "mock-model";
-      const response = await fetch("/api/brain/run", {
+      const response = await fetch(studioApiUrl("/api/brain/run"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -245,7 +250,7 @@ export function AiBrainSidebar({
     setLoading(true);
     setStatus(null);
     try {
-      const response = await fetch(`/api/brain/runs/${run.id}`, {
+      const response = await fetch(studioApiUrl(`/api/brain/runs/${run.id}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -273,7 +278,7 @@ export function AiBrainSidebar({
     setLoading(true);
     setStatus(null);
     try {
-      const response = await fetch(`/api/brain/runs/${run.id}`, {
+      const response = await fetch(studioApiUrl(`/api/brain/runs/${run.id}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "discard" }),

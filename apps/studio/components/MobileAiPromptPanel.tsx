@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useMemo, useState } from "react";
 import { ErrorAlert, LoadingSpinner, StickyActionBar } from "@uwe/shared-ui";
 import { AiPromptControls, computePromptUiState } from "@/components/AiPromptControls";
@@ -50,7 +51,7 @@ export function MobileAiPromptPanel({
     setResponse(null);
 
     try {
-      const res = await fetch("/api/ai/prompt", {
+      const res = await fetch(studioApiUrl("/api/ai/prompt"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

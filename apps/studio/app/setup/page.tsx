@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,7 +19,7 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/auth/setup")
+    void fetch(studioApiUrl("/api/auth/setup"))
       .then((response) => response.json())
       .then((payload: { setupAvailable?: boolean; setupConfigured?: boolean }) => {
         setSetupAvailable(Boolean(payload.setupAvailable));
@@ -32,7 +33,7 @@ export default function SetupPage() {
     setLoading(true);
     setError(null);
 
-    const response = await fetch("/api/auth/setup", {
+    const response = await fetch(studioApiUrl("/api/auth/setup"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ setupToken, displayName, email, password }),

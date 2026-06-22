@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
@@ -98,7 +99,7 @@ export function BackupWorkspace({
 
   useEffect(() => {
     async function loadPermissions() {
-      const response = await fetch("/api/backup?permissions=1");
+      const response = await fetch(studioApiUrl("/api/backup?permissions=1"));
       if (response.ok) {
         setPermissions(await response.json());
       }
@@ -112,7 +113,7 @@ export function BackupWorkspace({
   }, [preview]);
 
   async function refreshBackups() {
-    const response = await fetch("/api/backup");
+    const response = await fetch(studioApiUrl("/api/backup"));
     const data = await response.json();
     if (response.ok) {
       setBackups(data.backups ?? []);
@@ -124,7 +125,7 @@ export function BackupWorkspace({
     setError(null);
 
     try {
-      const response = await fetch(`/api/backup/${encodeURIComponent(backupId)}/download`);
+      const response = await fetch(studioApiUrl(`/api/backup/${encodeURIComponent(backupId)}/download`));
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? "Download fehlgeschlagen.");
@@ -150,7 +151,7 @@ export function BackupWorkspace({
     setResult(null);
 
     try {
-      const response = await fetch("/api/backup", {
+      const response = await fetch(studioApiUrl("/api/backup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -193,7 +194,7 @@ export function BackupWorkspace({
     setResult(null);
 
     try {
-      const response = await fetch("/api/backup/restore/preview", {
+      const response = await fetch(studioApiUrl("/api/backup/restore/preview"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -230,7 +231,7 @@ export function BackupWorkspace({
     setShowRestoreWarning(false);
 
     try {
-      const response = await fetch("/api/backup/restore/execute", {
+      const response = await fetch(studioApiUrl("/api/backup/restore/execute"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

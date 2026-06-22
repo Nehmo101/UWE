@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -91,7 +92,7 @@ export function AuditLogWorkspace() {
     params.set("limit", "100");
 
     try {
-      const response = await fetch(`/api/admin/audit-log?${params.toString()}`);
+      const response = await fetch(studioApiUrl(`/api/admin/audit-log?${params.toString()}`));
       if (!response.ok) {
         throw new Error(`Audit Log konnte nicht geladen werden (${response.status}).`);
       }

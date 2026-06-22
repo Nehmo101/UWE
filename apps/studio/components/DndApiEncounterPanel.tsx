@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -48,7 +49,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
     setBusy(`import-${item.id}`);
     setMessage(null);
     try {
-      const response = await fetch("/api/dnd-api", {
+      const response = await fetch(studioApiUrl("/api/dnd-api"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,7 +82,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
     setBusy("encounter");
     setMessage(null);
     try {
-      const response = await fetch("/api/dnd-api", {
+      const response = await fetch(studioApiUrl("/api/dnd-api"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

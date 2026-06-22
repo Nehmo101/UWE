@@ -1,13 +1,19 @@
-# Cloudflare Access für UWE (uweanddragons.org)
+# Cloudflare Access für UWE (uweandragons.org)
 
-Diese Anleitung beschreibt, wie Cloudflare Access als **zusätzliche** Schutzschicht vor Studio, Admin und sensiblen APIs eingesetzt wird. UWE erzwingt Zugriffskontrolle zusätzlich serverseitig über `authorize()` und die Route Policy in `packages/auth/src/security/route-policy.ts` — Cloudflare Access ersetzt diese Guards nicht.
+Diese Anleitung beschreibt, wie Cloudflare Access als **zusätzliche** Schutzschicht vor Studio und Admin eingesetzt wird. UWE erzwingt Zugriffskontrolle zusätzlich serverseitig über `authorize()` und die Route Policy in `packages/auth/src/security/route-policy.ts` — Cloudflare Access ersetzt diese Guards nicht.
 
-## Zielbild
+## Zielbild (Unified Path — empfohlen)
 
-| Bereich | Erreichbarkeit |
-|---------|----------------|
-| Public Player-Routen (`/`, `/worlds/*`, `/players/*`, `/share/*`, `/public-assets/*`) | **Ohne** Cloudflare Access |
-| Studio / Admin / Brain / Import / AI | **Nur** mit Cloudflare Access + UWE-interner Auth |
+Ein öffentlicher Hostname, getrennte Pfade für Portal und Studio:
+
+| Bereich | Öffentlicher Pfad | Backend | Cloudflare Access |
+|---------|-------------------|---------|-------------------|
+| Portal UI | `/`, `/worlds/*`, `/players/*`, `/share/*` | Portal `:3001` | **Nein** |
+| Portal API | `/api/*` (Player/Share/Health) | Portal `:3001` | **Nein** |
+| Studio UI | `/studio/*`, `/admin/*`, `/setup*` | Studio `:3000` | **Ja** |
+| Studio API | `/studio/api/*` → intern `/api/*` | Studio `:3000` | **Ja** (über `/studio*`) |
+
+Studio-Frontend-API-Aufrufe nutzen `studioApiUrl()` aus `apps/studio/src/lib/studio-api-url.ts` — im Unified-Path-Modus `/studio/api/...`, nicht `/api/...`.
 
 Empfohlene E-Mail für Admin-Zugriff: `lasset610@gmail.com`
 
@@ -16,84 +22,124 @@ Empfohlene E-Mail für Admin-Zugriff: `lasset610@gmail.com`
 ```txt
 Internet
   ↓
-Cloudflare (HTTPS, Access Policies)
+Cloudflare (HTTPS, Access nur auf /studio*, /admin*, /setup*)
   ↓
-cloudflared Tunnel → localhost:3000 (Studio) / :3001 (Portal)
+cloudflared Tunnel → lokaler Reverse Proxy (Caddy/nginx)
+  ↓ /                    → Portal :3001
+  ↓ /api/*               → Portal :3001
+  ↓ /studio/*            → Studio :3000 (Prefix wird intern gestrippt)
+  ↓ /studio/api/*        → Studio :3000 /api/*
   ↓
 UWE Middleware + authorize() (zweite Schicht)
 ```
 
-## Variante A — Getrennte Access Applications (empfohlen)
+## Reverse Proxy (Unified Path)
 
-### 1. Public Portal Application
+Vor dem Tunnel oder direkt hinter `cloudflared` einen lokalen Proxy terminieren. Beispiel **Caddy**:
 
-- **Domain:** `uweandragons.org`
-- **Path:** ausgeschlossen — nur Player-Pfade über Tunnel **ohne** Access Policy
-- Oder: eigener Hostname `players.uweanddragons.org` ohne Access
+```caddyfile
+uweandragons.org {
+    # Portal — öffentlich
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3001
+    }
+    handle {
+        reverse_proxy 127.0.0.1:3001
+    }
 
-Öffentliche Pfade (kein Access):
+    # Studio API — unter /studio/api/*
+    handle /studio/api/* {
+        uri strip_prefix /studio
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    # Studio UI — unter /studio/*
+    handle /studio/* {
+        uri strip_prefix /studio
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    # Admin / Setup (ohne /studio-Prefix, falls direkt geroutet)
+    handle /admin/* {
+        reverse_proxy 127.0.0.1:3000
+    }
+    handle /setup* {
+        reverse_proxy 127.0.0.1:3000
+    }
+}
+```
+
+Beispiel **nginx** (vereinfacht):
+
+```nginx
+# Portal
+location /api/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location / {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Studio API: /studio/api/* → Studio /api/*
+location /studio/api/ {
+    proxy_pass http://127.0.0.1:3000/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Studio UI: /studio/* → Studio /*
+location /studio/ {
+    proxy_pass http://127.0.0.1:3000/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location /admin/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Tunnel zeigt dann nur auf den Proxy-Port (z. B. `:8080`), nicht direkt auf `:3000`/`:3001`.
+
+## Cloudflare Access Policies
+
+### Öffentlich (kein Access)
 
 - `/`
 - `/worlds` und `/worlds/*`
-- `/players` und `/players/*` (Proxy-Alias)
+- `/players` und `/players/*`
 - `/share/*`
 - `/public-assets/*`
-- `/api/health`
-- `/api/auth/login`, `/api/auth/logout`, `/api/auth/preview`
+- `/api/health`, `/api/health/*`
+- `/api/auth/login`, `/api/auth/logout`, `/api/auth/preview` (Portal)
 - `/api/share/*`
 - `/api/assets/*/file`
 - `/api/worlds/*/graph`
 
-### 2. Studio / Admin Application
+**Wichtig:** `/api/*` auf Root-Ebene gehört zum **Portal** — kein Cloudflare Access darauf legen.
 
-Erstelle in Cloudflare Zero Trust → **Access → Applications** eine Self-hosted Application:
+### Geschützt (Access erforderlich)
 
-| Feld | Wert |
-|------|------|
-| Application name | `UWE Studio & Admin` |
-| Session Duration | z. B. 24h |
-| Application domain | `uweanddragons.org` |
-| Path | einer oder mehrere der folgenden Pfade |
-
-Geschützte Pfade:
+Nur UI- und Studio-Pfadpräfixe — **keine** einzelnen `/api/admin`-Einträge mehr nötig:
 
 ```
 /studio
 /studio/*
 /admin
 /admin/*
-/api/admin
-/api/admin/*
-/api/import
-/api/import/*
-/api/brain
-/api/brain/*
-/api/ai
-/api/ai/*
-/api/search
-/api/search/*
-/api/command/search
-/api/media/upload
-/api/media/upload/*
-/api/worlds/*/assets/upload
-/api/backup
-/api/backup/*
-/api/settings
-/api/export
-/api/export/*
-/api/mail
-/api/mail/*
-/api/jobs
-/api/jobs/*
-/api/agent-jobs
-/api/agent-jobs/*
-/api/debug
-/api/debug/*
+/setup
+/setup/*
 ```
 
-> **Hinweis:** Wenn Studio und Portal auf getrennten Ports laufen, kann alternativ `studio.uweandragons.org` komplett hinter Access liegen, während `uweandragons.org` nur das Portal bedient.
+`/studio/api/*` ist durch `/studio/*` abgedeckt.
 
-### 3. Access Policy
+### Access Policy
 
 Policy-Name: `UWE Admin — lasset610`
 
@@ -103,25 +149,11 @@ Policy-Name: `UWE Admin — lasset610`
 | Include | Emails → `lasset610@gmail.com` |
 | Require | (optional) MFA |
 
-Keine weiteren Include-Regeln für diese Application.
+## Variante — Getrennte Hostnames
 
-## Variante B — Wildcard Application
-
-Eine Application für `uweandragons.org/*` mit **Bypass**-Policies für Public-Pfade und **Allow** für Admin:
-
-1. **Bypass Policy** (Priority 1): Paths `/worlds*`, `/players*`, `/share*`, `/public-assets*`, `/api/health`, `/api/auth/*`, `/api/share/*`, `/api/assets/*`, `/api/worlds/*/graph`
-2. **Allow Policy** (Priority 2): Email `lasset610@gmail.com` für alle übrigen Pfade
-
-Wildcard-Apps sind schwerer zu warten — Variante A ist klarer.
-
-## Tunnel-Konfiguration (Beispiel)
-
-`~/.cloudflared/config.yml`:
+Alternativ zwei Tunnel-Hostnames (ohne Path-Routing):
 
 ```yaml
-tunnel: <TUNNEL-ID>
-credentials-file: /path/to/<TUNNEL-ID>.json
-
 ingress:
   - hostname: uweandragons.org
     service: http://127.0.0.1:3001
@@ -130,34 +162,58 @@ ingress:
   - service: http_status:404
 ```
 
-Bei Single-Host-Setup mit Path-Routing vor dem Tunnel kann ein lokaler Reverse Proxy Studio unter `/studio` und Portal unter `/` terminieren.
+Dann Cloudflare Access auf `studio.uweandragons.org/*`, Portal-Host ohne Access. Studio-API bleibt `/api/*` auf dem Studio-Host; setze `NEXT_PUBLIC_STUDIO_URL=https://studio.uweandragons.org`.
+
+## Tunnel-Konfiguration (Unified Path)
+
+```yaml
+tunnel: <TUNNEL-ID>
+credentials-file: /path/to/<TUNNEL-ID>.json
+
+ingress:
+  - hostname: uweandragons.org
+    service: http://127.0.0.1:8080   # lokaler Reverse Proxy (siehe oben)
+  - service: http_status:404
+```
 
 ## UWE Environment
 
 ```env
-PUBLIC_APP_URL=https://uweanddragons.org
+PUBLIC_APP_URL=https://uweandragons.org
+STUDIO_PATH=/studio
+PORTAL_PATH=/
 TRUST_PROXY=true
 CLOUDFLARE_TUNNEL=true
+CLOUDFLARE_ACCESS_ENABLED=true
 AUTH_REQUIRED=true
 STUDIO_API_TOKEN=<starkes-zufalls-token>
 STUDIO_ACCESS_ALLOWED_EMAILS=lasset610@gmail.com
+
+# Browser: Studio fetch() → /studio/api/...
+NEXT_PUBLIC_STUDIO_PATH=/studio
+# Optional — absolute API-Origin statt relativer Pfade:
+# NEXT_PUBLIC_STUDIO_API_ORIGIN=https://uweandragons.org/studio
 ```
 
-`STUDIO_ACCESS_ALLOWED_EMAILS` wird von UWE ausgewertet, wenn Cloudflare den Header `Cf-Access-Authenticated-User-Email` mitsendet. **Pflicht in Produktion** — ohne gesetzte Variable akzeptiert UWE keinen Cloudflare-Access-Header (kein hardcodierter Default mehr).
+Ohne `NEXT_PUBLIC_STUDIO_URL` + `NEXT_PUBLIC_PORTAL_URL` leitet UWE Studio-API-URLs aus `PUBLIC_APP_URL` + `STUDIO_PATH` ab.
+
+`STUDIO_ACCESS_ALLOWED_EMAILS` wird von UWE ausgewertet, wenn Cloudflare den Header `Cf-Access-Authenticated-User-Email` mitsendet. **Pflicht in Produktion** — ohne gesetzte Variable akzeptiert UWE keinen Cloudflare-Access-Header.
 
 ## Verifikation
 
 Nach dem Setup:
 
-1. **Public:** `curl -s https://uweanddragons.org/api/health` → HTTP 200
-2. **Protected API ohne Auth:** `curl -s -o /dev/null -w "%{http_code}" https://uweanddragons.org/api/brain/run` → `401` oder `403` (oder Cloudflare Login)
-3. **Mit Access-Cookie / Token:** Studio-UI und Admin-APIs erreichbar
-4. **Player-Inhalt:** `/worlds/<slug>` zeigt keine `dm_only`-Seiten (UWE filtert serverseitig)
+1. **Portal public:** `curl -s https://uweandragons.org/api/health/public` → HTTP 200
+2. **Studio API ohne Auth:** `curl -s -o /dev/null -w "%{http_code}" https://uweandragons.org/studio/api/brain/run` → `401`/`403` oder Cloudflare Login
+3. **Portal-API bleibt ohne Access:** `curl -s https://uweandragons.org/api/health` → HTTP 200 (kein Access-Redirect)
+4. **Mit Access-Cookie / Token:** Studio-UI unter `/studio` und `/studio/api/*` erreichbar
+5. **Player-Inhalt:** `/worlds/<slug>` zeigt keine `dm_only`-Seiten (UWE filtert serverseitig)
 
 Automatisierte Tests: `pnpm --filter @uwe/auth test`
 
 ## Wichtige Regeln
 
-- Cloudflare Access ist **Schicht 1**, UWE Middleware/Proxy ist **Schicht 2**, `authorize()` in API Routes und Server Actions ist **Schicht 3**.
+- Cloudflare Access ist **Schicht 1**, Reverse Proxy + UWE Middleware ist **Schicht 2**, `authorize()` in API Routes und Server Actions ist **Schicht 3**.
+- **Kein** Cloudflare Access auf `/api/*` (Portal-API) — Studio-API läuft unter `/studio/api/*`.
 - Entferne niemals `STUDIO_API_TOKEN` allein deshalb, weil Access aktiv ist.
-- Der RTX-Inferenz-Endpunkt bleibt **nicht** über Cloudflare erreichbar — nur UWE im Heimnetz spricht Ollama/LM Studio an (`AI_INFERENCE_ALLOW_PUBLIC_URL=false`).
+- Der RTX-Inferenz-Endpunkt bleibt **nicht** über Cloudflare erreichbar (`AI_INFERENCE_ALLOW_PUBLIC_URL=false`).
