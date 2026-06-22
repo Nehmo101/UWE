@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AuthHeader } from "@/src/components/AuthHeader";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { SessionRecapFeed } from "@/src/components/SessionRecapFeed";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
@@ -57,43 +55,35 @@ export default async function PortalSessionDetailPage({ params }: Props) {
   const returnPath = `/auth/worlds/${worldSlug}/sessions/${sessionId}`;
 
   return (
-    <main className="auth-page">
-      <AuthHeader user={user} />
-      <article className="auth-card auth-card-wide">
-        <div className="auth-breadcrumb">
-          <Link href="/auth/worlds">Welten</Link> /{" "}
-          <Link href={`/auth/worlds/${worldSlug}`}>{worldSlug}</Link> /{" "}
-          <Link href={`/auth/worlds/${worldSlug}/sessions`}>Sessions</Link> /{" "}
-          {session.title}
-        </div>
+    <article className="portal-content-card">
+      <a href={`/auth/worlds/${worldSlug}/sessions`} className="uwe-back-link">
+        ← Zurück zu Sessions
+      </a>
 
-        <header>
-          <h1>
-            Session {session.sessionNumber}: {session.title}
-          </h1>
-          {session.date && (
-            <p className="auth-lead">{session.date.toLocaleDateString("de-DE")}</p>
-          )}
-        </header>
+      <header>
+        <h1>
+          Session {session.sessionNumber}: {session.title}
+        </h1>
+        {session.date && <p className="auth-lead">{session.date.toLocaleDateString("de-DE")}</p>}
+      </header>
 
-        <SessionRecapFeed
+      <SessionRecapFeed
+        worldSlug={worldSlug}
+        session={session}
+        newlyUnlocked={newlyUnlocked}
+      />
+
+      {session.campaignId && (
+        <PlayerNotesPanel
           worldSlug={worldSlug}
-          session={session}
-          newlyUnlocked={newlyUnlocked}
+          campaignId={session.campaignId}
+          notes={notes}
+          currentUserId={user?.id ?? null}
+          canComment={canComment}
+          gameSessionId={sessionId}
+          returnPath={returnPath}
         />
-
-        {session.campaignId && (
-          <PlayerNotesPanel
-            worldSlug={worldSlug}
-            campaignId={session.campaignId}
-            notes={notes}
-            currentUserId={user?.id ?? null}
-            canComment={canComment}
-            gameSessionId={sessionId}
-            returnPath={returnPath}
-          />
-        )}
-      </article>
-    </main>
+      )}
+    </article>
   );
 }

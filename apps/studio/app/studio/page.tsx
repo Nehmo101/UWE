@@ -5,8 +5,6 @@ import {
   PublishBadge,
   SidebarSection,
   StatGrid,
-  StudioNavSidebar,
-  StudioShell,
 } from "@uwe/shared-ui";
 import {
   ACTIVITY_ACTION_LABELS,
@@ -17,6 +15,7 @@ import {
   getProductionSafetyWarnings,
   prisma,
 } from "@uwe/database/server";
+import { StudioAppShell } from "@/components/StudioAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { STUDIO_DASHBOARD_PATH } from "@/src/lib/routes";
 import { undoActivityAction } from "../inspector-actions";
@@ -48,38 +47,35 @@ export default async function StudioDashboard({ searchParams }: Props) {
   );
 
   return (
-    <StudioShell
+    <StudioAppShell
+      variant="dashboard"
+      activePath={STUDIO_DASHBOARD_PATH}
       showRail
       showSearch
       railActiveId="more"
-      subtitle="Dungeon Master Workspace"
+      title="Dashboard"
+      summary="Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff."
       bottomNav={studioGlobalBottomNav("more")}
       contextTitle="Schnellaktionen"
-      pageHeader={{
-        title: "Dashboard",
-        summary: "Verwalte Welten, Kampagnen und Wiki-Seiten mit vollem DM-Zugriff.",
-      }}
-      sidebar={
-        <StudioNavSidebar
-          items={[
-            { label: "Dashboard", href: STUDIO_DASHBOARD_PATH, active: true },
-            { label: "Welten", href: "/worlds" },
-            { label: "Admin", href: "/admin" },
-            { label: "Brain Store", href: "/brain" },
-            { label: "Templates", href: "/templates" },
-            { label: "Mail Center", href: "/mail" },
-            { label: "Backup", href: "/backup" },
-            { label: "Jobs", href: "/jobs" },
-            { label: "Systemstatus", href: "/admin/status" },
-            { label: "KI-Prompt", href: "/admin/ai-prompt" },
-            { label: "Einstellungen", href: "/settings" },
-            { label: "Passwort ändern", href: "/account/password" },
-            { label: "Sicherheit (2FA)", href: "/account/security" },
-          ]}
-        />
+      context={
+        <SidebarSection title="Schnellaktionen">
+          <ul className="uwe-sidebar-links">
+            <li>
+              <Link href="/worlds">Welten auswählen</Link>
+            </li>
+            <li>
+              <Link href="/search">Globale Suche</Link>
+            </li>
+            <li>
+              <Link href="/backup">Backup erstellen</Link>
+            </li>
+            <li>
+              <Link href="/settings">Einstellungen</Link>
+            </li>
+          </ul>
+        </SidebarSection>
       }
-      main={
-        <>
+    >
           {criticalProductionWarnings.length > 0 && (
             <div className="uwe-form-error" role="alert">
               <strong>Produktions-/Selfhosting-Warnung:</strong>
@@ -249,26 +245,6 @@ export default async function StudioDashboard({ searchParams }: Props) {
               </div>
             )}
           </section>
-        </>
-      }
-      context={
-        <SidebarSection title="Schnellaktionen">
-          <ul className="uwe-sidebar-links">
-            <li>
-              <Link href="/worlds">Welten auswählen</Link>
-            </li>
-            <li>
-              <Link href="/search">Globale Suche</Link>
-            </li>
-            <li>
-              <Link href="/backup">Backup erstellen</Link>
-            </li>
-            <li>
-              <Link href="/settings">Einstellungen</Link>
-            </li>
-          </ul>
-        </SidebarSection>
-      }
-    />
+    </StudioAppShell>
   );
 }

@@ -40,8 +40,17 @@ export function middleware(request: NextRequest) {
   });
 
   if (decision.action === "allow") {
+    const response = NextResponse.next({
+      request: {
+        headers: (() => {
+          const requestHeaders = new Headers(request.headers);
+          requestHeaders.set("x-uwe-pathname", request.nextUrl.pathname);
+          return requestHeaders;
+        })(),
+      },
+    });
     return applySecurityHeaders(
-      NextResponse.next(),
+      response,
       process.env,
       { allowYouTubeEmbeds: true },
       request,

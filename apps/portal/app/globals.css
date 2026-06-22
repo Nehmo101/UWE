@@ -70,6 +70,42 @@ body {
   text-decoration: underline;
 }
 
+.portal-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.portal-studio-link,
+.portal-login-link {
+  font-size: 0.85rem;
+  color: var(--uwe-info);
+  text-decoration: none;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.45rem;
+}
+
+.portal-studio-link:hover,
+.portal-login-link:hover {
+  background: color-mix(in srgb, var(--uwe-accent) 20%, transparent);
+}
+
+.portal-content-card {
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--uwe-card) 100%, var(--uwe-bg) 15%);
+  border: 1px solid var(--uwe-border);
+}
+
+.portal-content-card-narrow {
+  max-width: 28rem;
+}
+
+.portal-app-content {
+  max-width: 52rem;
+}
+
 .auth-page {
   min-height: 100vh;
   padding: 1rem 1rem 2.5rem;
