@@ -1,16 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
   ContentBlockList,
   DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
-  PageHeader,
   PAGE_TYPE_LABELS,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
   WikiContent,
 } from "@uwe/shared-ui";
 import { DungeonEntityList } from "@/components/DungeonEntityList";
@@ -29,6 +23,8 @@ import {
   linkAssetToDungeonPageAction,
   updateRoomContentAction,
 } from "../../../../../../../../dungeon-actions";
+import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{
@@ -62,6 +58,8 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   const linkedAssetIds = new Set(cockpit.assets.map((a) => a.id));
   const linkableAssets = assets.filter((a) => !linkedAssetIds.has(a.id));
   const redirectTo = `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${roomSlug}`;
+  const dungeonHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
+  const levelHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}`;
 
   const readAloud = cockpit.sections.readAloud.map((b) => b.content).join("\n\n");
   const playerDescription = cockpit.sections.playerDescription.map((b) => b.content).join("\n\n");
@@ -77,237 +75,48 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   ].map((item) => item.id);
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={cockpit.room.title} href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              {
-                label: "← Ebene",
-                href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}`,
-              },
-              { label: cockpit.dungeon.title, href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}` },
-            ]}
-          />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: "Dungeons", href: `/worlds/${worldSlug}/dungeons` },
-              { label: cockpit.dungeon.title, href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}` },
-              {
-                label: cockpit.level.title,
-                href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}`,
-              },
-              { label: cockpit.room.title },
-            ]}
-          />
-
-          {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
-          {saved && <p className="uwe-flash uwe-flash-success">Raum gespeichert.</p>}
-          {added && <p className="uwe-flash uwe-flash-success">Eintrag hinzugefügt.</p>}
-          {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
-
-          <PageHeader
-            title={cockpit.room.title}
-            summary={`${cockpit.level.title} · ${cockpit.dungeon.title}`}
-            meta={<DungeonPrepStatusBadge status={cockpit.room.prepStatus} />}
-            actions={
-              <>
-                <Link
-                  className="uwe-btn"
-                  href={labelNewHref(worldSlug, "dungeon_room", cockpit.room.id)}
-                >
-                  Label erstellen
-                </Link>
-                <form action={preparePrintListFromRoomAction} style={{ display: "inline" }}>
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="roomPageId" value={cockpit.room.id} />
-                  <input type="hidden" name="childPageIds" value={childPageIds.join(",")} />
-                  <input type="hidden" name="name" value={`${cockpit.room.title} — Druckliste`} />
-                  <input type="hidden" name="forNextSession" value="on" />
-                  <button type="submit" className="uwe-btn uwe-btn-primary">
-                    Druckliste vorbereiten
-                  </button>
-                </form>
-              </>
-            }
-          />
-
-          <form action={updateRoomContentAction} className="uwe-edit-form">
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
-            <input type="hidden" name="levelSlug" value={levelSlug} />
-            <input type="hidden" name="roomSlug" value={roomSlug} />
-            <input type="hidden" name="roomId" value={cockpit.room.id} />
-
-            <label>
-              Titel
-              <input name="title" defaultValue={cockpit.room.title} required />
-            </label>
-
-            <label>
-              Status
-              <select name="prepStatus" defaultValue={cockpit.room.prepStatus ?? "unprepared"}>
-                {Object.values(DungeonPrepStatusEnum).map((status) => (
-                  <option key={status} value={status}>
-                    {DUNGEON_PREP_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Vorlesetext
-              <textarea name="readAloud" rows={4} defaultValue={readAloud} />
-            </label>
-
-            <label>
-              Spieler-sichtbare Beschreibung
-              <textarea name="playerDescription" rows={5} defaultValue={playerDescription} />
-            </label>
-
-            <label>
-              DM-Notizen
-              <textarea name="dmNotes" rows={5} defaultValue={dmNotes} />
-            </label>
-
-            <button type="submit" className="uwe-btn uwe-btn-primary">Raum speichern</button>
-          </form>
-
-          <section className="uwe-section">
-            <h2>Wiki-Vorschau (mit Links)</h2>
-            <WikiContent html={cockpit.html} />
-          </section>
-
-          <DungeonEntityList title="Encounters" worldSlug={worldSlug} items={cockpit.encounters} />
-          <DungeonEntityList title="Fallen" worldSlug={worldSlug} items={cockpit.traps} />
-          <DungeonEntityList title="Rätsel" worldSlug={worldSlug} items={cockpit.puzzles} />
-          <DungeonEntityList title="Loot" worldSlug={worldSlug} items={cockpit.loot} />
-          <DungeonEntityList
-            title="Geheimnisse"
-            worldSlug={worldSlug}
-            items={cockpit.secrets}
-            isSecretSection
-          />
-          <DungeonEntityList title="Handouts" worldSlug={worldSlug} items={cockpit.handouts} />
-          <DungeonEntityList title="Karten" worldSlug={worldSlug} items={cockpit.maps} />
-
-          <section className="uwe-section">
-            <h2>Neuer Raum-Inhalt</h2>
-            {ROOM_CHILD_TYPES.map((childType) => (
-              <details key={childType} style={{ marginBottom: "1rem" }}>
-                <summary>{PAGE_TYPE_LABELS[childType]} hinzufügen</summary>
-                <form action={createRoomChildAction} className="uwe-form">
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
-                  <input type="hidden" name="levelSlug" value={levelSlug} />
-                  <input type="hidden" name="roomSlug" value={roomSlug} />
-                  <input type="hidden" name="childType" value={childType} />
-                  <label>
-                    Titel
-                    <input name="title" required />
-                  </label>
-                  <label>
-                    Kurzbeschreibung
-                    <input name="summary" />
-                  </label>
-                  <label>
-                    Inhalt
-                    <textarea name="content" rows={3} />
-                  </label>
-                  <label>
-                    Status
-                    <select name="prepStatus" defaultValue="unprepared">
-                      {Object.values(DungeonPrepStatusEnum).map((status) => (
-                        <option key={status} value={status}>
-                          {DUNGEON_PREP_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="submit" className="uwe-btn">Anlegen</button>
-                </form>
-              </details>
-            ))}
-          </section>
-
-          <section className="uwe-section">
-            <h2>Assets &amp; Bilder</h2>
-            {cockpit.assets.length > 0 && (
-              <ul>
-                {cockpit.assets.map((asset) => (
-                  <li key={asset.id}>
-                    {asset.title} ({asset.type}){" "}
-                    <Link
-                      className="uwe-btn uwe-btn-ghost uwe-btn-small"
-                      href={labelNewHref(worldSlug, "asset", asset.id)}
-                    >
-                      Bild als Label
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {linkableAssets.length > 0 && (
-              <form action={linkAssetToDungeonPageAction} className="uwe-form uwe-form-inline">
-                <input type="hidden" name="pageId" value={cockpit.room.id} />
-                <input type="hidden" name="redirectTo" value={redirectTo} />
-                <label>
-                  Asset verknüpfen
-                  <select name="assetId" required>
-                    <option value="">— wählen —</option>
-                    {linkableAssets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>{asset.title}</option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="uwe-btn">Verknüpfen</button>
-              </form>
-            )}
-          </section>
-
-          <section className="uwe-section">
-            <h2>Alle ContentBlocks</h2>
-            <ContentBlockList
-              blocks={[
-                ...cockpit.sections.readAloud,
-                ...cockpit.sections.playerDescription,
-                ...cockpit.sections.dmNotes,
-                ...cockpit.sections.otherBlocks,
-              ].map((block) => ({
-                id: block.id,
-                type: block.type,
-                sortOrder: block.sortOrder,
-                content: block.content,
-                visibility: block.visibility,
-              }))}
-              showVisibility
-            />
-            <ul className="uwe-linked-list" style={{ marginTop: "0.75rem" }}>
-              {[
-                ...cockpit.sections.readAloud,
-                ...cockpit.sections.playerDescription,
-                ...cockpit.sections.dmNotes,
-                ...cockpit.sections.otherBlocks,
-              ].map((block) => (
-                <li key={`label-${block.id}`}>
-                  <Link
-                    className="uwe-btn uwe-btn-ghost uwe-btn-small"
-                    href={labelNewHref(worldSlug, "content_block", block.id)}
-                  >
-                    Block → Label ({block.type})
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
+    <WorldModuleShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      activeNav="dungeons"
+      backLink={{ label: "← Ebene", href: levelHref }}
+      breadcrumb={dungeonBreadcrumb(world.name, worldSlug, [
+        { label: cockpit.dungeon.title, href: dungeonHref },
+        { label: cockpit.level.title, href: levelHref },
+        { label: cockpit.room.title },
+      ])}
+      pageHeader={{
+        title: cockpit.room.title,
+        summary: `${cockpit.level.title} · ${cockpit.dungeon.title}`,
+        meta: <DungeonPrepStatusBadge status={cockpit.room.prepStatus} />,
+        actions: (
+          <>
+            <Link
+              className="uwe-btn"
+              href={labelNewHref(worldSlug, "dungeon_room", cockpit.room.id)}
+            >
+              Label erstellen
+            </Link>
+            <form action={preparePrintListFromRoomAction} style={{ display: "inline" }}>
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="roomPageId" value={cockpit.room.id} />
+              <input type="hidden" name="childPageIds" value={childPageIds.join(",")} />
+              <input type="hidden" name="name" value={`${cockpit.room.title} — Druckliste`} />
+              <input type="hidden" name="forNextSession" value="on" />
+              <button type="submit" className="uwe-btn uwe-btn-primary">
+                Druckliste vorbereiten
+              </button>
+            </form>
+          </>
+        ),
+      }}
+      sidebarExtra={
+        <WorldContextSidebar
+          items={[
+            { label: cockpit.dungeon.title, href: dungeonHref },
+            { label: cockpit.level.title, href: levelHref },
+          ]}
+        />
       }
       context={
         <AiContextPanel
@@ -319,6 +128,181 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           roomSlug={roomSlug}
         />
       }
-    />
+      showSearch={false}
+    >
+      {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
+      {saved && <p className="uwe-flash uwe-flash-success">Raum gespeichert.</p>}
+      {added && <p className="uwe-flash uwe-flash-success">Eintrag hinzugefügt.</p>}
+      {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
+
+      <form action={updateRoomContentAction} className="uwe-edit-form">
+        <input type="hidden" name="worldSlug" value={worldSlug} />
+        <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
+        <input type="hidden" name="levelSlug" value={levelSlug} />
+        <input type="hidden" name="roomSlug" value={roomSlug} />
+        <input type="hidden" name="roomId" value={cockpit.room.id} />
+
+        <label>
+          Titel
+          <input name="title" defaultValue={cockpit.room.title} required />
+        </label>
+
+        <label>
+          Status
+          <select name="prepStatus" defaultValue={cockpit.room.prepStatus ?? "unprepared"}>
+            {Object.values(DungeonPrepStatusEnum).map((status) => (
+              <option key={status} value={status}>
+                {DUNGEON_PREP_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Vorlesetext
+          <textarea name="readAloud" rows={4} defaultValue={readAloud} />
+        </label>
+
+        <label>
+          Spieler-sichtbare Beschreibung
+          <textarea name="playerDescription" rows={5} defaultValue={playerDescription} />
+        </label>
+
+        <label>
+          DM-Notizen
+          <textarea name="dmNotes" rows={5} defaultValue={dmNotes} />
+        </label>
+
+        <button type="submit" className="uwe-btn uwe-btn-primary">Raum speichern</button>
+      </form>
+
+      <section className="uwe-section">
+        <h2>Wiki-Vorschau (mit Links)</h2>
+        <WikiContent html={cockpit.html} />
+      </section>
+
+      <DungeonEntityList title="Encounters" worldSlug={worldSlug} items={cockpit.encounters} />
+      <DungeonEntityList title="Fallen" worldSlug={worldSlug} items={cockpit.traps} />
+      <DungeonEntityList title="Rätsel" worldSlug={worldSlug} items={cockpit.puzzles} />
+      <DungeonEntityList title="Loot" worldSlug={worldSlug} items={cockpit.loot} />
+      <DungeonEntityList
+        title="Geheimnisse"
+        worldSlug={worldSlug}
+        items={cockpit.secrets}
+        isSecretSection
+      />
+      <DungeonEntityList title="Handouts" worldSlug={worldSlug} items={cockpit.handouts} />
+      <DungeonEntityList title="Karten" worldSlug={worldSlug} items={cockpit.maps} />
+
+      <section className="uwe-section">
+        <h2>Neuer Raum-Inhalt</h2>
+        {ROOM_CHILD_TYPES.map((childType) => (
+          <details key={childType} style={{ marginBottom: "1rem" }}>
+            <summary>{PAGE_TYPE_LABELS[childType]} hinzufügen</summary>
+            <form action={createRoomChildAction} className="uwe-form">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
+              <input type="hidden" name="levelSlug" value={levelSlug} />
+              <input type="hidden" name="roomSlug" value={roomSlug} />
+              <input type="hidden" name="childType" value={childType} />
+              <label>
+                Titel
+                <input name="title" required />
+              </label>
+              <label>
+                Kurzbeschreibung
+                <input name="summary" />
+              </label>
+              <label>
+                Inhalt
+                <textarea name="content" rows={3} />
+              </label>
+              <label>
+                Status
+                <select name="prepStatus" defaultValue="unprepared">
+                  {Object.values(DungeonPrepStatusEnum).map((status) => (
+                    <option key={status} value={status}>
+                      {DUNGEON_PREP_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="uwe-btn">Anlegen</button>
+            </form>
+          </details>
+        ))}
+      </section>
+
+      <section className="uwe-section">
+        <h2>Assets &amp; Bilder</h2>
+        {cockpit.assets.length > 0 && (
+          <ul>
+            {cockpit.assets.map((asset) => (
+              <li key={asset.id}>
+                {asset.title} ({asset.type}){" "}
+                <Link
+                  className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                  href={labelNewHref(worldSlug, "asset", asset.id)}
+                >
+                  Bild als Label
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {linkableAssets.length > 0 && (
+          <form action={linkAssetToDungeonPageAction} className="uwe-form uwe-form-inline">
+            <input type="hidden" name="pageId" value={cockpit.room.id} />
+            <input type="hidden" name="redirectTo" value={redirectTo} />
+            <label>
+              Asset verknüpfen
+              <select name="assetId" required>
+                <option value="">— wählen —</option>
+                {linkableAssets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>{asset.title}</option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="uwe-btn">Verknüpfen</button>
+          </form>
+        )}
+      </section>
+
+      <section className="uwe-section">
+        <h2>Alle ContentBlocks</h2>
+        <ContentBlockList
+          blocks={[
+            ...cockpit.sections.readAloud,
+            ...cockpit.sections.playerDescription,
+            ...cockpit.sections.dmNotes,
+            ...cockpit.sections.otherBlocks,
+          ].map((block) => ({
+            id: block.id,
+            type: block.type,
+            sortOrder: block.sortOrder,
+            content: block.content,
+            visibility: block.visibility,
+          }))}
+          showVisibility
+        />
+        <ul className="uwe-linked-list" style={{ marginTop: "0.75rem" }}>
+          {[
+            ...cockpit.sections.readAloud,
+            ...cockpit.sections.playerDescription,
+            ...cockpit.sections.dmNotes,
+            ...cockpit.sections.otherBlocks,
+          ].map((block) => (
+            <li key={`label-${block.id}`}>
+              <Link
+                className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                href={labelNewHref(worldSlug, "content_block", block.id)}
+              >
+                Block → Label ({block.type})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </WorldModuleShell>
   );
 }

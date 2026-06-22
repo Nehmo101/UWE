@@ -755,6 +755,65 @@ html[data-theme="light"] {
   margin: 0 0.35rem;
 }
 
+.uwe-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--uwe-muted);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.uwe-back-link:hover {
+  color: color-mix(in srgb, var(--uwe-accent) 75%, white 25%);
+}
+
+.uwe-back-link-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.uwe-context-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.uwe-context-actions-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.uwe-context-actions-danger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding-left: 0.75rem;
+  border-left: 1px solid color-mix(in srgb, var(--uwe-border) 60%, transparent);
+}
+
+@media (max-width: 640px) {
+  .uwe-context-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .uwe-context-actions-danger {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 0.5rem;
+    border-top: 1px solid color-mix(in srgb, var(--uwe-border) 60%, transparent);
+  }
+}
+
 .uwe-badge {
   display: inline-flex;
   align-items: center;
