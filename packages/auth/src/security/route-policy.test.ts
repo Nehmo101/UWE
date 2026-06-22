@@ -58,6 +58,10 @@ describe("route policy", () => {
     assert.equal(isUnknownProtectedApi("/api/secret-endpoint", "studio"), true);
     assert.equal(isUnknownProtectedApi("/api/health", "portal"), false);
     assert.equal(isUnknownProtectedApi("/api/health", "studio"), false);
+    assert.equal(isUnknownProtectedApi("/api/health/public", "portal"), false);
+    assert.equal(isUnknownProtectedApi("/api/health/public", "studio"), false);
+    assert.equal(isUnknownProtectedApi("/api/health/private", "portal"), false);
+    assert.equal(isUnknownProtectedApi("/api/health/private", "studio"), false);
   });
 
   it("maps unified /studio and /players prefixes", () => {

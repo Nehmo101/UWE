@@ -89,6 +89,26 @@ describe("middleware evaluation", () => {
     assert.equal(decision.action, "allow");
   });
 
+  it("allows public health probes on portal and studio", () => {
+    for (const pathname of ["/api/health/public"]) {
+      const portalDecision = evaluatePortalMiddleware(makeRequest(pathname), {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweandragons.org",
+      });
+      assert.equal(portalDecision.action, "allow", `portal ${pathname}`);
+
+      const studioDecision = evaluateStudioMiddleware(makeRequest(pathname), {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweandragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      });
+      assert.equal(studioDecision.action, "allow", `studio ${pathname}`);
+    }
+  });
+
   it("allows /setup without Authorization when STUDIO_API_TOKEN is configured", () => {
     const decision = evaluateStudioMiddleware(
       makeRequest("/setup", { headers: { host: "127.0.0.1:3000" } }),

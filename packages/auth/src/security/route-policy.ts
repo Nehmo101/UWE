@@ -46,6 +46,7 @@ export const PUBLIC_ASSET_ROUTES = [
 /** Portal API routes reachable without a player session. */
 export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/health",
+  "/api/health/public",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/preview",
@@ -129,6 +130,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/image-studio",
   "/api/inference",
   "/api/inference/*",
+  "/api/health/private",
   "/api/worlds/*/brain",
   "/api/worlds/*/brain/*",
   "/api/worlds/*/graph",
@@ -140,6 +142,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
 /** API routes that stay public even on Studio (health probes, OAuth callbacks). */
 export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/health",
+  "/api/health/public",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/setup",
@@ -262,6 +265,9 @@ function classifyApiRoute(resolved: string, surface: UweAppSurface): RouteClassi
     }
     if (matchesAny(resolved, PORTAL_SESSION_API_ROUTES)) {
       return { access: "protected-session", unknownApi: false, pathname: resolved };
+    }
+    if (matchesAny(resolved, PROTECTED_ROUTE_PREFIXES)) {
+      return { access: "protected", unknownApi: false, pathname: resolved };
     }
     return { access: "protected", unknownApi: true, pathname: resolved };
   }
