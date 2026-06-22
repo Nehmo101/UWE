@@ -3,6 +3,7 @@ import { getSystemSettingsSnapshot, resolveSessionInactivityTimeoutMs } from "@u
 import { UweSessionChrome } from "@uwe/shared-ui";
 
 const PUBLIC_PREFIXES = [
+  "/",
   "/login",
   "/forgot-password",
   "/reset-password",

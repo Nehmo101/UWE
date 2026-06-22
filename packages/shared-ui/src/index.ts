@@ -21,6 +21,8 @@ export {
   TopBarBrand,
 } from "./AppShell";
 
+export { TopBarSessionMount } from "./TopBarSessionMount";
+
 export {
   NavSidebarSections,
   SectionHeader,

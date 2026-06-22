@@ -99,7 +99,10 @@ export function AppShell({
                 <span className="uwe-mobile-nav-icon" aria-hidden />
               </button>
             )}
-            <div className="uwe-topbar-inner">{topBar}</div>
+            <div className="uwe-topbar-inner">
+              {topBar}
+              <div id="uwe-topbar-end" className="uwe-topbar-end" />
+            </div>
           </header>
         )}
         <div
