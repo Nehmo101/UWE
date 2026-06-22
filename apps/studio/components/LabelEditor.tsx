@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { LabelElement, LabelElementType } from "@uwe/database/server";
 
@@ -272,7 +273,7 @@ export function LabelEditor({
       formData.set("file", file);
       formData.set("title", file.name);
       formData.set("visibility", "player_visible");
-      const response = await fetch(`/api/worlds/${worldSlug}/assets/upload`, {
+      const response = await fetch(studioApiUrl(`/api/worlds/${worldSlug}/assets/upload`), {
         method: "POST",
         headers: { Accept: "application/json" },
         body: formData,

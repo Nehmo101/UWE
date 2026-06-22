@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -27,7 +28,7 @@ export function WebhookWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/webhooks");
+      const response = await fetch(studioApiUrl("/api/admin/webhooks"));
       if (!response.ok) {
         throw new Error(`Webhooks konnten nicht geladen werden (${response.status}).`);
       }
@@ -51,7 +52,7 @@ export function WebhookWorkspace() {
   async function createWebhook() {
     setError(null);
     setCreatedSecret(null);
-    const response = await fetch("/api/admin/webhooks", {
+    const response = await fetch(studioApiUrl("/api/admin/webhooks"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, url, events: selectedEvents }),

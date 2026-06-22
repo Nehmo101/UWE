@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -77,7 +78,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
     setError(null);
     try {
       const query = fetchRemote ? "?fetchRemote=1" : "";
-      const response = await fetch(`/api/admin/host-update${query}`);
+      const response = await fetch(studioApiUrl(`/api/admin/host-update${query}`));
       if (!response.ok) {
         const payload = (await response.json()) as { error?: string };
         throw new Error(payload.error ?? `Status ${response.status}`);
@@ -114,7 +115,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
     setConfirmOpen(false);
 
     try {
-      const response = await fetch("/api/admin/host-update", { method: "POST" });
+      const response = await fetch(studioApiUrl("/api/admin/host-update"), { method: "POST" });
       const payload = (await response.json()) as { error?: string; jobId?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? `Status ${response.status}`);

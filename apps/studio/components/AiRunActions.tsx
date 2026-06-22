@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 
 interface Props {
@@ -18,7 +19,7 @@ export function AiRunActions({ runId, worldSlug, status, resultText }: Props) {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`/api/ai/runs/${runId}`, {
+      const response = await fetch(studioApiUrl(`/api/ai/runs/${runId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),

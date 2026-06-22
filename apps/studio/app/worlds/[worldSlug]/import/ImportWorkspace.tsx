@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useMemo, useState } from "react";
 import type {
   ImportExecuteResult,
@@ -149,7 +150,7 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     setResult(null);
 
     try {
-      const response = await fetch("/api/import/preview", {
+      const response = await fetch(studioApiUrl("/api/import/preview"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ format, content, worldSlug }),
@@ -192,7 +193,7 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     setError(null);
 
     try {
-      const response = await fetch("/api/import/execute", {
+      const response = await fetch(studioApiUrl("/api/import/execute"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

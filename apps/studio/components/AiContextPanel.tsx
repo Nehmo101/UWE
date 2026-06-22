@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { AiBrainSidebar } from "./AiBrainSidebar";
 import type { DndGeneratorView } from "@uwe/ai-brain";
@@ -36,7 +37,7 @@ export function AiContextPanel({
     if (levelSlug) params.set("levelSlug", levelSlug);
     if (roomSlug) params.set("roomSlug", roomSlug);
 
-    const response = await fetch(`/api/dnd-generator?${params.toString()}`);
+    const response = await fetch(studioApiUrl(`/api/dnd-generator?${params.toString()}`));
     if (!response.ok) {
       const data = (await response.json()) as { error?: string };
       setLoadError(data.error ?? "Generator-Kontext konnte nicht geladen werden.");

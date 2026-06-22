@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 
 interface WorldOption {
@@ -24,7 +25,7 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
     const formData = new FormData(form);
 
     try {
-      const response = await fetch("/api/capture/upload", {
+      const response = await fetch(studioApiUrl("/api/capture/upload"), {
         method: "POST",
         body: formData,
         headers: { Accept: "application/json" },

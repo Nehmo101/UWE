@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { SECURITY_ROLE_LABELS } from "@uwe/auth";
 
@@ -136,7 +137,7 @@ export function AiGatewayWizard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/ai-gateway");
+      const res = await fetch(studioApiUrl("/api/admin/ai-gateway"));
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -155,7 +156,7 @@ export function AiGatewayWizard() {
 
   const loadAdminUsers = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch(studioApiUrl("/api/admin/users"));
       if (!res.ok) return;
       const body = (await res.json()) as { users?: AdminUserOption[] };
       setAdminUsers(body.users ?? []);
@@ -178,7 +179,7 @@ export function AiGatewayWizard() {
       if (usageFilters.feature) params.set("feature", usageFilters.feature);
       if (usageFilters.route) params.set("route", usageFilters.route);
       if (usageFilters.success) params.set("success", usageFilters.success);
-      const res = await fetch(`/api/admin/ai-gateway?${params.toString()}`);
+      const res = await fetch(studioApiUrl(`/api/admin/ai-gateway?${params.toString()}`));
       if (!res.ok) {
         throw new Error("Usage-Logs konnten nicht geladen werden.");
       }
@@ -199,7 +200,7 @@ export function AiGatewayWizard() {
 
   async function deleteGrant(userId: string) {
     setMessage(null);
-    const res = await fetch(`/api/admin/ai-gateway?userId=${encodeURIComponent(userId)}`, {
+    const res = await fetch(studioApiUrl(`/api/admin/ai-gateway?userId=${encodeURIComponent(userId)}`), {
       method: "DELETE",
     });
     if (!res.ok) {
@@ -213,7 +214,7 @@ export function AiGatewayWizard() {
 
   async function patchConfig(body: Record<string, unknown>) {
     setMessage(null);
-    const res = await fetch("/api/admin/ai-gateway", {
+    const res = await fetch(studioApiUrl("/api/admin/ai-gateway"), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -229,7 +230,7 @@ export function AiGatewayWizard() {
 
   async function saveProvider() {
     setMessage(null);
-    const res = await fetch("/api/admin/ai-gateway?action=provider", {
+    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=provider"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -256,7 +257,7 @@ export function AiGatewayWizard() {
       return;
     }
     setMessage(null);
-    const res = await fetch("/api/admin/ai-gateway?action=user-grant", {
+    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=user-grant"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(grantForm),
@@ -272,7 +273,7 @@ export function AiGatewayWizard() {
 
   async function runFallbackTest() {
     setMessage(null);
-    const res = await fetch("/api/admin/ai-gateway?action=fallback-test", { method: "POST" });
+    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=fallback-test"), { method: "POST" });
     const body = (await res.json()) as { message?: string; error?: string };
     setMessage(body.message ?? body.error ?? "Test abgeschlossen.");
   }
@@ -281,7 +282,7 @@ export function AiGatewayWizard() {
     setSimulationLoading(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/admin/ai-gateway?action=simulate", {
+      const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=simulate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -148,10 +148,44 @@ Auf dem Laptop (interaktiv, einmalig):
 cloudflared tunnel login
 cloudflared tunnel create uwe-laptop
 cloudflared tunnel route dns uwe-laptop uwe.example.org
+```
+
+#### Variante A — Unified Path (ein Hostname, empfohlen)
+
+Portal unter `/`, Studio unter `/studio`, Studio-API unter `/studio/api/*`. Ein lokaler Reverse Proxy (Caddy/nginx) terminiert beide Apps; der Tunnel zeigt nur auf den Proxy.
+
+Siehe [docs/cloudflare-access.md](./cloudflare-access.md) für Caddy/nginx-Beispiele und Cloudflare-Access-Pfade (`/studio*`, `/admin*`, `/setup*` — **kein** Access auf `/api/*`).
+
+`/etc/uwe/uwe.env` (Auszug):
+
+```env
+PUBLIC_APP_URL=https://uwe.example.org
+STUDIO_PATH=/studio
+NEXT_PUBLIC_STUDIO_PATH=/studio
+TRUST_PROXY=true
+CLOUDFLARE_TUNNEL=true
+CLOUDFLARE_ACCESS_ENABLED=true
+```
+
+`/etc/cloudflared/config.yml`:
+
+```yaml
+tunnel: uwe-laptop
+credentials-file: /etc/cloudflared/uwe-laptop.json
+
+ingress:
+  - hostname: uwe.example.org
+    service: http://127.0.0.1:8080   # lokaler Reverse Proxy
+  - service: http_status:404
+```
+
+#### Variante B — Getrennte Hostnames
+
+```bash
 cloudflared tunnel route dns uwe-laptop portal.uwe.example.org
 ```
 
-Konfiguration `/etc/cloudflared/config.yml` (an Domain anpassen):
+Konfiguration `/etc/cloudflared/config.yml`:
 
 ```yaml
 tunnel: uwe-laptop

@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 
 interface MailTestFormProps {
@@ -17,7 +18,7 @@ export function MailTestForm({ defaultEmail = "" }: MailTestFormProps) {
     setStatus(null);
 
     try {
-      const response = await fetch("/api/mail/test", {
+      const response = await fetch(studioApiUrl("/api/mail/test"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

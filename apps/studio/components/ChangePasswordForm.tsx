@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -34,7 +35,7 @@ export function ChangePasswordForm({
 
     setLoading(true);
 
-    const response = await fetch("/api/auth/change-password", {
+    const response = await fetch(studioApiUrl("/api/auth/change-password"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

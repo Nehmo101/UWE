@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MAIL_PROVIDER_PRESETS, type MailProviderPreset } from "@uwe/mail/portal-types";
@@ -25,7 +26,7 @@ export function MailPortalAccountForm() {
     setError(null);
     const form = new FormData(event.currentTarget);
 
-    const response = await fetch("/api/admin/mail/accounts", {
+    const response = await fetch(studioApiUrl("/api/admin/mail/accounts"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -143,7 +144,7 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
 
   async function runAction(path: string, method: "POST" | "DELETE" = "POST") {
     setMessage(null);
-    const response = await fetch(path, { method });
+    const response = await fetch(studioApiUrl(path), { method });
     const payload = (await response.json()) as { message?: string; error?: string };
     setMessage(payload.message ?? payload.error ?? (response.ok ? "OK" : "Fehler"));
     startTransition(() => router.refresh());
@@ -183,7 +184,7 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
                   disabled={pending}
                   onClick={async () => {
                     setMessage(null);
-                    const response = await fetch("/api/admin/mail/sync", {
+                    const response = await fetch(studioApiUrl("/api/admin/mail/sync"), {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ accountId: account.id }),

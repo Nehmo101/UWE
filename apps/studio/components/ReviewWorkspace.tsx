@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -56,7 +57,7 @@ export function ReviewWorkspace() {
     if (worldId) params.set("worldId", worldId);
 
     try {
-      const response = await fetch(`/api/admin/reviews?${params.toString()}`);
+      const response = await fetch(studioApiUrl(`/api/admin/reviews?${params.toString()}`));
       if (!response.ok) {
         throw new Error(`Reviews konnten nicht geladen werden (${response.status}).`);
       }
@@ -74,7 +75,7 @@ export function ReviewWorkspace() {
 
   const loadDetail = useCallback(async (reviewId: string) => {
     try {
-      const response = await fetch(`/api/admin/reviews/${reviewId}`);
+      const response = await fetch(studioApiUrl(`/api/admin/reviews/${reviewId}`));
       if (!response.ok) return;
       const data = (await response.json()) as {
         review: ReviewEntry;
@@ -95,7 +96,7 @@ export function ReviewWorkspace() {
   async function runAction(action: "approve" | "reject") {
     if (!selectedId) return;
     setActionMessage(null);
-    const response = await fetch(`/api/admin/reviews/${selectedId}`, {
+    const response = await fetch(studioApiUrl(`/api/admin/reviews/${selectedId}`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
@@ -113,7 +114,7 @@ export function ReviewWorkspace() {
 
   async function submitComment() {
     if (!selectedId || !commentText.trim()) return;
-    const response = await fetch(`/api/admin/reviews/${selectedId}`, {
+    const response = await fetch(studioApiUrl(`/api/admin/reviews/${selectedId}`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "comment", content: commentText.trim() }),

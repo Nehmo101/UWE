@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -32,7 +33,7 @@ export function ApiTokenWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/api-tokens");
+      const response = await fetch(studioApiUrl("/api/admin/api-tokens"));
       if (!response.ok) {
         throw new Error(`API-Tokens konnten nicht geladen werden (${response.status}).`);
       }
@@ -56,7 +57,7 @@ export function ApiTokenWorkspace() {
   async function createToken() {
     setError(null);
     setCreatedToken(null);
-    const response = await fetch("/api/admin/api-tokens", {
+    const response = await fetch(studioApiUrl("/api/admin/api-tokens"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, scopes: selectedScopes }),
@@ -73,7 +74,7 @@ export function ApiTokenWorkspace() {
   }
 
   async function revokeToken(id: string) {
-    const response = await fetch(`/api/admin/api-tokens/${id}`, { method: "DELETE" });
+    const response = await fetch(studioApiUrl(`/api/admin/api-tokens/${id}`), { method: "DELETE" });
     if (!response.ok) {
       setError("Widerruf fehlgeschlagen.");
       return;

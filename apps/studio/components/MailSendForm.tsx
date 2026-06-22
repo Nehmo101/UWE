@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 
 interface RecipientOption {
@@ -64,7 +65,7 @@ export function MailSendForm({
       }));
 
     try {
-      const response = await fetch("/api/mail/send", {
+      const response = await fetch(studioApiUrl("/api/mail/send"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

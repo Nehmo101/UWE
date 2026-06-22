@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -22,7 +23,7 @@ export function AgentJobsPoller({ runningJobIds }: AgentJobsPollerProps) {
     const timer = window.setInterval(() => {
       void Promise.all(
         activeIds.map(async (jobId) => {
-          const response = await fetch(`/api/agent-jobs/${jobId}`, {
+          const response = await fetch(studioApiUrl(`/api/agent-jobs/${jobId}`), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "poll" }),
@@ -69,7 +70,7 @@ export function AgentJobRetryButton({ jobId, disabled }: AgentJobRetryButtonProp
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/agent-jobs/${jobId}`, {
+      const response = await fetch(studioApiUrl(`/api/agent-jobs/${jobId}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "retry" }),

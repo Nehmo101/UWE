@@ -1,5 +1,6 @@
 "use client";
 
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -17,7 +18,7 @@ export function CreateWorldForm() {
     setError(null);
 
     try {
-      const response = await fetch("/api/worlds", {
+      const response = await fetch(studioApiUrl("/api/worlds"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
