@@ -3,7 +3,7 @@ Description=UWE host update (git pull + setup-uwe-host.sh --quick)
 Documentation=file:///opt/uwe/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
-Conflicts=uwe-host-update.service
+Conflicts=uwe.service
 
 [Service]
 Type=oneshot

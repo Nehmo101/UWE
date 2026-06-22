@@ -367,9 +367,42 @@ run_prisma_generate() {
   run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:generate"
 }
 
+migration_status_output() {
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma migrate status 2>&1" || true
+}
+
+migration_status_has_pending() {
+  local output="$1"
+  echo "$output" | grep -qE '(Following migration[s]? have not yet been applied|Database schema is not up to date|not yet been applied)'
+}
+
+migration_status_is_current() {
+  local output="$1"
+  echo "$output" | grep -qiE '(Database schema is up to date|No pending migrations|All migrations have been applied)'
+}
+
+verify_migrations_applied() {
+  local output
+  output="$(migration_status_output)"
+
+  if migration_status_has_pending "$output"; then
+    die "Ausstehende Datenbank-Migrationen nach db:deploy — Setup abgebrochen. Prüfe DATABASE_URL in $UWE_ENV_FILE und führe manuell aus: pnpm --filter $DATABASE_WORKSPACE_FILTER db:deploy
+
+$output"
+  fi
+
+  if migration_status_is_current "$output"; then
+    ok "Datenbank-Schema ist aktuell."
+    return 0
+  fi
+
+  warn "Migrations-Status konnte nicht eindeutig gelesen werden — bitte manuell prüfen:"
+  echo "$output" | sed 's/^/  /'
+}
+
 run_migrations() {
   local schema="$1"
-  local migrations_dir
+  local migrations_dir before
   migrations_dir="$(dirname "$schema")/migrations"
 
   if [[ ! -d "$migrations_dir" ]] || [[ -z "$(find "$migrations_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1 || true)" ]]; then
@@ -377,8 +410,20 @@ run_migrations() {
     return 0
   fi
 
+  before="$(migration_status_output)"
+  if migration_status_has_pending "$before"; then
+    warn "Ausstehende Migrationen erkannt — wende db:deploy an …"
+    echo "$before" | sed 's/^/  /'
+  else
+    log "Prüfe Datenbank-Migrationen …"
+    if migration_status_is_current "$before"; then
+      ok "Keine ausstehenden Migrationen vor db:deploy."
+    fi
+  fi
+
   log "Wende Datenbank-Migrationen an (pnpm --filter $DATABASE_WORKSPACE_FILTER db:deploy) …"
   run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy"
+  verify_migrations_applied
 }
 
 run_build() {
