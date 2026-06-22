@@ -60,6 +60,7 @@ export { createRedisRateLimitStore } from "./security/redis-rate-limit-store";
 export {
   guardStudioMutation,
   requireAdminApiAuth,
+  requireOwnerApiAuth,
   requirePortalApiAuth,
   requirePortalReadAuth,
   requireRestoreOwnerAuth,

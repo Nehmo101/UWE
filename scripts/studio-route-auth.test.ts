@@ -34,7 +34,7 @@ const TWO_FACTOR_ROUTES_HELPER = path.join(
 );
 
 const AUTH_GUARD_PATTERN =
-  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requirePrivateHealthAuth/;
+  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth/;
 
 function listRouteFiles(dir: string, prefix = ""): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -86,7 +86,7 @@ describe("Studio API route auth inventory", () => {
 
       assert.ok(
         AUTH_GUARD_PATTERN.test(content),
-        `${route} must call requireStudioApiAuth, guardStudioMutation, requireRestoreOwnerAuth, or requirePrivateHealthAuth`,
+        `${route} must call requireStudioApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, or requirePrivateHealthAuth`,
       );
     });
   }

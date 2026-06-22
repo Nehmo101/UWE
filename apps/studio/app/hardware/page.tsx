@@ -6,6 +6,8 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { HostUpdatePanel } from "@/components/HostUpdatePanel";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import {
   addHardwareErrorAction,
   createHardwareAction,
@@ -35,7 +37,11 @@ function statusBadgeClass(status: string): string {
 }
 
 export default async function HardwarePage() {
-  const cockpit = await getHomelabCockpitData(prisma);
+  const [cockpit, user] = await Promise.all([
+    getHomelabCockpitData(prisma),
+    getCurrentAuthUser(),
+  ]);
+  const canTriggerHostUpdate = user?.role === "owner";
 
   return (
     <AdminModuleShell
@@ -43,6 +49,8 @@ export default async function HardwarePage() {
       title="Hardware / Homelab"
       summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
     >
+      <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
+
       {cockpit.urlWarnings.length > 0 && (
         <section className="uwe-form-error uwe-section" role="alert">
           <strong>Sicherheitswarnungen (RTX niemals öffentlich):</strong>

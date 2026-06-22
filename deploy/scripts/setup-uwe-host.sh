@@ -28,6 +28,8 @@ source "$LIB_DIR/uwe-host-preflight.sh"
 source "$LIB_DIR/uwe-host-deps.sh"
 # shellcheck source=lib/uwe-host-ai-diagnostics.sh
 source "$LIB_DIR/uwe-host-ai-diagnostics.sh"
+# shellcheck source=lib/uwe-host-update-install.sh
+source "$LIB_DIR/uwe-host-update-install.sh"
 
 MODE="default"
 
@@ -665,6 +667,7 @@ main() {
   ensure_start_script
   verify_service_node_access
   write_systemd_unit
+  install_host_update_assets
   start_or_restart_service
 
   sleep 8
