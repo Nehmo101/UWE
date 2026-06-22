@@ -1,22 +1,16 @@
 import Link from "next/link";
 import {
-  AppShell,
   EmptyState,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
-  createDevAgentJobService,
   DEV_AGENT_JOB_PROVIDER_LABELS,
   DEV_AGENT_JOB_STATUS_LABELS,
+  createDevAgentJobService,
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { AgentJobRetryButton, AgentJobsPoller } from "@/components/AgentJobsPoller";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createAgentJobAction } from "../../integration-actions";
 
 export default async function AgentJobsPage() {
@@ -28,21 +22,11 @@ export default async function AgentJobsPage() {
     .map((job) => job.id);
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Agent Jobs" href="/admin/agent-jobs" />}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/admin/agent-jobs")} />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader
-            title="Cursor Agent Jobs"
-            summary="Entwicklungs-Prompts als GitHub-Actions- oder Cursor-Cloud-Jobs — Ergebnis: Branch/PR, kein Auto-Merge."
-          />
-
+    <AdminModuleShell
+      activePath="/admin/agent-jobs"
+      title="Cursor Agent Jobs"
+      summary="Entwicklungs-Prompts als GitHub-Actions- oder Cursor-Cloud-Jobs — Ergebnis: Branch/PR, kein Auto-Merge."
+    >
           <section className="uwe-card" style={{ marginBottom: "1rem" }}>
             <h2>Status</h2>
             <ul className="uwe-dashboard-muted">
@@ -129,8 +113,6 @@ export default async function AgentJobsPage() {
               </ul>
             )}
           </section>
-        </>
-      }
-    />
+    </AdminModuleShell>
   );
 }

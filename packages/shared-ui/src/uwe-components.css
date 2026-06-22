@@ -54,6 +54,19 @@
   line-height: 1;
 }
 
+/* Image Studio — launcher on desktop, inline form only on mobile */
+@media (min-width: 961px) {
+  .uwe-image-studio-inline {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .uwe-image-studio-launcher {
+    display: none;
+  }
+}
+
 @media (min-width: 1100px) {
   .uwe-shell-body[data-has-rail="true"] {
     grid-template-columns: 3.25rem 16rem minmax(0, 1fr) 18rem;

@@ -1,11 +1,6 @@
 import Link from "next/link";
 import {
-  AppShell,
   EmptyState,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import {
   CALENDAR_EVENT_KIND_LABELS,
@@ -15,10 +10,9 @@ import {
   prisma,
   resolveCalendarConfig,
 } from "@uwe/database/server";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { CalendarMonthGrid } from "@/components/CalendarMonthGrid";
 import { CalendarWeekGrid } from "@/components/CalendarWeekGrid";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { createCalendarEventAction, createCalendarFeedAction } from "../integration-actions";
 
 const DATE_FMT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -55,40 +49,30 @@ export default async function CalendarPage({ searchParams }: Props) {
   }));
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Kalender" href="/calendar" />}
-      sidebar={
-        <SidebarSection title="UWE Admin">
-          <SidebarNav items={adminSidebarNav("/calendar")} />
-        </SidebarSection>
-      }
-      main={
+    <AdminModuleShell
+      activePath="/calendar"
+      title="Kalender"
+      summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
+      actions={
         <>
-          <PageHeader
-            title="Kalender"
-            summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
-            actions={
-              <>
-                <Link
-                  href="/calendar?view=month"
-                  className={`uwe-btn ${calendarView === "month" ? "uwe-btn-primary" : ""}`}
-                >
-                  Monat
-                </Link>
-                <Link
-                  href="/calendar?view=week"
-                  className={`uwe-btn ${calendarView === "week" ? "uwe-btn-primary" : ""}`}
-                >
-                  Woche
-                </Link>
-                <Link href="/api/calendar/events?export=ics" className="uwe-btn">
-                  .ics Export
-                </Link>
-              </>
-            }
-          />
-
+          <Link
+            href="/calendar?view=month"
+            className={`uwe-btn ${calendarView === "month" ? "uwe-btn-primary" : ""}`}
+          >
+            Monat
+          </Link>
+          <Link
+            href="/calendar?view=week"
+            className={`uwe-btn ${calendarView === "week" ? "uwe-btn-primary" : ""}`}
+          >
+            Woche
+          </Link>
+          <Link href="/api/calendar/events?export=ics" className="uwe-btn">
+            .ics Export
+          </Link>
+        </>
+      }
+    >
           {!config.enabled && (
             <p className="uwe-notice uwe-notice-warn">Kalender-Integration ist deaktiviert.</p>
           )}
@@ -252,8 +236,6 @@ export default async function CalendarPage({ searchParams }: Props) {
               </ul>
             )}
           </section>
-        </>
-      }
-    />
+    </AdminModuleShell>
   );
 }
