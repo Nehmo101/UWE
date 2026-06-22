@@ -56,6 +56,8 @@ describe("self-hosting setup", () => {
     assert.match(deps, /diagnose_node_install_failure/);
     assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:generate/);
     assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:deploy/);
+    assert.match(deps, /verify_migrations_applied/);
+    assert.match(setup, /stop_uwe_service_for_maintenance/);
   });
 
   it("start-uwe.sh resolves node via absolute path and stable PATH", () => {
@@ -128,6 +130,8 @@ describe("self-hosting setup", () => {
     const update = fs.readFileSync(path.join(root, "deploy/scripts/uwe-host-update.sh"), "utf8");
     assert.match(update, /setup-uwe-host\.sh --quick/);
     assert.doesNotMatch(update, /--fresh/);
+    const updateUnit = fs.readFileSync(path.join(root, "deploy/systemd/uwe-host-update.service"), "utf8");
+    assert.match(updateUnit, /Conflicts=uwe\.service/);
   });
 
   it("host scripts target uwe.service not uwe-host.service", () => {

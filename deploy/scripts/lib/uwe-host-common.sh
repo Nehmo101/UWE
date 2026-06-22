@@ -60,7 +60,7 @@ Usage: sudo bash $script_name [MODE]
 
 Modes (mutually exclusive):
   (default)           Safe, idempotent update/repair — no data or secrets deleted
-  --quick             Fast update after git pull (skip Node rebuild unless missing)
+  --quick             Fast update after git pull (stop service, migrate, build, restart)
   --repair            Thorough dependency repair, cache cleanup, systemd rewrite
   --fresh             Destructive full reset — requires typing DELETE-UWE to confirm
   --wipe-and-reinstall  Alias for --fresh
@@ -287,4 +287,19 @@ run_as_uwe() {
       export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
       $cmd
     "
+}
+
+stop_uwe_service_for_maintenance() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if systemctl is-active --quiet "$SYSTEMD_UNIT" 2>/dev/null; then
+    log "Stoppe $SYSTEMD_UNIT (Wartung — UWE kurz nicht erreichbar) …"
+    systemctl stop "$SYSTEMD_UNIT"
+    ok "$SYSTEMD_UNIT gestoppt."
+    return 0
+  fi
+
+  ok "$SYSTEMD_UNIT läuft nicht — kein Stop nötig."
 }

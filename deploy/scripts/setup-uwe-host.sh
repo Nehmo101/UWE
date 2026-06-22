@@ -246,7 +246,7 @@ ensure_env_file() {
 }
 
 verify_http_healthchecks() {
-  local url code
+  local url code health_body
   log "HTTP-Healthchecks …"
 
   for url in \
@@ -265,6 +265,14 @@ verify_http_healthchecks() {
       ok "HTTP $code — $url"
     fi
   done
+
+  health_body="$(curl -sS --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/api/health" 2>/dev/null || true)"
+  if echo "$health_body" | grep -qE '"pendingCount":[1-9][0-9]*'; then
+    die "Ausstehende Datenbank-Migrationen nach Neustart — erneut ausführen: sudo bash $UWE_HOME/deploy/scripts/setup-uwe-host.sh --quick"
+  fi
+  if echo "$health_body" | grep -q '"ok":false' && echo "$health_body" | grep -q '"migrations"'; then
+    warn "Migration-Check meldet Probleme — curl http://127.0.0.1:${STUDIO_PORT}/api/health"
+  fi
 }
 
 ensure_start_script() {
@@ -665,6 +673,7 @@ main() {
     quick_flag=1
   fi
 
+  stop_uwe_service_for_maintenance
   run_deploy_steps "$quick_flag"
   ensure_start_script
   verify_service_node_access
