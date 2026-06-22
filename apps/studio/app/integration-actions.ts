@@ -1,6 +1,12 @@
 "use server";
 
+import fs from "node:fs";
 import { revalidatePath } from "next/cache";
+import {
+  buildStorageKey,
+  ensureUploadDirectory,
+  resolveAssetFilePath,
+} from "@uwe/assets";
 import {
   adoptAssetToTarget,
   createCalendarService,
@@ -8,11 +14,14 @@ import {
   createDndApiService,
   createImageStudioService,
   createJobService,
+  createUweRepositoryFromClient,
   getAppRepository,
+  getSystemSettings,
   prisma,
   resolveAgentJobsConfig,
   resolveCalendarConfig,
-  resolveImageStudioConfig,
+  resolveEffectiveUploadsPath,
+  syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -25,7 +34,13 @@ import {
 } from "@/src/lib/authz";
 
 export async function createImageStudioJobAction(formData: FormData) {
-  const config = resolveImageStudioConfig();
+  const settings = await getSystemSettings();
+  const config = {
+    enabled: settings.imageStudio.enabled,
+    defaultProviderMode: settings.imageStudio.defaultProviderMode,
+    allowCloud: settings.imageStudio.allowCloud,
+    backgroundRemovalEnabled: settings.imageStudio.backgroundRemovalEnabled,
+  };
   if (!config.enabled) throw new Error("Image Studio ist deaktiviert.");
 
   const worldSlug = String(formData.get("worldSlug") ?? "");
@@ -113,8 +128,8 @@ export async function createImageStudioJobAction(formData: FormData) {
 }
 
 export async function saveImageStudioDraftAction(formData: FormData) {
-  const config = resolveImageStudioConfig();
-  if (!config.enabled) throw new Error("Image Studio ist deaktiviert.");
+  const settings = await getSystemSettings();
+  if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
 
   assertStudioCanUseAI();
 
@@ -163,6 +178,68 @@ export async function adoptImageStudioAssetAction(formData: FormData) {
   if (worldSlug) {
     revalidatePath(`/worlds/${worldSlug}/assets`);
   }
+}
+
+export async function saveImageStudioCanvasAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const projectId = String(formData.get("projectId") ?? "");
+  const imageBase64 = String(formData.get("imageBase64") ?? "");
+  const title = String(formData.get("title") ?? "") || "Canvas-Bearbeitung";
+
+  if (!projectId || !imageBase64) {
+    throw new Error("projectId und imageBase64 sind erforderlich.");
+  }
+
+  const imageStudio = createImageStudioService(prisma);
+  const project = await imageStudio.getProject(projectId);
+  if (!project?.worldId) {
+    throw new Error("Projekt oder Welt nicht gefunden.");
+  }
+
+  const world = await prisma.world.findUnique({
+    where: { id: project.worldId },
+    select: { slug: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden.");
+  }
+  await requireStudioWorldEdit(world.slug);
+
+  const settings = await getSystemSettings();
+  const uploadsRoot = resolveEffectiveUploadsPath(settings);
+  ensureUploadDirectory(project.worldId, undefined, uploadsRoot);
+  const storageKey = buildStorageKey(project.worldId, "image-studio-canvas.png");
+  const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
+  fs.writeFileSync(filePath, Buffer.from(imageBase64, "base64"));
+
+  const repo = createUweRepositoryFromClient(prisma);
+  const asset = await repo.createAsset({
+    worldId: project.worldId,
+    title,
+    type: "image",
+    storageKey,
+    mimeType: "image/png",
+    size: Buffer.byteLength(imageBase64, "base64"),
+    visibility: "dm_only",
+    metadata: { source: "image_studio_canvas", projectId },
+  });
+
+  await imageStudio.addVersion({
+    projectId,
+    operation: "edit",
+    prompt: project.prompt,
+    assetId: asset.id,
+    providerMode: "manual",
+    metadata: { reviewStatus: "draft", editor: "canvas" },
+  });
+
+  await syncImageStudioProjectLinksToAsset(prisma, projectId, asset.id);
+  await imageStudio.updateProjectStatus(projectId, "completed");
+
+  revalidatePath("/image-studio");
+  revalidatePath(`/image-studio/${projectId}`);
+  revalidatePath(`/image-studio/${projectId}/edit`);
 }
 
 export async function createAgentJobAction(formData: FormData) {

@@ -31,6 +31,7 @@ const TOP_LEVEL_KEYS = new Set([
   "portal",
   "ai",
   "mail",
+  "imageStudio",
   "storage",
   "backup",
   "privacy",
@@ -50,6 +51,12 @@ const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
 const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody"]);
+const IMAGE_STUDIO_KEYS = new Set([
+  "enabled",
+  "defaultProviderMode",
+  "allowCloud",
+  "backgroundRemovalEnabled",
+]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
@@ -379,6 +386,56 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (Object.keys(mail).length > 0) {
         update.mail = mail;
+      }
+    }
+  }
+
+  if ("imageStudio" in body) {
+    const sectionErrors = validateSection(
+      body.imageStudio,
+      IMAGE_STUDIO_KEYS,
+      "settings.imageStudio",
+      (key, value, sectionErrors) => {
+        if (
+          key === "enabled" ||
+          key === "allowCloud" ||
+          key === "backgroundRemovalEnabled"
+        ) {
+          requireBoolean(value, `settings.imageStudio.${key}`, sectionErrors);
+        }
+        if (key === "defaultProviderMode") {
+          if (
+            value !== "auto" &&
+            value !== "local_rtx" &&
+            value !== "cloud"
+          ) {
+            sectionErrors.push(
+              "settings.imageStudio.defaultProviderMode muss auto, local_rtx oder cloud sein.",
+            );
+          }
+        }
+      },
+    );
+    errors.push(...sectionErrors);
+    if (sectionErrors.length === 0 && isRecord(body.imageStudio)) {
+      const imageStudio: NonNullable<UweSystemSettingsUpdate["imageStudio"]> = {};
+      if (body.imageStudio.enabled !== undefined) {
+        imageStudio.enabled = body.imageStudio.enabled as boolean;
+      }
+      if (body.imageStudio.defaultProviderMode !== undefined) {
+        imageStudio.defaultProviderMode = body.imageStudio.defaultProviderMode as
+          | "auto"
+          | "local_rtx"
+          | "cloud";
+      }
+      if (body.imageStudio.allowCloud !== undefined) {
+        imageStudio.allowCloud = body.imageStudio.allowCloud as boolean;
+      }
+      if (body.imageStudio.backgroundRemovalEnabled !== undefined) {
+        imageStudio.backgroundRemovalEnabled = body.imageStudio.backgroundRemovalEnabled as boolean;
+      }
+      if (Object.keys(imageStudio).length > 0) {
+        update.imageStudio = imageStudio;
       }
     }
   }

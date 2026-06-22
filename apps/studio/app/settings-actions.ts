@@ -154,6 +154,16 @@ export async function updateSettingsAction(formData: FormData) {
         autoBackupEnabled: parseBoolean(formData.get("autoBackupEnabled")),
       };
       break;
+    case "image-studio":
+      update.imageStudio = {
+        enabled: parseBoolean(formData.get("imageStudioEnabled")),
+        defaultProviderMode: String(
+          formData.get("imageStudioDefaultProvider") || "auto",
+        ) as "auto" | "local_rtx" | "cloud",
+        allowCloud: parseBoolean(formData.get("imageStudioAllowCloud")),
+        backgroundRemovalEnabled: parseBoolean(formData.get("imageStudioBgRemoval")),
+      };
+      break;
     default:
       throw new Error(`Unknown settings tab: ${tab}`);
   }

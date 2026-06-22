@@ -9,6 +9,7 @@ import {
 import {
   studioDashboardNav,
   studioSidebarSections,
+  resolveStudioRailActiveId,
   worldNavItems,
   type WorldNavKey,
 } from "@/src/lib/studio-navigation";
@@ -44,8 +45,8 @@ export function StudioAppShell({
   summary,
   actions,
   bottomNav,
-  showRail = false,
-  railActiveId,
+  showRail = true,
+  railActiveId: railActiveIdProp,
   showSearch = false,
   worldSlug,
   worldActive,
@@ -55,6 +56,7 @@ export function StudioAppShell({
   backHref,
   backLabel = "Zurück",
 }: StudioAppShellProps) {
+  const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const headerBlock = (
     <>
       {backHref ? (
@@ -170,7 +172,10 @@ export function StudioAppShell({
           : undefined
       }
       sidebar={
-        <NavSidebarSections sections={studioSidebarSections(activePath)} />
+        <NavSidebarSections
+          sections={studioSidebarSections(activePath)}
+          defaultOpenTitles={["Dashboard", "Inhalte & Medien", "Einstellungen"]}
+        />
       }
       main={headerBlock}
     />
