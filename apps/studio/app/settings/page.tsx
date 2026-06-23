@@ -1,14 +1,11 @@
 import Link from "next/link";
 import {
-  AppShell,
   BACKGROUND_PATTERN_LABELS,
   CANONICAL_LABELS,
-  PageHeader,
   SettingToggleRow,
   SettingsToggleGroup,
   ThemeSettingsPanel,
   ThemePicker,
-  TopBarBrand,
   VISIBILITY_LABELS,
   VisualThemePreview,
 } from "@uwe/shared-ui";
@@ -29,6 +26,7 @@ import {
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { SettingsPageSidebar } from "../../components/SettingsPageSidebar";
+import { StudioAppShell } from "@/components/StudioAppShell";
 import { resolveThemePreferencesForScope } from "@uwe/database/server";
 
 const TABS = [
@@ -82,20 +80,13 @@ export default async function SettingsPage({ searchParams }: Props) {
   } as const;
 
   return (
-    <AppShell
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle="Einstellungen" href="/studio" />
-        </>
-      }
+    <StudioAppShell
+      variant="module"
+      activePath={`/settings${activeTab !== "general" ? `?tab=${activeTab}` : ""}`}
+      title="Admin- & Systemeinstellungen"
+      summary="Zentrale Konfiguration für App, Portal, Speicher, KI und Datenschutz."
       sidebar={<SettingsPageSidebar activeTab={activeTab} />}
-      main={
-        <>
-          <PageHeader
-            title="Admin- & Systemeinstellungen"
-            summary="Zentrale Konfiguration für App, Portal, Speicher, KI und Datenschutz."
-          />
-
+    >
           {saved === "1" && (
             <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
               Einstellungen gespeichert.
@@ -860,8 +851,6 @@ export default async function SettingsPage({ searchParams }: Props) {
               </p>
             </section>
           )}
-        </>
-      }
-    />
+    </StudioAppShell>
   );
 }

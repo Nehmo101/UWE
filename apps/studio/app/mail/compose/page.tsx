@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
-import {
   createMailComposeService,
   createMailRecipientService,
   getAppRepository,
@@ -15,6 +8,7 @@ import {
 } from "@uwe/database/server";
 import type { MailComposeKind } from "@uwe/mail";
 import { MailSendForm } from "@/components/MailSendForm";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 const COMPOSE_KINDS = new Set<MailComposeKind>([
   "session_recap",
@@ -100,46 +94,34 @@ export default async function MailComposePage({ searchParams }: Props) {
   const world = worldSlug ? await getAppRepository().getWorldBySlug(worldSlug) : null;
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Mail vorbereiten" href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "← Mail Center", href: "/mail" },
-              ...(world ? [{ label: world.name, href: `/worlds/${worldSlug}` }] : []),
-            ]}
-          />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader
-            title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
-            summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
-          />
+    <AdminModuleShell
+      activePath="/mail"
+      backHref="/mail"
+      backLabel="Mail Center"
+      title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
+      summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
+    >
+      <p className="uwe-hint">
+        Quelle: <code>{draft.sourceType}</code> / <code>{draft.sourceId}</code>
+        {world ? (
+          <>
+            {" "}
+            · Welt: <Link href={`/worlds/${worldSlug}`}>{world.name}</Link>
+          </>
+        ) : null}
+      </p>
 
-          <p className="uwe-hint">
-            Quelle: <code>{draft.sourceType}</code> / <code>{draft.sourceId}</code>
-          </p>
-
-          <MailSendForm
-            worldId={draft.worldId || undefined}
-            initialSubject={draft.subject}
-            initialBodyText={draft.bodyText}
-            initialBodyHtml={draft.bodyHtml}
-            sourceType={draft.sourceType}
-            sourceId={draft.sourceId}
-            recipients={recipientOptions}
-            warnings={draft.warnings}
-            containsDmOnlyHint={draft.containsDmOnlyHint}
-          />
-
-          <p className="uwe-hint" style={{ marginTop: "1rem" }}>
-            <Link href="/mail">Zurück zum Mail Center</Link>
-          </p>
-        </>
-      }
-    />
+      <MailSendForm
+        worldId={draft.worldId || undefined}
+        initialSubject={draft.subject}
+        initialBodyText={draft.bodyText}
+        initialBodyHtml={draft.bodyHtml}
+        sourceType={draft.sourceType}
+        sourceId={draft.sourceId}
+        recipients={recipientOptions}
+        warnings={draft.warnings}
+        containsDmOnlyHint={draft.containsDmOnlyHint}
+      />
+    </AdminModuleShell>
   );
 }

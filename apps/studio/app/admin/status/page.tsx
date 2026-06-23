@@ -1,18 +1,12 @@
 import Link from "next/link";
 import {
-  AppShell,
-  Breadcrumb,
   HealthBadge,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import { prisma, UWE_VERSION } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -109,44 +103,19 @@ export default async function AdminStatusPage() {
   const overallBadge = status.ok ? "ok" : "degraded";
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Systemstatus" href="/studio" />}
-      sidebar={
-        <>
-          <SidebarSection title="Navigation">
-            <SidebarNav
-              items={[
-                { label: "← Dashboard", href: "/studio" },
-                { label: "Systemstatus", href: "/admin/status", active: true },
-                { label: "Cookbook", href: "/admin/cookbook" },
-                { label: "Einstellungen", href: "/settings" },
-                { label: "Backup", href: "/backup" },
-              ]}
-            />
-          </SidebarSection>
-        </>
+    <AdminModuleShell
+      activePath="/admin/status"
+      bottomNav="more"
+      title="Admin Status Dashboard"
+      summary="Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail, Brain, RTX-Inference und Jobs — ohne Secrets."
+      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Systemstatus" }]}
+      actions={
+        <HealthBadge
+          status={overallBadge}
+          label={status.ok ? "System OK" : "Einschränkungen"}
+        />
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Systemstatus" },
-            ]}
-          />
-
-          <PageHeader
-            title="Admin Status Dashboard"
-            summary="Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail, Brain, RTX-Inference und Jobs — ohne Secrets."
-            actions={
-              <HealthBadge
-                status={overallBadge}
-                label={status.ok ? "System OK" : "Einschränkungen"}
-              />
-            }
-          />
-
+    >
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
             Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
             {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}
@@ -525,8 +494,6 @@ export default async function AdminStatusPage() {
             API-Keys oder Tokens angezeigt. JSON-API:{" "}
             <Link href="/api/admin/status">/api/admin/status</Link>
           </p>
-        </>
-      }
-    />
+    </AdminModuleShell>
   );
 }

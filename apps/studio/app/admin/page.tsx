@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  AdminShell,
   AdminStatusCard,
   AdminStatusGrid,
   HealthBadge,
@@ -16,7 +15,7 @@ import {
 } from "@uwe/database/server";
 import { resolveUweAppUrls } from "@uwe/auth";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
+import { StudioAppShell } from "@/components/StudioAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 
 export default async function AdminOverviewPage() {
@@ -42,9 +41,9 @@ export default async function AdminOverviewPage() {
         : "error";
 
   return (
-    <AdminShell
+    <StudioAppShell
+      variant="admin"
       activePath="/admin"
-      navItems={adminSidebarNav("/admin")}
       title="Admin-Übersicht"
       summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
       bottomNav={studioGlobalBottomNav("more")}
@@ -54,8 +53,7 @@ export default async function AdminOverviewPage() {
           label={dashboard.ok ? "System OK" : "Einschränkungen"}
         />
       }
-      main={
-        <>
+    >
           {criticalWarnings.length > 0 && (
             <div className="uwe-form-error" role="alert" style={{ marginBottom: "1rem" }}>
               <strong>Kritische Hinweise:</strong>
@@ -93,6 +91,15 @@ export default async function AdminOverviewPage() {
               </Link>
               <Link className="uwe-btn" href="/admin/status">
                 Systemstatus
+              </Link>
+              <Link className="uwe-btn" href="/admin/reviews">
+                Reviews
+              </Link>
+              <Link className="uwe-btn" href="/admin/ai-gateway">
+                KI-Gateway
+              </Link>
+              <Link className="uwe-btn" href="/admin/agent-jobs">
+                Agent Jobs
               </Link>
               {appUrls.portalUrl ? (
                 <a className="uwe-btn" href={appUrls.portalUrl} target="_blank" rel="noreferrer">
@@ -213,8 +220,6 @@ export default async function AdminOverviewPage() {
               </dl>
             </AdminStatusCard>
           </AdminStatusGrid>
-        </>
-      }
-    />
+    </StudioAppShell>
   );
 }
