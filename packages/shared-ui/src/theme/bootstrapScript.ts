@@ -17,8 +17,7 @@ export function buildThemeBootstrapScript(
     scope === "portal"
       ? "uwe-theme-preferences-portal"
       : "uwe-theme-preferences-studio";
-  const defaultTheme =
-    scope === "portal" ? "uwe-portal-purple" : "uwe-cockpit-red";
+  const defaultTheme = "uwe-parchment-os";
 
   const colorMap: Record<string, Record<string, string>> = {};
   for (const theme of Object.values(UWE_THEMES)) {
@@ -48,6 +47,8 @@ export function buildThemeBootstrapScript(
       shellGradientMid: resolved.shellGradientMid,
       shellGradientEnd: resolved.shellGradientEnd,
       sidebarBg: resolved.sidebarBg,
+      sidebarFg: resolved.sidebarFg,
+      sidebarFgMuted: resolved.sidebarFgMuted,
       cardBg: resolved.cardBg,
       inputBg: resolved.inputBg,
       focusRing: resolved.focusRing,
@@ -80,6 +81,8 @@ export function buildThemeBootstrapScript(
     shellGradientMid: CSS_VARS.shellGradientMid,
     shellGradientEnd: CSS_VARS.shellGradientEnd,
     sidebarBg: CSS_VARS.sidebarBg,
+    sidebarFg: CSS_VARS.sidebarFg,
+    sidebarFgMuted: CSS_VARS.sidebarFgMuted,
     cardBg: CSS_VARS.cardBg,
     inputBg: CSS_VARS.inputBg,
     focusRing: CSS_VARS.focusRing,
@@ -91,7 +94,7 @@ export function buildThemeBootstrapScript(
   var DEFAULT=${JSON.stringify(defaultTheme)};
   var MAP=${JSON.stringify(colorMap)};
   var VARS=${JSON.stringify(cssVarKeys)};
-  var FONTS={mono:"ui-monospace, 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",sans:"system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",serif:"Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif"};
+  var FONTS={mono:"var(--uwe-font-space-mono, ui-monospace), 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",sans:"system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",serif:"var(--uwe-font-newsreader, Georgia), 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif"};
   var DENSITY={compact:0.92,comfortable:1,spacious:1.08};
   var LEGACY=${JSON.stringify(LEGACY_THEME_ID_MAP)};
   var LAYOUT=${JSON.stringify(LAYOUT_TOKENS)};

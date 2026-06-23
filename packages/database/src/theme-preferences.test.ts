@@ -43,7 +43,7 @@ describe("theme preferences", () => {
       },
       "portal",
     );
-    assert.equal(prefs.themeId, "uwe-portal-purple");
+    assert.equal(prefs.themeId, "uwe-parchment-os");
     assert.equal(prefs.background, "synapse");
     assert.equal(prefs.frostedGlass, false);
   });
