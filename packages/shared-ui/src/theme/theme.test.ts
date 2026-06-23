@@ -8,6 +8,7 @@ describe("uwe theme system", () => {
   it("defines all required theme presets", () => {
     const required = [
       "uwe-default",
+      "uwe-cockpit-red",
       "uwe-dark-fantasy",
       "uwe-portal-purple",
       "uwe-charcoal-desk",
@@ -50,7 +51,7 @@ describe("uwe theme system", () => {
     assert.match(script, /--uwe-sidebar-bg/);
     assert.match(script, /--uwe-radius-sm/);
     assert.match(script, /--uwe-spacing-md/);
-    assert.match(script, /uwe-default/);
+    assert.match(script, /uwe-cockpit-red/);
     assert.match(script, /uwe-portal-purple/);
     assert.match(script, /odysseus-dark-inspired/);
   });

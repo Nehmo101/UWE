@@ -28,8 +28,12 @@ describe("security headers", () => {
   });
 
   it("documents inline script allowance required by Next.js hydration", () => {
-    const csp = buildContentSecurityPolicy();
-    assert.match(csp, /script-src 'self' 'unsafe-inline'/);
+    const prodCsp = buildContentSecurityPolicy({}, { NODE_ENV: "production" });
+    assert.match(prodCsp, /script-src 'self' 'unsafe-inline'/);
+    assert.doesNotMatch(prodCsp, /unsafe-eval/);
+
+    const devCsp = buildContentSecurityPolicy({}, { NODE_ENV: "development" });
+    assert.match(devCsp, /script-src 'self' 'unsafe-inline' 'unsafe-eval'/);
   });
 
   it("does not send HSTS from static header builders (Next.js config)", () => {

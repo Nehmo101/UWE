@@ -1,18 +1,25 @@
+import type { ReactNode } from "react";
 import { RailButton } from "../components/RailButton";
+import { STUDIO_RAIL_ICON_MAP } from "./studio-rail-icons";
 
 export interface StudioRailItem {
   id: string;
   href: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
 }
 
 export const STUDIO_RAIL_ITEMS: StudioRailItem[] = [
-  { id: "today", href: "/today", label: "Heute", icon: "☀" },
-  { id: "capture", href: "/capture", label: "Capture", icon: "+" },
-  { id: "search", href: "/search", label: "Suche", icon: "🔍" },
-  { id: "image-studio", href: "/image-studio", label: "Image Studio", icon: "🖼" },
-  { id: "ai", href: "/ai", label: "KI", icon: "✦" },
+  { id: "today", href: "/today", label: "Heute", icon: STUDIO_RAIL_ICON_MAP.today },
+  { id: "capture", href: "/capture", label: "Capture", icon: STUDIO_RAIL_ICON_MAP.capture },
+  { id: "search", href: "/search", label: "Suche", icon: STUDIO_RAIL_ICON_MAP.search },
+  {
+    id: "image-studio",
+    href: "/image-studio",
+    label: "Image Studio",
+    icon: STUDIO_RAIL_ICON_MAP["image-studio"],
+  },
+  { id: "ai", href: "/ai", label: "KI", icon: STUDIO_RAIL_ICON_MAP.ai },
 ];
 
 export function StudioIconRail({

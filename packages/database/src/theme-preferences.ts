@@ -40,7 +40,7 @@ const CLIENT_BACKGROUND_VALUES = new Set<ThemeClientBackground>([
   "noise",
 ]);
 
-const DEFAULT_STUDIO_THEME_ID = "uwe-default";
+const DEFAULT_STUDIO_THEME_ID = "uwe-cockpit-red";
 const DEFAULT_PORTAL_THEME_ID = "uwe-portal-purple";
 
 export function defaultThemePreferencesRecord(
@@ -50,10 +50,11 @@ export function defaultThemePreferencesRecord(
     themeId: scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID,
     font: "sans",
     density: "comfortable",
-    background: "none",
+    background: scope === "studio" ? "constellation" : "none",
     frostedGlass: true,
     uiScale: 1,
-    bgEffectIntensity: 1,
+    bgEffectColor: scope === "studio" ? "#fecaca" : undefined,
+    bgEffectIntensity: scope === "studio" ? 0.38 : 1,
   };
 }
 

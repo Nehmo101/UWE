@@ -4,7 +4,7 @@ import {
   HealthBadge,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS, formatEuroFromCents, prisma } from "@uwe/database/server";
-import { StudioAppShell } from "@/components/StudioAppShell";
+import { StudioCockpitAppShell } from "@/components/StudioCockpitAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 
@@ -23,7 +23,7 @@ export default async function TodayPage() {
   const data = await getTodayDashboardData(prisma, { useMockInference });
 
   return (
-    <StudioAppShell
+    <StudioCockpitAppShell
       variant="module"
       activePath="/today"
       showRail
@@ -337,6 +337,6 @@ export default async function TodayPage() {
           <p className="uwe-dashboard-muted">
             <HealthBadge status={data.systemOk ? "ok" : "degraded"} label={data.systemLabel} />
           </p>
-    </StudioAppShell>
+    </StudioCockpitAppShell>
   );
 }

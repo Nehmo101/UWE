@@ -10,6 +10,7 @@ import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   studioDashboardNav,
   studioSidebarSections,
+  studioUnifiedSidebarSections,
   resolveStudioRailActiveId,
   worldBottomNavKey,
   worldNavItems,
@@ -47,6 +48,12 @@ export interface StudioAppShellProps {
   searchPlaceholder?: string;
   /** When set, replaces the default sectioned sidebar. */
   sidebar?: ReactNode;
+  /** Cockpit mockup chrome — world switcher, ⌘K hint, status footer */
+  cockpitMode?: boolean;
+  cockpitWorlds?: { name: string; slug: string }[];
+  statusFooter?: ReactNode;
+  /** Use unified Portal/Studio/Bibliothek sidebar instead of full IA sections */
+  unifiedSidebar?: boolean;
 }
 
 /** Unified Studio shell with sectioned navigation. */
@@ -76,8 +83,32 @@ export function StudioAppShell({
   searchAction = "/search",
   searchPlaceholder = "Global suchen…",
   sidebar: sidebarOverride,
+  cockpitMode = false,
+  cockpitWorlds = [],
+  statusFooter,
+  unifiedSidebar = false,
 }: StudioAppShellProps) {
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
+  const sidebarSections = unifiedSidebar
+    ? studioUnifiedSidebarSections(activePath)
+    : studioSidebarSections(activePath);
+
+  const shellCommon = {
+    cockpitMode,
+    cockpitWorlds,
+    activeWorldSlug: worldSlug ?? null,
+    statusFooter,
+    showRail,
+    railActiveId,
+    showSearch,
+    searchAction,
+    searchPlaceholder,
+    topBarExtra,
+    bottomNav,
+    context,
+    contextTitle,
+  };
+
   const headerBlock = (
     <>
       {backHref ? (
@@ -101,6 +132,14 @@ export function StudioAppShell({
     </>
   );
 
+  const pageHeader = title
+    ? {
+        title,
+        summary,
+        actions,
+      }
+    : undefined;
+
   if (variant === "world" && worldSlug) {
     const bottomKey =
       bottomNavActive ?? worldBottomNavKey(worldActive ?? "overview", Boolean(searchQuery?.trim()));
@@ -113,29 +152,18 @@ export function StudioAppShell({
 
     return (
       <StudioShell
+        {...shellCommon}
         subtitle="Welt bearbeiten"
         brandHref={`/worlds/${worldSlug}/dashboard`}
-        showSearch={showSearch}
         searchAction={`/worlds/${worldSlug}?q=`}
         searchPlaceholder="In dieser Welt suchen…"
-        topBarExtra={topBarExtra}
         bottomNav={bottomNav ?? studioWorldBottomNav(worldSlug, bottomKey)}
-        context={context}
-        contextTitle={contextTitle}
-        pageHeader={
-          title
-            ? {
-                title,
-                summary,
-                actions,
-              }
-            : undefined
-        }
+        pageHeader={pageHeader}
         sidebar={
           <>
             <NavSidebarSections
-              sections={studioSidebarSections(`/worlds/${worldSlug}`)}
-              defaultOpenTitles={["Dashboard", "Welten & Kampagnen"]}
+              sections={sidebarSections}
+              defaultOpenTitles={unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]}
             />
             <StudioNavSidebar title="Welt" items={navItems} />
             {sidebarExtra}
@@ -149,29 +177,14 @@ export function StudioAppShell({
   if (variant === "dashboard") {
     return (
       <StudioShell
-        showRail={showRail}
-        railActiveId={railActiveId}
-        showSearch={showSearch}
-        searchAction={searchAction}
-        searchPlaceholder={searchPlaceholder}
-        topBarExtra={topBarExtra}
-        bottomNav={bottomNav}
-        context={context}
-        contextTitle={contextTitle}
-        pageHeader={
-          title
-            ? {
-                title,
-                summary,
-                actions,
-              }
-            : undefined
-        }
+        {...shellCommon}
+        pageHeader={pageHeader}
         sidebar={
-          <StudioNavSidebar
-            title="Studio"
-            items={studioDashboardNav(activePath)}
-          />
+          unifiedSidebar ? (
+            <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Portal", "Studio"]} />
+          ) : (
+            <StudioNavSidebar title="Studio" items={studioDashboardNav(activePath)} />
+          )
         }
         main={headerBlock}
       />
@@ -182,7 +195,7 @@ export function StudioAppShell({
     return (
       <AdminShell
         activePath={activePath}
-        navItems={studioSidebarSections(activePath).flatMap((section) => section.items)}
+        navItems={sidebarSections.flatMap((section) => section.items)}
         title={title ?? "Admin"}
         summary={summary ?? ""}
         actions={actions}
@@ -194,29 +207,17 @@ export function StudioAppShell({
 
   return (
     <StudioShell
-      showRail={showRail}
-      railActiveId={railActiveId}
-      showSearch={showSearch}
-      searchAction={searchAction}
-      searchPlaceholder={searchPlaceholder}
-      topBarExtra={topBarExtra}
-      bottomNav={bottomNav}
-      context={context}
-      contextTitle={contextTitle}
-      pageHeader={
-        title
-          ? {
-              title,
-              summary,
-              actions,
-            }
-          : undefined
-      }
+      {...shellCommon}
+      pageHeader={pageHeader}
       sidebar={
         sidebarOverride ?? (
           <NavSidebarSections
-            sections={studioSidebarSections(activePath)}
-            defaultOpenTitles={["Dashboard", "Inhalte & Medien", "Einstellungen"]}
+            sections={sidebarSections}
+            defaultOpenTitles={
+              unifiedSidebar
+                ? ["Portal", "Studio", "Bibliothek"]
+                : ["Dashboard", "Inhalte & Medien", "Einstellungen"]
+            }
           />
         )
       }

@@ -30,14 +30,19 @@ const STRICT_TRANSPORT_SECURITY_VALUE = "max-age=31536000; includeSubDomains";
  */
 export function buildContentSecurityPolicy(
   options: SecurityHeaderOptions = {},
+  env: NodeJS.ProcessEnv = process.env,
 ): string {
+  const scriptSrc = isProductionEnv(env)
+    ? "'self' 'unsafe-inline'"
+    : "'self' 'unsafe-inline' 'unsafe-eval'";
+
   const directives = [
     "default-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    "script-src 'self' 'unsafe-inline'",
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
@@ -90,7 +95,7 @@ export function getUweSecurityHeaders(
   request?: RequestLikeForCookieOptions,
 ): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Security-Policy": buildContentSecurityPolicy(options),
+    "Content-Security-Policy": buildContentSecurityPolicy(options, env),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY",

@@ -8,7 +8,9 @@ import {
   studioCommandPaletteCommands,
   studioDashboardNav,
   studioSidebarSections,
+  studioUnifiedSidebarSections,
   worldBottomNavKey,
+  worldCockpitTabItems,
   worldNavItems,
 } from "./studio-navigation";
 
@@ -40,6 +42,25 @@ describe("studio navigation", () => {
     assert.ok(sectionTitles.includes("Benutzer & Rollen"));
     assert.ok(sectionTitles.includes("Admin"));
     assert.ok(sectionTitles.includes("System & Diagnose"));
+  });
+
+  it("unified sidebar follows cockpit mockup hierarchy", () => {
+    const sections = studioUnifiedSidebarSections("/studio", {
+      portalUrl: "http://localhost:3001",
+    });
+    const titles = sections.map((section) => section.title);
+    assert.deepEqual(titles, ["Portal", "Studio", "Bibliothek", "Aufgaben", "Administration"]);
+    const portal = sections.find((section) => section.title === "Portal");
+    assert.ok(portal?.items.some((item) => item.label === "Spieler-Portal"));
+    assert.ok(portal?.items.some((item) => item.href === "http://localhost:3001/worlds"));
+  });
+
+  it("exposes horizontal cockpit tabs for world overview", () => {
+    const tabs = worldCockpitTabItems("terra", "overview");
+    assert.ok(tabs.length >= 6);
+    assert.equal(tabs[0]?.key, "overview");
+    assert.ok(tabs.some((tab) => tab.key === "brain"));
+    assert.ok(tabs.find((tab) => tab.key === "overview")?.active);
   });
 
   it("includes all canonical world nav items", () => {

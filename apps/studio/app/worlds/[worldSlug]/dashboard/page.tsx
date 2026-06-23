@@ -6,8 +6,12 @@ import {
   PageTypeBadge,
   PublishBadge,
   SidebarSection,
-  StatGrid,
   VisibilityBadge,
+  WorldCockpitCard,
+  WorldCockpitGrid,
+  WorldCockpitHeader,
+  WorldCockpitTabs,
+  WorldCockpitTag,
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
@@ -15,8 +19,8 @@ import {
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
-import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { WorldCockpitShell } from "@/components/WorldCockpitShell";
+import { worldCockpitTabItems } from "@/src/lib/studio-navigation";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -50,22 +54,16 @@ export default async function WorldDashboardPage({ params }: Props) {
     { label: "+ Session", href: `/worlds/${worldSlug}/sessions/new` },
   ];
 
+  const cockpitTabs = worldCockpitTabItems(worldSlug, "overview");
+
   return (
-    <WorldModuleShell
+    <WorldCockpitShell
       worldSlug={worldSlug}
       worldName={world.name}
       activeNav="overview"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Übersicht")}
+      breadcrumb={[]}
+      hideBreadcrumb
       contextTitle="Quick Create"
-      pageHeader={{
-        title: world.name,
-        summary: world.description,
-        actions: (
-          <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
-            Seite erstellen
-          </Link>
-        ),
-      }}
       context={
         <>
           <SidebarSection title="Schnell erstellen">
@@ -114,24 +112,30 @@ export default async function WorldDashboardPage({ params }: Props) {
         </>
       }
     >
-      <StatGrid
-        stats={[
-          { label: "Seiten", value: overview.counts.pages },
-          { label: "NPCs", value: overview.counts.byCategory.npcs },
-          { label: "Orte", value: overview.counts.byCategory.orte },
-          { label: "Fraktionen", value: overview.counts.byCategory.fraktionen },
-          { label: "Sessions", value: overview.counts.gameSessions },
-          {
-            label: "Im Portal sichtbar",
-            value: overview.portal.visiblePageCount,
-            hint: `${overview.counts.drafts} Entwürfe`,
-          },
-        ]}
+      <WorldCockpitHeader
+        title={world.name}
+        summary={world.description}
+        tags={
+          <>
+            <WorldCockpitTag variant="accent">Welt-Cockpit</WorldCockpitTag>
+            <WorldCockpitTag>{overview.counts.pages} Seiten</WorldCockpitTag>
+            <WorldCockpitTag>{overview.counts.campaigns} Kampagnen</WorldCockpitTag>
+            <WorldCockpitTag variant="muted">
+              {overview.portal.visiblePageCount} im Portal
+            </WorldCockpitTag>
+          </>
+        }
+        actions={
+          <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+            Seite erstellen
+          </Link>
+        }
       />
 
-      <div className="uwe-dashboard-grid">
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Nächste Session</h2>
+      <WorldCockpitTabs items={cockpitTabs} />
+
+      <WorldCockpitGrid>
+        <WorldCockpitCard title="Nächste Session">
           {overview.nextSession ? (
             <>
               <p className="uwe-dashboard-highlight">
@@ -145,12 +149,6 @@ export default async function WorldDashboardPage({ params }: Props) {
                   : "Noch kein Termin"}{" "}
                 · {GAME_SESSION_STATUS_LABELS[overview.nextSession.status]}
               </p>
-              <Link
-                className="uwe-btn uwe-btn-ghost"
-                href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}
-              >
-                Session vorbereiten →
-              </Link>
             </>
           ) : (
             <EmptyState
@@ -162,13 +160,12 @@ export default async function WorldDashboardPage({ params }: Props) {
               }
             />
           )}
-        </section>
+        </WorldCockpitCard>
 
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Offene Plots</h2>
+        <WorldCockpitCard title="Offene Plots">
           {overview.openPlots.length === 0 ? (
             <p className="uwe-dashboard-muted">
-              Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots&ldquo;.
+              Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots“.
             </p>
           ) : (
             <ul className="uwe-dashboard-list">
@@ -182,51 +179,97 @@ export default async function WorldDashboardPage({ params }: Props) {
               ))}
             </ul>
           )}
-        </section>
+        </WorldCockpitCard>
 
-        <section className="uwe-card uwe-dashboard-card uwe-dashboard-card-wide">
+        <WorldCockpitCard title="Wiki & Seiten">
+          <p className="uwe-cockpit-stat-line">
+            <strong>{overview.counts.pages}</strong> Seiten gesamt
+          </p>
+          <p className="uwe-dashboard-muted">
+            {overview.counts.byCategory.npcs} NPCs · {overview.counts.byCategory.orte} Orte ·{" "}
+            {overview.counts.drafts} Entwürfe
+          </p>
+          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}`}>
+            Seitenliste →
+          </Link>
+        </WorldCockpitCard>
+
+        <WorldCockpitCard title="Portal & Sharing">
+          <p className="uwe-cockpit-stat-line">
+            <strong>{overview.portal.visiblePageCount}</strong> sichtbare Seiten
+          </p>
+          <p className="uwe-dashboard-muted">
+            {overview.portal.activeShareLinkCount} Share-Links · Portal{" "}
+            {overview.portal.portalEnabled ? "aktiv" : "aus"}
+          </p>
+          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/inspector`}>
+            Inspektor →
+          </Link>
+        </WorldCockpitCard>
+
+        <WorldCockpitCard title="Medien & Assets">
+          <p className="uwe-cockpit-stat-line">
+            <strong>{overview.counts.assets}</strong> Assets
+          </p>
+          <p className="uwe-dashboard-muted">
+            Karten, Handouts und Uploads für diese Welt.
+          </p>
+          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/assets`}>
+            Medien öffnen →
+          </Link>
+        </WorldCockpitCard>
+
+        <WorldCockpitCard title="KI & Brain">
+          <p className="uwe-cockpit-stat-line">
+            <strong>{overview.counts.gameSessions}</strong> Sessions
+          </p>
+          <p className="uwe-dashboard-muted">
+            Brain Store, KI-Läufe und Generator-Werkzeuge.
+          </p>
+          <div className="uwe-cockpit-card-actions">
+            <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/brain`}>
+              Brain →
+            </Link>
+            <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/ai-runs`}>
+              KI-Läufe →
+            </Link>
+          </div>
+        </WorldCockpitCard>
+      </WorldCockpitGrid>
+
+      {overview.recentPages.length > 0 && (
+        <section className="uwe-card uwe-cockpit-recent">
           <h2 className="uwe-section-title">Zuletzt bearbeitet</h2>
-          {overview.recentPages.length === 0 ? (
-            <EmptyState
-              title="Noch keine Seiten"
-              action={
-                <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
-                  Erste Seite erstellen
-                </Link>
-              }
-            />
-          ) : (
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>Titel</th>
-                  <th>Typ</th>
-                  <th>Sichtbarkeit</th>
-                  <th>Publish</th>
-                  <th>Geändert</th>
+          <table className="uwe-page-table">
+            <thead>
+              <tr>
+                <th>Titel</th>
+                <th>Typ</th>
+                <th>Sichtbarkeit</th>
+                <th>Publish</th>
+                <th>Geändert</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.recentPages.map((page) => (
+                <tr key={page.id}>
+                  <td>
+                    <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                      {page.title}
+                    </Link>
+                  </td>
+                  <td><PageTypeBadge type={page.type} /></td>
+                  <td><VisibilityBadge visibility={page.visibility} /></td>
+                  <td><PublishBadge status={page.publishStatus} /></td>
+                  <td className="uwe-dashboard-muted">
+                    {RELATIVE_FORMAT.format(page.updatedAt)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {overview.recentPages.map((page) => (
-                  <tr key={page.id}>
-                    <td>
-                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                        {page.title}
-                      </Link>
-                    </td>
-                    <td><PageTypeBadge type={page.type} /></td>
-                    <td><VisibilityBadge visibility={page.visibility} /></td>
-                    <td><PublishBadge status={page.publishStatus} /></td>
-                    <td className="uwe-dashboard-muted">
-                      {RELATIVE_FORMAT.format(page.updatedAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </section>
-      </div>
-    </WorldModuleShell>
+      )}
+    </WorldCockpitShell>
   );
 }

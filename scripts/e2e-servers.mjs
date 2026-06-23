@@ -20,6 +20,8 @@ const env = {
   DATABASE_URL: databaseUrl,
   SESSION_SECRET: `e2e-${"x".repeat(28)}`,
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
+  STUDIO_API_TOKEN: `e2e-studio-api-${"z".repeat(20)}`,
+  STUDIO_ACCESS_ALLOWED_EMAILS: "dm@uwe.local",
   SESSION_COOKIE_SECURE: "false",
   AUTH_REQUIRED: "true",
   NODE_ENV: "production",

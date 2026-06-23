@@ -382,11 +382,32 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
 export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   app: {
     theme: "dark",
-    backgroundPattern: "none",
+    backgroundPattern: "constellation",
     frostedGlass: true,
     motionEnabled: true,
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
+    themePreferences: {
+      studio: {
+        themeId: "uwe-cockpit-red",
+        font: "sans",
+        density: "comfortable",
+        background: "constellation",
+        frostedGlass: true,
+        uiScale: 1,
+        bgEffectColor: "#fecaca",
+        bgEffectIntensity: 0.38,
+      },
+      portal: {
+        themeId: "uwe-portal-purple",
+        font: "sans",
+        density: "comfortable",
+        background: "none",
+        frostedGlass: true,
+        uiScale: 1,
+        bgEffectIntensity: 1,
+      },
+    },
   },
   worlds: {
     defaultVisibility: "dm_only",

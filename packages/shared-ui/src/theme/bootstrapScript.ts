@@ -18,7 +18,7 @@ export function buildThemeBootstrapScript(
       ? "uwe-theme-preferences-portal"
       : "uwe-theme-preferences-studio";
   const defaultTheme =
-    scope === "portal" ? "uwe-portal-purple" : "uwe-default";
+    scope === "portal" ? "uwe-portal-purple" : "uwe-cockpit-red";
 
   const colorMap: Record<string, Record<string, string>> = {};
   for (const theme of Object.values(UWE_THEMES)) {
