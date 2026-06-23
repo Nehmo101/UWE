@@ -1750,14 +1750,48 @@ html[data-theme="light"] {
 }
 
 .uwe-landing-action {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 2.4rem 0.85rem 1rem;
   text-align: left;
   text-decoration: none;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease,
+    border-color 0.14s ease;
+}
+
+/* Chevron affordance so each option reads as an actionable entry */
+.uwe-landing-action::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.3rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  opacity: 0.55;
+  transition: transform 0.14s ease, opacity 0.14s ease;
+}
+
+.uwe-landing-action:hover,
+.uwe-landing-action:focus-visible {
+  transform: translateY(-1px);
+}
+
+.uwe-landing-action:hover::after,
+.uwe-landing-action:focus-visible::after {
+  opacity: 0.9;
+  transform: translateX(2px) rotate(-45deg);
+}
+
+.uwe-landing-action-logout::after {
+  display: none;
 }
 
 .uwe-landing-action-label {
