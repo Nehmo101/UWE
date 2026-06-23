@@ -2,15 +2,21 @@ import type { ReactNode } from "react";
 import {
   AdminShell,
   NavSidebarSections,
+  SidebarNav,
+  SidebarSection,
   StudioNavSidebar,
   StudioShell,
   type BottomNavItem,
 } from "@uwe/shared-ui";
+import { globalNavItems } from "@/src/lib/global-nav";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   studioDashboardNav,
   studioSidebarSections,
   resolveStudioRailActiveId,
+  worldBottomNavKey,
   worldNavItems,
+  type WorldBottomNavKey,
   type WorldNavKey,
 } from "@/src/lib/studio-navigation";
 
@@ -29,6 +35,11 @@ export interface StudioAppShellProps {
   showSearch?: boolean;
   worldSlug?: string;
   worldActive?: WorldNavKey;
+  /** Preserve campaign filter on „Neue Seite“ link. */
+  campaignSlug?: string;
+  searchQuery?: string;
+  bottomNavActive?: WorldBottomNavKey;
+  sidebarExtra?: ReactNode;
   context?: ReactNode;
   contextTitle?: string;
   breadcrumbs?: { label: string; href?: string }[];
@@ -50,6 +61,10 @@ export function StudioAppShell({
   showSearch = false,
   worldSlug,
   worldActive,
+  campaignSlug,
+  searchQuery = "",
+  bottomNavActive,
+  sidebarExtra,
   context,
   contextTitle,
   breadcrumbs,
@@ -81,6 +96,15 @@ export function StudioAppShell({
   );
 
   if (variant === "world" && worldSlug) {
+    const bottomKey =
+      bottomNavActive ?? worldBottomNavKey(worldActive ?? "overview", Boolean(searchQuery?.trim()));
+    const navItems = worldNavItems(worldSlug, worldActive).map((item) => {
+      if (item.key === "new-page" && campaignSlug) {
+        return { ...item, href: `${item.href}?campaign=${campaignSlug}` };
+      }
+      return item;
+    });
+
     return (
       <StudioShell
         subtitle="Welt bearbeiten"
@@ -88,7 +112,7 @@ export function StudioAppShell({
         showSearch={showSearch}
         searchAction={`/worlds/${worldSlug}?q=`}
         searchPlaceholder="In dieser Welt suchen…"
-        bottomNav={bottomNav}
+        bottomNav={bottomNav ?? studioWorldBottomNav(worldSlug, bottomKey)}
         context={context}
         contextTitle={contextTitle}
         pageHeader={
@@ -101,10 +125,13 @@ export function StudioAppShell({
             : undefined
         }
         sidebar={
-          <StudioNavSidebar
-            title="Welt"
-            items={worldNavItems(worldSlug, worldActive)}
-          />
+          <>
+            <SidebarSection title="Global">
+              <SidebarNav items={globalNavItems()} />
+            </SidebarSection>
+            <StudioNavSidebar title="Welt" items={navItems} />
+            {sidebarExtra}
+          </>
         }
         main={headerBlock}
       />
