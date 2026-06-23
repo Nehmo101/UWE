@@ -4,6 +4,14 @@
   --uwe-sidebar-bg: var(--uwe-panel);
   --uwe-card-bg: var(--uwe-surface);
   --uwe-input-bg: var(--uwe-bg-elevated);
+  --uwe-focus-ring: color-mix(in srgb, var(--uwe-accent) 55%, transparent);
+  --uwe-focus-shadow: color-mix(in srgb, var(--uwe-accent) 20%, transparent);
+  --uwe-spacing-xs: 0.25rem;
+  --uwe-spacing-sm: 0.5rem;
+  --uwe-spacing-md: 0.75rem;
+  --uwe-spacing-lg: 1rem;
+  --uwe-spacing-xl: 1.5rem;
+  --uwe-spacing-2xl: 2rem;
   --uwe-radius-sm: 0.375rem;
   --uwe-radius-md: 0.5rem;
   --uwe-radius-lg: 0.75rem;
@@ -92,17 +100,19 @@
 
 /* Card primitive */
 .uwe-card-padded {
-  padding: 1.25rem;
+  padding: var(--uwe-spacing-lg);
 }
 
 .uwe-card-title {
-  margin: 0 0 0.85rem;
-  font-size: 1rem;
+  margin: 0 0 var(--uwe-spacing-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .uwe-card-footer {
-  margin-top: 1rem;
-  padding-top: 0.85rem;
+  margin-top: var(--uwe-spacing-lg);
+  padding-top: var(--uwe-spacing-md);
   border-top: 1px solid var(--uwe-border-muted);
 }
 
@@ -374,25 +384,51 @@
 /* Admin status grid */
 .uwe-admin-status-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--uwe-spacing-md);
+  margin-bottom: var(--uwe-spacing-xl);
+}
+
+.uwe-admin-status-card.uwe-card {
+  padding: var(--uwe-spacing-md) var(--uwe-spacing-lg);
+  background: var(--uwe-card-bg);
 }
 
 .uwe-admin-status-card-title {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--uwe-spacing-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--uwe-fg);
 }
 
 .uwe-admin-status-card-body {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--uwe-fg-muted);
+  line-height: 1.5;
 }
 
 .uwe-admin-status-card-actions {
-  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-spacing-sm);
+  margin-top: var(--uwe-spacing-md);
 }
 
 @media (max-width: 960px) {
+  .uwe-admin-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .uwe-admin-status-card-actions {
+    width: 100%;
+  }
+
+  .uwe-admin-status-card-actions > .uwe-btn,
+  .uwe-admin-status-card-actions > a.uwe-btn {
+    flex: 1 1 calc(50% - var(--uwe-spacing-sm));
+    min-width: 0;
+  }
+
   .uwe-toolwindow-backdrop,
   .uwe-dialog-backdrop {
     padding: 0;

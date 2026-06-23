@@ -1,31 +1,26 @@
 /* UWE visual polish — CSS-only patterns, glass, scrollbars, motion, modal surfaces */
 
-/* ── Theme tokens ── */
+/* ── Theme tokens (bridge to --uwe-* runtime palette) ── */
 
 html {
-  --uwe-accent: #6366f1;
-  --uwe-accent-soft: rgba(99, 102, 241, 0.35);
-  --uwe-accent-muted: rgba(99, 102, 241, 0.18);
-  --uwe-surface-base: #060a12;
-  --uwe-surface-elevated: rgba(15, 23, 42, 0.97);
-  --uwe-surface-glass: rgba(8, 12, 22, 0.88);
-  --uwe-surface-glass-strong: rgba(8, 12, 22, 0.94);
-  --uwe-text-primary: #e2e8f0;
-  --uwe-text-muted: #94a3b8;
-  --uwe-border-subtle: rgba(148, 163, 184, 0.14);
-  --uwe-border-accent: rgba(129, 140, 248, 0.32);
+  --uwe-accent-soft: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  --uwe-surface-base: var(--uwe-bg);
+  --uwe-surface-elevated: var(--uwe-bg-elevated);
+  --uwe-surface-glass: color-mix(in srgb, var(--uwe-panel) 88%, transparent);
+  --uwe-surface-glass-strong: color-mix(in srgb, var(--uwe-panel) 94%, transparent);
+  --uwe-text-primary: var(--uwe-fg);
+  --uwe-text-muted: var(--uwe-fg-muted);
+  --uwe-border-subtle: var(--uwe-border-muted);
+  --uwe-border-accent: color-mix(in srgb, var(--uwe-accent) 32%, transparent);
   --uwe-glass-blur: 12px;
-  --uwe-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --uwe-shadow-sheet: 0 -16px 48px rgba(0, 0, 0, 0.45), 0 -1px 0 var(--uwe-border-subtle);
+  --uwe-shadow-modal: var(--uwe-shadow-lg), 0 0 0 1px color-mix(in srgb, var(--uwe-fg) 4%, transparent);
+  --uwe-shadow-sheet: 0 -16px 48px rgba(0, 0, 0, 0.45), 0 -1px 0 var(--uwe-border-muted);
   --uwe-transition-fast: 0.18s ease;
   --uwe-transition-surface: 0.22s ease;
 }
 
 html[data-uwe-app="portal"] {
-  --uwe-accent: #7c3aed;
-  --uwe-accent-soft: rgba(124, 58, 237, 0.35);
-  --uwe-accent-muted: rgba(124, 58, 237, 0.18);
-  --uwe-border-accent: rgba(167, 139, 250, 0.32);
+  --uwe-border-accent: color-mix(in srgb, var(--uwe-accent) 32%, transparent);
 }
 
 html[data-uwe-theme="dark"],
@@ -259,15 +254,15 @@ html[data-uwe-glass="on"] .uwe-palette-overlay {
 /* ── Panel surface (shared by Studio sections) ── */
 
 .uwe-panel {
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--uwe-border-subtle);
+  padding: var(--uwe-spacing-lg);
+  border-radius: var(--uwe-radius-lg);
+  border: 1px solid var(--uwe-border-muted);
   background: var(--uwe-surface-glass);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--uwe-fg) 3%, transparent);
 }
 
 .uwe-panel + .uwe-panel {
-  margin-top: 1rem;
+  margin-top: var(--uwe-spacing-lg);
 }
 
 /* ── Scrollbars (theme accent, unobtrusive) ── */
@@ -579,11 +574,11 @@ html[data-uwe-glass="off"] .uwe-theme-preview-topbar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 0.75rem;
+  gap: var(--uwe-spacing-lg);
+  padding: var(--uwe-spacing-md) var(--uwe-spacing-lg);
+  border-radius: var(--uwe-radius-lg);
   border: 1px solid var(--uwe-border-muted);
-  background: var(--uwe-surface);
+  background: var(--uwe-card-bg);
 }
 
 .uwe-setting-toggle-copy {
