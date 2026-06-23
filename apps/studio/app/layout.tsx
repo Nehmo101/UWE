@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import { Space_Mono, Newsreader } from "next/font/google";
 import { getAppRepository, getSystemSettingsSnapshot, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
   ThemeBootstrapScript,
@@ -8,6 +9,21 @@ import {
   toUweThemePreferences,
   type ThemeAppearance,
 } from "@uwe/shared-ui";
+
+const spaceMono = Space_Mono({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--uwe-font-space-mono",
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--uwe-font-newsreader",
+  display: "swap",
+});
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
@@ -35,7 +51,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ef4444",
+  themeColor: "#c2622b",
 };
 
 export default async function RootLayout({
@@ -69,7 +85,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
+    <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
       <body>
         <ThemeBootstrapScript
           scope="studio"

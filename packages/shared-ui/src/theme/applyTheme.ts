@@ -75,6 +75,8 @@ export function applyColorTokens(colors: ThemeColorTokens): void {
   style.setProperty(CSS_VARS.shellGradientMid, resolved.shellGradientMid);
   style.setProperty(CSS_VARS.shellGradientEnd, resolved.shellGradientEnd);
   style.setProperty(CSS_VARS.sidebarBg, resolved.sidebarBg);
+  style.setProperty(CSS_VARS.sidebarFg, resolved.sidebarFg);
+  style.setProperty(CSS_VARS.sidebarFgMuted, resolved.sidebarFgMuted);
   style.setProperty(CSS_VARS.cardBg, resolved.cardBg);
   style.setProperty(CSS_VARS.inputBg, resolved.inputBg);
   style.setProperty(CSS_VARS.focusRing, resolved.focusRing);
