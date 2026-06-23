@@ -1,21 +1,38 @@
 import Link from "next/link";
-import { listPortalWorlds } from "@/src/lib/auth";
-import {
-  EmptyState,
-} from "@uwe/shared-ui";
-import { PortalGuestShell } from "@/src/components/PortalGuestShell";
+import { getCurrentUser, listPortalWorlds } from "@/src/lib/auth";
+import { PortalPublicShell } from "@/src/components/PortalPublicShell";
+import { portalDiscoverBottomNav } from "@/src/lib/mobile-nav";
+import { EmptyState } from "@uwe/shared-ui";
 
 export default async function PortalWorldsPage() {
-  const worlds = await listPortalWorlds();
+  const [worlds, user] = await Promise.all([listPortalWorlds(), getCurrentUser()]);
 
   return (
-    <PortalGuestShell
-      guestNavActive="/worlds"
-      pageHeader={{
-        title: "Welten",
-        summary: "Wähle eine Welt und erkunde freigegebene Inhalte.",
-      }}
+    <PortalPublicShell
+      publicActive="discover"
+      bottomNav={portalDiscoverBottomNav("discover")}
+      brandHref="/worlds"
+      topBarExtra={
+        user ? (
+          <Link href="/auth/worlds" className="portal-login-link">
+            Meine Welten
+          </Link>
+        ) : (
+          <Link href="/login" className="portal-login-link">
+            Anmelden
+          </Link>
+        )
+      }
     >
+      <header className="uwe-page-header">
+        <div className="uwe-page-header-main">
+          <h1>Welten entdecken</h1>
+          <p className="uwe-page-summary">
+            Wähle eine Welt und erkunde freigegebene Inhalte.
+          </p>
+        </div>
+      </header>
+
       {worlds.length === 0 ? (
         <EmptyState
           title="Noch keine Welten verfügbar"
@@ -37,6 +54,6 @@ export default async function PortalWorldsPage() {
           ))}
         </div>
       )}
-    </PortalGuestShell>
+    </PortalPublicShell>
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PortalPublicShell } from "@/src/components/PortalPublicShell";
+import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   EmptyState,
   GlobalSearchForm,
@@ -20,8 +22,6 @@ import {
   type SearchEntityFilter,
 } from "@uwe/database/server";
 import { assertWorldReadable } from "@/src/lib/auth";
-import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
-import { PortalGuestShell } from "@/src/components/PortalGuestShell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -71,9 +71,9 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
   }));
 
   return (
-    <PortalGuestShell
+    <PortalPublicShell
       worldName={world.name}
-      brandHref="/worlds"
+      worldSlug={worldSlug}
       bottomNav={portalWorldBottomNav(worldSlug, isSearching ? "search" : "home")}
       breadcrumbs={[
         { label: "Welten", href: "/worlds" },
@@ -147,6 +147,6 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
           )}
         </div>
       )}
-    </PortalGuestShell>
+    </PortalPublicShell>
   );
 }

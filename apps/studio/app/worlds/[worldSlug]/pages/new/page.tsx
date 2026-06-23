@@ -62,6 +62,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
       worldName={world.name}
       activeNav="new-page"
       campaignSlug={campaignSlug}
+      backLink={{ label: "← Seitenliste", href: `/worlds/${worldSlug}` }}
       breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")}
       pageHeader={{
         title: "Neue Seite",

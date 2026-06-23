@@ -110,7 +110,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
       activeNav="inspector"
       bottomNavActive="inspector"
       contextTitle="Inspektor-Hilfe"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Inspektor", `/worlds/${worldSlug}/inspector`)}
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Kanon & Leaks", `/worlds/${worldSlug}/inspector`)}
       pageHeader={{
         title: "Inspektor",
         summary: "Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log).",
