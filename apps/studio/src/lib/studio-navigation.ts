@@ -341,6 +341,147 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   return "overview";
 }
 
+export interface StudioPaletteCommand {
+  id: string;
+  label: string;
+  href: string;
+  group: string;
+  keywords?: string[];
+}
+
+const PAGE_TEMPLATE_SHORTCUTS: {
+  id: string;
+  label: string;
+  template: string;
+  keywords: string[];
+}[] = [
+  { id: "new-npc", label: "NPC erstellen", template: "npc", keywords: ["create", "charakter"] },
+  { id: "new-ort", label: "Ort erstellen", template: "ort", keywords: ["create", "location", "stadt"] },
+  {
+    id: "new-fraktion",
+    label: "Fraktion erstellen",
+    template: "fraktion",
+    keywords: ["create", "faction", "gilde"],
+  },
+  { id: "new-quest", label: "Quest erstellen", template: "quest", keywords: ["create", "auftrag"] },
+  {
+    id: "new-handout",
+    label: "Handout erstellen",
+    template: "handout",
+    keywords: ["create", "brief"],
+  },
+];
+
+/** Command-palette entries derived from canonical Studio IA (studio-navigation). */
+export function studioCommandPaletteCommands(options: {
+  worlds: { name: string; slug: string }[];
+  worldSlug?: string | null;
+  pathname?: string;
+}): StudioPaletteCommand[] {
+  const { worlds, worldSlug, pathname = "" } = options;
+  const list: StudioPaletteCommand[] = [];
+
+  if (worldSlug) {
+    const base = `/worlds/${worldSlug}`;
+    const world = worlds.find((entry) => entry.slug === worldSlug);
+    const group = world ? `Welt: ${world.name}` : "Aktuelle Welt";
+
+    for (const item of worldNavItems(worldSlug)) {
+      const keywords =
+        item.key === "overview"
+          ? ["dashboard", "overview"]
+          : item.key === "pages"
+            ? ["wiki", "seitenliste"]
+            : item.key === "inspector"
+              ? ["sicherheit", "kanon", "leak", "check"]
+              : item.key === "graph"
+                ? ["beziehungen", "links"]
+                : item.key === "assets"
+                  ? ["karten", "bilder", "uploads"]
+                  : item.key === "soundboard"
+                    ? ["musik", "audio"]
+                    : item.key === "notes"
+                      ? ["kommentare", "review"]
+                      : item.key === "dungeons"
+                        ? ["räume", "cockpit"]
+                        : item.key === "labels"
+                          ? ["druck", "handout", "6x4", "label"]
+                          : item.key === "import"
+                            ? ["knoteforge"]
+                            : item.key === "backup"
+                              ? ["sicherung"]
+                              : item.key === "new-page"
+                                ? ["create", "erstellen"]
+                                : item.key === "sessions"
+                                  ? ["spielabend", "create"]
+                                  : undefined;
+
+      list.push({
+        id: `world-${item.key}`,
+        label:
+          item.key === "overview"
+            ? "Übersicht öffnen"
+            : item.key === "pages"
+              ? "Seitenliste öffnen"
+              : item.key === "new-page"
+                ? "Neue Seite erstellen"
+                : `${item.label} öffnen`,
+        href: item.href,
+        group,
+        keywords,
+      });
+    }
+
+    for (const shortcut of PAGE_TEMPLATE_SHORTCUTS) {
+      list.push({
+        id: shortcut.id,
+        label: shortcut.label,
+        href: `${base}/pages/new?template=${shortcut.template}`,
+        group,
+        keywords: shortcut.keywords,
+      });
+    }
+
+    const pageMatch = pathname.match(
+      /^\/worlds\/[^/]+\/(?:pages|npcs|orte|fraktionen|quests|handouts|items|notes|encounters|secrets|traps|puzzles|loot|rooms)\/([^/]+)/,
+    );
+    if (pageMatch) {
+      list.push({
+        id: "new-label-from-url",
+        label: "Label aus aktueller Seite",
+        href: `${base}/labels/new`,
+        group,
+        keywords: ["label", "quelle"],
+      });
+    }
+  }
+
+  for (const section of STUDIO_NAV_SECTIONS) {
+    for (const item of section.items) {
+      list.push({
+        id: `studio-${item.href.replace(/[^a-z0-9]+/gi, "-")}`,
+        label: `${item.label} öffnen`,
+        href: item.href,
+        group: section.title,
+        keywords: [section.title.toLocaleLowerCase("de")],
+      });
+    }
+  }
+
+  for (const world of worlds) {
+    if (world.slug === worldSlug) continue;
+    list.push({
+      id: `open-world-${world.slug}`,
+      label: `Welt öffnen: ${world.name}`,
+      href: `/worlds/${world.slug}/dashboard`,
+      group: "Welten",
+      keywords: [world.slug],
+    });
+  }
+
+  return list;
+}
+
 /** Breadcrumb trail for world-scoped Studio pages. */
 export function studioWorldBreadcrumbs(
   worldName: string,
