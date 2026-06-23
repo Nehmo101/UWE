@@ -24,6 +24,8 @@ export const CSS_VARS = {
   shellGradientMid: "--uwe-shell-gradient-mid",
   shellGradientEnd: "--uwe-shell-gradient-end",
   sidebarBg: "--uwe-sidebar-bg",
+  sidebarFg: "--uwe-sidebar-fg",
+  sidebarFgMuted: "--uwe-sidebar-fg-muted",
   cardBg: "--uwe-card-bg",
   inputBg: "--uwe-input-bg",
   focusRing: "--uwe-focus-ring",
@@ -73,6 +75,10 @@ export type ThemeColorTokens = {
   shellGradientEnd: string;
   /** Optional — derived from panel when omitted */
   sidebarBg?: string;
+  /** Optional — light text for dark sidebars; defaults to fg when omitted */
+  sidebarFg?: string;
+  /** Optional — muted text inside dark sidebars; defaults to fgMuted when omitted */
+  sidebarFgMuted?: string;
   /** Optional — derived from surface when omitted */
   cardBg?: string;
   /** Optional — derived from bgElevated when omitted */

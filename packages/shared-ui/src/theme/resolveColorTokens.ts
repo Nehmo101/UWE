@@ -2,6 +2,8 @@ import type { ThemeColorTokens } from "./tokens";
 
 export type ResolvedThemeColorTokens = ThemeColorTokens & {
   sidebarBg: string;
+  sidebarFg: string;
+  sidebarFgMuted: string;
   cardBg: string;
   inputBg: string;
   focusRing: string;
@@ -15,6 +17,8 @@ export function resolveThemeColorTokens(
   return {
     ...colors,
     sidebarBg: colors.sidebarBg ?? colors.panel,
+    sidebarFg: colors.sidebarFg ?? colors.fg,
+    sidebarFgMuted: colors.sidebarFgMuted ?? colors.fgMuted,
     cardBg: colors.cardBg ?? colors.surface,
     inputBg: colors.inputBg ?? colors.bgElevated,
     focusRing:

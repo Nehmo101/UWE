@@ -13,6 +13,7 @@ export type ThemeId =
   | "uwe-charcoal-desk"
   | "uwe-night-observatory"
   | "uwe-parchment-study"
+  | "uwe-parchment-os"
   | "uwe-phosphor-console"
   | "terra"
   | "hells";
@@ -264,6 +265,40 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
     },
     defaults: { font: "serif", background: "parchment", frostedGlass: false },
   },
+  "uwe-parchment-os": {
+    id: "uwe-parchment-os",
+    label: "Parchment OS",
+    description: "Warmes Papier-Studio mit Tinte-Sidebar — neues Studio-Standard-Design.",
+    colors: {
+      bg: "#f1e8d4",
+      bgElevated: "#fbf6ea",
+      surface: "rgba(251, 246, 234, 0.95)",
+      panel: "#ece1c9",
+      border: "#e0d4ba",
+      borderMuted: "rgba(224, 212, 186, 0.7)",
+      fg: "#211d17",
+      fgMuted: "#6f6555",
+      fgSubtle: "#9a8f78",
+      accent: "#c2622b",
+      accentHover: "#d47030",
+      accentMuted: "rgba(194, 98, 43, 0.12)",
+      danger: "#c2622b",
+      warning: "#e0b15a",
+      success: "#2f6f63",
+      info: "#2f6f63",
+      wikiLink: "#2f6f63",
+      wikiLinkHover: "#3a8878",
+      dmOnly: "#c2622b",
+      playerVisible: "#2f6f63",
+      shellGradientStart: "rgba(194, 98, 43, 0.03)",
+      shellGradientMid: "rgba(241, 232, 212, 0.05)",
+      shellGradientEnd: "#f1e8d4",
+      sidebarBg: "#211d17",
+      sidebarFg: "#f1e8d4",
+      sidebarFgMuted: "#b6ab92",
+    },
+    defaults: { font: "mono", background: "none", frostedGlass: false },
+  },
   "uwe-phosphor-console": {
     id: "uwe-phosphor-console",
     label: "Phosphor Console",
@@ -371,7 +406,7 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
 
 export const THEME_LIST = Object.values(UWE_THEMES);
 
-export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-cockpit-red";
+export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-parchment-os";
 export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-portal-purple";
 
 export function isThemeId(value: string): value is ThemeId {
