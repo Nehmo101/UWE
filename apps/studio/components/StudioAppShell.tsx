@@ -34,6 +34,9 @@ export interface StudioAppShellProps {
   breadcrumbs?: { label: string; href?: string }[];
   backHref?: string;
   backLabel?: string;
+  topBarExtra?: ReactNode;
+  searchAction?: string;
+  searchPlaceholder?: string;
 }
 
 /** Unified Studio shell with sectioned navigation. */
@@ -55,6 +58,9 @@ export function StudioAppShell({
   breadcrumbs,
   backHref,
   backLabel = "Zurück",
+  topBarExtra,
+  searchAction = "/search",
+  searchPlaceholder = "Global suchen…",
 }: StudioAppShellProps) {
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const headerBlock = (
@@ -88,6 +94,7 @@ export function StudioAppShell({
         showSearch={showSearch}
         searchAction={`/worlds/${worldSlug}?q=`}
         searchPlaceholder="In dieser Welt suchen…"
+        topBarExtra={topBarExtra}
         bottomNav={bottomNav}
         context={context}
         contextTitle={contextTitle}
@@ -117,6 +124,9 @@ export function StudioAppShell({
         showRail={showRail}
         railActiveId={railActiveId}
         showSearch={showSearch}
+        searchAction={searchAction}
+        searchPlaceholder={searchPlaceholder}
+        topBarExtra={topBarExtra}
         bottomNav={bottomNav}
         context={context}
         contextTitle={contextTitle}
@@ -159,6 +169,9 @@ export function StudioAppShell({
       showRail={showRail}
       railActiveId={railActiveId}
       showSearch={showSearch}
+      searchAction={searchAction}
+      searchPlaceholder={searchPlaceholder}
+      topBarExtra={topBarExtra}
       bottomNav={bottomNav}
       context={context}
       contextTitle={contextTitle}

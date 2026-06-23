@@ -84,4 +84,11 @@ describe("studio navigation", () => {
     assert.match(source, /^"use server";/m);
     assert.match(source, /export async function createPageAction/);
   });
+
+  it("marks worlds path active in studio sidebar sections for world shell", () => {
+    const sections = studioSidebarSections("/worlds/terra/dashboard");
+    const worldsSection = sections.find((section) => section.title === "Welten & Kampagnen");
+    assert.ok(worldsSection);
+    assert.ok(worldsSection.items.some((item) => item.href === "/worlds" && item.active));
+  });
 });

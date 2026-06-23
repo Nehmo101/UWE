@@ -10,6 +10,13 @@ interface AdminModuleShellProps {
   summary: string;
   bottomNav?: "today" | "capture" | "search" | "ai" | "more";
   actions?: ReactNode;
+  context?: ReactNode;
+  contextTitle?: string;
+  showSearch?: boolean;
+  breadcrumbs?: { label: string; href?: string }[];
+  backHref?: string;
+  backLabel?: string;
+  topBarExtra?: ReactNode;
   children: ReactNode;
 }
 
@@ -19,6 +26,13 @@ export function AdminModuleShell({
   summary,
   bottomNav = "more",
   actions,
+  context,
+  contextTitle,
+  showSearch,
+  breadcrumbs,
+  backHref,
+  backLabel,
+  topBarExtra,
   children,
 }: AdminModuleShellProps) {
   return (
@@ -29,6 +43,13 @@ export function AdminModuleShell({
       summary={summary}
       actions={actions}
       bottomNav={studioGlobalBottomNav(bottomNav)}
+      context={context}
+      contextTitle={contextTitle}
+      showSearch={showSearch}
+      breadcrumbs={breadcrumbs}
+      backHref={backHref}
+      backLabel={backLabel}
+      topBarExtra={topBarExtra}
     >
       {children}
     </StudioAppShell>

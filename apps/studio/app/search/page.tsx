@@ -1,13 +1,9 @@
 import Link from "next/link";
 import {
-  AppShell,
   GlobalSearchForm,
-  PageHeader,
   SearchFilterBar,
   SearchResultsList,
-  SidebarNav,
   SidebarSection,
-  TopBarBrand,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -17,7 +13,7 @@ import {
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 interface Props {
   searchParams: Promise<{
@@ -56,86 +52,15 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     : [];
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("search")}
+    <AdminModuleShell
+      activePath="/search"
+      bottomNav="search"
+      title="Globale Suche"
+      summary="Durchsuche Seiten, Inhaltsblöcke, NPCs, Orte, Tags und Aliase über alle Welten."
+      topBarExtra={
+        <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
+      }
       contextTitle="Suchbereiche"
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle="Globale Suche" href="/studio" />
-          <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
-        </>
-      }
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Welten", href: "/worlds" },
-              { label: "Globale Suche", href: "/search", active: true },
-            ]}
-          />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <PageHeader
-            title="Globale Suche"
-            summary="Durchsuche Seiten, Inhaltsblöcke, NPCs, Orte, Tags und Aliase über alle Welten."
-          />
-
-          <SearchFilterBar
-            action="/search"
-            query={q}
-            filters={[
-              {
-                name: "world",
-                label: "Welt",
-                value: worldSlug,
-                options: worlds.map((world) => ({ value: world.slug, label: world.name })),
-              },
-              ...(worldSlug
-                ? [
-                    {
-                      name: "campaign",
-                      label: "Kampagne",
-                      value: campaignSlug,
-                      options: campaigns.map((entry) => ({
-                        value: entry.slug,
-                        label: entry.name,
-                      })),
-                    },
-                  ]
-                : []),
-              {
-                name: "type",
-                label: "Typ",
-                value: entityFilter,
-                options: SEARCH_ENTITY_FILTERS.map((filter) => ({
-                  value: filter,
-                  label: SEARCH_ENTITY_FILTER_LABELS[filter],
-                })),
-              },
-              {
-                name: "visibility",
-                label: "Sichtbarkeit",
-                value: visibility,
-                options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                })),
-              },
-            ]}
-          />
-
-          <SearchResultsList
-            results={results}
-            query={q}
-            showWorld={!worldSlug}
-            showVisibility
-            showLabelActions
-          />
-        </>
-      }
       context={
         <SidebarSection title="Suchbereiche">
           <ul className="uwe-dashboard-muted" style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem" }}>
@@ -155,6 +80,58 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           )}
         </SidebarSection>
       }
-    />
+    >
+      <SearchFilterBar
+        action="/search"
+        query={q}
+        filters={[
+          {
+            name: "world",
+            label: "Welt",
+            value: worldSlug,
+            options: worlds.map((world) => ({ value: world.slug, label: world.name })),
+          },
+          ...(worldSlug
+            ? [
+                {
+                  name: "campaign",
+                  label: "Kampagne",
+                  value: campaignSlug,
+                  options: campaigns.map((entry) => ({
+                    value: entry.slug,
+                    label: entry.name,
+                  })),
+                },
+              ]
+            : []),
+          {
+            name: "type",
+            label: "Typ",
+            value: entityFilter,
+            options: SEARCH_ENTITY_FILTERS.map((filter) => ({
+              value: filter,
+              label: SEARCH_ENTITY_FILTER_LABELS[filter],
+            })),
+          },
+          {
+            name: "visibility",
+            label: "Sichtbarkeit",
+            value: visibility,
+            options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            })),
+          },
+        ]}
+      />
+
+      <SearchResultsList
+        results={results}
+        query={q}
+        showWorld={!worldSlug}
+        showVisibility
+        showLabelActions
+      />
+    </AdminModuleShell>
   );
 }

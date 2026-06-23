@@ -1,15 +1,18 @@
 import {
-  AppShell,
   BackLink,
   Breadcrumb,
   GlobalSearchForm,
-  PageHeader,
+  NavSidebarSections,
   SidebarNav,
   SidebarSection,
-  TopBarBrand,
+  StudioNavSidebar,
+  StudioShell,
 } from "@uwe/shared-ui";
-import { globalNavItems } from "@/src/lib/global-nav";
 import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
+import {
+  resolveStudioRailActiveId,
+  studioSidebarSections,
+} from "@/src/lib/studio-navigation";
 import {
   worldBottomNavKey,
   worldNavItems,
@@ -46,7 +49,7 @@ export interface WorldModuleShellProps {
 }
 
 /**
- * Stable world shell — global nav + world nav always visible.
+ * Stable world shell — sectioned Studio nav + world nav always visible.
  * Context-specific links belong in sidebarExtra or page actions, not replacing main nav.
  */
 export function WorldModuleShell({
@@ -68,6 +71,7 @@ export function WorldModuleShell({
 }: WorldModuleShellProps) {
   const bottomKey =
     bottomNavActive ?? worldBottomNavKey(activeNav, Boolean(searchQuery?.trim()));
+  const activePath = `/worlds/${worldSlug}`;
 
   const navItems = worldNavItems(worldSlug, activeNav).map((item) => {
     if (item.key === "new-page" && campaignSlug) {
@@ -77,15 +81,19 @@ export function WorldModuleShell({
   });
 
   return (
-    <AppShell
+    <StudioShell
+      subtitle={worldName}
+      brandHref={`/worlds/${worldSlug}/dashboard`}
+      showRail
+      railActiveId={resolveStudioRailActiveId(activePath)}
       bottomNav={studioWorldBottomNav(worldSlug, bottomKey)}
       contextTitle={contextTitle}
-      topBar={
+      context={context}
+      topBarExtra={
         <>
-          <TopBarBrand appName="UWE Studio" subtitle={worldName} href="/studio" />
           {showSearch && (
             <GlobalSearchForm
-              action={`/worlds/${worldSlug}`}
+              action={activePath}
               query={searchQuery}
               placeholder="In dieser Welt suchen…"
             />
@@ -93,14 +101,14 @@ export function WorldModuleShell({
           {topBarExtra}
         </>
       }
+      pageHeader={pageHeader}
       sidebar={
         <>
-          <SidebarSection title="Global">
-            <SidebarNav items={globalNavItems()} />
-          </SidebarSection>
-          <SidebarSection title="Welt">
-            <SidebarNav items={navItems} />
-          </SidebarSection>
+          <NavSidebarSections
+            sections={studioSidebarSections(activePath)}
+            defaultOpenTitles={["Dashboard", "Welten & Kampagnen"]}
+          />
+          <StudioNavSidebar title="Welt" items={navItems} />
           {sidebarExtra}
         </>
       }
@@ -108,18 +116,9 @@ export function WorldModuleShell({
         <>
           {backLink && <BackLink href={backLink.href} label={backLink.label} />}
           <Breadcrumb items={breadcrumb} />
-          {pageHeader && (
-            <PageHeader
-              title={pageHeader.title}
-              summary={pageHeader.summary}
-              meta={pageHeader.meta}
-              actions={pageHeader.actions}
-            />
-          )}
           {children}
         </>
       }
-      context={context}
     />
   );
 }

@@ -1,45 +1,21 @@
 import Link from "next/link";
-import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
+import { SidebarSection } from "@uwe/shared-ui";
 import { listStoredBackups } from "@uwe/backup";
 import { BackupWorkspace } from "@/components/BackupWorkspace";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 export default async function BackupPage() {
   const backups = listStoredBackups();
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Backup & Restore" href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "← Dashboard", href: "/studio" },
-              { label: "Welten", href: "/worlds" },
-              { label: "Backup", href: "/backup", active: true },
-            ]}
-          />
-        </SidebarSection>
-      }
-      main={
-        <>
-          <Breadcrumb items={[{ label: "Dashboard", href: "/studio" }, { label: "Backup" }]} />
-          <PageHeader
-            title="Backup & Restore"
-            summary="Erstelle vollständige oder welt-/kampagnenspezifische Backups, lade sie herunter und stelle Daten sicher wieder her."
-          />
-          <BackupWorkspace initialBackups={backups} />
-        </>
-      }
+    <AdminModuleShell
+      activePath="/backup"
+      title="Backup & Restore"
+      summary="Erstelle vollständige oder welt-/kampagnenspezifische Backups, lade sie herunter und stelle Daten sicher wieder her."
+      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Backup" }]}
       context={
         <SidebarSection title="Hinweise">
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.875rem" }}>
+          <ul className="uwe-hint" style={{ listStyle: "none", padding: 0, margin: 0 }}>
             <li style={{ marginBottom: "0.5rem" }}>ZIP-Backups enthalten JSON-Daten und Asset-Dateien.</li>
             <li style={{ marginBottom: "0.5rem" }}>Passwörter, Tokens und API-Keys werden ausgeschlossen.</li>
             <li>
@@ -48,6 +24,8 @@ export default async function BackupPage() {
           </ul>
         </SidebarSection>
       }
-    />
+    >
+      <BackupWorkspace initialBackups={backups} />
+    </AdminModuleShell>
   );
 }
