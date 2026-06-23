@@ -97,6 +97,20 @@ export function portalAuthSidebarSections(options: {
   return sections;
 }
 
+/** Guest wiki navigation for public /worlds routes. */
+export function portalGuestNav(activePath?: string): PortalNavItem[] {
+  const items = [
+    { key: "discover", label: "Welten entdecken", href: "/worlds" },
+    { key: "help", label: "Hilfe", href: "/" },
+    { key: "login", label: "Anmelden", href: "/login" },
+  ];
+
+  return items.map((item) => ({
+    ...item,
+    active: activePath === item.href,
+  }));
+}
+
 /** Breadcrumb trail for world-scoped auth pages. */
 export function portalWorldBreadcrumbs(
   worldName: string,

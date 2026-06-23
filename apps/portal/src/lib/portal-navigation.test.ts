@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   portalGlobalNav,
+  portalGuestNav,
   portalWorldNav,
   resolvePortalWorldNavKey,
 } from "./portal-navigation";
@@ -30,5 +31,11 @@ describe("portal navigation", () => {
       resolvePortalWorldNavKey("/auth/worlds/terra/assets", "terra"),
       "handouts",
     );
+  });
+
+  it("defines guest nav for public wiki routes", () => {
+    const nav = portalGuestNav("/worlds");
+    assert.equal(nav.find((item) => item.key === "discover")?.active, true);
+    assert.equal(nav.some((item) => item.key === "login"), true);
   });
 });

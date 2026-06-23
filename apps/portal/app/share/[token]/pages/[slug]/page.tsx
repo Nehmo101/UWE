@@ -1,9 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  PageHeader,
-  TopBarBrand,
   WikiContent,
   WikiSidebar,
 } from "@uwe/shared-ui";
@@ -17,6 +14,7 @@ import { SharePasswordForm } from "@/src/components/SharePasswordForm";
 import { isShareFeatureEnabled, isShareLinkPasswordRequired } from "@/src/lib/share-access";
 import { isSharePasswordVerified } from "@/src/lib/share-auth";
 import { resolveClientIp } from "@uwe/auth";
+import { PortalGuestShell } from "@/src/components/PortalGuestShell";
 
 interface Props {
   params: Promise<{ token: string; slug: string }>;
@@ -125,30 +123,25 @@ export default async function ShareLinkedPageView({ params }: Props) {
   const { view, readOnly } = result;
 
   return (
-    <AppShell
-      topBar={
-        <TopBarBrand
-          appName="UWE Freigabe"
-          subtitle={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
-          href={`/share/${token}`}
-        />
-      }
-      main={
-        <>
-          <PageHeader
-            title={view.page.title}
-            meta={view.page.tags.map((tag) => (
-              <span key={tag} className="uwe-tag">
-                {tag}
-              </span>
-            ))}
-          />
-          <WikiContent html={view.html} />
-        </>
-      }
+    <PortalGuestShell
+      brandAppName="UWE Freigabe"
+      brandHref={`/share/${token}`}
+      worldName={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
+      showLoginLink={false}
+      pageHeader={{
+        title: view.page.title,
+        meta: view.page.tags.map((tag) => (
+          <span key={tag} className="uwe-tag">
+            {tag}
+          </span>
+        )),
+      }}
       context={
         <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }
-    />
+      contextTitle="Verknüpfungen"
+    >
+      <WikiContent html={view.html} />
+    </PortalGuestShell>
   );
 }

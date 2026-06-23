@@ -37,6 +37,8 @@ export interface StudioAppShellProps {
   topBarExtra?: ReactNode;
   searchAction?: string;
   searchPlaceholder?: string;
+  /** When set, replaces the default sectioned sidebar. */
+  sidebar?: ReactNode;
 }
 
 /** Unified Studio shell with sectioned navigation. */
@@ -61,6 +63,7 @@ export function StudioAppShell({
   topBarExtra,
   searchAction = "/search",
   searchPlaceholder = "Global suchen…",
+  sidebar: sidebarOverride,
 }: StudioAppShellProps) {
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const headerBlock = (
@@ -185,10 +188,12 @@ export function StudioAppShell({
           : undefined
       }
       sidebar={
-        <NavSidebarSections
-          sections={studioSidebarSections(activePath)}
-          defaultOpenTitles={["Dashboard", "Inhalte & Medien", "Einstellungen"]}
-        />
+        sidebarOverride ?? (
+          <NavSidebarSections
+            sections={studioSidebarSections(activePath)}
+            defaultOpenTitles={["Dashboard", "Inhalte & Medien", "Einstellungen"]}
+          />
+        )
       }
       main={headerBlock}
     />

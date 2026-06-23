@@ -1,18 +1,12 @@
 import Link from "next/link";
 import {
-  AppShell,
-  Breadcrumb,
   HealthBadge,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
 } from "@uwe/shared-ui";
 import { prisma } from "@uwe/database/server";
 import { listCookbookSetupHints } from "@uwe/cookbook";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { getStudioCookbookDashboard } from "@/src/lib/cookbook-dashboard";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 function fitLevelLabel(level: string): string {
   switch (level) {
@@ -42,42 +36,18 @@ export default async function CookbookAdminPage() {
   const { hardware, runtime, recommendations, installedModels, registry, engines } = dashboard;
 
   return (
-    <AppShell
-      bottomNav={studioGlobalBottomNav("more")}
-      topBar={<TopBarBrand appName="UWE Studio" subtitle="Cookbook" href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "← Dashboard", href: "/studio" },
-              { label: "Cookbook", href: "/admin/cookbook", active: true },
-              { label: "KI & RTX Fallback", href: "/admin/ai-gateway" },
-              { label: "Systemstatus", href: "/admin/status" },
-              { label: "KI-Prompt", href: "/admin/ai-prompt" },
-              { label: "Einstellungen", href: "/settings" },
-            ]}
-          />
-        </SidebarSection>
+    <AdminModuleShell
+      activePath="/admin/cookbook"
+      bottomNav="more"
+      title="UWE Cookbook"
+      summary="Natives Modell-Management für lokale KI — Hardware-Fit, Runtime-Diagnose und Empfehlungen mit RTX/local-only Datenschutzregeln."
+      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Cookbook" }]}
+      actions={
+        <Link href="/admin/status" className="uwe-btn uwe-btn-ghost">
+          Systemstatus
+        </Link>
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Cookbook" },
-            ]}
-          />
-
-          <PageHeader
-            title="UWE Cookbook"
-            summary="Natives Modell-Management für lokale KI — Hardware-Fit, Runtime-Diagnose und Empfehlungen mit RTX/local-only Datenschutzregeln."
-            actions={
-              <Link href="/admin/status" className="uwe-button-secondary">
-                Systemstatus
-              </Link>
-            }
-          />
-
+    >
           {runtime.warnings.length > 0 && (
             <section className="uwe-form-error uwe-section" role="alert">
               <strong>Datenschutz / Routing:</strong>
@@ -181,15 +151,15 @@ export default async function CookbookAdminPage() {
                       marginTop: "0.5rem",
                     }}
                   >
-                    <dt style={{ color: "#94a3b8" }}>Modell</dt>
+                    <dt className="uwe-dashboard-muted">Modell</dt>
                     <dd style={{ margin: 0 }}>{rec.modelLabel}</dd>
-                    <dt style={{ color: "#94a3b8" }}>Engine</dt>
+                    <dt className="uwe-dashboard-muted">Engine</dt>
                     <dd style={{ margin: 0 }}>{rec.engineId}</dd>
-                    <dt style={{ color: "#94a3b8" }}>Hardware-Fit</dt>
+                    <dt className="uwe-dashboard-muted">Hardware-Fit</dt>
                     <dd style={{ margin: 0 }}>
                       {rec.fit.score}/100 — {fitLevelLabel(rec.fit.level)}
                     </dd>
-                    <dt style={{ color: "#94a3b8" }}>VRAM (geschätzt)</dt>
+                    <dt className="uwe-dashboard-muted">VRAM (geschätzt)</dt>
                     <dd style={{ margin: 0 }}>{rec.fit.estimatedVramGb} GB</dd>
                   </dl>
                   <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem", fontSize: "0.8rem" }}>
@@ -255,8 +225,6 @@ export default async function CookbookAdminPage() {
               </tbody>
             </table>
           </section>
-        </>
-      }
-    />
+    </AdminModuleShell>
   );
 }
