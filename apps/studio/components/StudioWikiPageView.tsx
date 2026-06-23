@@ -124,6 +124,7 @@ export async function StudioWikiPageView({
         worldSlug={worldSlug}
         worldName={world.name}
         activeNav="pages"
+        backLink={{ label: "← Seitenliste", href: `/worlds/${worldSlug}` }}
         breadcrumb={wikiPageBreadcrumb(
           world.name,
           worldSlug,

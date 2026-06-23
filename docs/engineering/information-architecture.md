@@ -167,20 +167,21 @@ app/auth/
 
 | Punkt | Priorität | Hinweis |
 |-------|-----------|---------|
-| `/worlds/[slug]/pages/new` hängt (fehlendes `"use server"`) | Hoch | Pre-existing, nicht Teil dieser IA-PR |
+| `/worlds/[slug]/pages/new` — `createPageAction` | Erledigt | `apps/studio/app/actions.ts` hat `"use server"`; Regression-Test in `studio-navigation.test.ts` |
 | Landing `/` vs. Dashboard `/studio` | Mittel | Zwei Einstiege bewusst (Marketing vs. Arbeitsbereich) |
-| Viele Studio-Weltseiten nutzen noch Custom-Sidebars | Mittel | Schrittweise Migration auf `StudioAppShell variant="world"` |
+| Weltseiten: kompakte `globalNavItems` vs. sectionierte Studio-Nav | Hoch | `WorldModuleShell` zeigt nur 4 Global-Links; PR 2 vereinheitlicht mit `studioSidebarSections` |
+| Command Palette an `studio-navigation.ts` | Erledigt | `studioCommandPaletteCommands()` in PR 1 |
 | Cloudflare/Hosting ohne dedizierte Route | Niedrig | Verteilt auf `/admin`, `/hardware`, `/settings` |
 | Preview-as-Player im Portal | Niedrig | DM-Tool; könnte später ins Studio verschoben werden |
 | Welt-Erstellung im Portal | Niedrig | Funktional für Owner; langfristig nur Studio |
 
 ### Empfohlene nächste UX-Verbesserungen
 
-1. Weltseiten im Studio auf `StudioAppShell variant="world"` migrieren
-2. `/admin/reviews` und `/admin/ai-gateway` in Admin-Übersicht verlinken
-3. Dungeon-Tiefe (Ebene → Raum) mit Breadcrumbs und Back-Navigation
-4. Portal öffentliches Wiki (`/worlds/*`) auf `PortalAppShell`-Pattern angleichen
-5. Command Palette an `studio-navigation.ts` anbinden
+1. `WorldModuleShell`: sectionierte Studio-Navigation statt kompakter `globalNavItems` (PR 2)
+2. Legacy-`AppShell`-Seiten auf `StudioAppShell` / `AdminModuleShell` migrieren (PR 2–3)
+3. Dungeon-Tiefe (Ebene → Raum): Back-Links vorhanden; Breadcrumbs prüfen bei neuen Routen
+4. Portal öffentliches Wiki (`/worlds/*`) auf `PortalShell` / `PortalAppShell`-Pattern angleichen (PR 4)
+5. Visual Polish: Tokens, Cards, Badges vereinheitlichen (PR 5)
 
 ---
 
