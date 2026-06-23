@@ -100,6 +100,25 @@ Client preferences from `ThemeSettingsPanel` override these in the browser via `
 - **Client:** `ThemeSettingsPanel` — presets, font, density, background, glass, scale
 - **Server:** form with `ThemePicker` + `VisualThemePreview` for global defaults
 
+### Application shells (workspace cockpit)
+
+Studio and Portal use shared shells from `@uwe/shared-ui` and app wrappers — **no Tailwind/shadcn parallel system**.
+
+| Shell | Location | When to use |
+|-------|----------|-------------|
+| `StudioShell` + `StudioAppShell` | `packages/shared-ui`, `apps/studio/components` | Studio dashboard, modules, admin |
+| `WorldModuleShell` | `apps/studio/components` | World-scoped DM routes — keeps sectioned Studio nav + world nav |
+| `AdminModuleShell` | `apps/studio/components` | Thin wrapper over `StudioAppShell variant="module"` |
+| `PortalShell` + `PortalGuestShell` | `packages/shared-ui`, `apps/portal/src/components` | Player wiki and share links |
+| `PortalAppShell` | `apps/portal/src/components` | Authenticated player hub |
+
+**Rules for feature pages:**
+
+- Use `uwe-*` classes and semantic tokens (`--uwe-accent`, `--uwe-surface`, …) — avoid hardcoded hex in `apps/*/app/**` pages.
+- Buttons: `uwe-btn`, `uwe-btn-primary`, `uwe-btn-ghost`
+- Cards: `uwe-card`, `uwe-stat-card`, `uwe-dashboard-grid`
+- Badges: `VisibilityBadge`, `PublishBadge`, `.uwe-badge-*` via `StatusBadges.tsx`
+
 ## Semantic CSS utilities
 
 | Class / token | Purpose |
@@ -111,6 +130,7 @@ Client preferences from `ThemeSettingsPanel` override these in the browser via `
 | `--uwe-dm-only` | GM-only emphasis |
 | `--uwe-player-visible` | Player-safe emphasis |
 | `--uwe-focus-ring` | Focus-visible outline |
+| `--uwe-label-print-bg` | Label print preview iframe (defaults to white) |
 | `body.uwe-theme-frosted` | Glass blur on shell surfaces |
 
 ## Creating a new theme

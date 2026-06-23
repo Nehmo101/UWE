@@ -543,3 +543,11 @@
     grid-template-columns: minmax(0, 1fr) 18rem;
   }
 }
+
+.uwe-label-preview-iframe {
+  width: 100%;
+  min-height: 420px;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-radius-md);
+  background: var(--uwe-label-print-bg, #ffffff);
+}

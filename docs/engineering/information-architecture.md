@@ -169,7 +169,9 @@ app/auth/
 |-------|-----------|---------|
 | `/worlds/[slug]/pages/new` — `createPageAction` | Erledigt | `apps/studio/app/actions.ts` hat `"use server"`; Regression-Test in `studio-navigation.test.ts` |
 | Landing `/` vs. Dashboard `/studio` | Mittel | Zwei Einstiege bewusst (Marketing vs. Arbeitsbereich) |
-| Weltseiten: kompakte `globalNavItems` vs. sectionierte Studio-Nav | Hoch | `WorldModuleShell` zeigt nur 4 Global-Links; PR 2 vereinheitlicht mit `studioSidebarSections` |
+| Weltseiten: sectionierte Studio-Nav | Erledigt | `WorldModuleShell` nutzt `studioSidebarSections` + Icon-Rail (PR 2) |
+| Legacy Studio `AppShell`-Seiten | Erledigt | Module/Admin auf `AdminModuleShell` / `StudioAppShell` (PR 2–3) |
+| Portal-Gast-Wiki auf `PortalGuestShell` | Erledigt | `/worlds/*`, `/share/*` (PR 4) |
 | Command Palette an `studio-navigation.ts` | Erledigt | `studioCommandPaletteCommands()` in PR 1 |
 | Cloudflare/Hosting ohne dedizierte Route | Niedrig | Verteilt auf `/admin`, `/hardware`, `/settings` |
 | Preview-as-Player im Portal | Niedrig | DM-Tool; könnte später ins Studio verschoben werden |
@@ -177,11 +179,24 @@ app/auth/
 
 ### Empfohlene nächste UX-Verbesserungen
 
-1. `WorldModuleShell`: sectionierte Studio-Navigation statt kompakter `globalNavItems` (PR 2)
-2. Legacy-`AppShell`-Seiten auf `StudioAppShell` / `AdminModuleShell` migrieren (PR 2–3)
-3. Dungeon-Tiefe (Ebene → Raum): Back-Links vorhanden; Breadcrumbs prüfen bei neuen Routen
-4. Portal öffentliches Wiki (`/worlds/*`) auf `PortalShell` / `PortalAppShell`-Pattern angleichen (PR 4)
-5. Visual Polish: Tokens, Cards, Badges vereinheitlichen (PR 5)
+1. Studio-Dashboard (`/studio`): Widget-Grid statt loser Kacheln (Mockup-Richtung)
+2. `StudioAppShell variant="world"` mit `WorldModuleShell` zusammenführen (optional)
+3. Mobile Overlap-Audit auf tiefen Dungeon-/Editor-Routen
+4. Einheitliche Empty States / Stat-Cards auf verbleibenden Legacy-Inhalten
+5. `global-nav.ts` entfernen, wenn nirgends mehr referenziert
+
+---
+
+## G) Shell-Komponenten (Stand Juni 2026)
+
+| Komponente | App | Verwendung |
+|------------|-----|------------|
+| `StudioAppShell` | Studio | Dashboard, Module, Admin-Variante |
+| `AdminModuleShell` | Studio | Daily Admin OS, Inhalte, Admin-Unterseiten |
+| `WorldModuleShell` | Studio | Alle `/worlds/[slug]/**` Routen |
+| `PortalAppShell` | Portal | Authentifizierter Spieler-Hub (`/auth/**`) |
+| `PortalGuestShell` | Portal | Öffentliches Wiki, Share-Links (`/worlds/*`, `/share/*`) |
+| Raw `AppShell` | — | Nur Auth/Landing — nicht für Feature-Seiten |
 
 ---
 
