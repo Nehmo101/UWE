@@ -32,6 +32,12 @@ export function applyLayoutTokens(): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const style = root.style;
+  style.setProperty(CSS_VARS.spacingXs, LAYOUT_TOKENS.spacingXs);
+  style.setProperty(CSS_VARS.spacingSm, LAYOUT_TOKENS.spacingSm);
+  style.setProperty(CSS_VARS.spacingMd, LAYOUT_TOKENS.spacingMd);
+  style.setProperty(CSS_VARS.spacingLg, LAYOUT_TOKENS.spacingLg);
+  style.setProperty(CSS_VARS.spacingXl, LAYOUT_TOKENS.spacingXl);
+  style.setProperty(CSS_VARS.spacing2xl, LAYOUT_TOKENS.spacing2xl);
   style.setProperty(CSS_VARS.radiusSm, LAYOUT_TOKENS.radiusSm);
   style.setProperty(CSS_VARS.radiusMd, LAYOUT_TOKENS.radiusMd);
   style.setProperty(CSS_VARS.radiusLg, LAYOUT_TOKENS.radiusLg);

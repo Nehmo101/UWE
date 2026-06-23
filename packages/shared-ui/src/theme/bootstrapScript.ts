@@ -119,6 +119,12 @@ export function buildThemeBootstrapScript(
     style.setProperty('--uwe-shadow-sm',LAYOUT.shadowSm);
     style.setProperty('--uwe-shadow-md',LAYOUT.shadowMd);
     style.setProperty('--uwe-shadow-lg',LAYOUT.shadowLg);
+    style.setProperty('--uwe-spacing-xs',LAYOUT.spacingXs);
+    style.setProperty('--uwe-spacing-sm',LAYOUT.spacingSm);
+    style.setProperty('--uwe-spacing-md',LAYOUT.spacingMd);
+    style.setProperty('--uwe-spacing-lg',LAYOUT.spacingLg);
+    style.setProperty('--uwe-spacing-xl',LAYOUT.spacingXl);
+    style.setProperty('--uwe-spacing-2xl',LAYOUT.spacing2xl);
     root.dataset.uweTheme=themeId;
     if(prefs&&prefs.font&&FONTS[prefs.font]) style.setProperty('--uwe-font-family',FONTS[prefs.font]);
     if(prefs&&prefs.density&&DENSITY[prefs.density]!=null) style.setProperty('--uwe-density-scale',String(DENSITY[prefs.density]));

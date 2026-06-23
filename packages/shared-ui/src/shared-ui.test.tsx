@@ -267,9 +267,21 @@ describe("shared-ui components", () => {
     assert.match(uweComponentsCss, /uwe-toolwindow/);
     assert.match(uweComponentsCss, /uwe-icon-rail/);
     assert.match(uweComponentsCss, /--uwe-radius-md/);
+    assert.match(uweComponentsCss, /--uwe-spacing-md/);
+    assert.match(uweComponentsCss, /--uwe-focus-ring/);
     assert.match(uweComponentsCss, /uwe-sidebar-collapse-toggle/);
     assert.match(uweComponentsCss, /uwe-collapsible-sidebar/);
     assert.match(uweComponentsCss, /data-sidebar-collapsed/);
+    assert.match(uweComponentsCss, /uwe-admin-status-grid/);
+  });
+
+  it("includes inline action and page action mobile layout rules", () => {
+    assert.match(uweCss, /\.uwe-inline-actions/);
+    assert.match(uweCss, /\.uwe-page-actions/);
+    assert.match(uweCss, /uwe-inline-actions > \.uwe-btn:only-child/);
+    assert.match(uweCss, /uwe-page-actions \.uwe-btn:only-child/);
+    assert.match(uweCss, /--uwe-spacing-sm/);
+    assert.match(uweCss, /--uwe-card-bg/);
   });
 });
 

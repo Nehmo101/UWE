@@ -28,6 +28,12 @@ export const CSS_VARS = {
   inputBg: "--uwe-input-bg",
   focusRing: "--uwe-focus-ring",
   focusShadow: "--uwe-focus-shadow",
+  spacingXs: "--uwe-spacing-xs",
+  spacingSm: "--uwe-spacing-sm",
+  spacingMd: "--uwe-spacing-md",
+  spacingLg: "--uwe-spacing-lg",
+  spacingXl: "--uwe-spacing-xl",
+  spacing2xl: "--uwe-spacing-2xl",
   radiusSm: "--uwe-radius-sm",
   radiusMd: "--uwe-radius-md",
   radiusLg: "--uwe-radius-lg",
@@ -78,6 +84,12 @@ export type ThemeColorTokens = {
 
 /** Static layout tokens (not per-preset). */
 export const LAYOUT_TOKENS = {
+  spacingXs: "0.25rem",
+  spacingSm: "0.5rem",
+  spacingMd: "0.75rem",
+  spacingLg: "1rem",
+  spacingXl: "1.5rem",
+  spacing2xl: "2rem",
   radiusSm: "0.375rem",
   radiusMd: "0.5rem",
   radiusLg: "0.75rem",
