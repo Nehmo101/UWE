@@ -5,11 +5,13 @@ import type { BottomNavItem } from "../MobileComponents";
 export interface PortalShellProps {
   main: ReactNode;
   sidebar?: ReactNode;
+  context?: ReactNode;
+  contextTitle?: string;
   worldName?: string;
+  appName?: string;
   brandHref?: string;
   topBarExtra?: ReactNode;
   bottomNav?: BottomNavItem[];
-  contextTitle?: string;
   pageHeader?: {
     title: string;
     summary?: string | null;
@@ -22,11 +24,13 @@ export interface PortalShellProps {
 export function PortalShell({
   main,
   sidebar,
+  context,
+  contextTitle = "Navigation",
   worldName,
+  appName = "UWE Portal",
   brandHref = "/",
   topBarExtra,
   bottomNav,
-  contextTitle = "Navigation",
   pageHeader,
 }: PortalShellProps) {
   const body = (
@@ -50,7 +54,7 @@ export function PortalShell({
       topBar={
         <>
           <TopBarBrand
-            appName="UWE Portal"
+            appName={appName}
             subtitle={worldName}
             href={brandHref}
           />
@@ -58,6 +62,7 @@ export function PortalShell({
         </>
       }
       sidebar={sidebar}
+      context={context}
       main={body}
     />
   );

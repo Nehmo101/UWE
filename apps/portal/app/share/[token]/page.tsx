@@ -2,9 +2,6 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  PageHeader,
-  TopBarBrand,
   WikiContent,
   WikiSidebar,
 } from "@uwe/shared-ui";
@@ -18,6 +15,7 @@ import { SharePasswordForm } from "@/src/components/SharePasswordForm";
 import { isShareFeatureEnabled, isShareLinkPasswordRequired } from "@/src/lib/share-access";
 import { isSharePasswordVerified } from "@/src/lib/share-auth";
 import { resolveClientIp } from "@uwe/auth";
+import { PortalGuestShell } from "@/src/components/PortalGuestShell";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -142,21 +140,19 @@ export default async function ShareLinkView({ params }: Props) {
   }
 
   if (result.kind === "asset") {
-    const { asset, fileUrl, readOnly } = result;
+    const { asset, fileUrl, readOnly: _readOnly } = result;
     const previewable = isPreviewable(asset.mimeType);
 
     return (
-      <AppShell
-        topBar={
-          <TopBarBrand
-            appName="UWE Freigabe"
-            subtitle={readOnly ? "Nur-Lesen" : "Freigegebenes Asset"}
-            href={`/share/${token}`}
-          />
-        }
-        main={
-          <>
-            <PageHeader title={asset.title} summary={asset.description} />
+      <PortalGuestShell
+        brandAppName="UWE Freigabe"
+        brandHref={`/share/${token}`}
+        showLoginLink={false}
+        pageHeader={{
+          title: asset.title,
+          summary: asset.description,
+        }}
+      >
             {previewable ? (
               asset.mimeType?.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -171,39 +167,32 @@ export default async function ShareLinkView({ params }: Props) {
                 </Link>
               </p>
             )}
-          </>
-        }
-      />
+      </PortalGuestShell>
     );
   }
 
   const { view, readOnly } = result;
 
   return (
-    <AppShell
-      topBar={
-        <TopBarBrand
-          appName="UWE Freigabe"
-          subtitle={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
-          href={`/share/${token}`}
-        />
-      }
-      main={
-        <>
-          <PageHeader
-            title={view.page.title}
-            meta={view.page.tags.map((tag) => (
-              <span key={tag} className="uwe-tag">
-                {tag}
-              </span>
-            ))}
-          />
-          <WikiContent html={view.html} />
-        </>
-      }
+    <PortalGuestShell
+      brandAppName="UWE Freigabe"
+      brandHref={`/share/${token}`}
+      worldName={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
+      showLoginLink={false}
+      pageHeader={{
+        title: view.page.title,
+        meta: view.page.tags.map((tag) => (
+          <span key={tag} className="uwe-tag">
+            {tag}
+          </span>
+        )),
+      }}
       context={
         <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }
-    />
+      contextTitle="Verknüpfungen"
+    >
+      <WikiContent html={view.html} />
+    </PortalGuestShell>
   );
 }

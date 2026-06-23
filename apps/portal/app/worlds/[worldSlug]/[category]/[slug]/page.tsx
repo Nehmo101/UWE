@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
   PortalNavByType,
+  PortalNavSidebar,
   SearchField,
-  SidebarSection,
-  TopBarBrand,
   WikiContent,
 } from "@uwe/shared-ui";
 import {
@@ -20,6 +16,7 @@ import {
   type NavCategory,
 } from "@uwe/database/server";
 import { assertWorldReadable } from "@/src/lib/auth";
+import { PortalGuestShell } from "@/src/components/PortalGuestShell";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
@@ -72,15 +69,28 @@ export default async function PortalPageView({ params }: Props) {
   }));
 
   return (
-    <AppShell
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
-          <SearchField action={`/worlds/${worldSlug}`} placeholder="Suchen…" />
-        </>
+    <PortalGuestShell
+      worldName={world.name}
+      brandHref="/worlds"
+      breadcrumbs={[
+        { label: "Welten", href: "/worlds" },
+        { label: world.name, href: `/worlds/${worldSlug}` },
+        { label: NAV_CATEGORY_LABELS[category as NavCategory] },
+        { label: page.title },
+      ]}
+      pageHeader={{
+        title: page.title,
+        meta: parseStringArray(page.tags).map((tag) => (
+          <span key={tag} className="uwe-tag">
+            {tag}
+          </span>
+        )),
+      }}
+      topBarExtra={
+        <SearchField action={`/worlds/${worldSlug}`} placeholder="Suchen…" />
       }
       sidebar={
-        <SidebarSection title="Navigation">
+        <PortalNavSidebar>
           <Link href={`/worlds/${worldSlug}`} className="uwe-sidebar-back-link">
             ← {world.name}
           </Link>
@@ -89,31 +99,12 @@ export default async function PortalPageView({ params }: Props) {
             items={navItems}
             activeCategory={category as NavCategory}
           />
-        </SidebarSection>
+        </PortalNavSidebar>
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Welten", href: "/worlds" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: NAV_CATEGORY_LABELS[category as NavCategory] },
-              { label: page.title },
-            ]}
-          />
-          <PageHeader
-            title={page.title}
-            meta={parseStringArray(page.tags).map((tag) => (
-              <span key={tag} className="uwe-tag">
-                {tag}
-              </span>
-            ))}
-          />
-          {page.contentBlocks.map((block, index) => (
-            <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
-          ))}
-        </>
-      }
-    />
+    >
+      {page.contentBlocks.map((block, index) => (
+        <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
+      ))}
+    </PortalGuestShell>
   );
 }
