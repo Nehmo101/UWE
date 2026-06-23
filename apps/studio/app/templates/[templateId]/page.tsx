@@ -1,15 +1,8 @@
 import { notFound } from "next/navigation";
-import {
-  AppShell,
-  Breadcrumb,
-  PageHeader,
-  SidebarNav,
-  SidebarSection,
-  TopBarBrand,
-} from "@uwe/shared-ui";
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import { updateTemplateAction } from "../../template-actions";
 import { TemplateForm } from "../TemplateForm";
+import { AdminModuleShell } from "@/components/AdminModuleShell";
 
 interface Props {
   params: Promise<{ templateId: string }>;
@@ -24,47 +17,28 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
   if (!template) notFound();
 
   return (
-    <AppShell
-      topBar={<TopBarBrand appName="UWE Studio" subtitle={template.name} href="/studio" />}
-      sidebar={
-        <SidebarSection title="Navigation">
-          <SidebarNav
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Templates", href: "/templates", active: true },
-            ]}
-          />
-        </SidebarSection>
+    <AdminModuleShell
+      activePath="/templates"
+      title={template.name}
+      summary={
+        template.isSystem
+          ? "System-Template — Änderungen wirken auf Quick Create in allen Welten."
+          : "Eigenes Template bearbeiten."
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", href: "/studio" },
-              { label: "Templates", href: "/templates" },
-              { label: template.name },
-            ]}
-          />
+      breadcrumbs={[
+        { label: "Dashboard", href: "/studio" },
+        { label: "Templates", href: "/templates" },
+        { label: template.name },
+      ]}
+    >
+      {saved && <p className="uwe-inspector-ok" role="status">✓ Gespeichert.</p>}
+      {error && <p className="uwe-form-error" role="alert">{error}</p>}
 
-          <PageHeader
-            title={template.name}
-            summary={
-              template.isSystem
-                ? "System-Template — Änderungen wirken auf Quick Create in allen Welten."
-                : "Eigenes Template bearbeiten."
-            }
-          />
-
-          {saved && <p className="uwe-inspector-ok" role="status">✓ Gespeichert.</p>}
-          {error && <p className="uwe-form-error" role="alert">{error}</p>}
-
-          <TemplateForm
-            template={template}
-            action={updateTemplateAction}
-            submitLabel="Template speichern"
-          />
-        </>
-      }
-    />
+      <TemplateForm
+        template={template}
+        action={updateTemplateAction}
+        submitLabel="Template speichern"
+      />
+    </AdminModuleShell>
   );
 }
