@@ -8,9 +8,7 @@ describe("uwe theme system", () => {
   it("defines all required theme presets", () => {
     const required = [
       "uwe-default",
-      "uwe-cockpit-red",
       "uwe-dark-fantasy",
-      "uwe-portal-purple",
       "uwe-charcoal-desk",
       "uwe-night-observatory",
       "uwe-parchment-study",
@@ -42,7 +40,14 @@ describe("uwe theme system", () => {
       resolveThemeId("odysseus-terminal-inspired", "uwe-default"),
       "uwe-phosphor-console",
     );
-    assert.equal(Object.keys(LEGACY_THEME_ID_MAP).length, 4);
+    assert.equal(Object.keys(LEGACY_THEME_ID_MAP).length, 6);
+  });
+
+  it("remaps the retired cockpit-red / portal-purple defaults to Parchment OS", () => {
+    assert.equal(isThemeId("uwe-cockpit-red"), false);
+    assert.equal(isThemeId("uwe-portal-purple"), false);
+    assert.equal(resolveThemeId("uwe-cockpit-red", "uwe-default"), "uwe-parchment-os");
+    assert.equal(resolveThemeId("uwe-portal-purple", "uwe-default"), "uwe-parchment-os");
   });
 
   it("bootstrap script references CSS variables and localStorage", () => {

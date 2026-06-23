@@ -7,9 +7,7 @@ import type {
 
 export type ThemeId =
   | "uwe-default"
-  | "uwe-cockpit-red"
   | "uwe-dark-fantasy"
-  | "uwe-portal-purple"
   | "uwe-charcoal-desk"
   | "uwe-night-observatory"
   | "uwe-parchment-study"
@@ -69,42 +67,6 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
     },
     defaults: { background: "none", frostedGlass: true },
   },
-  "uwe-cockpit-red": {
-    id: "uwe-cockpit-red",
-    label: "Cockpit Red",
-    description: "Dark command-deck shell with crimson accents — Studio cockpit mockup.",
-    colors: {
-      bg: "#12080a",
-      bgElevated: "#1a0c10",
-      surface: "rgba(26, 12, 16, 0.72)",
-      panel: "rgba(14, 8, 10, 0.92)",
-      border: "rgba(220, 38, 38, 0.28)",
-      borderMuted: "rgba(220, 38, 38, 0.16)",
-      fg: "#fce7e7",
-      fgMuted: "#f0a8a8",
-      fgSubtle: "#9f4a4a",
-      accent: "#ef4444",
-      accentHover: "#f87171",
-      accentMuted: "rgba(239, 68, 68, 0.16)",
-      danger: "#fb7185",
-      warning: "#fbbf24",
-      success: "#4ade80",
-      info: "#fca5a5",
-      wikiLink: "#fca5a5",
-      wikiLinkHover: "#fecaca",
-      dmOnly: "#fbbf24",
-      playerVisible: "#86efac",
-      shellGradientStart: "rgba(239, 68, 68, 0.22)",
-      shellGradientMid: "rgba(251, 113, 133, 0.1)",
-      shellGradientEnd: "#080406",
-    },
-    defaults: {
-      background: "constellation",
-      frostedGlass: true,
-      bgEffectColor: "#fecaca",
-      bgEffectIntensity: 0.38,
-    },
-  },
   "uwe-dark-fantasy": {
     id: "uwe-dark-fantasy",
     label: "Dark Fantasy",
@@ -135,37 +97,6 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
       shellGradientEnd: "#030712",
     },
     defaults: { background: "constellation", frostedGlass: true, bgEffectIntensity: 0.55 },
-  },
-  "uwe-portal-purple": {
-    id: "uwe-portal-purple",
-    label: "Portal Purple",
-    description: "Violet fantasy palette tuned for player-facing Portal.",
-    colors: {
-      bg: "#0f0a2e",
-      bgElevated: "#1e1b4b",
-      surface: "rgba(30, 27, 75, 0.65)",
-      panel: "rgba(15, 10, 46, 0.88)",
-      border: "rgba(167, 139, 250, 0.22)",
-      borderMuted: "rgba(167, 139, 250, 0.14)",
-      fg: "#ede9fe",
-      fgMuted: "#c4b5fd",
-      fgSubtle: "#a78bfa",
-      accent: "#8b5cf6",
-      accentHover: "#a78bfa",
-      accentMuted: "rgba(139, 92, 246, 0.18)",
-      danger: "#f87171",
-      warning: "#fbbf24",
-      success: "#86efac",
-      info: "#c4b5fd",
-      wikiLink: "#c4b5fd",
-      wikiLinkHover: "#ddd6fe",
-      dmOnly: "#f59e0b",
-      playerVisible: "#86efac",
-      shellGradientStart: "rgba(124, 58, 237, 0.28)",
-      shellGradientMid: "rgba(167, 139, 250, 0.12)",
-      shellGradientEnd: "#0f0a2e",
-    },
-    defaults: { background: "dots", frostedGlass: true },
   },
   "uwe-charcoal-desk": {
     id: "uwe-charcoal-desk",
@@ -417,12 +348,18 @@ export function getTheme(id: ThemeId): UweThemeDefinition {
   return UWE_THEMES[id];
 }
 
-/** Retired preview IDs from early drafts — mapped to UWE-native names only. */
+/**
+ * Retired theme IDs — mapped to current UWE-native names at read time.
+ * The old per-scope defaults (cockpit-red / portal-purple) are remapped to
+ * Parchment OS so existing installs adopt the new design with no migration.
+ */
 export const LEGACY_THEME_ID_MAP: Record<string, ThemeId> = {
   "odysseus-dark-inspired": "uwe-charcoal-desk",
   "odysseus-midnight-inspired": "uwe-night-observatory",
   "odysseus-paper-inspired": "uwe-parchment-study",
   "odysseus-terminal-inspired": "uwe-phosphor-console",
+  "uwe-cockpit-red": "uwe-parchment-os",
+  "uwe-portal-purple": "uwe-parchment-os",
 };
 
 export function resolveThemeId(value: string, fallback: ThemeId): ThemeId {
