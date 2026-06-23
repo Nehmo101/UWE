@@ -78,7 +78,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
       worldSlug={worldSlug}
       worldName={world.name}
       activeNav="assets"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Assets", `/worlds/${worldSlug}/assets`)}
+      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Medien & Assets", `/worlds/${worldSlug}/assets`)}
       pageHeader={{
         title: "Asset-Bibliothek",
         summary: "Bilder, Karten, Handouts und Medien zentral verwalten.",

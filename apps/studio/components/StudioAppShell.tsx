@@ -6,11 +6,14 @@ import {
   StudioShell,
   type BottomNavItem,
 } from "@uwe/shared-ui";
+import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   studioDashboardNav,
   studioSidebarSections,
   resolveStudioRailActiveId,
+  worldBottomNavKey,
   worldNavItems,
+  type WorldBottomNavKey,
   type WorldNavKey,
 } from "@/src/lib/studio-navigation";
 
@@ -29,6 +32,11 @@ export interface StudioAppShellProps {
   showSearch?: boolean;
   worldSlug?: string;
   worldActive?: WorldNavKey;
+  /** Preserve campaign filter on „Neue Seite“ link. */
+  campaignSlug?: string;
+  searchQuery?: string;
+  bottomNavActive?: WorldBottomNavKey;
+  sidebarExtra?: ReactNode;
   context?: ReactNode;
   contextTitle?: string;
   breadcrumbs?: { label: string; href?: string }[];
@@ -55,6 +63,10 @@ export function StudioAppShell({
   showSearch = false,
   worldSlug,
   worldActive,
+  campaignSlug,
+  searchQuery = "",
+  bottomNavActive,
+  sidebarExtra,
   context,
   contextTitle,
   breadcrumbs,
@@ -90,6 +102,15 @@ export function StudioAppShell({
   );
 
   if (variant === "world" && worldSlug) {
+    const bottomKey =
+      bottomNavActive ?? worldBottomNavKey(worldActive ?? "overview", Boolean(searchQuery?.trim()));
+    const navItems = worldNavItems(worldSlug, worldActive).map((item) => {
+      if (item.key === "new-page" && campaignSlug) {
+        return { ...item, href: `${item.href}?campaign=${campaignSlug}` };
+      }
+      return item;
+    });
+
     return (
       <StudioShell
         subtitle="Welt bearbeiten"
@@ -98,7 +119,7 @@ export function StudioAppShell({
         searchAction={`/worlds/${worldSlug}?q=`}
         searchPlaceholder="In dieser Welt suchen…"
         topBarExtra={topBarExtra}
-        bottomNav={bottomNav}
+        bottomNav={bottomNav ?? studioWorldBottomNav(worldSlug, bottomKey)}
         context={context}
         contextTitle={contextTitle}
         pageHeader={
@@ -111,10 +132,14 @@ export function StudioAppShell({
             : undefined
         }
         sidebar={
-          <StudioNavSidebar
-            title="Welt"
-            items={worldNavItems(worldSlug, worldActive)}
-          />
+          <>
+            <NavSidebarSections
+              sections={studioSidebarSections(`/worlds/${worldSlug}`)}
+              defaultOpenTitles={["Dashboard", "Welten & Kampagnen"]}
+            />
+            <StudioNavSidebar title="Welt" items={navItems} />
+            {sidebarExtra}
+          </>
         }
         main={headerBlock}
       />

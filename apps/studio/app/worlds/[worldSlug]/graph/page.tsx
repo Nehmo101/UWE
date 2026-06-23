@@ -109,7 +109,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
         worldSlug={worldSlug}
         worldName={world.name}
         activeNav="graph"
-        breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Graph", graphBase)}
+        breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Wissensgraph", graphBase)}
         pageHeader={{
           title: "Link-Graph",
           summary: "Seiten als Knoten, Wikilinks und Relationen als Kanten.",
