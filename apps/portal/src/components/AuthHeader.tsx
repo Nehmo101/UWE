@@ -9,16 +9,17 @@ interface AuthHeaderProps {
     displayName: string;
     email: string | null;
   } | null;
-  canAccessAdmin?: boolean;
-  studioSettingsUrl?: string;
+  canAccessStudio?: boolean;
+  studioUrl?: string;
 }
 
-export function AuthHeader({ user, canAccessAdmin = false, studioSettingsUrl }: AuthHeaderProps) {
+/** Legacy auth chrome — prefer PortalAppShell for new pages. */
+export function AuthHeader({ user, canAccessStudio = false, studioUrl }: AuthHeaderProps) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
     <header className="auth-header" data-nav-open={navOpen ? "true" : "false"}>
-      <Link href="/" className="auth-header-brand">
+      <Link href="/auth/worlds" className="auth-header-brand">
         UWE Portal
         <small>Spieler-Bereich</small>
       </Link>
@@ -33,20 +34,17 @@ export function AuthHeader({ user, canAccessAdmin = false, studioSettingsUrl }: 
       </button>
       <nav>
         <Link href="/auth/worlds" onClick={() => setNavOpen(false)}>
-          Welten
+          Meine Welten
         </Link>
-        {canAccessAdmin && studioSettingsUrl ? (
-          <a href={studioSettingsUrl} onClick={() => setNavOpen(false)}>
-            Admin / Einstellungen
+        {canAccessStudio && studioUrl ? (
+          <a href={studioUrl} onClick={() => setNavOpen(false)}>
+            Studio öffnen
           </a>
         ) : null}
         {user ? (
           <>
             <Link href="/auth/account/password" onClick={() => setNavOpen(false)}>
-              Passwort
-            </Link>
-            <Link href="/auth/account/security" onClick={() => setNavOpen(false)}>
-              Sicherheit
+              Account
             </Link>
             <LogoutButton displayName={user.displayName} />
           </>

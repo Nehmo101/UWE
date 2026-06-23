@@ -153,20 +153,20 @@ export default async function ShareLinkView({ params }: Props) {
           summary: asset.description,
         }}
       >
-            {previewable ? (
-              asset.mimeType?.startsWith("image/") ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fileUrl} alt={asset.title} className="share-asset-preview" />
-              ) : (
-                <iframe src={fileUrl} title={asset.title} className="share-asset-preview" />
-              )
-            ) : (
-              <p>
-                <Link href={fileUrl} className="uwe-btn uwe-btn-primary">
-                  Datei herunterladen
-                </Link>
-              </p>
-            )}
+        {previewable ? (
+          asset.mimeType?.startsWith("image/") ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={fileUrl} alt={asset.title} className="share-asset-preview" />
+          ) : (
+            <iframe src={fileUrl} title={asset.title} className="share-asset-preview" />
+          )
+        ) : (
+          <p>
+            <Link href={fileUrl} className="uwe-btn uwe-btn-primary">
+              Datei herunterladen
+            </Link>
+          </p>
+        )}
       </PortalGuestShell>
     );
   }
