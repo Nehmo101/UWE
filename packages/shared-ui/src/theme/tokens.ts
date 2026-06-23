@@ -119,9 +119,9 @@ export type BackgroundPatternId =
 export type AppScope = "studio" | "portal";
 
 export const FONT_FAMILIES: Record<FontFamilyId, string> = {
-  mono: "ui-monospace, 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",
+  mono: "var(--uwe-font-space-mono, ui-monospace), 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",
   sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
-  serif: "Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif",
+  serif: "var(--uwe-font-newsreader, Georgia), 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif",
 };
 
 export const DENSITY_SCALES: Record<DensityId, number> = {

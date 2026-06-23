@@ -31,15 +31,15 @@ test.describe("Studio cockpit visual regression", () => {
     await expect(page.locator(".uwe-rail-svg").first()).toBeVisible();
   });
 
-  test("cockpit theme uses red accent tokens", async ({ page }) => {
+  test("studio defaults to Parchment OS accent tokens", async ({ page }) => {
     await page.goto("/worlds/terra/dashboard");
 
     const themeId = await page.evaluate(() => document.documentElement.dataset.uweTheme);
-    expect(themeId).toBe("uwe-cockpit-red");
+    expect(themeId).toBe("uwe-parchment-os");
 
     const accent = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--uwe-accent").trim(),
     );
-    expect(accent.toLowerCase()).toBe("#ef4444");
+    expect(accent.toLowerCase()).toBe("#c2622b");
   });
 });

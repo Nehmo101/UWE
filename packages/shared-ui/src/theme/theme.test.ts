@@ -14,6 +14,7 @@ describe("uwe theme system", () => {
       "uwe-charcoal-desk",
       "uwe-night-observatory",
       "uwe-parchment-study",
+      "uwe-parchment-os",
       "uwe-phosphor-console",
       "terra",
       "hells",
@@ -28,10 +29,11 @@ describe("uwe theme system", () => {
   it("uses separate storage keys per app scope", () => {
     assert.equal(getStorageKey("studio"), "uwe-theme-preferences-studio");
     assert.equal(getStorageKey("portal"), "uwe-theme-preferences-portal");
-    assert.notEqual(
-      defaultPreferences("studio").themeId,
-      defaultPreferences("portal").themeId,
-    );
+  });
+
+  it("defaults both scopes to the Parchment OS theme", () => {
+    assert.equal(defaultPreferences("studio").themeId, "uwe-parchment-os");
+    assert.equal(defaultPreferences("portal").themeId, "uwe-parchment-os");
   });
 
   it("migrates retired preview theme ids to UWE-native ids", () => {

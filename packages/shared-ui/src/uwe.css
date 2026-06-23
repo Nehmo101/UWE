@@ -3908,6 +3908,12 @@ li[data-severity="warning"] .uwe-inspector-severity {
 
 html[data-uwe-theme="uwe-parchment-os"] {
   color-scheme: light;
+  /* Space Mono drives all UI chrome; Newsreader handles display headings. */
+  --uwe-font-family: var(--uwe-font-space-mono, ui-monospace, "Cascadia Code", monospace);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] body {
+  font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
 
 /* Shell — flat parchment background, no gradient */
@@ -4022,4 +4028,180 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-primary:hover {
 html[data-uwe-theme="uwe-parchment-os"] .uwe-context {
   background: #f1e8d4;
   border-left-color: #e0d4ba;
+}
+
+/* ───────────────────────────────────────────────────────────
+   Parchment OS — Auth & Landing pages
+   The login / landing shell has its own chrome (uwe-auth-*),
+   so it needs explicit parchment overrides to match the OS look.
+   ─────────────────────────────────────────────────────────── */
+
+/* Auth shell — flat parchment, no dark gradient / glow */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-shell {
+  background: #f1e8d4;
+  color: #211d17;
+  font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-shell-glow {
+  display: none;
+}
+
+/* Brand panel — warm sand, ink divider, no glass blur */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand {
+  background: #e9dfca;
+  border-right: 2px solid #211d17;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-kicker {
+  color: #c2622b;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-title {
+  color: #211d17;
+  font-family: var(--uwe-font-newsreader, Georgia, serif);
+}
+
+/* Logo tile — solid amber, ink-cornered */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-logo {
+  background: #c2622b;
+  color: #fbf6ea;
+  border-radius: 0.3em;
+  box-shadow: none;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-subtitle {
+  color: #6f6555;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-desc {
+  color: #6f6555;
+}
+
+/* Feature tiles — parchment cards with ink hairline */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-item {
+  background: #fbf6ea;
+  border: 1.5px solid #e0d4ba;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-item:hover {
+  border-color: #c2622b;
+  background: #fbf6ea;
+  box-shadow: 0 4px 14px rgba(33, 29, 23, 0.08);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-label {
+  color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-detail {
+  color: #9a8f78;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-meta {
+  color: #9a8f78;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-badge {
+  background: #c2622b;
+  border-color: #211d17;
+  color: #fbf6ea;
+}
+
+/* Auth content column */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-content {
+  background: #f1e8d4;
+}
+
+/* Auth card — solid parchment card, ink border, no blur */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card {
+  background: #fbf6ea;
+  border: 2px solid #211d17;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(33, 29, 23, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card:hover {
+  border-color: #211d17;
+  box-shadow: 0 14px 36px rgba(33, 29, 23, 0.14);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card-header h1 {
+  color: #211d17;
+  font-family: var(--uwe-font-newsreader, Georgia, serif);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-lead {
+  color: #6f6555;
+}
+
+/* Auth form fields */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form label {
+  color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form input {
+  background: #fbf6ea;
+  border: 1.5px solid #cbbfa3;
+  color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form input:focus {
+  border-color: #c2622b;
+  box-shadow: 0 0 0 3px rgba(194, 98, 43, 0.18);
+}
+
+/* Landing action buttons */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action-detail {
+  color: inherit;
+  opacity: 0.7;
+}
+
+/* Primary landing action = ink button */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-primary {
+  background: #c2622b;
+  border-color: #211d17;
+  color: #fbf6ea;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-primary:hover {
+  background: #d47030;
+}
+
+/* Ghost landing actions = ink-outline on parchment */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-ghost {
+  background: #fbf6ea;
+  border: 1.5px solid #211d17;
+  color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-ghost:hover {
+  background: #ece1c9;
+}
+
+/* ───────────────────────────────────────────────────────────
+   Parchment OS — global heading + button polish (all pages)
+   ─────────────────────────────────────────────────────────── */
+
+/* Display headings use Newsreader everywhere, not just .uwe-main */
+html[data-uwe-theme="uwe-parchment-os"] h1,
+html[data-uwe-theme="uwe-parchment-os"] h2,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-card-title,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-section-title {
+  font-family: var(--uwe-font-newsreader, Georgia, serif);
+}
+
+/* Ghost buttons across the app — ink outline on parchment */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-ghost {
+  border-color: #cbbfa3;
+  color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-ghost:hover {
+  background: #ece1c9;
+  border-color: #211d17;
 }

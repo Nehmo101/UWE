@@ -407,7 +407,7 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
 export const THEME_LIST = Object.values(UWE_THEMES);
 
 export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-parchment-os";
-export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-portal-purple";
+export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-parchment-os";
 
 export function isThemeId(value: string): value is ThemeId {
   return value in UWE_THEMES;

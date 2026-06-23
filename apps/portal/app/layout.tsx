@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Space_Mono, Newsreader } from "next/font/google";
 import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
 import { ThemeBootstrapScript, buildVisualThemeHtmlAttributes, toUweThemePreferences } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
@@ -6,6 +7,21 @@ import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 import { PortalSessionChrome } from "../components/PortalSessionChrome";
+
+const spaceMono = Space_Mono({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--uwe-font-space-mono",
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--uwe-font-newsreader",
+  display: "swap",
+});
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +40,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#7c3aed",
+  themeColor: "#c2622b",
 };
 
 export default async function RootLayout({
@@ -43,7 +59,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="de" suppressHydrationWarning {...visualThemeAttrs}>
+    <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
       <body>
         <ThemeBootstrapScript
           scope="portal"
