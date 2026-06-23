@@ -7,6 +7,18 @@ export interface PortalBottomNavItem {
   action?: "open-sidebar";
 }
 
+/** Bottom navigation for public world discovery (/worlds). */
+export function portalDiscoverBottomNav(
+  active: "discover" | "login" | "more",
+): PortalBottomNavItem[] {
+  return [
+    { label: "Welten", href: "/worlds", icon: "🌍", active: active === "discover" },
+    { label: "Meine", href: "/auth/worlds", icon: "⌂" },
+    { label: "Anmelden", href: "/login", icon: "👤", active: active === "login" },
+    { label: "Menü", icon: "☰", action: "open-sidebar", active: active === "more" },
+  ];
+}
+
 /** Bottom navigation for public Portal world pages */
 export function portalWorldBottomNav(
   worldSlug: string,
@@ -25,7 +37,7 @@ export function portalWorldBottomNav(
 /** Bottom navigation for authenticated Portal pages */
 export function portalAuthBottomNav(
   worldSlug: string | null,
-  active: "worlds" | "dashboard" | "sessions" | "notes" | "handouts" | "account",
+  active: "worlds" | "dashboard" | "sessions" | "handouts" | "account" | "more",
 ): PortalBottomNavItem[] {
   const worldBase = worldSlug ? `/auth/worlds/${worldSlug}` : null;
   return [
@@ -38,12 +50,6 @@ export function portalAuthBottomNav(
             href: `${worldBase}/sessions`,
             icon: "📜",
             active: active === "sessions",
-          },
-          {
-            label: "Notizen",
-            href: `${worldBase}/notes`,
-            icon: "📝",
-            active: active === "notes",
           },
           {
             label: "Handouts",
@@ -59,5 +65,8 @@ export function portalAuthBottomNav(
       icon: "👤",
       active: active === "account",
     },
+    ...(worldBase
+      ? [{ label: "Mehr", icon: "☰", action: "open-sidebar" as const, active: active === "more" }]
+      : []),
   ];
 }

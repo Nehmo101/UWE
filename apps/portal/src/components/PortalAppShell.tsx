@@ -61,6 +61,7 @@ export function PortalAppShell({
     worldSlug,
     worldActive,
     accountActive,
+    includeAccount: accountActive !== undefined,
   });
 
   const topBarExtra = (

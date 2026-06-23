@@ -2,9 +2,8 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
   PageHeader,
-  TopBarBrand,
+  PortalShell,
   WikiContent,
   WikiSidebar,
 } from "@uwe/shared-ui";
@@ -146,14 +145,10 @@ export default async function ShareLinkView({ params }: Props) {
     const previewable = isPreviewable(asset.mimeType);
 
     return (
-      <AppShell
-        topBar={
-          <TopBarBrand
-            appName="UWE Freigabe"
-            subtitle={readOnly ? "Nur-Lesen" : "Freigegebenes Asset"}
-            href={`/share/${token}`}
-          />
-        }
+      <PortalShell
+        appName="UWE Freigabe"
+        worldName={readOnly ? "Nur-Lesen" : "Freigegebenes Asset"}
+        brandHref={`/share/${token}`}
         main={
           <>
             <PageHeader title={asset.title} summary={asset.description} />
@@ -180,14 +175,10 @@ export default async function ShareLinkView({ params }: Props) {
   const { view, readOnly } = result;
 
   return (
-    <AppShell
-      topBar={
-        <TopBarBrand
-          appName="UWE Freigabe"
-          subtitle={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
-          href={`/share/${token}`}
-        />
-      }
+    <PortalShell
+      appName="UWE Freigabe"
+      worldName={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
+      brandHref={`/share/${token}`}
       main={
         <>
           <PageHeader
@@ -199,10 +190,10 @@ export default async function ShareLinkView({ params }: Props) {
             ))}
           />
           <WikiContent html={view.html} />
+          <aside className="portal-share-context">
+            <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
+          </aside>
         </>
-      }
-      context={
-        <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }
     />
   );

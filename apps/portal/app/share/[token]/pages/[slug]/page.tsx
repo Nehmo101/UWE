@@ -1,9 +1,8 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
-  AppShell,
   PageHeader,
-  TopBarBrand,
+  PortalShell,
   WikiContent,
   WikiSidebar,
 } from "@uwe/shared-ui";
@@ -125,14 +124,10 @@ export default async function ShareLinkedPageView({ params }: Props) {
   const { view, readOnly } = result;
 
   return (
-    <AppShell
-      topBar={
-        <TopBarBrand
-          appName="UWE Freigabe"
-          subtitle={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
-          href={`/share/${token}`}
-        />
-      }
+    <PortalShell
+      appName="UWE Freigabe"
+      worldName={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
+      brandHref={`/share/${token}`}
       main={
         <>
           <PageHeader
@@ -144,10 +139,10 @@ export default async function ShareLinkedPageView({ params }: Props) {
             ))}
           />
           <WikiContent html={view.html} />
+          <aside className="portal-share-context">
+            <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
+          </aside>
         </>
-      }
-      context={
-        <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }
     />
   );

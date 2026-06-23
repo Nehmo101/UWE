@@ -1,6 +1,8 @@
 /** Portal information architecture — player-facing navigation only. */
 
-export type PortalGlobalNavKey = "start" | "worlds" | "discover" | "account" | "help";
+export type PortalGlobalNavKey = "start" | "worlds" | "discover" | "account";
+
+export type PortalPublicNavKey = "discover" | "my-worlds" | "login";
 
 export type PortalWorldNavKey =
   | "dashboard"
@@ -31,7 +33,20 @@ export function portalGlobalNav(active: PortalGlobalNavKey): PortalNavItem[] {
     { key: "worlds", label: "Meine Welten", href: "/auth/worlds" },
     { key: "discover", label: "Welt entdecken", href: "/worlds" },
     { key: "account", label: "Account", href: "/auth/account/password" },
-    { key: "help", label: "Hilfe", href: "/" },
+  ];
+
+  return items.map((item) => ({
+    ...item,
+    active: item.key === active,
+  }));
+}
+
+/** Public wiki navigation (unauthenticated /worlds). */
+export function portalPublicNav(active?: PortalPublicNavKey): PortalNavItem[] {
+  const items: { key: PortalPublicNavKey; label: string; href: string }[] = [
+    { key: "discover", label: "Welten entdecken", href: "/worlds" },
+    { key: "my-worlds", label: "Meine Welten", href: "/auth/worlds" },
+    { key: "login", label: "Anmelden", href: "/login" },
   ];
 
   return items.map((item) => ({
@@ -77,6 +92,8 @@ export function portalAuthSidebarSections(options: {
   worldSlug?: string | null;
   worldActive?: PortalWorldNavKey;
   accountActive?: PortalAccountNavKey;
+  /** Show account links — only on account settings pages. */
+  includeAccount?: boolean;
 }): PortalNavSection[] {
   const sections: PortalNavSection[] = [
     { title: "Portal", items: portalGlobalNav(options.globalActive ?? "worlds") },
@@ -89,10 +106,32 @@ export function portalAuthSidebarSections(options: {
     });
   }
 
-  sections.push({
-    title: "Account",
-    items: portalAccountNav(options.accountActive ?? "password"),
-  });
+  if (options.includeAccount) {
+    sections.push({
+      title: "Account",
+      items: portalAccountNav(options.accountActive ?? "password"),
+    });
+  }
+
+  return sections;
+}
+
+/** Sidebar for public wiki pages (/worlds/*). */
+export function portalPublicSidebarSections(options: {
+  active?: PortalPublicNavKey;
+  worldSlug?: string | null;
+  worldItems?: PortalNavItem[];
+}): PortalNavSection[] {
+  const sections: PortalNavSection[] = [
+    { title: "Portal", items: portalPublicNav(options.active ?? "discover") },
+  ];
+
+  if (options.worldSlug && options.worldItems && options.worldItems.length > 0) {
+    sections.push({
+      title: "In dieser Welt",
+      items: options.worldItems,
+    });
+  }
 
   return sections;
 }

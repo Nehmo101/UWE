@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PortalPublicShell } from "@/src/components/PortalPublicShell";
+import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   EmptyState,
   GlobalSearchForm,
   PortalNavByType,
   PortalNavSidebar,
-  PortalShell,
   PortalWorldHero,
   SearchFilterBar,
   SearchResultsList,
@@ -21,7 +22,6 @@ import {
   type SearchEntityFilter,
 } from "@uwe/database/server";
 import { assertWorldReadable } from "@/src/lib/auth";
-import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -71,9 +71,9 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
   }));
 
   return (
-    <PortalShell
+    <PortalPublicShell
       worldName={world.name}
-      brandHref="/"
+      worldSlug={worldSlug}
       bottomNav={portalWorldBottomNav(worldSlug, isSearching ? "search" : "home")}
       topBarExtra={
         <div id="search">
@@ -98,56 +98,53 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
           )}
         </PortalNavSidebar>
       }
-      main={
+    >
+      <PortalWorldHero
+        name={world.name}
+        description={world.description}
+        pageCount={isSearching ? searchResults.length : pages.length}
+      />
+
+      {isSearching ? (
         <>
-          <PortalWorldHero
-            name={world.name}
-            description={world.description}
-            pageCount={isSearching ? searchResults.length : pages.length}
+          <SearchFilterBar
+            action={`/worlds/${worldSlug}`}
+            query={q}
+            filters={[
+              {
+                name: "filter",
+                label: "Typ",
+                value: entityFilter,
+                options: SEARCH_ENTITY_FILTERS.map((filter) => ({
+                  value: filter,
+                  label: SEARCH_ENTITY_FILTER_LABELS[filter],
+                })),
+              },
+            ]}
           />
-
-          {isSearching ? (
-            <>
-              <SearchFilterBar
-                action={`/worlds/${worldSlug}`}
-                query={q}
-                filters={[
-                  {
-                    name: "filter",
-                    label: "Typ",
-                    value: entityFilter,
-                    options: SEARCH_ENTITY_FILTERS.map((filter) => ({
-                      value: filter,
-                      label: SEARCH_ENTITY_FILTER_LABELS[filter],
-                    })),
-                  },
-                ]}
-              />
-              <SearchResultsList results={searchResults} query={q} />
-            </>
-          ) : (
-            <div className="wiki-page-list">
-              {pages.map((page) => (
-                <article key={page.id} className="wiki-world-card">
-                  <h2>
-                    <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                      {page.title}
-                    </Link>
-                  </h2>
-                  {page.summary && <p>{page.summary}</p>}
-                </article>
-              ))}
-
-              {pages.length === 0 && (
-                <EmptyState
-                  title="Keine veröffentlichten Seiten"
-                  description="In dieser Welt sind noch keine Inhalte für dich freigegeben."
-                />
-              )}
-            </div>
-          )}
+          <SearchResultsList results={searchResults} query={q} />
         </>
-      }
-    />
+      ) : (
+        <div className="wiki-page-list">
+          {pages.map((page) => (
+            <article key={page.id} className="wiki-world-card">
+              <h2>
+                <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
+                  {page.title}
+                </Link>
+              </h2>
+              {page.summary && <p>{page.summary}</p>}
+            </article>
+          ))}
+
+          {pages.length === 0 && (
+            <EmptyState
+              title="Keine veröffentlichten Seiten"
+              description="In dieser Welt sind noch keine Inhalte für dich freigegeben."
+            />
+          )}
+        </div>
+      )}
+    </PortalPublicShell>
   );
 }

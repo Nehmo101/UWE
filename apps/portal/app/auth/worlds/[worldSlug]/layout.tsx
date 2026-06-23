@@ -37,10 +37,10 @@ export default async function AuthWorldLayout({ children, params }: Props) {
   const bottomNavActive =
     worldActive === "sessions"
       ? "sessions"
-      : worldActive === "notes"
-        ? "notes"
-        : worldActive === "handouts"
-          ? "handouts"
+      : worldActive === "handouts"
+        ? "handouts"
+        : worldActive === "notes" || worldActive === "soundboard" || worldActive === "search"
+          ? "more"
           : "dashboard";
 
   return (

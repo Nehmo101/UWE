@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PortalPublicShell } from "@/src/components/PortalPublicShell";
+import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
-  AppShell,
-  Breadcrumb,
+  GlobalSearchForm,
   PageHeader,
   PortalNavByType,
-  SearchField,
-  SidebarSection,
-  TopBarBrand,
+  PortalNavSidebar,
   WikiContent,
 } from "@uwe/shared-ui";
 import {
@@ -72,15 +71,25 @@ export default async function PortalPageView({ params }: Props) {
   }));
 
   return (
-    <AppShell
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Portal" subtitle={world.name} href="/" />
-          <SearchField action={`/worlds/${worldSlug}`} placeholder="Suchen…" />
-        </>
+    <PortalPublicShell
+      worldName={world.name}
+      worldSlug={worldSlug}
+      bottomNav={portalWorldBottomNav(worldSlug, "home")}
+      topBarExtra={
+        <GlobalSearchForm
+          action={`/worlds/${worldSlug}`}
+          query=""
+          placeholder="In dieser Welt suchen…"
+        />
       }
+      breadcrumbs={[
+        { label: "Welten", href: "/worlds" },
+        { label: world.name, href: `/worlds/${worldSlug}` },
+        { label: NAV_CATEGORY_LABELS[category as NavCategory] },
+        { label: page.title },
+      ]}
       sidebar={
-        <SidebarSection title="Navigation">
+        <PortalNavSidebar>
           <Link href={`/worlds/${worldSlug}`} className="uwe-sidebar-back-link">
             ← {world.name}
           </Link>
@@ -89,31 +98,20 @@ export default async function PortalPageView({ params }: Props) {
             items={navItems}
             activeCategory={category as NavCategory}
           />
-        </SidebarSection>
+        </PortalNavSidebar>
       }
-      main={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Welten", href: "/worlds" },
-              { label: world.name, href: `/worlds/${worldSlug}` },
-              { label: NAV_CATEGORY_LABELS[category as NavCategory] },
-              { label: page.title },
-            ]}
-          />
-          <PageHeader
-            title={page.title}
-            meta={parseStringArray(page.tags).map((tag) => (
-              <span key={tag} className="uwe-tag">
-                {tag}
-              </span>
-            ))}
-          />
-          {page.contentBlocks.map((block, index) => (
-            <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
-          ))}
-        </>
-      }
-    />
+    >
+      <PageHeader
+        title={page.title}
+        meta={parseStringArray(page.tags).map((tag) => (
+          <span key={tag} className="uwe-tag">
+            {tag}
+          </span>
+        ))}
+      />
+      {page.contentBlocks.map((block, index) => (
+        <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
+      ))}
+    </PortalPublicShell>
   );
 }

@@ -6,6 +6,7 @@ export interface PortalShellProps {
   main: ReactNode;
   sidebar?: ReactNode;
   worldName?: string;
+  appName?: string;
   brandHref?: string;
   topBarExtra?: ReactNode;
   bottomNav?: BottomNavItem[];
@@ -23,6 +24,7 @@ export function PortalShell({
   main,
   sidebar,
   worldName,
+  appName = "UWE Portal",
   brandHref = "/",
   topBarExtra,
   bottomNav,
@@ -50,7 +52,7 @@ export function PortalShell({
       topBar={
         <>
           <TopBarBrand
-            appName="UWE Portal"
+            appName={appName}
             subtitle={worldName}
             href={brandHref}
           />
