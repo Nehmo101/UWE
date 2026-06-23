@@ -22,6 +22,8 @@ export interface AppShellProps {
   topBar?: ReactNode;
   /** Optional desktop icon rail (left of sidebar) */
   rail?: ReactNode;
+  /** Optional AI/system status strip below main content */
+  statusFooter?: ReactNode;
   /** Optional bottom navigation bar (shown on mobile only) */
   bottomNav?: BottomNavItem[];
   /** Title for collapsible context panel on mobile */
@@ -34,6 +36,7 @@ export function AppShell({
   context,
   topBar,
   rail,
+  statusFooter,
   bottomNav,
   contextTitle = "Details & Kontext",
 }: AppShellProps) {
@@ -171,6 +174,7 @@ export function AppShell({
             </>
           )}
         </div>
+        {statusFooter}
         {hasBottomNav && bottomNav && <MobileBottomNav items={bottomNav} />}
       </div>
     </SidebarContextProvider>

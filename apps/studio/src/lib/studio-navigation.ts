@@ -3,6 +3,11 @@
 import { isLikelyGameSessionId } from "./session-route";
 
 export type StudioNavSectionId =
+  | "portal"
+  | "studio"
+  | "library"
+  | "tasks"
+  | "administration"
   | "dashboard"
   | "worlds"
   | "daily-admin"
@@ -151,6 +156,105 @@ export function studioSidebarSections(activePath: string): StudioNavSection[] {
       active: isStudioNavItemActive(activePath, item.href),
     })),
   }));
+}
+
+const UNIFIED_SIDEBAR_LINKS: {
+  id: StudioNavSectionId;
+  title: string;
+  hrefs: string[];
+}[] = [
+  {
+    id: "portal",
+    title: "Portal",
+    hrefs: ["__portal__", "__portal_worlds__"],
+  },
+  {
+    id: "studio",
+    title: "Studio",
+    hrefs: ["/studio", "/today", "/capture", "/projects", "/workshop"],
+  },
+  {
+    id: "library",
+    title: "Bibliothek",
+    hrefs: ["/brain", "/templates", "/search", "/image-studio", "/mail", "/calendar"],
+  },
+  {
+    id: "tasks",
+    title: "Aufgaben",
+    hrefs: ["/jobs", "/admin/reviews", "/admin/agent-jobs"],
+  },
+  {
+    id: "administration",
+    title: "Administration",
+    hrefs: ["/admin", "/admin/users", "/admin/security", "/backup", "/settings"],
+  },
+];
+
+function resolveUnifiedHref(
+  href: string,
+  portalUrl: string,
+): { label: string; href: string } | null {
+  if (href === "__portal__") {
+    return portalUrl
+      ? { label: "Spieler-Portal", href: portalUrl }
+      : { label: "Spieler-Portal", href: "/worlds" };
+  }
+  if (href === "__portal_worlds__") {
+    const base = portalUrl.replace(/\/$/, "");
+    return { label: "Welten (Spieler)", href: base ? `${base}/worlds` : "/worlds" };
+  }
+
+  for (const section of STUDIO_NAV_SECTIONS) {
+    const item = section.items.find((entry) => entry.href === href);
+    if (item) return item;
+  }
+  return null;
+}
+
+/**
+ * Unified app sidebar — Portal, Studio, Bibliothek, Aufgaben, Administration (cockpit mockup).
+ */
+export function studioUnifiedSidebarSections(
+  activePath: string,
+  options: { portalUrl?: string } = {},
+): StudioNavSection[] {
+  const portalUrl = (options.portalUrl ?? process.env.NEXT_PUBLIC_PORTAL_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  const flat = studioFlatNav(activePath);
+
+  return UNIFIED_SIDEBAR_LINKS.map((group) => {
+    const items: StudioNavItem[] = [];
+    for (const href of group.hrefs) {
+      const resolved = resolveUnifiedHref(href, portalUrl);
+      if (!resolved) continue;
+      const active = flat.find((item) => item.href === resolved.href)?.active;
+      items.push({
+        ...resolved,
+        active: active ?? isStudioNavItemActive(activePath, resolved.href),
+      });
+    }
+    return {
+      id: group.id,
+      title: group.title,
+      items,
+    };
+  });
+}
+
+/** Horizontal cockpit tabs for world overview (subset of world nav). */
+export function worldCockpitTabItems(worldSlug: string, active?: WorldNavKey) {
+  const tabKeys: WorldNavKey[] = [
+    "overview",
+    "pages",
+    "sessions",
+    "dungeons",
+    "assets",
+    "brain",
+    "inspector",
+  ];
+  return worldNavItems(worldSlug, active).filter((item) => tabKeys.includes(item.key));
 }
 
 /** Flat nav list for AdminShell compatibility (legacy). */

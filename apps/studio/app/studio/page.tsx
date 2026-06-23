@@ -15,7 +15,7 @@ import {
   getProductionSafetyWarnings,
   prisma,
 } from "@uwe/database/server";
-import { StudioAppShell } from "@/components/StudioAppShell";
+import { StudioCockpitAppShell } from "@/components/StudioCockpitAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { STUDIO_DASHBOARD_PATH } from "@/src/lib/routes";
 import { undoActivityAction } from "../inspector-actions";
@@ -47,7 +47,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
   );
 
   return (
-    <StudioAppShell
+    <StudioCockpitAppShell
       variant="dashboard"
       activePath={STUDIO_DASHBOARD_PATH}
       showRail
@@ -245,6 +245,6 @@ export default async function StudioDashboard({ searchParams }: Props) {
               </div>
             )}
           </section>
-    </StudioAppShell>
+    </StudioCockpitAppShell>
   );
 }

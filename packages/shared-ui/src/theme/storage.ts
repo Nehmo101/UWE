@@ -36,10 +36,11 @@ export function defaultPreferences(scope: AppScope): UweThemePreferences {
     themeId: scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID,
     font: DEFAULT_FONT,
     density: DEFAULT_DENSITY,
-    background: DEFAULT_BACKGROUND,
+    background: scope === "studio" ? "constellation" : DEFAULT_BACKGROUND,
     frostedGlass: true,
     uiScale: DEFAULT_UI_SCALE,
-    bgEffectIntensity: 1,
+    bgEffectColor: scope === "studio" ? "#fecaca" : undefined,
+    bgEffectIntensity: scope === "studio" ? 0.38 : 1,
   };
 }
 

@@ -12,6 +12,7 @@ import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   resolveStudioRailActiveId,
   studioSidebarSections,
+  studioUnifiedSidebarSections,
 } from "@/src/lib/studio-navigation";
 import {
   worldBottomNavKey,
@@ -46,6 +47,13 @@ export interface WorldModuleShellProps {
   /** Override auto-detected mobile bottom nav tab. */
   bottomNavActive?: WorldBottomNavKey;
   showSearch?: boolean;
+  /** Cockpit mockup chrome */
+  cockpitMode?: boolean;
+  cockpitWorlds?: { name: string; slug: string }[];
+  statusFooter?: ReactNode;
+  unifiedSidebar?: boolean;
+  /** Hide breadcrumbs (e.g. world cockpit overview). */
+  hideBreadcrumb?: boolean;
 }
 
 /**
@@ -68,6 +76,11 @@ export function WorldModuleShell({
   campaignSlug,
   bottomNavActive,
   showSearch = true,
+  cockpitMode = false,
+  cockpitWorlds = [],
+  statusFooter,
+  unifiedSidebar = false,
+  hideBreadcrumb = false,
 }: WorldModuleShellProps) {
   const bottomKey =
     bottomNavActive ?? worldBottomNavKey(activeNav, Boolean(searchQuery?.trim()));
@@ -80,6 +93,10 @@ export function WorldModuleShell({
     return item;
   });
 
+  const sidebarSections = unifiedSidebar
+    ? studioUnifiedSidebarSections(activePath)
+    : studioSidebarSections(activePath);
+
   return (
     <StudioShell
       subtitle={worldName}
@@ -89,24 +106,37 @@ export function WorldModuleShell({
       bottomNav={studioWorldBottomNav(worldSlug, bottomKey)}
       contextTitle={contextTitle}
       context={context}
+      cockpitMode={cockpitMode}
+      cockpitWorlds={cockpitWorlds}
+      activeWorldSlug={worldSlug}
+      statusFooter={statusFooter}
       topBarExtra={
-        <>
-          {showSearch && (
-            <GlobalSearchForm
-              action={activePath}
-              query={searchQuery}
-              placeholder="In dieser Welt suchen…"
-            />
-          )}
-          {topBarExtra}
-        </>
+        cockpitMode ? (
+          topBarExtra
+        ) : (
+          <>
+            {showSearch && (
+              <GlobalSearchForm
+                action={activePath}
+                query={searchQuery}
+                placeholder="In dieser Welt suchen…"
+              />
+            )}
+            {topBarExtra}
+          </>
+        )
       }
+      showSearch={cockpitMode ? showSearch : false}
+      searchAction={activePath}
+      searchPlaceholder="In dieser Welt suchen…"
       pageHeader={pageHeader}
       sidebar={
         <>
           <NavSidebarSections
-            sections={studioSidebarSections(activePath)}
-            defaultOpenTitles={["Dashboard", "Welten & Kampagnen"]}
+            sections={sidebarSections}
+            defaultOpenTitles={
+              unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]
+            }
           />
           <StudioNavSidebar title="Welt" items={navItems} />
           {sidebarExtra}
@@ -115,7 +145,7 @@ export function WorldModuleShell({
       main={
         <>
           {backLink && <BackLink href={backLink.href} label={backLink.label} />}
-          <Breadcrumb items={breadcrumb} />
+          {!hideBreadcrumb && <Breadcrumb items={breadcrumb} />}
           {children}
         </>
       }

@@ -7,6 +7,7 @@ import type {
 
 export type ThemeId =
   | "uwe-default"
+  | "uwe-cockpit-red"
   | "uwe-dark-fantasy"
   | "uwe-portal-purple"
   | "uwe-charcoal-desk"
@@ -66,6 +67,42 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
       shellGradientEnd: "#060a12",
     },
     defaults: { background: "none", frostedGlass: true },
+  },
+  "uwe-cockpit-red": {
+    id: "uwe-cockpit-red",
+    label: "Cockpit Red",
+    description: "Dark command-deck shell with crimson accents — Studio cockpit mockup.",
+    colors: {
+      bg: "#12080a",
+      bgElevated: "#1a0c10",
+      surface: "rgba(26, 12, 16, 0.72)",
+      panel: "rgba(14, 8, 10, 0.92)",
+      border: "rgba(220, 38, 38, 0.28)",
+      borderMuted: "rgba(220, 38, 38, 0.16)",
+      fg: "#fce7e7",
+      fgMuted: "#f0a8a8",
+      fgSubtle: "#9f4a4a",
+      accent: "#ef4444",
+      accentHover: "#f87171",
+      accentMuted: "rgba(239, 68, 68, 0.16)",
+      danger: "#fb7185",
+      warning: "#fbbf24",
+      success: "#4ade80",
+      info: "#fca5a5",
+      wikiLink: "#fca5a5",
+      wikiLinkHover: "#fecaca",
+      dmOnly: "#fbbf24",
+      playerVisible: "#86efac",
+      shellGradientStart: "rgba(239, 68, 68, 0.22)",
+      shellGradientMid: "rgba(251, 113, 133, 0.1)",
+      shellGradientEnd: "#080406",
+    },
+    defaults: {
+      background: "constellation",
+      frostedGlass: true,
+      bgEffectColor: "#fecaca",
+      bgEffectIntensity: 0.38,
+    },
   },
   "uwe-dark-fantasy": {
     id: "uwe-dark-fantasy",
@@ -334,7 +371,7 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
 
 export const THEME_LIST = Object.values(UWE_THEMES);
 
-export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-default";
+export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-cockpit-red";
 export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-portal-purple";
 
 export function isThemeId(value: string): value is ThemeId {

@@ -8,6 +8,7 @@ import {
   TopBarBrand,
 } from "../AppShell";
 import type { BottomNavItem } from "../MobileComponents";
+import { StudioCockpitTopBar, type StudioCockpitWorldOption } from "./StudioCockpitTopBar";
 import { StudioIconRail } from "./studio-rail";
 
 export type StudioBottomNavKey = "today" | "capture" | "search" | "ai" | "more";
@@ -26,6 +27,11 @@ export interface StudioShellProps {
   bottomNav?: BottomNavItem[];
   showRail?: boolean;
   railActiveId?: string;
+  /** Cockpit chrome: world switcher, ⌘K hint, status footer slot */
+  cockpitMode?: boolean;
+  cockpitWorlds?: StudioCockpitWorldOption[];
+  activeWorldSlug?: string | null;
+  statusFooter?: ReactNode;
   pageHeader?: {
     title: string;
     summary?: string | null;
@@ -49,6 +55,10 @@ export function StudioShell({
   bottomNav,
   showRail = false,
   railActiveId,
+  cockpitMode = false,
+  cockpitWorlds = [],
+  activeWorldSlug,
+  statusFooter,
   pageHeader,
 }: StudioShellProps) {
   const body = (
@@ -65,23 +75,39 @@ export function StudioShell({
     </>
   );
 
+  const searchSlot =
+    showSearch && !cockpitMode ? (
+      <SearchField action={searchAction} placeholder={searchPlaceholder} />
+    ) : showSearch && cockpitMode ? (
+      <SearchField
+        action={searchAction}
+        placeholder={searchPlaceholder}
+      />
+    ) : null;
+
+  const topBar = cockpitMode ? (
+    <StudioCockpitTopBar
+      worlds={cockpitWorlds}
+      activeWorldSlug={activeWorldSlug}
+      brandHref={brandHref}
+      searchSlot={searchSlot}
+      endSlot={topBarExtra}
+    />
+  ) : (
+    <>
+      <TopBarBrand appName="UWE Studio" subtitle={subtitle} href={brandHref} />
+      {searchSlot}
+      {topBarExtra}
+    </>
+  );
+
   return (
     <AppShell
       rail={showRail ? <StudioIconRail activeId={railActiveId} /> : undefined}
       bottomNav={bottomNav}
       contextTitle={contextTitle}
-      topBar={
-        <>
-          <TopBarBrand appName="UWE Studio" subtitle={subtitle} href={brandHref} />
-          {showSearch && (
-            <SearchField
-              action={searchAction}
-              placeholder={searchPlaceholder}
-            />
-          )}
-          {topBarExtra}
-        </>
-      }
+      statusFooter={statusFooter}
+      topBar={topBar}
       sidebar={sidebar}
       context={context}
       main={body}

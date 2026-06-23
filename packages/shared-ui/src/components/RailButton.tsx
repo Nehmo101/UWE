@@ -1,9 +1,10 @@
+import type { ReactNode } from "react";
 import { cn } from "./cn";
 
 export interface RailButtonProps {
   href: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   active?: boolean;
   className?: string;
 }
