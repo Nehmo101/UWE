@@ -79,7 +79,7 @@ export function WorldModuleShell({
   cockpitMode = false,
   cockpitWorlds = [],
   statusFooter,
-  unifiedSidebar = false,
+  unifiedSidebar = true,
   hideBreadcrumb = false,
 }: WorldModuleShellProps) {
   const bottomKey =

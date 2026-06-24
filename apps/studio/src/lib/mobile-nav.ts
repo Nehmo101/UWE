@@ -16,7 +16,7 @@ export function studioGlobalBottomNav(
     { label: "Capture", href: "/capture", icon: "+", active: active === "capture" },
     { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
     { label: "KI", href: "/ai", icon: "✦", active: active === "ai" },
-    { label: "Mehr", href: "/studio", icon: "☰", active: active === "more" },
+    { label: "Mehr", icon: "☰", action: "open-sidebar", active: active === "more" },
   ];
 }
 
