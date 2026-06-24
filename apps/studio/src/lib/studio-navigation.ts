@@ -1,4 +1,4 @@
-/** Studio information architecture — DM, creator, owner, and admin navigation. */
+import { resolvePortalPublicBaseUrl } from "@uwe/auth";
 
 import { isLikelyGameSessionId } from "./session-route";
 
@@ -191,7 +191,7 @@ function resolveUnifiedHref(
   if (href === "__portal__") {
     return portalUrl
       ? { label: "Spieler-Portal", href: portalUrl }
-      : { label: "Spieler-Portal", href: "/worlds" };
+      : null;
   }
   if (href === "__portal_worlds__") {
     const base = portalUrl.replace(/\/$/, "");
@@ -212,10 +212,9 @@ export function studioUnifiedSidebarSections(
   activePath: string,
   options: { portalUrl?: string } = {},
 ): StudioNavSection[] {
-  const portalUrl = (options.portalUrl ?? process.env.NEXT_PUBLIC_PORTAL_URL ?? "").replace(
-    /\/$/,
-    "",
-  );
+  const portalUrl = (
+    options.portalUrl ?? resolvePortalPublicBaseUrl(process.env)
+  ).replace(/\/$/, "");
   const flat = studioFlatNav(activePath);
 
   return UNIFIED_SIDEBAR_LINKS.map((group) => {

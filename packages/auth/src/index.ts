@@ -168,6 +168,11 @@ export {
   isRequestSecure,
   originMatchesTrustedHost,
   resolveUweAppUrls,
+  resolvePortalPublicBaseUrl,
+  resolvePortalSessionHref,
+  resolvePortalLoginHref,
+  resolveStudioPublicBaseUrl,
+  resolveStudioSessionHref,
 } from "./runtime-config";
 
 export type { UweAppUrls } from "./runtime-config";

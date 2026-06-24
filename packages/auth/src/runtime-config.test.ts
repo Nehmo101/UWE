@@ -9,6 +9,8 @@ import {
   isPublicExposureConfigured,
   isRequestSecure,
   originMatchesTrustedHost,
+  resolvePortalSessionHref,
+  resolveUweAppUrls,
 } from "./runtime-config";
 import { resolveClientIp } from "./proxy";
 
@@ -185,6 +187,22 @@ describe("runtime config", () => {
       originMatchesTrustedHost("https://evil.example", "localhost:3001", env),
       false,
     );
+  });
+
+  it("honours PORTAL_PATH=/ for unified reverse-proxy deployments", () => {
+    const urls = resolveUweAppUrls({
+      PUBLIC_APP_URL: "https://uwe.example.org",
+      PORTAL_PATH: "/",
+    });
+    assert.equal(urls.portalPath, "/");
+    assert.equal(urls.portalUrl, "https://uwe.example.org");
+  });
+
+  it("builds portal session href without duplicating mount path", () => {
+    const href = resolvePortalSessionHref({
+      PUBLIC_APP_URL: "https://uwe.example.org",
+    });
+    assert.equal(href, "https://uwe.example.org/portal");
   });
 });
 

@@ -101,13 +101,91 @@ export function isProductionEnv(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.NODE_ENV?.trim() === "production";
 }
 
-function normalizeAppPath(value: string | undefined, fallback: string): string {
+function normalizeAppPath(
+  value: string | undefined,
+  fallback: string,
+  options?: { allowRoot?: boolean },
+): string {
   const trimmed = value?.trim();
-  if (!trimmed || trimmed === "/") {
+  if (!trimmed) {
     return fallback;
+  }
+  if (trimmed === "/") {
+    return options?.allowRoot ? "/" : fallback;
   }
   const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return withLeading.replace(/\/+$/, "") || fallback;
+}
+
+const DEV_STUDIO_URL = "http://localhost:3000";
+const DEV_PORTAL_URL = "http://localhost:3001";
+
+export function resolveStudioPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const urls = resolveUweAppUrls(env);
+  return (urls.studioUrl ?? DEV_STUDIO_URL).replace(/\/$/, "");
+}
+
+export function resolvePortalPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const urls = resolveUweAppUrls(env);
+  return (urls.portalUrl ?? DEV_PORTAL_URL).replace(/\/$/, "");
+}
+
+/** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */
+export function resolvePortalSessionHref(
+  env: NodeJS.ProcessEnv = process.env,
+  options: { currentApp?: "studio" | "portal" } = {},
+): string {
+  const currentApp = options.currentApp ?? "studio";
+  const urls = resolveUweAppUrls(env);
+  const portalBase = resolvePortalPublicBaseUrl(env);
+  const entryPath = "/portal";
+
+  if (currentApp === "portal") {
+    return entryPath;
+  }
+
+  if (urls.portalPath === "/") {
+    return `${portalBase}${entryPath}`;
+  }
+
+  if (portalBase.endsWith(urls.portalPath)) {
+    return portalBase;
+  }
+
+  return `${portalBase}${entryPath}`;
+}
+
+/** Portal login — relative on Portal, absolute when linked from Studio. */
+export function resolvePortalLoginHref(
+  env: NodeJS.ProcessEnv = process.env,
+  options: { currentApp?: "studio" | "portal" } = {},
+): string {
+  const currentApp = options.currentApp ?? "studio";
+  if (currentApp === "portal") {
+    return "/login";
+  }
+  return `${resolvePortalPublicBaseUrl(env)}/login`;
+}
+
+/** Logged-in Studio entry — relative on Studio, absolute when linked from Portal. */
+export function resolveStudioSessionHref(
+  env: NodeJS.ProcessEnv = process.env,
+  options: { currentApp?: "studio" | "portal" } = {},
+): string {
+  const currentApp = options.currentApp ?? "studio";
+  const urls = resolveUweAppUrls(env);
+  const studioBase = resolveStudioPublicBaseUrl(env);
+  const entryPath = "/studio";
+
+  if (currentApp === "studio") {
+    return entryPath;
+  }
+
+  if (studioBase.endsWith(urls.studioPath)) {
+    return studioBase;
+  }
+
+  return `${studioBase}${entryPath}`;
 }
 
 export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppUrls {
@@ -133,7 +211,7 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
     return {
       publicBaseUrl: base,
       studioUrl: `${base}${studioPath}`,
-      portalUrl: `${base}${portalPath}`,
+      portalUrl: portalPath === "/" ? base : `${base}${portalPath}`,
       studioPath,
       portalPath,
     };
@@ -173,7 +251,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     cloudflareTunnel,
     cloudflareAccessEnabled,
     studioPath: normalizeAppPath(env.STUDIO_PATH, "/studio"),
-    portalPath: normalizeAppPath(env.PORTAL_PATH, "/portal"),
+    portalPath: normalizeAppPath(env.PORTAL_PATH, "/portal", { allowRoot: true }),
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),
     sessionCookieSecure,
     sessionCookieSameSite: parseSameSite(env.SESSION_COOKIE_SAMESITE),

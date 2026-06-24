@@ -1,4 +1,10 @@
-import { resolveUweAppUrls } from "@uwe/auth";
+import {
+  resolvePortalLoginHref,
+  resolvePortalSessionHref,
+  resolveStudioPublicBaseUrl,
+  resolveStudioSessionHref,
+  resolveUweAppUrls,
+} from "@uwe/auth";
 
 export type UweAuthApp = "studio" | "portal";
 
@@ -12,37 +18,32 @@ export interface AuthLinkTargets {
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
 
-function trimBaseUrl(url: string | undefined): string {
-  return url?.replace(/\/$/, "") ?? "";
-}
-
 export function resolveAuthLinks(options: {
   isLoggedIn: boolean;
   currentApp: UweAuthApp;
   studioBaseUrl?: string;
   portalBaseUrl?: string;
+  env?: NodeJS.ProcessEnv;
 }): AuthLinkTargets {
-  const studioBase = trimBaseUrl(options.studioBaseUrl);
-  const portalBase = trimBaseUrl(options.portalBaseUrl);
-
+  const env = options.env ?? process.env;
   const loginHref = "/login";
   const logoutHref = options.currentApp === "studio" ? "/logout" : loginHref;
 
   if (!options.isLoggedIn) {
     return {
-      studioHref: options.currentApp === "studio" ? loginHref : `${studioBase}${loginHref}`,
-      portalHref: options.currentApp === "portal" ? loginHref : `${portalBase}${loginHref}`,
+      studioHref:
+        options.currentApp === "studio"
+          ? loginHref
+          : `${options.studioBaseUrl ?? resolveStudioPublicBaseUrl(env)}${loginHref}`,
+      portalHref: resolvePortalLoginHref(env, { currentApp: options.currentApp }),
       loginHref,
       logoutHref,
     };
   }
 
-  const studioPath = "/studio";
-  const portalPath = "/portal";
-
   return {
-    studioHref: options.currentApp === "studio" ? studioPath : `${studioBase}${studioPath}`,
-    portalHref: options.currentApp === "portal" ? portalPath : `${portalBase}${portalPath}`,
+    studioHref: resolveStudioSessionHref(env, { currentApp: options.currentApp }),
+    portalHref: resolvePortalSessionHref(env, { currentApp: options.currentApp }),
     loginHref,
     logoutHref,
   };
