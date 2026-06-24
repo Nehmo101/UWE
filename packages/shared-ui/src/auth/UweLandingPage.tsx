@@ -48,7 +48,6 @@ export function UweLandingPage({
             </span>
             WE
           </h1>
-          <p className="uwe-auth-brand-subtitle">Unified Web Experience</p>
           <p className="uwe-auth-brand-desc">{heroDesc}</p>
 
           <ul className="uwe-auth-feature-list">

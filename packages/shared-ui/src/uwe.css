@@ -3229,6 +3229,46 @@ html[data-theme="light"] {
   letter-spacing: 0.02em;
 }
 
+.uwe-graph-resizable {
+  position: relative;
+}
+
+.uwe-graph-resizable .uwe-graph-canvas {
+  height: var(--uwe-graph-height, 640px);
+  max-height: none;
+}
+
+.uwe-graph-resize-handle {
+  height: 10px;
+  margin-top: 0.25rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: color-mix(in srgb, var(--uwe-border) 80%, transparent);
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uwe-graph-resize-handle::after {
+  content: "";
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--uwe-muted);
+  opacity: 0.65;
+}
+
+.uwe-graph-resize-handle:hover,
+.uwe-graph-resize-handle:focus-visible {
+  background: color-mix(in srgb, var(--uwe-accent, var(--uwe-fg)) 12%, var(--uwe-border));
+}
+
+.uwe-graph-resize-handle:focus-visible {
+  outline: 2px solid var(--uwe-accent, var(--uwe-fg));
+  outline-offset: 2px;
+}
+
 .uwe-graph {
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   border-radius: 0.75rem;
@@ -3296,8 +3336,12 @@ html[data-theme="light"] {
 
 .uwe-graph-node-label {
   fill: var(--uwe-fg);
-  font-size: 11px;
+  font-size: 13px;
   pointer-events: none;
+}
+
+.uwe-graph-compact .uwe-graph-node-label {
+  font-size: 11px;
 }
 
 .uwe-graph-node-meta {

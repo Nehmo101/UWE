@@ -254,6 +254,11 @@ export {
   type GraphRelationListProps,
 } from "./GraphView";
 
+export {
+  ResizableGraphView,
+  type ResizableGraphViewProps,
+} from "./ResizableGraphView";
+
 export { CATEGORY_LABELS, WikiPageList, type WikiNavItem } from "./WikiComponents";
 
 export {

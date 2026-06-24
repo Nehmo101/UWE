@@ -414,6 +414,8 @@
   font-size: 0.875rem;
   color: var(--uwe-fg-muted);
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .uwe-admin-status-card-actions {
@@ -505,7 +507,7 @@
   border: none;
   border-radius: var(--uwe-radius-sm);
   background: transparent;
-  color: var(--uwe-fg-muted);
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
   font: inherit;
   font-size: 0.72rem;
   font-weight: 600;
@@ -517,10 +519,41 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.uwe-dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.uwe-dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  align-items: start;
+}
+
+.uwe-dl dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.uwe-dl dd a,
+.uwe-dl dd code {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
 .uwe-sidebar-section-trigger:hover,
 .uwe-collapsible-sidebar[data-open="true"] .uwe-sidebar-section-trigger {
-  color: var(--uwe-fg);
-  background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
+  color: var(--uwe-sidebar-fg, var(--uwe-fg));
+  background: color-mix(in srgb, var(--uwe-sidebar-fg, var(--uwe-fg)) 8%, transparent);
 }
 
 .uwe-sidebar-section-title {

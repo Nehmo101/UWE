@@ -123,6 +123,11 @@ body[data-uwe-design-v2] .uwe-graph-canvas {
   display: block;
 }
 
+body[data-uwe-design-v2] .uwe-graph-resizable .uwe-graph-canvas {
+  height: var(--uwe-graph-height, 640px);
+  max-height: none;
+}
+
 /* Wiki reader — legacy .wiki-content class maps to v2 typography */
 body[data-uwe-design-v2] .wiki-content {
   max-width: var(--uwe-v2-reader-max, 52rem);

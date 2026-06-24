@@ -20,7 +20,7 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar {
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-section h3 {
-  color: #9a8f78;
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a {
