@@ -3246,6 +3246,13 @@ html[data-theme="light"] {
   max-height: 220px;
 }
 
+/* Consistent reading width for the detail-page content column so prose and the
+   sibling graph section share one measure instead of sprawling full-width.
+   Scoped to the reader wrapper — dashboards that need full width are untouched. */
+.wiki-reader {
+  max-width: 52rem;
+}
+
 .wiki-graph-head {
   display: flex;
   align-items: center;

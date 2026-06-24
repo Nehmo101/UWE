@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Collapsible,
   ContentBlockList,
   GraphRelationList,
   GraphView,
@@ -219,7 +220,10 @@ export async function StudioWikiPageView({
                     aliases={parseStringArray(dmPage.aliases)}
                   />
                 </SidebarSection>
-                <SidebarSection title="Freigabe">
+                {/* Management panels collapsed by default so the reading view
+                    stays calm; knowledge (backlinks, related, metadata) above
+                    stays open. One click away (V3 via collapsible). */}
+                <Collapsible variant="sidebar" title="Freigabe" defaultOpen={false}>
                   <ShareLinkPanel
                     worldId={world.id}
                     worldSlug={worldSlug}
@@ -229,22 +233,23 @@ export async function StudioWikiPageView({
                     links={shareLinks}
                     previewHref={previewHref}
                   />
-                </SidebarSection>
-                <SidebarSection title="KI-Prompt">
+                </Collapsible>
+                <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
                   <MobileAiPromptPanel
                     worldSlug={worldSlug}
                     pageSlug={slug}
                     pageTitle={view.page.title}
                     useMock={useMockAi}
                   />
-                </SidebarSection>
-                <hr className="mobile-ai-brain-divider" aria-hidden="true" />
-                <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
+                  <hr className="mobile-ai-brain-divider" aria-hidden="true" />
+                  <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
+                </Collapsible>
               </>
             )}
           </>
         }
       >
+        <div className="wiki-reader">
         <WikiContent html={view.html} />
 
         <section className="wiki-graph-section" style={{ marginTop: "2rem" }}>
@@ -266,6 +271,7 @@ export async function StudioWikiPageView({
           />
           <GraphView nodes={pageGraph.nodes} edges={pageGraph.edges} compact />
         </section>
+        </div>
       </WorldModuleShell>
     </>
   );
