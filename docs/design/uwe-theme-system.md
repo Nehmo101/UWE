@@ -27,24 +27,29 @@ packages/shared-ui/src/
 
 | App | Storage key | Default theme |
 |-----|-------------|---------------|
-| Studio | `uwe-theme-preferences-studio` | `uwe-default` |
-| Portal | `uwe-theme-preferences-portal` | `uwe-portal-purple` |
+| Studio | `uwe-theme-preferences-studio` | `uwe-parchment-os` |
+| Portal | `uwe-theme-preferences-portal` | `uwe-parchment-os` |
 
-Studio and Portal can diverge — a player can use purple Portal while Studio stays slate/indigo.
+`DEFAULT_STUDIO_THEME_ID` and `DEFAULT_PORTAL_THEME_ID` are both `uwe-parchment-os` (`themes.ts`). Studio and Portal can still diverge per scope — a player can pick a dark theme for the Portal while Studio stays on Parchment OS.
 
 ## Presets
 
 | ID | Use case |
 |----|----------|
-| `uwe-default` | Studio baseline (slate / indigo) |
+| `uwe-parchment-os` | **Universal default** — light parchment OS (Studio + Portal) |
+| `uwe-default` | Slate / indigo dark baseline |
 | `uwe-dark-fantasy` | Deep fantasy workspace |
-| `uwe-portal-purple` | Player portal default |
 | `uwe-charcoal-desk` | Muted charcoal editing shell |
 | `uwe-night-observatory` | Deep blue-black + starfield |
 | `uwe-parchment-study` | Light parchment reading |
 | `uwe-phosphor-console` | Green-on-black console |
 | `terra` | Earthy campaign green |
 | `hells` | Infernal red |
+
+**Legacy IDs** are remapped via `LEGACY_THEME_ID_MAP` (no migration needed): the
+retired `uwe-cockpit-red` and `uwe-portal-purple` both resolve to
+`uwe-parchment-os`; the early `odysseus-*-inspired` preview IDs map to their
+UWE-native equivalents.
 
 ## User preferences shape (client)
 
