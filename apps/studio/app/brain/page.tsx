@@ -116,6 +116,10 @@ export default async function BrainOverviewPage() {
               <Link href={`/worlds/${world.slug}/brain`} className="uwe-v2-btn uwe-v2-btn-secondary">
                 Brain Store öffnen
               </Link>
+              <span className="uwe-hint" style={{ marginLeft: "0.75rem" }}>
+                KI-Wissensgenerierung pro Welt im{" "}
+                <Link href={`/worlds/${world.slug}/brain`}>Brain Store</Link>.
+              </span>
             </p>
           </section>
         ))

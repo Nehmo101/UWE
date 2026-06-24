@@ -13,6 +13,7 @@ interface Props {
   pageSlug?: string;
   sessionId?: string;
   defaultSessionId?: string;
+  defaultActionId?: BrainActionId;
   generatorActions?: DndGeneratorAction[];
 }
 
@@ -46,11 +47,12 @@ export function AiBrainSidebar({
   pageSlug,
   sessionId: fixedSessionId,
   defaultSessionId,
+  defaultActionId = "expand_knowledge",
   generatorActions,
 }: Props) {
   const [settings, setSettings] = useState<AiBrainSettings | null>(null);
   const [actions, setActions] = useState<BrainActionDefinition[]>([]);
-  const [actionId, setActionId] = useState<BrainActionId>("expand_knowledge");
+  const [actionId, setActionId] = useState<BrainActionId>(defaultActionId);
   const [providerId, setProviderId] = useState<AiProviderId>("ollama");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
@@ -101,9 +103,10 @@ export function AiBrainSidebar({
     const data = (await response.json()) as { actions: BrainActionDefinition[] };
     setActions(data.actions);
     if (data.actions.length > 0) {
-      setActionId(data.actions[0].id);
+      const preferred = data.actions.find((action) => action.id === defaultActionId);
+      setActionId(preferred?.id ?? data.actions[0].id);
     }
-  }, []);
+  }, [defaultActionId]);
 
   const loadSessions = useCallback(async () => {
     if (fixedSessionId) {

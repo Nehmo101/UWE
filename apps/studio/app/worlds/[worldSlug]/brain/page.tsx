@@ -15,6 +15,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { createBrainDocumentAction, createBrainFactAction } from "../../../brain-actions";
+import { BrainAiGeneratePanel } from "@/components/BrainAiGeneratePanel";
 import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -83,6 +84,11 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           {summary.chunkCount} Chunks · {summary.linkCount} Links
         </p>
       )}
+
+      <BrainAiGeneratePanel
+        worldSlug={worldSlug}
+        campaignId={selectedCampaign?.id}
+      />
 
       <section className="uwe-brain-create-grid">
         <form action={createBrainDocumentAction} className="uwe-brain-create-form">
