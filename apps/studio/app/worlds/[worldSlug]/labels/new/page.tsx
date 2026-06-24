@@ -65,7 +65,7 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
       {pages.length === 0 && blocks.length === 0 && assets.length === 0 ? (
         <section className="uwe-panel">
           <h2>Aus Seite, Raum, Block oder Asset</h2>
-          <p className="uwe-empty">
+          <p className="uwe-v2-empty">
             Noch keine Quellen vorhanden — erstelle zuerst Seiten oder lade Assets hoch.
             Alternativ kannst du unten ein leeres Label anlegen.
           </p>
@@ -163,7 +163,7 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
             DM-only Inhalte bewusst einschließen
           </label>
 
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Label erstellen
           </button>
         </form>
@@ -208,7 +208,7 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
             <input type="checkbox" name="truncateLongWords" defaultChecked />
             Lange Wörter kürzen
           </label>
-          <button type="submit" className="uwe-btn">
+          <button type="submit" className="uwe-v2-btn">
             Leeres Label speichern
           </button>
         </form>

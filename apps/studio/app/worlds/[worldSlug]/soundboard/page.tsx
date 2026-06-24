@@ -196,7 +196,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                       <form action={deleteSoundboardButtonAction}>
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="buttonId" value={button.id} />
-                        <button type="submit" className="uwe-btn" style={{ marginTop: "0.5rem" }}>
+                        <button type="submit" className="uwe-v2-btn" style={{ marginTop: "0.5rem" }}>
                           Löschen
                         </button>
                       </form>
@@ -234,7 +234,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                 ))}
               </select>
             </label>
-            <button type="submit" className="uwe-btn">
+            <button type="submit" className="uwe-v2-btn">
               Verknüpfen
             </button>
           </form>

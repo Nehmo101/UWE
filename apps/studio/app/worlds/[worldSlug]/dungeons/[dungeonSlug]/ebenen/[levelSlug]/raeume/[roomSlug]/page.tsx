@@ -92,7 +92,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
         actions: (
           <>
             <Link
-              className="uwe-btn"
+              className="uwe-v2-btn"
               href={labelNewHref(worldSlug, "dungeon_room", cockpit.room.id)}
             >
               Label erstellen
@@ -103,7 +103,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
               <input type="hidden" name="childPageIds" value={childPageIds.join(",")} />
               <input type="hidden" name="name" value={`${cockpit.room.title} — Druckliste`} />
               <input type="hidden" name="forNextSession" value="on" />
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Druckliste vorbereiten
               </button>
             </form>
@@ -173,10 +173,10 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           <textarea name="dmNotes" rows={5} defaultValue={dmNotes} />
         </label>
 
-        <button type="submit" className="uwe-btn uwe-btn-primary">Raum speichern</button>
+        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Raum speichern</button>
       </form>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Wiki-Vorschau (mit Links)</h2>
         <WikiContent html={cockpit.html} />
       </section>
@@ -194,12 +194,12 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
       <DungeonEntityList title="Handouts" worldSlug={worldSlug} items={cockpit.handouts} />
       <DungeonEntityList title="Karten" worldSlug={worldSlug} items={cockpit.maps} />
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Neuer Raum-Inhalt</h2>
         {ROOM_CHILD_TYPES.map((childType) => (
           <details key={childType} style={{ marginBottom: "1rem" }}>
             <summary>{PAGE_TYPE_LABELS[childType]} hinzufügen</summary>
-            <form action={createRoomChildAction} className="uwe-form">
+            <form action={createRoomChildAction} className="uwe-v2-form">
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
               <input type="hidden" name="levelSlug" value={levelSlug} />
@@ -227,13 +227,13 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
                   ))}
                 </select>
               </label>
-              <button type="submit" className="uwe-btn">Anlegen</button>
+              <button type="submit" className="uwe-v2-btn">Anlegen</button>
             </form>
           </details>
         ))}
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Assets &amp; Bilder</h2>
         {cockpit.assets.length > 0 && (
           <ul>
@@ -241,7 +241,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
               <li key={asset.id}>
                 {asset.title} ({asset.type}){" "}
                 <Link
-                  className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                  className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                   href={labelNewHref(worldSlug, "asset", asset.id)}
                 >
                   Bild als Label
@@ -251,7 +251,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           </ul>
         )}
         {linkableAssets.length > 0 && (
-          <form action={linkAssetToDungeonPageAction} className="uwe-form uwe-form-inline">
+          <form action={linkAssetToDungeonPageAction} className="uwe-v2-form uwe-form-inline">
             <input type="hidden" name="pageId" value={cockpit.room.id} />
             <input type="hidden" name="redirectTo" value={redirectTo} />
             <label>
@@ -263,12 +263,12 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
                 ))}
               </select>
             </label>
-            <button type="submit" className="uwe-btn">Verknüpfen</button>
+            <button type="submit" className="uwe-v2-btn">Verknüpfen</button>
           </form>
         )}
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Alle ContentBlocks</h2>
         <ContentBlockList
           blocks={[
@@ -294,7 +294,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           ].map((block) => (
             <li key={`label-${block.id}`}>
               <Link
-                className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                 href={labelNewHref(worldSlug, "content_block", block.id)}
               >
                 Block → Label ({block.type})

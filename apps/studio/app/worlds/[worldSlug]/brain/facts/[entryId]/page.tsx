@@ -108,7 +108,7 @@ export default async function StudioBrainFactPage({ params }: Props) {
           )}
         </p>
 
-        <button type="submit" className="uwe-btn uwe-btn-primary">
+        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Speichern
         </button>
       </form>

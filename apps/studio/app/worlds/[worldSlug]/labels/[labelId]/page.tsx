@@ -89,13 +89,13 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
               <>
                 <Link
                   href={`/worlds/${worldSlug}/labels/${labelId}/preview`}
-                  className="uwe-btn"
+                  className="uwe-v2-btn"
                 >
                   Vorschau
                 </Link>
                 <a
                   href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
-                  className="uwe-btn uwe-btn-primary"
+                  className="uwe-v2-btn uwe-v2-btn-primary"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -107,7 +107,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
               <form action={deleteLabelAction} style={{ display: "inline" }}>
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="labelId" value={labelId} />
-                <button type="submit" className="uwe-btn uwe-btn-danger">Löschen</button>
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger">Löschen</button>
               </form>
             }
           />
@@ -154,7 +154,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
                 <option value="printed">Gedruckt</option>
                 <option value="archived">Archiviert</option>
               </select>
-              <button type="submit" className="uwe-btn uwe-btn-sm">Status setzen</button>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-sm">Status setzen</button>
             </form>
           </SidebarSection>
           <SidebarSection title="Template">
@@ -162,7 +162,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="labelId" value={labelId} />
               <input type="text" name="templateName" placeholder="Template-Name" required />
-              <button type="submit" className="uwe-btn uwe-btn-sm">Als Template speichern</button>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-sm">Als Template speichern</button>
             </form>
           </SidebarSection>
         </>
@@ -297,7 +297,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           />
 
           <div className="uwe-form-actions">
-            <button type="submit" name="action" value="save" className="uwe-btn uwe-btn-primary">
+            <button type="submit" name="action" value="save" className="uwe-v2-btn uwe-v2-btn-primary">
               Speichern
             </button>
           </div>
@@ -323,7 +323,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
               ))}
             </select>
             <input type="number" name="copies" defaultValue={1} min={1} max={99} style={{ width: "4rem" }} />
-            <button type="submit" className="uwe-btn uwe-btn-sm">
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-sm">
               Zur Druckliste hinzufügen
             </button>
           </form>
@@ -334,12 +334,12 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
         <form action={duplicateLabelAction} style={{ display: "inline" }}>
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="labelId" value={labelId} />
-          <button type="submit" className="uwe-btn">Duplizieren</button>
+          <button type="submit" className="uwe-v2-btn">Duplizieren</button>
         </form>
         <form action={resetLabelToTemplateAction} style={{ display: "inline" }}>
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="labelId" value={labelId} />
-          <button type="submit" className="uwe-btn">Auf Vorlage zurücksetzen</button>
+          <button type="submit" className="uwe-v2-btn">Auf Vorlage zurücksetzen</button>
         </form>
       </div>
     </WorldModuleShell>

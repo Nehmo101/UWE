@@ -105,8 +105,8 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
         </label>
 
         <div className="uwe-form-actions">
-          <button type="submit" className="uwe-btn uwe-btn-primary">Session erstellen</button>
-          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}/sessions`}>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Session erstellen</button>
+          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/sessions`}>
             Abbrechen
           </Link>
         </div>

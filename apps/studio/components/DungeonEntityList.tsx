@@ -28,15 +28,15 @@ export function DungeonEntityList({
 }: Props) {
   if (items.length === 0) {
     return (
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h3>{title}</h3>
-        <p className="uwe-empty">Keine Einträge.</p>
+        <p className="uwe-v2-empty">Keine Einträge.</p>
       </section>
     );
   }
 
   return (
-    <section className="uwe-section">
+    <section className="uwe-v2-section">
       <h3>{title}</h3>
       <ul className="uwe-linked-list">
         {items.map((item) => (
@@ -49,7 +49,7 @@ export function DungeonEntityList({
               {isSecretSection ? (
                 <>
                   <Link
-                    className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                     href={pageLabelNewHref(worldSlug, item.type, item.id, {
                       includeDmOnly: true,
                     })}
@@ -57,7 +57,7 @@ export function DungeonEntityList({
                     DM-Label
                   </Link>
                   <Link
-                    className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                     href={pageLabelNewHref(worldSlug, item.type, item.id)}
                   >
                     Spieler-Label
@@ -65,7 +65,7 @@ export function DungeonEntityList({
                 </>
               ) : (
                 <Link
-                  className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                  className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                   href={pageLabelNewHref(worldSlug, item.type, item.id)}
                 >
                   Label

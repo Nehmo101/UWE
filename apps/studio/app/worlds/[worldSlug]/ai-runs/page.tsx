@@ -65,7 +65,7 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
       }
     >
       {runs.length === 0 ? (
-        <p className="uwe-empty-state">Noch keine AI Runs für diese Welt.</p>
+        <p className="uwe-v2-empty">Noch keine AI Runs für diese Welt.</p>
       ) : (
         <table className="uwe-page-table">
           <thead>

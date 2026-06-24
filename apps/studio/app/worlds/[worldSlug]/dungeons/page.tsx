@@ -45,7 +45,7 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
         title: "Dungeon Cockpit",
         summary: "Dungeons, Ebenen und Räume strukturiert vorbereiten — mit Vorlesetext, GM-Notizen und zugeordneten Assets.",
         actions: (
-          <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/dungeons/new`}>
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/dungeons/new`}>
             Neuer Dungeon
           </Link>
         ),
@@ -80,7 +80,7 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
       </table>
 
       {dungeonList.length === 0 && (
-        <p className="uwe-empty">Noch keine Dungeons. Erstelle den ersten Dungeon für diese Welt.</p>
+        <p className="uwe-v2-empty">Noch keine Dungeons. Erstelle den ersten Dungeon für diese Welt.</p>
       )}
     </WorldModuleShell>
   );
