@@ -97,14 +97,14 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
         ) : null}
       </header>
 
-      <section className="uwe-card uwe-section">
+      <section className="uwe-v2-card uwe-v2-section">
         <div className="uwe-capture-proposal-head">
-          <h3 className="uwe-section-title">KI-Vorschlag (Review)</h3>
+          <h3 className="uwe-v2-section-title">KI-Vorschlag (Review)</h3>
           {!proposal ? (
             <form action={generateCaptureProposalAction}>
               <input type="hidden" name="id" value={capture.id} />
               <input type="hidden" name="returnTo" value={`/capture/${capture.id}`} />
-              <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                 Vorschlag erzeugen
               </button>
             </form>
@@ -153,7 +153,7 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
                   <input type="hidden" name="id" value={capture.id} />
                   <input type="hidden" name="status" value="accepted" />
                   <input type="hidden" name="returnTo" value={`/capture/${capture.id}`} />
-                  <button type="submit" className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
                     Vorschlag annehmen
                   </button>
                 </form>
@@ -161,7 +161,7 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
                   <input type="hidden" name="id" value={capture.id} />
                   <input type="hidden" name="status" value="rejected" />
                   <input type="hidden" name="returnTo" value={`/capture/${capture.id}`} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Ablehnen
                   </button>
                 </form>
@@ -179,8 +179,8 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
         )}
       </section>
 
-      <section className="uwe-card uwe-section">
-        <h3 className="uwe-section-title">Triage</h3>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h3 className="uwe-v2-section-title">Triage</h3>
         <p className="uwe-dashboard-muted">
           Wähle eine Zielaktion. Captures werden verknüpft, nicht stillschweigend überschrieben.
         </p>
@@ -263,7 +263,7 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
 
                 <button
                   type="submit"
-                  className={`uwe-btn uwe-btn-sm ${action === "delete" ? "uwe-btn-danger" : "uwe-btn-primary"}`}
+                  className={`uwe-v2-btn uwe-v2-btn-sm ${action === "delete" ? "uwe-v2-btn-danger" : "uwe-v2-btn-primary"}`}
                 >
                   {CAPTURE_TRIAGE_ACTION_LABELS[action]}
                 </button>

@@ -18,7 +18,7 @@ export default async function AiGatewayAdminPage() {
         { label: "KI & RTX Fallback" },
       ]}
       actions={
-        <Link href="/admin/cookbook" className="uwe-btn uwe-btn-ghost">
+        <Link href="/admin/cookbook" className="uwe-v2-btn uwe-v2-btn-ghost">
           Cookbook
         </Link>
       }

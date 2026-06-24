@@ -123,7 +123,7 @@ export function TemplateForm({
         </label>
       </fieldset>
 
-      <button type="submit" className="uwe-btn uwe-btn-primary">{submitLabel}</button>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">{submitLabel}</button>
     </form>
   );
 }

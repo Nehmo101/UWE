@@ -143,7 +143,7 @@ export function MobileAiPromptPanel({
       <div className="mobile-ai-send-desktop">
         <button
           type="button"
-          className="uwe-btn uwe-btn-primary mobile-ai-send-btn"
+          className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
           disabled={sendDisabled}
           title={ui.sendBlockedReason}
           onClick={() => void handleSend()}
@@ -155,7 +155,7 @@ export function MobileAiPromptPanel({
       <StickyActionBar>
         <button
           type="button"
-          className="uwe-btn uwe-btn-primary mobile-ai-send-btn"
+          className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
           disabled={sendDisabled}
           title={ui.sendBlockedReason}
           onClick={() => void handleSend()}

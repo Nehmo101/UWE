@@ -59,28 +59,28 @@ export function RichTextBlockEditor({
       <div className="uwe-rich-text-editor__toolbar">
         <button
           type="button"
-          className="uwe-btn uwe-btn-ghost"
+          className="uwe-v2-btn uwe-v2-btn-ghost"
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
           B
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-ghost"
+          className="uwe-v2-btn uwe-v2-btn-ghost"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
           I
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-ghost"
+          className="uwe-v2-btn uwe-v2-btn-ghost"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           •
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-ghost"
+          className="uwe-v2-btn uwe-v2-btn-ghost"
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
           1.

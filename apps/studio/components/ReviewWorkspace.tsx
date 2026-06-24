@@ -127,13 +127,13 @@ export function ReviewWorkspace() {
 
   return (
     <>
-      <section className="uwe-card" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
         <p>
           <strong>{pendingCount}</strong> offene Reviews
         </p>
       </section>
 
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Filter</h2>
         <div className="uwe-form-grid">
           <label>
@@ -166,7 +166,7 @@ export function ReviewWorkspace() {
             />
           </label>
         </div>
-        <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void loadReviews()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadReviews()}>
           Filtern
         </button>
       </section>
@@ -175,7 +175,7 @@ export function ReviewWorkspace() {
       {loading ? <p>Lade Reviews…</p> : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-        <section className="uwe-card">
+        <section className="uwe-v2-card">
           <h2>Liste</h2>
           <table className="uwe-table">
             <thead>
@@ -203,7 +203,7 @@ export function ReviewWorkspace() {
           </table>
         </section>
 
-        <section className="uwe-card">
+        <section className="uwe-v2-card">
           <h2>Detail & Vorschau</h2>
           {!detail ? <p>Review auswählen.</p> : null}
           {detail ? (
@@ -227,10 +227,10 @@ export function ReviewWorkspace() {
               ) : null}
               {detail.status === "pending" ? (
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                  <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void runAction("approve")}>
+                  <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void runAction("approve")}>
                     Freigeben
                   </button>
-                  <button type="button" className="uwe-btn" onClick={() => void runAction("reject")}>
+                  <button type="button" className="uwe-v2-btn" onClick={() => void runAction("reject")}>
                     Ablehnen
                   </button>
                 </div>
@@ -252,7 +252,7 @@ export function ReviewWorkspace() {
                   placeholder="Kommentar…"
                   style={{ flex: 1 }}
                 />
-                <button type="button" className="uwe-btn" onClick={() => void submitComment()}>
+                <button type="button" className="uwe-v2-btn" onClick={() => void submitComment()}>
                   Senden
                 </button>
               </div>

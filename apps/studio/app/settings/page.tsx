@@ -237,7 +237,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                     ))}
                   </select>
                 </label>
-                <button type="submit" className="uwe-btn uwe-btn-primary">
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                   Speichern
                 </button>
               </form>
@@ -298,7 +298,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                                 name="guestModeEnabled"
                                 value={world.guestModeEnabled ? "0" : "1"}
                               />
-                              <button type="submit" className="uwe-btn uwe-btn-ghost">
+                              <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
                                 {world.guestModeEnabled ? "Deaktivieren" : "Aktivieren"}
                               </button>
                             </form>
@@ -340,7 +340,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                   defaultChecked={settings.portal.publicSharingEnabled}
                 />
               </SettingsToggleGroup>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -385,7 +385,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 />
               </label>
 
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -466,7 +466,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 konfiguriert. Aktiver Pfad: <code>{backupsPath}</code>
               </p>
 
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -511,7 +511,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                   </table>
                 </div>
               </section>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -714,13 +714,13 @@ export default async function SettingsPage({ searchParams }: Props) {
                   Nachrichten; Smart Inbox und KI-Entwürfe nur im Mail Portal.
                 </p>
                 <p>
-                  <Link href="/admin/mail" className="uwe-btn uwe-btn-secondary">
+                  <Link href="/admin/mail" className="uwe-v2-btn uwe-v2-btn-secondary">
                     Mail Portal — Konten einrichten
                   </Link>
                 </p>
               </SettingsCollapsiblePanel>
 
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -795,13 +795,13 @@ export default async function SettingsPage({ searchParams }: Props) {
                   <Link href="/admin/status">Systemstatus</Link>.
                 </p>
                 <p>
-                  <Link href="/image-studio" className="uwe-btn uwe-btn-secondary">
+                  <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
                     Image Studio öffnen
                   </Link>
                 </p>
               </SettingsCollapsiblePanel>
 
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -828,7 +828,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 />
                 Automatische Backups (Platzhalter)
               </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>
             </form>
@@ -842,13 +842,13 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
               </p>
               <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-                <Link className="uwe-btn uwe-btn-primary" href="/system">
+                <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system">
                   System-Hub öffnen
                 </Link>
-                <Link className="uwe-btn" href="/admin/status">
+                <Link className="uwe-v2-btn" href="/admin/status">
                   Admin Status Dashboard
                 </Link>
-                <Link className="uwe-btn" href="/ai">
+                <Link className="uwe-v2-btn" href="/ai">
                   KI
                 </Link>
               </p>

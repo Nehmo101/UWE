@@ -28,7 +28,7 @@ export default async function ImageStudioProjectPage({ params }: Props) {
       title={project.title}
       summary="Versionen prüfen, Entwurf speichern, Asset übernehmen oder im Canvas bearbeiten."
       actions={
-        <Link href="/image-studio" className="uwe-btn uwe-btn-secondary">
+        <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
           ← Alle Projekte
         </Link>
       }

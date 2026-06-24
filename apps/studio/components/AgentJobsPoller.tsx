@@ -91,7 +91,7 @@ export function AgentJobRetryButton({ jobId, disabled }: AgentJobRetryButtonProp
     <span>
       <button
         type="button"
-        className="uwe-btn uwe-btn-ghost"
+        className="uwe-v2-btn uwe-v2-btn-ghost"
         disabled={disabled || busy}
         onClick={() => void handleRetry()}
       >

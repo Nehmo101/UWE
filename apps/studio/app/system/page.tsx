@@ -145,8 +145,8 @@ export default async function SystemHubPage({ searchParams }: Props) {
             />
           </div>
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Homelab — Kurzüberblick</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Homelab — Kurzüberblick</h2>
             <div className="uwe-homelab-service-grid">
               {cockpit.serviceStatuses.slice(0, 6).map((service) => (
                 <article
@@ -166,22 +166,22 @@ export default async function SystemHubPage({ searchParams }: Props) {
             </p>
           </section>
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Schnellzugriff</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Schnellzugriff</h2>
             <p style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link className="uwe-btn uwe-btn-primary" href="/system?tab=diagnose">
+              <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
                 Vollständige Diagnose
               </Link>
-              <Link className="uwe-btn" href="/settings?tab=status">
+              <Link className="uwe-v2-btn" href="/settings?tab=status">
                 Einstellungen → Status
               </Link>
-              <Link className="uwe-btn" href="/jobs">
+              <Link className="uwe-v2-btn" href="/jobs">
                 Jobs
               </Link>
-              <Link className="uwe-btn" href="/backup">
+              <Link className="uwe-v2-btn" href="/backup">
                 Backup
               </Link>
-              <Link className="uwe-btn" href="/settings">
+              <Link className="uwe-v2-btn" href="/settings">
                 Einstellungen
               </Link>
             </p>
@@ -192,7 +192,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
       {activeTab === "homelab" && (
         <>
           {cockpit.urlWarnings.length > 0 && (
-            <section className="uwe-form-error uwe-section" role="alert">
+            <section className="uwe-form-error uwe-v2-section" role="alert">
               <strong>Sicherheitswarnungen (RTX niemals öffentlich):</strong>
               <ul>
                 {cockpit.urlWarnings.map((warning) => (
@@ -204,8 +204,8 @@ export default async function SystemHubPage({ searchParams }: Props) {
             </section>
           )}
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Service-Status</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Service-Status</h2>
             <div className="uwe-homelab-service-grid">
               {cockpit.serviceStatuses.map((service) => (
                 <article
@@ -220,8 +220,8 @@ export default async function SystemHubPage({ searchParams }: Props) {
             </div>
           </section>
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Security Checklist</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Security Checklist</h2>
             <ul className="uwe-homelab-checklist">
               {cockpit.securityChecks.map((check) => (
                 <li key={check.id} data-status={severityStatus(check.severity, check.ok)}>
@@ -233,11 +233,11 @@ export default async function SystemHubPage({ searchParams }: Props) {
             </ul>
           </section>
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Runbooks</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Runbooks</h2>
             <div className="uwe-homelab-runbook-list">
               {cockpit.runbooks.map((runbook) => (
-                <details key={runbook.id} className="uwe-card uwe-homelab-runbook">
+                <details key={runbook.id} className="uwe-v2-card uwe-homelab-runbook">
                   <summary>
                     <strong>{runbook.title}</strong> — {runbook.summary}
                   </summary>

@@ -458,8 +458,8 @@ export default async function AdminStatusPage() {
           </div>
 
           {jobs.recentFailures.length > 0 && (
-            <section className="uwe-card" style={{ marginTop: "1rem" }}>
-              <h2 className="uwe-section-title">Letzte fehlgeschlagene Jobs</h2>
+            <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
+              <h2 className="uwe-v2-section-title">Letzte fehlgeschlagene Jobs</h2>
               <ul className="uwe-dashboard-list">
                 {jobs.recentFailures.map((job) => (
                   <li key={job.id}>
@@ -475,8 +475,8 @@ export default async function AdminStatusPage() {
           )}
 
           {aiRuns.recentFailures.length > 0 && (
-            <section className="uwe-card" style={{ marginTop: "1rem" }}>
-              <h2 className="uwe-section-title">Letzte fehlgeschlagene AI Runs</h2>
+            <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
+              <h2 className="uwe-v2-section-title">Letzte fehlgeschlagene AI Runs</h2>
               <ul className="uwe-dashboard-list">
                 {aiRuns.recentFailures.map((run) => (
                   <li key={run.id}>

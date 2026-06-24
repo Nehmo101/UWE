@@ -52,7 +52,7 @@ export function MailTestForm({ defaultEmail = "" }: MailTestFormProps) {
           placeholder="dm@example.org"
         />
       </label>
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
         {loading ? "Sende…" : "Testmail senden"}
       </button>
       {status && <p className="uwe-notice">{status}</p>}

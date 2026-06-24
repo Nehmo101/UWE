@@ -11,10 +11,10 @@ export function EditPageStickyBar({
 }) {
   return (
     <StickyActionBar>
-      <button type="submit" form={formId} className="uwe-btn uwe-btn-primary">
+      <button type="submit" form={formId} className="uwe-v2-btn uwe-v2-btn-primary">
         Speichern
       </button>
-      <a href={previewHref} className="uwe-btn uwe-btn-secondary">
+      <a href={previewHref} className="uwe-v2-btn uwe-v2-btn-secondary">
         Vorschau
       </a>
     </StickyActionBar>

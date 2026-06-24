@@ -26,7 +26,7 @@ export default async function ImageStudioEditPage({ params }: Props) {
       title={`Bearbeiten — ${project.title}`}
       summary="Drehen und als neue Version speichern (Odysseus-Gallery-Editor, vereinfacht)."
       actions={
-        <Link href={`/image-studio/${projectId}`} className="uwe-btn uwe-btn-secondary">
+        <Link href={`/image-studio/${projectId}`} className="uwe-v2-btn uwe-v2-btn-secondary">
           ← Projekt
         </Link>
       }

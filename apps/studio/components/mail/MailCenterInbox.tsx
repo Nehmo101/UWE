@@ -56,8 +56,8 @@ export function MailCenterInbox({ accounts, initialMessages }: MailCenterInboxPr
 
   if (accounts.length === 0) {
     return (
-      <section className="uwe-card">
-        <h2 className="uwe-section-title">Posteingang</h2>
+      <section className="uwe-v2-card">
+        <h2 className="uwe-v2-section-title">Posteingang</h2>
         <p className="uwe-dashboard-muted">
           Noch kein IMAP-Konto konfiguriert. Lege unter{" "}
           <Link href="/mail?tab=setup">Einrichtung</Link> oder im{" "}
@@ -68,8 +68,8 @@ export function MailCenterInbox({ accounts, initialMessages }: MailCenterInboxPr
   }
 
   return (
-    <section className="uwe-card">
-      <h2 className="uwe-section-title">Posteingang</h2>
+    <section className="uwe-v2-card">
+      <h2 className="uwe-v2-section-title">Posteingang</h2>
       <p className="uwe-hint">
         Synchronisierte IMAP-Nachrichten. Für KI-Zusammenfassung und Smart Inbox:{" "}
         <Link href="/admin/mail">Mail Portal</Link>.
@@ -92,7 +92,7 @@ export function MailCenterInbox({ accounts, initialMessages }: MailCenterInboxPr
         </label>
         <button
           type="button"
-          className="uwe-btn uwe-btn-primary"
+          className="uwe-v2-btn uwe-v2-btn-primary"
           disabled={pending}
           onClick={() => void syncInbox()}
         >
@@ -103,7 +103,7 @@ export function MailCenterInbox({ accounts, initialMessages }: MailCenterInboxPr
       {status ? <p className="uwe-notice">{status}</p> : null}
 
       {initialMessages.length === 0 ? (
-        <p className="uwe-empty">Noch keine Nachrichten — IMAP-Sync starten.</p>
+        <p className="uwe-v2-empty">Noch keine Nachrichten — IMAP-Sync starten.</p>
       ) : (
         <ul className="uwe-list-cards">
           {initialMessages.map((message) => (

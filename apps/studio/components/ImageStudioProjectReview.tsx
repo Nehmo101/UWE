@@ -85,8 +85,8 @@ export function ImageStudioProjectReview({
 
   return (
     <div className="uwe-image-studio-review">
-      <section className="uwe-card">
-        <h2 className="uwe-section-title">Projekt</h2>
+      <section className="uwe-v2-card">
+        <h2 className="uwe-v2-section-title">Projekt</h2>
         <dl className="uwe-kv-list">
           <div>
             <dt>Status</dt>
@@ -118,7 +118,7 @@ export function ImageStudioProjectReview({
           </label>
           <button
             type="button"
-            className="uwe-btn uwe-btn-secondary"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
             disabled={pending}
             onClick={() => void saveDraft()}
           >
@@ -127,10 +127,10 @@ export function ImageStudioProjectReview({
         </div>
       </section>
 
-      <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
-        <h2 className="uwe-section-title">Versionen</h2>
+      <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
+        <h2 className="uwe-v2-section-title">Versionen</h2>
         {versions.length === 0 ? (
-          <p className="uwe-empty">Noch keine Versionen.</p>
+          <p className="uwe-v2-empty">Noch keine Versionen.</p>
         ) : (
           <ul className="uwe-list-cards">
             {versions.map((version) => (
@@ -154,7 +154,7 @@ export function ImageStudioProjectReview({
           <p style={{ marginTop: "1rem" }}>
             <Link
               href={`/image-studio/${projectId}/edit`}
-              className="uwe-btn uwe-btn-primary"
+              className="uwe-v2-btn uwe-v2-btn-primary"
             >
               Canvas-Editor öffnen
             </Link>
@@ -163,8 +163,8 @@ export function ImageStudioProjectReview({
       </section>
 
       {links.length > 0 && latestWithAsset?.assetId ? (
-        <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
-          <h2 className="uwe-section-title">Verknüpfung übernehmen</h2>
+        <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
+          <h2 className="uwe-v2-section-title">Verknüpfung übernehmen</h2>
           <ul className="uwe-list-plain">
             {links.map((link) => (
               <li key={`${link.targetType}-${link.targetId}`}>
@@ -172,7 +172,7 @@ export function ImageStudioProjectReview({
                 {link.targetType === "page" ? (
                   <button
                     type="button"
-                    className="uwe-btn uwe-btn-secondary"
+                    className="uwe-v2-btn uwe-v2-btn-secondary"
                     style={{ marginLeft: "0.5rem" }}
                     disabled={pending}
                     onClick={() => void adoptToPage(link.targetId)}

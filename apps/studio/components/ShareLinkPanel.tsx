@@ -86,14 +86,14 @@ export function ShareLinkPanel({
           Zugriff protokollieren
         </label>
 
-        <button type="submit" className="uwe-btn uwe-btn-primary">
+        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Link erstellen
         </button>
       </form>
 
       {previewHref && (
         <p className="share-link-preview">
-          <a href={previewHref} target="_blank" rel="noreferrer" className="uwe-btn uwe-btn-ghost">
+          <a href={previewHref} target="_blank" rel="noreferrer" className="uwe-v2-btn uwe-v2-btn-ghost">
             Vorschau anzeigen
           </a>
         </p>
@@ -118,7 +118,7 @@ export function ShareLinkPanel({
               <div className="share-link-actions">
                 <button
                   type="button"
-                  className="uwe-btn uwe-btn-ghost"
+                  className="uwe-v2-btn uwe-v2-btn-ghost"
                   onClick={() => copyLink(link.token)}
                 >
                   {copiedToken === link.token ? "Kopiert!" : "Link kopieren"}
@@ -128,7 +128,7 @@ export function ShareLinkPanel({
                   <form action={disableShareLinkAction}>
                     <input type="hidden" name="linkId" value={link.id} />
                     <input type="hidden" name="returnPath" value={returnPath} />
-                    <button type="submit" className="uwe-btn uwe-btn-ghost">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
                       Deaktivieren
                     </button>
                   </form>
@@ -163,7 +163,7 @@ export function ShareLinkPanel({
                     <input type="checkbox" name="logAccess" defaultChecked={link.logAccess} />
                     Zugriff protokollieren
                   </label>
-                  <button type="submit" className="uwe-btn uwe-btn-ghost">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
                     Einstellungen speichern
                   </button>
                 </form>

@@ -113,7 +113,7 @@ export function PrintListEditor({
         </tbody>
       </table>
       {items.length === 0 && (
-        <p className="uwe-empty">Noch keine Labels in dieser Druckliste.</p>
+        <p className="uwe-v2-empty">Noch keine Labels in dieser Druckliste.</p>
       )}
     </>
   );

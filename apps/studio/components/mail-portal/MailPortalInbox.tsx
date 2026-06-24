@@ -70,8 +70,8 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
 
   return (
     <div className="uwe-mail-portal-layout">
-      <section className="uwe-mail-portal-list uwe-card">
-        <h2 className="uwe-section-title">Smart Inbox</h2>
+      <section className="uwe-mail-portal-list uwe-v2-card">
+        <h2 className="uwe-v2-section-title">Smart Inbox</h2>
         <form
           className="uwe-inline-actions"
           onSubmit={(event) => {
@@ -84,7 +84,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
           }}
         >
           <input className="uwe-input" name="q" placeholder="Suche…" defaultValue={searchParams.get("q") ?? ""} />
-          <button className="uwe-btn uwe-btn-secondary uwe-btn-sm" type="submit">
+          <button className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" type="submit">
             Suchen
           </button>
         </form>
@@ -114,7 +114,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
         </ul>
       </section>
 
-      <section className="uwe-mail-portal-reader uwe-card">
+      <section className="uwe-mail-portal-reader uwe-v2-card">
         {!selectedMessage ? (
           <p className="uwe-dashboard-muted">Wähle eine Nachricht zum Lesen.</p>
         ) : (
@@ -153,7 +153,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
             <div className="uwe-inline-actions">
               <button
                 type="button"
-                className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                 disabled={pending}
                 onClick={() => runAi("/api/admin/mail/prioritize", { messageId: selectedMessage.id })}
               >
@@ -161,7 +161,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
               </button>
               <button
                 type="button"
-                className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                 disabled={pending}
                 onClick={() => runAi("/api/admin/mail/ai/summarize", { messageId: selectedMessage.id })}
               >
@@ -181,7 +181,7 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
               </select>
               <button
                 type="button"
-                className="uwe-btn uwe-btn-primary uwe-btn-sm"
+                className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
                 disabled={pending}
                 onClick={() =>
                   runAi("/api/admin/mail/ai/reply-draft", {
@@ -195,8 +195,8 @@ export function MailPortalInbox({ messages, selectedId, selectedMessage }: MailP
             </div>
 
             {selectedMessage.aiActions.length > 0 ? (
-              <section className="uwe-section">
-                <h3 className="uwe-section-title">KI-Aktionen</h3>
+              <section className="uwe-v2-section">
+                <h3 className="uwe-v2-section-title">KI-Aktionen</h3>
                 <ul className="uwe-list-plain">
                   {selectedMessage.aiActions.map((action, index) => (
                     <li key={`${action.kind}-${index}`}>

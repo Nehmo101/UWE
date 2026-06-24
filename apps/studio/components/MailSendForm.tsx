@@ -129,7 +129,7 @@ export function MailSendForm({
       <fieldset className="uwe-fieldset">
         <legend>Empfänger</legend>
         {recipients.length === 0 ? (
-          <p className="uwe-empty">Keine Empfänger mit E-Mail-Adresse gefunden.</p>
+          <p className="uwe-v2-empty">Keine Empfänger mit E-Mail-Adresse gefunden.</p>
         ) : (
           recipients.map((recipient) => (
             <label key={recipient.email} className="uwe-checkbox">
@@ -157,7 +157,7 @@ export function MailSendForm({
 
       <button
         type="submit"
-        className="uwe-btn uwe-btn-primary"
+        className="uwe-v2-btn uwe-v2-btn-primary"
         disabled={loading || selected.size === 0}
       >
         {loading ? "Sende…" : "Mail jetzt senden"}

@@ -29,8 +29,8 @@ export default async function WorkshopRecipesPage() {
         <Link href="/workshop">← Werkstatt</Link>
       </p>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Rezept</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Rezept</h2>
         <form action={createPaintRecipeAction} className="uwe-brain-create-form">
           <label>
             Name
@@ -78,14 +78,14 @@ export default async function WorkshopRecipesPage() {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Rezept anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Bibliothek ({recipes.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Bibliothek ({recipes.length})</h2>
         {recipes.length === 0 ? (
           <EmptyState
             title="Noch keine Paint-Rezepte"
@@ -182,14 +182,14 @@ export default async function WorkshopRecipesPage() {
                     />
                     </>
                   )}
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Speichern
                   </button>
                 </form>
                 <form action={deletePaintRecipeAction}>
                   <input type="hidden" name="id" value={recipe.id} />
                   <input type="hidden" name="returnTo" value="/workshop/recipes" />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Löschen
                   </button>
                 </form>

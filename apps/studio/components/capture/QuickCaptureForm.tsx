@@ -157,7 +157,7 @@ export function QuickCaptureForm({
 
       <button
         type="submit"
-        className="uwe-btn uwe-btn-primary uwe-capture-submit"
+        className="uwe-v2-btn uwe-v2-btn-primary uwe-capture-submit"
         disabled={isSubmitting || isUploading}
       >
         {isSubmitting ? "Speichern …" : "Erfassen"}

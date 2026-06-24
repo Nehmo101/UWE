@@ -211,7 +211,7 @@ export function JobsWorkspace({
             ))}
           </select>
         </label>
-        <button type="button" className="uwe-btn uwe-btn-secondary" onClick={() => void refresh()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void refresh()}>
           Aktualisieren
         </button>
       </div>
@@ -266,7 +266,7 @@ export function JobsWorkspace({
                   {selectedJob.canCancel && (
                     <button
                       type="button"
-                      className="uwe-btn uwe-btn-secondary"
+                      className="uwe-v2-btn uwe-v2-btn-secondary"
                       disabled={busy === selectedJob.id}
                       onClick={() => void cancelJob(selectedJob.id)}
                     >
@@ -276,7 +276,7 @@ export function JobsWorkspace({
                   {selectedJob.canRetry && (
                     <button
                       type="button"
-                      className="uwe-btn"
+                      className="uwe-v2-btn"
                       disabled={busy === selectedJob.id}
                       onClick={() => void retryJob(selectedJob.id)}
                     >
