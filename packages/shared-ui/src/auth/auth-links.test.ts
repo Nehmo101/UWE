@@ -26,37 +26,57 @@ describe("auth-links", () => {
     assert.equal(urls.portalBaseUrl, "https://uwe.example.org/portal");
   });
 
+  it("derives portal URL at domain root when PORTAL_PATH=/", () => {
+    const urls = readPublicAppUrls({
+      PUBLIC_BASE_URL: "https://uwe.example.org",
+      PORTAL_PATH: "/",
+    });
+    assert.equal(urls.portalBaseUrl, "https://uwe.example.org");
+  });
+
   it("links from Studio landing to Portal with absolute URL when logged in", () => {
-    const urls = readPublicAppUrls({});
     const links = resolveAuthLinks({
       isLoggedIn: true,
       currentApp: "studio",
-      studioBaseUrl: urls.studioBaseUrl,
-      portalBaseUrl: urls.portalBaseUrl,
+      env: {},
     });
     assert.equal(links.portalHref, "http://localhost:3001/portal");
     assert.equal(links.studioHref, "/studio");
   });
 
+  it("does not double-append /portal when portal base already includes mount path", () => {
+    const links = resolveAuthLinks({
+      isLoggedIn: true,
+      currentApp: "studio",
+      env: { PUBLIC_BASE_URL: "https://uwe.example.org" },
+    });
+    assert.equal(links.portalHref, "https://uwe.example.org/portal");
+  });
+
+  it("links to portal entry on root-hosted unified deployment", () => {
+    const links = resolveAuthLinks({
+      isLoggedIn: true,
+      currentApp: "studio",
+      env: { PUBLIC_BASE_URL: "https://uwe.example.org", PORTAL_PATH: "/" },
+    });
+    assert.equal(links.portalHref, "https://uwe.example.org/portal");
+  });
+
   it("links from Studio landing to Portal login when logged out", () => {
-    const urls = readPublicAppUrls({});
     const links = resolveAuthLinks({
       isLoggedIn: false,
       currentApp: "studio",
-      studioBaseUrl: urls.studioBaseUrl,
-      portalBaseUrl: urls.portalBaseUrl,
+      env: {},
     });
     assert.equal(links.portalHref, "http://localhost:3001/login");
     assert.equal(links.studioHref, "/login");
   });
 
   it("keeps same-app links relative on Portal", () => {
-    const urls = readPublicAppUrls({});
     const links = resolveAuthLinks({
       isLoggedIn: true,
       currentApp: "portal",
-      studioBaseUrl: urls.studioBaseUrl,
-      portalBaseUrl: urls.portalBaseUrl,
+      env: {},
     });
     assert.equal(links.portalHref, "/portal");
     assert.equal(links.studioHref, "http://localhost:3000/studio");
