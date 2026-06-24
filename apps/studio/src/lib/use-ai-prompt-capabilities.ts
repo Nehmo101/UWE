@@ -51,15 +51,44 @@ export interface UseAiPromptCapabilitiesOptions {
   pollIntervalMs?: number;
 }
 
+/**
+ * Classifies status-load outcomes so the UI can stay calm when AI is simply
+ * not available, and only show the hard red error for genuine failures.
+ *
+ * - "none": status loaded, AI is usable.
+ * - "unavailable": AI is intentionally off/offline/mock (RTX disabled, no cloud,
+ *   mock mode). Render a muted hint, never a danger block.
+ * - "error": unexpected failure (network/5xx while AI is expected). Render red.
+ */
+export type AiStatusKind = "none" | "unavailable" | "error";
+
 export interface UseAiPromptCapabilitiesResult {
   caps: AiPromptCapabilities;
   loading: boolean;
+  /** Legacy generic error message (kept for compatibility). */
   error: string | null;
+  /** Classified status outcome. Prefer this over `error` for rendering. */
+  statusKind: AiStatusKind;
+  /** Calm, muted hint when `statusKind === "unavailable"`. */
+  unavailableHint: string | null;
   providerMode: AiProviderMode;
   contextMode: AiContextMode;
   setProviderMode: (mode: AiProviderMode) => void;
   setContextMode: (mode: AiContextMode) => void;
   refresh: () => Promise<void>;
+}
+
+const MOCK_AI =
+  typeof process !== "undefined" && process.env?.NEXT_PUBLIC_AI_USE_MOCK === "true";
+
+const HINT_AI_OFFLINE_MOCK =
+  "KI läuft im Offline-/Mock-Modus. Antworten sind simuliert.";
+const HINT_AI_NOT_AVAILABLE =
+  "KI ist aktuell nicht verfügbar (lokale RTX aus, keine Cloud konfiguriert).";
+
+/** True when the resolved capabilities offer no usable AI backend. */
+function capsHaveNoBackend(caps: AiPromptCapabilities): boolean {
+  return !caps.localAiReady && !caps.cloudAvailable;
 }
 
 export function useAiPromptCapabilities(
@@ -73,6 +102,8 @@ export function useAiPromptCapabilities(
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusKind, setStatusKind] = useState<AiStatusKind>("none");
+  const [unavailableHint, setUnavailableHint] = useState<string | null>(null);
   const [providerMode, setProviderModeState] = useState<AiProviderMode>("auto");
   const [contextMode, setContextModeState] = useState<AiContextMode>("general_chat");
 
@@ -84,6 +115,15 @@ export function useAiPromptCapabilities(
       ]);
 
       if (!adminRes.ok || !settingsRes.ok) {
+        // In offline/mock mode the status endpoints are expected to be
+        // unavailable — keep the panel calm instead of flagging a hard error.
+        if (MOCK_AI) {
+          setCaps((prev) => ({ ...DEFAULT_CAPS, hasCurrentObject: prev.hasCurrentObject }));
+          setError(null);
+          setStatusKind("unavailable");
+          setUnavailableHint(HINT_AI_OFFLINE_MOCK);
+          return;
+        }
         throw new Error("Status konnte nicht geladen werden.");
       }
 
@@ -118,6 +158,19 @@ export function useAiPromptCapabilities(
       setCaps(nextCaps);
       setError(null);
 
+      // Status loaded fine. Distinguish a usable AI from one that is simply
+      // switched off/offline — the latter is a calm, muted hint, not an error.
+      if (MOCK_AI) {
+        setStatusKind("unavailable");
+        setUnavailableHint(HINT_AI_OFFLINE_MOCK);
+      } else if (capsHaveNoBackend(nextCaps)) {
+        setStatusKind("unavailable");
+        setUnavailableHint(HINT_AI_NOT_AVAILABLE);
+      } else {
+        setStatusKind("none");
+        setUnavailableHint(null);
+      }
+
       setProviderModeState((current) => {
         const resolvedProvider = resolveProviderSelection(current, nextCaps);
         setContextModeState((ctx) =>
@@ -126,7 +179,18 @@ export function useAiPromptCapabilities(
         return resolvedProvider;
       });
     } catch {
-      setError("Status konnte nicht geladen werden.");
+      // Network/parse failure. Mock/offline dev is expected to fail here, so
+      // stay calm; otherwise surface a genuine error.
+      if (MOCK_AI) {
+        setCaps((prev) => ({ ...DEFAULT_CAPS, hasCurrentObject: prev.hasCurrentObject }));
+        setError(null);
+        setStatusKind("unavailable");
+        setUnavailableHint(HINT_AI_OFFLINE_MOCK);
+      } else {
+        setError("Status konnte nicht geladen werden.");
+        setStatusKind("error");
+        setUnavailableHint(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -161,6 +225,8 @@ export function useAiPromptCapabilities(
     caps,
     loading,
     error,
+    statusKind,
+    unavailableHint,
     providerMode,
     contextMode,
     setProviderMode,

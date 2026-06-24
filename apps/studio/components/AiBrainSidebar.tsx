@@ -1,6 +1,7 @@
 "use client";
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { EmptyState, LoadingState } from "@uwe/shared-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
@@ -410,6 +411,15 @@ export function AiBrainSidebar({
           Aktion ausführen
         </button>
       </div>
+
+      {loading && <LoadingState label="Brain-Aktion läuft…" size="sm" />}
+
+      {!loading && proposals.length === 0 && !context && recentRuns.length === 0 && (
+        <EmptyState
+          title="Noch keine Vorschläge"
+          description="Wähle eine Brain-Aktion und führe sie aus, um Vorschläge zu erhalten."
+        />
+      )}
 
       {context && (
         <details className="ai-brain-context">

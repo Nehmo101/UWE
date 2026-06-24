@@ -2,7 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useMemo, useState } from "react";
-import { ErrorAlert, LoadingSpinner, StickyActionBar } from "@uwe/shared-ui";
+import { EmptyState, ErrorAlert, LoadingSpinner, StickyActionBar } from "@uwe/shared-ui";
 import { AiPromptControls, computePromptUiState } from "@/components/AiPromptControls";
 import { useAiPromptCapabilities } from "@/src/lib/use-ai-prompt-capabilities";
 
@@ -27,6 +27,8 @@ export function MobileAiPromptPanel({
     caps,
     loading: statusLoading,
     error: statusError,
+    statusKind,
+    unavailableHint,
     providerMode,
     contextMode,
     setProviderMode,
@@ -78,7 +80,11 @@ export function MobileAiPromptPanel({
     }
   }
 
-  const displayError = error ?? statusError;
+  // Only genuine failures (send error, or a real status error) get the red
+  // alert. "AI unavailable/offline/mock" is shown as a calm muted hint below.
+  const aiUnavailable = statusKind === "unavailable";
+  const displayError = error ?? (statusKind === "error" ? statusError : null);
+  const sendDisabled = !ui.canSend || loading || aiUnavailable;
 
   return (
     <div className="mobile-ai-prompt uwe-has-sticky-actions">
@@ -106,6 +112,15 @@ export function MobileAiPromptPanel({
         />
       </label>
 
+      {aiUnavailable && (
+        <div className="mobile-ai-unavailable" aria-live="polite">
+          <EmptyState
+            title="KI nicht verfügbar"
+            description={unavailableHint ?? "KI ist aktuell nicht verfügbar."}
+          />
+        </div>
+      )}
+
       {loading && (
         <div className="mobile-ai-loading" role="status" aria-live="polite">
           <LoadingSpinner label="KI antwortet…" />
@@ -129,7 +144,7 @@ export function MobileAiPromptPanel({
         <button
           type="button"
           className="uwe-btn uwe-btn-primary mobile-ai-send-btn"
-          disabled={!ui.canSend || loading}
+          disabled={sendDisabled}
           title={ui.sendBlockedReason}
           onClick={() => void handleSend()}
         >
@@ -141,7 +156,7 @@ export function MobileAiPromptPanel({
         <button
           type="button"
           className="uwe-btn uwe-btn-primary mobile-ai-send-btn"
-          disabled={!ui.canSend || loading}
+          disabled={sendDisabled}
           title={ui.sendBlockedReason}
           onClick={() => void handleSend()}
         >
