@@ -50,7 +50,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
         title: "Sessions",
         summary: "Vorbereiten, spielen und nachbereiten — Recaps fürs Portal veröffentlichen.",
         actions: (
-          <Link className="uwe-btn uwe-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
             Neue Session
           </Link>
         ),
@@ -107,7 +107,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
       </table>
 
       {sessions.length === 0 && (
-        <p className="uwe-empty">Noch keine Sessions. Erstelle die erste Session für diese Kampagne.</p>
+        <p className="uwe-v2-empty">Noch keine Sessions. Erstelle die erste Session für diese Kampagne.</p>
       )}
     </WorldModuleShell>
   );

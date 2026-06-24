@@ -113,7 +113,7 @@ export default async function BrainOverviewPage() {
             )}
 
             <p className="uwe-brain-meta">
-              <Link href={`/worlds/${world.slug}/brain`} className="uwe-btn uwe-btn-secondary">
+              <Link href={`/worlds/${world.slug}/brain`} className="uwe-v2-btn uwe-v2-btn-secondary">
                 Brain Store öffnen
               </Link>
             </p>

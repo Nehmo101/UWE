@@ -32,8 +32,8 @@ export default async function LifeBrainPage() {
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Dokument</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Dokument</h2>
         <form action={createLifeBrainDocumentAction} className="uwe-brain-create-form">
           <label>
             Titel
@@ -57,14 +57,14 @@ export default async function LifeBrainPage() {
             Tags (kommagetrennt)
             <input name="tags" placeholder="homelab, netzwerk" />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Dokument speichern
           </button>
         </form>
       </section>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neuer Fakt</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neuer Fakt</h2>
         <form action={createLifeBrainFactAction} className="uwe-brain-create-form">
           <label>
             Titel
@@ -82,7 +82,7 @@ export default async function LifeBrainPage() {
             Tags (kommagetrennt)
             <input name="tags" placeholder="material, 3d-print" />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-secondary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
             Fakt speichern
           </button>
         </form>
@@ -96,8 +96,8 @@ export default async function LifeBrainPage() {
         />
       ) : (
         <>
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Dokumente ({documents.length})</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Dokumente ({documents.length})</h2>
             <div className="uwe-today-card-list">
               {documents.map((doc) => (
                 <article key={doc.id} className="uwe-today-card">
@@ -110,7 +110,7 @@ export default async function LifeBrainPage() {
                   {doc.content && <p>{doc.content}</p>}
                   <form action={deleteLifeBrainDocumentAction}>
                     <input type="hidden" name="id" value={doc.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                       Löschen
                     </button>
                   </form>
@@ -119,8 +119,8 @@ export default async function LifeBrainPage() {
             </div>
           </section>
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Fakten ({facts.length})</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Fakten ({facts.length})</h2>
             <div className="uwe-today-card-list">
               {facts.map((fact) => (
                 <article key={fact.id} className="uwe-today-card">
@@ -133,7 +133,7 @@ export default async function LifeBrainPage() {
                   {fact.content && <p>{fact.content}</p>}
                   <form action={deleteLifeBrainFactAction}>
                     <input type="hidden" name="id" value={fact.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                       Löschen
                     </button>
                   </form>

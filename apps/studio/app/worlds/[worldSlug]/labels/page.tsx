@@ -60,7 +60,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
         title: "Label-Bibliothek",
         summary: "6×4 Zoll Labels, Karten und Handouts erstellen, bearbeiten und drucken.",
         actions: (
-          <Link href={`/worlds/${worldSlug}/labels/new`} className="uwe-btn uwe-btn-primary">
+          <Link href={`/worlds/${worldSlug}/labels/new`} className="uwe-v2-btn uwe-v2-btn-primary">
             Neues Label
           </Link>
         ),
@@ -153,7 +153,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
             </tbody>
           </table>
           {labelRows.length === 0 && (
-            <p className="uwe-empty">
+            <p className="uwe-v2-empty">
               Noch keine Labels.{" "}
               <Link href={`/worlds/${worldSlug}/labels/new`}>Erstes Label erstellen</Link>
             </p>
@@ -224,7 +224,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
                 <input type="checkbox" name="forNextSession" />
                 Für nächste Session
               </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary">Erstellen</button>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Erstellen</button>
             </form>
           </section>
 
@@ -274,7 +274,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
             </tbody>
           </table>
           {printLists.length === 0 && (
-            <p className="uwe-empty">Noch keine Drucklisten.</p>
+            <p className="uwe-v2-empty">Noch keine Drucklisten.</p>
           )}
         </>
       )}

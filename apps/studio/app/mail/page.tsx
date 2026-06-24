@@ -124,7 +124,7 @@ export default async function MailCenterPage({ searchParams }: Props) {
       <section style={{ marginTop: "2rem" }}>
         <h2>Letzte Mail-Logs</h2>
         {logs.length === 0 ? (
-          <p className="uwe-empty">Noch keine Mails protokolliert.</p>
+          <p className="uwe-v2-empty">Noch keine Mails protokolliert.</p>
         ) : (
           <table className="uwe-table">
             <thead>
@@ -175,7 +175,7 @@ export default async function MailCenterPage({ searchParams }: Props) {
       title="Mail Center"
       summary="SMTP, Posteingang, Entwürfe und Compose-Flows — Versand nur nach expliziter Aktion."
       actions={
-        <Link href="/settings?tab=mail" className="uwe-btn uwe-btn-secondary">
+        <Link href="/settings?tab=mail" className="uwe-v2-btn uwe-v2-btn-secondary">
           Einstellungen
         </Link>
       }

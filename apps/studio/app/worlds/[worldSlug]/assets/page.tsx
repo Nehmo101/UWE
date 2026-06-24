@@ -147,7 +147,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                   ))}
                 </select>
               </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Hochladen
               </button>
             </form>
@@ -242,7 +242,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
           </table>
 
           {assets.length === 0 && (
-            <p className="uwe-empty">Noch keine Assets für diesen Filter.</p>
+            <p className="uwe-v2-empty">Noch keine Assets für diesen Filter.</p>
           )}
 
           {assets.length > 0 && (
@@ -290,7 +290,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                         placeholder="karte, handout"
                       />
                     </label>
-                    <button type="submit" className="uwe-btn uwe-btn-primary">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                       Speichern
                     </button>
                   </form>
@@ -348,7 +348,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                     ))}
                   </select>
                 </label>
-                <button type="submit" className="uwe-btn">
+                <button type="submit" className="uwe-v2-btn">
                   Verknüpfen
                 </button>
               </form>

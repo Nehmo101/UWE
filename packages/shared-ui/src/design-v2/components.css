@@ -290,3 +290,18 @@
   font-size: 0.82rem;
   color: var(--uwe-fg-muted);
 }
+
+/* Stat card combined with base card (legacy uwe-stat-card migration) */
+.uwe-v2-card.uwe-v2-stat-card {
+  padding: var(--uwe-spacing-md, 0.75rem) var(--uwe-spacing-lg, 1rem);
+}
+
+/* — Empty state (inline) — */
+.uwe-v2-empty {
+  margin: 0;
+  padding: var(--uwe-v2-content-gap) 0;
+  color: var(--uwe-fg-muted);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.5;
+}

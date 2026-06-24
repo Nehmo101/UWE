@@ -74,44 +74,44 @@ export default async function AdminOverviewPage() {
             </div>
           )}
 
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Schnellaktionen</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Schnellaktionen</h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link className="uwe-btn uwe-btn-primary" href="/worlds">
+              <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/worlds">
                 Welten verwalten
               </Link>
-              <Link className="uwe-btn" href="/backup">
+              <Link className="uwe-v2-btn" href="/backup">
                 Backup erstellen
               </Link>
-              <Link className="uwe-btn" href="/settings">
+              <Link className="uwe-v2-btn" href="/settings">
                 Einstellungen
               </Link>
-              <Link className="uwe-btn" href="/admin/mail">
+              <Link className="uwe-v2-btn" href="/admin/mail">
                 Mail Portal
               </Link>
-              <Link className="uwe-btn" href="/admin/status">
+              <Link className="uwe-v2-btn" href="/admin/status">
                 Systemstatus
               </Link>
-              <Link className="uwe-btn" href="/admin/reviews">
+              <Link className="uwe-v2-btn" href="/admin/reviews">
                 Reviews
               </Link>
-              <Link className="uwe-btn" href="/admin/ai-gateway">
+              <Link className="uwe-v2-btn" href="/admin/ai-gateway">
                 KI-Gateway
               </Link>
-              <Link className="uwe-btn" href="/admin/agent-jobs">
+              <Link className="uwe-v2-btn" href="/admin/agent-jobs">
                 Agent Jobs
               </Link>
               {appUrls.portalUrl ? (
-                <a className="uwe-btn" href={appUrls.portalUrl} target="_blank" rel="noreferrer">
+                <a className="uwe-v2-btn" href={appUrls.portalUrl} target="_blank" rel="noreferrer">
                   Portal öffnen
                 </a>
               ) : (
-                <Link className="uwe-btn" href="/settings?tab=portal">
+                <Link className="uwe-v2-btn" href="/settings?tab=portal">
                   Portal konfigurieren
                 </Link>
               )}
               {appUrls.studioUrl ? (
-                <a className="uwe-btn" href={appUrls.studioUrl}>
+                <a className="uwe-v2-btn" href={appUrls.studioUrl}>
                   Studio öffnen
                 </a>
               ) : null}
@@ -195,7 +195,7 @@ export default async function AdminOverviewPage() {
             <AdminStatusCard
               title="Backup"
               actions={
-                <Link className="uwe-btn uwe-btn-ghost" href="/backup">
+                <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/backup">
                   Backup verwalten
                 </Link>
               }

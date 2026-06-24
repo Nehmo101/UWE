@@ -54,7 +54,7 @@ export default async function HardwarePage() {
       <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
 
       {cockpit.urlWarnings.length > 0 && (
-        <section className="uwe-form-error uwe-section" role="alert">
+        <section className="uwe-form-error uwe-v2-section" role="alert">
           <strong>Sicherheitswarnungen (RTX niemals öffentlich):</strong>
           <ul>
             {cockpit.urlWarnings.map((warning) => (
@@ -66,8 +66,8 @@ export default async function HardwarePage() {
         </section>
       )}
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Service-Status</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Service-Status</h2>
         <p className="uwe-dashboard-muted">
           Stand: {DATE_FORMAT.format(new Date(cockpit.timestamp))} ·{" "}
           <Link href="/admin/status">Admin Status →</Link>
@@ -86,8 +86,8 @@ export default async function HardwarePage() {
         </div>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Security Checklist</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Security Checklist</h2>
         <ul className="uwe-homelab-checklist">
           {cockpit.securityChecks.map((check) => (
             <li key={check.id} data-status={severityStatus(check.severity, check.ok)}>
@@ -102,11 +102,11 @@ export default async function HardwarePage() {
         </p>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Runbooks</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Runbooks</h2>
         <div className="uwe-homelab-runbook-list">
           {cockpit.runbooks.map((runbook) => (
-            <details key={runbook.id} className="uwe-card uwe-homelab-runbook">
+            <details key={runbook.id} className="uwe-v2-card uwe-v2-card-padded uwe-homelab-runbook">
               <summary>
                 <strong>{runbook.title}</strong> — {runbook.summary}
               </summary>
@@ -125,8 +125,8 @@ export default async function HardwarePage() {
         </div>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Fehlerhistorie</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Fehlerhistorie</h2>
         {cockpit.errorHistory.length === 0 ? (
           <p className="uwe-dashboard-muted">Noch keine dokumentierten Fehler.</p>
         ) : (
@@ -149,8 +149,8 @@ export default async function HardwarePage() {
         )}
       </section>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Gerät</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Gerät</h2>
         <form action={createHardwareAction} className="uwe-brain-create-form">
           <label>
             Name
@@ -210,14 +210,14 @@ export default async function HardwarePage() {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Gerät anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Geräte ({cockpit.deviceCards.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Geräte ({cockpit.deviceCards.length})</h2>
         {cockpit.deviceCards.length === 0 ? (
           <EmptyState
             title="Noch keine Geräte"
@@ -229,7 +229,7 @@ export default async function HardwarePage() {
             {cockpit.deviceCards.map((device) => {
               const deviceWarnings = cockpit.urlWarnings.filter((w) => w.deviceId === device.id);
               return (
-                <article key={device.id} className="uwe-card uwe-homelab-device-card">
+                <article key={device.id} className="uwe-v2-card uwe-v2-card-padded uwe-homelab-device-card">
                   <header className="uwe-homelab-device-header">
                     <div>
                       <h3>{device.name}</h3>
@@ -321,7 +321,7 @@ export default async function HardwarePage() {
                           <form action={toggleHardwareSetupStepAction} style={{ display: "inline" }}>
                             <input type="hidden" name="deviceId" value={device.id} />
                             <input type="hidden" name="stepIndex" value={index} />
-                            <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-sm">
+                            <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
                               {step.done ? "☑" : "☐"} {step.label}
                             </button>
                           </form>
@@ -395,7 +395,7 @@ export default async function HardwarePage() {
                       <textarea name="notes" rows={2} defaultValue={device.notes} />
                     </label>
                     <div className="uwe-homelab-device-actions">
-                      <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                         Speichern
                       </button>
                     </div>
@@ -403,7 +403,7 @@ export default async function HardwarePage() {
 
                   <form action={recordHardwareCheckAction} style={{ display: "inline" }}>
                     <input type="hidden" name="deviceId" value={device.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
                       Jetzt geprüft
                     </button>
                   </form>
@@ -422,14 +422,14 @@ export default async function HardwarePage() {
                       Betroffene Services
                       <input name="affectedServices" placeholder="rtx_agent, backup" />
                     </label>
-                    <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
                       Fehler speichern
                     </button>
                   </form>
 
                   <form action={deleteHardwareAction}>
                     <input type="hidden" name="id" value={device.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                       Löschen
                     </button>
                   </form>

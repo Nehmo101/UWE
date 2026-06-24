@@ -198,7 +198,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                       }}
                     />
                   </div>
-                  <button type="submit" className="uwe-btn uwe-btn-primary">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                     Server-Standards speichern
                   </button>
                 </form>

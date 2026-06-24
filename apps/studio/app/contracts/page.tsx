@@ -29,8 +29,8 @@ export default async function ContractsPage() {
       title="Verträge & Monatsausgaben"
       summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen."
     >
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Kostenübersicht</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Kostenübersicht</h2>
         <p>
           Monatlich (aktiv): {formatEuroFromCents(costs.monthlyTotalCents)} · Jährlich:{" "}
           {formatEuroFromCents(costs.yearlyTotalCents)} · Aktive Verträge: {costs.activeCount}
@@ -51,8 +51,8 @@ export default async function ContractsPage() {
         )}
       </section>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neuer Vertrag / Ausgabe</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neuer Vertrag / Ausgabe</h2>
         <form action={createContractAction} className="uwe-brain-create-form">
           <label>
             Name
@@ -106,14 +106,14 @@ export default async function ContractsPage() {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Vertrag anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Verträge ({contracts.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Verträge ({contracts.length})</h2>
         {contracts.length === 0 ? (
           <EmptyState
             title="Noch keine Verträge"
@@ -184,13 +184,13 @@ export default async function ContractsPage() {
                     {formatEuroFromCents(contract.amountCents ?? 0)} ·{" "}
                     {BILLING_INTERVAL_LABELS[contract.billingInterval]}
                   </p>
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Speichern
                   </button>
                 </form>
                 <form action={deleteContractAction}>
                   <input type="hidden" name="id" value={contract.id} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Löschen
                   </button>
                 </form>
