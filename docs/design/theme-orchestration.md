@@ -11,7 +11,7 @@ Shells, ToolWindows und Shared-UI-Primitives folgen einem separaten Phasenplan:
 
 Theme-Orchestrierung (#107–#128) bleibt abgeschlossen; die UI-Shell-Pipeline baut darauf auf.
 
-## View-Polish (#226–#229) — Ansichten-Track
+## View-Polish (#226–#230) — Ansichten-Track
 
 Eigenständiger, view-only Track (kein Funktions-/Backend-/Security-Umbau) auf Basis von
 [uwe-ansichten-analyse-und-plan.md](./uwe-ansichten-analyse-und-plan.md). Behebt die unter
@@ -20,11 +20,15 @@ Detailseite. Fünf Workstreams, je eigener Branch + PR, gemäß Abhängigkeitsgr
 
 | WS | PR | Branch | Inhalt | Status |
 |----|----|--------|--------|--------|
-| WS-2 | #227 | `claude/view-ws2-theme-css` | Theme-brechende CSS-Farben → `--uwe-*`-Tokens; Token-Treue-Policy-Kommentar | offen |
-| WS-3 | #226 | `claude/view-ws3-quiet-states` | KI-Panel: ruhiger „nicht verfügbar"-Hinweis statt rotem Fehler; Empty/Loading-States | offen |
-| WS-1 | #228 | `claude/view-ws1-graph-fix` | Graph theme-treu + höhenbegrenzt (preserveAspectRatio, 220px-Cap); Wiki-Seite: `GraphRelationList` + Link | offen |
-| WS-4 | #229 | `claude/view-ws4-readability` | Lesebreite (`.wiki-reader`), Verwaltungs-Panels (Freigabe/KI) in `Collapsible`; stacked auf WS-1 | offen |
-| WS-5 | — | `claude/view-ws5-consistency` | A11y (Bottom-Nav-Label 0.7rem), toter `.wiki-layout`-CSS entfernt, Doku auf Parchment-OS-Realität | offen |
+| WS-2 | #227 | `claude/view-ws2-theme-css` | Theme-brechende CSS-Farben → `--uwe-*`-Tokens; Token-Treue-Policy-Kommentar | ✅ merged (#227) |
+| WS-3 | #226 | `claude/view-ws3-quiet-states` | KI-Panel: ruhiger „nicht verfügbar"-Hinweis statt rotem Fehler; Empty/Loading-States | ✅ merged (#226) |
+| WS-1 | #228 | `claude/view-ws1-graph-fix` | Graph theme-treu + höhenbegrenzt (preserveAspectRatio, 220px-Cap); Wiki-Seite: `GraphRelationList` + Link | ✅ merged (#228) |
+| WS-4 | #229 | `claude/view-ws4-readability` | Lesebreite (`.wiki-reader`), Verwaltungs-Panels (Freigabe/KI) in `Collapsible`; stacked auf WS-1 | ✅ merged (#229) |
+| WS-5 | #230 | `claude/view-ws5-consistency` | A11y (Bottom-Nav-Label 0.7rem), toter `.wiki-layout`-CSS entfernt, Doku auf Parchment-OS-Realität | ✅ merged (#230) |
+
+Alle fünf in `main` (squash). **Offene Nacharbeit:** manuelle Browser-QA über alle 9 Presets
+(§8 des Plans) sowie die bewusst zurückgestellten Punkte — Badge-System-Vereinheitlichung
+(`.uwe-badge-*` vs `.wiki-badge-*`) und Blöcke/`WorldContextSidebar`-Deduplizierung.
 
 Abhängigkeiten: WS-2 (Token-Contract) → WS-1/WS-4; WS-3 unabhängig; WS-4 nach 1–3 (stacked auf WS-1); WS-5 zuletzt.
 Invarianten je PR: keine neuen hartcodierten Hex/RGBA in `apps/*/app/**` & `packages/shared-ui/src/*.css`,
