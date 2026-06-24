@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PlayerDashboard } from "@/src/components/PlayerDashboard";
+import { PortalWorldDashboardClient } from "@/src/components/PortalWorldDashboardClient";
 import { PreviewAsPlayerForm } from "@/src/components/PreviewAsPlayerForm";
 import {
   canUsePreview,
@@ -125,7 +125,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
           <SearchResultsList results={searchResults} query={q} />
         </>
       ) : dashboard ? (
-        <PlayerDashboard worldSlug={worldSlug} dashboard={dashboard} />
+        <PortalWorldDashboardClient worldSlug={worldSlug} dashboard={dashboard} />
       ) : (
         <EmptyState
           title="Keine Inhalte freigegeben"
