@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   GraphRelationList,
-  GraphView,
+  ResizableGraphView,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -220,7 +220,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
           </button>
         </form>
 
-        <GraphView nodes={graph.nodes} edges={graph.edges} />
+        <ResizableGraphView nodes={graph.nodes} edges={graph.edges} />
 
         <p className="uwe-v2-empty" style={{ marginTop: "1rem" }}>
           {graph.nodes.length} Knoten · {graph.edges.length} Kanten

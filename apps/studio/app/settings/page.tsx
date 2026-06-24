@@ -25,13 +25,15 @@ import {
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
+import { IntegrationsSetupPanel } from "../../components/IntegrationsSetupPanel";
 import { SettingsPageSidebar } from "../../components/SettingsPageSidebar";
 import { StudioAppShell } from "@/components/StudioAppShell";
 import { resolveThemePreferencesForScope } from "@uwe/database/server";
+import { getSpotifyConfigurationSummary } from "@/src/lib/spotify-handlers";
 
 const TABS = [
   { id: "general", label: "General" },
-  { id: "appearance", label: "Erscheinungsbild" },
+  { id: "appearance", label: "Design & Theme" },
   { id: "worlds", label: "Worlds" },
   { id: "portal", label: "Portal" },
   { id: "privacy", label: "Privacy" },
@@ -70,8 +72,9 @@ export default async function SettingsPage({ searchParams }: Props) {
   const paths = getPersistentPathConfiguration(settings);
   const imageStudioConfig = settings.imageStudio;
   const calendarConfig = resolveCalendarConfig();
-  const dndApiConfig = resolveDndApiConfig();
   const agentJobsConfig = resolveAgentJobsConfig();
+  const dndApiConfig = resolveDndApiConfig();
+  const spotifyOAuth = getSpotifyConfigurationSummary();
 
   const pathSourceLabel = {
     settings: "Studio-Einstellungen",
@@ -111,7 +114,7 @@ export default async function SettingsPage({ searchParams }: Props) {
               <p className="uwe-hint">
                 Visuelle Themes, Schrift, UI-Dichte und Hintergrundmuster konfigurierst du
                 unter{" "}
-                <Link href="/settings?tab=appearance">Erscheinungsbild</Link>. Einstellungen
+                <Link href="/settings?tab=appearance">Design &amp; Theme</Link>. Einstellungen
                 werden automatisch mit dem Server synchronisiert (
                 <code>settings.app.themePreferences</code>).
               </p>
@@ -122,7 +125,7 @@ export default async function SettingsPage({ searchParams }: Props) {
             <div className="uwe-settings-stack">
               <ThemeSettingsPanel />
               <SettingsCollapsiblePanel
-                title="Portal-Erscheinungsbild"
+                title="Portal-Design"
                 summary="Separates Theme für das Spieler-Portal"
                 defaultOpen
               >
@@ -131,7 +134,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 />
               </SettingsCollapsiblePanel>
               <SettingsCollapsiblePanel
-                title="SSR-Visual-Standards"
+                title="Server-Standards (SSR)"
                 summary="Dark/Light, Muster, Motion beim ersten Paint"
                 defaultOpen={false}
               >
@@ -523,70 +526,27 @@ export default async function SettingsPage({ searchParams }: Props) {
               summary="ENV-gesteuerte Features und Admin-Links"
               defaultOpen
             >
-              <section className="uwe-form">
-                <p className="uwe-hint">
-                  Alle externen Integrationen sind deaktivierbar. Secrets nur serverseitig in .env —
-                  nie im Frontend.
-                </p>
-                <table className="uwe-table" style={{ width: "100%", marginTop: "1rem" }}>
-                  <thead>
-                    <tr>
-                      <th>Feature</th>
-                      <th>Status</th>
-                      <th>Admin-Seite</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Image Studio</td>
-                      <td>{imageStudioConfig.enabled ? "aktiv" : "deaktiviert"}</td>
-                      <td>
-                        <Link href="/image-studio">/image-studio</Link>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Kalender</td>
-                      <td>{calendarConfig.enabled ? "aktiv" : "deaktiviert"}</td>
-                      <td>
-                        <Link href="/calendar">/calendar</Link>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>DnD API (Open5e/SRD)</td>
-                      <td>
-                        Open5e: {dndApiConfig.open5eEnabled ? "an" : "aus"} · SRD:{" "}
-                        {dndApiConfig.dnd5eSrdEnabled ? "an" : "aus"}
-                      </td>
-                      <td>Welt → DnD API</td>
-                    </tr>
-                    <tr>
-                      <td>Agent Jobs</td>
-                      <td>
-                        {agentJobsConfig.enabled ? "aktiv" : "deaktiviert"} · Token:{" "}
-                        {agentJobsConfig.githubTokenConfigured ? "OK" : "fehlt"}
-                      </td>
-                      <td>
-                        <Link href="/admin/agent-jobs">/admin/agent-jobs</Link>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Spotify Soundboard</td>
-                      <td>
-                        OAuth über <code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code> in
-                        .env
-                      </td>
-                      <td>
-                        <Link href="/worlds">Welten</Link> → Soundboard (pro Welt, Spotify Premium)
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="uwe-hint" style={{ marginTop: "1rem" }}>
-                  Siehe <code>.env.example</code> für IMAGE_STUDIO_*, CALENDAR_*, DND_*, AGENT_JOBS_*,
-                  SPOTIFY_* und CALDAV_PASSWORD. Mail-SMTP kann alternativ unter Tab Mail im Portal
-                  konfiguriert werden.
-                </p>
-              </section>
+              <IntegrationsSetupPanel
+                worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))}
+                spotifyOAuth={spotifyOAuth}
+                imageStudio={{
+                  enabled: imageStudioConfig.enabled,
+                  rtxAgentConfigured: imageStudioConfig.rtxAgentConfigured,
+                  cloudApiKeyConfigured: imageStudioConfig.cloudApiKeyConfigured,
+                }}
+                calendar={{
+                  enabled: calendarConfig.enabled,
+                  caldavEnabled: calendarConfig.caldavEnabled,
+                }}
+                agentJobs={{
+                  enabled: agentJobsConfig.enabled,
+                  githubTokenConfigured: agentJobsConfig.githubTokenConfigured,
+                }}
+                dndApi={{
+                  open5eEnabled: dndApiConfig.open5eEnabled,
+                  dnd5eSrdEnabled: dndApiConfig.dnd5eSrdEnabled,
+                }}
+              />
             </SettingsCollapsiblePanel>
           )}
 

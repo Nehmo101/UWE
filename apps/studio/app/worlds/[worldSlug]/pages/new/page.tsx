@@ -16,6 +16,7 @@ import {
   CanonicalStatusEnum,
 } from "@uwe/database/server";
 import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { NewPageAiPanel } from "@/components/NewPageAiPanel";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createPageAction } from "../../../../actions";
 
@@ -90,6 +91,12 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           </Link>
         ))}
       </div>
+
+      <NewPageAiPanel
+        worldSlug={worldSlug}
+        pageType={template.pageType}
+        campaignSlug={campaignSlug}
+      />
 
       <p className="uwe-form-hint">
         <Link href="/templates">Templates verwalten →</Link>

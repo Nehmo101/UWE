@@ -32,7 +32,6 @@ export function AuthBrandingPanel({ variant }: AuthBrandingPanelProps) {
           </span>
           WE
         </h1>
-        <p className="uwe-auth-brand-subtitle">Unified Web Experience</p>
         <p className="uwe-auth-brand-desc">
           Self-hosted Alltags- und Hobby-Betriebssystem — deine Daten bleiben auf deiner Hardware.
           {variant === "studio"

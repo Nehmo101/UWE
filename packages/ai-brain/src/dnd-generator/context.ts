@@ -30,6 +30,21 @@ export function pageTypeToContextKind(pageType: string): DndContextKind {
   return PAGE_TYPE_TO_KIND[pageType] ?? "page";
 }
 
+export function buildDraftPageContext(input: {
+  worldSlug: string;
+  worldId?: string;
+  pageType: string;
+  title?: string;
+}): DndContextDescriptor {
+  return {
+    kind: pageTypeToContextKind(input.pageType),
+    worldSlug: input.worldSlug,
+    worldId: input.worldId,
+    pageType: input.pageType,
+    title: input.title ?? "Neue Seite",
+  };
+}
+
 export function buildPageContext(input: {
   worldSlug: string;
   worldId?: string;

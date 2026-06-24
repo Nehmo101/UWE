@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   buildDndGeneratorView,
+  buildDraftPageContext,
   buildPageContext,
   buildSessionContext,
   buildDungeonRoomContext,
@@ -37,6 +38,21 @@ async function resolveContext(searchParams: URLSearchParams): Promise<DndContext
       worldSlug,
       sessionId,
       title: session.title,
+    });
+  }
+
+  if (kind === "draft") {
+    const pageType = searchParams.get("pageType")?.trim();
+    if (!pageType) return null;
+
+    const title = searchParams.get("title")?.trim();
+    const world = await repo.getWorldBySlug(worldSlug);
+
+    return buildDraftPageContext({
+      worldSlug,
+      worldId: world?.id,
+      pageType,
+      title: title || undefined,
     });
   }
 

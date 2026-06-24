@@ -8,7 +8,7 @@ export function ThemeSettingsPanel() {
 
   return (
     <section className="uwe-theme-settings" aria-labelledby="uwe-theme-settings-title">
-      <h2 id="uwe-theme-settings-title">Studio-Erscheinungsbild</h2>
+      <h2 id="uwe-theme-settings-title">Studio-Design</h2>
       <p className="uwe-hint">
         Theme-Einstellungen werden in diesem Browser gespeichert und mit den
         Server-Standards synchronisiert (geräteübergreifend). Änderungen gelten

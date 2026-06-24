@@ -11,7 +11,7 @@ const SETTINGS_GROUPS: {
     title: "Allgemein",
     tabs: [
       { id: "general", label: "General" },
-      { id: "appearance", label: "Erscheinungsbild" },
+      { id: "appearance", label: "Design & Theme" },
       { id: "worlds", label: "Worlds" },
       { id: "portal", label: "Portal" },
       { id: "privacy", label: "Privacy" },
@@ -70,8 +70,8 @@ export function SettingsPageSidebar({ activeTab }: { activeTab: string }) {
       ))}
 
       <p className="uwe-hint" style={{ marginTop: "1rem" }}>
-        Odysseus-inspiriert: Theme, Dichte und Hintergrund unter{" "}
-        <Link href="/settings?tab=appearance">Erscheinungsbild</Link>.
+        Design V2: Presets, Dichte und Zonen-Farben unter{" "}
+        <Link href="/settings?tab=appearance">Design &amp; Theme</Link>.
       </p>
     </>
   );
