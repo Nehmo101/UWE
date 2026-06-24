@@ -196,10 +196,15 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
 }
 .uwe-theme-options { margin-top: 1.25rem; }
 
-/* ===== Theme tokens (Studio default) ===== */
+/* ===== Theme tokens (Studio default) =====
+   IMPORTANT: These vars must live on :root ONLY — not on .uwe-shell.
+   .uwe-shell having its own declarations would shadow the :root values
+   set by the inline bootstrap script, making theme switching silently broken.
+   All child elements inherit the vars from :root; overrides go on :root
+   (or html[data-uwe-theme="…"]) so the bootstrap script's inline-style
+   on <html> always wins. */
 
-:root,
-.uwe-shell {
+:root {
   --uwe-bg: #0b1220;
   --uwe-fg: #e2e8f0;
   --uwe-muted: #94a3b8;
@@ -3944,6 +3949,11 @@ html[data-uwe-theme="uwe-parchment-os"] {
   color-scheme: light;
   /* Space Mono drives all UI chrome; Newsreader handles display headings. */
   --uwe-font-family: var(--uwe-font-space-mono, ui-monospace, "Cascadia Code", monospace);
+  /* Legacy alias tokens — set here on html so every child inherits parchment values.
+     Without this, elements that still reference --uwe-muted / --uwe-card fall back
+     to the dark defaults declared in :root. */
+  --uwe-muted: #6f6555;
+  --uwe-card: rgba(251, 246, 234, 0.95);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] body {
