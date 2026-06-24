@@ -8,7 +8,6 @@ import {
   toUweThemePreferences,
 } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
-import "@uwe/shared-ui/uwe-v2.css";
 import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";

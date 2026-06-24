@@ -47,7 +47,7 @@ export function SharePasswordForm({ token }: SharePasswordFormProps) {
         />
       </label>
       {error && <p className="uwe-flash uwe-flash-error">{error}</p>}
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
         {loading ? "Prüfe…" : "Zugang anfordern"}
       </button>
     </form>

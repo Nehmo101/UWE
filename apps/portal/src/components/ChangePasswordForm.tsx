@@ -114,7 +114,7 @@ export function ChangePasswordForm({
         </p>
       )}
 
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
         {loading ? "Speichern…" : initialPasswordOnly ? "Passwort festlegen" : "Passwort ändern"}
       </button>
 

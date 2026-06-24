@@ -162,7 +162,7 @@ export default async function ShareLinkView({ params }: Props) {
           )
         ) : (
           <p>
-            <Link href={fileUrl} className="uwe-btn uwe-btn-primary">
+            <Link href={fileUrl} className="uwe-v2-btn uwe-v2-btn-primary">
               Datei herunterladen
             </Link>
           </p>

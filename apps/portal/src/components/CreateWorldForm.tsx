@@ -92,7 +92,7 @@ export function CreateWorldForm() {
         </p>
       ) : null}
 
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={submitting}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={submitting}>
         {submitting ? "Erstelle…" : "Welt erstellen"}
       </button>
     </form>

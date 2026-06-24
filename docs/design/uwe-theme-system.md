@@ -19,8 +19,8 @@ packages/shared-ui/src/
   ThemePicker.tsx        # Accessible dark/light/system radio picker
   visual-theme.ts        # Server SSR data-uwe-* attributes
   VisualThemePreview.tsx # Live preview for server standards
-  uwe.css                # Token layer + component styles (legacy, parallel)
-  uwe-v2.css             # Design V2 refresh (design-v2/*)
+  uwe.css                # Unified entry: design-v2 + legacy bridge + specialized widgets
+  uwe-v2.css             # Deprecated alias → design-v2/index.css (use uwe.css)
   design-v2/             # V2 tokens, shell, components, layouts, mobile, wiki
   shells-v2/             # StudioShellV2, PortalShellV2, AdminShellV2
   layout-editor/         # Drag-and-drop dashboard layout editor

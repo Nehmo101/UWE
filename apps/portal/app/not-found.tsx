@@ -8,7 +8,7 @@ export default function PortalNotFound() {
         title="Seite nicht gefunden"
         description="Diesen Inhalt gibt es nicht — oder er ist für dich (noch) nicht freigeschaltet."
         action={
-          <Link className="uwe-btn uwe-btn-primary" href="/">
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/">
             Zur Portal-Startseite
           </Link>
         }
