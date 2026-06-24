@@ -243,7 +243,7 @@
   overflow: auto;
   padding: 0.5rem;
   border-radius: 0.375rem;
-  background: rgba(15, 23, 42, 0.65);
+  background: color-mix(in srgb, var(--uwe-surface) 65%, transparent);
   color: var(--uwe-fg);
   font-size: 0.72rem;
 }
@@ -313,7 +313,7 @@
 }
 
 .wiki-badge-secret {
-  background: rgba(248, 113, 113, 0.2);
+  background: color-mix(in srgb, var(--uwe-danger) 20%, transparent);
   color: var(--uwe-danger);
 }
 
@@ -377,7 +377,7 @@
 .wiki-world-card {
   padding: 1.25rem;
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.75);
+  background: color-mix(in srgb, var(--uwe-surface) 75%, transparent);
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
@@ -522,7 +522,7 @@
 }
 
 .ai-run-pre {
-  background: rgba(15, 23, 42, 0.6);
+  background: color-mix(in srgb, var(--uwe-surface) 60%, transparent);
   border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
   border-radius: 0.375rem;
   padding: 0.75rem;
@@ -636,8 +636,8 @@
 }
 
 .mobile-ai-chip-warn {
-  border-color: rgba(251, 191, 36, 0.35);
-  background: rgba(251, 191, 36, 0.08);
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-warning) 8%, transparent);
 }
 
 .mobile-ai-chip-warn .mobile-ai-chip-value {
@@ -646,7 +646,7 @@
 
 .mobile-ai-chip-error {
   border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
-  background: rgba(248, 113, 113, 0.08);
+  background: color-mix(in srgb, var(--uwe-danger) 8%, transparent);
 }
 
 .mobile-ai-chip-error .mobile-ai-chip-value {
@@ -778,8 +778,8 @@
   margin: 0;
   padding: 0.65rem 0.85rem;
   border-radius: 0.55rem;
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid color-mix(in srgb, var(--uwe-warning) 25%, transparent);
+  background: color-mix(in srgb, var(--uwe-warning) 6%, transparent);
   font-size: 0.82rem;
   line-height: 1.45;
   color: var(--uwe-warning);
@@ -815,7 +815,7 @@
   padding: 0.85rem 1rem;
   border-radius: 0.65rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 208%, var(--uwe-muted) 0%);
-  background: rgba(15, 23, 42, 0.75);
+  background: color-mix(in srgb, var(--uwe-surface) 75%, transparent);
   color: var(--uwe-fg);
   font: inherit;
   font-size: 1rem;
@@ -849,7 +849,7 @@
   padding: 1rem;
   border-radius: 0.65rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
-  background: rgba(15, 23, 42, 0.65);
+  background: color-mix(in srgb, var(--uwe-surface) 65%, transparent);
   font-size: 0.95rem;
   line-height: 1.65;
   white-space: pre-wrap;

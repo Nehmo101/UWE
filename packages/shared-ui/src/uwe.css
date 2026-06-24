@@ -1,5 +1,21 @@
 /* UWE shared workspace design — token-driven theme system */
 
+/*
+ * Theme-fidelity policy (WS-2):
+ * All surface/border/text/accent/semantic colors must use --uwe-* tokens (or
+ * color-mix() on them) so every surface reacts to the active theme.
+ * Deliberate non-token literals are limited to:
+ *   - The :root / .uwe-shell / [data-app] token *definitions* below (source values).
+ *   - rgba(0,0,0,…) drop shadows (shadows are theme-agnostic by convention).
+ *   - `color: #fff` text drawn on a saturated --uwe-accent fill (always legible).
+ *   - The Label print canvas (#fff stock + fixed ink/selection colors — WYSIWYG).
+ *   - Theme-picker dark/light/system preview swatches (depict fixed schemes).
+ *   - Bespoke per-theme override blocks scoped to html[data-uwe-theme="…"]
+ *     (e.g. Parchment OS): these ARE the theme's own palette layer and only
+ *     apply when that theme is active, so they cannot break other themes.
+ * Each such exception is annotated inline.
+ */
+
 @import "./uwe-visual-polish.css";
 @import "./uwe-components.css";
 
@@ -579,7 +595,7 @@ html[data-theme="light"] {
 }
 
 .uwe-search input:focus {
-  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline: 2px solid var(--uwe-focus-ring);
   border-color: transparent;
 }
 
@@ -946,8 +962,8 @@ html[data-theme="light"] {
 }
 
 .uwe-badge-canon {
-  background: rgba(167, 139, 250, 0.12);
-  color: #ddd6fe;
+  background: color-mix(in srgb, var(--uwe-accent) 12%, transparent);
+  color: color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-fg) 65%);
 }
 
 .uwe-badge-type {
@@ -988,7 +1004,7 @@ html[data-theme="light"] {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  border-bottom: 1px solid var(--uwe-border-muted);
   background: color-mix(in srgb, var(--uwe-panel) 91%, transparent);
 }
 
@@ -1295,7 +1311,7 @@ html[data-theme="light"] {
 .uwe-filter-bar a:hover {
   background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
   color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
 }
 
 .uwe-page-table {
@@ -1393,7 +1409,7 @@ html[data-theme="light"] {
   width: 1.15em;
   height: 1.15em;
   border-radius: 0.35em;
-  background: linear-gradient(135deg, var(--uwe-accent), color-mix(in srgb, var(--uwe-accent) 70%, #312e81));
+  background: linear-gradient(135deg, var(--uwe-accent), color-mix(in srgb, var(--uwe-accent) 70%, var(--uwe-bg-elevated)));
   color: white;
   font-size: 0.72em;
   font-weight: 800;
@@ -1684,7 +1700,7 @@ html[data-theme="light"] {
   position: absolute;
   inset: 0 0 auto;
   height: 12rem;
-  background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.25), transparent 60%);
+  background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--uwe-accent) 25%, transparent), transparent 60%);
   pointer-events: none;
 }
 
@@ -1914,7 +1930,7 @@ html[data-theme="light"] {
 .uwe-preview-banner {
   padding: 0.55rem 1rem;
   background: color-mix(in srgb, var(--uwe-warning) 12%, transparent);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.25);
+  border-bottom: 1px solid color-mix(in srgb, var(--uwe-warning) 25%, transparent);
   color: var(--uwe-warning);
   font-size: 0.85rem;
   text-align: center;
@@ -1935,7 +1951,7 @@ html[data-theme="light"] {
   padding: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
   border-radius: 0.5rem;
-  background: rgba(15, 23, 42, 0.6);
+  background: color-mix(in srgb, var(--uwe-surface) 60%, transparent);
   color: inherit;
   cursor: pointer;
   text-align: left;
@@ -1956,7 +1972,7 @@ html[data-theme="light"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(51, 65, 85, 0.6);
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 60%, transparent);
   font-size: 0.75rem;
   color: var(--uwe-muted);
 }
@@ -1983,7 +1999,7 @@ html[data-theme="light"] {
   padding: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   border-radius: 0.5rem;
-  background: rgba(15, 23, 42, 0.4);
+  background: color-mix(in srgb, var(--uwe-surface) 40%, transparent);
 }
 
 .uwe-soundboard-controls {
@@ -2206,7 +2222,7 @@ html[data-theme="light"] {
     z-index: 25;
     border: none;
     padding: 0;
-    background: rgba(2, 6, 23, 0.65);
+    background: color-mix(in srgb, var(--uwe-bg) 55%, transparent);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -2226,7 +2242,7 @@ html[data-theme="light"] {
     display: block;
     border-top: 1px solid var(--uwe-border);
     padding: 0 1rem 1rem;
-    background: rgba(8, 12, 22, 0.45);
+    background: color-mix(in srgb, var(--uwe-panel) 45%, transparent);
   }
 
   .uwe-mobile-context-trigger {
@@ -2471,7 +2487,7 @@ html[data-theme="light"] {
     padding: 0.75rem;
     margin: 1rem -0.75rem -0.75rem;
     border-radius: 0.75rem;
-    background: rgba(8, 12, 22, 0.92);
+    background: color-mix(in srgb, var(--uwe-panel) 92%, transparent);
     backdrop-filter: blur(8px);
     border: 1px solid var(--uwe-border);
   }
@@ -2528,7 +2544,7 @@ html[data-theme="light"] {
     z-index: 40;
     padding-bottom: var(--uwe-safe-bottom);
     border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
-    background: rgba(8, 12, 22, 0.95);
+    background: color-mix(in srgb, var(--uwe-panel) 95%, transparent);
     backdrop-filter: blur(12px);
   }
 
@@ -2594,7 +2610,7 @@ html[data-theme="light"] {
     padding: 0.65rem 1rem;
     padding-bottom: calc(0.65rem + var(--uwe-safe-bottom));
     border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
-    background: rgba(8, 12, 22, 0.95);
+    background: color-mix(in srgb, var(--uwe-panel) 95%, transparent);
     backdrop-filter: blur(12px);
   }
 
@@ -2643,7 +2659,7 @@ html[data-theme="light"] {
     min-height: var(--uwe-touch-min);
     border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
-    background: rgba(15, 23, 42, 0.65);
+    background: color-mix(in srgb, var(--uwe-surface) 65%, transparent);
     color: var(--uwe-fg);
     font: inherit;
     font-size: 0.9rem;
@@ -2671,7 +2687,7 @@ html[data-theme="light"] {
     z-index: 44;
     border: none;
     padding: 0;
-    background: rgba(2, 6, 23, 0.6);
+    background: color-mix(in srgb, var(--uwe-bg) 50%, transparent);
     cursor: pointer;
   }
 
@@ -2685,7 +2701,7 @@ html[data-theme="light"] {
     padding: 1rem 1rem calc(1rem + var(--uwe-safe-bottom));
     border-radius: 1rem 1rem 0 0;
     border-top: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
-    background: rgba(8, 12, 22, 0.98);
+    background: color-mix(in srgb, var(--uwe-panel) 98%, transparent);
     box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.4);
   }
 
@@ -2796,6 +2812,7 @@ html[data-theme="light"] {
 .uwe-label-preview-panel .uwe-label-preview-frame {
   max-width: 480px;
   margin: 0 auto;
+  /* Intentional print-WYSIWYG surface: labels print on white paper. Not theme-driven. */
   background: #fff;
   border-radius: 0.35rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -2803,6 +2820,7 @@ html[data-theme="light"] {
 
 .uwe-label-preview-card {
   padding: 1rem;
+  /* Intentional print ink color on white label stock — not theme-driven. */
   color: #111;
   font-family: Georgia, serif;
   height: 100%;
@@ -2838,7 +2856,7 @@ html[data-theme="light"] {
 
 .uwe-tab.is-active,
 .uwe-tab:hover {
-  background: rgba(59, 130, 246, 0.15);
+  background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
   color: var(--uwe-fg);
 }
 
@@ -2853,7 +2871,7 @@ html[data-theme="light"] {
 .uwe-label-editor-sep {
   width: 1px;
   height: 1.25rem;
-  background: rgba(148, 163, 184, 0.3);
+  background: color-mix(in srgb, var(--uwe-border) 200%, transparent);
   margin: 0 0.25rem;
 }
 
@@ -2872,6 +2890,8 @@ html[data-theme="light"] {
 
 .uwe-label-editor-canvas {
   position: relative;
+  /* Intentional white print canvas (WYSIWYG label stock) — fixed colors below must
+     remain readable on white regardless of app theme; not theme-driven. */
   background: #fff;
   border-radius: 0.35rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -2949,7 +2969,7 @@ html[data-theme="light"] {
 }
 
 .uwe-label-editor-props {
-  background: rgba(15, 23, 42, 0.5);
+  background: color-mix(in srgb, var(--uwe-surface) 50%, transparent);
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   border-radius: 0.5rem;
   padding: 0.75rem;
@@ -3011,17 +3031,17 @@ html[data-theme="light"] {
 }
 
 .uwe-badge-success {
-  background: rgba(34, 197, 94, 0.2);
+  background: color-mix(in srgb, var(--uwe-success) 20%, transparent);
   color: var(--uwe-success);
 }
 
 .uwe-badge-warning {
-  background: rgba(245, 158, 11, 0.2);
+  background: color-mix(in srgb, var(--uwe-warning) 20%, transparent);
   color: var(--uwe-warning-fg);
 }
 
 .uwe-badge-danger {
-  background: rgba(239, 68, 68, 0.2);
+  background: color-mix(in srgb, var(--uwe-danger) 20%, transparent);
   color: var(--uwe-danger);
 }
 
@@ -3048,8 +3068,8 @@ html[data-theme="light"] {
 }
 
 .uwe-flash-warning {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: color-mix(in srgb, var(--uwe-warning) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--uwe-warning) 35%, transparent);
   color: var(--uwe-warning);
 }
 
@@ -3091,7 +3111,7 @@ html[data-theme="light"] {
 }
 
 .uwe-btn-danger {
-  border-color: rgba(248, 113, 113, 0.45);
+  border-color: color-mix(in srgb, var(--uwe-danger) 45%, transparent);
   color: var(--uwe-danger);
 }
 
@@ -3210,7 +3230,7 @@ html[data-theme="light"] {
 .uwe-graph {
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   border-radius: 0.75rem;
-  background: rgba(8, 12, 22, 0.65);
+  background: color-mix(in srgb, var(--uwe-panel) 65%, transparent);
   padding: 1rem;
 }
 
@@ -3338,14 +3358,14 @@ html[data-theme="light"] {
 }
 
 .uwe-flash-success {
-  background: rgba(34, 197, 94, 0.15);
+  background: color-mix(in srgb, var(--uwe-success) 15%, transparent);
   border: 1px solid color-mix(in srgb, var(--uwe-success) 35%, transparent);
   color: var(--uwe-success);
 }
 
 .uwe-flash-error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: color-mix(in srgb, var(--uwe-danger) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--uwe-danger) 35%, transparent);
   color: var(--uwe-danger);
 }
 
@@ -3393,8 +3413,8 @@ html[data-theme="light"] {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: color-mix(in srgb, var(--uwe-warning) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--uwe-warning) 25%, transparent);
 }
 
 .uwe-import-alerts h3 {
@@ -3413,7 +3433,7 @@ html[data-theme="light"] {
   justify-content: center;
   align-items: flex-start;
   padding: 12vh 1rem 1rem;
-  background: rgba(4, 7, 14, 0.7);
+  background: color-mix(in srgb, var(--uwe-bg) 60%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -3425,7 +3445,11 @@ html[data-theme="light"] {
   flex-direction: column;
   border: 1px solid color-mix(in srgb, var(--uwe-accent) 35%, white 15%);
   border-radius: 0.85rem;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(8, 12, 22, 0.98));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--uwe-surface) 98%, transparent),
+    color-mix(in srgb, var(--uwe-panel) 98%, transparent)
+  );
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }
@@ -3520,7 +3544,7 @@ html[data-theme="light"] {
   padding: 0.7rem 0.8rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 150%, var(--uwe-muted) 0%);
   border-radius: 0.65rem;
-  background: rgba(15, 23, 42, 0.6);
+  background: color-mix(in srgb, var(--uwe-surface) 60%, transparent);
   color: var(--uwe-fg);
   text-decoration: none;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -3538,13 +3562,13 @@ html[data-theme="light"] {
 }
 
 .uwe-template-card:hover {
-  border-color: rgba(129, 140, 248, 0.4);
+  border-color: color-mix(in srgb, var(--uwe-accent) 40%, transparent);
   background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
 }
 
 .uwe-template-card.active {
-  border-color: rgba(129, 140, 248, 0.7);
-  background: rgba(99, 102, 241, 0.16);
+  border-color: color-mix(in srgb, var(--uwe-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--uwe-accent) 16%, transparent);
 }
 
 .uwe-form-hint {
@@ -3654,9 +3678,9 @@ html[data-theme="light"] {
 .uwe-inspector-ok {
   margin: 0;
   padding: 0.6rem 0.85rem;
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid color-mix(in srgb, var(--uwe-success) 30%, transparent);
   border-radius: 0.55rem;
-  background: rgba(16, 185, 129, 0.08);
+  background: color-mix(in srgb, var(--uwe-success) 8%, transparent);
   color: color-mix(in srgb, var(--uwe-success) 80%, white 20%);
   font-size: 0.88rem;
 }
@@ -3676,19 +3700,19 @@ html[data-theme="light"] {
   gap: 0.7rem;
   padding: 0.55rem 0.8rem;
   border-radius: 0.55rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--uwe-border-muted);
   background: var(--uwe-card);
   font-size: 0.88rem;
 }
 
 .uwe-inspector-findings li[data-severity="critical"] {
-  border-color: rgba(248, 113, 113, 0.45);
-  background: rgba(239, 68, 68, 0.1);
+  border-color: color-mix(in srgb, var(--uwe-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--uwe-danger) 10%, transparent);
 }
 
 .uwe-inspector-findings li[data-severity="warning"] {
-  border-color: rgba(251, 191, 36, 0.35);
-  background: rgba(245, 158, 11, 0.08);
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-warning) 8%, transparent);
 }
 
 .uwe-inspector-fixes {
@@ -3701,8 +3725,8 @@ html[data-theme="light"] {
 .uwe-form-error {
   padding: 0.55rem 0.8rem;
   border-radius: 0.55rem;
-  border: 1px solid rgba(248, 113, 113, 0.45);
-  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid color-mix(in srgb, var(--uwe-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--uwe-danger) 10%, transparent);
   color: var(--uwe-danger);
   font-size: 0.88rem;
 }
@@ -3747,7 +3771,7 @@ li[data-severity="warning"] .uwe-inspector-severity {
 .uwe-inspector-message a {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: rgba(148, 163, 184, 0.4);
+  text-decoration-color: color-mix(in srgb, var(--uwe-fg-muted) 60%, transparent);
 }
 
 .uwe-inspector-message a:hover {
@@ -3836,10 +3860,12 @@ li[data-severity="warning"] .uwe-inspector-severity {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 999px;
-  border: 2px solid rgba(148, 163, 184, 0.25);
+  border: 2px solid color-mix(in srgb, var(--uwe-border) 200%, transparent);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
+/* Color-scheme preview swatches intentionally depict fixed dark/light schemes
+   (not the active theme) so users can recognize the dark/light/system choice. */
 .uwe-theme-picker-dot-dark {
   background: linear-gradient(135deg, #1e293b, #0f172a);
 }
@@ -3931,7 +3957,7 @@ li[data-severity="warning"] .uwe-inspector-severity {
   display: grid;
   gap: 0.2rem;
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--uwe-border-subtle, rgba(148, 163, 184, 0.14));
+  border: 1px solid var(--uwe-border-subtle, var(--uwe-border-muted));
   border-radius: 0.5rem;
   background: transparent;
   color: inherit;
@@ -3939,8 +3965,8 @@ li[data-severity="warning"] .uwe-inspector-severity {
 }
 
 .uwe-mail-message-item.active {
-  border-color: var(--uwe-border-accent, rgba(129, 140, 248, 0.32));
-  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--uwe-border-accent, color-mix(in srgb, var(--uwe-accent) 32%, transparent));
+  background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
 }
 
 .uwe-mail-message-item.unread .uwe-mail-message-subject {

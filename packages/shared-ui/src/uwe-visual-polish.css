@@ -407,7 +407,7 @@ html[data-uwe-motion="off"] .uwe-shell::before {
 /* ── Modal / overlay polish ── */
 
 .uwe-palette-overlay {
-  background: rgba(4, 7, 14, 0.72);
+  background: color-mix(in srgb, var(--uwe-bg) 62%, transparent);
 }
 
 .uwe-palette {
@@ -416,7 +416,7 @@ html[data-uwe-motion="off"] .uwe-shell::before {
 }
 
 .uwe-filter-sheet-backdrop {
-  background: rgba(2, 6, 23, 0.62);
+  background: color-mix(in srgb, var(--uwe-bg) 55%, transparent);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }

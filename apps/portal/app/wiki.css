@@ -203,7 +203,7 @@
 }
 
 .wiki-badge-secret {
-  background: rgba(248, 113, 113, 0.2);
+  background: color-mix(in srgb, var(--uwe-danger) 20%, transparent);
   color: var(--uwe-danger);
 }
 
@@ -267,7 +267,7 @@
 .wiki-world-card {
   padding: 1.25rem;
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.75);
+  background: color-mix(in srgb, var(--uwe-surface) 75%, transparent);
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
