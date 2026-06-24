@@ -117,3 +117,27 @@ body[data-uwe-design-v2] .uwe-graph-canvas {
   height: auto;
   display: block;
 }
+
+/* Wiki reader — legacy .wiki-content class maps to v2 typography */
+body[data-uwe-design-v2] .wiki-content {
+  max-width: var(--uwe-v2-reader-max, 52rem);
+  color: var(--uwe-reader-fg, var(--uwe-fg));
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+body[data-uwe-design-v2] .wiki-content h1,
+body[data-uwe-design-v2] .wiki-content h2,
+body[data-uwe-design-v2] .wiki-content h3,
+body[data-uwe-design-v2] .wiki-content h4 {
+  font-family: var(--uwe-zone-heading-font);
+  color: var(--uwe-reader-heading, var(--uwe-zone-heading-fg));
+}
+
+body[data-uwe-design-v2] .wiki-content a.wiki-link {
+  color: var(--uwe-wiki-link);
+}
+
+body[data-uwe-design-v2] .wiki-content a.wiki-link:hover {
+  color: var(--uwe-wiki-link-hover);
+}

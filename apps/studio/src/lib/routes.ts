@@ -1,1 +1,1 @@
-export const STUDIO_DASHBOARD_PATH = "/studio";
+export const STUDIO_DASHBOARD_PATH = "/today";

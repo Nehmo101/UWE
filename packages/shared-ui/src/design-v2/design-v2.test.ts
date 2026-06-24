@@ -32,10 +32,11 @@ describe("design v2 CSS bundle", () => {
     assert.match(uweCss, /@import "\.\/design-v2\/legacy-bridge\.css"/);
   });
 
-  it("legacy bridge maps graph height under v2", () => {
+  it("legacy bridge maps graph height and wiki content under v2", () => {
     const bridge = readFileSync(path.join(designV2Dir, "legacy-bridge.css"), "utf8");
     assert.match(bridge, /max-height:\s*220px/);
     assert.match(bridge, /data-uwe-design-v2/);
+    assert.match(bridge, /body\[data-uwe-design-v2\] \.wiki-content/);
   });
 });
 

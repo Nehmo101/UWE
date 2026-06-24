@@ -1,3 +1,5 @@
+/* Studio-only wiki extensions. Base reader typography: design-v2/wiki.css via uwe.css */
+
 .wiki-nav {
   padding: 1.5rem 1rem;
   border-right: 1px solid var(--uwe-border-muted, rgba(148, 163, 184, 0.15));

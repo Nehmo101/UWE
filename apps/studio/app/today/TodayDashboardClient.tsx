@@ -34,8 +34,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
     switch (widget.widgetType) {
       case "system-ampel":
         return (
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">System-Ampel</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">
               <span className="uwe-system-ampel-item" data-status={statusDot(data.systemOk)}>
                 UWE {data.systemLabel}
@@ -72,7 +72,7 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
               </span>
             </div>
             {data.homelab.alerts.criticalCount > 0 && (
-              <div className="uwe-form-error uwe-section" role="alert">
+              <div className="uwe-form-error uwe-v2-section" role="alert">
                 <strong>{data.homelab.alerts.criticalCount} kritische Homelab-/Security-Probleme</strong>
                 <ul>
                   {data.homelab.alerts.messages.map((message) => (
@@ -91,8 +91,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         );
       case "dnd-favorite":
         return (
-          <section className="uwe-card uwe-dashboard-card">
-            <h2 className="uwe-section-title">DnD / Welten</h2>
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">DnD / Welten</h2>
             {data.preferredWorld ? (
               <>
                 <p>
@@ -121,8 +121,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         );
       case "capture-inbox":
         return (
-          <section className="uwe-card uwe-dashboard-card">
-            <h2 className="uwe-section-title">Capture Inbox</h2>
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Capture Inbox</h2>
             <p>{data.lifeAdmin.inboxCaptureCount} offene Einträge</p>
             {data.lifeAdmin.recentCaptures.length > 0 ? (
               <div className="uwe-today-card-list">
@@ -146,8 +146,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         );
       case "projects":
         return (
-          <section className="uwe-card uwe-dashboard-card">
-            <h2 className="uwe-section-title">Projekte</h2>
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Projekte</h2>
             <p>{data.lifeAdmin.activeProjectCount} aktiv / geplant</p>
             <div className="uwe-today-card-list">
               {data.lifeAdmin.activeProjects.map((project) => (
@@ -164,8 +164,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         );
       case "homelab":
         return (
-          <section className="uwe-card uwe-dashboard-card">
-            <h2 className="uwe-section-title">Hardware / Homelab</h2>
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Hardware / Homelab</h2>
             <p>
               {data.lifeAdmin.hardwareIssues > 0
                 ? `${data.lifeAdmin.hardwareIssues} Gerät(e) offline/defekt`

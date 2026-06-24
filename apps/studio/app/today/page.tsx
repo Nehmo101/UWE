@@ -24,7 +24,7 @@ export default async function TodayPage() {
       title="Heute"
       summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
       actions={
-        <Link href="/capture?quick=1" className="uwe-btn uwe-btn-primary">
+        <Link href="/capture?quick=1" className="uwe-v2-btn uwe-v2-btn-primary">
           + Capture
         </Link>
       }
@@ -32,9 +32,9 @@ export default async function TodayPage() {
     >
       <TodayDashboardClient data={data} />
 
-      <div className="uwe-dashboard-grid">
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Kalender — Heute</h2>
+      <div className="uwe-v2-stat-grid">
+        <section className="uwe-v2-card uwe-v2-card-padded">
+          <h2 className="uwe-v2-section-title">Kalender — Heute</h2>
           {data.calendarToday.length > 0 ? (
             <div className="uwe-today-card-list">
               {data.calendarToday.map((item) => (
@@ -76,8 +76,8 @@ export default async function TodayPage() {
           </p>
         </section>
 
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Mail Center</h2>
+        <section className="uwe-v2-card uwe-v2-card-padded">
+          <h2 className="uwe-v2-section-title">Mail Center</h2>
           {data.mailSummary.recentFailed > 0 ? (
             <p className="uwe-form-error">
               {data.mailSummary.recentFailed} fehlgeschlagenen Sendung(en)
@@ -112,8 +112,8 @@ export default async function TodayPage() {
           </p>
         </section>
 
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Werkstatt</h2>
+        <section className="uwe-v2-card uwe-v2-card-padded">
+          <h2 className="uwe-v2-section-title">Werkstatt</h2>
           <p>{data.lifeAdmin.activeWorkshopCount} in Arbeit / geplant</p>
           {data.lifeAdmin.workshopOpenTasks.length > 0 ? (
             <div className="uwe-today-card-list">
@@ -143,8 +143,8 @@ export default async function TodayPage() {
           </p>
         </section>
 
-        <section className="uwe-card uwe-dashboard-card">
-          <h2 className="uwe-section-title">Verträge & Ausgaben</h2>
+        <section className="uwe-v2-card uwe-v2-card-padded">
+          <h2 className="uwe-v2-section-title">Verträge & Ausgaben</h2>
           <p>
             {data.lifeAdmin.contractsNeedingReview > 0
               ? `${data.lifeAdmin.contractsNeedingReview} zur Prüfung`
