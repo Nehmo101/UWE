@@ -4,7 +4,7 @@ import { PortalPublicShell } from "@/src/components/PortalPublicShell";
 import { portalWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
   GlobalSearchForm,
-  PageHeader,
+  PageHeaderV2,
   PortalNavByType,
   PortalNavSidebar,
   WikiContent,
@@ -101,7 +101,7 @@ export default async function PortalPageView({ params }: Props) {
         </PortalNavSidebar>
       }
     >
-      <PageHeader
+      <PageHeaderV2
         title={page.title}
         meta={parseStringArray(page.tags).map((tag) => (
           <span key={tag} className="uwe-tag">
@@ -109,9 +109,11 @@ export default async function PortalPageView({ params }: Props) {
           </span>
         ))}
       />
+      <div className="uwe-v2-reader">
       {page.contentBlocks.map((block, index) => (
         <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
       ))}
+      </div>
     </PortalPublicShell>
   );
 }

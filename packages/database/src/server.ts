@@ -861,12 +861,18 @@ export {
 export {
   DEFAULT_PORTAL_WORLD_LAYOUT,
   DEFAULT_STUDIO_TODAY_LAYOUT,
+  DEFAULT_STUDIO_DASHBOARD_LAYOUT,
+  DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT,
   getDefaultDashboardLayout,
   normalizeDashboardWidgets,
   parseDashboardWidgets,
   portalWorldPageKey,
+  studioWorldDashboardPageKey,
   STUDIO_TODAY_PAGE_KEY,
+  STUDIO_DASHBOARD_PAGE_KEY,
   STUDIO_TODAY_WIDGET_TYPES,
+  STUDIO_DASHBOARD_WIDGET_TYPES,
+  STUDIO_WORLD_DASHBOARD_WIDGET_TYPES,
   PORTAL_WORLD_WIDGET_TYPES,
   validateDashboardWidgets,
   type DashboardLayoutResult,
@@ -874,6 +880,8 @@ export {
   type DashboardWidgetConfig,
   type PortalWorldWidgetType,
   type StudioTodayWidgetType,
+  type StudioDashboardWidgetType,
+  type StudioWorldDashboardWidgetType,
 } from "./dashboard-layout-types";
 
 export {

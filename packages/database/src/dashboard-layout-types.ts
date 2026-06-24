@@ -15,6 +15,7 @@ export interface DashboardLayoutResult {
 }
 
 export const STUDIO_TODAY_PAGE_KEY = "studio:today";
+export const STUDIO_DASHBOARD_PAGE_KEY = "studio:dashboard";
 
 export const STUDIO_TODAY_WIDGET_TYPES = [
   "system-ampel",
@@ -25,6 +26,28 @@ export const STUDIO_TODAY_WIDGET_TYPES = [
 ] as const;
 
 export type StudioTodayWidgetType = (typeof STUDIO_TODAY_WIDGET_TYPES)[number];
+
+export const STUDIO_DASHBOARD_WIDGET_TYPES = [
+  "stats",
+  "next-actions",
+  "activity-log",
+  "recent-pages",
+  "worlds",
+] as const;
+
+export type StudioDashboardWidgetType = (typeof STUDIO_DASHBOARD_WIDGET_TYPES)[number];
+
+export const STUDIO_WORLD_DASHBOARD_WIDGET_TYPES = [
+  "next-session",
+  "open-plots",
+  "wiki-pages",
+  "portal-sharing",
+  "media-assets",
+  "ai-brain",
+  "recent-pages",
+] as const;
+
+export type StudioWorldDashboardWidgetType = (typeof STUDIO_WORLD_DASHBOARD_WIDGET_TYPES)[number];
 
 export const PORTAL_WORLD_WIDGET_TYPES = [
   "next-session",
@@ -41,6 +64,10 @@ export type PortalWorldWidgetType = (typeof PORTAL_WORLD_WIDGET_TYPES)[number];
 
 export function portalWorldPageKey(worldSlug: string): string {
   return `portal:world:${worldSlug}`;
+}
+
+export function studioWorldDashboardPageKey(worldSlug: string): string {
+  return `studio:world:${worldSlug}:dashboard`;
 }
 
 function widget(
@@ -61,6 +88,24 @@ export const DEFAULT_STUDIO_TODAY_LAYOUT: DashboardWidgetConfig[] = [
   widget("homelab", "homelab", 1, 3),
 ];
 
+export const DEFAULT_STUDIO_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
+  widget("stats", "stats", 0, 1),
+  widget("next-actions", "next-actions", 0, 2),
+  widget("activity-log", "activity-log", 0, 3),
+  widget("recent-pages", "recent-pages", 1, 2),
+  widget("worlds", "worlds", 1, 3),
+];
+
+export const DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
+  widget("next-session", "next-session", 0, 1),
+  widget("open-plots", "open-plots", 0, 2),
+  widget("wiki-pages", "wiki-pages", 0, 3),
+  widget("portal-sharing", "portal-sharing", 1, 1),
+  widget("media-assets", "media-assets", 1, 2),
+  widget("ai-brain", "ai-brain", 1, 3),
+  widget("recent-pages", "recent-pages", 2, 1),
+];
+
 export const DEFAULT_PORTAL_WORLD_LAYOUT: DashboardWidgetConfig[] = [
   widget("next-session", "next-session", 0, 1),
   widget("last-recap", "last-recap", 1, 1),
@@ -75,6 +120,14 @@ export const DEFAULT_PORTAL_WORLD_LAYOUT: DashboardWidgetConfig[] = [
 export function getDefaultDashboardLayout(pageKey: string): DashboardWidgetConfig[] {
   if (pageKey === STUDIO_TODAY_PAGE_KEY) {
     return DEFAULT_STUDIO_TODAY_LAYOUT.map((entry) => ({ ...entry }));
+  }
+
+  if (pageKey === STUDIO_DASHBOARD_PAGE_KEY) {
+    return DEFAULT_STUDIO_DASHBOARD_LAYOUT.map((entry) => ({ ...entry }));
+  }
+
+  if (pageKey.startsWith("studio:world:") && pageKey.endsWith(":dashboard")) {
+    return DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT.map((entry) => ({ ...entry }));
   }
 
   if (pageKey.startsWith("portal:world:")) {
@@ -160,9 +213,13 @@ export function validateDashboardWidgets(
   const allowedTypes = new Set<string>(
     pageKey === STUDIO_TODAY_PAGE_KEY
       ? STUDIO_TODAY_WIDGET_TYPES
-      : pageKey.startsWith("portal:world:")
-        ? PORTAL_WORLD_WIDGET_TYPES
-        : [],
+      : pageKey === STUDIO_DASHBOARD_PAGE_KEY
+        ? STUDIO_DASHBOARD_WIDGET_TYPES
+        : pageKey.startsWith("studio:world:") && pageKey.endsWith(":dashboard")
+          ? STUDIO_WORLD_DASHBOARD_WIDGET_TYPES
+          : pageKey.startsWith("portal:world:")
+            ? PORTAL_WORLD_WIDGET_TYPES
+            : [],
   );
 
   if (allowedTypes.size === 0) {

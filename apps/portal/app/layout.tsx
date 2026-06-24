@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Mono, Newsreader } from "next/font/google";
 import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
-import { ThemeBootstrapScript, buildVisualThemeHtmlAttributes, toUweThemePreferences } from "@uwe/shared-ui";
+import {
+  ThemeBootstrapScript,
+  buildVisualThemeHtmlAttributes,
+  isDesignV2Enabled,
+  toUweThemePreferences,
+} from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "@uwe/shared-ui/uwe-v2.css";
 import "./globals.css";
@@ -59,9 +64,11 @@ export default async function RootLayout({
     "portal",
   );
 
+  const designV2 = isDesignV2Enabled();
+
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
-      <body>
+      <body {...(designV2 ? { "data-uwe-design-v2": "true" } : {})}>
         <ThemeBootstrapScript
           scope="portal"
           serverPreferences={serverThemePreferences}

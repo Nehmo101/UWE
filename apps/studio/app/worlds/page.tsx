@@ -20,7 +20,7 @@ export default async function WorldsPage() {
       summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung — oder lege eine neue an."
     >
       {canCreateWorld ? (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
           <CreateWorldForm />
         </section>
       ) : null}
@@ -31,18 +31,18 @@ export default async function WorldsPage() {
           description="Erstelle oben deine erste Welt — oder importiere später Inhalte über Welt → Import."
         />
       ) : (
-        <section className="uwe-section">
-          <h2 className="uwe-section-title">Deine Welten</h2>
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Deine Welten</h2>
           <div className="wiki-world-grid">
             {worlds.map((world) => (
-              <article key={world.id} className="wiki-world-card">
+              <article key={world.id} className="wiki-world-card uwe-v2-card uwe-v2-card-padded">
                 <h2>{world.name}</h2>
                 {world.description && <p>{world.description}</p>}
                 <div className="uwe-inline-actions">
-                  <Link className="uwe-btn uwe-btn-primary uwe-btn-sm" href={`/worlds/${world.slug}/dashboard`}>
+                  <Link className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm" href={`/worlds/${world.slug}/dashboard`}>
                     Welt verwalten
                   </Link>
-                  <Link className="uwe-btn uwe-btn-secondary uwe-btn-sm" href={`/worlds/${world.slug}/soundboard`}>
+                  <Link className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" href={`/worlds/${world.slug}/soundboard`}>
                     Soundboard
                   </Link>
                 </div>

@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { SidebarSection } from "@uwe/shared-ui";
 import {
+  ACTIVITY_ACTION_LABELS,
   buildNextActions,
   createActivityLogService,
   getAppRepository,
@@ -9,8 +12,6 @@ import { StudioCockpitAppShell } from "@/components/StudioCockpitAppShell";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
 import { STUDIO_DASHBOARD_PATH } from "@/src/lib/routes";
 import { StudioDashboardClient } from "./StudioDashboardClient";
-import Link from "next/link";
-import { SidebarSection } from "@uwe/shared-ui";
 
 interface Props {
   searchParams: Promise<{ undoApplied?: string; undoError?: string }>;
@@ -82,7 +83,7 @@ export default async function StudioDashboard({ searchParams }: Props) {
         activityEntries={activityEntries.map((entry) => ({
           id: entry.id,
           createdAt: entry.createdAt.toISOString(),
-          action: entry.action,
+          actionLabel: ACTIVITY_ACTION_LABELS[entry.action],
           summary: entry.summary,
           targetHref: entry.targetHref,
           undo: entry.undo
@@ -96,14 +97,14 @@ export default async function StudioDashboard({ searchParams }: Props) {
           id: action.id,
           title: action.title,
           description: action.description,
-          href: action.href,
+          href: action.href ?? null,
           severity: action.severity,
         }))}
         criticalProductionWarnings={criticalProductionWarnings.map((warning) => ({
           id: warning.id,
           title: warning.title,
           description: warning.description,
-          href: warning.href,
+          href: warning.href ?? null,
         }))}
         undoApplied={undoApplied}
         undoError={undoError}

@@ -244,3 +244,49 @@
   gap: var(--uwe-spacing-sm, 0.5rem);
   padding-top: var(--uwe-spacing-sm, 0.5rem);
 }
+
+/* — Section — */
+.uwe-v2-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-v2-content-gap);
+  margin-bottom: var(--uwe-v2-section-gap);
+}
+
+.uwe-v2-section-title {
+  margin: 0;
+  font-family: var(--uwe-zone-heading-font);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--uwe-zone-heading-fg);
+}
+
+/* — Stat grid — */
+.uwe-v2-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--uwe-v2-content-gap);
+  margin-bottom: var(--uwe-v2-section-gap);
+}
+
+.uwe-v2-stat-card {
+  padding: var(--uwe-spacing-md, 0.75rem) var(--uwe-spacing-lg, 1rem);
+  border-radius: var(--uwe-radius-lg, 0.75rem);
+  border: 1px solid var(--uwe-zone-card-border);
+  background: var(--uwe-zone-card-bg);
+}
+
+.uwe-v2-stat-value {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--uwe-zone-heading-fg);
+  line-height: 1.2;
+}
+
+.uwe-v2-stat-label {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}

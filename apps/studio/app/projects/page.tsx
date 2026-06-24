@@ -30,8 +30,8 @@ export default async function ProjectsPage() {
       title="Projekte"
       summary="Persönliche Projekte — UWE, Hardware, DnD, Werkstatt und mehr."
     >
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Projekt</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Projekt</h2>
         <form action={createProjectAction} className="uwe-brain-create-form">
           <label>
             Name
@@ -69,14 +69,14 @@ export default async function ProjectsPage() {
             Kosten (Cent)
             <input name="costCents" type="number" min={0} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Projekt anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Projekte ({projects.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Projekte ({projects.length})</h2>
         {projects.length === 0 ? (
           <EmptyState
             title="Noch keine Projekte"
@@ -86,7 +86,7 @@ export default async function ProjectsPage() {
         ) : (
           <div className="uwe-today-card-list">
             {projects.map((project) => (
-              <article key={project.id} className="uwe-today-card">
+              <article key={project.id} className="uwe-today-card uwe-v2-card uwe-v2-card-padded">
                 <form action={updateProjectAction} className="uwe-brain-create-form">
                   <input type="hidden" name="id" value={project.id} />
                   <label>
@@ -134,14 +134,14 @@ export default async function ProjectsPage() {
                     {PROJECT_STATUS_LABELS[project.status]} · {formatProjectBudget(project.costCents)}
                   </p>
                   <div className="uwe-inline-actions">
-                    <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                       Speichern
                     </button>
                   </div>
                 </form>
                 <form action={deleteProjectAction}>
                   <input type="hidden" name="id" value={project.id} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Löschen
                   </button>
                 </form>
