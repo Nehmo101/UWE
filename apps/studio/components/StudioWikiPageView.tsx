@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ContentBlockList,
+  GraphRelationList,
   GraphView,
   MetaPanel,
   SidebarSection,
@@ -246,8 +247,23 @@ export async function StudioWikiPageView({
       >
         <WikiContent html={view.html} />
 
-        <section style={{ marginTop: "2rem" }}>
-          <h2 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Nachbarschafts-Graph</h2>
+        <section className="wiki-graph-section" style={{ marginTop: "2rem" }}>
+          <div className="wiki-graph-head">
+            <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Nachbarschafts-Graph</h2>
+            <Link
+              className="uwe-btn uwe-btn-ghost"
+              href={`/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`}
+            >
+              Im großen Graph öffnen →
+            </Link>
+          </div>
+          {/* Knowledge-first: the relation list surfaces connections immediately;
+              the height-capped graph stays as a compact visual aid below it. */}
+          <GraphRelationList
+            edges={pageGraph.edges}
+            focusPageId={rawPage.id}
+            nodeTitles={Object.fromEntries(pageGraph.nodes.map((node) => [node.id, node.title]))}
+          />
           <GraphView nodes={pageGraph.nodes} edges={pageGraph.edges} compact />
         </section>
       </WorldModuleShell>

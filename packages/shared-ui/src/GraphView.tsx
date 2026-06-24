@@ -101,6 +101,7 @@ export function GraphView({
     <div className={`uwe-graph${compact ? " uwe-graph-compact" : ""}`}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Seiten-Graph"
         className="uwe-graph-canvas"
@@ -115,7 +116,7 @@ export function GraphView({
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(148, 163, 184, 0.7)" />
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--uwe-fg-muted)" />
           </marker>
         </defs>
 
@@ -152,7 +153,7 @@ export function GraphView({
               cy={node.y}
               r={node.isFocus ? 18 : compact ? 12 : 14}
               fill={CATEGORY_COLORS[node.category]}
-              stroke={node.isFocus ? "var(--uwe-fg)" : "var(--uwe-card)"}
+              stroke={node.isFocus ? "var(--uwe-fg)" : "var(--uwe-surface)"}
               strokeWidth={node.isFocus ? 2.5 : 1.5}
             />
             <text

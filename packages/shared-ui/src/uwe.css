@@ -3230,12 +3230,32 @@ html[data-theme="light"] {
 .uwe-graph {
   border: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--uwe-panel) 65%, transparent);
+  background: var(--uwe-surface);
   padding: 1rem;
 }
 
 .uwe-graph-compact {
   padding: 0.5rem;
+}
+
+/* Bound the compact graph height: a fixed viewBox aspect ratio (360x220) with
+   width:100%/height:auto would otherwise scale the SVG to ~900px tall on a wide
+   content column. Cap it; the <svg> uses preserveAspectRatio to stay centered. */
+.uwe-graph-compact .uwe-graph-canvas {
+  height: 220px;
+  max-height: 220px;
+}
+
+.wiki-graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.wiki-graph-section .uwe-graph-relations {
+  margin-bottom: 1rem;
 }
 
 .uwe-graph-empty {
@@ -3251,7 +3271,7 @@ html[data-theme="light"] {
 }
 
 .uwe-graph-edge line {
-  stroke: rgba(148, 163, 184, 0.45);
+  stroke: color-mix(in srgb, var(--uwe-border) 100%, transparent);
   stroke-width: 1.5;
 }
 
