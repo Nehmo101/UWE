@@ -297,29 +297,6 @@
   font-style: italic;
 }
 
-.wiki-badge {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.25rem;
-  margin-left: 0.35rem;
-  vertical-align: middle;
-}
-
-.wiki-badge-secret {
-  background: color-mix(in srgb, var(--uwe-danger) 20%, transparent);
-  color: var(--uwe-danger);
-}
-
-.wiki-badge-player {
-  background: rgba(74, 222, 128, 0.15);
-  color: var(--uwe-success);
-}
-
-.wiki-badge-public {
-  background: color-mix(in srgb, var(--uwe-info) 15%, transparent);
-  color: var(--uwe-info);
-}
-
 .wiki-page-list {
   display: grid;
   gap: 1.5rem;

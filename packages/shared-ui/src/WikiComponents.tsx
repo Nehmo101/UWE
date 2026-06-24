@@ -123,10 +123,10 @@ export function WikiPageList({ pages }: { pages: WikiNavItem[] }) {
                 <li key={page.href}>
                   <a href={page.href}>{page.title}</a>
                   {page.visibility === "dm_only" && (
-                    <span className="wiki-badge wiki-badge-secret">GM</span>
+                    <span className="uwe-badge uwe-badge-secret">GM</span>
                   )}
                   {page.visibility === "player_visible" && (
-                    <span className="wiki-badge wiki-badge-player">Spieler</span>
+                    <span className="uwe-badge uwe-badge-player">Spieler</span>
                   )}
                 </li>
               ))}
@@ -140,10 +140,10 @@ export function WikiPageList({ pages }: { pages: WikiNavItem[] }) {
 
 export function VisibilityBadge({ visibility }: { visibility: PageVisibility }) {
   if (visibility === "dm_only") {
-    return <span className="wiki-badge wiki-badge-secret">Nur GM</span>;
+    return <span className="uwe-badge uwe-badge-secret">Nur GM</span>;
   }
   if (visibility === "player_visible") {
-    return <span className="wiki-badge wiki-badge-player">Spieler sichtbar</span>;
+    return <span className="uwe-badge uwe-badge-player">Spieler sichtbar</span>;
   }
-  return <span className="wiki-badge wiki-badge-public">Öffentlich</span>;
+  return <span className="uwe-badge uwe-badge-public">Öffentlich</span>;
 }
