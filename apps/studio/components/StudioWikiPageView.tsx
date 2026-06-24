@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Collapsible,
-  ContentBlockList,
   GraphRelationList,
   GraphView,
   MetaPanel,
@@ -146,32 +145,16 @@ export async function StudioWikiPageView({
           )
         }
         sidebarExtra={
-          <>
-            <WorldContextSidebar
-              items={[
-                { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
-                {
-                  label: "Graph",
-                  href: `/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`,
-                },
-                { label: "Bearbeiten", href: `${pageHref}/edit` },
-              ]}
-            />
-            {!isPlayerPreview && dmPage && (
-              <SidebarSection title="Blöcke">
-                <ContentBlockList
-                  blocks={dmPage.contentBlocks.map((b) => ({
-                    id: b.id,
-                    type: b.type,
-                    sortOrder: b.sortOrder,
-                    content: b.content,
-                    visibility: b.visibility,
-                  }))}
-                  showVisibility
-                />
-              </SidebarSection>
-            )}
-          </>
+          <WorldContextSidebar
+            items={[
+              { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
+              {
+                label: "Graph",
+                href: `/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`,
+              },
+              { label: "Bearbeiten", href: `${pageHref}/edit` },
+            ]}
+          />
         }
         pageHeader={{
           title: view.page.title,
