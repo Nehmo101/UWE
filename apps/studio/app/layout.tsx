@@ -31,6 +31,7 @@ import { ThemeDocumentSync } from "../components/ThemeDocumentSync";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
 import "@uwe/shared-ui/uwe.css";
+import "@uwe/shared-ui/uwe-v2.css";
 import "./globals.css";
 import "./wiki.css";
 

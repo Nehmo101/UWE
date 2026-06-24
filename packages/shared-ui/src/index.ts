@@ -74,6 +74,20 @@ export {
 } from "./components";
 
 export {
+  ButtonV2,
+  CardV2,
+  PageHeaderV2,
+  type ButtonV2Props,
+  type ButtonV2Size,
+  type ButtonV2Variant,
+  type CardV2Props,
+  type PageHeaderV2Props,
+} from "./components-v2";
+
+/** Package export path for design v2 CSS (import in app layouts). */
+export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
+
+export {
   StudioShell,
   StudioNavSidebar,
   PortalShell,
@@ -96,6 +110,38 @@ export {
   type PortalShellProps,
   type AdminShellProps,
 } from "./shells";
+
+export { isDesignV2Enabled } from "./design-v2-feature";
+
+export {
+  AppShellV2,
+  V2PageHeader,
+  V2TopBarBrand,
+  StudioShellV2,
+  StudioNavSidebarV2,
+  PortalShellV2,
+  PortalNavSidebarV2,
+  AdminShellV2,
+  AdminStatusCardV2,
+  AdminStatusGridV2,
+  IconAi,
+  IconAssets,
+  IconCapture,
+  IconHome,
+  IconMenu,
+  IconSearch,
+  IconSessions,
+  IconToday,
+  V2_NAV_ICONS,
+  resolveV2BottomNavIcon,
+  type AppShellV2Props,
+  type StudioShellV2Props,
+  type StudioShellV2Variant,
+  type StudioNavSidebarV2Props,
+  type PortalShellV2Props,
+  type AdminShellV2Props,
+  type V2NavIconKey,
+} from "./shells-v2";
 
 export {
   SettingToggleRow,
@@ -233,3 +279,16 @@ export {
   type UweThemePreferences,
   useUweTheme,
 } from "./theme";
+
+export {
+  LayoutEditorProvider,
+  LayoutEditToolbar,
+  SortableWidgetGrid,
+  useDashboardLayout,
+  useLayoutEditor,
+  type LayoutEditToolbarProps,
+  type LayoutEditorProviderProps,
+  type SortableWidgetGridProps,
+  type UseDashboardLayoutOptions,
+  type UseDashboardLayoutState,
+} from "./layout-editor";

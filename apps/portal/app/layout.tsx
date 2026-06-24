@@ -3,6 +3,7 @@ import { Space_Mono, Newsreader } from "next/font/google";
 import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
 import { ThemeBootstrapScript, buildVisualThemeHtmlAttributes, toUweThemePreferences } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
+import "@uwe/shared-ui/uwe-v2.css";
 import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";

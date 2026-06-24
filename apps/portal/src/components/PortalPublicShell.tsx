@@ -1,7 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { NavSidebarSections, PortalShell, type BottomNavItem } from "@uwe/shared-ui";
+import {
+  isDesignV2Enabled,
+  NavSidebarSections,
+  PortalShell,
+  PortalShellV2,
+  type BottomNavItem,
+} from "@uwe/shared-ui";
 import {
   portalPublicSidebarSections,
   type PortalNavItem,
@@ -70,7 +76,17 @@ export function PortalPublicShell({
     </>
   );
 
-  return (
+  return isDesignV2Enabled() ? (
+    <PortalShellV2
+      worldName={worldName}
+      brandHref={resolvedBrandHref}
+      topBarExtra={topBarExtra}
+      bottomNav={bottomNav}
+      contextTitle="Navigation"
+      sidebar={sidebar ?? <NavSidebarSections sections={sections} />}
+      main={main}
+    />
+  ) : (
     <PortalShell
       worldName={worldName}
       brandHref={resolvedBrandHref}
