@@ -3,9 +3,11 @@ import {
   DEFAULT_DENSITY,
   DEFAULT_FONT,
   DEFAULT_UI_SCALE,
+  normalizeElementOverrides,
   type AppScope,
   type BackgroundPatternId,
   type DensityId,
+  type ElementOverrideTokens,
   type FontFamilyId,
 } from "./tokens";
 import {
@@ -24,6 +26,7 @@ export interface UweThemePreferences {
   uiScale: number;
   bgEffectColor?: string;
   bgEffectIntensity: number;
+  elementOverrides?: ElementOverrideTokens;
 }
 
 const STORAGE_KEY: Record<AppScope, string> = {
@@ -92,6 +95,7 @@ function parsePreferences(
       : defaults.bgEffectIntensity;
   const bgEffectColor =
     typeof obj.bgEffectColor === "string" ? obj.bgEffectColor : undefined;
+  const elementOverrides = normalizeElementOverrides(obj.elementOverrides);
 
   return {
     themeId,
@@ -102,6 +106,7 @@ function parsePreferences(
     uiScale,
     bgEffectColor,
     bgEffectIntensity,
+    elementOverrides,
   };
 }
 

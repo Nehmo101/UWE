@@ -20,7 +20,17 @@ export interface ThemePreferencesRecord {
   uiScale: number;
   bgEffectColor?: string;
   bgEffectIntensity: number;
+  elementOverrides?: ThemeElementOverrides;
 }
+
+export type ThemeElementOverrides = Partial<{
+  chromeBg: string;
+  chromeFg: string;
+  headingFg: string;
+  headingFont: string;
+  cardBg: string;
+  cardBorder: string;
+}>;
 
 export interface AppThemePreferences {
   studio?: ThemePreferencesRecord | null;
@@ -39,6 +49,30 @@ const CLIENT_BACKGROUND_VALUES = new Set<ThemeClientBackground>([
   "parchment",
   "noise",
 ]);
+
+const ELEMENT_OVERRIDE_KEYS = [
+  "chromeBg",
+  "chromeFg",
+  "headingFg",
+  "headingFont",
+  "cardBg",
+  "cardBorder",
+] as const satisfies readonly (keyof ThemeElementOverrides)[];
+
+function normalizeElementOverridesRecord(raw: unknown): ThemeElementOverrides | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  const result: ThemeElementOverrides = {};
+
+  for (const key of ELEMENT_OVERRIDE_KEYS) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim()) {
+      result[key] = value.trim();
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
 
 const DEFAULT_STUDIO_THEME_ID = "uwe-parchment-os";
 const DEFAULT_PORTAL_THEME_ID = "uwe-parchment-os";
@@ -115,6 +149,7 @@ export function normalizeThemePreferencesRecord(
     typeof obj.bgEffectColor === "string" && obj.bgEffectColor.trim()
       ? obj.bgEffectColor
       : undefined;
+  const elementOverrides = normalizeElementOverridesRecord(obj.elementOverrides);
 
   return {
     themeId,
@@ -125,6 +160,7 @@ export function normalizeThemePreferencesRecord(
     uiScale,
     bgEffectColor,
     bgEffectIntensity,
+    elementOverrides,
   };
 }
 

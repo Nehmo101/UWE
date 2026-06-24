@@ -1,11 +1,15 @@
 import {
   CSS_VARS,
   DENSITY_SCALES,
+  ELEMENT_OVERRIDE_CSS_VARS,
+  ELEMENT_OVERRIDE_KEYS,
   FONT_FAMILIES,
   LAYOUT_TOKENS,
+  resolveElementOverrideValue,
   type AppScope,
   type BackgroundPatternId,
   type DensityId,
+  type ElementOverrideTokens,
   type FontFamilyId,
   type ThemeColorTokens,
 } from "./tokens";
@@ -145,6 +149,22 @@ export function applyBgEffectOptions(
   );
 }
 
+export function applyElementOverrides(overrides?: ElementOverrideTokens): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const style = root.style;
+
+  for (const key of ELEMENT_OVERRIDE_KEYS) {
+    const cssVar = ELEMENT_OVERRIDE_CSS_VARS[key];
+    const raw = overrides?.[key];
+    if (raw) {
+      style.setProperty(cssVar, resolveElementOverrideValue(key, raw));
+    } else {
+      style.removeProperty(cssVar);
+    }
+  }
+}
+
 export function applyThemePreferences(
   preferences: UweThemePreferences,
   _scope?: AppScope,
@@ -165,6 +185,7 @@ export function applyThemePreferences(
     theme.defaults?.bgEffectIntensity ??
     1;
   applyBgEffectOptions(effectColor, effectIntensity);
+  applyElementOverrides(preferences.elementOverrides);
 
   if (typeof document !== "undefined") {
     document.documentElement.dataset.uweTheme = preferences.themeId;

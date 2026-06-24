@@ -47,6 +47,12 @@ export const CSS_VARS = {
   uiScale: "--uwe-ui-scale",
   bgEffectColor: "--uwe-bg-effect-color",
   bgEffectIntensity: "--uwe-bg-effect-intensity",
+  zoneChromeBg: "--uwe-zone-chrome-bg",
+  zoneChromeFg: "--uwe-zone-chrome-fg",
+  zoneHeadingFg: "--uwe-zone-heading-fg",
+  zoneHeadingFont: "--uwe-zone-heading-font",
+  zoneCardBg: "--uwe-zone-card-bg",
+  zoneCardBorder: "--uwe-zone-card-border",
 } as const;
 
 export type ThemeColorTokens = {
@@ -87,6 +93,65 @@ export type ThemeColorTokens = {
   focusRing?: string;
   focusShadow?: string;
 };
+
+/** Per-zone color/font overrides persisted in theme preferences. */
+export type ElementOverrideTokens = Partial<{
+  chromeBg: string;
+  chromeFg: string;
+  headingFg: string;
+  /** CSS font-family value or FontFamilyId (`mono` | `sans` | `serif`). */
+  headingFont: string;
+  cardBg: string;
+  cardBorder: string;
+}>;
+
+export const ELEMENT_OVERRIDE_KEYS = [
+  "chromeBg",
+  "chromeFg",
+  "headingFg",
+  "headingFont",
+  "cardBg",
+  "cardBorder",
+] as const satisfies readonly (keyof ElementOverrideTokens)[];
+
+export const ELEMENT_OVERRIDE_CSS_VARS: Record<
+  (typeof ELEMENT_OVERRIDE_KEYS)[number],
+  string
+> = {
+  chromeBg: CSS_VARS.zoneChromeBg,
+  chromeFg: CSS_VARS.zoneChromeFg,
+  headingFg: CSS_VARS.zoneHeadingFg,
+  headingFont: CSS_VARS.zoneHeadingFont,
+  cardBg: CSS_VARS.zoneCardBg,
+  cardBorder: CSS_VARS.zoneCardBorder,
+};
+
+const FONT_FAMILY_IDS = new Set<FontFamilyId>(["mono", "sans", "serif"]);
+
+export function normalizeElementOverrides(raw: unknown): ElementOverrideTokens | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  const result: ElementOverrideTokens = {};
+
+  for (const key of ELEMENT_OVERRIDE_KEYS) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim()) {
+      result[key] = value.trim();
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+export function resolveElementOverrideValue(
+  key: (typeof ELEMENT_OVERRIDE_KEYS)[number],
+  value: string,
+): string {
+  if (key === "headingFont" && FONT_FAMILY_IDS.has(value as FontFamilyId)) {
+    return FONT_FAMILIES[value as FontFamilyId];
+  }
+  return value;
+}
 
 /** Static layout tokens (not per-preset). */
 export const LAYOUT_TOKENS = {

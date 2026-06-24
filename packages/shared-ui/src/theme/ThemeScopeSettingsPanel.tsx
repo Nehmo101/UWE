@@ -5,6 +5,7 @@ import { THEME_LIST } from "./themes";
 import type {
   BackgroundPatternId,
   DensityId,
+  ElementOverrideTokens,
   FontFamilyId,
 } from "./tokens";
 import type { UweThemePreferences } from "./storage";
@@ -29,6 +30,128 @@ const DENSITY_OPTIONS: { id: DensityId; label: string }[] = [
   { id: "comfortable", label: "Komfortabel" },
   { id: "spacious", label: "Großzügig" },
 ];
+
+const ELEMENT_OVERRIDE_FIELDS: {
+  key: keyof ElementOverrideTokens;
+  label: string;
+  kind: "color" | "font";
+}[] = [
+  { key: "chromeBg", label: "Chrome-Hintergrund", kind: "color" },
+  { key: "chromeFg", label: "Chrome-Text", kind: "color" },
+  { key: "headingFg", label: "Überschrift-Farbe", kind: "color" },
+  { key: "headingFont", label: "Überschrift-Schrift", kind: "font" },
+  { key: "cardBg", label: "Karten-Hintergrund", kind: "color" },
+  { key: "cardBorder", label: "Karten-Rahmen", kind: "color" },
+];
+
+function ElementOverrideFields({
+  overrides,
+  updateOverrides,
+}: {
+  overrides: ElementOverrideTokens | undefined;
+  updateOverrides: (patch: Partial<ElementOverrideTokens> | undefined) => void;
+}) {
+  const current = overrides ?? {};
+
+  return (
+    <fieldset className="uwe-fieldset">
+      <legend>Zonen-Farben (Design v2)</legend>
+      <p className="uwe-hint">
+        Optionale Feinanpassung für Chrome, Überschriften und Karten. Leer lassen für Theme-Standard.
+      </p>
+      <div className="uwe-form uwe-theme-options">
+        {ELEMENT_OVERRIDE_FIELDS.map(({ key, label, kind }) => {
+          if (kind === "font") {
+            return (
+              <label key={key}>
+                {label}
+                <select
+                  value={
+                    current.headingFont === "mono" ||
+                    current.headingFont === "sans" ||
+                    current.headingFont === "serif"
+                      ? current.headingFont
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      const { headingFont: _removed, ...rest } = current;
+                      updateOverrides(Object.keys(rest).length > 0 ? rest : undefined);
+                      return;
+                    }
+                    updateOverrides({ ...current, headingFont: value });
+                  }}
+                >
+                  <option value="">Theme-Standard</option>
+                  {FONT_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          }
+
+          const colorValue =
+            current[key]?.startsWith("#") ? current[key]! : "#000000";
+
+          return (
+            <label key={key}>
+              {label}
+              <span
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                  alignItems: "center",
+                }}
+              >
+                <input
+                  type="color"
+                  value={current[key]?.startsWith("#") ? current[key]! : colorValue}
+                  onChange={(e) =>
+                    updateOverrides({ ...current, [key]: e.target.value })
+                  }
+                  aria-label={`${label} wählen`}
+                />
+                <input
+                  type="text"
+                  value={current[key] ?? ""}
+                  placeholder="Theme-Standard"
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    if (!value) {
+                      const next = { ...current };
+                      delete next[key];
+                      updateOverrides(Object.keys(next).length > 0 ? next : undefined);
+                      return;
+                    }
+                    updateOverrides({ ...current, [key]: value });
+                  }}
+                />
+                {current[key] && (
+                  <button
+                    type="button"
+                    className="uwe-btn uwe-btn-ghost uwe-btn-sm"
+                    onClick={() => {
+                      const next = { ...current };
+                      delete next[key];
+                      updateOverrides(Object.keys(next).length > 0 ? next : undefined);
+                    }}
+                  >
+                    Zurücksetzen
+                  </button>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
 
 function Swatch({ themeId }: { themeId: string }) {
   const theme = THEME_LIST.find((t) => t.id === themeId);
@@ -171,6 +294,13 @@ export function ThemePreferencesFields({
           </span>
         </label>
       </div>
+
+      <ElementOverrideFields
+        overrides={preferences.elementOverrides}
+        updateOverrides={(elementOverrides) =>
+          updatePreferences({ elementOverrides })
+        }
+      />
 
       {onReset && (
         <div className="uwe-form-actions">
