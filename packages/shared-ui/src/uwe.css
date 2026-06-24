@@ -739,6 +739,7 @@ html[data-theme="light"] {
   margin: 0 0 0.75rem;
   color: var(--uwe-fg-muted);
   line-height: 1.6;
+  overflow-wrap: break-word;
 }
 
 .uwe-card-link {
@@ -797,6 +798,8 @@ html[data-theme="light"] {
   font-size: 0.9rem;
   line-height: 1.5;
   max-width: 42rem;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .uwe-page-meta {
@@ -1130,6 +1133,7 @@ html[data-theme="light"] {
   margin: 0;
   line-height: 1.5;
   font-size: 0.9rem;
+  overflow-wrap: break-word;
 }
 
 .uwe-error-action {
@@ -1219,6 +1223,8 @@ html[data-theme="light"] {
   display: grid;
   gap: 1rem;
   max-width: 40rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .uwe-form label {
@@ -1233,6 +1239,7 @@ html[data-theme="light"] {
 .uwe-form textarea {
   padding: 0.65rem 0.75rem;
   min-height: var(--uwe-touch-min);
+  min-width: 0;
   border-radius: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--uwe-border) 150%, var(--uwe-muted) 0%);
   background: color-mix(in srgb, var(--uwe-panel) 100%, var(--uwe-bg) 25%);
@@ -2251,6 +2258,11 @@ html[data-theme="light"] {
     padding-bottom: calc(5rem + var(--uwe-safe-bottom));
   }
 
+  /* Hide topbar search when bottom nav already provides search tab */
+  .uwe-shell[data-has-bottom-nav="true"] .uwe-topbar .uwe-search {
+    display: none;
+  }
+
   .uwe-page-header {
     flex-direction: column;
     gap: var(--uwe-spacing-md);
@@ -2447,7 +2459,8 @@ html[data-theme="light"] {
   }
 
   .uwe-form-row-2,
-  .uwe-form-row-3 {
+  .uwe-form-row-3,
+  .uwe-form-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2768,6 +2781,16 @@ html[data-theme="light"] {
   .uwe-bottom-nav-label {
     font-size: 0.58rem;
   }
+
+  .uwe-topbar {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .uwe-main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 
 .uwe-label-preview-panel .uwe-label-preview-frame {
@@ -2956,6 +2979,12 @@ html[data-theme="light"] {
 
 .uwe-form-row-3 {
   grid-template-columns: 1fr 1fr 1fr;
+}
+
+.uwe-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
 }
 
 .uwe-form-inline {

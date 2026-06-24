@@ -138,6 +138,9 @@
 .uwe-select {
   padding: 0.65rem 0.75rem;
   min-height: var(--uwe-touch-min);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   border-radius: var(--uwe-radius-md);
   border: 1px solid var(--uwe-border);
   background: color-mix(in srgb, var(--uwe-input-bg) 92%, var(--uwe-bg) 8%);

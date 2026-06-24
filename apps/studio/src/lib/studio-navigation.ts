@@ -171,7 +171,7 @@ const UNIFIED_SIDEBAR_LINKS: {
   {
     id: "studio",
     title: "Studio",
-    hrefs: ["/studio", "/today", "/capture", "/projects", "/workshop"],
+    hrefs: ["/studio", "/today", "/worlds", "/capture", "/projects", "/workshop"],
   },
   {
     id: "library",
@@ -186,7 +186,7 @@ const UNIFIED_SIDEBAR_LINKS: {
   {
     id: "administration",
     title: "Administration",
-    hrefs: ["/admin", "/admin/users", "/admin/security", "/backup", "/settings"],
+    hrefs: ["/admin", "/admin/mail", "/admin/users", "/admin/security", "/admin/audit-log", "/backup", "/settings"],
   },
 ];
 

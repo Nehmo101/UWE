@@ -86,7 +86,7 @@ export function StudioAppShell({
   cockpitMode = false,
   cockpitWorlds = [],
   statusFooter,
-  unifiedSidebar = false,
+  unifiedSidebar = true,
 }: StudioAppShellProps) {
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const sidebarSections = unifiedSidebar
@@ -215,7 +215,7 @@ export function StudioAppShell({
             sections={sidebarSections}
             defaultOpenTitles={
               unifiedSidebar
-                ? ["Portal", "Studio", "Bibliothek"]
+                ? ["Studio", "Bibliothek", "Administration"]
                 : ["Dashboard", "Inhalte & Medien", "Einstellungen"]
             }
           />
