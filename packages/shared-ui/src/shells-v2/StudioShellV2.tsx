@@ -81,7 +81,7 @@ export function StudioShellV2({
   context,
   contextTitle,
   subtitle,
-  brandHref = "/studio",
+  brandHref = "/today",
   topBarExtra,
   showSearch = false,
   searchAction = "/search",

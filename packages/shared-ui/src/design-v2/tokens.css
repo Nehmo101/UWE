@@ -15,9 +15,12 @@
   --uwe-zone-card-bg: var(--uwe-card-bg, var(--uwe-surface));
   --uwe-zone-card-border: var(--uwe-border);
 
-  /* v2 layout rhythm (derived from spacing tokens) */
+  /* v2 layout rhythm — UWE Handoff.dc.html */
   --uwe-v2-topbar-height: 3.375rem; /* 54px */
-  --uwe-v2-sidebar-width: 16rem;
+  --uwe-v2-sidebar-width: 14.75rem; /* 236px */
+  --uwe-v2-sidebar-width-collapsed: 4.125rem; /* 66px */
+  --uwe-v2-radius-btn: 0.5625rem; /* 9px */
+  --uwe-v2-radius-card: 0.875rem; /* 14px */
   --uwe-v2-reader-max: 52rem;
   --uwe-v2-content-gap: var(--uwe-spacing-lg, 1rem);
   --uwe-v2-section-gap: var(--uwe-spacing-xl, 1.5rem);

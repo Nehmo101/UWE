@@ -11,7 +11,7 @@
   min-height: 2.25rem;
   padding: 0.45rem 0.9rem;
   border: 1px solid var(--uwe-border);
-  border-radius: var(--uwe-radius-md, 0.5rem);
+  border-radius: var(--uwe-v2-radius-btn, var(--uwe-radius-md, 0.5rem));
   background: var(--uwe-zone-card-bg);
   color: var(--uwe-zone-chrome-fg);
   font: inherit;
@@ -41,14 +41,26 @@
 }
 
 .uwe-v2-btn-primary {
-  border-color: color-mix(in srgb, var(--uwe-accent) 60%, var(--uwe-border));
-  background: var(--uwe-accent);
-  color: color-mix(in srgb, var(--uwe-bg) 8%, white 92%);
+  border-color: var(--uwe-fg);
+  background: var(--uwe-fg);
+  color: var(--uwe-card-bg, var(--uwe-bg-elevated));
 }
 
 .uwe-v2-btn-primary:hover {
+  background: color-mix(in srgb, var(--uwe-fg) 88%, white 12%);
+  border-color: color-mix(in srgb, var(--uwe-fg) 88%, white 12%);
+}
+
+.uwe-v2-btn-accent {
+  border-color: var(--uwe-fg);
+  border-width: 2px;
+  background: var(--uwe-accent);
+  color: var(--uwe-card-bg, var(--uwe-bg-elevated));
+}
+
+.uwe-v2-btn-accent:hover {
   background: var(--uwe-accent-hover);
-  border-color: var(--uwe-accent-hover);
+  border-color: var(--uwe-fg);
 }
 
 .uwe-v2-btn-secondary {
@@ -79,8 +91,8 @@
 
 /* — Card — */
 .uwe-v2-card {
-  border: 1px solid var(--uwe-zone-card-border);
-  border-radius: var(--uwe-radius-lg, 0.75rem);
+  border: 1.5px solid var(--uwe-zone-card-border);
+  border-radius: var(--uwe-v2-radius-card, var(--uwe-radius-lg, 0.75rem));
   background: var(--uwe-zone-card-bg);
   box-shadow: var(--uwe-shadow-sm);
   overflow: hidden;

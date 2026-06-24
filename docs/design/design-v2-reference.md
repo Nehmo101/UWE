@@ -1,9 +1,8 @@
-# Design V2 — Referenz (Fallback ohne UWE-Analyse.zip)
+# Design V2 — Referenz
 
 **Stand:** Juni 2026  
-**Quelle:** `docs/design/uwe-ansichten-analyse-und-plan.md`, `docs/design/odysseus-ui-architecture-analysis.md`, Parchment OS Preset
-
-Die Zip-Datei „UWE-Analyse.zip“ war nicht im Repository verfügbar. Dieses Dokument definiert die abgenommenen Design-Tokens und QA-Kriterien für den UI-Refresh.
+**Quelle:** `docs/design/GitHub Repository UWE-Analyse.zip` → `UWE Handoff.dc.html`  
+**Handoff-Dokumentation:** `docs/design/parchment-os-handoff.md`
 
 ## Visuelle Leitlinien
 
@@ -11,7 +10,7 @@ Die Zip-Datei „UWE-Analyse.zip“ war nicht im Repository verfügbar. Dieses D
 |--------|---------|
 | Standard-Theme | `uwe-parchment-os` (hell, Pergament) |
 | Topbar | 54px, ink-bordered |
-| Sidebar | Dunkles Ink-Chrome vs. warme Hauptfläche |
+| Sidebar | 236px, dunkles Ink-Chrome vs. warme Hauptfläche |
 | Lesebreite | max. 52rem (`--uwe-v2-reader-max`) |
 | Mobile Breakpoint | 390px primär, Bottom-Nav ≤960px |
 | Icons | SVG (keine Emoji in Bottom-Nav) |
@@ -24,21 +23,24 @@ Die Zip-Datei „UWE-Analyse.zip“ war nicht im Repository verfügbar. Dieses D
 | Überschriften | `--uwe-zone-heading-fg`, `--uwe-zone-heading-font` |
 | Karten | `--uwe-zone-card-bg`, `--uwe-zone-card-border` |
 | Wiki-Lesen | `--uwe-reader-fg`, `--uwe-reader-heading` |
+| Layout | `--uwe-v2-sidebar-width` (236px), `--uwe-v2-topbar-height` (54px) |
 
 Benutzer-Overrides: Settings → Erscheinungsbild → Zonen-Farbwähler.
 
-## Abnahme-Screens (manuell)
+## Abnahme-Screens
+
+Referenzbilder: `docs/design/scraps/today-desktop.png`, `today-mobile.png`
 
 ### Studio (Desktop ≥1280px + Mobile 390px)
 
 1. `/today` — Daily Cockpit, Layout-Editor, System-Ampel
-2. `/worlds/terra/lore/[slug]` — Wiki-Detail, Graph kompakt, keine grauen Fremdkörper
+2. `/worlds/terra/lore/[slug]` — Wiki-Detail, Graph kompakt
 3. `/settings?tab=appearance` — Theme-Presets + Zonen-Overrides
 
 ### Portal
 
-1. `/worlds/terra` — Öffentliche Welt, ruhige Lesefläche
-2. `/auth/worlds/terra` — Spieler-Dashboard, Layout-Editor
+1. `/worlds/terra` — Öffentliche Welt
+2. `/auth/worlds/terra` — Spieler-Dashboard
 3. `/login` — Auth-Flow
 
 ### Theme-Presets (alle 9)
@@ -51,7 +53,7 @@ Automatisiert: `packages/shared-ui/src/design-v2/design-v2.test.ts`
 
 ```
 uwe.css
-  ├── design-v2/index.css   (tokens, shell, components, layouts, mobile, wiki)
+  ├── design-v2/index.css   (tokens, shell, components, layouts, mobile, wiki, parchment-os-shell)
   ├── design-v2/legacy-bridge.css
   ├── uwe-visual-polish.css
   └── uwe-components.css    (Command Palette, Label Editor, spezialisierte Widgets)

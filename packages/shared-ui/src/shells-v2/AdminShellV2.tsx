@@ -27,7 +27,7 @@ export function AdminShellV2({
   bottomNav,
   statusStrip,
   brandHref = "/admin",
-  backToStudioHref = "/studio",
+  backToStudioHref = "/today",
   backToStudioLabel = "Zurück zum Studio",
 }: AdminShellV2Props) {
   return (

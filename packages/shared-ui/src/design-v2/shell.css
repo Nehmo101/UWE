@@ -39,9 +39,10 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.625rem 1rem;
+  min-height: var(--uwe-v2-topbar-height);
+  padding: 0 1rem;
   border-bottom: 1px solid var(--uwe-border);
-  background: var(--uwe-panel);
+  background: var(--uwe-zone-chrome-bg, var(--uwe-panel));
   position: sticky;
   top: 0;
   z-index: 40;
@@ -91,10 +92,32 @@
 
 .uwe-v2-sidebar {
   grid-area: sidebar;
-  width: 16rem;
+  width: var(--uwe-v2-sidebar-width);
   overflow: auto;
   border-right: 1px solid var(--uwe-border);
-  background: var(--uwe-bg-elevated);
+  background: var(--uwe-sidebar-bg, var(--uwe-bg-elevated));
+  color: var(--uwe-sidebar-fg, var(--uwe-fg));
+}
+
+.uwe-v2-sidebar .uwe-sidebar-section h3 {
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
+}
+
+.uwe-v2-sidebar .uwe-sidebar-nav a {
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
+  border-left: 3px solid transparent;
+}
+
+.uwe-v2-sidebar .uwe-sidebar-nav a:hover {
+  color: var(--uwe-sidebar-fg, var(--uwe-fg));
+  background: color-mix(in srgb, var(--uwe-sidebar-fg, var(--uwe-fg)) 8%, transparent);
+}
+
+.uwe-v2-sidebar .uwe-sidebar-nav a.active {
+  color: var(--uwe-sidebar-fg, var(--uwe-fg));
+  border-left-color: var(--uwe-accent);
+  background: color-mix(in srgb, var(--uwe-sidebar-fg, var(--uwe-fg)) 12%, var(--uwe-sidebar-bg, var(--uwe-panel)));
+  font-weight: 600;
 }
 
 .uwe-v2-sidebar-content {

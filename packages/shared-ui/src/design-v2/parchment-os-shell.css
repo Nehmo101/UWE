@@ -1,0 +1,78 @@
+/**
+ * Parchment OS — V2 shell overrides aligned with UWE Handoff.dc.html
+ * Scoped to html[data-uwe-theme="uwe-parchment-os"] + .uwe-v2-* classes.
+ */
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar {
+  min-height: var(--uwe-v2-topbar-height);
+  height: var(--uwe-v2-topbar-height);
+  padding-top: 0;
+  padding-bottom: 0;
+  background: #e9dfca;
+  border-bottom: 2px solid #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar {
+  width: var(--uwe-v2-sidebar-width);
+  background: var(--uwe-sidebar-bg);
+  border-right: none;
+  scrollbar-color: #3b342a transparent;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-section h3 {
+  color: #9a8f78;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a {
+  color: var(--uwe-sidebar-fg-muted);
+  border-left: 3px solid transparent;
+  border-radius: 0;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a:hover {
+  color: var(--uwe-sidebar-fg);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a.active {
+  color: var(--uwe-sidebar-fg);
+  background: #2c261d;
+  border-left-color: var(--uwe-accent);
+  font-weight: 700;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-nav-badge {
+  background: #3b342a;
+  color: #9a8f78;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main {
+  background: var(--uwe-bg);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main h1,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main h2,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-page-header-main h1 {
+  font-family: var(--uwe-font-newsreader, Georgia, serif);
+  font-weight: 600;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-card {
+  border-color: #e0d4ba;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-primary {
+  background: #211d17;
+  color: #fbf6ea;
+  border-color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-primary:hover {
+  background: #2c261d;
+  border-color: #2c261d;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-accent {
+  border-width: 2px;
+  border-color: #211d17;
+}

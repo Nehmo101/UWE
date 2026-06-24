@@ -227,6 +227,7 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
       sidebarBg: "#211d17",
       sidebarFg: "#f1e8d4",
       sidebarFgMuted: "#b6ab92",
+      cardBg: "#fbf6ea",
     },
     defaults: { font: "mono", background: "none", frostedGlass: false },
   },

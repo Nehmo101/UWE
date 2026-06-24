@@ -17,6 +17,7 @@ describe("design v2 CSS bundle", () => {
       "layouts.css",
       "mobile.css",
       "wiki.css",
+      "parchment-os-shell.css",
       "legacy-bridge.css",
       "index.css",
     ];
@@ -37,6 +38,24 @@ describe("design v2 CSS bundle", () => {
     assert.match(bridge, /max-height:\s*220px/);
     assert.match(bridge, /data-uwe-design-v2/);
     assert.match(bridge, /body\[data-uwe-design-v2\] \.wiki-content/);
+  });
+
+  it("parchment OS handoff tokens match theme preset", () => {
+    const parchment = UWE_THEMES["uwe-parchment-os"].colors;
+    assert.equal(parchment.fg?.toLowerCase(), "#211d17");
+    assert.equal(parchment.accent?.toLowerCase(), "#c2622b");
+    assert.equal(parchment.bg?.toLowerCase(), "#f1e8d4");
+    assert.equal(parchment.sidebarBg?.toLowerCase(), "#211d17");
+    assert.equal(parchment.cardBg?.toLowerCase(), "#fbf6ea");
+  });
+
+  it("v2 layout tokens follow handoff dimensions", () => {
+    const tokens = readFileSync(path.join(designV2Dir, "tokens.css"), "utf8");
+    assert.match(tokens, /14\.75rem.*236px/);
+    assert.match(tokens, /3\.375rem.*54px/);
+    const components = readFileSync(path.join(designV2Dir, "components.css"), "utf8");
+    assert.match(components, /\.uwe-v2-btn-accent/);
+    assert.match(components, /\.uwe-v2-btn-primary/);
   });
 });
 
