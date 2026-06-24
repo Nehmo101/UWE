@@ -24,7 +24,7 @@ export default async function AuthWorldsPage() {
             }
             action={
               user ? undefined : (
-                <Link className="uwe-btn uwe-btn-primary" href="/login">
+                <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/login">
                   Zur Anmeldung
                 </Link>
               )

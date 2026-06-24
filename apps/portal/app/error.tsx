@@ -15,7 +15,7 @@ export default function PortalError({
         title="Etwas ist schiefgelaufen"
         message={error.message || "Die Seite konnte nicht geladen werden."}
         action={
-          <button type="button" className="uwe-btn uwe-btn-primary" onClick={reset}>
+          <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={reset}>
             Erneut versuchen
           </button>
         }

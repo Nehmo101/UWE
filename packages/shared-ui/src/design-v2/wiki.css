@@ -1,0 +1,128 @@
+/**
+ * Design v2 wiki reader typography.
+ */
+
+.uwe-v2-wiki {
+  color: var(--uwe-reader-fg, var(--uwe-fg));
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.uwe-v2-wiki-content {
+  max-width: var(--uwe-v2-reader-max);
+}
+
+.uwe-v2-wiki-content h1,
+.uwe-v2-wiki-content h2,
+.uwe-v2-wiki-content h3,
+.uwe-v2-wiki-content h4 {
+  font-family: var(--uwe-zone-heading-font);
+  color: var(--uwe-reader-heading, var(--uwe-zone-heading-fg));
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.uwe-v2-wiki-content h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--uwe-border-muted);
+}
+
+.uwe-v2-wiki-content h2 {
+  font-size: 1.35rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.uwe-v2-wiki-content h3 {
+  font-size: 1.12rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.uwe-v2-wiki-content p {
+  margin: 0 0 1rem;
+}
+
+.uwe-v2-wiki-content a {
+  color: var(--uwe-wiki-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--uwe-wiki-link) 35%, transparent);
+  text-underline-offset: 0.15em;
+}
+
+.uwe-v2-wiki-content a:hover {
+  color: var(--uwe-wiki-link-hover);
+}
+
+.uwe-v2-wiki-content blockquote {
+  margin: 1rem 0;
+  padding: 0.65rem 1rem;
+  border-left: 3px solid color-mix(in srgb, var(--uwe-accent) 50%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent-muted) 35%, transparent);
+  color: var(--uwe-fg-muted);
+  border-radius: 0 var(--uwe-radius-sm, 0.375rem) var(--uwe-radius-sm, 0.375rem) 0;
+}
+
+.uwe-v2-wiki-content code {
+  padding: 0.12rem 0.35rem;
+  border-radius: var(--uwe-radius-sm, 0.375rem);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 80%, var(--uwe-bg) 20%);
+  font-size: 0.88em;
+}
+
+.uwe-v2-wiki-content pre {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: var(--uwe-radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--uwe-panel) 70%, var(--uwe-bg) 30%);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.uwe-v2-wiki-content pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.uwe-v2-wiki-content ul,
+.uwe-v2-wiki-content ol {
+  margin: 0 0 1rem;
+  padding-left: 1.35rem;
+}
+
+.uwe-v2-wiki-content li {
+  margin-bottom: 0.35rem;
+}
+
+.uwe-v2-wiki-link-hidden {
+  color: var(--uwe-fg-muted);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.uwe-v2-wiki-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: var(--uwe-v2-content-gap);
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-v2-wiki-aside {
+  margin-top: var(--uwe-v2-section-gap);
+  padding: var(--uwe-v2-content-gap);
+  border: 1px solid var(--uwe-zone-card-border);
+  border-radius: var(--uwe-radius-lg, 0.75rem);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 85%, transparent);
+}
+
+.uwe-v2-wiki-aside h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--uwe-fg-muted);
+}

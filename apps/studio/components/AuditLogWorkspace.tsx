@@ -118,7 +118,7 @@ export function AuditLogWorkspace() {
 
   return (
     <>
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Filter</h2>
         <div className="uwe-form-grid">
           <label>
@@ -159,14 +159,14 @@ export function AuditLogWorkspace() {
             <input type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
           </label>
         </div>
-        <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void loadEntries()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadEntries()}>
           Filtern
         </button>
       </section>
 
       {error && <p className="uwe-notice uwe-notice-warn">{error}</p>}
 
-      <section className="uwe-card">
+      <section className="uwe-v2-card">
         <h2>
           Einträge {loading ? "…" : `(${entries.length} / ${total})`}
         </h2>

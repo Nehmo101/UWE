@@ -94,7 +94,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         title: world.name,
         summary: world.description,
         actions: (
-          <Link className="uwe-btn uwe-btn-primary" href={newPageHref}>
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={newPageHref}>
             Seite erstellen
           </Link>
         ),
@@ -183,7 +183,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
           title="Keine Seiten"
           description="Für diesen Filter gibt es noch keine Einträge. Erstelle eine neue Seite oder passe den Filter an."
           action={
-            <Link className="uwe-btn uwe-btn-primary" href={newPageHref}>
+            <Link className="uwe-v2-btn uwe-v2-btn-primary" href={newPageHref}>
               Seite erstellen
             </Link>
           }

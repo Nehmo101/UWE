@@ -9,8 +9,8 @@ interface MailCenterSetupProps {
 export function MailCenterSetup({ smtpStatus, accountCount }: MailCenterSetupProps) {
   return (
     <div className="uwe-mail-center-setup">
-      <section className="uwe-card">
-        <h2 className="uwe-section-title">Einrichtung — Odysseus-Stil</h2>
+      <section className="uwe-v2-card">
+        <h2 className="uwe-v2-section-title">Einrichtung — Odysseus-Stil</h2>
         <p className="uwe-hint">
           Outbound (SMTP) und Inbound (IMAP) getrennt konfigurieren. Secrets nur serverseitig —
           nie im Browser.
@@ -31,7 +31,7 @@ export function MailCenterSetup({ smtpStatus, accountCount }: MailCenterSetupPro
         </ol>
       </section>
 
-      <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
+      <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
         <h3>SMTP-Status</h3>
         <dl className="uwe-kv-list">
           <div>
@@ -48,13 +48,13 @@ export function MailCenterSetup({ smtpStatus, accountCount }: MailCenterSetupPro
           </div>
         </dl>
         <p>
-          <Link href="/settings?tab=mail" className="uwe-btn uwe-btn-secondary">
+          <Link href="/settings?tab=mail" className="uwe-v2-btn uwe-v2-btn-secondary">
             SMTP konfigurieren
           </Link>
         </p>
       </section>
 
-      <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
+      <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
         <h3>IMAP-Konten</h3>
         <p className="uwe-dashboard-muted">
           {accountCount === 0
@@ -62,7 +62,7 @@ export function MailCenterSetup({ smtpStatus, accountCount }: MailCenterSetupPro
             : `${accountCount} Konto/Konten aktiv.`}
         </p>
         <p>
-          <Link href="/admin/mail" className="uwe-btn uwe-btn-primary">
+          <Link href="/admin/mail" className="uwe-v2-btn uwe-v2-btn-primary">
             Mail Portal öffnen
           </Link>
         </p>

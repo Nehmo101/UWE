@@ -34,7 +34,7 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
       title={fact.title}
       summary="Life-Brain-Fakt — nur lokal, nicht für Cloud-KI."
       actions={
-        <Link href="/life-brain" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+        <Link href="/life-brain" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
           Zurück zur Suche
         </Link>
       }
@@ -43,7 +43,7 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
 
-      <article className="uwe-card uwe-section">
+      <article className="uwe-v2-card uwe-v2-section">
         <p className="uwe-dashboard-muted">
           Typ: {fact.factType}
           {" · "}
@@ -55,15 +55,15 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
         </p>
 
         {fact.content && (
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Inhalt</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Inhalt</h2>
             <p style={{ whiteSpace: "pre-wrap" }}>{fact.content}</p>
           </section>
         )}
 
         {linkedCaptures.length > 0 && (
-          <section className="uwe-section">
-            <h2 className="uwe-section-title">Quellen / Captures</h2>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Quellen / Captures</h2>
             <ul className="uwe-today-card-list">
               {linkedCaptures.map((capture) => (
                 <li key={capture.id} className="uwe-today-card">
@@ -89,7 +89,7 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
 
         <form action={deleteLifeBrainFactAction}>
           <input type="hidden" name="id" value={fact.id} />
-          <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
             Fakt löschen
           </button>
         </form>

@@ -4,15 +4,16 @@ import { studioGlobalBottomNav, studioWorldBottomNav } from "./mobile-nav";
 import { resolvePreferredWorldSlug } from "./today-dashboard";
 
 describe("studio mobile nav", () => {
-  it("uses Daily Admin OS bottom nav items", () => {
+  it("uses consolidated IA bottom nav items", () => {
     const nav = studioGlobalBottomNav("today");
     assert.deepEqual(
       nav.map((item) => item.label),
-      ["Heute", "Capture", "Suche", "KI", "Mehr"],
+      ["Heute", "Leben", "Welten", "KI", "Mehr"],
     );
     assert.equal(nav[0]?.active, true);
     assert.equal(nav[0]?.href, "/today");
     assert.equal(nav[1]?.href, "/capture");
+    assert.equal(nav[2]?.href, "/worlds");
     assert.equal(nav[3]?.href, "/ai");
   });
 

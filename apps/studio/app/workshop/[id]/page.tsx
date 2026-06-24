@@ -58,14 +58,14 @@ export default async function WorkshopDetailPage({ params }: Props) {
       </p>
 
       {workshop.nextAction && (
-        <section className="uwe-card uwe-section">
-          <h2 className="uwe-section-title">Nächster Schritt</h2>
+        <section className="uwe-v2-card uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Nächster Schritt</h2>
           <p>{workshop.nextAction}</p>
         </section>
       )}
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Projekt bearbeiten</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Projekt bearbeiten</h2>
         <form action={updateWorkshopAction} className="uwe-brain-create-form">
           <input type="hidden" name="id" value={workshop.id} />
           <label>
@@ -179,16 +179,16 @@ export default async function WorkshopDetailPage({ params }: Props) {
             />
           </label>
 
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Speichern
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Übersicht</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Übersicht</h2>
         <div className="uwe-dashboard-grid">
-          <article className="uwe-card uwe-dashboard-card">
+          <article className="uwe-v2-card uwe-dashboard-card">
             <h3>Material</h3>
             <ul>
               {asMaterialList(workshop.materialsNeeded).map((entry) => (
@@ -200,7 +200,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
               ))}
             </ul>
           </article>
-          <article className="uwe-card uwe-dashboard-card">
+          <article className="uwe-v2-card uwe-dashboard-card">
             <h3>Farben</h3>
             <ul>
               {asColorList(workshop.colorsUsed).map((entry) => (
@@ -212,7 +212,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
               ))}
             </ul>
           </article>
-          <article className="uwe-card uwe-dashboard-card">
+          <article className="uwe-v2-card uwe-dashboard-card">
             <h3>Links</h3>
             <ul>
               {asLinkList(workshop.stlLinks).map((entry) => (
@@ -224,15 +224,15 @@ export default async function WorkshopDetailPage({ params }: Props) {
               ))}
             </ul>
           </article>
-          <article className="uwe-card uwe-dashboard-card">
+          <article className="uwe-v2-card uwe-dashboard-card">
             <h3>Kosten</h3>
             <p>{workshop.costCents != null ? formatEuroFromCents(workshop.costCents) : "—"}</p>
           </article>
         </div>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Bilder</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Bilder</h2>
         <div className="uwe-dashboard-grid">
           {(
             [
@@ -241,7 +241,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
               ["Ergebnis", workshop.resultPhotos],
             ] as const
           ).map(([label, photos]) => (
-            <article key={String(label)} className="uwe-card uwe-dashboard-card">
+            <article key={String(label)} className="uwe-v2-card uwe-dashboard-card">
               <h3>{label}</h3>
               {asPhotoList(photos).map((photo) => (
                 <figure key={photo.url}>
@@ -260,8 +260,8 @@ export default async function WorkshopDetailPage({ params }: Props) {
       </section>
 
       {captureLinks.length > 0 && (
-        <section className="uwe-card uwe-section">
-          <h2 className="uwe-section-title">Capture-Verknüpfungen</h2>
+        <section className="uwe-v2-card uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Capture-Verknüpfungen</h2>
           <ul>
             {captureLinks.map((link) => (
               <li key={link.id}>
@@ -272,8 +272,8 @@ export default async function WorkshopDetailPage({ params }: Props) {
         </section>
       )}
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Paint-Rezept für dieses Projekt</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Paint-Rezept für dieses Projekt</h2>
         <form action={createPaintRecipeAction} className="uwe-brain-create-form">
           <input type="hidden" name="workshopProjectId" value={workshop.id} />
           <label>
@@ -322,13 +322,13 @@ export default async function WorkshopDetailPage({ params }: Props) {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-secondary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
             Rezept speichern
           </button>
         </form>
 
         {workshop.paintRecipes.length > 0 && (
-          <div className="uwe-today-card-list uwe-section">
+          <div className="uwe-today-card-list uwe-v2-section">
             {workshop.paintRecipes.map((recipe) => (
               <article key={recipe.id} className="uwe-today-card">
                 <h3>{recipe.name}</h3>
@@ -353,7 +353,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
                 <form action={deletePaintRecipeAction}>
                   <input type="hidden" name="id" value={recipe.id} />
                   <input type="hidden" name="returnTo" value={`/workshop/${workshop.id}`} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Rezept löschen
                   </button>
                 </form>
@@ -363,8 +363,8 @@ export default async function WorkshopDetailPage({ params }: Props) {
         )}
       </section>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">3D-Druck-Profil</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">3D-Druck-Profil</h2>
         <form action={createPrintProfileAction} className="uwe-brain-create-form">
           <input type="hidden" name="workshopProjectId" value={workshop.id} />
           <label>
@@ -403,13 +403,13 @@ export default async function WorkshopDetailPage({ params }: Props) {
             Verbesserung
             <textarea name="improvements" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-secondary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
             Profil speichern
           </button>
         </form>
 
         {workshop.printProfiles.length > 0 && (
-          <div className="uwe-today-card-list uwe-section">
+          <div className="uwe-today-card-list uwe-v2-section">
             {workshop.printProfiles.map((profile) => (
               <article key={profile.id} className="uwe-today-card">
                 <h3>{profile.name || "Drucklauf"}</h3>
@@ -423,7 +423,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
                 <form action={deletePrintProfileAction}>
                   <input type="hidden" name="id" value={profile.id} />
                   <input type="hidden" name="returnTo" value={`/workshop/${workshop.id}`} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Profil löschen
                   </button>
                 </form>
@@ -435,7 +435,7 @@ export default async function WorkshopDetailPage({ params }: Props) {
 
       <form action={deleteWorkshopAction}>
         <input type="hidden" name="id" value={workshop.id} />
-        <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+        <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
           Projekt löschen
         </button>
       </form>

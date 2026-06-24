@@ -1,7 +1,8 @@
 import { StudioAppShell } from "@/components/StudioAppShell";
+import { StudioAppShellV2 } from "@/components/StudioAppShellV2";
 import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
-import { SidebarNav, SidebarSection } from "@uwe/shared-ui";
+import { isDesignV2Enabled, SidebarNav, SidebarSection } from "@uwe/shared-ui";
 import type { ReactNode } from "react";
 
 interface AdminModuleShellProps {
@@ -35,22 +36,28 @@ export function AdminModuleShell({
   topBarExtra,
   children,
 }: AdminModuleShellProps) {
+  const shellProps = {
+    variant: "module" as const,
+    activePath,
+    title,
+    summary,
+    actions,
+    bottomNav: studioGlobalBottomNav(bottomNav),
+    context,
+    contextTitle,
+    showSearch,
+    breadcrumbs,
+    backHref,
+    backLabel,
+    topBarExtra,
+  };
+
+  if (isDesignV2Enabled()) {
+    return <StudioAppShellV2 {...shellProps}>{children}</StudioAppShellV2>;
+  }
+
   return (
-    <StudioAppShell
-      variant="module"
-      activePath={activePath}
-      title={title}
-      summary={summary}
-      actions={actions}
-      bottomNav={studioGlobalBottomNav(bottomNav)}
-      context={context}
-      contextTitle={contextTitle}
-      showSearch={showSearch}
-      breadcrumbs={breadcrumbs}
-      backHref={backHref}
-      backLabel={backLabel}
-      topBarExtra={topBarExtra}
-    >
+    <StudioAppShell {...shellProps}>
       {children}
     </StudioAppShell>
   );

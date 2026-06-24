@@ -68,7 +68,7 @@ export function AiRunActions({ runId, worldSlug, status, resultText }: Props) {
             Abbrechen
           </button>
         )}
-        <a className="uwe-btn" href={`/worlds/${worldSlug}/ai-runs`}>
+        <a className="uwe-v2-btn" href={`/worlds/${worldSlug}/ai-runs`}>
           Zur Liste
         </a>
       </div>

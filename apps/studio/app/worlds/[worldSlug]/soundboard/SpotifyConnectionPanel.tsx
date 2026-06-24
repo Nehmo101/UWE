@@ -76,7 +76,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {!loading && status?.configured && !status.connected && (
             <a
-              className="uwe-btn"
+              className="uwe-v2-btn"
               href={`/api/worlds/${encodeURIComponent(worldSlug)}/spotify/connect`}
             >
               Mit Spotify verbinden
@@ -85,7 +85,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
           {!loading && status?.connected && (
             <button
               type="button"
-              className="uwe-btn"
+              className="uwe-v2-btn"
               onClick={() => void handleDisconnect()}
               disabled={disconnecting}
             >

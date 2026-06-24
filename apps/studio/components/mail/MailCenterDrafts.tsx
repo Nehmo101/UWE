@@ -55,10 +55,10 @@ export function MailCenterDrafts({ drafts }: MailCenterDraftsProps) {
 
   return (
     <div className="uwe-mail-center-drafts">
-      <section className="uwe-card">
-        <h2 className="uwe-section-title">Gespeicherte Entwürfe</h2>
+      <section className="uwe-v2-card">
+        <h2 className="uwe-v2-section-title">Gespeicherte Entwürfe</h2>
         {drafts.length === 0 ? (
-          <p className="uwe-empty">Noch keine Mail-Entwürfe.</p>
+          <p className="uwe-v2-empty">Noch keine Mail-Entwürfe.</p>
         ) : (
           <table className="uwe-table">
             <thead>
@@ -81,8 +81,8 @@ export function MailCenterDrafts({ drafts }: MailCenterDraftsProps) {
         )}
       </section>
 
-      <section className="uwe-card uwe-form" style={{ marginTop: "1.5rem" }}>
-        <h2 className="uwe-section-title">Neuer Entwurf</h2>
+      <section className="uwe-v2-card uwe-form" style={{ marginTop: "1.5rem" }}>
+        <h2 className="uwe-v2-section-title">Neuer Entwurf</h2>
         <p className="uwe-hint">
           Freier Entwurf — Versand über Compose-Flows oder Mail Portal nach Prüfung.
         </p>
@@ -105,7 +105,7 @@ export function MailCenterDrafts({ drafts }: MailCenterDraftsProps) {
               onChange={(event) => setBodyText(event.target.value)}
             />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary" disabled={loading}>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
             {loading ? "Speichern…" : "Entwurf speichern"}
           </button>
         </form>

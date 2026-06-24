@@ -78,16 +78,16 @@ export function UweLandingPage({
 
           <div className="uwe-auth-card-body">
             <div className="uwe-landing-actions">
-              <Link className="uwe-btn uwe-btn-primary uwe-landing-action" href={links.studioHref}>
+              <Link className="uwe-v2-btn uwe-v2-btn-primary uwe-landing-action" href={links.studioHref}>
                 <span className="uwe-landing-action-label">Zum Studio</span>
                 <span className="uwe-landing-action-detail">Weltenbau &amp; Admin</span>
               </Link>
-              <Link className="uwe-btn uwe-btn-ghost uwe-landing-action" href={links.portalHref}>
+              <Link className="uwe-v2-btn uwe-v2-btn-ghost uwe-landing-action" href={links.portalHref}>
                 <span className="uwe-landing-action-label">Zum Portal</span>
                 <span className="uwe-landing-action-detail">Spieler-Wiki</span>
               </Link>
               {!isLoggedIn ? (
-                <Link className="uwe-btn uwe-btn-ghost uwe-landing-action" href={links.loginHref}>
+                <Link className="uwe-v2-btn uwe-v2-btn-ghost uwe-landing-action" href={links.loginHref}>
                   <span className="uwe-landing-action-label">Anmelden</span>
                   <span className="uwe-landing-action-detail">Session-Login</span>
                 </Link>

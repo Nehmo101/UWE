@@ -46,8 +46,8 @@ export function CreateWorldForm() {
   }
 
   return (
-    <form className="uwe-form studio-create-world-form" onSubmit={handleSubmit}>
-      <h2 className="uwe-section-title">Neue Welt erstellen</h2>
+    <form className="uwe-v2-form studio-create-world-form" onSubmit={handleSubmit}>
+      <h2 className="uwe-v2-section-title">Neue Welt erstellen</h2>
       <p className="uwe-hint">
         Nur für Owner/Admin. Nach dem Anlegen kannst du Wiki, Soundboard (Spotify), Sessions und
         Assets in der Welt verwalten.
@@ -93,7 +93,7 @@ export function CreateWorldForm() {
         </p>
       ) : null}
 
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={submitting}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={submitting}>
         {submitting ? "Erstelle…" : "Welt erstellen"}
       </button>
     </form>

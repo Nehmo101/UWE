@@ -110,7 +110,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           <form action={publishSessionRecapAction}>
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="sessionId" value={sessionId} />
-            <button type="submit" className="uwe-btn uwe-btn-primary">
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
               Fürs Portal veröffentlichen
             </button>
           </form>
@@ -213,7 +213,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         </fieldset>
 
         <div className="uwe-form-actions">
-          <button type="submit" className="uwe-btn uwe-btn-primary">Speichern</button>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
         </div>
       </form>
 
@@ -228,12 +228,12 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
               <input type="checkbox" name="forNextSession" defaultChecked />
               Für nächste Session markieren
             </label>
-            <button type="submit" className="uwe-btn uwe-btn-primary">
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
               Druckliste aus Session vorbereiten
             </button>
           </form>
         ) : (
-          <p className="uwe-empty">Verknüpfe Seiten, um Labels vorzubereiten.</p>
+          <p className="uwe-v2-empty">Verknüpfe Seiten, um Labels vorzubereiten.</p>
         )}
       </section>
 
@@ -248,7 +248,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                 </Link>
                 <PageTypeBadge type={page.type} />
                 <Link
-                  className="uwe-btn uwe-btn-ghost uwe-btn-small"
+                  className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
                   href={pageLabelNewHref(worldSlug, page.type, page.id)}
                 >
                   Label
@@ -257,7 +257,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                   <input type="hidden" name="worldSlug" value={worldSlug} />
                   <input type="hidden" name="sessionId" value={sessionId} />
                   <input type="hidden" name="pageId" value={page.id} />
-                  <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-small">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
                     Entfernen
                   </button>
                 </form>
@@ -265,7 +265,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             ))}
           </ul>
         ) : (
-          <p className="uwe-empty">Noch keine verknüpften Seiten.</p>
+          <p className="uwe-v2-empty">Noch keine verknüpften Seiten.</p>
         )}
 
         {linkablePages.length > 0 && (
@@ -280,7 +280,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                 </option>
               ))}
             </select>
-            <button type="submit" className="uwe-btn uwe-btn-ghost">Verknüpfen</button>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">Verknüpfen</button>
           </form>
         )}
       </section>

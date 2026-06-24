@@ -135,11 +135,11 @@ export async function StudioWikiPageView({
         )}
         topBarExtra={
           !isPlayerPreview ? (
-            <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, rawPage.type, slug)}>
+            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pagePreviewHref(worldSlug, rawPage.type, slug)}>
               Vorschau als Spieler
             </Link>
           ) : (
-            <Link className="uwe-btn uwe-btn-ghost" href={pageHref}>
+            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pageHref}>
               Zurück zur DM-Ansicht
             </Link>
           )
@@ -174,12 +174,12 @@ export async function StudioWikiPageView({
           actions: !isPlayerPreview ? (
             <>
               <Link
-                className="uwe-btn"
+                className="uwe-v2-btn"
                 href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
               >
                 Label erstellen
               </Link>
-              <Link className="uwe-btn uwe-btn-primary" href={`${pageHref}/edit`}>
+              <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`${pageHref}/edit`}>
                 Bearbeiten
               </Link>
             </>
@@ -232,14 +232,14 @@ export async function StudioWikiPageView({
           </>
         }
       >
-        <div className="wiki-reader">
+        <div className="uwe-v2-reader uwe-v2-wiki">
         <WikiContent html={view.html} />
 
-        <section className="wiki-graph-section" style={{ marginTop: "2rem" }}>
+        <section className="wiki-graph-section uwe-v2-wiki-aside" style={{ marginTop: "2rem" }}>
           <div className="wiki-graph-head">
             <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Nachbarschafts-Graph</h2>
             <Link
-              className="uwe-btn uwe-btn-ghost"
+              className="uwe-v2-btn uwe-v2-btn-ghost"
               href={`/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`}
             >
               Im großen Graph öffnen →

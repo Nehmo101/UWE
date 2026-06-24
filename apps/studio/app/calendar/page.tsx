@@ -57,17 +57,17 @@ export default async function CalendarPage({ searchParams }: Props) {
         <>
           <Link
             href="/calendar?view=month"
-            className={`uwe-btn ${calendarView === "month" ? "uwe-btn-primary" : ""}`}
+            className={`uwe-v2-btn ${calendarView === "month" ? "uwe-v2-btn-primary" : ""}`}
           >
             Monat
           </Link>
           <Link
             href="/calendar?view=week"
-            className={`uwe-btn ${calendarView === "week" ? "uwe-btn-primary" : ""}`}
+            className={`uwe-v2-btn ${calendarView === "week" ? "uwe-v2-btn-primary" : ""}`}
           >
             Woche
           </Link>
-          <Link href="/api/calendar/events?export=ics" className="uwe-btn">
+          <Link href="/api/calendar/events?export=ics" className="uwe-v2-btn">
             .ics Export
           </Link>
         </>
@@ -78,7 +78,7 @@ export default async function CalendarPage({ searchParams }: Props) {
           )}
 
           <div className="uwe-dashboard-grid">
-            <section className="uwe-card uwe-form">
+            <section className="uwe-v2-card uwe-v2-card-padded uwe-form">
               <h2>Termin anlegen</h2>
               <form action={createCalendarEventAction} className="uwe-form">
                 <label>
@@ -134,13 +134,13 @@ export default async function CalendarPage({ searchParams }: Props) {
                   Beschreibung
                   <textarea name="description" rows={2} />
                 </label>
-                <button type="submit" className="uwe-btn uwe-btn-primary">
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                   Speichern
                 </button>
               </form>
             </section>
 
-            <section className="uwe-card uwe-form">
+            <section className="uwe-v2-card uwe-v2-card-padded uwe-form">
               <h2>Feed hinzufügen</h2>
               <form action={createCalendarFeedAction} className="uwe-form">
                 <label>
@@ -181,7 +181,7 @@ export default async function CalendarPage({ searchParams }: Props) {
                 <p className="uwe-hint">
                   Alternativ weiterhin global über ENV CALDAV_PASSWORD. Sync startet automatisch.
                 </p>
-                <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!config.enabled}>
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={!config.enabled}>
                   Feed + Sync
                 </button>
               </form>
@@ -195,7 +195,7 @@ export default async function CalendarPage({ searchParams }: Props) {
           )}
 
           <section style={{ marginTop: "1.5rem" }}>
-            <h2 className="uwe-section-title">Feeds</h2>
+            <h2 className="uwe-v2-section-title">Feeds</h2>
             {feeds.length === 0 ? (
               <EmptyState title="Keine Feeds" description="Lokaler Kalender wird beim ersten Termin angelegt." />
             ) : (
@@ -220,7 +220,7 @@ export default async function CalendarPage({ searchParams }: Props) {
           </section>
 
           <section style={{ marginTop: "1.5rem" }}>
-            <h2 className="uwe-section-title">Nächste 30 Tage</h2>
+            <h2 className="uwe-v2-section-title">Nächste 30 Tage</h2>
             {events.length === 0 ? (
               <EmptyState title="Keine Termine" description="Lege einen Termin an oder synchronisiere einen Feed." />
             ) : (

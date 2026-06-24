@@ -273,7 +273,7 @@ export function SoundboardButtonForm({
         </select>
       </label>
 
-      <button type="submit" className="uwe-btn uwe-btn-primary">
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
         {submitLabel}
       </button>
     </form>

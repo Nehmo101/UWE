@@ -94,14 +94,14 @@ export default async function WorkshopPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <nav className="uwe-inline-actions uwe-section">
+      <nav className="uwe-inline-actions uwe-v2-section">
         <Link href="/workshop/recipes">Paint-Rezepte</Link>
         <Link href="/workshop/print-profiles">Druck-Profile</Link>
         <Link href="/workshop/rental">Terrain-Verleih</Link>
       </nav>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Werkstatt-Projekt</h2>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Werkstatt-Projekt</h2>
         <form action={createWorkshopAction} className="uwe-brain-create-form">
           <label>
             Titel
@@ -143,14 +143,14 @@ export default async function WorkshopPage({ searchParams }: Props) {
             Beschreibung
             <textarea name="description" rows={3} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Werkstatt-Projekt anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Projekte ({visibleWorkshops.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Projekte ({visibleWorkshops.length})</h2>
         {visibleWorkshops.length === 0 ? (
           <EmptyState
             title="Noch keine Werkstatt-Projekte"
@@ -213,20 +213,20 @@ export default async function WorkshopPage({ searchParams }: Props) {
                   )}
                   {workshop.description && <p>{workshop.description}</p>}
                   <div className="uwe-inline-actions">
-                    <Link href={`/workshop/${workshop.id}`} className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                    <Link href={`/workshop/${workshop.id}`} className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                       Cockpit öffnen
                     </Link>
                     {nextStatus && (
                       <form action={advanceWorkshopStatusAction}>
                         <input type="hidden" name="id" value={workshop.id} />
-                        <button type="submit" className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
                           → {WORKSHOP_STATUS_LABELS[nextStatus]}
                         </button>
                       </form>
                     )}
                     <Link
                       href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}
-                      className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                      className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                     >
                       Terrain-Mail
                     </Link>

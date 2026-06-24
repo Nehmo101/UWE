@@ -486,8 +486,24 @@ model User {
   aiUserGrant          AiUserGrant?
   aiUsageLogs          AiUsageLog[]
   reviewComments         ReviewComment[]
+  dashboardLayouts       DashboardLayout[]
 
   @@map("users")
+}
+
+/// Per-user dashboard widget layout (Studio Today, Portal world overview, …).
+model DashboardLayout {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  pageKey   String   @map("page_key")
+  widgets   String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pageKey])
+  @@index([userId])
+  @@map("dashboard_layouts")
 }
 
 /// External identity provider link (OAuth prep — no auto-provisioning).

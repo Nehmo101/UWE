@@ -71,7 +71,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
             primary={
               <a
                 href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=print`}
-                className="uwe-btn uwe-btn-primary"
+                className="uwe-v2-btn uwe-v2-btn-primary"
                 target="_blank"
                 rel="noreferrer"
               >
@@ -82,13 +82,13 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
               <>
                 <a
                   href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=pdf`}
-                  className="uwe-btn"
+                  className="uwe-v2-btn"
                 >
                   PDF exportieren
                 </a>
                 <a
                   href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}
-                  className="uwe-btn"
+                  className="uwe-v2-btn"
                 >
                   PNG exportieren
                 </a>
@@ -98,7 +98,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
               <form action={deletePrintListAction} style={{ display: "inline" }}>
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="printListId" value={printListId} />
-                <button type="submit" className="uwe-btn uwe-btn-danger">Löschen</button>
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger">Löschen</button>
               </form>
             }
           />
@@ -173,7 +173,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           <PrintListEditor items={editorItems} />
 
           <div className="uwe-form-actions">
-            <button type="submit" className="uwe-btn uwe-btn-primary">Speichern</button>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
           </div>
         </form>
       </section>
@@ -183,7 +183,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="printListId" value={printListId} />
           <input type="hidden" name="status" value="printed" />
-          <button type="submit" className="uwe-btn">Als gedruckt markieren</button>
+          <button type="submit" className="uwe-v2-btn">Als gedruckt markieren</button>
         </form>
       </div>
     </WorldModuleShell>

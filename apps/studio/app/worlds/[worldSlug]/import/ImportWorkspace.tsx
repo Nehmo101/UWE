@@ -338,7 +338,7 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
         <div className="uwe-form-actions">
           <button
             type="button"
-            className="uwe-btn uwe-btn-primary"
+            className="uwe-v2-btn uwe-v2-btn-primary"
             onClick={handlePreview}
             disabled={loading || !content.trim()}
           >
@@ -480,13 +480,13 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
             </table>
 
             {preview.items.length === 0 && (
-              <p className="uwe-empty">Keine importierbaren Einträge gefunden.</p>
+              <p className="uwe-v2-empty">Keine importierbaren Einträge gefunden.</p>
             )}
 
             <div className="uwe-form-actions">
               <button
                 type="button"
-                className="uwe-btn uwe-btn-primary"
+                className="uwe-v2-btn uwe-v2-btn-primary"
                 onClick={handleExecute}
                 disabled={loading || !preview.canExecute || selectedCount === 0}
               >

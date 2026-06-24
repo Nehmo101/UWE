@@ -46,7 +46,7 @@ export default async function ImageStudioPage({ searchParams }: Props) {
       title="Image Studio"
       summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
       actions={
-        <Link href="/settings?tab=image-studio" className="uwe-btn uwe-btn-secondary">
+        <Link href="/settings?tab=image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
           Einstellungen
         </Link>
       }
@@ -66,8 +66,8 @@ export default async function ImageStudioPage({ searchParams }: Props) {
 
       <ImageStudioWorkspace inlineForm={jobForm} disabled={!config.enabled} />
 
-      <section>
-        <h2 className="uwe-section-title">Projekte</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Projekte</h2>
         {projects.length === 0 ? (
           <EmptyState
             title="Noch keine Image-Studio-Projekte"

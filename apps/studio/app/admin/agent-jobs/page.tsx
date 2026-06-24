@@ -27,7 +27,7 @@ export default async function AgentJobsPage() {
       title="Cursor Agent Jobs"
       summary="Entwicklungs-Prompts als GitHub-Actions- oder Cursor-Cloud-Jobs — Ergebnis: Branch/PR, kein Auto-Merge."
     >
-          <section className="uwe-card" style={{ marginBottom: "1rem" }}>
+          <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
             <h2>Status</h2>
             <ul className="uwe-dashboard-muted">
               <li>Agent Jobs: {config.enabled ? "aktiv" : "deaktiviert"}</li>
@@ -44,7 +44,7 @@ export default async function AgentJobsPage() {
             </p>
           )}
 
-          <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+          <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
             <h2>Neuer Agent-Job</h2>
             <form action={createAgentJobAction} className="uwe-form">
               <label>
@@ -70,7 +70,7 @@ export default async function AgentJobsPage() {
                   placeholder="Implementiere … ohne Auto-Merge. Branch cursor/…"
                 />
               </label>
-              <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!config.enabled}>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={!config.enabled}>
                 Job starten
               </button>
             </form>
@@ -85,7 +85,7 @@ export default async function AgentJobsPage() {
           </section>
 
           <section>
-            <h2 className="uwe-section-title">Verlauf</h2>
+            <h2 className="uwe-v2-section-title">Verlauf</h2>
             <AgentJobsPoller runningJobIds={runningJobIds} />
             {jobs.length === 0 ? (
               <EmptyState title="Noch keine Agent-Jobs" description="Erstelle einen Job oben." />

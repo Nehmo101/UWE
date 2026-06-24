@@ -59,7 +59,7 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
     >
       {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Räume</h2>
         <table className="uwe-page-table">
           <thead>
@@ -84,13 +84,13 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
           </tbody>
         </table>
         {overview.rooms.length === 0 && (
-          <p className="uwe-empty">Noch keine Räume auf dieser Ebene.</p>
+          <p className="uwe-v2-empty">Noch keine Räume auf dieser Ebene.</p>
         )}
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Neuer Raum</h2>
-        <form action={createDungeonRoomAction} className="uwe-form">
+        <form action={createDungeonRoomAction} className="uwe-v2-form">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
           <input type="hidden" name="levelSlug" value={levelSlug} />
@@ -126,7 +126,7 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
             <textarea name="dmNotes" rows={4} placeholder="Geheime Hinweise, DCs, Trigger…" />
           </label>
 
-          <button type="submit" className="uwe-btn uwe-btn-primary">Raum anlegen</button>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Raum anlegen</button>
         </form>
       </section>
     </WorldModuleShell>

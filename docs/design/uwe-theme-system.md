@@ -19,8 +19,11 @@ packages/shared-ui/src/
   ThemePicker.tsx        # Accessible dark/light/system radio picker
   visual-theme.ts        # Server SSR data-uwe-* attributes
   VisualThemePreview.tsx # Live preview for server standards
-  uwe.css                # Token layer + component styles
-  uwe-visual-polish.css  # Patterns, glass, scrollbars, motion
+  uwe.css                # Unified entry: design-v2 + legacy bridge + specialized widgets
+  uwe-v2.css             # Deprecated alias → design-v2/index.css (use uwe.css)
+  design-v2/             # V2 tokens, shell, components, layouts, mobile, wiki
+  shells-v2/             # StudioShellV2, PortalShellV2, AdminShellV2
+  layout-editor/         # Drag-and-drop dashboard layout editor
 ```
 
 ## App scopes
@@ -97,6 +100,34 @@ Client preferences from `ThemeSettingsPanel` override these in the browser via `
 2. `ThemeBootstrapScript` runs as first child of `<body>`, reads `localStorage`, sets CSS variables before paint.
 3. `ThemeProvider` re-loads preferences on mount.
 4. `ThemeDocumentSync` applies server `data-theme` for dark/light/system accessibility path.
+
+## Design V2 (UI refresh, 2026-06)
+
+Design V2 is **enabled by default**. Set `NEXT_PUBLIC_UWE_DESIGN_V2=false` to revert to legacy shells.
+
+| Layer | Path |
+|-------|------|
+| CSS entry | `@uwe/shared-ui/uwe-v2.css` |
+| Shells | `packages/shared-ui/src/shells-v2/` |
+| Primitives | `ButtonV2`, `CardV2`, `PageHeaderV2` |
+| Feature flag | `isDesignV2Enabled()` in `design-v2-feature.ts` |
+| Body marker | `data-uwe-design-v2="true"` on `<body>` |
+
+### Element overrides (per scope)
+
+Beyond preset themes, users can override zone colors in **Settings → Erscheinungsbild**:
+
+| Override | CSS variable |
+|----------|--------------|
+| Seitenband (Sidebar/Topbar) | `--uwe-zone-chrome-bg`, `--uwe-zone-chrome-fg` |
+| Überschriften | `--uwe-zone-heading-fg`, `--uwe-zone-heading-font` |
+| Karten | `--uwe-zone-card-bg`, `--uwe-zone-card-border` |
+
+Stored in `UweThemePreferences.elementOverrides` (client + `settings.app.themePreferences`).
+
+### Dashboard layout editor
+
+Overview pages (`/today`, `/studio`, world dashboard, Portal player dashboard) support drag-and-drop widget reordering via **Layout bearbeiten** → **Anwenden**. Layouts persist per user in `DashboardLayout` (Prisma).
 
 ## Studio UI
 

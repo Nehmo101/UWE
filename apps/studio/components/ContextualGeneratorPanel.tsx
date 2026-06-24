@@ -82,8 +82,8 @@ export function ContextualGeneratorPanel({
   }
 
   return (
-    <section className="uwe-card uwe-section">
-      <h2 className="uwe-section-title">Kontext-Generator</h2>
+    <section className="uwe-v2-card uwe-v2-section">
+      <h2 className="uwe-v2-section-title">Kontext-Generator</h2>
       <p className="uwe-dashboard-muted">
         KI-Aktionen für {pageTitle} — alle Vorschläge erfordern Review vor Übernahme.
       </p>
@@ -101,8 +101,8 @@ export function ContextualGeneratorPanel({
       )}
 
       {missingHints.length > 0 && (
-        <div className="uwe-section">
-          <h3 className="uwe-section-title">Fehlende Inhalte</h3>
+        <div className="uwe-v2-section">
+          <h3 className="uwe-v2-section-title">Fehlende Inhalte</h3>
           <ul>
             {missingHints.map((hint) => (
               <li key={hint.field} data-severity={hint.severity}>
@@ -120,7 +120,7 @@ export function ContextualGeneratorPanel({
             <p className="uwe-dashboard-muted">{action.description}</p>
             <button
               type="button"
-              className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+              className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
               disabled={!rtxEnabled || busyAction !== null}
               onClick={() => void runAction(action)}
             >

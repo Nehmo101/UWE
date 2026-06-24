@@ -87,6 +87,7 @@ export function toUweThemePreferences(
     uiScale: record.uiScale,
     bgEffectColor: record.bgEffectColor,
     bgEffectIntensity: record.bgEffectIntensity,
+    elementOverrides: record.elementOverrides,
   };
 }
 
@@ -102,6 +103,7 @@ export function fromUweThemePreferences(
     uiScale: preferences.uiScale,
     bgEffectColor: preferences.bgEffectColor,
     bgEffectIntensity: preferences.bgEffectIntensity,
+    elementOverrides: preferences.elementOverrides,
   };
 }
 

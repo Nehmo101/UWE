@@ -58,8 +58,8 @@ export default async function AdminMailPortalPage({ searchParams }: Props) {
           />
         </Suspense>
 
-        <section className="uwe-section">
-          <h2 className="uwe-section-title">Audit / Sync-Status</h2>
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Audit / Sync-Status</h2>
           <ul className="uwe-list-plain">
             {audit.map((entry) => (
               <li key={entry.id}>

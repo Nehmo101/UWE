@@ -129,7 +129,7 @@ export default async function PortalWorldHome({ params, searchParams }: Props) {
       ) : (
         <div className="wiki-page-list">
           {pages.map((page) => (
-            <article key={page.id} className="wiki-world-card">
+            <article key={page.id} className="wiki-world-card uwe-v2-card uwe-v2-card-padded">
               <h2>
                 <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
                   {page.title}

@@ -1,9 +1,11 @@
 import { getAppRepository } from "@uwe/database/server";
+import { isDesignV2Enabled } from "@uwe/shared-ui";
 import { StudioCockpitStatusFooter } from "./StudioCockpitStatusFooter";
 import {
   StudioAppShell,
   type StudioAppShellProps,
 } from "./StudioAppShell";
+import { StudioAppShellV2 } from "./StudioAppShellV2";
 
 type StudioCockpitAppShellProps = Omit<
   StudioAppShellProps,
@@ -22,13 +24,17 @@ export async function StudioCockpitAppShell(props: StudioCockpitAppShellProps) {
     // Database not ready — shell still renders.
   }
 
-  return (
-    <StudioAppShell
-      {...props}
-      cockpitMode
-      unifiedSidebar
-      cockpitWorlds={worlds}
-      statusFooter={<StudioCockpitStatusFooter />}
-    />
-  );
+  const shellProps = {
+    ...props,
+    cockpitMode: true as const,
+    unifiedSidebar: true as const,
+    cockpitWorlds: worlds,
+    statusFooter: <StudioCockpitStatusFooter />,
+  };
+
+  if (isDesignV2Enabled()) {
+    return <StudioAppShellV2 {...shellProps} />;
+  }
+
+  return <StudioAppShell {...shellProps} />;
 }

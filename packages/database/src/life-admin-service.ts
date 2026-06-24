@@ -90,24 +90,13 @@ export {
   WorkshopPaintTarget as WorkshopPaintTargetEnum,
   WorkshopRentalStatus as WorkshopRentalStatusEnum,
 } from "./generated/prisma/client";
+export { CAPTURE_TYPE_LABELS } from "./capture-constants";
 
 export const CAPTURE_STATUS_LABELS: Record<CaptureStatus, string> = {
   inbox: "Inbox",
   triaged: "Sortiert",
   linked: "Verknüpft",
   archived: "Archiviert",
-};
-
-export const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
-  quick_note: "Schnelle Notiz",
-  dnd_idea: "DnD-Idee",
-  uwe_todo: "UWE-To-do",
-  project_idea: "Projektidee",
-  hardware: "Hardware/Homelab",
-  contract_expense: "Vertrag/Ausgabe",
-  art_miniature_terrain: "Kunst/Miniatur/Terrain",
-  link: "Link",
-  file_image: "Datei/Bild",
 };
 
 export const PERSONAL_BRAIN_CATEGORIES = [

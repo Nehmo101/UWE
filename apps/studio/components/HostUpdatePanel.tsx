@@ -132,8 +132,8 @@ export function HostUpdatePanel({ canTrigger }: Props) {
 
   if (loading && !dashboard) {
     return (
-      <section className="uwe-section uwe-card">
-        <h2 className="uwe-section-title">UWE Host-Update</h2>
+      <section className="uwe-v2-section uwe-v2-card">
+        <h2 className="uwe-v2-section-title">UWE Host-Update</h2>
         <p className="uwe-dashboard-muted">Status wird geladen…</p>
       </section>
     );
@@ -144,8 +144,8 @@ export function HostUpdatePanel({ canTrigger }: Props) {
   const git = dashboard?.git;
 
   return (
-    <section className="uwe-section uwe-card uwe-homelab-host-update">
-      <h2 className="uwe-section-title">UWE Host-Update</h2>
+    <section className="uwe-v2-section uwe-v2-card uwe-homelab-host-update">
+      <h2 className="uwe-v2-section-title">UWE Host-Update</h2>
       <p className="uwe-dashboard-muted">
         Führt <code>git pull</code> und <code>setup-uwe-host.sh --quick</code> auf diesem Linux-Host aus.
         Studio ist während des Updates einige Minuten nicht erreichbar.
@@ -218,7 +218,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
           <>
             <button
               type="button"
-              className="uwe-btn uwe-btn-primary"
+              className="uwe-v2-btn uwe-v2-btn-primary"
               disabled={
                 !availability?.available || triggering || isActive
               }
@@ -228,7 +228,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
             </button>
             <button
               type="button"
-              className="uwe-btn uwe-btn-ghost"
+              className="uwe-v2-btn uwe-v2-btn-ghost"
               disabled={loading}
               onClick={() => {
                 setLoading(true);
@@ -241,10 +241,10 @@ export function HostUpdatePanel({ canTrigger }: Props) {
         ) : (
           <p className="uwe-dashboard-muted">Nur der Owner kann Host-Updates auslösen.</p>
         )}
-        <Link className="uwe-btn uwe-btn-ghost" href="/backup">
+        <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/backup">
           Backup vor Update
         </Link>
-        <Link className="uwe-btn uwe-btn-ghost" href="/admin/audit-log">
+        <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/admin/audit-log">
           Audit-Log
         </Link>
       </div>
@@ -258,7 +258,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
           <div style={{ display: "flex", gap: "0.65rem", marginTop: "0.75rem" }}>
             <button
               type="button"
-              className="uwe-btn uwe-btn-primary"
+              className="uwe-v2-btn uwe-v2-btn-primary"
               disabled={triggering}
               onClick={() => void handleTrigger()}
             >
@@ -266,7 +266,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
             </button>
             <button
               type="button"
-              className="uwe-btn uwe-btn-ghost"
+              className="uwe-v2-btn uwe-v2-btn-ghost"
               onClick={() => setConfirmOpen(false)}
             >
               Abbrechen

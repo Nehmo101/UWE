@@ -115,7 +115,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
       }
     >
       {allNotes.length === 0 ? (
-        <p className="uwe-empty">
+        <p className="uwe-v2-empty">
           {view === "all" ? "Keine Spielernotizen vorhanden." : "Keine Notizen in der Review Queue."}
         </p>
       ) : (
@@ -139,7 +139,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                   <form action={acceptPlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-primary uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
                       Freigeben
                     </button>
                   </form>
@@ -149,7 +149,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
                     <input type="hidden" name="targetPageId" value={note.pageId} />
-                    <button type="submit" className="uwe-btn uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
                       Als ContentBlock übernehmen
                     </button>
                   </form>
@@ -164,7 +164,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                       placeholder="Seitentitel (optional)"
                       className="uwe-input-inline"
                     />
-                    <button type="submit" className="uwe-btn uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
                       Als Seite übernehmen
                     </button>
                   </form>
@@ -181,7 +181,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="uwe-btn uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
                       Als ContentBlock übernehmen
                     </button>
                   </form>
@@ -190,7 +190,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                   <form action={hidePlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
                       Verbergen
                     </button>
                   </form>
@@ -199,7 +199,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                   <form action={deletePlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-btn uwe-btn-danger uwe-btn-small">
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger uwe-v2-btn-sm">
                       Löschen
                     </button>
                   </form>

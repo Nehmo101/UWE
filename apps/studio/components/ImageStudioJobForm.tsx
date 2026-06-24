@@ -300,7 +300,7 @@ export function ImageStudioJobForm({
         <textarea name="prompt" required rows={4} placeholder="Episches DnD-Portrait …" />
       </label>
 
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!enabled}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={!enabled}>
         Generieren (Job)
       </button>
     </form>

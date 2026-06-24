@@ -49,16 +49,16 @@ export default async function CapturePage({ searchParams }: Props) {
       summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
       bottomNav="capture"
     >
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Bild erfassen (Mobile)</h2>
+          <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Bild erfassen (Mobile)</h2>
             <p className="uwe-hint">
               Fotos von Miniaturen, Terrain oder Handouts — optional direkt als Asset in einer Welt.
             </p>
             <CaptureImageUpload worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))} />
           </section>
 
-          <section className="uwe-card uwe-section uwe-capture-quick-section">
-            <h2 className="uwe-section-title">
+          <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section uwe-capture-quick-section">
+            <h2 className="uwe-v2-section-title">
               {showQuickForm ? "Schnell erfassen" : "Neuer Capture"}
             </h2>
             <QuickCaptureForm
@@ -68,9 +68,9 @@ export default async function CapturePage({ searchParams }: Props) {
             />
           </section>
 
-          <section className="uwe-section">
+          <section className="uwe-v2-section">
             <div className="uwe-capture-inbox-head">
-              <h2 className="uwe-section-title">Inbox ({captures.length})</h2>
+              <h2 className="uwe-v2-section-title">Inbox ({captures.length})</h2>
               <div className="uwe-capture-filter-tabs">
                 <Link href="/capture" data-active={!status || status === "inbox" ? "true" : "false"}>
                   Inbox
@@ -100,7 +100,7 @@ export default async function CapturePage({ searchParams }: Props) {
                       : CAPTURE_TYPE_LABELS[capture.captureType];
 
                   return (
-                    <article key={capture.id} className="uwe-today-card uwe-capture-inbox-card">
+                    <article key={capture.id} className="uwe-today-card uwe-v2-card uwe-v2-card-padded uwe-capture-inbox-card">
                       <Link href={`/capture/${capture.id}`} className="uwe-capture-inbox-link">
                         <h3>{capture.title}</h3>
                         <p>
@@ -111,12 +111,12 @@ export default async function CapturePage({ searchParams }: Props) {
                         {capture.storageKey ? <p className="uwe-capture-snippet">📎 Anhang</p> : null}
                       </Link>
                       <div className="uwe-inline-actions">
-                        <Link href={`/capture/${capture.id}`} className="uwe-btn uwe-btn-primary uwe-btn-sm">
+                        <Link href={`/capture/${capture.id}`} className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
                           Triage
                         </Link>
                         <form action={deleteCaptureAction}>
                           <input type="hidden" name="id" value={capture.id} />
-                          <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                             Löschen
                           </button>
                         </form>

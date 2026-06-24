@@ -117,13 +117,13 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
         topBarExtra={
           !isPlayerPreview ? (
             <Link
-              className="uwe-btn uwe-btn-ghost"
+              className="uwe-v2-btn uwe-v2-btn-ghost"
               href={`${graphBase}?preview=player`}
             >
               Vorschau als Spieler
             </Link>
           ) : (
-            <Link className="uwe-btn uwe-btn-ghost" href={graphBase}>
+            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={graphBase}>
               Zurück zur DM-Ansicht
             </Link>
           )
@@ -215,14 +215,14 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Filter anwenden
           </button>
         </form>
 
         <GraphView nodes={graph.nodes} edges={graph.edges} />
 
-        <p className="uwe-empty" style={{ marginTop: "1rem" }}>
+        <p className="uwe-v2-empty" style={{ marginTop: "1rem" }}>
           {graph.nodes.length} Knoten · {graph.edges.length} Kanten
         </p>
       </WorldModuleShell>

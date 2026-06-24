@@ -43,13 +43,13 @@ export default async function CookbookAdminPage() {
       summary="Natives Modell-Management für lokale KI — Hardware-Fit, Runtime-Diagnose und Empfehlungen mit RTX/local-only Datenschutzregeln."
       breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Cookbook" }]}
       actions={
-        <Link href="/admin/status" className="uwe-btn uwe-btn-ghost">
+        <Link href="/admin/status" className="uwe-v2-btn uwe-v2-btn-ghost">
           Systemstatus
         </Link>
       }
     >
           {runtime.warnings.length > 0 && (
-            <section className="uwe-form-error uwe-section" role="alert">
+            <section className="uwe-form-error uwe-v2-section" role="alert">
               <strong>Datenschutz / Routing:</strong>
               <ul>
                 {runtime.warnings.map((warning) => (
@@ -91,8 +91,8 @@ export default async function CookbookAdminPage() {
             />
           </div>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Installierte lokale Modelle</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Installierte lokale Modelle</h2>
             {installedModels.length === 0 ? (
               <p className="uwe-dashboard-muted">Keine Modelle erkannt. Starte Ollama und lade ein Modell.</p>
             ) : (
@@ -109,15 +109,15 @@ export default async function CookbookAdminPage() {
             )}
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Engine-Status</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Engine-Status</h2>
             <div className="uwe-dashboard-grid">
               {engines.map((engineDef) => {
                 const status = runtime.engines.find((e) => e.engineId === engineDef.id);
                 return (
-                  <article key={engineDef.id} className="uwe-card uwe-dashboard-card">
+                  <article key={engineDef.id} className="uwe-v2-card uwe-dashboard-card">
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
-                      <h3 className="uwe-section-title" style={{ fontSize: "1rem" }}>
+                      <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
                         {engineDef.label}
                       </h3>
                       <HealthBadge
@@ -133,12 +133,12 @@ export default async function CookbookAdminPage() {
             </div>
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Empfehlungen pro Use Case</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Empfehlungen pro Use Case</h2>
             <div className="uwe-dashboard-grid">
               {recommendations.map((rec) => (
-                <article key={rec.useCase} className="uwe-card uwe-dashboard-card">
-                  <h3 className="uwe-section-title" style={{ fontSize: "1rem" }}>
+                <article key={rec.useCase} className="uwe-v2-card uwe-dashboard-card">
+                  <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
                     {rec.label}
                   </h3>
                   <p className="uwe-dashboard-muted">{rec.description}</p>
@@ -171,8 +171,8 @@ export default async function CookbookAdminPage() {
           </section>
 
           {runtime.diagnoses.length > 0 && (
-            <section className="uwe-card uwe-section">
-              <h2 className="uwe-section-title">Runtime-Diagnose</h2>
+            <section className="uwe-v2-card uwe-v2-section">
+              <h2 className="uwe-v2-section-title">Runtime-Diagnose</h2>
               {runtime.diagnoses.map((diag) => (
                 <article key={diag.summary} style={{ marginBottom: "1rem" }}>
                   <strong>{diag.summary}</strong>
@@ -186,11 +186,11 @@ export default async function CookbookAdminPage() {
             </section>
           )}
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Setup: Ollama / Docker / Local Serve</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Setup: Ollama / Docker / Local Serve</h2>
             {setupHints.map((entry) => (
               <article key={entry.engineId} style={{ marginBottom: "1.25rem" }}>
-                <h3 className="uwe-section-title" style={{ fontSize: "1rem" }}>
+                <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
                   {entry.label}
                 </h3>
                 <ol>
@@ -202,8 +202,8 @@ export default async function CookbookAdminPage() {
             ))}
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Modell-Katalog (Auszug)</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Modell-Katalog (Auszug)</h2>
             <table className="uwe-table" style={{ width: "100%", fontSize: "0.85rem" }}>
               <thead>
                 <tr>

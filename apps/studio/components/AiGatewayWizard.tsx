@@ -312,7 +312,7 @@ export function AiGatewayWizard() {
 
   if (error) {
     return (
-      <section className="uwe-form-error uwe-section" role="alert">
+      <section className="uwe-form-error uwe-v2-section" role="alert">
         {error}
       </section>
     );
@@ -344,7 +344,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 0 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>RTX verbinden</h2>
           <p>
             Status:{" "}
@@ -364,7 +364,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 1 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Routing-Modus</h2>
           <p className="uwe-muted">
             Standard: <strong>Lokal, dann Cloud</strong> — RTX wird bevorzugt.
@@ -389,7 +389,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 2 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Cloud-Fallback</h2>
           <label className="uwe-checkbox-row">
             <input
@@ -406,7 +406,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 3 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Cloud-Provider</h2>
           <p className="uwe-muted">API-Keys werden verschlüsselt gespeichert — nie im Frontend angezeigt.</p>
           <div className="uwe-form-grid">
@@ -466,7 +466,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 4 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Privacy-Regeln</h2>
           <p className="uwe-muted">
             Private Inhalte gehen standardmäßig niemals in die Cloud.
@@ -493,7 +493,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 5 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Budgets</h2>
           <p>
             Heute: ${data.budget.dailySpentUsd.toFixed(4)} /{" "}
@@ -541,7 +541,7 @@ export function AiGatewayWizard() {
       )}
 
       {step === 6 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>User-Freigaben</h2>
           <p className="uwe-muted">
             Beispiel: Carina für KI-Chat freischalten — ohne Provider- oder Key-Zugriff.
@@ -620,10 +620,10 @@ export function AiGatewayWizard() {
       )}
 
       {step === 7 && (
-        <section className="uwe-card uwe-section">
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Routing-Simulation, Fallback-Test &amp; Usage Logs</h2>
 
-          <div className="uwe-section">
+          <div className="uwe-v2-section">
             <h3>Routing-Simulation</h3>
             <p className="uwe-muted">
               Prüft offline, welcher Pfad (RTX vs. Cloud) für die aktuelle Konfiguration greifen würde — ohne echten API-Call.
@@ -682,7 +682,7 @@ export function AiGatewayWizard() {
               {simulationLoading ? "Simuliere…" : "Routing simulieren"}
             </button>
             {simulationCases && (
-              <ul className="uwe-section">
+              <ul className="uwe-v2-section">
                 {simulationCases.map((simCase) => (
                   <li key={simCase.id}>
                     {simCase.passed ? "✓" : "✗"} <strong>{simCase.label}</strong> — {simCase.detail}
@@ -696,7 +696,7 @@ export function AiGatewayWizard() {
             Live-Fallback-Test ausführen
           </button>
 
-          <div className="uwe-form-grid uwe-section">
+          <div className="uwe-form-grid uwe-v2-section">
             <label className="uwe-field">
               User
               <select
@@ -773,7 +773,7 @@ export function AiGatewayWizard() {
             </a>
           </div>
 
-          <table className="uwe-table uwe-section">
+          <table className="uwe-table uwe-v2-section">
             <thead>
               <tr>
                 <th>Zeit</th>

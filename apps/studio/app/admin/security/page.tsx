@@ -31,8 +31,8 @@ export default async function AdminSecurityPage() {
         title="Security"
         summary="Sicherheitsübersicht für UWE Admins"
       >
-        <section className="uwe-card">
-          <h2 className="uwe-section-title">Zugriff verweigert</h2>
+        <section className="uwe-v2-card">
+          <h2 className="uwe-v2-section-title">Zugriff verweigert</h2>
           <p className="uwe-notice uwe-notice-warn">{access.reason}</p>
           {access.userRole && (
             <p className="uwe-dashboard-muted">
@@ -68,8 +68,8 @@ export default async function AdminSecurityPage() {
       </p>
 
       {status.warnings.length > 0 && (
-        <section className="uwe-card" style={{ marginBottom: "1rem" }}>
-          <h2 className="uwe-section-title">Warnungen</h2>
+        <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
+          <h2 className="uwe-v2-section-title">Warnungen</h2>
           <ul className="uwe-dashboard-list">
             {status.warnings.map((warning) => (
               <li key={warning.id}>
@@ -219,8 +219,8 @@ export default async function AdminSecurityPage() {
       </div>
 
       {status.auditLog.length > 0 && (
-        <section className="uwe-card" style={{ marginTop: "1rem" }}>
-          <h2 className="uwe-section-title">Audit Log (Sicherheit)</h2>
+        <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
+          <h2 className="uwe-v2-section-title">Audit Log (Sicherheit)</h2>
           <ul className="uwe-dashboard-list">
             {status.auditLog.map((entry) => (
               <li key={entry.id}>

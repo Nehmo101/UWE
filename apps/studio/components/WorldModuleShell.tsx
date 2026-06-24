@@ -2,11 +2,14 @@ import {
   BackLink,
   Breadcrumb,
   GlobalSearchForm,
+  isDesignV2Enabled,
   NavSidebarSections,
   SidebarNav,
   SidebarSection,
   StudioNavSidebar,
+  StudioNavSidebarV2,
   StudioShell,
+  StudioShellV2,
 } from "@uwe/shared-ui";
 import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
 import {
@@ -97,60 +100,70 @@ export function WorldModuleShell({
     ? studioUnifiedSidebarSections(activePath)
     : studioSidebarSections(activePath);
 
-  return (
-    <StudioShell
-      subtitle={worldName}
-      brandHref={`/worlds/${worldSlug}/dashboard`}
-      showRail
-      railActiveId={resolveStudioRailActiveId(activePath)}
-      bottomNav={studioWorldBottomNav(worldSlug, bottomKey)}
-      contextTitle={contextTitle}
-      context={context}
-      cockpitMode={cockpitMode}
-      cockpitWorlds={cockpitWorlds}
-      activeWorldSlug={worldSlug}
-      statusFooter={statusFooter}
-      topBarExtra={
-        cockpitMode ? (
-          topBarExtra
-        ) : (
-          <>
-            {showSearch && (
-              <GlobalSearchForm
-                action={activePath}
-                query={searchQuery}
-                placeholder="In dieser Welt suchen…"
-              />
-            )}
-            {topBarExtra}
-          </>
-        )
-      }
-      showSearch={cockpitMode ? showSearch : false}
-      searchAction={activePath}
-      searchPlaceholder="In dieser Welt suchen…"
-      pageHeader={pageHeader}
-      sidebar={
-        <>
-          <NavSidebarSections
-            sections={sidebarSections}
-            defaultOpenTitles={
-              unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]
-            }
-          />
-          <StudioNavSidebar title="Welt" items={navItems} />
-          {sidebarExtra}
-        </>
-      }
-      main={
-        <>
-          {backLink && <BackLink href={backLink.href} label={backLink.label} />}
-          {!hideBreadcrumb && <Breadcrumb items={breadcrumb} />}
-          {children}
-        </>
-      }
-    />
+  const sidebarContent = (
+    <>
+      <NavSidebarSections
+        sections={sidebarSections}
+        defaultOpenTitles={
+          unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]
+        }
+      />
+      {isDesignV2Enabled() ? (
+        <StudioNavSidebarV2 title="Welt" items={navItems} />
+      ) : (
+        <StudioNavSidebar title="Welt" items={navItems} />
+      )}
+      {sidebarExtra}
+    </>
   );
+
+  const mainContent = (
+    <>
+      {backLink && <BackLink href={backLink.href} label={backLink.label} />}
+      {!hideBreadcrumb && <Breadcrumb items={breadcrumb} />}
+      {children}
+    </>
+  );
+
+  const shellProps = {
+    subtitle: worldName,
+    brandHref: `/worlds/${worldSlug}/dashboard`,
+    showRail: true as const,
+    railActiveId: resolveStudioRailActiveId(activePath),
+    bottomNav: studioWorldBottomNav(worldSlug, bottomKey),
+    contextTitle,
+    context,
+    cockpitMode,
+    cockpitWorlds,
+    activeWorldSlug: worldSlug,
+    statusFooter,
+    topBarExtra: cockpitMode ? (
+      topBarExtra
+    ) : (
+      <>
+        {showSearch && (
+          <GlobalSearchForm
+            action={activePath}
+            query={searchQuery}
+            placeholder="In dieser Welt suchen…"
+          />
+        )}
+        {topBarExtra}
+      </>
+    ),
+    showSearch: cockpitMode ? showSearch : false,
+    searchAction: activePath,
+    searchPlaceholder: "In dieser Welt suchen…",
+    pageHeader,
+    sidebar: sidebarContent,
+    main: mainContent,
+  };
+
+  if (isDesignV2Enabled()) {
+    return <StudioShellV2 {...shellProps} variant="world" />;
+  }
+
+  return <StudioShell {...shellProps} />;
 }
 
 /** Reusable campaign filter sidebar section. */

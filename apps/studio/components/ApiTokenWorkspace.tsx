@@ -90,7 +90,7 @@ export function ApiTokenWorkspace() {
 
   return (
     <>
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Neuen API-Token erstellen</h2>
         <label>
           Name
@@ -111,7 +111,7 @@ export function ApiTokenWorkspace() {
             ))}
           </div>
         </fieldset>
-        <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void createToken()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createToken()}>
           Token erstellen
         </button>
         {createdToken && (
@@ -124,7 +124,7 @@ export function ApiTokenWorkspace() {
 
       {error && <p className="uwe-notice uwe-notice-error">{error}</p>}
 
-      <section className="uwe-card">
+      <section className="uwe-v2-card">
         <h2>Aktive Tokens ({tokens.length})</h2>
         {loading ? (
           <p className="uwe-dashboard-muted">Lade…</p>
@@ -154,7 +154,7 @@ export function ApiTokenWorkspace() {
                   <td>{token.isActive ? "aktiv" : "widerrufen"}</td>
                   <td>
                     {token.isActive && (
-                      <button type="button" className="uwe-btn uwe-btn-ghost" onClick={() => void revokeToken(token.id)}>
+                      <button type="button" className="uwe-v2-btn uwe-v2-btn-ghost" onClick={() => void revokeToken(token.id)}>
                         Widerrufen
                       </button>
                     )}

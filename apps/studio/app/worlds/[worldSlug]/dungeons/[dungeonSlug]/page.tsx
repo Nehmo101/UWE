@@ -73,7 +73,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
       {saved && <p className="uwe-flash uwe-flash-success">Dungeon gespeichert.</p>}
       {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Ebenen</h2>
         <table className="uwe-page-table">
           <thead>
@@ -96,13 +96,13 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           </tbody>
         </table>
         {overview.levels.length === 0 && (
-          <p className="uwe-empty">Noch keine Ebenen.</p>
+          <p className="uwe-v2-empty">Noch keine Ebenen.</p>
         )}
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Neue Ebene</h2>
-        <form action={createDungeonLevelAction} className="uwe-form uwe-form-inline">
+        <form action={createDungeonLevelAction} className="uwe-v2-form uwe-form-inline">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
           <label>
@@ -119,16 +119,16 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
               ))}
             </select>
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">Ebene anlegen</button>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Ebene anlegen</button>
         </form>
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Beschreibung</h2>
         <WikiContent html={overview.html} />
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Assets &amp; Karten</h2>
         {overview.assets.length > 0 && (
           <ul>
@@ -138,7 +138,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           </ul>
         )}
         {linkableAssets.length > 0 && (
-          <form action={linkAssetToDungeonPageAction} className="uwe-form uwe-form-inline">
+          <form action={linkAssetToDungeonPageAction} className="uwe-v2-form uwe-form-inline">
             <input type="hidden" name="pageId" value={overview.dungeon.id} />
             <input type="hidden" name="redirectTo" value={redirectTo} />
             <label>
@@ -150,12 +150,12 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
                 ))}
               </select>
             </label>
-            <button type="submit" className="uwe-btn">Verknüpfen</button>
+            <button type="submit" className="uwe-v2-btn">Verknüpfen</button>
           </form>
         )}
       </section>
 
-      <section className="uwe-section">
+      <section className="uwe-v2-section">
         <h2>Metadaten</h2>
         <form action={updateDungeonEntityAction} className="uwe-edit-form">
           <input type="hidden" name="pageId" value={overview.dungeon.id} />
@@ -194,7 +194,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
               ))}
             </select>
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">Speichern</button>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
         </form>
       </section>
     </WorldModuleShell>

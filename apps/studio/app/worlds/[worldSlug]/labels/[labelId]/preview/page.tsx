@@ -76,13 +76,13 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
           <>
             <a
               href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
-              className="uwe-btn uwe-btn-primary"
+              className="uwe-v2-btn uwe-v2-btn-primary"
               target="_blank"
               rel="noreferrer"
             >
               Drucken
             </a>
-            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className="uwe-btn">
+            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className="uwe-v2-btn">
               Bearbeiten
             </Link>
           </>

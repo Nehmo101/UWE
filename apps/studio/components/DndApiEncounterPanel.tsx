@@ -113,7 +113,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
   }
 
   return (
-    <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-form" style={{ marginBottom: "1.5rem" }}>
       <h2>Encounter Builder (Open5e)</h2>
       {open5eMonsters.length > 0 && (
         <ul className="uwe-list-cards">
@@ -126,7 +126,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <button
                     type="button"
-                    className="uwe-btn uwe-btn-ghost"
+                    className="uwe-v2-btn uwe-v2-btn-ghost"
                     disabled={busy === `import-${item.id}`}
                     onClick={() => void importStatblock(item)}
                   >
@@ -134,7 +134,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
                   </button>
                   <button
                     type="button"
-                    className={`uwe-btn ${isSelected ? "uwe-btn-primary" : "uwe-btn-ghost"}`}
+                    className={`uwe-v2-btn ${isSelected ? "uwe-v2-btn-primary" : "uwe-v2-btn-ghost"}`}
                     onClick={() => toggleMonster(item)}
                   >
                     {isSelected ? "Im Encounter" : "Zum Encounter"}
@@ -162,7 +162,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
 
       <button
         type="button"
-        className="uwe-btn uwe-btn-primary"
+        className="uwe-v2-btn uwe-v2-btn-primary"
         disabled={busy === "encounter" || selected.length === 0}
         onClick={() => void createEncounter()}
       >

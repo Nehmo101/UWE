@@ -71,10 +71,10 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
       )}
       topBarExtra={
         <>
-          <Link className="uwe-btn uwe-btn-ghost" href={pagePreviewHref(worldSlug, page.type, slug)}>
+          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pagePreviewHref(worldSlug, page.type, slug)}>
             Vorschau als Spieler
           </Link>
-          <Link className="uwe-btn uwe-btn-ghost" href={`/image-studio?pageId=${page.id}`}>
+          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/image-studio?pageId=${page.id}`}>
             Image Studio
           </Link>
         </>
@@ -94,7 +94,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           <p className="uwe-flash-success" style={{ fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
         )}
 
-        <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-form">
+        <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-v2-form">
           <input type="hidden" name="pageId" value={page.id} />
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="pageSlug" value={slug} />
@@ -168,7 +168,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </label>
 
           <div className="uwe-form-actions">
-            <button type="submit" className="uwe-btn uwe-btn-primary">Seite speichern</button>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Seite speichern</button>
           </div>
         </form>
 
@@ -178,7 +178,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           defaultOpen={page.contentBlocks.length <= 3}
         >
           {page.contentBlocks.map((block) => (
-            <form key={block.id} action={updateContentBlockAction} className="uwe-form" style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "0.65rem" }}>
+            <form key={block.id} action={updateContentBlockAction} className="uwe-v2-form" style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "0.65rem" }}>
               <input type="hidden" name="blockId" value={block.id} />
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="pageSlug" value={slug} />
@@ -210,9 +210,9 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               />
 
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                <button type="submit" className="uwe-btn">Block speichern</button>
+                <button type="submit" className="uwe-v2-btn">Block speichern</button>
                 <Link
-                  className="uwe-btn uwe-btn-ghost"
+                  className="uwe-v2-btn uwe-v2-btn-ghost"
                   href={`/worlds/${worldSlug}/labels/new?sourceRef=content_block:${block.id}`}
                 >
                   Aus Block Label erstellen
@@ -227,13 +227,13 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="pageSlug" value={slug} />
               <input type="hidden" name="category" value={category} />
-              <button type="submit" className="uwe-btn uwe-btn-ghost uwe-btn-danger">
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
                 Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
               </button>
             </form>
           ))}
 
-          <form action={createContentBlockAction} className="uwe-form">
+          <form action={createContentBlockAction} className="uwe-v2-form">
             <input type="hidden" name="pageId" value={page.id} />
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="pageSlug" value={slug} />
@@ -261,7 +261,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
             <ContentBlockContentField blockType="rich_text" rows={4} />
 
-            <button type="submit" className="uwe-btn uwe-btn-primary">Block hinzufügen</button>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzufügen</button>
           </form>
         </CollapsibleSection>
 

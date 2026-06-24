@@ -126,7 +126,7 @@ export function TagAdminWorkspace() {
 
   return (
     <>
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Filter</h2>
         <div className="uwe-form-grid">
           <label>
@@ -141,7 +141,7 @@ export function TagAdminWorkspace() {
             </select>
           </label>
           <div style={{ alignSelf: "end" }}>
-            <button type="button" className="uwe-btn uwe-btn-secondary" onClick={() => void loadTags()}>
+            <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void loadTags()}>
               Aktualisieren
             </button>
           </div>
@@ -153,8 +153,8 @@ export function TagAdminWorkspace() {
 
       {data && !loading && (
         <>
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Merge-Vorschläge ({data.suggestions.length})</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Merge-Vorschläge ({data.suggestions.length})</h2>
             {data.suggestions.length === 0 ? (
               <p className="uwe-dashboard-muted">Keine ähnlichen Tags gefunden.</p>
             ) : (
@@ -169,7 +169,7 @@ export function TagAdminWorkspace() {
                     </p>
                     <button
                       type="button"
-                      className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                      className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                       onClick={() => applySuggestion(suggestion)}
                     >
                       In Merge-Formular übernehmen
@@ -180,8 +180,8 @@ export function TagAdminWorkspace() {
             )}
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Tags zusammenführen</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Tags zusammenführen</h2>
             <form className="uwe-form-grid" onSubmit={handleMerge}>
               <label>
                 Ziel-Tag
@@ -202,7 +202,7 @@ export function TagAdminWorkspace() {
                 />
               </label>
               <div style={{ alignSelf: "end" }}>
-                <button type="submit" className="uwe-btn uwe-btn-primary" disabled={merging}>
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={merging}>
                   {merging ? "Merge läuft…" : "Tags mergen"}
                 </button>
               </div>
@@ -210,8 +210,8 @@ export function TagAdminWorkspace() {
             {mergeStatus && <p className="uwe-dashboard-muted">{mergeStatus}</p>}
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">
               Unbenutzte Kandidaten ({data.unused.length})
             </h2>
             <p className="uwe-dashboard-muted">
@@ -230,8 +230,8 @@ export function TagAdminWorkspace() {
             )}
           </section>
 
-          <section className="uwe-card uwe-section">
-            <h2 className="uwe-section-title">Tag-Inventar ({data.inventory.length})</h2>
+          <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Tag-Inventar ({data.inventory.length})</h2>
             <table className="uwe-table">
               <thead>
                 <tr>

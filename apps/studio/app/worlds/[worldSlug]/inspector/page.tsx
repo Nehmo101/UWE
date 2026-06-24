@@ -71,7 +71,7 @@ function FindingList({
                   {finding.linkTarget && (
                     <input type="hidden" name="linkTarget" value={finding.linkTarget} />
                   )}
-                  <button type="submit" className="uwe-btn uwe-btn-small">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
                     {fix.label}
                   </button>
                 </form>
@@ -151,8 +151,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         ]}
       />
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Portal-Sicherheit</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Portal-Sicherheit</h2>
         <FindingList
           findings={report.safetyFindings}
           emptyText="Keine Auffälligkeiten — DM-Inhalte bleiben verborgen."
@@ -160,8 +160,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         />
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Im Portal sichtbare Seiten</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Im Portal sichtbare Seiten</h2>
         {report.visiblePages.length === 0 ? (
           <EmptyState
             title="Nichts veröffentlicht"
@@ -191,8 +191,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         )}
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Share-Links</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Share-Links</h2>
         {report.shareLinks.length === 0 ? (
           <p className="uwe-inspector-ok">✓ Keine Share-Links vorhanden.</p>
         ) : (
@@ -219,8 +219,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         )}
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Sichtbare Assets</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Sichtbare Assets</h2>
         {report.visibleAssets.length === 0 ? (
           <p className="uwe-inspector-ok">
             ✓ Keine Assets im Portal sichtbar ({report.dmOnlyAssetCount} DM-only).
@@ -237,8 +237,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         )}
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Kanon-Warnungen</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Kanon-Warnungen</h2>
         <FindingList
           findings={report.canonFindings}
           emptyText="Keine Widersprüche, toten Links oder Duplikate gefunden."

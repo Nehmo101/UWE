@@ -1,0 +1,319 @@
+/**
+ * Design v2 primitives — token-only styling.
+ */
+
+/* — Button — */
+.uwe-v2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-v2-radius-btn, var(--uwe-radius-md, 0.5rem));
+  background: var(--uwe-zone-card-bg);
+  color: var(--uwe-zone-chrome-fg);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.uwe-v2-btn:hover {
+  border-color: color-mix(in srgb, var(--uwe-accent) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent-muted) 40%, var(--uwe-zone-card-bg));
+}
+
+.uwe-v2-btn:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring, var(--uwe-accent));
+  outline-offset: 2px;
+}
+
+.uwe-v2-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.uwe-v2-btn-primary {
+  border-color: var(--uwe-fg);
+  background: var(--uwe-fg);
+  color: var(--uwe-card-bg, var(--uwe-bg-elevated));
+}
+
+.uwe-v2-btn-primary:hover {
+  background: color-mix(in srgb, var(--uwe-fg) 88%, white 12%);
+  border-color: color-mix(in srgb, var(--uwe-fg) 88%, white 12%);
+}
+
+.uwe-v2-btn-accent {
+  border-color: var(--uwe-fg);
+  border-width: 2px;
+  background: var(--uwe-accent);
+  color: var(--uwe-card-bg, var(--uwe-bg-elevated));
+}
+
+.uwe-v2-btn-accent:hover {
+  background: var(--uwe-accent-hover);
+  border-color: var(--uwe-fg);
+}
+
+.uwe-v2-btn-secondary {
+  border-color: var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 70%, var(--uwe-bg) 30%);
+}
+
+.uwe-v2-btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.uwe-v2-btn-ghost:hover {
+  background: color-mix(in srgb, var(--uwe-accent-muted) 55%, transparent);
+}
+
+.uwe-v2-btn-danger {
+  border-color: color-mix(in srgb, var(--uwe-danger) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-danger) 12%, var(--uwe-zone-card-bg));
+  color: var(--uwe-danger);
+}
+
+.uwe-v2-btn-sm {
+  min-height: 1.85rem;
+  padding: 0.3rem 0.65rem;
+   font-size: 0.8125rem;
+}
+
+/* — Card — */
+.uwe-v2-card {
+  border: 1.5px solid var(--uwe-zone-card-border);
+  border-radius: var(--uwe-v2-radius-card, var(--uwe-radius-lg, 0.75rem));
+  background: var(--uwe-zone-card-bg);
+  box-shadow: var(--uwe-shadow-sm);
+  overflow: hidden;
+}
+
+.uwe-v2-card-padded {
+  padding: var(--uwe-v2-content-gap);
+}
+
+.uwe-v2-card-title {
+  margin: 0 0 var(--uwe-spacing-sm, 0.5rem);
+  font-family: var(--uwe-zone-heading-font);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--uwe-zone-heading-fg);
+}
+
+.uwe-v2-card-footer {
+  margin-top: var(--uwe-spacing-md, 0.75rem);
+  padding-top: var(--uwe-spacing-md, 0.75rem);
+  border-top: 1px solid var(--uwe-border-muted);
+}
+
+/* — Page header — */
+.uwe-v2-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--uwe-v2-content-gap);
+  margin-bottom: var(--uwe-v2-section-gap);
+}
+
+.uwe-v2-page-header-main h1 {
+  margin: 0;
+  font-family: var(--uwe-zone-heading-font);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--uwe-zone-heading-fg);
+  letter-spacing: -0.02em;
+}
+
+.uwe-v2-page-summary {
+  margin: 0.35rem 0 0;
+  max-width: 42rem;
+  color: var(--uwe-fg-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.uwe-v2-page-meta {
+  margin-top: var(--uwe-spacing-sm, 0.5rem);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.uwe-v2-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-spacing-sm, 0.5rem);
+}
+
+/* — Badge — */
+.uwe-v2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--uwe-radius-sm, 0.375rem);
+  border: 1px solid var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 80%, var(--uwe-bg) 20%);
+  color: var(--uwe-fg-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.uwe-v2-badge-accent {
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-accent);
+}
+
+.uwe-v2-badge-danger {
+  border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-danger) 10%, transparent);
+  color: var(--uwe-danger);
+}
+
+.uwe-v2-badge-success {
+  border-color: color-mix(in srgb, var(--uwe-success) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-success) 10%, transparent);
+  color: var(--uwe-success);
+}
+
+.uwe-v2-badge-warning {
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--uwe-warning) 10%, transparent);
+  color: var(--uwe-warning);
+}
+
+/* — Form — */
+.uwe-v2-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-v2-content-gap);
+}
+
+.uwe-v2-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--uwe-zone-chrome-fg);
+}
+
+.uwe-v2-input,
+.uwe-v2-textarea,
+.uwe-v2-select {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-radius-md, 0.5rem);
+  background: var(--uwe-input-bg, var(--uwe-bg-elevated));
+  color: var(--uwe-fg);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.uwe-v2-textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.uwe-v2-input:focus-visible,
+.uwe-v2-textarea:focus-visible,
+.uwe-v2-select:focus-visible {
+  outline: none;
+  border-color: var(--uwe-focus-ring, var(--uwe-accent));
+  box-shadow: var(--uwe-focus-shadow, 0 0 0 3px color-mix(in srgb, var(--uwe-accent) 25%, transparent));
+}
+
+.uwe-v2-field-hint {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-v2-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-spacing-sm, 0.5rem);
+  padding-top: var(--uwe-spacing-sm, 0.5rem);
+}
+
+/* — Section — */
+.uwe-v2-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-v2-content-gap);
+  margin-bottom: var(--uwe-v2-section-gap);
+}
+
+.uwe-v2-section-title {
+  margin: 0;
+  font-family: var(--uwe-zone-heading-font);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--uwe-zone-heading-fg);
+}
+
+/* — Stat grid — */
+.uwe-v2-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--uwe-v2-content-gap);
+  margin-bottom: var(--uwe-v2-section-gap);
+}
+
+.uwe-v2-stat-card {
+  padding: var(--uwe-spacing-md, 0.75rem) var(--uwe-spacing-lg, 1rem);
+  border-radius: var(--uwe-radius-lg, 0.75rem);
+  border: 1px solid var(--uwe-zone-card-border);
+  background: var(--uwe-zone-card-bg);
+}
+
+.uwe-v2-stat-value {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--uwe-zone-heading-fg);
+  line-height: 1.2;
+}
+
+.uwe-v2-stat-label {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+/* Stat card combined with base card (legacy uwe-stat-card migration) */
+.uwe-v2-card.uwe-v2-stat-card {
+  padding: var(--uwe-spacing-md, 0.75rem) var(--uwe-spacing-lg, 1rem);
+}
+
+/* — Empty state (inline) — */
+.uwe-v2-empty {
+  margin: 0;
+  padding: var(--uwe-v2-content-gap) 0;
+  color: var(--uwe-fg-muted);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.5;
+}

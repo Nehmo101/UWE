@@ -77,7 +77,7 @@ export function WebhookWorkspace() {
 
   return (
     <>
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Webhook-Endpunkt</h2>
         <p className="uwe-dashboard-muted">
           Outbound-Webhooks mit HMAC-Signatur. Private/localhost URLs werden blockiert (SSRF-Schutz).
@@ -99,7 +99,7 @@ export function WebhookWorkspace() {
             </label>
           ))}
         </fieldset>
-        <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void createWebhook()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createWebhook()}>
           Webhook erstellen
         </button>
         {createdSecret && (
@@ -111,7 +111,7 @@ export function WebhookWorkspace() {
 
       {error && <p className="uwe-notice uwe-notice-error">{error}</p>}
 
-      <section className="uwe-card">
+      <section className="uwe-v2-card">
         <h2>Endpunkte ({endpoints.length})</h2>
         {loading ? (
           <p className="uwe-dashboard-muted">Lade…</p>

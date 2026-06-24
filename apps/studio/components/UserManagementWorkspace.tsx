@@ -240,7 +240,7 @@ export function UserManagementWorkspace() {
         </p>
       )}
 
-      <section className="uwe-card uwe-form" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Neuen Benutzer anlegen</h2>
         <div className="uwe-form-grid">
           <label>
@@ -310,12 +310,12 @@ export function UserManagementWorkspace() {
             </select>
           </label>
         </div>
-        <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void createUser()}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createUser()}>
           Benutzer erstellen
         </button>
       </section>
 
-      <section className="uwe-card" style={{ marginBottom: "1.5rem" }}>
+      <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "1.5rem" }}>
         <h2>Benutzer</h2>
         {loading ? (
           <p>Lade Benutzer…</p>
@@ -344,7 +344,7 @@ export function UserManagementWorkspace() {
                   <td>
                     <button
                       type="button"
-                      className="uwe-btn uwe-btn-ghost"
+                      className="uwe-v2-btn uwe-v2-btn-ghost"
                       onClick={() => setSelectedUserId(user.id)}
                     >
                       Bearbeiten
@@ -358,7 +358,7 @@ export function UserManagementWorkspace() {
       </section>
 
       {selectedUser && (
-        <section className="uwe-card uwe-form">
+        <section className="uwe-v2-card uwe-v2-card-padded uwe-form">
           <h2>{selectedUser.displayName} bearbeiten</h2>
           <div className="uwe-form-grid">
             <label>
@@ -430,26 +430,26 @@ export function UserManagementWorkspace() {
           </div>
 
           <div className="uwe-form-actions">
-            <button type="button" className="uwe-btn uwe-btn-primary" onClick={() => void saveUser()}>
+            <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void saveUser()}>
               Speichern
             </button>
             <button
               type="button"
-              className="uwe-btn uwe-btn-secondary"
+              className="uwe-v2-btn uwe-v2-btn-secondary"
               onClick={() => void toggleUserStatus(selectedUser)}
             >
               {selectedUser.status === "disabled" ? "Reaktivieren" : "Deaktivieren"}
             </button>
             <button
               type="button"
-              className="uwe-btn uwe-btn-danger"
+              className="uwe-v2-btn uwe-v2-btn-danger"
               onClick={() => void deleteUser(selectedUser)}
             >
               Endgültig löschen
             </button>
             <button
               type="button"
-              className="uwe-btn uwe-btn-ghost"
+              className="uwe-v2-btn uwe-v2-btn-ghost"
               onClick={() => setSelectedUserId(null)}
             >
               Schließen
@@ -468,7 +468,7 @@ export function UserManagementWorkspace() {
                   {membership.characterName ? ` (${membership.characterName})` : ""}
                   <button
                     type="button"
-                    className="uwe-btn uwe-btn-ghost"
+                    className="uwe-v2-btn uwe-v2-btn-ghost"
                     onClick={() => void removeMembership(membership.worldId)}
                   >
                     Entfernen
@@ -527,7 +527,7 @@ export function UserManagementWorkspace() {
               />
             </label>
           </div>
-          <button type="button" className="uwe-btn uwe-btn-secondary" onClick={() => void addMembership()}>
+          <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void addMembership()}>
             Mitgliedschaft hinzufügen
           </button>
         </section>

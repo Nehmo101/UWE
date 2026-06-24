@@ -52,8 +52,8 @@ export function MailPortalAccountForm() {
   }
 
   return (
-    <form className="uwe-form uwe-card" onSubmit={handleSubmit}>
-      <h3 className="uwe-section-title">Mailkonto hinzufügen</h3>
+    <form className="uwe-form uwe-v2-card" onSubmit={handleSubmit}>
+      <h3 className="uwe-v2-section-title">Mailkonto hinzufügen</h3>
       {error ? (
         <p className="uwe-form-error" role="alert">
           {error}
@@ -126,7 +126,7 @@ export function MailPortalAccountForm() {
         </label>
       </div>
 
-      <button className="uwe-btn uwe-btn-primary" type="submit" disabled={pending}>
+      <button className="uwe-v2-btn uwe-v2-btn-primary" type="submit" disabled={pending}>
         {pending ? "Speichern…" : "Konto speichern"}
       </button>
     </form>
@@ -151,15 +151,15 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
   }
 
   return (
-    <section className="uwe-section">
-      <h2 className="uwe-section-title">Konten</h2>
+    <section className="uwe-v2-section">
+      <h2 className="uwe-v2-section-title">Konten</h2>
       {message ? <p className="uwe-dashboard-muted">{message}</p> : null}
       {accounts.length === 0 ? (
         <p className="uwe-dashboard-muted">Noch keine Mailkonten verbunden.</p>
       ) : (
         <ul className="uwe-list-cards">
           {accounts.map((account) => (
-            <li key={account.id} className="uwe-card">
+            <li key={account.id} className="uwe-v2-card">
               <strong>{account.label}</strong>
               <span className="uwe-dashboard-muted">{account.username}</span>
               <span className="uwe-dashboard-muted">
@@ -172,7 +172,7 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
               <div className="uwe-inline-actions">
                 <button
                   type="button"
-                  className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                   disabled={pending}
                   onClick={() => runAction(`/api/admin/mail/accounts/${account.id}/test`)}
                 >
@@ -180,7 +180,7 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
                 </button>
                 <button
                   type="button"
-                  className="uwe-btn uwe-btn-secondary uwe-btn-sm"
+                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
                   disabled={pending}
                   onClick={async () => {
                     setMessage(null);
@@ -205,7 +205,7 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
                 </button>
                 <button
                   type="button"
-                  className="uwe-btn uwe-btn-danger uwe-btn-sm"
+                  className="uwe-v2-btn uwe-v2-btn-danger uwe-v2-btn-sm"
                   disabled={pending}
                   onClick={() => runAction(`/api/admin/mail/accounts/${account.id}`, "DELETE")}
                 >

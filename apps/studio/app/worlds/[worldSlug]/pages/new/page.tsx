@@ -95,7 +95,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
         <Link href="/templates">Templates verwalten →</Link>
       </p>
 
-      <form action={createPageAction} className="uwe-form" key={template.id}>
+      <form action={createPageAction} className="uwe-v2-form" key={template.id}>
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="template" value={template.slug} />
 
@@ -207,8 +207,8 @@ export default async function NewPageForm({ params, searchParams }: Props) {
         )}
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button type="submit" className="uwe-btn uwe-btn-primary">Seite erstellen</button>
-          <Link className="uwe-btn uwe-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Seite erstellen</button>
+          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
         </div>
       </form>
     </WorldModuleShell>

@@ -42,7 +42,7 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
       }}
       showSearch={false}
     >
-      <form action={createDungeonAction} className="uwe-form">
+      <form action={createDungeonAction} className="uwe-v2-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         {selectedCampaign && (
           <input type="hidden" name="campaignId" value={selectedCampaign.id} />
@@ -64,8 +64,8 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
         </label>
 
         <div className="uwe-form-actions">
-          <button type="submit" className="uwe-btn uwe-btn-primary">Dungeon erstellen</button>
-          <Link className="uwe-btn" href={`/worlds/${worldSlug}/dungeons`}>Abbrechen</Link>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Dungeon erstellen</button>
+          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/dungeons`}>Abbrechen</Link>
         </div>
       </form>
     </WorldModuleShell>

@@ -35,8 +35,8 @@ export function CalendarWeekGrid({ weekStart, events }: CalendarWeekGridProps) {
   }).format(days[6]);
 
   return (
-    <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
-      <h2 className="uwe-section-title">{`${weekLabel} – ${weekEndLabel}`}</h2>
+    <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
+      <h2 className="uwe-v2-section-title">{`${weekLabel} – ${weekEndLabel}`}</h2>
       <div
         style={{
           display: "grid",

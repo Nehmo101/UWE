@@ -17,8 +17,8 @@ export default async function WorkshopPrintProfilesPage() {
         <Link href="/workshop">← Werkstatt</Link>
       </p>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Druckprofil</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Druckprofil</h2>
         <form action={createPrintProfileAction} className="uwe-brain-create-form">
           <label>
             Bezeichnung
@@ -60,14 +60,14 @@ export default async function WorkshopPrintProfilesPage() {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Profil speichern
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Historie ({profiles.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Historie ({profiles.length})</h2>
         {profiles.length === 0 ? (
           <EmptyState
             title="Noch keine Druckprofile"
@@ -97,7 +97,7 @@ export default async function WorkshopPrintProfilesPage() {
                 <form action={deletePrintProfileAction}>
                   <input type="hidden" name="id" value={profile.id} />
                   <input type="hidden" name="returnTo" value="/workshop/print-profiles" />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Löschen
                   </button>
                 </form>

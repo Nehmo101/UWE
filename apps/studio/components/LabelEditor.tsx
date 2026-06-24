@@ -307,28 +307,28 @@ export function LabelEditor({
       />
 
       <div className="uwe-label-editor-toolbar">
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("title")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("title")}>
           + Titel
         </button>
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("text")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("text")}>
           + Text
         </button>
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("image")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("image")}>
           + Bild
         </button>
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("box")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("box")}>
           + Box
         </button>
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("divider")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("divider")}>
           + Linie
         </button>
-        <button type="button" className="uwe-btn uwe-btn-sm" onClick={() => addElement("qr")}>
+        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("qr")}>
           + QR
         </button>
         <span className="uwe-label-editor-sep" />
         <button
           type="button"
-          className="uwe-btn uwe-btn-sm"
+          className="uwe-v2-btn uwe-v2-btn-sm"
           disabled={state.past.length === 0}
           onClick={() => dispatch({ type: "undo" })}
         >
@@ -336,7 +336,7 @@ export function LabelEditor({
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-sm"
+          className="uwe-v2-btn uwe-v2-btn-sm"
           disabled={state.future.length === 0}
           onClick={() => dispatch({ type: "redo" })}
         >
@@ -344,7 +344,7 @@ export function LabelEditor({
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-sm"
+          className="uwe-v2-btn uwe-v2-btn-sm"
           disabled={!state.selectedId}
           onClick={() => dispatch({ type: "duplicate_selected" })}
         >
@@ -352,7 +352,7 @@ export function LabelEditor({
         </button>
         <button
           type="button"
-          className="uwe-btn uwe-btn-sm uwe-btn-danger"
+          className="uwe-v2-btn uwe-v2-btn-sm uwe-v2-btn-danger"
           disabled={!state.selectedId}
           onClick={() => dispatch({ type: "delete_selected" })}
         >

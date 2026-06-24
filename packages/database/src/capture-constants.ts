@@ -1,5 +1,17 @@
 import type { CaptureType } from "./generated/prisma/client";
 
+export const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
+  quick_note: "Schnelle Notiz",
+  dnd_idea: "DnD-Idee",
+  uwe_todo: "UWE-To-do",
+  project_idea: "Projektidee",
+  hardware: "Hardware/Homelab",
+  contract_expense: "Vertrag/Ausgabe",
+  art_miniature_terrain: "Kunst/Miniatur/Terrain",
+  link: "Link",
+  file_image: "Datei/Bild",
+};
+
 export const QUICK_CAPTURE_TYPE_OPTIONS: Array<{
   id: string;
   label: string;

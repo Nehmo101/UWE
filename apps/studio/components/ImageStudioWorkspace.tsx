@@ -33,7 +33,7 @@ export function ImageStudioWorkspace({
         </div>
       </Card>
 
-      <section className="uwe-card uwe-form uwe-image-studio-inline" aria-label="Neues Bild">
+      <section className="uwe-v2-card uwe-form uwe-image-studio-inline" aria-label="Neues Bild">
         <h2>Neues Bild</h2>
         {inlineForm}
       </section>

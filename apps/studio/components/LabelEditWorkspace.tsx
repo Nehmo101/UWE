@@ -59,27 +59,27 @@ export function LabelEditWorkspace({
           {FIT_LABELS[fitStatus]}
         </span>
         {fitApplied && <span className="uwe-table-sub">Auto-Fit / Kürzung angewendet</span>}
-        <button type="submit" name="action" value="auto_fit" className="uwe-btn uwe-btn-sm">
+        <button type="submit" name="action" value="auto_fit" className="uwe-v2-btn uwe-v2-btn-sm">
           Automatisch passend machen
         </button>
-        <button type="submit" name="action" value="restore_original" className="uwe-btn uwe-btn-sm">
+        <button type="submit" name="action" value="restore_original" className="uwe-v2-btn uwe-v2-btn-sm">
           Original wiederherstellen
         </button>
         {fitApplied && (
           <button
             type="button"
-            className="uwe-btn uwe-btn-sm"
+            className="uwe-v2-btn uwe-v2-btn-sm"
             onClick={() => setShowCompare((value) => !value)}
           >
             {showCompare ? "Vergleich ausblenden" : "Vorher/Nachher"}
           </button>
         )}
         {aiAvailable ? (
-          <button type="submit" name="action" value="ai_shorten" className="uwe-btn uwe-btn-sm">
+          <button type="submit" name="action" value="ai_shorten" className="uwe-v2-btn uwe-v2-btn-sm">
             KI-kürzen
           </button>
         ) : (
-          <button type="button" className="uwe-btn uwe-btn-sm" disabled title="AI Brain nicht konfiguriert">
+          <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" disabled title="AI Brain nicht konfiguriert">
             KI-kürzen (nicht verfügbar)
           </button>
         )}

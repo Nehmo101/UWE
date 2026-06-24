@@ -43,8 +43,8 @@ export function CalendarMonthGrid({ month, events }: CalendarMonthGridProps) {
   const monthLabel = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" }).format(month);
 
   return (
-    <section className="uwe-card" style={{ marginTop: "1.5rem" }}>
-      <h2 className="uwe-section-title">{monthLabel}</h2>
+    <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
+      <h2 className="uwe-v2-section-title">{monthLabel}</h2>
       <div
         style={{
           display: "grid",

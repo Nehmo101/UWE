@@ -326,7 +326,7 @@ export function BackupWorkspace({
 
         <button
           type="button"
-          className="uwe-btn uwe-btn-primary"
+          className="uwe-v2-btn uwe-v2-btn-primary"
           disabled={busy === "create"}
           onClick={createBackup}
         >
@@ -365,7 +365,7 @@ export function BackupWorkspace({
                       {permissions?.canDownload && (
                         <button
                           type="button"
-                          className="uwe-btn"
+                          className="uwe-v2-btn"
                           disabled={busy === "download"}
                           onClick={() => downloadBackup(backup.id, backup.filename)}
                         >
@@ -375,7 +375,7 @@ export function BackupWorkspace({
                       {permissions?.canPreview && (
                       <button
                         type="button"
-                        className="uwe-btn"
+                        className="uwe-v2-btn"
                         onClick={() => {
                           setSelectedBackupId(backup.id);
                           setUploadBase64("");
@@ -426,7 +426,7 @@ export function BackupWorkspace({
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
           <button
             type="button"
-            className="uwe-btn"
+            className="uwe-v2-btn"
             disabled={busy === "preview" || (!selectedBackupId && !uploadBase64)}
             onClick={runPreview}
           >
@@ -435,7 +435,7 @@ export function BackupWorkspace({
           {permissions?.canRestore && (
           <button
             type="button"
-            className="uwe-btn uwe-btn-primary"
+            className="uwe-v2-btn uwe-v2-btn-primary"
             disabled={busy === "restore" || !preview}
             onClick={runRestore}
           >
@@ -473,7 +473,7 @@ export function BackupWorkspace({
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button
                 type="button"
-                className="uwe-btn uwe-btn-primary"
+                className="uwe-v2-btn uwe-v2-btn-primary"
                 disabled={!restoreConfirmed || busy === "restore"}
                 onClick={runRestore}
               >
@@ -481,7 +481,7 @@ export function BackupWorkspace({
               </button>
               <button
                 type="button"
-                className="uwe-btn"
+                className="uwe-v2-btn"
                 onClick={() => {
                   setShowRestoreWarning(false);
                   setRestoreConfirmed(false);

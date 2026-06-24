@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import {
+  isDesignV2Enabled,
   PortalNavSidebar,
   PortalShell,
+  PortalShellV2,
   SidebarNav,
   type BottomNavItem,
 } from "@uwe/shared-ui";
@@ -68,9 +70,44 @@ export function PortalGuestShell({
           ))}
         </nav>
       ) : null}
-      <div className="portal-app-content">{children}</div>
+      <div className="portal-app-content uwe-v2-reader">{children}</div>
     </>
   );
+
+  const topBarActions = (
+    <div className="portal-topbar-actions">
+      {topBarExtra}
+      {showLoginLink ? (
+        <a href="/login" className="portal-login-link">
+          Anmelden
+        </a>
+      ) : null}
+    </div>
+  );
+
+  const resolvedSidebar =
+    sidebar ?? (
+      <PortalNavSidebar>
+        <SidebarNav items={portalGuestNav(guestNavActive)} />
+      </PortalNavSidebar>
+    );
+
+  if (isDesignV2Enabled()) {
+    return (
+      <PortalShellV2
+        appName={brandAppName}
+        worldName={worldName}
+        brandHref={brandHref}
+        bottomNav={bottomNav}
+        context={context}
+        contextTitle={contextTitle}
+        pageHeader={pageHeader}
+        topBarExtra={topBarActions}
+        sidebar={resolvedSidebar}
+        main={main}
+      />
+    );
+  }
 
   return (
     <PortalShell
@@ -81,23 +118,8 @@ export function PortalGuestShell({
       context={context}
       contextTitle={contextTitle}
       pageHeader={pageHeader}
-      topBarExtra={
-        <div className="portal-topbar-actions">
-          {topBarExtra}
-          {showLoginLink ? (
-            <a href="/login" className="portal-login-link">
-              Anmelden
-            </a>
-          ) : null}
-        </div>
-      }
-      sidebar={
-        sidebar ?? (
-          <PortalNavSidebar>
-            <SidebarNav items={portalGuestNav(guestNavActive)} />
-          </PortalNavSidebar>
-        )
-      }
+      topBarExtra={topBarActions}
+      sidebar={resolvedSidebar}
       main={main}
     />
   );

@@ -74,7 +74,7 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
         <input name="file" type="file" accept="image/*" capture="environment" required />
       </label>
       <input type="hidden" name="captureType" value="file_image" />
-      <button type="submit" className="uwe-btn uwe-btn-primary" disabled={uploading}>
+      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={uploading}>
         {uploading ? "Lädt hoch…" : "Bild erfassen"}
       </button>
       {status && <p className="uwe-hint">{status}</p>}

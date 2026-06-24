@@ -119,7 +119,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
               ))}
             </select>
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Dokument anlegen
           </button>
         </form>
@@ -158,7 +158,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
               ))}
             </select>
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Fakt anlegen
           </button>
         </form>
@@ -167,7 +167,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
       <section className="uwe-brain-section">
         <h2>Dokumente</h2>
         {documents.length === 0 ? (
-          <p className="uwe-empty">Noch keine Brain-Dokumente.</p>
+          <p className="uwe-v2-empty">Noch keine Brain-Dokumente.</p>
         ) : (
           <table className="uwe-page-table">
             <thead>
@@ -201,7 +201,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
       <section className="uwe-brain-section">
         <h2>Fakten</h2>
         {facts.length === 0 ? (
-          <p className="uwe-empty">Noch keine Brain-Fakten.</p>
+          <p className="uwe-v2-empty">Noch keine Brain-Fakten.</p>
         ) : (
           <table className="uwe-page-table">
             <thead>

@@ -45,11 +45,11 @@ export function StatusCard({
 
   return (
     <section
-      className={`uwe-card uwe-dashboard-card${wide ? " uwe-dashboard-card-wide" : ""}`}
+      className={`uwe-v2-card uwe-dashboard-card${wide ? " uwe-dashboard-card-wide" : ""}`}
       aria-labelledby={`status-${title.replace(/\s+/g, "-").toLowerCase()}`}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.5rem" }}>
-        <h2 className="uwe-section-title" id={`status-${title.replace(/\s+/g, "-").toLowerCase()}`}>
+        <h2 className="uwe-v2-section-title" id={`status-${title.replace(/\s+/g, "-").toLowerCase()}`}>
           {title}
         </h2>
         <HealthBadge status={badgeStatus} label={statusLabel} />

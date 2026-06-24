@@ -28,8 +28,8 @@ export default async function WorkshopRentalPage() {
         <Link href="/workshop">← Werkstatt</Link>
       </p>
 
-      <section className="uwe-card uwe-section">
-        <h2 className="uwe-section-title">Neues Terrain-Set</h2>
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Neues Terrain-Set</h2>
         <form action={createTerrainRentalAction} className="uwe-brain-create-form">
           <label>
             Terrain-Set
@@ -81,14 +81,14 @@ export default async function WorkshopRentalPage() {
             Notizen
             <textarea name="notes" rows={2} />
           </label>
-          <button type="submit" className="uwe-btn uwe-btn-primary">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
             Set anlegen
           </button>
         </form>
       </section>
 
-      <section className="uwe-section">
-        <h2 className="uwe-section-title">Bestand ({rentals.length})</h2>
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Bestand ({rentals.length})</h2>
         {rentals.length === 0 ? (
           <EmptyState
             title="Noch keine Verleih-Sets"
@@ -178,13 +178,13 @@ export default async function WorkshopRentalPage() {
                       ? ` · Kaution ${formatEuroFromCents(rental.depositCents)}`
                       : ""}
                   </p>
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Speichern
                   </button>
                 </form>
                 <form action={deleteTerrainRentalAction}>
                   <input type="hidden" name="id" value={rental.id} />
-                  <button type="submit" className="uwe-btn uwe-btn-secondary uwe-btn-sm">
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
                     Löschen
                   </button>
                 </form>
