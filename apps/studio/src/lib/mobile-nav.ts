@@ -7,14 +7,14 @@ export interface StudioBottomNavItem {
   action?: "open-sidebar";
 }
 
-/** Bottom navigation for global Studio pages (Daily Admin OS) */
+/** Bottom navigation for global Studio pages — aligned with consolidated IA sections. */
 export function studioGlobalBottomNav(
   active: "today" | "capture" | "search" | "ai" | "more",
 ): StudioBottomNavItem[] {
   return [
     { label: "Heute", href: "/today", icon: "☀", active: active === "today" },
-    { label: "Capture", href: "/capture", icon: "+", active: active === "capture" },
-    { label: "Suche", href: "/search", icon: "🔍", active: active === "search" },
+    { label: "Leben", href: "/capture", icon: "+", active: active === "capture" },
+    { label: "Welten", href: "/worlds", icon: "🔍", active: active === "search" },
     { label: "KI", href: "/ai", icon: "✦", active: active === "ai" },
     { label: "Mehr", icon: "☰", action: "open-sidebar", active: active === "more" },
   ];

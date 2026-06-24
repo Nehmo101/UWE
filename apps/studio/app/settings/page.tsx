@@ -842,11 +842,14 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
               </p>
               <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-                <Link className="uwe-btn uwe-btn-primary" href="/admin/status">
-                  Admin Status Dashboard öffnen
+                <Link className="uwe-btn uwe-btn-primary" href="/system">
+                  System-Hub öffnen
                 </Link>
-                <Link className="uwe-btn" href="/admin/ai-prompt">
-                  KI-Prompt (mobil)
+                <Link className="uwe-btn" href="/admin/status">
+                  Admin Status Dashboard
+                </Link>
+                <Link className="uwe-btn" href="/ai">
+                  KI
                 </Link>
               </p>
             </section>

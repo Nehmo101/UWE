@@ -6,6 +6,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { SystemHubBanner } from "@/components/SystemHubBanner";
 import { HostUpdatePanel } from "@/components/HostUpdatePanel";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import {
@@ -49,6 +50,7 @@ export default async function HardwarePage() {
       title="Hardware / Homelab"
       summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
     >
+      <SystemHubBanner />
       <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
 
       {cockpit.urlWarnings.length > 0 && (

@@ -7,6 +7,7 @@ import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { SystemHubBanner } from "@/components/SystemHubBanner";
 
 function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -116,6 +117,7 @@ export default async function AdminStatusPage() {
         />
       }
     >
+      <SystemHubBanner />
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
             Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
             {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}

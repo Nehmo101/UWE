@@ -35,21 +35,60 @@ const REQUIRED_WORLD_NAV_LABELS = [
   "Neue Seite",
 ];
 
+const EXPECTED_SIDEBAR_SECTIONS = [
+  "Heute",
+  "Welten",
+  "Leben",
+  "Werkstatt",
+  "Wissen",
+  "Medien",
+  "KI",
+  "System",
+  "Admin",
+];
+
 describe("studio navigation", () => {
-  it("groups admin and system areas in Studio sidebar", () => {
-    const sections = studioSidebarSections("/admin/users");
+  it("uses consolidated IA sidebar sections", () => {
+    const sections = studioSidebarSections("/today");
     const sectionTitles = sections.map((section) => section.title);
-    assert.ok(sectionTitles.includes("Benutzer & Rollen"));
-    assert.ok(sectionTitles.includes("Admin"));
-    assert.ok(sectionTitles.includes("System & Diagnose"));
+    assert.deepEqual(sectionTitles, EXPECTED_SIDEBAR_SECTIONS);
   });
 
-  it("unified sidebar follows cockpit mockup hierarchy", () => {
-    const sections = studioUnifiedSidebarSections("/studio", {
+  it("places Heute as the sole primary home link", () => {
+    const sections = studioSidebarSections("/today");
+    const heute = sections.find((section) => section.title === "Heute");
+    assert.ok(heute);
+    assert.deepEqual(
+      heute.items.map((item) => item.href),
+      ["/today"],
+    );
+    assert.ok(heute.items[0]?.active);
+  });
+
+  it("groups Welten, Leben, KI, System, and Admin items", () => {
+    const sections = studioSidebarSections("/admin/users");
+    const worlds = sections.find((section) => section.title === "Welten");
+    const leben = sections.find((section) => section.title === "Leben");
+    const ki = sections.find((section) => section.title === "KI");
+    const system = sections.find((section) => section.title === "System");
+    const admin = sections.find((section) => section.title === "Admin");
+
+    assert.ok(worlds?.items.some((item) => item.href === "/worlds"));
+    assert.ok(worlds?.items.some((item) => item.href === "/search"));
+    assert.ok(leben?.items.some((item) => item.href === "/capture"));
+    assert.ok(leben?.items.some((item) => item.href === "/hardware"));
+    assert.ok(ki?.items.some((item) => item.href === "/ai"));
+    assert.ok(!ki?.items.some((item) => item.href === "/admin/ai-prompt"));
+    assert.ok(system?.items.some((item) => item.href === "/system"));
+    assert.ok(admin?.items.some((item) => item.href === "/admin/users"));
+  });
+
+  it("unified sidebar follows consolidated IA hierarchy", () => {
+    const sections = studioUnifiedSidebarSections("/today", {
       portalUrl: "http://localhost:3001",
     });
     const titles = sections.map((section) => section.title);
-    assert.deepEqual(titles, ["Portal", "Studio", "Bibliothek", "Aufgaben", "Administration"]);
+    assert.deepEqual(titles, ["Portal", ...EXPECTED_SIDEBAR_SECTIONS]);
     const portal = sections.find((section) => section.title === "Portal");
     assert.ok(portal?.items.some((item) => item.label === "Spieler-Portal"));
     assert.ok(portal?.items.some((item) => item.href === "http://localhost:3001/worlds"));
@@ -105,11 +144,13 @@ describe("studio navigation", () => {
     assert.equal(worldBottomNavKey("pages", true), "search");
   });
 
-  it("provides compact dashboard nav", () => {
-    const nav = studioDashboardNav("/studio");
-    assert.ok(nav.some((item) => item.href === "/studio" && item.active));
+  it("provides compact dashboard nav anchored on Heute and System", () => {
+    const nav = studioDashboardNav("/today");
+    assert.ok(nav.some((item) => item.href === "/today" && item.active));
     assert.ok(nav.some((item) => item.href === "/worlds"));
+    assert.ok(nav.some((item) => item.href === "/system"));
     assert.ok(nav.some((item) => item.href === "/admin"));
+    assert.ok(!nav.some((item) => item.href === "/studio"));
   });
 
   it("builds command palette commands from studio IA", () => {
@@ -119,10 +160,11 @@ describe("studio navigation", () => {
       pathname: "/worlds/terra/dashboard",
     });
 
-    assert.ok(commands.some((cmd) => cmd.href === "/today" && cmd.group === "Dashboard"));
+    assert.ok(commands.some((cmd) => cmd.href === "/today" && cmd.group === "Heute"));
     assert.ok(commands.some((cmd) => cmd.href === "/worlds/terra/pages/new"));
     assert.ok(commands.some((cmd) => cmd.href === "/admin/reviews"));
     assert.ok(commands.some((cmd) => cmd.href === "/capture"));
+    assert.ok(commands.some((cmd) => cmd.href === "/system" && cmd.group === "System"));
   });
 
   it("includes world switcher commands for other worlds", () => {
@@ -150,8 +192,14 @@ describe("studio navigation", () => {
 
   it("marks worlds path active in studio sidebar sections for world shell", () => {
     const sections = studioSidebarSections("/worlds/terra/dashboard");
-    const worldsSection = sections.find((section) => section.title === "Welten & Kampagnen");
+    const worldsSection = sections.find((section) => section.title === "Welten");
     assert.ok(worldsSection);
     assert.ok(worldsSection.items.some((item) => item.href === "/worlds" && item.active));
+  });
+
+  it("marks system hub active for legacy admin status route", () => {
+    const sections = studioSidebarSections("/admin/status");
+    const system = sections.find((section) => section.title === "System");
+    assert.ok(system?.items.some((item) => item.href === "/system" && item.active));
   });
 });

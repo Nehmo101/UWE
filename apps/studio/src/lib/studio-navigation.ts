@@ -4,22 +4,15 @@ import { isLikelyGameSessionId } from "./session-route";
 
 export type StudioNavSectionId =
   | "portal"
-  | "studio"
-  | "library"
-  | "tasks"
-  | "administration"
-  | "dashboard"
+  | "heute"
   | "worlds"
-  | "daily-admin"
-  | "content"
-  | "ai"
-  | "integrations"
-  | "users"
-  | "admin"
-  | "setup"
+  | "leben"
+  | "werkstatt"
+  | "wissen"
+  | "medien"
+  | "ki"
   | "system"
-  | "backup"
-  | "settings";
+  | "admin";
 
 export interface StudioNavItem {
   label: string;
@@ -37,38 +30,45 @@ export interface StudioNavSection {
 const STUDIO_NAV_SECTIONS: { id: StudioNavSectionId; title: string; items: { label: string; href: string }[] }[] =
   [
     {
-      id: "dashboard",
-      title: "Dashboard",
-      items: [
-        { label: "Studio Dashboard", href: "/studio" },
-        { label: "Heute", href: "/today" },
-      ],
+      id: "heute",
+      title: "Heute",
+      items: [{ label: "Heute", href: "/today" }],
     },
     {
       id: "worlds",
-      title: "Welten & Kampagnen",
+      title: "Welten",
       items: [
         { label: "Welten", href: "/worlds" },
         { label: "Globale Suche", href: "/search" },
-        { label: "Brain Store", href: "/brain" },
         { label: "Templates", href: "/templates" },
       ],
     },
     {
-      id: "daily-admin",
-      title: "Daily Admin OS",
+      id: "leben",
+      title: "Leben",
       items: [
         { label: "Capture", href: "/capture" },
         { label: "Projekte", href: "/projects" },
-        { label: "Werkstatt", href: "/workshop" },
         { label: "Verträge", href: "/contracts" },
         { label: "Hardware", href: "/hardware" },
-        { label: "Persönliches Brain", href: "/life-brain" },
       ],
     },
     {
-      id: "content",
-      title: "Inhalte & Medien",
+      id: "werkstatt",
+      title: "Werkstatt",
+      items: [{ label: "Werkstatt", href: "/workshop" }],
+    },
+    {
+      id: "wissen",
+      title: "Wissen",
+      items: [
+        { label: "Life Brain", href: "/life-brain" },
+        { label: "Brain Store", href: "/brain" },
+      ],
+    },
+    {
+      id: "medien",
+      title: "Medien",
       items: [
         { label: "Image Studio", href: "/image-studio" },
         { label: "Mail Center", href: "/mail" },
@@ -76,28 +76,22 @@ const STUDIO_NAV_SECTIONS: { id: StudioNavSectionId; title: string; items: { lab
       ],
     },
     {
-      id: "ai",
-      title: "KI-Werkzeuge",
+      id: "ki",
+      title: "KI",
       items: [
-        { label: "KI-Chat", href: "/ai" },
-        { label: "KI-Prompt", href: "/admin/ai-prompt" },
-        { label: "KI-Gateway", href: "/admin/ai-gateway" },
+        { label: "KI", href: "/ai" },
         { label: "Reviews", href: "/admin/reviews" },
         { label: "Agent Jobs", href: "/admin/agent-jobs" },
       ],
     },
     {
-      id: "integrations",
-      title: "Integrationen",
-      items: [{ label: "Einstellungen → Integrationen", href: "/settings?tab=integrations" }],
-    },
-    {
-      id: "users",
-      title: "Benutzer & Rollen",
+      id: "system",
+      title: "System",
       items: [
-        { label: "Benutzer", href: "/admin/users" },
-        { label: "API Tokens", href: "/admin/api-tokens" },
-        { label: "Webhooks", href: "/admin/webhooks" },
+        { label: "System-Hub", href: "/system" },
+        { label: "Jobs", href: "/jobs" },
+        { label: "Backup", href: "/backup" },
+        { label: "Einstellungen", href: "/settings" },
       ],
     },
     {
@@ -105,43 +99,11 @@ const STUDIO_NAV_SECTIONS: { id: StudioNavSectionId; title: string; items: { lab
       title: "Admin",
       items: [
         { label: "Admin Übersicht", href: "/admin" },
-        { label: "Mail Portal", href: "/admin/mail" },
+        { label: "Benutzer", href: "/admin/users" },
         { label: "Security", href: "/admin/security" },
         { label: "Audit Log", href: "/admin/audit-log" },
         { label: "Tags", href: "/admin/tags" },
         { label: "Cookbook", href: "/admin/cookbook" },
-      ],
-    },
-    {
-      id: "setup",
-      title: "Einrichtung",
-      items: [
-        { label: "Initial Setup", href: "/setup" },
-        { label: "Cookbook", href: "/admin/cookbook" },
-        { label: "KI-Gateway", href: "/admin/ai-gateway" },
-      ],
-    },
-    {
-      id: "system",
-      title: "System & Diagnose",
-      items: [
-        { label: "Systemstatus", href: "/admin/status" },
-        { label: "Jobs", href: "/jobs" },
-        { label: "Einstellungen → Status", href: "/settings?tab=status" },
-      ],
-    },
-    {
-      id: "backup",
-      title: "Backup & Restore",
-      items: [{ label: "Backup", href: "/backup" }],
-    },
-    {
-      id: "settings",
-      title: "Einstellungen",
-      items: [
-        { label: "Einstellungen", href: "/settings" },
-        { label: "Passwort ändern", href: "/account/password" },
-        { label: "Sicherheit (2FA)", href: "/account/security" },
       ],
     },
   ];
@@ -169,24 +131,56 @@ const UNIFIED_SIDEBAR_LINKS: {
     hrefs: ["__portal__", "__portal_worlds__"],
   },
   {
-    id: "studio",
-    title: "Studio",
-    hrefs: ["/studio", "/today", "/worlds", "/capture", "/projects", "/workshop"],
+    id: "heute",
+    title: "Heute",
+    hrefs: ["/today"],
   },
   {
-    id: "library",
-    title: "Bibliothek",
-    hrefs: ["/brain", "/templates", "/search", "/image-studio", "/mail", "/calendar"],
+    id: "worlds",
+    title: "Welten",
+    hrefs: ["/worlds", "/search", "/templates"],
   },
   {
-    id: "tasks",
-    title: "Aufgaben",
-    hrefs: ["/jobs", "/admin/reviews", "/admin/agent-jobs"],
+    id: "leben",
+    title: "Leben",
+    hrefs: ["/capture", "/projects", "/contracts", "/hardware"],
   },
   {
-    id: "administration",
-    title: "Administration",
-    hrefs: ["/admin", "/admin/mail", "/admin/users", "/admin/security", "/admin/audit-log", "/backup", "/settings"],
+    id: "werkstatt",
+    title: "Werkstatt",
+    hrefs: ["/workshop"],
+  },
+  {
+    id: "wissen",
+    title: "Wissen",
+    hrefs: ["/life-brain", "/brain"],
+  },
+  {
+    id: "medien",
+    title: "Medien",
+    hrefs: ["/image-studio", "/mail", "/calendar"],
+  },
+  {
+    id: "ki",
+    title: "KI",
+    hrefs: ["/ai", "/admin/reviews", "/admin/agent-jobs"],
+  },
+  {
+    id: "system",
+    title: "System",
+    hrefs: ["/system", "/jobs", "/backup", "/settings"],
+  },
+  {
+    id: "admin",
+    title: "Admin",
+    hrefs: [
+      "/admin",
+      "/admin/users",
+      "/admin/security",
+      "/admin/audit-log",
+      "/admin/tags",
+      "/admin/cookbook",
+    ],
   },
 ];
 
@@ -212,7 +206,7 @@ function resolveUnifiedHref(
 }
 
 /**
- * Unified app sidebar — Portal, Studio, Bibliothek, Aufgaben, Administration (cockpit mockup).
+ * Unified app sidebar — Portal plus consolidated Studio IA (cockpit mockup).
  */
 export function studioUnifiedSidebarSections(
   activePath: string,
@@ -270,17 +264,16 @@ export function studioFlatNav(activePath: string): StudioNavItem[] {
 /** Compact dashboard sidebar — most-used Studio links. */
 export function studioDashboardNav(activePath: string): StudioNavItem[] {
   const keys = [
-    "/studio",
-    "/worlds",
-    "/admin",
     "/today",
+    "/worlds",
     "/capture",
-    "/search",
     "/ai",
+    "/system",
+    "/admin",
+    "/search",
     "/brain",
     "/image-studio",
     "/backup",
-    "/admin/status",
     "/settings",
   ];
 
@@ -302,9 +295,25 @@ function isStudioNavItemActive(activePath: string, href: string): boolean {
     return normalizedActive === `/settings?tab=${tab}`;
   }
 
+  // Tabbed system hub: /system?tab=homelab
+  if (normalizedHref.startsWith("/system?tab=")) {
+    const tab = normalizedHref.split("tab=")[1];
+    return normalizedActive === `/system?tab=${tab}`;
+  }
+
+  if (normalizedHref === "/system" && normalizedActive.startsWith("/system")) {
+    return true;
+  }
+
+  // Legacy routes that map to the System section
+  if (normalizedHref === "/system") {
+    if (normalizedActive === "/admin/status" || normalizedActive.startsWith("/admin/status/")) {
+      return true;
+    }
+  }
+
   // Prefix match for nested routes (e.g. /worlds/terra/... → /worlds)
   if (
-    normalizedHref !== "/studio" &&
     normalizedHref !== "/admin" &&
     !normalizedHref.includes("?") &&
     normalizedActive.startsWith(`${normalizedHref}/`)
@@ -404,10 +413,10 @@ export function campaignNavItems(
 
 /** Resolve icon-rail active id from Studio path. */
 export function resolveStudioRailActiveId(activePath: string): string | undefined {
-  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/studio";
+  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/today";
   if (normalized.startsWith("/today")) return "today";
   if (normalized.startsWith("/capture")) return "capture";
-  if (normalized.startsWith("/search")) return "search";
+  if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "search";
   if (normalized.startsWith("/image-studio")) return "image-studio";
   if (normalized.startsWith("/ai")) return "ai";
   return undefined;
