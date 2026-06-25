@@ -12,6 +12,7 @@ export const CSS_VARS = {
   accent: "--uwe-accent",
   accentHover: "--uwe-accent-hover",
   accentMuted: "--uwe-accent-muted",
+  onAccent: "--uwe-on-accent",
   danger: "--uwe-danger",
   warning: "--uwe-warning",
   success: "--uwe-success",

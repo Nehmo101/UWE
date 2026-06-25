@@ -43,7 +43,9 @@
 .uwe-v2-btn-primary {
   border-color: var(--uwe-fg);
   background: var(--uwe-fg);
-  color: var(--uwe-card-bg, var(--uwe-bg-elevated));
+  /* Solid page bg as text: the card-bg token is often translucent and muddies
+     contrast against the --uwe-fg fill (WCAG AA failure on light-fg themes). */
+  color: var(--uwe-bg);
 }
 
 .uwe-v2-btn-primary:hover {

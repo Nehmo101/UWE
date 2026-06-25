@@ -35,6 +35,7 @@
   --uwe-accent: #6366f1;
   --uwe-accent-hover: #818cf8;
   --uwe-accent-muted: rgba(99, 102, 241, 0.15);
+  --uwe-on-accent: #000000;
   --uwe-danger: #f87171;
   --uwe-warning: #fbbf24;
   --uwe-success: #4ade80;
@@ -1214,7 +1215,7 @@ html[data-theme="light"] {
 .uwe-btn-primary {
   background: var(--uwe-accent);
   border-color: color-mix(in srgb, var(--uwe-accent) 70%, transparent);
-  color: #fff;
+  color: var(--uwe-on-accent, #fff);
 }
 
 .uwe-btn-primary:hover {

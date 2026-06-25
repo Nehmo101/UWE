@@ -780,7 +780,7 @@ body[data-uwe-design-v2] .uwe-v2-shell .uwe-btn:not(.uwe-v2-btn) {
 body[data-uwe-design-v2] .uwe-v2-shell .uwe-btn-primary:not(.uwe-v2-btn) {
   border-color: color-mix(in srgb, var(--uwe-accent) 60%, var(--uwe-border));
   background: var(--uwe-accent);
-  color: color-mix(in srgb, var(--uwe-bg) 8%, white 92%);
+  color: var(--uwe-on-accent, #fff);
 }
 
 body[data-uwe-design-v2] .uwe-v2-shell .uwe-btn-ghost:not(.uwe-v2-btn) {
