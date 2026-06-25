@@ -66,6 +66,14 @@ jobs:
         env:
           CI: true
 
+      - name: Measure runtime budgets (LCP / Web Vitals)
+        run: pnpm test:e2e:perf
+        env:
+          CI: true
+
+      - name: Enforce runtime budgets
+        run: node scripts/perf-budget-check.mjs --require
+
   postgres-smoke:
     runs-on: ubuntu-latest
     needs: quality

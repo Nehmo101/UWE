@@ -33,9 +33,33 @@ Defined in `packages/database/src/perf-budgets.ts`:
 
 Budgets are wall-clock on CI runners with SQLite. If CI hardware changes, adjust budgets in one place (`perf-budgets.ts`) and document the reason in the PR.
 
+## Runtime budgets (browser LCP / Web Vitals, CI)
+
+Defined in `packages/database/src/perf-budgets.ts` (`RUNTIME_BUDGETS_MS`) and enforced by
+`scripts/perf-budget-check.mjs`. The Playwright perf specs (`e2e/studio-perf.spec.ts`,
+`e2e/portal-perf.spec.ts`) measure Largest Contentful Paint (LCP), First Contentful Paint
+(FCP) and the navigation load duration, writing them to `perf-results.json`; the check then
+fails CI when any metric exceeds its budget.
+
+| Route | LCP | FCP | Load |
+|-------|-----|-----|------|
+| Studio `/today` | 3000 ms | 2000 ms | 4000 ms |
+| Portal `/worlds` | 2800 ms | 1900 ms | 3800 ms |
+
+Wired into the CI `e2e` job:
+
+```bash
+pnpm test:e2e:perf                              # measure → perf-results.json
+node scripts/perf-budget-check.mjs --require    # enforce (fails on breach)
+```
+
+Locally `pnpm perf:budget` is a soft no-op when `perf-results.json` is absent (run the perf
+specs first). Adjust thresholds in `perf-budgets.ts` + `perf-budget-check.mjs` together and
+justify changes in the PR.
+
 ## What is not covered yet
 
-- Real browser LCP measurement in CI (bundle chunk budgets cover client JS size)
+- Lighthouse field metrics (CLS, INP) — only LCP/FCP/load proxies are gated
 - PostgreSQL-specific load tests (`pnpm test:postgres-smoke` covers schema only)
 
 ## Bundle budgets (CI)
@@ -50,7 +74,7 @@ After `pnpm build:release`, `scripts/bundle-budget-check.mjs` validates Studio s
 
 ## What was previously listed as gaps (now partially covered)
 
-- ~~LCP / bundle-size budgets in CI~~ — bundle chunk gate in `quality`
+- ~~LCP / bundle-size budgets in CI~~ — bundle chunk gate in `quality`; runtime LCP/Web-Vitals gate in CI `e2e` job
 - `@next/bundle-analyzer` — optional local profiling only
 
 ## Related

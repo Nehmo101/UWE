@@ -73,6 +73,20 @@ export const PERF_BUDGETS_MS = {
   listPages: 600,
 } as const;
 
+/**
+ * Browser runtime budgets (milliseconds) per key route, enforced in CI by
+ * `scripts/perf-budget-check.mjs` against measured Web Vitals from the
+ * Playwright perf specs. Keys are `<project>:<path>`; metrics are LCP (Largest
+ * Contentful Paint), FCP (First Contentful Paint) and a coarse load/TTI proxy.
+ * Adjust with justification in `docs/engineering/performance.md`.
+ */
+export const RUNTIME_BUDGETS_MS = {
+  "studio:/today": { lcp: 3000, fcp: 2000, load: 4000 },
+  "portal:/worlds": { lcp: 2800, fcp: 1900, load: 3800 },
+} as const;
+
+export type RuntimeMetricName = "lcp" | "fcp" | "load";
+
 export function assertWithinBudget(
   label: string,
   elapsedMs: number,
