@@ -1,4 +1,6 @@
 /* Portal wiki extensions. Base reader typography: design-v2/wiki.css via uwe.css */
+/* Visibility badges: use VisibilityBadge from @uwe/shared-ui (.uwe-badge-*).
+   Legacy .wiki-badge-* classes alias to .uwe-badge-* in packages/shared-ui/src/uwe.css. */
 
 .wiki-nav {
   padding: 1.5rem 1rem;

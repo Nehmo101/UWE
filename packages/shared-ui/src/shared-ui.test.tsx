@@ -84,16 +84,18 @@ describe("shared-ui components", () => {
     const html = renderToStaticMarkup(
       <>
         <VisibilityBadge visibility="player_visible" />
+        <VisibilityBadge visibility="dm_only" />
         <PublishBadge status="published" />
         <PageTypeBadge type="lore" />
       </>,
     );
     assert.match(html, /Portal \(ohne Login\)/);
+    assert.match(html, /Nur GM/);
+    assert.match(html, /uwe-badge-secret/);
     assert.match(html, /aria-label=/);
     assert.match(html, /Veröffentlicht/);
     assert.match(html, /Lore/);
     assert.doesNotMatch(html, /dm_only/);
-    assert.doesNotMatch(html, /Nur GM/);
   });
 
   it("does not expose dm_only labels in player-visible search results", () => {

@@ -923,7 +923,8 @@ html[data-theme="light"] {
   }
 }
 
-.uwe-badge {
+.uwe-badge,
+.wiki-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
@@ -936,19 +937,22 @@ html[data-theme="light"] {
   white-space: nowrap;
 }
 
-.uwe-badge-secret {
+.uwe-badge-secret,
+.wiki-badge-secret {
   background: color-mix(in srgb, var(--uwe-danger) 15%, transparent);
   color: color-mix(in srgb, var(--uwe-danger) 70%, #fff);
   border-color: color-mix(in srgb, var(--uwe-danger) 25%, transparent);
 }
 
-.uwe-badge-player {
+.uwe-badge-player,
+.wiki-badge-player {
   background: color-mix(in srgb, var(--uwe-player-visible) 12%, transparent);
   color: var(--uwe-player-visible);
   border-color: color-mix(in srgb, var(--uwe-player-visible) 20%, transparent);
 }
 
-.uwe-badge-public {
+.uwe-badge-public,
+.wiki-badge-public {
   background: color-mix(in srgb, var(--uwe-info) 12%, transparent);
   color: var(--uwe-info);
 }

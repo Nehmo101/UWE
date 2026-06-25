@@ -28,7 +28,7 @@ import {
 } from "@uwe/database/server";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldModuleShell } from "@/components/WorldModuleShell";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 export interface StudioWikiPageViewProps {
@@ -143,18 +143,6 @@ export async function StudioWikiPageView({
               Zurück zur DM-Ansicht
             </Link>
           )
-        }
-        sidebarExtra={
-          <WorldContextSidebar
-            items={[
-              { label: "← Seitenliste", href: `/worlds/${worldSlug}` },
-              {
-                label: "Graph",
-                href: `/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`,
-              },
-              { label: "Bearbeiten", href: `${pageHref}/edit` },
-            ]}
-          />
         }
         pageHeader={{
           title: view.page.title,

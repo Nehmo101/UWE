@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { VisibilityBadge } from "./StatusBadges";
 
 export type PageCategory = "lore" | "locations" | "npcs" | "dungeons";
 export type PageVisibility = "dm_only" | "player_visible" | "public";
@@ -128,12 +129,7 @@ export function WikiPageList({ pages }: { pages: WikiNavItem[] }) {
               {items.map((page) => (
                 <li key={page.href}>
                   <a href={page.href}>{page.title}</a>
-                  {page.visibility === "dm_only" && (
-                    <span className="uwe-badge uwe-badge-secret">GM</span>
-                  )}
-                  {page.visibility === "player_visible" && (
-                    <span className="uwe-badge uwe-badge-player">Spieler</span>
-                  )}
+                  {page.visibility && <VisibilityBadge visibility={page.visibility} />}
                 </li>
               ))}
             </ul>
@@ -142,14 +138,4 @@ export function WikiPageList({ pages }: { pages: WikiNavItem[] }) {
       })}
     </div>
   );
-}
-
-export function VisibilityBadge({ visibility }: { visibility: PageVisibility }) {
-  if (visibility === "dm_only") {
-    return <span className="uwe-badge uwe-badge-secret">Nur GM</span>;
-  }
-  if (visibility === "player_visible") {
-    return <span className="uwe-badge uwe-badge-player">Spieler sichtbar</span>;
-  }
-  return <span className="uwe-badge uwe-badge-public">Öffentlich</span>;
 }
