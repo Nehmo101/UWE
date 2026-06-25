@@ -27,6 +27,7 @@ import {
 } from "./StatusBadges";
 import { SearchResultsList } from "./SearchResults";
 import { filterPaletteCommands } from "./CommandPalette";
+import { GraphView } from "./GraphView";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uweCss = readFileSync(path.join(__dirname, "uwe.css"), "utf8");
@@ -320,5 +321,42 @@ describe("command palette filtering", () => {
       ["a"],
     );
     assert.equal(filterPaletteCommands(commands, "terra backup").length, 0);
+  });
+});
+
+describe("GraphView accessibility", () => {
+  it("renders aria-label on graph node links", () => {
+    const html = renderToStaticMarkup(
+      <GraphView
+        nodes={[
+          {
+            id: "n1",
+            title: "Elara",
+            slug: "elara",
+            type: "npc",
+            category: "npc",
+            visibility: "player_visible",
+            tags: [],
+            href: "/worlds/terra/npcs/elara",
+            campaignId: null,
+          },
+          {
+            id: "n2",
+            title: "Hafenstadt",
+            slug: "hafenstadt",
+            type: "location",
+            category: "location",
+            visibility: "dm_only",
+            tags: [],
+            href: "/worlds/terra/locations/hafenstadt",
+            campaignId: null,
+            isFocus: true,
+          },
+        ]}
+        edges={[]}
+      />,
+    );
+    assert.match(html, /aria-label="Elara, NPC"/);
+    assert.match(html, /aria-label="Hafenstadt, Ort \(Fokus\)"/);
   });
 });

@@ -36,6 +36,8 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 | Command Palette Escape | ✅ | Schließt Modal |
 | Filter Sheet Escape | ✅ | Schließt Sheet |
 | Sidebar Drawer Escape | ✅ | Schließt Drawer |
+| Sidebar Drawer Focus Trap | ✅ | Tab-Zyklus + Rückfokus auf Toggle |
+| Filter Sheet Focus Trap | ✅ | Initialer Fokus auf Schließen, Tab-Zyklus |
 | Command Palette Focus Trap | ✅ | Tab-Zyklus innerhalb des Dialogs |
 | Skip Link | ✅ | „Zum Inhalt springen“ in `AppShell` |
 
@@ -49,7 +51,8 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 | Bottom Nav | ✅ | `aria-label`, `aria-current="page"` |
 | Capture FAB | ✅ | `aria-label="Schnell erfassen"` |
 | Command Palette | ✅ | `role="dialog"`, `aria-modal`, `aria-controls`, `aria-describedby` |
-| Filter Sheet | ✅ | `role="dialog"`, `aria-modal="true"` |
+| Filter Sheet | ✅ | `role="dialog"`, `aria-modal="true"`, Focus Trap |
+| GraphView-Knoten | ✅ | `aria-label` pro SVG-Link (Titel + Kategorie) |
 
 ### Motion
 
@@ -79,13 +82,10 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 
 ### Keyboard & Fokus
 
-- [ ] **Sidebar Focus Trap**: Fokus kann beim offenen Drawer in den Hintergrund entweichen; Rückfokus auf Toggle fehlt.
-- [ ] **Filter Sheet Focus Trap**: Kein initialer Fokus / Tab-Zyklus im Sheet.
 - [ ] **Command Palette Combobox-Muster**: Aktuell `listbox` + `option`; WAI-ARIA Combobox wäre semantisch korrekter.
 
 ### Screenreader
 
-- [ ] **GraphView-Knoten**: SVG-Links ohne individuelle accessible names.
 - [ ] **Wiki HTML-Inhalt**: `dangerouslySetInnerHTML` — Überschriftenstruktur/Alt-Texte abhängig vom Autor.
 - [ ] **Bottom Nav Icons**: Emoji/Text — uneinheitliche Vorlese-Aussprache je Plattform.
 
@@ -118,9 +118,11 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 |-------|-------|
 | `packages/shared-ui/src/ThemePicker.tsx` | Barrierefreier Theme-Picker |
 | `packages/shared-ui/src/uwe.css` | Tokens, focus-visible, reduced-motion, Theme-Picker-Styles |
+| `packages/shared-ui/src/useFocusTrap.ts` | Focus Trap Hook (Sidebar, Filter, Palette) |
 | `packages/shared-ui/src/CommandPalette.tsx` | Focus Trap, ARIA |
 | `packages/shared-ui/src/MobileComponents.tsx` | Bottom Nav, Filter Sheet |
-| `packages/shared-ui/src/AppShell.tsx` | Skip Link, Main Landmark |
+| `packages/shared-ui/src/GraphView.tsx` | Graph-Knoten `aria-label` |
+| `packages/shared-ui/src/AppShell.tsx` | Skip Link, Sidebar Focus Trap |
 | `apps/studio/app/layout.tsx` | `data-theme` aus DB |
 | `apps/studio/app/settings/page.tsx` | Theme Picker Integration |
 | `apps/studio/app/wiki.css` / `apps/portal/app/wiki.css` | Reader-Tokens |

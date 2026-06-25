@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useFocusTrap } from "./useFocusTrap";
 
 export interface CommandPaletteCommand {
   id: string;
@@ -98,36 +99,12 @@ export function CommandPalette({
     };
   }, []);
 
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Tab" || !dialogRef.current) return;
-
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'input, button, [href], [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  useFocusTrap({
+    active: open,
+    containerRef: dialogRef,
+    initialFocusRef: inputRef,
+    onEscape: close,
+  });
 
   useEffect(() => {
     if (!open || !searchEndpoint || query.trim().length < 2) {

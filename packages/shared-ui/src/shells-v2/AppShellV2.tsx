@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,6 +13,7 @@ import {
   type BottomNavItem,
 } from "../MobileComponents";
 import { resolveV2BottomNavIcon, IconMenu } from "./icons";
+import { useFocusTrap } from "../useFocusTrap";
 
 export interface AppShellV2Props {
   sidebar?: ReactNode;
@@ -104,19 +106,20 @@ export function AppShellV2({
   const hasRail = Boolean(rail);
   const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
 
+  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarBackdropRef = useRef<HTMLButtonElement>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
+
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), []);
 
-  useEffect(() => {
-    if (!sidebarOpen) return;
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeSidebar();
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [sidebarOpen, closeSidebar]);
+  useFocusTrap({
+    active: sidebarOpen,
+    containerRef: sidebarRef,
+    extraFocusablesRef: sidebarBackdropRef,
+    returnFocusRef: sidebarToggleRef,
+    onEscape: closeSidebar,
+  });
 
   useEffect(() => {
     function onToggleSidebar() {
@@ -149,6 +152,7 @@ export function AppShellV2({
           <header className="uwe-v2-topbar">
             {hasSidebar ? (
               <button
+                ref={sidebarToggleRef}
                 type="button"
                 className="uwe-v2-mobile-nav-toggle"
                 aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
@@ -172,13 +176,14 @@ export function AppShellV2({
           {hasSidebar ? (
             <>
               <button
+                ref={sidebarBackdropRef}
                 type="button"
                 className="uwe-v2-sidebar-backdrop"
                 aria-label="Navigation schließen"
                 tabIndex={sidebarOpen ? 0 : -1}
                 onClick={closeSidebar}
               />
-              <aside id="uwe-v2-sidebar" className="uwe-v2-sidebar">
+              <aside id="uwe-v2-sidebar" ref={sidebarRef} className="uwe-v2-sidebar">
                 <MobileSidebarContent>
                   <div className="uwe-v2-sidebar-content">{sidebar}</div>
                 </MobileSidebarContent>

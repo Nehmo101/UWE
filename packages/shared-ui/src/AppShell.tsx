@@ -3,9 +3,11 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useFocusTrap } from "./useFocusTrap";
 import {
   MobileBottomNav,
   MobileContextPanel,
@@ -47,19 +49,20 @@ export function AppShell({
   const hasRail = Boolean(rail);
   const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
 
+  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarBackdropRef = useRef<HTMLButtonElement>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
+
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), []);
 
-  useEffect(() => {
-    if (!sidebarOpen) return;
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeSidebar();
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [sidebarOpen, closeSidebar]);
+  useFocusTrap({
+    active: sidebarOpen,
+    containerRef: sidebarRef,
+    extraFocusablesRef: sidebarBackdropRef,
+    returnFocusRef: sidebarToggleRef,
+    onEscape: closeSidebar,
+  });
 
   useEffect(() => {
     function onToggleSidebar() {
@@ -115,6 +118,7 @@ export function AppShell({
             {hasSidebar && (
               <>
                 <button
+                  ref={sidebarToggleRef}
                   type="button"
                   className="uwe-mobile-nav-toggle"
                   aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
@@ -153,13 +157,14 @@ export function AppShell({
           {hasSidebar && (
             <>
               <button
+                ref={sidebarBackdropRef}
                 type="button"
                 className="uwe-sidebar-backdrop"
                 aria-label="Navigation schließen"
                 tabIndex={sidebarOpen ? 0 : -1}
                 onClick={closeSidebar}
               />
-              <aside id="uwe-sidebar" className="uwe-sidebar">
+              <aside id="uwe-sidebar" ref={sidebarRef} className="uwe-sidebar">
                 <MobileSidebarContent>{sidebar}</MobileSidebarContent>
               </aside>
             </>

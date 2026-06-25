@@ -71,6 +71,11 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+function graphNodeAccessibleName(node: GraphNode): string {
+  const category = GRAPH_NODE_CATEGORY_LABELS[node.category];
+  return node.isFocus ? `${node.title}, ${category} (Fokus)` : `${node.title}, ${category}`;
+}
+
 export function GraphView({
   nodes,
   edges,
@@ -147,7 +152,12 @@ export function GraphView({
         })}
 
         {layoutNodes.map((node) => (
-          <a key={node.id} href={node.href} className={node.isFocus ? "uwe-graph-node uwe-graph-node-focus" : "uwe-graph-node"}>
+          <a
+            key={node.id}
+            href={node.href}
+            className={node.isFocus ? "uwe-graph-node uwe-graph-node-focus" : "uwe-graph-node"}
+            aria-label={graphNodeAccessibleName(node)}
+          >
             <circle
               cx={node.x}
               cy={node.y}

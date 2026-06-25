@@ -5,9 +5,11 @@ import {
   useContext,
   useEffect,
   useId,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useFocusTrap } from "./useFocusTrap";
 
 /* ── Sidebar context (close drawer on navigation) ── */
 
@@ -192,17 +194,27 @@ export function MobileFilterSheet({
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLButtonElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const close = () => setOpen(false);
+
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    extraFocusablesRef: backdropRef,
+    initialFocusRef: closeButtonRef,
+    returnFocusRef: toggleRef,
+    onEscape: close,
+  });
 
   useEffect(() => {
     if (!open) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prev;
     };
   }, [open]);
@@ -211,6 +223,7 @@ export function MobileFilterSheet({
     <div className="uwe-filter-sheet" data-open={open ? "true" : "false"}>
       <div className="uwe-filter-sheet-bar">
         <button
+          ref={toggleRef}
           type="button"
           className="uwe-filter-sheet-toggle"
           aria-expanded={open}
@@ -225,19 +238,29 @@ export function MobileFilterSheet({
       </div>
       {open && (
         <button
+          ref={backdropRef}
           type="button"
           className="uwe-filter-sheet-backdrop"
           aria-label="Filter schließen"
-          onClick={() => setOpen(false)}
+          onClick={close}
         />
       )}
-      <div id={id} className="uwe-filter-sheet-panel" hidden={!open} role="dialog" aria-modal="true" aria-label={title}>
+      <div
+        id={id}
+        ref={panelRef}
+        className="uwe-filter-sheet-panel"
+        hidden={!open}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="uwe-filter-sheet-header">
           <strong>{title}</strong>
           <button
+            ref={closeButtonRef}
             type="button"
             className="uwe-btn uwe-btn-ghost uwe-btn-sm"
-            onClick={() => setOpen(false)}
+            onClick={close}
           >
             Schließen
           </button>
