@@ -19,7 +19,6 @@ import {
 } from "@uwe/database/server";
 import {
   AI_TASK_LABELS,
-  createApiKeyStoreFromEnv,
   generateAiTaskBySlug,
   indexBrainDocument,
   indexPersonalBrainDocument,
@@ -31,6 +30,7 @@ import {
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
+import { createApiKeyStore } from "./ai-key-store";
 import {
   executeImport,
   parseImportContent,
@@ -206,7 +206,7 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
   }
 
   const overrides = await getAiSettingsOverrides();
-  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const settings = resolveAiBrainSettings(await createApiKeyStore(), overrides);
   const useMock = payload.useMock ?? process.env.AI_USE_MOCK === "true";
   const deps = {
     repo: createUweRepository(),
@@ -355,7 +355,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
     localOnly: resolveLocalOnlyMode(systemSettings),
     enabled: systemSettings.ai.enabled,
   };
-  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const settings = resolveAiBrainSettings(await createApiKeyStore(), overrides);
   const useMock = payload.useMock ?? process.env.AI_USE_MOCK === "true";
 
   const world = await repo.getWorldBySlug(payload.worldSlug);
@@ -420,7 +420,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
         localOnly: settings.localOnly,
         sessionId: payload.sessionId,
       },
-      apiKeyStore: createApiKeyStoreFromEnv(),
+      apiKeyStore: await createApiKeyStore(),
       useMock,
     }) as Awaited<ReturnType<typeof generateAiTaskBySlug>> & {
       prompts: { systemPrompt: string; userPrompt: string };

@@ -476,44 +476,81 @@ export default async function SettingsPage({ searchParams }: Props) {
           )}
 
           {activeTab === "ai" && (
-            <form action={updateSettingsAction} className="uwe-form">
+            <form action={updateSettingsAction} className="uwe-form uwe-settings-stack">
               <input type="hidden" name="tab" value="ai" />
-              <h2>AI Settings</h2>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="aiEnabled" defaultChecked={settings.ai.enabled} />
-                AI Brain aktiv
-              </label>
-              <label className="uwe-checkbox">
-                <input
-                  type="checkbox"
-                  name="localOnlyMode"
-                  defaultChecked={settings.ai.localOnlyMode}
-                />
-                Local-only AI Mode
-              </label>
-              <section style={{ marginTop: "1.5rem" }}>
-                <h3>API Keys (Platzhalter)</h3>
-                <div className="uwe-page-table-wrap">
-                  <table className="uwe-page-table">
-                    <thead>
-                      <tr>
-                        <th>Provider</th>
-                        <th>Status</th>
-                        <th>Quelle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {settings.ai.providerKeyPlaceholders.map((provider) => (
-                        <tr key={provider.id}>
-                          <td>{provider.label}</td>
-                          <td>{provider.configured ? "••••••••" : "Nicht konfiguriert"}</td>
-                          <td>{provider.source === "env" ? "Umgebungsvariable" : "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+              <SettingsCollapsiblePanel title="KI-Allgemein" summary="Aktivierung und Betriebsmodus" defaultOpen>
+                <label className="uwe-checkbox">
+                  <input type="checkbox" name="aiEnabled" defaultChecked={settings.ai.enabled} />
+                  AI Brain aktiv
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="localOnlyMode"
+                    defaultChecked={settings.ai.localOnlyMode}
+                  />
+                  Local-only AI Mode (kein Cloud-Provider erlaubt)
+                </label>
+              </SettingsCollapsiblePanel>
+
+              <SettingsCollapsiblePanel
+                title="Cloud-Provider API Keys"
+                summary="Verschlüsselt gespeichert — ENV hat Vorrang"
+                defaultOpen
+              >
+                <p className="uwe-hint">
+                  API Keys können hier im Admin Portal hinterlegt werden (verschlüsselt gespeichert)
+                  oder über Umgebungsvariablen (<code>.env</code>) konfiguriert werden.
+                  Umgebungsvariablen haben immer Vorrang.
+                </p>
+                {settings.ai.providerKeyPlaceholders.map((provider) => {
+                  const sourceLabel =
+                    provider.source === "env"
+                      ? "Umgebungsvariable"
+                      : provider.source === "db"
+                        ? "Admin Portal"
+                        : "—";
+                  const envLocked = provider.source === "env";
+                  return (
+                    <div key={provider.id} className="uwe-settings-api-key-row">
+                      <div className="uwe-settings-api-key-header">
+                        <strong>{provider.label}</strong>
+                        <span className={`uwe-badge ${provider.configured ? "uwe-badge-ok" : "uwe-badge-missing"}`}>
+                          {provider.configured ? `Konfiguriert · ${sourceLabel}` : "Nicht konfiguriert"}
+                        </span>
+                      </div>
+                      {envLocked ? (
+                        <p className="uwe-hint">
+                          Über Umgebungsvariable gesetzt — kann hier nicht überschrieben werden.
+                        </p>
+                      ) : (
+                        <>
+                          <label>
+                            API Key
+                            <input
+                              type="password"
+                              name={`apiKey_${provider.id}`}
+                              placeholder={
+                                provider.source === "db"
+                                  ? "Leer lassen = bestehenden Key behalten"
+                                  : "API Key eingeben"
+                              }
+                              autoComplete="new-password"
+                            />
+                          </label>
+                          {provider.source === "db" && (
+                            <label className="uwe-checkbox">
+                              <input type="checkbox" name={`clearApiKey_${provider.id}`} />
+                              Key löschen
+                            </label>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </SettingsCollapsiblePanel>
+
               <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
               </button>

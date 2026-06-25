@@ -77,13 +77,21 @@ export interface AiProviderKeyPlaceholder {
   id: string;
   label: string;
   configured: boolean;
-  source: "env" | "none";
+  source: "env" | "db" | "none";
+}
+
+/** Encrypted API key stored in system settings (never sent to clients). */
+export interface AiProviderStoredKey {
+  providerId: string;
+  keyEnc: string;
 }
 
 export interface AiSettings {
   localOnlyMode: boolean;
   enabled: boolean;
   providerKeyPlaceholders: AiProviderKeyPlaceholder[];
+  /** Encrypted provider API keys stored in DB. Never sent to clients. */
+  cloudApiKeys?: AiProviderStoredKey[] | null;
 }
 
 export interface StorageSettings {
@@ -179,7 +187,7 @@ export type UweSystemSettingsUpdate = {
   worlds?: Partial<WorldSettings>;
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
-  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled">>;
+  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys">>;
   mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "smtpCredentials">>;
   imageStudio?: Partial<ImageStudioPortalSettings>;
   storage?: Partial<StorageSettings>;
@@ -424,6 +432,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     localOnlyMode: false,
     enabled: true,
     providerKeyPlaceholders: buildProviderKeyPlaceholders(),
+    cloudApiKeys: null,
   },
   mail: buildMailSettings(),
   imageStudio: buildImageStudioSettings(),
@@ -445,7 +454,9 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   },
 };
 
-function buildProviderKeyPlaceholders(): AiProviderKeyPlaceholder[] {
+function buildProviderKeyPlaceholders(
+  storedKeys?: AiProviderStoredKey[] | null,
+): AiProviderKeyPlaceholder[] {
   const providers: Array<{ id: string; label: string; envKey: string }> = [
     { id: "openai", label: "OpenAI", envKey: "OPENAI_API_KEY" },
     { id: "anthropic", label: "Anthropic", envKey: "ANTHROPIC_API_KEY" },
@@ -454,14 +465,57 @@ function buildProviderKeyPlaceholders(): AiProviderKeyPlaceholder[] {
   ];
 
   return providers.map((provider) => {
-    const configured = Boolean(process.env[provider.envKey]?.trim());
-    return {
-      id: provider.id,
-      label: provider.label,
-      configured,
-      source: configured ? "env" : "none",
-    };
+    const fromEnv = Boolean(process.env[provider.envKey]?.trim());
+    if (fromEnv) {
+      return { id: provider.id, label: provider.label, configured: true, source: "env" as const };
+    }
+    const fromDb = storedKeys?.some((k) => k.providerId === provider.id && k.keyEnc);
+    if (fromDb) {
+      return { id: provider.id, label: provider.label, configured: true, source: "db" as const };
+    }
+    return { id: provider.id, label: provider.label, configured: false, source: "none" as const };
   });
+}
+
+/** Encrypts or replaces a single provider key in the stored list. Pass key=undefined to remove. */
+export function buildAiProviderKeyUpdate(
+  providerId: string,
+  key: string | undefined,
+  existing: AiProviderStoredKey[] | null | undefined,
+): AiProviderStoredKey[] {
+  const current = existing ?? [];
+  if (!key || !key.trim()) {
+    return current.filter((k) => k.providerId !== providerId);
+  }
+  const keyEnc = encryptSecret(key.trim(), resolveTokenEncryptionSecret());
+  return [
+    ...current.filter((k) => k.providerId !== providerId),
+    { providerId, keyEnc },
+  ];
+}
+
+/** Returns decrypted API keys from settings (env takes precedence, then DB). */
+export function resolveDecryptedProviderKeys(
+  settings: UweSystemSettings,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const stored = settings.ai.cloudApiKeys;
+  if (!stored?.length) return result;
+
+  const secret = resolveTokenEncryptionSecret();
+  for (const storedKey of stored) {
+    if (storedKey.keyEnc) {
+      try {
+        const decrypted = decryptSecret(storedKey.keyEnc, secret);
+        if (decrypted) {
+          result[storedKey.providerId] = decrypted;
+        }
+      } catch {
+        // ignore individual decrypt failures
+      }
+    }
+  }
+  return result;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -496,9 +550,16 @@ function mergeSettings(
         ? {
             localOnlyMode: Boolean((stored.ai as unknown as AiSettings).localOnlyMode),
             enabled: (stored.ai as unknown as AiSettings).enabled ?? base.ai.enabled,
+            cloudApiKeys: Array.isArray((stored.ai as unknown as AiSettings).cloudApiKeys)
+              ? ((stored.ai as unknown as AiSettings).cloudApiKeys as AiProviderStoredKey[])
+              : null,
           }
         : {}),
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(),
+      providerKeyPlaceholders: buildProviderKeyPlaceholders(
+        isRecord(stored.ai)
+          ? ((stored.ai as unknown as AiSettings).cloudApiKeys ?? null)
+          : null,
+      ),
     },
     mail: buildMailSettings(readMailSettingsInput(stored.mail)),
     imageStudio: buildImageStudioSettings(readImageStudioSettingsInput(stored.imageStudio)),
@@ -533,7 +594,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
     },
     ai: {
       ...settings.ai,
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(),
+      providerKeyPlaceholders: buildProviderKeyPlaceholders(settings.ai.cloudApiKeys),
     },
     mail: buildMailSettings({
       enabled: settings.mail.enabled,
@@ -609,10 +670,7 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
     },
     ai: {
       ...normalized.ai,
-      providerKeyPlaceholders: normalized.ai.providerKeyPlaceholders.map((placeholder) => ({
-        ...placeholder,
-        configured: placeholder.configured,
-      })),
+      cloudApiKeys: undefined,
     },
   };
 }
@@ -779,7 +837,15 @@ export class SettingsService {
       ai: {
         ...current.ai,
         ...update.ai,
-        providerKeyPlaceholders: buildProviderKeyPlaceholders(),
+        cloudApiKeys:
+          update.ai?.cloudApiKeys !== undefined
+            ? update.ai.cloudApiKeys
+            : current.ai.cloudApiKeys,
+        providerKeyPlaceholders: buildProviderKeyPlaceholders(
+          update.ai?.cloudApiKeys !== undefined
+            ? update.ai.cloudApiKeys
+            : current.ai.cloudApiKeys,
+        ),
       },
       mail: buildMailSettings({
         enabled: update.mail?.enabled ?? current.mail.enabled,

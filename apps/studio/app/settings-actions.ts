@@ -7,11 +7,13 @@ import {
   mapServerBackgroundToClient,
   resolveThemePreferencesForScope,
   buildMailSmtpCredentialsUpdate,
+  buildAiProviderKeyUpdate,
   type BackgroundPattern,
   type UweSystemSettingsUpdate,
   type Visibility,
   type CanonicalStatus,
   type ThemeAppearance,
+  type AiProviderStoredKey,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -101,12 +103,28 @@ export async function updateSettingsAction(formData: FormData) {
         exportsPath: String(formData.get("exportsPath") || ""),
       };
       break;
-    case "ai":
+    case "ai": {
+      const current = await repo().getSystemSettings();
+      const providerIds = ["openai", "anthropic", "gemini", "openrouter"] as const;
+      let cloudApiKeys: AiProviderStoredKey[] | null = current.ai.cloudApiKeys ?? null;
+
+      for (const providerId of providerIds) {
+        const key = String(formData.get(`apiKey_${providerId}`) || "").trim();
+        const clear = parseBoolean(formData.get(`clearApiKey_${providerId}`));
+        if (clear) {
+          cloudApiKeys = buildAiProviderKeyUpdate(providerId, undefined, cloudApiKeys);
+        } else if (key) {
+          cloudApiKeys = buildAiProviderKeyUpdate(providerId, key, cloudApiKeys);
+        }
+      }
+
       update.ai = {
         enabled: parseBoolean(formData.get("aiEnabled")),
         localOnlyMode: parseBoolean(formData.get("localOnlyMode")),
+        cloudApiKeys,
       };
       break;
+    }
     case "mail": {
       const current = await repo().getSystemSettings();
       const smtpPortRaw = Number.parseInt(String(formData.get("smtpPort") || "587"), 10);

@@ -17,7 +17,6 @@ import {
   AI_TASK_LABELS,
   buildAiContextBySlug,
   createProvider,
-  createApiKeyStoreFromEnv,
   InferenceUrlBlockedError,
   listSessionsForBrain,
   resolveAiBrainSettings,
@@ -30,6 +29,7 @@ import {
 } from "@uwe/security";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 import { jsonError } from "./api-response";
+import { createApiKeyStore } from "./ai-key-store";
 
 async function getAiSettingsOverrides() {
   const systemSettings = await getSystemSettings();
@@ -77,19 +77,20 @@ function handleAiError(error: unknown) {
 
 export async function getSettings() {
   const overrides = await getAiSettingsOverrides();
-  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const settings = resolveAiBrainSettings(await createApiKeyStore(), overrides);
   return NextResponse.json({ settings });
 }
 
 export async function getModels(providerId: AiProviderId, useMock = false) {
   const overrides = await getAiSettingsOverrides();
-  const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+  const apiKeyStore = await createApiKeyStore();
+  const settings = resolveAiBrainSettings(apiKeyStore, overrides);
   if (settings.localOnly && !settings.providers.find((p) => p.id === providerId)?.isLocal) {
     return jsonError("Local-only-Modus: Cloud-Provider nicht verfügbar.", 403);
   }
 
   try {
-    const provider = createProvider(providerId, createApiKeyStoreFromEnv(), { useMock });
+    const provider = createProvider(providerId, apiKeyStore, { useMock });
     const models = await provider.listModels();
     const health = await provider.healthCheck();
     return NextResponse.json({ models, health });
@@ -125,7 +126,7 @@ export async function postContext(body: {
   try {
     const repo = createUweRepository();
     const overrides = await getAiSettingsOverrides();
-    const settings = resolveAiBrainSettings(createApiKeyStoreFromEnv(), overrides);
+    const settings = resolveAiBrainSettings(await createApiKeyStore(), overrides);
 
     const allowDmOnly = resolveEffectiveAllowDmOnly({
       clientAllowDmOnly: body.allowDmOnly,

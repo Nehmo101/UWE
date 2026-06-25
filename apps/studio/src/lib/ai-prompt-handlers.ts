@@ -4,7 +4,6 @@ import {
   AiProviderError,
   AiRouterError,
   contextModeRequiresLocalContext,
-  createApiKeyStoreFromEnv,
   InferenceUrlBlockedError,
   isRtxReady,
   resolveAiBrainSettings,
@@ -22,6 +21,7 @@ import {
   resolveLocalOnlyMode,
 } from "@uwe/database/server";
 import { loadStudioPersonalBrainPromptContext } from "./personal-brain-ai-context";
+import { createApiKeyStore } from "./ai-key-store";
 import {
   AiAccessDeniedError,
   AiPolicyViolationError,
@@ -113,7 +113,7 @@ export async function executeAiPrompt(
   }
 
   const overrides = await getSettingsOverrides();
-  const apiKeyStore = createApiKeyStoreFromEnv();
+  const apiKeyStore = await createApiKeyStore();
   const settings = resolveAiBrainSettings(apiKeyStore, overrides);
 
   if (!settings.enabled) {
