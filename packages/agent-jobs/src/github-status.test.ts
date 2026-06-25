@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fetchWorkflowRunStatus } from "./github-status";
+import { fetchPullRequestForBranch, fetchWorkflowRunStatus } from "./github-status";
 
 describe("fetchWorkflowRunStatus", () => {
   it("returns the latest workflow run for a branch", async () => {
@@ -47,6 +47,53 @@ describe("fetchWorkflowRunStatus", () => {
     try {
       await assert.rejects(
         () => fetchWorkflowRunStatus("acme", "repo", "bad-token", "main"),
+        /403/,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("fetchPullRequestForBranch", () => {
+  it("returns the latest pull request for a branch head", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      assert.match(url, /repos\/acme\/repo\/pulls/);
+      assert.match(url, /head=acme%3Acursor%2Ffeature-branch/);
+      return new Response(
+        JSON.stringify([
+          {
+            number: 42,
+            html_url: "https://github.com/acme/repo/pull/42",
+          },
+        ]),
+        { status: 200 },
+      );
+    };
+
+    try {
+      const result = await fetchPullRequestForBranch(
+        "acme",
+        "repo",
+        "ghp_test",
+        "cursor/feature-branch",
+      );
+      assert.equal(result.number, 42);
+      assert.equal(result.url, "https://github.com/acme/repo/pull/42");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("throws when GitHub returns an error", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response("forbidden", { status: 403 });
+
+    try {
+      await assert.rejects(
+        () => fetchPullRequestForBranch("acme", "repo", "bad-token", "main"),
         /403/,
       );
     } finally {

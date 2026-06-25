@@ -17,6 +17,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/reset-password",
   "/api/auth",
   "/api/health",
+  "/api/agent-jobs/callback",
 ];
 
 function isPublicPath(pathname: string): boolean {

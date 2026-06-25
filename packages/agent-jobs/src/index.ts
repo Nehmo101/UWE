@@ -5,7 +5,7 @@
 
 import { fetchWorkflowRunStatus } from "./github-status";
 
-export { fetchWorkflowRunStatus, type WorkflowRunStatus } from "./github-status";
+export { fetchWorkflowRunStatus, fetchPullRequestForBranch, type WorkflowRunStatus, type PullRequestSummary } from "./github-status";
 
 export type DevAgentJobProvider = "github_actions" | "cursor_cloud" | "cursor_cli_local";
 
@@ -22,6 +22,7 @@ export interface AgentJobDispatchResult {
   githubRunId?: string;
   cursorJobId?: string;
   branchName?: string;
+  prUrl?: string;
   error?: string;
 }
 
@@ -183,6 +184,7 @@ export async function dispatchCursorCloudJob(
     provider: "cursor_cloud",
     cursorJobId: data.id,
     branchName: data.branchName,
+    prUrl: data.prUrl,
   };
 }
 

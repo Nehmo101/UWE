@@ -4,7 +4,7 @@ import {
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import { fetchWorkflowRunStatus, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
+import { fetchPullRequestForBranch, fetchWorkflowRunStatus, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { dispatchJob } from "@/src/lib/job-executor";
 import {
   guardStudioMutation,
@@ -103,12 +103,33 @@ export async function POST(request: Request, context: RouteContext) {
       githubToken,
       existing.branchName,
     );
+
+    let prUrl = existing.prUrl;
+    if (
+      runStatus.status === "completed" &&
+      runStatus.conclusion === "success" &&
+      !prUrl
+    ) {
+      try {
+        const pullRequest = await fetchPullRequestForBranch(
+          owner,
+          repo,
+          githubToken,
+          existing.branchName,
+        );
+        prUrl = pullRequest.url ?? existing.prUrl;
+      } catch {
+        // Best effort — workflow status still updates the job.
+      }
+    }
+
     const job = await agentJobs.applyPollResult(jobId, {
       status: runStatus.status,
       conclusion: runStatus.conclusion,
       runId: runStatus.runId != null ? String(runStatus.runId) : null,
       htmlUrl: runStatus.htmlUrl,
       branchName: existing.branchName,
+      prUrl,
     });
     return NextResponse.json({ job, polled: true, runStatus });
   } catch (error) {

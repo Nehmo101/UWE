@@ -200,6 +200,7 @@ export async function runAgentJob(ctx: JobRunnerContext): Promise<Record<string,
     branchName: dispatch.branchName ?? null,
     githubRunId: dispatch.githubRunId ?? null,
     cursorJobId: dispatch.cursorJobId ?? null,
+    prUrl: dispatch.prUrl ?? null,
   });
 
   await db.$disconnect();

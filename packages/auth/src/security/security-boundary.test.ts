@@ -177,11 +177,13 @@ describe("security boundary", () => {
       ) {
         continue;
       }
-      const needsAlternateGuard = file.endsWith("/health/private/route.ts");
+      const needsAlternateGuard =
+        file.endsWith("/health/private/route.ts") ||
+        file.endsWith("/agent-jobs/callback/route.ts");
       if (needsAlternateGuard) {
         assert.match(
           content,
-          /requirePrivateHealthAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireAdminMailApi|requireAdminMailMutation/,
+          /requirePrivateHealthAuth|requireAgentJobCallbackAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireAdminMailApi|requireAdminMailMutation/,
           `${file} must call an auth guard`,
         );
         continue;

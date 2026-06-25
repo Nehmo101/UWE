@@ -88,3 +88,32 @@ jobs:
             --title "${{ github.event.inputs.title }}" \
             --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge. Full gate runs on merge to main." \
             --draft || echo "PR may already exist"
+
+      - name: Notify UWE completion callback
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STUDIO_API_TOKEN: ${{ secrets.STUDIO_API_TOKEN }}
+          STUDIO_CALLBACK_URL: ${{ secrets.STUDIO_CALLBACK_URL }}
+        run: |
+          if [ -z "$STUDIO_CALLBACK_URL" ] || [ -z "$STUDIO_API_TOKEN" ]; then
+            echo "STUDIO_CALLBACK_URL or STUDIO_API_TOKEN not set — skipping UWE callback"
+            exit 0
+          fi
+          STATUS="completed"
+          ERROR_MESSAGE=""
+          if [ "${{ job.status }}" != "success" ]; then
+            STATUS="failed"
+            ERROR_MESSAGE="GitHub Actions job status: ${{ job.status }}"
+          fi
+          PR_URL=""
+          if [ "$STATUS" = "completed" ]; then
+            PR_URL="$(gh pr view "${{ github.event.inputs.branch_name }}" --json url -q .url 2>/dev/null || true)"
+          fi
+          PAYLOAD=$(node -e "console.log(JSON.stringify({job_id: process.argv[1], status: process.argv[2], pr_url: process.argv[3] || null, branch_name: process.argv[4], error_message: process.argv[5] || null}))" \
+            "${{ github.event.inputs.job_id }}" "$STATUS" "$PR_URL" "${{ github.event.inputs.branch_name }}" "$ERROR_MESSAGE")
+          curl -sf -X POST "${STUDIO_CALLBACK_URL%/}/api/agent-jobs/callback" \
+            -H "Authorization: Bearer ${STUDIO_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            || echo "UWE callback failed (non-fatal)"

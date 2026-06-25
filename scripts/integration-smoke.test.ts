@@ -329,6 +329,7 @@ describe("integration smoke — Media, Calendar, DnD & Agent routes", () => {
     "apps/studio/app/api/calendar/events/route.ts",
     "apps/studio/app/api/calendar/feeds/route.ts",
     "apps/studio/app/api/agent-jobs/route.ts",
+    "apps/studio/app/api/agent-jobs/callback/route.ts",
     "apps/studio/app/api/dnd-api/route.ts",
     "packages/calendar/src/index.ts",
     "packages/dnd-api/src/index.ts",

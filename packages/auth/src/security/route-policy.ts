@@ -150,6 +150,7 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
   "/api/spotify/callback",
+  "/api/agent-jobs/callback",
 ] as const;
 
 /** All Studio app routes are protected in production exposure scenarios. */

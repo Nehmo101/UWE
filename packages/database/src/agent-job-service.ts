@@ -59,6 +59,14 @@ export interface AgentJobPollResult {
   branchName?: string | null;
 }
 
+export interface AgentJobCompletionInput {
+  status: "completed" | "failed";
+  prUrl?: string | null;
+  branchName?: string | null;
+  errorMessage?: string | null;
+  githubRunId?: string | null;
+}
+
 export class DevAgentJobService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -170,6 +178,40 @@ export class DevAgentJobService {
           status: result.status ?? null,
           conclusion: result.conclusion ?? null,
           htmlUrl: result.htmlUrl ?? null,
+        },
+      },
+    });
+  }
+
+  async applyCompletionCallback(id: string, input: AgentJobCompletionInput) {
+    const existing = await this.getJob(id);
+    if (!existing) {
+      throw new Error("Agent-Job nicht gefunden.");
+    }
+
+    if (existing.status === "completed" || existing.status === "cancelled") {
+      return existing;
+    }
+
+    const completedAt = new Date();
+
+    return this.updateJob(id, {
+      status: input.status,
+      prUrl: input.prUrl ?? existing.prUrl,
+      branchName: input.branchName ?? existing.branchName,
+      githubRunId: input.githubRunId ?? existing.githubRunId,
+      errorMessage:
+        input.status === "failed"
+          ? (input.errorMessage ?? existing.errorMessage ?? "Agent-Job fehlgeschlagen.")
+          : null,
+      completedAt,
+      result: {
+        ...(existing.result && typeof existing.result === "object"
+          ? (existing.result as Record<string, unknown>)
+          : {}),
+        callback: {
+          status: input.status,
+          at: completedAt.toISOString(),
         },
       },
     });
