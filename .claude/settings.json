@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install --frozen-lockfile)",
+      "Bash(pnpm quality)",
+      "Bash(pnpm ci:check)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:ci)",
+      "Bash(pnpm test:security)",
+      "Bash(pnpm test:e2e)",
+      "Bash(pnpm build:release)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm dev:studio)",
+      "Bash(pnpm dev:portal)",
+      "Bash(pnpm secret:scan)",
+      "Bash(pnpm audit:prod)",
+      "Bash(pnpm security:audit)",
+      "Bash(pnpm docs:check)",
+      "Bash(pnpm --filter @uwe/database db:generate)",
+      "Bash(pnpm --filter @uwe/database db:deploy)",
+      "Bash(pnpm --filter @uwe/database db:seed)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git checkout*)",
+      "Bash(git stash*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(ls*)",
+      "Bash(cat /home/user/UWE/**)"
+    ]
+  }
+}
