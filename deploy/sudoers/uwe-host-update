@@ -4,3 +4,4 @@
 # Validate after install: visudo -cf /etc/sudoers.d/uwe-host-update
 Defaults!/opt/uwe/deploy/scripts/uwe-host-update-trigger.sh !requiretty
 uwe ALL=(root) NOPASSWD: /opt/uwe/deploy/scripts/uwe-host-update-trigger.sh
+# uwe-cd-trigger.sh (SSH CD path) calls uwe-host-update-trigger.sh via sudo — covered above.
