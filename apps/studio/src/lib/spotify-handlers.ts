@@ -10,11 +10,13 @@ import {
 import {
   buildSpotifyAuthorizationUrl,
   exchangeSpotifyAuthorizationCode,
+  listSpotifyDevices,
   pauseSpotifyPlayback,
   playSpotifyTrack,
   resumeSpotifyPlayback,
   setSpotifyVolume,
   stopSpotifyPlayback,
+  transferSpotifyPlayback,
 } from "@uwe/soundboard";
 import {
   encodeOAuthState,
@@ -216,6 +218,11 @@ export async function playSpotifyForWorld(
       );
     }
 
+    const preferredDeviceId = await runtime.service.getPreferredDeviceId(worldSlug);
+    if (preferredDeviceId) {
+      await transferSpotifyPlayback({ accessToken, deviceId: preferredDeviceId });
+    }
+
     const result = await playSpotifyTrack({
       accessToken,
       uri: body.uri,
@@ -223,6 +230,54 @@ export async function playSpotifyForWorld(
     });
 
     return NextResponse.json(result, { status: result.ok ? 200 : 502 });
+  } finally {
+    await runtime.db.$disconnect();
+  }
+}
+
+export async function listSpotifyDevicesForWorld(worldSlug: string) {
+  const runtime = getSpotifyService();
+  if (!runtime) {
+    return jsonError("Spotify OAuth ist nicht konfiguriert.", 503);
+  }
+
+  try {
+    const accessToken = await runtime.service.getValidAccessTokenByWorldSlug(worldSlug);
+    if (!accessToken) {
+      return NextResponse.json(
+        { ok: false, message: "Spotify ist für diese Welt nicht verbunden." },
+        { status: 401 },
+      );
+    }
+
+    const result = await listSpotifyDevices({ accessToken });
+    return NextResponse.json(result, { status: result.ok ? 200 : 502 });
+  } finally {
+    await runtime.db.$disconnect();
+  }
+}
+
+export async function setPreferredSpotifyDevice(
+  worldSlug: string,
+  body: { deviceId: string | null; deviceName: string | null },
+) {
+  const runtime = getSpotifyService();
+  if (!runtime) {
+    return jsonError("Spotify OAuth ist nicht konfiguriert.", 503);
+  }
+
+  try {
+    const updated = await runtime.service.setPreferredDevice(
+      worldSlug,
+      body.deviceId,
+      body.deviceName,
+    );
+
+    if (!updated) {
+      return jsonError("Welt oder Spotify-Verbindung nicht gefunden.", 404);
+    }
+
+    return NextResponse.json({ ok: true });
   } finally {
     await runtime.db.$disconnect();
   }
