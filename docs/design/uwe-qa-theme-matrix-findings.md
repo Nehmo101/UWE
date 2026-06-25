@@ -24,7 +24,20 @@ zentralen Stellen beheben.
 
 (Knotenzahl > 50, da ein Verstoß mehrere DOM-Knoten umfassen kann.)
 
-## Empfohlene Folge-WPs (keine Blind-Fixes)
+## Bearbeitungsstand (2026-06-25)
+
+Kontrastdefekte **50 → 19** (−62 %), jeder Schritt per voller QA-Matrix (72/72) + Unit-Tests verifiziert:
+
+| WP | PR | Ergebnis |
+|----|----|----------|
+| **P0 Primary-Buttons** | [#259](https://github.com/Nehmo101/UWE/pull/259) | abgeleiteter `--uwe-on-accent`-Token (V1+V2) → **29 → 0** Button-Verstöße |
+| **P1 Links** | [#260](https://github.com/Nehmo101/UWE/pull/260) | abgeleiteter `--uwe-link`-Token + globale `a`-Regel → Link-Knoten **71 → 14** |
+| **P1 Muted/Subtle** | [#261](https://github.com/Nehmo101/UWE/pull/261) | Parchment `fgMuted`/`fgSubtle` auf AA (4.41→6.3 / 2.46→5.0) |
+
+### Verbleibend (19) — systemisch, eigene WP empfohlen
+Konzentriert auf die **zwei hellen Parchment-Themes** (`uwe-parchment-study`, `uwe-parchment-os`): `<h3>`-Sektions­überschriften, Body-`<p>`, Breadcrumb-Separator, `.uwe-cockpit-tag-accent`-Chips, Form-Labels/`select`, `dt`/`li`. Das ist eine breite Text-Kontrast-Schwäche der Parchment-Paletten → **dedizierte „Parchment-AA-Überholung"** (systematisches Abdunkeln der Text-Tiers vs. Palette-Neuabstimmung — Design-Entscheidung), kein Einzel-Token-Fix.
+
+## Ursprüngliche Empfehlung (erledigt P0/P1)
 
 - **P0 — `cursor/a11y-contrast-primary-button-adcf`**: Kontrast von Primary-Button-Text↔Hintergrund
   (Token `--uwe-accent`/`--uwe-on-accent` bzw. `.uwe-btn-primary`/`.uwe-v2-btn-primary`) auf ≥ 4.5:1
