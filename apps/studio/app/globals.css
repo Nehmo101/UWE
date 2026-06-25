@@ -142,7 +142,7 @@ body {
 .uwe-settings-tabs a:hover {
   background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
   color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
 }
 
 .uwe-checkbox {
@@ -262,14 +262,14 @@ body {
   min-width: var(--uwe-touch-min, 2.75rem);
   min-height: var(--uwe-touch-min, 2.75rem);
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--uwe-accent), #8b5cf6);
+  background: linear-gradient(135deg, var(--uwe-accent), var(--uwe-accent-hover));
   color: #fff;
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1;
   text-decoration: none;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--uwe-accent) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--uwe-fg) 15%, transparent);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -337,7 +337,7 @@ body {
 }
 
 .uwe-today-quick-chip[data-severity="warn"] {
-  border-color: color-mix(in srgb, var(--uwe-warn, #c9a227) 50%, var(--uwe-border) 50%);
+  border-color: color-mix(in srgb, var(--uwe-warning) 50%, var(--uwe-border) 50%);
 }
 
 .uwe-system-ampel {
@@ -362,11 +362,11 @@ body {
 }
 
 .uwe-system-ampel-item[data-status="warn"] {
-  border-color: rgba(234, 179, 8, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
 }
 
 .uwe-system-ampel-item[data-status="error"] {
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
 }
 
 .uwe-homelab-service-grid {
@@ -398,11 +398,11 @@ body {
 }
 
 .uwe-homelab-service-card[data-status="warn"] {
-  border-color: rgba(234, 179, 8, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
 }
 
 .uwe-homelab-service-card[data-status="error"] {
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
 }
 
 .uwe-homelab-checklist {
@@ -431,11 +431,11 @@ body {
 }
 
 .uwe-homelab-checklist li[data-status="warn"] {
-  border-color: rgba(234, 179, 8, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
 }
 
 .uwe-homelab-checklist li[data-status="error"] {
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
 }
 
 .uwe-homelab-runbook-list {
@@ -459,7 +459,7 @@ body {
   padding: 0.25rem 0.5rem;
   border-radius: 0.35rem;
   font-size: 0.78rem;
-  background: color-mix(in srgb, var(--uwe-card) 60%, #000 40%);
+  background: color-mix(in srgb, var(--uwe-card) 60%, var(--uwe-bg) 40%);
 }
 
 .uwe-homelab-device-grid {
@@ -497,11 +497,11 @@ body {
 }
 
 .uwe-hw-badge-error {
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid color-mix(in srgb, var(--uwe-danger) 35%, transparent);
 }
 
 .uwe-hw-badge-planned {
-  border: 1px solid rgba(234, 179, 8, 0.35);
+  border: 1px solid color-mix(in srgb, var(--uwe-warning) 35%, transparent);
 }
 
 .uwe-hw-badge-neutral {
@@ -623,7 +623,7 @@ body {
 
 .studio-auth-success {
   margin: 0;
-  color: var(--uwe-success, #16a34a);
+  color: var(--uwe-success);
   font-size: 0.9rem;
 }
 
@@ -737,7 +737,7 @@ body {
 }
 
 .uwe-capture-error {
-  color: var(--uwe-danger, #ef4444);
+  color: var(--uwe-danger);
 }
 
 .uwe-capture-inbox-head {
@@ -866,7 +866,7 @@ body {
 }
 
 .uwe-capture-warning {
-  color: var(--uwe-danger, #ef4444);
+  color: var(--uwe-danger);
   font-size: 0.85rem;
   margin: 0;
 }

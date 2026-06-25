@@ -252,7 +252,7 @@ export function ImageStudioJobForm({
                 backgroundSize: "contain",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",
-                border: "1px solid var(--uwe-border, #333)",
+                border: "1px solid var(--uwe-border)",
               }}
             />
           )}
@@ -267,9 +267,9 @@ export function ImageStudioJobForm({
                   width: "100%",
                   maxWidth: "20rem",
                   aspectRatio: "1",
-                  border: "1px solid var(--uwe-border, #333)",
+                  border: "1px solid var(--uwe-border)",
                   touchAction: "none",
-                  background: "rgba(0,0,0,0.2)",
+                  background: "color-mix(in srgb, var(--uwe-bg) 20%, transparent)",
                 }}
                 onPointerDown={(event) => {
                   drawingRef.current = true;

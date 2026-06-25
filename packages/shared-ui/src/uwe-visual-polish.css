@@ -30,31 +30,31 @@ html[data-uwe-theme="system"] {
 
 html[data-uwe-theme="light"] {
   color-scheme: light;
-  --uwe-surface-base: #f1f5f9;
-  --uwe-surface-elevated: rgba(255, 255, 255, 0.97);
-  --uwe-surface-glass: rgba(255, 255, 255, 0.82);
-  --uwe-surface-glass-strong: rgba(255, 255, 255, 0.94);
-  --uwe-text-primary: #0f172a;
-  --uwe-text-muted: #475569;
-  --uwe-border-subtle: rgba(15, 23, 42, 0.12);
-  --uwe-border-accent: rgba(99, 102, 241, 0.28);
-  --uwe-shadow-modal: 0 20px 48px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
-  --uwe-shadow-sheet: 0 -12px 36px rgba(15, 23, 42, 0.14), 0 -1px 0 var(--uwe-border-subtle);
+  --uwe-surface-base: var(--uwe-bg);
+  --uwe-surface-elevated: color-mix(in srgb, var(--uwe-bg-elevated) 97%, var(--uwe-fg) 3%);
+  --uwe-surface-glass: color-mix(in srgb, var(--uwe-panel) 82%, transparent);
+  --uwe-surface-glass-strong: color-mix(in srgb, var(--uwe-panel) 94%, transparent);
+  --uwe-text-primary: var(--uwe-fg);
+  --uwe-text-muted: var(--uwe-fg-muted);
+  --uwe-border-subtle: color-mix(in srgb, var(--uwe-fg) 12%, transparent);
+  --uwe-border-accent: color-mix(in srgb, var(--uwe-accent) 28%, transparent);
+  --uwe-shadow-modal: var(--uwe-shadow-lg), 0 0 0 1px color-mix(in srgb, var(--uwe-fg) 6%, transparent);
+  --uwe-shadow-sheet: 0 -12px 36px color-mix(in srgb, var(--uwe-fg) 14%, transparent), 0 -1px 0 var(--uwe-border-subtle);
 }
 
 @media (prefers-color-scheme: light) {
   html[data-uwe-theme="system"] {
     color-scheme: light;
-    --uwe-surface-base: #f1f5f9;
-    --uwe-surface-elevated: rgba(255, 255, 255, 0.97);
-    --uwe-surface-glass: rgba(255, 255, 255, 0.82);
-    --uwe-surface-glass-strong: rgba(255, 255, 255, 0.94);
-    --uwe-text-primary: #0f172a;
-    --uwe-text-muted: #475569;
-    --uwe-border-subtle: rgba(15, 23, 42, 0.12);
-    --uwe-border-accent: rgba(99, 102, 241, 0.28);
-    --uwe-shadow-modal: 0 20px 48px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
-    --uwe-shadow-sheet: 0 -12px 36px rgba(15, 23, 42, 0.14), 0 -1px 0 var(--uwe-border-subtle);
+    --uwe-surface-base: var(--uwe-bg);
+    --uwe-surface-elevated: color-mix(in srgb, var(--uwe-bg-elevated) 97%, var(--uwe-fg) 3%);
+    --uwe-surface-glass: color-mix(in srgb, var(--uwe-panel) 82%, transparent);
+    --uwe-surface-glass-strong: color-mix(in srgb, var(--uwe-panel) 94%, transparent);
+    --uwe-text-primary: var(--uwe-fg);
+    --uwe-text-muted: var(--uwe-fg-muted);
+    --uwe-border-subtle: color-mix(in srgb, var(--uwe-fg) 12%, transparent);
+    --uwe-border-accent: color-mix(in srgb, var(--uwe-accent) 28%, transparent);
+    --uwe-shadow-modal: var(--uwe-shadow-lg), 0 0 0 1px color-mix(in srgb, var(--uwe-fg) 6%, transparent);
+    --uwe-shadow-sheet: 0 -12px 36px color-mix(in srgb, var(--uwe-fg) 14%, transparent), 0 -1px 0 var(--uwe-border-subtle);
   }
 }
 
@@ -82,29 +82,29 @@ html[data-uwe-theme="light"] {
 
 html[data-uwe-bg-pattern="dots"] .uwe-shell::before {
   opacity: 1;
-  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--uwe-fg-muted) 14%, transparent) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 
 html[data-uwe-bg-pattern="constellation"] .uwe-shell::before {
   opacity: 1;
   background-image:
-    radial-gradient(1px 1px at 12% 18%, rgba(226, 232, 240, 0.55), transparent),
-    radial-gradient(1px 1px at 28% 72%, rgba(129, 140, 248, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 44% 34%, rgba(56, 189, 248, 0.45), transparent),
-    radial-gradient(1px 1px at 63% 81%, rgba(226, 232, 240, 0.4), transparent),
-    radial-gradient(1px 1px at 78% 22%, rgba(167, 139, 250, 0.45), transparent),
-    radial-gradient(1px 1px at 91% 58%, rgba(148, 163, 184, 0.35), transparent),
+    radial-gradient(1px 1px at 12% 18%, color-mix(in srgb, var(--uwe-fg) 55%, transparent), transparent),
+    radial-gradient(1px 1px at 28% 72%, color-mix(in srgb, var(--uwe-accent-hover) 50%, transparent), transparent),
+    radial-gradient(1.5px 1.5px at 44% 34%, color-mix(in srgb, var(--uwe-info) 45%, transparent), transparent),
+    radial-gradient(1px 1px at 63% 81%, color-mix(in srgb, var(--uwe-fg) 40%, transparent), transparent),
+    radial-gradient(1px 1px at 78% 22%, color-mix(in srgb, var(--uwe-accent) 45%, transparent), transparent),
+    radial-gradient(1px 1px at 91% 58%, color-mix(in srgb, var(--uwe-fg-muted) 35%, transparent), transparent),
     linear-gradient(
       118deg,
       transparent 0 48%,
-      rgba(129, 140, 248, 0.06) 49%,
+      color-mix(in srgb, var(--uwe-accent-hover) 6%, transparent) 49%,
       transparent 50% 100%
     ),
     linear-gradient(
       32deg,
       transparent 0 62%,
-      rgba(56, 189, 248, 0.05) 63%,
+      color-mix(in srgb, var(--uwe-info) 5%, transparent) 63%,
       transparent 64% 100%
     );
   background-size: 100% 100%;
@@ -117,38 +117,38 @@ html[data-uwe-bg-pattern="synapse"] .uwe-shell::before {
       72deg,
       transparent,
       transparent 46px,
-      rgba(99, 102, 241, 0.07) 46px,
-      rgba(99, 102, 241, 0.07) 47px
+      color-mix(in srgb, var(--uwe-accent) 7%, transparent) 46px,
+      color-mix(in srgb, var(--uwe-accent) 7%, transparent) 47px
     ),
     repeating-linear-gradient(
       -18deg,
       transparent,
       transparent 58px,
-      rgba(56, 189, 248, 0.05) 58px,
-      rgba(56, 189, 248, 0.05) 59px
+      color-mix(in srgb, var(--uwe-info) 5%, transparent) 58px,
+      color-mix(in srgb, var(--uwe-info) 5%, transparent) 59px
     ),
     radial-gradient(ellipse 50% 40% at 50% 0%, var(--uwe-accent-muted), transparent 70%);
 }
 
 html[data-uwe-bg-pattern="parchment"] .uwe-shell::before {
   opacity: 1;
-  background-color: rgba(120, 84, 36, 0.04);
+  background-color: color-mix(in srgb, var(--uwe-dm-only) 6%, transparent);
   background-image:
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 3px,
-      rgba(180, 140, 80, 0.04) 3px,
-      rgba(180, 140, 80, 0.04) 4px
+      color-mix(in srgb, var(--uwe-warning) 5%, transparent) 3px,
+      color-mix(in srgb, var(--uwe-warning) 5%, transparent) 4px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 3px,
-      rgba(160, 120, 60, 0.035) 3px,
-      rgba(160, 120, 60, 0.035) 4px
+      color-mix(in srgb, var(--uwe-dm-only) 4%, transparent) 3px,
+      color-mix(in srgb, var(--uwe-dm-only) 4%, transparent) 4px
     ),
-    radial-gradient(ellipse 90% 70% at 50% 100%, rgba(180, 130, 70, 0.08), transparent 65%);
+    radial-gradient(ellipse 90% 70% at 50% 100%, color-mix(in srgb, var(--uwe-warning) 10%, transparent), transparent 65%);
 }
 
 html[data-uwe-bg-pattern="subtle-noise"] .uwe-shell::before {
@@ -170,16 +170,16 @@ html[data-uwe-theme="system"] .uwe-shell {
     background:
       radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.1), transparent 50%),
       radial-gradient(ellipse 60% 40% at 90% 0%, rgba(56, 189, 248, 0.06), transparent 45%),
-      linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+      linear-gradient(180deg, var(--uwe-bg-elevated) 0%, var(--uwe-bg) 100%);
   }
 }
 
 html[data-uwe-theme="light"] .uwe-shell {
   color: var(--uwe-text-primary);
   background:
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.1), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 90% 0%, rgba(56, 189, 248, 0.06), transparent 45%),
-    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--uwe-accent) 10%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, color-mix(in srgb, var(--uwe-info) 6%, transparent), transparent 45%),
+    linear-gradient(180deg, var(--uwe-bg-elevated) 0%, var(--uwe-bg) 100%);
 }
 
 /* Very subtle constellation drift — desktop only, motion on */
@@ -636,7 +636,7 @@ html[data-uwe-glass="off"] .uwe-theme-preview-topbar {
   width: 1.2rem;
   height: 1.2rem;
   border-radius: 999px;
-  background: #fff;
+  background: var(--uwe-bg-elevated);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 0.15s ease;
 }

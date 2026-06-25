@@ -62,7 +62,7 @@ export function CalendarWeekGrid({ weekStart, events }: CalendarWeekGridProps) {
               <div
                 style={{
                   minHeight: "8rem",
-                  border: "1px solid var(--uwe-border, #333)",
+                  border: "1px solid var(--uwe-border)",
                   borderRadius: "6px",
                   padding: "0.35rem",
                   marginTop: "0.25rem",

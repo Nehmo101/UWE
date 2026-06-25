@@ -268,9 +268,9 @@ body {
   margin: 0;
   padding: 0.65rem 0.85rem;
   border-radius: 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--uwe-success, #16a34a) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--uwe-success) 35%, transparent);
   background: color-mix(in srgb, var(--uwe-success) 12%, transparent);
-  color: var(--uwe-success, #16a34a);
+  color: var(--uwe-success);
   font-size: 0.875rem;
 }
 
@@ -378,7 +378,7 @@ body {
   padding: 1.1rem 1.15rem;
   border-radius: 0.75rem;
   background: color-mix(in srgb, var(--uwe-panel) 82%, transparent);
-  border: 1px solid rgba(167, 139, 250, 0.12);
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 12%, transparent);
   line-height: 1.75;
 }
 
@@ -426,7 +426,7 @@ body {
   max-height: 140px;
   object-fit: contain;
   border-radius: 0.5rem;
-  background: rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--uwe-bg) 25%, transparent);
 }
 
 .auth-notes-panel {
@@ -539,7 +539,7 @@ body {
   min-height: 480px;
   border: 0;
   border-radius: 0.5rem;
-  background: rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--uwe-bg) 25%, transparent);
 }
 
 .portal-share-context {
