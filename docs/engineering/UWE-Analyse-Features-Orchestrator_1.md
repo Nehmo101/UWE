@@ -1,6 +1,6 @@
 # UWE Verbesserungs- & Reparaturprogramm — Orchestrator-Plan
 
-**Stand:** 2026-06-24 · **Orchestrator:** Cloud Agent (Session 1)  
+**Stand:** 2026-06-25 · **Orchestrator:** Cloud Agent (Session 2)  
 **Branch-Prefix:** `cursor/<descriptive-name>-adcf`  
 **Quality Gate:** `pnpm install --frozen-lockfile && pnpm quality`
 
@@ -174,3 +174,18 @@
 | 2026-06-24 | accessibility-engineer | [#240](https://github.com/Nehmo101/UWE/pull/240) | WP 3.1–3.2 Focus Trap + GraphView a11y (Draft) |
 | 2026-06-24 | frontend-engineer | [#241](https://github.com/Nehmo101/UWE/pull/241) | Phase 4 Secrets/Reveal Editor-Controls (Draft) |
 | 2026-06-24 | documentation-writer | [#242](https://github.com/Nehmo101/UWE/pull/242) | Phase 7.1 — Matrix + Orchestrator + Inventar-Stub (Draft) |
+
+### Session 2 (2026-06-25) — Restanten-Abarbeitung (inline, Subagent-Typen in Umgebung nicht verfügbar)
+
+Rahmen: Quality Gate im Build-Container nicht lauffähig (Prisma-Engine-Host `binaries.prisma.sh` egress-blockiert → `db:generate` und damit `lint/typecheck/test/build` nicht ausführbar). Verifikation via CI / Folge-Abnahme; LCP-Gate-Kernlogik lokal grün getestet (`perf-budget.test.ts`, `docs:check`).
+
+| Datum | WP | PR | Ergebnis |
+|-------|-----|-----|----------|
+| 2026-06-25 | WP-A Image-Studio `failed`-Status | [#248](https://github.com/Nehmo101/UWE/pull/248) | Reconciled (Fremd-Scope #245/#249 entfernt), **merged** |
+| 2026-06-25 | WP-B Final-QA-Automation | [#247](https://github.com/Nehmo101/UWE/pull/247) | Reconciled (Rebase, `package.json`-Konflikt), **merged** |
+| 2026-06-25 | WP-C Life-Brain Tag-Editing | [#250](https://github.com/Nehmo101/UWE/pull/250) | Document/Fact Tag-Eingaben (Asset war fertig), **merged** |
+| 2026-06-25 | WP-D ContentBlock-Secrets | [#251](https://github.com/Nehmo101/UWE/pull/251) | `maskSecretsInUi`+Reveal+Editor+Leak-Test · **offen — Security-Review + `test:security` Pflicht vor Merge** |
+| 2026-06-25 | WP-E `wiki-base.css` Konsolidierung | [#252](https://github.com/Nehmo101/UWE/pull/252) | 43 byte-identische Regeln extrahiert, **merged** |
+| 2026-06-25 | WP-F LCP/Runtime-CI-Gate | [#253](https://github.com/Nehmo101/UWE/pull/253) | `perf-budget-check.mjs`+Specs+CI (Test 5/5 grün), **merged** |
+| 2026-06-25 | WP-G Legacy-E2E → Shell V2 | [#254](https://github.com/Nehmo101/UWE/pull/254) | V1→V2-Selektoren (quellbasiert verifiziert), **merged** |
+| 2026-06-25 | WP-H Theme-Matrix Browser-QA | [#255](https://github.com/Nehmo101/UWE/pull/255) | Harness (9 Presets × Routen); Ausführung umgebungsbedingt offen (Prisma), **merged** |
