@@ -41,6 +41,27 @@ export const IMAGE_STUDIO_STATUS_LABELS: Record<ImageStudioStatus, string> = {
   failed: "Fehlgeschlagen",
 };
 
+export function imageStudioStatusBadgeClass(status: ImageStudioStatus): string {
+  switch (status) {
+    case "completed":
+      return "uwe-badge uwe-badge-success";
+    case "processing":
+      return "uwe-badge uwe-badge-warning";
+    case "failed":
+      return "uwe-badge uwe-badge-danger";
+    default:
+      return "uwe-badge";
+  }
+}
+
+export function extractImageStudioErrorMessage(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+  const lastError = (metadata as Record<string, unknown>).lastError;
+  return typeof lastError === "string" && lastError.trim() ? lastError : null;
+}
+
 export interface CreateImageStudioProjectInput {
   worldId?: string | null;
   title: string;
@@ -98,6 +119,31 @@ export class ImageStudioService {
     return this.db.imageStudioProject.update({
       where: { id },
       data: { status },
+    });
+  }
+
+  async markProjectFailed(id: string, errorMessage?: string) {
+    const existing = await this.db.imageStudioProject.findUnique({
+      where: { id },
+      select: { metadata: true },
+    });
+    const prior =
+      existing?.metadata &&
+      typeof existing.metadata === "object" &&
+      !Array.isArray(existing.metadata)
+        ? (existing.metadata as Record<string, unknown>)
+        : {};
+
+    return this.db.imageStudioProject.update({
+      where: { id },
+      data: {
+        status: "failed",
+        metadata: toPrismaJsonValue({
+          ...prior,
+          lastError: (errorMessage?.trim() || "Unbekannter Fehler").slice(0, 500),
+          failedAt: new Date().toISOString(),
+        }),
+      },
     });
   }
 

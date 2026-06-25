@@ -1377,6 +1377,8 @@ export {
   resolveCalendarConfig,
   IMAGE_STUDIO_OPERATION_LABELS,
   IMAGE_STUDIO_STATUS_LABELS,
+  imageStudioStatusBadgeClass,
+  extractImageStudioErrorMessage,
   ImageStudioOperationEnum,
   ImageStudioStatusEnum,
   ImageStudioLinkTargetTypeEnum,

@@ -9,6 +9,7 @@ import {
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
+import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
 import { createImageStudioJobAction } from "../integration-actions";
 
@@ -78,9 +79,10 @@ export default async function ImageStudioPage({ searchParams }: Props) {
             {projects.map((project) => (
               <li key={project.id} className="uwe-list-card">
                 <strong>{project.title}</strong>
-                <span className="uwe-badge">
-                  {IMAGE_STUDIO_STATUS_LABELS[project.status]}
-                </span>
+                <ImageStudioStatusBadge
+                  status={project.status}
+                  label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+                />
                 {project.prompt && (
                   <p className="uwe-dashboard-muted">{project.prompt.slice(0, 120)}</p>
                 )}

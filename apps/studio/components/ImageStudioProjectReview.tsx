@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ImageStudioStatus } from "@uwe/database/server";
 import {
   adoptImageStudioAssetAction,
   saveImageStudioDraftAction,
 } from "@/app/integration-actions";
+import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 
 interface VersionRow {
   id: string;
@@ -25,7 +27,8 @@ interface ImageStudioProjectReviewProps {
   projectId: string;
   title: string;
   prompt: string | null;
-  status: string;
+  status: ImageStudioStatus;
+  statusLabel: string;
   worldSlug: string | null;
   versions: VersionRow[];
   links: LinkRow[];
@@ -36,6 +39,7 @@ export function ImageStudioProjectReview({
   title,
   prompt,
   status,
+  statusLabel,
   worldSlug,
   versions,
   links,
@@ -90,7 +94,9 @@ export function ImageStudioProjectReview({
         <dl className="uwe-kv-list">
           <div>
             <dt>Status</dt>
-            <dd>{status}</dd>
+            <dd>
+              <ImageStudioStatusBadge status={status} label={statusLabel} />
+            </dd>
           </div>
           <div>
             <dt>Welt</dt>

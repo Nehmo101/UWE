@@ -65,7 +65,7 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
 
   const db = createPrismaClient();
   const imageStudio = createImageStudioService(db);
-  const projectId = payload.projectId;
+  let activeProjectId = payload.projectId;
 
   try {
     await ctx.jobs.updateProgress(ctx.jobId, 10, "Provider auswählen");
@@ -93,7 +93,6 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
 
     const repo = createUweRepositoryFromClient(db);
 
-    let activeProjectId = projectId;
     if (!activeProjectId && payload.worldId) {
       const project = await imageStudio.createProject({
         worldId: payload.worldId,
@@ -149,8 +148,9 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       worldSlug: payload.worldSlug,
     };
   } catch (error) {
-    if (projectId) {
-      await imageStudio.updateProjectStatus(projectId, "failed");
+    if (activeProjectId && !(await ctx.jobs.isCancelled(ctx.jobId))) {
+      const message = error instanceof Error ? error.message : "Bildgenerierung fehlgeschlagen.";
+      await imageStudio.markProjectFailed(activeProjectId, message);
     }
     throw error;
   } finally {

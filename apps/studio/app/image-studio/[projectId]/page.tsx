@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   createImageStudioService,
+  extractImageStudioErrorMessage,
   IMAGE_STUDIO_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { ImageStudioProjectReview } from "@/components/ImageStudioProjectReview";
+import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 
 interface Props {
   params: Promise<{ projectId: string }>;
@@ -21,6 +23,7 @@ export default async function ImageStudioProjectPage({ params }: Props) {
   const world = project.worldId
     ? await prisma.world.findUnique({ where: { id: project.worldId }, select: { slug: true } })
     : null;
+  const errorMessage = extractImageStudioErrorMessage(project.metadata);
 
   return (
     <AdminModuleShell
@@ -33,13 +36,21 @@ export default async function ImageStudioProjectPage({ params }: Props) {
         </Link>
       }
     >
-      <p className="uwe-badge">{IMAGE_STUDIO_STATUS_LABELS[project.status]}</p>
+      <ImageStudioStatusBadge
+        status={project.status}
+        label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+      />
+
+      {project.status === "failed" && errorMessage ? (
+        <p className="uwe-notice uwe-notice-error">{errorMessage}</p>
+      ) : null}
 
       <ImageStudioProjectReview
         projectId={project.id}
         title={project.title}
         prompt={project.prompt}
-        status={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+        status={project.status}
+        statusLabel={IMAGE_STUDIO_STATUS_LABELS[project.status]}
         worldSlug={world?.slug ?? null}
         versions={project.versions.map((version) => ({
           id: version.id,
