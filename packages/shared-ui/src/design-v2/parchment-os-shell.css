@@ -76,3 +76,60 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-accent {
   border-width: 2px;
   border-color: #211d17;
 }
+
+/* WCAG AA contrast on sand topbar + status footer (axe smoke: Studio /today) */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-topbar .uwe-brand small,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-brand small,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-v2-brand small {
+  color: #4a4338;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-cockpit-beta-badge {
+  color: #7a3614;
+  border-color: #7a3614;
+  background: color-mix(in srgb, #7a3614 14%, #e9dfca);
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-status-footer-item {
+  color: #4a4338;
+}
+
+/* Portal guest wiki — axe smoke /worlds/* (Parchment OS) */
+html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-back-link {
+  color: #b6ab92;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-portal-nav-section ul a {
+  color: #b6ab92;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-portal-nav-section h3 a {
+  color: #f1e8d4;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .wiki-page-list h2 a {
+  color: #1f5248;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .wiki-page-list h2 a:hover {
+  color: #2f6f63;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-search .uwe-btn-primary,
+html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-search-wide .uwe-btn-primary {
+  background: #211d17;
+  color: #fbf6ea;
+  border-color: #211d17;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-breadcrumb {
+  color: #4a4338;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-breadcrumb a {
+  color: #4a4338;
+}
+
+html[data-uwe-theme="uwe-parchment-os"] .uwe-portal-hero-meta {
+  color: #4a4338;
+}

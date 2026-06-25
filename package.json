@@ -34,6 +34,7 @@
     "export:wiki": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/wiki-cli.ts",
     "backup:create": "pnpm --filter @uwe/database db:generate && node --import tsx packages/backup/src/cli.ts",
     "test:e2e": "pnpm --filter @uwe/database db:generate && playwright test",
+    "test:e2e:a11y": "pnpm --filter @uwe/database db:generate && playwright test e2e/studio-a11y.spec.ts e2e/portal-a11y.spec.ts",
     "test:postgres-smoke": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/database exec node --import tsx --test src/postgres-smoke.test.ts",
     "backup": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js backup",
     "restore": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js restore",
@@ -57,6 +58,7 @@
     "host:uninstall-autostart": "bash scripts/uninstall-uwe-autostart.sh"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.61.0",
     "eslint": "^9.39.4",
