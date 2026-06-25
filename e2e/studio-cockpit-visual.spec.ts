@@ -9,7 +9,7 @@ test.describe("Studio cockpit visual regression", () => {
   test("world cockpit dashboard shows mockup chrome", async ({ page }) => {
     await page.goto("/worlds/terra/dashboard");
 
-    await expect(page.locator(".uwe-shell")).toBeVisible();
+    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
     await expect(page.locator(".uwe-cockpit-topbar")).toBeVisible();
     await expect(page.locator(".uwe-cockpit-beta-badge")).toHaveText("BETA");
     await expect(page.locator(".uwe-cockpit-world-select")).toBeVisible();
@@ -25,10 +25,10 @@ test.describe("Studio cockpit visual regression", () => {
     await expect(page.locator(".uwe-cockpit-grid")).toBeVisible();
     await expect(page.locator(".uwe-cockpit-card")).toHaveCount(6);
 
-    await expect(page.locator(".uwe-sidebar")).toContainText("Portal");
-    await expect(page.locator(".uwe-sidebar")).toContainText("Bibliothek");
-    await expect(page.locator(".uwe-icon-rail")).toBeVisible();
-    await expect(page.locator(".uwe-rail-svg").first()).toBeVisible();
+    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Portal");
+    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Bibliothek");
+    await expect(page.locator(".uwe-v2-rail")).toBeVisible();
+    await expect(page.locator(".uwe-v2-rail-link").first()).toBeVisible();
   });
 
   test("studio defaults to Parchment OS accent tokens", async ({ page }) => {
