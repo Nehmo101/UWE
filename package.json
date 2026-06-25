@@ -35,6 +35,7 @@
     "backup:create": "pnpm --filter @uwe/database db:generate && node --import tsx packages/backup/src/cli.ts",
     "test:e2e": "pnpm --filter @uwe/database db:generate && playwright test",
     "test:e2e:a11y": "pnpm --filter @uwe/database db:generate && playwright test e2e/studio-a11y.spec.ts e2e/portal-a11y.spec.ts",
+    "test:qa-smoke": "node scripts/qa-smoke.mjs",
     "test:postgres-smoke": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/database exec node --import tsx --test src/postgres-smoke.test.ts",
     "backup": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js backup",
     "restore": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js restore",
