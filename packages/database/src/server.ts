@@ -80,6 +80,8 @@ export {
   AssetTypeEnum,
   PageTypeEnum,
   PublishStatusEnum,
+  RevealStateEnum,
+  SecretLevelEnum,
   VisibilityEnum,
 } from "./repository";
 

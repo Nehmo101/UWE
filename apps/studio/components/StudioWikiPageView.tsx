@@ -189,6 +189,8 @@ export async function StudioWikiPageView({
                     type={dmPage.type}
                     tags={parseStringArray(dmPage.tags)}
                     aliases={parseStringArray(dmPage.aliases)}
+                    secretLevel={dmPage.secretLevel}
+                    revealState={dmPage.revealState}
                   />
                 </SidebarSection>
                 {/* Management panels collapsed by default so the reading view

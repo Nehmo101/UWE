@@ -74,6 +74,8 @@ export {
   AssetType as AssetTypeEnum,
   PageType as PageTypeEnum,
   PublishStatus as PublishStatusEnum,
+  RevealState as RevealStateEnum,
+  SecretLevel as SecretLevelEnum,
   Visibility as VisibilityEnum,
 } from "./generated/prisma/client";
 

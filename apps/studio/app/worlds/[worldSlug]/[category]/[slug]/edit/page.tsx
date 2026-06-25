@@ -7,6 +7,10 @@ import {
   PUBLISH_LABELS,
   CANONICAL_LABELS,
   BLOCK_TYPE_LABELS,
+  SECRET_LEVEL_LABELS,
+  REVEAL_STATE_LABELS,
+  SecretLevelBadge,
+  RevealStateBadge,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
 import { ContentBlockContentField } from "../../../../../../components/ContentBlockContentField";
@@ -22,6 +26,8 @@ import {
   PublishStatusEnum,
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
+  SecretLevelEnum,
+  RevealStateEnum,
 } from "@uwe/database/server";
 import {
   updatePageAction,
@@ -147,6 +153,47 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               ))}
             </select>
           </label>
+
+          <fieldset className="uwe-fieldset">
+            <legend>Geheimnis &amp; Enthüllung</legend>
+            <p className="uwe-field-hint" style={{ marginTop: 0 }}>
+              Aktuell:{" "}
+              <SecretLevelBadge secretLevel={page.secretLevel} />
+              {page.secretLevel !== "none" && (
+                <> · <RevealStateBadge revealState={page.revealState} /></>
+              )}
+            </p>
+
+            <label>
+              Geheimnis-Level
+              <select name="secretLevel" defaultValue={page.secretLevel}>
+                {Object.values(SecretLevelEnum).map((level) => (
+                  <option key={level} value={level}>
+                    {SECRET_LEVEL_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+              <small className="uwe-field-hint">
+                Steuert zusätzlichen Schutz für veröffentlichte Spieler-Inhalte.
+                „Kein Geheimnis“ bedeutet: nur Sichtbarkeit und Publish-Status gelten.
+              </small>
+            </label>
+
+            <label>
+              Enthüllungs-Status
+              <select name="revealState" defaultValue={page.revealState}>
+                {Object.values(RevealStateEnum).map((state) => (
+                  <option key={state} value={state}>
+                    {REVEAL_STATE_LABELS[state]}
+                  </option>
+                ))}
+              </select>
+              <small className="uwe-field-hint">
+                Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen die Seite im Portal
+                erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
+              </small>
+            </label>
+          </fieldset>
 
           <label>
             Canonical Status

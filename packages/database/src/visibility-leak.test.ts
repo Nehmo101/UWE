@@ -174,6 +174,45 @@ describe("visibility and secret leak protection", () => {
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "enthuellt"));
   });
 
+  it("updatePage persists secretLevel and revealState for player exposure", async () => {
+    const page = await repo.createPage({
+      worldId,
+      title: "Geheimnis bearbeiten",
+      slug: "geheimnis-edit",
+      type: "lore",
+      visibility: "player_visible",
+      publishStatus: "published",
+      secretLevel: "none",
+      revealState: "hidden",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: "Anfangs sichtbar.",
+        },
+      ],
+    });
+
+    assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"));
+
+    await repo.updatePage(page.id, {
+      secretLevel: "spoiler",
+      revealState: "hidden",
+    });
+
+    let updated = await repo.getPageBySlug(worldSlug, "geheimnis-edit");
+    assert.equal(updated?.secretLevel, "spoiler");
+    assert.equal(updated?.revealState, "hidden");
+    assert.equal(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"), null);
+
+    await repo.updatePage(page.id, { revealState: "revealed" });
+
+    updated = await repo.getPageBySlug(worldSlug, "geheimnis-edit");
+    assert.equal(updated?.revealState, "revealed");
+    assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"));
+  });
+
   it("central exposure rules match acceptance criteria", () => {
     assert.equal(
       isPlayerExposableContent({

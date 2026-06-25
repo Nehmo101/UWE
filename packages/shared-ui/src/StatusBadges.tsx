@@ -6,6 +6,8 @@ import type {
   GameSessionStatus,
   PageType,
   PublishStatus,
+  RevealState,
+  SecretLevel,
   Visibility,
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
@@ -41,6 +43,32 @@ export const PUBLISH_LABELS: Record<PublishStatus, string> = {
   internal: "Intern",
   published: "Veröffentlicht",
   archived: "Archiviert",
+};
+
+export const SECRET_LEVEL_LABELS: Record<SecretLevel, string> = {
+  none: "Kein Geheimnis",
+  spoiler: "Spoiler",
+  dm_secret: "GM-Geheimnis",
+};
+
+export const SECRET_LEVEL_DESCRIPTIONS: Record<SecretLevel, string> = {
+  none: "Kein zusätzlicher Geheimnis-Schutz — Sichtbarkeit und Publish-Status gelten allein.",
+  spoiler:
+    "Campaign-Spoiler — veröffentlichte Spieler-Inhalte bleiben verborgen, bis der Enthüllungs-Status „Enthüllt“ ist.",
+  dm_secret:
+    "Strenges GM-Geheimnis — erscheint für Spieler erst nach expliziter Enthüllung, auch wenn die Seite veröffentlicht ist.",
+};
+
+export const REVEAL_STATE_LABELS: Record<RevealState, string> = {
+  hidden: "Verborgen",
+  preview: "Vorschau (Teaser)",
+  revealed: "Enthüllt",
+};
+
+export const REVEAL_STATE_DESCRIPTIONS: Record<RevealState, string> = {
+  hidden: "Spieler sehen die Seite nicht, solange ein Geheimnis-Level gesetzt ist.",
+  preview: "Noch nicht für Spieler freigegeben — nur im Studio sichtbar (wie „Verborgen“ für Portal-Zugriff).",
+  revealed: "Geheimnis ist für Spieler freigegeben — die Seite kann im Portal erscheinen (bei passender Sichtbarkeit).",
 };
 
 export const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
@@ -164,6 +192,46 @@ export function PublishBadge({ status }: { status: PublishStatus }) {
         : "uwe-badge";
 
   return <span className={className}>{PUBLISH_LABELS[status]}</span>;
+}
+
+export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) {
+  if (secretLevel === "none") {
+    return <span className="uwe-badge">—</span>;
+  }
+
+  const className =
+    secretLevel === "dm_secret"
+      ? "uwe-badge uwe-badge-secret"
+      : "uwe-badge uwe-badge-draft";
+
+  return (
+    <span
+      className={className}
+      title={SECRET_LEVEL_DESCRIPTIONS[secretLevel]}
+      aria-label={`Geheimnis-Level: ${SECRET_LEVEL_LABELS[secretLevel]}. ${SECRET_LEVEL_DESCRIPTIONS[secretLevel]}`}
+    >
+      {SECRET_LEVEL_LABELS[secretLevel]}
+    </span>
+  );
+}
+
+export function RevealStateBadge({ revealState }: { revealState: RevealState }) {
+  const className =
+    revealState === "revealed"
+      ? "uwe-badge uwe-badge-published"
+      : revealState === "preview"
+        ? "uwe-badge uwe-badge-player"
+        : "uwe-badge uwe-badge-secret";
+
+  return (
+    <span
+      className={className}
+      title={REVEAL_STATE_DESCRIPTIONS[revealState]}
+      aria-label={`Enthüllungs-Status: ${REVEAL_STATE_LABELS[revealState]}. ${REVEAL_STATE_DESCRIPTIONS[revealState]}`}
+    >
+      {REVEAL_STATE_LABELS[revealState]}
+    </span>
+  );
 }
 
 export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
@@ -313,6 +381,8 @@ export function MetaPanel({
   type,
   tags,
   aliases,
+  secretLevel,
+  revealState,
 }: {
   visibility: Visibility;
   publishStatus: PublishStatus;
@@ -320,6 +390,8 @@ export function MetaPanel({
   type: PageType;
   tags: string[];
   aliases: string[];
+  secretLevel?: SecretLevel;
+  revealState?: RevealState;
 }) {
   return (
     <div className="uwe-meta-panel">
@@ -336,6 +408,18 @@ export function MetaPanel({
           <dt>Publish</dt>
           <dd><PublishBadge status={publishStatus} /></dd>
         </div>
+        {secretLevel !== undefined && (
+          <div>
+            <dt>Geheimnis</dt>
+            <dd><SecretLevelBadge secretLevel={secretLevel} /></dd>
+          </div>
+        )}
+        {revealState !== undefined && secretLevel !== undefined && secretLevel !== "none" && (
+          <div>
+            <dt>Enthüllung</dt>
+            <dd><RevealStateBadge revealState={revealState} /></dd>
+          </div>
+        )}
         <div>
           <dt>Kanon</dt>
           <dd><CanonicalBadge status={canonicalStatus} /></dd>

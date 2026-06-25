@@ -11,12 +11,16 @@ import {
   pickUniqueSlug,
   prisma,
   slugifyPageTitle,
+  RevealStateEnum,
+  SecretLevelEnum,
   type CreateContentBlockInput,
   type PageType,
   type Visibility,
   type PublishStatus,
   type CanonicalStatus,
   type ContentBlockType,
+  type RevealState,
+  type SecretLevel,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -30,6 +34,20 @@ function activity() {
   return createActivityLogService(prisma);
 }
 
+function parseSecretLevel(value: FormDataEntryValue | null): SecretLevel {
+  const raw = String(value ?? "none");
+  return (Object.values(SecretLevelEnum) as SecretLevel[]).includes(raw as SecretLevel)
+    ? (raw as SecretLevel)
+    : "none";
+}
+
+function parseRevealState(value: FormDataEntryValue | null): RevealState {
+  const raw = String(value ?? "hidden");
+  return (Object.values(RevealStateEnum) as RevealState[]).includes(raw as RevealState)
+    ? (raw as RevealState)
+    : "hidden";
+}
+
 export async function updatePageAction(formData: FormData) {
   await requireStudioActionAuth();
   const pageId = String(formData.get("pageId"));
@@ -41,6 +59,8 @@ export async function updatePageAction(formData: FormData) {
   // Capture old type/slug before the update so both old and new URLs are revalidated.
   const oldPage = await repo().getPageBySlug(worldSlug, pageSlug);
   const newVisibility = formData.get("visibility") as Visibility;
+  const newSecretLevel = parseSecretLevel(formData.get("secretLevel"));
+  const newRevealState = parseRevealState(formData.get("revealState"));
 
   await repo().updatePage(pageId, {
     title: String(formData.get("title")),
@@ -50,6 +70,8 @@ export async function updatePageAction(formData: FormData) {
     visibility: newVisibility,
     publishStatus: formData.get("publishStatus") as PublishStatus,
     canonicalStatus: formData.get("canonicalStatus") as CanonicalStatus,
+    secretLevel: newSecretLevel,
+    revealState: newRevealState,
     tags: String(formData.get("tags") || "")
       .split(",")
       .map((t) => t.trim())
@@ -75,6 +97,14 @@ export async function updatePageAction(formData: FormData) {
     targetLabel: title,
     targetHref: newHref,
     summary: `Seite „${title}“ geändert.`,
+    details:
+      oldPage &&
+      (oldPage.secretLevel !== newSecretLevel || oldPage.revealState !== newRevealState)
+        ? {
+            secretLevel: { from: oldPage.secretLevel, to: newSecretLevel },
+            revealState: { from: oldPage.revealState, to: newRevealState },
+          }
+        : undefined,
   });
 
   if (oldPage && oldPage.visibility !== newVisibility) {
