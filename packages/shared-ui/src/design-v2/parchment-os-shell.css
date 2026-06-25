@@ -17,6 +17,12 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar {
   background: var(--uwe-sidebar-bg);
   border-right: none;
   scrollbar-color: #3b342a transparent;
+  /* The sidebar is dark ink (#211d17). Generic descendants (hints, plain links)
+     otherwise inherit the light-theme's dark content tokens and fail AA on the
+     dark surface — point them at the light sidebar-fg tokens instead. */
+  --uwe-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-fg-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-link: var(--uwe-sidebar-fg);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-section h3 {

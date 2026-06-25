@@ -138,6 +138,12 @@
   border-left: 1px solid var(--uwe-border);
   background: var(--uwe-panel);
   padding: 0.75rem;
+  /* This rail reuses .uwe-sidebar-section markup (Collapsible variant="sidebar")
+     but sits on a light content panel, not the dark nav sidebar. Reset the
+     sidebar-fg tokens to the content fg tokens so reused section titles stay
+     AA-legible instead of inheriting the sidebar's light-on-dark text color. */
+  --uwe-sidebar-fg: var(--uwe-fg);
+  --uwe-sidebar-fg-muted: var(--uwe-fg-muted);
 }
 
 .uwe-v2-context-mobile {

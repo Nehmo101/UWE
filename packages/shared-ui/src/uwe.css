@@ -234,9 +234,12 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
 :root {
   --uwe-bg: #0b1220;
   --uwe-fg: #e2e8f0;
-  --uwe-muted: #94a3b8;
+  /* Legacy short tokens follow the theme-wired tokens (set per-theme by the
+     bootstrap script); static values are pre-hydration fallbacks only.
+     Without this they stayed slate/dark and failed WCAG AA on light themes. */
+  --uwe-muted: var(--uwe-fg-muted, #94a3b8);
   --uwe-panel: rgba(8, 12, 22, 0.55);
-  --uwe-card: rgba(15, 23, 42, 0.55);
+  --uwe-card: var(--uwe-card-bg, var(--uwe-surface, rgba(15, 23, 42, 0.55)));
   --uwe-border: rgba(148, 163, 184, 0.12);
   --uwe-accent: #6366f1;
   --uwe-danger: #fca5a5;
@@ -248,9 +251,9 @@ html.uwe-density-spacious { --uwe-density-scale: 1.08; }
 [data-app="portal"] {
   --uwe-bg: #1e1b4b;
   --uwe-fg: #f5f3ff;
-  --uwe-muted: #a78bfa;
+  --uwe-muted: var(--uwe-fg-muted, #a78bfa);
   --uwe-panel: rgba(15, 10, 46, 0.55);
-  --uwe-card: rgba(30, 27, 75, 0.55);
+  --uwe-card: var(--uwe-card-bg, var(--uwe-surface, rgba(30, 27, 75, 0.55)));
   --uwe-border: rgba(167, 139, 250, 0.15);
   --uwe-accent: #7c3aed;
   --uwe-danger: #fca5a5;
@@ -540,7 +543,7 @@ html[data-theme="light"] {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-sidebar-nav ul {
@@ -678,7 +681,7 @@ html[data-theme="light"] {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.8rem;
   margin-bottom: 0.45rem;
 }
@@ -692,7 +695,7 @@ html[data-theme="light"] {
 
 .uwe-search-result-fields {
   margin: 0.45rem 0 0;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.75rem;
 }
 
@@ -798,7 +801,7 @@ html[data-theme="light"] {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.72rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-page-header {
@@ -846,7 +849,7 @@ html[data-theme="light"] {
 
 .uwe-breadcrumb {
   font-size: 0.82rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   margin-bottom: 1rem;
 }
 
@@ -1048,7 +1051,7 @@ html[data-theme="light"] {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   margin-bottom: 0.2rem;
 }
 
@@ -1058,7 +1061,7 @@ html[data-theme="light"] {
 
 .uwe-empty,
 .wiki-empty {
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-style: italic;
 }
 
@@ -1079,7 +1082,7 @@ html[data-theme="light"] {
 
 .uwe-empty-state p {
   margin: 0;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   line-height: 1.55;
   max-width: 28rem;
   margin-inline: auto;
@@ -1303,7 +1306,7 @@ html[data-theme="light"] {
 .uwe-field-hint {
   font-size: 0.74rem;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-filter-bar {
@@ -1343,7 +1346,7 @@ html[data-theme="light"] {
 }
 
 .uwe-page-table th {
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1747,7 +1750,7 @@ html[data-theme="light"] {
   position: relative;
   margin: 1rem 0 0;
   font-size: 0.85rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-portal-hero-meta a {
@@ -1938,7 +1941,7 @@ html[data-theme="light"] {
 }
 
 .uwe-more-link a {
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%) !important;
+  color: var(--uwe-muted) !important;
   font-style: italic;
 }
 
@@ -2098,7 +2101,7 @@ html[data-theme="light"] {
 .uwe-collapsible-summary {
   font-size: 0.8rem;
   font-weight: 400;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-collapsible-chevron {
@@ -2161,7 +2164,7 @@ html[data-theme="light"] {
 
 .uwe-page-list-card-meta {
   font-size: 0.8rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-page-header-main {
@@ -2400,7 +2403,7 @@ html[data-theme="light"] {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+    color: var(--uwe-muted);
     min-width: 5rem;
   }
 
@@ -2589,7 +2592,7 @@ html[data-theme="light"] {
     padding: 0.35rem 0.25rem;
     border: none;
     background: transparent;
-    color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+    color: var(--uwe-muted);
     text-decoration: none;
     font: inherit;
     cursor: pointer;
@@ -3132,7 +3135,9 @@ html[data-theme="light"] {
 }
 
 .uwe-sidebar-links a {
-  color: color-mix(in srgb, var(--uwe-accent) 75%, white 25%);
+  /* The accent+white mix fails AA on light themes; --uwe-link is the AA-safe
+     accent-family color (and goes light inside dark sidebars that reset it). */
+  color: var(--uwe-link, color-mix(in srgb, var(--uwe-accent) 75%, white 25%));
   text-decoration: none;
 }
 
@@ -3350,7 +3355,7 @@ html[data-theme="light"] {
 }
 
 .uwe-graph-node-meta {
-  fill: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  fill: var(--uwe-muted);
   font-size: 9px;
   pointer-events: none;
 }
@@ -3420,12 +3425,12 @@ html[data-theme="light"] {
 
 .uwe-graph-relation-arrow {
   margin: 0 0.35rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-graph-relation-kind {
   margin-left: 0.5rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.75rem;
 }
 
@@ -3544,7 +3549,7 @@ html[data-theme="light"] {
 }
 
 .uwe-palette-input::placeholder {
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
 }
 
 .uwe-palette-list {
@@ -3581,7 +3586,7 @@ html[data-theme="light"] {
 }
 
 .uwe-palette-item small {
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -3602,7 +3607,7 @@ html[data-theme="light"] {
   gap: 1rem;
   padding: 0.5rem 1.1rem;
   border-top: 1px solid var(--uwe-border);
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-size: 0.72rem;
 }
 
@@ -3717,7 +3722,7 @@ html[data-theme="light"] {
 }
 
 .uwe-dashboard-list a {
-  color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-fg) 45%);
+  color: var(--uwe-link, color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-fg) 45%));
   font-size: 0.8rem;
   text-decoration: none;
 }
@@ -4200,7 +4205,7 @@ html[data-uwe-theme="uwe-parchment-os"] {
   /* Legacy alias tokens — set here on html so every child inherits parchment values.
      Without this, elements that still reference --uwe-muted / --uwe-card fall back
      to the dark defaults declared in :root. */
-  --uwe-muted: #6f6555;
+  --uwe-muted: #574e40;
   --uwe-card: rgba(251, 246, 234, 0.95);
 }
 
@@ -4237,6 +4242,12 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar {
   background: #211d17;
   border-right: none;
   scrollbar-color: #3b342a transparent;
+  /* Dark ink surface: generic descendants (hints, plain links like the settings
+     sidebar) must use the light sidebar-fg tokens, not the light-theme's dark
+     content tokens, to stay AA. Mirrors the .uwe-v2-sidebar reset. */
+  --uwe-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-fg-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-link: var(--uwe-sidebar-fg);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] body.uwe-theme-frosted .uwe-sidebar {
@@ -4254,10 +4265,11 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar .uwe-brand small {
   color: #b6ab92;
 }
 
-/* Sidebar section group headers */
+/* Sidebar section group headers — sidebar-fg-muted adapts per context: light on
+   the dark nav sidebar, dark where .uwe-v2-context resets it for light panels. */
 html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-section h3,
 html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar h3 {
-  color: #9a8f78;
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
 }
 
 /* Sidebar nav — inactive */
@@ -4365,11 +4377,11 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-logo {
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-subtitle {
-  color: #6f6555;
+  color: #574e40;
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-desc {
-  color: #6f6555;
+  color: #574e40;
 }
 
 /* Feature tiles — parchment cards with ink hairline */
@@ -4389,11 +4401,11 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-label {
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-detail {
-  color: #9a8f78;
+  color: var(--uwe-fg-subtle);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-meta {
-  color: #9a8f78;
+  color: var(--uwe-fg-subtle);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-badge {
@@ -4428,7 +4440,7 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card-header h1 {
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-lead {
-  color: #6f6555;
+  color: #574e40;
 }
 
 /* Auth form fields */

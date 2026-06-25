@@ -795,7 +795,9 @@
 }
 
 .uwe-cockpit-tag-accent {
-  color: var(--uwe-accent);
+  /* --uwe-accent alone fails AA on the faint accent-tint chip; --uwe-link is
+     the theme's AA-contrasting accent-family color. */
+  color: var(--uwe-link, var(--uwe-accent));
   border-color: color-mix(in srgb, var(--uwe-accent) 40%, transparent);
   background: color-mix(in srgb, var(--uwe-accent) 10%, transparent);
 }

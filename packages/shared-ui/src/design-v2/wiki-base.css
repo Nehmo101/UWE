@@ -162,13 +162,13 @@
 .wiki-meta {
   display: block;
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   margin-top: 0.15rem;
 }
 
 .wiki-empty {
   font-size: 0.875rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   font-style: italic;
 }
 
@@ -200,7 +200,7 @@
 
 .wiki-breadcrumb {
   font-size: 0.875rem;
-  color: color-mix(in srgb, var(--uwe-muted) 78%, var(--uwe-bg) 22%);
+  color: var(--uwe-muted);
   margin-bottom: 1rem;
 }
 
@@ -225,7 +225,7 @@
 }
 
 .wiki-world-card a {
-  color: color-mix(in srgb, var(--uwe-info) 90%, white 10%);
+  color: var(--uwe-link, color-mix(in srgb, var(--uwe-info) 90%, white 10%));
   text-decoration: none;
 }
 

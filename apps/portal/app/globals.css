@@ -80,7 +80,7 @@ body {
 .portal-studio-link,
 .portal-login-link {
   font-size: 0.85rem;
-  color: var(--uwe-info);
+  color: var(--uwe-link, var(--uwe-info));
   text-decoration: none;
   padding: 0.35rem 0.65rem;
   border-radius: 0.45rem;
