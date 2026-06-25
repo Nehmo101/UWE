@@ -38,6 +38,7 @@
     "perf:budget": "node scripts/perf-budget-check.mjs",
     "test:e2e:a11y": "pnpm --filter @uwe/database db:generate && playwright test e2e/studio-a11y.spec.ts e2e/portal-a11y.spec.ts",
     "test:qa-smoke": "node scripts/qa-smoke.mjs",
+    "qa:theme-matrix": "pnpm --filter @uwe/database db:generate && QA_MATRIX=1 playwright test studio-qa-matrix portal-qa-matrix",
     "test:postgres-smoke": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/database exec node --import tsx --test src/postgres-smoke.test.ts",
     "backup": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js backup",
     "restore": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js restore",
