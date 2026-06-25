@@ -10,6 +10,7 @@ import {
   type ThemeAppearance,
 } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
+import "@uwe/shared-ui/wiki-base.css";
 import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";

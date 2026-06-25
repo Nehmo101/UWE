@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
   "./uwe.css": "./src/uwe.css",
-    "./uwe-v2.css": "./src/uwe-v2.css"
+    "./uwe-v2.css": "./src/uwe-v2.css",
+    "./wiki-base.css": "./src/design-v2/wiki-base.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
