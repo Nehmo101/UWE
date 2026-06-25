@@ -126,6 +126,9 @@ export function getMiddlewareMatcher(surface: UweAppSurface): string[] {
     return [
       "/",
       "/login",
+      "/forgot-password",
+      "/reset-password",
+      "/portal",
       "/worlds/:path*",
       "/players/:path*",
       "/auth/:path*",
