@@ -90,6 +90,44 @@ export function isSecretVisibleToPlayer(
   return revealState === "revealed";
 }
 
+/** Default placeholder shown in the UI in place of a masked secret. */
+export const DEFAULT_SECRET_PLACEHOLDER =
+  "🔒 Verborgenes Geheimnis — für Spieler noch nicht enthüllt.";
+
+export interface MaskSecretsOptions {
+  /**
+   * Audience the content is rendered for. For `"player"` (default) a secret
+   * that is not `revealed` is masked; for `"dm"` the full content is returned.
+   * This is a UI affordance only — server-side player APIs must still rely on
+   * `sanitizeForPlayer` / `isBlockPlayerExposable` to drop secrets entirely.
+   */
+  audience?: "player" | "dm";
+  /** Placeholder shown in place of masked content. */
+  placeholder?: string;
+}
+
+export interface MaskedContent {
+  masked: boolean;
+  content: string;
+}
+
+/**
+ * UI helper: masks the text content of a secret block/page when it is not
+ * revealed and the audience is a player. Pure and side-effect free. Does NOT
+ * replace the server-side sanitization boundary — it only avoids showing
+ * unrevealed secret text in shared/preview surfaces.
+ */
+export function maskSecretsInUi(
+  input: Pick<ContentAccessFields, "secretLevel" | "revealState"> & { content: string },
+  options: MaskSecretsOptions = {},
+): MaskedContent {
+  const audience = options.audience ?? "player";
+  if (audience === "dm" || isSecretVisibleToPlayer(input)) {
+    return { masked: false, content: input.content };
+  }
+  return { masked: true, content: options.placeholder ?? DEFAULT_SECRET_PLACEHOLDER };
+}
+
 /**
  * Central rule: content is exposable to players only when visibility, status,
  * and secret/reveal state all allow it.

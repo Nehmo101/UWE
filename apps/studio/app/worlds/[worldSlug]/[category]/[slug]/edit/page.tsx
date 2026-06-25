@@ -11,6 +11,7 @@ import {
   REVEAL_STATE_LABELS,
   SecretLevelBadge,
   RevealStateBadge,
+  SecretReveal,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
 import { ContentBlockContentField } from "../../../../../../components/ContentBlockContentField";
@@ -250,11 +251,52 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 </select>
               </label>
 
+              <fieldset className="uwe-fieldset">
+                <legend>Geheimnis &amp; Enthüllung</legend>
+                <p className="uwe-field-hint" style={{ marginTop: 0 }}>
+                  Aktuell: <SecretLevelBadge secretLevel={block.secretLevel} />
+                  {block.secretLevel !== "none" && (
+                    <> · <RevealStateBadge revealState={block.revealState} /></>
+                  )}
+                </p>
+                <label>
+                  Geheimnis-Level
+                  <select name="secretLevel" defaultValue={block.secretLevel}>
+                    {Object.values(SecretLevelEnum).map((level) => (
+                      <option key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Enthüllungs-Status
+                  <select name="revealState" defaultValue={block.revealState}>
+                    {Object.values(RevealStateEnum).map((state) => (
+                      <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
+                    ))}
+                  </select>
+                  <small className="uwe-field-hint">
+                    Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen den Block im Portal
+                    erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
+                  </small>
+                </label>
+              </fieldset>
+
               <ContentBlockContentField
                 blockType={block.type}
                 defaultValue={block.content}
                 rows={6}
               />
+
+              {block.secretLevel !== "none" && (
+                <div className="uwe-field-hint" style={{ marginTop: "0.5rem" }}>
+                  <strong>Spieler-Vorschau:</strong>
+                  <SecretReveal
+                    content={block.content}
+                    secretLevel={block.secretLevel}
+                    revealState={block.revealState}
+                  />
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                 <button type="submit" className="uwe-v2-btn">Block speichern</button>
@@ -302,6 +344,24 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <select name="visibility" defaultValue="dm_only">
                 {Object.values(VisibilityEnum).map((v) => (
                   <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Geheimnis-Level
+              <select name="secretLevel" defaultValue="none">
+                {Object.values(SecretLevelEnum).map((level) => (
+                  <option key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Enthüllungs-Status
+              <select name="revealState" defaultValue="hidden">
+                {Object.values(RevealStateEnum).map((state) => (
+                  <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
                 ))}
               </select>
             </label>

@@ -221,6 +221,8 @@ export {
   type ContentBlockViewModel,
 } from "./StatusBadges";
 
+export { SecretReveal, type SecretRevealProps } from "./SecretReveal";
+
 export {
   CommandPalette,
   filterPaletteCommands,

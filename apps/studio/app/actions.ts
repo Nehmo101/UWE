@@ -241,15 +241,39 @@ export async function updateContentBlockAction(formData: FormData) {
   }
 
   const newVisibility = formData.get("visibility") as Visibility;
+  const newSecretLevel = parseSecretLevel(formData.get("secretLevel"));
+  const newRevealState = parseRevealState(formData.get("revealState"));
 
   await repo().updateContentBlock(blockId, {
     type: formData.get("type") as ContentBlockType,
     sortOrder: Number(formData.get("sortOrder")),
     content: String(formData.get("content") || ""),
     visibility: newVisibility,
+    secretLevel: newSecretLevel,
+    revealState: newRevealState,
   });
 
   const editHref = `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
+
+  if (
+    oldBlock &&
+    (oldBlock.secretLevel !== newSecretLevel || oldBlock.revealState !== newRevealState)
+  ) {
+    await activity().log({
+      worldId: oldBlock.page.worldId,
+      worldSlug,
+      action: "visibility_changed",
+      targetType: "content_block",
+      targetId: blockId,
+      targetLabel: `Block auf „${oldBlock.page.title}“`,
+      targetHref: editHref,
+      summary: `Block-Geheimnis auf „${oldBlock.page.title}“ geändert.`,
+      details: {
+        secretLevel: { from: oldBlock.secretLevel, to: newSecretLevel },
+        revealState: { from: oldBlock.revealState, to: newRevealState },
+      },
+    });
+  }
 
   if (oldBlock && oldBlock.visibility !== newVisibility) {
     await activity().log({
@@ -286,6 +310,8 @@ export async function createContentBlockAction(formData: FormData) {
     sortOrder: nextOrder,
     content: String(formData.get("content") || ""),
     visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
+    secretLevel: parseSecretLevel(formData.get("secretLevel")),
+    revealState: parseRevealState(formData.get("revealState")),
   });
 
   revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);

@@ -3,6 +3,7 @@ import { before, describe, it } from "node:test";
 import {
   isPlayerExposableContent,
   isSecretVisibleToPlayer,
+  maskSecretsInUi,
   sanitizeForPlayer,
 } from "./content-access";
 import { createAuthService } from "./auth";
@@ -109,6 +110,39 @@ describe("visibility and secret leak protection", () => {
 
     await repo.createPage({
       worldId,
+      title: "Block-Geheimnisse",
+      slug: "block-geheimnisse",
+      type: "lore",
+      visibility: "player_visible",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: "Sichtbarer Block.",
+        },
+        {
+          type: "rich_text",
+          sortOrder: 1,
+          visibility: "player_visible",
+          secretLevel: "dm_secret",
+          revealState: "hidden",
+          content: "GEHEIMER BLOCK verborgen.",
+        },
+        {
+          type: "rich_text",
+          sortOrder: 2,
+          visibility: "player_visible",
+          secretLevel: "spoiler",
+          revealState: "revealed",
+          content: "Enthuellter Block-Spoiler.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId,
       title: "Privater Plot",
       slug: "privater-plot",
       type: "lore",
@@ -137,6 +171,41 @@ describe("visibility and secret leak protection", () => {
     assert.ok(joined.includes("Spieler sehen das."));
     assert.ok(!joined.includes("DM NOTE"));
     assert.equal(sanitized.contentBlocks.every((block) => block.type !== "gm_note"), true);
+  });
+
+  it("sanitizeForPlayer drops unrevealed secret content blocks", async () => {
+    const page = await repo.getPageBySlug(worldSlug, "block-geheimnisse");
+    assert.ok(page);
+
+    const sanitized = sanitizeForPlayer(page);
+    const joined = sanitized.contentBlocks.map((block) => block.content).join("\n");
+
+    assert.ok(joined.includes("Sichtbarer Block."));
+    assert.ok(!joined.includes("GEHEIMER BLOCK"), "hidden secret block must not leak");
+    assert.ok(joined.includes("Enthuellter Block-Spoiler."), "revealed secret block stays visible");
+  });
+
+  it("maskSecretsInUi masks unrevealed secrets for players but not for DMs", () => {
+    const hidden = {
+      content: "Top secret",
+      secretLevel: "dm_secret",
+      revealState: "hidden",
+    } as const;
+
+    const player = maskSecretsInUi(hidden, { audience: "player" });
+    assert.equal(player.masked, true);
+    assert.ok(!player.content.includes("Top secret"));
+
+    const dm = maskSecretsInUi(hidden, { audience: "dm" });
+    assert.equal(dm.masked, false);
+    assert.equal(dm.content, "Top secret");
+
+    const revealed = maskSecretsInUi(
+      { content: "Now shown", secretLevel: "spoiler", revealState: "revealed" },
+      { audience: "player" },
+    );
+    assert.equal(revealed.masked, false);
+    assert.equal(revealed.content, "Now shown");
   });
 
   it("public search index excludes private and unpublished content", async () => {

@@ -312,6 +312,8 @@ export class UweRepository {
         sortOrder: input.sortOrder,
         content: input.content ?? "",
         visibility: input.visibility ?? "dm_only",
+        secretLevel: input.secretLevel ?? "none",
+        revealState: input.revealState ?? "hidden",
         metadata: input.metadata ?? {},
         assetId: input.assetId ?? null,
       },

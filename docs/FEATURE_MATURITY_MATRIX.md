@@ -28,7 +28,7 @@ Stand: Juni 2026 · Branch-Basis `main`.
 | 4 | Agent Jobs / Orchestrator | Phase 2 (Polling) | Ja (mit Limits) | Nein |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
 | 6 | Import Preview / Undo | Preview ja, Undo nein | Preview ja | Preview ja |
-| 7 | Secrets-/Reveal-System | Backend ja, Editor-UI ja (Page-Ebene) | Teilweise | Nein |
+| 7 | Secrets-/Reveal-System | Backend ja, Editor-UI ja (Page + ContentBlock) | Teilweise | Teilweise |
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
 | 10 | Global Search 2.0 | Erweiterte Suche v1 | Ja | Ja (Kern) |
@@ -234,14 +234,14 @@ Stand: Juni 2026 · Branch-Basis `main`.
 |-----------|--------|
 | Vorhanden | Ja (Backend) |
 | Scaffolding | Studio-Editor-UI für `secretLevel` / `revealState` |
-| UI | **Ja (Page-Ebene)** — Studio-Page-Editor setzt `secretLevel` / `revealState` (gemerged via [#241](https://github.com/Nehmo101/UWE/pull/241)) |
+| UI | **Ja (Page- + ContentBlock-Ebene)** — Studio-Editor setzt `secretLevel` / `revealState` für Seiten (#241) und Blöcke, mit `SecretReveal`-Spieler-Vorschau |
 | API | Ja — AuthZ, `POST /api/admin/secrets/reveal` (Audit only) |
-| DB | Ja — Migration `visibility_secret_system` |
-| Tests | Ja — `visibility-leak.test.ts`, AuthZ |
-| Nutzbar | **Ja (Page-Ebene)** — Leseschutz aktiv, Authoring im Editor; ContentBlock-/Asset-Ebene offen |
-| Production-ready | **Teilweise** — Page-Editor-UI vorhanden; ContentBlock-Secrets + `maskSecretsInUi` Reveal-Button offen |
+| DB | Ja — Migration `visibility_secret_system` (ContentBlock-Felder bereits im Schema) |
+| Tests | Ja — `visibility-leak.test.ts` (inkl. Block-Secret-Leak + `maskSecretsInUi`), AuthZ |
+| Nutzbar | **Ja (Page- + ContentBlock-Ebene)** — Leseschutz aktiv, Authoring im Editor; Asset-Ebene offen |
+| Production-ready | **Teilweise** — Page- + ContentBlock-Editor-UI vorhanden; Asset-Level-Secrets offen |
 
-**Offen (zurückgestellt):** ContentBlock-Level-Secrets, `maskSecretsInUi` + Reveal-Button in der UI, Asset-Level-Secrets.
+**Offen (zurückgestellt):** Asset-Level-Secrets (Folge-WP).
 
 **Referenzen:** `docs/secrets.md`, `packages/auth/src/content-access.ts`
 
