@@ -217,6 +217,8 @@ export {
   PageTypeBadge,
   PlayerNoteStatusBadge,
   PublishBadge,
+  RevealStateBadge,
+  SecretLevelBadge,
   VisibilityBadge,
   type ContentBlockViewModel,
 } from "./StatusBadges";
