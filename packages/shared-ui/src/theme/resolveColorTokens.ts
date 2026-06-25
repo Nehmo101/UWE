@@ -10,7 +10,44 @@ export type ResolvedThemeColorTokens = ThemeColorTokens & {
   focusShadow: string;
   /** Text color for accent-filled controls (primary buttons), AA-contrasting. */
   onAccent: string;
+  /** Default hyperlink color, AA-contrasting against the theme background. */
+  link: string;
 };
+
+/** WCAG contrast ratio between two hex colors, or null if either is non-hex. */
+function hexContrast(a: string, b: string): number | null {
+  const la = hexLuminance(a);
+  const lb = hexLuminance(b);
+  if (la === null || lb === null) return null;
+  const [hi, lo] = la >= lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * Picks a hyperlink color that meets WCAG AA against the background: the first
+ * of [accentHover, wikiLink, accent] reaching >=4.5:1 (brand accent on dark
+ * themes, the darker wiki-link on light themes). Falls back to the highest-
+ * contrast candidate when none clears 4.5.
+ */
+export function deriveLink(colors: ThemeColorTokens): string {
+  if (colors.link) return colors.link;
+  const bg = colors.bg;
+  const candidates = [colors.accentHover, colors.wikiLink, colors.accent].filter(
+    (c): c is string => typeof c === "string",
+  );
+  let best = candidates[0] ?? colors.accent;
+  let bestRatio = -1;
+  for (const candidate of candidates) {
+    const ratio = hexContrast(candidate, bg);
+    if (ratio === null) continue;
+    if (ratio >= 4.5) return candidate;
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      best = candidate;
+    }
+  }
+  return best;
+}
 
 /** Relative luminance (WCAG) of a #rgb/#rrggbb color, or null if not parseable. */
 function hexLuminance(color: string): number | null {
@@ -63,5 +100,6 @@ export function resolveThemeColorTokens(
       colors.focusShadow ??
       `color-mix(in srgb, ${colors.accent} 22%, transparent)`,
     onAccent: deriveOnAccent(colors.accent),
+    link: deriveLink(colors),
   };
 }

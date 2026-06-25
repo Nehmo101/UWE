@@ -13,6 +13,7 @@ export const CSS_VARS = {
   accentHover: "--uwe-accent-hover",
   accentMuted: "--uwe-accent-muted",
   onAccent: "--uwe-on-accent",
+  link: "--uwe-link",
   danger: "--uwe-danger",
   warning: "--uwe-warning",
   success: "--uwe-success",
@@ -69,6 +70,8 @@ export type ThemeColorTokens = {
   accent: string;
   accentHover: string;
   accentMuted: string;
+  /** Optional explicit hyperlink color; derived from accent/wikiLink when omitted. */
+  link?: string;
   danger: string;
   warning: string;
   success: string;

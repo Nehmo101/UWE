@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deriveOnAccent, resolveThemeColorTokens } from "./resolveColorTokens";
+import { deriveLink, deriveOnAccent, resolveThemeColorTokens } from "./resolveColorTokens";
 import { THEME_LIST, UWE_THEMES } from "./themes";
 
 describe("resolveThemeColorTokens", () => {
@@ -56,6 +56,35 @@ describe("deriveOnAccent", () => {
       if (!/^#[0-9a-fA-F]{6}$/.test(accent)) continue;
       const ratio = contrast(accent, deriveOnAccent(accent));
       assert.ok(ratio >= 4.5, `${theme.id} ${accent} ratio ${ratio.toFixed(2)}`);
+    }
+  });
+});
+
+describe("deriveLink", () => {
+  const lum = (hex: string) => {
+    const ch = (v: number) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    const n = hex.replace("#", "");
+    return (
+      0.2126 * ch(parseInt(n.slice(0, 2), 16)) +
+      0.7152 * ch(parseInt(n.slice(2, 4), 16)) +
+      0.0722 * ch(parseInt(n.slice(4, 6), 16))
+    );
+  };
+  const contrast = (a: string, b: string) => {
+    const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (l1 + 0.05) / (l2 + 0.05);
+  };
+
+  it("derives a link color >=4.5:1 against the background for every theme", () => {
+    for (const theme of THEME_LIST) {
+      const bg = theme.colors.bg;
+      if (!/^#[0-9a-fA-F]{6}$/.test(bg)) continue;
+      const link = deriveLink(theme.colors);
+      const ratio = contrast(link, bg);
+      assert.ok(ratio >= 4.5, `${theme.id} link ${link} on ${bg} = ${ratio.toFixed(2)}`);
     }
   });
 });

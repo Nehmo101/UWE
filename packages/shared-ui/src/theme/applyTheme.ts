@@ -68,6 +68,7 @@ export function applyColorTokens(colors: ThemeColorTokens): void {
   style.setProperty(CSS_VARS.accentHover, resolved.accentHover);
   style.setProperty(CSS_VARS.accentMuted, resolved.accentMuted);
   style.setProperty(CSS_VARS.onAccent, resolved.onAccent);
+  style.setProperty(CSS_VARS.link, resolved.link);
   style.setProperty(CSS_VARS.danger, resolved.danger);
   style.setProperty(CSS_VARS.warning, resolved.warning);
   style.setProperty(CSS_VARS.success, resolved.success);

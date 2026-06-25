@@ -36,6 +36,7 @@
   --uwe-accent-hover: #818cf8;
   --uwe-accent-muted: rgba(99, 102, 241, 0.15);
   --uwe-on-accent: #000000;
+  --uwe-link: #818cf8;
   --uwe-danger: #f87171;
   --uwe-warning: #fbbf24;
   --uwe-success: #4ade80;
@@ -82,6 +83,13 @@ html {
 body {
   background-color: var(--uwe-bg);
   color: var(--uwe-fg);
+}
+
+/* Base hyperlink color so unclassed links never fall back to the browser
+   default blue (#0000ee), which fails WCAG AA on themed backgrounds. Lowest
+   specificity — any component rule (.uwe-* a, etc.) overrides it. */
+a {
+  color: var(--uwe-link, var(--uwe-accent));
 }
 
 /* Semantic utility tokens */
@@ -870,7 +878,7 @@ html[data-theme="light"] {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.875rem;
-  color: var(--uwe-muted);
+  color: var(--uwe-link, var(--uwe-accent));
   text-decoration: none;
   margin-bottom: 0.75rem;
   padding: 0.25rem 0;
@@ -3135,7 +3143,7 @@ html[data-theme="light"] {
 .uwe-sidebar-back-link {
   display: inline-block;
   margin-bottom: 0.85rem;
-  color: var(--uwe-muted);
+  color: var(--uwe-link, var(--uwe-accent));
   font-size: 0.875rem;
   text-decoration: none;
 }
