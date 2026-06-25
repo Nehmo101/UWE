@@ -2677,7 +2677,7 @@ html[data-theme="light"] {
     padding: 0 0.35rem;
     border-radius: 999px;
     background: var(--uwe-accent);
-    color: #fff;
+    color: color-mix(in srgb, var(--uwe-accent) 10%, var(--uwe-card-bg) 90%);
     font-size: 0.72rem;
     font-weight: 700;
   }
@@ -2797,7 +2797,7 @@ html[data-theme="light"] {
   }
 
   .uwe-bottom-nav-label {
-    font-size: 0.58rem;
+    font-size: 0.65rem;
   }
 
   .uwe-topbar {
@@ -2966,7 +2966,7 @@ html[data-theme="light"] {
   bottom: 0;
   width: 10px;
   height: 10px;
-  background: #3b82f6;
+  background: var(--uwe-accent);
   cursor: se-resize;
 }
 
@@ -3022,14 +3022,6 @@ html[data-theme="light"] {
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.75rem;
-}
-
-.uwe-badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
 }
 
 .uwe-badge-success {

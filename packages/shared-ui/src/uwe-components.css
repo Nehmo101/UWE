@@ -335,6 +335,13 @@
   font-size: 0.8rem;
 }
 
+.uwe-table-sub {
+  margin: 0.15rem 0 0;
+  color: var(--uwe-fg-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 /* Toast */
 .uwe-toast-region {
   position: fixed;

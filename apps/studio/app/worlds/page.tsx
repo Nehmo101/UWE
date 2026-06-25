@@ -16,6 +16,7 @@ export default async function WorldsPage() {
   return (
     <AdminModuleShell
       activePath="/worlds"
+      bottomNav="search"
       title="Welten"
       summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung — oder lege eine neue an."
     >
