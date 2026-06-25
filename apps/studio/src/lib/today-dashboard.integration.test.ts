@@ -41,6 +41,8 @@ describe("today dashboard integration", () => {
     assert.ok(typeof data.systemOk === "boolean");
     assert.ok(data.systemLabel.length > 0);
     assert.ok(Array.isArray(data.lifeAdmin.recentCaptures));
+    assert.ok(Array.isArray(data.calendarToday));
+    assert.ok(Array.isArray(data.calendarThisWeek));
   });
 
   it("scales today summary with seeded captures", async () => {

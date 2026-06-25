@@ -1317,6 +1317,7 @@ export type {
   CreateCalendarFeedInput,
   CreateCalendarEventInput,
   ListCalendarEventsOptions,
+  ListCalendarEventsForAggregationOptions,
   CalendarEvent,
   CalendarFeed,
   CalendarEventKind,

@@ -74,6 +74,14 @@ export interface ListCalendarEventsOptions {
   limit?: number;
 }
 
+export interface ListCalendarEventsForAggregationOptions {
+  from?: Date;
+  to?: Date;
+  /** When set, include feed/personal events (no world) plus events for this world. */
+  worldId?: string;
+  limit?: number;
+}
+
 export class CalendarService {
   constructor(
     private readonly db: PrismaClient,
@@ -149,6 +157,36 @@ export class CalendarService {
       if (options.from) where.startAt.gte = options.from;
       if (options.to) where.startAt.lte = options.to;
     }
+    return this.db.calendarEvent.findMany({
+      where,
+      orderBy: { startAt: "asc" },
+      take: options.limit ?? 500,
+      include: { feed: true, session: true },
+    });
+  }
+
+  /**
+   * Read-only event list for /today and other cross-module aggregations.
+   * Keeps external feed events (worldId null) while optionally scoping DnD events to one world.
+   */
+  async listEventsForAggregation(options: ListCalendarEventsForAggregationOptions = {}) {
+    const where: Prisma.CalendarEventWhereInput = {
+      AND: [
+        {
+          OR: [{ feedId: null }, { feed: { enabled: true } }],
+        },
+        ...(options.worldId
+          ? [{ OR: [{ worldId: null }, { worldId: options.worldId }] }]
+          : []),
+      ],
+    };
+
+    if (options.from || options.to) {
+      where.startAt = {};
+      if (options.from) where.startAt.gte = options.from;
+      if (options.to) where.startAt.lte = options.to;
+    }
+
     return this.db.calendarEvent.findMany({
       where,
       orderBy: { startAt: "asc" },

@@ -1,5 +1,9 @@
 import type { PrismaClient } from "./client";
-import type { CalendarEvent, CalendarEventKind } from "./generated/prisma/client";
+import type {
+  CalendarEvent,
+  CalendarEventKind,
+  CalendarFeed,
+} from "./generated/prisma/client";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createCalendarService } from "./calendar-service";
 
@@ -27,8 +31,12 @@ export interface AggregatedCalendarItem {
   urgency: CalendarItemUrgency;
 }
 
+export type CalendarEventWithFeed = CalendarEvent & {
+  feed?: Pick<CalendarFeed, "name" | "type"> | null;
+};
+
 export interface CalendarAggregationInput {
-  events: CalendarEvent[];
+  events: CalendarEventWithFeed[];
   contractAlerts: ReturnType<typeof buildContractAlerts>;
   workshops: Array<{ id: string; title: string; metadata: unknown }>;
   hardware: Array<{ id: string; name: string; metadata: unknown }>;
@@ -131,6 +139,13 @@ function calendarEventHref(event: CalendarEvent): string | null {
   return "/calendar";
 }
 
+function calendarEventModuleLabel(event: CalendarEventWithFeed): string {
+  if (event.feed && event.feed.type !== "local") {
+    return event.feed.name;
+  }
+  return calendarEventKindLabel(event.kind);
+}
+
 export function aggregateCalendarItems(
   input: CalendarAggregationInput,
 ): AggregatedCalendarItem[] {
@@ -157,7 +172,7 @@ export function aggregateCalendarItems(
       allDay: event.allDay,
       source: "calendar_event",
       kind: event.kind,
-      moduleLabel: calendarEventKindLabel(event.kind),
+      moduleLabel: calendarEventModuleLabel(event),
       href: calendarEventHref(event),
       urgency: classifyUrgency(event.startAt, now),
     });
@@ -370,7 +385,7 @@ export class CalendarAggregationService {
       sessions,
       lastBackup,
     ] = await Promise.all([
-      calendar.listEvents({
+      calendar.listEventsForAggregation({
         worldId: options.worldId,
         from,
         to,

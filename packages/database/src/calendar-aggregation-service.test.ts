@@ -1,8 +1,9 @@
-import { describe, it } from "node:test";
+import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import {
   aggregateCalendarItems,
   classifyUrgency,
+  createCalendarAggregationService,
   endOfWeek,
   isWithinHorizon,
   readMetadataDate,
@@ -10,11 +11,16 @@ import {
   startOfDay,
 } from "./calendar-aggregation-service";
 import { buildContractAlerts } from "./contract-expense-utils";
+import { createCalendarService } from "./calendar-service";
+import { createPrismaClient, type PrismaClient } from "./client";
+import { createTestDatabaseUrl } from "./test-helpers";
 import type { CalendarEvent } from "./generated/prisma/client";
 
 const NOW = new Date("2026-06-19T10:00:00Z");
 
-function makeEvent(overrides: Partial<CalendarEvent>): CalendarEvent {
+function makeEvent(overrides: Partial<CalendarEvent> & { feed?: { name: string; type: "familywall" } }): CalendarEvent & {
+  feed?: { name: string; type: "familywall" };
+} {
   return {
     id: "evt-1",
     feedId: null,
@@ -201,9 +207,96 @@ describe("calendar-aggregation-service", () => {
     }
   });
 
+  it("uses feed name as module label for external calendar events", () => {
+    const items = aggregateCalendarItems({
+      events: [
+        makeEvent({
+          id: "fw-1",
+          title: "Familienausflug",
+          kind: "external",
+          startAt: new Date("2026-06-19T14:00:00Z"),
+          feed: { name: "FamilyWall", type: "familywall" },
+        }),
+      ],
+      contractAlerts: [],
+      workshops: [],
+      hardware: [],
+      personalProjects: [],
+      sessions: [],
+      lastBackupAt: NOW,
+      now: NOW,
+      horizonDays: 14,
+    });
+
+    assert.equal(items[0]?.moduleLabel, "FamilyWall");
+    assert.equal(items[0]?.source, "calendar_event");
+  });
+
   it("checks horizon boundaries", () => {
     assert.equal(isWithinHorizon(new Date("2026-06-25T00:00:00Z"), NOW, 7), true);
     assert.equal(isWithinHorizon(new Date("2026-07-10T00:00:00Z"), NOW, 7), false);
     assert.equal(startOfDay(NOW).getHours(), 0);
+  });
+});
+
+describe("calendar-aggregation-service integration", () => {
+  let db: PrismaClient;
+
+  before(async () => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  it("returns feed and scoped world events for today summary", async () => {
+    const calendar = createCalendarService(db);
+    const aggregation = createCalendarAggregationService(db);
+    const now = new Date("2026-06-19T10:00:00Z");
+
+    const world = await db.world.create({
+      data: { name: "Today Cal", slug: `today-cal-${Date.now()}` },
+    });
+
+    const feed = await calendar.createFeed({
+      name: "iCal Feed",
+      type: "ical_url",
+      direction: "read_only",
+    });
+
+    await calendar.createEvent({
+      feedId: feed.id,
+      title: "Arzttermin heute",
+      startAt: new Date("2026-06-19T15:00:00Z"),
+      kind: "external",
+    });
+
+    await calendar.createEvent({
+      feedId: feed.id,
+      title: "Samstag extern",
+      startAt: new Date("2026-06-20T10:00:00Z"),
+      kind: "external",
+    });
+
+    await calendar.syncSessionToCalendar(
+      (
+        await db.gameSession.create({
+          data: {
+            worldId: world.id,
+            title: "Kampagnenabend",
+            sessionNumber: 3,
+            date: new Date("2026-06-20T19:00:00Z"),
+          },
+        })
+      ).id,
+    );
+
+    const summary = await aggregation.getTodaySummary({
+      worldId: world.id,
+      now,
+      horizonDays: 14,
+    });
+
+    assert.ok(summary.today.some((item) => item.title === "Arzttermin heute"));
+    assert.ok(summary.today.some((item) => item.moduleLabel === "iCal Feed"));
+    assert.ok(summary.thisWeek.some((item) => item.title.includes("Kampagnenabend")));
+    assert.ok(summary.thisWeek.some((item) => item.title === "Samstag extern"));
   });
 });
