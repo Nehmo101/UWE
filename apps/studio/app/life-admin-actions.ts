@@ -310,6 +310,24 @@ export async function createLifeBrainFactAction(formData: FormData) {
   redirect("/life-brain");
 }
 
+export async function updateLifeBrainDocumentTagsAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await lifeAdmin().updatePersonalBrainDocument(String(formData.get("id")), {
+    tags: parseCommaTags(formData),
+  });
+  revalidateAdminPaths();
+}
+
+export async function updateLifeBrainFactTagsAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await lifeAdmin().updatePersonalBrainFact(String(formData.get("id")), {
+    tags: parseCommaTags(formData),
+  });
+  revalidateAdminPaths();
+}
+
 export async function deleteLifeBrainDocumentAction(formData: FormData) {
   assertStudioTrusted();
 

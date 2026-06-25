@@ -7,7 +7,10 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
-import { deleteLifeBrainDocumentAction } from "../../../life-admin-actions";
+import {
+  deleteLifeBrainDocumentAction,
+  updateLifeBrainDocumentTagsAction,
+} from "../../../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -90,6 +93,22 @@ export default async function LifeBrainDocumentDetailPage({ params }: Props) {
             </ul>
           </section>
         )}
+
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Tags bearbeiten</h2>
+          <form action={updateLifeBrainDocumentTagsAction} className="uwe-form-grid">
+            <input type="hidden" name="id" value={document.id} />
+            <label>
+              Tags (kommagetrennt)
+              <input name="tags" defaultValue={tags.join(", ")} placeholder="recht, vertrag" />
+            </label>
+            <div style={{ alignSelf: "end" }}>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+                Tags speichern
+              </button>
+            </div>
+          </form>
+        </section>
 
         <form action={deleteLifeBrainDocumentAction}>
           <input type="hidden" name="id" value={document.id} />

@@ -343,17 +343,17 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | **Ja** (`tag-service.ts`) |
-| Scaffolding | Studio-Admin-UI fehlt |
-| UI | **Ja** — `/admin/tags` + Asset/Life-Brain Tag-Felder |
+| Scaffolding | Studio-Admin-UI vorhanden |
+| UI | **Ja** — `/admin/tags` + Asset-Tag-Feld + Life-Brain Tag-Editing (Document/Fact) |
 | API | `createTagService`, `mergeTags`, `suggestTagMerges` |
 | DB | JSON-Tags (kein Tag-Model) |
 | Tests | `tag-service.test.ts` |
-| Nutzbar | **Ja** — Admin-UI + Merge/Suggestions |
-| Production-ready | **Nein** — UI + Asset/Life-Brain Tag-Felder fehlen |
+| Nutzbar | **Ja** — Admin-UI + Merge/Suggestions + Tag-Eingaben |
+| Production-ready | **Ja** — Admin-UI + Tag-Felder auf Asset & Life-Brain |
 
-**Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`.
+**Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`. Tag-Eingaben: Asset-Editor (`updateAssetAction`) und Life-Brain Document/Fact (`updateLifeBrainDocumentTagsAction`/`updateLifeBrainFactTagsAction`).
 
-**Nächste Schritte:** Studio-Admin-UI, Asset/Life-Brain Tag-Eingaben, optional zentrales Tag-Model.
+**Nächste Schritte:** optional zentrales Tag-Model.
 
 ---
 

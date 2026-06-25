@@ -6,7 +6,10 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { AdminModuleShell } from "@/components/AdminModuleShell";
-import { deleteLifeBrainFactAction } from "../../../life-admin-actions";
+import {
+  deleteLifeBrainFactAction,
+  updateLifeBrainFactTagsAction,
+} from "../../../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -86,6 +89,22 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
             </ul>
           </section>
         )}
+
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Tags bearbeiten</h2>
+          <form action={updateLifeBrainFactTagsAction} className="uwe-form-grid">
+            <input type="hidden" name="id" value={fact.id} />
+            <label>
+              Tags (kommagetrennt)
+              <input name="tags" defaultValue={tags.join(", ")} placeholder="regel, hausregel" />
+            </label>
+            <div style={{ alignSelf: "end" }}>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+                Tags speichern
+              </button>
+            </div>
+          </form>
+        </section>
 
         <form action={deleteLifeBrainFactAction}>
           <input type="hidden" name="id" value={fact.id} />
