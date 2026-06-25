@@ -39,10 +39,27 @@ describe("env validation", () => {
       STUDIO_API_TOKEN: "studio-token-value-here",
       TRUST_PROXY: "true",
       CLOUDFLARE_TUNNEL: "true",
+      CLOUDFLARE_ACCESS_ENABLED: "true",
+      STUDIO_ACCESS_ALLOWED_EMAILS: "owner@example.com",
       AUTH_REQUIRED: "true",
       SESSION_COOKIE_SECURE: "true",
     });
 
     assert.equal(hasBlockingEnvIssues(issues), false);
+  });
+
+  it("requires studio access allowlist when Cloudflare Access is enabled", () => {
+    const issues = validateUweEnvironment({
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uwe.example.com",
+      AUTH_SECRET: "a-strong-random-secret-value-here",
+      RUN_DB_SEED: "false",
+      STUDIO_API_TOKEN: "studio-token-value-here",
+      TRUST_PROXY: "true",
+      CLOUDFLARE_TUNNEL: "true",
+      CLOUDFLARE_ACCESS_ENABLED: "true",
+    });
+
+    assert.ok(issues.some((issue) => issue.id === "env:studio-access-allowlist"));
   });
 });

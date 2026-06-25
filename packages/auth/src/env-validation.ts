@@ -123,6 +123,23 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
     });
   }
 
+  if (
+    runtime.isProduction &&
+    publicExposure &&
+    runtime.cloudflareTunnel &&
+    runtime.cloudflareAccessEnabled &&
+    !env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() &&
+    !env.STUDIO_ACCESS_EMAIL?.trim()
+  ) {
+    issues.push({
+      id: "env:studio-access-allowlist",
+      severity: "error",
+      envKey: "STUDIO_ACCESS_ALLOWED_EMAILS",
+      message:
+        "CLOUDFLARE_ACCESS_ENABLED=true — STUDIO_ACCESS_ALLOWED_EMAILS setzen, damit Cf-Access-Header serverseitig geprüft werden.",
+    });
+  }
+
   return issues;
 }
 

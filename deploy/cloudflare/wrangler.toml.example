@@ -1,0 +1,25 @@
+# UWE Edge Health Worker — optional uptime probe + KV snapshot.
+# Deploy after copying wrangler.toml.example → wrangler.toml and setting account_id.
+#
+# KV namespace created via Cloudflare MCP (UWE_EDGE_HEALTH):
+#   id = "506d04d5c7c545bfac30daeb54f2d8bd"
+#
+# Deploy: npx wrangler deploy
+# Route (Dashboard): status.uweandragons.org/* → uwe-edge-health
+
+name = "uwe-edge-health"
+main = "uwe-edge-health-worker.mjs"
+compatibility_date = "2024-11-01"
+
+# Cron trigger drives the worker's scheduled() handler — without this the
+# periodic probe never runs (only the manual POST /run and GET fetch paths do).
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[kv_namespaces]]
+binding = "HEALTH"
+id = "506d04d5c7c545bfac30daeb54f2d8bd"
+
+[vars]
+UWE_PUBLIC_URL = "https://uweandragons.org"
+UWE_STUDIO_HEALTH_PATH = "/studio/api/health/public"

@@ -492,6 +492,16 @@ run_healthcheck() {
     fi
   done
 
+  if [[ -x "$UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh" ]]; then
+    if bash "$UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh"; then
+      healthcheck_item "Cloudflare Tunnel" ok "checks passed"
+    else
+      healthcheck_item "Cloudflare Tunnel" warn "see messages above"
+    fi
+  elif [[ -f "$UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh" ]]; then
+    healthcheck_item "Cloudflare Tunnel" warn "check script not executable"
+  fi
+
   if [[ -f "$UWE_HOME/scripts/check-standalone-prisma-deps.mjs" ]] && id "$SERVICE_USER" >/dev/null 2>&1; then
     for app in studio portal; do
       if [[ -d "$UWE_HOME/apps/$app/.next/standalone" ]]; then
