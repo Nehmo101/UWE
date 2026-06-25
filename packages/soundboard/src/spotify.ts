@@ -595,3 +595,90 @@ export async function setSpotifyVolume(
 
   return { ok: true, message: "Spotify-Lautstärke angepasst." };
 }
+
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  isActive: boolean;
+  volumePercent: number | null;
+}
+
+export interface SpotifyDevicesResult {
+  ok: boolean;
+  devices?: SpotifyDevice[];
+  message?: string;
+}
+
+export interface SpotifyTransferConfig extends SpotifyTokenConfig {
+  deviceId: string;
+}
+
+export async function listSpotifyDevices(
+  config: SpotifyTokenConfig,
+  fetchImpl?: SpotifyFetch,
+): Promise<SpotifyDevicesResult> {
+  if (!config.accessToken) {
+    return { ok: false, message: missingTokenResult().message };
+  }
+
+  const fetchFn = fetchImpl ?? fetch;
+
+  let response: Response;
+  try {
+    response = await fetchFn(`${SPOTIFY_API_BASE}/me/player/devices`, {
+      headers: { Authorization: `Bearer ${config.accessToken}` },
+    });
+  } catch {
+    return { ok: false, message: "Spotify-Geräteliste konnte nicht abgerufen werden." };
+  }
+
+  if (!response.ok) {
+    const bodyText = await readResponseBody(response);
+    return { ok: false, message: mapSpotifyHttpError(response.status, bodyText) };
+  }
+
+  const payload = (await response.json()) as {
+    devices?: Array<{
+      id: string | null;
+      name: string;
+      type: string;
+      is_active: boolean;
+      volume_percent: number | null;
+    }>;
+  };
+
+  const devices: SpotifyDevice[] = (payload.devices ?? [])
+    .filter((d) => Boolean(d.id))
+    .map((d) => ({
+      id: d.id as string,
+      name: d.name,
+      type: d.type,
+      isActive: d.is_active,
+      volumePercent: d.volume_percent,
+    }));
+
+  return { ok: true, devices };
+}
+
+export async function transferSpotifyPlayback(
+  config: SpotifyTransferConfig,
+  fetchImpl?: SpotifyFetch,
+): Promise<SpotifyPlaybackResult> {
+  if (!config.accessToken) {
+    return missingTokenResult();
+  }
+
+  const result = await spotifyApiRequest(
+    { accessToken: config.accessToken, fetchImpl },
+    "PUT",
+    "/me/player",
+    { body: { device_ids: [config.deviceId], play: false } },
+  );
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, status: result.status };
+  }
+
+  return { ok: true, message: "Spotify-Wiedergabe übertragen." };
+}

@@ -1049,6 +1049,8 @@ model SpotifyConnection {
   refreshTokenEncrypted String   @map("refresh_token_encrypted")
   expiresAt             DateTime @map("expires_at")
   scopes                String   @default("")
+  preferredDeviceId     String?  @map("preferred_device_id")
+  preferredDeviceName   String?  @map("preferred_device_name")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

@@ -13,6 +13,8 @@ export interface SpotifyConnectionStatus {
   spotifyDisplayName?: string | null;
   expiresAt?: string;
   scopes?: string;
+  preferredDeviceId?: string | null;
+  preferredDeviceName?: string | null;
 }
 
 export interface SaveSpotifyConnectionInput {
@@ -39,6 +41,8 @@ export class SpotifyConnectionService {
             spotifyDisplayName: true,
             expiresAt: true,
             scopes: true,
+            preferredDeviceId: true,
+            preferredDeviceName: true,
           },
         },
       },
@@ -54,7 +58,40 @@ export class SpotifyConnectionService {
       spotifyDisplayName: world.spotifyConnection.spotifyDisplayName,
       expiresAt: world.spotifyConnection.expiresAt.toISOString(),
       scopes: world.spotifyConnection.scopes,
+      preferredDeviceId: world.spotifyConnection.preferredDeviceId,
+      preferredDeviceName: world.spotifyConnection.preferredDeviceName,
     };
+  }
+
+  async setPreferredDevice(
+    worldSlug: string,
+    deviceId: string | null,
+    deviceName: string | null,
+  ): Promise<boolean> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+
+    if (!world) {
+      return false;
+    }
+
+    const updated = await this.db.spotifyConnection.updateMany({
+      where: { worldId: world.id },
+      data: { preferredDeviceId: deviceId, preferredDeviceName: deviceName },
+    });
+
+    return updated.count > 0;
+  }
+
+  async getPreferredDeviceId(worldSlug: string): Promise<string | null> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { spotifyConnection: { select: { preferredDeviceId: true } } },
+    });
+
+    return world?.spotifyConnection?.preferredDeviceId ?? null;
   }
 
   async saveConnection(input: SaveSpotifyConnectionInput): Promise<void> {
