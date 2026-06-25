@@ -12,19 +12,16 @@ import {
   AiGatewayAccessDeniedError,
   AiGatewayBudgetExceededError,
   AiGatewayDisabledError,
-  semanticSearchPersonalBrainChunks,
 } from "@uwe/ai-brain";
 import {
   createBrainStoreService,
   createJobService,
-  createLifeAdminService,
-  createPersonalBrainService,
   createUweRepository,
   getSystemSettings,
-  loadPersonalBrainPromptContext,
   prisma,
   resolveLocalOnlyMode,
 } from "@uwe/database/server";
+import { loadStudioPersonalBrainPromptContext } from "./personal-brain-ai-context";
 import {
   AiAccessDeniedError,
   AiPolicyViolationError,
@@ -158,8 +155,6 @@ export async function executeAiPrompt(
 
   const repo = createUweRepository();
   const brainStore = createBrainStoreService();
-  const lifeAdmin = createLifeAdminService(prisma);
-  const personalBrain = createPersonalBrainService(prisma);
 
   if (!user) {
     throw new AiGatewayAccessDeniedError(
@@ -174,38 +169,7 @@ export async function executeAiPrompt(
       repo,
       brainStore,
       loadPersonalBrainContext: () =>
-        loadPersonalBrainPromptContext({
-          query: prompt,
-          retrievalLimit: 8,
-          loadDocs: () =>
-            lifeAdmin.listPersonalBrainDocuments({ limit: 30 }).then((docs) =>
-              docs.map((doc) => ({
-                title: doc.title,
-                content: doc.content,
-                category: doc.category,
-              })),
-            ),
-          loadFacts: () =>
-            lifeAdmin.listPersonalBrainFacts({ limit: 30 }).then((facts) =>
-              facts.map((fact) => ({
-                title: fact.title,
-                content: fact.content,
-                factType: fact.factType,
-              })),
-            ),
-          searchChunks: async (query, limit) => {
-            const results = await semanticSearchPersonalBrainChunks(personalBrain, {
-              query,
-              limit,
-            });
-            return results.map((entry) => ({
-              documentTitle: entry.documentTitle,
-              category: entry.category,
-              content: entry.content,
-              score: entry.score,
-            }));
-          },
-        }),
+        loadStudioPersonalBrainPromptContext(prisma, { query: prompt, retrievalLimit: 8 }),
     },
     {
       user: gatewayUser,

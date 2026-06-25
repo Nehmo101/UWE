@@ -32,7 +32,7 @@ export function isCloudRouteAllowedForContext(contextMode: AiContextMode): boole
 
 /**
  * Server-side validation of provider + context mode combinations.
- * Cloud must never receive local campaign/object/brain context.
+ * Cloud must never receive local campaign/object/brain/personal life context.
  */
 export function validateProviderContextCombination(
   providerMode: AiProviderMode,

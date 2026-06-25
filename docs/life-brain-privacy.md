@@ -12,7 +12,7 @@ Persönliches Life-Brain (`PersonalBrainDocument`, `PersonalBrainFact`) ist **st
 | `GET /api/life-brain/search` | Studio-auth API für Suche |
 | `GET\|POST /api/life-brain/context` | Query-fokussierter Kontext für **lokale** Agenten |
 
-Retrieval: Keyword + Filter in `packages/database/src/personal-brain-search.ts`. Keine Life-Brain-Embeddings — DnD-Brain-Semantik bleibt getrennt.
+Retrieval: Stichwort + Filter in `packages/database/src/personal-brain-search.ts`; semantische Chunks über RTX in `@uwe/ai-brain` (`indexPersonalBrainDocument`, `semanticSearchPersonalBrainChunks`). Life-Brain-Embeddings sind strikt getrennt vom DnD-Brain (`BrainChunk`).
 
 ## Capture → Life Brain
 

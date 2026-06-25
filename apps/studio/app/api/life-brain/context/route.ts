@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  createLifeAdminService,
-  loadPersonalBrainAgentContext,
-  assertPersonalBrainLocalOnly,
-  prisma,
-} from "@uwe/database/server";
+import { assertPersonalBrainLocalOnly, prisma } from "@uwe/database/server";
 import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
+import { loadStudioPersonalBrainPromptContext } from "@/src/lib/personal-brain-ai-context";
 
 interface ContextBody {
   query?: string;
@@ -23,14 +19,12 @@ function parseContextBody(body: ContextBody) {
 }
 
 async function buildContext(query: string, limit: number) {
-  const service = createLifeAdminService(prisma);
-  return loadPersonalBrainAgentContext(
-    (searchQuery, docLimit) =>
-      service.searchPersonalBrainDocumentsForContext(searchQuery, docLimit),
-    (searchQuery, factLimit) =>
-      service.searchPersonalBrainFactsForContext(searchQuery, factLimit),
-    { query: query || undefined, limit },
-  );
+  return loadStudioPersonalBrainPromptContext(prisma, {
+    query: query || undefined,
+    retrievalLimit: limit,
+    docFallbackLimit: limit,
+    factFallbackLimit: limit,
+  });
 }
 
 export async function GET(request: Request) {
@@ -55,6 +49,7 @@ export async function GET(request: Request) {
     query,
     provider,
     localOnly: true,
+    retrieval: Boolean(query),
     context,
     contextLength: context.length,
   });
@@ -87,6 +82,7 @@ export async function POST(request: Request) {
     query,
     provider,
     localOnly: true,
+    retrieval: Boolean(query),
     context,
     contextLength: context.length,
   });
