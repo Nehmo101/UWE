@@ -1,4 +1,4 @@
-import { resolvePortalPublicBaseUrl } from "@uwe/auth";
+import { resolvePortalSessionHref, resolveUweAppUrls } from "@uwe/auth";
 
 import { isLikelyGameSessionId } from "./session-route";
 
@@ -189,13 +189,14 @@ function resolveUnifiedHref(
   portalUrl: string,
 ): { label: string; href: string } | null {
   if (href === "__portal__") {
-    return portalUrl
-      ? { label: "Spieler-Portal", href: portalUrl }
-      : null;
+    if (!portalUrl) return null;
+    const sessionHref = resolvePortalSessionHref(process.env, { currentApp: "studio" });
+    return { label: "Spieler-Portal", href: sessionHref };
   }
   if (href === "__portal_worlds__") {
+    if (!portalUrl) return null;
     const base = portalUrl.replace(/\/$/, "");
-    return { label: "Welten (Spieler)", href: base ? `${base}/worlds` : "/worlds" };
+    return { label: "Welten (Spieler)", href: `${base}/worlds` };
   }
 
   for (const section of STUDIO_NAV_SECTIONS) {
@@ -212,9 +213,8 @@ export function studioUnifiedSidebarSections(
   activePath: string,
   options: { portalUrl?: string } = {},
 ): StudioNavSection[] {
-  const portalUrl = (
-    options.portalUrl ?? resolvePortalPublicBaseUrl(process.env)
-  ).replace(/\/$/, "");
+  const urls = resolveUweAppUrls(process.env);
+  const portalUrl = (options.portalUrl ?? urls.portalUrl ?? "").replace(/\/$/, "");
   const flat = studioFlatNav(activePath);
 
   return UNIFIED_SIDEBAR_LINKS.map((group) => {

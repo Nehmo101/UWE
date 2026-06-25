@@ -3103,6 +3103,14 @@ html[data-theme="light"] {
   gap: 0.5rem;
 }
 
+/* Override .uwe-form label (specificity 0,1,1) so checkbox rows stay flex */
+.uwe-form label.uwe-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .uwe-link-btn {
   background: none;
   border: none;
