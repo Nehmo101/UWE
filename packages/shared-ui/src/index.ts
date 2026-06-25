@@ -228,7 +228,6 @@ export {
 export {
   ThemePicker,
   THEME_OPTIONS,
-  applyThemeAppearance,
   type ThemePickerProps,
 } from "./ThemePicker";
 
@@ -237,6 +236,7 @@ export { HealthBadge } from "./HealthBadge";
 
 export {
   BACKGROUND_PATTERN_LABELS,
+  applyThemeAppearance,
   buildVisualThemeHtmlAttributes,
   type BackgroundPattern,
   type ThemeAppearance,
@@ -244,6 +244,8 @@ export {
   type VisualThemeHtmlAttributes,
   type VisualThemeSettings,
 } from "./visual-theme";
+
+export { ThemeDocumentSync } from "./ThemeDocumentSync";
 
 export { VisualThemePreview, type VisualThemePreviewProps } from "./VisualThemePreview";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useId, useState } from "react";
-import type { ThemeAppearance } from "./visual-theme";
+import { applyThemeAppearance, type ThemeAppearance } from "./visual-theme";
 
 export type { ThemeAppearance } from "./visual-theme";
 
@@ -14,11 +14,6 @@ export const THEME_OPTIONS: {
   { value: "light", label: "Light", description: "Helles Erscheinungsbild mit hohem Kontrast" },
   { value: "system", label: "System", description: "Übernimmt die Hell/Dunkel-Einstellung des Geräts" },
 ];
-
-export function applyThemeAppearance(theme: ThemeAppearance) {
-  if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = theme;
-}
 
 export interface ThemePickerProps {
   name?: string;

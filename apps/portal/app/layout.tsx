@@ -3,9 +3,11 @@ import { Space_Mono, Newsreader } from "next/font/google";
 import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
   ThemeBootstrapScript,
+  ThemeDocumentSync,
   buildVisualThemeHtmlAttributes,
   isDesignV2Enabled,
   toUweThemePreferences,
+  type ThemeAppearance,
 } from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
@@ -62,6 +64,7 @@ export default async function RootLayout({
     resolveThemePreferencesForScope(settings.app, "portal"),
     "portal",
   );
+  const serverTheme: ThemeAppearance = settings.app.theme;
 
   const designV2 = isDesignV2Enabled();
 
@@ -77,6 +80,7 @@ export default async function RootLayout({
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
         >
+          <ThemeDocumentSync theme={serverTheme} />
           {portalEnabled ? (
             <>
               {children}

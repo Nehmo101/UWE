@@ -62,4 +62,13 @@ describe("uwe theme system", () => {
     assert.match(script, /uwe-portal-purple/);
     assert.match(script, /odysseus-dark-inspired/);
   });
+
+  it("portal bootstrap uses portal-scoped storage keys", () => {
+    const script = buildThemeBootstrapScript("portal", {
+      serverPreferences: defaultPreferences("portal"),
+      serverUpdatedAt: "2026-06-01T00:00:00.000Z",
+    });
+    assert.match(script, /uwe-theme-preferences-portal/);
+    assert.match(script, /uwe-theme-sync-at-portal/);
+  });
 });

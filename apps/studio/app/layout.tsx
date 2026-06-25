@@ -4,6 +4,7 @@ import { Space_Mono, Newsreader } from "next/font/google";
 import { getAppRepository, getSystemSettingsSnapshot, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
   ThemeBootstrapScript,
+  ThemeDocumentSync,
   TopBarSessionMount,
   buildVisualThemeHtmlAttributes,
   isDesignV2Enabled,
@@ -28,7 +29,6 @@ const newsreader = Newsreader({
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
-import { ThemeDocumentSync } from "../components/ThemeDocumentSync";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
 import "@uwe/shared-ui/uwe.css";

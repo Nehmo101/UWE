@@ -18,6 +18,8 @@ export interface VisualThemeSettings {
 export type VisualThemeAppVariant = "studio" | "portal";
 
 export interface VisualThemeHtmlAttributes {
+  /** dark / light / system — drives color-scheme and a11y CSS hooks */
+  "data-theme": ThemeAppearance;
   "data-uwe-theme": ThemeAppearance;
   "data-uwe-bg-pattern": BackgroundPattern;
   "data-uwe-glass": "on" | "off";
@@ -31,6 +33,7 @@ export function buildVisualThemeHtmlAttributes(
   options?: { appVariant?: VisualThemeAppVariant },
 ): VisualThemeHtmlAttributes {
   return {
+    "data-theme": app.theme,
     "data-uwe-theme": app.theme,
     "data-uwe-bg-pattern": app.backgroundPattern ?? "none",
     "data-uwe-glass": app.frostedGlass !== false ? "on" : "off",
@@ -47,3 +50,8 @@ export const BACKGROUND_PATTERN_LABELS: Record<BackgroundPattern, string> = {
   parchment: "Pergament",
   "subtle-noise": "Feines Rauschen",
 };
+
+export function applyThemeAppearance(theme: ThemeAppearance): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.theme = theme;
+}

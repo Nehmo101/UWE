@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildVisualThemeHtmlAttributes } from "./visual-theme";
+import { applyThemeAppearance, buildVisualThemeHtmlAttributes } from "./visual-theme";
 
 describe("buildVisualThemeHtmlAttributes", () => {
   it("maps app settings to html data attributes", () => {
@@ -15,12 +15,33 @@ describe("buildVisualThemeHtmlAttributes", () => {
     );
 
     assert.deepEqual(attrs, {
+      "data-theme": "system",
       "data-uwe-theme": "system",
       "data-uwe-bg-pattern": "dots",
       "data-uwe-glass": "off",
       "data-uwe-motion": "on",
       "data-uwe-app": "portal",
     });
+  });
+
+  it("applyThemeAppearance sets data-theme on documentElement", () => {
+    const prev = globalThis.document;
+    const el = { dataset: {} as DOMStringMap };
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: {
+        documentElement: el,
+      },
+    });
+    try {
+      applyThemeAppearance("light");
+      assert.equal(el.dataset.theme, "light");
+    } finally {
+      Object.defineProperty(globalThis, "document", {
+        configurable: true,
+        value: prev,
+      });
+    }
   });
 
   it("defaults glass and motion to on when undefined", () => {
