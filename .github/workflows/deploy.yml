@@ -1,0 +1,54 @@
+name: Deploy
+
+# Triggered automatically after CI passes on main.
+# Deploys to the self-hosted Linux mini via SSH (uwe service user).
+#
+# Required GitHub Secrets:
+#   DEPLOY_HOST     — hostname or LAN IP of the mini
+#   DEPLOY_SSH_KEY  — private SSH key (Ed25519 recommended); matching public key in ~uwe/.ssh/authorized_keys on host
+#   DEPLOY_HOST_KEY — host public key fingerprint (from: ssh-keyscan <host>); optional but recommended
+#   DEPLOY_SSH_PORT — SSH port (optional, default 22)
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to host via SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          if [[ -n "${DEPLOY_HOST_KEY:-}" ]]; then
+            printf '%s\n' "$DEPLOY_HOST_KEY" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$DEPLOY_SSH_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key \
+              -p "$DEPLOY_SSH_PORT" \
+              -o BatchMode=yes \
+              "uwe@${DEPLOY_HOST}" \
+              /opt/uwe/deploy/scripts/uwe-cd-trigger.sh

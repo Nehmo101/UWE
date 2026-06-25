@@ -1,6 +1,6 @@
 # CI — Workflows, Scripts, and Debugging
 
-Stand: 2026-06-20
+Stand: 2026-06-25
 
 UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) and **Turbo** for the monorepo. CI runs on **Node 22** in GitHub Actions.
 
@@ -17,6 +17,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
 | **Manual / release tags** | `windows-installer.yml` | Windows EXE build |
 | **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
+| **CI success on `main`** | `deploy.yml` | SSH deploy to self-hosted Linux mini | Production deployment |
 
 ## Workflows
 
@@ -28,6 +29,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
 | **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
 | **Windows Installer** | `.github/workflows/windows-installer.yml` | Manual, `v*` tags, `release/**` | Windows installer build/test | No |
+| **Deploy** | `.github/workflows/deploy.yml` | `workflow_run` after CI success on `main` | SSH → `uwe-cd-trigger.sh` → git pull + setup --quick | No |
 
 ### Branch protection (recommended)
 
