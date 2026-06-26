@@ -38,10 +38,10 @@ export interface StudioShellV2Props {
 
 const RAIL_ITEMS = [
   { id: "today", href: "/today", label: "Heute", icon: V2_NAV_ICONS.today },
-  { id: "capture", href: "/capture", label: "Capture", icon: V2_NAV_ICONS.capture },
-  { id: "search", href: "/search", label: "Suche", icon: V2_NAV_ICONS.search },
-  { id: "image-studio", href: "/image-studio", label: "Image Studio", icon: V2_NAV_ICONS.assets },
-  { id: "ai", href: "/ai", label: "KI", icon: V2_NAV_ICONS.ai },
+  { id: "worlds", href: "/worlds", label: "Welten", icon: V2_NAV_ICONS.search },
+  { id: "create", href: "/capture", label: "Erstellen", icon: V2_NAV_ICONS.capture },
+  { id: "media-ai", href: "/ai", label: "Medien & KI", icon: V2_NAV_ICONS.ai },
+  { id: "system", href: "/system", label: "System", icon: V2_NAV_ICONS.menu },
 ] as const;
 
 function StudioIconRailV2({ activeId }: { activeId?: string }) {
@@ -74,7 +74,7 @@ function resolveSubtitle(variant: StudioShellV2Variant, subtitle?: string) {
   }
 }
 
-/** Design V2 DM cockpit shell — icon rail, sidebar sections, topbar, main, context. */
+/** Design V2 Studio shell — icon rail, sidebar sections, topbar, main, context. */
 export function StudioShellV2({
   main,
   sidebar,

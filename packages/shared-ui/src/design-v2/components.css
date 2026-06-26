@@ -70,6 +70,17 @@
   background: color-mix(in srgb, var(--uwe-zone-card-bg) 70%, var(--uwe-bg) 30%);
 }
 
+.uwe-v2-btn-subtle {
+  border-color: var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 45%, transparent);
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-v2-btn-subtle:hover {
+  color: var(--uwe-zone-chrome-fg);
+  background: color-mix(in srgb, var(--uwe-accent-muted) 35%, transparent);
+}
+
 .uwe-v2-btn-ghost {
   border-color: transparent;
   background: transparent;
@@ -88,7 +99,7 @@
 .uwe-v2-btn-sm {
   min-height: 1.85rem;
   padding: 0.3rem 0.65rem;
-   font-size: 0.8125rem;
+  font-size: 0.8125rem;
 }
 
 /* — Card — */

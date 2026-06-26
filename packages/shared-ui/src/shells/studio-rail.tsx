@@ -11,15 +11,10 @@ export interface StudioRailItem {
 
 export const STUDIO_RAIL_ITEMS: StudioRailItem[] = [
   { id: "today", href: "/today", label: "Heute", icon: STUDIO_RAIL_ICON_MAP.today },
-  { id: "capture", href: "/capture", label: "Capture", icon: STUDIO_RAIL_ICON_MAP.capture },
-  { id: "search", href: "/search", label: "Suche", icon: STUDIO_RAIL_ICON_MAP.search },
-  {
-    id: "image-studio",
-    href: "/image-studio",
-    label: "Image Studio",
-    icon: STUDIO_RAIL_ICON_MAP["image-studio"],
-  },
-  { id: "ai", href: "/ai", label: "KI", icon: STUDIO_RAIL_ICON_MAP.ai },
+  { id: "worlds", href: "/worlds", label: "Welten", icon: STUDIO_RAIL_ICON_MAP.worlds },
+  { id: "create", href: "/capture", label: "Erstellen", icon: STUDIO_RAIL_ICON_MAP.create },
+  { id: "media-ai", href: "/ai", label: "Medien & KI", icon: STUDIO_RAIL_ICON_MAP["media-ai"] },
+  { id: "system", href: "/system", label: "System", icon: STUDIO_RAIL_ICON_MAP.system },
 ];
 
 export function StudioIconRail({
