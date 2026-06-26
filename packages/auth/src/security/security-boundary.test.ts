@@ -89,6 +89,16 @@ describe("security boundary", () => {
     delete process.env.STUDIO_API_TOKEN;
   });
 
+  it("keeps RTX connector API public at middleware (handler does token auth)", () => {
+    // Connectors authenticate with their own token in the handler, not a session.
+    assert.equal(isPublicRoute("/api/connectors/heartbeat", "studio"), true);
+    assert.equal(isPublicRoute("/api/connectors/claim-job", "studio"), true);
+    assert.equal(isPublicRoute("/api/connectors/jobs/abc/complete", "studio"), true);
+    assert.equal(isUnknownProtectedApi("/api/connectors/heartbeat", "studio"), false);
+    // Admin management of connectors stays protected (session/admin).
+    assert.equal(isPublicRoute("/api/admin/connectors", "studio"), false);
+  });
+
   it("blocks or hides unknown API routes (deny-by-default)", () => {
     assert.equal(isUnknownProtectedApi("/api/not-implemented", "portal"), true);
     assert.equal(isUnknownProtectedApi("/api/not-implemented", "studio"), true);
@@ -190,8 +200,8 @@ describe("security boundary", () => {
       }
       assert.match(
         content,
-        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation/,
-        `${file} must call requireStudioApiAuth, requireAdminApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, or requireAdminMailApi`,
+        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/,
+        `${file} must call requireStudioApiAuth, requireAdminApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, requireAdminMailApi, or authenticateConnector`,
       );
     }
 

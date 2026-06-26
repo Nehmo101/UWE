@@ -151,6 +151,10 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/auth/two-factor/verify",
   "/api/spotify/callback",
   "/api/agent-jobs/callback",
+  // RTX Host Connector endpoints authenticate with their own connector token in
+  // the route handler (authenticateConnector), not a user session — so they stay
+  // public at the middleware layer like the agent-jobs callback.
+  "/api/connectors/*",
 ] as const;
 
 /** All Studio app routes are protected in production exposure scenarios. */
