@@ -12,8 +12,14 @@ The outbound RTX Host Connector queue already has job catalogue entries for:
 - `image_generate`
 
 The connector executor currently runs `llm_generate` and `embedding_generate`
-through Ollama only. `image_generate` exists in the catalogue but fails honestly
-because no image executor is configured.
+through Ollama only. LM Studio and llama.cpp discovery remains informational for
+now; they do not advertise executable `llm_local` or `embedding_local`
+capabilities. Cloud providers stay behind the UWE interface/gateway instead of
+the RTX connector.
+
+`image_generate` can run through an explicitly configured local command via
+`UWE_CONNECTOR_IMAGE_CMD`. There is no bundled first-party image backend yet, so
+`image_generation` is not advertised unless that command is configured.
 
 ## Legacy inbound path still in use
 
@@ -46,9 +52,9 @@ Do not rewrite the AI Brain in one step. Add a small adapter service first:
 
 ## Image generation
 
-`image_generate` should stay behind a follow-up until an executor exists. Do not
-advertise `image_generation` and do not show runtime status that suggests the
-connector can generate images.
+`image_generate` should stay capability-gated. It is executable only when a local
+image worker command is configured. A first-party worker, model selection and UI
+status polish remain follow-ups.
 
 ## Verification target
 
