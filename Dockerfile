@@ -13,6 +13,10 @@ COPY packages ./packages
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
+ARG PORTAL_PATH=/portal
+ARG PORTAL_PROXY_URL=http://portal:3001
+ENV PORTAL_PATH=$PORTAL_PATH
+ENV PORTAL_PROXY_URL=$PORTAL_PROXY_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @uwe/database db:generate
 RUN pnpm build

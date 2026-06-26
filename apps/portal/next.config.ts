@@ -7,8 +7,12 @@ import { getUweStandaloneNextConfig } from "@uwe/config/next-standalone";
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const standalone = getUweStandaloneNextConfig(appDir);
 
+const rawPortalPath = process.env.PORTAL_PATH?.trim();
+const basePath = rawPortalPath && rawPortalPath !== "/" ? rawPortalPath : undefined;
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  basePath,
   ...standalone,
   transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
   async headers() {
