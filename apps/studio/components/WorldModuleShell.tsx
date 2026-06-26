@@ -6,8 +6,6 @@ import {
   NavSidebarSections,
   SidebarNav,
   SidebarSection,
-  StudioNavSidebar,
-  StudioNavSidebarV2,
   StudioShell,
   StudioShellV2,
 } from "@uwe/shared-ui";
@@ -19,9 +17,10 @@ import {
 } from "@/src/lib/studio-navigation";
 import {
   worldBottomNavKey,
-  worldNavItems,
+  worldNavSections,
   type WorldBottomNavKey,
   type WorldNavKey,
+  type WorldNavSection,
 } from "@/src/lib/world-nav";
 import type { ReactNode } from "react";
 
@@ -59,8 +58,28 @@ export interface WorldModuleShellProps {
   hideBreadcrumb?: boolean;
 }
 
+export type WorldShellProps = WorldModuleShellProps;
+
+function applyCampaignToWorldSections(
+  sections: WorldNavSection[],
+  campaignSlug?: string,
+): WorldNavSection[] {
+  if (!campaignSlug) return sections;
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+      item.key === "new-page" ? { ...item, href: `${item.href}?campaign=${campaignSlug}` } : item,
+    ),
+  }));
+}
+
+function worldDefaultOpenTitles(sections: WorldNavSection[]) {
+  const activeTitle = sections.find((section) => section.items.some((item) => item.active))?.title;
+  return Array.from(new Set(["Übersicht", "Inhalte", activeTitle].filter(Boolean) as string[]));
+}
+
 /**
- * Stable world shell — sectioned Studio nav + world nav always visible.
+ * Stable world shell — sectioned Studio nav + grouped world cockpit navigation.
  * Context-specific links belong in sidebarExtra or page actions, not replacing main nav.
  */
 export function WorldModuleShell({
@@ -88,13 +107,10 @@ export function WorldModuleShell({
   const bottomKey =
     bottomNavActive ?? worldBottomNavKey(activeNav, Boolean(searchQuery?.trim()));
   const activePath = `/worlds/${worldSlug}`;
-
-  const navItems = worldNavItems(worldSlug, activeNav).map((item) => {
-    if (item.key === "new-page" && campaignSlug) {
-      return { ...item, href: `${item.href}?campaign=${campaignSlug}` };
-    }
-    return item;
-  });
+  const worldSections = applyCampaignToWorldSections(
+    worldNavSections(worldSlug, activeNav),
+    campaignSlug,
+  );
 
   const sidebarSections = unifiedSidebar
     ? studioUnifiedSidebarSections(activePath)
@@ -104,15 +120,12 @@ export function WorldModuleShell({
     <>
       <NavSidebarSections
         sections={sidebarSections}
-        defaultOpenTitles={
-          unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]
-        }
+        defaultOpenTitles={unifiedSidebar ? ["Welten"] : ["Welten"]}
       />
-      {isDesignV2Enabled() ? (
-        <StudioNavSidebarV2 title="Welt" items={navItems} />
-      ) : (
-        <StudioNavSidebar title="Welt" items={navItems} />
-      )}
+      <NavSidebarSections
+        sections={worldSections}
+        defaultOpenTitles={worldDefaultOpenTitles(worldSections)}
+      />
       {sidebarExtra}
     </>
   );
@@ -165,6 +178,8 @@ export function WorldModuleShell({
 
   return <StudioShell {...shellProps} />;
 }
+
+export const WorldShell = WorldModuleShell;
 
 /** Reusable campaign filter sidebar section. */
 export function WorldCampaignSidebar({
