@@ -7,7 +7,8 @@ export type ButtonV2Variant =
   | "accent"
   | "secondary"
   | "ghost"
-  | "danger";
+  | "danger"
+  | "subtle";
 
 export type ButtonV2Size = "default" | "sm";
 
@@ -18,6 +19,7 @@ const VARIANT_CLASS: Record<ButtonV2Variant, string> = {
   secondary: "uwe-v2-btn uwe-v2-btn-secondary",
   ghost: "uwe-v2-btn uwe-v2-btn-ghost",
   danger: "uwe-v2-btn uwe-v2-btn-danger",
+  subtle: "uwe-v2-btn uwe-v2-btn-subtle",
 };
 
 const SIZE_CLASS: Record<ButtonV2Size, string | undefined> = {
