@@ -16,7 +16,6 @@ export default function LoginPage() {
         <div className="auth-seed-users">
           <h2>Entwicklungs-Benutzer</h2>
           <ul>
-            <li>DM: dm@uwe.local / uwe-dev</li>
             <li>
               Spieler: aman@uwe.local, lazul@uwe.local, veldrin@uwe.local, finnion@uwe.local /
               uwe-dev
