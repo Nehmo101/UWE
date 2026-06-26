@@ -3,96 +3,106 @@
 Branch: `claude/uwe-repo-cleanup-kgjf1k`
 
 Goal: bring the repo to a tidy, consistent, production-near state — correct stale
-docs, remove safe legacy remnants, start centralising slug logic, and document
-follow-ups — without big-bang refactors and without breaking the active product
-path (Linux Host + `pnpm`/`systemd` + optional outbound RTX Host Connector).
+docs, remove safe legacy remnants, centralise slug logic, and resolve the open
+follow-ups — without breaking the active product path (Linux Host + `pnpm`/`systemd`
++ optional outbound RTX Host Connector).
+
+This report covers both the initial cleanup pass and the follow-up pass that
+implemented the deferred items.
 
 ---
 
 ## 1. Summary
 
-- **Docs now tell the truth about the runtime.** ARCHITECTURE, REPO_AUDIT,
-  PRODUCTION, the host startup doc and the CI engineering docs no longer present
-  Docker or the Windows one-click installer as active paths. The canonical path is
-  Linux Host + `systemd` (`deploy/systemd/uwe.service`,
-  `deploy/scripts/setup-uwe-host.sh`), optionally fronted by a Cloudflare Tunnel.
-- **RTX framing is consistent.** The outbound **RTX Host Connector** is the
-  go-forward inference path everywhere; the old inbound **RTX-Agent**
-  (`RTX_AGENT_URL`) appears only as deprecated compatibility. (README and
-  `.env.example` already said this; ARCHITECTURE/REPO_AUDIT now match.)
-- **Safe dead code removed:** legacy `AuthHeader` portal component, the orphaned
-  `AdminSidebarBlock` + `admin-sidebar-nav.ts`, and the deprecated
-  `deploy/linux/uwe-host.service` (archived, not just deleted).
-- **Slug logic centralised** into `packages/database/src/slug-utils.ts` and the
-  low-risk call sites migrated, with behaviour preserved (verified by tests).
-- **Follow-ups documented** for shell V1/V2 consolidation, `@uwe/wiki-engine`
-  disposition, large-service splits, and the riskier slug call sites.
+- **Docs tell the truth about the runtime.** ARCHITECTURE, REPO_AUDIT, PRODUCTION
+  (fully rewritten), the host startup doc, backup-restore and the CI engineering
+  docs no longer present Docker or the Windows one-click installer as active paths.
+  Canonical path: Linux Host + `systemd` (`deploy/systemd/uwe.service`,
+  `deploy/scripts/setup-uwe-host.sh`), optional Cloudflare Tunnel.
+- **RTX framing is consistent.** Outbound **RTX Host Connector** is the go-forward
+  inference path everywhere; the inbound **RTX-Agent** (`RTX_AGENT_URL`) is
+  deprecated compatibility only.
+- **Slug logic fully centralised** into a new **`@uwe/shared-utils`** package and
+  migrated across `database`, `auth`, `knoteforge-import`, `agent-jobs` and
+  `backup` — behaviour preserved (verified).
+- **`@uwe/wiki-engine` retired** — it was consumed only by its own tests;
+  production wiki-links live in `@uwe/database`.
+- **Safe dead code removed:** legacy `AuthHeader`, the orphaned `AdminSidebarBlock`
+  + `admin-sidebar-nav.ts`, and the deprecated `deploy/linux/uwe-host.service`
+  (archived).
 
 ---
 
-## 2. Changed files
+## 2. Changed / new files
+
+**New**
+
+| File | Purpose |
+|------|---------|
+| `packages/shared-utils/*` | New framework-agnostic package: `slugifyDe`, `slugifyAscii`, `slugifyKey`, `pickUniqueSlug`, `normalizeLookupKey` (+ tests). |
+| `docs/archive/legacy-uwe-host-service.md` | Archive of the deprecated `uwe-host.service`. |
+| `docs/engineering/cleanup-report-2026-06-26.md` | This report. |
+
+**Changed (code)**
 
 | File | Change |
 |------|--------|
-| `docs/ARCHITECTURE.md` | Deployment flow rewritten to Linux Host + systemd (no Docker/Windows branches); repo-hierarchy shows `uwe-rtx-connector`/`uwe-rtx-agent`/`deploy/` instead of `windows-installer`; RTX-Agent → RTX Host Connector throughout; date bumped. |
-| `docs/REPO_AUDIT.md` | "Historical snapshot" banner + current sources of truth; project structure fixed (no `docker-compose.yml`/`windows-installer`); Image Studio & Calendar corrected from "not implemented" to existing Phase-2 features; CI workflow table corrected (no `windows-installer.yml`); feature list + RTX section corrected. |
-| `docs/PRODUCTION.md` | Deprecation banner; Linux host is the recommended path; "Voraussetzungen" → Node 22 + pnpm + systemd; Windows/Docker quickstart marked historical. |
-| `docs/UWE_HOST_LINUX_STARTUP.md` | Tech-ref row points to the archived service; removed stale `docker compose up -d` line. |
-| `docs/backup-restore.md` | Removed Windows-installer CLI (`tools/windows-installer/dist/cli.js`) and `pnpm backup`; now Studio/`pnpm backup:create`/`deploy/scripts/uwe-backup.sh` + Linux paths. |
-| `docs/engineering/ci.md` | Removed the non-existent `windows-installer.yml` workflow rows/section. |
-| `docs/engineering/self-hosted-ci.md` | Removed `windows-installer.yml` / `build-exe` references. |
-| `docs/engineering/migration-from-copilot.md` | Workflow list corrected (no windows packaging; added `deploy.yml`). |
-| `docs/engineering/cleanup-inventory.md` | Added: done-list, slug follow-ups, large-service split plan, shell V1/V2 follow-up, wiki-engine disposition. |
-| `packages/database/src/slug-utils.ts` | **New** central slug module. |
-| `packages/database/src/slug-utils.test.ts` | **New** tests. |
-| `packages/database/src/page-templates.ts` | `slugifyPageTitle` → `slugifyDe`; `pickUniqueSlug` re-exported from slug-utils. |
-| `packages/database/src/page-template-service.ts` | Local `slugifyTemplateName` → `slugifyDe`. |
-| `packages/database/src/dungeon-cockpit.ts` | Local `slugifyTitle` → `slugifyDe(…, { maxLength: 80, fallback: "entity" })`. |
-| `packages/database/src/mail-utils.ts` | `slugifyMailKey` → `slugifyKey(value, fallback, { maxLength: 80 })`. |
-| `packages/database/src/queries.ts` | `normalizeLookupKey` now from slug-utils (re-exported). |
+| `packages/database/src/slug-utils.ts` | Thin re-export of `@uwe/shared-utils` (keeps `@uwe/database/server` surface stable). |
+| `packages/database/src/{page-templates,page-template-service,dungeon-cockpit,queries,mail-utils}.ts` | Use the shared slug helpers. |
+| `packages/database/src/index.ts` | Phase-1 barrel comment clarified (test-only; apps use `/server`). |
 | `packages/backup/src/restore.ts` | Local `resolveUniqueSlug` → shared `pickUniqueSlug`. |
-| `apps/studio/components/AdminModuleShell.tsx` | Removed `AdminSidebarBlock` + now-unused imports. |
-| `packages/shared-ui/src/index.ts` | Documented canonical (V2) vs legacy (V1) shells; `@deprecated` on V1 exports. |
-| `packages/wiki-engine/src/index.ts` | Status note: standalone utility; disposition tracked in cleanup-inventory. |
+| `packages/auth/src/content-access.ts` | `normalizeLookupKey` from `@uwe/shared-utils`. |
+| `packages/knoteforge-import/src/slug.ts` | Re-exports/wraps `slugifyAscii` + `pickUniqueSlug` + `normalizeLookupKey`. |
+| `packages/agent-jobs/src/index.ts` | `slugifyBranch` uses shared `slugifyKey`. |
+| `apps/studio/components/AdminModuleShell.tsx` | Removed `AdminSidebarBlock` + unused imports. |
+| `packages/shared-ui/src/index.ts` | Documented canonical (V2) vs legacy (V1) shells; `@deprecated` on V1. |
+| `packages/{database,auth,knoteforge-import,agent-jobs}/package.json`, `pnpm-lock.yaml` | Add `@uwe/shared-utils`; remove `@uwe/wiki-engine`. |
 | `scripts/selfhost.test.ts` | Asserts the archived doc instead of the removed service file. |
-| `docs/archive/legacy-uwe-host-service.md` | **New** archive of the deprecated unit. |
+
+**Changed (docs)**
+
+`docs/ARCHITECTURE.md`, `docs/REPO_AUDIT.md`, `docs/PRODUCTION.md` (full rewrite),
+`docs/UWE_HOST_LINUX_STARTUP.md`, `docs/backup-restore.md`,
+`docs/engineering/{ci,self-hosted-ci,migration-from-copilot,cleanup-inventory,TECHNICAL_ROADMAP}.md`,
+`CLAUDE.md`, `README.md`.
 
 ## 3. Removed files / functions
 
-- **Deleted file** `apps/portal/src/components/AuthHeader.tsx` — legacy auth chrome;
-  not imported anywhere (auth layouts use `PortalAppShell`).
-- **Deleted file** `apps/studio/src/lib/admin-sidebar-nav.ts` — orphaned after the
-  navigation refactor; its only consumer was `AdminSidebarBlock`.
-- **Removed export/function** `AdminSidebarBlock` in `AdminModuleShell.tsx` (and the
-  now-unused `adminSidebarNav` / `SidebarNav` / `SidebarSection` imports).
-- **Moved (not lost)** `deploy/linux/uwe-host.service` → `docs/archive/legacy-uwe-host-service.md`.
-- **Inlined/removed local helpers** (behaviour folded into `slug-utils.ts`):
-  `slugifyPageTitle` body, `pickUniqueSlug` body (page-templates),
-  `slugifyTemplateName` (page-template-service), `slugifyTitle` (dungeon-cockpit),
-  `slugifyMailKey` body (mail-utils), `normalizeLookupKey` body (queries),
-  `resolveUniqueSlug` (backup/restore).
+- **Deleted package** `packages/wiki-engine/` (`@uwe/wiki-engine`) — only self-tested;
+  production wiki-links live in `@uwe/database`.
+- **Deleted files** `apps/portal/src/components/AuthHeader.tsx`,
+  `apps/studio/src/lib/admin-sidebar-nav.ts`.
+- **Removed export** `AdminSidebarBlock`.
+- **Archived (moved)** `deploy/linux/uwe-host.service` → `docs/archive/legacy-uwe-host-service.md`.
+- **Inlined into `@uwe/shared-utils`** (per-package duplicates removed): the slug
+  bodies in `page-templates`, `page-template-service`, `dungeon-cockpit`, `queries`,
+  `mail-utils`, `backup/restore`, `auth/content-access`, `knoteforge-import/slug`,
+  `agent-jobs/slugifyBranch`.
 
 ## 4. Checks / test results
 
-Verification ran in a **degraded environment**: `pnpm install --frozen-lockfile`
-aborted during the `@prisma/engines` postinstall with `ECONNRESET` (the Prisma
-engines download host is reset/blocked by the session egress policy). That left
-the dependency tree incomplete — the generated Prisma client was never produced
-and several `node_modules/.bin` shims (eslint, prisma) were not linked. This is an
-**environment limitation, independent of the cleanup changes.**
+The repo build runs in a **degraded environment**: `pnpm install --frozen-lockfile`
+aborts during the `@prisma/engines` postinstall (`ECONNRESET` — the Prisma engines
+download host is reset/blocked by the session egress policy). Without it the
+generated Prisma client never exists and the right `node_modules/.bin` shims
+(eslint, prisma) are not linked. Workspace packages were linked with
+`pnpm install --ignore-scripts` so the new package resolves at runtime.
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| `slug-utils.test.ts` | ✅ 5/5 pass | New central slug behaviour. |
-| `page-templates.test.ts` | ✅ 7/7 pass | Confirms slug migration is behaviour-preserving. |
-| `scripts/selfhost.test.ts` | ✅ 11/11 pass | Confirms `uwe-host.service` archive + active `uwe.service` + host scripts. |
-| TS transpile/syntax check (all 10 changed source files) | ✅ clean | Caught and fixed one real bug (see Risks). |
-| `pnpm lint` | ⚠️ blocked | Resolved ESLint 10.1.0 vs `eslint-config-next@15.5.19` (`@rushstack/eslint-patch` cannot patch ESLint 10); `.bin/eslint` not linked by the aborted install. Lockfile correctly pins `eslint@9.39.4`. Not caused by this cleanup. |
-| `pnpm typecheck` | ⚠️ blocked | Needs `packages/database/src/generated/prisma/*`, which requires `prisma generate`; engine download is blocked. |
-| `pnpm test` / `test:ci` / `test:security` | ⚠️ blocked | Most suites import the runtime Prisma client. |
-| `pnpm build:release` | ⚠️ blocked | Needs the generated Prisma client. |
+| `@uwe/shared-utils` slug tests | ✅ 6/6 | Incl. `slugifyAscii` == legacy importer slug (proven over 9 inputs). |
+| database `slug-utils` + `page-templates` | ✅ 12/12 | Re-export path + behaviour preservation. |
+| `@uwe/auth` suite | ✅ 149/149 | Covers the `content-access` migration. |
+| `@uwe/knoteforge-import` parser | ✅ 5/5 | (`importer.test.ts` needs the Prisma client → blocked.) |
+| `@uwe/agent-jobs` | ✅ 5/5 | `slugifyBranch` migration. |
+| `scripts/selfhost.test.ts` | ✅ 11/11 | Archive + active `uwe.service` + host scripts. |
+| `docs:check` | ✅ | 112 markdown files, no broken links after the doc rewrites. |
+| `secret:scan` | ✅ | Clean. |
+| TS transpile (all changed `.ts/.tsx`) | ✅ | Syntax-clean (caught one real bug during the first pass, fixed). |
+| `pnpm lint` | ⚠️ blocked | Resolved ESLint 10.1.0 vs `eslint-config-next@15.5.19` (`@rushstack/eslint-patch` cannot patch ESLint 10); `.bin/eslint` not linked by the aborted install. Lockfile pins `eslint@9.39.4`. Not caused by this cleanup. |
+| `pnpm typecheck` / `pnpm test` / `build:release` | ⚠️ blocked | Need the generated Prisma client. |
 
-To complete the full gate on an unrestricted network:
+Full gate to run on an unrestricted network:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -102,34 +112,23 @@ pnpm lint && pnpm typecheck && pnpm test:ci && pnpm test:security && pnpm build:
 
 ## 5. Remaining follow-up tasks
 
-Tracked in `docs/engineering/cleanup-inventory.md`:
+These three are larger refactors that move/integrate runtime code and therefore
+need a **runnable `pnpm typecheck` + build** to land safely — which the Prisma
+engine block currently prevents (even additive code must pass `tsc`). Precise
+plans are in `docs/engineering/cleanup-inventory.md`:
 
-1. **Slug** — migrate the riskier call sites only with guardrails:
-   `knoteforge-import/src/slug.ts` (diacritic-strip vs umlaut-expand → re-import
-   idempotency), `auth/content-access.ts` `normalizeLookupKey` (would create an
-   `@uwe/database`→`@uwe/auth` cycle), `agent-jobs` `slugifyBranch` (git-branch domain).
-2. **Shells** — extract shared shell logic so V1/V2 become thin renderers, then
-   retire V1 once Design V2 has soaked. Must preserve the reduced IA.
-3. **wiki-engine** — wire `@uwe/wiki-engine` into the live render/backlink path, or
-   retire it with the Phase-1 in-memory `@uwe/database` layer.
-4. **Large services** — incremental splits in this order: `life-admin-service` →
-   `label-service` → `server.ts` barrel → `ai-review-service` → `repository.ts`,
-   keeping the `@uwe/database/server` surface stable.
-5. **AI Brain connector adapter** — implement `connectorQueueProvider` per
-   `docs/ai-brain-connector-migration.md`, then demote `RTX_AGENT_URL`.
+1. **Large-service splits** — incremental, one PR each:
+   `life-admin-service` → `label-service` → `server.ts` barrel → `ai-review-service`
+   → `repository.ts`, keeping the `@uwe/database/server` surface stable.
+2. **Shell V1/V2 consolidation** — extract shared shell logic (breadcrumb/header,
+   world-section building, default-open sections, bottom-nav key resolution) so V1/V2
+   become thin renderers, then retire V1 once Design V2 has soaked. Must preserve the
+   reduced IA (Heute · Welten · Erstellen · Medien & KI · System).
+3. **AI-Brain connector queue adapter** — implement `connectorQueueProvider` per
+   `docs/ai-brain-connector-migration.md`, then demote `RTX_AGENT_URL`. The inbound
+   RTX-Agent stays wired (`localRtxProvider`, `rtxHealthcheck`,
+   `/api/inference/hardware`) until this adapter replaces it, so it is intentional
+   deprecated compatibility — not dead code.
 
-## 6. Deliberately not done / notes
-
-- **No service deletion of the RTX-Agent or `@uwe/wiki-engine`** — both are still
-  wired or intentionally retained; only re-framed/annotated and scheduled as
-  follow-ups (avoids breaking existing setups / removing features in use).
-- **PRODUCTION.md was banner-corrected, not fully rewritten** — its deeper
-  Docker/volume sections remain as clearly-marked historical reference to avoid a
-  risky large rewrite. The canonical deployment doc is `UWE_HOST_LINUX_STARTUP.md`.
-- **WP8 (portal `/portal` subpath, UX)** — no code change needed: `PORTAL_PATH` /
-  `STUDIO_PATH` config + Studio middleware rewrite already exist, and the portal
-  already handles a missing world gracefully (`notFound()` + `EmptyState`).
-- **One self-inflicted bug was found and fixed during verification**: the scripted
-  removal of `resolveUniqueSlug` in `restore.ts` initially left a dangling
-  `${index}`;` fragment (a `}` inside a template literal confused the boundary
-  search). Caught by the transpile check and corrected before finishing.
+Phase-1 in-memory `@uwe/database` layer (`index.ts`/`store.ts`/`queries.ts`) remains
+test-only (no app imports it); retire or migrate its tests to Prisma fixtures later.

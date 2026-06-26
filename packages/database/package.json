@@ -39,6 +39,7 @@
     "@uwe/connector": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/mail": "workspace:*",
+    "@uwe/shared-utils": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "pdf-lib": "^1.17.1",
     "pg": "^8.21.0"

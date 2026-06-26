@@ -712,7 +712,7 @@ packages/
   auth/            # Sessions, roles, route policy
   security/        # Security helpers
   security-tests/  # Authz and leak scanner tests
-  wiki-engine/     # Wikilink parsing
+  shared-utils/    # Framework-agnostic utilities (slugs, lookup keys)
   static-export/   # Static HTML + wiki export
   assets/          # Upload paths, MIME validation, storage keys
   backup/          # Backup/restore CLI and bundle format

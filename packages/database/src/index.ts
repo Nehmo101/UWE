@@ -1,8 +1,10 @@
 /**
  * UWE Core database layer.
  *
- * Phase 1: in-memory wiki store (Studio/Portal UI + wiki-engine)
+ * Phase 1: in-memory wiki store (legacy; retained for its own tests)
  * Phase 2: Prisma repository (structured source of truth) — see `@uwe/database/server`
+ *
+ * Apps use `@uwe/database/server`, not this Phase-1 barrel.
  */
 
 export const DATABASE_PACKAGE_VERSION = "0.2.0";

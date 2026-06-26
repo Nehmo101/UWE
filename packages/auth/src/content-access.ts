@@ -1,3 +1,5 @@
+import { normalizeLookupKey } from "@uwe/shared-utils";
+
 /** Normalized visibility for player-facing access checks. */
 export type ContentVisibility = "private" | "dm_only" | "player_visible" | "public";
 
@@ -178,10 +180,6 @@ export interface PrivateReferenceTarget {
   title: string;
   slug: string;
   reason: "private_visibility" | "unpublished" | "hidden_secret";
-}
-
-function normalizeLookupKey(key: string): string {
-  return key.trim().toLocaleLowerCase("de");
 }
 
 function parseAliases(aliases: unknown): string[] {

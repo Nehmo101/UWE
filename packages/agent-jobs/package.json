@@ -17,5 +17,8 @@
     "@uwe/config": "workspace:*",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@uwe/shared-utils": "workspace:*"
   }
 }

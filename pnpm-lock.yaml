@@ -195,6 +195,10 @@ importers:
         version: 5.9.3
 
   packages/agent-jobs:
+    dependencies:
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
@@ -260,6 +264,10 @@ importers:
         version: 5.9.3
 
   packages/auth:
+    dependencies:
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
@@ -388,6 +396,9 @@ importers:
       '@uwe/mail':
         specifier: workspace:*
         version: link:../mail
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
       '@uwe/soundboard':
         specifier: workspace:*
         version: link:../soundboard
@@ -474,6 +485,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
@@ -618,6 +632,21 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/shared-utils:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/soundboard:
     devDependencies:
       '@types/node':
@@ -666,25 +695,6 @@ importers:
       '@uwe/env':
         specifier: workspace:*
         version: link:../env
-    devDependencies:
-      '@types/node':
-        specifier: ^22.15.32
-        version: 22.19.21
-      '@uwe/config':
-        specifier: workspace:*
-        version: link:../config
-      tsx:
-        specifier: ^4.20.3
-        version: 4.22.4
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-
-  packages/wiki-engine:
-    dependencies:
-      '@uwe/database':
-        specifier: workspace:*
-        version: link:../database
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

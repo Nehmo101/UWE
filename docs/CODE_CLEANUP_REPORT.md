@@ -1,5 +1,10 @@
 # Code Cleanup Report (2026-06-18)
 
+> **Historical.** For later changes see
+> [engineering/cleanup-report-2026-06-26.md](engineering/cleanup-report-2026-06-26.md).
+> `@uwe/wiki-engine`, described below as a retained test-only package, was
+> **removed** on 2026-06-26 (production wiki-links live in `@uwe/database`).
+
 Scope: safe reduction pass on `apps/studio`, `apps/portal`, and shared packages. No feature removals.
 
 ## Entfernt

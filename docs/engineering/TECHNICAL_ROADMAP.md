@@ -74,10 +74,12 @@ Große Dateien — **nicht blind splitten**, sondern beim nächsten Feature im g
 
 | Item | Problem | Optionen |
 |------|---------|----------|
-| `store.ts`, `queries.ts`, in-memory repo | Produktion nutzt Prisma; Tests/wiki-engine noch Legacy | A) Tests auf Prisma-Fixtures migrieren, Legacy löschen B) Als test-only dokumentieren |
-| `@uwe/wiki-engine` | Aus Apps entfernt, Package bleibt | Migration planen oder explizit „test-only“ in ARCHITECTURE.md |
+| `store.ts`, `queries.ts`, in-memory repo | Produktion nutzt Prisma; Phase-1 In-Memory-Stack nur noch Test/Legacy | A) Tests auf Prisma-Fixtures migrieren, Legacy löschen B) Als test-only dokumentieren |
 
-**Blockiert:** Full removal until `packages/wiki-engine` tests migrated.
+**Erledigt (2026-06-26):** `@uwe/wiki-engine` wurde entfernt — es war nur durch
+seinen eigenen Test referenziert, Produktions-Wikilinks leben in `@uwe/database`
+(`world-inspector`, `graph-service`, …). Verbleibt: der Phase-1 In-Memory-Stack
+(`store.ts` / `queries.ts` / `index.ts`), den keine App importiert.
 
 ---
 

@@ -4,11 +4,16 @@ Risk-aware list of technical debt and split candidates. **No automatic deletion*
 
 ## Done in cleanup 2026-06-26
 
-- **Slug utilities centralised** → `packages/database/src/slug-utils.ts`
-  (`slugifyDe`, `pickUniqueSlug`, `normalizeLookupKey`, `slugifyKey`). Migrated:
-  `page-templates`, `page-template-service`, `dungeon-cockpit`, `queries`,
-  `mail-utils`, and `@uwe/backup` `restore`. Behaviour preserved (tests:
-  `slug-utils.test.ts`, `page-templates.test.ts`).
+- **Slug utilities centralised** → new package **`@uwe/shared-utils`**
+  (`slugifyDe`, `slugifyAscii`, `slugifyKey`, `pickUniqueSlug`,
+  `normalizeLookupKey`). `packages/database/src/slug-utils.ts` is now a thin
+  re-export. Migrated: `page-templates`, `page-template-service`,
+  `dungeon-cockpit`, `queries`, `mail-utils`, `@uwe/backup` `restore`,
+  **`@uwe/auth` `content-access`, `@uwe/knoteforge-import` `slug`,
+  `@uwe/agent-jobs` `slugifyBranch`**. Behaviour preserved (tests:
+  `shared-utils/slug.test.ts`, database `slug-utils`/`page-templates`,
+  auth suite, knoteforge parser; `slugifyAscii` proven equal to the legacy
+  importer slug).
 - **Removed dead code:** `apps/portal/src/components/AuthHeader.tsx` (Legacy auth
   chrome, replaced by `PortalAppShell`); `AdminSidebarBlock` +
   `apps/studio/src/lib/admin-sidebar-nav.ts` (orphaned after the nav refactor).
@@ -18,16 +23,17 @@ Risk-aware list of technical debt and split candidates. **No automatic deletion*
   Docker or the Windows installer as active paths; RTX-Agent is deprecated in
   favour of the outbound RTX Host Connector. See `docs/removed-legacy-runtime.md`.
 
-## Slug utilities — remaining follow-ups
+## Slug utilities — how the variants map
 
-Deliberately **not** migrated to keep behaviour identical / avoid cross-package
-cycles:
+All slug logic now lives in `@uwe/shared-utils`; the cross-package cycle concern
+is gone because the package sits below `auth`/`database` with no dependencies.
 
-| Location | Why kept separate |
-|----------|-------------------|
-| `packages/knoteforge-import/src/slug.ts` | Strips diacritics (`ä→a`) instead of expanding (`ä→ae`). Switching would change import slugs and risk re-import idempotency. Migrate only with a re-import/dedupe check. |
-| `packages/auth/src/content-access.ts` `normalizeLookupKey` | `@uwe/database` depends on `@uwe/auth`; importing back would create a cycle. Centralise only if a lower-level shared package is introduced. |
-| `packages/agent-jobs/src/index.ts` `slugifyBranch` | Produces git branch names (`cursor/<slug>-<ts>`), different domain; `agent-jobs` has no `@uwe/database` dependency. |
+| Caller | Shared helper | Why this variant |
+|--------|---------------|------------------|
+| pages, worlds, templates, dungeons | `slugifyDe` | German display content, umlaut-expanding (`ä→ae`). |
+| KnoteForge importer | `slugifyAscii` | ASCII transliteration (`ä→a`); preserves existing import slug stability (verified equal to the legacy function). |
+| mail keys, `agent-jobs` branch names | `slugifyKey` | Machine keys; drops non-ASCII. |
+| wikilink / lookup targets | `normalizeLookupKey` | Case-insensitive trim+lowercase. |
 
 ## Large services (split candidates)
 
@@ -72,14 +78,14 @@ Order rationale: start with the most self-contained domain (life-admin), end wit
 | Barrel | Notes |
 |--------|-------|
 | `packages/database/src/server.ts` | Primary app surface — grows with every feature |
-| `packages/database/src/index.ts` | Legacy wiki-engine only |
+| `packages/database/src/index.ts` | Phase-1 in-memory wiki barrel (test-only) |
 | `packages/ai-brain/src/index.ts` | Large public API — document subpaths before splitting |
 
 ## Legacy / dual-path (not dead)
 
 | Path | Status |
 |------|--------|
-| `packages/database/src/store.ts`, `seed.ts` | Phase-1 in-memory wiki; wiki-engine tests |
+| `packages/database/src/store.ts`, `seed.ts` | Phase-1 in-memory wiki; test-only |
 | `schema.prisma` + `schema.postgresql.prisma` | Intentional dual schema |
 | `terra-seed.ts` vs `seed.ts` SEED_PAGES | Terra is canonical rich seed |
 
@@ -102,19 +108,16 @@ adjustment, default-open sections, bottom-nav key resolution) into helpers so V1
 become thin renderers; then retire V1 once Design V2 has soaked. Must not regress
 the reduced IA (Heute · Welten · Erstellen · Medien & KI · System).
 
-## wiki-engine disposition (follow-up)
+## wiki-engine — retired (2026-06-26)
 
-`@uwe/wiki-engine` is a standalone, tested wiki-link utility (parse, backlinks,
-related, broken-link detection). It is currently consumed **only by its own
-tests**; apps render wiki content via `@uwe/database/server`. The Phase-1
-in-memory barrel `packages/database/src/index.ts` is likewise not imported by any
-app (verified: apps import `@uwe/database/server`).
+`@uwe/wiki-engine` was **removed**. It was a standalone wiki-link utility consumed
+**only by its own tests**; production wiki-link handling lives in `@uwe/database`
+(`world-inspector`, `graph-service`, `inspector-fix-service`, …) and apps render
+via `@uwe/database/server`. No app, build config or other package imported it.
 
-**Decision:** keep `@uwe/wiki-engine` as the official wiki-link utility. Two open
-follow-ups, pick one when touched next:
-1. Wire it into the live render/backlink path so it earns its keep, **or**
-2. Retire it together with the Phase-1 `@uwe/database` (index/store/queries)
-   in-memory layer once nothing depends on it.
+Remaining Phase-1 follow-up: the in-memory `@uwe/database` layer
+(`index.ts` / `store.ts` / `queries.ts`) is still test-only and imported by no app.
+Retire or migrate its tests to Prisma fixtures in a later pass.
 
 ## Config duplicates (resolved / watch)
 

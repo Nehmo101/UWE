@@ -3,6 +3,7 @@
  * Results are branches/PRs/issues — never auto-merge.
  */
 
+import { slugifyKey } from "@uwe/shared-utils";
 import { fetchWorkflowRunStatus } from "./github-status";
 
 export { fetchWorkflowRunStatus, fetchPullRequestForBranch, type WorkflowRunStatus, type PullRequestSummary } from "./github-status";
@@ -50,12 +51,8 @@ export function resolveAgentJobsDispatchConfig(
 }
 
 function slugifyBranch(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-  return `cursor/${slug || "agent-job"}-${Date.now().toString(36)}`;
+  const slug = slugifyKey(title, "agent-job", { maxLength: 40 });
+  return `cursor/${slug}-${Date.now().toString(36)}`;
 }
 
 export async function dispatchGitHubActionsJob(

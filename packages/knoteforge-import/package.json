@@ -13,7 +13,8 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@uwe/database": "workspace:*"
+    "@uwe/database": "workspace:*",
+    "@uwe/shared-utils": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

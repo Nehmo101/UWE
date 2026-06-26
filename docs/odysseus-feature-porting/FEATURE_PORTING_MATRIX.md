@@ -227,7 +227,7 @@ model ResearchSource {
 |---------|--------|----------|
 | Wiki Pages (20+ Typen) | ✅ | `Page`, `PageType` |
 | Content Blocks (13 Typen) | ✅ | `ContentBlock`, `ContentBlockType` |
-| Wikilinks / Backlinks | ✅ | `packages/wiki-engine/` |
+| Wikilinks / Backlinks | ✅ | `@uwe/database` (`world-inspector`, `graph-service`) |
 | Form-Editor (Textarea) | 🔶 | `.../edit/page.tsx` |
 | Templates | ✅ | `PageTemplate` |
 | Import (Knoteforge) | ✅ | `packages/knoteforge-import/` |
@@ -287,7 +287,7 @@ model PageVersion {
 
 ### Tests
 
-- `packages/wiki-engine` — Wikilinks nach Rich-Text-Edit
+- `packages/database/src/graph-service.test.ts` — Wikilinks/Backlinks
 - `packages/database/src/page-version.test.ts`
 - `visibility-security.test.ts` — gm_note nie in Portal
 - Player-leak-scanner für Export

@@ -21,7 +21,7 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/ai-brain` | AI-Router, DnD-Generator, Privacy Guards |
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 | `@uwe/shared-ui` | Geteilte React-Komponenten (AppShell, Nav) |
-| `@uwe/wiki-engine` | Wikilink-Parsing |
+| `@uwe/shared-utils` | Framework-agnostische Utilities (Slugs, Lookup-Keys) |
 | Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs` |
 
 ### Neuen Code platzieren

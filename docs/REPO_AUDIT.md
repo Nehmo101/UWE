@@ -50,9 +50,9 @@ uwe/                          # Root — pnpm workspace, Turbo, ESLint flat conf
 │   ├── knoteforge-import/    # JSON-Import
 │   ├── mail/                 # SMTP, Compose
 │   ├── shared-ui/            # AppShell, MobileBottomNav, Badges
+│   ├── shared-utils/         # Slugs, Lookup-Keys (framework-agnostisch)
 │   ├── soundboard/           # Spotify OAuth, Playback
-│   ├── static-export/        # HTML-Export
-│   └── wiki-engine/          # Wikilink-Parsing
+│   └── static-export/        # HTML-Export
 ├── tools/
 │   ├── uwe-rtx-connector/    # Outbound RTX Host Connector (aktiv)
 │   └── uwe-rtx-agent/        # Inbound RTX-Agent (deprecated, Kompatibilität)
