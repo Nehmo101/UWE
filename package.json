@@ -55,6 +55,7 @@
     "package:windows": "node tools/windows-installer/src/package-release.mjs && pnpm installer:windows:build && node tools/windows-installer/src/build-inno.mjs",
     "installer:windows:build": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/src/build-exe.mjs",
     "installer:windows:dry-run": "pnpm --filter @uwe/windows-installer run build && node tools/windows-installer/dist/cli.js dry-run --mode dev --repo .",
+    "connector:start": "pnpm --filter @uwe/rtx-connector start",
     "host:start": "bash scripts/uwe-host-start.sh",
     "host:stop": "bash scripts/uwe-host-stop.sh",
     "host:status": "bash scripts/uwe-host-status.sh",

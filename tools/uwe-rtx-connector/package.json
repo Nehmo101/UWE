@@ -1,0 +1,24 @@
+{
+  "name": "@uwe/rtx-connector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE RTX Host Connector — optional outbound worker that claims jobs from the UWE Host (local AI, audio, spotify). Never required for UWE to be online.",
+  "type": "module",
+  "bin": {
+    "uwe-rtx-connector": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts start",
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/connector": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}
