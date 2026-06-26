@@ -164,6 +164,23 @@ function normalizeAgentStatus(raw: string, enabled: boolean): RtxAgentStatus {
   return "unreachable";
 }
 
+export async function fetchRtxAgentModels(
+  config: RtxAgentConfig = resolveRtxAgentConfig()!,
+): Promise<string[]> {
+  try {
+    const payload = await fetchAgentJson<{ models?: Array<{ name?: string }> }>(
+      config,
+      "/api/models",
+    );
+    const names = (payload.models ?? [])
+      .map((m) => m.name?.trim())
+      .filter((n): n is string => Boolean(n));
+    return names;
+  } catch {
+    return [];
+  }
+}
+
 export async function chatViaRtxAgent(
   options: GenerateTextOptions,
   config: RtxAgentConfig = resolveRtxAgentConfig()!,

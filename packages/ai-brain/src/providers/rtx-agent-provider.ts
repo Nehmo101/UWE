@@ -5,7 +5,7 @@ import type {
   GenerateTextOptions,
   GenerateTextResult,
 } from "../types";
-import { chatViaRtxAgent, fetchRtxAgentHealth } from "../rtx-agent-client";
+import { chatViaRtxAgent, fetchRtxAgentHealth, fetchRtxAgentModels } from "../rtx-agent-client";
 import { resolveRtxAgentConfig, type RtxAgentConfig } from "../rtx-agent-config";
 
 /**
@@ -18,9 +18,18 @@ export class RtxAgentProvider implements AiProvider {
   constructor(private readonly config: RtxAgentConfig) {}
 
   async listModels(): Promise<AiModel[]> {
-    const health = await fetchRtxAgentHealth(this.config);
-    const model = health.model ?? this.config.preferredModel ?? "llama3.2";
-    return [{ id: model, name: model, provider: this.id }];
+    const [modelNames, health] = await Promise.all([
+      fetchRtxAgentModels(this.config),
+      fetchRtxAgentHealth(this.config),
+    ]);
+
+    if (modelNames.length > 0) {
+      return modelNames.map((name) => ({ id: name, name, provider: this.id }));
+    }
+
+    // Fallback: RTX agent is older and does not expose /api/models
+    const fallback = health.model ?? this.config.preferredModel ?? "llama3.2";
+    return [{ id: fallback, name: fallback, provider: this.id }];
   }
 
   async generateText(options: GenerateTextOptions): Promise<GenerateTextResult> {
