@@ -4,8 +4,8 @@
  * acknowledged immediately; long GPU jobs (llm/image/embedding) run inline.
  *
  * Local AI uses Ollama when reachable. Audio uses an optional player command so
- * no platform-specific binary is hard-coded. Anything not wired for this host is
- * reported back honestly rather than pretending to succeed.
+ * no platform-specific binary is hard-coded. Spotify and image generation are
+ * only executable when their explicit local backends are configured.
  */
 
 import { spawn } from "node:child_process";
@@ -18,6 +18,9 @@ import { log } from "./logging";
 export interface ExecutorContext {
   ollamaUrl?: string;
   audioCommand?: string;
+  spotifyAccessToken?: string;
+  spotifyDeviceId?: string;
+  imageCommand?: string;
   requestTimeoutMs: number;
   /** Triggers a fresh local LLM discovery; resolved model count is returned. */
   refreshModels: () => Promise<number>;
@@ -27,6 +30,15 @@ export type JobResult = Record<string, unknown>;
 
 function asString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 async function runOllamaChat(
@@ -80,18 +92,167 @@ async function runOllamaEmbedding(
   return { embedding: data.embedding ?? [], model, provider: "ollama" };
 }
 
+function splitCommand(command: string): [string, ...string[]] {
+  const parts = command.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    throw new Error("Executor-Kommando ist leer.");
+  }
+  return parts as [string, ...string[]];
+}
+
 function playSound(audioCommand: string, payload: Record<string, unknown>): JobResult {
   const source = asString(payload.sourceUrl ?? payload.url ?? payload.path ?? payload.source);
   if (!source) {
     throw new Error("sound_play: keine Audioquelle im Payload.");
   }
-  const [cmd, ...baseArgs] = audioCommand.split(/\s+/).filter(Boolean);
-  if (!cmd) {
-    throw new Error("UWE_CONNECTOR_AUDIO_CMD ist leer.");
-  }
+  const [cmd, ...baseArgs] = splitCommand(audioCommand);
   const child = spawn(cmd, [...baseArgs, source], { stdio: "ignore", detached: true });
   child.unref();
   return { dispatched: true, via: cmd, source };
+}
+
+async function spotifyRequest(
+  ctx: ExecutorContext,
+  path: string,
+  init: RequestInit,
+): Promise<JobResult> {
+  if (!ctx.spotifyAccessToken || !ctx.spotifyDeviceId) {
+    throw new Error("Spotify Connect ist nicht konfiguriert (Token oder Device-ID fehlt).");
+  }
+  const response = await fetch(`https://api.spotify.com/v1/me/player${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${ctx.spotifyAccessToken}`,
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+    signal: AbortSignal.timeout(ctx.requestTimeoutMs),
+  });
+  if (!response.ok && response.status !== 204) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Spotify Connect HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
+  }
+  return { dispatched: true, provider: "spotify", deviceId: ctx.spotifyDeviceId };
+}
+
+async function runSpotifyJob(
+  type: ConnectorJobType,
+  payload: Record<string, unknown>,
+  ctx: ExecutorContext,
+): Promise<JobResult> {
+  const deviceId = encodeURIComponent(asString(payload.deviceId, ctx.spotifyDeviceId));
+  if (!deviceId) {
+    throw new Error("Spotify Connect: Device-ID fehlt.");
+  }
+
+  switch (type) {
+    case "spotify_play": {
+      const uris = Array.isArray(payload.uris)
+        ? payload.uris.filter((uri): uri is string => typeof uri === "string")
+        : undefined;
+      const body: Record<string, unknown> = {};
+      const uri = asString(payload.uri);
+      const contextUri = asString(payload.contextUri ?? payload.context_uri);
+      const positionMs = asNumber(payload.positionMs ?? payload.position_ms);
+      if (uris?.length) body.uris = uris;
+      if (uri) body.uris = [uri];
+      if (contextUri) body.context_uri = contextUri;
+      if (positionMs != null) body.position_ms = Math.max(0, Math.round(positionMs));
+      const hasBody = Object.keys(body).length > 0;
+      return {
+        ...(await spotifyRequest(ctx, `/play?device_id=${deviceId}`, {
+          method: "PUT",
+          body: hasBody ? JSON.stringify(body) : undefined,
+        })),
+        action: "play",
+      };
+    }
+    case "spotify_pause": {
+      return {
+        ...(await spotifyRequest(ctx, `/pause?device_id=${deviceId}`, { method: "PUT" })),
+        action: "pause",
+      };
+    }
+    case "spotify_volume": {
+      const rawVolume = asNumber(payload.volume ?? payload.volumePercent ?? payload.volume_percent);
+      if (rawVolume == null) throw new Error("spotify_volume: 'volume' fehlt im Payload.");
+      const volumePercent = Math.max(0, Math.min(100, Math.round(rawVolume <= 1 ? rawVolume * 100 : rawVolume)));
+      return {
+        ...(await spotifyRequest(ctx, `/volume?volume_percent=${volumePercent}&device_id=${deviceId}`, {
+          method: "PUT",
+        })),
+        action: "volume",
+        volumePercent,
+      };
+    }
+    case "spotify_transfer_device": {
+      return {
+        ...(await spotifyRequest(ctx, "", {
+          method: "PUT",
+          body: JSON.stringify({ device_ids: [decodeURIComponent(deviceId)], play: Boolean(payload.play) }),
+        })),
+        action: "transfer_device",
+      };
+    }
+    default:
+      throw new Error(`Unbekannter Spotify-Jobtyp: ${type}`);
+  }
+}
+
+async function runCommandWithJson(
+  command: string,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<JobResult> {
+  const [cmd, ...args] = splitCommand(command);
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGTERM");
+      reject(new Error("image_generate: lokaler Image-Executor hat das Timeout erreicht."));
+    }, timeoutMs);
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(new Error(`image_generate: Executor Exit ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
+        return;
+      }
+      const output = stdout.trim();
+      if (!output) {
+        resolve({ dispatched: true, via: cmd });
+        return;
+      }
+      try {
+        const parsed = JSON.parse(output) as JobResult;
+        resolve({ dispatched: true, via: cmd, ...parsed });
+      } catch {
+        resolve({ dispatched: true, via: cmd, output });
+      }
+    });
+    child.stdin.end(JSON.stringify(payload));
+  });
 }
 
 export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise<JobResult> {
@@ -129,10 +290,13 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
     case "spotify_pause":
     case "spotify_volume":
     case "spotify_transfer_device": {
-      throw new Error("Spotify Connect ist auf diesem Connector noch nicht mit einem Executor verbunden.");
+      return runSpotifyJob(type, payload, ctx);
     }
     case "image_generate": {
-      throw new Error("Bildgenerierung ist auf diesem Connector noch nicht konfiguriert.");
+      if (!ctx.imageCommand) {
+        throw new Error("Bildgenerierung ist nicht konfiguriert (UWE_CONNECTOR_IMAGE_CMD fehlt).");
+      }
+      return runCommandWithJson(ctx.imageCommand, payload, ctx.requestTimeoutMs);
     }
     default: {
       throw new Error(`Unbekannter Jobtyp: ${type}`);
