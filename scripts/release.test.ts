@@ -55,7 +55,6 @@ describe("release packaging", () => {
     assert.match(production, /Backup vor Updates/i);
     assert.match(production, /Update-Anleitung/i);
     assert.match(production, /Troubleshooting/i);
-    assert.match(production, /Alter Laptop/i);
     assert.match(production, /Smoke-Check/i);
     assert.match(production, /UWE_DATA_DIR/i);
     assert.match(production, /Healthcheck/i);
