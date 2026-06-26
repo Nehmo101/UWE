@@ -58,6 +58,11 @@ interface RestoreResult {
   items: Array<{ entityType: string; identifier: string; status: string; error?: string }>;
 }
 
+interface BackupSchedule {
+  enabled: boolean;
+  frequency: "daily" | "weekly" | "monthly";
+}
+
 interface Props {
   initialBackups: StoredBackup[];
   defaultWorldSlug?: string;
@@ -96,6 +101,10 @@ export function BackupWorkspace({
   const [restoreConfirmed, setRestoreConfirmed] = useState(false);
   const [sendPasswordSetupEmails, setSendPasswordSetupEmails] = useState(false);
   const [showRestoreWarning, setShowRestoreWarning] = useState(false);
+  const [schedule, setSchedule] = useState<BackupSchedule | null>(null);
+  const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleSaved, setScheduleSaved] = useState(false);
 
   useEffect(() => {
     async function loadPermissions() {
@@ -104,7 +113,15 @@ export function BackupWorkspace({
         setPermissions(await response.json());
       }
     }
+    async function loadSchedule() {
+      const response = await fetch(studioApiUrl("/api/backup/schedule"));
+      if (response.ok) {
+        const data = await response.json();
+        setSchedule(data.schedule as BackupSchedule);
+      }
+    }
     void loadPermissions();
+    void loadSchedule();
   }, []);
 
   const previewSummary = useMemo(() => {
@@ -262,6 +279,32 @@ export function BackupWorkspace({
     }
   }
 
+  async function saveSchedule() {
+    if (!schedule) return;
+    setScheduleBusy(true);
+    setScheduleError(null);
+    setScheduleSaved(false);
+
+    try {
+      const response = await fetch(studioApiUrl("/api/backup/schedule"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(schedule),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error((data as { error?: string }).error ?? "Speichern fehlgeschlagen.");
+      }
+      setSchedule((data as { schedule: BackupSchedule }).schedule);
+      setScheduleSaved(true);
+      setTimeout(() => setScheduleSaved(false), 3000);
+    } catch (saveError) {
+      setScheduleError(saveError instanceof Error ? saveError.message : "Speichern fehlgeschlagen.");
+    } finally {
+      setScheduleBusy(false);
+    }
+  }
+
   return (
     <div className="uwe-backup-workspace">
       {permissions && (
@@ -396,6 +439,59 @@ export function BackupWorkspace({
           </div>
         )}
       </section>
+
+      {schedule && permissions?.role === "owner" && (
+        <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
+          <h2 style={{ marginTop: 0 }}>Automatische Backups</h2>
+          <label style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
+            <input
+              type="checkbox"
+              checked={schedule.enabled}
+              onChange={(event) => setSchedule({ ...schedule, enabled: event.target.checked })}
+            />
+            Automatische Backups aktiviert
+          </label>
+
+          <label style={{ display: "block", marginBottom: "1rem" }}>
+            Häufigkeit
+            <select
+              className="uwe-input"
+              value={schedule.frequency}
+              disabled={!schedule.enabled}
+              onChange={(event) =>
+                setSchedule({ ...schedule, frequency: event.target.value as BackupSchedule["frequency"] })
+              }
+            >
+              <option value="daily">Täglich</option>
+              <option value="weekly">Wöchentlich</option>
+              <option value="monthly">Monatlich</option>
+            </select>
+          </label>
+
+          <p className="uwe-hint" style={{ marginBottom: "1rem" }}>
+            Der Systemd-Timer läuft täglich um 03:15 Uhr und prüft diese Einstellung.
+            Bei wöchentlichem oder monatlichem Plan wird ein Backup nur erstellt, wenn
+            die letzte Sicherung älter als 7 bzw. 30 Tage ist.
+          </p>
+
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <button
+              type="button"
+              className="uwe-v2-btn uwe-v2-btn-primary"
+              disabled={scheduleBusy}
+              onClick={saveSchedule}
+            >
+              {scheduleBusy ? "Speichere…" : "Zeitplan speichern"}
+            </button>
+            {scheduleSaved && <span style={{ color: "var(--uwe-success, green)" }}>Gespeichert.</span>}
+          </div>
+          {scheduleError && (
+            <p className="uwe-error-alert" role="alert" style={{ marginTop: "0.75rem" }}>
+              {scheduleError}
+            </p>
+          )}
+        </section>
+      )}
 
       {permissions?.canPreview && (
       <section className="uwe-panel">

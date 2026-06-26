@@ -8,12 +8,19 @@ import {
   prisma,
 } from "@uwe/database/server";
 import {
+  canCreateBackup,
+  canDownloadBackup,
+  canPreviewRestore,
+  canRestoreBackup,
   listStoredBackups,
   loadBackupFromBuffer,
   loadBackupFromFile,
+  normalizeRetentionCount,
   previewRestoreOnly,
   type BackupType,
 } from "@uwe/backup";
+import type { UweRole } from "@uwe/auth";
+import { getUserFromRequestCookieHeader } from "./auth-session";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 import { jsonError } from "./api-response";
 
@@ -28,6 +35,20 @@ export interface BackupCreateBody {
 export async function getBackupList() {
   const backups = listStoredBackups();
   return NextResponse.json({ backups });
+}
+
+export async function getBackupPermissions(request: Request) {
+  const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
+  const role: UweRole = (user?.role as UweRole | undefined) ?? "guest";
+  return NextResponse.json({
+    role,
+    canCreate: canCreateBackup(role),
+    canDownload: canDownloadBackup(role),
+    canRestore: canRestoreBackup(role),
+    canPreview: canPreviewRestore(role),
+    retentionCount: normalizeRetentionCount(process.env.UWE_BACKUP_RETENTION),
+    encryptionConfigured: !!process.env.UWE_BACKUP_ENCRYPTION_KEY,
+  });
 }
 
 function backupJobTitle(body: BackupCreateBody): string {

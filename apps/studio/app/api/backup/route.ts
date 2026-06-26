@@ -1,4 +1,4 @@
-import { getBackupList, postBackupCreate, type BackupCreateBody } from "../../../src/lib/backup-handlers";
+import { getBackupList, getBackupPermissions, postBackupCreate, type BackupCreateBody } from "../../../src/lib/backup-handlers";
 import {
   guardStudioMutation,
   passthroughBodySchema,
@@ -9,6 +9,11 @@ import {
 export async function GET(request: Request) {
   const authError = requireStudioApiAuth(request);
   if (authError) return authError;
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("permissions") === "1") {
+    return getBackupPermissions(request);
+  }
 
   return getBackupList();
 }
