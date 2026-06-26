@@ -142,7 +142,7 @@ function isStudioNavItemActive(activePath: string, href: string): boolean {
   }
 
   if (normalizedHref === "/system" && normalizedActive.startsWith("/system")) {
-    return true;
+    return !normalizedActive.startsWith("/system/rtx-connector");
   }
 
   if (normalizedHref === "/system") {
@@ -332,7 +332,8 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/brain") ||
     normalized.startsWith("/life-brain") ||
     normalized.startsWith("/admin/reviews") ||
-    normalized.startsWith("/admin/agent-jobs")
+    normalized.startsWith("/admin/agent-jobs") ||
+    normalized.startsWith("/system/rtx-connector")
   ) {
     return "media-ai";
   }
