@@ -81,7 +81,7 @@ async function runOllamaEmbedding(
 }
 
 function playSound(audioCommand: string, payload: Record<string, unknown>): JobResult {
-  const source = asString(payload.url ?? payload.path ?? payload.source);
+  const source = asString(payload.sourceUrl ?? payload.url ?? payload.path ?? payload.source);
   if (!source) {
     throw new Error("sound_play: keine Audioquelle im Payload.");
   }
@@ -113,23 +113,23 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
     }
     case "sound_play": {
       if (!ctx.audioCommand) {
-        log.info("sound_play empfangen — kein UWE_CONNECTOR_AUDIO_CMD gesetzt, bestätige nur.", {
+        log.warn("sound_play empfangen, aber kein lokaler Audio-Player ist konfiguriert.", {
           jobId: job.id,
         });
-        return { acknowledged: true, note: "Kein lokaler Audio-Player konfiguriert." };
+        throw new Error("sound_play: kein lokaler Audio-Player konfiguriert (UWE_CONNECTOR_AUDIO_CMD fehlt).");
       }
       return playSound(ctx.audioCommand, payload);
     }
     case "sound_stop":
     case "sound_stop_all":
-    case "sound_volume":
+    case "sound_volume": {
+      return { acknowledged: true, type };
+    }
     case "spotify_play":
     case "spotify_pause":
     case "spotify_volume":
     case "spotify_transfer_device": {
-      // Acknowledged control jobs — wired to the local audio/spotify backend on
-      // the RTX machine. Phase 1 confirms receipt so the host UI reflects state.
-      return { acknowledged: true, type };
+      throw new Error("Spotify Connect ist auf diesem Connector noch nicht mit einem Executor verbunden.");
     }
     case "image_generate": {
       throw new Error("Bildgenerierung ist auf diesem Connector noch nicht konfiguriert.");
