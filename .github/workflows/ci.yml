@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  schedule:
+    # Weekly Sunday 03:00 UTC — runs E2E and performance checks
+    - cron: "0 3 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -41,6 +44,9 @@ jobs:
           shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh
 
   e2e:
+    # Only run on manual trigger or schedule — not on every push to main.
+    # Skipped jobs do not fail the workflow, so deploy.yml still triggers.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     needs: quality
     steps:

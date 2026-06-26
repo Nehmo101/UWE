@@ -1,6 +1,6 @@
 # CI — Workflows, Scripts, and Debugging
 
-Stand: 2026-06-25
+Stand: 2026-06-26
 
 UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) and **Turbo** for the monorepo. CI runs on **Node 22** in GitHub Actions.
 
@@ -11,21 +11,21 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | Event | Workflow | Gate |
 |-------|----------|------|
 | **Pull request** | `pr-check.yml` | `pnpm ci:light` (lint, typecheck, test:ci, secret scan, docs) |
-| **Push `main`** | `ci.yml` | Full `pnpm quality` + E2E + PostgreSQL smoke + conditional Docker |
-| **Push `main`** | `security.yml` | Secret scan, prod audit, security tests |
-| **Monday 06:00 UTC** | `security.yml` | Weekly dependency monitoring |
+| **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke |
+| **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
+| **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
 | **Manual / release tags** | `windows-installer.yml` | Windows EXE build |
 | **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
-| **CI success on `main`** | `deploy.yml` | SSH deploy to self-hosted Linux mini | Production deployment |
+| **CI success on `main`** | `deploy.yml` | SSH deploy to self-hosted Linux mini |
 
 ## Workflows
 
 | Workflow | File | Trigger | Purpose | Required on PR? |
 |----------|------|---------|---------|-----------------|
 | **PR Check** | `.github/workflows/pr-check.yml` | All PRs | Cheap gate: `pnpm ci:light` + lockfile check | **Yes** |
-| **CI** | `.github/workflows/ci.yml` | Push `main`, manual | Full `pnpm quality`, E2E, Postgres smoke, conditional Docker | No |
-| **Security** | `.github/workflows/security.yml` | Push `main`, weekly, manual | Audit + security tests (secret scan also in PR) | No |
+| **CI** | `.github/workflows/ci.yml` | Push `main`, weekly schedule, manual | Full `pnpm quality`, Postgres smoke; E2E on schedule/manual only | No |
+| **Security** | `.github/workflows/security.yml` | Weekly Monday, manual | Audit + security tests (secret scan also in PR via `ci:light`) | No |
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
 | **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
 | **Windows Installer** | `.github/workflows/windows-installer.yml` | Manual, `v*` tags, `release/**` | Windows installer build/test | No |
@@ -39,8 +39,8 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 **Do not mark as required** (path-filtered, expensive, or post-merge gates):
 
-- `quality`, `e2e`, `postgres-smoke`, `docker-build` (CI on `main`)
-- `security-scan`, `security-tests` (Security)
+- `quality`, `e2e`, `postgres-smoke` (CI on `main` / scheduled)
+- `security-scan`, `security-tests` (Security — weekly/manual only)
 - `docs` (Docs Check)
 - `test`, `build-exe` (Windows Installer)
 
@@ -51,15 +51,14 @@ Configure in GitHub: **Settings → Branches → Branch protection rules → `ma
 The only automatic workflow on pull requests:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm --filter @uwe/database db:generate`
-3. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
-4. `pnpm ci:light` — lint, typecheck, test:ci, secret scan, docs:check
+2. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
+3. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
 
-No `pnpm quality`, no E2E, no Docker, no Windows build, no security tests, no release build.
+No `pnpm quality`, no E2E, no Windows build, no security tests, no release build.
 
 ### CI (`ci.yml`)
 
-Runs only on push to `main` or `workflow_dispatch`:
+Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatch`:
 
 1. Install with frozen lockfile
 2. `pnpm quality` — full gate:
@@ -71,9 +70,8 @@ Runs only on push to `main` or `workflow_dispatch`:
    - Security tests
    - Production dependency audit (high+)
    - Release build
-3. **E2E tests** (`pnpm test:e2e`) — Playwright, runs after quality passes
-4. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + owner setup against a Postgres 16 service container
-5. Docker build (studio + portal) — only when Docker-related files changed; cache writes use `mode=min` to reduce GHA cache storage costs
+3. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + smoke tests against a Postgres 16 service container; runs after quality on every trigger
+4. **E2E tests + performance budget** (`pnpm test:e2e`, `pnpm test:e2e:perf`, `perf-budget-check.mjs`) — Playwright; runs only on `workflow_dispatch` or `schedule`, **not** on every push to `main`
 
 Concurrency cancels superseded `main` pushes to avoid duplicate full-gate runs.
 
@@ -83,7 +81,7 @@ Concurrency cancels superseded `main` pushes to avoid duplicate full-gate runs.
 - `pnpm security:audit` (alias for `pnpm audit:prod`)
 - `pnpm test:security`
 
-Triggers: push `main`, weekly Monday 06:00 UTC, `workflow_dispatch`. Secret scan also runs in PR Check.
+Triggers: **weekly Monday 06:00 UTC** and `workflow_dispatch` only. No longer runs on every push to `main` — `pnpm quality` in `ci.yml` already covers secret scan, security tests, and prod audit on main.
 
 ### Docs Check (`docs-check.yml`)
 
@@ -183,14 +181,6 @@ pnpm audit --prod
 ```
 
 Fix or document accepted risks. Audit level is **high** and above for production deps.
-
-### Docker build failures
-
-Reproduce locally:
-
-```bash
-pnpm docker:build:ci
-```
 
 ## What is blocking?
 
