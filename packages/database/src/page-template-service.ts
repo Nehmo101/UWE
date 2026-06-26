@@ -3,6 +3,7 @@ import type { PageType, Visibility } from "./generated/prisma/client";
 import { PAGE_TEMPLATES, type PageTemplateBlock } from "./page-templates";
 import { createActivityLogService } from "./activity-log-service";
 import { runSeedOnce } from "./seed-tracker";
+import { slugifyDe } from "./slug-utils";
 
 /**
  * DB-backed Quick-Create page templates.
@@ -89,20 +90,6 @@ export function parseTemplateBlocks(value: unknown): PageTemplateBlock[] {
       content: String(block.content ?? ""),
     };
   });
-}
-
-function slugifyTemplateName(name: string): string {
-  return name
-    .trim()
-    .toLocaleLowerCase("de")
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 type DbTemplate = {
@@ -218,7 +205,7 @@ export class PageTemplateService {
       throw new Error("Ein Template braucht mindestens einen Block.");
     }
 
-    const slug = await this.pickUniqueSlug(input.slug || slugifyTemplateName(input.name));
+    const slug = await this.pickUniqueSlug(input.slug || slugifyDe(input.name));
 
     const template = await this.db.pageTemplate.create({
       data: {

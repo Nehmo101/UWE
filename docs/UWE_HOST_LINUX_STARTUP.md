@@ -457,7 +457,7 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 | `deploy/scripts/lib/uwe-host-ai-diagnostics.sh` | Optionale AI-Fehleranalyse |
 | `deploy/scripts/start-uwe.sh` | Startet Studio + Portal (von systemd aufgerufen) |
 | `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
-| `deploy/linux/uwe-host.service` | **Deprecated** — nur noch für Migration dokumentiert |
+| `docs/archive/legacy-uwe-host-service.md` | **Deprecated** — archivierter `uwe-host.service`-Verlauf (nur Migration) |
 | `scripts/uwe-host-*.sh` | Convenience-Wrapper um `uwe.service` |
 
-Weitere Production-Optionen: [PRODUCTION.md](./PRODUCTION.md), Docker: `docker compose up -d`.
+Weitere Production-Hinweise: [PRODUCTION.md](./PRODUCTION.md). Der aktive Pfad ist Linux Host + `systemd` (kein Docker, kein Windows-Installer) — siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md).

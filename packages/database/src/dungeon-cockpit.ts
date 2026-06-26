@@ -7,6 +7,7 @@ import type {
 } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { withParsedArrays } from "./json-utils";
+import { slugifyDe } from "./slug-utils";
 import { renderPageContentHtml, type WikiPageNode } from "./page-service";
 import { filterBlocksForContext } from "./permissions";
 import type { PageSummary } from "./repository";
@@ -153,16 +154,7 @@ export interface DmLevelOverview {
 }
 
 function slugifyTitle(title: string): string {
-  return title
-    .trim()
-    .toLowerCase()
-    .replace(/[äÄ]/g, "ae")
-    .replace(/[öÖ]/g, "oe")
-    .replace(/[üÜ]/g, "ue")
-    .replace(/ß/g, "ss")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "entity";
+  return slugifyDe(title, { maxLength: 80, fallback: "entity" });
 }
 
 function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true } }>): DungeonEntitySummary {

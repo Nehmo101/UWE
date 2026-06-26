@@ -1,5 +1,11 @@
 /**
  * UWE Wiki Engine — wikilinks, backlinks, related pages, broken link detection.
+ *
+ * Status: standalone, self-contained wiki-link utility. It is intentionally
+ * decoupled from `@uwe/database` and currently consumed only by its own tests;
+ * apps render wiki content through `@uwe/database/server`. Disposition
+ * (integrate into the live render path vs. retire) is tracked in
+ * docs/engineering/cleanup-inventory.md.
  */
 
 export const WIKI_ENGINE_VERSION = "0.2.0";

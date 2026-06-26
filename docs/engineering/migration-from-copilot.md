@@ -58,10 +58,10 @@ New Cursor Commands:
 
 These are general CI/CD concerns, not tied to Cursor:
 
-- `ci.yml` — full quality gate + Docker builds
+- `ci.yml` — full quality gate + release build
 - `security.yml` — secret scan, audit, security tests
 - `docs-check.yml` — documentation validation
-- `windows-installer.yml` — Windows packaging
+- `deploy.yml` — SSH deploy to the self-hosted Linux host
 - `pnpm quality` — canonical local/CI gate
 
 Cursor integration is limited to:

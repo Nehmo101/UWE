@@ -18,7 +18,6 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 | **Push `main`** | `ci.yml` | `pnpm quality` + Postgres-Smoke | mittel (~10–15 Min.) |
 | **Sonntag 03:00 UTC / Manuell** | `ci.yml` | E2E + Performance-Budget | teuer (~15–25 Min.) |
 | **Montag 06:00 UTC / Manuell** | `security.yml` | Audit + Security Tests | mittel |
-| **Manuell / Release** | `windows-installer.yml` | Windows EXE | teuer (Windows-Runner) |
 | **Manuell** | `cursor-agent.yml` | Agent + `ci:light` | mittel |
 
 ### Was auf PRs **nicht** mehr läuft
@@ -26,7 +25,6 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 - `ci.yml` (volles `pnpm quality`, E2E, Postgres-Smoke)
 - `security.yml` (Audit, Security Tests — Secret Scan läuft via `pnpm ci:light` in PR)
 - `docs-check.yml` (läuft in `pr-check.yml` via `pnpm docs:check`)
-- `windows-installer.yml`
 
 ### Branch Protection
 
@@ -36,10 +34,9 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 
 **Nicht required** (sonst hängen PRs bei path-gefilterten oder post-merge Checks):
 
-- CI: `quality`, `e2e`, `postgres-smoke`, `docker-build`
+- CI: `quality`, `e2e`, `postgres-smoke`
 - Security: `security-scan`, `security-tests`
 - Docs Check: `docs`
-- Windows Installer: `test`, `build-exe`
 
 ---
 

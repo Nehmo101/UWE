@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
-import { createSettingsService } from "@uwe/database/server";
+import { createSettingsService, pickUniqueSlug } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
 import { previewRestore } from "./restore-preview";
 import type {
@@ -15,15 +15,6 @@ function remapId(idMap: Map<string, string>, oldId: string): string {
     idMap.set(oldId, randomUUID());
   }
   return idMap.get(oldId)!;
-}
-
-function resolveUniqueSlug(baseSlug: string, taken: Set<string>): string {
-  if (!taken.has(baseSlug)) return baseSlug;
-  let index = 2;
-  while (taken.has(`${baseSlug}-${index}`)) {
-    index++;
-  }
-  return `${baseSlug}-${index}`;
 }
 
 export async function executeRestore(
@@ -92,7 +83,7 @@ export async function executeRestore(
       }
 
       if (options.autoResolveSlugConflicts) {
-        const slug = resolveUniqueSlug(world.slug, takenWorldSlugs);
+        const slug = pickUniqueSlug(world.slug, takenWorldSlugs);
         takenWorldSlugs.add(slug);
         await db.world.create({
           data: {
@@ -267,7 +258,7 @@ export async function executeRestore(
       }
 
       if (options.autoResolveSlugConflicts) {
-        const slug = resolveUniqueSlug(page.slug, takenSlugs);
+        const slug = pickUniqueSlug(page.slug, takenSlugs);
         takenSlugs.add(slug);
         await db.page.create({
           data: {

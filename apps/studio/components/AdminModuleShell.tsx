@@ -1,8 +1,7 @@
 import { StudioAppShell } from "@/components/StudioAppShell";
 import { StudioAppShellV2 } from "@/components/StudioAppShellV2";
-import { adminSidebarNav } from "@/src/lib/admin-sidebar-nav";
 import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
-import { isDesignV2Enabled, SidebarNav, SidebarSection } from "@uwe/shared-ui";
+import { isDesignV2Enabled } from "@uwe/shared-ui";
 import type { ReactNode } from "react";
 
 interface AdminModuleShellProps {
@@ -60,14 +59,5 @@ export function AdminModuleShell({
     <StudioAppShell {...shellProps}>
       {children}
     </StudioAppShell>
-  );
-}
-
-/** Legacy sidebar block for pages not yet on StudioAppShell. */
-export function AdminSidebarBlock({ activePath }: { activePath: string }) {
-  return (
-    <SidebarSection title="UWE Studio">
-      <SidebarNav items={adminSidebarNav(activePath)} />
-    </SidebarSection>
   );
 }

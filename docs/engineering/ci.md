@@ -15,7 +15,6 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
-| **Manual / release tags** | `windows-installer.yml` | Windows EXE build |
 | **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
 | **CI success on `main`** | `deploy.yml` | SSH deploy to self-hosted Linux mini |
 
@@ -28,8 +27,11 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Security** | `.github/workflows/security.yml` | Weekly Monday, manual | Audit + security tests (secret scan also in PR via `ci:light`) | No |
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
 | **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
-| **Windows Installer** | `.github/workflows/windows-installer.yml` | Manual, `v*` tags, `release/**` | Windows installer build/test | No |
 | **Deploy** | `.github/workflows/deploy.yml` | `workflow_run` after CI success on `main` | SSH → `uwe-cd-trigger.sh` → git pull + setup --quick | No |
+
+> The former `windows-installer.yml` workflow was removed together with the
+> Docker + Windows-installer runtime (see
+> [removed-legacy-runtime.md](../removed-legacy-runtime.md)).
 
 ### Branch protection (recommended)
 
@@ -42,7 +44,6 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 - `quality`, `e2e`, `postgres-smoke` (CI on `main` / scheduled)
 - `security-scan`, `security-tests` (Security — weekly/manual only)
 - `docs` (Docs Check)
-- `test`, `build-exe` (Windows Installer)
 
 Configure in GitHub: **Settings → Branches → Branch protection rules → `main` → Require status checks**.
 
@@ -54,7 +55,7 @@ The only automatic workflow on pull requests:
 2. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
 3. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
 
-No `pnpm quality`, no E2E, no Windows build, no security tests, no release build.
+No `pnpm quality`, no E2E, no security tests, no release build.
 
 ### CI (`ci.yml`)
 
@@ -91,12 +92,6 @@ Supplemental only — PRs already run `pnpm docs:check` in `pr-check.yml`.
 - Basic internal link scan (warnings only for broken relative links)
 
 Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
-
-### Windows Installer (`windows-installer.yml`)
-
-- Linux job: installer package build, typecheck, unit tests, scaffolding tests, dry-run
-- Windows job: EXE build + artifact upload (3-day retention)
-- Triggers: `workflow_dispatch`, `v*` tags, `release/**` branches — **not** on normal PRs
 
 ### Cursor Agent (`cursor-agent.yml`)
 

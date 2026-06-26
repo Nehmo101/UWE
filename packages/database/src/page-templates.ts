@@ -1,4 +1,5 @@
 import type { ContentBlockType, PageType, Visibility } from "./generated/prisma/client";
+import { slugifyDe } from "./slug-utils";
 
 /**
  * Page templates for Quick Create.
@@ -257,33 +258,7 @@ export function getPageTemplate(id: string | null | undefined): PageTemplate | n
 
 /** Derive a URL-safe slug from a page title (umlaut-aware). */
 export function slugifyPageTitle(title: string): string {
-  return title
-    .trim()
-    .toLocaleLowerCase("de")
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return slugifyDe(title);
 }
 
-/**
- * Pick a slug that does not collide with existing slugs.
- * Falls back to numbered suffixes (`-2`, `-3`, …).
- */
-export function pickUniqueSlug(baseSlug: string, existingSlugs: Iterable<string>): string {
-  const taken = new Set(existingSlugs);
-  const base = baseSlug || "seite";
-
-  if (!taken.has(base)) return base;
-
-  for (let i = 2; i < 1000; i += 1) {
-    const candidate = `${base}-${i}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-
-  return `${base}-${Date.now()}`;
-}
+export { pickUniqueSlug } from "./slug-utils";
