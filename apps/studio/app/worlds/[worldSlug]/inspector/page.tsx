@@ -108,7 +108,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
       worldSlug={worldSlug}
       worldName={world.name}
       activeNav="inspector"
-      bottomNavActive="inspector"
       contextTitle="Inspektor-Hilfe"
       breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Kanon & Leaks", `/worlds/${worldSlug}/inspector`)}
       pageHeader={{
