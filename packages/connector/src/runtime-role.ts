@@ -1,10 +1,10 @@
 /**
  * UWE runtime roles.
  *
- *   host           → always-on instance (website, studio, portal, db, queue).
+ *   host           -> always-on instance (website, studio, portal, db, queue).
  *                    Source of truth. Must boot and serve without any connector.
- *   rtx-connector  → optional local worker on the RTX PC. Connects OUTBOUND to
- *                    the host, claims jobs, runs local AI / audio / spotify.
+ *   rtx-connector  -> optional local worker on the RTX PC. Connects OUTBOUND to
+ *                    the host and claims jobs for executable local backends.
  *
  * The connector is never required for the host to be online.
  */
@@ -42,7 +42,7 @@ export interface ConnectorRuntimeConfig {
   queueEnabled: boolean;
   pollIntervalMs: number;
   heartbeatIntervalMs: number;
-  /** Capabilities forced via env. Empty → auto-detect at runtime. */
+  /** Capability requests from env. Empty -> auto-detect; executable filters still apply. */
   forcedCapabilities: ConnectorCapability[];
 }
 
