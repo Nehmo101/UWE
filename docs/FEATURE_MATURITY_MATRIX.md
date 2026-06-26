@@ -38,6 +38,44 @@ Stand: Juni 2026 · Branch-Basis `main`.
 
 ---
 
+## Reifegrad-Klassen (Stable / Beta / Lab / Deprecated)
+
+Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
+[CURRENT_STATE.md](CURRENT_STATE.md).
+
+### ✅ Stable / Core (production-ready Kern)
+
+- Worlds & Wiki, Medienverwaltung (Assets), Player Portal
+- Auth (Login/Setup/Reset, Rollen, TOTP) + DM-only/Leak-Schutz (Visibility)
+- Linux Host Setup (systemd), Backup/Restore (Kern)
+- Global Search (Kern), Static HTML / Wiki Export
+
+### 🔶 Beta (nutzbar, nicht voll production-ready)
+
+- Calendar (iCal/CalDAV/FamilyWall — kein voller CalDAV-Sync)
+- DnD API (Open5e/SRD — Cache-Inkonsistenzen offen)
+- Daily Admin OS (Today/Capture/Projekte/… — teilweise)
+- Secrets/Reveal (Page + Block; Asset-Ebene offen)
+- Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
+
+### 🧪 Lab / nicht production-ready
+
+- **Image Studio** — generate/variant/inpaint je nach Provider/RTX; kein Canvas,
+  Cloud-Edit/`failed`-Handling unvollständig.
+- **Agent Jobs / Orchestrator** — Dispatch + Polling; Completion-Callback / PR-Sync /
+  zuverlässige Statusrückmeldung offen. Kein automatischer Welt-/Brain-Kontext in Cloud-Agenten.
+- **Performance-Budget / große Testwelt** — CI-Smoke + Bundle-Budget; keine Browser-LCP-Gates.
+- **Import Undo** — nicht vorhanden (nur Import Preview). Vor Execute Backup nötig.
+- **Life-Brain Retrieval** — kein Embedding/Retrieval; Daily Admin OS speichert nur.
+
+### ⛔ Deprecated / Removed
+
+- **Docker** und **Windows-One-Click-Installer** — entfernt ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
+- **Inbound RTX-Agent** — Standalone-Tool entfernt; `RTX_AGENT_URL` nur noch deprecateter
+  Client-Shim. Aktiv: outbound **RTX Host Connector** + direktes Ollama/LM Studio.
+
+---
+
 ## 1. Image Studio
 
 | Kriterium | Status |

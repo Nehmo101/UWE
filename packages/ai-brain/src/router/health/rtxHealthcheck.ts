@@ -1,11 +1,9 @@
 import { getInferenceStatus } from "../../inference";
 import { resolveInferenceConfig } from "../../inference-config";
 import { sanitizeInferenceEndpointLabel, type InferenceUrlKind } from "../../inference-url-guard";
-import { fetchRtxAgentHealth } from "../../rtx-agent-client";
 import {
   evaluateRtxAgentUrl,
   isRtxAgentConfigured,
-  resolveRtxAgentConfig,
   type RtxAgentStatus,
 } from "../../rtx-agent-config";
 import type { AiHealthCheckResult } from "../../types";
@@ -34,7 +32,6 @@ export async function checkRtxHealth(options?: {
 }): Promise<RtxHealthStatus> {
   const env = options?.env ?? process.env;
   const agentEvaluation = evaluateRtxAgentUrl(env);
-  const agentConfig = resolveRtxAgentConfig(env);
 
   if (agentEvaluation.configured && !agentEvaluation.urlAllowed) {
     return {
@@ -50,26 +47,6 @@ export async function checkRtxHealth(options?: {
       urlKind: agentEvaluation.urlKind ?? "public",
       publicExposureWarning:
         "RTX_AGENT_URL zeigt auf eine öffentliche Adresse — nur Heimnetz/private IP nutzen.",
-    };
-  }
-
-  if (agentConfig && !options?.useMock) {
-    const agentHealth = await fetchRtxAgentHealth(agentConfig);
-    const ready = agentHealth.status === "ready";
-    const online = agentHealth.status === "ready" || agentHealth.status === "starting";
-
-    return {
-      online,
-      ready,
-      message: agentHealth.message,
-      providerId: "ollama",
-      endpoint: agentConfig.url,
-      defaultModel:
-        agentHealth.model ?? agentConfig.preferredModel ?? resolveInferenceConfig().defaultModel,
-      agentStatus: agentHealth.status,
-      source: "agent",
-      urlAllowed: true,
-      urlKind: agentEvaluation.urlKind ?? "private",
     };
   }
 

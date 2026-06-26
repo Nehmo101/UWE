@@ -1,8 +1,8 @@
 name: Cursor Agent Job
 
-# Cost note: this workflow uses GitHub-hosted minutes. For routine agent work,
-# prefer AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local or a self-hosted runner.
-# The PR gate (pr-check.yml / pnpm ci:light) runs after the agent opens a PR.
+# Agents run in the GitHub Cloud (GitHub-hosted runners). This workflow uses
+# GitHub-hosted minutes; the PR gate (pr-check.yml / pnpm ci:light) runs after the
+# agent opens a PR, and the full gate (pnpm quality) runs on merge to main.
 
 on:
   workflow_dispatch:

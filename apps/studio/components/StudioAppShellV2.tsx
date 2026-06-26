@@ -16,8 +16,12 @@ import {
   worldNavSections,
   type WorldBottomNavKey,
   type WorldNavKey,
-  type WorldNavSection,
 } from "@/src/lib/studio-navigation";
+import {
+  applyCampaignToWorldSections,
+  ShellHeaderBlock,
+  worldDefaultOpenTitles,
+} from "@/src/lib/studio-shell-utils";
 
 export type StudioAppShellV2Variant = "dashboard" | "admin" | "world" | "module";
 
@@ -51,24 +55,6 @@ export interface StudioAppShellV2Props {
   cockpitWorlds?: { name: string; slug: string }[];
   statusFooter?: ReactNode;
   unifiedSidebar?: boolean;
-}
-
-function applyCampaignToWorldSections(
-  sections: WorldNavSection[],
-  campaignSlug?: string,
-): WorldNavSection[] {
-  if (!campaignSlug) return sections;
-  return sections.map((section) => ({
-    ...section,
-    items: section.items.map((item) =>
-      item.key === "new-page" ? { ...item, href: `${item.href}?campaign=${campaignSlug}` } : item,
-    ),
-  }));
-}
-
-function worldDefaultOpenTitles(sections: WorldNavSection[]) {
-  const activeTitle = sections.find((section) => section.items.some((item) => item.active))?.title;
-  return Array.from(new Set(["Übersicht", "Inhalte", activeTitle].filter(Boolean) as string[]));
 }
 
 /** Studio shell V2 — canonical Studio/World shell adapter with Design V2 chrome. */
@@ -129,26 +115,9 @@ export function StudioAppShellV2({
   };
 
   const headerBlock = (
-    <>
-      {backHref ? (
-        <a href={backHref} className="uwe-back-link">
-          ← {backLabel}
-        </a>
-      ) : null}
-      {breadcrumbs && breadcrumbs.length > 0 ? (
-        <nav className="uwe-breadcrumb" aria-label="Brotkrumen">
-          {breadcrumbs.map((item, index) => (
-            <span key={`${item.label}-${index}`}>
-              {item.href ? <a href={item.href}>{item.label}</a> : item.label}
-              {index < breadcrumbs.length - 1 ? (
-                <span className="uwe-breadcrumb-sep">/</span>
-              ) : null}
-            </span>
-          ))}
-        </nav>
-      ) : null}
+    <ShellHeaderBlock backHref={backHref} backLabel={backLabel} breadcrumbs={breadcrumbs}>
       {children}
-    </>
+    </ShellHeaderBlock>
   );
 
   const pageHeader = title

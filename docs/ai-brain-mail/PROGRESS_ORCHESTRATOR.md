@@ -26,8 +26,8 @@ Cloud-KI erhält niemals Brain-/World-/Objekt-Kontext — nur allgemeinen User-P
 |---------|------|
 | AI Router | `packages/ai-brain/src/router/aiRouter.ts` |
 | Privacy Guard | `packages/ai-brain/src/router/privacyGuard.ts` |
-| RTX Agent Client | `packages/ai-brain/src/rtx-agent-client.ts` |
-| RTX Agent Tool | `tools/uwe-rtx-agent/` |
+| RTX Agent Client (deprecated shim) | `packages/ai-brain/src/rtx-agent-client.ts` |
+| RTX Host Connector (active; legacy `tools/uwe-rtx-agent` removed) | `tools/uwe-rtx-connector/` |
 | Prompt API | `apps/studio/app/api/ai/prompt/route.ts` |
 | Mobile UI | `apps/studio/components/MobileAiPromptPanel.tsx` |
 

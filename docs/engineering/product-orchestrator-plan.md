@@ -13,7 +13,7 @@ Dieses Dokument koordiniert die Evolution von UWE: vom DnD-/Campaign-Brain zum p
 | **Kein Familien-/Meal-/Haushalts-Modul** | `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md` |
 | **KI-Outputs immer Proposal/Draft** | Kein Auto-Apply auf Kanon oder Life Brain |
 | **Cloud-KI ohne Brain/Welt/Life-Kontext** | `packages/ai-brain/src/router/privacyGuard.ts` |
-| **RTX nur LAN, nie öffentlich** | `tools/uwe-rtx-agent`, `DEPLOYMENT_SECURITY.md` |
+| **RTX nur LAN, nie öffentlich** | `tools/uwe-rtx-connector`, `packages/security/src/security/rtx-boundary.ts`, `DEPLOYMENT_SECURITY.md` |
 | **Mobile-first für Capture, Today, Portal, Werkstatt** | `apps/studio/src/lib/mobile-nav.ts` |
 | **Kleine PRs, sequenzielle Konfliktvermeidung** | Ein Subagent pro Domäne, getrennte Dateipfade wo möglich |
 

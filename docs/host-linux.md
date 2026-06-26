@@ -26,10 +26,11 @@ pnpm host:status                           # health
 pnpm host:stop
 ```
 
-## Local CI gate
+## CI gate
 
-CI is currently expected to run locally from the repository root; do not assume
-GitHub Actions as the source of truth for this rework. Use Node.js 22 and run:
+**GitHub Cloud CI is the authoritative gate** (see
+[engineering/ci.md](engineering/ci.md)); a PR is mergeable when its GitHub checks
+are green. The commands below are an **optional local pre-check** on Node.js 22:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -41,9 +42,7 @@ pnpm test:security
 pnpm build:release
 ```
 
-The checks intentionally target the Linux Host + outbound RTX Connector path.
-Failures from removed Docker or Windows-installer paths should be updated to the
-new architecture, not deleted blindly.
+The checks target the Linux Host + outbound RTX Connector path.
 
 ## Production (systemd, recommended)
 

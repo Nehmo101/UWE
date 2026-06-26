@@ -36,7 +36,14 @@ Portal            → apps/portal/app/**
 Shared UI         → packages/shared-ui/src/
 ```
 
-## CI-Gate — vor jedem Push
+## CI-Gate — GitHub Cloud ist maßgeblich
+
+**GitHub Cloud CI ist der verbindliche Gate.** Ein PR ist mergebar, wenn seine
+GitHub-Checks grün sind: `pr-check.yml` (`pnpm ci:light`) auf jedem PR, volles
+`pnpm quality` auf `main`. Es gibt **keinen** lokalen oder self-hosted Pflicht-Gate.
+
+Lokal `pnpm quality` (oder schneller `pnpm ci:light`) vor dem Push laufen zu lassen
+ist eine **optionale Vorprüfung**, um Fehler früher zu finden:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -53,7 +60,7 @@ pnpm quality
 7. `pnpm audit:prod` — Production Dependency Audit (high+)
 8. `pnpm build:release` — Production Build
 
-Nicht pushen, bevor `pnpm quality` mit Exit 0 beendet.
+Maßgeblich sind die grünen GitHub-Checks; der lokale Lauf ist optionale Vorprüfung.
 
 ### Schnell-Gate (ohne Security/Audit)
 
@@ -105,10 +112,6 @@ Nach `pnpm add` / Dependency-Änderungen: `pnpm install` und `pnpm-lock.yaml` co
 - Keine toten Features, auskommentierte Blöcke oder Orphan-Files.
 - `@uwe/database/server` Barrel ist groß (~1080 Zeilen) — lieber direkte Service-Imports.
 
-## Bekannte Broken Route (pre-existing)
-
-`/worlds/[worldSlug]/pages/new` — `createPageAction` fehlt `"use server"`, Seite hängt beim Laden. Andere Write-Flows (z.B. `/capture`) funktionieren.
-
 ## Dev-Mode Gotcha: CSP blockiert `next dev`
 
 Die CSP erlaubt kein `'unsafe-eval'`. `next dev` benötigt das für HMR. Für Browser-Tests in dev temporär `'unsafe-eval'` in `packages/auth/src/security-headers.ts` ergänzen — **vor Commit revertieren**.
@@ -122,12 +125,21 @@ pnpm --filter @uwe/database db:seed     # Demo-Welt "Terra" + User
 # Login: dm@uwe.local / uwe-dev
 ```
 
+## Aktive Runtime-Wahrheit
+
+- **UWE Host**: Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`).
+- **RTX Host Connector**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
+- **Cloudflare Tunnel / Access**: optional davor.
+- **CI/Agenten**: nur GitHub Cloud.
+- **Kein** Docker, **kein** Windows-One-Click-Installer, **kein** inbound RTX-Agent als aktiver Pfad.
+
 ## Scope-Disziplin
 
 - Minimaler Diff — nur das ändern, was der Task verlangt.
 - Bestehende Package-Grenzen einhalten.
 - Keine Drive-by Refactors.
 - Bestehende Services erweitern statt Logik duplizieren.
+- Kein Docker / Windows-Installer / inbound RTX-Agent wieder einführen.
 
 ## Wichtige Docs
 

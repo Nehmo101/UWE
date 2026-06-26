@@ -275,7 +275,7 @@ export class ConnectorService {
     });
 
     const updated = await this.db.connector.findUnique({ where: { id: connectorId } });
-    return updated ? applyCapabilityPolicy(toConnectorView(updated), await this.getCapabilityPolicy(connectorId)) : null;
+    return updated ? applyCapabilityPolicy(toConnectorView(updated), await this.getCapabilityPolicy(connectorId) ?? undefined) : null;
   }
 
   /**

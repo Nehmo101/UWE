@@ -21,7 +21,7 @@ Docs: `docs/IMAGE_STUDIO.md`, `docs/FEATURE_MATURITY_MATRIX.md` §1.
 | Studio UI | `apps/studio/app/image-studio/` |
 | API | `apps/studio/app/api/image-studio/` |
 | Assets | `packages/assets/` — storage keys, MIME validation |
-| RTX | `tools/uwe-rtx-agent` — `/v1/images` |
+| RTX | `tools/uwe-rtx-connector` (active) — `/v1/images`; legacy inbound `RTX_AGENT_URL` deprecated |
 
 ## Provider routing
 

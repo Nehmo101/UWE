@@ -10,8 +10,8 @@ Zweck: Orientierung für Featurebereiche und technische Schulden.
 > **Feature-Reifegrad** (Image Studio, Kalender, DnD API existieren bereits)
 > haben sich seither geändert.
 >
-> **Aktuelle Sources of Truth:** [README.md](../README.md),
-> [SECURITY.md](../SECURITY.md),
+> **Aktuelle Sources of Truth:** [docs/CURRENT_STATE.md](./CURRENT_STATE.md)
+> (aktive Runtime + CI), [README.md](../README.md), [SECURITY.md](../SECURITY.md),
 > [docs/removed-legacy-runtime.md](./removed-legacy-runtime.md),
 > [docs/FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md),
 > [docs/ARCHITECTURE.md](./ARCHITECTURE.md). Bei Widersprüchen gelten diese.

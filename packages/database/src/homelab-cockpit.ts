@@ -193,11 +193,11 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
     },
     {
       id: "rtx_agent",
-      label: "RTX Agent",
+      label: "RTX Agent (Legacy)",
       ok: rtxAgentOk,
       severity: rtxAgentSeverity,
       message: !inference.enabled
-        ? "KI deaktiviert — RTX Agent optional"
+        ? "KI deaktiviert — Legacy RTX Agent optional (outbound Connector bevorzugt)"
         : !rtxAgentConfigured
           ? "RTX_AGENT_URL nicht konfiguriert"
           : !rtx.urlAllowed
@@ -248,7 +248,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 3,
-          instruction: "RTX-Laptop: RTX Agent und Ollama starten (Windows Tray oder Dienst)",
+          instruction: "RTX-Rechner: Ollama + outbound RTX Host Connector starten (Legacy inbound RTX Agent ist deprecated)",
         },
         {
           order: 4,
@@ -335,7 +335,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 4,
-          instruction: "RTX Agent Logs (Windows: Tray-App / Agent-Konsole)",
+          instruction: "RTX Connector Logs (oder Legacy RTX Agent Konsole, falls noch genutzt)",
         },
       ],
     },
@@ -402,8 +402,8 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
     },
     {
       id: "check_rtx_agent",
-      title: "RTX-Agent prüfen",
-      summary: "Lokale KI — nur Heimnetz, Token erforderlich.",
+      title: "RTX-Agent prüfen (Legacy)",
+      summary: "Legacy inbound RTX Agent — deprecated; bevorzugt outbound Connector. Nur Heimnetz, Token erforderlich.",
       steps: [
         {
           order: 1,

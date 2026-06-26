@@ -1,12 +1,18 @@
 # Agent instructions (UWE)
 
-Cloud agents and Cursor subagents must pass the same **quality** gate as CI before opening or updating a pull request.
+**GitHub Cloud CI is the authoritative gate.** A pull request is ready to merge when
+its GitHub checks are green — `pr-check.yml` (`pnpm ci:light`) on every PR, and the
+full `pnpm quality` gate on `main`. Agents (cloud, Cursor, Codex, Claude) run only in
+the GitHub Cloud; there is no required local or self-hosted gate.
 
-## Required check (mirrors `.github/workflows/ci.yml`)
+Running the quality gate locally before pushing is an **optional, recommended
+pre-check** that catches failures faster:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm quality
+pnpm quality       # full local mirror of the main gate
+# or, faster, mirroring the PR gate:
+pnpm ci:light
 ```
 
 `pnpm quality` runs, in order:
@@ -20,7 +26,8 @@ pnpm quality
 7. `pnpm audit:prod` — production dependency audit at high severity and above
 8. `pnpm build:release` — production build
 
-Do **not** push or mark a PR ready until this succeeds locally.
+A PR is ready when its **GitHub checks are green**. The local run above is an
+optional pre-check, not a required or self-hosted gate.
 
 ## Common recurring failures
 
@@ -61,7 +68,7 @@ After adding dependencies: `pnpm install` and commit `pnpm-lock.yaml`. CI uses `
 ## Further reading
 
 - `docs/engineering/ci.md` — CI workflows, local commands, debugging
-- `docs/engineering/self-hosted-ci.md` — Self-hosted CI, Hardware, Billing (geplant für später)
+- `docs/engineering/self-hosted-ci.md` — Self-hosted CI, Hardware, Billing (historical / optional reference — **not** the active gate)
 - `docs/engineering/cursor-workflow.md` — Cursor rules, commands, agent PR workflow
 - `.cursor/rules/` — project, coding, CI, security, and docs rules for Cursor
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed quality workflow
@@ -115,11 +122,3 @@ falls back to a broken native GET — i.e. interactive UI does not work in dev.
   dev branch of the CSP in `security-headers.ts` (production unchanged) and
   revert before committing — CSP changes need explicit security review per
   `.cursor/rules/security.mdc`.
-
-### Known broken route (pre-existing)
-
-`/worlds/[worldSlug]/pages/new` errors at render: `createPageAction` in
-`apps/studio/app/actions.ts` is passed to `<form action={...}>` but that file
-is missing the `"use server"` directive, so the page hangs on the
-`Studio wird geladen…` loader. Other write flows (e.g. `/capture`, which uses
-`apps/studio/app/capture-actions.ts`) are proper server actions and work.

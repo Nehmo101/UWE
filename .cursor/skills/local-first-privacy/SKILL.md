@@ -36,11 +36,11 @@ Validation: `validateProviderContextCombination`, `validateResolvedRouteForConte
 
 See `docs/life-brain-privacy.md`.
 
-## RTX agent
+## RTX inference (outbound connector)
 
-- `tools/uwe-rtx-agent/` — inference worker only
+- `tools/uwe-rtx-connector/` — outbound inference worker only (legacy inbound `tools/uwe-rtx-agent` removed)
 - No persistent UWE data storage on RTX host
-- Studio calls RTX over private network URL from ENV
+- Connector connects outbound to the host over the private network; no inbound port
 
 ## Deployment checks
 

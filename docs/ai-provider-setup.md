@@ -4,13 +4,22 @@ Cloud-Provider und RTX werden **ausschließlich vom Master-Admin (Owner)** konfi
 
 ## Lokale RTX (bevorzugt)
 
+Aktiver Weg: direktes Ollama/LM Studio im Heimnetz plus optional der ausgehende
+**RTX Host Connector** (`tools/uwe-rtx-connector`, `pnpm connector:start`).
+
 ```env
-RTX_AGENT_URL=http://192.168.x.x:8787
-RTX_AGENT_TOKEN=<starkes-geheimnis>
+AI_INFERENCE_ENABLED=true
+AI_INFERENCE_PROVIDER=ollama
+AI_INFERENCE_BASE_URL=http://192.168.x.x:11434
 PREFERRED_LOCAL_MODEL=llama3.2
 ```
 
-RTX-Agent: `tools/uwe-rtx-agent/` — nur im Heimnetz, nie öffentlich.
+Nur im Heimnetz, nie öffentlich. Siehe [rtx-connector.md](rtx-connector.md).
+
+> **Legacy (entfernt):** der alte inbound RTX-Agent (Tool + ai-brain-LLM-Client) wurde
+> entfernt. `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` überleben nur als Legacy-Aliase der
+> RTX-Worker-URL (`RTX_BASE_URL` / `RTX_SERVICE_TOKEN`) für den Worker/Image-Pfad
+> ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
 
 ## Cloud-Provider (Fallback)
 

@@ -1,8 +1,9 @@
-# Removed legacy runtime (Docker + Windows installer)
+# Removed legacy runtime (Docker, Windows installer, inbound RTX Agent)
 
 UWE was simplified to two clear roles: an always-on **UWE Host** (Linux) and an
-optional, outbound **RTX Host Connector**. As part of that simplification, Docker
-and the Windows one-click installer were removed from the **active product path**.
+optional, outbound **RTX Host Connector**. As part of that simplification, Docker,
+the Windows one-click installer, and the standalone **inbound** RTX Agent tool were
+removed from the **active product path**.
 
 This is an honest record of what changed.
 
@@ -25,9 +26,11 @@ This is an honest record of what changed.
 | `tools/windows-installer/` (package `@uwe/windows-installer`) | No installer. Run the host on Linux. |
 | `scripts/windows/*.ps1`, `UWE-Installieren.cmd` | No active product path. |
 | `package.json` scripts `installer:windows*`, `launcher:dev`, `package:windows`, `backup`/`restore`/`doctor`/`repair` (installer CLI) | Backups: `pnpm backup:create` (`@uwe/backup`) and `deploy/scripts/uwe-backup.sh`. |
-| `.github/workflows/windows-installer.yml`, Docker build jobs | Local CI is the current gate: lint, typecheck, unit/security tests, migration checks, connector + queue tests, release build. |
-| `scripts/windows-installer.test.ts`, Docker assertions in `scripts/selfhost.test.ts` | Tests should cover the Linux Host + outbound Connector path. |
+| `.github/workflows/windows-installer.yml`, Docker build jobs | **GitHub Cloud CI** is the authoritative gate (`pr-check.yml` → `pnpm ci:light`; full `pnpm quality` on `main`). Local commands are an optional pre-check only. |
+| `scripts/windows-installer.test.ts`, Docker assertions in `scripts/selfhost.test.ts` | Tests cover the Linux Host + outbound Connector path. `integration-smoke.test.ts` guards that no Docker build job returns. |
 | `docs/WINDOWS_INSTALLER.md`, `docs/windows-install.md`, `docs/windows-troubleshooting.md`, `docs/windows-test-checklist.md` | [docs/host-linux.md](host-linux.md), [docs/rtx-connector.md](rtx-connector.md). |
+| `tools/uwe-rtx-agent/` (package `@uwe/rtx-agent`, incl. `scripts/rtx-tray.ps1`) | **Removed.** The inbound RTX Agent is no longer shipped. Use the outbound [RTX Host Connector](rtx-connector.md) + direct Ollama/LM Studio. |
+| `packages/ai-brain/src/rtx-agent-client.ts`, `packages/ai-brain/src/providers/rtx-agent-provider.ts` | **Removed.** Inbound-agent LLM client/provider; ai-brain inference now uses direct Ollama/LM Studio + the connector. `rtx-agent-config.ts` stays only as the RTX worker URL resolver for the `@uwe/security` boundary. |
 
 ## Kept (still supported)
 
@@ -35,8 +38,10 @@ This is an honest record of what changed.
   `scripts/uwe-host-*.sh`, autostart scripts.
 - Backup/restore as a feature (`@uwe/backup`, `pnpm backup:create`).
 - PostgreSQL as an optional database (`schema.postgresql.prisma`).
-- The legacy **inbound** RTX agent (`tools/uwe-rtx-agent`, `RTX_AGENT_URL`) remains
-  for existing setups but is **deprecated** in favour of the outbound connector.
+- The RTX **worker** security boundary (`@uwe/security` `rtx-boundary`) and the
+  RTX worker/image path still resolve and LAN-validate a worker URL. `RTX_AGENT_URL`
+  survives only as the **legacy alias** of that worker URL (`RTX_BASE_URL`); it is no
+  longer an LLM-inference path.
 
 ## Honest status
 
@@ -49,12 +54,21 @@ This is an honest record of what changed.
   `image_generation` requires an explicit local image command.
 - The host stores reported capabilities separately from effective capabilities
   and can cap each connector with `allowedCapabilities`.
-- Fully migrating the inbound AI path (`RTX_AGENT_URL`) onto the connector queue is
-  a follow-up; today both coexist and the connector is the recommended direction.
+- The standalone inbound RTX Agent tool **and** its ai-brain LLM client/provider
+  (`rtx-agent-client`, `rtx-agent-provider`) have been removed. LLM inference now uses
+  direct Ollama/LM Studio (`AI_INFERENCE_BASE_URL`) + the outbound RTX Host Connector.
+  `RTX_AGENT_URL` remains only as a legacy alias of the RTX worker URL (`RTX_BASE_URL`)
+  used by the security boundary / RTX worker (image) path.
 
-## Local CI
+## CI truth
 
-Run this from the repo root on Node.js 22:
+**GitHub Cloud CI is the authoritative gate** — see
+[engineering/ci.md](engineering/ci.md). PRs are gated by `pr-check.yml`
+(`pnpm ci:light`); the full `pnpm quality` gate runs on `main`. A PR is mergeable
+when its GitHub checks are green.
+
+The commands below are an **optional local pre-check** to catch problems faster
+before pushing — they are not a required or self-hosted gate:
 
 ```bash
 pnpm install --frozen-lockfile

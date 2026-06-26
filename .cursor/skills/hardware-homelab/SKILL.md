@@ -46,9 +46,10 @@ pnpm docker:up
 
 `docker-compose.yml` — Studio + Portal + SQLite volume. RTX runs **outside** compose on gaming PC.
 
-## RTX agent
+## RTX inference (outbound connector)
 
-- Package: `tools/uwe-rtx-agent/`
+- Active package: `tools/uwe-rtx-connector/` (`pnpm connector:start`) — outbound worker, no inbound port
+- Legacy inbound RTX agent (`RTX_AGENT_URL`) is deprecated; the standalone tool was removed
 - ENV: internal URL only (e.g. `http://192.168.x.x:11434`)
 - Inference only — no UWE DB on RTX machine
 - Skill: `local-first-privacy` for routing rules

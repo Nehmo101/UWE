@@ -47,7 +47,7 @@ Cookbook feeds `@uwe/ai-brain` routing via `buildCookbookRuntimeProbe()` (`packa
 |----------|---------|
 | `AI_INFERENCE_PROVIDER` | `ollama` or `openai_compatible` |
 | `AI_INFERENCE_BASE_URL` | Local inference endpoint |
-| `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` | Remote GPU via `tools/uwe-rtx-agent` |
+| `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` | Legacy remote GPU (deprecated inbound agent — tool removed; use the outbound RTX Host Connector) |
 | `AI_LOCAL_ONLY` / `AI_DATENSCHUTZ_MODE` | Force local-only |
 | `COOKBOOK_GPU_VRAM_GB` | Override detected VRAM (CI / headless hosts) |
 | `COOKBOOK_GPU_NAME` | GPU label for override profile |
@@ -77,17 +77,16 @@ docker run -d --gpus all -v ollama:/root/.ollama -p 11434:11434 --name ollama ol
 docker exec -it ollama ollama pull llama3.1:8b
 ```
 
-### RTX Agent (UWE host → GPU PC)
+### RTX Host Connector (UWE host ← GPU PC, outbound)
 
-On the GPU machine, run `tools/uwe-rtx-agent` (see `tools/uwe-rtx-agent/README.md`).
+On the GPU machine, run the **outbound RTX Host Connector** (`pnpm connector:start`,
+`tools/uwe-rtx-connector`). It connects outbound to the host and opens no inbound port.
+See [rtx-connector.md](rtx-connector.md).
 
-On UWE Studio:
-
-```env
-RTX_AGENT_URL=http://192.168.x.x:8787
-RTX_AGENT_TOKEN=your-secret-token
-PREFERRED_LOCAL_MODEL=llama3.1:8b
-```
+> **Legacy (removed):** the old inbound RTX Agent (tool + ai-brain LLM client) was
+> removed. `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` survive only as legacy aliases of the
+> RTX worker URL (`RTX_BASE_URL` / `RTX_SERVICE_TOKEN`) for the worker/image path
+> (see [removed-legacy-runtime.md](removed-legacy-runtime.md)).
 
 Use **private LAN IPs only** — public RTX URLs are blocked by `@uwe/security` and Cookbook warnings.
 

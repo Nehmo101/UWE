@@ -353,12 +353,17 @@ export function AiGatewayWizard() {
           <p className="uwe-muted">{data.rtxHealth.message}</p>
           <ul>
             <li>
-              <code>RTX_AGENT_URL</code> auf die LAN-Adresse des RTX-Laptops setzen
+              Aktiv: outbound <strong>RTX Host Connector</strong> starten
+              (<code>pnpm connector:start</code>, <code>tools/uwe-rtx-connector</code>) — verbindet
+              sich ausgehend zum Host, kein offener Port am RTX-PC
             </li>
             <li>
-              <code>RTX_AGENT_TOKEN</code> als gemeinsames Geheimnis konfigurieren
+              Alternativ direktes Ollama/LM Studio im LAN über <code>AI_INFERENCE_BASE_URL</code>
             </li>
-            <li>RTX-Agent starten: <code>tools/uwe-rtx-agent</code></li>
+            <li>
+              Legacy (deprecated): <code>RTX_AGENT_URL</code> + <code>RTX_AGENT_TOKEN</code> nur für
+              Bestands-Setups
+            </li>
           </ul>
         </section>
       )}

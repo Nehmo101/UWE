@@ -40,7 +40,6 @@ const ALLOWLIST_PATHS = [
   /apps\/portal\/app\/login\/page\.tsx$/,
   /packages\/security-tests\/src\/fixtures\/security-fixture\.ts$/,
   /packages\/env\/src\/config\/env\.ts$/,
-  /tools\/uwe-rtx-agent\/src\/test-helpers\.ts$/,
   /\.test\.(ts|tsx)$/,
   /docs\/secrets\.md$/,
   /\.env\.example$/,

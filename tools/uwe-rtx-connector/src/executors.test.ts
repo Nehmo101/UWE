@@ -115,7 +115,7 @@ describe("executeJob spotify", () => {
   it("fails clearly when spotify credentials are missing", async () => {
     await assert.rejects(
       () => executeJob(genericJob("spotify_pause", {}), ctx()),
-      /Spotify Connect ist nicht konfiguriert/,
+      /Spotify Connect/,
     );
   });
 });

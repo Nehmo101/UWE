@@ -102,11 +102,16 @@ Design V2 is **default-on** (`isDesignV2Enabled`, opt-out via
   `AdminModuleShell`, `WorldModuleShell`, `PortalAppShell`) currently branch on
   `isDesignV2Enabled()`.
 
-**Follow-up (not done here — too broad for a safe single PR):** extract shared
-logic (breadcrumb/header rendering, world-section building, campaign-link
-adjustment, default-open sections, bottom-nav key resolution) into helpers so V1/V2
-become thin renderers; then retire V1 once Design V2 has soaked. Must not regress
-the reduced IA (Heute · Welten · Erstellen · Medien & KI · System).
+**Done (Studio app shells):** the duplicated pure logic now lives in
+`apps/studio/src/lib/studio-shell-utils.tsx` — `applyCampaignToWorldSections`,
+`worldDefaultOpenTitles`, and the shared `ShellHeaderBlock` (back-link + breadcrumb).
+`StudioAppShell` (V1) and `StudioAppShellV2` import these instead of redefining them,
+so the two cannot drift. Behaviour unchanged; the reduced IA
+(Heute · Welten · Erstellen · Medien & KI · System) is untouched.
+
+**Remaining follow-up:** apply the same extraction to the lower-level `@uwe/shared-ui`
+shells (`StudioShell`/`StudioShellV2`, `AdminShell`/`AdminShellV2`, Portal) and retire
+the V1 shells once Design V2 has soaked.
 
 ## wiki-engine — retired (2026-06-26)
 

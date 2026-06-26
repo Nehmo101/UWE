@@ -255,7 +255,7 @@ Persistente Produktionsdaten: `/var/lib/uwe` (DB, Uploads), `/var/backups/uwe` (
 
 ---
 
-## Alternative: Lokale Entwicklung (ohne Docker)
+## Alternative: Lokale Entwicklung
 
 ### Prerequisites
 
@@ -279,9 +279,13 @@ pnpm dev:studio   # http://localhost:3000
 pnpm dev:portal   # http://localhost:3001
 ```
 
-### Local CI gate
+### CI gate
 
-CI is currently expected to run locally for the Linux Host + outbound RTX Connector path. Do not rely on GitHub Actions as the active gate for this infrastructure rework.
+**GitHub Cloud CI is the authoritative gate.** A PR is mergeable when its GitHub
+checks are green — `pr-check.yml` (`pnpm ci:light`) on every PR and the full
+`pnpm quality` gate on `main`. See [docs/engineering/ci.md](docs/engineering/ci.md).
+
+The commands below are an **optional local pre-check** (not required, not self-hosted):
 
 ```bash
 pnpm install --frozen-lockfile
@@ -480,78 +484,21 @@ Diese Regel ist **nicht verhandelbar** und wird serverseitig durchgesetzt:
 
 In der UI siehst du Hinweise wie: *„Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.“*
 
-### RTX-Agent einrichten (Legacy — inbound)
+### RTX-Agent (Legacy inbound — entfernt)
 
-> **Hinweis:** Dieser Abschnitt beschreibt das **alte inbound-Modell**, bei dem der UWE Host in
-> einen RTX-HTTP-Server hineinruft. Der **go-forward Weg** ist der ausgehende
-> **RTX Host Connector** ([docs/rtx-connector.md](docs/rtx-connector.md), `pnpm connector:start`).
-> Der Connector öffnet keinen Port am RTX-PC und verbindet sich ausschließlich ausgehend zum Host.
-
-Der **UWE RTX-Agent** läuft auf dem RTX-Rechner als lokaler Dienst (optional mit Windows-Tray und Autostart). UWE spricht nur mit dem Agenten — nicht direkt mit dem Internet.
-
-#### 1. RTX-Agent starten
-
-Auf dem RTX-PC das Teilprojekt `uwe-rtx-agent` starten (Konsole oder Tray-App). Standard: lauscht im Heimnetz auf einer privaten IP (z. B. `http://192.168.x.x:8787`).
-
-#### 2. Token setzen
-
-Im Agent und in UWE **dasselbe** Shared Secret verwenden:
-
-```env
-# RTX-Agent (.env auf dem RTX-PC)
-AGENT_TOKEN=generiere-ein-langes-zufaelliges-geheimnis
-
-# UWE Host (.env auf dem Laptop)
-RTX_AGENT_TOKEN=dasselbe-geheimnis-wie-oben
-```
-
-Token nur serverseitig — **nie** im Browser oder in Git committen.
-
-#### 3. URL konfigurieren
-
-In der UWE-`.env` auf dem Host:
-
-```env
-RTX_AGENT_URL=http://192.168.x.x:8787
-```
-
-Nur Heimnetz-IP oder `localhost` — **keine** öffentliche URL, kein Cloudflare-Tunnel zum RTX.
-
-#### 4. Ollama/Backend konfigurieren
-
-Auf dem RTX-PC im Agent (Beispiel Ollama):
-
-```env
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-DEFAULT_MODEL=qwen2.5-coder:7b
-```
-
-Alternativ LM Studio / OpenAI-kompatibel — siehe Agent-README. Optional: `START_OLLAMA_COMMAND`, wenn der Agent Ollama mitstarten soll.
-
-In UWE optional:
-
-```env
-PREFERRED_LOCAL_MODEL=qwen2.5-coder:7b
-```
-
-#### 5. Autostart aktivieren
-
-In der Windows-Tray-App: **„Beim Windows-Start ausführen“** aktivieren (CurrentUser-Autostart, ohne Adminrechte). Nach Neustart prüfen, ob der Tray-Status **grün** (ready) ist.
-
-#### 6. Status prüfen
-
-| Wo | Was prüfen |
-|----|------------|
-| RTX Tray / Agent | `GET /health` → `ready`, `disabled`, `starting` oder `error` |
-| UWE Studio | Admin-Dashboard: RTX online/offline/deaktiviert, lokale KI bereit, Cloud konfiguriert |
-| Manuell | `curl -H "Authorization: Bearer <RTX_AGENT_TOKEN>" http://192.168.x.x:8787/health` |
-
-Healthcheck-Intervall und Timeout in UWE:
-
-```env
-RTX_HEALTHCHECK_INTERVAL_MS=10000
-RTX_TIMEOUT_MS=3000
-```
+> **Deprecated / entfernt.** Das alte inbound-Modell (UWE Host ruft in einen
+> RTX-HTTP-Server hinein, `RTX_AGENT_URL`) wird **nicht mehr empfohlen**, und das
+> Standalone-Tool `uwe-rtx-agent` wurde aus dem Repo entfernt
+> ([docs/removed-legacy-runtime.md](docs/removed-legacy-runtime.md)).
+>
+> Aktiver Weg für lokale RTX-Leistung: der ausgehende **RTX Host Connector** —
+> siehe Abschnitt **"RTX Connector starten (optional)"** oben und
+> [docs/rtx-connector.md](docs/rtx-connector.md) (`pnpm connector:start`). Der Connector
+> öffnet **keinen** Port am RTX-PC und verbindet sich ausschließlich ausgehend zum Host.
+>
+> Der inbound RTX-Agent inkl. ai-brain-LLM-Client (`rtx-agent-client`/`-provider`) wurde
+> entfernt; `RTX_AGENT_URL` überlebt nur als Legacy-Alias der RTX-Worker-URL
+> (`RTX_BASE_URL`). Für neue Installationen ist der Connector der einzige unterstützte Weg.
 
 ### Cloud-Fallback
 
@@ -627,7 +574,7 @@ npx serve exports/terra-static
 
 ## Feature-Status (Kurzüberblick)
 
-Stand: Juni 2026 · Details: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md), [docs/ROADMAP.md](docs/ROADMAP.md)
+Stand: Juni 2026 · Kurz-Wahrheit: [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) · Details: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md), [docs/ROADMAP.md](docs/ROADMAP.md)
 
 | Bereich | Status | Hinweis |
 |---------|--------|---------|

@@ -131,7 +131,6 @@ graph TD
 
   Repo --> Tools["tools/"]
   Tools --> RtxConnector["uwe-rtx-connector<br/>optionaler outbound Worker (aktiv)"]
-  Tools --> RtxAgent["uwe-rtx-agent<br/>inbound Agent (deprecated)"]
 
   Repo --> Deploy["deploy/"]
   Deploy --> Systemd["systemd-Units + Setup-Scripts<br/>uwe.service, setup-uwe-host.sh"]

@@ -483,6 +483,13 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
               <p className="uwe-v2-empty">Keine importierbaren Einträge gefunden.</p>
             )}
 
+            <p className="uwe-flash uwe-flash-warning">
+              ⚠️ Dieser Import kann aktuell <strong>nicht automatisch zurückgerollt</strong>{" "}
+              werden. Erstelle vorher ein Backup —{" "}
+              <a href="/backup">Backup erstellen</a>. Ein Rollback ist sonst nur über ein
+              vorhandenes Backup möglich.
+            </p>
+
             <div className="uwe-form-actions">
               <button
                 type="button"

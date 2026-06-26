@@ -17,8 +17,12 @@ import {
   worldNavSections,
   type WorldBottomNavKey,
   type WorldNavKey,
-  type WorldNavSection,
 } from "@/src/lib/studio-navigation";
+import {
+  applyCampaignToWorldSections,
+  ShellHeaderBlock,
+  worldDefaultOpenTitles,
+} from "@/src/lib/studio-shell-utils";
 import { StudioAppShellV2 } from "./StudioAppShellV2";
 
 export type StudioAppShellVariant = "dashboard" | "admin" | "world" | "module";
@@ -59,25 +63,13 @@ export interface StudioAppShellProps {
   unifiedSidebar?: boolean;
 }
 
-function applyCampaignToWorldSections(
-  sections: WorldNavSection[],
-  campaignSlug?: string,
-): WorldNavSection[] {
-  if (!campaignSlug) return sections;
-  return sections.map((section) => ({
-    ...section,
-    items: section.items.map((item) =>
-      item.key === "new-page" ? { ...item, href: `${item.href}?campaign=${campaignSlug}` } : item,
-    ),
-  }));
-}
-
-function worldDefaultOpenTitles(sections: WorldNavSection[]) {
-  const activeTitle = sections.find((section) => section.items.some((item) => item.active))?.title;
-  return Array.from(new Set(["Übersicht", "Inhalte", activeTitle].filter(Boolean) as string[]));
-}
-
-/** Unified Studio shell with sectioned navigation. */
+/**
+ * Unified Studio shell with sectioned navigation.
+ *
+ * Legacy/fallback adapter: Design V2 is default-on, so this delegates to
+ * `StudioAppShellV2` unless `NEXT_PUBLIC_UWE_DESIGN_V2=false`. Shared navigation
+ * logic lives in `@/src/lib/studio-shell-utils` so V1/V2 cannot drift.
+ */
 export function StudioAppShell(props: StudioAppShellProps) {
   if (isDesignV2Enabled()) {
     return <StudioAppShellV2 {...props} />;
@@ -137,26 +129,9 @@ export function StudioAppShell(props: StudioAppShellProps) {
   };
 
   const headerBlock = (
-    <>
-      {backHref ? (
-        <a href={backHref} className="uwe-back-link">
-          ← {backLabel}
-        </a>
-      ) : null}
-      {breadcrumbs && breadcrumbs.length > 0 ? (
-        <nav className="uwe-breadcrumb" aria-label="Brotkrumen">
-          {breadcrumbs.map((item, index) => (
-            <span key={`${item.label}-${index}`}>
-              {item.href ? <a href={item.href}>{item.label}</a> : item.label}
-              {index < breadcrumbs.length - 1 ? (
-                <span className="uwe-breadcrumb-sep">/</span>
-              ) : null}
-            </span>
-          ))}
-        </nav>
-      ) : null}
+    <ShellHeaderBlock backHref={backHref} backLabel={backLabel} breadcrumbs={breadcrumbs}>
       {children}
-    </>
+    </ShellHeaderBlock>
   );
 
   const pageHeader = title

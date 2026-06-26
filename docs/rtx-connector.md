@@ -107,7 +107,8 @@ advertised.
 
 Phase 1 runs as a CLI/Node process (`pnpm connector:start`). Running it as an
 autostart service or tray app is a follow-up. The legacy `tools/uwe-rtx-agent`
-has a Windows tray script for reference, but it is the deprecated inbound model.
+(inbound model, incl. its Windows tray script) has been removed; only a deprecated
+`RTX_AGENT_URL` client shim remains for existing setups.
 
 ## Security
 

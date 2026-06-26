@@ -1,3 +1,9 @@
+// RTX worker URL/config resolver (`RTX_AGENT_URL` / `RTX_BASE_URL`).
+// The legacy inbound RTX *Agent* LLM client/provider was removed — ai-brain inference
+// now uses direct Ollama/LM Studio (`AI_INFERENCE_BASE_URL`) and the outbound RTX Host
+// Connector. This module remains because the RTX worker security boundary
+// (`@uwe/security` rtx-boundary) and the RTX worker (image) path still resolve and
+// LAN-validate the worker URL through it. See docs/removed-legacy-runtime.md.
 import { assertInferenceUrlAllowed, classifyInferenceUrl, type InferenceUrlKind } from "./inference-url-guard";
 
 export type RtxAgentStatus = "ready" | "disabled" | "starting" | "error" | "unreachable";

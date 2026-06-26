@@ -98,7 +98,7 @@ Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
 - Runs `pnpm ci:light` before push (not full `pnpm quality`)
 - PR gate (`pr-check.yml`) validates the opened PR
 - Full gate runs after merge to `main` via `ci.yml`
-- Prefer `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` or a self-hosted runner for routine agent work
+- Agents run in the GitHub Cloud; there is no self-hosted runner requirement
 
 ## Local commands
 
@@ -185,7 +185,7 @@ Post-merge gates on `main` (CI, Security) catch issues after merge — run `pnpm
 
 ## Related
 
-- `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, cost alternatives
-- `AGENTS.md` — agent quality gate (local `pnpm quality` before push)
+- `docs/engineering/self-hosted-ci.md` — historical / optional reference (self-hosted runner, hardware) — **not** the active gate
+- `AGENTS.md` — agent gate (GitHub Cloud CI authoritative; local `pnpm quality` optional pre-check)
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed failure patterns
 - `docs/AGENT_JOBS.md` — Cursor agent GitHub Actions integration

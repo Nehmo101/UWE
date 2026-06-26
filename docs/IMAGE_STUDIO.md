@@ -45,9 +45,14 @@ Brain/Weltdaten werden **nicht** an Cloud gesendet — nur der Bild-Prompt im Mo
 
 Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImageStudioPrompt()`, `validateImageContextForProvider()`.
 
-## RTX Agent Erweiterung
+## RTX Bild-Endpoint (Legacy)
 
-Der RTX Agent (`tools/uwe-rtx-agent`) sollte Endpoint `POST /v1/images` implementieren:
+> Image Studio ist **Lab / nicht production-ready** (kein Canvas, Cloud-Edit/Fehler-
+> handling unvollständig — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md)).
+
+Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
+Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md)); der
+alte inbound RTX-Agent (`RTX_AGENT_URL`) ist deprecated (Tool entfernt):
 
 ```json
 {

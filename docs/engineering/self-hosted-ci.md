@@ -2,9 +2,14 @@
 
 Stand: 2026-06-26
 
+> **Historisch / optional — NICHT der aktive Gate.** Die maßgebliche CI läuft
+> ausschließlich in der **GitHub Cloud** (siehe [ci.md](ci.md)). Self-hosted Runner
+> sind hier nur als Referenz/Notfalloption dokumentiert und werden derzeit **nicht**
+> verwendet. Ein PR ist mergebar, wenn seine GitHub-Checks grün sind.
+
 Dieses Dokument hält Entscheidungen und Planung für **CI ohne GitHub Actions Minuten** fest — für den Fall, dass Billing-Limits erreicht sind oder keine weiteren Kosten gewünscht sind.
 
-**Aktuelle Entscheidung (Step 2):** GitHub-hosted Actions mit **kostenoptimierter Aufteilung** — günstiges PR-Gate, volles Gate nur auf `main`. Self-hosted Runner bleibt **optional für später**.
+**Aktuelle Entscheidung:** GitHub-hosted Actions (GitHub Cloud) mit **kostenoptimierter Aufteilung** — günstiges PR-Gate, volles Gate nur auf `main`. Self-hosted Runner bleibt **optional/historisch** und ist nicht aktiv.
 
 Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workflow.md).
 

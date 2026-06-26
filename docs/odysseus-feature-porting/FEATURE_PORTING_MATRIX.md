@@ -32,7 +32,7 @@ Legende:
 
 | Bereich | Status | Evidence |
 |---------|--------|----------|
-| RTX Agent (Ollama-Proxy) | ✅ | `tools/uwe-rtx-agent/` |
+| RTX Inference (Ollama) | ✅ | `tools/uwe-rtx-connector/` (outbound; legacy inbound `tools/uwe-rtx-agent` removed) |
 | AI Router (local/cloud) | ✅ | `packages/ai-brain/src/router/` |
 | Brain „Cookbook“-Aktionen (7 DnD-Actions) | ✅ | `packages/ai-brain/src/actions.ts` |
 | Inference Health | ✅ | `/api/inference/health` |
@@ -513,7 +513,7 @@ caldavPending  Boolean @default(false)
 
 | Priorität | Feature | UWE-Ziel |
 |-----------|---------|----------|
-| P0 | RTX `POST /v1/images` | `tools/uwe-rtx-agent` |
+| P0 | RTX `POST /v1/images` | `tools/uwe-rtx-connector` (legacy `tools/uwe-rtx-agent` removed) |
 | P0 | Gallery Block Renderer | Portal + Studio Preview |
 | P1 | Canvas Editor (basic) | Crop, Rotate, Annotate für Handouts |
 | P1 | Editor Drafts | `ImageEditorDraft` (layers JSON) |
