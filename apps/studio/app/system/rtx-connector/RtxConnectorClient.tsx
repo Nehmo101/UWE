@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 
-import { CONNECTOR_CAPABILITY_LABELS, type ConnectorCapability } from "@uwe/connector";
+import { CONNECTOR_CAPABILITY_LABELS, type ConnectorCapability } from "@uwe/connector/client";
 
 interface ConnectorModelView {
   provider: string;
