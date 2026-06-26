@@ -15,6 +15,11 @@ export {
 } from "./capabilities";
 
 export {
+  CONNECTOR_OFFLINE_MESSAGE,
+  capabilityOfflineMessage,
+} from "./degraded";
+
+export {
   CONNECTOR_JOB_TYPES,
   CONNECTOR_JOB_DESCRIPTORS,
   CONNECTOR_LANES,

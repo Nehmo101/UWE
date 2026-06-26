@@ -56,6 +56,14 @@ export interface ConnectorModelInfo {
   capabilities?: string[];
 }
 
+export interface ConnectorSummary {
+  anyOnline: boolean;
+  onlineCount: number;
+  totalCount: number;
+  availableCapabilities: ConnectorCapability[];
+  connectors: ConnectorView[];
+}
+
 export interface CreatedConnector {
   connector: ConnectorView;
   /** Plaintext token — shown exactly once, never persisted. */
@@ -184,6 +192,34 @@ export class ConnectorService {
 
   async setDisabled(connectorId: string, disabled: boolean): Promise<void> {
     await this.db.connector.update({ where: { id: connectorId }, data: { disabled } });
+  }
+
+  /**
+   * High-level connector availability for degraded-mode UI. Reports whether any
+   * connector is online and which capabilities are currently served.
+   */
+  async summarize(now: Date = new Date()): Promise<ConnectorSummary> {
+    const connectors = await this.listConnectors(now);
+    const online = connectors.filter(
+      (connector) => connector.status === "online" || connector.status === "degraded",
+    );
+    const availableCapabilities = new Set<ConnectorCapability>();
+    for (const connector of online) {
+      for (const capability of connector.capabilities) {
+        availableCapabilities.add(capability);
+      }
+    }
+    return {
+      anyOnline: online.length > 0,
+      onlineCount: online.length,
+      totalCount: connectors.length,
+      availableCapabilities: [...availableCapabilities],
+      connectors,
+    };
+  }
+
+  capabilityAvailable(summary: ConnectorSummary, capability: ConnectorCapability): boolean {
+    return summary.availableCapabilities.includes(capability);
   }
 
   // --- Heartbeat ---

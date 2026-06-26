@@ -4,10 +4,13 @@ import {
   SidebarSection,
   VisibilityBadge,
 } from "@uwe/shared-ui";
+import { CONNECTOR_OFFLINE_MESSAGE } from "@uwe/connector";
 import {
   createAuthService,
+  createConnectorService,
   createPrismaClient,
   getAppRepository,
+  prisma,
 } from "@uwe/database/server";
 import {
   createSoundboardButtonAction,
@@ -66,6 +69,9 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   );
   await db.$disconnect();
 
+  const connectorSummary = await createConnectorService(prisma).summarize();
+  const rtxAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
+
   const audioAssets = await repo.listAssetsByWorld(worldSlug, { type: "audio" });
   const linkablePages = await repo.listPagesByWorld(worldSlug, {
     campaignId: selectedCampaign?.id,
@@ -111,6 +117,20 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
       }
     >
       <SpotifyConnectionPanel worldSlug={worldSlug} />
+
+      <section className="uwe-panel">
+        <h2>RTX-Audioausgabe</h2>
+        {rtxAudioOnline ? (
+          <p className="uwe-flash uwe-flash-success">
+            RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
+          </p>
+        ) : (
+          <p className="uwe-hint" style={{ margin: 0 }}>
+            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
+            <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
+          </p>
+        )}
+      </section>
 
       {(created || saved || deleted || linked) && (
         <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>

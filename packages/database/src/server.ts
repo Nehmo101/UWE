@@ -1380,6 +1380,7 @@ export type {
   ConnectorJob,
   ConnectorView,
   ConnectorModelInfo,
+  ConnectorSummary,
   CreatedConnector,
   HeartbeatInput,
   EnqueueConnectorJobInput,
