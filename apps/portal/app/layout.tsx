@@ -92,7 +92,7 @@ export default async function RootLayout({
               <div className="card">
                 <h2>Portal deaktiviert</h2>
                 <p>
-                  Das UWE Portal ist derzeit in den Admin-Einstellungen deaktiviert.
+                  Das UWE Portal ist derzeit in den Systemeinstellungen deaktiviert.
                 </p>
               </div>
             </main>
