@@ -172,6 +172,9 @@ export default async function SystemHubPage({ searchParams }: Props) {
               <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
                 Vollständige Diagnose
               </Link>
+              <Link className="uwe-v2-btn" href="/system/rtx-connector">
+                RTX Connector
+              </Link>
               <Link className="uwe-v2-btn" href="/settings?tab=status">
                 Einstellungen → Status
               </Link>

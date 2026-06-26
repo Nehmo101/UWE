@@ -36,6 +36,7 @@
     "@prisma/client": "^7.8.0",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
+    "@uwe/connector": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/mail": "workspace:*",
     "@uwe/soundboard": "workspace:*",

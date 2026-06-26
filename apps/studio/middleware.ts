@@ -18,6 +18,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/auth",
   "/api/health",
   "/api/agent-jobs/callback",
+  // RTX Host Connector authenticates with its own token in the route handler.
+  "/api/connectors",
 ];
 
 function isPublicPath(pathname: string): boolean {

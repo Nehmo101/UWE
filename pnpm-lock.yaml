@@ -120,6 +120,9 @@ importers:
       '@uwe/calendar':
         specifier: workspace:*
         version: link:../../packages/calendar
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../../packages/connector
       '@uwe/cookbook':
         specifier: workspace:*
         version: link:../../packages/cookbook
@@ -326,6 +329,21 @@ importers:
 
   packages/config: {}
 
+  packages/connector:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/cookbook:
     devDependencies:
       '@types/node':
@@ -361,6 +379,9 @@ importers:
       '@uwe/auth':
         specifier: workspace:*
         version: link:../auth
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../connector
       '@uwe/env':
         specifier: workspace:*
         version: link:../env
@@ -690,11 +711,18 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  tools/windows-installer:
+  tools/uwe-rtx-connector:
+    dependencies:
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../../packages/connector
     devDependencies:
       '@types/node':
-        specifier: ^22.15.21
+        specifier: ^22.15.32
         version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       tsx:
         specifier: ^4.22.4
         version: 4.22.4
