@@ -1,13 +1,26 @@
 name: Deploy
 
 # Triggered automatically after CI passes on main.
-# Deploys to the self-hosted Linux mini via SSH (uwe service user).
+# Runs on a SELF-HOSTED runner installed ON the UWE Linux mini (label: uwe-deploy).
+# The runner registers itself outbound to GitHub and pulls jobs — there is NO
+# inbound SSH from the GitHub cloud into the LAN (that path timed out before and
+# contradicts the "outbound only" architecture).
 #
-# Required GitHub Secrets:
-#   DEPLOY_HOST     — hostname or LAN IP of the mini
-#   DEPLOY_SSH_KEY  — private SSH key (Ed25519 recommended); matching public key in ~uwe/.ssh/authorized_keys on host
-#   DEPLOY_HOST_KEY — host public key fingerprint (from: ssh-keyscan <host>); optional but recommended
-#   DEPLOY_SSH_PORT — SSH port (optional, default 22)
+# This job only ORCHESTRATES the deploy: it invokes uwe-cd-trigger.sh, which
+# writes a host-update request and starts uwe-host-update.service (systemd).
+# The actual git pull + rebuild runs in that service, which stops uwe.service
+# during the build (Conflicts=uwe.service) — so the apps free their RAM and a
+# 4 GB host has enough memory for the build. The runner agent itself is light
+# (~150–250 MB idle); it does not run the heavy CI gate (that stays on the
+# GitHub-hosted runner in ci.yml).
+#
+# Runner setup (one-time):
+#   GitHub → Settings → Actions → Runners → New self-hosted runner
+#   - Install on the UWE host, run as the `uwe` service user (it needs the
+#     NOPASSWD sudoers entry from deploy/sudoers/uwe-host-update).
+#   - Add the label `uwe-deploy`, install as a service (./svc.sh install).
+#   - Set UWE_HOST_UPDATE_ENABLED=true in /etc/uwe/uwe.env.
+#   See docs/engineering/self-hosted-ci.md.
 
 on:
   workflow_run:
@@ -25,30 +38,10 @@ concurrency:
 jobs:
   deploy:
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, uwe-deploy]
+    # The host-update service builds synchronously (Type=oneshot); give it room
+    # on a low-RAM host that may swap during the build.
+    timeout-minutes: 60
     steps:
-      - name: Deploy to host via SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
-          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          if [[ -n "${DEPLOY_HOST_KEY:-}" ]]; then
-            printf '%s\n' "$DEPLOY_HOST_KEY" >> ~/.ssh/known_hosts
-          else
-            ssh-keyscan -p "$DEPLOY_SSH_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
-          chmod 600 ~/.ssh/known_hosts
-
-          ssh -i ~/.ssh/deploy_key \
-              -p "$DEPLOY_SSH_PORT" \
-              -o BatchMode=yes \
-              "uwe@${DEPLOY_HOST}" \
-              /opt/uwe/deploy/scripts/uwe-cd-trigger.sh
+      - name: Trigger host update on the UWE mini
+        run: /opt/uwe/deploy/scripts/uwe-cd-trigger.sh

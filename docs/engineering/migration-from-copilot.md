@@ -61,7 +61,7 @@ These are general CI/CD concerns, not tied to Cursor:
 - `ci.yml` — full quality gate + release build
 - `security.yml` — secret scan, audit, security tests
 - `docs-check.yml` — documentation validation
-- `deploy.yml` — SSH deploy to the self-hosted Linux host
+- `deploy.yml` — deploy via self-hosted runner on the Linux host
 - `pnpm quality` — canonical local/CI gate
 
 Cursor integration is limited to:
