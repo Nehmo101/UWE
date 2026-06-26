@@ -1,6 +1,6 @@
 # Self-Hosted CI & GitHub Actions — Strategie und Hardware
 
-Stand: 2026-06-20
+Stand: 2026-06-26
 
 Dieses Dokument hält Entscheidungen und Planung für **CI ohne GitHub Actions Minuten** fest — für den Fall, dass Billing-Limits erreicht sind oder keine weiteren Kosten gewünscht sind.
 
@@ -15,15 +15,16 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 | Event | Workflow | Inhalt | GitHub-Minuten |
 |-------|----------|--------|----------------|
 | **Pull Request** | `pr-check.yml` | `pnpm ci:light` + Lockfile | günstig (~3–5 Min.) |
-| **Push `main`** | `ci.yml` | `pnpm quality` + E2E + Postgres + Docker | teuer (~15–25 Min.) |
-| **Push `main` / Schedule** | `security.yml` | Audit + Security Tests | mittel |
+| **Push `main`** | `ci.yml` | `pnpm quality` + Postgres-Smoke | mittel (~10–15 Min.) |
+| **Sonntag 03:00 UTC / Manuell** | `ci.yml` | E2E + Performance-Budget | teuer (~15–25 Min.) |
+| **Montag 06:00 UTC / Manuell** | `security.yml` | Audit + Security Tests | mittel |
 | **Manuell / Release** | `windows-installer.yml` | Windows EXE | teuer (Windows-Runner) |
 | **Manuell** | `cursor-agent.yml` | Agent + `ci:light` | mittel |
 
 ### Was auf PRs **nicht** mehr läuft
 
-- `ci.yml` (volles `pnpm quality`, E2E, Docker)
-- `security.yml` (Audit, Security Tests — Secret Scan bleibt in PR)
+- `ci.yml` (volles `pnpm quality`, E2E, Postgres-Smoke)
+- `security.yml` (Audit, Security Tests — Secret Scan läuft via `pnpm ci:light` in PR)
 - `docs-check.yml` (läuft in `pr-check.yml` via `pnpm docs:check`)
 - `windows-installer.yml`
 
@@ -115,14 +116,14 @@ Unbegrenzte GitHub Actions Minuten auf Free-Tier — für privates UWE meist **k
 | Disk | **80–100 GB** SSD |
 | OS | Linux x64, Node 22 |
 
-### Stufe 3 — Wie `ci.yml` auf `main` (Quality + E2E + Postgres + Docker)
+### Stufe 3 — Wie `ci.yml` scheduled (Quality + E2E + Postgres)
 
 | | |
 |--|--|
 | CPU | **4–6 Kerne** |
 | RAM | **16 GB** (8 GB knapp) |
-| Disk | **100–200 GB** SSD + Docker |
-| Zusatz | Docker, optional BuildKit-Cache |
+| Disk | **100–150 GB** SSD |
+| Zusatz | Playwright Chromium |
 
 ### Speicher (Planung)
 
@@ -131,7 +132,6 @@ Unbegrenzte GitHub Actions Minuten auf Free-Tier — für privates UWE meist **k
 | Repo + `node_modules` | 2–4 GB |
 | pnpm Store | 5–15 GB |
 | Playwright Chromium | ~500 MB |
-| Docker Layer (Studio + Portal) | 10–30 GB |
 
 SSD empfohlen — Builds auf HDD sind sehr langsam.
 
@@ -175,12 +175,6 @@ SSD empfohlen — Builds auf HDD sind sehr langsam.
 | 8 GB | ok | knapp | nicht empfohlen |
 | 16 GB | komfortabel | ok | grenzwertig |
 | 32 GB | komfortabel | komfortabel | ok |
-
----
-
-## Docker GHA Cache
-
-`ci.yml` schreibt Docker-Build-Cache mit `mode=min` (statt `mode=max`) — weniger Cache-Speicherkosten bei GitHub. `cache-from` bleibt für schnellere Builds auf `main`.
 
 ---
 
@@ -243,3 +237,4 @@ Wenn Jobs sofort fehlschlagen (5 s, keine Steps):
 |-------|--------------|
 | 2026-06-18 | GitHub-hosted Actions (Billing) als Step 1; Self-hosted + Hardware-Notes für später dokumentiert |
 | 2026-06-20 | Kostenoptimierung: PR = `ci:light` only; main = volles Gate; Security scheduled/main; Windows/Agent manuell |
+| 2026-06-26 | Weitere Reduktion: doppelter Prisma-Schritt aus PR entfernt; Security nur noch weekly/manual; E2E/Perf aus Push-main raus, läuft scheduled (So 03:00) + manual |
