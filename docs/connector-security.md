@@ -31,11 +31,21 @@ narrow.
   path.
 - No DB replication between host and RTX. The host stays the source of truth.
 
+## Capability policy
+
+- Heartbeat capabilities are normalized server-side; unknown capability names are
+  discarded.
+- The host stores `reportedCapabilities` separately from effective `capabilities`.
+- Optional host/admin `allowedCapabilities` can cap a connector. `null` means no
+  extra restriction; `[]` denies all connector-served capabilities.
+- Queue matching uses only effective `capabilities`, so a connector cannot claim
+  a job for a capability that is unknown or not allowed.
+
 ## Rate limiting & abuse
 
 - Connector endpoints use a dedicated rate-limit bucket (`connector`).
 - Job claims are capability- and lane-checked server-side; a connector can only
-  claim jobs matching the capabilities it advertised.
+  claim jobs matching its effective capabilities.
 - Claims are optimistic and atomic — two connectors cannot run the same job.
 
 ## Logging
@@ -47,4 +57,4 @@ narrow.
 
 - World / brain data is never sent to the cloud automatically. Local models on the
   connector receive context only through explicit jobs. Cloud fallback is
-  off unless `UWE_AI_CLOUD_FALLBACK=true` on the host.
+  controlled by the UWE host/interface policy, not by connector self-reporting.
