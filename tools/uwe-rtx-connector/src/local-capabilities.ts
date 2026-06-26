@@ -30,19 +30,17 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
   const flag = (value: string | undefined, fallback: boolean) =>
     value == null || value.trim() === "" ? fallback : value.trim().toLowerCase() === "true";
   const audioCommandConfigured = Boolean(env.UWE_CONNECTOR_AUDIO_CMD?.trim());
-
-  // These jobs still have no real local executor. Keep their env switches wired,
-  // but do not advertise them until an executable backend exists.
-  const spotifyBackendConfigured = false;
-  const imageExecutorConfigured = false;
+  const spotifyAccessToken = env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() || env.SPOTIFY_ACCESS_TOKEN?.trim();
+  const spotifyBackendConfigured = Boolean(spotifyAccessToken && env.SPOTIFY_DEVICE_ID?.trim());
+  const imageExecutorConfigured = Boolean(env.UWE_CONNECTOR_IMAGE_CMD?.trim());
 
   return {
     audioCommandConfigured,
     audioEnabled: flag(env.UWE_CONNECTOR_AUDIO, true) && audioCommandConfigured,
     spotifyBackendConfigured,
-    spotifyEnabled: flag(env.UWE_CONNECTOR_SPOTIFY, false) && spotifyBackendConfigured,
+    spotifyEnabled: flag(env.UWE_CONNECTOR_SPOTIFY, true) && spotifyBackendConfigured,
     imageExecutorConfigured,
-    imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, false) && imageExecutorConfigured,
+    imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, true) && imageExecutorConfigured,
     systemInfoEnabled: flag(env.UWE_CONNECTOR_SYSTEM_INFO, true),
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
   };
