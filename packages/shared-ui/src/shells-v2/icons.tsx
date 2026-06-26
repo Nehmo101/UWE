@@ -110,16 +110,19 @@ export const V2_NAV_ICONS: Record<V2NavIconKey, ReactNode> = {
   assets: <IconAssets />,
 };
 
-/** Map legacy bottom-nav emoji strings to V2 SVG icons. */
+/** Map bottom-nav compact icon strings to V2 SVG icons. */
 export function resolveV2BottomNavIcon(icon: string): ReactNode {
   const map: Record<string, V2NavIconKey> = {
     "☀": "today",
     "+": "capture",
+    "◎": "search",
     "🔍": "search",
     "✦": "ai",
+    "⚙": "menu",
     "☰": "menu",
     "⌂": "home",
     "📄": "sessions",
+    "▣": "sessions",
     "🛡": "search",
   };
   const key = map[icon];
