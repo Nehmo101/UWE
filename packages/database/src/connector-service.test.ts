@@ -47,6 +47,8 @@ describe("ConnectorService", () => {
     });
     assert.equal(view.status, "online");
     assert.deepEqual(view.capabilities, ["audio_local", "llm_local"]);
+    assert.deepEqual(view.reportedCapabilities, ["audio_local", "llm_local"]);
+    assert.equal(view.allowedCapabilities, null);
     assert.equal(view.version, "1.2.3");
   });
 
@@ -83,6 +85,53 @@ describe("ConnectorService", () => {
       connectorId: connector.id,
       availableLanes: ["audio"],
     });
+    assert.equal(claimed, null);
+  });
+
+  it("applies host allowedCapabilities as the effective claim policy", async () => {
+    const isolatedDb = createPrismaClient(createTestDatabaseUrl());
+    const service = createConnectorService(isolatedDb);
+    const { connector } = await service.createConnector("Allowed Caps Test");
+
+    await service.setAllowedCapabilities(connector.id, ["audio_local"]);
+    const view = await service.heartbeat(connector.id, {
+      capabilities: ["audio_local", "llm_local"],
+    });
+
+    assert.deepEqual(view.reportedCapabilities, ["audio_local", "llm_local"]);
+    assert.deepEqual(view.allowedCapabilities, ["audio_local"]);
+    assert.deepEqual(view.capabilities, ["audio_local"]);
+
+    await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
+    await service.enqueueJob({ type: "sound_play", payload: { sourceUrl: "x" } });
+
+    const audio = await service.claimJob({
+      connectorId: connector.id,
+      availableLanes: ["audio", "gpu"],
+    });
+    assert.equal(audio?.type, "sound_play");
+
+    const blocked = await service.claimJob({
+      connectorId: connector.id,
+      availableLanes: ["gpu"],
+    });
+    assert.equal(blocked, null);
+  });
+
+  it("treats an empty allowedCapabilities list as deny-all", async () => {
+    const isolatedDb = createPrismaClient(createTestDatabaseUrl());
+    const service = createConnectorService(isolatedDb);
+    const { connector } = await service.createConnector("Deny Caps Test");
+
+    await service.setAllowedCapabilities(connector.id, []);
+    const view = await service.heartbeat(connector.id, { capabilities: ["audio_local"] });
+
+    assert.deepEqual(view.reportedCapabilities, ["audio_local"]);
+    assert.deepEqual(view.allowedCapabilities, []);
+    assert.deepEqual(view.capabilities, []);
+
+    await service.enqueueJob({ type: "sound_play", payload: { sourceUrl: "x" } });
+    const claimed = await service.claimJob({ connectorId: connector.id, availableLanes: ["audio"] });
     assert.equal(claimed, null);
   });
 
