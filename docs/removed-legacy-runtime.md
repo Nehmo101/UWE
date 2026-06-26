@@ -45,8 +45,10 @@ This is an honest record of what changed.
 - The RTX Host Connector is optional; UWE is fully online without it.
 - Connector capabilities are intentionally conservative. `audio_local` requires a
   configured local audio command, Ollama is the only executable local LLM provider
-  today, and `spotify_connect` / `image_generation` are not advertised while they
-  only have stubs.
+  today, `spotify_connect` requires Spotify credentials plus a device ID, and
+  `image_generation` requires an explicit local image command.
+- The host stores reported capabilities separately from effective capabilities
+  and can cap each connector with `allowedCapabilities`.
 - Fully migrating the inbound AI path (`RTX_AGENT_URL`) onto the connector queue is
   a follow-up; today both coexist and the connector is the recommended direction.
 
