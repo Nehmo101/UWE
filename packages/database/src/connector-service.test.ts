@@ -51,13 +51,14 @@ describe("ConnectorService", () => {
   });
 
   it("keeps soundboard degraded when no audio connector is online", async () => {
-    const service = createConnectorService(db);
+    const isolatedDb = createPrismaClient(createTestDatabaseUrl());
+    const service = createConnectorService(isolatedDb);
     const { connector } = await service.createConnector("No Audio Test");
     await service.heartbeat(connector.id, { capabilities: ["system_info"] });
 
     const summary = await service.summarize();
     assert.equal(service.capabilityAvailable(summary, "audio_local"), false);
-    assert.ok(summary.availableCapabilities.includes("system_info"));
+    assert.deepEqual(summary.availableCapabilities, ["system_info"]);
   });
 
   it("does not let unknown reported capabilities unlock jobs", async () => {
