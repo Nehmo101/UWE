@@ -140,7 +140,8 @@ async function runSpotifyJob(
   payload: Record<string, unknown>,
   ctx: ExecutorContext,
 ): Promise<JobResult> {
-  const deviceId = encodeURIComponent(asString(payload.deviceId, ctx.spotifyDeviceId));
+  const rawDeviceId = asString(payload.deviceId, ctx.spotifyDeviceId ?? "");
+  const deviceId = encodeURIComponent(rawDeviceId);
   if (!deviceId) {
     throw new Error("Spotify Connect: Device-ID fehlt.");
   }
@@ -176,7 +177,8 @@ async function runSpotifyJob(
     case "spotify_volume": {
       const rawVolume = asNumber(payload.volume ?? payload.volumePercent ?? payload.volume_percent);
       if (rawVolume == null) throw new Error("spotify_volume: 'volume' fehlt im Payload.");
-      const volumePercent = Math.max(0, Math.min(100, Math.round(rawVolume <= 1 ? rawVolume * 100 : rawVolume)));
+      const percent = rawVolume <= 1 ? rawVolume * 100 : rawVolume;
+      const volumePercent = Math.max(0, Math.min(100, Math.round(percent)));
       return {
         ...(await spotifyRequest(ctx, `/volume?volume_percent=${volumePercent}&device_id=${deviceId}`, {
           method: "PUT",
@@ -189,7 +191,7 @@ async function runSpotifyJob(
       return {
         ...(await spotifyRequest(ctx, "", {
           method: "PUT",
-          body: JSON.stringify({ device_ids: [decodeURIComponent(deviceId)], play: Boolean(payload.play) }),
+          body: JSON.stringify({ device_ids: [rawDeviceId], play: Boolean(payload.play) }),
         })),
         action: "transfer_device",
       };
