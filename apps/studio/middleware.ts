@@ -65,6 +65,19 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-uwe-pathname", pathname);
 
+  // Pass portal proxy paths through without Studio auth or route classification.
+  // When PORTAL_PATH is set to a sub-path, Studio rewrites those requests to the
+  // portal container — middleware must not intercept them.
+  const rawPortalPath = process.env.PORTAL_PATH?.trim();
+  if (rawPortalPath && rawPortalPath !== "/" && (pathname === rawPortalPath || pathname.startsWith(`${rawPortalPath}/`))) {
+    return applySecurityHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
+  }
+
   const config = getUweRuntimeConfig();
   if (config.authRequired && !isPublicPath(pathname)) {
     const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);

@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
     "@uwe/static-export",
     "@uwe/env",
   ],
+  async rewrites() {
+    const portalPath = process.env.PORTAL_PATH?.trim();
+    if (!portalPath || portalPath === "/") return [];
+    const proxyBase = (
+      process.env.PORTAL_PROXY_URL ||
+      `http://127.0.0.1:${process.env.PORTAL_PORT || "3001"}`
+    ).replace(/\/$/, "");
+    return [
+      { source: portalPath, destination: `${proxyBase}${portalPath}` },
+      { source: `${portalPath}/:path*`, destination: `${proxyBase}${portalPath}/:path*` },
+    ];
+  },
   async headers() {
     return [
       {
