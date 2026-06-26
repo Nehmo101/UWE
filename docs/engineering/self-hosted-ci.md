@@ -2,10 +2,15 @@
 
 Stand: 2026-06-26
 
-> **Historisch / optional — NICHT der aktive Gate.** Die maßgebliche CI läuft
+> **Historisch / optional — NICHT der aktive CI-Gate.** Die maßgebliche CI läuft
 > ausschließlich in der **GitHub Cloud** (siehe [ci.md](ci.md)). Self-hosted Runner
-> sind hier nur als Referenz/Notfalloption dokumentiert und werden derzeit **nicht**
-> verwendet. Ein PR ist mergebar, wenn seine GitHub-Checks grün sind.
+> für **CI** sind hier nur als Referenz/Notfalloption dokumentiert und werden
+> derzeit **nicht** verwendet. Ein PR ist mergebar, wenn seine GitHub-Checks grün sind.
+>
+> **Ausnahme — aktiv:** Für **Deployment** (`deploy.yml`) läuft sehr wohl ein
+> kleiner self-hosted Runner auf dem UWE-Host (Label `uwe-deploy`). Er führt
+> **kein** CI aus, sondern stößt nur den Host-Update an. Siehe Abschnitt
+> [Deploy-Runner](#deploy-runner-aktiv-auf-dem-uwe-host).
 
 Dieses Dokument hält Entscheidungen und Planung für **CI ohne GitHub Actions Minuten** fest — für den Fall, dass Billing-Limits erreicht sind oder keine weiteren Kosten gewünscht sind.
 
@@ -180,7 +185,53 @@ SSD empfohlen — Builds auf HDD sind sehr langsam.
 
 ---
 
-## Umsetzung Self-hosted (Checkliste für später)
+## Deploy-Runner (aktiv auf dem UWE-Host)
+
+> Dies ist **getrennt** von einem CI-Runner. Der Deploy-Runner führt **kein**
+> `pnpm quality` und keine Builds im Runner-Prozess aus — er löst nur den
+> Host-Update aus. Deshalb reichen hier **4 GB RAM** locker, obwohl die
+> Hardware-Tabellen oben (für volles CI) deutlich mehr verlangen.
+
+**Warum ein Runner statt SSH:** Der frühere Push-Deploy (`deploy.yml` auf
+`ubuntu-latest` → SSH in den LAN-Host) lief in `Connection timed out`, weil der
+GitHub-Cloud-Runner den Mini im LAN nicht erreicht. Ein self-hosted Runner
+registriert sich **outbound** und holt Jobs ab — kein eingehender Port nötig,
+passend zur „outbound only"-Architektur.
+
+**Was der Job tut:**
+
+```
+deploy.yml (runs-on: [self-hosted, uwe-deploy])
+  → /opt/uwe/deploy/scripts/uwe-cd-trigger.sh
+    → schreibt host-update-request.json
+    → sudo uwe-host-update-trigger.sh
+      → systemctl start uwe-host-update.service   (Type=oneshot)
+        → git pull + setup-uwe-host.sh --quick (Build, Migrationen)
+```
+
+`uwe-host-update.service` hat `Conflicts=uwe.service` — die UWE-Apps werden
+während des Builds gestoppt und geben ihren RAM frei, sodass der Build auch auf
+4 GB durchläuft. Der Runner-Agent selbst braucht im Leerlauf ~150–250 MB.
+
+**Einrichtung (einmalig):**
+
+1. GitHub → **Settings → Actions → Runners → New self-hosted runner**
+2. Auf dem UWE-Host installieren, **als `uwe`-User** laufen lassen (braucht den
+   NOPASSWD-Eintrag aus `deploy/sudoers/uwe-host-update`)
+3. Label **`uwe-deploy`** vergeben
+4. Als Service registrieren: `./svc.sh install && ./svc.sh start`
+5. In `/etc/uwe/uwe.env`: `UWE_HOST_UPDATE_ENABLED=true`
+
+**Sicherheit:** `deploy.yml` triggert nur via `workflow_run` nach **CI-Erfolg auf
+`main`** — kein PR/Fork-Code läuft auf dem Runner. Trotzdem: Runner nur in einem
+privaten Repo bzw. mit deaktivierten Fork-PR-Runs betreiben.
+
+**Wenn der Runner offline ist:** Der Deploy-Job bleibt in der Queue, bis der Host
+wieder online ist — danach wird automatisch deployt (kein harter Fehlschlag).
+
+---
+
+## Umsetzung Self-hosted CI (Checkliste für später)
 
 1. Linux-Host vorbereiten (siehe Hardware-Stufen oben)
 2. GitHub: **Settings → Actions → Runners → New self-hosted runner**

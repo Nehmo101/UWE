@@ -16,7 +16,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
 | **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
-| **CI success on `main`** | `deploy.yml` | SSH deploy to self-hosted Linux mini |
+| **CI success on `main`** | `deploy.yml` | Deploy via self-hosted runner on the Linux mini |
 
 ## Workflows
 
@@ -27,7 +27,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Security** | `.github/workflows/security.yml` | Weekly Monday, manual | Audit + security tests (secret scan also in PR via `ci:light`) | No |
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
 | **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
-| **Deploy** | `.github/workflows/deploy.yml` | `workflow_run` after CI success on `main` | SSH → `uwe-cd-trigger.sh` → git pull + setup --quick | No |
+| **Deploy** | `.github/workflows/deploy.yml` | `workflow_run` after CI success on `main` | Self-hosted runner (`uwe-deploy`) on the host → `uwe-cd-trigger.sh` → git pull + setup --quick | No |
 
 > The former `windows-installer.yml` workflow was removed together with the
 > Docker + Windows-installer runtime (see
