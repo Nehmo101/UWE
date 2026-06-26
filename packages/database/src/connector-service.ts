@@ -4,7 +4,8 @@
  *
  * The host never reaches out to a connector. Connectors authenticate with a
  * token (only its hash is stored), send heartbeats, claim jobs that match their
- * capabilities, and report results. All scheduling rules live in @uwe/connector.
+ * effective capabilities, and report results. All scheduling rules live in
+ * @uwe/connector.
  */
 
 import {
@@ -38,7 +39,12 @@ export interface ConnectorView {
   status: ConnectorStatus;
   disabled: boolean;
   queueEnabled: boolean;
+  /** Effective capabilities used for UI availability and queue eligibility. */
   capabilities: ConnectorCapability[];
+  /** Raw normalized capabilities most recently reported by the connector. */
+  reportedCapabilities: ConnectorCapability[];
+  /** Host/admin allowlist. null means unrestricted for compatibility. */
+  allowedCapabilities: ConnectorCapability[] | null;
   models: ConnectorModelInfo[];
   version: string | null;
   currentJobs: number;
@@ -95,11 +101,42 @@ export interface ClaimJobInput {
   availableLanes: readonly ConnectorLane[];
 }
 
+interface ConnectorCapabilityPolicyRow {
+  id: string;
+  reported_capabilities: unknown;
+  allowed_capabilities: unknown;
+}
+
 function parseCapabilities(value: unknown): ConnectorCapability[] {
+  if (typeof value === "string") {
+    try {
+      return parseCapabilities(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
   if (!Array.isArray(value)) {
     return [];
   }
   return normalizeCapabilities(value);
+}
+
+function parseAllowedCapabilities(value: unknown): ConnectorCapability[] | null {
+  if (value == null) {
+    return null;
+  }
+  return parseCapabilities(value);
+}
+
+function effectiveCapabilities(
+  reported: readonly ConnectorCapability[],
+  allowed: readonly ConnectorCapability[] | null,
+): ConnectorCapability[] {
+  if (allowed == null) {
+    return normalizeCapabilities(reported);
+  }
+  const allowedSet = new Set(allowed);
+  return normalizeCapabilities(reported).filter((capability) => allowedSet.has(capability));
 }
 
 function parseModels(value: unknown): ConnectorModelInfo[] {
@@ -114,7 +151,23 @@ function parseModels(value: unknown): ConnectorModelInfo[] {
   );
 }
 
+function applyCapabilityPolicy(
+  view: ConnectorView,
+  policy?: { reportedCapabilities: ConnectorCapability[]; allowedCapabilities: ConnectorCapability[] | null },
+): ConnectorView {
+  if (!policy) {
+    return view;
+  }
+  return {
+    ...view,
+    reportedCapabilities: policy.reportedCapabilities,
+    allowedCapabilities: policy.allowedCapabilities,
+    capabilities: effectiveCapabilities(policy.reportedCapabilities, policy.allowedCapabilities),
+  };
+}
+
 export function toConnectorView(connector: Connector, now: Date = new Date()): ConnectorView {
+  const capabilities = parseCapabilities(connector.capabilities);
   return {
     id: connector.id,
     name: connector.name,
@@ -130,7 +183,9 @@ export function toConnectorView(connector: Connector, now: Date = new Date()): C
     ),
     disabled: connector.disabled,
     queueEnabled: connector.queueEnabled,
-    capabilities: parseCapabilities(connector.capabilities),
+    capabilities,
+    reportedCapabilities: capabilities,
+    allowedCapabilities: null,
     models: parseModels(connector.models),
     version: connector.version,
     currentJobs: connector.currentJobs,
@@ -187,11 +242,40 @@ export class ConnectorService {
 
   async listConnectors(now: Date = new Date()): Promise<ConnectorView[]> {
     const connectors = await this.db.connector.findMany({ orderBy: { createdAt: "asc" } });
-    return connectors.map((connector) => toConnectorView(connector, now));
+    const policies = await this.getCapabilityPolicyMap();
+    return connectors.map((connector) => applyCapabilityPolicy(toConnectorView(connector, now), policies.get(connector.id)));
   }
 
   async setDisabled(connectorId: string, disabled: boolean): Promise<void> {
     await this.db.connector.update({ where: { id: connectorId }, data: { disabled } });
+  }
+
+  async setAllowedCapabilities(
+    connectorId: string,
+    capabilities: readonly string[] | null,
+  ): Promise<ConnectorView | null> {
+    const allowed = capabilities == null ? null : normalizeCapabilities(capabilities);
+    await this.db.$executeRaw`
+      UPDATE connectors
+      SET allowed_capabilities = ${allowed == null ? null : JSON.stringify(allowed)}
+      WHERE id = ${connectorId}
+    `;
+
+    const connector = await this.db.connector.findUnique({ where: { id: connectorId } });
+    if (!connector) {
+      return null;
+    }
+
+    const policy = await this.getCapabilityPolicy(connectorId);
+    const reported = policy?.reportedCapabilities ?? parseCapabilities(connector.capabilities);
+    const effective = effectiveCapabilities(reported, allowed);
+    await this.db.connector.update({
+      where: { id: connectorId },
+      data: { capabilities: toPrismaJsonValue(effective) },
+    });
+
+    const updated = await this.db.connector.findUnique({ where: { id: connectorId } });
+    return updated ? applyCapabilityPolicy(toConnectorView(updated), await this.getCapabilityPolicy(connectorId)) : null;
   }
 
   /**
@@ -225,8 +309,13 @@ export class ConnectorService {
   // --- Heartbeat ---
 
   async heartbeat(connectorId: string, input: HeartbeatInput): Promise<ConnectorView> {
-    const capabilities =
+    const reportedCapabilities =
       input.capabilities != null ? normalizeCapabilities(input.capabilities) : undefined;
+    const allowedCapabilities = (await this.getCapabilityPolicy(connectorId))?.allowedCapabilities ?? null;
+    const capabilities =
+      reportedCapabilities != null
+        ? effectiveCapabilities(reportedCapabilities, allowedCapabilities)
+        : undefined;
     const lastError = input.lastError === undefined ? undefined : input.lastError;
 
     const connector = await this.db.connector.update({
@@ -242,7 +331,19 @@ export class ConnectorService {
         ...(lastError !== undefined ? { lastError } : {}),
       },
     });
-    return toConnectorView(connector);
+
+    if (reportedCapabilities !== undefined) {
+      await this.db.$executeRaw`
+        UPDATE connectors
+        SET reported_capabilities = ${JSON.stringify(reportedCapabilities)}
+        WHERE id = ${connectorId}
+      `;
+    }
+
+    return applyCapabilityPolicy(toConnectorView(connector), {
+      reportedCapabilities: reportedCapabilities ?? parseCapabilities(connector.capabilities),
+      allowedCapabilities,
+    });
   }
 
   /** Mark connectors offline whose heartbeat window has elapsed (sweep). */
@@ -464,6 +565,47 @@ export class ConnectorService {
       counts[row.lane] = row._count._all;
     }
     return counts;
+  }
+
+  private async getCapabilityPolicy(connectorId: string): Promise<{
+    reportedCapabilities: ConnectorCapability[];
+    allowedCapabilities: ConnectorCapability[] | null;
+  } | null> {
+    const rows = await this.db.$queryRaw<ConnectorCapabilityPolicyRow[]>`
+      SELECT id, reported_capabilities, allowed_capabilities
+      FROM connectors
+      WHERE id = ${connectorId}
+      LIMIT 1
+    `;
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return {
+      reportedCapabilities: parseCapabilities(row.reported_capabilities),
+      allowedCapabilities: parseAllowedCapabilities(row.allowed_capabilities),
+    };
+  }
+
+  private async getCapabilityPolicyMap(): Promise<Map<string, {
+    reportedCapabilities: ConnectorCapability[];
+    allowedCapabilities: ConnectorCapability[] | null;
+  }>> {
+    const rows = await this.db.$queryRaw<ConnectorCapabilityPolicyRow[]>`
+      SELECT id, reported_capabilities, allowed_capabilities
+      FROM connectors
+    `;
+    const policies = new Map<string, {
+      reportedCapabilities: ConnectorCapability[];
+      allowedCapabilities: ConnectorCapability[] | null;
+    }>();
+    for (const row of rows) {
+      policies.set(row.id, {
+        reportedCapabilities: parseCapabilities(row.reported_capabilities),
+        allowedCapabilities: parseAllowedCapabilities(row.allowed_capabilities),
+      });
+    }
+    return policies;
   }
 }
 

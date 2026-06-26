@@ -17,8 +17,11 @@ import type { LocalLlmSummary } from "./llm-discovery";
 
 export interface CapabilityEnv {
   audioEnabled: boolean;
+  audioCommandConfigured: boolean;
   spotifyEnabled: boolean;
+  spotifyBackendConfigured: boolean;
   imageEnabled: boolean;
+  imageExecutorConfigured: boolean;
   systemInfoEnabled: boolean;
   fileCacheEnabled: boolean;
 }
@@ -26,10 +29,18 @@ export interface CapabilityEnv {
 export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): CapabilityEnv {
   const flag = (value: string | undefined, fallback: boolean) =>
     value == null || value.trim() === "" ? fallback : value.trim().toLowerCase() === "true";
+  const audioCommandConfigured = Boolean(env.UWE_CONNECTOR_AUDIO_CMD?.trim());
+  const spotifyAccessToken = env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() || env.SPOTIFY_ACCESS_TOKEN?.trim();
+  const spotifyBackendConfigured = Boolean(spotifyAccessToken && env.SPOTIFY_DEVICE_ID?.trim());
+  const imageExecutorConfigured = Boolean(env.UWE_CONNECTOR_IMAGE_CMD?.trim());
+
   return {
-    audioEnabled: flag(env.UWE_CONNECTOR_AUDIO, true),
-    spotifyEnabled: flag(env.UWE_CONNECTOR_SPOTIFY, Boolean(env.SPOTIFY_DEVICE_ID?.trim())),
-    imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, false),
+    audioCommandConfigured,
+    audioEnabled: flag(env.UWE_CONNECTOR_AUDIO, true) && audioCommandConfigured,
+    spotifyBackendConfigured,
+    spotifyEnabled: flag(env.UWE_CONNECTOR_SPOTIFY, true) && spotifyBackendConfigured,
+    imageExecutorConfigured,
+    imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, true) && imageExecutorConfigured,
     systemInfoEnabled: flag(env.UWE_CONNECTOR_SYSTEM_INFO, true),
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
   };
@@ -45,20 +56,35 @@ export function detectCapabilities(
   env: CapabilityEnv,
   forced: readonly ConnectorCapability[] = [],
 ): DetectedCapabilities {
-  if (forced.length > 0) {
-    return { capabilities: normalizeCapabilities(forced), models: toModelInfos(llms) };
-  }
+  const executable = executableCapabilities(llms, env);
+  const capabilities =
+    forced.length > 0
+      ? normalizeCapabilities(forced).filter((capability) => executable.includes(capability))
+      : executable;
 
+  return { capabilities, models: toModelInfos(llms) };
+}
+
+function executableCapabilities(llms: LocalLlmSummary, env: CapabilityEnv): ConnectorCapability[] {
   const detected: ConnectorCapability[] = [];
   if (env.audioEnabled) detected.push("audio_local");
   if (env.spotifyEnabled) detected.push("spotify_connect");
-  if (llms.hasChat) detected.push("llm_local");
-  if (llms.hasEmbeddings) detected.push("embedding_local");
+  if (hasReadyOllamaCapability(llms, "chat")) detected.push("llm_local");
+  if (hasReadyOllamaCapability(llms, "embeddings")) detected.push("embedding_local");
   if (env.imageEnabled) detected.push("image_generation");
   if (env.fileCacheEnabled) detected.push("file_cache");
   if (env.systemInfoEnabled) detected.push("system_info");
 
-  return { capabilities: normalizeCapabilities(detected), models: toModelInfos(llms) };
+  return normalizeCapabilities(detected);
+}
+
+function hasReadyOllamaCapability(llms: LocalLlmSummary, capability: string): boolean {
+  return llms.models.some(
+    (model) =>
+      model.provider === "ollama" &&
+      model.status === "ready" &&
+      model.capabilities?.includes(capability),
+  );
 }
 
 function toModelInfos(llms: LocalLlmSummary): ConnectorModelInfo[] {
