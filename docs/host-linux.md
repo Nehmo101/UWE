@@ -84,8 +84,16 @@ machine.
 
 ## Behaviour without an RTX connector
 
-Studio, Portal, login and worlds stay fully online. Soundboard UI is visible but
-local audio returns the normal degraded response when no online connector
-advertises `audio_local`. Local AI and image generation must make the same kind
-of honest degraded/stub state clear. No crashes — this is the expected degraded
-state. See [rtx-connector.md](rtx-connector.md).
+Studio, Portal, login and worlds stay fully online. Connector-backed features use
+honest degraded behavior when no online connector advertises the required
+effective capability:
+
+- Soundboard local playback needs `audio_local`.
+- Spotify controls need `spotify_connect`.
+- Local LLM and embedding jobs need reachable Ollama-backed `llm_local` /
+  `embedding_local`.
+- Image generation needs `image_generation` from an explicitly configured local
+  image command.
+
+No crashes — this is the expected degraded state. See
+[rtx-connector.md](rtx-connector.md).
