@@ -2,13 +2,14 @@
 
 The **UWE Host** is the always-on instance and the **source of truth**: website,
 Studio, Portal, database, auth, uploads, queue, settings and public reachability.
-It runs on a small Linux box (an old laptop is fine) with `pnpm` + `systemd`.
+It runs on a small Linux box (an old laptop is fine) with Node.js 22, `pnpm` and
+`systemd`.
 
 The host must boot and serve **without** any RTX connector.
 
 ## Requirements
 
-- Linux (Debian/Ubuntu-like), Node.js 20+, `pnpm` (`packageManager` pinned in
+- Linux (Debian/Ubuntu-like), Node.js 22, `pnpm` (`packageManager` pinned in
   `package.json`).
 - A persistent data directory for SQLite, uploads, backups and exports.
 
@@ -24,6 +25,25 @@ pnpm host:start                            # Studio :3000, Portal :3001
 pnpm host:status                           # health
 pnpm host:stop
 ```
+
+## Local CI gate
+
+CI is currently expected to run locally from the repository root; do not assume
+GitHub Actions as the source of truth for this rework. Use Node.js 22 and run:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @uwe/database db:generate
+pnpm lint
+pnpm typecheck
+pnpm test:ci
+pnpm test:security
+pnpm build:release
+```
+
+The checks intentionally target the Linux Host + outbound RTX Connector path.
+Failures from removed Docker or Windows-installer paths should be updated to the
+new architecture, not deleted blindly.
 
 ## Production (systemd, recommended)
 
@@ -65,6 +85,7 @@ machine.
 ## Behaviour without an RTX connector
 
 Studio, Portal, login and worlds stay fully online. Soundboard UI is visible but
-local audio shows "RTX Connector offline"; local AI and image generation show the
-same calm notice. No crashes — this is the expected degraded state. See
-[rtx-connector.md](rtx-connector.md).
+local audio returns the normal degraded response when no online connector
+advertises `audio_local`. Local AI and image generation must make the same kind
+of honest degraded/stub state clear. No crashes — this is the expected degraded
+state. See [rtx-connector.md](rtx-connector.md).
