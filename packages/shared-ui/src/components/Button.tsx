@@ -6,7 +6,8 @@ export type ButtonVariant =
   | "primary"
   | "secondary"
   | "ghost"
-  | "danger";
+  | "danger"
+  | "subtle";
 
 export type ButtonSize = "default" | "sm" | "small";
 
@@ -16,6 +17,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   secondary: "uwe-btn uwe-btn-secondary",
   ghost: "uwe-btn uwe-btn-ghost",
   danger: "uwe-btn uwe-btn-danger",
+  subtle: "uwe-btn uwe-btn-subtle",
 };
 
 const SIZE_CLASS: Record<ButtonSize, string | undefined> = {
