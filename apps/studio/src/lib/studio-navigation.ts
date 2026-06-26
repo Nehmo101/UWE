@@ -1,18 +1,6 @@
-import { resolvePortalSessionHref, resolveUweAppUrls } from "@uwe/auth";
-
 import { isLikelyGameSessionId } from "./session-route";
 
-export type StudioNavSectionId =
-  | "portal"
-  | "heute"
-  | "worlds"
-  | "leben"
-  | "werkstatt"
-  | "wissen"
-  | "medien"
-  | "ki"
-  | "system"
-  | "admin";
+export type StudioNavSectionId = "today" | "worlds" | "create" | "media-ai" | "system";
 
 export interface StudioNavItem {
   label: string;
@@ -27,90 +15,75 @@ export interface StudioNavSection {
   items: StudioNavItem[];
 }
 
-const STUDIO_NAV_SECTIONS: { id: StudioNavSectionId; title: string; items: { label: string; href: string }[] }[] =
-  [
-    {
-      id: "heute",
-      title: "Heute",
-      items: [{ label: "Heute", href: "/today" }],
-    },
-    {
-      id: "worlds",
-      title: "Welten",
-      items: [
-        { label: "Welten", href: "/worlds" },
-        { label: "Globale Suche", href: "/search" },
-        { label: "Templates", href: "/templates" },
-      ],
-    },
-    {
-      id: "leben",
-      title: "Leben",
-      items: [
-        { label: "Capture", href: "/capture" },
-        { label: "Projekte", href: "/projects" },
-        { label: "Verträge", href: "/contracts" },
-        { label: "Hardware", href: "/hardware" },
-      ],
-    },
-    {
-      id: "werkstatt",
-      title: "Werkstatt",
-      items: [{ label: "Werkstatt", href: "/workshop" }],
-    },
-    {
-      id: "wissen",
-      title: "Wissen",
-      items: [
-        { label: "Life Brain", href: "/life-brain" },
-        { label: "Brain Store", href: "/brain" },
-      ],
-    },
-    {
-      id: "medien",
-      title: "Medien",
-      items: [
-        { label: "Image Studio", href: "/image-studio" },
-        { label: "Mail Center", href: "/mail" },
-        { label: "Kalender", href: "/calendar" },
-      ],
-    },
-    {
-      id: "ki",
-      title: "KI",
-      items: [
-        { label: "KI", href: "/ai" },
-        { label: "Reviews", href: "/admin/reviews" },
-        { label: "Agent Jobs", href: "/admin/agent-jobs" },
-      ],
-    },
-    {
-      id: "system",
-      title: "System",
-      items: [
-        { label: "System-Hub", href: "/system" },
-        { label: "Jobs", href: "/jobs" },
-        { label: "Backup", href: "/backup" },
-        { label: "Einstellungen", href: "/settings" },
-      ],
-    },
-    {
-      id: "admin",
-      title: "Admin",
-      items: [
-        { label: "Admin Übersicht", href: "/admin" },
-        { label: "Benutzer", href: "/admin/users" },
-        { label: "Security", href: "/admin/security" },
-        { label: "Audit Log", href: "/admin/audit-log" },
-        { label: "Tags", href: "/admin/tags" },
-        { label: "Cookbook", href: "/admin/cookbook" },
-      ],
-    },
-  ];
+export const TARGET_STUDIO_NAV: {
+  id: StudioNavSectionId;
+  title: string;
+  items: { label: string; href: string }[];
+}[] = [
+  {
+    id: "today",
+    title: "Heute",
+    items: [
+      { label: "Heute", href: "/today" },
+      { label: "Capture schnell", href: "/capture?quick=1" },
+    ],
+  },
+  {
+    id: "worlds",
+    title: "Welten",
+    items: [
+      { label: "Alle Welten", href: "/worlds" },
+      { label: "Suche", href: "/search" },
+    ],
+  },
+  {
+    id: "create",
+    title: "Erstellen",
+    items: [
+      { label: "Capture", href: "/capture" },
+      { label: "Templates", href: "/templates" },
+      { label: "Werkstatt", href: "/workshop" },
+      { label: "Projekte", href: "/projects" },
+      { label: "Verträge", href: "/contracts" },
+    ],
+  },
+  {
+    id: "media-ai",
+    title: "Medien & KI",
+    items: [
+      { label: "KI", href: "/ai" },
+      { label: "Image Studio", href: "/image-studio" },
+      { label: "Mail", href: "/mail" },
+      { label: "Kalender", href: "/calendar" },
+      { label: "Brain Store", href: "/brain" },
+      { label: "Life Brain", href: "/life-brain" },
+      { label: "Reviews", href: "/admin/reviews" },
+      { label: "Agent Jobs", href: "/admin/agent-jobs" },
+      { label: "RTX Connector", href: "/system/rtx-connector" },
+    ],
+  },
+  {
+    id: "system",
+    title: "System",
+    items: [
+      { label: "System-Hub", href: "/system" },
+      { label: "Homelab", href: "/system?tab=homelab" },
+      { label: "Diagnose", href: "/system?tab=diagnose" },
+      { label: "Admin Übersicht", href: "/admin" },
+      { label: "Benutzer", href: "/admin/users" },
+      { label: "Security", href: "/admin/security" },
+      { label: "Audit Log", href: "/admin/audit-log" },
+      { label: "Jobs", href: "/jobs" },
+      { label: "Backup", href: "/backup" },
+      { label: "Einstellungen", href: "/settings" },
+      { label: "Hardware", href: "/hardware" },
+    ],
+  },
+];
 
 /** Sectioned Studio sidebar — canonical IA structure. */
 export function studioSidebarSections(activePath: string): StudioNavSection[] {
-  return STUDIO_NAV_SECTIONS.map((section) => ({
+  return TARGET_STUDIO_NAV.map((section) => ({
     id: section.id,
     title: section.title,
     items: section.items.map((item) => ({
@@ -120,162 +93,32 @@ export function studioSidebarSections(activePath: string): StudioNavSection[] {
   }));
 }
 
-const UNIFIED_SIDEBAR_LINKS: {
-  id: StudioNavSectionId;
-  title: string;
-  hrefs: string[];
-}[] = [
-  {
-    id: "portal",
-    title: "Portal",
-    hrefs: ["__portal__", "__portal_worlds__"],
-  },
-  {
-    id: "heute",
-    title: "Heute",
-    hrefs: ["/today"],
-  },
-  {
-    id: "worlds",
-    title: "Welten",
-    hrefs: ["/worlds", "/search", "/templates"],
-  },
-  {
-    id: "leben",
-    title: "Leben",
-    hrefs: ["/capture", "/projects", "/contracts", "/hardware"],
-  },
-  {
-    id: "werkstatt",
-    title: "Werkstatt",
-    hrefs: ["/workshop"],
-  },
-  {
-    id: "wissen",
-    title: "Wissen",
-    hrefs: ["/life-brain", "/brain"],
-  },
-  {
-    id: "medien",
-    title: "Medien",
-    hrefs: ["/image-studio", "/mail", "/calendar"],
-  },
-  {
-    id: "ki",
-    title: "KI",
-    hrefs: ["/ai", "/admin/reviews", "/admin/agent-jobs"],
-  },
-  {
-    id: "system",
-    title: "System",
-    hrefs: ["/system", "/jobs", "/backup", "/settings"],
-  },
-  {
-    id: "admin",
-    title: "Admin",
-    hrefs: [
-      "/admin",
-      "/admin/users",
-      "/admin/security",
-      "/admin/audit-log",
-      "/admin/tags",
-      "/admin/cookbook",
-    ],
-  },
-];
-
-function resolveUnifiedHref(
-  href: string,
-  portalUrl: string,
-): { label: string; href: string } | null {
-  if (href === "__portal__") {
-    if (!portalUrl) return null;
-    const sessionHref = resolvePortalSessionHref(process.env, { currentApp: "studio" });
-    return { label: "Spieler-Portal", href: sessionHref };
-  }
-  if (href === "__portal_worlds__") {
-    if (!portalUrl) return null;
-    const base = portalUrl.replace(/\/$/, "");
-    return { label: "Welten (Spieler)", href: `${base}/worlds` };
-  }
-
-  for (const section of STUDIO_NAV_SECTIONS) {
-    const item = section.items.find((entry) => entry.href === href);
-    if (item) return item;
-  }
-  return null;
-}
-
 /**
- * Unified app sidebar — Portal plus consolidated Studio IA (cockpit mockup).
+ * Unified Studio sidebar. Portal is intentionally not a sixth Studio section;
+ * app switching belongs in landing/topbar chrome, while this stays product IA.
  */
 export function studioUnifiedSidebarSections(
   activePath: string,
   options: { portalUrl?: string } = {},
 ): StudioNavSection[] {
-  const urls = resolveUweAppUrls(process.env);
-  const portalUrl = (options.portalUrl ?? urls.portalUrl ?? "").replace(/\/$/, "");
-  const flat = studioFlatNav(activePath);
-
-  return UNIFIED_SIDEBAR_LINKS.map((group) => {
-    const items: StudioNavItem[] = [];
-    for (const href of group.hrefs) {
-      const resolved = resolveUnifiedHref(href, portalUrl);
-      if (!resolved) continue;
-      const active = flat.find((item) => item.href === resolved.href)?.active;
-      items.push({
-        ...resolved,
-        active: active ?? isStudioNavItemActive(activePath, resolved.href),
-      });
-    }
-    return {
-      id: group.id,
-      title: group.title,
-      items,
-    };
-  });
+  void options;
+  return studioSidebarSections(activePath);
 }
 
-/** Horizontal cockpit tabs for world overview (subset of world nav). */
+/** Horizontal cockpit tabs for world overview (reduced to cockpit-level areas). */
 export function worldCockpitTabItems(worldSlug: string, active?: WorldNavKey) {
-  const tabKeys: WorldNavKey[] = [
-    "overview",
-    "pages",
-    "sessions",
-    "dungeons",
-    "assets",
-    "brain",
-    "inspector",
-  ];
+  const tabKeys: WorldNavKey[] = ["overview", "pages", "sessions", "dungeons", "assets"];
   return worldNavItems(worldSlug, active).filter((item) => tabKeys.includes(item.key));
 }
 
-/** Flat nav list for AdminShell compatibility (legacy). */
+/** Flat nav list for compatibility with older shell adapters. */
 export function studioFlatNav(activePath: string): StudioNavItem[] {
-  return STUDIO_NAV_SECTIONS.flatMap((section) =>
-    section.items.map((item) => ({
-      ...item,
-      active: isStudioNavItemActive(activePath, item.href),
-    })),
-  );
+  return studioSidebarSections(activePath).flatMap((section) => section.items);
 }
 
-/** Compact dashboard sidebar — most-used Studio links. */
+/** Compact dashboard sidebar — one entry per primary Studio area. */
 export function studioDashboardNav(activePath: string): StudioNavItem[] {
-  const keys = [
-    "/today",
-    "/worlds",
-    "/capture",
-    "/ai",
-    "/system",
-    "/admin",
-    "/search",
-    "/brain",
-    "/image-studio",
-    "/backup",
-    "/settings",
-  ];
-
+  const keys = ["/today", "/worlds", "/capture", "/ai", "/system"];
   const all = studioFlatNav(activePath);
   return keys
     .map((href) => all.find((item) => item.href === href))
@@ -288,13 +131,11 @@ function isStudioNavItemActive(activePath: string, href: string): boolean {
 
   if (normalizedActive === normalizedHref) return true;
 
-  // Tabbed settings: /settings?tab=integrations
   if (normalizedHref.startsWith("/settings?tab=")) {
     const tab = normalizedHref.split("tab=")[1];
     return normalizedActive === `/settings?tab=${tab}`;
   }
 
-  // Tabbed system hub: /system?tab=homelab
   if (normalizedHref.startsWith("/system?tab=")) {
     const tab = normalizedHref.split("tab=")[1];
     return normalizedActive === `/system?tab=${tab}`;
@@ -304,14 +145,12 @@ function isStudioNavItemActive(activePath: string, href: string): boolean {
     return true;
   }
 
-  // Legacy routes that map to the System section
   if (normalizedHref === "/system") {
     if (normalizedActive === "/admin/status" || normalizedActive.startsWith("/admin/status/")) {
       return true;
     }
   }
 
-  // Prefix match for nested routes (e.g. /worlds/terra/... → /worlds)
   if (
     normalizedHref !== "/admin" &&
     !normalizedHref.includes("?") &&
@@ -347,7 +186,9 @@ export type WorldNavKey =
   | "backup"
   | "new-page";
 
-export type WorldBottomNavKey = "overview" | "pages" | "search" | "inspector" | "more";
+export type WorldBottomNavKey = "overview" | "content" | "sessions" | "tools" | "more";
+
+export type WorldNavSectionId = "overview" | "content" | "sessions" | "dungeons" | "media" | "tools";
 
 export interface WorldNavItem {
   key: WorldNavKey;
@@ -356,41 +197,100 @@ export interface WorldNavItem {
   active?: boolean;
 }
 
-/** Canonical world sidebar for Studio. */
-export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNavItem[] {
-  const base = `/worlds/${worldSlug}`;
+export interface WorldNavSection {
+  id: WorldNavSectionId;
+  title: string;
+  items: WorldNavItem[];
+}
 
-  const items: { key: WorldNavKey; label: string; href: string }[] = [
-    { key: "overview", label: "Übersicht", href: `${base}/dashboard` },
-    { key: "pages", label: "Seiten", href: base },
-    { key: "sessions", label: "Sessions", href: `${base}/sessions` },
-    { key: "dungeons", label: "Dungeons", href: `${base}/dungeons` },
-    { key: "assets", label: "Medien & Assets", href: `${base}/assets` },
-    { key: "labels", label: "Labels", href: `${base}/labels` },
-    { key: "notes", label: "Spielernotizen", href: `${base}/notes` },
-    { key: "soundboard", label: "Soundboard", href: `${base}/soundboard` },
-    { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
-    { key: "brain", label: "Brain Store", href: `${base}/brain` },
-    { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
-    { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
-    { key: "import", label: "Import", href: `${base}/import` },
-    { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
-    { key: "backup", label: "Backup", href: `${base}/backup` },
-    { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
+/** Canonical grouped world sidebar for Studio. */
+export function worldNavSections(worldSlug: string, active?: WorldNavKey): WorldNavSection[] {
+  const base = `/worlds/${worldSlug}`;
+  const sections: {
+    id: WorldNavSectionId;
+    title: string;
+    items: { key: WorldNavKey; label: string; href: string }[];
+  }[] = [
+    {
+      id: "overview",
+      title: "Übersicht",
+      items: [{ key: "overview", label: "Dashboard", href: `${base}/dashboard` }],
+    },
+    {
+      id: "content",
+      title: "Inhalte",
+      items: [
+        { key: "pages", label: "Seiten", href: base },
+        { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
+      ],
+    },
+    {
+      id: "sessions",
+      title: "Sessions",
+      items: [
+        { key: "sessions", label: "Sessions", href: `${base}/sessions` },
+        { key: "notes", label: "Spielernotizen", href: `${base}/notes` },
+      ],
+    },
+    {
+      id: "dungeons",
+      title: "Dungeons",
+      items: [{ key: "dungeons", label: "Dungeons", href: `${base}/dungeons` }],
+    },
+    {
+      id: "media",
+      title: "Medien",
+      items: [
+        { key: "assets", label: "Medien & Assets", href: `${base}/assets` },
+        { key: "soundboard", label: "Soundboard", href: `${base}/soundboard` },
+        { key: "labels", label: "Labels & Print", href: `${base}/labels` },
+      ],
+    },
+    {
+      id: "tools",
+      title: "Tools",
+      items: [
+        { key: "brain", label: "Brain Store", href: `${base}/brain` },
+        { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
+        { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
+        { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
+        { key: "import", label: "Import", href: `${base}/import` },
+        { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
+        { key: "backup", label: "Backup", href: `${base}/backup` },
+      ],
+    },
   ];
 
-  return items.map((item) => ({
-    ...item,
-    active: item.key === active,
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      active: item.key === active,
+    })),
   }));
+}
+
+/** Flat world nav list for command palette, breadcrumbs, and legacy adapters. */
+export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNavItem[] {
+  return worldNavSections(worldSlug, active).flatMap((section) => section.items);
 }
 
 /** Map world nav key to mobile bottom nav active tab. */
 export function worldBottomNavKey(active: WorldNavKey, isSearching = false): WorldBottomNavKey {
-  if (isSearching) return "search";
   if (active === "overview") return "overview";
-  if (active === "pages" || active === "new-page") return "pages";
-  if (active === "inspector") return "inspector";
+  if (active === "pages" || active === "new-page" || isSearching) return "content";
+  if (active === "sessions" || active === "notes") return "sessions";
+  if (
+    active === "brain" ||
+    active === "graph" ||
+    active === "inspector" ||
+    active === "ai-runs" ||
+    active === "import" ||
+    active === "dnd-api" ||
+    active === "backup"
+  ) {
+    return "tools";
+  }
   return "more";
 }
 
@@ -414,10 +314,38 @@ export function campaignNavItems(
 export function resolveStudioRailActiveId(activePath: string): string | undefined {
   const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/today";
   if (normalized.startsWith("/today")) return "today";
-  if (normalized.startsWith("/capture")) return "capture";
-  if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "search";
-  if (normalized.startsWith("/image-studio")) return "image-studio";
-  if (normalized.startsWith("/ai")) return "ai";
+  if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "worlds";
+  if (
+    normalized.startsWith("/capture") ||
+    normalized.startsWith("/templates") ||
+    normalized.startsWith("/workshop") ||
+    normalized.startsWith("/projects") ||
+    normalized.startsWith("/contracts")
+  ) {
+    return "create";
+  }
+  if (
+    normalized.startsWith("/ai") ||
+    normalized.startsWith("/image-studio") ||
+    normalized.startsWith("/mail") ||
+    normalized.startsWith("/calendar") ||
+    normalized.startsWith("/brain") ||
+    normalized.startsWith("/life-brain") ||
+    normalized.startsWith("/admin/reviews") ||
+    normalized.startsWith("/admin/agent-jobs")
+  ) {
+    return "media-ai";
+  }
+  if (
+    normalized.startsWith("/system") ||
+    normalized.startsWith("/admin") ||
+    normalized.startsWith("/jobs") ||
+    normalized.startsWith("/backup") ||
+    normalized.startsWith("/settings") ||
+    normalized.startsWith("/hardware")
+  ) {
+    return "system";
+  }
   return undefined;
 }
 
@@ -484,7 +412,7 @@ const PAGE_TEMPLATE_SHORTCUTS: {
   },
 ];
 
-/** Command-palette entries derived from canonical Studio IA (studio-navigation). */
+/** Command-palette entries derived from canonical Studio IA. */
 export function studioCommandPaletteCommands(options: {
   worlds: { name: string; slug: string }[];
   worldSlug?: string | null;
@@ -496,52 +424,55 @@ export function studioCommandPaletteCommands(options: {
   if (worldSlug) {
     const base = `/worlds/${worldSlug}`;
     const world = worlds.find((entry) => entry.slug === worldSlug);
-    const group = world ? `Welt: ${world.name}` : "Aktuelle Welt";
+    const fallbackGroup = world ? `Welt: ${world.name}` : "Aktuelle Welt";
 
-    for (const item of worldNavItems(worldSlug)) {
-      const keywords =
-        item.key === "overview"
-          ? ["dashboard", "overview"]
-          : item.key === "pages"
-            ? ["wiki", "seitenliste"]
-            : item.key === "inspector"
-              ? ["sicherheit", "kanon", "leak", "check"]
-              : item.key === "graph"
-                ? ["beziehungen", "links"]
-                : item.key === "assets"
-                  ? ["karten", "bilder", "uploads"]
-                  : item.key === "soundboard"
-                    ? ["musik", "audio"]
-                    : item.key === "notes"
-                      ? ["kommentare", "review"]
-                      : item.key === "dungeons"
-                        ? ["räume", "cockpit"]
-                        : item.key === "labels"
-                          ? ["druck", "handout", "6x4", "label"]
-                          : item.key === "import"
-                            ? ["knoteforge"]
-                            : item.key === "backup"
-                              ? ["sicherung"]
-                              : item.key === "new-page"
-                                ? ["create", "erstellen"]
-                                : item.key === "sessions"
-                                  ? ["spielabend", "create"]
-                                  : undefined;
-
-      list.push({
-        id: `world-${item.key}`,
-        label:
+    for (const section of worldNavSections(worldSlug)) {
+      const group = `${fallbackGroup} / ${section.title}`;
+      for (const item of section.items) {
+        const keywords =
           item.key === "overview"
-            ? "Übersicht öffnen"
+            ? ["dashboard", "overview"]
             : item.key === "pages"
-              ? "Seitenliste öffnen"
-              : item.key === "new-page"
-                ? "Neue Seite erstellen"
-                : `${item.label} öffnen`,
-        href: item.href,
-        group,
-        keywords,
-      });
+              ? ["wiki", "seitenliste"]
+              : item.key === "inspector"
+                ? ["sicherheit", "kanon", "leak", "check"]
+                : item.key === "graph"
+                  ? ["beziehungen", "links"]
+                  : item.key === "assets"
+                    ? ["karten", "bilder", "uploads"]
+                    : item.key === "soundboard"
+                      ? ["musik", "audio"]
+                      : item.key === "notes"
+                        ? ["kommentare", "review"]
+                        : item.key === "dungeons"
+                          ? ["räume", "cockpit"]
+                          : item.key === "labels"
+                            ? ["druck", "handout", "6x4", "label"]
+                            : item.key === "import"
+                              ? ["knoteforge"]
+                              : item.key === "backup"
+                                ? ["sicherung"]
+                                : item.key === "new-page"
+                                  ? ["create", "erstellen"]
+                                  : item.key === "sessions"
+                                    ? ["spielabend", "create"]
+                                    : undefined;
+
+        list.push({
+          id: `world-${item.key}`,
+          label:
+            item.key === "overview"
+              ? "Dashboard öffnen"
+              : item.key === "pages"
+                ? "Seitenliste öffnen"
+                : item.key === "new-page"
+                  ? "Neue Seite erstellen"
+                  : `${item.label} öffnen`,
+          href: item.href,
+          group,
+          keywords,
+        });
+      }
     }
 
     for (const shortcut of PAGE_TEMPLATE_SHORTCUTS) {
@@ -549,7 +480,7 @@ export function studioCommandPaletteCommands(options: {
         id: shortcut.id,
         label: shortcut.label,
         href: `${base}/pages/new?template=${shortcut.template}`,
-        group,
+        group: `${fallbackGroup} / Inhalte`,
         keywords: shortcut.keywords,
       });
     }
@@ -562,13 +493,13 @@ export function studioCommandPaletteCommands(options: {
         id: "new-label-from-url",
         label: "Label aus aktueller Seite",
         href: `${base}/labels/new`,
-        group,
+        group: `${fallbackGroup} / Medien`,
         keywords: ["label", "quelle"],
       });
     }
   }
 
-  for (const section of STUDIO_NAV_SECTIONS) {
+  for (const section of TARGET_STUDIO_NAV) {
     for (const item of section.items) {
       list.push({
         id: `studio-${item.href.replace(/[^a-z0-9]+/gi, "-")}`,
