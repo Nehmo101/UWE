@@ -325,8 +325,8 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 2,
-          instruction: "Docker-Compose Logs (falls Container)",
-          command: "docker compose logs -f --tail=100",
+          instruction: "UWE Host Logs (systemd)",
+          command: "journalctl -u uwe.service -f -n 100",
         },
         {
           order: 3,

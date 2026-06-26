@@ -33,76 +33,63 @@ Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · Reifegrad: [docs/FE
 
 ---
 
-## Quick start (Docker — empfohlen)
+## Zielmodell: UWE Host (Linux) + RTX Connector
 
-Der einfachste Weg: Docker installieren, Repository klonen, `.env` anlegen, starten.
+UWE besteht aus zwei klaren Rollen:
+
+| Rolle | Läuft auf | Verantwortlich für |
+|-------|-----------|--------------------|
+| **UWE Host** (always-on) | kleiner Linux-Host (alter Laptop) | Website, Studio, Portal, DB, Auth, Uploads, Queue, Settings, öffentliche Erreichbarkeit. **Source of Truth.** |
+| **RTX Host Connector** (optional) | RTX-PC / Haupt-PC | lokale Leistung: KI, Bildgenerierung, Audio, Spotify — als **ausgehender** Worker. |
+
+```text
+RTX Connector  ───────▶  UWE Host        (Connector verbindet sich ausgehend)
+```
+
+**Wichtig:** Der RTX Connector ist **niemals** Voraussetzung dafür, dass UWE online ist.
+Website, Studio und Portal laufen vollständig ohne ihn. Ist der Connector offline, zeigen
+lokale KI-/Audio-Funktionen ruhig „RTX Connector offline“ — kein Crash.
+
+> **Hinweis:** Docker und der Windows-One-Click-Installer sind **kein** aktiver Produktpfad
+> mehr. Der Zielweg ist Linux-Host + pnpm + systemd (+ optional Cloudflare Tunnel) und der
+> optionale RTX Connector. Siehe [docs/removed-legacy-runtime.md](docs/removed-legacy-runtime.md).
+
+## Quick start (Linux Host)
 
 ```bash
 git clone https://github.com/nehmo101/uwe
 cd uwe
-cp .env.example .env
-docker compose up -d
+cp .env.example .env            # AUTH_SECRET/SESSION_SECRET setzen
+pnpm install --frozen-lockfile
+pnpm --filter @uwe/database db:deploy   # Migrationen
+pnpm --filter @uwe/database db:seed     # Demo-Welt + Login dm@uwe.local / uwe-dev
+pnpm build:release
+pnpm host:start                 # startet Studio (3000) + Portal (3001)
 ```
-
-Beim **ersten Start** baut Docker die Images (kann einige Minuten dauern). Anschließend:
 
 | App | URL | Zweck |
 |-----|-----|-------|
 | **UWE Studio** (DM) | http://localhost:3000 | Welten bearbeiten |
 | **UWE Portal** (Spieler) | http://localhost:3001 | Wiki & Handouts |
 
-**Daily Admin OS** (Studio): `/today` — Cockpit für Capture, Projekte, Verträge, Hardware und persönliches Life-Brain. Siehe [docs/daily-admin-os.md](docs/daily-admin-os.md).
+Status prüfen: `pnpm host:status` · `curl http://localhost:3000/api/health`.
+Für einen produktiven, dauerhaft laufenden Host (systemd, Cloudflare Tunnel) siehe das
+**One-Shot Setup** unten und [docs/host-linux.md](docs/host-linux.md).
 
-**Demo-Login** (automatisch beim ersten Start): `dm@uwe.local` / `uwe-dev`  
-Weitere Demo-Spieler: siehe Container-Logs nach dem Seed (`docker compose logs studio`).
+## RTX Connector starten (optional)
 
-Status prüfen:
+Auf dem RTX-PC, nachdem im Studio unter **System → RTX Connector** ein Token erzeugt wurde:
 
 ```bash
-docker compose ps
-curl http://localhost:3000/api/health
-curl http://localhost:3001/api/health
+cp tools/uwe-rtx-connector/.env.example tools/uwe-rtx-connector/.env
+# UWE_HOST_URL und UWE_CONNECTOR_TOKEN eintragen
+pnpm connector:start
 ```
 
-**Produktion:** `AUTH_SECRET` in `.env` setzen und `RUN_DB_SEED=false` — Details in [docs/PRODUCTION.md](docs/PRODUCTION.md).
-
-Persistente Daten:
-
-| Pfad / Volume | Inhalt |
-|---------------|--------|
-| Docker-Volume `uwe-database` | SQLite-Datenbank |
-| `./data/uploads` | Hochgeladene Assets |
-| `./data/backups` | Backup-Ordner |
-| `./exports` | Statische HTML-Exporte |
-
----
-
-## Windows (ohne Docker)
-
-Für Windows-Nutzer gibt es einen **One-Click-Installations-Assistenten** — ohne Terminal, Docker oder manuelle Konfiguration.
-
-### One-Click Installation
-
-1. Node.js 20+ installieren: https://nodejs.org/
-2. **`UWE-Installieren.cmd`** doppelklicken oder:
-
-```powershell
-pnpm installer:windows
-```
-
-3. Im Assistenten **„Installieren & Starten“** wählen
-4. UWE über die Desktop-Verknüpfung **„UWE starten“** öffnen
-
-| Dokument | Inhalt |
-|----------|--------|
-| [docs/windows-install.md](docs/windows-install.md) | Schritt-für-Schritt für Endnutzer |
-| [docs/windows-troubleshooting.md](docs/windows-troubleshooting.md) | Fehlerbehebung |
-| [docs/backup-restore.md](docs/backup-restore.md) | Backup & Restore |
-| [docs/WINDOWS_INSTALLER.md](docs/WINDOWS_INSTALLER.md) | Technische Details |
-
-**Wartung:** Desktop-Verknüpfung **„UWE Steuerung“** — Start/Stop, Backup, Update, Reparatur, Deinstallation.
-
-**Entwickler:** Der normale Workflow (`pnpm install`, `pnpm dev`, `pnpm build`) bleibt unverändert.
+Details: [docs/rtx-connector.md](docs/rtx-connector.md) ·
+[docs/connector-security.md](docs/connector-security.md) ·
+[docs/soundboard-worker-flow.md](docs/soundboard-worker-flow.md) ·
+[docs/local-llm-setup.md](docs/local-llm-setup.md).
 
 ---
 
@@ -145,7 +132,7 @@ Production-Env und Secrets liegen unter **`/etc/uwe/uwe.env`** (nicht im Git). V
 |----------|--------|
 | **Linux systemd (Production)** | `sudo systemctl start uwe.service` — Autostart: `sudo systemctl enable uwe.service` |
 | **Status prüfen** | `sudo bash ./scripts/uwe-host-status.sh --healthcheck` |
-| **Docker** | `docker compose up -d` im Repo-Verzeichnis |
+| **Host-Scripts** | `pnpm host:start` / `pnpm host:status` / `pnpm host:stop` |
 | **Entwicklung** | `pnpm dev` (Studio `:3000`, Portal `:3001`) |
 
 ### Cloudflare + lokale Services
@@ -304,7 +291,7 @@ pnpm docs:check         # required docs + markdown sanity
 pnpm release:check      # validate release files and version sync
 ```
 
-Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality` including bundle budget check, E2E, Postgres smoke, conditional Docker). Security runs on `main` and weekly; Windows installer and Cursor agent are manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality` including bundle budget check, E2E, Postgres smoke). Security runs on `main` and weekly; Cursor agent is manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
@@ -491,7 +478,12 @@ Diese Regel ist **nicht verhandelbar** und wird serverseitig durchgesetzt:
 
 In der UI siehst du Hinweise wie: *„Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.“*
 
-### RTX-Agent einrichten
+### RTX-Agent einrichten (Legacy — inbound)
+
+> **Hinweis:** Dieser Abschnitt beschreibt das **alte inbound-Modell**, bei dem der UWE Host in
+> einen RTX-HTTP-Server hineinruft. Der **go-forward Weg** ist der ausgehende
+> **RTX Host Connector** ([docs/rtx-connector.md](docs/rtx-connector.md), `pnpm connector:start`).
+> Der Connector öffnet keinen Port am RTX-PC und verbindet sich ausschließlich ausgehend zum Host.
 
 Der **UWE RTX-Agent** läuft auf dem RTX-Rechner als lokaler Dienst (optional mit Windows-Tray und Autostart). UWE spricht nur mit dem Agenten — nicht direkt mit dem Internet.
 
@@ -668,7 +660,7 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md]
 
 ### Done
 
-- [x] Docker Compose für Studio + Portal + persistente Datenbank
+- [x] Linux Host (pnpm + systemd) für Studio + Portal + persistente Datenbank
 - [x] Native Auth: Login, Setup, Passwort-Reset, Rollen, TOTP 2FA
 - [x] Static HTML Export und Markdown/HTML Wiki-Export für player-sichere Ausgabe
 - [x] KnoteForge-Import (JSON) mit Preview, Mapping und Duplikaterkennung

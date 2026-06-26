@@ -465,9 +465,7 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.match(ci, /pnpm quality/);
     assert.doesNotMatch(ci, /pull_request:/);
     const qualityIndex = ci.indexOf("pnpm quality");
-    const dockerIndex = ci.indexOf("docker-build:");
     assert.ok(qualityIndex >= 0, "CI must run pnpm quality");
-    assert.ok(dockerIndex < 0 || qualityIndex < dockerIndex, "quality must run before docker-build job");
   });
 
   it("quality script runs security gates before build", () => {
@@ -480,11 +478,10 @@ describe("integration smoke — agent CI quality gate", () => {
     ]);
   });
 
-  it("keeps Docker builds conditional in CI", () => {
+  it("no longer ships a Docker build job (Docker removed from active path)", () => {
     const ci = read(".github/workflows/ci.yml");
-    assert.match(ci, /docker-build:/);
-    assert.match(ci, /Detect Docker-affecting changes/);
-    assert.match(ci, /docker\/build-push-action@v6/);
+    assert.doesNotMatch(ci, /docker-build:/);
+    assert.doesNotMatch(ci, /docker\/build-push-action/);
   });
 
   it("runs light gate in cursor-agent workflow before push", () => {

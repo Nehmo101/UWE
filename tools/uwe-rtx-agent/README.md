@@ -1,4 +1,11 @@
-# UWE RTX Agent
+# UWE RTX Agent (DEPRECATED — inbound model)
+
+> **Deprecated.** This is the legacy **inbound** model: the agent runs an HTTP
+> server on the RTX machine and the UWE Host calls into it (`RTX_AGENT_URL`). The
+> go-forward path is the **outbound** RTX Host Connector in
+> `tools/uwe-rtx-connector` (`pnpm connector:start`), which opens no port on the
+> RTX machine and connects outbound to the host. See `docs/rtx-connector.md`.
+> Kept only for existing setups; not part of the active product path.
 
 Local inference proxy for the RTX machine. The agent runs on the GPU PC, checks or starts Ollama, exposes a small HTTP API for UWE, and never stores Brain data or logs prompts by default.
 
