@@ -50,15 +50,50 @@ describe("ConnectorService", () => {
     assert.equal(view.version, "1.2.3");
   });
 
+  it("keeps soundboard degraded when no audio connector is online", async () => {
+    const service = createConnectorService(db);
+    const { connector } = await service.createConnector("No Audio Test");
+    await service.heartbeat(connector.id, { capabilities: ["system_info"] });
+
+    const summary = await service.summarize();
+    assert.equal(service.capabilityAvailable(summary, "audio_local"), false);
+    assert.ok(summary.availableCapabilities.includes("system_info"));
+  });
+
+  it("does not let unknown reported capabilities unlock jobs", async () => {
+    const service = createConnectorService(db);
+    const { connector } = await service.createConnector("Unknown Caps Test");
+    await service.heartbeat(connector.id, { capabilities: ["not_a_capability"] });
+
+    const row = await db.connector.findUnique({ where: { id: connector.id } });
+    assert.deepEqual(row?.capabilities, []);
+
+    await db.connectorJob.create({
+      data: {
+        type: "sound_play",
+        lane: "audio",
+        priority: 90,
+        targetCapability: "not_a_capability",
+        payload: {},
+      },
+    });
+
+    const claimed = await service.claimJob({
+      connectorId: connector.id,
+      availableLanes: ["audio"],
+    });
+    assert.equal(claimed, null);
+  });
+
   it("claims the highest-priority job matching capabilities", async () => {
     const service = createConnectorService(db);
     const { connector } = await service.createConnector("Claim Test");
     await service.heartbeat(connector.id, { capabilities: ["audio_local", "llm_local"] });
 
     const llm = await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
-    await service.enqueueJob({ type: "sound_play", payload: { url: "x" } });
+    await service.enqueueJob({ type: "sound_play", payload: { sourceUrl: "x" } });
 
-    // audio + gpu lanes free → sound_play (priority 90) beats llm_generate (50)
+    // audio + gpu lanes free -> sound_play (priority 90) beats llm_generate (50)
     const claimed = await service.claimJob({
       connectorId: connector.id,
       availableLanes: ["audio", "gpu"],
@@ -67,7 +102,7 @@ describe("ConnectorService", () => {
     assert.equal(claimed?.status, "claimed");
     assert.equal(claimed?.claimedByConnectorId, connector.id);
 
-    // only gpu lane free now → llm_generate is claimable
+    // only gpu lane free now -> llm_generate is claimable
     const second = await service.claimJob({
       connectorId: connector.id,
       availableLanes: ["gpu"],
@@ -107,7 +142,7 @@ describe("ConnectorService", () => {
     const retryable = await service.enqueueJob({ type: "sound_play", payload: {}, maxRetries: 1 });
     await service.claimJob({ connectorId: connector.id, availableLanes: ["audio"] });
     const requeued = await service.failJob(retryable.id, connector.id, "transient");
-    assert.equal(requeued?.status, "pending", "retries remaining → back to pending");
+    assert.equal(requeued?.status, "pending", "retries remaining -> back to pending");
     assert.equal(requeued?.retryCount, 1);
 
     await service.claimJob({ connectorId: connector.id, availableLanes: ["audio"] });
