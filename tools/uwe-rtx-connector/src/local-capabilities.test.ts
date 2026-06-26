@@ -78,7 +78,32 @@ describe("detectCapabilities", () => {
     assert.deepEqual(ollamaEmbeddings.capabilities, ["embedding_local", "system_info"]);
   });
 
-  it("does not let forced capabilities advertise stubs", () => {
+  it("advertises spotify_connect only with token and device id", () => {
+    assert.equal(resolveCapabilityEnv({ SPOTIFY_DEVICE_ID: "device" }).spotifyEnabled, false);
+    assert.equal(
+      resolveCapabilityEnv({ SPOTIFY_DEVICE_ID: "device", SPOTIFY_ACCESS_TOKEN: "token" }).spotifyEnabled,
+      true,
+    );
+
+    const detected = detectCapabilities(
+      emptyLlms,
+      env({ spotifyEnabled: true, spotifyBackendConfigured: true }),
+    );
+    assert.deepEqual(detected.capabilities, ["spotify_connect", "system_info"]);
+  });
+
+  it("advertises image_generation only with a configured image command", () => {
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_IMAGE: "true" }).imageEnabled, false);
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_IMAGE_CMD: "node image-worker.js" }).imageEnabled, true);
+
+    const detected = detectCapabilities(
+      emptyLlms,
+      env({ imageEnabled: true, imageExecutorConfigured: true }),
+    );
+    assert.deepEqual(detected.capabilities, ["image_generation", "system_info"]);
+  });
+
+  it("does not let forced capabilities advertise missing backends", () => {
     const detected = detectCapabilities(emptyLlms, env(), [
       "image_generation",
       "spotify_connect",
