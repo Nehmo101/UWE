@@ -40,6 +40,17 @@ body[data-uwe-design-v2] .uwe-btn-secondary:not(.uwe-v2-btn) {
   background: color-mix(in srgb, var(--uwe-zone-card-bg) 70%, var(--uwe-bg) 30%);
 }
 
+body[data-uwe-design-v2] .uwe-btn-subtle:not(.uwe-v2-btn) {
+  border-color: var(--uwe-border-muted);
+  background: color-mix(in srgb, var(--uwe-zone-card-bg) 45%, transparent);
+  color: var(--uwe-fg-muted);
+}
+
+body[data-uwe-design-v2] .uwe-btn-subtle:not(.uwe-v2-btn):hover {
+  color: var(--uwe-zone-chrome-fg);
+  background: color-mix(in srgb, var(--uwe-accent-muted) 35%, transparent);
+}
+
 body[data-uwe-design-v2] .uwe-btn-ghost:not(.uwe-v2-btn) {
   border-color: transparent;
   background: transparent;
