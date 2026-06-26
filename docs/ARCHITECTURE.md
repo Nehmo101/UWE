@@ -1,6 +1,6 @@
 # UWE Architekturübersicht
 
-Stand: 2026-06-18
+Stand: 2026-06-26
 
 Diese Datei beschreibt UWE auf drei Ebenen:
 
@@ -22,7 +22,7 @@ graph TD
   UWE --> Portal["UWE Portal<br/>Spieler-Wiki / Handouts"]
   UWE --> Core["UWE Core<br/>Shared Packages / Datenlogik"]
   UWE --> Export["Static Export<br/>player-sichere HTML-Ausgabe"]
-  UWE --> Integrations["Optionale Integrationen<br/>RTX-Agent, Spotify, Kalender, Mail, DnD-APIs"]
+  UWE --> Integrations["Optionale Integrationen<br/>RTX Host Connector, Spotify, Kalender, Mail, DnD-APIs"]
 
   Studio --> DMWorkflows["Welten, Seiten, Sessions, Inspector,<br/>Templates, Labels, Soundboard, Backups"]
   Studio --> AdminOS["Daily Admin OS<br/>Today, Capture, Projekte, Verträge,<br/>Hardware, Life-Brain"]
@@ -39,7 +39,7 @@ graph TD
   Core --> UI["@uwe/shared-ui<br/>gemeinsame React-Komponenten"]
 
   Export --> StaticSite["exports/<world>-static<br/>HTML, CSS, JS, Search Index"]
-  Integrations --> RTX["RTX-Agent im Heimnetz<br/>lokale KI-Inferenz"]
+  Integrations --> RTX["RTX Host Connector<br/>optionaler outbound KI-Worker"]
   Integrations --> Spotify["Spotify Web API<br/>DM-seitiges Soundboard"]
   Integrations --> Calendar["Kalender / Mail / Jobs<br/>Admin- und Automationsfunktionen"]
 ```
@@ -61,7 +61,7 @@ flowchart LR
   Core --> Backups["data/backups<br/>Backup-ZIPs"]
   Studio --> Exports["exports/<world>-static<br/>Static HTML Export"]
 
-  Studio -->|optional, nur Heimnetz| RTX["RTX-Agent<br/>Ollama / LM Studio"]
+  Studio -->|optional, outbound Connector| RTX["RTX Host Connector<br/>Ollama / lokale KI"]
   Studio -->|optional| Spotify["Spotify Web API"]
   Studio -->|optional| MailCalendar["Mail / Kalender / Jobs"]
 
@@ -74,7 +74,7 @@ flowchart LR
 - **Studio ist die Schreib- und Admin-Oberfläche.** Hier entstehen Inhalte, Imports, Generator-Ausgaben, Inspector-Fixes, Backups und Exporte.
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
-- **RTX-Agent ist nur Inferenz-Worker.** Er soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden.
+- **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` (`RTX_AGENT_URL`) bleibt nur als **deprecated** Kompatibilität bestehen.
 - **Cloud-KI darf kein Brain/Weltwissen erhalten.** Cloud-Fallback ist nur für allgemeinen Chat ohne UWE-Kontext vorgesehen.
 
 ---
@@ -127,14 +127,18 @@ graph TD
   Packages --> WikiPkg["wiki-engine<br/>Wikilinks / Markdown-Logik"]
   Packages --> StaticExportPkg["static-export<br/>HTML-Export"]
   Packages --> SoundboardPkg["soundboard<br/>Audio, YouTube, Spotify"]
-  Packages --> AIBrainPkg["ai-brain<br/>Router, Privacy, RTX-Agent"]
+  Packages --> AIBrainPkg["ai-brain<br/>Router, Privacy, Connector/RTX"]
   Packages --> FeaturePkgs["Feature-Pakete<br/>backup, calendar, mail, dnd-api,<br/>image-studio, knoteforge-import, agent-jobs"]
 
   Repo --> Tools["tools/"]
-  Tools --> WindowsInstaller["windows-installer<br/>One-Click Installation / Wartung"]
+  Tools --> RtxConnector["uwe-rtx-connector<br/>optionaler outbound Worker (aktiv)"]
+  Tools --> RtxAgent["uwe-rtx-agent<br/>inbound Agent (deprecated)"]
+
+  Repo --> Deploy["deploy/"]
+  Deploy --> Systemd["systemd-Units + Setup-Scripts<br/>uwe.service, setup-uwe-host.sh"]
 
   Repo --> Scripts["scripts/"]
-  Scripts --> Quality["Tests, Security Checks,<br/>Release Checks, Windows Scripts"]
+  Scripts --> Quality["Tests, Security Checks,<br/>Release Checks, Host-Scripts"]
 
   Repo --> Docs["docs/"]
   Docs --> Production["PRODUCTION.md"]
@@ -152,33 +156,33 @@ graph TD
 | **UWE Portal** | Nein / sehr begrenzt | Nur player-safe Inhalte | Spieler-Wiki, Handouts, öffentliche oder authentifizierte Ansicht |
 | **Static Export** | Nein | Nur exportierte player-safe Inhalte | Statisches Hosting ohne Serverlogik |
 | **UWE Core Packages** | Indirekt über Apps | Ja | Datenlogik, Auth, Rendering, Security, Assets |
-| **RTX-Agent** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz im Heimnetz |
+| **RTX Host Connector** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
 | **Cloud-KI** | Nein | Nur allgemeiner Chat ohne UWE-Kontext | Optionaler Fallback für nicht-sensitive Allgemeinfragen |
 
 ---
 
 ## 6. Deployment-Flow
 
+Der **einzige aktive Produktpfad** ist ein Linux Host mit `pnpm` und `systemd`.
+Es gibt **keinen** Docker-Pfad und **keinen** Windows-One-Click-Installer mehr
+(siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md)).
+
 ```mermaid
 flowchart TD
-  Start["Start / Installation"] --> Mode{"Betriebsmodus"}
+  Start["Start / Installation"] --> Setup["sudo bash deploy/scripts/setup-uwe-host.sh<br/>(Node 22 + pnpm + Prisma + Build)"]
 
-  Mode -->|Docker empfohlen| Docker["docker compose up -d"]
-  Mode -->|Windows One-Click| Windows["UWE-Installieren.cmd / Installer Wizard"]
-  Mode -->|Manuell| Manual["pnpm install<br/>pnpm build:release<br/>pnpm db:migrate"]
+  Setup --> Service["systemd: uwe.service<br/>start-uwe.sh → Studio :3000 + Portal :3001"]
 
-  Docker --> Services["Studio + Portal Services"]
-  Windows --> Services
-  Manual --> Services
-
-  Services --> Data["Persistente Daten<br/>uwe.db, uploads, backups, exports"]
-  Services --> Protection{"Internet-Exposure?"}
+  Service --> Data["Persistente Daten<br/>/var/lib/uwe: uwe.db, uploads, backups, exports"]
+  Service --> Protection{"Internet-Exposure?"}
 
   Protection -->|nur lokal / Heimnetz| LAN["Direkt im LAN nutzbar"]
-  Protection -->|öffentlich erreichbar| Access["Reverse Proxy Auth / VPN / Cloudflare Access"]
+  Protection -->|öffentlich erreichbar| Access["Cloudflare Tunnel / Access (optional)"]
 
-  Access --> StudioProtected["Studio schützen"]
+  Access --> StudioProtected["Studio schützen (Auth + Access)"]
   Access --> PortalPublic["Portal darf offener sein,<br/>aber nur player-safe Content"]
+
+  Service -.->|optional, outbound| Connector["RTX Host Connector<br/>verbindet sich zum Host"]
 ```
 
 ---
@@ -191,7 +195,7 @@ Neue Features sollten möglichst klar einer dieser Schichten zugeordnet werden:
 2. **Portal Feature** — alles, was Spieler sehen oder nutzen sollen. Immer mit Sichtbarkeits- und Leak-Tests denken.
 3. **Core Package** — wiederverwendbare Logik, die nicht direkt UI-spezifisch ist.
 4. **Integration Package** — externe APIs, Agenten, Mail, Kalender, Spotify, DnD-APIs.
-5. **Tooling/Installer** — Start, Update, Backup, Restore, Repair, Release.
+5. **Host-Tooling/Deploy** — `deploy/scripts/setup-uwe-host.sh`, systemd-Units, Start/Update/Backup/Restore/Repair, Release. Kein Docker-/Windows-Installer-Pfad mehr.
 
 Faustregel: Wenn ein Feature sowohl Studio als auch Portal betrifft, gehört die gemeinsame Logik in ein Package; Studio und Portal sollten dann nur ihre jeweilige UI und Route-Logik besitzen.
 
@@ -205,11 +209,11 @@ flowchart LR
   Core --> Data["Lokale Daten<br/>DB + Uploads + Backups"]
   Core --> Portal["Spieler lesen<br/>UWE Portal"]
   Core --> Export["Static Export"]
-  Studio --> RTX["Optional RTX-Agent<br/>lokale KI"]
+  Studio --> RTX["Optional RTX Host Connector<br/>lokale KI (outbound)"]
 
   Data --> Studio
   Data --> Portal
   Data --> Export
 ```
 
-**UWE = Studio zum Erstellen, Core zum Absichern/Verwalten, Portal/Export zum sicheren Teilen, RTX-Agent für lokale KI.**
+**UWE = Studio zum Erstellen, Core zum Absichern/Verwalten, Portal/Export zum sicheren Teilen, RTX Host Connector für lokale KI.** Läuft als Linux Host mit `systemd` (kein Docker, kein Windows-Installer).

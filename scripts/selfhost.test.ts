@@ -15,8 +15,8 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/uwe-host-setup.sh")));
-    // Legacy unit kept for migration docs only — production uses uwe.service
-    assert.ok(fs.existsSync(path.join(root, "deploy/linux/uwe-host.service")));
+    // Legacy uwe-host.service unit is archived as docs only — production uses uwe.service
+    assert.ok(fs.existsSync(path.join(root, "docs/archive/legacy-uwe-host-service.md")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-stop.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-status.sh")));

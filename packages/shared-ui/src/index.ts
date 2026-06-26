@@ -87,6 +87,14 @@ export {
 /** Package export path for design v2 CSS (import in app layouts). */
 export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
 
+// ---------------------------------------------------------------------------
+// Shell exports — Design V2 is the canonical surface (default-on via
+// `isDesignV2Enabled`). The V1 shells below are LEGACY/compatibility only and
+// render when `NEXT_PUBLIC_UWE_DESIGN_V2=false`. Prefer the `*V2` shells for new
+// code. Consolidating V1→V2 is tracked in docs/engineering/cleanup-inventory.md.
+// ---------------------------------------------------------------------------
+
+/** @deprecated Legacy (Design V1) shells — prefer the `*V2` exports below. */
 export {
   StudioShell,
   StudioNavSidebar,
@@ -113,6 +121,7 @@ export {
 
 export { isDesignV2Enabled } from "./design-v2-feature";
 
+/** Canonical Design V2 shells (default-on). Prefer these for new code. */
 export {
   AppShellV2,
   V2PageHeader,

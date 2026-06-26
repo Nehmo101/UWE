@@ -2,6 +2,19 @@
 
 Anleitung für den ersten produktiven Betrieb von **UWE (Universeller Welten-Editor)**.
 
+> ⚠️ **Veraltete Abschnitte (Docker + Windows).** Der **aktive Produktpfad** ist
+> ein **Linux Host mit `pnpm` + `systemd`** (optional Cloudflare Tunnel). Docker
+> und der Windows-One-Click-Installer wurden aus dem aktiven Pfad **entfernt** —
+> siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md).
+>
+> **Maßgeblich für Deployment:**
+> [UWE_HOST_LINUX_STARTUP.md](./UWE_HOST_LINUX_STARTUP.md),
+> [host-linux.md](./host-linux.md), [deployment.md](./deployment.md),
+> [deployment-hardening.md](./deployment-hardening.md).
+>
+> Die Docker-/Windows-Abschnitte weiter unten bleiben nur als **historische
+> Referenz** stehen und beschreiben keinen unterstützten Pfad mehr.
+
 | Komponente | URL (Standard) | Zweck |
 |------------|----------------|-------|
 | UWE Studio | http://localhost:3000 | DM-Editor (nur für Spielleiter) |
@@ -11,40 +24,19 @@ Anleitung für den ersten produktiven Betrieb von **UWE (Universeller Welten-Edi
 
 ## Voraussetzungen
 
-- **Docker** ≥ 24 und **Docker Compose** v2, oder
-- **Node.js** ≥ 20 und **pnpm** ≥ 10 für manuellen Build
+- **Node.js** ≥ 22 und **pnpm** ≥ 10
+- **Linux** mit `systemd` (Production); macOS/Linux für Entwicklung
 
 ---
 
-## Alter Laptop — Production Host
+## Production Host (Linux, empfohlen)
 
-UWE ist für den dauerhaften Betrieb auf einem **alten Laptop** als zentraler Host vorgesehen (Datenbank, Uploads, Backups, Exports, später Brain/Mail). Der RTX-Rechner im Heimnetz bleibt ein separater Inference-Worker — siehe `docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md`.
+UWE ist für den dauerhaften Betrieb auf einem **always-on Linux-Laptop** als
+zentraler Host vorgesehen (Datenbank, Uploads, Backups, Exports, Brain/Mail).
+Der RTX-Rechner bleibt ein separater **outbound** Inference-Worker (RTX Host
+Connector) — siehe [rtx-connector.md](./rtx-connector.md).
 
-### Option A: Windows One-Click (empfohlen auf altem Laptop)
-
-1. Node.js 20+ installieren
-2. `UWE-Installieren.cmd` oder `pnpm installer:windows` ausführen
-3. Im Assistenten **Installieren & Starten** wählen (Production-Modus: kein Demo-Seed)
-
-Standard-Installationspfad: `%LOCALAPPDATA%\UWE`
-
-| Pfad | Inhalt |
-|------|--------|
-| `%LOCALAPPDATA%\UWE\data\uwe.db` | SQLite-Datenbank |
-| `%LOCALAPPDATA%\UWE\data\uploads` | Asset-Uploads |
-| `%LOCALAPPDATA%\UWE\data\backups` | Backup-ZIPs |
-| `%LOCALAPPDATA%\UWE\exports` | Static-HTML-Exporte |
-| `%LOCALAPPDATA%\UWE\.env` | Konfiguration (nicht teilen) |
-
-Details: [docs/windows-install.md](windows-install.md)
-
-### Option B: Docker auf dem alten Laptop
-
-Siehe [Schnellstart (Docker)](#schnellstart-docker--empfohlen) unten. Daten bleiben in Docker-Volume und Bind-Mounts erhalten.
-
-### Option C: Linux Production Host (systemd)
-
-**Empfohlen für dauerhaften Betrieb auf einem Linux-Host-Laptop:** siehe [docs/UWE_HOST_LINUX_STARTUP.md](UWE_HOST_LINUX_STARTUP.md).
+**Kanonischer Setup-Pfad:** [docs/UWE_HOST_LINUX_STARTUP.md](UWE_HOST_LINUX_STARTUP.md).
 
 ```bash
 cd /opt/uwe
@@ -53,7 +45,7 @@ sudo bash ./deploy/scripts/setup-uwe-host.sh
 
 Offizielle Pfade: `/etc/uwe/uwe.env`, `/var/lib/uwe`, Service `uwe.service`. Convenience: `pnpm host:start`, `pnpm host:status`.
 
-### Option D: Manueller Production-Build (Entwicklung/Ad-hoc)
+### Alternative: Manueller Production-Build (Entwicklung/Ad-hoc)
 
 ```bash
 git clone <repository-url> uwe
@@ -157,7 +149,12 @@ Bei `status: degraded`: `checks.storage.message` und `checks.migrations.message`
 
 ---
 
-## Schnellstart (Docker — empfohlen)
+## Schnellstart (Docker — ENTFERNT, nur historisch)
+
+> ⚠️ **Nicht mehr unterstützt.** Docker wurde aus dem aktiven Produktpfad
+> entfernt (kein `Dockerfile` / `docker-compose.yml` im Repo). Nutze den
+> Linux-Host-Pfad oben. Die folgenden Docker-Befehle bleiben nur als
+> historische Referenz erhalten.
 
 ```bash
 git clone <repository-url> uwe

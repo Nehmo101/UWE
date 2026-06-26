@@ -1,6 +1,7 @@
 import { buildPagePath } from "./store";
 import type { Page, PageCategory, PagePath, PageVisibility, World } from "./types";
 import type { WikiStore } from "./store";
+import { normalizeLookupKey } from "./slug-utils";
 
 export function listWorlds(store: WikiStore): World[] {
   return [...store.worlds.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -88,9 +89,7 @@ export function buildPageLookupIndex(
   return index;
 }
 
-export function normalizeLookupKey(key: string): string {
-  return key.trim().toLocaleLowerCase("de");
-}
+export { normalizeLookupKey };
 
 export function resolvePageByLinkTarget(
   store: WikiStore,

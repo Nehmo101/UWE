@@ -1,6 +1,8 @@
 # Backup & Restore
 
-Anleitung für Backups unter Windows (und allgemein).
+Anleitung für Backups auf dem **Linux Host** (und allgemein). Der frühere
+Windows-Installer-Pfad existiert nicht mehr — siehe
+[removed-legacy-runtime.md](./removed-legacy-runtime.md).
 
 ## Was wird gesichert?
 
@@ -22,70 +24,60 @@ Anleitung für Backups unter Windows (und allgemein).
 
 ## Backup erstellen
 
-### Über die Steuerung (empfohlen)
+### Über UWE Studio (empfohlen)
 
-1. „UWE Steuerung“ öffnen
-2. **„Backup erstellen“** klicken
-3. Backup liegt in `%LOCALAPPDATA%\UWE\data\backups\`
+Studio → **Backup** → **Backup erstellen**. Das ZIP liegt im konfigurierten
+Backup-Verzeichnis (Host: `/var/lib/uwe/backups`).
 
 ### Über die Kommandozeile
 
 ```bash
-pnpm backup
-# oder im Entwicklermodus:
 pnpm backup:create --type=full --format=zip
 # PlayerNotes optional (Datenschutz beachten):
 pnpm backup:create --type=full --include-player-notes
 ```
 
-### Snapshot (Rohdaten)
+### Host-Backup-Script / Snapshot
 
-Für schnelle Vollsicherung von DB + Uploads + Config:
+Für eine schnelle Vollsicherung von DB + Uploads + Config auf dem Linux Host:
 
 ```bash
-node tools/windows-installer/dist/cli.js snapshot
+bash deploy/scripts/uwe-backup.sh
 ```
 
-Ergebnis: `%LOCALAPPDATA%\UWE\data\backups\snapshot-<timestamp>\`
+Auf dem Host läuft dies automatisch über `deploy/systemd/uwe-backup.timer`.
 
 ## Restore
 
-### Über die Steuerung
+### Über UWE Studio (empfohlen)
 
-1. UWE stoppen
-2. Steuerung → Restore (oder CLI):
-   ```powershell
-   node tools\windows-installer\dist\cli.js restore --backup "C:\Pfad\zum\backup.zip"
-   ```
+Studio → **Backup** → **Wiederherstellen**, Backup-ZIP auswählen.
 
-### Über UWE Studio
+### Manuell (Notfall, Linux Host)
 
-Nach dem Start: Studio → Backup → Wiederherstellen
-
-### Manuell (Notfall)
-
-1. UWE stoppen
-2. `%LOCALAPPDATA%\UWE\data\uwe.db` sichern
+1. Dienst stoppen: `sudo systemctl stop uwe.service`
+2. `/var/lib/uwe/uwe.db` sichern
 3. Backup-ZIP entpacken oder Snapshot kopieren
 4. Dateien ersetzen
-5. UWE starten
+5. Dienst starten: `sudo systemctl start uwe.service`
 
 ## Automatische Backups
 
 | Anlass | Speicherort |
 |--------|-------------|
-| Vor Migration | `data\backups\pre-migration-*.db` |
-| Vor Update | `data\backups\snapshot-*` |
+| Vor Migration | `/var/lib/uwe/backups/pre-migration-*.db` |
+| Vor Update | `/var/lib/uwe/backups/snapshot-*` |
 | Vor Restore | Automatisches Full-Backup |
 
 ## Update mit bestehenden Welten
 
-Updates **behalten** standardmäßig:
-- `data\` (Datenbank, Uploads, Backups)
-- `.env` (Konfiguration inkl. AUTH_SECRET)
-- `exports\`
+Host-Updates (`setup-uwe-host.sh --quick` / `uwe-host-update.sh`) **behalten**
+standardmäßig:
+- `/var/lib/uwe` (Datenbank, Uploads, Backups)
+- `/etc/uwe/uwe.env` (Konfiguration inkl. AUTH_SECRET)
+- Exporte
 
-Nur `app\` wird ersetzt und neu gebaut.
+Nur der Anwendungs-Code wird via `git pull` aktualisiert und neu gebaut.
 
 ## Sicherheit
 

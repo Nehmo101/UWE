@@ -3,7 +3,18 @@
 Stand: 2026-06-18 (Version 0.1.x, Branch `main`).  
 Zweck: Orientierung für Featurebereiche und technische Schulden.
 
-> **Source of Truth für Betrieb und Security:** [README.md](../README.md) und [SECURITY.md](../SECURITY.md). Dieses Audit kann hinter dem Code liegen — bei Widersprüchen README/SECURITY bevorzugen. Reifegrad: [ROADMAP.md](./ROADMAP.md), [FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md).
+> ⚠️ **Historischer Snapshot (teilweise veraltet).** Dieses Audit ist eine
+> Momentaufnahme vom 2026-06-18 und liegt an mehreren Stellen hinter dem Code.
+> Insbesondere der **Runtime-Pfad** (kein Docker, kein Windows-Installer mehr —
+> nur Linux Host + `systemd` + optionaler outbound RTX Host Connector) und der
+> **Feature-Reifegrad** (Image Studio, Kalender, DnD API existieren bereits)
+> haben sich seither geändert.
+>
+> **Aktuelle Sources of Truth:** [README.md](../README.md),
+> [SECURITY.md](../SECURITY.md),
+> [docs/removed-legacy-runtime.md](./removed-legacy-runtime.md),
+> [docs/FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md),
+> [docs/ARCHITECTURE.md](./ARCHITECTURE.md). Bei Widersprüchen gelten diese.
 
 ## Annahmen (aus Repo abgeleitet)
 
@@ -43,12 +54,12 @@ uwe/                          # Root — pnpm workspace, Turbo, ESLint flat conf
 │   ├── static-export/        # HTML-Export
 │   └── wiki-engine/          # Wikilink-Parsing
 ├── tools/
-│   ├── uwe-rtx-agent/        # Lokaler RTX-Inferenz-Worker
-│   └── windows-installer/    # Windows One-Click-Setup
+│   ├── uwe-rtx-connector/    # Outbound RTX Host Connector (aktiv)
+│   └── uwe-rtx-agent/        # Inbound RTX-Agent (deprecated, Kompatibilität)
+├── deploy/                   # systemd-Units + setup-uwe-host.sh (Linux Host)
 ├── docs/                     # Produkt- und Implementierungsdoku
-├── scripts/                  # Release, Selfhost, Integration-Smoke-Tests
-├── .github/workflows/        # CI, Windows-Installer
-├── docker-compose.yml        # Studio + Portal + SQLite-Volume
+├── scripts/                  # Release, Selfhost, Host-Scripts, Smoke-Tests
+├── .github/workflows/        # CI (Linux Host + Connector Gate)
 └── data/                     # uploads, backups (dev)
 ```
 
@@ -215,13 +226,19 @@ uwe/                          # Root — pnpm workspace, Turbo, ESLint flat conf
 | Jobs UI | `apps/studio/app/jobs/page.tsx`, `JobsWorkspace.tsx` | |
 | RTX Deferred | `packages/database/src/rtx-deferred-jobs.ts` | Warteschlange bei RTX offline |
 
-### RTX Agent (extern)
+### RTX Inferenz (extern)
+
+Aktiver Pfad: **outbound RTX Host Connector**. Der alte inbound `RTX-Agent`
+bleibt nur als **deprecated** Kompatibilität verdrahtet — siehe
+[docs/rtx-connector.md](./rtx-connector.md) und
+[docs/ai-brain-connector-migration.md](./ai-brain-connector-migration.md).
 
 | Pfad | Rolle |
 |------|-------|
-| `tools/uwe-rtx-agent/**` | Lokaler Inferenz-Dienst |
-| `packages/ai-brain/src/rtx-agent-client.ts` | UWE → Agent |
-| `packages/ai-brain/src/providers/rtx-agent-provider.ts` | Provider-Integration |
+| `tools/uwe-rtx-connector/**` | Outbound Connector (aktiv) |
+| `tools/uwe-rtx-agent/**` | Inbound Inferenz-Dienst (deprecated) |
+| `packages/ai-brain/src/rtx-agent-client.ts` | UWE → Agent (deprecated Pfad) |
+| `packages/ai-brain/src/providers/rtx-agent-provider.ts` | Provider-Integration (deprecated) |
 
 ---
 
@@ -361,9 +378,17 @@ Prisma-Schema: `packages/database/prisma/schema.prisma` (SQLite).
 
 ---
 
-## 5. Wo Image Studio integriert werden soll
+## 5. Image Studio (vorhanden, Phase 2)
 
-Image Studio ist **nicht implementiert**. Empfohlene Anknüpfpunkte:
+> **Korrektur:** Image Studio **existiert** (`packages/image-studio`, Route
+> `/image-studio`, `POST /api/image-studio`). Nutzbar für `generate` / `variant`
+> / `inpaint` (RTX + Maske), aber **noch nicht production-ready** — kein
+> Canvas-Editor, Cloud nur `generate`/`variant`. Maßgeblich:
+> [FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md) §1,
+> [IMAGE_STUDIO.md](./IMAGE_STUDIO.md).
+
+Die folgende Tabelle ist die ursprüngliche **Integrations-Empfehlung** (vor der
+Implementierung) und bleibt als Anknüpfpunkt-Referenz für weitere Phasen:
 
 | Priorität | Ort | Begründung |
 |-----------|-----|------------|
@@ -381,9 +406,16 @@ Image Studio ist **nicht implementiert**. Empfohlene Anknüpfpunkte:
 
 ---
 
-## 6. Wo Kalender integriert werden soll
+## 6. Kalender (vorhanden, Phase 2)
 
-**Kein Kalender-Feature vorhanden.** Termin-Daten existieren bereits:
+> **Korrektur:** Es **existiert** ein Kalender-Feature (`packages/calendar`,
+> Models `CalendarFeed` / `CalendarEvent`, Route `/calendar`). Nutzbar mit
+> lokalem Kalender + iCal/CalDAV/FamilyWall-Feeds und Wochenansicht; CalDAV
+> Write-back optional. Maßgeblich:
+> [FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md) §2,
+> [CALENDAR_INTEGRATION.md](./CALENDAR_INTEGRATION.md).
+
+Die folgenden Termin-Datenquellen werden dabei aggregiert:
 
 | Datenquelle | Felder | UI heute |
 |-------------|--------|----------|
@@ -513,23 +545,23 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 - ✅ Brain Store (Documents, Facts, Chunks, Embeddings, Links)
 - ✅ Wissenstexte UI + `expand_knowledge` Brain-Action
 - ✅ KI-Router (Auto/RTX/Cloud) mit Privacy-Enforcement
-- ✅ RTX-Agent Integration + Windows Tray Tool
+- ✅ RTX Host Connector (outbound) + deprecated inbound RTX-Agent
 - ✅ Job-Queue (Mail, AI, Embedding, Import, Backup, Canon)
 - ✅ Mail Center (Templates, Recipients, Compose, Logs)
 - ✅ Soundboard (Local, YouTube, Spotify OAuth)
 - ✅ Static HTML Export (player-safe)
 - ✅ KnoteForge Import mit Preview
-- ✅ Backup/Restore (API + CLI + Windows)
+- ✅ Backup/Restore (API + CLI + `deploy/scripts/uwe-backup.sh`)
 - ✅ Activity Log + Next Actions + Command Palette
 - ✅ Daily Admin OS Basis: Today, Capture, Projects, Workshop, Contracts, Hardware, Life-Brain
 - ✅ Mobile Bottom Nav + KI-Prompt Page + Global Capture FAB
 - ✅ Settings UI (General, Worlds, Portal, Privacy, Storage, AI, Mail, Backup)
 - ✅ CI: lint, typecheck, test, build (`ci.yml`)
-- ✅ Docker Compose + Windows Installer
-- ✅ Image Studio Phase 1 (Prompt-Generierung, Job-Queue, RTX/Cloud)
-- ✅ Kalender Phase 1 (lokal, iCal/CalDAV/FamilyWall read-only)
-- ✅ DnD API Phase 1 (Open5e, SRD-Monster, Beyond-Links)
-- ✅ Agent Jobs (GitHub Actions / Cursor Cloud Dispatch)
+- ✅ Linux Host + `systemd` (`deploy/scripts/setup-uwe-host.sh`, `uwe.service`) — **kein** Docker/Windows-Installer mehr
+- ✅ Image Studio Phase 2 (`generate`/`variant`/`inpaint`; kein Canvas-Editor)
+- ✅ Kalender Phase 2 (lokal, iCal/CalDAV/FamilyWall, Wochenansicht; CalDAV write-back optional)
+- ✅ DnD API Phase 2 (Open5e/SRD-Suche, Statblock-Import)
+- ✅ Agent Jobs Phase 2 (GitHub Actions / Cursor Cloud Dispatch, Polling)
 
 ---
 
@@ -626,18 +658,27 @@ Ausführen: `pnpm test` (inkl. Script-Tests).
 | Workflow | Pfad | Steps |
 |----------|------|-------|
 | CI | `.github/workflows/ci.yml` | install → lint → prisma generate → typecheck → test → build:release |
-| Windows Installer | `.github/workflows/windows-installer.yml` | Installer-Build |
+| PR Check | `.github/workflows/pr-check.yml` | leichter PR-Gate |
+| Security | `.github/workflows/security.yml` | Authz/Leak/Route-Guards |
+| Docs Check | `.github/workflows/docs-check.yml` | Doku-Konsistenz |
+| Deploy | `.github/workflows/deploy.yml` | Host-Deploy-Trigger |
+| Cursor Agent | `.github/workflows/cursor-agent.yml` | Agent-Job-Dispatch |
 
-Node 22 in CI, pnpm 10.12.1. Kein deploy-Workflow im Repo.
+Node 22 in CI, pnpm 10.12.1. Der frühere `windows-installer.yml` wurde mit dem
+Legacy-Runtime-Cleanup entfernt (siehe
+[removed-legacy-runtime.md](./removed-legacy-runtime.md)).
 
 ---
 
-## Kalender / Termin-Logik (falls vorhanden)
+## Kalender / Termin-Logik
 
-- **GameSession.date** — einziges echtes Session-Datum; Dashboard zeigt „Nächste Session“
+> **Aktualisiert:** Ein Kalender-Feature existiert inzwischen
+> (`packages/calendar`, `CalendarFeed` / `CalendarEvent`, Route `/calendar`).
+
+- **GameSession.date** — Session-Datum; Dashboard zeigt „Nächste Session“
 - **ContractExpense** — `nextPaymentDate`, `renewalDate`, `cancelByDate`, `billingDay` — Listen in `/contracts`
-- **Kein** zentrales Event-Modell, **kein** Kalender-Widget, **kein** iCal/Reminder
-- **Today** (`today-dashboard.ts`) — aggregiert Status, nicht Termine in Kalenderform
+- **CalendarEvent / CalendarFeed** — lokaler Kalender + iCal/CalDAV/FamilyWall-Feeds, Wochenansicht (`/calendar`)
+- **Today** (`today-dashboard.ts`) — aggregiert Status; `/today`-Kalender-Aggregation ist Folgeaufgabe
 
 ---
 

@@ -2,6 +2,33 @@
 
 Risk-aware list of technical debt and split candidates. **No automatic deletion** — items here are reviewed before action.
 
+## Done in cleanup 2026-06-26
+
+- **Slug utilities centralised** → `packages/database/src/slug-utils.ts`
+  (`slugifyDe`, `pickUniqueSlug`, `normalizeLookupKey`, `slugifyKey`). Migrated:
+  `page-templates`, `page-template-service`, `dungeon-cockpit`, `queries`,
+  `mail-utils`, and `@uwe/backup` `restore`. Behaviour preserved (tests:
+  `slug-utils.test.ts`, `page-templates.test.ts`).
+- **Removed dead code:** `apps/portal/src/components/AuthHeader.tsx` (Legacy auth
+  chrome, replaced by `PortalAppShell`); `AdminSidebarBlock` +
+  `apps/studio/src/lib/admin-sidebar-nav.ts` (orphaned after the nav refactor).
+- **Archived** `deploy/linux/uwe-host.service` → `docs/archive/legacy-uwe-host-service.md`.
+  Active systemd path is `deploy/systemd/uwe.service` + `deploy/scripts/setup-uwe-host.sh`.
+- **Doc truth pass:** ARCHITECTURE/REPO_AUDIT/PRODUCTION/CI docs no longer present
+  Docker or the Windows installer as active paths; RTX-Agent is deprecated in
+  favour of the outbound RTX Host Connector. See `docs/removed-legacy-runtime.md`.
+
+## Slug utilities — remaining follow-ups
+
+Deliberately **not** migrated to keep behaviour identical / avoid cross-package
+cycles:
+
+| Location | Why kept separate |
+|----------|-------------------|
+| `packages/knoteforge-import/src/slug.ts` | Strips diacritics (`ä→a`) instead of expanding (`ä→ae`). Switching would change import slugs and risk re-import idempotency. Migrate only with a re-import/dedupe check. |
+| `packages/auth/src/content-access.ts` `normalizeLookupKey` | `@uwe/database` depends on `@uwe/auth`; importing back would create a cycle. Centralise only if a lower-level shared package is introduced. |
+| `packages/agent-jobs/src/index.ts` `slugifyBranch` | Produces git branch names (`cursor/<slug>-<ts>`), different domain; `agent-jobs` has no `@uwe/database` dependency. |
+
 ## Large services (split candidates)
 
 | File | ~Lines | Suggested split |
@@ -13,6 +40,30 @@ Risk-aware list of technical debt and split candidates. **No automatic deletion*
 | `packages/database/src/ai-review-service.ts` | 760+ | Apply strategies per task type |
 
 Marking only — splits should be incremental PRs with unchanged public APIs.
+
+### Recommended split plan (incremental, one PR each)
+
+Public surface for all of these is the `@uwe/database/server` barrel — keep its
+exported names stable so apps/tests do not change.
+
+1. **`life-admin-service.ts`** → extract `capture-service.ts`,
+   `hardware-service.ts`, `personal-brain-service.ts`. Keep `createLifeAdminService`
+   as a thin facade re-exporting the same methods. Tests: `life-admin-service.test.ts`,
+   `today-dashboard.test.ts`.
+2. **`label-service.ts`** → split print pipeline (`label-print-*`) from the
+   template/registry logic. Tests: `label-service.test.ts`, `label-editor.test.ts`,
+   plus `label-safety` leak checks.
+3. **`server.ts` barrel** → group re-exports into domain sub-barrels
+   (`server/world.ts`, `server/ai.ts`, …) imported by `server.ts`; the public
+   `@uwe/database/server` path stays identical. Tests: full `pnpm typecheck` + app build.
+4. **`ai-review-service.ts`** → one apply-strategy module per task type behind a
+   registry. Tests: `ai-review-service.test.ts`, `privacy.test.ts`.
+5. **`repository.ts`** → carve out asset and session subgraphs
+   (`asset-repository.ts` already exists; move session graph next). Tests:
+   `asset.test.ts`, visibility/security suites.
+
+Order rationale: start with the most self-contained domain (life-admin), end with
+`repository.ts` which the most code depends on.
 
 ## Barrel files
 
@@ -31,6 +82,39 @@ Marking only — splits should be incremental PRs with unchanged public APIs.
 | `packages/database/src/store.ts`, `seed.ts` | Phase-1 in-memory wiki; wiki-engine tests |
 | `schema.prisma` + `schema.postgresql.prisma` | Intentional dual schema |
 | `terra-seed.ts` vs `seed.ts` SEED_PAGES | Terra is canonical rich seed |
+
+## Shell V1/V2 consolidation (follow-up)
+
+Design V2 is **default-on** (`isDesignV2Enabled`, opt-out via
+`NEXT_PUBLIC_UWE_DESIGN_V2=false`). The V1 shells are legacy/compatibility only.
+
+- **Canonical:** `*V2` shells (`AppShellV2`, `StudioShellV2`, `PortalShellV2`,
+  `AdminShellV2`, …) — exported from `@uwe/shared-ui`.
+- **Legacy:** `StudioShell`, `PortalShell`, `AdminShell`, `AppShell` — JSDoc
+  `@deprecated`; still rendered when Design V2 is disabled.
+- App-level wrappers (`StudioAppShell` vs `StudioAppShellV2`,
+  `AdminModuleShell`, `WorldModuleShell`, `PortalAppShell`) currently branch on
+  `isDesignV2Enabled()`.
+
+**Follow-up (not done here — too broad for a safe single PR):** extract shared
+logic (breadcrumb/header rendering, world-section building, campaign-link
+adjustment, default-open sections, bottom-nav key resolution) into helpers so V1/V2
+become thin renderers; then retire V1 once Design V2 has soaked. Must not regress
+the reduced IA (Heute · Welten · Erstellen · Medien & KI · System).
+
+## wiki-engine disposition (follow-up)
+
+`@uwe/wiki-engine` is a standalone, tested wiki-link utility (parse, backlinks,
+related, broken-link detection). It is currently consumed **only by its own
+tests**; apps render wiki content via `@uwe/database/server`. The Phase-1
+in-memory barrel `packages/database/src/index.ts` is likewise not imported by any
+app (verified: apps import `@uwe/database/server`).
+
+**Decision:** keep `@uwe/wiki-engine` as the official wiki-link utility. Two open
+follow-ups, pick one when touched next:
+1. Wire it into the live render/backlink path so it earns its keep, **or**
+2. Retire it together with the Phase-1 `@uwe/database` (index/store/queries)
+   in-memory layer once nothing depends on it.
 
 ## Config duplicates (resolved / watch)
 
