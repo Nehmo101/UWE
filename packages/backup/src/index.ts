@@ -12,3 +12,4 @@ export * from "./encrypt";
 export * from "./retention";
 export * from "./atomic-write";
 export * from "./safety-copy";
+export * from "./schedule";
