@@ -326,6 +326,21 @@ importers:
 
   packages/config: {}
 
+  packages/connector:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/cookbook:
     devDependencies:
       '@types/node':
@@ -361,6 +376,9 @@ importers:
       '@uwe/auth':
         specifier: workspace:*
         version: link:../auth
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../connector
       '@uwe/env':
         specifier: workspace:*
         version: link:../env

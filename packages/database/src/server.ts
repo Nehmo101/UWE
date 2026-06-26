@@ -1370,6 +1370,23 @@ export type {
 } from "./agent-job-service";
 
 export {
+  ConnectorService,
+  createConnectorService,
+  toConnectorView,
+} from "./connector-service";
+
+export type {
+  Connector,
+  ConnectorJob,
+  ConnectorView,
+  ConnectorModelInfo,
+  CreatedConnector,
+  HeartbeatInput,
+  EnqueueConnectorJobInput,
+  ClaimJobInput,
+} from "./connector-service";
+
+export {
   createImageStudioService,
   ImageStudioService,
   createDndApiService,
