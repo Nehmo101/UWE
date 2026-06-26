@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import {
+  TARGET_STUDIO_NAV,
+  resolveStudioRailActiveId,
   resolveWorldNavKey,
   studioCommandPaletteCommands,
   studioDashboardNav,
@@ -12,94 +14,103 @@ import {
   worldBottomNavKey,
   worldCockpitTabItems,
   worldNavItems,
+  worldNavSections,
 } from "./studio-navigation";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const REQUIRED_WORLD_NAV_LABELS = [
-  "Übersicht",
+  "Dashboard",
   "Seiten",
+  "Neue Seite",
   "Sessions",
+  "Spielernotizen",
   "Dungeons",
   "Medien & Assets",
-  "Labels",
-  "Spielernotizen",
   "Soundboard",
-  "Wissensgraph",
+  "Labels & Print",
   "Brain Store",
+  "Wissensgraph",
   "Kanon & Leaks",
   "KI-Läufe",
   "Import",
   "DnD API",
   "Backup",
-  "Neue Seite",
 ];
 
-const EXPECTED_SIDEBAR_SECTIONS = [
-  "Heute",
-  "Welten",
-  "Leben",
-  "Werkstatt",
-  "Wissen",
-  "Medien",
-  "KI",
-  "System",
-  "Admin",
-];
+const EXPECTED_SIDEBAR_SECTIONS = ["Heute", "Welten", "Erstellen", "Medien & KI", "System"];
 
 describe("studio navigation", () => {
-  it("uses consolidated IA sidebar sections", () => {
+  it("uses five consolidated IA sidebar sections", () => {
     const sections = studioSidebarSections("/today");
     const sectionTitles = sections.map((section) => section.title);
     assert.deepEqual(sectionTitles, EXPECTED_SIDEBAR_SECTIONS);
+    assert.deepEqual(
+      TARGET_STUDIO_NAV.map((section) => section.id),
+      ["today", "worlds", "create", "media-ai", "system"],
+    );
   });
 
-  it("places Heute as the sole primary home link", () => {
+  it("keeps Heute lean without hiding quick capture", () => {
     const sections = studioSidebarSections("/today");
     const heute = sections.find((section) => section.title === "Heute");
     assert.ok(heute);
     assert.deepEqual(
       heute.items.map((item) => item.href),
-      ["/today"],
+      ["/today", "/capture?quick=1"],
     );
     assert.ok(heute.items[0]?.active);
   });
 
-  it("groups Welten, Leben, KI, System, and Admin items", () => {
+  it("maps legacy feature routes into reduced hubs", () => {
     const sections = studioSidebarSections("/admin/users");
     const worlds = sections.find((section) => section.title === "Welten");
-    const leben = sections.find((section) => section.title === "Leben");
-    const ki = sections.find((section) => section.title === "KI");
+    const create = sections.find((section) => section.title === "Erstellen");
+    const mediaAi = sections.find((section) => section.title === "Medien & KI");
     const system = sections.find((section) => section.title === "System");
-    const admin = sections.find((section) => section.title === "Admin");
 
     assert.ok(worlds?.items.some((item) => item.href === "/worlds"));
     assert.ok(worlds?.items.some((item) => item.href === "/search"));
-    assert.ok(leben?.items.some((item) => item.href === "/capture"));
-    assert.ok(leben?.items.some((item) => item.href === "/hardware"));
-    assert.ok(ki?.items.some((item) => item.href === "/ai"));
-    assert.ok(!ki?.items.some((item) => item.href === "/admin/ai-prompt"));
+    assert.ok(create?.items.some((item) => item.href === "/capture"));
+    assert.ok(create?.items.some((item) => item.href === "/templates"));
+    assert.ok(mediaAi?.items.some((item) => item.href === "/ai"));
+    assert.ok(mediaAi?.items.some((item) => item.href === "/admin/agent-jobs"));
+    assert.ok(mediaAi?.items.some((item) => item.href === "/system/rtx-connector"));
     assert.ok(system?.items.some((item) => item.href === "/system"));
-    assert.ok(admin?.items.some((item) => item.href === "/admin/users"));
+    assert.ok(system?.items.some((item) => item.href === "/admin/users"));
+    assert.ok(!sections.some((section) => section.title === "Admin"));
   });
 
-  it("unified sidebar follows consolidated IA hierarchy", () => {
+  it("unified sidebar stays product IA and not app switching chrome", () => {
     const sections = studioUnifiedSidebarSections("/today", {
       portalUrl: "http://localhost:3001",
     });
     const titles = sections.map((section) => section.title);
-    assert.deepEqual(titles, ["Portal", ...EXPECTED_SIDEBAR_SECTIONS]);
-    const portal = sections.find((section) => section.title === "Portal");
-    assert.ok(portal?.items.some((item) => item.label === "Spieler-Portal"));
-    assert.ok(portal?.items.some((item) => item.href === "http://localhost:3001/worlds"));
+    assert.deepEqual(titles, EXPECTED_SIDEBAR_SECTIONS);
+    assert.ok(!titles.includes("Portal"));
   });
 
-  it("exposes horizontal cockpit tabs for world overview", () => {
+  it("exposes cockpit tabs without world tool overload", () => {
     const tabs = worldCockpitTabItems("terra", "overview");
-    assert.ok(tabs.length >= 6);
-    assert.equal(tabs[0]?.key, "overview");
-    assert.ok(tabs.some((tab) => tab.key === "brain"));
+    assert.ok(tabs.length <= 5);
+    assert.deepEqual(
+      tabs.map((tab) => tab.key),
+      ["overview", "pages", "sessions", "dungeons", "assets"],
+    );
+    assert.ok(!tabs.some((tab) => tab.key === "brain"));
     assert.ok(tabs.find((tab) => tab.key === "overview")?.active);
+  });
+
+  it("groups world navigation into cockpit sections", () => {
+    const sections = worldNavSections("terra", "brain");
+    assert.deepEqual(
+      sections.map((section) => section.title),
+      ["Übersicht", "Inhalte", "Sessions", "Dungeons", "Medien", "Tools"],
+    );
+    const tools = sections.find((section) => section.title === "Tools");
+    assert.ok(tools?.items.some((item) => item.label === "Brain Store" && item.active));
+    assert.ok(tools?.items.some((item) => item.label === "Import"));
+    assert.equal(sections.flatMap((section) => section.items).length, REQUIRED_WORLD_NAV_LABELS.length);
   });
 
   it("includes all canonical world nav items", () => {
@@ -111,11 +122,12 @@ describe("studio navigation", () => {
     assert.equal(nav.length, REQUIRED_WORLD_NAV_LABELS.length);
   });
 
-  it("includes brain and ai-runs in world nav", () => {
+  it("keeps world tools reachable without flattening them into cockpit tabs", () => {
     const nav = worldNavItems("terra");
     const labels = nav.map((item) => item.label);
     assert.ok(labels.includes("Brain Store"));
     assert.ok(labels.includes("KI-Läufe"));
+    assert.ok(labels.includes("Kanon & Leaks"));
   });
 
   it("resolves world nav keys for nested routes", () => {
@@ -134,23 +146,36 @@ describe("studio navigation", () => {
     );
   });
 
-  it("maps world nav keys to mobile bottom nav tabs", () => {
+  it("maps world nav keys to at most five mobile bottom nav tabs", () => {
     assert.equal(worldBottomNavKey("overview"), "overview");
-    assert.equal(worldBottomNavKey("pages"), "pages");
-    assert.equal(worldBottomNavKey("new-page"), "pages");
-    assert.equal(worldBottomNavKey("inspector"), "inspector");
+    assert.equal(worldBottomNavKey("pages"), "content");
+    assert.equal(worldBottomNavKey("new-page"), "content");
+    assert.equal(worldBottomNavKey("sessions"), "sessions");
+    assert.equal(worldBottomNavKey("inspector"), "tools");
+    assert.equal(worldBottomNavKey("brain"), "tools");
     assert.equal(worldBottomNavKey("dungeons"), "more");
-    assert.equal(worldBottomNavKey("brain"), "more");
-    assert.equal(worldBottomNavKey("pages", true), "search");
+    assert.equal(worldBottomNavKey("assets"), "more");
+    assert.equal(worldBottomNavKey("pages", true), "content");
   });
 
-  it("provides compact dashboard nav anchored on Heute and System", () => {
+  it("provides compact dashboard nav anchored on five global areas", () => {
     const nav = studioDashboardNav("/today");
+    assert.deepEqual(
+      nav.map((item) => item.href),
+      ["/today", "/worlds", "/capture", "/ai", "/system"],
+    );
     assert.ok(nav.some((item) => item.href === "/today" && item.active));
-    assert.ok(nav.some((item) => item.href === "/worlds"));
-    assert.ok(nav.some((item) => item.href === "/system"));
-    assert.ok(nav.some((item) => item.href === "/admin"));
+    assert.ok(!nav.some((item) => item.href === "/admin"));
     assert.ok(!nav.some((item) => item.href === "/studio"));
+  });
+
+  it("resolves reduced rail active ids for legacy route families", () => {
+    assert.equal(resolveStudioRailActiveId("/today"), "today");
+    assert.equal(resolveStudioRailActiveId("/worlds/terra/dashboard"), "worlds");
+    assert.equal(resolveStudioRailActiveId("/capture"), "create");
+    assert.equal(resolveStudioRailActiveId("/admin/agent-jobs"), "media-ai");
+    assert.equal(resolveStudioRailActiveId("/admin/users"), "system");
+    assert.equal(resolveStudioRailActiveId("/settings"), "system");
   });
 
   it("builds command palette commands from studio IA", () => {
@@ -162,8 +187,9 @@ describe("studio navigation", () => {
 
     assert.ok(commands.some((cmd) => cmd.href === "/today" && cmd.group === "Heute"));
     assert.ok(commands.some((cmd) => cmd.href === "/worlds/terra/pages/new"));
-    assert.ok(commands.some((cmd) => cmd.href === "/admin/reviews"));
-    assert.ok(commands.some((cmd) => cmd.href === "/capture"));
+    assert.ok(commands.some((cmd) => cmd.href === "/worlds/terra/brain" && cmd.group === "Welt: Terra / Tools"));
+    assert.ok(commands.some((cmd) => cmd.href === "/admin/reviews" && cmd.group === "Medien & KI"));
+    assert.ok(commands.some((cmd) => cmd.href === "/capture" && cmd.group === "Erstellen"));
     assert.ok(commands.some((cmd) => cmd.href === "/system" && cmd.group === "System"));
   });
 
