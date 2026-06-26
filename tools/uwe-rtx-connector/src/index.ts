@@ -91,6 +91,12 @@ async function main(): Promise<void> {
     executorBase: {
       ollamaUrl: discoveryConfig.ollamaUrl,
       audioCommand: process.env.UWE_CONNECTOR_AUDIO_CMD?.trim() || undefined,
+      spotifyAccessToken:
+        process.env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() ||
+        process.env.SPOTIFY_ACCESS_TOKEN?.trim() ||
+        undefined,
+      spotifyDeviceId: process.env.SPOTIFY_DEVICE_ID?.trim() || undefined,
+      imageCommand: process.env.UWE_CONNECTOR_IMAGE_CMD?.trim() || undefined,
       requestTimeoutMs: 120_000,
     },
   });
