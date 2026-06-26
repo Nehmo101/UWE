@@ -9,7 +9,7 @@
 | Player App | **UWE Portal** | Player-facing wiki and handouts (live web app + API) |
 | Export | **Static Export** | Player-safe HTML export for simple hosting |
 | Backend | **UWE Core** | Shared data layer, auth, wiki engine (packages) |
-| Integrations | **RTX, Mail, Calendar, …** | Optional local AI, SMTP, calendar feeds, DnD APIs |
+| Integrations | **RTX Connector, Mail, Calendar, …** | Optional outbound local worker, SMTP, calendar feeds, DnD APIs |
 
 > Self-hosted Daily Admin OS and campaign brain — no cloud required for core data.
 
@@ -40,15 +40,17 @@ UWE besteht aus zwei klaren Rollen:
 | Rolle | Läuft auf | Verantwortlich für |
 |-------|-----------|--------------------|
 | **UWE Host** (always-on) | kleiner Linux-Host (alter Laptop) | Website, Studio, Portal, DB, Auth, Uploads, Queue, Settings, öffentliche Erreichbarkeit. **Source of Truth.** |
-| **RTX Host Connector** (optional) | RTX-PC / Haupt-PC | lokale Leistung: KI, Bildgenerierung, Audio, Spotify — als **ausgehender** Worker. |
+| **RTX Host Connector** (optional) | RTX-PC / Haupt-PC | lokale Leistung als **ausgehender** Worker: Audio, Spotify, Ollama-LLM, Embeddings und optional lokale Bildgenerierung. |
 
 ```text
 RTX Connector  ───────▶  UWE Host        (Connector verbindet sich ausgehend)
 ```
 
 **Wichtig:** Der RTX Connector ist **niemals** Voraussetzung dafür, dass UWE online ist.
-Website, Studio und Portal laufen vollständig ohne ihn. Ist der Connector offline, zeigen
-lokale KI-/Audio-Funktionen ruhig „RTX Connector offline“ — kein Crash.
+Website, Studio und Portal laufen vollständig ohne ihn. Ist der Connector offline oder meldet
+eine Capability nicht, zeigen lokale KI-/Audio-/Bild-Funktionen einen ehrlichen Degraded-Status — kein Crash.
+
+Capabilities werden nur gemeldet, wenn ein echter Executor konfiguriert ist: `audio_local` braucht `UWE_CONNECTOR_AUDIO_CMD`, `spotify_connect` braucht Spotify-Token plus Device-ID, lokale LLMs bleiben im Connector vorerst Ollama-only, und `image_generation` braucht `UWE_CONNECTOR_IMAGE_CMD`. Cloud-KI wird über das UWE-Interface/Gateway angebunden, nicht über falsche Connector-Capabilities.
 
 > **Hinweis:** Docker und der Windows-One-Click-Installer sind **kein** aktiver Produktpfad
 > mehr. Der Zielweg ist Linux-Host + pnpm + systemd (+ optional Cloudflare Tunnel) und der
@@ -102,7 +104,7 @@ Einmaliges bzw. wiederholbares Linux-Host-Setup für den **alten UWE-Host-Laptop
 | Voraussetzung | Hinweis |
 |---------------|---------|
 | Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
-| Node.js 22 (Host) | Production-Setup installiert Node 22; Projekt-Runtime ≥ 20 |
+| Node.js 22 (Host) | Production-Setup installiert Node 22; lokale Checks sollen ebenfalls Node 22 nutzen |
 | pnpm ≥ 10 | `corepack enable && corepack prepare pnpm@latest --activate` |
 | git | Repository typischerweise unter `/opt/uwe` |
 | root/sudo | Script muss als root laufen |
@@ -257,7 +259,7 @@ Persistente Produktionsdaten: `/var/lib/uwe` (DB, Uploads), `/var/backups/uwe` (
 
 ### Prerequisites
 
-- **Node.js** ≥ 20
+- **Node.js** 22
 - **pnpm** ≥ 10 (`corepack enable && corepack prepare pnpm@latest --activate`)
 
 ### Install and run
@@ -277,21 +279,19 @@ pnpm dev:studio   # http://localhost:3000
 pnpm dev:portal   # http://localhost:3001
 ```
 
-### Build and test
+### Local CI gate
+
+CI is currently expected to run locally for the Linux Host + outbound RTX Connector path. Do not rely on GitHub Actions as the active gate for this infrastructure rework.
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm ci:light           # PR gate (matches pr-check.yml)
-pnpm quality            # full gate (matches main CI) — lint, tests, security, audit, build, bundle budget
-pnpm build:release      # production build (includes Prisma generate)
-pnpm test
+pnpm --filter @uwe/database db:generate
+pnpm lint
 pnpm typecheck
-pnpm lint               # ESLint (flat config at eslint.config.mjs, zero warnings allowed)
-pnpm docs:check         # required docs + markdown sanity
-pnpm release:check      # validate release files and version sync
+pnpm test:ci
+pnpm test:security
+pnpm build:release
 ```
-
-Pull requests run a cheap gate in GitHub Actions (`pr-check.yml` — `pnpm ci:light`). Push to `main` runs the full gate (`ci.yml` — `pnpm quality` including bundle budget check, E2E, Postgres smoke). Security runs on `main` and weekly; Cursor agent is manual/release-only. See [docs/engineering/ci.md](docs/engineering/ci.md). Manual QA: [docs/TEST_PLAN.md](docs/TEST_PLAN.md), auth matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Linting uses a single flat ESLint config at the repo root (`eslint.config.mjs`) with
 `eslint-config-next` (core-web-vitals + TypeScript rules) for both apps and all
@@ -304,7 +304,7 @@ Current version: **0.1.0** (see `VERSION` and [CHANGELOG.md](CHANGELOG.md)).
 
 ## DM Workflow Highlights (Studio)
 
-- **KI-gestützter DnD-Generator** — kontextuelle Aktionen (NPC, Ort, Dungeon-Raum, Encounter, Handout, Kanonprüfung, Session-Vorbereitung) über lokale RTX; Review/Apply-Workflow, keine automatische Kanonisierung. Details: [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md).
+- **KI-gestützter DnD-Generator** — kontextuelle Aktionen (NPC, Ort, Dungeon-Raum, Encounter, Handout, Kanonprüfung, Session-Vorbereitung) über lokale RTX/Ollama oder erlaubte Cloud-Modi; Review/Apply-Workflow, keine automatische Kanonisierung. Details: [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md).
 - **World Overview** — `/worlds/[slug]/dashboard` is the per-world start page: stats, next session, open plots, recently edited pages, player-note review queue, portal status, and quick-create shortcuts.
 - **Command Palette** — press `Ctrl/⌘ + K` anywhere in Studio to jump to any view, quick-create entities, switch worlds, or search pages live.
 - **Quick Create with templates** — the new-page form offers templates (NPC, Ort, Fraktion, Quest, Session-Plan, Handout) that pre-fill player-visible content plus DM-only note blocks. Slugs are optional and generated automatically. Templates are DB-backed and user-editable at `/templates` (create, edit, duplicate, deactivate); the built-in set is seeded once as system templates.
@@ -402,7 +402,7 @@ DM-only soundboard buttons are filtered for the Player Portal via the same visib
 
 ## KI-System (Brain & RTX)
 
-UWE Studio bietet ein **lokales Brain** (DnD-/World-Wissen, Sessions, Kanon) und optional **Cloud-KI** nur für allgemeine Fragen ohne Kampagnendaten. Inferenz läuft bevorzugt über einen **RTX-Agent** im Heimnetz (Ollama/LM Studio auf dem RTX-Rechner).
+UWE Studio bietet ein **lokales Brain** (DnD-/World-Wissen, Sessions, Kanon) und optional **Cloud-KI** nur für allgemeine Fragen ohne Kampagnendaten. Die Zielarchitektur ist: UWE Host bleibt Source of Truth, lokale RTX-Leistung kommt über den **outbound RTX Host Connector**, und Cloud-KI wird über das UWE Interface/Gateway kontrolliert angebunden.
 
 ### AI Gateway & RTX-Fallback
 
@@ -415,6 +415,7 @@ Permission → Privacy → Budget → RTX Health → Provider → Usage Log
 | Thema | Details |
 |-------|---------|
 | **Standard** | Lokale RTX bevorzugt (`LOCAL_THEN_CLOUD`) |
+| **Lokaler Connector** | Der outbound Connector meldet `llm_local` / `embedding_local` nur für erreichbare Ollama-Modelle. |
 | **Cloud-Fallback** | Nur wenn Master-Admin (Owner) global freigibt |
 | **Provider & API-Keys** | Nur Master-Admin — verschlüsselt in DB, nie im Frontend |
 | **User-Freigaben** | z. B. Carina gezielt für KI-Features freischalten |
@@ -423,15 +424,16 @@ Permission → Privacy → Budget → RTX Health → Provider → Usage Log
 
 **Setup:** Studio → Cookbook → **KI & RTX Fallback** (`/admin/ai-gateway`) — geführter Master-Admin-Wizard.
 
-Dokumentation: [docs/ai-gateway.md](docs/ai-gateway.md) · [docs/ai-provider-setup.md](docs/ai-provider-setup.md) · [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md) · [docs/ai-troubleshooting.md](docs/ai-troubleshooting.md)
+Dokumentation: [docs/ai-gateway.md](docs/ai-gateway.md) · [docs/ai-provider-setup.md](docs/ai-provider-setup.md) · [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md) · [docs/ai-troubleshooting.md](docs/ai-troubleshooting.md) · [docs/ai-brain-connector-migration.md](docs/ai-brain-connector-migration.md)
 
 **Wichtig:** DnD-Weltwissen, persönliches Life-Brain und private Notizen dürfen standardmäßig **nicht** an Cloud-Provider — siehe Privacy-Regeln im Admin-Wizard.
 
 **ENV (Beispiele, keine echten Secrets):**
 
 ```env
-RTX_AGENT_URL=http://192.168.x.x:8787
-RTX_AGENT_TOKEN=<generiertes-geheimnis>
+UWE_HOST_URL=https://uwe.example
+UWE_CONNECTOR_TOKEN=uwec_...
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 # Optional Cloud-Fallback (zusätzlich im Admin-Wizard konfigurierbar):
 OPENAI_API_KEY=<optional>
 CLOUD_AI_PROVIDER=openai
@@ -440,7 +442,7 @@ CLOUD_AI_PROVIDER=openai
 | Rolle | Rechner | Aufgabe |
 |-------|---------|---------|
 | **UWE Host** | Alter Laptop / Self-Host | Datenbank, Brain, Mail, Studio — **alle persistenten Daten** |
-| **RTX-Agent** | RTX-PC (Heimnetz) | Nur Inferenz-Worker — **speichert keine UWE-Daten** |
+| **RTX Host Connector** | RTX-PC (Heimnetz) | Optionaler outbound Worker — **öffnet keinen Port und speichert keine UWE-Daten** |
 | **Cloud-KI** | Externer Anbieter | Nur allgemeiner Chat — **kein Brain/Weltwissen** |
 
 Details zur Sicherheit: [SECURITY_NOTES.md](SECURITY_NOTES.md) · Deployment: [docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md](docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md)
@@ -452,7 +454,7 @@ Wähle im Admin-Portal (Desktop oder mobil), **welcher Provider** die Anfrage au
 | Modus | Verhalten |
 |-------|-----------|
 | **Auto** | Bevorzugt lokale RTX-KI. Bei **Allgemeinem Chat** und offline RTX: Fallback auf Cloud (wenn konfiguriert). Bei Brain oder aktuellem Objekt: **blockieren**, wenn RTX nicht bereit — **kein Cloud-Fallback**. |
-| **Lokale KI / RTX** | Nur der RTX-Agent. Brain-, Objekt- und Weltkontext erlaubt, wenn RTX **ready** ist. RTX offline/deaktiviert → Anfrage wird abgelehnt. |
+| **Lokale KI / RTX** | Nur lokale RTX. Brain-, Objekt- und Weltkontext erlaubt, wenn RTX **ready** ist. RTX offline/deaktiviert → Anfrage wird abgelehnt. |
 | **Cloud-KI** | Nur **Allgemeiner Chat**. Kein Brain, kein aktuelles Objekt, keine UWE-Weltdaten. |
 
 ### Kontextmodi
@@ -634,15 +636,16 @@ Stand: Juni 2026 · Details: [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATU
 | Rollen (owner/admin/dm/player) | ✅ done | [SECURITY.md](SECURITY.md) |
 | DM-only / Portal-Leak-Schutz | ✅ done | Hard tests + Inspector + Leak Scanner |
 | Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Kalender-Widget/Capture-Bild noch offen |
-| DnD-KI-Generator, Brain, RTX-Router | ✅ done | Cloud nur für Allgemeinen Chat |
+| DnD-KI-Generator, Brain, RTX-Router | ✅ done | Cloud nur für Allgemeinen Chat; Connector lokal vorerst Ollama-only |
 | Static HTML Export | ✅ done | `pnpm export:static` |
 | Markdown/HTML Wiki-Export | ✅ done | `pnpm export:wiki` |
 | Label-Druck (6×4, PDF/HTML) | ✅ done | [docs/LABELS.md](docs/LABELS.md) |
-| Backup/Restore (API, CLI, Windows) | ✅ done | Kern vollständig; Auto-Backup-Scheduler optional — [docs/BACKUP.md](docs/BACKUP.md) |
+| Backup/Restore (API, CLI) | ✅ done | Kern vollständig; Auto-Backup-Scheduler optional — [docs/BACKUP.md](docs/BACKUP.md) |
+| RTX Host Connector | 🔶 partial | Outbound Worker; Audio/Spotify/Image nur mit echten lokalen Backends — [docs/rtx-connector.md](docs/rtx-connector.md) |
 | Image Studio | 🔶 partial | Generate/Variant/Inpaint; kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
 | Kalender | 🔶 partial | Monats-/Wochenansicht, Feeds; vollständiger CalDAV-Sync offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
 | DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import + Encounter-Builder — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
-| Agent Jobs (GitHub Actions) | 🔶 partial | Dispatch + Polling; kein Auto-Merge — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
+| Agent Jobs | 🔶 partial | Dispatch + Polling; kein Auto-Merge — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
 | Mail Center (SMTP) | ✅ done | Studio-only — [docs/ai-brain-mail/README.md](docs/ai-brain-mail/README.md) |
 | Tag-/Taxonomie-Aufräumer | 🔶 partial | `/admin/tags` + Merge-API; zentrales Tag-Model optional — [docs/engineering/tag-taxonomy.md](docs/engineering/tag-taxonomy.md) |
 | Secrets/Reveal (Spoiler-System) | 🔶 partial | Backend + Leak-Schutz; Studio-Editor-UI fehlt — [docs/secrets.md](docs/secrets.md) |
@@ -674,6 +677,7 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md]
 
 ### Partial / in progress
 
+- [ ] RTX Host Connector — first-party Image Worker, AI-Brain Queue Adapter, autostart/tray packaging
 - [ ] Image Studio — Canvas-Editor, Cloud-Edit-Härtung
 - [ ] Kalender — vollständiger CalDAV-Sync, Session ↔ Event Auto-Sync
 - [ ] Agent Jobs — Completion-Callback, Cursor CLI Härtung
@@ -719,13 +723,13 @@ packages/
   mail/            # SMTP compose and templates
   dnd-api/         # Open5e/SRD integration
   knoteforge-import/  # JSON import pipeline
-  agent-jobs/      # GitHub Actions agent dispatch
+  agent-jobs/      # Agent dispatch
   cookbook/        # Admin setup wizards (AI gateway, …)
   web-search/      # Research helpers (Studio-only)
 
 tools/
-  uwe-rtx-agent/   # Local RTX inference worker (home network only)
-  windows-installer/  # Windows one-click setup and maintenance CLI
+  uwe-rtx-connector/  # Optional outbound RTX Host Connector worker
+  uwe-rtx-agent/      # Deprecated inbound local RTX inference worker
 ```
 
 Stack: Next.js 15, React 19, TypeScript, Prisma 7, SQLite (libsql) with optional PostgreSQL.
@@ -750,8 +754,15 @@ Copy `.env.example` to `.env`. Important variables:
 | `RUN_DB_SEED` | Demo seed: `auto` (first empty DB), `true`, or `false` (production) |
 | `UWE_SETUP_TOKEN` | One-time owner bootstrap via Studio `/setup` (required in production first-run) |
 | `AUTH_REQUIRED` | Enforce login on Studio/Portal in production (`true` default) |
-| `RTX_AGENT_URL` | Heimnetz-URL des UWE RTX-Agent (z. B. `http://192.168.x.x:8787`) |
-| `RTX_AGENT_TOKEN` | Shared Secret für RTX-Agent (serverseitig, nicht im Frontend) |
+| `UWE_HOST_URL` | Host URL used by the outbound RTX Connector |
+| `UWE_CONNECTOR_TOKEN` | One-time connector token generated in Studio; plaintext lives only on the connector machine |
+| `UWE_CONNECTOR_AUDIO_CMD` | Local audio command; enables `audio_local` when set |
+| `SPOTIFY_DEVICE_ID` | Spotify Connect device for connector jobs |
+| `SPOTIFY_ACCESS_TOKEN` / `UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN` | Enables `spotify_connect` together with `SPOTIFY_DEVICE_ID` |
+| `UWE_CONNECTOR_IMAGE_CMD` | Local image worker command; enables `image_generation` when set |
+| `OLLAMA_BASE_URL` | Ollama endpoint for local connector LLM/embedding jobs |
+| `RTX_AGENT_URL` | Deprecated inbound RTX-Agent URL for compatibility |
+| `RTX_AGENT_TOKEN` | Shared Secret für deprecated RTX-Agent (serverseitig, nicht im Frontend) |
 | `RTX_HEALTHCHECK_INTERVAL_MS` | Intervall für RTX-Statusprüfung (Standard: `10000`) |
 | `RTX_TIMEOUT_MS` | Timeout pro RTX-Healthcheck (Standard: `3000`) |
 | `PREFERRED_LOCAL_MODEL` | Bevorzugtes lokales Modell für RTX |
@@ -759,7 +770,7 @@ Copy `.env.example` to `.env`. Important variables:
 | `CLOUD_AI_API_KEY` | API-Key — nur in `.env`, nie in Git |
 | `CLOUD_AI_MODEL` | Cloud-Modell für Allgemeinen Chat |
 
-Weitere Brain-/Inferenz-Variablen: siehe `.env.example` und Abschnitt [KI-System](#ki-system-brain--rtx).
+Weitere Brain-/Inferenz-Variablen: siehe `.env.example`, `tools/uwe-rtx-connector/.env.example` und Abschnitt [KI-System](#ki-system-brain--rtx).
 
 ## Backup & Restore
 
@@ -767,7 +778,7 @@ Weitere Brain-/Inferenz-Variablen: siehe `.env.example` und Abschnitt [KI-System
 |---------|----------|
 | Studio UI | Studio → Backup erstellen / Wiederherstellen |
 | CLI | `pnpm backup` · `pnpm backup:create` |
-| Windows Steuerung | Desktop „UWE Steuerung“ → Backup erstellen |
+| Linux Host | `deploy/scripts/uwe-backup.sh` |
 | Architektur & Rollen | [docs/BACKUP.md](docs/BACKUP.md) · [docs/backup-restore.md](docs/backup-restore.md) |
 
 Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized). ShareLinks werden ohne Tokens exportiert; Restore regeneriert Tokens. **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`. Optional: Auto-Backup-Scheduler noch in Arbeit — siehe [docs/BACKUP.md](docs/BACKUP.md).
@@ -789,7 +800,7 @@ Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized
 
 **Portal** may be hosted more openly; only content marked `player_visible` or `public` (and published) is served on `/worlds/*`.
 
-> **Warning:** Never expose the RTX agent, Ollama, or LM Studio to the internet. Cloudflare Tunnel must point **only** to UWE (Studio + Portal), never to inference endpoints.
+> **Warning:** Never expose the deprecated RTX agent, Ollama, LM Studio, llama.cpp, or local connector helper commands to the internet. Cloudflare Tunnel must point **only** to UWE (Studio + Portal), never to inference endpoints. The RTX Host Connector itself connects outbound and does not need an inbound port.
 
 ---
 
@@ -809,6 +820,8 @@ Private project — all rights reserved.
 | [docs/daily-admin-os.md](docs/daily-admin-os.md) | Daily Admin OS — routes and integration status |
 | [docs/dnd-generator-upgrade.md](docs/dnd-generator-upgrade.md) | DnD-KI-Generator — actions, review, player safety |
 | [docs/life-brain-privacy.md](docs/life-brain-privacy.md) | Privacy rules for personal brain |
+| [docs/host-linux.md](docs/host-linux.md) | Linux Host setup and local CI gate |
+| [docs/rtx-connector.md](docs/rtx-connector.md) | Outbound RTX Host Connector |
 | [docs/engineering/ci.md](docs/engineering/ci.md) | CI workflows and local quality gates |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Planned and in-progress features |
 | [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md) | Honest feature maturity assessment |
