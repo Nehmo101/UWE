@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   AdminShell,
+  isDesignV2Enabled,
   NavSidebarSections,
   StudioNavSidebar,
   StudioShell,
@@ -13,10 +14,12 @@ import {
   studioUnifiedSidebarSections,
   resolveStudioRailActiveId,
   worldBottomNavKey,
-  worldNavItems,
+  worldNavSections,
   type WorldBottomNavKey,
   type WorldNavKey,
+  type WorldNavSection,
 } from "@/src/lib/studio-navigation";
+import { StudioAppShellV2 } from "./StudioAppShellV2";
 
 export type StudioAppShellVariant = "dashboard" | "admin" | "world" | "module";
 
@@ -52,42 +55,66 @@ export interface StudioAppShellProps {
   cockpitMode?: boolean;
   cockpitWorlds?: { name: string; slug: string }[];
   statusFooter?: ReactNode;
-  /** Use unified Portal/Studio/Bibliothek sidebar instead of full IA sections */
+  /** Use the reduced canonical Studio IA sidebar. */
   unifiedSidebar?: boolean;
 }
 
+function applyCampaignToWorldSections(
+  sections: WorldNavSection[],
+  campaignSlug?: string,
+): WorldNavSection[] {
+  if (!campaignSlug) return sections;
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+      item.key === "new-page" ? { ...item, href: `${item.href}?campaign=${campaignSlug}` } : item,
+    ),
+  }));
+}
+
+function worldDefaultOpenTitles(sections: WorldNavSection[]) {
+  const activeTitle = sections.find((section) => section.items.some((item) => item.active))?.title;
+  return Array.from(new Set(["Übersicht", "Inhalte", activeTitle].filter(Boolean) as string[]));
+}
+
 /** Unified Studio shell with sectioned navigation. */
-export function StudioAppShell({
-  variant = "module",
-  activePath,
-  children,
-  title,
-  summary,
-  actions,
-  bottomNav,
-  showRail = true,
-  railActiveId: railActiveIdProp,
-  showSearch = false,
-  worldSlug,
-  worldActive,
-  campaignSlug,
-  searchQuery = "",
-  bottomNavActive,
-  sidebarExtra,
-  context,
-  contextTitle,
-  breadcrumbs,
-  backHref,
-  backLabel = "Zurück",
-  topBarExtra,
-  searchAction = "/search",
-  searchPlaceholder = "Global suchen…",
-  sidebar: sidebarOverride,
-  cockpitMode = false,
-  cockpitWorlds = [],
-  statusFooter,
-  unifiedSidebar = true,
-}: StudioAppShellProps) {
+export function StudioAppShell(props: StudioAppShellProps) {
+  if (isDesignV2Enabled()) {
+    return <StudioAppShellV2 {...props} />;
+  }
+
+  const {
+    variant = "module",
+    activePath,
+    children,
+    title,
+    summary,
+    actions,
+    bottomNav,
+    showRail = true,
+    railActiveId: railActiveIdProp,
+    showSearch = false,
+    worldSlug,
+    worldActive,
+    campaignSlug,
+    searchQuery = "",
+    bottomNavActive,
+    sidebarExtra,
+    context,
+    contextTitle,
+    breadcrumbs,
+    backHref,
+    backLabel = "Zurück",
+    topBarExtra,
+    searchAction = "/search",
+    searchPlaceholder = "Global suchen…",
+    sidebar: sidebarOverride,
+    cockpitMode = false,
+    cockpitWorlds = [],
+    statusFooter,
+    unifiedSidebar = true,
+  } = props;
+
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const sidebarSections = unifiedSidebar
     ? studioUnifiedSidebarSections(activePath)
@@ -143,12 +170,10 @@ export function StudioAppShell({
   if (variant === "world" && worldSlug) {
     const bottomKey =
       bottomNavActive ?? worldBottomNavKey(worldActive ?? "overview", Boolean(searchQuery?.trim()));
-    const navItems = worldNavItems(worldSlug, worldActive).map((item) => {
-      if (item.key === "new-page" && campaignSlug) {
-        return { ...item, href: `${item.href}?campaign=${campaignSlug}` };
-      }
-      return item;
-    });
+    const worldSections = applyCampaignToWorldSections(
+      worldNavSections(worldSlug, worldActive),
+      campaignSlug,
+    );
 
     return (
       <StudioShell
@@ -161,11 +186,11 @@ export function StudioAppShell({
         pageHeader={pageHeader}
         sidebar={
           <>
+            <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Welten"]} />
             <NavSidebarSections
-              sections={sidebarSections}
-              defaultOpenTitles={unifiedSidebar ? ["Portal", "Studio"] : ["Dashboard", "Welten & Kampagnen"]}
+              sections={worldSections}
+              defaultOpenTitles={worldDefaultOpenTitles(worldSections)}
             />
-            <StudioNavSidebar title="Welt" items={navItems} />
             {sidebarExtra}
           </>
         }
@@ -181,7 +206,7 @@ export function StudioAppShell({
         pageHeader={pageHeader}
         sidebar={
           unifiedSidebar ? (
-            <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Portal", "Studio"]} />
+            <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Heute", "Welten"]} />
           ) : (
             <StudioNavSidebar title="Studio" items={studioDashboardNav(activePath)} />
           )
@@ -196,7 +221,7 @@ export function StudioAppShell({
       <AdminShell
         activePath={activePath}
         navItems={sidebarSections.flatMap((section) => section.items)}
-        title={title ?? "Admin"}
+        title={title ?? "System"}
         summary={summary ?? ""}
         actions={actions}
         bottomNav={bottomNav}
@@ -211,14 +236,7 @@ export function StudioAppShell({
       pageHeader={pageHeader}
       sidebar={
         sidebarOverride ?? (
-          <NavSidebarSections
-            sections={sidebarSections}
-            defaultOpenTitles={
-              unifiedSidebar
-                ? ["Studio", "Bibliothek", "Administration"]
-                : ["Dashboard", "Inhalte & Medien", "Einstellungen"]
-            }
-          />
+          <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Heute", "Welten"]} />
         )
       }
       main={headerBlock}
