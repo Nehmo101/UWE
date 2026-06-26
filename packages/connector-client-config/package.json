@@ -1,0 +1,24 @@
+{
+  "name": "@uwe/connector-client-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UWE RTX Connector Client local settings — types, validation, and UI helpers (no filesystem I/O; Tauri handles persistence)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}
