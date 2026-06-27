@@ -4,22 +4,22 @@ Guide for deploying UWE behind **Cloudflare Tunnel** with a **public player Port
 
 ## Architecture
 
-```
+```text
 Internet
-   │
-   ▼
+   |
+   v
 Cloudflare (DNS + Tunnel + Access)
-   │
-   ├──► Portal (public)     https://wiki.example.com  →  :3001
-   │
-   └──► Studio (protected)  https://studio.example.com →  :3000
-                              ↑ Cloudflare Access required
+   |
+   |---> Portal (public)     https://wiki.example.com  ->  :3001
+   |
+   `---> Studio (protected)  https://studio.example.com ->  :3000
+                              ^ Cloudflare Access required
 
 Home LAN (NOT in Tunnel)
-   └──► RTX Agent / Ollama   http://192.168.x.x:11434
+   `---> Ollama / LM Studio / optional RTX Worker   http://192.168.x.x:11434
 ```
 
-**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, or the RTX Agent to the internet.
+**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, the RTX Host Connector, or any direct RTX worker endpoint to the internet.
 
 ## Recommended Cloudflare Setup
 
@@ -88,32 +88,24 @@ SESSION_COOKIE_SAMESITE=lax
 PLAYER_PREVIEW_ALLOW_DM_ONLY=false
 PLAYER_PREVIEW_PUBLIC=false
 
-# Data paths (Docker or host)
-DATABASE_URL=file:/data/uwe.db
+# Data paths (host)
+DATABASE_URL=file:/var/lib/uwe/uwe.db
 UWE_DATA_DIR=/var/lib/uwe
 
-# RTX — private LAN IP only, NOT public URL
-RTX_AGENT_URL=http://192.168.1.50:8765
-RTX_AGENT_TOKEN=<rtx-agent-token>
-# AI_INFERENCE_ALLOW_PUBLIC_URL=false  (default)
+# RTX — private LAN only, NOT public URLs
+AI_INFERENCE_ALLOW_PUBLIC_URL=false
+# AI_INFERENCE_BASE_URL=http://192.168.1.50:11434
+# Optional direct worker endpoint for image/security-boundary path:
+# RTX_BASE_URL=http://192.168.1.50:8765
+# RTX_SERVICE_TOKEN=<rtx-worker-token>
 
 # Upload limit (optional)
 # UWE_MAX_UPLOAD_BYTES=52428800
 ```
 
-## Docker Compose Notes
+## Host Notes
 
-```yaml
-environment:
-  AUTH_SECRET: ${AUTH_SECRET}  # Never use default placeholder
-  RUN_DB_SEED: "false"
-  STUDIO_API_TOKEN: ${STUDIO_API_TOKEN}
-  AUTH_REQUIRED: "true"
-  TRUST_PROXY: "true"
-  CLOUDFLARE_TUNNEL: "true"
-```
-
-Mount persistent volume for `/data` (database + uploads + backups).
+The active host product path is Linux + `pnpm` + `systemd`; Docker and the old Windows host installer are no longer the supported runtime. Keep persistent data under a dedicated host path such as `/var/lib/uwe` and backups under `/var/backups/uwe`.
 
 ## Post-Deploy Verification
 
