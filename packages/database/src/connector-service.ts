@@ -23,6 +23,7 @@ import {
   type ConnectorCapability,
   type ConnectorJobType,
   type ConnectorLane,
+  type ConnectorModelType,
   type ConnectorStatus,
 } from "@uwe/connector";
 
@@ -60,6 +61,14 @@ export interface ConnectorModelInfo {
   status?: string;
   contextLength?: number;
   capabilities?: string[];
+  /** Friendly label shown in the host model picker. */
+  displayName?: string;
+  description?: string;
+  /** Short use-case hints reported by the connector. */
+  bestFor?: string[];
+  modelType?: ConnectorModelType;
+  /** True for all models the connector sends — only enabled models are reported. */
+  enabledForUwe?: boolean;
 }
 
 export interface ConnectorSummary {

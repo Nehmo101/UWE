@@ -16,6 +16,7 @@
   "dependencies": {
     "@tauri-apps/api": "2.0.0",
     "@uwe/connector-client-config": "workspace:*",
+    "@uwe/connector-model-profile": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

@@ -22,6 +22,7 @@ import {
 } from "@uwe/connector";
 
 import { HostClient } from "./host-client";
+import { JobHistory, jobHistoryPath } from "./job-history";
 import {
   detectCapabilities,
   resolveCapabilityEnv,
@@ -31,6 +32,11 @@ import {
   resolveDiscoveryConfig,
   type DiscoveryConfig,
 } from "./llm-discovery";
+import { configureConnectorLogFile, connectorLogPath } from "./logging";
+import {
+  loadModelProfileStore,
+  resolveConnectorDataDir,
+} from "./model-profile-store";
 import { ConnectorRunner } from "./runner";
 
 export const CONNECTOR_VERSION = "1.0.0";
@@ -90,6 +96,8 @@ export interface CreateConnectorRunnerOk {
   runner: ConnectorRunner;
   config: ConnectorRuntimeConfig;
   discoveryConfig: DiscoveryConfig;
+  /** Resolved client data directory (model store, job history, log file). */
+  dataDir: string;
 }
 
 export interface CreateConnectorRunnerError {
@@ -122,9 +130,20 @@ export function createConnectorRunner(
   const discoveryConfig = resolveDiscoveryConfig();
   const capabilityEnv = resolveCapabilityEnv();
 
+  // Client data dir holds the model profile store, job history, and log ring.
+  const dataDir = resolveConnectorDataDir();
+  configureConnectorLogFile(connectorLogPath(dataDir));
+  const history = new JobHistory({ persistPath: jobHistoryPath(dataDir) });
+
+  // The store is reloaded on every discovery so toggling a model in the client
+  // takes effect on the next heartbeat without restarting the connector.
   const discover = async () => {
-    const llms = await discoverLocalLlms(discoveryConfig);
-    return detectCapabilities(llms, capabilityEnv, config.forcedCapabilities);
+    const store = loadModelProfileStore(dataDir);
+    const llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
+    return detectCapabilities(llms, capabilityEnv, {
+      profiles: store.profiles,
+      forced: config.forcedCapabilities,
+    });
   };
 
   const client = new HostClient(config.hostUrl, config.token);
@@ -133,6 +152,7 @@ export function createConnectorRunner(
     config,
     version: CONNECTOR_VERSION,
     discover,
+    history,
     executorBase: {
       ollamaUrl: discoveryConfig.ollamaUrl,
       audioCommand: process.env.UWE_CONNECTOR_AUDIO_CMD?.trim() || undefined,
@@ -146,5 +166,5 @@ export function createConnectorRunner(
     },
   });
 
-  return { ok: true, runner, config, discoveryConfig };
+  return { ok: true, runner, config, discoveryConfig, dataDir };
 }

@@ -1,19 +1,21 @@
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
-    process::Child,
+    process::{Child, Command, Output, Stdio},
     sync::Mutex,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use dirs::data_local_dir;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{Manager, RunEvent, State};
 use url::Url;
 
 /// Relative path (from the monorepo root) to the Node desktop launcher that
 /// runs the outbound connector work loop.
 const CONNECTOR_LAUNCHER_REL: &str = "tools/uwe-rtx-connector/src/desktop-launcher.ts";
+const CONNECTOR_CLIENT_CLI_REL: &str = "tools/uwe-rtx-connector/src/client-cli.ts";
 
 /// Timeout for the host connection test request.
 const HOST_TEST_TIMEOUT: Duration = Duration::from_secs(10);
@@ -70,6 +72,12 @@ struct HostConnectionTestResult {
     checked_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PullOllamaResult {
+    events: Vec<serde_json::Value>,
+    store: serde_json::Value,
+}
+
 #[derive(Debug, Default)]
 struct ConnectorRuntimeState {
     running: bool,
@@ -117,6 +125,74 @@ fn resolve_monorepo_root() -> PathBuf {
     }
 
     PathBuf::from(".")
+}
+
+fn build_client_cli_command(args: &[&str]) -> Result<Command, String> {
+    let root = resolve_monorepo_root();
+    let data_dir = connector_app_data_dir()?;
+
+    let mut command = Command::new("node");
+    command
+        .arg("--import")
+        .arg("tsx")
+        .arg(CONNECTOR_CLIENT_CLI_REL)
+        .args(args)
+        .current_dir(&root)
+        .env("UWE_RUNTIME_ROLE", "rtx-connector-client")
+        .env("UWE_CONNECTOR_CLIENT_DATA_DIR", &data_dir);
+
+    Ok(command)
+}
+
+fn client_cli_output_to_string(action: &str, output: Output) -> Result<String, String> {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let detail = if !stderr.is_empty() {
+            stderr
+        } else if !stdout.is_empty() {
+            stdout
+        } else {
+            "Kein Fehlertext ausgegeben.".to_string()
+        };
+
+        return Err(format!("client-cli {action} fehlgeschlagen: {detail}"));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn run_client_cli(args: &[&str]) -> Result<String, String> {
+    let output = build_client_cli_command(args)?
+        .output()
+        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {error}"))?;
+
+    client_cli_output_to_string(&args.join(" "), output)
+}
+
+fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<String, String> {
+    let mut command = build_client_cli_command(args)?;
+    command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {error}"))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(stdin_payload.as_bytes())
+            .map_err(|error| format!("client-cli stdin konnte nicht geschrieben werden: {error}"))?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("client-cli konnte nicht abgeschlossen werden: {error}"))?;
+
+    client_cli_output_to_string(&args.join(" "), output)
+}
+
+fn parse_client_cli_json<T: DeserializeOwned>(raw: &str, label: &str) -> Result<T, String> {
+    serde_json::from_str(raw).map_err(|error| format!("{label} konnte nicht geparst werden: {error}"))
 }
 
 /// Reconcile the runtime state with the real child process: detect a process
@@ -272,6 +348,71 @@ fn status_snapshot(
 }
 
 #[tauri::command]
+fn get_model_store() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["model-store-get"])?;
+    parse_client_cli_json(&raw, "Model-Store")
+}
+
+#[tauri::command]
+fn save_model_store(store: serde_json::Value) -> Result<serde_json::Value, String> {
+    let payload = serde_json::to_string(&store)
+        .map_err(|error| format!("Model-Store konnte nicht serialisiert werden: {error}"))?;
+    let raw = run_client_cli_with_stdin(&["model-store-save"], &payload)?;
+    parse_client_cli_json(&raw, "Model-Store")
+}
+
+#[tauri::command]
+fn scan_models() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["scan"])?;
+    parse_client_cli_json(&raw, "Scan-Ergebnis")
+}
+
+#[tauri::command]
+fn pull_ollama_model(name: String) -> Result<PullOllamaResult, String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Ollama-Modellname darf nicht leer sein.".to_string());
+    }
+
+    let raw = run_client_cli(&["pull-ollama", trimmed])?;
+    let mut events = Vec::new();
+    let mut store: Option<serde_json::Value> = None;
+
+    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        let value: serde_json::Value = serde_json::from_str(line)
+            .map_err(|error| format!("Ollama-Pull-Ausgabe ist kein gueltiges JSON: {error}"))?;
+
+        if value.get("profiles").is_some() && value.get("scanPaths").is_some() {
+            store = Some(value);
+        } else {
+            events.push(value);
+        }
+    }
+
+    let store = store.ok_or_else(|| {
+        "Ollama-Pull lieferte keinen aktualisierten Model-Store zuruueck.".to_string()
+    })?;
+
+    Ok(PullOllamaResult { events, store })
+}
+
+#[tauri::command]
+fn list_connector_jobs() -> Result<Vec<serde_json::Value>, String> {
+    let raw = run_client_cli(&["jobs"])?;
+    parse_client_cli_json(&raw, "Job-Historie")
+}
+
+#[tauri::command]
+fn list_connector_logs(category: Option<String>) -> Result<Vec<String>, String> {
+    let raw = match category.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["logs", value])?,
+        None => run_client_cli(&["logs"])?,
+    };
+
+    parse_client_cli_json(&raw, "Connector-Logs")
+}
+
+#[tauri::command]
 fn read_config() -> Result<ConnectorClientConfig, String> {
     read_config_from_disk()
 }
@@ -342,6 +483,7 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
     }
 
     let root = resolve_monorepo_root();
+    let data_dir = connector_app_data_dir()?;
     let mut command = std::process::Command::new("node");
     command
         .arg("--import")
@@ -352,6 +494,7 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
         .env("UWE_HOST_URL", &config.host_url)
         .env("UWE_CONNECTOR_TOKEN", &config.token)
         .env("UWE_CONNECTOR_NAME", &config.name)
+        .env("UWE_CONNECTOR_CLIENT_DATA_DIR", &data_dir)
         .env(
             "UWE_CONNECTOR_QUEUE_ENABLED",
             if config.queue_enabled { "true" } else { "false" },
@@ -526,7 +669,13 @@ pub fn run() {
             get_connector_status,
             start_connector,
             stop_connector,
-            test_host_connection
+            test_host_connection,
+            get_model_store,
+            save_model_store,
+            scan_models,
+            pull_ollama_model,
+            list_connector_jobs,
+            list_connector_logs
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

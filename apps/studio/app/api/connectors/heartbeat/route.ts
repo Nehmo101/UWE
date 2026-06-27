@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { CONNECTOR_CAPABILITIES } from "@uwe/connector";
+import { CONNECTOR_CAPABILITIES, CONNECTOR_MODEL_TYPES } from "@uwe/connector";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { parseBody } from "@uwe/security";
 
@@ -14,6 +14,11 @@ const modelSchema = z.object({
   status: z.string().max(32).optional(),
   contextLength: z.number().int().nonnegative().optional(),
   capabilities: z.array(z.string().max(32)).max(16).optional(),
+  displayName: z.string().max(120).optional(),
+  description: z.string().max(500).optional(),
+  bestFor: z.array(z.string().max(60)).max(16).optional(),
+  modelType: z.enum(CONNECTOR_MODEL_TYPES).optional(),
+  enabledForUwe: z.boolean().optional(),
 });
 
 const heartbeatSchema = z.object({

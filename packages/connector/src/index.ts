@@ -20,6 +20,13 @@ export {
 } from "./degraded";
 
 export {
+  CONNECTOR_MODEL_TYPES,
+  isConnectorModelType,
+  type ConnectorModelInfo,
+  type ConnectorModelType,
+} from "./model-types";
+
+export {
   CONNECTOR_JOB_TYPES,
   CONNECTOR_JOB_DESCRIPTORS,
   CONNECTOR_LANES,

@@ -10,11 +10,13 @@
   "scripts": {
     "start": "tsx src/index.ts start",
     "desktop:start": "tsx src/desktop-launcher.ts",
+    "client-cli": "tsx src/client-cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/connector": "workspace:*"
+    "@uwe/connector": "workspace:*",
+    "@uwe/connector-model-profile": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

@@ -9,6 +9,7 @@ import {
   createConnectorRunner,
   loadConnectorEnvFile,
 } from "./bootstrap";
+import { configureConnectorLogFile } from "./logging";
 
 const CONNECTOR_ENV_KEYS = [
   "UWE_HOST_URL",
@@ -18,6 +19,7 @@ const CONNECTOR_ENV_KEYS = [
   "UWE_CONNECTOR_CAPABILITIES",
   "UWE_CONNECTOR_POLL_MS",
   "UWE_CONNECTOR_HEARTBEAT_MS",
+  "UWE_CONNECTOR_CLIENT_DATA_DIR",
   "BOOTSTRAP_TEST_ONLY",
   "BOOTSTRAP_PREEXISTING",
 ];
@@ -42,6 +44,8 @@ afterEach(() => {
       process.env[key] = savedEnv[key];
     }
   }
+  // Reset the module-global log sink so other test files are unaffected.
+  configureConnectorLogFile(null);
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -105,6 +109,9 @@ test("createConnectorRunner returns an error result when config is incomplete", 
 });
 
 test("createConnectorRunner builds a runner and resolved config from the env file", () => {
+  // Point the client data dir at the temp dir so model store / job history /
+  // log files never touch the real home directory during tests.
+  process.env.UWE_CONNECTOR_CLIENT_DATA_DIR = tmpDir;
   const path = writeEnv(
     [
       "UWE_HOST_URL=https://host.test/",
@@ -123,6 +130,7 @@ test("createConnectorRunner builds a runner and resolved config from the env fil
     assert.equal(result.config.name, "My RTX");
     assert.equal(result.config.pollIntervalMs, 1234);
     assert.ok(result.discoveryConfig.ollamaUrl);
+    assert.equal(result.dataDir, tmpDir);
     assert.equal(typeof result.runner.refresh, "function");
     assert.equal(result.runner.activeJobCount, 0);
   }

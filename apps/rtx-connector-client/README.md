@@ -2,14 +2,15 @@
 
 Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
 
-## Scope in P0
+## Scope in P1
 
 - React 19 + TypeScript + Vite frontend in UWE Parchment style (`@uwe/shared-ui`)
 - Tauri 2 shell with local JSON config in `%LOCALAPPDATA%/UWE/rtx-connector-client/`
 - **Übersicht**, **Verbindung**, **Einstellungen** + 8-step **Erststart-Wizard**
 - Starts/stops the same Connector Core as `pnpm connector:start` via `desktop-launcher.ts`
 - Real host connection test: `GET /api/connectors/config` with Bearer token
-- Placeholders for all 14 product navigation areas
+- **Downloads**, **Modell-Bibliothek**, **UWE-Freigabe**, **Jobs** und **Logs** aktiv
+- Model-Store CRUD via `client-cli.ts` (`model-store-get/save`, `scan`, `pull-ollama`, `jobs`, `logs`)
 
 ## Commands
 
@@ -33,16 +34,17 @@ Tauri UI  →  start/stop  →  node --import tsx tools/uwe-rtx-connector/src/de
 
 The headless CLI (`pnpm connector:start`) remains unchanged.
 
-## Local config
+## Local config / data dir
 
-`config.json` in Windows local app data. Shape defined in `@uwe/connector-client-config`.
+- `config.json` in Windows local app data. Shape defined in `@uwe/connector-client-config`.
+- `model-store.json`, `job-history.json` und Connector-Logs liegen daneben im selben Tauri-AppData-Verzeichnis.
 
 ## Phased rollout
 
 | Phase | Focus |
 |-------|--------|
-| P0 | Shell, connection, wizard, process control (this PR) |
-| P1 | Model library, Ollama pull, UWE release, jobs, logs |
+| P0 | Shell, connection, wizard, process control |
+| P1 | Model library, Ollama pull, UWE release, jobs, logs (current) |
 | P2 | Cookbook (`@uwe/cookbook`), runners, Ollama start, security page |
 | P3 | Hugging Face downloads |
 | P4 | Spotify OAuth, audio, image worker |
