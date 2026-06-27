@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "tsx src/index.ts start",
+    "desktop:start": "tsx src/desktop-launcher.ts",
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },

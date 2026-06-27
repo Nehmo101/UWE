@@ -1,0 +1,336 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter,
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--uwe-accent) 14%, transparent), transparent 28%),
+    var(--uwe-bg);
+  color: var(--uwe-fg);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.connector-shell {
+  display: grid;
+  grid-template-columns: 18rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.connector-sidebar {
+  border-right: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-sidebar-bg) 90%, transparent);
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.connector-brand h1,
+.connector-header h2 {
+  margin: 0;
+}
+
+.connector-brand p,
+.connector-header p,
+.connector-muted {
+  color: var(--uwe-fg-muted);
+}
+
+.connector-kicker {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--uwe-warning);
+}
+
+.connector-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.connector-nav-item {
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 70%, transparent);
+  background: transparent;
+  color: var(--uwe-fg);
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.connector-nav-item:hover {
+  border-color: color-mix(in srgb, var(--uwe-accent) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent-muted) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.connector-nav-item small {
+  color: var(--uwe-fg-subtle);
+}
+
+.connector-nav-item.is-active {
+  border-color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent-muted) 80%, transparent);
+}
+
+.connector-main {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.connector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.connector-header-actions,
+.connector-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.connector-banner {
+  border: 1px solid var(--uwe-border);
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.connector-banner-success {
+  border-color: color-mix(in srgb, var(--uwe-success) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-success) 10%, transparent);
+}
+
+.connector-banner-error {
+  border-color: color-mix(in srgb, var(--uwe-danger) 50%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-danger) 10%, transparent);
+}
+
+.connector-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.connector-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.connector-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connector-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.connector-grid-span-2 {
+  grid-column: span 2;
+}
+
+.connector-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.connector-stat {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+}
+
+.connector-kv {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.connector-kv div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--uwe-border-muted);
+  padding-bottom: 0.65rem;
+}
+
+.connector-kv dt {
+  color: var(--uwe-fg-subtle);
+}
+
+.connector-kv dd {
+  margin: 0;
+  text-align: right;
+}
+
+.connector-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.connector-field,
+.connector-checkbox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.connector-field-full {
+  grid-column: 1 / -1;
+}
+
+.connector-input,
+.connector-select {
+  width: 100%;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 88%, transparent);
+  color: var(--uwe-fg);
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.connector-input:focus,
+.connector-select:focus {
+  outline: none;
+  border-color: var(--uwe-accent);
+  box-shadow: 0 0 0 3px var(--uwe-focus-shadow);
+}
+
+.connector-checkbox {
+  flex-direction: row;
+  align-items: center;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: 0.9rem;
+  padding: 0.85rem 0.95rem;
+  background: color-mix(in srgb, var(--uwe-card-bg) 90%, transparent);
+}
+
+.connector-checkbox input {
+  margin: 0;
+}
+
+.connector-phase-list,
+.connector-note-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.connector-phase-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.connector-phase-list span {
+  color: var(--uwe-fg-subtle);
+  white-space: nowrap;
+}
+
+.connector-lead {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.connector-boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--uwe-fg-muted);
+}
+
+.connector-wizard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--uwe-bg) 35%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.connector-wizard-card {
+  width: min(42rem, 100%);
+}
+
+@media (max-width: 1100px) {
+  .connector-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .connector-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--uwe-border);
+  }
+}
+
+@media (max-width: 760px) {
+  .connector-header {
+    flex-direction: column;
+  }
+
+  .connector-grid-2,
+  .connector-grid-3,
+  .connector-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .connector-grid-span-2,
+  .connector-field-full {
+    grid-column: auto;
+  }
+
+  .connector-kv div,
+  .connector-phase-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .connector-kv dd {
+    text-align: left;
+  }
+}

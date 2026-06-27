@@ -1,0 +1,33 @@
+{
+  "name": "@uwe/rtx-connector-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Windows-focused Tauri desktop client for the UWE RTX Connector",
+  "scripts": {
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "dev:web": "vite",
+    "build": "vite build",
+    "build:web": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.0.0",
+    "@uwe/connector-client-config": "workspace:*",
+    "@uwe/shared-ui": "workspace:*",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.0.0",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@uwe/config": "workspace:*",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.0"
+  }
+}

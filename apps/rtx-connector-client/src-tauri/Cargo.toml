@@ -1,0 +1,22 @@
+[package]
+name = "uwe_rtx_connector_client"
+version = "0.1.0"
+description = "UWE RTX Connector Client"
+authors = ["UWE"]
+edition = "2021"
+build = "build.rs"
+
+[lib]
+name = "uwe_rtx_connector_client_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = "=2.0.0"
+
+[dependencies]
+dirs = "6.0.0"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0.228", package = "serde", features = ["derive"] }
+serde_json = "1.0.150"
+tauri = "=2.0.0"
+url = "2.5.8"
