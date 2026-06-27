@@ -168,12 +168,12 @@ Details: [SECURITY_NOTES.md](SECURITY_NOTES.md).
 
 ## RTX / AI Worker Exposure
 
-**Never expose the RTX agent, Ollama, or LM Studio to the public internet.**
+**Never expose the RTX Connector helper endpoints, RTX worker, Ollama, or LM Studio to the public internet.**
 
-- No Cloudflare Tunnel or port-forward to the RTX machine
-- `RTX_AGENT_URL` must be a private LAN IP or `localhost`
+- No Cloudflare Tunnel or port-forward to the RTX machine or local inference endpoints
+- `RTX_BASE_URL` must point to a private LAN IP or `localhost` when a direct RTX worker is used
 - `AI_INFERENCE_ALLOW_PUBLIC_URL=false` (default) blocks public RTX URLs
-- RTX agent stores no UWE data — inference only
+- The RTX Host Connector connects outbound to UWE and stores no UWE source-of-truth data
 
 ---
 
@@ -228,7 +228,7 @@ Before exposing UWE to the internet:
 - [ ] **Studio:** Cloudflare Access or VPN **plus** session login; set `STUDIO_API_TOKEN` for API hardening
 - [ ] **Portal:** review `AUTH_REQUIRED`, `PLAYER_PREVIEW_PUBLIC`, share-link settings
 - [ ] `SESSION_COOKIE_SECURE=true` behind HTTPS
-- [ ] RTX agent on private LAN only — not in tunnel config
+- [ ] RTX Connector and local inference endpoints on private LAN only — never in tunnel config
 - [ ] Back up `./data/` and Docker volume `uwe-database` before updates
 - [ ] AI/cloud API keys only in `.env`
 - [ ] Multi-instance: rate limiting at reverse proxy or `setRateLimitStore()` (Redis/Upstash)

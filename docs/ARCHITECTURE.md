@@ -73,7 +73,7 @@ flowchart LR
 - **Studio ist die Schreib- und Admin-Oberfläche.** Hier entstehen Inhalte, Imports, Generator-Ausgaben, Inspector-Fixes, Backups und Exporte.
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
-- **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` (`RTX_AGENT_URL`) bleibt nur als **deprecated** Kompatibilität bestehen.
+- **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
 - **Cloud-KI darf kein Brain/Weltwissen erhalten.** Cloud-Fallback ist nur für allgemeinen Chat ohne UWE-Kontext vorgesehen.
 
 ---

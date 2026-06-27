@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="UWE RTX Connector">
+  <rect width="256" height="256" rx="48" fill="#171512"/>
+  <path d="M56 76c0-13.255 10.745-24 24-24h96c13.255 0 24 10.745 24 24v104c0 13.255-10.745 24-24 24H80c-13.255 0-24-10.745-24-24V76z" fill="#f2dfb7"/>
+  <path d="M82 90h92v18H82V90zm0 34h92v18H82v-18zm0 34h52v18H82v-18z" fill="#332d24"/>
+  <path d="M158 156l32-32 13 13-45 45-25-25 13-13 12 12z" fill="#2f7d5f"/>
+  <path d="M42 116h28v24H42v-24zm144 0h28v24h-28v-24z" fill="#8fb9a8"/>
+  <path d="M116 28h24v36h-24V28zm0 164h24v36h-24v-36z" fill="#8fb9a8"/>
+</svg>

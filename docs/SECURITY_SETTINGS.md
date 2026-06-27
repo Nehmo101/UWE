@@ -14,7 +14,7 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 
 | Secret | Feature |
 |--------|---------|
-| `RTX_AGENT_TOKEN` | Image + AI lokal |
+| `RTX_SERVICE_TOKEN` | Direkter RTX Worker / Image-Pfad |
 | `CLOUD_AI_API_KEY` / `OPENAI_API_KEY` | Cloud Image/Chat |
 | `CALDAV_PASSWORD` | Kalender CalDAV |
 | `GITHUB_TOKEN` / `AGENT_JOBS_GITHUB_TOKEN` | Agent Jobs |
@@ -25,7 +25,7 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 
 | Feature | Local-first | Cloud optional | Daten an Cloud |
 |---------|-------------|----------------|----------------|
-| Image Studio | RTX Agent | DALL-E wenn `ALLOW_CLOUD` | Nur Prompt |
+| Image Studio | RTX Worker / Connector | DALL-E wenn `ALLOW_CLOUD` | Nur Prompt |
 | Kalender | SQLite | iCal fetch only | Feed-URLs (kein Brain) |
 | DnD API | Cache SQLite | Open5e/SRD public API | Suche-Query only |
 | Agent Jobs | GitHub Actions | Cursor Cloud | Dev-Prompt only |

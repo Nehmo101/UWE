@@ -37,7 +37,7 @@ Pass `userId` on job enqueue (`EnqueueJobInput.userId`) so background jobs retai
 ## Never log or send to client
 
 - `apiKeyEnc` / decrypted API keys
-- `RTX_AGENT_TOKEN`, cloud provider secrets
+- `RTX_SERVICE_TOKEN`, `CLOUD_AI_API_KEY`, and other provider secrets
 - Full prompts with PII in production usage logs (gateway logs metadata only)
 
 ## Audit trail

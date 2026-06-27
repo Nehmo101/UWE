@@ -30,6 +30,13 @@ public RTX API and no DB replication.
 
 See `tools/uwe-rtx-connector/.env.example` for all options.
 
+For the Windows desktop client use:
+
+```bash
+pnpm connector:client:dev
+pnpm connector:client:build
+```
+
 ## What works today
 
 - **Heartbeat** with normalized, policy-filtered capabilities, discovered models
@@ -47,6 +54,13 @@ See `tools/uwe-rtx-connector/.env.example` for all options.
   image worker. The job payload is sent as JSON on stdin; JSON or text stdout is
   returned as the job result.
 - **Model refresh** through `connector_refresh_models`.
+- **Hugging Face file downloads** in the Windows desktop client. Downloaded files
+  are stored under the connector client data directory and registered as local
+  `huggingface` model profiles. Private/gated repos use `HF_TOKEN` or
+  `HUGGINGFACE_HUB_TOKEN` from the RTX machine environment.
+- **Windows tray and autostart** in the desktop client. The tray can re-open or
+  exit the app; `start_in_tray` / `minimize_to_tray` hide the window as configured;
+  Windows autostart is written to the current user's Run key.
 - **Reconnect** after transient host/network errors; **exit** if the token is
   rejected.
 - **Graceful shutdown** on SIGINT/SIGTERM (drains active jobs, final heartbeat).
@@ -61,6 +75,9 @@ See `tools/uwe-rtx-connector/.env.example` for all options.
   in this phase. `sound_play` is the real local audio execution path.
 - `image_generate` has a generic local command executor, but no bundled image
   backend. Packaging a first-party image worker remains a follow-up.
+- Tauri Windows bundling is enabled for MSI/NSIS. The checked-in SVG is the source
+  icon; generate `.ico`/PNG sizes in a local checkout if the active Tauri bundler
+  requires platform-specific icon binaries.
 
 ## Capabilities
 
@@ -102,13 +119,6 @@ advertised.
 | `spotify` | `spotify_*` | 80 |
 | `maintenance` | `connector_refresh_models` | 60 |
 | `gpu` | `llm_generate` (50), `image_generate` (30), `embedding_generate` (20) | lowest |
-
-## Autostart / tray (later)
-
-Phase 1 runs as a CLI/Node process (`pnpm connector:start`). Running it as an
-autostart service or tray app is a follow-up. The legacy `tools/uwe-rtx-agent`
-(inbound model, incl. its Windows tray script) has been removed; only a deprecated
-`RTX_AGENT_URL` client shim remains for existing setups.
 
 ## Security
 

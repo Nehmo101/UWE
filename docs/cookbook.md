@@ -7,7 +7,7 @@ Native local model management for UWE Studio — **not** an Odysseus sidecar. Th
 | Component | Package / path | Purpose |
 |-----------|----------------|---------|
 | Model registry | `packages/cookbook/src/model-registry.ts` | Curated catalog with VRAM estimates and use-case tags |
-| Engine registry | `packages/cookbook/src/engine-registry.ts` | Ollama, OpenAI-compatible, RTX Agent, Docker, LM Studio |
+| Engine registry | `packages/cookbook/src/engine-registry.ts` | Ollama, OpenAI-compatible, RTX Connector/Worker, Docker, LM Studio |
 | Hardware profile | `packages/cookbook/src/hardware-profile.ts` | RAM/CPU/GPU probe (`nvidia-smi` or `COOKBOOK_GPU_*` env) |
 | Model fit score | `packages/cookbook/src/model-fit.ts` | 0–100 score from VRAM/RAM vs model size |
 | Runtime health | `packages/cookbook/src/runtime-health.ts` | Ollama tags, Docker probe, engine status |
@@ -47,7 +47,7 @@ Cookbook feeds `@uwe/ai-brain` routing via `buildCookbookRuntimeProbe()` (`packa
 |----------|---------|
 | `AI_INFERENCE_PROVIDER` | `ollama` or `openai_compatible` |
 | `AI_INFERENCE_BASE_URL` | Local inference endpoint |
-| `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` | Legacy remote GPU (deprecated inbound agent — tool removed; use the outbound RTX Host Connector) |
+| `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` | RTX Worker endpoint and service token for local GPU/image workflows |
 | `AI_LOCAL_ONLY` / `AI_DATENSCHUTZ_MODE` | Force local-only |
 | `COOKBOOK_GPU_VRAM_GB` | Override detected VRAM (CI / headless hosts) |
 | `COOKBOOK_GPU_NAME` | GPU label for override profile |
@@ -84,8 +84,9 @@ On the GPU machine, run the **outbound RTX Host Connector** (`pnpm connector:sta
 See [rtx-connector.md](rtx-connector.md).
 
 > **Legacy (removed):** the old inbound RTX Agent (tool + ai-brain LLM client) was
-> removed. `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` survive only as legacy aliases of the
-> RTX worker URL (`RTX_BASE_URL` / `RTX_SERVICE_TOKEN`) for the worker/image path
+> removed. Existing installs may still have legacy agent-named aliases in code for
+> compatibility, but new docs and setup should use `RTX_BASE_URL` and
+> `RTX_SERVICE_TOKEN` for the RTX worker/image path
 > (see [removed-legacy-runtime.md](removed-legacy-runtime.md)).
 
 Use **private LAN IPs only** — public RTX URLs are blocked by `@uwe/security` and Cookbook warnings.
@@ -125,7 +126,7 @@ Re-run `pnpm --filter @uwe/cookbook test` after changes.
 
 Master-Admin-Wizard unter **`/admin/ai-gateway`** (Cookbook → KI & RTX Fallback):
 
-1. **RTX verbinden** — `RTX_AGENT_URL` + Token prüfen, Health-Check
+1. **RTX verbinden** — `RTX_BASE_URL` + Service-Token prüfen, Health-Check
 2. **Routing-Modus** — `LOCAL_ONLY`, `LOCAL_THEN_CLOUD` (Standard), `CLOUD_ONLY`, `DISABLED`
 3. **Cloud-Fallback** — global aktivieren/deaktivieren (Owner only)
 4. **Provider einrichten** — OpenAI, Anthropic, Gemini, OpenRouter; API-Key sicher setzen

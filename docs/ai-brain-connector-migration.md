@@ -48,30 +48,33 @@ Cloud/privacy rules are unchanged — the connector is just another local backen
 
 ## Legacy inbound path (renamed / demoted)
 
-- `packages/ai-brain/src/rtx-worker-config.ts` is the canonical resolver for
-  `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` / `RTX_TIMEOUT_MS` / `PREFERRED_LOCAL_MODEL`
-  (`RtxWorker*` names). `rtx-agent-config.ts` is a deprecated re-export shim that
-  keeps the old `RtxAgent*` aliases and the `./rtx-agent-config` package export.
-- `apps/studio/app/api/inference/hardware/route.ts` no longer calls
-  `${RTX_AGENT_URL}/api/hardware`; it returns **410 Gone** and points to the
+- `packages/ai-brain/src/rtx-worker-config.ts` is the canonical resolver for the
+  RTX worker URL/token, timeout and preferred local model (`RtxWorker*` names).
+  `rtx-agent-config.ts` is a deprecated re-export shim that keeps the old
+  `RtxAgent*` aliases and the `./rtx-agent-config` package export for existing
+  imports.
+- `apps/studio/app/api/inference/hardware/route.ts` no longer calls the old
+  inbound agent hardware endpoint; it returns **410 Gone** and points to the
   outbound RTX Host Connector (`tools/uwe-rtx-connector`, `system_info`).
 - `packages/cookbook/src/recommendations.ts` no longer recommends the legacy
   `rtx_agent` engine — Ollama / OpenAI-compatible / connector only.
 
 The RTX worker security boundary (`@uwe/security` rtx-boundary) and the image
-path still resolve/LAN-validate `RTX_AGENT_URL` for existing setups.
+path still resolve/LAN-validate the worker URL for existing setups. New docs and
+examples should use `RTX_BASE_URL` / `RTX_SERVICE_TOKEN`.
 
 ## Image generation
 
-`image_generate` stays capability-gated. When `RTX_AGENT_URL` is set, Image
-Studio logs a deprecation warning. With `RTX_USE_CONNECTOR_IMAGE=true` and a
-host-injected connector bridge, image generation routes through the connector
-`image_generate` queue instead of the inbound RTX Agent HTTP call. A first-party
-image worker, model selection and UI status polish remain follow-ups.
+`image_generate` stays capability-gated. When the direct worker URL is configured,
+Image Studio logs a deprecation warning for the old inbound path. With
+`RTX_USE_CONNECTOR_IMAGE=true` and a host-injected connector bridge, image
+generation routes through the connector `image_generate` queue instead of the
+inbound HTTP call. A first-party image worker, model selection and UI status polish
+remain follow-ups.
 
 ## Verification target
 
-Before removing or demoting `RTX_AGENT_URL`, run locally:
+Before removing the legacy env alias compatibility in code, run locally:
 
 ```bash
 pnpm install --frozen-lockfile
