@@ -30,12 +30,12 @@ export const HINT_CLOUD_NO_BRAIN =
   "Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.";
 export const HINT_BRAIN_LOCAL_ONLY =
   "DnD-/World-Wissen ist nur mit lokaler KI verfügbar.";
-export const HINT_RTX_NOT_READY = "Der RTX-Agent ist aktuell nicht bereit.";
+export const HINT_RTX_NOT_READY = "Der RTX Connector ist aktuell nicht bereit.";
 export const HINT_LOCAL_READY = "Lokale KI bereit.";
-export const HINT_RTX_DISABLED = "RTX-Agent deaktiviert.";
-export const HINT_RTX_UNREACHABLE = "RTX-Rechner nicht erreichbar.";
+export const HINT_RTX_DISABLED = "RTX Connector deaktiviert.";
+export const HINT_RTX_UNREACHABLE = "RTX Connector nicht erreichbar.";
 export const HINT_LOCAL_NOT_READY =
-  "Lokale KI ist aktuell nicht bereit. Bitte RTX-Agent aktivieren oder allgemeinen Cloud-Chat nutzen.";
+  "Lokale KI ist aktuell nicht bereit. Bitte RTX Connector aktivieren oder allgemeinen Cloud-Chat nutzen.";
 export const HINT_PERSONAL_BRAIN_LOCAL_ONLY =
   "Persönliches Life-Brain ist nur mit lokaler RTX verfügbar — kein Cloud-Fallback.";
 export const HINT_OBJECT_NEEDS_PAGE =
@@ -272,9 +272,9 @@ export function computePromptUiState(
   if (caps.rtxState === "disabled") {
     hints.push(HINT_RTX_DISABLED);
   } else if (caps.rtxState === "starting" && provider !== "cloud") {
-    hints.push("RTX-Inference wird gestartet — bitte kurz warten.");
+    hints.push("RTX Connector wird gestartet — bitte kurz warten.");
   } else if (caps.rtxState === "error" && provider !== "cloud") {
-    hints.push("RTX-Inference meldet einen Fehler — Systemstatus prüfen.");
+    hints.push("RTX Connector meldet einen Fehler — Systemstatus prüfen.");
   } else if (caps.rtxState === "offline" && provider !== "cloud") {
     hints.push(HINT_RTX_UNREACHABLE);
   }
