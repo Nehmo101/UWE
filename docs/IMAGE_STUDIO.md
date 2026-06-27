@@ -4,8 +4,8 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 
 ## Features (Phase 1 — nutzbar)
 
-- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background` (RTX)
-- Provider-Routing: RTX Agent (lokal) → optional Cloud (OpenAI DALL-E, nur generate/variant)
+- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background` (lokaler RTX Worker / Connector)
+- Provider-Routing: lokaler RTX Worker oder outbound RTX Host Connector → optional Cloud (OpenAI DALL-E, nur generate/variant)
 - Projekt-/Versions-Tracking mit **reviewbare Drafts** (`metadata.reviewStatus`)
 - Ergebnis als Asset in Medienbibliothek — **automatische Verknüpfung** zu verlinkten Seiten/Entitäten
 - **Prompt-Datenschutz:** `contextMode` steuert ob Welt-/Brain-Kontext an Provider geht (Cloud: nur `prompt_only`)
@@ -23,13 +23,13 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 | `IMAGE_STUDIO_ALLOW_CLOUD` | `false` | Cloud-KI bewusst aktivieren |
 | `IMAGE_STUDIO_BG_REMOVAL` | `true` | Background-Removal Task erlaubt |
 | `IMAGE_STUDIO_CLOUD_MODEL` | `dall-e-3` | Cloud-Modell |
-| `RTX_AGENT_URL` | — | RTX Image Endpoint `/v1/images` |
-| `RTX_AGENT_TOKEN` | — | Bearer Token |
+| `RTX_BASE_URL` | — | Direkter RTX Worker Endpoint `/v1/images` |
+| `RTX_SERVICE_TOKEN` | — | Bearer Token |
 
 ## Routing
 
 1. **auto**: RTX Healthcheck → bei Erfolg lokal, sonst Cloud (wenn erlaubt).
-2. **local_rtx**: Nur RTX Agent — kein Cloud-Fallback.
+2. **local_rtx**: Nur lokaler RTX Worker / Connector — kein Cloud-Fallback.
 3. **cloud**: Nur wenn `IMAGE_STUDIO_ALLOW_CLOUD=true` und API-Key gesetzt.
 
 Brain/Weltdaten werden **nicht** an Cloud gesendet — nur der Bild-Prompt im Modus `prompt_only`.
@@ -51,8 +51,9 @@ Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImag
 > handling unvollständig — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md)).
 
 Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
-Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md)); der
-alte inbound RTX-Agent (`RTX_AGENT_URL`) ist deprecated (Tool entfernt):
+Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md));
+für direkte Worker-Endpunkte sind `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` die aktuellen
+Namen:
 
 ```json
 {
