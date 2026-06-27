@@ -6,7 +6,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 
 import {
   createModelProfile,
