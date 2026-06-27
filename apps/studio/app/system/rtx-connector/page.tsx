@@ -10,7 +10,12 @@ import { RtxConnectorClient } from "./RtxConnectorClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function RtxConnectorPage() {
+interface PageProps {
+  searchParams: Promise<{ from?: string }>;
+}
+
+export default async function RtxConnectorPage({ searchParams }: PageProps) {
+  const { from } = await searchParams;
   const service = createConnectorService(prisma);
   const [summary, pendingByLane] = await Promise.all([
     service.summarize(),
@@ -38,6 +43,20 @@ export default async function RtxConnectorPage() {
         />
       }
     >
+      {from === "cookbook" && (
+        <section className="uwe-v2-section" role="status">
+          <div className="uwe-v2-card" style={{ padding: "1rem", borderColor: "var(--uwe-accent, #888)" }}>
+            <strong>Das Cookbook ist umgezogen.</strong>
+            <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
+              Lokales Modell-Management läuft jetzt über den RTX Connector: aktivierte Modelle werden
+              vom Connector gemeldet, Workflow-Standards stellst du hier ein. Online-/Cloud-KI bleibt
+              in den <Link href="/settings">Einstellungen</Link> und im{" "}
+              <Link href="/admin/ai-gateway">AI Gateway</Link>.
+            </p>
+          </div>
+        </section>
+      )}
+
       {!summary.anyOnline && (
         <section className="uwe-v2-section" role="status">
           <div className="uwe-v2-card" style={{ padding: "1rem" }}>

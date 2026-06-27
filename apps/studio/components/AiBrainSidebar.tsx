@@ -3,10 +3,16 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { EmptyState, LoadingState } from "@uwe/shared-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
 import type { AiBrainSettings, AiContext, AiProviderId, DndGeneratorAction } from "@uwe/ai-brain";
 import type { BrainActionDefinition, BrainActionId } from "@uwe/ai-brain";
+import {
+  ConnectorModelPicker,
+  type ConnectorModelSelection,
+  type ConnectorPickerModelView,
+} from "@/components/ConnectorModelPicker";
 
 interface Props {
   worldSlug: string;
@@ -67,6 +73,8 @@ export function AiBrainSidebar({
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [allowDmOnly, setAllowDmOnly] = useState(false);
+  const [connectorModels, setConnectorModels] = useState<ConnectorPickerModelView[]>([]);
+  const [connectorSelection, setConnectorSelection] = useState<ConnectorModelSelection | null>(null);
 
   const selectedAction = useMemo(
     () => actions.find((action) => action.id === actionId),
@@ -164,12 +172,53 @@ export function AiBrainSidebar({
     }
   }, []);
 
+  const loadConnectorModels = useCallback(async () => {
+    try {
+      const response = await fetch(studioApiUrl("/api/admin/connector-workflow"), {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        setConnectorModels([]);
+        return;
+      }
+      const data = (await response.json()) as { pickerModels?: ConnectorPickerModelView[] };
+      setConnectorModels(data.pickerModels ?? []);
+    } catch {
+      setConnectorModels([]);
+    }
+  }, []);
+
+  const handleConnectorSelection = useCallback(
+    (selection: ConnectorModelSelection | null) => {
+      setConnectorSelection(selection);
+      if (!selection) {
+        return;
+      }
+      const picked = connectorModels.find(
+        (entry) => entry.connectorId === selection.connectorId && entry.modelId === selection.modelId,
+      );
+      if (!picked) {
+        return;
+      }
+      const matchingProvider = availableProviders.find((provider) => provider.id === picked.provider);
+      if (matchingProvider) {
+        setProviderId(matchingProvider.id);
+      }
+      setModel(picked.name);
+      setStatus(
+        `Connector-Modell „${picked.displayName?.trim() || picked.name}" gewählt (${picked.connectorName}). Ausführung läuft über die RTX-Queue.`,
+      );
+    },
+    [connectorModels, availableProviders],
+  );
+
   useEffect(() => {
     void loadSettings();
     void loadActions();
     void loadSessions();
     void loadRecentRuns();
-  }, [loadSettings, loadActions, loadSessions, loadRecentRuns]);
+    void loadConnectorModels();
+  }, [loadSettings, loadActions, loadSessions, loadRecentRuns, loadConnectorModels]);
 
   useEffect(() => {
     if (providerId) {
@@ -383,6 +432,24 @@ export function AiBrainSidebar({
           ))}
         </select>
       </label>
+
+      {connectorModels.length > 0 && (
+        <details className="ai-brain-context">
+          <summary>Connector-Modelle ({connectorModels.length})</summary>
+          <p className="ai-brain-meta">
+            Vom RTX Connector gemeldete Modelle. Auswahl setzt das Modell für diesen Run; die
+            Ausführung läuft lokal über die RTX-Queue. Standards pflegst du auf der{" "}
+            <Link href="/system/rtx-connector">RTX-Connector-Seite</Link>.
+          </p>
+          <ConnectorModelPicker
+            label="Connector-Modell verwenden"
+            models={connectorModels}
+            value={connectorSelection}
+            onChange={handleConnectorSelection}
+            noneLabel="— Keines (Provider-Modell oben nutzen)"
+          />
+        </details>
+      )}
 
       {!settings?.localOnly && !isPlayerSafe && (
         <label className="ai-brain-checkbox">
