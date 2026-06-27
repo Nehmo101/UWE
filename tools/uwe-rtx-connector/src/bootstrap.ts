@@ -21,12 +21,14 @@ import {
   type ConnectorRuntimeConfig,
 } from "@uwe/connector";
 
+import { loadClientRuntimeConfig } from "./client-config-store";
 import { HostClient } from "./host-client";
 import { JobHistory, jobHistoryPath } from "./job-history";
 import {
   detectCapabilities,
   resolveCapabilityEnv,
 } from "./local-capabilities";
+import { loadSpotifySession } from "./spotify-local-store";
 import {
   discoverLocalLlms,
   resolveDiscoveryConfig,
@@ -91,6 +93,36 @@ export interface CreateConnectorRunnerOptions {
   envPath?: string;
 }
 
+/**
+ * Merge the Tauri-owned client config (`config.json`) and the persisted Spotify
+ * session into `process.env`, so capability detection and executors pick up the
+ * local audio/image commands and the Spotify token/device the user configured
+ * in the RTX Connector Client. Existing process env values always win, mirroring
+ * `loadConnectorEnvFile` (so the desktop shell may still override via env).
+ *
+ * Spotify tokens stay on disk and in `process.env` only — never logged. The
+ * token is read as-is; the client UI/CLI refreshes and persists it, and a
+ * connector restart picks up the refreshed value.
+ */
+export function applyClientRuntimeEnv(dataDir: string): void {
+  const setIfUnset = (key: string, value: string | null | undefined) => {
+    if (value && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  };
+
+  const config = loadClientRuntimeConfig(dataDir);
+  setIfUnset("UWE_CONNECTOR_AUDIO_CMD", config.audioCommand);
+  setIfUnset("UWE_CONNECTOR_IMAGE_CMD", config.imageCommand);
+  setIfUnset("SPOTIFY_CLIENT_ID", config.spotifyClientId);
+
+  const session = loadSpotifySession(dataDir);
+  if (session) {
+    setIfUnset("UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN", session.accessToken);
+    setIfUnset("SPOTIFY_DEVICE_ID", session.deviceId);
+  }
+}
+
 export interface CreateConnectorRunnerOk {
   ok: true;
   runner: ConnectorRunner;
@@ -128,10 +160,15 @@ export function createConnectorRunner(
   const config = configResult.config;
 
   const discoveryConfig = resolveDiscoveryConfig();
+
+  // Client data dir holds the model profile store, job history, log ring, the
+  // Tauri-owned config.json, and the Spotify session. Merge the audio/image
+  // commands and Spotify token/device from there into the environment before
+  // resolving capabilities so they are advertised correctly.
+  const dataDir = resolveConnectorDataDir();
+  applyClientRuntimeEnv(dataDir);
   const capabilityEnv = resolveCapabilityEnv();
 
-  // Client data dir holds the model profile store, job history, and log ring.
-  const dataDir = resolveConnectorDataDir();
   configureConnectorLogFile(connectorLogPath(dataDir));
   const history = new JobHistory({ persistPath: jobHistoryPath(dataDir) });
 

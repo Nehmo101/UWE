@@ -17,7 +17,8 @@
   "dependencies": {
     "@uwe/connector": "workspace:*",
     "@uwe/connector-model-profile": "workspace:*",
-    "@uwe/cookbook": "workspace:*"
+    "@uwe/cookbook": "workspace:*",
+    "@uwe/soundboard": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

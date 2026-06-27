@@ -11,6 +11,8 @@
  * Commands never print secrets. Progress for `pull-ollama` is emitted as NDJSON lines.
  */
 
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
@@ -28,6 +30,16 @@ import {
   matchInstalledModel,
 } from "@uwe/cookbook";
 
+import { loadClientRuntimeConfig, type ClientRuntimeConfig } from "./client-config-store";
+import {
+  buildAuthorizationUrl,
+  clearSpotifySession,
+  exchangeCodeAndStore,
+  listDevices,
+  setDevice,
+  testPlayback,
+  type SpotifyLocalConfig,
+} from "./spotify-local-store";
 import { discoverLocalLlms, resolveDiscoveryConfig } from "./llm-discovery";
 import { scanFilesystemModels } from "./filesystem-models";
 import { jobHistoryPath, JobHistory } from "./job-history";
@@ -59,6 +71,14 @@ function usage(): never {
   client-cli probe-runners
   client-cli start-ollama
   client-cli test-runner [ollama|lm_studio|llama_cpp]
+  client-cli spotify-auth-url
+  client-cli spotify-exchange-code <code>
+  client-cli spotify-devices
+  client-cli spotify-set-device <deviceId>
+  client-cli spotify-test [play|pause]
+  client-cli spotify-disconnect
+  client-cli test-audio [source]
+  client-cli test-image [prompt]
 `);
   process.exit(1);
 }
@@ -253,6 +273,167 @@ async function cmdTestRunner(rawId?: string): Promise<void> {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
+function clientConfig(): ClientRuntimeConfig {
+  return loadClientRuntimeConfig(dataDir());
+}
+
+function spotifyConfig(): SpotifyLocalConfig {
+  const config = clientConfig();
+  return {
+    clientId: config.spotifyClientId,
+    clientSecret: config.spotifyClientSecret,
+    redirectUri: config.spotifyRedirectUri,
+  };
+}
+
+function cmdSpotifyAuthUrl(): void {
+  const state = randomBytes(16).toString("hex");
+  const url = buildAuthorizationUrl(spotifyConfig(), state);
+  process.stdout.write(`${JSON.stringify({ url, state })}\n`);
+}
+
+async function cmdSpotifyExchangeCode(code?: string): Promise<void> {
+  const trimmed = code?.trim();
+  if (!trimmed) {
+    console.error("spotify-exchange-code: Authorization-Code fehlt.");
+    process.exit(1);
+  }
+  const result = await exchangeCodeAndStore(dataDir(), spotifyConfig(), trimmed);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+async function cmdSpotifyDevices(): Promise<void> {
+  const result = await listDevices(dataDir(), spotifyConfig());
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+function cmdSpotifySetDevice(deviceId?: string): void {
+  const trimmed = deviceId?.trim() ?? "";
+  const result = setDevice(dataDir(), trimmed || null);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+async function cmdSpotifyTest(action?: string): Promise<void> {
+  const mode = action?.trim() === "play" ? "play" : "pause";
+  const result = await testPlayback(dataDir(), spotifyConfig(), mode);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+function cmdSpotifyDisconnect(): void {
+  clearSpotifySession(dataDir());
+  process.stdout.write(`${JSON.stringify({ ok: true, message: "Spotify getrennt." })}\n`);
+}
+
+function splitCommand(command: string): [string, ...string[]] {
+  const parts = command.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    throw new Error("Kommando ist leer.");
+  }
+  return parts as [string, ...string[]];
+}
+
+/**
+ * Launch the configured audio command (optionally with a test source) and
+ * report whether the process spawned. Detached so it survives the short-lived
+ * CLI invocation.
+ */
+function cmdTestAudio(source?: string): void {
+  const audioCommand = clientConfig().audioCommand;
+  if (!audioCommand) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        message: "Kein Audio-Kommando konfiguriert (Audio-Panel im RTX-Client).",
+      })}\n`,
+    );
+    return;
+  }
+
+  const [cmd, ...baseArgs] = splitCommand(audioCommand);
+  const args = source?.trim() ? [...baseArgs, source.trim()] : baseArgs;
+
+  try {
+    const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+    child.unref();
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, via: cmd, message: "Audio-Kommando gestartet." })}\n`,
+    );
+  } catch (error) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        via: cmd,
+        message: error instanceof Error ? error.message : String(error),
+      })}\n`,
+    );
+  }
+}
+
+/**
+ * Run the configured image command with a small JSON test payload on stdin and
+ * capture its output, mirroring how the connector executes `image_generate`.
+ */
+async function cmdTestImage(prompt?: string): Promise<void> {
+  const imageCommand = clientConfig().imageCommand;
+  if (!imageCommand) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        message: "Kein Image-Kommando konfiguriert (Bild-Panel im RTX-Client).",
+      })}\n`,
+    );
+    return;
+  }
+
+  const payload = { prompt: prompt?.trim() || "UWE connector test image", test: true };
+  const [cmd, ...args] = splitCommand(imageCommand);
+
+  const result = await new Promise<Record<string, unknown>>((resolve) => {
+    const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGTERM");
+      resolve({ ok: false, via: cmd, message: "Image-Kommando hat das Timeout erreicht." });
+    }, 120_000);
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ ok: false, via: cmd, message: error.message });
+    });
+    child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0) {
+        resolve({
+          ok: false,
+          via: cmd,
+          message: `Image-Kommando Exit ${code}${stderr ? `: ${stderr.trim()}` : ""}`,
+        });
+        return;
+      }
+      resolve({ ok: true, via: cmd, message: "Image-Kommando erfolgreich.", output: stdout.trim() });
+    });
+    child.stdin.end(JSON.stringify(payload));
+  });
+
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
 async function main(): Promise<void> {
   const [, , command, ...args] = process.argv;
   if (!command) usage();
@@ -294,6 +475,30 @@ async function main(): Promise<void> {
       return;
     case "test-runner":
       await cmdTestRunner(args[0]);
+      return;
+    case "spotify-auth-url":
+      cmdSpotifyAuthUrl();
+      return;
+    case "spotify-exchange-code":
+      await cmdSpotifyExchangeCode(args[0]);
+      return;
+    case "spotify-devices":
+      await cmdSpotifyDevices();
+      return;
+    case "spotify-set-device":
+      cmdSpotifySetDevice(args[0]);
+      return;
+    case "spotify-test":
+      await cmdSpotifyTest(args[0]);
+      return;
+    case "spotify-disconnect":
+      cmdSpotifyDisconnect();
+      return;
+    case "test-audio":
+      cmdTestAudio(args[0]);
+      return;
+    case "test-image":
+      await cmdTestImage(args[0]);
       return;
     default:
       console.error(`Unbekannter Befehl: ${command}`);
