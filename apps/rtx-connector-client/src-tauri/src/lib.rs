@@ -7,15 +7,23 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use dirs::data_local_dir;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tauri::{Manager, RunEvent, State};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, RunEvent, State, WindowEvent,
+};
 use url::Url;
 
 /// Relative path (from the monorepo root) to the Node desktop launcher that
 /// runs the outbound connector work loop.
 const CONNECTOR_LAUNCHER_REL: &str = "tools/uwe-rtx-connector/src/desktop-launcher.ts";
 const CONNECTOR_CLIENT_CLI_REL: &str = "tools/uwe-rtx-connector/src/client-cli.ts";
+const HUGGINGFACE_CLI_REL: &str = "tools/uwe-rtx-connector/src/huggingface-cli.ts";
 
 /// Timeout for the host connection test request.
 const HOST_TEST_TIMEOUT: Duration = Duration::from_secs(10);
@@ -23,6 +31,13 @@ const HOST_TEST_TIMEOUT: Duration = Duration::from_secs(10);
 const APP_VENDOR_DIR: &str = "UWE";
 const APP_NAME_DIR: &str = "rtx-connector-client";
 const CONFIG_FILE_NAME: &str = "config.json";
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[cfg(target_os = "windows")]
+const AUTOSTART_RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+#[cfg(target_os = "windows")]
+const AUTOSTART_VALUE_NAME: &str = "UWE RTX Connector Client";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -154,7 +169,7 @@ fn resolve_monorepo_root() -> PathBuf {
     PathBuf::from(".")
 }
 
-fn build_client_cli_command(args: &[&str]) -> Result<Command, String> {
+fn build_node_script_command(script_rel: &str, args: &[&str]) -> Result<Command, String> {
     let root = resolve_monorepo_root();
     let data_dir = connector_app_data_dir()?;
 
@@ -162,13 +177,17 @@ fn build_client_cli_command(args: &[&str]) -> Result<Command, String> {
     command
         .arg("--import")
         .arg("tsx")
-        .arg(CONNECTOR_CLIENT_CLI_REL)
+        .arg(script_rel)
         .args(args)
         .current_dir(&root)
         .env("UWE_RUNTIME_ROLE", "rtx-connector-client")
         .env("UWE_CONNECTOR_CLIENT_DATA_DIR", &data_dir);
 
     Ok(command)
+}
+
+fn build_client_cli_command(args: &[&str]) -> Result<Command, String> {
+    build_node_script_command(CONNECTOR_CLIENT_CLI_REL, args)
 }
 
 fn client_cli_output_to_string(action: &str, output: Output) -> Result<String, String> {
@@ -197,6 +216,14 @@ fn run_client_cli(args: &[&str]) -> Result<String, String> {
     client_cli_output_to_string(&args.join(" "), output)
 }
 
+fn run_node_script(script_rel: &str, args: &[&str]) -> Result<String, String> {
+    let output = build_node_script_command(script_rel, args)?
+        .output()
+        .map_err(|error| format!("{script_rel} konnte nicht gestartet werden: {error}"))?;
+
+    client_cli_output_to_string(&format!("{script_rel} {}", args.join(" ")), output)
+}
+
 fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<String, String> {
     let mut command = build_client_cli_command(args)?;
     command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -220,6 +247,28 @@ fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<Strin
 
 fn parse_client_cli_json<T: DeserializeOwned>(raw: &str, label: &str) -> Result<T, String> {
     serde_json::from_str(raw).map_err(|error| format!("{label} konnte nicht geparst werden: {error}"))
+}
+
+fn parse_model_download_output(raw: &str, label: &str) -> Result<PullOllamaResult, String> {
+    let mut events = Vec::new();
+    let mut store: Option<serde_json::Value> = None;
+
+    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        let value: serde_json::Value = serde_json::from_str(line)
+            .map_err(|error| format!("{label}-Ausgabe ist kein gueltiges JSON: {error}"))?;
+
+        if value.get("profiles").is_some() && value.get("scanPaths").is_some() {
+            store = Some(value);
+        } else {
+            events.push(value);
+        }
+    }
+
+    let store = store.ok_or_else(|| {
+        format!("{label} lieferte keinen aktualisierten Model-Store zurueck.")
+    })?;
+
+    Ok(PullOllamaResult { events, store })
 }
 
 /// Reconcile the runtime state with the real child process: detect a process
@@ -271,6 +320,73 @@ fn connector_app_data_dir() -> Result<PathBuf, String> {
 
 fn connector_config_path() -> Result<PathBuf, String> {
     Ok(connector_app_data_dir()?.join(CONFIG_FILE_NAME))
+}
+
+#[cfg(target_os = "windows")]
+fn run_reg(args: &[&str]) -> Result<Output, String> {
+    Command::new("reg")
+        .args(args)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|error| format!("Windows-Registry konnte nicht aufgerufen werden: {error}"))
+}
+
+#[cfg(target_os = "windows")]
+fn autostart_command_line() -> Result<String, String> {
+    let exe = std::env::current_exe()
+        .map_err(|error| format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}"))?;
+    Ok(format!("\"{}\" --minimized", exe.display()))
+}
+
+#[cfg(target_os = "windows")]
+fn sync_windows_autostart(enabled: bool) -> Result<(), String> {
+    if enabled {
+        let command_line = autostart_command_line()?;
+        let output = run_reg(&[
+            "add",
+            AUTOSTART_RUN_KEY,
+            "/v",
+            AUTOSTART_VALUE_NAME,
+            "/t",
+            "REG_SZ",
+            "/d",
+            &command_line,
+            "/f",
+        ])?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            return Err(format!(
+                "Windows-Autostart konnte nicht aktiviert werden: {}",
+                if stderr.is_empty() { "Registry-Fehler" } else { &stderr }
+            ));
+        }
+        return Ok(());
+    }
+
+    let output = run_reg(&[
+        "delete",
+        AUTOSTART_RUN_KEY,
+        "/v",
+        AUTOSTART_VALUE_NAME,
+        "/f",
+    ])?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let text = format!("{stdout}\n{stderr}").to_lowercase();
+        if text.contains("unable to find") || text.contains("nicht gefunden") || text.contains("system was unable") {
+            return Ok(());
+        }
+        return Err("Windows-Autostart konnte nicht deaktiviert werden.".to_string());
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn sync_windows_autostart(_enabled: bool) -> Result<(), String> {
+    Ok(())
 }
 
 const SPOTIFY_SESSION_FILE_NAME: &str = "spotify-session.json";
@@ -394,14 +510,61 @@ fn status_snapshot(
         },
         message: runtime.message.clone().or_else(|| {
             Some(if runtime.running {
-                "Connector-Stub laeuft.".to_string()
+                "Connector-Prozess laeuft.".to_string()
             } else {
-                "Connector-Stub ist gestoppt.".to_string()
+                "Connector-Prozess ist gestoppt.".to_string()
             })
         }),
         connection_status: derive_connection_status(config, runtime.running).to_string(),
         last_heartbeat_at: runtime.last_heartbeat_at.clone(),
     }
+}
+
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn should_hide_to_tray() -> bool {
+    read_config_from_disk()
+        .map(|config| config.tray_mode == "minimize_to_tray" || config.tray_mode == "start_in_tray")
+        .unwrap_or(true)
+}
+
+fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let open_item = MenuItem::with_id(app, "open", "Oeffnen", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Beenden", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+
+    let mut builder = TrayIconBuilder::new()
+        .tooltip("UWE RTX Connector Client")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_main_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+
+    builder.build(app)?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -432,25 +595,33 @@ fn pull_ollama_model(name: String) -> Result<PullOllamaResult, String> {
     }
 
     let raw = run_client_cli(&["pull-ollama", trimmed])?;
-    let mut events = Vec::new();
-    let mut store: Option<serde_json::Value> = None;
+    parse_model_download_output(&raw, "Ollama-Pull")
+}
 
-    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
-        let value: serde_json::Value = serde_json::from_str(line)
-            .map_err(|error| format!("Ollama-Pull-Ausgabe ist kein gueltiges JSON: {error}"))?;
+#[tauri::command]
+fn pull_huggingface_model(
+    repo_id: String,
+    filename: String,
+    revision: Option<String>,
+) -> Result<PullOllamaResult, String> {
+    let repo_id = repo_id.trim();
+    let filename = filename.trim();
+    let revision = revision.as_deref().map(str::trim).filter(|value| !value.is_empty());
 
-        if value.get("profiles").is_some() && value.get("scanPaths").is_some() {
-            store = Some(value);
-        } else {
-            events.push(value);
-        }
+    if repo_id.is_empty() {
+        return Err("Hugging-Face-Repository darf nicht leer sein.".to_string());
+    }
+    if filename.is_empty() {
+        return Err("Hugging-Face-Dateiname darf nicht leer sein.".to_string());
     }
 
-    let store = store.ok_or_else(|| {
-        "Ollama-Pull lieferte keinen aktualisierten Model-Store zuruueck.".to_string()
-    })?;
+    let mut args = vec!["pull", repo_id, filename];
+    if let Some(value) = revision {
+        args.push(value);
+    }
 
-    Ok(PullOllamaResult { events, store })
+    let raw = run_node_script(HUGGINGFACE_CLI_REL, &args)?;
+    parse_model_download_output(&raw, "Hugging-Face-Download")
 }
 
 #[tauri::command]
@@ -569,6 +740,7 @@ fn read_config() -> Result<ConnectorClientConfig, String> {
 #[tauri::command]
 fn write_config(config: ConnectorClientConfig, app_state: State<'_, AppState>) -> Result<ConnectorClientConfig, String> {
     let normalized = normalize_config(config)?;
+    sync_windows_autostart(normalized.autostart_windows)?;
     write_config_to_disk(&normalized)?;
 
     let mut runtime = app_state
@@ -578,7 +750,7 @@ fn write_config(config: ConnectorClientConfig, app_state: State<'_, AppState>) -
 
     if !runtime.running {
         runtime.last_heartbeat_at = None;
-        runtime.message = Some("Konfiguration gespeichert. Connector-Stub ist gestoppt.".to_string());
+        runtime.message = Some("Konfiguration gespeichert. Connector-Prozess ist gestoppt.".to_string());
     }
 
     Ok(normalized)
@@ -847,6 +1019,34 @@ async fn test_host_connection(
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
+        .setup(|app| {
+            setup_tray(app)?;
+            if let Ok(config) = read_config_from_disk() {
+                if config.tray_mode == "start_in_tray" || config.minimized_start {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                }
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
+                if should_hide_to_tray() {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+            WindowEvent::Resized(_) => {
+                let hide_when_minimized = read_config_from_disk()
+                    .map(|config| config.tray_mode == "minimize_to_tray")
+                    .unwrap_or(false);
+                if hide_when_minimized && window.is_minimized().unwrap_or(false) {
+                    let _ = window.hide();
+                }
+            }
+            _ => {}
+        })
         .invoke_handler(tauri::generate_handler![
             read_config,
             write_config,
@@ -858,6 +1058,7 @@ pub fn run() {
             save_model_store,
             scan_models,
             pull_ollama_model,
+            pull_huggingface_model,
             list_connector_jobs,
             list_connector_logs,
             cookbook_dashboard,
