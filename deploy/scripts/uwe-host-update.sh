@@ -22,14 +22,14 @@ log_line() {
 
 write_state() {
   local patch="$1"
-  node -e "
+  STATE_FILE="$STATE_FILE" PATCH="$patch" node -e "
     const fs = require('node:fs');
     const target = process.env.STATE_FILE;
     const patch = JSON.parse(process.env.PATCH);
     let current = {};
     try { current = JSON.parse(fs.readFileSync(target, 'utf8')); } catch {}
     fs.writeFileSync(target, JSON.stringify({ ...current, ...patch }, null, 2) + '\n', { mode: 0o640 });
-  " STATE_FILE="$STATE_FILE" PATCH="$patch"
+  "
 }
 
 load_request_into_state() {
@@ -37,7 +37,7 @@ load_request_into_state() {
     die "Keine Update-Anfrage gefunden ($REQUEST_FILE)."
   fi
 
-  node -e "
+  REQUEST_FILE="$REQUEST_FILE" STATE_FILE="$STATE_FILE" node -e "
     const fs = require('node:fs');
     const requestPath = process.env.REQUEST_FILE;
     const statePath = process.env.STATE_FILE;
@@ -64,7 +64,7 @@ load_request_into_state() {
     };
     fs.writeFileSync(statePath, JSON.stringify(next, null, 2) + '\n', { mode: 0o640 });
     fs.unlinkSync(requestPath);
-  " REQUEST_FILE="$REQUEST_FILE" STATE_FILE="$STATE_FILE"
+  "
 }
 
 ensure_host_update_enabled() {
