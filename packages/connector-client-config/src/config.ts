@@ -21,6 +21,7 @@ const connectorClientConfigSchema = z.object({
   minimizedStart: z.boolean(),
   autostartWindows: z.boolean(),
   trayMode: trayModeSchema,
+  privacyMode: z.boolean(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -47,6 +48,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     minimizedStart: false,
     autostartWindows: false,
     trayMode: "minimize_to_tray",
+    privacyMode: false,
   };
 }
 
@@ -93,6 +95,8 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
         ? input.autostartWindows
         : defaults.autostartWindows,
     trayMode: trayMode ?? defaults.trayMode,
+    privacyMode:
+      typeof input.privacyMode === "boolean" ? input.privacyMode : defaults.privacyMode,
   };
 }
 

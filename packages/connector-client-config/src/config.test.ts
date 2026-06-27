@@ -23,6 +23,7 @@ describe("defaultConnectorClientConfig", () => {
     assert.equal(config.minimizedStart, false);
     assert.equal(config.autostartWindows, false);
     assert.equal(config.trayMode, "minimize_to_tray");
+    assert.equal(config.privacyMode, false);
   });
 });
 
@@ -90,6 +91,13 @@ describe("parseConnectorClientConfig", () => {
   it("falls back to default trayMode for unknown values", () => {
     const config = parseConnectorClientConfig({ trayMode: "unknown-mode" });
     assert.equal(config.trayMode, "minimize_to_tray");
+  });
+
+  it("parses privacyMode and defaults it to false", () => {
+    assert.equal(parseConnectorClientConfig({}).privacyMode, false);
+    assert.equal(parseConnectorClientConfig({ privacyMode: true }).privacyMode, true);
+    // Non-boolean input falls back to the default.
+    assert.equal(parseConnectorClientConfig({ privacyMode: "yes" }).privacyMode, false);
   });
 });
 
