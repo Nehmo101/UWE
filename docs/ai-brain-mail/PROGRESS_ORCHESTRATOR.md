@@ -7,9 +7,9 @@ Stand: **P18 abgeschlossen** (Durchlauf 2–8). Baut auf P00–P13 (`docs/ai-bra
 | Paket | Status | Notizen |
 |-------|--------|---------|
 | **P14** AI Router + Privacy Hardening | ✅ done | Zentraler `routeAiRequest`, Cloud = nur User-Prompt, `allowDmOnly` serverseitig |
-| **P15** RTX-Agent Health + Status | ✅ done | `RTX_AGENT_URL`, `checkRtxHealth`, Admin-Status, Mobile-Chips |
+| **P15** RTX Worker Health + Status | ✅ done | `RTX_BASE_URL`, `checkRtxHealth`, Admin-Status, Mobile-Chips |
 | **P16** KI-Prompt UI (Unified API) | ✅ done | `/api/ai/prompt` → Router, Brain-Retrieval, Mobile Panel |
-| **P17** RTX-Agent Provider | ✅ done | `RtxAgentProvider`, `chatViaRtxAgent`, bevorzugt vor direktem Ollama |
+| **P17** RTX Worker Provider | ✅ done | Deprecated RTX-agent shim, bevorzugt vor direktem Ollama |
 | **P18** QA + Doku | ✅ done | `privacy.test.ts`, UI-Tests, PROGRESS, Label-AI nur lokal |
 
 ## Architektur-Invariante (unverändert)
@@ -33,7 +33,7 @@ Cloud-KI erhält niemals Brain-/World-/Objekt-Kontext — nur allgemeinen User-P
 
 ## ENV (neu/ relevant)
 
-- `RTX_AGENT_URL`, `RTX_AGENT_TOKEN` — bevorzugter lokaler Pfad
+- `RTX_BASE_URL`, `RTX_SERVICE_TOKEN` — RTX worker/image path
 - `CLOUD_AI_PROVIDER`, `CLOUD_AI_API_KEY`, `CLOUD_AI_MODEL` — nur Allgemeiner Chat
 - `RTX_TIMEOUT_MS`, `PREFERRED_LOCAL_MODEL`
 
@@ -46,6 +46,6 @@ node --import tsx --test apps/studio/src/lib/ai-prompt-ui.test.ts
 
 ## Nächste optionale Schritte
 
-- E2E mit laufendem RTX-Agent + Ollama
+- E2E mit laufendem RTX Connector/Worker + Ollama
 - Semantic Brain-Search in Brain-Kontextmodus
 - Windows-Tray in Installer-Paket einbinden
