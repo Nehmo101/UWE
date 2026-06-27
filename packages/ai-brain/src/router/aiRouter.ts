@@ -1,4 +1,5 @@
-import type { BrainStoreService, UweRepository } from "@uwe/database/server";
+import type { BrainStoreService, PrismaClient, UweRepository } from "@uwe/database/server";
+import { prisma as sharedPrisma } from "@uwe/database/server";
 
 import {
 
@@ -64,6 +65,8 @@ import {
 
 } from "./providers/localRtxProvider";
 
+import { tryConnectorLlmGenerate } from "./providers/connectorQueueProvider";
+
 import type {
 
   AiContextMode,
@@ -98,6 +101,12 @@ export interface AiRouterDeps {
 
   /** Loads serialized personal brain context — required for personal_brain mode. */
   loadPersonalBrainContext?: () => Promise<string>;
+
+  /**
+   * Prisma client used to reach the connector queue for local inference.
+   * Defaults to the shared host client when omitted.
+   */
+  prisma?: PrismaClient;
 
 }
 
@@ -577,8 +586,6 @@ export async function routeAiRequest(
 
 
 
-  const provider = createRoutedProvider(resolution, apiKeyStore, request.useMock);
-
   const { systemPrompt, userPrompt } = buildRouterPrompts(
 
     request,
@@ -593,15 +600,35 @@ export async function routeAiRequest(
 
 
 
-  const result = await runAiTask(provider, {
+  // Prefer the outbound connector queue for local generation when an online
+  // connector advertises `llm_local`; fall back to the direct local provider
+  // when no connector is available.
+  const connectorOutcome =
+    resolution.route === "local_rtx" && !request.useMock
+      ? await tryConnectorLlmGenerate(deps.prisma ?? sharedPrisma, {
+          taskType: request.taskType,
+          explicitModel: request.model,
+          resolvedModel: model,
+          systemPrompt,
+          userPrompt,
+          providerId: resolution.providerId,
+          worldId: context.worldId || undefined,
+        })
+      : null;
 
-    model,
+  let result: AiRouterResult["result"];
 
-    prompt: userPrompt,
-
-    systemPrompt,
-
-  });
+  if (connectorOutcome) {
+    result = connectorOutcome.result;
+    model = connectorOutcome.model;
+  } else {
+    const provider = createRoutedProvider(resolution, apiKeyStore, request.useMock);
+    result = await runAiTask(provider, {
+      model,
+      prompt: userPrompt,
+      systemPrompt,
+    });
+  }
 
 
 
