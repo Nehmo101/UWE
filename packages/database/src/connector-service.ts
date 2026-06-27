@@ -56,6 +56,8 @@ export interface ConnectorView {
 }
 
 export interface ConnectorModelInfo {
+  /** Stable profile key reported by the connector (P5+); addresses a model. */
+  id?: string;
   provider: string;
   name: string;
   status?: string;
