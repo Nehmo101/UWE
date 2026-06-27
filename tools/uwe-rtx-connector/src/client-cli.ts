@@ -1,8 +1,12 @@
-#!/usr/bin/env -S node --import tsx
 /**
  * One-shot CLI helpers for the RTX Connector desktop client (Tauri invokes these).
  *
  *   tsx tools/uwe-rtx-connector/src/client-cli.ts <command> [args]
+ *
+ * Always invoked via `node --import tsx` (Tauri) or the `client-cli` package
+ * script — never executed directly — so it carries no shebang. A shebang here
+ * makes `tsx` mis-resolve named exports from re-export barrels such as
+ * `@uwe/cookbook`, so it must stay absent.
  *
  * Commands never print secrets. Progress for `pull-ollama` is emitted as NDJSON lines.
  */
@@ -16,6 +20,13 @@ import {
   type ConnectorModelProfile,
   type ConnectorModelProfileStore,
 } from "@uwe/connector-model-profile";
+import {
+  buildCookbookRecommendations,
+  computeModelFit,
+  detectHardwareProfile,
+  listCookbookModels,
+  matchInstalledModel,
+} from "@uwe/cookbook";
 
 import { discoverLocalLlms, resolveDiscoveryConfig } from "./llm-discovery";
 import { scanFilesystemModels } from "./filesystem-models";
@@ -27,6 +38,14 @@ import {
   resolveConnectorDataDir,
   saveModelProfileStore,
 } from "./model-profile-store";
+import {
+  measureOllamaTokensPerSecond,
+  probeRunner,
+  probeRunners,
+  resolveRunnerConfig,
+  startOllamaOnWindows,
+  type RunnerId,
+} from "./runner-admin";
 
 function usage(): never {
   console.error(`Usage:
@@ -36,6 +55,10 @@ function usage(): never {
   client-cli pull-ollama <modelName>
   client-cli jobs
   client-cli logs [category]
+  client-cli cookbook-dashboard
+  client-cli probe-runners
+  client-cli start-ollama
+  client-cli test-runner [ollama|lm_studio|llama_cpp]
 `);
   process.exit(1);
 }
@@ -163,6 +186,73 @@ function cmdLogs(category?: string): void {
   process.stdout.write(`${JSON.stringify(filtered.slice(-200))}\n`);
 }
 
+/**
+ * Hardware-aware Cookbook dashboard: detected hardware, installed Ollama models,
+ * curated recommendations, and per-model fit scores for the whole registry.
+ */
+async function cmdCookbookDashboard(): Promise<void> {
+  const hardware = await detectHardwareProfile();
+
+  const ollamaBase = resolveRunnerConfig().ollamaUrl;
+  const installed = await new OllamaAdmin(ollamaBase).listModels();
+  const installedNames = installed.map((entry) => entry.name);
+
+  const recommendations = buildCookbookRecommendations(hardware, installedNames);
+
+  const models = listCookbookModels().map((model) => ({
+    id: model.id,
+    label: model.label,
+    family: model.family,
+    paramsB: model.paramsB,
+    tags: model.tags,
+    useCases: model.useCases,
+    engines: model.engines,
+    recommendedQuant: model.recommendedQuant,
+    minVramGbQ4: model.minVramGbQ4,
+    installed: installedNames.some((name) => matchInstalledModel(name, model)),
+    fit: computeModelFit(hardware, model),
+  }));
+
+  const dashboard = {
+    hardware,
+    installedModels: installedNames,
+    recommendations,
+    models,
+  };
+
+  process.stdout.write(`${JSON.stringify(dashboard)}\n`);
+}
+
+async function cmdProbeRunners(): Promise<void> {
+  const runners = await probeRunners();
+  process.stdout.write(`${JSON.stringify({ runners })}\n`);
+}
+
+async function cmdStartOllama(): Promise<void> {
+  const result = await startOllamaOnWindows();
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+const RUNNER_IDS: RunnerId[] = ["ollama", "lm_studio", "llama_cpp"];
+
+async function cmdTestRunner(rawId?: string): Promise<void> {
+  const id = (rawId?.trim() as RunnerId) || "ollama";
+  if (!RUNNER_IDS.includes(id)) {
+    console.error(`test-runner: unbekannter Runner "${rawId}". Erlaubt: ${RUNNER_IDS.join(", ")}.`);
+    process.exit(1);
+  }
+
+  const result = await probeRunner(id);
+  // For an online Ollama runner, attach a best-effort throughput sample.
+  if (id === "ollama" && result.status === "online" && result.models.length > 0) {
+    const speed = await measureOllamaTokensPerSecond(result.models[0]);
+    process.stdout.write(`${JSON.stringify({ ...result, speed })}\n`);
+    return;
+  }
+
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
 async function main(): Promise<void> {
   const [, , command, ...args] = process.argv;
   if (!command) usage();
@@ -192,6 +282,18 @@ async function main(): Promise<void> {
       return;
     case "logs":
       cmdLogs(args[0]?.trim() || undefined);
+      return;
+    case "cookbook-dashboard":
+      await cmdCookbookDashboard();
+      return;
+    case "probe-runners":
+      await cmdProbeRunners();
+      return;
+    case "start-ollama":
+      await cmdStartOllama();
+      return;
+    case "test-runner":
+      await cmdTestRunner(args[0]);
       return;
     default:
       console.error(`Unbekannter Befehl: ${command}`);
