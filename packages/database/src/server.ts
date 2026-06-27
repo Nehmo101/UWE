@@ -1373,6 +1373,8 @@ export {
   ConnectorService,
   createConnectorService,
   toConnectorView,
+  waitForConnectorJob,
+  ConnectorJobWaitError,
 } from "./connector-service";
 
 export type {
@@ -1385,6 +1387,7 @@ export type {
   HeartbeatInput,
   EnqueueConnectorJobInput,
   ClaimJobInput,
+  WaitForConnectorJobOptions,
 } from "./connector-service";
 
 export {

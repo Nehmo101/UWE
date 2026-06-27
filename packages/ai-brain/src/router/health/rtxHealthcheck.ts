@@ -2,10 +2,10 @@ import { getInferenceStatus } from "../../inference";
 import { resolveInferenceConfig } from "../../inference-config";
 import { sanitizeInferenceEndpointLabel, type InferenceUrlKind } from "../../inference-url-guard";
 import {
-  evaluateRtxAgentUrl,
-  isRtxAgentConfigured,
-  type RtxAgentStatus,
-} from "../../rtx-agent-config";
+  evaluateRtxWorkerUrl,
+  isRtxWorkerConfigured,
+  type RtxWorkerStatus,
+} from "../../rtx-worker-config";
 import type { AiHealthCheckResult } from "../../types";
 
 export interface RtxHealthStatus {
@@ -17,8 +17,8 @@ export interface RtxHealthStatus {
   defaultModel: string;
   health?: AiHealthCheckResult;
   modelCount?: number;
-  /** Agent status when RTX_AGENT_URL is configured. */
-  agentStatus?: RtxAgentStatus;
+  /** Worker status when RTX_AGENT_URL is configured. */
+  agentStatus?: RtxWorkerStatus;
   /** Whether health was read from RTX agent vs direct inference. */
   source: "agent" | "inference";
   urlAllowed: boolean;
@@ -31,7 +31,7 @@ export async function checkRtxHealth(options?: {
   env?: NodeJS.ProcessEnv;
 }): Promise<RtxHealthStatus> {
   const env = options?.env ?? process.env;
-  const agentEvaluation = evaluateRtxAgentUrl(env);
+  const agentEvaluation = evaluateRtxWorkerUrl(env);
 
   if (agentEvaluation.configured && !agentEvaluation.urlAllowed) {
     return {
@@ -76,4 +76,7 @@ export async function isRtxReady(options?: { useMock?: boolean }): Promise<boole
   return health.ready;
 }
 
-export { isRtxAgentConfigured };
+export { isRtxWorkerConfigured };
+
+/** @deprecated Use {@link isRtxWorkerConfigured}. */
+export const isRtxAgentConfigured = isRtxWorkerConfigured;

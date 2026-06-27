@@ -623,3 +623,74 @@ export class ConnectorService {
 export function createConnectorService(db: PrismaClient): ConnectorService {
   return new ConnectorService(db);
 }
+
+/** Raised when a connector job fails, expires, is missing, or times out while waiting. */
+export class ConnectorJobWaitError extends Error {
+  constructor(
+    message: string,
+    readonly jobId: string,
+    readonly status: ConnectorJob["status"] | "missing" | "timeout",
+  ) {
+    super(message);
+    this.name = "ConnectorJobWaitError";
+  }
+}
+
+export interface WaitForConnectorJobOptions {
+  /** Overall budget before giving up. Defaults to 120s. */
+  timeoutMs?: number;
+  /** Poll interval between status checks. Defaults to 500ms. */
+  intervalMs?: number;
+  /** Injectable clock (ms epoch) — for deterministic tests. */
+  now?: () => number;
+  /** Injectable sleep — for deterministic tests. */
+  sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Poll a connector job until it reaches a terminal state. Resolves with the
+ * completed job, or throws `ConnectorJobWaitError` on failure/expiry/timeout.
+ *
+ * The host never executes the job itself — an online RTX Host Connector claims
+ * and completes it through the queue. This helper only observes the job row.
+ */
+export async function waitForConnectorJob(
+  db: PrismaClient,
+  jobId: string,
+  options: WaitForConnectorJobOptions = {},
+): Promise<ConnectorJob> {
+  const timeoutMs = options.timeoutMs ?? 120_000;
+  const intervalMs = options.intervalMs ?? 500;
+  const now = options.now ?? (() => Date.now());
+  const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + timeoutMs;
+
+  for (;;) {
+    const job = await db.connectorJob.findUnique({ where: { id: jobId } });
+    if (!job) {
+      throw new ConnectorJobWaitError(
+        `Connector-Job ${jobId} wurde nicht gefunden.`,
+        jobId,
+        "missing",
+      );
+    }
+    if (job.status === "completed") {
+      return job;
+    }
+    if (job.status === "failed" || job.status === "expired") {
+      throw new ConnectorJobWaitError(
+        job.failedReason || `Connector-Job ${jobId} endete mit Status "${job.status}".`,
+        jobId,
+        job.status,
+      );
+    }
+    if (now() >= deadline) {
+      throw new ConnectorJobWaitError(
+        `Connector-Job ${jobId} hat das Zeitlimit von ${timeoutMs} ms überschritten (Status: ${job.status}).`,
+        jobId,
+        "timeout",
+      );
+    }
+    await sleep(intervalMs);
+  }
+}

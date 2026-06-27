@@ -1,7 +1,7 @@
 # AI Brain -> RTX Connector migration notes
 
-Date: 2026-06-26
-Status: inventory and follow-up plan
+Date: 2026-06-27
+Status: connector queue provider implemented and wired (P6)
 
 ## Current state
 
@@ -21,40 +21,53 @@ the RTX connector.
 `UWE_CONNECTOR_IMAGE_CMD`. There is no bundled first-party image backend yet, so
 `image_generation` is not advertised unless that command is configured.
 
-## Legacy inbound path still in use
+## Connector queue provider (implemented)
 
-The AI Brain/Gateway code still supports the old inbound RTX Agent model:
+Local LLM inference now prefers the outbound RTX Host Connector queue:
 
-- `packages/ai-brain/src/rtx-agent-config.ts` reads `RTX_AGENT_URL`,
-  `RTX_AGENT_TOKEN`, `RTX_TIMEOUT_MS` and `PREFERRED_LOCAL_MODEL`.
-- `packages/ai-brain/src/router/providers/localRtxProvider.ts` prefers the
-  inbound RTX Agent when configured, otherwise direct local inference providers.
-- `packages/ai-brain/src/router/health/rtxHealthcheck.ts` reports either RTX
-  Agent health or direct inference health.
-- `apps/studio/app/api/inference/hardware/route.ts` calls
-  `${RTX_AGENT_URL}/api/hardware` directly.
+- `packages/ai-brain/src/router/providers/connectorQueueProvider.ts`
+  - `isConnectorLlmAvailable(prisma)` / `isConnectorEmbeddingAvailable(prisma)` —
+    true when an online connector advertises `llm_local` / `embedding_local`.
+  - `runConnectorLlmGenerate` / `runConnectorEmbeddingGenerate` — enqueue an
+    `llm_generate` / `embedding_generate` job and poll until it completes (max
+    120s, 500ms interval) via `waitForConnectorJob`.
+  - `tryConnectorLlmGenerate` — used by the router: returns `null` when no
+    connector advertises `llm_local` so the caller falls back to the direct
+    local provider; otherwise resolves the model (explicit request model →
+    `ConnectorWorkflowService` slot default → resolved fallback), runs the job
+    and returns a `GenerateTextResult`.
+- `packages/database/src/connector-service.ts` adds `waitForConnectorJob`
+  (and `ConnectorJobWaitError`) — the host observes the job row; an online
+  connector claims and completes it. Injectable `now`/`sleep` keep tests fast.
+- `packages/ai-brain/src/router/aiRouter.ts` prefers the connector queue when
+  the route is `local_rtx` and a connector advertises `llm_local`. The direct
+  `createLocalRtxProvider` stays as the fallback when no connector is online.
+  `request.useMock` bypasses the connector path.
 
-These paths are deprecated but still present for existing setups.
+Cloud/privacy rules are unchanged — the connector is just another local backend.
 
-## Pragmatic migration path
+## Legacy inbound path (renamed / demoted)
 
-Do not rewrite the AI Brain in one step. Add a small adapter service first:
+- `packages/ai-brain/src/rtx-worker-config.ts` is the canonical resolver for
+  `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` / `RTX_TIMEOUT_MS` / `PREFERRED_LOCAL_MODEL`
+  (`RtxWorker*` names). `rtx-agent-config.ts` is a deprecated re-export shim that
+  keeps the old `RtxAgent*` aliases and the `./rtx-agent-config` package export.
+- `apps/studio/app/api/inference/hardware/route.ts` no longer calls
+  `${RTX_AGENT_URL}/api/hardware`; it returns **410 Gone** and points to the
+  outbound RTX Host Connector (`tools/uwe-rtx-connector`, `system_info`).
+- `packages/cookbook/src/recommendations.ts` no longer recommends the legacy
+  `rtx_agent` engine — Ollama / OpenAI-compatible / connector only.
 
-1. Add `packages/ai-brain/src/router/providers/connectorQueueProvider.ts`.
-2. It should depend on `createConnectorService(prisma)` from the host process,
-   enqueue `llm_generate` / `embedding_generate`, and wait or poll for completion
-   behind a bounded timeout.
-3. Only enable it when an online connector advertises the required effective
-   capability (`llm_local` or `embedding_local`).
-4. Keep cloud/privacy rules unchanged; the adapter is only another local provider.
-5. Leave `RTX_AGENT_URL` as deprecated compatibility until the queue provider is
-   verified in local CI and real host smoke tests.
+The RTX worker security boundary (`@uwe/security` rtx-boundary) and the image
+path still resolve/LAN-validate `RTX_AGENT_URL` for existing setups.
 
 ## Image generation
 
-`image_generate` should stay capability-gated. It is executable only when a local
-image worker command is configured. A first-party worker, model selection and UI
-status polish remain follow-ups.
+`image_generate` stays capability-gated. When `RTX_AGENT_URL` is set, Image
+Studio logs a deprecation warning. With `RTX_USE_CONNECTOR_IMAGE=true` and a
+host-injected connector bridge, image generation routes through the connector
+`image_generate` queue instead of the inbound RTX Agent HTTP call. A first-party
+image worker, model selection and UI status polish remain follow-ups.
 
 ## Verification target
 

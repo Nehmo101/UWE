@@ -5,9 +5,9 @@ import {
   classifyInferenceUrl,
 } from "@uwe/ai-brain/inference-url-guard";
 import {
-  resolveRtxAgentConfig,
-  type RtxAgentConfig,
-} from "@uwe/ai-brain/rtx-agent-config";
+  resolveRtxWorkerConfig,
+  type RtxWorkerConfig,
+} from "@uwe/ai-brain/rtx-worker-config";
 
 export class RtxBoundaryError extends Error {
   constructor(message: string) {
@@ -35,7 +35,7 @@ const DEFAULT_MAX_RETRIES = 2;
 
 export function resolveRtxBaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
   rejectClientWorkerUrl(undefined, env);
-  const config = resolveRtxAgentConfig(env);
+  const config = resolveRtxWorkerConfig(env);
   return config?.url ?? null;
 }
 
@@ -63,7 +63,7 @@ export function resolveRtxWorkerBoundary(
 ): RtxWorkerBoundaryConfig | null {
   rejectClientWorkerUrl(undefined, env);
 
-  const config = resolveRtxAgentConfig(env);
+  const config = resolveRtxWorkerConfig(env);
   if (!config) {
     return null;
   }
@@ -176,10 +176,13 @@ export async function fetchRtxWorker(
   );
 }
 
-export function toRtxAgentConfig(boundary: RtxWorkerBoundaryConfig): RtxAgentConfig {
+export function toRtxWorkerConfig(boundary: RtxWorkerBoundaryConfig): RtxWorkerConfig {
   return {
     url: boundary.baseUrl,
     token: boundary.token,
     timeoutMs: boundary.timeoutMs,
   };
 }
+
+/** @deprecated Use {@link toRtxWorkerConfig}. */
+export const toRtxAgentConfig = toRtxWorkerConfig;

@@ -8,7 +8,7 @@ import {
   InferenceUrlBlockedError,
   isInferenceUrlAllowed,
 } from "./inference-url-guard";
-import { evaluateRtxAgentUrl } from "./rtx-agent-config";
+import { evaluateRtxWorkerUrl } from "./rtx-worker-config";
 import { checkRtxHealth } from "./router/health/rtxHealthcheck";
 import { createProvider, MockAiProvider } from "./providers/registry";
 import { InMemoryApiKeyStore } from "./settings";
@@ -309,7 +309,7 @@ describe("RTX agent URL evaluation", () => {
   it("allows private RTX agent URLs", () => {
     process.env.RTX_AGENT_URL = "http://192.168.1.50:8787";
 
-    const evaluation = evaluateRtxAgentUrl(process.env);
+    const evaluation = evaluateRtxWorkerUrl(process.env);
 
     assert.equal(evaluation.configured, true);
     assert.equal(evaluation.urlAllowed, true);
@@ -319,7 +319,7 @@ describe("RTX agent URL evaluation", () => {
   it("blocks public RTX agent URLs without throwing", () => {
     process.env.RTX_AGENT_URL = "https://rtx.public.example:8787";
 
-    const evaluation = evaluateRtxAgentUrl(process.env);
+    const evaluation = evaluateRtxWorkerUrl(process.env);
 
     assert.equal(evaluation.configured, true);
     assert.equal(evaluation.urlAllowed, false);

@@ -120,6 +120,7 @@ export {
   buildRtxWorkerAuthHeaders,
   verifyRtxHmacSignature,
   fetchRtxWorker,
+  toRtxWorkerConfig,
   toRtxAgentConfig,
   RtxBoundaryError,
   type RtxWorkerBoundaryConfig,

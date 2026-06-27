@@ -318,6 +318,8 @@ export interface ImageStudioConfig {
 
 export interface ImageStudioConfigStatus extends ImageStudioConfig {
   rtxAgentConfigured: boolean;
+  /** Local image generation routes through the outbound RTX Host Connector queue. */
+  connectorImageEnabled: boolean;
   cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
@@ -375,6 +377,10 @@ export function resolveImageStudioConfigStatus(
 ): ImageStudioConfigStatus {
   const config = resolveImageStudioConfig(env, portal);
   const rtxAgentConfigured = Boolean(env.RTX_AGENT_URL?.trim());
+  const connectorImageEnabled = env.RTX_USE_CONNECTOR_IMAGE === "true";
+  // A local image backend is available via the outbound connector queue or the
+  // legacy inbound RTX Agent URL.
+  const localImageBackend = connectorImageEnabled || rtxAgentConfigured;
   const cloudApiKeyConfigured = Boolean(
     env.CLOUD_AI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim(),
   );
@@ -386,17 +392,20 @@ export function resolveImageStudioConfigStatus(
   }
   if (!config.enabled) {
     message = "Image Studio ist deaktiviert.";
-  } else if (!rtxAgentConfigured && !config.allowCloud) {
-    message = "RTX_AGENT_URL fehlt und Cloud ist deaktiviert — keine Bildgenerierung möglich.";
-  } else if (!rtxAgentConfigured && config.allowCloud && !cloudApiKeyConfigured) {
-    message = "RTX fehlt — Cloud erlaubt, aber kein API-Key konfiguriert.";
+  } else if (!localImageBackend && !config.allowCloud) {
+    message = "Kein lokaler Bild-Backend (RTX Connector) und Cloud deaktiviert — keine Bildgenerierung möglich.";
+  } else if (!localImageBackend && config.allowCloud && !cloudApiKeyConfigured) {
+    message = "Lokaler Bild-Backend fehlt — Cloud erlaubt, aber kein API-Key konfiguriert.";
+  } else if (connectorImageEnabled) {
+    message = "Bildgenerierung über RTX Host Connector (image_generate).";
   } else if (rtxAgentConfigured) {
-    message = "RTX Agent konfiguriert.";
+    message = "Legacy RTX Agent konfiguriert (RTX_AGENT_URL) — outbound Connector bevorzugt.";
   }
 
   return {
     ...config,
     rtxAgentConfigured,
+    connectorImageEnabled,
     cloudApiKeyConfigured,
     source: fromPortal ? "portal" : "env",
     message,

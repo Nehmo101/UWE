@@ -4,7 +4,11 @@ import { before, describe, it } from "node:test";
 import { hashConnectorToken } from "@uwe/connector";
 
 import { createPrismaClient, type PrismaClient } from "./client";
-import { createConnectorService } from "./connector-service";
+import {
+  ConnectorJobWaitError,
+  createConnectorService,
+  waitForConnectorJob,
+} from "./connector-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 describe("ConnectorService", () => {
@@ -211,5 +215,91 @@ describe("ConnectorService", () => {
     assert.ok(count >= 1);
     const row = await db.connectorJob.findUnique({ where: { id: job.id } });
     assert.equal(row?.status, "expired");
+  });
+});
+
+describe("waitForConnectorJob", () => {
+  let db: PrismaClient;
+
+  before(async () => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  it("resolves with the job once it completes", async () => {
+    const service = createConnectorService(db);
+    const { connector } = await service.createConnector("Wait Complete");
+    await service.heartbeat(connector.id, { capabilities: ["llm_local"] });
+
+    const job = await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
+    await service.claimJob({ connectorId: connector.id, availableLanes: ["gpu"] });
+    await service.completeJob(job.id, connector.id, { text: "Hallo", model: "llama3.2" });
+
+    const completed = await waitForConnectorJob(db, job.id, { intervalMs: 1 });
+    assert.equal(completed.status, "completed");
+    assert.deepEqual(completed.result, { text: "Hallo", model: "llama3.2" });
+  });
+
+  it("polls until a job reaches a terminal state", async () => {
+    const service = createConnectorService(db);
+    const { connector } = await service.createConnector("Wait Poll");
+    await service.heartbeat(connector.id, { capabilities: ["llm_local"] });
+
+    const job = await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
+
+    const waitPromise = waitForConnectorJob(db, job.id, { intervalMs: 5 });
+    await service.claimJob({ connectorId: connector.id, availableLanes: ["gpu"] });
+    await service.completeJob(job.id, connector.id, { text: "späte Antwort" });
+
+    const completed = await waitPromise;
+    assert.equal(completed.status, "completed");
+  });
+
+  it("throws when the job fails", async () => {
+    const service = createConnectorService(db);
+    const { connector } = await service.createConnector("Wait Fail");
+    await service.heartbeat(connector.id, { capabilities: ["llm_local"] });
+
+    const job = await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
+    await service.claimJob({ connectorId: connector.id, availableLanes: ["gpu"] });
+    await service.failJob(job.id, connector.id, "OOM auf der GPU");
+
+    await assert.rejects(
+      () => waitForConnectorJob(db, job.id, { intervalMs: 1 }),
+      (error: unknown) => {
+        assert.ok(error instanceof ConnectorJobWaitError);
+        assert.equal(error.status, "failed");
+        assert.match(error.message, /OOM/);
+        return true;
+      },
+    );
+  });
+
+  it("throws for a missing job", async () => {
+    await assert.rejects(
+      () => waitForConnectorJob(db, "does-not-exist", { intervalMs: 1 }),
+      (error: unknown) => error instanceof ConnectorJobWaitError && error.status === "missing",
+    );
+  });
+
+  it("throws on timeout using injected clock/sleep", async () => {
+    const service = createConnectorService(db);
+    const job = await service.enqueueJob({ type: "llm_generate", payload: { prompt: "hi" } });
+
+    let clock = 0;
+    let sleeps = 0;
+    await assert.rejects(
+      () =>
+        waitForConnectorJob(db, job.id, {
+          timeoutMs: 50,
+          intervalMs: 10,
+          now: () => clock,
+          sleep: async (ms) => {
+            sleeps += 1;
+            clock += ms;
+          },
+        }),
+      (error: unknown) => error instanceof ConnectorJobWaitError && error.status === "timeout",
+    );
+    assert.ok(sleeps >= 1, "should have polled at least once before timing out");
   });
 });

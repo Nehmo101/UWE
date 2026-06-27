@@ -49,6 +49,16 @@ export interface ImageStudioResult {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Optional host-supplied bridge that runs an `image_generate` job through the
+ * outbound RTX Host Connector queue instead of calling the legacy inbound RTX
+ * Agent HTTP endpoint. Injected by the host (which has DB/queue access) so this
+ * package stays dependency-free.
+ */
+export type ConnectorImageGenerate = (
+  request: ImageStudioRequest,
+) => Promise<ImageStudioResult>;
+
 export interface ImageStudioProviderConfig {
   enabled: boolean;
   allowCloud: boolean;
@@ -58,6 +68,10 @@ export interface ImageStudioProviderConfig {
   cloudProvider?: string;
   cloudModel?: string;
   defaultMode: ImageProviderMode;
+  /** When true, prefer the connector image_generate queue over direct RTX Agent HTTP. */
+  useConnectorImage?: boolean;
+  /** Host-injected connector queue bridge (see {@link ConnectorImageGenerate}). */
+  connectorImageGenerate?: ConnectorImageGenerate;
 }
 
 export function resolveImageProviderConfig(
@@ -73,7 +87,27 @@ export function resolveImageProviderConfig(
     cloudModel: env.IMAGE_STUDIO_CLOUD_MODEL?.trim() || env.CLOUD_AI_MODEL?.trim() || "dall-e-3",
     defaultMode:
       (env.IMAGE_STUDIO_DEFAULT_PROVIDER?.trim() as ImageProviderMode) || "auto",
+    useConnectorImage: env.RTX_USE_CONNECTOR_IMAGE === "true",
   };
+}
+
+let warnedRtxAgentImageDeprecation = false;
+
+function warnRtxAgentImageDeprecation(via: "connector" | "direct"): void {
+  if (warnedRtxAgentImageDeprecation) return;
+  warnedRtxAgentImageDeprecation = true;
+  const tail =
+    via === "connector"
+      ? "Routing über die RTX-Host-Connector-Queue (image_generate)."
+      : "Direkter Aufruf des Legacy-Endpunkts — bitte auf den outbound RTX Host Connector migrieren (RTX_USE_CONNECTOR_IMAGE=true).";
+  console.warn(`[image-studio] RTX_AGENT_URL ist veraltet. ${tail}`);
+}
+
+/** A local image backend is available via the connector bridge or the legacy RTX Agent URL. */
+function hasLocalImageBackend(config: ImageStudioProviderConfig): boolean {
+  return Boolean(
+    (config.useConnectorImage && config.connectorImageGenerate) || config.rtxAgentUrl,
+  );
 }
 
 async function checkRtxAvailable(config: ImageStudioProviderConfig): Promise<boolean> {
@@ -99,12 +133,26 @@ async function resolveProvider(
   config: ImageStudioProviderConfig,
 ): Promise<ImageProviderMode> {
   if (mode === "disabled" || !config.enabled) return "disabled";
-  if (mode === "local_rtx") return config.rtxAgentUrl ? "local_rtx" : "disabled";
+  if (mode === "local_rtx") return hasLocalImageBackend(config) ? "local_rtx" : "disabled";
   if (mode === "cloud") return config.allowCloud && config.cloudApiKey ? "cloud" : "disabled";
+  // auto: prefer the connector queue when configured, then legacy RTX Agent.
+  if (config.useConnectorImage && config.connectorImageGenerate) return "local_rtx";
   const rtxUp = await checkRtxAvailable(config);
   if (rtxUp) return "local_rtx";
   if (config.allowCloud && config.cloudApiKey) return "cloud";
   return "disabled";
+}
+
+async function runLocalImageTask(
+  config: ImageStudioProviderConfig,
+  request: ImageStudioRequest,
+): Promise<ImageStudioResult> {
+  if (config.useConnectorImage && config.connectorImageGenerate) {
+    if (config.rtxAgentUrl) warnRtxAgentImageDeprecation("connector");
+    return config.connectorImageGenerate(request);
+  }
+  if (config.rtxAgentUrl) warnRtxAgentImageDeprecation("direct");
+  return callRtxImageAgent(config, request);
 }
 
 async function callRtxImageAgent(
@@ -241,7 +289,7 @@ export async function runImageStudioTask(
   };
 
   if (mode === "local_rtx") {
-    return callRtxImageAgent(resolvedConfig, providerRequest);
+    return runLocalImageTask(resolvedConfig, providerRequest);
   }
 
   return callCloudImageApi(resolvedConfig, providerRequest);
