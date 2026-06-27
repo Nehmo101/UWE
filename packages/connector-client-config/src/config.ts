@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validateHostUrl } from "./validate-host-url";
 import {
   CONNECTOR_TRAY_MODES,
+  DEFAULT_SPOTIFY_REDIRECT_URI,
   type ConnectorClientConfig,
   type ConnectorTrayMode,
 } from "./types";
@@ -22,6 +23,11 @@ const connectorClientConfigSchema = z.object({
   autostartWindows: z.boolean(),
   trayMode: trayModeSchema,
   privacyMode: z.boolean(),
+  spotifyClientId: z.string(),
+  spotifyClientSecret: z.string(),
+  spotifyRedirectUri: z.string(),
+  audioCommand: z.string(),
+  imageCommand: z.string(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -49,6 +55,11 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     autostartWindows: false,
     trayMode: "minimize_to_tray",
     privacyMode: false,
+    spotifyClientId: "",
+    spotifyClientSecret: "",
+    spotifyRedirectUri: DEFAULT_SPOTIFY_REDIRECT_URI,
+    audioCommand: "",
+    imageCommand: "",
   };
 }
 
@@ -97,6 +108,22 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
     trayMode: trayMode ?? defaults.trayMode,
     privacyMode:
       typeof input.privacyMode === "boolean" ? input.privacyMode : defaults.privacyMode,
+    spotifyClientId:
+      typeof input.spotifyClientId === "string"
+        ? input.spotifyClientId.trim()
+        : defaults.spotifyClientId,
+    spotifyClientSecret:
+      typeof input.spotifyClientSecret === "string"
+        ? input.spotifyClientSecret.trim()
+        : defaults.spotifyClientSecret,
+    spotifyRedirectUri:
+      typeof input.spotifyRedirectUri === "string" && input.spotifyRedirectUri.trim()
+        ? input.spotifyRedirectUri.trim()
+        : defaults.spotifyRedirectUri,
+    audioCommand:
+      typeof input.audioCommand === "string" ? input.audioCommand.trim() : defaults.audioCommand,
+    imageCommand:
+      typeof input.imageCommand === "string" ? input.imageCommand.trim() : defaults.imageCommand,
   };
 }
 

@@ -807,6 +807,9 @@ importers:
       '@uwe/cookbook':
         specifier: workspace:*
         version: link:../../packages/cookbook
+      '@uwe/soundboard':
+        specifier: workspace:*
+        version: link:../../packages/soundboard
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

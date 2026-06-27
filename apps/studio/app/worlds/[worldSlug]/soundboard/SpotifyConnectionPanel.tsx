@@ -14,6 +14,8 @@ interface SpotifyDevice {
 interface SpotifyStatusResponse {
   configured: boolean;
   connected: boolean;
+  /** "rtx-connector" when Spotify is served by the RTX Connector Client. */
+  via?: string | null;
   spotifyDisplayName?: string | null;
   preferredDeviceId?: string | null;
   preferredDeviceName?: string | null;
@@ -154,25 +156,20 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
     return labels[type] ?? type;
   };
 
+  const connectorActive = status?.via === "rtx-connector";
+
   return (
     <section className="uwe-panel">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
         <div>
           <h2>Spotify</h2>
           <p className="uwe-table-sub" style={{ margin: 0 }}>
-            Verbinde ein Spotify-Premium-Konto pro Welt für Soundboard-Wiedergabe über die Web API.
+            Spotify wird im RTX Connector Client eingerichtet — das Soundboard sendet die
+            Wiedergabe als Connector-Job an den RTX-PC.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {!loading && status?.configured && !status.connected && (
-            <a
-              className="uwe-v2-btn"
-              href={`/api/worlds/${encodeURIComponent(worldSlug)}/spotify/connect`}
-            >
-              Mit Spotify verbinden
-            </a>
-          )}
-          {!loading && status?.connected && (
+          {!loading && !connectorActive && status?.configured && status.connected && (
             <>
               <button
                 type="button"
@@ -197,14 +194,28 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
 
       {loading && <p className="uwe-table-sub">Spotify-Status wird geladen …</p>}
 
-      {!loading && status && !status.configured && (
-        <p className="uwe-flash uwe-flash-error" role="alert">
-          {status.message ??
-            "Spotify OAuth ist nicht konfiguriert. SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET und Redirect-URI setzen."}
+      {!loading && connectorActive && (
+        <p className="uwe-flash uwe-flash-success">
+          Spotify läuft über den <strong>RTX Connector Client</strong>. Anmeldung und Ausgabegerät
+          werden dort im Spotify-Panel verwaltet — der Host hält keine Spotify-Tokens.
         </p>
       )}
 
-      {!loading && status?.configured && status.connected && (
+      {!loading && !connectorActive && status && !status.configured && (
+        <div className="uwe-flash uwe-flash-error" role="alert">
+          <p style={{ margin: 0 }}>
+            {status.message ??
+              "Spotify wird im RTX Connector Client eingerichtet (Client-ID/Secret hinterlegen und anmelden)."}
+          </p>
+          <p className="uwe-table-sub" style={{ margin: "0.5rem 0 0" }}>
+            Öffne den RTX Connector Client → Spotify, hinterlege Client-ID/Secret, melde dich an und
+            wähle das Ausgabegerät. Sobald der Connector online ist, wird er hier automatisch als
+            Spotify-Backend erkannt.
+          </p>
+        </div>
+      )}
+
+      {!loading && !connectorActive && status?.configured && status.connected && (
         <p className="uwe-flash uwe-flash-success">
           Verbunden als {status.spotifyDisplayName ?? "Spotify-Nutzer"}.
           {status.preferredDeviceName && (
@@ -216,7 +227,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
         </p>
       )}
 
-      {!loading && status?.configured && !status.connected && (
+      {!loading && !connectorActive && status?.configured && !status.connected && (
         <p className="uwe-table-sub">
           Noch nicht verbunden. Spotify Premium und ein aktives Wiedergabegerät (App oder Webplayer) sind nötig.
         </p>

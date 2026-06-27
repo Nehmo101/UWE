@@ -12,8 +12,10 @@ import {
 } from "@uwe/connector-model-profile";
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
+import { AudioPanel } from "./components/AudioPanel";
 import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
+import { ImagePanel } from "./components/ImagePanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
 import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
@@ -21,6 +23,7 @@ import { RunnersPanel } from "./components/RunnersPanel";
 import { SecurityPanel } from "./components/SecurityPanel";
 import { SectionPlaceholder } from "./components/SectionPlaceholder";
 import { SetupWizard } from "./components/SetupWizard";
+import { SpotifyPanel } from "./components/SpotifyPanel";
 import { UweReleasePanel } from "./components/UweReleasePanel";
 import {
   getConnectorStatus,
@@ -33,10 +36,18 @@ import {
   readConfig,
   saveModelStore,
   scanModels,
+  spotifyAuthUrl,
+  spotifyDevices,
+  spotifyDisconnect,
+  spotifyExchangeCode,
+  spotifySetDevice,
+  spotifyTest,
   startConnector,
   startOllama,
   stopConnector,
+  testAudio,
   testHostConnection,
+  testImage,
   testRunner,
   writeConfig,
   type ConnectorRuntimeStatus,
@@ -107,21 +118,21 @@ const NAV_SECTIONS: Section[] = [
     id: "spotify",
     label: "Spotify",
     phase: "P4",
-    active: false,
+    active: true,
     summary: "Spotify OAuth und Device-Verwaltung nur auf dem RTX-PC.",
   },
   {
     id: "audio",
     label: "Audio",
     phase: "P4",
-    active: false,
+    active: true,
     summary: "Lokale Audio-Befehle und Capability-Tests.",
   },
   {
     id: "image",
     label: "Bildgenerierung",
     phase: "P4",
-    active: false,
+    active: true,
     summary: "Image-Worker konfigurieren und testen.",
   },
   {
@@ -723,6 +734,41 @@ export default function App() {
             busy={busyAction !== null}
             onChangePrivacyMode={(value) => updateConfig("privacyMode", value)}
             onSave={persistConfig}
+          />
+        );
+      case "spotify":
+        return (
+          <SpotifyPanel
+            config={config}
+            busy={busyAction !== null}
+            onChange={updateConfig}
+            onSave={persistConfig}
+            onAuthUrl={spotifyAuthUrl}
+            onExchangeCode={spotifyExchangeCode}
+            onLoadDevices={spotifyDevices}
+            onSetDevice={spotifySetDevice}
+            onTest={spotifyTest}
+            onDisconnect={spotifyDisconnect}
+          />
+        );
+      case "audio":
+        return (
+          <AudioPanel
+            config={config}
+            busy={busyAction !== null}
+            onChange={updateConfig}
+            onSave={persistConfig}
+            onTest={testAudio}
+          />
+        );
+      case "image":
+        return (
+          <ImagePanel
+            config={config}
+            busy={busyAction !== null}
+            onChange={updateConfig}
+            onSave={persistConfig}
+            onTest={testImage}
           />
         );
       case "jobs":

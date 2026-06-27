@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
@@ -8,7 +7,6 @@ import {
   resolveSpotifyOAuthConfig,
 } from "@uwe/database/server";
 import {
-  buildSpotifyAuthorizationUrl,
   exchangeSpotifyAuthorizationCode,
   listSpotifyDevices,
   pauseSpotifyPlayback,
@@ -19,13 +17,15 @@ import {
   transferSpotifyPlayback,
 } from "@uwe/soundboard";
 import {
-  encodeOAuthState,
-  hashStateCookieValue,
   SPOTIFY_STATE_COOKIE,
   verifySpotifyOAuthState,
 } from "./spotify-oauth-state";
 import { getOAuthStateCookieOptions } from "@uwe/auth";
 import { jsonError } from "./api-response";
+import {
+  isSpotifyConnectAvailable,
+  tryDispatchSpotifyConnector,
+} from "./spotify-connector";
 
 const SPOTIFY_STATE_COOKIE_PATH = "/api/spotify/callback";
 
@@ -43,17 +43,26 @@ function getSpotifyService() {
   };
 }
 
-function encodeOAuthStateForRequest(state: { worldSlug: string; nonce: string }): string {
-  return encodeOAuthState(state);
-}
-
 export async function getSpotifyStatus(worldSlug: string) {
+  // Spotify auth now lives on the RTX Connector Client. When a connector
+  // advertises `spotify_connect`, report it as the active, connected backend.
+  if (await isSpotifyConnectAvailable()) {
+    return NextResponse.json({
+      configured: true,
+      connected: true,
+      via: "rtx-connector",
+      spotifyDisplayName: "RTX Connector",
+      message: "RTX Connector",
+    });
+  }
+
   const runtime = getSpotifyService();
   if (!runtime) {
     return NextResponse.json({
       configured: false,
       connected: false,
-      message: "Spotify OAuth ist nicht konfiguriert (SPOTIFY_CLIENT_ID/SECRET).",
+      message:
+        "Spotify wird im RTX Connector Client eingerichtet — dort Client-ID/Secret hinterlegen und anmelden.",
     });
   }
 
@@ -68,36 +77,20 @@ export async function getSpotifyStatus(worldSlug: string) {
   }
 }
 
-export async function startSpotifyConnect(worldSlug: string) {
-  const runtime = getSpotifyService();
-  if (!runtime) {
-    return jsonError("Spotify OAuth ist nicht konfiguriert.", 503);
-  }
-
-  try {
-    const world = await runtime.db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-
-    if (!world) {
-      return jsonError("Welt nicht gefunden.", 404);
-    }
-
-    const nonce = randomBytes(16).toString("hex");
-    const state = encodeOAuthStateForRequest({ worldSlug, nonce });
-    const authorizationUrl = buildSpotifyAuthorizationUrl(runtime.oauthConfig, state);
-
-    const response = NextResponse.redirect(authorizationUrl);
-    response.cookies.set(SPOTIFY_STATE_COOKIE, hashStateCookieValue(nonce), {
-      ...getOAuthStateCookieOptions(SPOTIFY_STATE_COOKIE_PATH),
-      maxAge: 10 * 60,
-    });
-
-    return response;
-  } finally {
-    await runtime.db.$disconnect();
-  }
+export async function startSpotifyConnect(_worldSlug: string) {
+  // Host-side Spotify OAuth is retired. Spotify is connected exclusively in the
+  // RTX Connector Client (Spotify panel), which holds the OAuth credentials and
+  // the active Spotify Connect device. Point the user there instead of starting
+  // a host OAuth redirect.
+  return NextResponse.json(
+    {
+      ok: false,
+      setup: "rtx-connector-client",
+      message:
+        "Spotify wird jetzt im RTX Connector Client eingerichtet: dort Client-ID/Secret hinterlegen, anmelden und das Ausgabegerät wählen.",
+    },
+    { status: 410 },
+  );
 }
 
 export async function handleSpotifyCallback(request: Request) {
@@ -204,6 +197,13 @@ export async function playSpotifyForWorld(
     return jsonError("Spotify-URI fehlt.");
   }
 
+  const queued = await tryDispatchSpotifyConnector(worldSlug, {
+    action: "play",
+    uri: body.uri,
+    volume: body.volume,
+  });
+  if (queued) return queued;
+
   const runtime = getSpotifyService();
   if (!runtime) {
     return jsonError("Spotify OAuth ist nicht konfiguriert.", 503);
@@ -309,18 +309,27 @@ async function withWorldAccessToken(
 }
 
 export async function pauseSpotifyForWorld(worldSlug: string) {
+  const queued = await tryDispatchSpotifyConnector(worldSlug, { action: "pause" });
+  if (queued) return queued;
+
   return withWorldAccessToken(worldSlug, (accessToken) =>
     pauseSpotifyPlayback({ accessToken }),
   );
 }
 
 export async function resumeSpotifyForWorld(worldSlug: string) {
+  const queued = await tryDispatchSpotifyConnector(worldSlug, { action: "resume" });
+  if (queued) return queued;
+
   return withWorldAccessToken(worldSlug, (accessToken) =>
     resumeSpotifyPlayback({ accessToken }),
   );
 }
 
 export async function stopSpotifyForWorld(worldSlug: string) {
+  const queued = await tryDispatchSpotifyConnector(worldSlug, { action: "stop" });
+  if (queued) return queued;
+
   return withWorldAccessToken(worldSlug, (accessToken) =>
     stopSpotifyPlayback({ accessToken }),
   );
@@ -333,6 +342,12 @@ export async function setSpotifyVolumeForWorld(
   if (typeof body.volume !== "number") {
     return jsonError("Lautstärke fehlt.");
   }
+
+  const queued = await tryDispatchSpotifyConnector(worldSlug, {
+    action: "volume",
+    volume: body.volume,
+  });
+  if (queued) return queued;
 
   return withWorldAccessToken(worldSlug, (accessToken) =>
     setSpotifyVolume({ accessToken, volume: body.volume as number }),

@@ -8,6 +8,7 @@ export {
   CONNECTOR_PROCESS_STATUSES,
   CONNECTOR_TRAY_MODES,
   ConnectorConnectionStatus,
+  DEFAULT_SPOTIFY_REDIRECT_URI,
   type ConnectorClientConfig,
   type ConnectorProcessState,
   type ConnectorProcessStatus,
