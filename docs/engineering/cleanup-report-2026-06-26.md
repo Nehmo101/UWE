@@ -20,7 +20,7 @@ implemented the deferred items.
   Canonical path: Linux Host + `systemd` (`deploy/systemd/uwe.service`,
   `deploy/scripts/setup-uwe-host.sh`), optional Cloudflare Tunnel.
 - **RTX framing is consistent.** Outbound **RTX Host Connector** is the go-forward
-  inference path everywhere; the inbound **RTX-Agent** (`RTX_AGENT_URL`) is
+  inference path everywhere; the inbound **RTX-Agent** legacy URL alias is
   deprecated compatibility only.
 - **Slug logic fully centralised** into a new **`@uwe/shared-utils`** package and
   migrated across `database`, `auth`, `knoteforge-import`, `agent-jobs` and
@@ -125,8 +125,8 @@ plans are in `docs/engineering/cleanup-inventory.md`:
    become thin renderers, then retire V1 once Design V2 has soaked. Must preserve the
    reduced IA (Heute · Welten · Erstellen · Medien & KI · System).
 3. **AI-Brain connector queue adapter** — implement `connectorQueueProvider` per
-   `docs/ai-brain-connector-migration.md`, then demote `RTX_AGENT_URL`. The inbound
-   RTX-Agent stays wired (`localRtxProvider`, `rtxHealthcheck`,
+   `docs/ai-brain-connector-migration.md`, then demote the legacy agent URL alias.
+   The inbound RTX-Agent stays wired (`localRtxProvider`, `rtxHealthcheck`,
    `/api/inference/hardware`) until this adapter replaces it, so it is intentional
    deprecated compatibility — not dead code.
 
