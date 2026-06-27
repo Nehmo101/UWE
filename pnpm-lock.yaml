@@ -804,6 +804,9 @@ importers:
       '@uwe/connector-model-profile':
         specifier: workspace:*
         version: link:../../packages/connector-model-profile
+      '@uwe/cookbook':
+        specifier: workspace:*
+        version: link:../../packages/cookbook
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

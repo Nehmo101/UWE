@@ -40,6 +40,28 @@ its capabilities, then claims and runs jobs.
 - Reconnects after transient host/network errors; exits if the token is rejected.
 - Shuts down gracefully on SIGINT/SIGTERM (drains active jobs, final heartbeat).
 
+## Desktop client CLI helpers
+
+`src/client-cli.ts` exposes one-shot commands the Tauri desktop client invokes
+(`node --import tsx src/client-cli.ts <command>`). In addition to the model-store
+helpers it provides runner/cookbook admin commands:
+
+- `cookbook-dashboard` — detected hardware (`@uwe/cookbook`), installed Ollama
+  models, curated recommendations and per-model fit scores.
+- `probe-runners` — health-check Ollama (`/api/tags`), LM Studio and llama.cpp
+  (`/v1/models`).
+- `start-ollama` — best-effort start of the local Ollama service on Windows
+  (no-op with a friendly message elsewhere).
+- `test-runner [ollama|lm_studio|llama_cpp]` — quick health probe of one runner
+  (Ollama also returns a best-effort tokens/s sample).
+
+All probes are offline-safe and only read model metadata the local servers
+expose. Runner helpers live in `src/runner-admin.ts`.
+
+When the desktop client starts the connector with **Privacy Mode** enabled it
+sets `UWE_CONNECTOR_PRIVACY_MODE=true`, signalling the connector to report only
+minimal metadata to the host.
+
 ## Security
 
 - Authenticates with a connector token (`Authorization: Bearer uwec_…`). The

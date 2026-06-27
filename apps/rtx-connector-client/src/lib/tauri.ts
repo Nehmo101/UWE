@@ -57,6 +57,102 @@ export interface PullOllamaModelResult {
   store: ConnectorModelProfileStore;
 }
 
+export type RunnerId = "ollama" | "lm_studio" | "llama_cpp";
+export type RunnerStatus = "online" | "offline" | "error";
+
+export interface RunnerProbeResult {
+  id: RunnerId;
+  label: string;
+  endpoint: string;
+  healthPath: string;
+  status: RunnerStatus;
+  modelCount: number | null;
+  models: string[];
+  message: string;
+}
+
+export interface OllamaSpeedResult {
+  ok: boolean;
+  model: string;
+  tokensPerSecond: number | null;
+  evalCount: number | null;
+  message: string;
+}
+
+export interface RunnerTestResult extends RunnerProbeResult {
+  speed?: OllamaSpeedResult;
+}
+
+export interface StartOllamaResult {
+  ok: boolean;
+  started: boolean;
+  alreadyRunning: boolean;
+  message: string;
+  triedPaths: string[];
+}
+
+export interface CookbookHardwareSummary {
+  platform: string;
+  arch: string;
+  cpuCores: number;
+  ramGb: number;
+  backend: string;
+  gpuName: string | null;
+  gpuVramGb: number;
+  gpuCount: number;
+  probeMessage: string;
+}
+
+export type CookbookFitLevel =
+  | "excellent"
+  | "good"
+  | "marginal"
+  | "poor"
+  | "unsupported";
+
+export interface CookbookModelFit {
+  modelId: string;
+  score: number;
+  level: CookbookFitLevel;
+  estimatedVramGb: number;
+  estimatedRamGb: number;
+  fitsGpu: boolean;
+  fitsRam: boolean;
+  notes: string[];
+}
+
+export interface CookbookRecommendationView {
+  useCase: string;
+  label: string;
+  description: string;
+  modelId: string;
+  modelLabel: string;
+  engineId: string;
+  fit: CookbookModelFit;
+  privacyNote: string;
+}
+
+export interface CookbookModelView {
+  id: string;
+  label: string;
+  family: string;
+  paramsB: number;
+  tags: string[];
+  useCases: string[];
+  engines: string[];
+  recommendedQuant: string;
+  minVramGbQ4: number;
+  installed: boolean;
+  fit: CookbookModelFit;
+}
+
+export interface CookbookDashboardView {
+  hardware: CookbookHardwareSummary;
+  installedModels: string[];
+  recommendations: CookbookRecommendationView[];
+  models: CookbookModelView[];
+}
+
 const MOCK_CONFIG_KEY = "uwe-rtx-connector-client:mock-config";
 const MOCK_RUNNING_KEY = "uwe-rtx-connector-client:mock-running";
 const MOCK_MODEL_STORE_KEY = "uwe-rtx-connector-client:mock-model-store";
@@ -206,6 +302,157 @@ function parsePullResult(raw: unknown): PullOllamaModelResult {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function asBool(value: unknown, fallback = false): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+const RUNNER_IDS: RunnerId[] = ["ollama", "lm_studio", "llama_cpp"];
+const RUNNER_STATUSES: RunnerStatus[] = ["online", "offline", "error"];
+
+function parseRunner(raw: unknown): RunnerProbeResult {
+  const value = asRecord(raw);
+  const id = RUNNER_IDS.includes(value.id as RunnerId) ? (value.id as RunnerId) : "ollama";
+  const status = RUNNER_STATUSES.includes(value.status as RunnerStatus)
+    ? (value.status as RunnerStatus)
+    : "error";
+  return {
+    id,
+    label: asString(value.label, id),
+    endpoint: asString(value.endpoint),
+    healthPath: asString(value.healthPath),
+    status,
+    modelCount: typeof value.modelCount === "number" ? value.modelCount : null,
+    models: asStringArray(value.models),
+    message: asString(value.message),
+  };
+}
+
+function parseRunners(raw: unknown): RunnerProbeResult[] {
+  const value = asRecord(raw);
+  const runners = Array.isArray(value.runners) ? value.runners : Array.isArray(raw) ? raw : [];
+  return runners.map(parseRunner);
+}
+
+function parseSpeed(raw: unknown): OllamaSpeedResult | undefined {
+  if (typeof raw !== "object" || raw === null) {
+    return undefined;
+  }
+  const value = asRecord(raw);
+  return {
+    ok: asBool(value.ok),
+    model: asString(value.model),
+    tokensPerSecond: typeof value.tokensPerSecond === "number" ? value.tokensPerSecond : null,
+    evalCount: typeof value.evalCount === "number" ? value.evalCount : null,
+    message: asString(value.message),
+  };
+}
+
+function parseRunnerTest(raw: unknown): RunnerTestResult {
+  const base = parseRunner(raw);
+  const speed = parseSpeed(asRecord(raw).speed);
+  return speed ? { ...base, speed } : base;
+}
+
+function parseStartOllama(raw: unknown): StartOllamaResult {
+  const value = asRecord(raw);
+  return {
+    ok: asBool(value.ok),
+    started: asBool(value.started),
+    alreadyRunning: asBool(value.alreadyRunning),
+    message: asString(value.message),
+    triedPaths: asStringArray(value.triedPaths),
+  };
+}
+
+function parseFit(raw: unknown): CookbookModelFit {
+  const value = asRecord(raw);
+  const level = value.level as CookbookFitLevel;
+  return {
+    modelId: asString(value.modelId),
+    score: asNumber(value.score),
+    level: level ?? "unsupported",
+    estimatedVramGb: asNumber(value.estimatedVramGb),
+    estimatedRamGb: asNumber(value.estimatedRamGb),
+    fitsGpu: asBool(value.fitsGpu),
+    fitsRam: asBool(value.fitsRam),
+    notes: asStringArray(value.notes),
+  };
+}
+
+function parseHardware(raw: unknown): CookbookHardwareSummary {
+  const value = asRecord(raw);
+  return {
+    platform: asString(value.platform, "unknown"),
+    arch: asString(value.arch, "unknown"),
+    cpuCores: asNumber(value.cpuCores),
+    ramGb: asNumber(value.ramGb),
+    backend: asString(value.backend, "cpu"),
+    gpuName: typeof value.gpuName === "string" ? value.gpuName : null,
+    gpuVramGb: asNumber(value.gpuVramGb),
+    gpuCount: asNumber(value.gpuCount),
+    probeMessage: asString(value.probeMessage),
+  };
+}
+
+function parseRecommendation(raw: unknown): CookbookRecommendationView {
+  const value = asRecord(raw);
+  return {
+    useCase: asString(value.useCase),
+    label: asString(value.label),
+    description: asString(value.description),
+    modelId: asString(value.modelId),
+    modelLabel: asString(value.modelLabel),
+    engineId: asString(value.engineId),
+    fit: parseFit(value.fit),
+    privacyNote: asString(value.privacyNote),
+  };
+}
+
+function parseCookbookModel(raw: unknown): CookbookModelView {
+  const value = asRecord(raw);
+  return {
+    id: asString(value.id),
+    label: asString(value.label),
+    family: asString(value.family),
+    paramsB: asNumber(value.paramsB),
+    tags: asStringArray(value.tags),
+    useCases: asStringArray(value.useCases),
+    engines: asStringArray(value.engines),
+    recommendedQuant: asString(value.recommendedQuant),
+    minVramGbQ4: asNumber(value.minVramGbQ4),
+    installed: asBool(value.installed),
+    fit: parseFit(value.fit),
+  };
+}
+
+function parseCookbookDashboard(raw: unknown): CookbookDashboardView {
+  const value = asRecord(raw);
+  return {
+    hardware: parseHardware(value.hardware),
+    installedModels: asStringArray(value.installedModels),
+    recommendations: Array.isArray(value.recommendations)
+      ? value.recommendations.map(parseRecommendation)
+      : [],
+    models: Array.isArray(value.models) ? value.models.map(parseCookbookModel) : [],
+  };
+}
+
 function deriveConnectionStatus(
   config: ConnectorClientConfig,
   running: boolean,
@@ -228,6 +475,98 @@ function buildMockRuntimeStatus(): ConnectorRuntimeStatus {
       : "Browser-Vorschau: Connector-Stub ist gestoppt.",
     connectionStatus: deriveConnectionStatus(config, running),
     lastHeartbeatAt: running ? nowTimestamp() : null,
+  };
+}
+
+function buildMockRunners(): RunnerProbeResult[] {
+  return [
+    {
+      id: "ollama",
+      label: "Ollama",
+      endpoint: "http://127.0.0.1:11434",
+      healthPath: "/api/tags",
+      status: "offline",
+      modelCount: null,
+      models: [],
+      message: "Browser-Vorschau: kein echter Runner ohne Tauri-Shell.",
+    },
+    {
+      id: "lm_studio",
+      label: "LM Studio",
+      endpoint: "http://127.0.0.1:1234",
+      healthPath: "/v1/models",
+      status: "offline",
+      modelCount: null,
+      models: [],
+      message: "Browser-Vorschau: kein echter Runner ohne Tauri-Shell.",
+    },
+    {
+      id: "llama_cpp",
+      label: "llama.cpp",
+      endpoint: "http://127.0.0.1:8080",
+      healthPath: "/v1/models",
+      status: "offline",
+      modelCount: null,
+      models: [],
+      message: "Browser-Vorschau: kein echter Runner ohne Tauri-Shell.",
+    },
+  ];
+}
+
+function mockFit(modelId: string, score: number, level: CookbookFitLevel): CookbookModelFit {
+  return {
+    modelId,
+    score,
+    level,
+    estimatedVramGb: 6,
+    estimatedRamGb: 9,
+    fitsGpu: level !== "unsupported" && level !== "poor",
+    fitsRam: true,
+    notes: ["Browser-Vorschauwerte — echte Schätzung nur in der Tauri-App."],
+  };
+}
+
+function buildMockCookbookDashboard(): CookbookDashboardView {
+  return {
+    hardware: {
+      platform: "browser",
+      arch: "preview",
+      cpuCores: 8,
+      ramGb: 32,
+      backend: "cpu",
+      gpuName: null,
+      gpuVramGb: 0,
+      gpuCount: 0,
+      probeMessage: "Browser-Vorschau — echte Hardware-Erkennung nur in der Tauri-App.",
+    },
+    installedModels: [],
+    recommendations: [
+      {
+        useCase: "dnd_generator",
+        label: "DnD Generator",
+        description: "NPCs, Orte, Encounters und Dungeon-Räume generieren.",
+        modelId: "llama3.1:8b",
+        modelLabel: "Llama 3.1 8B",
+        engineId: "ollama",
+        fit: mockFit("llama3.1:8b", 72, "good"),
+        privacyNote: "Bei privatem Kontext Cloud-Provider blockiert.",
+      },
+    ],
+    models: [
+      {
+        id: "llama3.1:8b",
+        label: "Llama 3.1 8B",
+        family: "llama",
+        paramsB: 8,
+        tags: ["balanced", "general"],
+        useCases: ["dnd_generator", "session_prep"],
+        engines: ["ollama", "lm_studio"],
+        recommendedQuant: "Q4_K_M",
+        minVramGbQ4: 5.5,
+        installed: false,
+        fit: mockFit("llama3.1:8b", 72, "good"),
+      },
+    ],
   };
 }
 
@@ -361,6 +700,24 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
       const lines = readMockLogs();
       return (category ? lines.filter((line) => line.includes(`[${category}]`)) : lines) as T;
     }
+    case "cookbook_dashboard":
+      return buildMockCookbookDashboard() as T;
+    case "probe_runners":
+      return { runners: buildMockRunners() } as T;
+    case "start_ollama":
+      return {
+        ok: false,
+        started: false,
+        alreadyRunning: false,
+        message:
+          "Browser-Vorschau: Ollama-Start ist nur in der Tauri-App auf dem RTX-PC verfügbar.",
+        triedPaths: [],
+      } as T;
+    case "test_runner": {
+      const id = typeof args?.runner === "string" ? args.runner.trim() : "ollama";
+      const runner = buildMockRunners().find((entry) => entry.id === id) ?? buildMockRunners()[0];
+      return runner as T;
+    }
     default:
       throw new Error(`Unbekannter Mock-Befehl: ${command}`);
   }
@@ -417,4 +774,20 @@ export async function listConnectorJobs(): Promise<ConnectorJobHistoryEntry[]> {
 
 export async function listConnectorLogs(category?: string): Promise<string[]> {
   return parseLogs(await invokeCommand<unknown>("list_connector_logs", { category }));
+}
+
+export async function getCookbookDashboard(): Promise<CookbookDashboardView> {
+  return parseCookbookDashboard(await invokeCommand<unknown>("cookbook_dashboard"));
+}
+
+export async function probeRunners(): Promise<RunnerProbeResult[]> {
+  return parseRunners(await invokeCommand<unknown>("probe_runners"));
+}
+
+export async function startOllama(): Promise<StartOllamaResult> {
+  return parseStartOllama(await invokeCommand<unknown>("start_ollama"));
+}
+
+export async function testRunner(runner?: RunnerId): Promise<RunnerTestResult> {
+  return parseRunnerTest(await invokeCommand<unknown>("test_runner", { runner }));
 }

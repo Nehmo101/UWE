@@ -25,6 +25,14 @@ export interface ConnectorClientConfig {
   autostartWindows: boolean;
   /** How the client behaves with the system tray. */
   trayMode: ConnectorTrayMode;
+  /**
+   * Privacy mode. When `true`, the connector reports only the minimal metadata
+   * required for the host to route jobs (connector name, lanes, model ids) and
+   * omits richer host-facing telemetry such as model descriptions, hardware
+   * details and on-disk paths. Passed to the connector process as the
+   * `UWE_CONNECTOR_PRIVACY_MODE` environment variable. Defaults to `false`.
+   */
+  privacyMode: boolean;
 }
 
 export const ConnectorConnectionStatus = {
