@@ -33,7 +33,36 @@ export interface ConnectorClientConfig {
    * `UWE_CONNECTOR_PRIVACY_MODE` environment variable. Defaults to `false`.
    */
   privacyMode: boolean;
+  /**
+   * Spotify application client id used for the connector-local OAuth flow.
+   * Spotify auth lives only on the RTX Connector Client — never on the host.
+   * Empty until the user pastes their Spotify app credentials.
+   */
+  spotifyClientId: string;
+  /** Spotify application client secret for the connector-local OAuth flow. */
+  spotifyClientSecret: string;
+  /**
+   * Spotify OAuth redirect URI. Defaults to the loopback callback the client
+   * listens on (`http://127.0.0.1:8742/callback`). Must match the URI
+   * registered in the Spotify developer dashboard.
+   */
+  spotifyRedirectUri: string;
+  /**
+   * Local audio player command. Passed to the connector as
+   * `UWE_CONNECTOR_AUDIO_CMD`; the source URL/path is appended as the final
+   * argument. Empty disables local audio playback.
+   */
+  audioCommand: string;
+  /**
+   * Local image-generation command. Passed to the connector as
+   * `UWE_CONNECTOR_IMAGE_CMD`; the job payload is provided on stdin as JSON.
+   * Empty disables local image generation.
+   */
+  imageCommand: string;
 }
+
+/** Default Spotify OAuth redirect URI for the connector-local loopback flow. */
+export const DEFAULT_SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8742/callback";
 
 export const ConnectorConnectionStatus = {
   NotConfigured: "not_configured",

@@ -24,6 +24,11 @@ describe("defaultConnectorClientConfig", () => {
     assert.equal(config.autostartWindows, false);
     assert.equal(config.trayMode, "minimize_to_tray");
     assert.equal(config.privacyMode, false);
+    assert.equal(config.spotifyClientId, "");
+    assert.equal(config.spotifyClientSecret, "");
+    assert.equal(config.spotifyRedirectUri, "http://127.0.0.1:8742/callback");
+    assert.equal(config.audioCommand, "");
+    assert.equal(config.imageCommand, "");
   });
 });
 
@@ -98,6 +103,33 @@ describe("parseConnectorClientConfig", () => {
     assert.equal(parseConnectorClientConfig({ privacyMode: true }).privacyMode, true);
     // Non-boolean input falls back to the default.
     assert.equal(parseConnectorClientConfig({ privacyMode: "yes" }).privacyMode, false);
+  });
+
+  it("parses and trims Spotify and executor command fields", () => {
+    const config = parseConnectorClientConfig({
+      spotifyClientId: "  client-id  ",
+      spotifyClientSecret: " secret ",
+      spotifyRedirectUri: " http://127.0.0.1:9000/cb ",
+      audioCommand: "  mpv --no-video  ",
+      imageCommand: " python gen.py ",
+    });
+
+    assert.equal(config.spotifyClientId, "client-id");
+    assert.equal(config.spotifyClientSecret, "secret");
+    assert.equal(config.spotifyRedirectUri, "http://127.0.0.1:9000/cb");
+    assert.equal(config.audioCommand, "mpv --no-video");
+    assert.equal(config.imageCommand, "python gen.py");
+  });
+
+  it("falls back to the default redirect URI for blank values", () => {
+    assert.equal(
+      parseConnectorClientConfig({ spotifyRedirectUri: "   " }).spotifyRedirectUri,
+      "http://127.0.0.1:8742/callback",
+    );
+    assert.equal(
+      parseConnectorClientConfig({ spotifyRedirectUri: 42 }).spotifyRedirectUri,
+      "http://127.0.0.1:8742/callback",
+    );
   });
 });
 
