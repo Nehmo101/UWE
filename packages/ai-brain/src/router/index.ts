@@ -51,6 +51,7 @@ export {
 export {
   checkRtxHealth,
   isRtxReady,
+  isRtxWorkerConfigured,
   isRtxAgentConfigured,
   type RtxHealthStatus,
 } from "./health/rtxHealthcheck";

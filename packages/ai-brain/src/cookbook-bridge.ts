@@ -1,7 +1,7 @@
 import type { CookbookRuntimeProbeInput } from "@uwe/cookbook";
 import { getInferenceStatus } from "./inference";
 import { checkRtxHealth } from "./router/health/rtxHealthcheck";
-import { isRtxAgentConfigured } from "./rtx-agent-config";
+import { isRtxWorkerConfigured } from "./rtx-worker-config";
 
 export async function buildCookbookRuntimeProbe(options?: {
   useMock?: boolean;
@@ -31,7 +31,7 @@ export async function buildCookbookRuntimeProbe(options?: {
       message: rtx.message,
       urlAllowed: rtx.urlAllowed,
       modelCount: rtx.modelCount,
-      agentConfigured: isRtxAgentConfigured(options?.env),
+      agentConfigured: isRtxWorkerConfigured(options?.env),
     },
     skipDocker: options?.useMock,
   };

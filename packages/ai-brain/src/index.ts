@@ -89,6 +89,8 @@ export {
   resolveCloudProviderId,
   checkRtxHealth,
   isRtxReady,
+  isRtxWorkerConfigured,
+  isRtxAgentConfigured,
   AiRouterError,
   type AiProviderMode,
   type AiContextMode,
