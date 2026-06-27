@@ -71,7 +71,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 ### ⛔ Deprecated / Removed
 
 - **Docker** und **Windows-One-Click-Installer** — entfernt ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
-- **Inbound RTX-Agent** — Standalone-Tool entfernt; `RTX_AGENT_URL` nur noch deprecateter
+- **Inbound RTX-Agent** — Standalone-Tool entfernt; nur noch deprecateter
   Client-Shim. Aktiv: outbound **RTX Host Connector** + direktes Ollama/LM Studio.
 
 ---
