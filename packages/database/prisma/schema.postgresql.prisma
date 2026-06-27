@@ -1572,6 +1572,16 @@ enum ConnectorLane {
   maintenance
 }
 
+// Workflow slots that map a UWE use-case to a specific connector model.
+enum ConnectorWorkflowSlot {
+  chat
+  code
+  dnd
+  analysis
+  embedding
+  vision
+}
+
 model Connector {
   id              String          @id @default(cuid())
   name            String
@@ -1590,10 +1600,28 @@ model Connector {
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
-  claimedJobs ConnectorJob[]
+  claimedJobs      ConnectorJob[]
+  workflowDefaults ConnectorWorkflowDefault[]
 
   @@index([status])
   @@map("connectors")
+}
+
+// One default connector model per workflow slot. The host picks these models
+// for the matching use-case; the connector stays the source of truth for the
+// model metadata reported on heartbeat.
+model ConnectorWorkflowDefault {
+  id          String                @id @default(cuid())
+  slot        ConnectorWorkflowSlot @unique
+  connectorId String                @map("connector_id")
+  modelId     String                @map("model_id")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  connector Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@index([connectorId])
+  @@map("connector_workflow_defaults")
 }
 
 model ConnectorJob {

@@ -27,6 +27,15 @@ Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
   `start-ollama`, `test-runner`.
 - Tray-Integration und Windows-Autostart bleiben Stubs („folgt“).
 
+## Neu in P5
+
+- **Studio-Workflow-Standards**: Studio bietet auf `/system/rtx-connector` einen
+  Modell-Picker für vom Connector gemeldete Modelle (Anzeigename, Beschreibung,
+  `bestFor`) und Workflow-Standards pro Anwendungsfall (chat, code, dnd, analysis,
+  embedding, vision → `{ connectorId, modelId }`). Heartbeat-Modelle tragen dafür
+  jetzt eine stabile Profil-`id`. Das alte `/admin/cookbook` leitet auf die
+  RTX-Connector-Seite um; Online-/Cloud-KI bleibt in Einstellungen + AI Gateway.
+
 ## Commands
 
 From the repo root:

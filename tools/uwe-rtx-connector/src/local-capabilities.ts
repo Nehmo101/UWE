@@ -145,6 +145,7 @@ function toEnabledModelInfos(
     .map((profile) => {
       const discovered = discoveredByKey.get(profile.id);
       const info: ConnectorModelInfo = {
+        id: profile.id,
         provider: profile.provider,
         name: profile.name,
         modelType: profile.modelType,

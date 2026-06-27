@@ -788,7 +788,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                 <p className="uwe-hint">
                   Setze <code>RTX_AGENT_URL</code> und optional <code>RTX_AGENT_TOKEN</code> in{" "}
                   <code>.env</code>. Diagnose unter{" "}
-                  <Link href="/admin/cookbook">Cookbook</Link> und{" "}
+                  <Link href="/system/rtx-connector">RTX Connector</Link> und{" "}
                   <Link href="/admin/status">Systemstatus</Link>.
                 </p>
                 <p>

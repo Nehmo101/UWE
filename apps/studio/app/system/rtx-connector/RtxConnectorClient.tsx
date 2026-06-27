@@ -1,14 +1,46 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CONNECTOR_CAPABILITY_LABELS, type ConnectorCapability } from "@uwe/connector/client";
 
+import {
+  ConnectorModelPicker,
+  type ConnectorPickerModelView,
+} from "@/components/ConnectorModelPicker";
+
 interface ConnectorModelView {
+  id?: string;
   provider: string;
   name: string;
   status?: string;
+  displayName?: string;
+  description?: string;
+  bestFor?: string[];
+  modelType?: string;
 }
+
+interface WorkflowDefaultView {
+  slot: string;
+  connectorId: string;
+  modelId: string;
+  model: ConnectorPickerModelView | null;
+}
+
+interface WorkflowState {
+  slots: string[];
+  pickerModels: ConnectorPickerModelView[];
+  defaults: WorkflowDefaultView[];
+}
+
+const WORKFLOW_SLOT_LABELS: Record<string, string> = {
+  chat: "Chat / Allgemein",
+  code: "Code",
+  dnd: "DnD-Generator",
+  analysis: "Analyse / Zusammenfassung",
+  embedding: "Embeddings",
+  vision: "Vision / Bildverständnis",
+};
 
 interface ConnectorView {
   id: string;
@@ -65,6 +97,49 @@ export function RtxConnectorClient({
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [workflow, setWorkflow] = useState<WorkflowState | null>(null);
+
+  const loadWorkflow = useCallback(async () => {
+    const response = await fetch("/api/admin/connector-workflow", {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return;
+    }
+    const data = (await response.json()) as WorkflowState;
+    setWorkflow(data);
+  }, []);
+
+  useEffect(() => {
+    void loadWorkflow();
+  }, [loadWorkflow]);
+
+  const saveWorkflowDefault = useCallback(
+    async (slot: string, selection: { connectorId: string; modelId: string } | null) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/admin/connector-workflow", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slot,
+            connectorId: selection?.connectorId ?? null,
+            modelId: selection?.modelId ?? null,
+          }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setError(data.error ?? "Workflow-Standard konnte nicht gespeichert werden.");
+          return;
+        }
+        await loadWorkflow();
+      } finally {
+        setBusy(false);
+      }
+    },
+    [loadWorkflow],
+  );
 
   const reload = useCallback(async () => {
     setError(null);
@@ -86,7 +161,8 @@ export function RtxConnectorClient({
       anyOnline: data.connectors.some((c) => c.status === "online" || c.status === "degraded"),
     }));
     setPendingByLane(data.pendingByLane);
-  }, []);
+    await loadWorkflow();
+  }, [loadWorkflow]);
 
   const createConnector = useCallback(async () => {
     setBusy(true);
@@ -270,15 +346,22 @@ export function RtxConnectorClient({
                         .map((cap) => CONNECTOR_CAPABILITY_LABELS[cap])
                         .join(", ")}
                 </p>
-                <p>
-                  LLMs:{" "}
-                  {connector.models.length === 0
-                    ? "—"
-                    : connector.models
-                        .slice(0, 6)
-                        .map((model) => `${model.name} (${model.provider})`)
-                        .join(", ")}
-                </p>
+                <p>Modelle:</p>
+                {connector.models.length === 0 ? (
+                  <p className="uwe-dashboard-muted">—</p>
+                ) : (
+                  <ul style={{ margin: "0.25rem 0 0", paddingLeft: "1.1rem" }}>
+                    {connector.models.slice(0, 8).map((model) => (
+                      <li key={model.id ?? `${model.provider}:${model.name}`}>
+                        <strong>{model.displayName?.trim() || model.name}</strong>{" "}
+                        <span className="uwe-dashboard-muted">({model.provider})</span>
+                        {model.bestFor && model.bestFor.length > 0 && (
+                          <span className="uwe-dashboard-muted"> · {model.bestFor.join(", ")}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {connector.lastError && (
                   <p className="uwe-form-error" style={{ marginTop: "0.35rem" }}>
                     {connector.lastError}
@@ -314,6 +397,46 @@ export function RtxConnectorClient({
                 </div>
               </article>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Workflow-Standardmodelle</h2>
+        <p className="uwe-dashboard-muted">
+          Lege pro Anwendungsfall fest, welches vom Connector gemeldete Modell standardmäßig genutzt
+          wird. Es stehen nur Modelle online verbundener Connectors zur Auswahl. Online-/Cloud-KI
+          bleibt in den Einstellungen und im AI Gateway konfigurierbar.
+        </p>
+        {!workflow ? (
+          <p className="uwe-dashboard-muted">Workflow-Standards werden geladen…</p>
+        ) : workflow.pickerModels.length === 0 ? (
+          <p className="uwe-dashboard-muted">
+            Keine Connector-Modelle verfügbar. Aktiviere Modelle im RTX Connector und stelle sicher,
+            dass er online ist.
+          </p>
+        ) : (
+          <div className="uwe-dashboard-grid">
+            {workflow.slots.map((slot) => {
+              const current = workflow.defaults.find((entry) => entry.slot === slot) ?? null;
+              return (
+                <article key={slot} className="uwe-v2-card" style={{ padding: "1rem" }}>
+                  <ConnectorModelPicker
+                    label={WORKFLOW_SLOT_LABELS[slot] ?? slot}
+                    models={workflow.pickerModels}
+                    value={current ? { connectorId: current.connectorId, modelId: current.modelId } : null}
+                    disabled={busy}
+                    onChange={(selection) => void saveWorkflowDefault(slot, selection)}
+                  />
+                  {current && !current.model && (
+                    <p className="uwe-form-error" style={{ marginTop: "0.4rem", fontSize: "0.8rem" }}>
+                      Hinterlegtes Modell (<code>{current.modelId}</code>) wird vom Connector aktuell
+                      nicht gemeldet.
+                    </p>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

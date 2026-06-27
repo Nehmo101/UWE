@@ -31,6 +31,13 @@ export function isConnectorModelType(value: unknown): value is ConnectorModelTyp
  * provider; the curated fields come from the connector's model profile store.
  */
 export interface ConnectorModelInfo {
+  /**
+   * Stable profile key (equal to `modelProfileKey(provider, name, path)` on the
+   * connector). Used by the host to address a specific model in workflow
+   * defaults and pickers. Optional for backwards compatibility with older
+   * connectors that predate P5.
+   */
+  id?: string;
   /** Inference provider, e.g. "ollama", "lmstudio", "llamacpp", "filesystem". */
   provider: string;
   /** Technical model id used by the provider (or filename for filesystem models). */
