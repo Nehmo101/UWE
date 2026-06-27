@@ -6,13 +6,28 @@ import {
   parseConnectorClientConfig,
   type ConnectorClientConfig,
 } from "@uwe/connector-client-config";
+import {
+  defaultModelProfileStore,
+  type ConnectorModelProfileStore,
+} from "@uwe/connector-model-profile";
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
+import { DownloadsPanel } from "./components/DownloadsPanel";
+import { JobsPanel } from "./components/JobsPanel";
+import { LogsPanel } from "./components/LogsPanel";
+import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
 import { SectionPlaceholder } from "./components/SectionPlaceholder";
 import { SetupWizard } from "./components/SetupWizard";
+import { UweReleasePanel } from "./components/UweReleasePanel";
 import {
   getConnectorStatus,
+  getModelStore,
+  listConnectorJobs,
+  listConnectorLogs,
+  pullOllamaModel,
   readConfig,
+  saveModelStore,
+  scanModels,
   startConnector,
   stopConnector,
   testHostConnection,
@@ -56,21 +71,21 @@ const NAV_SECTIONS: Section[] = [
     id: "downloads",
     label: "Downloads",
     phase: "P1",
-    active: false,
+    active: true,
     summary: "Ollama pull und lokaler Modell-Import.",
   },
   {
     id: "library",
     label: "Modell-Bibliothek",
     phase: "P1",
-    active: false,
+    active: true,
     summary: "Verzeichnisse scannen und Modellstatus verwalten.",
   },
   {
     id: "release",
     label: "UWE-Freigabe",
     phase: "P1",
-    active: false,
+    active: true,
     summary: "Modelle einzeln für UWE aktivieren und melden.",
   },
   {
@@ -105,14 +120,14 @@ const NAV_SECTIONS: Section[] = [
     id: "jobs",
     label: "Jobs",
     phase: "P1",
-    active: false,
+    active: true,
     summary: "Aktive und letzte Connector-Jobs nach Lane.",
   },
   {
     id: "logs",
     label: "Logs",
     phase: "P1",
-    active: false,
+    active: true,
     summary: "Redigierte Logs nach Kategorie exportieren.",
   },
   {
@@ -196,6 +211,8 @@ function humanizeProcessStatus(status: ConnectorRuntimeStatus["status"]): string
 export default function App() {
   const [selectedSectionId, setSelectedSectionId] = useState("overview");
   const [config, setConfig] = useState<ConnectorClientConfig>(defaultConnectorClientConfig());
+  const [modelStore, setModelStore] = useState<ConnectorModelProfileStore>(defaultModelProfileStore());
+  const [modelStoreLoaded, setModelStoreLoaded] = useState(false);
   const [runtimeStatus, setRuntimeStatus] = useState<ConnectorRuntimeStatus>(INITIAL_RUNTIME_STATUS);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -225,6 +242,38 @@ export default function App() {
       setBusyAction(null);
     }
   }, []);
+
+  const loadModelStore = useCallback(async () => {
+    const nextStore = await getModelStore();
+    setModelStore(nextStore);
+    setModelStoreLoaded(true);
+    return nextStore;
+  }, []);
+
+  const persistModelStore = useCallback(async (nextStore: ConnectorModelProfileStore) => {
+    const saved = await saveModelStore(nextStore);
+    setModelStore(saved);
+    setModelStoreLoaded(true);
+    return saved;
+  }, []);
+
+  const runModelScan = useCallback(async () => {
+    const scanned = await scanModels();
+    setModelStore(scanned);
+    setModelStoreLoaded(true);
+    return scanned;
+  }, []);
+
+  const runOllamaPull = useCallback(async (name: string) => {
+    const result = await pullOllamaModel(name);
+    setModelStore(result.store);
+    setModelStoreLoaded(true);
+    return result;
+  }, []);
+
+  const loadConnectorJobs = useCallback(async () => listConnectorJobs(), []);
+
+  const loadConnectorLogs = useCallback(async (category?: string) => listConnectorLogs(category), []);
 
   useEffect(() => {
     void (async () => {
@@ -369,9 +418,9 @@ export default function App() {
 
           <CardV2 title="Rollout">
             <div className="connector-stack">
-              <p className="connector-stat">P0 aktiv</p>
+              <p className="connector-stat">P1 aktiv</p>
               <p className="connector-muted">
-                Übersicht, Verbindung und Einstellungen sind nutzbar. Weitere Bereiche folgen phasenweise.
+                Übersicht, Verbindung, Einstellungen sowie Downloads, Modell-Bibliothek, Freigaben, Jobs und Logs sind nutzbar.
               </p>
               {!config.wizardCompleted ? (
                 <ButtonV2 variant="secondary" onClick={() => setShowWizard(true)}>
@@ -584,6 +633,38 @@ export default function App() {
     }
 
     switch (selectedSection.id) {
+      case "downloads":
+        return (
+          <DownloadsPanel
+            loaded={modelStoreLoaded}
+            store={modelStore}
+            onLoadStore={loadModelStore}
+            onPullModel={runOllamaPull}
+          />
+        );
+      case "library":
+        return (
+          <ModelLibraryPanel
+            loaded={modelStoreLoaded}
+            store={modelStore}
+            onLoadStore={loadModelStore}
+            onSaveStore={persistModelStore}
+            onScanModels={runModelScan}
+          />
+        );
+      case "release":
+        return (
+          <UweReleasePanel
+            loaded={modelStoreLoaded}
+            store={modelStore}
+            onLoadStore={loadModelStore}
+            onSaveStore={persistModelStore}
+          />
+        );
+      case "jobs":
+        return <JobsPanel onLoadJobs={loadConnectorJobs} />;
+      case "logs":
+        return <LogsPanel onLoadLogs={loadConnectorLogs} />;
       case "connection":
         return renderConnection();
       case "settings":
@@ -603,6 +684,11 @@ export default function App() {
       {showWizard ? (
         <SetupWizard
           initialConfig={config}
+          initialModelStore={modelStore}
+          modelStoreLoaded={modelStoreLoaded}
+          loadModelStore={loadModelStore}
+          saveModelStore={persistModelStore}
+          scanModels={runModelScan}
           onCompleted={(saved) => {
             setConfig(saved);
             setShowWizard(false);
@@ -638,7 +724,7 @@ export default function App() {
       <main className="connector-main">
         <header className="connector-header">
           <div>
-            <p className="connector-kicker">P0</p>
+            <p className="connector-kicker">{selectedSection.phase}</p>
             <h2>{selectedSection.label}</h2>
             <p className="connector-muted">{selectedSection.summary}</p>
           </div>

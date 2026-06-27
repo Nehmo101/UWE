@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   maskToken,
@@ -6,6 +6,7 @@ import {
   validateHostUrl,
   type ConnectorClientConfig,
 } from "@uwe/connector-client-config";
+import type { ConnectorModelProfileStore } from "@uwe/connector-model-profile";
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
 import {
@@ -67,6 +68,11 @@ const WIZARD_STEPS: WizardStep[] = [
 
 type Props = {
   initialConfig: ConnectorClientConfig;
+  initialModelStore: ConnectorModelProfileStore;
+  modelStoreLoaded: boolean;
+  loadModelStore: () => Promise<ConnectorModelProfileStore>;
+  saveModelStore: (store: ConnectorModelProfileStore) => Promise<ConnectorModelProfileStore>;
+  scanModels: () => Promise<ConnectorModelProfileStore>;
   onCompleted: (config: ConnectorClientConfig) => void;
   onDismiss: () => void;
 };
@@ -75,15 +81,49 @@ function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unbekannter Fehler";
 }
 
-export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
+export function SetupWizard({
+  initialConfig,
+  initialModelStore,
+  modelStoreLoaded,
+  loadModelStore,
+  saveModelStore,
+  scanModels,
+  onCompleted,
+  onDismiss,
+}: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [config, setConfig] = useState<ConnectorClientConfig>(initialConfig);
+  const [modelStore, setModelStore] = useState<ConnectorModelProfileStore>(initialModelStore);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<HostConnectionTestResult | null>(null);
+  const [scanAttempted, setScanAttempted] = useState(false);
 
   const step = WIZARD_STEPS[stepIndex];
   const isLastStep = stepIndex === WIZARD_STEPS.length - 1;
+
+  useEffect(() => {
+    setModelStore(initialModelStore);
+  }, [initialModelStore]);
+
+  useEffect(() => {
+    if (step.id < 6 || modelStoreLoaded) {
+      return;
+    }
+
+    void (async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        setModelStore(await loadModelStore());
+      } catch (nextError) {
+        setError(toMessage(nextError));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [loadModelStore, modelStoreLoaded, step.id]);
 
   const canAdvance = useMemo(() => {
     switch (step.id) {
@@ -95,10 +135,22 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
         return config.name.trim().length > 0;
       case 4:
         return testResult?.ok === true;
+      case 6:
+        return scanAttempted || modelStore.profiles.length > 0;
+      case 7:
+        return modelStore.profiles.length === 0 || modelStore.profiles.some((profile) => profile.enabledForUwe);
       default:
         return true;
     }
-  }, [config.hostUrl, config.name, config.token, step.id, testResult?.ok]);
+  }, [
+    config.hostUrl,
+    config.name,
+    config.token,
+    modelStore.profiles,
+    scanAttempted,
+    step.id,
+    testResult?.ok,
+  ]);
 
   function updateConfig<K extends keyof ConnectorClientConfig>(
     key: K,
@@ -113,10 +165,12 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
   async function runConnectionTest() {
     setBusy(true);
     setError(null);
+    setNotice(null);
 
     try {
       const result = await testHostConnection(config.hostUrl, config.token);
       setTestResult(result);
+      setNotice(result.ok ? "Verbindung steht." : null);
       if (!result.ok) {
         setError(result.message);
       }
@@ -130,6 +184,7 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
   async function finishWizard() {
     setBusy(true);
     setError(null);
+    setNotice(null);
 
     try {
       const saved = await writeConfig(
@@ -145,6 +200,48 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
       }
 
       onCompleted(saved);
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runModelScan() {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const scanned = await scanModels();
+      setModelStore(scanned);
+      setScanAttempted(true);
+      setNotice(
+        scanned.profiles.length > 0
+          ? `${scanned.profiles.length} Modelle gefunden.`
+          : "Scan abgeschlossen. Noch keine Modelle gefunden.",
+      );
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableProfileForUwe(profileId: string) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const saved = await saveModelStore({
+        ...modelStore,
+        profiles: modelStore.profiles.map((profile) =>
+          profile.id === profileId ? { ...profile, enabledForUwe: true } : profile,
+        ),
+      });
+      setModelStore(saved);
+      setNotice("Modell für UWE freigegeben.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -213,13 +310,66 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
           </div>
         );
       case 5:
-      case 6:
-      case 7:
         return (
           <p className="connector-muted">
             Dieser Schritt wird in einer späteren Phase automatisiert. Du kannst ihn vorerst
             überspringen und den Connector bereits starten.
           </p>
+        );
+      case 6:
+        return (
+          <div className="connector-stack">
+            <p className="connector-muted">
+              Suche nach laufenden Providern und lokalen Modellpfaden. Das Ergebnis landet im lokalen Model-Store.
+            </p>
+            <div className="connector-actions">
+              <ButtonV2 variant="secondary" onClick={runModelScan} disabled={busy}>
+                Modelle scannen
+              </ButtonV2>
+            </div>
+            <div className="connector-stats-row">
+              <div className="connector-stat-pill">Profile: {modelStore.profiles.length}</div>
+              <div className="connector-stat-pill">Scan-Pfade: {modelStore.scanPaths.length}</div>
+            </div>
+          </div>
+        );
+      case 7:
+        return (
+          <div className="connector-stack">
+            {modelStore.profiles.length === 0 ? (
+              <p className="connector-muted">
+                Noch keine Modelle vorhanden. Du kannst den Schritt überspringen und später in P1 einen Scan ausführen.
+              </p>
+            ) : (
+              <div className="connector-profile-list">
+                {modelStore.profiles.slice(0, 5).map((profile) => (
+                  <div key={profile.id} className="connector-inline-card">
+                    <div className="connector-inline-card-header">
+                      <div>
+                        <p className="connector-lead">{profile.displayName || profile.name}</p>
+                        <p className="connector-muted">
+                          {profile.provider} · {profile.modelType}
+                        </p>
+                      </div>
+                      <HealthBadge
+                        status={profile.enabledForUwe ? "ok" : "degraded"}
+                        label={profile.enabledForUwe ? "Freigegeben" : "Nicht freigegeben"}
+                      />
+                    </div>
+                    {!profile.enabledForUwe ? (
+                      <ButtonV2
+                        variant="primary"
+                        onClick={() => void enableProfileForUwe(profile.id)}
+                        disabled={busy}
+                      >
+                        Für UWE aktivieren
+                      </ButtonV2>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         );
       case 8:
         return (
@@ -290,6 +440,7 @@ export function SetupWizard({ initialConfig, onCompleted, onDismiss }: Props) {
             {step.title}
           </p>
           <p className="connector-muted">{step.description}</p>
+          {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
           {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
           {renderStepBody()}
         </div>

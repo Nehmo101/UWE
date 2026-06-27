@@ -99,6 +99,9 @@ importers:
       '@uwe/connector-client-config':
         specifier: workspace:*
         version: link:../../packages/connector-client-config
+      '@uwe/connector-model-profile':
+        specifier: workspace:*
+        version: link:../../packages/connector-model-profile
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
