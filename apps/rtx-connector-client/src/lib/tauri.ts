@@ -153,6 +153,39 @@ export interface CookbookDashboardView {
   models: CookbookModelView[];
 }
 
+export interface SpotifyAuthUrlResult {
+  url: string;
+  state: string;
+}
+
+export interface SpotifyStatusResult {
+  ok: boolean;
+  message: string;
+}
+
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  isActive: boolean;
+  volumePercent: number | null;
+}
+
+export interface SpotifyDevicesResult {
+  ok: boolean;
+  connected: boolean;
+  devices: SpotifyDevice[];
+  deviceId: string | null;
+  message?: string;
+}
+
+export interface CommandTestResult {
+  ok: boolean;
+  via?: string;
+  message: string;
+  output?: string;
+}
+
 const MOCK_CONFIG_KEY = "uwe-rtx-connector-client:mock-config";
 const MOCK_RUNNING_KEY = "uwe-rtx-connector-client:mock-running";
 const MOCK_MODEL_STORE_KEY = "uwe-rtx-connector-client:mock-model-store";
@@ -570,6 +603,48 @@ function buildMockCookbookDashboard(): CookbookDashboardView {
   };
 }
 
+function parseSpotifyDevice(raw: unknown): SpotifyDevice {
+  const value = asRecord(raw);
+  return {
+    id: asString(value.id),
+    name: asString(value.name),
+    type: asString(value.type),
+    isActive: asBool(value.isActive),
+    volumePercent: typeof value.volumePercent === "number" ? value.volumePercent : null,
+  };
+}
+
+function parseSpotifyDevices(raw: unknown): SpotifyDevicesResult {
+  const value = asRecord(raw);
+  return {
+    ok: asBool(value.ok),
+    connected: asBool(value.connected),
+    devices: Array.isArray(value.devices) ? value.devices.map(parseSpotifyDevice) : [],
+    deviceId: typeof value.deviceId === "string" ? value.deviceId : null,
+    message: typeof value.message === "string" ? value.message : undefined,
+  };
+}
+
+function parseSpotifyStatus(raw: unknown): SpotifyStatusResult {
+  const value = asRecord(raw);
+  return { ok: asBool(value.ok), message: asString(value.message) };
+}
+
+function parseAuthUrl(raw: unknown): SpotifyAuthUrlResult {
+  const value = asRecord(raw);
+  return { url: asString(value.url), state: asString(value.state) };
+}
+
+function parseCommandTest(raw: unknown): CommandTestResult {
+  const value = asRecord(raw);
+  return {
+    ok: asBool(value.ok),
+    via: typeof value.via === "string" ? value.via : undefined,
+    message: asString(value.message),
+    output: typeof value.output === "string" ? value.output : undefined,
+  };
+}
+
 async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauriRuntime()) {
     return invoke<T>(command, args);
@@ -718,6 +793,61 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
       const runner = buildMockRunners().find((entry) => entry.id === id) ?? buildMockRunners()[0];
       return runner as T;
     }
+    case "spotify_auth_url": {
+      const config = readMockConfig();
+      if (!config.spotifyClientId) {
+        throw new Error("Spotify-Client-ID fehlt — zuerst speichern.");
+      }
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: config.spotifyClientId,
+        redirect_uri: config.spotifyRedirectUri,
+        scope: "user-modify-playback-state user-read-playback-state",
+        state: "browser-preview",
+        show_dialog: "false",
+      });
+      return {
+        url: `https://accounts.spotify.com/authorize?${params.toString()}`,
+        state: "browser-preview",
+      } as T;
+    }
+    case "spotify_exchange_code":
+      return {
+        ok: false,
+        message: "Browser-Vorschau: Spotify-Login funktioniert nur in der Tauri-App.",
+      } as T;
+    case "spotify_devices":
+      return {
+        ok: false,
+        connected: false,
+        devices: [],
+        deviceId: null,
+        message: "Browser-Vorschau: keine echten Spotify-Geräte ohne Tauri-Shell.",
+      } as T;
+    case "spotify_set_device":
+      return { ok: false, message: "Browser-Vorschau: Spotify nicht verbunden." } as T;
+    case "spotify_test":
+      return { ok: false, message: "Browser-Vorschau: Spotify nicht verbunden." } as T;
+    case "spotify_disconnect":
+      return { ok: true, message: "Spotify getrennt (Browser-Vorschau)." } as T;
+    case "test_audio": {
+      const config = readMockConfig();
+      return {
+        ok: false,
+        message: config.audioCommand
+          ? "Browser-Vorschau: Audio-Test läuft nur in der Tauri-App auf dem RTX-PC."
+          : "Kein Audio-Kommando konfiguriert.",
+      } as T;
+    }
+    case "test_image": {
+      const config = readMockConfig();
+      return {
+        ok: false,
+        message: config.imageCommand
+          ? "Browser-Vorschau: Image-Test läuft nur in der Tauri-App auf dem RTX-PC."
+          : "Kein Image-Kommando konfiguriert.",
+      } as T;
+    }
     default:
       throw new Error(`Unbekannter Mock-Befehl: ${command}`);
   }
@@ -790,4 +920,36 @@ export async function startOllama(): Promise<StartOllamaResult> {
 
 export async function testRunner(runner?: RunnerId): Promise<RunnerTestResult> {
   return parseRunnerTest(await invokeCommand<unknown>("test_runner", { runner }));
+}
+
+export async function spotifyAuthUrl(): Promise<SpotifyAuthUrlResult> {
+  return parseAuthUrl(await invokeCommand<unknown>("spotify_auth_url"));
+}
+
+export async function spotifyExchangeCode(code: string): Promise<SpotifyStatusResult> {
+  return parseSpotifyStatus(await invokeCommand<unknown>("spotify_exchange_code", { code }));
+}
+
+export async function spotifyDevices(): Promise<SpotifyDevicesResult> {
+  return parseSpotifyDevices(await invokeCommand<unknown>("spotify_devices"));
+}
+
+export async function spotifySetDevice(deviceId: string | null): Promise<SpotifyStatusResult> {
+  return parseSpotifyStatus(await invokeCommand<unknown>("spotify_set_device", { deviceId }));
+}
+
+export async function spotifyTest(action?: "play" | "pause"): Promise<SpotifyStatusResult> {
+  return parseSpotifyStatus(await invokeCommand<unknown>("spotify_test", { action }));
+}
+
+export async function spotifyDisconnect(): Promise<SpotifyStatusResult> {
+  return parseSpotifyStatus(await invokeCommand<unknown>("spotify_disconnect"));
+}
+
+export async function testAudio(source?: string): Promise<CommandTestResult> {
+  return parseCommandTest(await invokeCommand<unknown>("test_audio", { source }));
+}
+
+export async function testImage(prompt?: string): Promise<CommandTestResult> {
+  return parseCommandTest(await invokeCommand<unknown>("test_image", { prompt }));
 }

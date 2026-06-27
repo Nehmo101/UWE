@@ -40,6 +40,23 @@ struct ConnectorClientConfig {
     /// the host. Defaulted for forward-compatibility with older config files.
     #[serde(default)]
     privacy_mode: bool,
+    /// Spotify OAuth credentials + local executor commands (P4). Spotify auth
+    /// lives only on the RTX client. All defaulted for forward-compatibility
+    /// with config files written before P4.
+    #[serde(default)]
+    spotify_client_id: String,
+    #[serde(default)]
+    spotify_client_secret: String,
+    #[serde(default = "default_spotify_redirect_uri")]
+    spotify_redirect_uri: String,
+    #[serde(default)]
+    audio_command: String,
+    #[serde(default)]
+    image_command: String,
+}
+
+fn default_spotify_redirect_uri() -> String {
+    "http://127.0.0.1:8742/callback".to_string()
 }
 
 impl Default for ConnectorClientConfig {
@@ -55,6 +72,11 @@ impl Default for ConnectorClientConfig {
             autostart_windows: false,
             tray_mode: "minimize_to_tray".to_string(),
             privacy_mode: false,
+            spotify_client_id: String::new(),
+            spotify_client_secret: String::new(),
+            spotify_redirect_uri: default_spotify_redirect_uri(),
+            audio_command: String::new(),
+            image_command: String::new(),
         }
     }
 }
@@ -251,6 +273,27 @@ fn connector_config_path() -> Result<PathBuf, String> {
     Ok(connector_app_data_dir()?.join(CONFIG_FILE_NAME))
 }
 
+const SPOTIFY_SESSION_FILE_NAME: &str = "spotify-session.json";
+
+/// Subset of the connector-local Spotify session persisted by the Node CLI.
+/// Read only to forward the access token + device to the connector process.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SpotifySessionFile {
+    #[serde(default)]
+    access_token: String,
+    #[serde(default)]
+    device_id: Option<String>,
+}
+
+/// Best-effort read of the persisted Spotify session. A missing or corrupt file
+/// is fine — Spotify is optional and the connector stays online without it.
+fn read_spotify_session() -> Option<SpotifySessionFile> {
+    let path = connector_app_data_dir().ok()?.join(SPOTIFY_SESSION_FILE_NAME);
+    let raw = fs::read_to_string(path).ok()?;
+    serde_json::from_str::<SpotifySessionFile>(&raw).ok()
+}
+
 fn ensure_parent_dir(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
@@ -288,6 +331,15 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     if config.tray_mode.is_empty() {
         config.tray_mode = "minimize_to_tray".to_string();
     }
+
+    config.spotify_client_id = config.spotify_client_id.trim().to_string();
+    config.spotify_client_secret = config.spotify_client_secret.trim().to_string();
+    config.spotify_redirect_uri = config.spotify_redirect_uri.trim().to_string();
+    if config.spotify_redirect_uri.is_empty() {
+        config.spotify_redirect_uri = default_spotify_redirect_uri();
+    }
+    config.audio_command = config.audio_command.trim().to_string();
+    config.image_command = config.image_command.trim().to_string();
 
     Ok(config)
 }
@@ -446,6 +498,70 @@ fn test_runner(runner: Option<String>) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
+fn spotify_auth_url() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["spotify-auth-url"])?;
+    parse_client_cli_json(&raw, "Spotify-Auth-URL")
+}
+
+#[tauri::command]
+fn spotify_exchange_code(code: String) -> Result<serde_json::Value, String> {
+    let trimmed = code.trim();
+    if trimmed.is_empty() {
+        return Err("Spotify-Code darf nicht leer sein.".to_string());
+    }
+    let raw = run_client_cli(&["spotify-exchange-code", trimmed])?;
+    parse_client_cli_json(&raw, "Spotify-Code-Tausch")
+}
+
+#[tauri::command]
+fn spotify_devices() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["spotify-devices"])?;
+    parse_client_cli_json(&raw, "Spotify-Geräte")
+}
+
+#[tauri::command]
+fn spotify_set_device(device_id: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match device_id.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["spotify-set-device", value])?,
+        None => run_client_cli(&["spotify-set-device"])?,
+    };
+    parse_client_cli_json(&raw, "Spotify-Gerät")
+}
+
+#[tauri::command]
+fn spotify_test(action: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match action.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["spotify-test", value])?,
+        None => run_client_cli(&["spotify-test"])?,
+    };
+    parse_client_cli_json(&raw, "Spotify-Test")
+}
+
+#[tauri::command]
+fn spotify_disconnect() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["spotify-disconnect"])?;
+    parse_client_cli_json(&raw, "Spotify-Trennen")
+}
+
+#[tauri::command]
+fn test_audio(source: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match source.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["test-audio", value])?,
+        None => run_client_cli(&["test-audio"])?,
+    };
+    parse_client_cli_json(&raw, "Audio-Test")
+}
+
+#[tauri::command]
+fn test_image(prompt: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match prompt.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["test-image", value])?,
+        None => run_client_cli(&["test-image"])?,
+    };
+    parse_client_cli_json(&raw, "Image-Test")
+}
+
+#[tauri::command]
 fn read_config() -> Result<ConnectorClientConfig, String> {
     read_config_from_disk()
 }
@@ -536,6 +652,37 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
             "UWE_CONNECTOR_PRIVACY_MODE",
             if config.privacy_mode { "true" } else { "false" },
         );
+
+    // P4: forward the local audio/image commands and Spotify OAuth credentials
+    // so the connector can execute audio/image jobs and refresh Spotify tokens.
+    // Spotify auth lives only on this client; the host never sees these.
+    if !config.audio_command.is_empty() {
+        command.env("UWE_CONNECTOR_AUDIO_CMD", &config.audio_command);
+    }
+    if !config.image_command.is_empty() {
+        command.env("UWE_CONNECTOR_IMAGE_CMD", &config.image_command);
+    }
+    if !config.spotify_client_id.is_empty() {
+        command.env("SPOTIFY_CLIENT_ID", &config.spotify_client_id);
+    }
+    if !config.spotify_client_secret.is_empty() {
+        command.env("SPOTIFY_CLIENT_SECRET", &config.spotify_client_secret);
+    }
+    if !config.spotify_redirect_uri.is_empty() {
+        command.env("SPOTIFY_REDIRECT_URI", &config.spotify_redirect_uri);
+    }
+
+    // Spotify token + preferred device come from the persisted session (P4
+    // manual auth flow). The connector reads the same file too, but forwarding
+    // here keeps the spawn env explicit and overridable.
+    if let Some(session) = read_spotify_session() {
+        if !session.access_token.is_empty() {
+            command.env("UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN", &session.access_token);
+        }
+        if let Some(device_id) = session.device_id.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
+            command.env("SPOTIFY_DEVICE_ID", device_id);
+        }
+    }
 
     match command.spawn() {
         Ok(child) => {
@@ -716,7 +863,15 @@ pub fn run() {
             cookbook_dashboard,
             probe_runners,
             start_ollama,
-            test_runner
+            test_runner,
+            spotify_auth_url,
+            spotify_exchange_code,
+            spotify_devices,
+            spotify_set_device,
+            spotify_test,
+            spotify_disconnect,
+            test_audio,
+            test_image
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
