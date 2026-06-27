@@ -36,6 +36,10 @@ struct ConnectorClientConfig {
     minimized_start: bool,
     autostart_windows: bool,
     tray_mode: String,
+    /// Privacy mode — when true the connector reports only minimal metadata to
+    /// the host. Defaulted for forward-compatibility with older config files.
+    #[serde(default)]
+    privacy_mode: bool,
 }
 
 impl Default for ConnectorClientConfig {
@@ -50,6 +54,7 @@ impl Default for ConnectorClientConfig {
             minimized_start: false,
             autostart_windows: false,
             tray_mode: "minimize_to_tray".to_string(),
+            privacy_mode: false,
         }
     }
 }
@@ -413,6 +418,34 @@ fn list_connector_logs(category: Option<String>) -> Result<Vec<String>, String> 
 }
 
 #[tauri::command]
+fn cookbook_dashboard() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["cookbook-dashboard"])?;
+    parse_client_cli_json(&raw, "Cookbook-Dashboard")
+}
+
+#[tauri::command]
+fn probe_runners() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["probe-runners"])?;
+    parse_client_cli_json(&raw, "Runner-Status")
+}
+
+#[tauri::command]
+fn start_ollama() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["start-ollama"])?;
+    parse_client_cli_json(&raw, "Ollama-Start")
+}
+
+#[tauri::command]
+fn test_runner(runner: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match runner.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => run_client_cli(&["test-runner", value])?,
+        None => run_client_cli(&["test-runner"])?,
+    };
+
+    parse_client_cli_json(&raw, "Runner-Test")
+}
+
+#[tauri::command]
 fn read_config() -> Result<ConnectorClientConfig, String> {
     read_config_from_disk()
 }
@@ -498,6 +531,10 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
         .env(
             "UWE_CONNECTOR_QUEUE_ENABLED",
             if config.queue_enabled { "true" } else { "false" },
+        )
+        .env(
+            "UWE_CONNECTOR_PRIVACY_MODE",
+            if config.privacy_mode { "true" } else { "false" },
         );
 
     match command.spawn() {
@@ -675,7 +712,11 @@ pub fn run() {
             scan_models,
             pull_ollama_model,
             list_connector_jobs,
-            list_connector_logs
+            list_connector_logs,
+            cookbook_dashboard,
+            probe_runners,
+            start_ollama,
+            test_runner
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

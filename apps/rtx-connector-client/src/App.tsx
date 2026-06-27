@@ -12,28 +12,36 @@ import {
 } from "@uwe/connector-model-profile";
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
+import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
 import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
+import { RunnersPanel } from "./components/RunnersPanel";
+import { SecurityPanel } from "./components/SecurityPanel";
 import { SectionPlaceholder } from "./components/SectionPlaceholder";
 import { SetupWizard } from "./components/SetupWizard";
 import { UweReleasePanel } from "./components/UweReleasePanel";
 import {
   getConnectorStatus,
+  getCookbookDashboard,
   getModelStore,
   listConnectorJobs,
   listConnectorLogs,
+  probeRunners,
   pullOllamaModel,
   readConfig,
   saveModelStore,
   scanModels,
   startConnector,
+  startOllama,
   stopConnector,
   testHostConnection,
+  testRunner,
   writeConfig,
   type ConnectorRuntimeStatus,
   type HostConnectionTestResult,
+  type RunnerId,
 } from "./lib/tauri";
 
 type Section = {
@@ -64,7 +72,7 @@ const NAV_SECTIONS: Section[] = [
     id: "cookbook",
     label: "Cookbook",
     phase: "P2",
-    active: false,
+    active: true,
     summary: "Hardware-aware Modell-Empfehlungen aus @uwe/cookbook.",
   },
   {
@@ -92,7 +100,7 @@ const NAV_SECTIONS: Section[] = [
     id: "runners",
     label: "Runner",
     phase: "P2",
-    active: false,
+    active: true,
     summary: "Ollama, LM Studio, llama.cpp erkennen und testen.",
   },
   {
@@ -134,7 +142,7 @@ const NAV_SECTIONS: Section[] = [
     id: "security",
     label: "Sicherheit",
     phase: "P2",
-    active: false,
+    active: true,
     summary: "Outbound-only, Token-Schutz und Privacy Mode.",
   },
   {
@@ -274,6 +282,36 @@ export default function App() {
   const loadConnectorJobs = useCallback(async () => listConnectorJobs(), []);
 
   const loadConnectorLogs = useCallback(async (category?: string) => listConnectorLogs(category), []);
+
+  const loadCookbookDashboard = useCallback(async () => getCookbookDashboard(), []);
+
+  const enableModelForUwe = useCallback(async (name: string) => {
+    let store = await getModelStore();
+    const matches = (profile: ConnectorModelProfileStore["profiles"][number]) =>
+      profile.provider === "ollama" && (profile.name === name || profile.displayName === name);
+
+    if (!store.profiles.some(matches)) {
+      const result = await pullOllamaModel(name);
+      store = result.store;
+    }
+
+    const next: ConnectorModelProfileStore = {
+      ...store,
+      profiles: store.profiles.map((profile) =>
+        matches(profile) ? { ...profile, enabledForUwe: true } : profile,
+      ),
+    };
+
+    const saved = await saveModelStore(next);
+    setModelStore(saved);
+    setModelStoreLoaded(true);
+  }, []);
+
+  const probeRunnersList = useCallback(async () => probeRunners(), []);
+
+  const runStartOllama = useCallback(async () => startOllama(), []);
+
+  const runTestRunner = useCallback(async (id: RunnerId) => testRunner(id), []);
 
   useEffect(() => {
     void (async () => {
@@ -418,9 +456,10 @@ export default function App() {
 
           <CardV2 title="Rollout">
             <div className="connector-stack">
-              <p className="connector-stat">P1 aktiv</p>
+              <p className="connector-stat">P2 aktiv</p>
               <p className="connector-muted">
-                Übersicht, Verbindung, Einstellungen sowie Downloads, Modell-Bibliothek, Freigaben, Jobs und Logs sind nutzbar.
+                Zusätzlich zu P1 sind jetzt Cookbook-Empfehlungen, Runner-Erkennung und die
+                Sicherheits-/Privacy-Ansicht nutzbar.
               </p>
               {!config.wizardCompleted ? (
                 <ButtonV2 variant="secondary" onClick={() => setShowWizard(true)}>
@@ -589,7 +628,7 @@ export default function App() {
                 checked={config.autostartWindows}
                 onChange={(event) => updateConfig("autostartWindows", event.target.checked)}
               />
-              <span>Autostart bei Windows-Start (folgt in P2)</span>
+              <span>Autostart bei Windows-Start (folgt)</span>
             </label>
 
             <label className="connector-field connector-field-full">
@@ -659,6 +698,31 @@ export default function App() {
             store={modelStore}
             onLoadStore={loadModelStore}
             onSaveStore={persistModelStore}
+          />
+        );
+      case "cookbook":
+        return (
+          <CookbookPanel
+            onLoadDashboard={loadCookbookDashboard}
+            onPullModel={runOllamaPull}
+            onEnableForUwe={enableModelForUwe}
+          />
+        );
+      case "runners":
+        return (
+          <RunnersPanel
+            onProbeRunners={probeRunnersList}
+            onStartOllama={runStartOllama}
+            onTestRunner={runTestRunner}
+          />
+        );
+      case "security":
+        return (
+          <SecurityPanel
+            privacyMode={config.privacyMode}
+            busy={busyAction !== null}
+            onChangePrivacyMode={(value) => updateConfig("privacyMode", value)}
+            onSave={persistConfig}
           />
         );
       case "jobs":
