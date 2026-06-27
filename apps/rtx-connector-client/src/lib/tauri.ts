@@ -108,23 +108,33 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
     }
     case "test_host_connection": {
       const hostUrl = typeof args?.hostUrl === "string" ? args.hostUrl : "";
+      const token = typeof args?.token === "string" ? args.token : "";
       const validation = validateHostUrl(hostUrl);
 
-      const result: HostConnectionTestResult = validation.ok
-        ? {
-            ok: true,
-            status: "ready",
-            message: `Browser-Vorschau: Host ${validation.normalized} sieht gueltig aus.`,
-            checkedAt: nowTimestamp(),
-          }
-        : {
-            ok: false,
-            status: "error",
-            message: validation.reason,
-            checkedAt: nowTimestamp(),
-          };
+      if (!validation.ok) {
+        return {
+          ok: false,
+          status: "error",
+          message: validation.reason,
+          checkedAt: nowTimestamp(),
+        } as T;
+      }
 
-      return result as T;
+      if (!token.trim()) {
+        return {
+          ok: false,
+          status: "not_configured",
+          message: "Connector-Token fehlt für den Verbindungstest.",
+          checkedAt: nowTimestamp(),
+        } as T;
+      }
+
+      return {
+        ok: true,
+        status: "ready",
+        message: `Browser-Vorschau: Host ${validation.normalized} und Token-Format sehen gültig aus.`,
+        checkedAt: nowTimestamp(),
+      } as T;
     }
     default:
       throw new Error(`Unbekannter Mock-Befehl: ${command}`);
@@ -151,6 +161,9 @@ export async function stopConnector(): Promise<ConnectorRuntimeStatus> {
   return invokeCommand<ConnectorRuntimeStatus>("stop_connector");
 }
 
-export async function testHostConnection(hostUrl: string): Promise<HostConnectionTestResult> {
-  return invokeCommand<HostConnectionTestResult>("test_host_connection", { hostUrl });
+export async function testHostConnection(
+  hostUrl: string,
+  token?: string,
+): Promise<HostConnectionTestResult> {
+  return invokeCommand<HostConnectionTestResult>("test_host_connection", { hostUrl, token });
 }

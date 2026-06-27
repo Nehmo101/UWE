@@ -1,15 +1,15 @@
 # UWE RTX Connector Client
 
-Windows-focused Tauri 2 desktop scaffold for the local **UWE RTX Connector**.
+Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
 
 ## Scope in P0
 
-- React 19 + TypeScript + Vite frontend.
-- Tauri 2 shell with minimal Rust commands.
-- Shared UWE parchment theme via `@uwe/shared-ui/uwe.css`.
-- Sidebar placeholders for the full desktop-client surface.
-- JSON config persistence in local app data.
-- Stub start/stop status only; no real connector process spawn yet.
+- React 19 + TypeScript + Vite frontend in UWE Parchment style (`@uwe/shared-ui`)
+- Tauri 2 shell with local JSON config in `%LOCALAPPDATA%/UWE/rtx-connector-client/`
+- **Übersicht**, **Verbindung**, **Einstellungen** + 8-step **Erststart-Wizard**
+- Starts/stops the same Connector Core as `pnpm connector:start` via `desktop-launcher.ts`
+- Real host connection test: `GET /api/connectors/config` with Bearer token
+- Placeholders for all 14 product navigation areas
 
 ## Commands
 
@@ -21,25 +21,30 @@ pnpm connector:client:build
 pnpm --filter @uwe/rtx-connector-client typecheck
 ```
 
-From this app folder:
+Set `UWE_MONOREPO_ROOT` if the app cannot auto-detect the repo (e.g. packaged builds later).
 
-```bash
-pnpm tauri:dev
-pnpm tauri:build
-pnpm build
-pnpm typecheck
+## Architecture
+
+```
+Tauri UI  →  start/stop  →  node --import tsx tools/uwe-rtx-connector/src/desktop-launcher.ts
+                                      ↓
+                              ConnectorRunner (outbound heartbeat + job poll)
 ```
 
-## Local config storage
+The headless CLI (`pnpm connector:start`) remains unchanged.
 
-The Tauri backend stores `config.json` in the OS local app-data directory.
+## Local config
 
-- Windows: `%LOCALAPPDATA%/UWE/rtx-connector-client/config.json`
-- Linux dev fallback: `~/.local/share/UWE/rtx-connector-client/config.json`
+`config.json` in Windows local app data. Shape defined in `@uwe/connector-client-config`.
 
-## Notes
+## Phased rollout
 
-- `start_connector` and `stop_connector` only toggle in-memory process state in P0.
-- `test_host_connection` currently validates URL shape only; it does not open a real network connection yet.
-- `bundle.active` is disabled until native icons and Windows packaging details are added.
-- `build` is the CI-safe web build; desktop packaging is behind `tauri:build`.
+| Phase | Focus |
+|-------|--------|
+| P0 | Shell, connection, wizard, process control (this PR) |
+| P1 | Model library, Ollama pull, UWE release, jobs, logs |
+| P2 | Cookbook (`@uwe/cookbook`), runners, Ollama start, security page |
+| P3 | Hugging Face downloads |
+| P4 | Spotify OAuth, audio, image worker |
+| P5 | Studio online models + connector model picker |
+| P6 | Legacy RTX Agent cleanup, connector queue provider |

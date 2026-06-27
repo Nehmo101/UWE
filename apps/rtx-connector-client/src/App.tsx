@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   defaultConnectorClientConfig,
@@ -9,6 +9,7 @@ import {
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
 import { SectionPlaceholder } from "./components/SectionPlaceholder";
+import { SetupWizard } from "./components/SetupWizard";
 import {
   getConnectorStatus,
   readConfig,
@@ -28,110 +29,111 @@ type Section = {
   summary: string;
 };
 
+/** Product navigation — P0 active sections marked `active: true`. */
 const NAV_SECTIONS: Section[] = [
   {
     id: "overview",
-    label: "Overview",
+    label: "Übersicht",
     phase: "P0",
     active: true,
-    summary: "Lokaler Status, Schnellzugriffe und Rollout-Ueberblick.",
+    summary: "Verbindungsstatus, Schnellaktionen und Connector-Kennzahlen.",
   },
   {
     id: "connection",
-    label: "Connection",
+    label: "Verbindung",
     phase: "P0",
     active: true,
-    summary: "UWE Host URL, Connector-Token und Verbindungstest.",
+    summary: "Host URL, Connector-Token, Start/Stop und Verbindungstest.",
   },
   {
-    id: "settings",
-    label: "Settings",
-    phase: "P0",
-    active: true,
-    summary: "Queue-Verhalten, Tray-Modus und Windows-Startoptionen.",
-  },
-  {
-    id: "models",
-    label: "Models",
-    phase: "Phase 1",
+    id: "cookbook",
+    label: "Cookbook",
+    phase: "P2",
     active: false,
-    summary: "Lokale Ollama-, LM Studio- und llama.cpp-Modelle verwalten.",
+    summary: "Hardware-aware Modell-Empfehlungen aus @uwe/cookbook.",
   },
   {
-    id: "capabilities",
-    label: "Capabilities",
-    phase: "Phase 1",
+    id: "downloads",
+    label: "Downloads",
+    phase: "P1",
     active: false,
-    summary: "Erkannte Connector-Faehigkeiten und Host-Allowlist sichtbar machen.",
+    summary: "Ollama pull und lokaler Modell-Import.",
   },
   {
-    id: "queue",
-    label: "Queue",
-    phase: "Phase 1",
+    id: "library",
+    label: "Modell-Bibliothek",
+    phase: "P1",
     active: false,
-    summary: "Claim-Politik, Lane-Prioritaeten und Backpressure steuern.",
+    summary: "Verzeichnisse scannen und Modellstatus verwalten.",
   },
   {
-    id: "jobs",
-    label: "Jobs",
-    phase: "Phase 1",
+    id: "release",
+    label: "UWE-Freigabe",
+    phase: "P1",
     active: false,
-    summary: "Aktive und letzte RTX-Jobs inklusive Ergebnisstatus ansehen.",
+    summary: "Modelle einzeln für UWE aktivieren und melden.",
+  },
+  {
+    id: "runners",
+    label: "Runner",
+    phase: "P2",
+    active: false,
+    summary: "Ollama, LM Studio, llama.cpp erkennen und testen.",
+  },
+  {
+    id: "spotify",
+    label: "Spotify",
+    phase: "P4",
+    active: false,
+    summary: "Spotify OAuth und Device-Verwaltung nur auf dem RTX-PC.",
   },
   {
     id: "audio",
     label: "Audio",
-    phase: "Phase 1",
+    phase: "P4",
     active: false,
-    summary: "Lokale Audioausgabe und Soundboard-Worker sichtbar konfigurieren.",
+    summary: "Lokale Audio-Befehle und Capability-Tests.",
   },
   {
-    id: "image-worker",
-    label: "Image Worker",
-    phase: "Phase 2",
+    id: "image",
+    label: "Bildgenerierung",
+    phase: "P4",
     active: false,
-    summary: "Bild-Backends, Worker-Binaerpfade und Ausfuehrungsprofile pflegen.",
+    summary: "Image-Worker konfigurieren und testen.",
+  },
+  {
+    id: "jobs",
+    label: "Jobs",
+    phase: "P1",
+    active: false,
+    summary: "Aktive und letzte Connector-Jobs nach Lane.",
   },
   {
     id: "logs",
     label: "Logs",
-    phase: "Phase 1",
+    phase: "P1",
     active: false,
-    summary: "Redigierte Connector-Logs mit Download und Filteransicht.",
-  },
-  {
-    id: "diagnostics",
-    label: "Diagnostics",
-    phase: "Phase 1",
-    active: false,
-    summary: "Host-Checks, Provider-Reachability und Health-Diagnosen anzeigen.",
-  },
-  {
-    id: "updates",
-    label: "Updates",
-    phase: "Phase 2",
-    active: false,
-    summary: "Desktop-Updater, Versionshinweise und Rollback-Hinweise.",
+    summary: "Redigierte Logs nach Kategorie exportieren.",
   },
   {
     id: "security",
-    label: "Security",
-    phase: "Phase 2",
+    label: "Sicherheit",
+    phase: "P2",
     active: false,
-    summary: "Token-Rotation, Log-Redaction und lokale Privacy-Guardrails.",
+    summary: "Outbound-only, Token-Schutz und Privacy Mode.",
   },
   {
-    id: "about",
-    label: "About",
-    phase: "Phase 2",
-    active: false,
-    summary: "Build-Info, Runtime-Versionen und Support-Hinweise.",
+    id: "settings",
+    label: "Einstellungen",
+    phase: "P0",
+    active: true,
+    summary: "Tray, Autostart und Queue-Optionen.",
   },
 ];
 
 const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
   status: "stopped",
-  message: "Connector-Stub ist noch nicht gestartet.",
+  message: "Connector ist gestoppt.",
   connectionStatus: "not_configured",
   lastHeartbeatAt: null,
 };
@@ -159,17 +161,17 @@ function humanizeConnectionStatus(status: ConnectorRuntimeStatus["connectionStat
     case "connected":
       return "Verbunden";
     case "connecting":
-      return "Verbinde";
+      return "Verbindet";
     case "ready":
       return "Bereit";
     case "degraded":
-      return "Eingeschraenkt";
+      return "Eingeschränkt";
     case "disconnected":
       return "Getrennt";
     case "error":
       return "Fehler";
     case "not_configured":
-      return "Nicht konfiguriert";
+      return "Nicht eingerichtet";
     default:
       return status;
   }
@@ -178,7 +180,7 @@ function humanizeConnectionStatus(status: ConnectorRuntimeStatus["connectionStat
 function humanizeProcessStatus(status: ConnectorRuntimeStatus["status"]): string {
   switch (status) {
     case "running":
-      return "Laeuft";
+      return "Läuft";
     case "starting":
       return "Startet";
     case "stopping":
@@ -199,17 +201,15 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<HostConnectionTestResult | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   const selectedSection = useMemo(
     () => NAV_SECTIONS.find((section) => section.id === selectedSectionId) ?? NAV_SECTIONS[0],
     [selectedSectionId],
   );
 
-  useEffect(() => {
-    void refreshFromBackend();
-  }, []);
-
-  async function refreshFromBackend() {
+  const refreshFromBackend = useCallback(async () => {
     setBusyAction("refresh");
     setError(null);
 
@@ -217,12 +217,24 @@ export default function App() {
       const [nextConfig, nextRuntimeStatus] = await Promise.all([readConfig(), getConnectorStatus()]);
       setConfig(nextConfig);
       setRuntimeStatus(nextRuntimeStatus);
+      return { nextConfig, nextRuntimeStatus };
     } catch (nextError) {
       setError(toMessage(nextError));
+      return null;
     } finally {
       setBusyAction(null);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      const result = await refreshFromBackend();
+      setBootstrapped(true);
+      if (result && !result.nextConfig.wizardCompleted) {
+        setShowWizard(true);
+      }
+    })();
+  }, [refreshFromBackend]);
 
   function updateConfig<K extends keyof ConnectorClientConfig>(
     key: K,
@@ -237,11 +249,7 @@ export default function App() {
     setNotice(null);
 
     try {
-      const normalizedConfig = parseConnectorClientConfig({
-        ...config,
-        wizardCompleted:
-          config.wizardCompleted || Boolean(config.hostUrl.trim() && config.token.trim()),
-      });
+      const normalizedConfig = parseConnectorClientConfig(config);
       const savedConfig = await writeConfig(normalizedConfig);
       const nextRuntimeStatus = await getConnectorStatus();
 
@@ -261,9 +269,9 @@ export default function App() {
     setNotice(null);
 
     try {
-      const result = await testHostConnection(config.hostUrl);
+      const result = await testHostConnection(config.hostUrl, config.token);
       setTestResult(result);
-      setNotice(result.ok ? "Host-Test erfolgreich abgeschlossen." : null);
+      setNotice(result.ok ? "Verbindungstest erfolgreich." : null);
       if (!result.ok) {
         setError(result.message);
       }
@@ -280,9 +288,10 @@ export default function App() {
     setNotice(null);
 
     try {
+      await writeConfig(parseConnectorClientConfig(config));
       const nextRuntimeStatus = await startConnector();
       setRuntimeStatus(nextRuntimeStatus);
-      setNotice("Connector-Stub als laufend markiert.");
+      setNotice("Connector-Core gestartet.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -298,7 +307,7 @@ export default function App() {
     try {
       const nextRuntimeStatus = await stopConnector();
       setRuntimeStatus(nextRuntimeStatus);
-      setNotice("Connector-Stub gestoppt.");
+      setNotice("Connector-Core gestoppt.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -307,13 +316,12 @@ export default function App() {
   }
 
   function renderOverview() {
-    const activeCount = NAV_SECTIONS.filter((section) => section.active).length;
-    const backlogCount = NAV_SECTIONS.length - activeCount;
+    const isRunning = runtimeStatus.status === "running";
 
     return (
       <>
         <div className="connector-grid connector-grid-3">
-          <CardV2 title="Connector-Status">
+          <CardV2 title="Verbindungsstatus">
             <div className="connector-stack">
               <HealthBadge
                 status={toHealthBadgeStatus(runtimeStatus)}
@@ -322,6 +330,14 @@ export default function App() {
               <p className="connector-muted">{runtimeStatus.message}</p>
               <dl className="connector-kv">
                 <div>
+                  <dt>Host</dt>
+                  <dd>{config.hostUrl || "Nicht gesetzt"}</dd>
+                </div>
+                <div>
+                  <dt>Connector</dt>
+                  <dd>{config.name}</dd>
+                </div>
+                <div>
                   <dt>Letzter Heartbeat</dt>
                   <dd>{runtimeStatus.lastHeartbeatAt ?? "Noch keiner"}</dd>
                 </div>
@@ -329,70 +345,59 @@ export default function App() {
             </div>
           </CardV2>
 
-          <CardV2 title="Aktive P0-Module">
+          <CardV2 title="Steuerung">
             <div className="connector-stack">
-              <p className="connector-stat">{activeCount} / {NAV_SECTIONS.length}</p>
               <p className="connector-muted">
-                Overview, Connection und Settings sind im Scaffold direkt nutzbar.
+                Startet und stoppt denselben Connector-Core wie <code>pnpm connector:start</code>.
               </p>
-            </div>
-          </CardV2>
-
-          <CardV2 title="Backlog">
-            <div className="connector-stack">
-              <p className="connector-stat">{backlogCount} weitere Bereiche</p>
-              <p className="connector-muted">
-                Alle weiteren Desktop-Ansichten sind als Phasen-Platzhalter vorbereitet.
-              </p>
-            </div>
-          </CardV2>
-        </div>
-
-        <div className="connector-grid connector-grid-2">
-          <CardV2
-            title="Lokales Profil"
-            footer={
               <div className="connector-actions">
-                <ButtonV2 variant="secondary" onClick={() => setSelectedSectionId("connection")}>
-                  Connection oeffnen
+                {isRunning ? (
+                  <ButtonV2 variant="accent" onClick={runStopConnector} disabled={busyAction !== null}>
+                    Verbindung stoppen
+                  </ButtonV2>
+                ) : (
+                  <ButtonV2 variant="primary" onClick={runStartConnector} disabled={busyAction !== null}>
+                    Verbindung starten
+                  </ButtonV2>
+                )}
+                <ButtonV2 variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
+                  Status aktualisieren
                 </ButtonV2>
-                <ButtonV2 variant="ghost" onClick={() => setSelectedSectionId("settings")}>
-                  Settings oeffnen
-                </ButtonV2>
               </div>
-            }
-          >
-            <dl className="connector-kv">
-              <div>
-                <dt>Name</dt>
-                <dd>{config.name}</dd>
-              </div>
-              <div>
-                <dt>Host</dt>
-                <dd>{config.hostUrl || "Noch nicht gesetzt"}</dd>
-              </div>
-              <div>
-                <dt>Token</dt>
-                <dd>{maskToken(config.token) || "Noch nicht gesetzt"}</dd>
-              </div>
-              <div>
-                <dt>Queue</dt>
-                <dd>{config.queueEnabled ? "Aktiv" : "Deaktiviert"}</dd>
-              </div>
-            </dl>
+            </div>
           </CardV2>
 
-          <CardV2 title="Naechste Phasen">
-            <ul className="connector-phase-list">
-              {NAV_SECTIONS.filter((section) => !section.active).map((section) => (
-                <li key={section.id}>
-                  <strong>{section.label}</strong>
-                  <span>{section.phase}</span>
-                </li>
-              ))}
-            </ul>
+          <CardV2 title="Rollout">
+            <div className="connector-stack">
+              <p className="connector-stat">P0 aktiv</p>
+              <p className="connector-muted">
+                Übersicht, Verbindung und Einstellungen sind nutzbar. Weitere Bereiche folgen phasenweise.
+              </p>
+              {!config.wizardCompleted ? (
+                <ButtonV2 variant="secondary" onClick={() => setShowWizard(true)}>
+                  Erststart-Wizard öffnen
+                </ButtonV2>
+              ) : null}
+            </div>
           </CardV2>
         </div>
+
+        <CardV2 title="Lokales Profil">
+          <dl className="connector-kv">
+            <div>
+              <dt>Token</dt>
+              <dd>{maskToken(config.token) || "Noch nicht gesetzt"}</dd>
+            </div>
+            <div>
+              <dt>Queue</dt>
+              <dd>{config.queueEnabled ? "Aktiv" : "Deaktiviert"}</dd>
+            </div>
+            <div>
+              <dt>Wizard</dt>
+              <dd>{config.wizardCompleted ? "Abgeschlossen" : "Ausstehend"}</dd>
+            </div>
+          </dl>
+        </CardV2>
       </>
     );
   }
@@ -420,7 +425,7 @@ export default function App() {
                 className="connector-input"
                 value={config.name}
                 onChange={(event) => updateConfig("name", event.target.value)}
-                placeholder="RTX Host Connector"
+                placeholder="RTX Arbeitszimmer"
               />
             </label>
 
@@ -430,7 +435,7 @@ export default function App() {
                 className="connector-input"
                 value={config.hostUrl}
                 onChange={(event) => updateConfig("hostUrl", event.target.value)}
-                placeholder="https://uwe.local"
+                placeholder="https://uwe.example.org"
               />
             </label>
 
@@ -467,8 +472,7 @@ export default function App() {
             />
             <p className="connector-muted">{runtimeStatus.message}</p>
             <p className="connector-muted">
-              P0 startet noch keinen echten Node-Connectorprozess, sondern schaltet nur
-              den lokalen Stub-Zustand fuer die Tauri-Oberflaeche.
+              Outbound-only: kein öffentlicher Port, kein SSH, kein DB-Zugriff auf dem RTX-PC.
             </p>
           </div>
         </CardV2>
@@ -478,10 +482,10 @@ export default function App() {
             <div className="connector-stack">
               <HealthBadge
                 status={testResult.ok ? "ok" : "error"}
-                label={`${testResult.ok ? "Erfolgreich" : "Fehlgeschlagen"} / ${humanizeConnectionStatus(testResult.status)}`}
+                label={testResult.ok ? "Erfolgreich" : "Fehlgeschlagen"}
               />
               <p className="connector-muted">{testResult.message}</p>
-              <p className="connector-muted">Geprueft: {testResult.checkedAt}</p>
+              <p className="connector-muted">Geprüft: {testResult.checkedAt}</p>
             </div>
           </CardV2>
         ) : null}
@@ -493,11 +497,11 @@ export default function App() {
     return (
       <div className="connector-grid connector-grid-2">
         <CardV2
-          title="Lokale Client-Optionen"
+          title="Client-Optionen"
           footer={
             <div className="connector-actions">
               <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
-                Settings speichern
+                Einstellungen speichern
               </ButtonV2>
             </div>
           }
@@ -527,7 +531,7 @@ export default function App() {
                 checked={config.minimizedStart}
                 onChange={(event) => updateConfig("minimizedStart", event.target.checked)}
               />
-              <span>Fenster minimiert starten</span>
+              <span>Minimiert starten</span>
             </label>
 
             <label className="connector-checkbox">
@@ -536,7 +540,7 @@ export default function App() {
                 checked={config.autostartWindows}
                 onChange={(event) => updateConfig("autostartWindows", event.target.checked)}
               />
-              <span>Windows-Autostart vormerken</span>
+              <span>Autostart bei Windows-Start (folgt in P2)</span>
             </label>
 
             <label className="connector-field connector-field-full">
@@ -544,7 +548,9 @@ export default function App() {
               <select
                 className="connector-select"
                 value={config.trayMode}
-                onChange={(event) => updateConfig("trayMode", event.target.value as ConnectorClientConfig["trayMode"])}
+                onChange={(event) =>
+                  updateConfig("trayMode", event.target.value as ConnectorClientConfig["trayMode"])
+                }
               >
                 <option value="normal">Normal</option>
                 <option value="minimize_to_tray">Beim Minimieren in den Tray</option>
@@ -554,11 +560,12 @@ export default function App() {
           </div>
         </CardV2>
 
-        <CardV2 title="P0-Hinweise">
+        <CardV2 title="Sicherheit">
           <ul className="connector-note-list">
-            <li>Autostart ist im Scaffold nur als Konfigurationswert vorhanden.</li>
-            <li>Tray-Integration, native Notifications und echte Updater folgen spaeter.</li>
-            <li>Persistenz liegt bereits in einem JSON im lokalen AppData-Verzeichnis.</li>
+            <li>Verbindung nur ausgehend zum UWE Host.</li>
+            <li>Connector-Token wird nicht in Logs angezeigt.</li>
+            <li>Tokens werden lokal in AppData gespeichert.</li>
+            <li>Tray-Integration und Windows-Autostart folgen in späteren Phasen.</li>
           </ul>
         </CardV2>
       </div>
@@ -587,16 +594,33 @@ export default function App() {
     }
   }
 
+  if (!bootstrapped) {
+    return <div className="connector-boot">Lade RTX Connector Client …</div>;
+  }
+
   return (
     <div className="connector-shell">
+      {showWizard ? (
+        <SetupWizard
+          initialConfig={config}
+          onCompleted={(saved) => {
+            setConfig(saved);
+            setShowWizard(false);
+            void refreshFromBackend();
+            setNotice("Erststart-Wizard abgeschlossen.");
+          }}
+          onDismiss={() => setShowWizard(false)}
+        />
+      ) : null}
+
       <aside className="connector-sidebar">
         <div className="connector-brand">
-          <span className="connector-kicker">Windows-first Tauri client</span>
-          <h1>UWE RTX Connector Client</h1>
-          <p>Desktop-Startpunkt fuer den outbound RTX Connector auf dem lokalen Rechner.</p>
+          <span className="connector-kicker">UWE · Outbound Connector</span>
+          <h1>RTX Connector Client</h1>
+          <p>Lokale Desktop-App für den RTX Connector auf Windows.</p>
         </div>
 
-        <nav className="connector-nav" aria-label="Connector navigation">
+        <nav className="connector-nav" aria-label="Hauptnavigation">
           {NAV_SECTIONS.map((section) => (
             <button
               key={section.id}
@@ -614,7 +638,7 @@ export default function App() {
       <main className="connector-main">
         <header className="connector-header">
           <div>
-            <p className="connector-kicker">P0 scaffold</p>
+            <p className="connector-kicker">P0</p>
             <h2>{selectedSection.label}</h2>
             <p className="connector-muted">{selectedSection.summary}</p>
           </div>

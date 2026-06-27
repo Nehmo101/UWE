@@ -23,6 +23,7 @@ const config = [
       "**/.next/**",
       "**/dist/**",
       "**/.turbo/**",
+      "**/src-tauri/target/**",
       "packages/database/src/generated/**",
       "data/**",
       "exports/**",
