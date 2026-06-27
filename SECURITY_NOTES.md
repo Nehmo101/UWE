@@ -1,6 +1,6 @@
-# Sicherheitsnotizen — KI-System (Brain, RTX-Agent, Cloud)
+# Sicherheitsnotizen — KI-System (Brain, RTX Connector, Cloud)
 
-Ergänzung zu [SECURITY.md](SECURITY.md). Gilt für UWE Studio, Brain, RTX-Agent und Cloud-KI.
+Ergänzung zu [SECURITY.md](SECURITY.md). Gilt für UWE Studio, Brain, RTX Host Connector / lokale RTX Worker und Cloud-KI.
 
 ---
 
@@ -11,7 +11,7 @@ UWE ist **alleiniger Besitzer** aller Kampagnen- und Brain-Daten. Die Architektu
 | Komponente | Speichert UWE-Daten? | Erreichbarkeit |
 |------------|----------------------|----------------|
 | **UWE Host** (Laptop) | Ja — DB, Brain, Embeddings, Mail | Über Cloudflare Tunnel / Proxy (Studio geschützt halten) |
-| **RTX-Agent** (RTX-PC) | Nein — nur Inferenz-Worker | Nur Heimnetz, Token-geschützt |
+| **RTX Host Connector / lokaler RTX Worker** (RTX-PC) | Nein — nur Inferenz-/Job-Worker | Connector outbound; direkte Worker nur Heimnetz, Token-geschützt |
 | **Cloud-KI** | Nein — nur flüchtige Anfrage/Antwort | Internet |
 
 **Grundregel:** Alles Wissen bleibt lokal in UWE. Der RTX-Rechner berechnet Text/Embeddings, speichert aber keine UWE-Inhalte dauerhaft.
@@ -42,24 +42,25 @@ Die Durchsetzung erfolgt **serverseitig** (Privacy Guard / AI Router) — nicht 
 
 ---
 
-## RTX-Agent nicht öffentlich exposen
+## RTX nicht öffentlich exposen
 
-Der RTX-Agent darf **nicht** über das Internet erreichbar sein:
+Der RTX Host Connector arbeitet outbound und braucht keinen öffentlichen Port. Direkte RTX Worker, Ollama oder LM Studio dürfen ebenfalls **nicht** über das Internet erreichbar sein:
 
 - Kein Port-Forwarding am Router auf den RTX-PC
-- Kein Cloudflare-Tunnel zum RTX-Agent
+- Kein Cloudflare-Tunnel zu Ollama, LM Studio oder direkten RTX Worker-Endpunkten
 - Keine Bindung an `0.0.0.0` ohne Firewall — bevorzugt private LAN-IP
-- Nur der UWE-Host im Heimnetz spricht mit dem Agent
+- Nur der UWE-Host im Heimnetz spricht mit direkten Worker-Endpunkten
 
-Cloudflare leitet **nur** an UWE weiter, nicht an Ollama, LM Studio oder den RTX-Agent.
+Cloudflare leitet **nur** an UWE weiter, nicht an lokale RTX-Dienste.
 
 ---
 
 ## Token verwenden
 
-- `RTX_AGENT_TOKEN` (UWE) und `AGENT_TOKEN` (Agent) müssen **identisch** und lang/zufällig sein
+- `RTX_SERVICE_TOKEN` muss **lang/zufällig** sein, wenn ein direkter RTX Worker-Endpunkt genutzt wird
+- Connector-Tokens werden im Studio erzeugt und vom RTX Host Connector outbound verwendet
 - Token nur in `.env` auf Server/RTX-PC — **nie** in Git, Frontend, URLs oder Logs
-- Jeder Request an `POST /chat` und sensible Endpunkte erfordert `Authorization: Bearer <token>`
+- Jeder Request an sensible direkte Worker-Endpunkte erfordert `Authorization: Bearer <token>`
 - Fehlender oder falscher Token → Request abgelehnt
 
 Zusätzlich: `STUDIO_API_TOKEN` für sensible Studio-APIs, wenn UWE aus untrusted Netzen erreichbar sein könnte.
@@ -68,9 +69,9 @@ Zusätzlich: `STUDIO_API_TOKEN` für sensible Studio-APIs, wenn UWE aus untruste
 
 ## Keine Promptlogs
 
-Standardmäßig **keine** dauerhafte Speicherung von Prompts oder Antworten auf dem RTX-Agent:
+Standardmäßig **keine** dauerhafte Speicherung von Prompts oder Antworten auf dem RTX-PC:
 
-- `LOG_PROMPTS=false` (Standard)
+- `LOG_PROMPTS=false` (Standard, falls ein Worker diese Option kennt)
 - Debug-Logging nur bewusst und kurzzeitig aktivieren
 - Keine Brain-Daten, Tokens oder vollständige Prompts in Anwendungs- oder Reverse-Proxy-Logs
 - Cloud-Provider: nur minimale Prompts senden (Allgemeiner Chat); API-Keys nie loggen
@@ -92,7 +93,7 @@ Diese Regeln verhindern den schwerwiegendsten Fehler: versehentliches Senden von
 
 | Risiko | Mitigation |
 |--------|------------|
-| RTX-Agent öffentlich erreichbar | Nur Heimnetz; Firewall; Token; keine Portfreigabe |
+| Lokaler RTX-Dienst öffentlich erreichbar | Nur Heimnetz; Firewall; Token; keine Portfreigabe |
 | Token in Logs oder Git | `.env` in `.gitignore`; keine Token in Fehlermeldungen |
 | UI-only Security | Serverseitiger Privacy Guard für alle KI-Routen |
 | Auto-Fallback mit Brain-Kontext | Explizit verboten; Tests auf gefährliche Kombinationen |
