@@ -17,9 +17,9 @@ PREFERRED_LOCAL_MODEL=llama3.2
 Nur im Heimnetz, nie öffentlich. Siehe [rtx-connector.md](rtx-connector.md).
 
 > **Legacy (entfernt):** der alte inbound RTX-Agent (Tool + ai-brain-LLM-Client) wurde
-> entfernt. `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` überleben nur als Legacy-Aliase der
-> RTX-Worker-URL (`RTX_BASE_URL` / `RTX_SERVICE_TOKEN`) für den Worker/Image-Pfad
-> ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
+> entfernt. Für den verbliebenen Worker/Image-Pfad heißen die aktuellen Variablen
+> `RTX_BASE_URL` / `RTX_SERVICE_TOKEN`; neue Setups sollten keine agent-benannten
+> Env-Aliase mehr dokumentieren oder verwenden.
 
 ## Cloud-Provider (Fallback)
 
