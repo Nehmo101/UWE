@@ -94,7 +94,7 @@ importers:
   apps/rtx-connector-client:
     dependencies:
       '@tauri-apps/api':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0
       '@uwe/connector-client-config':
         specifier: workspace:*
@@ -110,7 +110,7 @@ importers:
         version: 19.2.7(react@19.2.7)
     devDependencies:
       '@tauri-apps/cli':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0
       '@types/node':
         specifier: ^26.0.1
@@ -397,6 +397,28 @@ importers:
 
   packages/connector-client-config:
     dependencies:
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/connector-model-profile:
+    dependencies:
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../connector
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -776,6 +798,9 @@ importers:
       '@uwe/connector':
         specifier: workspace:*
         version: link:../../packages/connector
+      '@uwe/connector-model-profile':
+        specifier: workspace:*
+        version: link:../../packages/connector-model-profile
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
