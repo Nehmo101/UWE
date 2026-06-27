@@ -5,9 +5,9 @@
 **Symptom:** „Lokale RTX-Inference ist nicht erreichbar“
 
 1. RTX-Laptop eingeschaltet?
-2. `RTX_AGENT_URL` korrekt (LAN-IP, nicht localhost vom Server)?
-3. `RTX_AGENT_TOKEN` auf beiden Seiten identisch?
-4. Firewall: Port des RTX-Agents freigegeben?
+2. Direkter Runner-Endpunkt korrekt (`AI_INFERENCE_BASE_URL`, LAN-IP, nicht localhost vom Server)?
+3. Falls ein separater RTX-Worker genutzt wird: `RTX_BASE_URL` und `RTX_SERVICE_TOKEN` gemeinsam gesetzt?
+4. Firewall: Port von Ollama/LM Studio oder des expliziten RTX-Workers im Heimnetz erreichbar?
 5. `/admin/status` oder Cookbook → RTX Health prüfen
 
 ## Cloud-Fallback funktioniert nicht
