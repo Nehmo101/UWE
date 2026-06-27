@@ -14,7 +14,8 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/connector": "workspace:*"
+    "@uwe/connector": "workspace:*",
+    "@uwe/connector-model-profile": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

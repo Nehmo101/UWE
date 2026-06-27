@@ -4,15 +4,13 @@
  * the connector token as a bearer header.
  */
 
-import type { ConnectorCapability, ConnectorLane } from "@uwe/connector";
+import type {
+  ConnectorCapability,
+  ConnectorLane,
+  ConnectorModelInfo,
+} from "@uwe/connector";
 
-export interface ConnectorModelInfo {
-  provider: string;
-  name: string;
-  status?: string;
-  contextLength?: number;
-  capabilities?: string[];
-}
+export type { ConnectorModelInfo };
 
 export interface HostConfig {
   pollIntervalMs: number;

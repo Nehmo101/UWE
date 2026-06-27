@@ -9,6 +9,10 @@
  * metadata exposed by the local server.
  */
 
+import type { ModelScanPath } from "@uwe/connector-model-profile";
+
+import { scanFilesystemModels } from "./filesystem-models";
+
 export type ProviderStatus = "ready" | "unavailable" | "error";
 
 export interface DiscoveredModel {
@@ -17,6 +21,10 @@ export interface DiscoveredModel {
   status: ProviderStatus;
   contextLength?: number;
   capabilities?: string[];
+  /** Absolute path for filesystem (`.gguf`) models; undefined for API models. */
+  path?: string;
+  /** On-disk size in bytes for filesystem models, when known. */
+  sizeBytes?: number;
 }
 
 export interface ProviderResult {
@@ -133,7 +141,30 @@ export interface LocalLlmSummary {
   hasVision: boolean;
 }
 
-export async function discoverLocalLlms(config: DiscoveryConfig): Promise<LocalLlmSummary> {
+/** Map scanned `.gguf` files into a discovery `ProviderResult`. */
+export function discoverFilesystemModels(
+  scanPaths: readonly ModelScanPath[],
+): ProviderResult {
+  const models = scanFilesystemModels(scanPaths).map<DiscoveredModel>((file) => ({
+    provider: "filesystem",
+    name: file.name,
+    status: "ready",
+    path: file.path,
+    sizeBytes: file.sizeBytes,
+    capabilities:
+      file.modelType === "embedding"
+        ? ["embeddings"]
+        : file.modelType === "vision"
+          ? ["chat", "vision"]
+          : ["chat"],
+  }));
+  return { provider: "filesystem", status: "ready", models };
+}
+
+export async function discoverLocalLlms(
+  config: DiscoveryConfig,
+  scanPaths: readonly ModelScanPath[] = [],
+): Promise<LocalLlmSummary> {
   const tasks: Array<Promise<ProviderResult>> = [];
   if (config.ollamaUrl) {
     tasks.push(discoverOllama(config.ollamaUrl, config.timeoutMs));
@@ -146,6 +177,9 @@ export async function discoverLocalLlms(config: DiscoveryConfig): Promise<LocalL
   }
 
   const providers = await Promise.all(tasks);
+  if (scanPaths.length > 0) {
+    providers.push(discoverFilesystemModels(scanPaths));
+  }
   const models = providers.flatMap((result) => result.models);
 
   return {

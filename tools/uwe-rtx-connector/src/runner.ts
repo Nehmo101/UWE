@@ -19,6 +19,7 @@ import {
 
 import { executeJob, type ExecutorContext, type JobResult } from "./executors";
 import { HostClient, HostClientError, type ClaimedJob, type HostConfig } from "./host-client";
+import type { JobHistory } from "./job-history";
 import type { DetectedCapabilities } from "./local-capabilities";
 import { log } from "./logging";
 
@@ -29,6 +30,8 @@ export interface RunnerOptions {
   discover: () => Promise<DetectedCapabilities>;
   executorBase: Omit<ExecutorContext, "refreshModels">;
   execute?: (job: ClaimedJob, ctx: ExecutorContext) => Promise<JobResult>;
+  /** Optional bounded, privacy-safe record of finished jobs. */
+  history?: JobHistory;
 }
 
 export class ConnectorRunner {
@@ -118,19 +121,21 @@ export class ConnectorRunner {
   private dispatch(job: ClaimedJob): void {
     const lane = job.lane;
     this.laneCounts[lane] += 1;
-    log.info(`Job beansprucht: ${job.type}`, { jobId: job.id, lane });
+    log.event("jobs", "info", `Job beansprucht: ${job.type}`, { jobId: job.id, lane });
 
     const ctx: ExecutorContext = {
       ...this.options.executorBase,
       refreshModels: () => this.refresh(),
     };
     const exec = this.options.execute ?? executeJob;
+    const startedAt = Date.now();
 
     const promise = (async () => {
       try {
         const result = await exec(job, ctx);
         await this.client.completeJob(job.id, result);
-        log.info(`Job abgeschlossen: ${job.type}`, { jobId: job.id });
+        log.event("jobs", "info", `Job abgeschlossen: ${job.type}`, { jobId: job.id });
+        this.recordHistory(job, "completed", Date.now() - startedAt);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         try {
@@ -138,7 +143,8 @@ export class ConnectorRunner {
         } catch (failError) {
           this.handleHostError(failError, "Fail-Meldung");
         }
-        log.warn(`Job fehlgeschlagen: ${job.type}`, { jobId: job.id, reason });
+        log.event("jobs", "warn", `Job fehlgeschlagen: ${job.type}`, { jobId: job.id, reason });
+        this.recordHistory(job, "failed", Date.now() - startedAt, reason);
       } finally {
         this.laneCounts[lane] = Math.max(0, this.laneCounts[lane] - 1);
       }
@@ -146,6 +152,23 @@ export class ConnectorRunner {
 
     this.active.add(promise);
     void promise.finally(() => this.active.delete(promise));
+  }
+
+  private recordHistory(
+    job: ClaimedJob,
+    status: "completed" | "failed",
+    durationMs: number,
+    reason?: string,
+  ): void {
+    // Only non-sensitive descriptors — never the payload or result.
+    this.options.history?.record({
+      id: job.id,
+      type: job.type,
+      lane: job.lane,
+      status,
+      durationMs,
+      reason,
+    });
   }
 
   private handleHostError(error: unknown, context: string): void {
