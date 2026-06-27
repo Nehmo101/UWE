@@ -1388,6 +1388,22 @@ export type {
 } from "./connector-service";
 
 export {
+  ConnectorWorkflowService,
+  createConnectorWorkflowService,
+  ConnectorWorkflowValidationError,
+  CONNECTOR_WORKFLOW_SLOTS,
+  CONNECTOR_WORKFLOW_SLOT_LABELS,
+  isConnectorWorkflowSlot,
+  pickerModelId,
+} from "./connector-workflow-service";
+
+export type {
+  ConnectorWorkflowSlot,
+  ConnectorPickerModel,
+  ConnectorWorkflowDefaultView,
+} from "./connector-workflow-service";
+
+export {
   createImageStudioService,
   ImageStudioService,
   createDndApiService,
