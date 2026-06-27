@@ -23,13 +23,13 @@ Also set:
 
 | Variable | Purpose |
 |----------|---------|
-| `RTX_BASE_URL` | RTX agent or inference endpoint (legacy: `RTX_AGENT_URL`) |
-| `RTX_SERVICE_TOKEN` | Bearer token for RTX agent (legacy: `RTX_AGENT_TOKEN`) |
+| `RTX_BASE_URL` | Direct RTX worker URL for the remaining image-worker/security-boundary path |
+| `RTX_SERVICE_TOKEN` | Bearer token for that direct RTX worker URL |
 | `MAX_UPLOAD_MB` | Maximum upload size for Studio assets (default: `50`) |
 | `STUDIO_API_TOKEN` | Bearer token for sensitive Studio APIs |
 | `SMTP_PASSWORD`, `CLOUD_AI_API_KEY`, provider API keys | Feature-specific secrets |
 
-`RTX_BASE_URL` and `RTX_SERVICE_TOKEN` must be set together or not at all.
+`RTX_BASE_URL` and `RTX_SERVICE_TOKEN` must be set together or not at all. For local LLM work prefer direct Ollama/LM Studio through `AI_INFERENCE_BASE_URL` and the outbound RTX Host Connector.
 
 ## Development defaults
 
@@ -56,7 +56,7 @@ On Windows without OpenSSL, use PowerShell:
 [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
 ```
 
-The Windows installer generates `AUTH_SECRET` / `SESSION_SECRET` automatically on first install.
+The old Windows host installer is no longer part of the active product path. Fresh installs should generate `SESSION_SECRET` during Linux host setup.
 
 ## Never commit
 
