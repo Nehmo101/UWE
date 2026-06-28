@@ -196,9 +196,31 @@ source_uwe_env_file() {
     return 0
   fi
 
+  local readonly_env_keys=(
+    SERVICE_USER
+    SERVICE_GROUP
+    UWE_ENV_DIR
+    UWE_ENV_FILE
+    UWE_DATA_DIR
+    UWE_LOG_DIR
+    UWE_BACKUP_DIR
+    UWE_DIAG_DIR
+    DEFAULT_UWE_HOME
+    STUDIO_PORT
+    PORTAL_PORT
+    SYSTEMD_UNIT
+    LEGACY_SYSTEMD_UNIT
+    DATABASE_WORKSPACE_FILTER
+    NODE_MAJOR
+    DEFAULT_PNPM_VERSION
+    SYSTEMD_PATH
+  )
+  local readonly_env_pattern
+  readonly_env_pattern="$(IFS='|'; printf '%s' "${readonly_env_keys[*]}")"
+
   set -a
   # shellcheck disable=SC1090
-  source "$env_file"
+  source <(grep -Ev "^[[:space:]]*(export[[:space:]]+)?(${readonly_env_pattern})[[:space:]]*=" "$env_file")
   set +a
 
   # uwe.env must not override the systemd PATH (e.g. nvm/home paths break the service user).

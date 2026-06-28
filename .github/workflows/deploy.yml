@@ -45,3 +45,23 @@ jobs:
     steps:
       - name: Trigger host update on the UWE mini
         run: /opt/uwe/deploy/scripts/uwe-cd-trigger.sh
+
+      - name: Show host update diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::group::host-update-state"
+          if [ -f /var/lib/uwe/host-update-state.json ]; then
+            cat /var/lib/uwe/host-update-state.json
+          else
+            echo "No host-update-state.json found."
+          fi
+          echo "::endgroup::"
+
+          echo "::group::host-update-log"
+          if [ -f /var/log/uwe/host-update.log ]; then
+            tail -n 240 /var/log/uwe/host-update.log
+          else
+            echo "No host-update.log found."
+          fi
+          echo "::endgroup::"
