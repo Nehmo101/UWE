@@ -35,7 +35,24 @@ assert_not_running() {
   " "$STATE_FILE")"
 
   if [[ "$status" == "running" || "$status" == "pending" ]]; then
-    die "Host-Update läuft bereits (Status: $status)."
+    if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet "$UPDATE_UNIT"; then
+      die "Host-Update läuft bereits (Status: $status)."
+    fi
+
+    warn "Host-Update-State war '$status', aber $UPDATE_UNIT ist nicht aktiv — markiere als stale."
+    STATE_FILE="$STATE_FILE" node -e "
+      const fs = require('node:fs');
+      const target = process.env.STATE_FILE;
+      let state = {};
+      try { state = JSON.parse(fs.readFileSync(target, 'utf8')); } catch {}
+      fs.writeFileSync(target, JSON.stringify({
+        ...state,
+        status: 'failed',
+        finishedAt: new Date().toISOString(),
+        exitCode: state.exitCode ?? 1,
+        error: 'Stale host update state cleared before starting a new update.',
+      }, null, 2) + '\n', { mode: 0o640 });
+    "
   fi
 
   if [[ -f "$LOCK_FILE" ]]; then
