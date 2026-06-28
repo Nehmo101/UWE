@@ -688,11 +688,7 @@ main() {
   ensure_start_script
   verify_service_node_access
   write_systemd_unit
-  if [[ "${UWE_SKIP_HOST_UPDATE_INSTALL:-false}" == "true" ]]; then
-    log "Überspringe Reinstallation von uwe-host-update.service im laufenden Host-Update."
-  else
-    install_host_update_assets
-  fi
+  install_host_update_assets
   start_or_restart_service
 
   sleep 8

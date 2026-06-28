@@ -128,7 +128,7 @@ describe("self-hosting setup", () => {
     assert.match(update, /setup-uwe-host\.sh --quick/);
     assert.doesNotMatch(update, /--fresh/);
     const updateUnit = fs.readFileSync(path.join(root, "deploy/systemd/uwe-host-update.service"), "utf8");
-    assert.match(updateUnit, /Conflicts=uwe\.service/);
+    assert.doesNotMatch(updateUnit, /Conflicts=uwe\.service/);
   });
 
   it("host scripts target uwe.service not uwe-host.service", () => {
