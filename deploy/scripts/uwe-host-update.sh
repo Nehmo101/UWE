@@ -81,12 +81,23 @@ git_as_service_user() {
     git -C "$UWE_HOME" "$@"
 }
 
+repository_at_origin_main() {
+  local local_head remote_head
+  local_head="$(git_as_service_user rev-parse HEAD 2>/dev/null || true)"
+  remote_head="$(git_as_service_user rev-parse origin/main 2>/dev/null || true)"
+  [[ -n "$local_head" && "$local_head" == "$remote_head" ]]
+}
+
 sync_repository_to_origin_main() {
-  log_line "git fetch origin main ..."
-  git_as_service_user fetch origin main 2>&1 | tee -a "$LOG_FILE"
-  local fetch_code="${PIPESTATUS[0]}"
-  if [[ "$fetch_code" -ne 0 ]]; then
-    return "$fetch_code"
+  if repository_at_origin_main; then
+    log_line "Repository ist bereits auf origin/main; überspringe git fetch."
+  else
+    log_line "git fetch origin main ..."
+    git_as_service_user fetch origin main 2>&1 | tee -a "$LOG_FILE"
+    local fetch_code="${PIPESTATUS[0]}"
+    if [[ "$fetch_code" -ne 0 ]]; then
+      return "$fetch_code"
+    fi
   fi
 
   if ! git_as_service_user diff --quiet || ! git_as_service_user diff --cached --quiet; then
