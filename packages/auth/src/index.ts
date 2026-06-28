@@ -162,10 +162,12 @@ export {
   getSessionCookieOptions,
   getSessionCookieOptionsForRequest,
   getTrustedRequestHosts,
+  getUweDeploymentModel,
   getUweRuntimeConfig,
   isProductionEnv,
   isPublicExposureConfigured,
   isRequestSecure,
+  isSplitHostnameDeployment,
   originMatchesTrustedHost,
   resolveUweAppUrls,
   resolvePortalPublicBaseUrl,
@@ -175,7 +177,7 @@ export {
   resolveStudioSessionHref,
 } from "./runtime-config";
 
-export type { UweAppUrls } from "./runtime-config";
+export type { UweAppUrls, UweDeploymentModel } from "./runtime-config";
 
 export type { EnvValidationIssue, EnvValidationSeverity } from "./env-validation";
 export { hasBlockingEnvIssues, validateUweEnvironment } from "./env-validation";
@@ -261,5 +263,8 @@ export {
   evaluateStudioMiddleware,
   getMiddlewareMatcher,
 } from "./security/middleware";
+
+export type { LegacyPathRedirect } from "./legacy-path-redirects";
+export { resolveLegacyPathRedirect } from "./legacy-path-redirects";
 
 export const AUTH_PACKAGE_VERSION = "0.2.0";

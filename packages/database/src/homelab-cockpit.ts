@@ -123,12 +123,14 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
       : "Datenbank und Migrationen OK";
 
   const publicExposure = studioSecurity.publicExposureConfigured;
-  const tunnelConfigured = system.proxy.cloudflareTunnel && system.proxy.trustProxy;
+  const tunnelConfigured = system.proxy.cloudflare.tunnelConfigured;
   const tunnelOk = !publicExposure || tunnelConfigured;
   const tunnelMessage = !publicExposure
     ? "Nur lokal — Cloudflare Tunnel nicht erforderlich"
     : tunnelConfigured
-      ? "Cloudflare Tunnel + TRUST_PROXY aktiv"
+      ? system.proxy.deploymentModel === "split-hostname"
+        ? "Cloudflare Tunnel + Split-Hostnames aktiv"
+        : "Cloudflare Tunnel + TRUST_PROXY aktiv"
       : "Öffentliche Erreichbarkeit ohne Tunnel/TRUST_PROXY-Konfiguration";
 
   const rtxAgentConfigured =

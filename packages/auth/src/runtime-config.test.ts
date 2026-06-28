@@ -196,6 +196,29 @@ describe("runtime config", () => {
     });
     assert.equal(urls.portalPath, "/");
     assert.equal(urls.portalUrl, "https://uwe.example.org");
+    assert.equal(urls.deploymentModel, "unified-path");
+  });
+
+  it("uses split-hostname URLs with root paths when hosts differ", () => {
+    const urls = resolveUweAppUrls({
+      PUBLIC_APP_URL: "https://uweanddragons.org",
+      NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+    });
+    assert.equal(urls.deploymentModel, "split-hostname");
+    assert.equal(urls.studioPath, "/");
+    assert.equal(urls.portalPath, "/");
+    assert.equal(urls.studioUrl, "https://studio.uweanddragons.org");
+    assert.equal(urls.portalUrl, "https://uweanddragons.org");
+  });
+
+  it("builds portal session href for split-hostname deployments", () => {
+    const href = resolvePortalSessionHref({
+      PUBLIC_APP_URL: "https://uweanddragons.org",
+      NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+    });
+    assert.equal(href, "https://uweanddragons.org/auth/worlds");
   });
 
   it("builds portal session href without duplicating mount path", () => {

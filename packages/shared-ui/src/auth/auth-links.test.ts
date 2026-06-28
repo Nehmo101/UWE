@@ -62,6 +62,20 @@ describe("auth-links", () => {
     assert.equal(links.portalHref, "https://uwe.example.org/portal");
   });
 
+  it("links to portal auth hub on split-hostname deployment", () => {
+    const links = resolveAuthLinks({
+      isLoggedIn: true,
+      currentApp: "studio",
+      env: {
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      },
+    });
+    assert.equal(links.portalHref, "https://uweanddragons.org/auth/worlds");
+    assert.equal(links.studioHref, "/");
+  });
+
   it("links from Studio landing to Portal login when logged out", () => {
     const links = resolveAuthLinks({
       isLoggedIn: false,

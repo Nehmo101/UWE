@@ -28,7 +28,10 @@ export interface UweAppUrls {
   portalUrl: string | null;
   studioPath: string;
   portalPath: string;
+  deploymentModel: UweDeploymentModel;
 }
+
+export type UweDeploymentModel = "split-hostname" | "unified-path" | "local";
 
 export interface SessionCookieOptions {
   httpOnly: true;
@@ -120,6 +123,72 @@ function normalizeAppPath(
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
 
+function parsePublicUrlHost(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return new URL(trimmed).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/** True when Portal and Studio are configured on different public hostnames. */
+export function isSplitHostnameDeployment(env: NodeJS.ProcessEnv = process.env): boolean {
+  const explicitStudio = env.NEXT_PUBLIC_STUDIO_URL?.trim();
+  const explicitPortal = env.NEXT_PUBLIC_PORTAL_URL?.trim();
+  if (explicitStudio && explicitPortal) {
+    const studioHost = parsePublicUrlHost(explicitStudio);
+    const portalHost = parsePublicUrlHost(explicitPortal);
+    return Boolean(studioHost && portalHost && studioHost !== portalHost);
+  }
+
+  const runtime = getUweRuntimeConfig(env);
+  if (!runtime.publicAppUrl || !explicitStudio) {
+    return false;
+  }
+
+  const publicHost = parsePublicUrlHost(runtime.publicAppUrl);
+  const studioHost = parsePublicUrlHost(explicitStudio);
+  return Boolean(publicHost && studioHost && publicHost !== studioHost);
+}
+
+export function getUweDeploymentModel(env: NodeJS.ProcessEnv = process.env): UweDeploymentModel {
+  if (isSplitHostnameDeployment(env)) {
+    return "split-hostname";
+  }
+
+  const runtime = getUweRuntimeConfig(env);
+  if (runtime.publicAppUrl) {
+    return "unified-path";
+  }
+
+  return "local";
+}
+
+function resolveEffectiveAppPaths(
+  env: NodeJS.ProcessEnv,
+  runtime: UweRuntimeConfig,
+): Pick<UweAppUrls, "studioPath" | "portalPath" | "deploymentModel"> {
+  const deploymentModel = getUweDeploymentModel(env);
+
+  if (deploymentModel === "split-hostname") {
+    return {
+      studioPath: "/",
+      portalPath: "/",
+      deploymentModel,
+    };
+  }
+
+  return {
+    studioPath: runtime.studioPath,
+    portalPath: runtime.portalPath,
+    deploymentModel,
+  };
+}
+
 export function resolveStudioPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   const urls = resolveUweAppUrls(env);
   return (urls.studioUrl ?? DEV_STUDIO_URL).replace(/\/$/, "");
@@ -138,10 +207,14 @@ export function resolvePortalSessionHref(
   const currentApp = options.currentApp ?? "studio";
   const urls = resolveUweAppUrls(env);
   const portalBase = resolvePortalPublicBaseUrl(env);
-  const entryPath = "/portal";
+  const entryPath = urls.deploymentModel === "split-hostname" ? "/auth/worlds" : "/portal";
 
   if (currentApp === "portal") {
     return entryPath;
+  }
+
+  if (urls.deploymentModel === "split-hostname") {
+    return `${portalBase}${entryPath}`;
   }
 
   if (urls.portalPath === "/") {
@@ -175,10 +248,14 @@ export function resolveStudioSessionHref(
   const currentApp = options.currentApp ?? "studio";
   const urls = resolveUweAppUrls(env);
   const studioBase = resolveStudioPublicBaseUrl(env);
-  const entryPath = "/studio";
+  const entryPath = urls.deploymentModel === "split-hostname" ? "/" : "/studio";
 
   if (currentApp === "studio") {
     return entryPath;
+  }
+
+  if (urls.deploymentModel === "split-hostname") {
+    return studioBase;
   }
 
   if (studioBase.endsWith(urls.studioPath)) {
@@ -190,8 +267,7 @@ export function resolveStudioSessionHref(
 
 export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppUrls {
   const runtime = getUweRuntimeConfig(env);
-  const studioPath = runtime.studioPath;
-  const portalPath = runtime.portalPath;
+  const pathInfo = resolveEffectiveAppPaths(env, runtime);
 
   const explicitStudio = env.NEXT_PUBLIC_STUDIO_URL?.trim()?.replace(/\/$/, "");
   const explicitPortal = env.NEXT_PUBLIC_PORTAL_URL?.trim()?.replace(/\/$/, "");
@@ -201,8 +277,9 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
       publicBaseUrl: runtime.publicAppUrl,
       studioUrl: explicitStudio,
       portalUrl: explicitPortal,
-      studioPath,
-      portalPath,
+      studioPath: pathInfo.studioPath,
+      portalPath: pathInfo.portalPath,
+      deploymentModel: pathInfo.deploymentModel,
     };
   }
 
@@ -210,10 +287,18 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
     const base = runtime.publicAppUrl.replace(/\/$/, "");
     return {
       publicBaseUrl: base,
-      studioUrl: `${base}${studioPath}`,
-      portalUrl: portalPath === "/" ? base : `${base}${portalPath}`,
-      studioPath,
-      portalPath,
+      studioUrl: pathInfo.deploymentModel === "split-hostname" && explicitStudio
+        ? explicitStudio
+        : `${base}${runtime.studioPath}`,
+      portalUrl:
+        pathInfo.deploymentModel === "split-hostname" && explicitPortal
+          ? explicitPortal
+          : runtime.portalPath === "/"
+            ? base
+            : `${base}${runtime.portalPath}`,
+      studioPath: pathInfo.studioPath,
+      portalPath: pathInfo.portalPath,
+      deploymentModel: pathInfo.deploymentModel,
     };
   }
 
@@ -221,8 +306,9 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
     publicBaseUrl: null,
     studioUrl: explicitStudio ?? null,
     portalUrl: explicitPortal ?? null,
-    studioPath,
-    portalPath,
+    studioPath: pathInfo.studioPath,
+    portalPath: pathInfo.portalPath,
+    deploymentModel: pathInfo.deploymentModel,
   };
 }
 
@@ -364,12 +450,15 @@ export function getTrustedRequestHosts(
     hosts.add(requestHost.trim().toLowerCase());
   }
 
-  const publicAppUrl = getUweRuntimeConfig(env).publicAppUrl;
-  if (publicAppUrl) {
+  const urls = resolveUweAppUrls(env);
+  for (const candidate of [urls.publicBaseUrl, urls.studioUrl, urls.portalUrl]) {
+    if (!candidate) {
+      continue;
+    }
     try {
-      hosts.add(new URL(publicAppUrl).host.toLowerCase());
+      hosts.add(new URL(candidate).host.toLowerCase());
     } catch {
-      // ignore invalid PUBLIC_APP_URL — already normalized to null in config
+      // ignore invalid URL
     }
   }
 

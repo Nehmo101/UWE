@@ -4,6 +4,7 @@ import {
   applySecurityHeaders,
   evaluatePortalMiddleware,
   isCrossSiteBrowserRequest,
+  resolveLegacyPathRedirect,
 } from "@uwe/auth";
 
 function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null {
@@ -27,6 +28,24 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
 }
 
 export function middleware(request: NextRequest) {
+  const legacyRedirect = resolveLegacyPathRedirect(request.nextUrl.pathname, "portal", process.env);
+  if (legacyRedirect) {
+    const target = legacyRedirect.external
+      ? legacyRedirect.destination
+      : (() => {
+          const url = request.nextUrl.clone();
+          url.pathname = legacyRedirect.destination;
+          url.search = request.nextUrl.search;
+          return url.toString();
+        })();
+    return applySecurityHeaders(
+      NextResponse.redirect(target, 308),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
+  }
+
   const crossOriginError = rejectCrossOriginApiRequest(request);
   if (crossOriginError) {
     return crossOriginError;
