@@ -147,6 +147,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   create_npc: "dnd",
   create_location: "dnd",
   create_encounter: "dnd",
+  create_knowledge_text: "dnd",
   improve_lore_text: "dnd",
   prepare_canon_check: "analysis",
   prepare_next_session: "dnd",

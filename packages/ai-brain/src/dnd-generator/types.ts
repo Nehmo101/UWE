@@ -26,6 +26,7 @@ export type DndGeneratorActionId =
   | "player_version"
   | "dm_notes"
   | "extract_brain_facts"
+  | "create_knowledge_text"
   | "canon_check"
   | "prepare_next_session"
   | "fill_missing"

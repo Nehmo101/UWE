@@ -56,8 +56,7 @@ export function TemplateForm({
           ))}
         </select>
         <small className="uwe-field-hint">
-          „Portal (ohne Login)“ ist nach dem Veröffentlichen ohne Login über die
-          Player-Routen sichtbar. Geheimnisse gehören in Nur-GM-Blöcke.
+          „Portal sichtbar“ ist nach dem Veröffentlichen für angemeldete Spieler im Portal sichtbar. Geheimnisse gehören in Nur-GM-Blöcke.
         </small>
       </label>
 

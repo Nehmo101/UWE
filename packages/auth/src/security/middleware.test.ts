@@ -19,39 +19,51 @@ function makeRequest(pathname: string, options: { session?: string; headers?: Re
   };
 }
 
+const productionPortalEnv = {
+  ...process.env,
+  NODE_ENV: "production",
+  AUTH_REQUIRED: "true",
+  PUBLIC_APP_URL: "https://uweanddragons.org",
+};
+
 describe("middleware evaluation", () => {
-  it("allows public portal routes in production", () => {
-    const decision = evaluatePortalMiddleware(makeRequest("/worlds/terra"), {
-      ...process.env,
-      NODE_ENV: "production",
-      AUTH_REQUIRED: "false",
-      PLAYER_PREVIEW_PUBLIC: "true",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-    });
-    assert.equal(decision.action, "allow");
-  });
-
-  it("redirects guest wiki to login when auth is required", () => {
-    const decision = evaluatePortalMiddleware(makeRequest("/worlds/terra"), {
-      ...process.env,
-      NODE_ENV: "production",
-      AUTH_REQUIRED: "true",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-    });
-    assert.equal(decision.action, "redirect-login");
-    assert.equal(decision.redirectPath, "/login");
-  });
-
-  it("redirects /worlds and /players index to login when auth is required", () => {
-    for (const path of ["/worlds", "/players"]) {
-      const decision = evaluatePortalMiddleware(makeRequest(path), {
-        ...process.env,
-        NODE_ENV: "production",
-        AUTH_REQUIRED: "true",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
-      });
+  it("redirects portal app content to login without a session", () => {
+    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players", "/players/terra", "/share/abc123"]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path), productionPortalEnv);
       assert.equal(decision.action, "redirect-login", path);
-      assert.equal(decision.redirectPath, "/login");
+      assert.equal(decision.redirectPath, "/login", path);
+    }
+  });
+
+  it("allows portal app content with a session", () => {
+    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players/terra", "/share/abc123"]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path, { session: "session-token" }), productionPortalEnv);
+      assert.equal(decision.action, "allow", path);
+    }
+  });
+
+  it("blocks session-protected portal APIs without a session", () => {
+    for (const path of [
+      "/api/dashboard-layout/portal:world:terra",
+      "/api/worlds/terra/graph",
+      "/api/share/abc123",
+      "/api/assets/asset-123/file",
+    ]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path), productionPortalEnv);
+      assert.equal(decision.action, "block", path);
+      assert.equal(decision.status, 401, path);
+    }
+  });
+
+  it("allows session-protected portal APIs with a session", () => {
+    for (const path of [
+      "/api/dashboard-layout/portal:world:terra",
+      "/api/worlds/terra/graph",
+      "/api/share/abc123",
+      "/api/assets/asset-123/file",
+    ]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path, { session: "session-token" }), productionPortalEnv);
+      assert.equal(decision.action, "allow", path);
     }
   });
 
@@ -78,6 +90,19 @@ describe("middleware evaluation", () => {
     assert.equal(decision.status, 404);
   });
 
+  it("allows known studio dashboard layout API through middleware classification", () => {
+    const decision = evaluateStudioMiddleware(makeRequest("/api/dashboard-layout/studio:today", {
+      headers: { host: "127.0.0.1:3000", "sec-fetch-site": "same-origin" },
+    }), {
+      ...process.env,
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uweanddragons.org",
+      CLOUDFLARE_TUNNEL: "true",
+      STUDIO_API_TOKEN: "secret",
+    });
+    assert.equal(decision.action, "allow");
+  });
+
   it("allows studio health endpoint", () => {
     const decision = evaluateStudioMiddleware(makeRequest("/api/health"), {
       ...process.env,
@@ -94,14 +119,14 @@ describe("middleware evaluation", () => {
       const portalDecision = evaluatePortalMiddleware(makeRequest(pathname), {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweandragons.org",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
       });
       assert.equal(portalDecision.action, "allow", `portal ${pathname}`);
 
       const studioDecision = evaluateStudioMiddleware(makeRequest(pathname), {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweandragons.org",
+        PUBLIC_APP_URL: "https://uweanddragons.org",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       });

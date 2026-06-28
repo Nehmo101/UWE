@@ -318,7 +318,7 @@ export function buildCanonFindings(
         fixes: [
           {
             action: "set_page_player_visible",
-            label: "Für das Portal freigeben (ohne Login sichtbar)",
+            label: "Für angemeldete Spieler im Portal freigeben",
           },
         ],
       });

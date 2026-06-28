@@ -19,16 +19,17 @@ import {
 } from "./index";
 
 describe("Brain Actions — catalog", () => {
-  it("defines all seven P09 target actions", () => {
+  it("defines all eight P09 target actions", () => {
     const ids = BRAIN_ACTION_LIST.map((action) => action.id);
     assert.ok(ids.includes("session_recap"));
     assert.ok(ids.includes("next_session_prep"));
     assert.ok(ids.includes("expand_knowledge"));
+    assert.ok(ids.includes("create_knowledge_text"));
     assert.ok(ids.includes("canon_check"));
     assert.ok(ids.includes("player_handout"));
     assert.ok(ids.includes("fill_dungeon_room"));
     assert.ok(ids.includes("mail_draft"));
-    assert.equal(BRAIN_ACTION_LIST.length, 7);
+    assert.equal(BRAIN_ACTION_LIST.length, 8);
   });
 
   it("marks player-safe actions correctly", () => {
@@ -66,6 +67,19 @@ describe("Brain Actions — proposals", () => {
     });
     assert.equal(proposals[0]?.targetType, "session_summary_dm");
     assert.equal(proposals[0]?.visibility, "dm_only");
+  });
+
+  it("builds Wissenstext proposals as brain documents", () => {
+    const action = getBrainAction("create_knowledge_text");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: "## Arbor\n\nArbor ist ein Waldaußenposten.",
+      pageId: "page-1",
+    });
+    assert.equal(proposals.length, 1);
+    assert.equal(proposals[0]?.targetType, "brain_document");
+    assert.equal(proposals[0]?.visibility, "dm_only");
+    assert.equal(proposals[0]?.metadata?.documentType, "world_knowledge");
   });
 });
 
@@ -109,6 +123,49 @@ describe("Brain Actions — end-to-end with mock provider", () => {
     assert.equal(run?.status, "completed");
     assert.ok(run?.resultText);
     assert.ok(Array.isArray(run?.proposals));
+  });
+
+  it("runs create_knowledge_text and applies it as a brain document", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const aiRuns = createAiRunService(databaseUrl);
+    const brainStore = createBrainStoreService(databaseUrl);
+
+    const { runId, proposals } = await runBrainAction(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        actionId: "create_knowledge_text",
+        worldSlug: seeded.world.slug,
+        pageSlug: seeded.pages.arbor.slug,
+        providerId: "ollama",
+        model: "mock-model",
+        useMock: true,
+        options: { allowDmOnly: true, localOnly: true },
+      },
+    );
+
+    const proposal = proposals[0];
+    assert.ok(proposal);
+    assert.equal(proposal.targetType, "brain_document");
+
+    await applyProposal(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        runId,
+        proposalId: proposal.id,
+        editedContent: "Wissenstext über Arbor.",
+      },
+    );
+
+    const documents = await brainStore.listDocuments(seeded.world.slug, {
+      documentType: "world_knowledge",
+    });
+    const created = documents.find((doc) => doc.content === "Wissenstext über Arbor.");
+    assert.ok(created);
+    assert.equal(created.title, "Wissenstext");
+    assert.equal(created.visibility, "dm_only");
+    assert.equal(created.source, "ai_generated");
+    assert.equal(created.status, "draft");
   });
 
   it("runs session_recap with session context and saves run history", async () => {

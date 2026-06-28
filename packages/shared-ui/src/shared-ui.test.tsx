@@ -90,7 +90,7 @@ describe("shared-ui components", () => {
         <PageTypeBadge type="lore" />
       </>,
     );
-    assert.match(html, /Portal \(ohne Login\)/);
+    assert.match(html, /Portal sichtbar/);
     assert.match(html, /Nur GM/);
     assert.match(html, /uwe-badge-secret/);
     assert.match(html, /aria-label=/);
@@ -122,7 +122,7 @@ describe("shared-ui components", () => {
       />,
     );
     assert.match(html, /Arbor/);
-    assert.match(html, /Portal \(ohne Login\)/);
+    assert.match(html, /Portal sichtbar/);
     assert.doesNotMatch(html, /Nur GM/);
     assert.doesNotMatch(html, /dm_only/);
     assert.doesNotMatch(html, /Geheim/);

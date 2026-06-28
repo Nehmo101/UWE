@@ -49,6 +49,14 @@ describe("design v2 CSS bundle", () => {
     assert.equal(parchment.cardBg?.toLowerCase(), "#fbf6ea");
   });
 
+  it("parchment OS shell uses semantic CSS tokens instead of hard-coded colors", () => {
+    const shell = readFileSync(path.join(designV2Dir, "parchment-os-shell.css"), "utf8");
+    assert.doesNotMatch(shell, /#[0-9a-fA-F]{3,8}\b/);
+    assert.doesNotMatch(shell, /\brgba?\(/);
+    assert.match(shell, /--uwe-v2-topbar-bg/);
+    assert.match(shell, /--uwe-v2-sidebar-active-bg/);
+  });
+
   it("v2 layout tokens follow handoff dimensions", () => {
     const tokens = readFileSync(path.join(designV2Dir, "tokens.css"), "utf8");
     assert.match(tokens, /14\.75rem.*236px/);

@@ -9,13 +9,41 @@ import type {
   RecordAiRunResult,
 } from "./ai-proposal-types";
 import { buildGeneratedPatch, suggestApplyMode } from "./ai-proposal-types";
-import { BrainStoreService } from "./brain-store-service";
+import {
+  BrainStoreService,
+  type BrainDocumentType,
+  type BrainVisibility,
+} from "./brain-store-service";
 import { GameSessionService } from "./game-session";
 import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
 import { toPrismaJsonValue } from "./json-utils";
 import { createUndoService } from "./undo-service";
 import { syncAiProposalReview } from "./review-bridge";
+
+const BRAIN_DOCUMENT_TYPES: BrainDocumentType[] = [
+  "world_knowledge",
+  "campaign_knowledge",
+  "session_summary",
+  "npc_facts",
+  "location_facts",
+  "faction_facts",
+  "canon_facts",
+  "general",
+  "ai_summary",
+];
+
+const BRAIN_VISIBILITIES: BrainVisibility[] = ["dm_only", "player_visible", "public"];
+
+function pickMetadataValue<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
+}
 
 export interface ApplyBrainProposalInput {
   runId: string;
@@ -145,6 +173,10 @@ export class AiReviewService {
         content: json.content,
         title: json.label,
       });
+      const brainMetadata = {
+        ...(json.metadata ?? {}),
+        ...(json.visibility ? { visibility: json.visibility } : {}),
+      };
 
       await this.db.aiProposal.create({
         data: {
@@ -156,7 +188,7 @@ export class AiReviewService {
             JSON.stringify({
               ...patch,
               brainTargetType: json.targetType,
-              brainMetadata: json.metadata ?? null,
+              brainMetadata,
             }),
           ),
           resultText: json.content,
@@ -192,7 +224,7 @@ export class AiReviewService {
 
     const patch = proposal.patch as unknown as GeneratedPatch & {
       brainTargetType?: string;
-      brainMetadata?: Record<string, unknown>;
+      brainMetadata?: Record<string, unknown> | null;
     };
     const targetType = patch.brainTargetType ?? patch.operation;
     const mode = this.mapTargetToApplyMode(String(targetType));
@@ -312,32 +344,41 @@ export class AiReviewService {
     mailDraft: boolean,
   ): Promise<ApplyAiProposalResult> {
     const patch = proposal.patch as GeneratedPatch & {
-      brainMetadata?: Record<string, unknown>;
+      brainMetadata?: Record<string, unknown> | null;
     };
     const content = (input.editedContent ?? proposal.editedText ?? proposal.resultText).trim();
     if (!content) return { ok: false, message: "Kein Inhalt zum Übernehmen." };
 
     const brainStore = new BrainStoreService(this.db);
+    const metadata = patch.brainMetadata ?? {};
     const subject =
-      typeof patch.brainMetadata?.subject === "string"
-        ? patch.brainMetadata.subject
+      typeof metadata.subject === "string"
+        ? metadata.subject
         : patch.label ?? "Brain-Dokument";
+    const documentType = mailDraft
+      ? "session_summary"
+      : pickMetadataValue(metadata.documentType, BRAIN_DOCUMENT_TYPES, "general");
+    const visibility = mailDraft
+      ? "player_visible"
+      : pickMetadataValue(metadata.visibility, BRAIN_VISIBILITIES, "dm_only");
 
     const doc = await brainStore.createDocument({
       worldId: proposal.worldId,
       pageId: proposal.sourcePageId ?? proposal.aiRun.pageId ?? undefined,
       gameSessionId: proposal.sessionId ?? proposal.aiRun.gameSessionId ?? undefined,
-      title: mailDraft ? `Mail: ${subject}` : (patch.label ?? "KI-Vorschlag"),
+      title: mailDraft ? `Mail: ${subject}` : subject,
       content,
-      documentType: mailDraft ? "session_summary" : "general",
-      visibility: mailDraft ? "player_visible" : "dm_only",
+      documentType,
+      visibility,
       source: "ai_generated",
       status: "draft",
       metadata: {
         aiRunId: proposal.aiRunId,
         proposalId: proposal.id,
         mailDraft,
-        subject: mailDraft ? subject : undefined,
+        subject,
+        documentType,
+        visibility,
         autoSend: false,
       },
     });

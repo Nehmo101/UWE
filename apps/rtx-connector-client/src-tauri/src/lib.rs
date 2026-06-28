@@ -34,6 +34,13 @@ const CONFIG_FILE_NAME: &str = "config.json";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn configure_hidden_process(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+}
 #[cfg(target_os = "windows")]
 const AUTOSTART_RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 #[cfg(target_os = "windows")]
@@ -174,6 +181,7 @@ fn build_node_script_command(script_rel: &str, args: &[&str]) -> Result<Command,
     let data_dir = connector_app_data_dir()?;
 
     let mut command = Command::new("node");
+    configure_hidden_process(&mut command);
     command
         .arg("--import")
         .arg("tsx")
@@ -806,6 +814,7 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
     let root = resolve_monorepo_root();
     let data_dir = connector_app_data_dir()?;
     let mut command = std::process::Command::new("node");
+    configure_hidden_process(&mut command);
     command
         .arg("--import")
         .arg("tsx")

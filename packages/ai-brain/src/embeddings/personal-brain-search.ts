@@ -73,7 +73,7 @@ export async function semanticSearchPersonalBrainChunks(
     return keywordSearch(chunks, query, limit);
   }
 
-  return indexedChunks
+  const semanticResults = indexedChunks
     .map((chunk) => ({
       chunk,
       score: cosineSimilarity(queryVector, chunk.embedding!),
@@ -90,6 +90,8 @@ export async function semanticSearchPersonalBrainChunks(
       chunkIndex: chunk.chunkIndex,
       score,
     }));
+
+  return semanticResults.length > 0 ? semanticResults : keywordSearch(chunks, query, limit);
 }
 
 function keywordSearch(

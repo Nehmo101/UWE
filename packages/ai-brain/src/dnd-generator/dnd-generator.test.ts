@@ -44,6 +44,7 @@ describe("DnD Generator — context", () => {
     );
 
     assert.ok(npcActions.some((a) => a.id === "image_prompt"));
+    assert.ok(npcActions.some((a) => a.id === "create_knowledge_text"));
     assert.ok(sessionActions.some((a) => a.id === "prepare_next_session"));
     assert.ok(!npcActions.some((a) => a.id === "prepare_next_session"));
   });

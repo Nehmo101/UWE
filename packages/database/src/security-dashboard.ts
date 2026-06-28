@@ -370,7 +370,7 @@ export function buildSecurityWarnings(input: {
       severity: "critical",
       title: "Portal-Auth nicht aktiv",
       description:
-        "AUTH_REQUIRED=false bei öffentlicher Erreichbarkeit — Spieler-Routen sind ohne Login erreichbar.",
+        "AUTH_REQUIRED=false ist für Production nicht mehr vorgesehen — Portal-Routen erzwingen Login über die Route-Policy.",
     });
   }
 

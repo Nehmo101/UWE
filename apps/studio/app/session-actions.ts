@@ -1,3 +1,5 @@
+"use server";
+
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createGameSessionService,

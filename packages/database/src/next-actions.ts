@@ -152,9 +152,9 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
       actions.push({
         id: `portal-visible:${world.slug}`,
         severity: "info",
-        title: `${world.name}: ${portalVisible} Seiten ohne Login sichtbar`,
+        title: `${world.name}: ${portalVisible} Portal-sichtbare Seiten`,
         description:
-          "Diese Seiten sind über die Player-Routen (/worlds/…) öffentlich lesbar — im Inspector prüfen.",
+          "Diese Seiten sind nach Login im Portal sichtbar — im Inspector auf Freigaben prüfen.",
         href: `/worlds/${world.slug}/inspector`,
       });
     }

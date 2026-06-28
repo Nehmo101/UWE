@@ -11,6 +11,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   create_npc: "NPC-Ideen erstellen",
   create_location: "Orte erstellen",
   create_encounter: "Encounter erstellen",
+  create_knowledge_text: "Wissenstext erstellen",
   improve_lore_text: "Lore verbessern",
   prepare_canon_check: "Kanonprüfung vorbereiten",
   prepare_next_session: "Nächste Session vorbereiten",
@@ -40,6 +41,8 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Entwirf einen neuen Ort passend zum Setting. Beschreibe Atmosphäre, NPCs, Geheimnisse und Abenteuer-Hooks.",
   create_encounter:
     "Entwirf ein Encounter-Szenario mit Setup, Gegnern/Irritationen, Taktik und möglichen Ausgängen.",
+  create_knowledge_text:
+    "Erstelle einen strukturierten Wissenstext aus dem Kontext. Schreibe als nutzbares Brain-Dokument mit Titel, Kurzfassung, gesicherten Fakten, offenen Fragen und klar markierten Ideen. Verändere Kanon nicht ungeprüft.",
   improve_lore_text:
     "Verbessere den Lore-Text stilistisch und strukturell, ohne Kanon-Fakten zu verändern.",
   prepare_canon_check:

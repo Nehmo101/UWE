@@ -88,6 +88,25 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
     ];
   }
 
+  if (action.id === "create_knowledge_text") {
+    return [
+      {
+        id: `${baseId}-knowledge`,
+        label: action.defaultProposalLabel,
+        content: resultText.trim(),
+        targetType: "brain_document",
+        targetId: pageId ?? null,
+        visibility: "dm_only",
+        status: "pending",
+        metadata: {
+          documentType: "world_knowledge",
+          source: "ai_generated",
+          subject: action.defaultProposalLabel,
+        },
+      },
+    ];
+  }
+
   return [
     {
       id: `${baseId}-main`,

@@ -20,20 +20,13 @@ export interface RouteClassification {
   pathname: string;
 }
 
-/** Guest/player wiki pages — content filtered to player_visible at data layer. */
+/** Public app routes. Portal content itself is private; only auth entrypoints stay public. */
 export const PUBLIC_PLAYER_APP_ROUTES = [
-  "/",
   "/login",
   "/logout",
   "/setup",
   "/forgot-password",
   "/reset-password",
-  "/portal",
-  "/worlds",
-  "/worlds/*",
-  "/players",
-  "/players/*",
-  "/share/*",
 ] as const;
 
 /** Public asset delivery (Portal serves via /api/assets; alias /public-assets for proxies). */
@@ -49,17 +42,20 @@ export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/health/public",
   "/api/auth/login",
   "/api/auth/logout",
-  "/api/auth/preview",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
-  "/api/share/*",
-  "/api/worlds/*/graph",
-  ...PUBLIC_ASSET_ROUTES,
 ] as const;
 
 /** Portal app routes that require a logged-in player session. */
 export const PORTAL_SESSION_APP_ROUTES = [
+  "/",
+  "/portal",
+  "/worlds",
+  "/worlds/*",
+  "/players",
+  "/players/*",
+  "/share/*",
   "/auth",
   "/auth/*",
 ] as const;
@@ -67,12 +63,17 @@ export const PORTAL_SESSION_APP_ROUTES = [
 /** Portal API routes that require a logged-in player session. */
 export const PORTAL_SESSION_API_ROUTES = [
   "/api/auth/change-password",
+  "/api/auth/preview",
   "/api/auth/session/touch",
   "/api/auth/two-factor",
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
+  "/api/assets/*/file",
+  "/api/dashboard-layout/*",
+  "/api/share/*",
   "/api/worlds",
+  "/api/worlds/*/graph",
 ] as const;
 
 /** Studio API routes that require a logged-in session (not Bearer token). */
@@ -83,6 +84,7 @@ export const STUDIO_SESSION_API_ROUTES = [
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
+  "/api/dashboard-layout/*",
   "/api/worlds",
 ] as const;
 

@@ -15,24 +15,24 @@ import { EmptyState } from "./AppShell";
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
   private: "Privat",
   dm_only: "Nur GM",
-  player_visible: "Portal (ohne Login)",
-  public: "Öffentlich (Share-Link)",
+  player_visible: "Portal sichtbar",
+  public: "Share-Link",
   specific_players: "Bestimmte Spieler",
   unlock_after_session: "Nach Session",
   archived: "Archiviert",
 };
 
 /**
- * Full explanations for visibility values. The Portal exposes published content on
- * /worlds/* without authentication — these texts make that consequence explicit.
+ * Full explanations for visibility values. Portal content requires an
+ * authenticated UWE user; these texts make the publication consequence clear.
  */
 export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
   private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",
   dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
   player_visible:
-    "Über die Player-/World-Routen (/worlds/…) ohne Login sichtbar, sobald die Seite veröffentlicht ist.",
+    "Für eingeloggte Spieler im Portal sichtbar, sobald die Seite veröffentlicht ist.",
   public:
-    "Wie Portal-sichtbar, zusätzlich über öffentliche Share-Links erreichbar (abschaltbar in den Einstellungen).",
+    "Wie Portal-sichtbar, zusätzlich für explizite Share-Link-Freigaben markiert; Share-Routen brauchen ebenfalls Login.",
   specific_players: "Nur für eingeloggte Spieler mit Freigabe sichtbar.",
   unlock_after_session: "Wird nach der verknüpften Session für Spieler freigeschaltet.",
   archived: "Archiviert — für Spieler ausgeblendet, im Studio weiterhin auffindbar.",

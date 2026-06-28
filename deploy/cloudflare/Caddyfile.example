@@ -1,31 +1,32 @@
-# Local reverse proxy for Unified Path deployment.
-# Routes Portal + Studio behind cloudflared, which forwards to 127.0.0.1:8080
-# (see config.yml.example). Listens on plain HTTP :8080 — TLS is terminated at
-# the Cloudflare edge, so this block must NOT use a hostname site address (that
-# would make Caddy provision certs and bind :443 instead of :8080).
-# Copy to /etc/caddy/Caddyfile (or include from your Caddy config).
+# Legacy unified-path reverse proxy example.
 #
-# Docs: docs/cloudflare-access.md
+# The recommended Cloudflare deployment now uses split hostnames and does not
+# need Caddy/nginx path rewriting:
+#   uweanddragons.org        -> Portal :3001
+#   studio.uweanddragons.org -> Studio :3000
+#
+# Keep this file only for installations that deliberately stay on one hostname
+# with /studio/* path routing. New installs should use config.yml.example.
 
 :8080 {
-	# Portal API — public (no Cloudflare Access on /api/*)
+	# Portal API and UI
 	handle /api/* {
 		reverse_proxy 127.0.0.1:3001
 	}
 
-	# Studio API — /studio/api/* → Studio /api/*
+	# Studio API - /studio/api/* -> Studio /api/*
 	handle /studio/api/* {
 		uri strip_prefix /studio
 		reverse_proxy 127.0.0.1:3000
 	}
 
-	# Studio UI — /studio/*
+	# Studio UI - /studio/* -> Studio /*
 	handle /studio/* {
 		uri strip_prefix /studio
 		reverse_proxy 127.0.0.1:3000
 	}
 
-	# Admin / Setup (Cloudflare Access on these paths)
+	# Admin / setup on Studio for legacy links
 	handle /admin/* {
 		reverse_proxy 127.0.0.1:3000
 	}
@@ -33,7 +34,6 @@
 		reverse_proxy 127.0.0.1:3000
 	}
 
-	# Portal UI — default
 	handle {
 		reverse_proxy 127.0.0.1:3001
 	}

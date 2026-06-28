@@ -140,8 +140,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               ))}
             </select>
             <small className="uwe-field-hint">
-              „Portal (ohne Login)“ und „Öffentlich (Share-Link)“ sind nach dem
-              Veröffentlichen ohne Login über die Player-Routen (/worlds/…) sichtbar.
+              „Portal sichtbar“ und „Share-Link“ sind nach dem
+              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
               „Nur GM“ erscheint dort niemals.
             </small>
           </label>

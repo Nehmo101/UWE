@@ -66,7 +66,7 @@ export class InspectorFixService {
           return await this.updatePageFix(world, input.pageId, {
             data: { visibility: "player_visible" },
             describe: (title) =>
-              `„${title}“ für das Portal freigegeben (ohne Login sichtbar).`,
+              `„${title}“ für angemeldete Spieler im Portal freigegeben.`,
             visibilityChange: true,
           });
         case "remove_broken_wiki_link":

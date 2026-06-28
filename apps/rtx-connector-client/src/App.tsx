@@ -173,7 +173,22 @@ const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
 };
 
 function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unbekannter Fehler";
+  if (typeof error === "string") {
+    return error.trim() || "Unbekannter Fehler";
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  return "Unbekannter Fehler";
 }
 
 function toHealthBadgeStatus(

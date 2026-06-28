@@ -12,6 +12,7 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   create_npc: "dnd_generator",
   create_location: "dnd_generator",
   create_encounter: "dnd_generator",
+  create_knowledge_text: "editor_rewrite",
   fill_dungeon_room: "dnd_generator",
   improve_lore_text: "editor_rewrite",
   summarize_page: "editor_rewrite",

@@ -34,6 +34,9 @@ export function listMigrationDirectories(): string[] | null {
     return fs
       .readdirSync(migrationsDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
+      .filter((entry) =>
+        fs.existsSync(path.join(migrationsDir, entry.name, "migration.sql")),
+      )
       .map((entry) => entry.name)
       .sort();
   } catch {

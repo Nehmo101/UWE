@@ -1,14 +1,9 @@
-import {
-  getUweRuntimeConfig,
-  isProductionEnv,
-  isPublicExposureConfigured,
-} from "../runtime-config";
+import { isProductionEnv, isPublicExposureConfigured } from "../runtime-config";
 import { SESSION_COOKIE_NAME } from "../session";
 import { authorizeForSurface } from "./authorize";
 import {
   classifyRoute,
   isApiRoute,
-  isGuestWikiPath,
   isUnknownProtectedApi,
   type UweAppSurface,
 } from "./route-policy";
@@ -27,11 +22,6 @@ export interface MiddlewareRequestLike {
   };
   headers: Headers;
   url: string;
-}
-
-function requiresAuthenticatedPortalAccess(env: NodeJS.ProcessEnv = process.env): boolean {
-  const config = getUweRuntimeConfig(env);
-  return config.isProduction && (config.authRequired || !config.playerPreviewPublic);
 }
 
 function buildRequest(request: MiddlewareRequestLike): Request {
@@ -72,10 +62,6 @@ export function evaluatePortalMiddleware(
 
   if (classification.access === "protected") {
     return { action: "block", status: 403, error: "Zugriff verweigert." };
-  }
-
-  if (isGuestWikiPath(pathname) && requiresAuthenticatedPortalAccess(env) && !hasSession) {
-    return { action: "redirect-login", redirectPath: "/login" };
   }
 
   return { action: "allow" };

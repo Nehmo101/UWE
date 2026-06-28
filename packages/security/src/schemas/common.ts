@@ -77,6 +77,7 @@ export const AI_TASK_TYPES = [
   "create_npc",
   "create_location",
   "create_encounter",
+  "create_knowledge_text",
   "improve_lore_text",
   "prepare_canon_check",
   "prepare_next_session",

@@ -3,8 +3,8 @@ import { before, describe, it } from "node:test";
 import {
   createPersonalBrainService,
   createPrismaClient,
-  createTestDatabaseUrl,
 } from "@uwe/database/server";
+import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { MockEmbeddingProvider } from "./provider";
 import { indexPersonalBrainDocument } from "./personal-brain-indexer";
 import { semanticSearchPersonalBrainChunks } from "./personal-brain-search";

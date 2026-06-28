@@ -5,6 +5,7 @@ export type BrainActionId =
   | "session_recap"
   | "next_session_prep"
   | "expand_knowledge"
+  | "create_knowledge_text"
   | "canon_check"
   | "player_handout"
   | "fill_dungeon_room"
@@ -63,6 +64,18 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "dm_internal",
     defaultProposalTarget: "page_content_block",
     defaultProposalLabel: "Erweiterter Lore-Text",
+  },
+  create_knowledge_text: {
+    id: "create_knowledge_text",
+    label: "Wissenstext erstellen",
+    description:
+      "Aus Kontext, Brain und Seite einen neuen strukturierten Wissenstext als Brain-Dokument vorschlagen.",
+    taskType: "create_knowledge_text",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "brain_document",
+    defaultProposalLabel: "Wissenstext",
   },
   canon_check: {
     id: "canon_check",

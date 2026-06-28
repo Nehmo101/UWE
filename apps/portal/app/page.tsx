@@ -1,14 +1,11 @@
-import { UweLandingPage } from "@uwe/shared-ui";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/src/lib/auth";
 
 export default async function LandingPage() {
   const user = await getCurrentUser();
+  if (user) {
+    redirect("/auth/worlds");
+  }
 
-  return (
-    <UweLandingPage
-      currentApp="portal"
-      isLoggedIn={Boolean(user)}
-      userDisplayName={user?.displayName}
-    />
-  );
+  redirect("/login?redirect=/auth/worlds");
 }

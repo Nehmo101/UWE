@@ -34,6 +34,15 @@ const BASE_ACTIONS: DndGeneratorAction[] = [
     requiresReview: true,
   },
   {
+    id: "create_knowledge_text",
+    label: "Wissenstext erstellen",
+    description: "Strukturierten Wissenstext als neues Brain-Dokument vorschlagen.",
+    taskType: "create_knowledge_text",
+    brainActionId: "create_knowledge_text",
+    playerSafe: false,
+    requiresReview: true,
+  },
+  {
     id: "canon_check",
     label: "Kanon-Konflikte prüfen",
     description: "Widersprüche und Kanon-Abweichungen erkennen.",
@@ -85,14 +94,29 @@ const BASE_ACTIONS: DndGeneratorAction[] = [
 ];
 
 const CONTEXT_ACTION_IDS: Partial<Record<DndContextDescriptor["kind"], DndGeneratorActionId[]>> = {
-  world: ["summarize", "canon_check", "prepare_next_session", "extract_brain_facts"],
-  page: ["summarize", "player_version", "dm_notes", "canon_check", "fill_missing", "image_prompt"],
+  world: [
+    "summarize",
+    "canon_check",
+    "prepare_next_session",
+    "extract_brain_facts",
+    "create_knowledge_text",
+  ],
+  page: [
+    "summarize",
+    "player_version",
+    "dm_notes",
+    "canon_check",
+    "fill_missing",
+    "create_knowledge_text",
+    "image_prompt",
+  ],
   npc: [
     "summarize",
     "dm_notes",
     "fill_missing",
     "canon_check",
     "create_handout",
+    "create_knowledge_text",
     "image_prompt",
     "extract_brain_facts",
   ],
@@ -103,8 +127,16 @@ const CONTEXT_ACTION_IDS: Partial<Record<DndContextDescriptor["kind"], DndGenera
     "canon_check",
     "create_handout",
     "image_prompt",
+    "create_knowledge_text",
   ],
-  faction: ["summarize", "dm_notes", "fill_missing", "canon_check", "extract_brain_facts"],
+  faction: [
+    "summarize",
+    "dm_notes",
+    "fill_missing",
+    "canon_check",
+    "extract_brain_facts",
+    "create_knowledge_text",
+  ],
   quest: ["summarize", "dm_notes", "fill_missing", "canon_check", "create_handout"],
   session: [
     "summarize",
@@ -139,7 +171,7 @@ const CONTEXT_ACTION_IDS: Partial<Record<DndContextDescriptor["kind"], DndGenera
   loot: ["summarize", "dm_notes", "fill_missing", "create_handout", "create_label"],
   handout: ["summarize", "player_version", "fill_missing", "create_label"],
   monster: ["summarize", "dm_notes", "fill_missing", "image_prompt", "create_label"],
-  rule: ["summarize", "dm_notes", "canon_check", "extract_brain_facts"],
+  rule: ["summarize", "dm_notes", "canon_check", "extract_brain_facts", "create_knowledge_text"],
   workshop_project: ["summarize", "dm_notes", "canon_check", "fill_missing", "image_prompt"],
 };
 
