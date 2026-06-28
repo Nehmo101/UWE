@@ -29,13 +29,13 @@ function makeMiddlewareRequest(pathname: string, headers: Record<string, string>
 }
 
 describe("security boundary", () => {
-  it("allows public player routes", () => {
-    assert.equal(isPublicRoute("/", "portal"), true);
+  it("keeps only portal auth entrypoints public and protects player content", () => {
+    assert.equal(isPublicRoute("/", "portal"), false);
     assert.equal(isPublicRoute("/login", "portal"), true);
     assert.equal(isPublicRoute("/forgot-password", "portal"), true);
     assert.equal(isPublicRoute("/reset-password", "portal"), true);
-    assert.equal(isPublicRoute("/worlds/terra", "portal"), true);
-    assert.equal(isPublicRoute("/players/terra", "portal"), true);
+    assert.equal(isPublicRoute("/worlds/terra", "portal"), false);
+    assert.equal(isPublicRoute("/players/terra", "portal"), false);
 
     const decision = evaluatePortalMiddleware(makeMiddlewareRequest("/worlds/terra"), {
       ...process.env,
@@ -44,7 +44,7 @@ describe("security boundary", () => {
       PLAYER_PREVIEW_PUBLIC: "true",
       PUBLIC_APP_URL: "https://uweanddragons.org",
     });
-    assert.equal(decision.action, "allow");
+    assert.equal(decision.action, "redirect-login");
   });
 
   it("blocks protected studio routes without auth when publicly exposed", () => {
@@ -112,9 +112,9 @@ describe("security boundary", () => {
     assert.equal(portalDecision.status, 404);
   });
 
-  it("classifies player wiki routes as public with protected-session for auth area", () => {
+  it("classifies player wiki routes as protected-session", () => {
     const guest = classifyRoute("/worlds/terra/orte/eldoria", "portal");
-    assert.equal(guest.access, "public");
+    assert.equal(guest.access, "protected-session");
 
     const authArea = classifyRoute("/auth/worlds/terra", "portal");
     assert.equal(authArea.access, "protected-session");
@@ -179,17 +179,18 @@ describe("security boundary", () => {
 
     for (const file of walk(studioApiDir)) {
       const content = fs.readFileSync(file, "utf8");
+      const normalizedFile = file.replace(/\\/g, "/");
       if (
-        file.includes("/api/auth/") ||
-        file.endsWith("/health/public/route.ts") ||
-        file.endsWith("/health/route.ts") ||
-        file.endsWith("/spotify/callback/route.ts")
+        normalizedFile.includes("/api/auth/") ||
+        normalizedFile.endsWith("/health/public/route.ts") ||
+        normalizedFile.endsWith("/health/route.ts") ||
+        normalizedFile.endsWith("/spotify/callback/route.ts")
       ) {
         continue;
       }
       const needsAlternateGuard =
-        file.endsWith("/health/private/route.ts") ||
-        file.endsWith("/agent-jobs/callback/route.ts");
+        normalizedFile.endsWith("/health/private/route.ts") ||
+        normalizedFile.endsWith("/agent-jobs/callback/route.ts");
       if (needsAlternateGuard) {
         assert.match(
           content,
@@ -209,10 +210,11 @@ describe("security boundary", () => {
 
     for (const file of walk(portalApiDir)) {
       const content = fs.readFileSync(file, "utf8");
-      if (file.endsWith("/health/public/route.ts") || file.endsWith("/health/route.ts")) {
+      const normalizedFile = file.replace(/\\/g, "/");
+      if (normalizedFile.endsWith("/health/public/route.ts") || normalizedFile.endsWith("/health/route.ts")) {
         continue;
       }
-      if (file.endsWith("/health/private/route.ts")) {
+      if (normalizedFile.endsWith("/health/private/route.ts")) {
         assert.match(
           content,
           /requireOwnerAuth|requirePortalOwnerAuth|requirePortalApiAuth|requirePrivateHealthAuth/,
@@ -221,8 +223,8 @@ describe("security boundary", () => {
         continue;
       }
       if (
-        file.includes("/api/auth/two-factor/") &&
-        !file.endsWith("/verify/route.ts")
+        normalizedFile.includes("/api/auth/two-factor/") &&
+        !normalizedFile.endsWith("/verify/route.ts")
       ) {
         const helperContent = fs.readFileSync(portalTwoFactorHelper, "utf8");
         assert.match(
