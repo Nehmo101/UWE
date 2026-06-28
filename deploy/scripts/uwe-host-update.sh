@@ -170,7 +170,7 @@ main() {
     fi
 
     log_line "setup-uwe-host.sh --quick …"
-    bash "$UWE_HOME/deploy/scripts/setup-uwe-host.sh" --quick 2>&1 | tee -a "$LOG_FILE"
+    UWE_SKIP_HOST_UPDATE_INSTALL=true bash "$UWE_HOME/deploy/scripts/setup-uwe-host.sh" --quick 2>&1 | tee -a "$LOG_FILE"
     exit "${PIPESTATUS[0]}"
   }
   exit_code=$?
