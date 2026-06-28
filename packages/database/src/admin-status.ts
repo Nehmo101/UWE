@@ -673,7 +673,10 @@ export async function getAdminStatus(
   options: { rateLimiterMode?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<AdminStatus> {
   const env = options.env ?? process.env;
-  const system = await getSystemStatus(db, { rateLimiterMode: options.rateLimiterMode });
+  const system = await getSystemStatus(db, {
+    rateLimiterMode: options.rateLimiterMode,
+    env,
+  });
 
   const [mail, brain, embeddings, aiRuns, jobs] = await Promise.all([
     getMailHealthStatus(db, env),
