@@ -15,7 +15,6 @@ import { isSeedApplied } from "./seed-tracker";
 import {
   isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
-  isStudioApiTokenMissing,
   isWeakAuthSecret,
 } from "./production-safety";
 import {
@@ -215,8 +214,9 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
 
 export async function getSystemStatus(
   db: PrismaClient,
-  options: { rateLimiterMode?: string } = {},
+  options: { rateLimiterMode?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<SystemStatus> {
+  const env = options.env ?? process.env;
   let databaseStatus: { ok: boolean; message: string };
   try {
     await db.$queryRawUnsafe("SELECT 1");
@@ -285,13 +285,12 @@ export async function getSystemStatus(
     }
   }
 
-  const authSecret = process.env.AUTH_SECRET;
-  const authSecretConfigured = Boolean(authSecret?.trim());
+  const authSecret = env.AUTH_SECRET ?? env.SESSION_SECRET;
 
   return {
     ok: databaseStatus.ok && migrations.ok && storage.ok,
     version: UWE_VERSION,
-    commit: process.env.UWE_COMMIT ?? process.env.GIT_COMMIT ?? null,
+    commit: env.UWE_COMMIT ?? env.GIT_COMMIT ?? null,
     app: getAppRuntimeStatus(),
     database: databaseStatus,
     migrations,
@@ -301,16 +300,16 @@ export async function getSystemStatus(
       expectedVersion: PAGE_TEMPLATE_SEED_VERSION,
     },
     trust: {
-      studioLogin: getUweRuntimeConfig().authRequired ? "session-login" : "none-by-design",
-      studioApiTokenConfigured: !isStudioApiTokenMissing(),
-      authSecretConfigured,
+      studioLogin: getUweRuntimeConfig(env).authRequired ? "session-login" : "none-by-design",
+      studioApiTokenConfigured: Boolean(env.STUDIO_API_TOKEN?.trim()),
+      authSecretConfigured: Boolean(authSecret?.trim()),
       authSecretLooksWeak: isWeakAuthSecret(authSecret),
       runDbSeedDisabled: !isRunDbSeedUnsafe(),
       publicPortalSharingEnabled,
       exposureHint:
         "Studio erzwingt Session-Login wenn AUTH_REQUIRED=true — zusätzlich Reverse-Proxy-Auth, VPN oder Cloudflare Access als äußere Schutzschicht nutzen.",
     },
-    proxy: getProxyStatus(),
+    proxy: getProxyStatus(env),
     mail: mailStatus,
     rateLimiter: {
       mode: options.rateLimiterMode ?? "in-memory (prozesslokal)",

@@ -70,6 +70,7 @@ export const TARGET_STUDIO_NAV: {
       { label: "Homelab", href: "/system?tab=homelab" },
       { label: "Diagnose", href: "/system?tab=diagnose" },
       { label: "Admin Übersicht", href: "/admin" },
+      { label: "Einrichtung", href: "/admin/setup" },
       { label: "Benutzer", href: "/admin/users" },
       { label: "Security", href: "/admin/security" },
       { label: "Audit Log", href: "/admin/audit-log" },

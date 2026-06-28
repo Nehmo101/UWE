@@ -433,6 +433,22 @@ export type {
 } from "./admin-status";
 
 export {
+  assertOwnerSetupHasNoSecrets,
+  formatSetupSourceBadge,
+  getOwnerSetupSnapshot,
+} from "./owner-setup-service";
+
+export type {
+  OwnerSetupSectionId,
+  OwnerSetupSnapshot,
+  OwnerSetupOptions,
+  SetupSectionLevel,
+  SetupSectionStatus,
+  SetupSettingItem,
+  SetupSettingSource,
+} from "./owner-setup-service";
+
+export {
   assessRtxExposure,
   assessStudioSecurity,
   classifyEndpointUrl,
