@@ -550,7 +550,7 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let mut builder = TrayIconBuilder::new()
         .tooltip("UWE RTX Connector Client")
         .menu(&menu)
-        .show_menu_on_left_click(false)
+        .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => show_main_window(app),
             "quit" => app.exit(0),

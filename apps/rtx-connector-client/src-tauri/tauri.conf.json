@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "local.uwe.rtx-connector-client",
   "build": {
-    "beforeDevCommand": "pnpm dev:web",
+    "beforeDevCommand": "corepack pnpm dev:web",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build:web",
+    "beforeBuildCommand": "corepack pnpm build:web",
     "frontendDist": "../dist"
   },
   "app": {
@@ -29,7 +29,7 @@
     "active": true,
     "targets": ["msi", "nsis"],
     "publisher": "UWE",
-    "icon": ["icons/icon.svg"],
+    "icon": ["icons/icon.svg", "icons/icon.ico"],
     "shortDescription": "Local desktop client for the UWE RTX Host Connector",
     "longDescription": "Windows desktop client for the optional outbound UWE RTX Host Connector. It manages local connector configuration, model downloads, runner visibility, jobs and logs."
   }
