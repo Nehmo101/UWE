@@ -51,9 +51,9 @@ jobs:
 
           git fetch origin main
 
-          if [[ -n "$(git status --porcelain)" ]]; then
+          if ! git diff --quiet || ! git diff --cached --quiet; then
             git status --short
-            git stash push --include-untracked -m "host deploy pre-sync $(date -Iseconds)"
+            git stash push -m "host deploy pre-sync $(date -Iseconds)"
           fi
 
           if git merge-base --is-ancestor HEAD origin/main; then

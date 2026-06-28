@@ -82,12 +82,10 @@ sync_repository_to_origin_main() {
     return "$fetch_code"
   fi
 
-  local dirty_status
-  dirty_status="$(git -C "$UWE_HOME" status --porcelain)"
-  if [[ -n "$dirty_status" ]]; then
-    log_line "Lokale Arbeitsbaum-Änderungen gefunden; sichere sie per git stash."
-    printf '%s\n' "$dirty_status" | tee -a "$LOG_FILE"
-    git -C "$UWE_HOME" stash push --include-untracked -m "host update pre-sync $(date -Iseconds)" 2>&1 | tee -a "$LOG_FILE"
+  if ! git -C "$UWE_HOME" diff --quiet || ! git -C "$UWE_HOME" diff --cached --quiet; then
+    log_line "Lokale getrackte Arbeitsbaum-Änderungen gefunden; sichere sie per git stash."
+    git -C "$UWE_HOME" status --short | tee -a "$LOG_FILE"
+    git -C "$UWE_HOME" stash push -m "host update pre-sync $(date -Iseconds)" 2>&1 | tee -a "$LOG_FILE"
     local stash_code="${PIPESTATUS[0]}"
     if [[ "$stash_code" -ne 0 ]]; then
       return "$stash_code"
@@ -118,6 +116,7 @@ main() {
   require_root
   UWE_HOME="$(detect_uwe_home "$SCRIPT_DIR")"
   export UWE_HOME
+  git config --global --add safe.directory "$UWE_HOME" 2>/dev/null || true
 
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_DATA_DIR"
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_LOG_DIR"
