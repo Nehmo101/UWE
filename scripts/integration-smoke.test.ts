@@ -180,15 +180,19 @@ describe("integration smoke — minimal app access paths", () => {
     assert.match(roadmap, /PostgreSQL/);
   });
 
-  it("keeps Portal public pages reachable", () => {
+  it("keeps Portal auth pages reachable and content login-protected", () => {
     const middleware = read("apps/portal/middleware.ts");
     const home = read("apps/portal/app/page.tsx");
 
     assert.match(middleware, /"\/"/);
     assert.match(middleware, /"\/worlds\/:path\*"/);
+    assert.match(middleware, /"\/auth\/:path\*"/);
     assert.match(middleware, /"\/forgot-password"/);
     assert.match(middleware, /"\/reset-password"/);
-    assert.match(home, /UweLandingPage/);
+    assert.match(home, /getCurrentUser/);
+    assert.match(home, /redirect\("\/auth\/worlds"\)/);
+    assert.match(home, /redirect\("\/login\?redirect=\/auth\/worlds"\)/);
+    assert.doesNotMatch(home, /UweLandingPage/);
     assert.ok(exists("apps/portal/app/login/page.tsx"));
     assert.ok(exists("apps/portal/app/forgot-password/page.tsx"));
     assert.ok(exists("apps/portal/app/reset-password/page.tsx"));
