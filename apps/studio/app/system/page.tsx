@@ -399,6 +399,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
                 { label: "Public Base URL", value: system.proxy.publicAppUrl ?? "—" },
                 { label: "Studio URL", value: system.proxy.studioUrl ?? "—" },
                 { label: "Portal URL", value: system.proxy.portalUrl ?? "—" },
+                { label: "Deployment", value: system.proxy.deploymentModel },
               ]}
               nextSteps={studioSecurity.nextSteps}
               wide
@@ -409,32 +410,60 @@ export default async function SystemHubPage({ searchParams }: Props) {
               level={
                 system.proxy.publicExposureConfigured && !system.proxy.trustProxy
                   ? "degraded"
-                  : "ok"
+                  : system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
+                    ? "ok"
+                    : "degraded"
               }
               statusLabel={
-                system.proxy.cloudflareTunnel
+                system.proxy.cloudflare.tunnelConfigured
                   ? "Tunnel aktiv"
                   : system.proxy.publicExposureConfigured
-                    ? "Öffentlich"
+                    ? "Öffentlich ohne Tunnel-Flag"
                     : "Lokal"
               }
               message={
-                system.proxy.cloudflareTunnel
-                  ? "Cloudflare Tunnel ist konfiguriert."
-                  : system.proxy.publicAppUrl
-                    ? `Öffentliche URL: ${system.proxy.publicAppUrl}`
-                    : "Keine öffentliche URL konfiguriert — UWE nur lokal erreichbar."
+                system.proxy.deploymentModel === "split-hostname"
+                  ? "Split-Hostnames: Portal und Studio auf getrennten Subdomains."
+                  : system.proxy.cloudflareTunnel
+                    ? "Cloudflare Tunnel ist konfiguriert."
+                    : system.proxy.publicAppUrl
+                      ? `Öffentliche URL: ${system.proxy.publicAppUrl}`
+                      : "Keine öffentliche URL konfiguriert — UWE nur lokal erreichbar."
               }
               details={[
                 { label: "PUBLIC_APP_URL", value: system.proxy.publicAppUrl },
                 { label: "TRUST_PROXY", value: system.proxy.trustProxy },
                 { label: "CLOUDFLARE_TUNNEL", value: system.proxy.cloudflareTunnel },
+                { label: "Tunnel konfiguriert", value: system.proxy.cloudflare.tunnelConfigured },
+                {
+                  label: "Cloudflare Access aktiv",
+                  value: system.proxy.cloudflare.accessEnabled,
+                },
+                {
+                  label: "Access-Allowlist",
+                  value: system.proxy.cloudflare.allowlistConfigured,
+                },
+                { label: "Portal-URL gesetzt", value: system.proxy.cloudflare.portalUrlConfigured },
+                { label: "Studio-URL gesetzt", value: system.proxy.cloudflare.studioUrlConfigured },
+                {
+                  label: "Portal = Public Base",
+                  value: system.proxy.cloudflare.portalUrlMatchesPublicBase,
+                },
+                {
+                  label: "Studio eigener Host",
+                  value: system.proxy.cloudflare.studioOnSeparateHost,
+                },
                 { label: "Cookie Secure", value: system.proxy.sessionCookieSecure },
               ]}
               nextSteps={
                 system.proxy.publicExposureConfigured && !system.proxy.trustProxy
                   ? ["Setze TRUST_PROXY=true hinter Cloudflare oder Reverse-Proxy."]
-                  : []
+                  : system.proxy.deploymentModel !== "split-hostname" &&
+                      system.proxy.publicExposureConfigured
+                    ? [
+                        "Empfohlen: NEXT_PUBLIC_PORTAL_URL + NEXT_PUBLIC_STUDIO_URL auf getrennten Hostnames setzen.",
+                      ]
+                    : []
               }
               wide
             />

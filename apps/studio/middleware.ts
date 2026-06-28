@@ -5,6 +5,7 @@ import {
   evaluateStudioMiddleware,
   getUweRuntimeConfig,
   isCrossSiteBrowserRequest,
+  resolveLegacyPathRedirect,
   SESSION_COOKIE_NAME,
 } from "@uwe/auth";
 
@@ -58,6 +59,18 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
 }
 
 export function middleware(request: NextRequest) {
+  const legacyRedirect = resolveLegacyPathRedirect(request.nextUrl.pathname, "studio", process.env);
+  if (legacyRedirect) {
+    const url = request.nextUrl.clone();
+    url.pathname = legacyRedirect.destination;
+    return applySecurityHeaders(
+      NextResponse.redirect(url, 308),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
+  }
+
   const crossOriginError = rejectCrossOriginApiRequest(request);
   if (crossOriginError) {
     return crossOriginError;

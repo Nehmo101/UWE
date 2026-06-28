@@ -5,7 +5,7 @@
 
 const DEFAULT_PATHS = {
   portal: "/api/health/public",
-  studio: "/studio/api/health/public",
+  studio: "/api/health/public",
 };
 
 async function probe(url, expectAuthBlock = false) {
@@ -57,17 +57,22 @@ const worker = {
 export default worker;
 
 async function runChecks(env) {
-  const base = (env.UWE_PUBLIC_URL || "https://uweandragons.org").replace(/\/$/, "");
+  const portalBase = (env.UWE_PORTAL_URL || env.UWE_PUBLIC_URL || "https://uweanddragons.org").replace(
+    /\/$/,
+    "",
+  );
+  const studioBase = (env.UWE_STUDIO_URL || "https://studio.uweanddragons.org").replace(/\/$/, "");
   const portalPath = env.UWE_PORTAL_HEALTH_PATH || DEFAULT_PATHS.portal;
   const studioPath = env.UWE_STUDIO_HEALTH_PATH || DEFAULT_PATHS.studio;
 
-  const portal = await probe(`${base}${portalPath}`);
-  const studio = await probe(`${base}${studioPath}`, true);
+  const portal = await probe(`${portalBase}${portalPath}`);
+  const studio = await probe(`${studioBase}${studioPath}`, true);
 
   const payload = {
     ok: portal.ok && studio.ok,
     checkedAt: new Date().toISOString(),
-    base,
+    portalBase,
+    studioBase,
     probes: { portal, studio },
   };
 

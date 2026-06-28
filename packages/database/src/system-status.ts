@@ -27,7 +27,9 @@ import {
 import {
   getUweRuntimeConfig,
   isPublicExposureConfigured,
+  isSplitHostnameDeployment,
   resolveUweAppUrls,
+  type UweDeploymentModel,
 } from "@uwe/auth";
 import { UWE_VERSION } from "./version";
 
@@ -60,6 +62,17 @@ export interface SeedStatusSummary {
   expectedVersion: number;
 }
 
+export interface CloudflareStatusSummary {
+  tunnelConfigured: boolean;
+  accessEnabled: boolean;
+  allowlistConfigured: boolean;
+  portalUrlConfigured: boolean;
+  studioUrlConfigured: boolean;
+  portalUrlMatchesPublicBase: boolean;
+  studioOnSeparateHost: boolean;
+  deploymentModel: UweDeploymentModel;
+}
+
 export interface ProxyStatus {
   publicAppUrl: string | null;
   trustProxy: boolean;
@@ -70,6 +83,8 @@ export interface ProxyStatus {
   portalPath: string;
   studioUrl: string | null;
   portalUrl: string | null;
+  deploymentModel: UweDeploymentModel;
+  cloudflare: CloudflareStatusSummary;
   authRequired: boolean;
   sessionCookieSecure: boolean;
   playerPreviewPublic: boolean;
@@ -194,6 +209,10 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
   const allowlistRaw =
     env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim() || "";
 
+  const publicBase = runtime.publicAppUrl?.replace(/\/$/, "") ?? null;
+  const portalBase = urls.portalUrl?.replace(/\/$/, "") ?? null;
+  const splitHostname = isSplitHostnameDeployment(env);
+
   return {
     publicAppUrl: runtime.publicAppUrl,
     trustProxy: runtime.trustProxy,
@@ -204,6 +223,19 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
     portalPath: urls.portalPath,
     studioUrl: urls.studioUrl,
     portalUrl: urls.portalUrl,
+    deploymentModel: urls.deploymentModel,
+    cloudflare: {
+      tunnelConfigured: runtime.cloudflareTunnel && runtime.trustProxy,
+      accessEnabled: runtime.cloudflareAccessEnabled,
+      allowlistConfigured: Boolean(allowlistRaw),
+      portalUrlConfigured: Boolean(urls.portalUrl),
+      studioUrlConfigured: Boolean(urls.studioUrl),
+      portalUrlMatchesPublicBase: Boolean(
+        publicBase && portalBase && publicBase.toLowerCase() === portalBase.toLowerCase(),
+      ),
+      studioOnSeparateHost: splitHostname,
+      deploymentModel: urls.deploymentModel,
+    },
     authRequired: runtime.authRequired,
     sessionCookieSecure: runtime.sessionCookieSecure,
     playerPreviewPublic: runtime.playerPreviewPublic,
