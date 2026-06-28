@@ -74,41 +74,48 @@ ensure_host_update_enabled() {
   fi
 }
 
+git_as_service_user() {
+  sudo -u "$SERVICE_USER" env \
+    HOME="$UWE_HOME" \
+    GIT_TERMINAL_PROMPT=0 \
+    git -C "$UWE_HOME" "$@"
+}
+
 sync_repository_to_origin_main() {
   log_line "git fetch origin main ..."
-  git -C "$UWE_HOME" fetch origin main 2>&1 | tee -a "$LOG_FILE"
+  git_as_service_user fetch origin main 2>&1 | tee -a "$LOG_FILE"
   local fetch_code="${PIPESTATUS[0]}"
   if [[ "$fetch_code" -ne 0 ]]; then
     return "$fetch_code"
   fi
 
-  if ! git -C "$UWE_HOME" diff --quiet || ! git -C "$UWE_HOME" diff --cached --quiet; then
+  if ! git_as_service_user diff --quiet || ! git_as_service_user diff --cached --quiet; then
     log_line "Lokale getrackte Arbeitsbaum-Änderungen gefunden; sichere sie per git stash."
-    git -C "$UWE_HOME" status --short | tee -a "$LOG_FILE"
-    git -C "$UWE_HOME" stash push -m "host update pre-sync $(date -Iseconds)" 2>&1 | tee -a "$LOG_FILE"
+    git_as_service_user status --short | tee -a "$LOG_FILE"
+    git_as_service_user stash push -m "host update pre-sync $(date -Iseconds)" 2>&1 | tee -a "$LOG_FILE"
     local stash_code="${PIPESTATUS[0]}"
     if [[ "$stash_code" -ne 0 ]]; then
       return "$stash_code"
     fi
   fi
 
-  if git -C "$UWE_HOME" merge-base --is-ancestor HEAD origin/main; then
+  if git_as_service_user merge-base --is-ancestor HEAD origin/main; then
     log_line "git merge --ff-only origin/main ..."
-    git -C "$UWE_HOME" merge --ff-only origin/main 2>&1 | tee -a "$LOG_FILE"
+    git_as_service_user merge --ff-only origin/main 2>&1 | tee -a "$LOG_FILE"
     return "${PIPESTATUS[0]}"
   fi
 
   local backup_ref
   backup_ref="refs/backup/host-main-before-deploy/$(date -u +%Y%m%dT%H%M%SZ)"
   log_line "Lokaler Branch divergiert von origin/main; sichere HEAD nach ${backup_ref}."
-  git -C "$UWE_HOME" update-ref "$backup_ref" HEAD 2>&1 | tee -a "$LOG_FILE"
+  git_as_service_user update-ref "$backup_ref" HEAD 2>&1 | tee -a "$LOG_FILE"
   local backup_code="${PIPESTATUS[0]}"
   if [[ "$backup_code" -ne 0 ]]; then
     return "$backup_code"
   fi
 
   log_line "git reset --hard origin/main ..."
-  git -C "$UWE_HOME" reset --hard origin/main 2>&1 | tee -a "$LOG_FILE"
+  git_as_service_user reset --hard origin/main 2>&1 | tee -a "$LOG_FILE"
   return "${PIPESTATUS[0]}"
 }
 
