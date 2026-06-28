@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Privileged UWE host update — git pull + setup-uwe-host.sh --quick only.
+# Privileged UWE host update — sync origin/main + setup-uwe-host.sh --quick only.
 # Invoked by systemd uwe-host-update.service (root). Not for direct Studio use.
 set -euo pipefail
 
@@ -74,6 +74,46 @@ ensure_host_update_enabled() {
   fi
 }
 
+sync_repository_to_origin_main() {
+  log_line "git fetch origin main ..."
+  git -C "$UWE_HOME" fetch origin main 2>&1 | tee -a "$LOG_FILE"
+  local fetch_code="${PIPESTATUS[0]}"
+  if [[ "$fetch_code" -ne 0 ]]; then
+    return "$fetch_code"
+  fi
+
+  local dirty_status
+  dirty_status="$(git -C "$UWE_HOME" status --porcelain)"
+  if [[ -n "$dirty_status" ]]; then
+    log_line "Lokale Arbeitsbaum-Änderungen gefunden; sichere sie per git stash."
+    printf '%s\n' "$dirty_status" | tee -a "$LOG_FILE"
+    git -C "$UWE_HOME" stash push --include-untracked -m "host update pre-sync $(date -Iseconds)" 2>&1 | tee -a "$LOG_FILE"
+    local stash_code="${PIPESTATUS[0]}"
+    if [[ "$stash_code" -ne 0 ]]; then
+      return "$stash_code"
+    fi
+  fi
+
+  if git -C "$UWE_HOME" merge-base --is-ancestor HEAD origin/main; then
+    log_line "git merge --ff-only origin/main ..."
+    git -C "$UWE_HOME" merge --ff-only origin/main 2>&1 | tee -a "$LOG_FILE"
+    return "${PIPESTATUS[0]}"
+  fi
+
+  local backup_ref
+  backup_ref="refs/backup/host-main-before-deploy/$(date -u +%Y%m%dT%H%M%SZ)"
+  log_line "Lokaler Branch divergiert von origin/main; sichere HEAD nach ${backup_ref}."
+  git -C "$UWE_HOME" update-ref "$backup_ref" HEAD 2>&1 | tee -a "$LOG_FILE"
+  local backup_code="${PIPESTATUS[0]}"
+  if [[ "$backup_code" -ne 0 ]]; then
+    return "$backup_code"
+  fi
+
+  log_line "git reset --hard origin/main ..."
+  git -C "$UWE_HOME" reset --hard origin/main 2>&1 | tee -a "$LOG_FILE"
+  return "${PIPESTATUS[0]}"
+}
+
 main() {
   require_root
   UWE_HOME="$(detect_uwe_home "$SCRIPT_DIR")"
@@ -105,11 +145,11 @@ main() {
 
   set +e
   {
-    log_line "git pull …"
-    git -C "$UWE_HOME" pull --ff-only 2>&1 | tee -a "$LOG_FILE"
-    pull_code="${PIPESTATUS[0]}"
-    if [[ "$pull_code" -ne 0 ]]; then
-      exit "$pull_code"
+    log_line "Synchronisiere Repository mit origin/main ..."
+    sync_repository_to_origin_main
+    sync_code="$?"
+    if [[ "$sync_code" -ne 0 ]]; then
+      exit "$sync_code"
     fi
 
     log_line "setup-uwe-host.sh --quick …"

@@ -43,6 +43,29 @@ jobs:
     # on a low-RAM host that may swap during the build.
     timeout-minutes: 60
     steps:
+      - name: Ensure host repository tracks main
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /opt/uwe
+
+          git fetch origin main
+
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git status --short
+            git stash push --include-untracked -m "host deploy pre-sync $(date -Iseconds)"
+          fi
+
+          if git merge-base --is-ancestor HEAD origin/main; then
+            git merge --ff-only origin/main
+            exit 0
+          fi
+
+          backup_ref="refs/backup/host-main-before-deploy/$(date -u +%Y%m%dT%H%M%SZ)"
+          git update-ref "$backup_ref" HEAD
+          echo "Host branch diverged; backed up current HEAD to $backup_ref"
+          git reset --hard origin/main
+
       - name: Trigger host update on the UWE mini
         run: /opt/uwe/deploy/scripts/uwe-cd-trigger.sh
 
