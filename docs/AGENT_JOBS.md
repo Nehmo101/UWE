@@ -50,7 +50,7 @@ Admin-Portal (/admin/agent-jobs)
 `.github/workflows/cursor-agent.yml` — `workflow_dispatch` mit Inputs:
 - `prompt`, `title`, `job_id`, `branch_name`
 
-Der Workflow führt `pnpm ci:light` (nicht volles `pnpm quality`) vor dem Push aus, um GitHub-hosted Minuten zu sparen. Das geöffnete PR wird von `pr-check.yml` geprüft; das volle Gate läuft nach Merge auf `main` via `ci.yml`.
+Der Workflow pusht den Branch und öffnet ein Draft-PR — **ohne** `pnpm ci:light` im Agent-Job (das würde ~9 Min doppelt laufen). Das geöffnete PR wird von `pr-check.yml` geprüft; das volle Gate läuft nach Merge auf `main` via `ci.yml`.
 
 **Bevorzugt lokal/self-hosted:** `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` (oder Self-hosted Runner) statt `github_actions` für routinemäßige Agent-Jobs.
 

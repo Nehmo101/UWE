@@ -21,7 +21,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
-| **Manual** | `cursor-agent.yml` | Agent branch + draft PR (light gate only) |
+| **Manual** | `cursor-agent.yml` | Agent branch + draft PR (PR gate validates after push) |
 | **CI success on `main`** | `deploy.yml` | Deploy via self-hosted runner on the Linux mini |
 
 ## Workflows
@@ -104,8 +104,7 @@ Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
 
 ### Cursor Agent (`cursor-agent.yml`)
 
-- Runs `pnpm ci:light` before push (not full `pnpm quality`)
-- PR gate (`pr-check.yml`) validates the opened PR
+- Pushes branch and opens draft PR — does **not** run `ci:light` (PR gate `pr-check.yml` validates the opened PR, avoiding duplicate ~9 min runs)
 - Full gate runs after merge to `main` via `ci.yml`
 - Agents run in the GitHub Cloud; there is no self-hosted runner requirement
 
