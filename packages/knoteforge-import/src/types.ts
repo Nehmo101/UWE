@@ -174,6 +174,32 @@ export interface ImportLogEntry {
   message: string;
 }
 
+export interface ImportUndoPageUpdate {
+  pageId: string;
+  page: {
+    id: string;
+    worldId: string;
+    campaignId: string | null;
+    parentPageId: string | null;
+    title: string;
+    slug: string;
+    type: string;
+    summary: string | null;
+    visibility: string;
+    publishStatus: string;
+    canonicalStatus: string;
+    tags: unknown;
+    aliases: unknown;
+  };
+  previousBlockIds: string[];
+  addedBlockIds: string[];
+}
+
+export interface ImportUndoPayload {
+  createdPageIds: string[];
+  updatedPages: ImportUndoPageUpdate[];
+}
+
 export interface ImportExecuteResult {
   worldSlug: string;
   created: number;
@@ -188,6 +214,7 @@ export interface ImportExecuteResult {
     error?: string;
   }>;
   log: ImportLogEntry[];
+  undo?: ImportUndoPayload;
 }
 
 export interface ImportOptions {

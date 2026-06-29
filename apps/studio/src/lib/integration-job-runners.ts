@@ -18,7 +18,7 @@ import {
   type JobService,
 } from "@uwe/database/server";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
-import { fetchCalDavEvents, fetchIcalFeed, parseIcalEvents, putCalDavEvent } from "@uwe/calendar";
+import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
 import {
   executeAiGatewayImageRequest,
   executeAiGatewayResearchJob,
@@ -349,6 +349,7 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
             allDay: event.allDay,
           },
           event.remoteHref ?? undefined,
+          event.remoteEtag ?? undefined,
         );
         await calendar.markEventSynced(event.id, {
           remoteHref: result.href,
@@ -360,14 +361,15 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
 
     await ctx.jobs.updateProgress(ctx.jobId, 40, "Externe Events laden");
     let imported = 0;
+    let pruned = 0;
     if (feed.type === "caldav" && feed.caldavUrl) {
       const password = calendar.resolveFeedCredentials(feed) ?? process.env.CALDAV_PASSWORD?.trim();
-      const events = await fetchCalDavEvents({
+      const syncResult = await syncCalDavCollection({
         caldavUrl: feed.caldavUrl,
         username: feed.username ?? undefined,
         password,
       });
-      for (const event of events) {
+      for (const event of syncResult.events) {
         await calendar.upsertExternalEvent(feed.id, event.uid, {
           feedId: feed.id,
           title: event.title,
@@ -378,9 +380,18 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
           allDay: event.allDay,
           kind: "external",
           externalUid: event.uid,
+          remoteHref: event.href,
+          remoteEtag: event.etag,
         });
         imported += 1;
       }
+      await calendar.deleteExternalEventsNotInUids(feed.id, syncResult.remoteUids);
+      pruned = syncResult.remoteUids.length > 0 ? 1 : 0;
+      await calendar.mergeFeedSyncMetadata(feed.id, {
+        syncToken: syncResult.syncToken,
+        ctag: syncResult.ctag,
+        lastMethod: syncResult.method,
+      });
     } else if (feed.url) {
       const content = await fetchIcalFeed(feed.url);
       const events = parseIcalEvents(content);
@@ -410,7 +421,7 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
 
     await calendar.markFeedSynced(feed.id, null);
     await db.$disconnect();
-    return { feedId: feed.id, imported, pushed, sessionsSynced };
+    return { feedId: feed.id, imported, pushed, sessionsSynced, pruned };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await calendar.markFeedSynced(feed.id, message);

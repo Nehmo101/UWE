@@ -8,6 +8,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwner } from "@/src/lib/auth";
+import { syncBackupScheduleFromSettings } from "@/src/lib/backup-schedule-sync";
 
 function repo() {
   return getAppRepository();
@@ -104,5 +105,9 @@ export async function updateOwnerSetupAction(formData: FormData) {
   }
 
   await repo().updateSystemSettings(update);
+  if (update.backup) {
+    const settings = await repo().getSystemSettings();
+    syncBackupScheduleFromSettings(settings.backup);
+  }
   setupRedirect(tab);
 }

@@ -18,6 +18,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
+import { syncBackupScheduleFromSettings } from "@/src/lib/backup-schedule-sync";
 
 function repo() {
   return getAppRepository();
@@ -170,6 +171,11 @@ export async function updateSettingsAction(formData: FormData) {
       update.backup = {
         backupsPath: String(formData.get("backupsPath") || ""),
         autoBackupEnabled: parseBoolean(formData.get("autoBackupEnabled")),
+        retentionCount: (() => {
+          const raw = Number.parseInt(String(formData.get("retentionCount") || "14"), 10);
+          if (raw === 7 || raw === 30) return raw;
+          return 14;
+        })(),
       };
       break;
     case "image-studio":
@@ -187,6 +193,11 @@ export async function updateSettingsAction(formData: FormData) {
   }
 
   await repo().updateSystemSettings(update);
+
+  if (update.backup) {
+    const settings = await repo().getSystemSettings();
+    syncBackupScheduleFromSettings(settings.backup);
+  }
 
   revalidatePath("/settings");
   redirect(`/settings?tab=${tab}&saved=1`);

@@ -8,6 +8,7 @@ import {
   createMailService,
   createPersonalBrainService,
   createPrismaClient,
+  createUndoService,
   createUweRepository,
   createWorldInspectorService,
   getSystemSettings,
@@ -79,11 +80,15 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
   await ctx.jobs.updateProgress(ctx.jobId, 10, "Backup vorbereiten");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
+  const systemSettings = await getSystemSettings();
+  const scheduled = Boolean((ctx.job.payload as { scheduled?: boolean } | null)?.scheduled);
+
   const options: CreateBackupOptions = {
     type: payload.type,
     worldSlug: payload.worldSlug,
     campaignSlug: payload.campaignSlug,
     format: payload.format ?? "zip",
+    retentionCount: systemSettings.backup.retentionCount,
   };
 
   if (options.format === "json") {
@@ -100,14 +105,16 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
       targetType: "system",
       targetLabel: filename,
       targetHref: "/backup",
-      summary: `Backup erstellt (${payload.type}): ${filename}.`,
+      summary: scheduled
+        ? `Geplantes Backup erstellt (${payload.type}): ${filename}.`
+        : `Backup erstellt (${payload.type}): ${filename}.`,
     });
 
     await logAuditEvent(prisma, {
       action: "backup_created",
       targetType: "backup",
       targetId: filename,
-      metadata: { type: payload.type, format: "json", filename },
+      metadata: { type: payload.type, format: "json", filename, scheduled },
     });
 
     return { filename, path: outputPath, manifest: bundle.manifest };
@@ -123,14 +130,16 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
     targetType: "system",
     targetLabel: filename,
     targetHref: "/backup",
-    summary: `Backup erstellt (${payload.type}): ${filename}.`,
+    summary: scheduled
+      ? `Geplantes Backup erstellt (${payload.type}): ${filename}.`
+      : `Backup erstellt (${payload.type}): ${filename}.`,
   });
 
   await logAuditEvent(prisma, {
     action: "backup_created",
     targetType: "backup",
     targetId: filename,
-    metadata: { type: payload.type, format: "zip", filename },
+    metadata: { type: payload.type, format: "zip", filename, scheduled },
   });
 
   return { filename, path: outputPath, manifest: bundle.manifest };
@@ -166,6 +175,18 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
   const result = await executeImport(repo, bundle, payload.worldSlug, payload.format, options);
   const world = await repo.getWorldBySlug(payload.worldSlug);
 
+  let undoEntryId: string | undefined;
+  if (result.undo && world && (result.undo.createdPageIds.length > 0 || result.undo.updatedPages.length > 0)) {
+    const undoService = createUndoService(prisma);
+    const undoEntry = await undoService.captureImportExecute({
+      worldId: world.id,
+      jobId: ctx.jobId,
+      createdPageIds: result.undo.createdPageIds,
+      updatedPages: result.undo.updatedPages as import("@uwe/database/server").ImportPageUpdateSnapshot[],
+    });
+    undoEntryId = undoEntry.id;
+  }
+
   await createActivityLogService(prisma).log({
     worldSlug: payload.worldSlug,
     action: "import_executed",
@@ -173,6 +194,7 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
     targetLabel: payload.worldSlug,
     targetHref: `/worlds/${payload.worldSlug}`,
     summary: `Import (${payload.format}) in Welt „${payload.worldSlug}" ausgeführt.`,
+    undoEntryId,
   });
 
   await logAuditEvent(prisma, {

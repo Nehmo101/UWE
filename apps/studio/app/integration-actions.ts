@@ -71,6 +71,19 @@ export async function createImageStudioJobAction(formData: FormData) {
   await requireStudioWorldEdit(worldSlug);
 
   const effectiveProvider = (providerMode as "auto" | "local_rtx" | "cloud" | undefined) ?? "auto";
+  if ((task === "inpaint" || task === "edit" || task === "remove_background") && !sourceImageBase64) {
+    throw new Error("Quellbild ist für diese Operation erforderlich.");
+  }
+  if (task === "inpaint" && !maskBase64) {
+    throw new Error("Maske ist für Inpainting erforderlich.");
+  }
+  if (
+    (task === "inpaint" || task === "edit" || task === "remove_background") &&
+    (effectiveProvider === "cloud" || (effectiveProvider === "auto" && config.allowCloud))
+  ) {
+    throw new Error("Inpaint/Edit ist nur mit lokalem RTX verfügbar.");
+  }
+
   if (effectiveProvider === "cloud" || (effectiveProvider === "auto" && config.allowCloud)) {
     validateImageContextForProvider("cloud", contextMode, { cloudContextApproved });
   }

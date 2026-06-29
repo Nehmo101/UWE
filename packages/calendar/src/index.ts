@@ -4,6 +4,7 @@
  */
 
 import { assertUserProvidedFetchUrlAllowed } from "@uwe/security";
+import { fetchCalDavEventsViaGet } from "./caldav-sync";
 
 export interface ParsedIcalEvent {
   uid: string;
@@ -218,33 +219,19 @@ export interface CalDavSyncOptions {
   timeoutMs?: number;
 }
 
-/** Minimal CalDAV sync: fetch calendar collection as iCal (works for many providers). */
+/** @deprecated Prefer syncCalDavCollection — kept for callers needing GET-only fetch. */
 export async function fetchCalDavEvents(options: CalDavSyncOptions): Promise<ParsedIcalEvent[]> {
-  assertUserProvidedFetchUrlAllowed(options.caldavUrl);
-  const auth =
-    options.username && options.password
-      ? `Basic ${Buffer.from(`${options.username}:${options.password}`).toString("base64")}`
-      : undefined;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 20000);
-  try {
-    const response = await fetch(options.caldavUrl, {
-      signal: controller.signal,
-      headers: {
-        Accept: "text/calendar",
-        ...(auth ? { Authorization: auth } : {}),
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`CalDAV-Sync fehlgeschlagen (${response.status}).`);
-    }
-    const content = await response.text();
-    return parseIcalEvents(content);
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetchCalDavEventsViaGet(options);
 }
+
+export {
+  syncCalDavCollection,
+  propfindCalendarCollection,
+  reportCalendarQuery,
+  fetchCalDavEventsViaGet,
+  type CalDavSyncResult,
+  type CalDavRemoteEvent,
+} from "./caldav-sync";
 
 export {
   putCalDavEvent,

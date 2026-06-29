@@ -361,7 +361,7 @@ export {
   UndoService,
 } from "./undo-service";
 
-export type { UndoOperation, UndoResult } from "./undo-service";
+export type { UndoOperation, UndoResult, ImportPageUpdateSnapshot } from "./undo-service";
 
 export {
   AiReviewService,

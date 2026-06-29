@@ -75,6 +75,7 @@ async function executeFromBundle(
     failed: 0,
     items: [],
     log: [],
+    undo: { createdPageIds: [], updatedPages: [] },
   };
 
   appendLog(result.log, {
@@ -126,6 +127,13 @@ async function executeFromBundle(
           : itemPreview.resolvedSlug;
 
       if (itemPreview.status === "update" && itemPreview.existingPageId) {
+        const existingPage = await repo.getPageById(itemPreview.existingPageId);
+        if (!existingPage) {
+          throw new Error("Bestehende Seite für Update nicht gefunden.");
+        }
+        const previousBlockIds = existingPage.contentBlocks.map((block) => block.id);
+        const addedBlockIds: string[] = [];
+
         const updated = await repo.updatePage(itemPreview.existingPageId, {
           title: draft.title,
           type: draft.type,
@@ -137,14 +145,36 @@ async function executeFromBundle(
         });
 
         for (const block of draft.contentBlocks) {
-          await repo.createContentBlock(updated.id, {
+          const createdBlock = await repo.createContentBlock(updated.id, {
             type: block.type,
             sortOrder: block.sortOrder,
             content: block.content,
             visibility: block.visibility,
             metadata: block.metadata,
           });
+          addedBlockIds.push(createdBlock.id);
         }
+
+        result.undo?.updatedPages.push({
+          pageId: existingPage.id,
+          page: {
+            id: existingPage.id,
+            worldId: existingPage.worldId,
+            campaignId: existingPage.campaignId,
+            parentPageId: existingPage.parentPageId,
+            title: existingPage.title,
+            slug: existingPage.slug,
+            type: existingPage.type,
+            summary: existingPage.summary,
+            visibility: existingPage.visibility,
+            publishStatus: existingPage.publishStatus,
+            canonicalStatus: existingPage.canonicalStatus,
+            tags: existingPage.tags,
+            aliases: existingPage.aliases,
+          },
+          previousBlockIds,
+          addedBlockIds,
+        });
 
         takenSlugs.add(updated.slug);
         result.updated++;
@@ -183,6 +213,7 @@ async function executeFromBundle(
       });
 
       takenSlugs.add(page.slug);
+      result.undo?.createdPageIds.push(page.id);
       result.created++;
       result.items.push({
         itemId,
@@ -217,6 +248,14 @@ async function executeFromBundle(
     status: "new",
     message: `Import abgeschlossen: ${result.created} erstellt, ${result.updated} aktualisiert, ${result.skipped} übersprungen, ${result.failed} fehlgeschlagen.`,
   });
+
+  if (
+    result.undo &&
+    result.undo.createdPageIds.length === 0 &&
+    result.undo.updatedPages.length === 0
+  ) {
+    delete result.undo;
+  }
 
   return result;
 }

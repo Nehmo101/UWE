@@ -32,19 +32,25 @@ export async function putCalDavEvent(
   options: CalDavWriteOptions,
   event: IcalExportEvent,
   remoteHref?: string,
+  remoteEtag?: string | null,
 ): Promise<{ href: string; etag: string | null }> {
   const href = remoteHref ?? buildCalDavEventHref(options.caldavUrl, event.uid);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 20000);
 
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "text/calendar; charset=utf-8",
+      ...buildAuthHeader(options),
+    };
+    if (remoteEtag) {
+      headers["If-Match"] = remoteEtag;
+    }
+
     const response = await fetch(href, {
       method: "PUT",
       signal: controller.signal,
-      headers: {
-        "Content-Type": "text/calendar; charset=utf-8",
-        ...buildAuthHeader(options),
-      },
+      headers,
       body: eventToIcalBody(event),
     });
 

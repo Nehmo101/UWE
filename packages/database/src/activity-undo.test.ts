@@ -181,4 +181,80 @@ describe("activity log + undo basis", () => {
     assert.equal(upgraded.applied, true);
     assert.equal(runs, 2);
   });
+
+  it("import.execute undo deletes created pages and reverts updates", async () => {
+    const page = await repo.createPage({
+      worldId,
+      title: "Import Ziel",
+      slug: "import-ziel",
+      type: "note",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      summary: "Alt",
+    });
+    await repo.createContentBlock(page.id, {
+      type: "rich_text",
+      sortOrder: 0,
+      content: "Bestehend",
+      visibility: "dm_only",
+    });
+
+    const created = await repo.createPage({
+      worldId,
+      title: "Import Neu",
+      slug: "import-neu",
+      type: "note",
+      visibility: "dm_only",
+      publishStatus: "draft",
+    });
+
+    const addedBlock = await repo.createContentBlock(page.id, {
+      type: "rich_text",
+      sortOrder: 1,
+      content: "Neu aus Import",
+      visibility: "dm_only",
+    });
+
+    const entry = await undo.captureImportExecute({
+      worldId,
+      jobId: "job-import-test",
+      createdPageIds: [created.id],
+      updatedPages: [
+        {
+          pageId: page.id,
+          page: {
+            id: page.id,
+            worldId: page.worldId,
+            campaignId: page.campaignId,
+            parentPageId: page.parentPageId,
+            title: page.title,
+            slug: page.slug,
+            type: page.type,
+            summary: "Alt",
+            visibility: page.visibility,
+            publishStatus: page.publishStatus,
+            canonicalStatus: page.canonicalStatus,
+            tags: page.tags,
+            aliases: page.aliases,
+          },
+          previousBlockIds: [],
+          addedBlockIds: [addedBlock.id],
+        },
+      ],
+    });
+
+    await repo.updatePage(page.id, { title: "Import Update", summary: "Neu" });
+
+    const result = await undo.undo(entry.id);
+    assert.equal(result.ok, true);
+
+    const deleted = await db.page.findUnique({ where: { id: created.id } });
+    assert.equal(deleted, null);
+
+    const reverted = await db.page.findUnique({ where: { id: page.id } });
+    assert.equal(reverted?.summary, "Alt");
+
+    const strayBlock = await db.contentBlock.findUnique({ where: { id: addedBlock.id } });
+    assert.equal(strayBlock, null);
+  });
 });

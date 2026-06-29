@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImageStudioMaskCanvas } from "./ImageStudioMaskCanvas";
 
 interface WorldOption {
   slug: string;
@@ -19,6 +20,7 @@ interface ImageStudioJobFormProps {
 }
 
 const INPAINT_TASKS = new Set(["inpaint", "edit", "remove_background", "variant"]);
+const LOCAL_ONLY_TASKS = new Set(["inpaint", "edit", "remove_background"]);
 
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
@@ -80,11 +82,11 @@ export function ImageStudioJobForm({
   const [maskBase64, setMaskBase64] = useState("");
   const [layerMode, setLayerMode] = useState(false);
   const [layerStatus, setLayerStatus] = useState<string | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const drawingRef = useRef(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const showInpaintFields = INPAINT_TASKS.has(task);
   const showVariantCount = task === "variant";
+  const requiresLocalProvider = LOCAL_ONLY_TASKS.has(task);
 
   function handleSourceFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -96,14 +98,7 @@ export function ImageStudioJobForm({
       const base64 = result.includes(",") ? result.split(",")[1] ?? "" : result;
       setSourceBase64(base64);
       setSourcePreview(result);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          setMaskBase64("");
-        }
-      }
+      setMaskBase64("");
     };
     reader.readAsDataURL(file);
   }
@@ -117,44 +112,28 @@ export function ImageStudioJobForm({
       const composite = await compositeLayerImages(files);
       setSourceBase64(composite.base64);
       setSourcePreview(composite.preview);
+      setMaskBase64("");
       setLayerStatus(`${files.length} Layer zu einem Quellbild kombiniert.`);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          setMaskBase64("");
-        }
-      }
     } catch {
       setLayerStatus("Layer konnten nicht kombiniert werden.");
     }
   }
 
-  function pointerPos(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  }
-
-  function paintMask(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx || !canvas) return;
-    const { x, y } = pointerPos(event);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-    ctx.beginPath();
-    ctx.arc(x, y, 16, 0, Math.PI * 2);
-    ctx.fill();
-    setMaskBase64(canvas.toDataURL("image/png").split(",")[1] ?? "");
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (requiresLocalProvider && !sourceBase64) {
+      event.preventDefault();
+      window.alert("Quellbild ist für diese Operation erforderlich.");
+      return;
+    }
+    if (task === "inpaint" && !maskBase64) {
+      event.preventDefault();
+      window.alert("Bitte eine Maske für Inpainting zeichnen.");
+      return;
+    }
   }
 
   return (
-    <form action={action} className="uwe-form">
+    <form ref={formRef} action={action} className="uwe-form" onSubmit={handleSubmit}>
       {pageId && <input type="hidden" name="pageId" value={pageId} />}
       {pageId && <input type="hidden" name="linkTargetType" value={linkTargetType} />}
       <input type="hidden" name="sourceImageBase64" value={sourceBase64} />
@@ -204,12 +183,23 @@ export function ImageStudioJobForm({
 
       <label>
         Provider
-        <select name="providerMode" defaultValue={defaultProviderMode}>
-          <option value="auto">Auto (RTX → Cloud)</option>
+        <select
+          name="providerMode"
+          defaultValue={requiresLocalProvider ? "local_rtx" : defaultProviderMode}
+          key={task}
+        >
+          <option value="auto" disabled={requiresLocalProvider}>
+            Auto (RTX → Cloud)
+          </option>
           <option value="local_rtx">Nur RTX (lokal)</option>
-          <option value="cloud">Cloud</option>
+          <option value="cloud" disabled={requiresLocalProvider}>
+            Cloud
+          </option>
         </select>
       </label>
+      {requiresLocalProvider && (
+        <p className="uwe-hint">Inpaint/Edit erfordert RTX — Cloud ist für diese Operation deaktiviert.</p>
+      )}
 
       {showVariantCount && (
         <label>
@@ -240,52 +230,16 @@ export function ImageStudioJobForm({
             </label>
           )}
           {layerStatus && <p className="uwe-hint">{layerStatus}</p>}
-          {sourcePreview && (
-            <div
-              role="img"
-              aria-label="Quellbild"
-              style={{
-                width: "100%",
-                maxWidth: "20rem",
-                height: "12rem",
-                backgroundImage: `url(${sourcePreview})`,
-                backgroundSize: "contain",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                border: "1px solid var(--uwe-border)",
-              }}
-            />
-          )}
           {(task === "inpaint" || task === "edit") && (
-            <label>
-              Maske zeichnen (Inpaint-Bereich)
-              <canvas
-                ref={canvasRef}
-                width={512}
-                height={512}
-                style={{
-                  width: "100%",
-                  maxWidth: "20rem",
-                  aspectRatio: "1",
-                  border: "1px solid var(--uwe-border)",
-                  touchAction: "none",
-                  background: "color-mix(in srgb, var(--uwe-bg) 20%, transparent)",
-                }}
-                onPointerDown={(event) => {
-                  drawingRef.current = true;
-                  paintMask(event);
-                }}
-                onPointerMove={(event) => {
-                  if (drawingRef.current) paintMask(event);
-                }}
-                onPointerUp={() => {
-                  drawingRef.current = false;
-                }}
-                onPointerLeave={() => {
-                  drawingRef.current = false;
-                }}
+            <div>
+              <p className="uwe-label">Maske zeichnen (Inpaint-Bereich)</p>
+              <ImageStudioMaskCanvas
+                sourcePreview={sourcePreview}
+                sourceBase64={sourceBase64}
+                onMaskChange={setMaskBase64}
+                disabled={!enabled}
               />
-            </label>
+            </div>
           )}
         </>
       )}

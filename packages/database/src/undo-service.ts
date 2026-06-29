@@ -25,7 +25,8 @@ export type UndoOperation =
   | "ai.block.create"
   | "ai.session.recap"
   | "ai.session.summary_dm"
-  | "ai.brain_document.create";
+  | "ai.brain_document.create"
+  | "import.execute";
 
 interface PageSnapshot {
   kind: "page";
@@ -89,6 +90,21 @@ interface BrainDocumentCreateSnapshot {
   documentId: string;
 }
 
+export interface ImportPageUpdateSnapshot {
+  pageId: string;
+  page: PageSnapshot["page"];
+  previousBlockIds: string[];
+  addedBlockIds: string[];
+}
+
+interface ImportExecuteSnapshot {
+  kind: "import_execute";
+  worldId: string;
+  jobId?: string;
+  createdPageIds: string[];
+  updatedPages: ImportPageUpdateSnapshot[];
+}
+
 type UndoSnapshot =
   | PageSnapshot
   | BlockSnapshot
@@ -96,7 +112,8 @@ type UndoSnapshot =
   | AiBlockCreateSnapshot
   | SessionRecapSnapshot
   | SessionSummaryDmSnapshot
-  | BrainDocumentCreateSnapshot;
+  | BrainDocumentCreateSnapshot
+  | ImportExecuteSnapshot;
 
 export interface UndoResult {
   ok: boolean;
@@ -306,6 +323,32 @@ export class UndoService {
     });
   }
 
+  /** Batch snapshot for a completed import job. */
+  async captureImportExecute(input: {
+    worldId: string;
+    jobId?: string;
+    createdPageIds: string[];
+    updatedPages: ImportPageUpdateSnapshot[];
+  }) {
+    const snapshot: ImportExecuteSnapshot = {
+      kind: "import_execute",
+      worldId: input.worldId,
+      jobId: input.jobId,
+      createdPageIds: input.createdPageIds,
+      updatedPages: input.updatedPages,
+    };
+
+    return this.db.undoEntry.create({
+      data: {
+        worldId: input.worldId,
+        operation: "import.execute" satisfies UndoOperation,
+        targetType: "world",
+        targetId: input.jobId ?? input.worldId,
+        snapshot: toPrismaJsonValue(snapshot),
+      },
+    });
+  }
+
   /**
    * Restore the snapshot of an undo entry. Restores are conservative: if the
    * target no longer exists for an update snapshot, the undo fails with a
@@ -358,6 +401,12 @@ export class UndoService {
 
     if (snapshot.kind === "brain_document_create") {
       const result = await this.undoBrainDocumentCreate(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "import_execute") {
+      const result = await this.undoImportExecute(snapshot);
       if (result.ok) await this.markUndone(entryId);
       return result;
     }
@@ -568,6 +617,53 @@ export class UndoService {
 
     await this.db.brainDocument.delete({ where: { id: snapshot.documentId } });
     return { ok: true, message: `Brain-Dokument „${doc.title}“ rückgängig gemacht (gelöscht).` };
+  }
+
+  private async undoImportExecute(snapshot: ImportExecuteSnapshot): Promise<UndoResult> {
+    for (const pageId of snapshot.createdPageIds) {
+      const page = await this.db.page.findUnique({ where: { id: pageId } });
+      if (page) {
+        await this.db.page.delete({ where: { id: pageId } });
+      }
+    }
+
+    for (const update of snapshot.updatedPages) {
+      const existing = await this.db.page.findUnique({ where: { id: update.pageId } });
+      if (!existing) continue;
+
+      await this.db.page.update({
+        where: { id: update.pageId },
+        data: {
+          campaignId: update.page.campaignId,
+          parentPageId: update.page.parentPageId,
+          title: update.page.title,
+          slug: update.page.slug,
+          type: update.page.type,
+          summary: update.page.summary,
+          visibility: update.page.visibility,
+          publishStatus: update.page.publishStatus,
+          canonicalStatus: update.page.canonicalStatus,
+          tags: toPrismaJsonValue(update.page.tags),
+          aliases: toPrismaJsonValue(update.page.aliases),
+        },
+      });
+
+      if (update.addedBlockIds.length > 0) {
+        await this.db.contentBlock.deleteMany({
+          where: { id: { in: update.addedBlockIds } },
+        });
+      }
+    }
+
+    const total = snapshot.createdPageIds.length + snapshot.updatedPages.length;
+    if (total === 0) {
+      return { ok: false, message: "Import-Undo enthält keine Änderungen." };
+    }
+
+    return {
+      ok: true,
+      message: `Import rückgängig gemacht (${snapshot.createdPageIds.length} Seiten gelöscht, ${snapshot.updatedPages.length} Updates zurückgesetzt).`,
+    };
   }
 }
 

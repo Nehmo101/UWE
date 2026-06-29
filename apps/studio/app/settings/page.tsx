@@ -820,7 +820,15 @@ export default async function SettingsPage({ searchParams }: Props) {
                   name="autoBackupEnabled"
                   defaultChecked={settings.backup.autoBackupEnabled}
                 />
-                Automatische Backups (Platzhalter)
+                Automatische Backups (systemd-Timer / schedule.json)
+              </label>
+              <label>
+                Aufbewahrung (Anzahl Backups)
+                <select name="retentionCount" defaultValue={String(settings.backup.retentionCount)}>
+                  <option value="7">7</option>
+                  <option value="14">14</option>
+                  <option value="30">30</option>
+                </select>
               </label>
               <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern

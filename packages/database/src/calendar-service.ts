@@ -63,6 +63,10 @@ export interface CreateCalendarEventInput {
   kind?: CalendarEventKind;
   externalUid?: string | null;
   metadata?: Record<string, unknown> | null;
+  /** When false, imported external events do not enter CalDAV write-back queue. */
+  caldavPending?: boolean;
+  remoteHref?: string | null;
+  remoteEtag?: string | null;
 }
 
 export interface ListCalendarEventsOptions {
@@ -214,7 +218,13 @@ export class CalendarService {
         kind: input.kind ?? "personal",
         externalUid: input.externalUid ?? null,
         metadata: toPrismaJsonValue(input.metadata),
-        caldavPending: feed?.type === "caldav" && feed.direction !== "read_only",
+        caldavPending:
+          input.caldavPending ??
+          (input.kind !== "external" &&
+            feed?.type === "caldav" &&
+            feed.direction !== "read_only"),
+        ...(input.remoteHref !== undefined ? { remoteHref: input.remoteHref } : {}),
+        ...(input.remoteEtag !== undefined ? { remoteEtag: input.remoteEtag } : {}),
       },
     });
   }
@@ -232,6 +242,7 @@ export class CalendarService {
     const feed = feedId
       ? await this.db.calendarFeed.findUnique({ where: { id: feedId } })
       : existing.feed;
+    const effectiveKind = input.kind ?? existing.kind;
 
     return this.db.calendarEvent.update({
       where: { id },
@@ -248,7 +259,13 @@ export class CalendarService {
         ...(input.kind != null ? { kind: input.kind } : {}),
         ...(input.externalUid !== undefined ? { externalUid: input.externalUid } : {}),
         ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),
-        caldavPending: feed?.type === "caldav" && feed.direction !== "read_only",
+        ...(input.remoteHref !== undefined ? { remoteHref: input.remoteHref } : {}),
+        ...(input.remoteEtag !== undefined ? { remoteEtag: input.remoteEtag } : {}),
+        caldavPending:
+          input.caldavPending ??
+          (effectiveKind !== "external" &&
+            feed?.type === "caldav" &&
+            feed.direction !== "read_only"),
       },
     });
   }
@@ -265,10 +282,55 @@ export class CalendarService {
     const existing = await this.db.calendarEvent.findFirst({
       where: { feedId, externalUid },
     });
+    const payload = {
+      ...input,
+      externalUid,
+      feedId,
+      kind: input.kind ?? "external",
+      caldavPending: false,
+    };
     if (existing) {
-      return this.updateEvent(existing.id, { ...input, externalUid, feedId });
+      return this.updateEvent(existing.id, payload);
     }
-    return this.createEvent({ ...input, externalUid, feedId });
+    return this.createEvent(payload);
+  }
+
+  async deleteExternalEventsNotInUids(feedId: string, uids: string[]) {
+    if (uids.length === 0) {
+      await this.db.calendarEvent.deleteMany({
+        where: { feedId, kind: "external" },
+      });
+      return;
+    }
+    await this.db.calendarEvent.deleteMany({
+      where: {
+        feedId,
+        kind: "external",
+        externalUid: { notIn: uids },
+      },
+    });
+  }
+
+  async mergeFeedSyncMetadata(
+    feedId: string,
+    patch: { syncToken?: string | null; ctag?: string | null; lastMethod?: string },
+  ) {
+    const feed = await this.db.calendarFeed.findUnique({ where: { id: feedId } });
+    if (!feed) return null;
+    const current =
+      feed.metadata && typeof feed.metadata === "object" && !Array.isArray(feed.metadata)
+        ? (feed.metadata as Record<string, unknown>)
+        : {};
+    const next = {
+      ...current,
+      ...(patch.syncToken !== undefined ? { caldavSyncToken: patch.syncToken } : {}),
+      ...(patch.ctag !== undefined ? { caldavCTag: patch.ctag } : {}),
+      ...(patch.lastMethod ? { caldavLastMethod: patch.lastMethod } : {}),
+    };
+    return this.db.calendarFeed.update({
+      where: { id: feedId },
+      data: { metadata: toPrismaJsonValue(next) },
+    });
   }
 
   async markFeedSynced(feedId: string, error: string | null = null) {
