@@ -17,22 +17,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.cursor/**'
+
       - uses: pnpm/action-setup@v4
+        if: steps.changes.outputs.code == 'true'
         with:
           version: 10.12.1
 
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.code == 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.changes.outputs.code == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Verify lockfile is in sync
+        if: steps.changes.outputs.code == 'true'
         run: git diff --exit-code pnpm-lock.yaml
 
       - name: Restore Turbo cache
+        if: steps.changes.outputs.code == 'true'
         uses: actions/cache@v4
         with:
           path: .turbo
@@ -41,4 +56,9 @@ jobs:
             turbo-pr-${{ runner.os }}-
 
       - name: Light CI gate
+        if: steps.changes.outputs.code == 'true'
         run: pnpm ci:light
+
+      - name: Docs-only PR — skip heavy gate
+        if: steps.changes.outputs.code != 'true'
+        run: echo "Docs-only changes; fast-checks satisfied without ci:light."

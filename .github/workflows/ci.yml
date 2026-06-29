@@ -17,6 +17,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            db:
+              - 'packages/database/**'
+              - '**/*postgres*'
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -103,7 +118,11 @@ jobs:
   postgres-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: quality
+    needs: [quality, detect-changes]
+    if: >-
+      needs.detect-changes.outputs.db == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     services:
       postgres:
         image: postgres:16

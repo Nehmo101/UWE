@@ -17,7 +17,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | Event | Workflow | Gate |
 |-------|----------|------|
 | **Pull request** | `pr-check.yml` | `pnpm ci:light` (lint, typecheck, test:ci, secret scan, docs) |
-| **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke |
+| **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke (when DB paths change) |
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
@@ -57,10 +57,11 @@ Configure in GitHub: **Settings → Branches → Branch protection rules → `ma
 
 The only automatic workflow on pull requests:
 
-1. `pnpm install --frozen-lockfile`
-2. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
-3. Restore Turbo cache (`actions/cache`)
-4. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
+1. Path filter — docs-only PRs (markdown, `docs/**`, `.cursor/**`) skip the heavy gate; job `fast-checks` still completes successfully for branch protection
+2. `pnpm install --frozen-lockfile` (code changes only)
+3. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
+4. Restore Turbo cache (`actions/cache`)
+5. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
 
 No `pnpm quality`, no E2E, no security tests, no release build.
 
@@ -79,7 +80,7 @@ Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatc
    - Security tests
    - Production dependency audit (high+)
    - Release build
-3. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + smoke tests against a Postgres 16 service container; runs after quality on every trigger
+3. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + smoke tests against a Postgres 16 service container; runs after quality when `packages/database/**` or `**/*postgres*` changed, or on schedule / manual dispatch
 4. **E2E tests + performance budget** (`pnpm test:e2e`, `pnpm test:e2e:perf`, `perf-budget-check.mjs`) — Playwright; runs only on `workflow_dispatch` or `schedule`, **not** on every push to `main`
 
 Concurrency cancels superseded `main` pushes to avoid duplicate full-gate runs.
@@ -96,7 +97,7 @@ Triggers: **weekly Monday 06:00 UTC** and `workflow_dispatch` only. No longer ru
 
 Supplemental only — PRs already run `pnpm docs:check` in `pr-check.yml`.
 
-- `pnpm docs:check` — required files, Markdown structure
+- `node scripts/docs-check.mjs` — required files, Markdown structure (no monorepo install; script uses only Node built-ins)
 - Basic internal link scan (warnings only for broken relative links)
 
 Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
