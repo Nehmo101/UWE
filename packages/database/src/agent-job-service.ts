@@ -67,6 +67,18 @@ export interface AgentJobCompletionInput {
   githubRunId?: string | null;
 }
 
+export interface CursorAgentPollResult {
+  /** Already-normalized DevAgentJob status (mapped from the Cursor API status). */
+  status: DevAgentJobStatus;
+  /** Raw Cursor status string, kept for diagnostics in result.cursor. */
+  rawStatus?: string | null;
+  branchName?: string | null;
+  prUrl?: string | null;
+  url?: string | null;
+  summary?: string | null;
+  errorMessage?: string | null;
+}
+
 export class DevAgentJobService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -178,6 +190,39 @@ export class DevAgentJobService {
           status: result.status ?? null,
           conclusion: result.conclusion ?? null,
           htmlUrl: result.htmlUrl ?? null,
+        },
+      },
+    });
+  }
+
+  async applyCursorPollResult(id: string, result: CursorAgentPollResult) {
+    const existing = await this.getJob(id);
+    if (!existing) {
+      throw new Error("Agent-Job nicht gefunden.");
+    }
+
+    const terminal = result.status === "completed" || result.status === "failed";
+    const completedAt = terminal ? (existing.completedAt ?? new Date()) : null;
+    const errorMessage =
+      result.status === "failed"
+        ? (result.errorMessage ?? existing.errorMessage ?? "Cursor Agent fehlgeschlagen.")
+        : null;
+
+    return this.updateJob(id, {
+      status: result.status,
+      branchName: result.branchName ?? existing.branchName,
+      prUrl: result.prUrl ?? existing.prUrl,
+      errorMessage,
+      completedAt,
+      result: {
+        ...(existing.result && typeof existing.result === "object"
+          ? (existing.result as Record<string, unknown>)
+          : {}),
+        cursor: {
+          status: result.rawStatus ?? null,
+          url: result.url ?? null,
+          summary: result.summary ?? null,
+          at: new Date().toISOString(),
         },
       },
     });

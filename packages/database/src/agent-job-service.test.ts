@@ -63,3 +63,63 @@ describe("DevAgentJobService.applyCompletionCallback", () => {
     await db.devAgentJob.delete({ where: { id: created.id } });
   });
 });
+
+describe("DevAgentJobService.applyCursorPollResult", () => {
+  let db: PrismaClient;
+
+  before(async () => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  it("keeps a running job open and records cursor metadata", async () => {
+    const service = createDevAgentJobService(db);
+    const created = await service.createJob({
+      title: "feat: cursor poll running",
+      prompt: "do it",
+      provider: "cursor_cloud",
+    });
+
+    const polled = await service.applyCursorPollResult(created.id, {
+      status: "running",
+      rawStatus: "RUNNING",
+      branchName: "cursor/x",
+      url: "https://cursor.com/agents?id=bc_1",
+      summary: "working",
+    });
+
+    assert.equal(polled.status, "running");
+    assert.equal(polled.branchName, "cursor/x");
+    assert.equal(polled.completedAt, null);
+    const result = polled.result as { cursor?: { status?: string; summary?: string } };
+    assert.equal(result.cursor?.status, "RUNNING");
+    assert.equal(result.cursor?.summary, "working");
+
+    await db.devAgentJob.delete({ where: { id: created.id } });
+  });
+
+  it("marks a finished agent completed and a failed agent failed", async () => {
+    const service = createDevAgentJobService(db);
+
+    const ok = await service.createJob({ title: "done", prompt: "x", provider: "cursor_cloud" });
+    const completed = await service.applyCursorPollResult(ok.id, {
+      status: "completed",
+      rawStatus: "FINISHED",
+      prUrl: "https://github.com/acme/repo/pull/5",
+    });
+    assert.equal(completed.status, "completed");
+    assert.ok(completed.completedAt);
+    assert.equal(completed.errorMessage, null);
+
+    const bad = await service.createJob({ title: "bad", prompt: "x", provider: "cursor_cloud" });
+    const failed = await service.applyCursorPollResult(bad.id, {
+      status: "failed",
+      rawStatus: "ERROR",
+    });
+    assert.equal(failed.status, "failed");
+    assert.ok(failed.completedAt);
+    assert.match(failed.errorMessage ?? "", /Cursor Agent/);
+
+    await db.devAgentJob.delete({ where: { id: ok.id } });
+    await db.devAgentJob.delete({ where: { id: bad.id } });
+  });
+});

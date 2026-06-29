@@ -4,7 +4,13 @@ import {
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import { fetchPullRequestForBranch, fetchWorkflowRunStatus, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
+import {
+  fetchCursorAgentStatus,
+  fetchPullRequestForBranch,
+  fetchWorkflowRunStatus,
+  mapCursorStatusToDevAgentStatus,
+  resolveAgentJobsDispatchConfig,
+} from "@uwe/agent-jobs";
 import { dispatchJob } from "@/src/lib/job-executor";
 import {
   guardStudioMutation,
@@ -73,6 +79,33 @@ export async function POST(request: Request, context: RouteContext) {
   const existing = await agentJobs.getJob(jobId);
   if (!existing) {
     return NextResponse.json({ error: "Agent-Job nicht gefunden." }, { status: 404 });
+  }
+
+  if (existing.provider === "cursor_cloud") {
+    if (!existing.cursorJobId) {
+      return NextResponse.json({ job: existing, polled: false });
+    }
+
+    const cursorConfig = resolveAgentJobsDispatchConfig();
+    if (!cursorConfig.cursorCloudApiKey) {
+      return NextResponse.json({ error: "CURSOR_CLOUD_API_KEY fehlt." }, { status: 503 });
+    }
+
+    try {
+      const cursorStatus = await fetchCursorAgentStatus(existing.cursorJobId, cursorConfig);
+      const job = await agentJobs.applyCursorPollResult(jobId, {
+        status: mapCursorStatusToDevAgentStatus(cursorStatus.status),
+        rawStatus: cursorStatus.status,
+        branchName: cursorStatus.branchName,
+        prUrl: cursorStatus.prUrl,
+        url: cursorStatus.url,
+        summary: cursorStatus.summary,
+      });
+      return NextResponse.json({ job, polled: true, cursorStatus });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Cursor-Poll fehlgeschlagen.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
   }
 
   if (existing.provider !== "github_actions" || !existing.branchName) {
