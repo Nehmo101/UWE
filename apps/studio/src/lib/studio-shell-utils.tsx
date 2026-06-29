@@ -2,11 +2,8 @@ import type { ReactNode } from "react";
 import type { WorldNavSection } from "./studio-navigation";
 
 /**
- * Shared, behaviour-preserving helpers for the Studio app shells.
- *
- * `StudioAppShell` (Design V2 adapter; pending SettingsShell/SystemShell migration) previously
- * defined these independently, which risked drift. They live here so both shells stay
- * thin renderers over identical navigation logic.
+ * Shared helpers for Studio shell navigation (campaign filters, sidebar defaults).
+ * Legacy V1/V2 app shells were removed in Wave 3; new shells use `@/src/components/shell/*`.
  */
 
 /** Preserve a campaign filter on the „Neue Seite" link within world nav sections. */

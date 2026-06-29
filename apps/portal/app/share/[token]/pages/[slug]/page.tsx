@@ -11,10 +11,12 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { SharePasswordForm } from "@/src/components/SharePasswordForm";
+import { ShareGateMessage } from "@/src/components/ShareGateMessage";
+import { PageHeader, PortalShell } from "@/src/components/shell";
+import { shareNavGroups } from "@/src/navigation/portal-nav";
 import { isShareFeatureEnabled, isShareLinkPasswordRequired } from "@/src/lib/share-access";
 import { isSharePasswordVerified } from "@/src/lib/share-auth";
 import { resolveClientIp } from "@uwe/auth";
-import { PortalGuestShell } from "@/src/components/PortalGuestShell";
 
 interface Props {
   params: Promise<{ token: string; slug: string }>;
@@ -84,35 +86,24 @@ export default async function ShareLinkedPageView({ params }: Props) {
   const result = await resolveSharePageView(token, slug);
 
   if (result.kind === "password") {
-    return (
-      <main className="share-gate">
-        <SharePasswordForm token={token} />
-      </main>
-    );
+    return <SharePasswordForm token={token} />;
   }
 
   if (result.kind === "password_required") {
     return (
-      <main className="share-gate">
-        <div className="share-password-form">
-          <h1>Passwort erforderlich</h1>
-          <p>
-            Dieser Freigabe-Link ist nicht passwortgeschützt. In Production müssen
-            Share-Links ein Passwort haben (PLAYER_PREVIEW_REQUIRE_TOKEN).
-          </p>
-        </div>
-      </main>
+      <ShareGateMessage
+        title="Passwort erforderlich"
+        description="Dieser Freigabe-Link ist nicht passwortgeschützt. In Production müssen Share-Links ein Passwort haben (PLAYER_PREVIEW_REQUIRE_TOKEN)."
+      />
     );
   }
 
   if (result.kind === "disabled") {
     return (
-      <main className="share-gate">
-        <div className="share-password-form">
-          <h1>Freigabe deaktiviert</h1>
-          <p>Öffentliche Freigaben sind derzeit systemweit deaktiviert.</p>
-        </div>
-      </main>
+      <ShareGateMessage
+        title="Freigabe deaktiviert"
+        description="Öffentliche Freigaben sind derzeit systemweit deaktiviert."
+      />
     );
   }
 
@@ -120,28 +111,29 @@ export default async function ShareLinkedPageView({ params }: Props) {
     notFound();
   }
 
-  const { view, readOnly } = result;
+  const { view } = result;
 
   return (
-    <PortalGuestShell
-      brandAppName="UWE Freigabe"
+    <PortalShell
+      brandLabel="UWE Freigabe"
       brandHref={`/share/${token}`}
-      worldName={readOnly ? "Nur-Lesen" : "Freigegebener Inhalt"}
-      showLoginLink={false}
-      pageHeader={{
-        title: view.page.title,
-        meta: view.page.tags.map((tag) => (
-          <span key={tag} className="uwe-tag">
-            {tag}
-          </span>
-        )),
-      }}
-      context={
+      navGroups={shareNavGroups(token)}
+      contextPanel={
         <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }
-      contextTitle="Verknüpfungen"
     >
+      <PageHeader
+        title={view.page.title}
+        meta={view.page.tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+          >
+            {tag}
+          </span>
+        ))}
+      />
       <WikiContent html={view.html} />
-    </PortalGuestShell>
+    </PortalShell>
   );
 }

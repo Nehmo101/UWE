@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthCard, AuthPageLayout } from "@uwe/shared-ui";
 import { createPrismaClient, createUserService } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export default async function AccountPasswordPage() {
@@ -29,19 +30,30 @@ export default async function AccountPasswordPage() {
   }
 
   return (
-    <AuthPageLayout variant="studio" compact>
-      <AuthCard
-        variant="studio"
-        title="Passwort ändern"
-        lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
-        footer={<Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>}
-      >
-        <ChangePasswordForm
-          backHref="/"
-          forcePasswordChange={forcePasswordChange}
-          initialPasswordOnly={initialPasswordOnly}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Einstellungen", href: "/settings" },
+            { label: "Passwort" },
+          ]}
         />
-      </AuthCard>
-    </AuthPageLayout>
+      }
+    >
+      <AuthPageLayout variant="studio" compact>
+        <AuthCard
+          variant="studio"
+          title="Passwort ändern"
+          lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
+          footer={<Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>}
+        >
+          <ChangePasswordForm
+            backHref="/"
+            forcePasswordChange={forcePasswordChange}
+            initialPasswordOnly={initialPasswordOnly}
+          />
+        </AuthCard>
+      </AuthPageLayout>
+    </SystemShell>
   );
 }

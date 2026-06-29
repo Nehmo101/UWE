@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/src/components/ui/button";
 
 interface LogoutButtonProps {
   displayName: string;
@@ -20,8 +21,8 @@ export function LogoutButton({ displayName }: LogoutButtonProps) {
   }
 
   return (
-    <button type="button" className="auth-link-button" disabled={loading} onClick={handleLogout}>
+    <Button variant="ghost" size="sm" type="button" disabled={loading} onClick={handleLogout}>
       {loading ? "Abmelden…" : `Abmelden (${displayName})`}
-    </button>
+    </Button>
   );
 }

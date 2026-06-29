@@ -36,12 +36,4 @@ test.describe("Studio shell chrome (new AppShell)", () => {
     await expect(page.getByRole("heading", { name: "Capture Inbox" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Capture / Inbox" })).toBeVisible();
   });
-
-  test("StudioAppShell renders settings navigation", async ({ page }) => {
-    await page.goto("/settings");
-
-    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Admin- & Systemeinstellungen" })).toBeVisible();
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Einstellungen");
-  });
 });

@@ -122,3 +122,26 @@ export function portalNavItems(worldSlug?: string | null): NavItem[] {
 export function portalNavConflicts(worldSlug?: string | null): NavConflicts {
   return findNavConflicts(portalNavItems(worldSlug));
 }
+
+/** Minimal navigation for password-protected share links. */
+export function shareNavGroups(token: string): NavGroup[] {
+  return [
+    {
+      id: "share",
+      title: "Freigabe",
+      items: [
+        {
+          id: "share-root",
+          label: "Inhalt",
+          href: `/share/${token}`,
+          icon: "link",
+          group: "Freigabe",
+          section: SECTION,
+          permission: ["public"],
+          status: "active",
+          source: "portal",
+        },
+      ],
+    },
+  ];
+}

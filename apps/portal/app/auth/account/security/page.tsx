@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TwoFactorSetupForm } from "@uwe/shared-ui";
+import { PageHeader } from "@/src/components/shell";
+import { Card, CardContent } from "@/src/components/ui/card";
 import { getCurrentUser } from "@/src/lib/auth";
 
 export default async function PortalAccountSecurityPage() {
@@ -10,16 +12,21 @@ export default async function PortalAccountSecurityPage() {
   }
 
   return (
-    <section className="portal-content-card portal-content-card-narrow">
-      <h1>Sicherheit</h1>
-      <p className="auth-lead">
-        Angemeldet als {user.displayName}
-        {user.email ? ` (${user.email})` : ""}.
-      </p>
-      <TwoFactorSetupForm variant="portal" backHref="/auth/account/password" />
-      <p className="auth-footer">
-        <Link href="/auth/account/password">Passwort ändern</Link>
-      </p>
-    </section>
+    <>
+      <PageHeader
+        title="Sicherheit"
+        summary={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
+      />
+      <Card className="max-w-md">
+        <CardContent className="pt-6">
+          <TwoFactorSetupForm variant="portal" backHref="/auth/account/password" />
+          <p className="mt-4 text-sm text-muted-foreground">
+            <Link href="/auth/account/password" className="text-primary hover:underline">
+              Passwort ändern
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </>
   );
 }

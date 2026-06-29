@@ -1,10 +1,11 @@
-import { PortalAppShell } from "@/src/components/PortalAppShell";
+import {
+  BreadcrumbTrail,
+  PortalAuthChrome,
+  PortalShell,
+} from "@/src/components/shell";
 import { getCurrentUser } from "@/src/lib/auth";
-import { resolvePortalWorldNavKey } from "@/src/lib/portal-navigation";
-import { portalAuthBottomNav } from "@/src/lib/mobile-nav";
 import { ADMIN_ACCESS_ROLES, hasAnyRole, resolveUweAppUrls } from "@uwe/auth";
 import { createPrismaClient } from "@uwe/database/server";
-import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -18,8 +19,6 @@ export default async function AuthWorldLayout({ children, params }: Props) {
   const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
   const appUrls = resolveUweAppUrls();
   const studioUrl = appUrls.studioUrl ?? null;
-  const headerList = await headers();
-  const pathname = headerList.get("x-uwe-pathname") ?? `/auth/worlds/${worldSlug}`;
 
   const db = createPrismaClient();
   let worldName = worldSlug;
@@ -33,28 +32,27 @@ export default async function AuthWorldLayout({ children, params }: Props) {
     await db.$disconnect();
   }
 
-  const worldActive = resolvePortalWorldNavKey(pathname, worldSlug);
-  const bottomNavActive =
-    worldActive === "sessions"
-      ? "sessions"
-      : worldActive === "handouts"
-        ? "handouts"
-        : worldActive === "notes" || worldActive === "soundboard" || worldActive === "search"
-          ? "more"
-          : "dashboard";
-
   return (
-    <PortalAppShell
-      user={user}
-      canAccessStudio={canAccessStudio}
-      studioUrl={studioUrl}
+    <PortalShell
       worldSlug={worldSlug}
       worldName={worldName}
-      worldActive={worldActive}
-      globalActive="worlds"
-      bottomNav={portalAuthBottomNav(worldSlug, bottomNavActive)}
+      headerActions={
+        <PortalAuthChrome
+          user={user}
+          canAccessStudio={canAccessStudio}
+          studioUrl={studioUrl}
+        />
+      }
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Meine Welten", href: "/auth/worlds" },
+            { label: worldName },
+          ]}
+        />
+      }
     >
       {children}
-    </PortalAppShell>
+    </PortalShell>
   );
 }
