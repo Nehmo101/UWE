@@ -86,7 +86,7 @@ Full matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 ## DM-Only & Portal Leak Protection
 
 - **`dm_only`** pages, blocks, assets, soundboard buttons, session fields, and secret page *titles* are filtered server-side for Portal, search, graph, backlinks, related pages, and static export
-- **`player_visible`** (Studio label: *"Portal (ohne Login)"*) and **`public`** content on **published** pages is readable by anyone who can reach `/worlds/*` — this is intentional
+- **`player_visible`** (Studio label: *"Portal sichtbar"*) and **`public`** content on **published** pages is readable by anyone who can reach `/worlds/*` (no login required) — this is intentional
 - Hard regression tests: `packages/database/src/visibility-security.test.ts`, `pnpm test:leaks`
 - Studio **World Inspector** audits portal-visible content and offers one-click fixes
 - **Public Leak Scanner** (`/admin/status`) flags accidental DM-only markers on public routes
@@ -211,7 +211,7 @@ Details: [SECURITY_NOTES.md](SECURITY_NOTES.md).
 
 **Additional considerations:**
 
-- **`player_visible` means "no login required"** — published pages/blocks/assets/soundboard buttons with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal (ohne Login)" to make the consequence explicit. `dm_only` content is never served on those routes
+- **`player_visible` means "no login required"** — published pages/blocks/assets/soundboard buttons with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal sichtbar" (für Spieler freigegeben) to make the consequence explicit. `dm_only` content is never served on those routes
 - **Portal sessions** — opaque database-backed tokens (httpOnly, SameSite=Lax, Secure in production); token hashes stored at rest via SHA-256; they are not derived from `AUTH_SECRET`
 - **Share links** — public URLs grant read access to specific content; review active links regularly
 

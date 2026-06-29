@@ -365,7 +365,7 @@ Only **published** pages with visibility `public` or `player_visible` appear in 
 
 **Protected vs public routes:** Central policy in `@uwe/auth` (`route-policy.ts`). Security QA matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
-**Naming note:** because public routes need no login, Studio labels `player_visible` as **"Portal (ohne Login)"** — anything published with this visibility is readable by everyone who can reach the Portal. `dm_only` content is never served on `/worlds/*`.
+**Naming note:** Studio labels `player_visible` as **"Portal sichtbar"** (für Spieler freigegeben) — anything published with this visibility is readable by everyone who can reach the Portal's `/worlds/*` routes, no login required. `dm_only` content is never served on `/worlds/*`.
 
 ---
 

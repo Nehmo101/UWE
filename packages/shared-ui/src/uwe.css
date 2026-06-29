@@ -989,6 +989,58 @@ html[data-theme="light"] {
   color: var(--uwe-fg);
 }
 
+/* RTX / local-AI status badge — consistent across Studio surfaces. */
+.uwe-rtx-badge {
+  gap: 0.4em;
+  text-transform: none;
+}
+
+.uwe-rtx-badge-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--uwe-fg-subtle, #888);
+  flex: none;
+}
+
+.uwe-rtx-badge[data-rtx-state="online"] {
+  background: color-mix(in srgb, var(--uwe-success) 14%, transparent);
+  color: color-mix(in srgb, var(--uwe-success) 72%, var(--uwe-fg) 28%);
+  border-color: color-mix(in srgb, var(--uwe-success) 30%, transparent);
+}
+.uwe-rtx-badge[data-rtx-state="online"] .uwe-rtx-badge-dot {
+  background: var(--uwe-success);
+}
+
+.uwe-rtx-badge[data-rtx-state="starting"] {
+  background: color-mix(in srgb, var(--uwe-warning) 14%, transparent);
+  color: var(--uwe-warning-fg, var(--uwe-warning));
+  border-color: color-mix(in srgb, var(--uwe-warning) 30%, transparent);
+}
+.uwe-rtx-badge[data-rtx-state="starting"] .uwe-rtx-badge-dot {
+  background: var(--uwe-warning);
+}
+
+.uwe-rtx-badge[data-rtx-state="offline"],
+.uwe-rtx-badge[data-rtx-state="error"] {
+  background: color-mix(in srgb, var(--uwe-danger) 14%, transparent);
+  color: color-mix(in srgb, var(--uwe-danger) 72%, var(--uwe-fg) 28%);
+  border-color: color-mix(in srgb, var(--uwe-danger) 28%, transparent);
+}
+.uwe-rtx-badge[data-rtx-state="offline"] .uwe-rtx-badge-dot,
+.uwe-rtx-badge[data-rtx-state="error"] .uwe-rtx-badge-dot {
+  background: var(--uwe-danger);
+}
+
+.uwe-rtx-badge[data-rtx-state="disabled"] {
+  background: color-mix(in srgb, var(--uwe-fg-muted) 12%, transparent);
+  color: var(--uwe-fg-muted);
+  border-color: var(--uwe-border);
+}
+.uwe-rtx-badge[data-rtx-state="disabled"] .uwe-rtx-badge-dot {
+  background: var(--uwe-fg-muted);
+}
+
 .uwe-tag,
 .wiki-tag {
   font-size: 0.72rem;

@@ -89,6 +89,46 @@ export function IconAssets() {
   );
 }
 
+export function IconWorlds() {
+  return (
+    <NavSvg>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </NavSvg>
+  );
+}
+
+export function IconUser() {
+  return (
+    <NavSvg>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </NavSvg>
+  );
+}
+
+export function IconGraph() {
+  return (
+    <NavSvg>
+      <circle cx="6" cy="7" r="2.2" />
+      <circle cx="18" cy="6" r="2.2" />
+      <circle cx="13" cy="18" r="2.2" />
+      <path d="M8 8.2 11 16M8 7l7.7-.7M16.4 7.8 14 16" />
+    </NavSvg>
+  );
+}
+
+export function IconPalette() {
+  return (
+    <NavSvg>
+      <path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-1 1.4-2-.4-1 .2-2 1.3-2H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z" />
+      <circle cx="8" cy="11" r="1" />
+      <circle cx="12" cy="8" r="1" />
+      <circle cx="16" cy="11" r="1" />
+    </NavSvg>
+  );
+}
+
 export type V2NavIconKey =
   | "today"
   | "capture"
@@ -97,7 +137,11 @@ export type V2NavIconKey =
   | "menu"
   | "home"
   | "sessions"
-  | "assets";
+  | "assets"
+  | "worlds"
+  | "user"
+  | "graph"
+  | "palette";
 
 export const V2_NAV_ICONS: Record<V2NavIconKey, ReactNode> = {
   today: <IconToday />,
@@ -108,9 +152,13 @@ export const V2_NAV_ICONS: Record<V2NavIconKey, ReactNode> = {
   home: <IconHome />,
   sessions: <IconSessions />,
   assets: <IconAssets />,
+  worlds: <IconWorlds />,
+  user: <IconUser />,
+  graph: <IconGraph />,
+  palette: <IconPalette />,
 };
 
-/** Map bottom-nav compact icon strings to V2 SVG icons. */
+/** Map bottom-nav compact icon strings (incl. emoji) to consistent V2 SVG icons. */
 export function resolveV2BottomNavIcon(icon: string): ReactNode {
   const map: Record<string, V2NavIconKey> = {
     "☀": "today",
@@ -123,7 +171,12 @@ export function resolveV2BottomNavIcon(icon: string): ReactNode {
     "⌂": "home",
     "📄": "sessions",
     "▣": "sessions",
+    "📜": "sessions",
     "🛡": "search",
+    "🌍": "worlds",
+    "👤": "user",
+    "🔗": "graph",
+    "🎨": "palette",
   };
   const key = map[icon];
   return key ? V2_NAV_ICONS[key] : icon;

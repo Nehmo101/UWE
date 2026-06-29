@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { CONNECTOR_CAPABILITY_LABELS, type ConnectorCapability } from "@uwe/connector/client";
+import { RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
 
 import {
   ConnectorModelPicker,
@@ -77,6 +78,20 @@ const STATUS_LABELS: Record<ConnectorView["status"], string> = {
   degraded: "Eingeschränkt",
   disabled: "Deaktiviert",
 };
+
+/** Map a connector's status to the shared RTX status-badge dot state. */
+function connectorStatusToRtxState(status: ConnectorView["status"]): RtxConnectorState {
+  switch (status) {
+    case "online":
+      return "online";
+    case "degraded":
+      return "starting";
+    case "disabled":
+      return "disabled";
+    default:
+      return "offline";
+  }
+}
 
 function formatWhen(value: string | Date | null): string {
   if (!value) return "noch nie";
@@ -233,7 +248,27 @@ export function RtxConnectorClient({
   return (
     <>
       <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Queue & Sicherheit</h2>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.5rem",
+          }}
+        >
+          <h2 className="uwe-v2-section-title" style={{ margin: 0 }}>
+            Queue & Sicherheit
+          </h2>
+          <RtxStatusBadge
+            state={summary.anyOnline ? "online" : "offline"}
+            label={
+              summary.anyOnline
+                ? `RTX online · ${summary.onlineCount}/${summary.totalCount}`
+                : "RTX offline"
+            }
+          />
+        </div>
         <div className="uwe-dashboard-grid">
           <article className="uwe-v2-card" style={{ padding: "1rem" }}>
             <h3>Host-Queue</h3>
@@ -302,11 +337,18 @@ export function RtxConnectorClient({
             type="button"
             className="uwe-v2-btn uwe-v2-btn-primary"
             disabled={busy || newName.trim().length === 0}
+            title="Neuen RTX Connector registrieren und einmaliges Token erzeugen"
             onClick={createConnector}
           >
             Token erzeugen
           </button>
-          <button type="button" className="uwe-v2-btn" disabled={busy} onClick={reload}>
+          <button
+            type="button"
+            className="uwe-v2-btn"
+            disabled={busy}
+            title="Connector-Status neu laden"
+            onClick={reload}
+          >
             Aktualisieren
           </button>
         </div>
@@ -330,9 +372,20 @@ export function RtxConnectorClient({
                       : "error"
                 }
               >
-                <h3>
-                  {connector.name} — {STATUS_LABELS[connector.status]}
-                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <h3 style={{ margin: 0 }}>{connector.name}</h3>
+                  <RtxStatusBadge
+                    state={connectorStatusToRtxState(connector.status)}
+                    label={STATUS_LABELS[connector.status]}
+                  />
+                </div>
                 <p className="uwe-dashboard-muted">
                   Letzter Heartbeat: {formatWhen(connector.lastHeartbeatAt)}
                   {connector.version ? ` · v${connector.version}` : ""} · Jobs:{" "}
@@ -372,6 +425,11 @@ export function RtxConnectorClient({
                     type="button"
                     className="uwe-v2-btn"
                     disabled={busy}
+                    title={
+                      connector.disabled
+                        ? "Connector aktivieren — nimmt wieder RTX-Jobs an"
+                        : "Connector deaktivieren — nimmt keine neuen RTX-Jobs an"
+                    }
                     onClick={() =>
                       patchConnector(connector.id, connector.disabled ? "enable" : "disable")
                     }
@@ -382,14 +440,16 @@ export function RtxConnectorClient({
                     type="button"
                     className="uwe-v2-btn"
                     disabled={busy}
+                    title="Neues Connector-Token erzeugen — das alte Token wird ungültig"
                     onClick={() => patchConnector(connector.id, "rotate-token")}
                   >
                     Token erneuern
                   </button>
                   <button
                     type="button"
-                    className="uwe-v2-btn"
+                    className="uwe-v2-btn uwe-v2-btn-danger"
                     disabled={busy}
+                    title="Connector dauerhaft entfernen"
                     onClick={() => deleteConnector(connector.id)}
                   >
                     Entfernen

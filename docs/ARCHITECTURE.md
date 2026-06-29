@@ -87,7 +87,7 @@ flowchart TD
   Review --> Visibility{"Sichtbarkeit?"}
 
   Visibility -->|dm_only| DMOnly["Nur Studio<br/>DM-Geheimnisse, Notizen, Spoiler"]
-  Visibility -->|player_visible| PortalContent["Portal ohne Login<br/>für jeden mit Zugriff auf URL lesbar"]
+  Visibility -->|player_visible| PortalContent["Portal sichtbar<br/>für Spieler freigegeben (ohne Login lesbar)"]
   Visibility -->|public| PublicContent["Öffentlich / Exportfähig"]
 
   PortalContent --> Published{"Published?"}

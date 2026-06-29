@@ -246,6 +246,52 @@ export function AssetTypeBadge({ type }: { type: AssetType }) {
   return <span className="uwe-badge uwe-badge-type">{ASSET_TYPE_LABELS[type]}</span>;
 }
 
+/** Connector / local-AI runtime state shown in the RTX status badge. */
+export type RtxConnectorState = "online" | "offline" | "disabled" | "starting" | "error";
+
+export const RTX_STATE_LABELS: Record<RtxConnectorState, string> = {
+  online: "RTX online",
+  offline: "RTX offline",
+  disabled: "RTX deaktiviert",
+  starting: "RTX startet",
+  error: "RTX Fehler",
+};
+
+export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
+  online: "RTX Connector verbunden — lokale KI ist verfügbar.",
+  offline:
+    "RTX Connector nicht erreichbar. KI-Jobs werden vorgemerkt und starten automatisch, sobald RTX wieder online ist — kein Cloud-Fallback.",
+  disabled: "RTX Connector deaktiviert. Aktiviere ihn, um lokale KI zu nutzen.",
+  starting: "RTX Connector wird gestartet — bitte kurz warten.",
+  error: "RTX Connector meldet einen Fehler. Prüfe den Systemstatus.",
+};
+
+/**
+ * Consistent RTX/local-AI status indicator. Uses a colored dot + label and a
+ * tooltip so the technical RTX state stays understandable across Studio.
+ */
+export function RtxStatusBadge({
+  state,
+  label,
+  className,
+}: {
+  state: RtxConnectorState;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`uwe-badge uwe-rtx-badge${className ? ` ${className}` : ""}`}
+      data-rtx-state={state}
+      title={RTX_STATE_DESCRIPTIONS[state]}
+      aria-label={`RTX-Status: ${RTX_STATE_LABELS[state]}. ${RTX_STATE_DESCRIPTIONS[state]}`}
+    >
+      <span className="uwe-rtx-badge-dot" aria-hidden />
+      {label ?? RTX_STATE_LABELS[state]}
+    </span>
+  );
+}
+
 export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }) {
   const className =
     status === "summarized"

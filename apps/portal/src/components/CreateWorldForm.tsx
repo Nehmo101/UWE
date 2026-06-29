@@ -83,7 +83,7 @@ export function CreateWorldForm() {
           checked={guestModeEnabled}
           onChange={(event) => setGuestModeEnabled(event.target.checked)}
         />
-        Gastmodus aktiv (Portal read-only für anonyme Besucher)
+        Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar
       </label>
 
       {error ? (

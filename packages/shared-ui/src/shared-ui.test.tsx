@@ -23,8 +23,10 @@ import {
 import {
   PageTypeBadge,
   PublishBadge,
+  RtxStatusBadge,
   VisibilityBadge,
 } from "./StatusBadges";
+import { resolveV2BottomNavIcon } from "./shells-v2/icons";
 import { SearchResultsList } from "./SearchResults";
 import { filterPaletteCommands } from "./CommandPalette";
 import { GraphView } from "./GraphView";
@@ -285,6 +287,36 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /uwe-page-actions \.uwe-btn:only-child/);
     assert.match(uweCss, /--uwe-spacing-sm/);
     assert.match(uweCss, /--uwe-card-bg/);
+  });
+
+  it("renders the RTX status badge with state, label and tooltip", () => {
+    const online = renderToStaticMarkup(<RtxStatusBadge state="online" />);
+    assert.match(online, /uwe-rtx-badge/);
+    assert.match(online, /data-rtx-state="online"/);
+    assert.match(online, /uwe-rtx-badge-dot/);
+    assert.match(online, /RTX online/);
+    assert.match(online, /title="/);
+
+    const offline = renderToStaticMarkup(
+      <RtxStatusBadge state="offline" label="RTX offline · 0/1" />,
+    );
+    assert.match(offline, /data-rtx-state="offline"/);
+    assert.match(offline, /RTX offline · 0\/1/);
+    assert.match(offline, /aria-label="RTX-Status: RTX offline/);
+  });
+
+  it("includes RTX status badge styles in shared CSS", () => {
+    assert.match(uweCss, /\.uwe-rtx-badge/);
+    assert.match(uweCss, /uwe-rtx-badge\[data-rtx-state="online"\]/);
+    assert.match(uweCss, /uwe-rtx-badge-dot/);
+  });
+
+  it("maps emoji nav icons to consistent V2 SVG icons", () => {
+    for (const emoji of ["🌍", "👤", "🔗", "🎨", "📜", "🔍", "⌂"]) {
+      const html = renderToStaticMarkup(<>{resolveV2BottomNavIcon(emoji)}</>);
+      assert.match(html, /uwe-v2-nav-icon/, `expected SVG icon for ${emoji}`);
+      assert.doesNotMatch(html, new RegExp(emoji), `expected no raw emoji for ${emoji}`);
+    }
   });
 });
 

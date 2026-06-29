@@ -215,6 +215,8 @@ export {
   PUBLISH_LABELS,
   REVEAL_STATE_DESCRIPTIONS,
   REVEAL_STATE_LABELS,
+  RTX_STATE_DESCRIPTIONS,
+  RTX_STATE_LABELS,
   SECRET_LEVEL_DESCRIPTIONS,
   SECRET_LEVEL_LABELS,
   VISIBILITY_DESCRIPTIONS,
@@ -227,9 +229,11 @@ export {
   PlayerNoteStatusBadge,
   PublishBadge,
   RevealStateBadge,
+  RtxStatusBadge,
   SecretLevelBadge,
   VisibilityBadge,
   type ContentBlockViewModel,
+  type RtxConnectorState,
 } from "./StatusBadges";
 
 export { SecretReveal, type SecretRevealProps } from "./SecretReveal";
