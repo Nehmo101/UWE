@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createGameSessionService,
@@ -9,6 +10,27 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
+
+const GAME_SESSION_STATUSES = [
+  "planned",
+  "prepared",
+  "played",
+  "summarized",
+  "archived",
+] as const;
+
+const createSessionSchema = z.object({
+  title: z.string().trim().min(1, "Titel ist erforderlich."),
+  date: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value ? value : undefined))
+    .refine((value) => value === undefined || !Number.isNaN(new Date(value).getTime()), {
+      message: "Ungültiges Datum.",
+    }),
+  status: z.enum(GAME_SESSION_STATUSES).optional(),
+});
 
 function sessions() {
   return createGameSessionService();
@@ -24,7 +46,16 @@ export async function createGameSessionAction(formData: FormData) {
   await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
-  if (!world) throw new Error("World not found");
+  if (!world) throw new Error("Welt nicht gefunden.");
+
+  const parsed = createSessionSchema.safeParse({
+    title: formData.get("title") ?? "",
+    date: formData.get("date") ?? undefined,
+    status: formData.get("status") ?? undefined,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Ungültige Eingabe.");
+  }
 
   const campaignSlug = String(formData.get("campaignSlug") || "");
   const campaign = campaignSlug
@@ -39,10 +70,10 @@ export async function createGameSessionAction(formData: FormData) {
   const session = await sessions().create({
     worldId: world.id,
     campaignId: campaign?.id ?? null,
-    title: String(formData.get("title")),
+    title: parsed.data.title,
     sessionNumber,
-    date: formData.get("date") ? new Date(String(formData.get("date"))) : null,
-    status: (formData.get("status") as GameSessionStatus) ?? "planned",
+    date: parsed.data.date ? new Date(parsed.data.date) : null,
+    status: (parsed.data.status as GameSessionStatus | undefined) ?? "planned",
     summaryDm: String(formData.get("summaryDm") || "") || null,
     summaryPlayer: String(formData.get("summaryPlayer") || "") || null,
     notes: String(formData.get("notes") || "") || null,

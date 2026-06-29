@@ -1,9 +1,11 @@
 "use server";
 
+import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createDungeonCockpitService,
   getAppRepository,
+  ROOM_CHILD_TYPES,
   type DungeonPrepStatus,
   type RoomChildType,
 } from "@uwe/database/server";
@@ -14,6 +16,26 @@ import {
   requireStudioContentEdit,
   requireStudioWorldEdit,
 } from "@/src/lib/authz";
+
+const titleSchema = z.string().trim().min(1, "Titel ist erforderlich.");
+
+/** Validate and normalize a required title field; throws a clear error. */
+function parseTitle(formData: FormData): string {
+  const result = titleSchema.safeParse(formData.get("title") ?? "");
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "Ungültiger Titel.");
+  }
+  return result.data;
+}
+
+/** Validate the room child type against the known enum. */
+function parseRoomChildType(formData: FormData): RoomChildType {
+  const value = formData.get("childType");
+  if (typeof value !== "string" || !ROOM_CHILD_TYPES.includes(value as RoomChildType)) {
+    throw new Error("Ungültiger Raum-Inhaltstyp.");
+  }
+  return value as RoomChildType;
+}
 
 function dungeons() {
   return createDungeonCockpitService();
@@ -33,15 +55,16 @@ export async function createDungeonAction(formData: FormData) {
   await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
-  if (!world) throw new Error("World not found");
+  if (!world) throw new Error("Welt nicht gefunden.");
 
+  const title = parseTitle(formData);
   const campaignId = String(formData.get("campaignId") || "") || null;
 
   const dungeon = await dungeons().createWithGeneratedSlug({
     worldId: world.id,
     campaignId,
     parentPageId: null,
-    title: String(formData.get("title")),
+    title,
     type: "dungeon",
     summary: String(formData.get("summary") || "") || null,
     prepStatus: "unprepared",
@@ -69,13 +92,15 @@ export async function createDungeonLevelAction(formData: FormData) {
   if (!world) throw new Error("World not found");
 
   const dungeon = await repo().getPageBySlug(worldSlug, dungeonSlug);
-  if (!dungeon || dungeon.type !== "dungeon") throw new Error("Dungeon not found");
+  if (!dungeon || dungeon.type !== "dungeon") throw new Error("Dungeon nicht gefunden.");
+
+  const title = parseTitle(formData);
 
   const level = await dungeons().createWithGeneratedSlug({
     worldId: world.id,
     campaignId: dungeon.campaignId,
     parentPageId: dungeon.id,
-    title: String(formData.get("title")),
+    title,
     type: "dungeon_level",
     prepStatus: (formData.get("prepStatus") as DungeonPrepStatus) ?? "unprepared",
   });
@@ -95,15 +120,16 @@ export async function createDungeonRoomAction(formData: FormData) {
   if (!world) throw new Error("World not found");
 
   const levelOverview = await dungeons().getLevelOverview(worldSlug, dungeonSlug, levelSlug);
-  if (!levelOverview) throw new Error("Level not found");
+  if (!levelOverview) throw new Error("Ebene nicht gefunden.");
 
+  const title = parseTitle(formData);
   const dungeonPage = await repo().getPageBySlug(worldSlug, dungeonSlug);
 
   const room = await dungeons().createWithGeneratedSlug({
     worldId: world.id,
     campaignId: dungeonPage?.campaignId ?? null,
     parentPageId: levelOverview.level.id,
-    title: String(formData.get("title")),
+    title,
     type: "room",
     prepStatus: (formData.get("prepStatus") as DungeonPrepStatus) ?? "unprepared",
     contentBlocks: [
@@ -140,12 +166,14 @@ export async function createRoomChildAction(formData: FormData) {
   const dungeonSlug = String(formData.get("dungeonSlug"));
   const levelSlug = String(formData.get("levelSlug"));
   const roomSlug = String(formData.get("roomSlug"));
-  const childType = formData.get("childType") as RoomChildType;
 
   await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
-  if (!world) throw new Error("World not found");
+  if (!world) throw new Error("Welt nicht gefunden.");
+
+  const title = parseTitle(formData);
+  const childType = parseRoomChildType(formData);
 
   const roomCockpit = await dungeons().getRoomCockpit(
     worldSlug,
@@ -154,7 +182,7 @@ export async function createRoomChildAction(formData: FormData) {
     roomSlug,
     [],
   );
-  if (!roomCockpit) throw new Error("Room not found");
+  if (!roomCockpit) throw new Error("Raum nicht gefunden.");
 
   const dungeonPage = await repo().getPageBySlug(worldSlug, dungeonSlug);
 
@@ -162,7 +190,7 @@ export async function createRoomChildAction(formData: FormData) {
     worldId: world.id,
     campaignId: dungeonPage?.campaignId ?? null,
     parentPageId: roomCockpit.room.id,
-    title: String(formData.get("title")),
+    title,
     type: childType,
     summary: String(formData.get("summary") || "") || null,
     prepStatus: (formData.get("prepStatus") as DungeonPrepStatus) ?? "unprepared",

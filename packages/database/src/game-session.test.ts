@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
-import { createGameSessionService } from "./game-session";
+import { createGameSessionService, GameSessionService } from "./game-session";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
+
+/** Service whose calendar sync always fails, to verify QF4 graceful handling. */
+class FailingCalendarGameSessionService extends GameSessionService {
+  protected override async runCalendarSync(): Promise<void> {
+    throw new Error("calendar feed unavailable");
+  }
+}
 
 describe("UWE game session management", () => {
   let databaseUrl: string;
@@ -121,6 +128,29 @@ describe("UWE game session management", () => {
     const linkedIds = session.linkedPages.map((link) => link.pageId);
     assert.ok(linkedIds.includes(npcPageId));
     assert.ok(linkedIds.includes(locationPageId));
+  });
+
+  it("creates a session with a date even when calendar sync fails (QF4)", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const failing = new FailingCalendarGameSessionService(db);
+    const nextNumber = await failing.getNextSessionNumber(worldId, campaignId);
+
+    // create() must resolve despite runCalendarSync throwing (best-effort sync).
+    const session = await failing.create({
+      worldId,
+      campaignId,
+      title: "Session mit Datum trotz Kalenderfehler",
+      sessionNumber: nextNumber,
+      date: new Date("2026-02-01T19:00:00.000Z"),
+      status: "planned",
+    });
+
+    assert.ok(session.id, "session should be created despite calendar failure");
+    const persisted = await failing.getById(session.id);
+    assert.ok(persisted, "session must be persisted");
+    assert.equal(persisted.title, "Session mit Datum trotz Kalenderfehler");
+
+    await db.$disconnect();
   });
 
   it("links additional pages to an existing session", async () => {

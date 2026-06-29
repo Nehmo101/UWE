@@ -1,3 +1,39 @@
+/*
+ * Tailwind CSS v4 — additive only (theme + utilities, NO preflight reset).
+ * Tokens bridge to the existing --uwe-* theme variables.
+ * See docs/design/new-ui-stack.md.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "../app";
+@source "../src";
+
+@theme {
+  --color-background: var(--uwe-bg);
+  --color-foreground: var(--uwe-fg);
+  --color-card: var(--uwe-card, var(--uwe-card-bg));
+  --color-card-foreground: var(--uwe-fg);
+  --color-popover: var(--uwe-panel);
+  --color-popover-foreground: var(--uwe-fg);
+  --color-muted: var(--uwe-muted);
+  --color-muted-foreground: var(--uwe-fg-muted);
+  --color-border: var(--uwe-border);
+  --color-input: var(--uwe-input-bg, var(--uwe-border));
+  --color-ring: var(--uwe-focus-ring, var(--uwe-accent));
+  --color-primary: var(--uwe-accent);
+  --color-primary-foreground: var(--uwe-on-accent);
+  --color-secondary: var(--uwe-panel);
+  --color-secondary-foreground: var(--uwe-fg);
+  --color-accent: var(--uwe-accent-muted, var(--uwe-accent));
+  --color-accent-foreground: var(--uwe-on-accent);
+  --color-destructive: var(--uwe-danger);
+  --color-destructive-foreground: var(--uwe-danger-fg, var(--uwe-on-accent));
+  --color-sidebar: var(--uwe-sidebar-bg);
+  --color-sidebar-foreground: var(--uwe-sidebar-fg);
+  --radius: var(--uwe-radius-md, 0.625rem);
+}
+
 *,
 *::before,
 *::after {

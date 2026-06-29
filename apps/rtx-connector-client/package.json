@@ -18,6 +18,7 @@
     "@uwe/connector-client-config": "workspace:*",
     "@uwe/connector-model-profile": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
+    "@uwe/shared-utils": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

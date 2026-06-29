@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./slug": "./src/slug.ts"
+    "./slug": "./src/slug.ts",
+    "./navigation": "./src/navigation.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

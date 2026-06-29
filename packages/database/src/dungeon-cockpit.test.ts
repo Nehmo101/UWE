@@ -133,6 +133,29 @@ describe("UWE dungeon cockpit", () => {
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
+  it("generates unique slugs for dungeons with the same title (QF5)", async () => {
+    const dungeons = createDungeonCockpitService(databaseUrl);
+
+    const first = await dungeons.createWithGeneratedSlug({
+      worldId,
+      parentPageId: null,
+      title: "Gleicher Dungeon-Titel",
+      type: "dungeon",
+      prepStatus: "unprepared",
+    });
+    const second = await dungeons.createWithGeneratedSlug({
+      worldId,
+      parentPageId: null,
+      title: "Gleicher Dungeon-Titel",
+      type: "dungeon",
+      prepStatus: "unprepared",
+    });
+
+    assert.ok(first.slug);
+    assert.ok(second.slug);
+    assert.notEqual(first.slug, second.slug, "duplicate titles must get distinct slugs");
+  });
+
   it("builds dungeon > level > room hierarchy", async () => {
     const dungeons = createDungeonCockpitService(databaseUrl);
     const repo = createUweRepository(databaseUrl);

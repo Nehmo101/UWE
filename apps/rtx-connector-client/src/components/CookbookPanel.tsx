@@ -16,7 +16,19 @@ type Props = {
 };
 
 function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unbekannter Fehler";
+  if (typeof error === "string") {
+    return error.trim() || "Unbekannter Fehler";
+  }
+  if (error instanceof Error) {
+    return error.message.trim() || "Unbekannter Fehler";
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+  return "Unbekannter Fehler";
 }
 
 function fitBadgeStatus(level: CookbookFitLevel): "ok" | "degraded" | "error" {

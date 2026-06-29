@@ -271,10 +271,46 @@ export class GameSessionService {
     });
 
     if (session.date) {
-      await createCalendarService(this.db).syncSessionToCalendar(session.id);
+      // Calendar sync is best-effort: a failing/optional calendar must never
+      // fail session creation after the session was already persisted (QF4).
+      await this.safeCalendarSync(session.id);
     }
 
     return session;
+  }
+
+  /** Calendar sync that never throws — logs and continues on failure. */
+  private async safeCalendarSync(sessionId: string): Promise<void> {
+    try {
+      await this.runCalendarSync(sessionId);
+    } catch (error) {
+      console.warn(
+        `[game-session] Kalender-Sync fehlgeschlagen für Session ${sessionId} (Session bleibt erhalten):`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  /** Calendar unsync that never throws. */
+  private async safeCalendarUnsync(sessionId: string): Promise<void> {
+    try {
+      await this.runCalendarUnsync(sessionId);
+    } catch (error) {
+      console.warn(
+        `[game-session] Kalender-Unsync fehlgeschlagen für Session ${sessionId}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  /** Overridable seam for tests. Performs the actual calendar sync. */
+  protected async runCalendarSync(sessionId: string): Promise<void> {
+    await createCalendarService(this.db).syncSessionToCalendar(sessionId);
+  }
+
+  /** Overridable seam for tests. Performs the actual calendar unsync. */
+  protected async runCalendarUnsync(sessionId: string): Promise<void> {
+    await createCalendarService(this.db).unsyncSessionFromCalendar(sessionId);
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
@@ -309,11 +345,11 @@ export class GameSessionService {
     });
 
     if (input.date !== undefined || input.title !== undefined || input.sessionNumber !== undefined) {
-      const calendar = createCalendarService(this.db);
+      // Best-effort (QF4): calendar problems must not fail the session update.
       if (input.date === null) {
-        await calendar.unsyncSessionFromCalendar(sessionId);
+        await this.safeCalendarUnsync(sessionId);
       } else {
-        await calendar.syncSessionToCalendar(sessionId);
+        await this.safeCalendarSync(sessionId);
       }
     }
 
