@@ -31,20 +31,12 @@ permissions:
 jobs:
   cursor-agent:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.1
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
 
       - name: Create branch
         run: git checkout -b "${{ github.event.inputs.branch_name }}"
@@ -69,12 +61,6 @@ jobs:
           git add -A
           git diff --staged --quiet || git commit -m "chore(agent): ${{ github.event.inputs.title }}"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Light CI gate (PR check will enforce on the opened PR)
-        run: pnpm ci:light
-
       - name: Push branch
         run: git push -u origin "${{ github.event.inputs.branch_name }}"
 
@@ -86,7 +72,7 @@ jobs:
             --base main \
             --head "${{ github.event.inputs.branch_name }}" \
             --title "${{ github.event.inputs.title }}" \
-            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge. Full gate runs on merge to main." \
+            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge. PR gate (pr-check.yml) validates the opened PR; full gate runs on merge to main." \
             --draft || echo "PR may already exist"
 
       - name: Notify UWE completion callback
