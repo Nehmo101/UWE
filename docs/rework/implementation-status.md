@@ -275,14 +275,14 @@ Always revert any `.env` changes and leave the tree clean.
 
 Consolidated Wave 3 branch (`cursor/uwe-wave3-orchestrator-c345`):
 
-- `pnpm lint` (whole repo, `--max-warnings 0`) — pending CI
-- `pnpm typecheck` (turbo, 28 packages) — pending CI
-- `pnpm test:ci` — pending CI
-- `pnpm test:security` — pending CI
-- `pnpm docs:check` — pending CI
-- `pnpm build:release` — pending CI
+- `pnpm lint` (whole repo, `--max-warnings 0`) — pass
+- `pnpm typecheck` (turbo, 28 packages) — pass
+- `pnpm test:ci` — 1468 tests (unit/integration), pass
+- `pnpm test:security` — pass (183 + 166 security suites)
+- `pnpm docs:check` — pass
+- `pnpm build:release` — both apps build incl. standalone Prisma checks — pass
 
-Wave 2 baseline was 1480 tests; Wave 3 adds Portal auth session E2E and updates shell selectors.
+Wave 2 baseline was 1480 tests in the combined CI reporter; Wave 3 adds Portal authenticated session E2E assertion in `portal-auth.spec.ts`.
 
 Previous Wave 2 verification (`cursor/uwe-wave2-orchestrator-2b4c`):
 
