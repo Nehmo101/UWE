@@ -10,6 +10,7 @@ import {
 import { createGameSessionService } from "@uwe/database/server";
 import {
   AiPrivacyError,
+  AiRouterError,
   buildAiContext,
   contextContainsDmOnly,
   generateAiTask,
@@ -453,10 +454,14 @@ describe("AI Brain — generateAiTask with mock provider", () => {
     assert.equal(result.provider, "ollama");
   });
 
-  it("rejects cloud provider in datenschutz mode during generation", async () => {
+  it("rejects cloud provider when datenschutz mode blocks cloud (AiPrivacyError)", async () => {
     const repo = createUweRepository(databaseUrl);
     const seeded = await seedTerraWorld(repo);
+    const apiKeyStore = new InMemoryApiKeyStore();
+    apiKeyStore.set("openai", "test-openai-key");
 
+    // datenschutzMode=true blocks cloud even when localOnly=false — validateProviderForContext fires.
+    // W0 note: cloud + current_object is now routing-allowed; datenschutz is the blocking layer.
     await assert.rejects(
       () =>
         generateAiTask(repo, {
@@ -467,12 +472,39 @@ describe("AI Brain — generateAiTask with mock provider", () => {
           model: "gpt-4o-mini",
           options: {
             datenschutzMode: true,
-            localOnly: true,
+            localOnly: false,
             allowDmOnly: false,
           },
+          apiKeyStore,
           useMock: true,
         }),
       AiPrivacyError,
+    );
+  });
+
+  it("rejects cloud provider when local-only mode is active (AiRouterError)", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const apiKeyStore = new InMemoryApiKeyStore();
+    apiKeyStore.set("openai", "test-openai-key");
+
+    await assert.rejects(
+      () =>
+        generateAiTask(repo, {
+          taskType: "summarize_page",
+          worldId: seeded.world.id,
+          pageId: seeded.pages.validori.id,
+          providerId: "openai",
+          model: "gpt-4o-mini",
+          options: {
+            datenschutzMode: false,
+            localOnly: true,
+            allowDmOnly: false,
+          },
+          apiKeyStore,
+          useMock: true,
+        }),
+      AiRouterError,
     );
   });
 });

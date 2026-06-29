@@ -32,7 +32,9 @@ export function isCloudRouteAllowedForContext(contextMode: AiContextMode): boole
 
 /**
  * Server-side validation of provider + context mode combinations.
- * Cloud must never receive local campaign/object/brain/personal life context.
+ * Only personal_brain is permanently cloud-blocked.
+ * DnD/world modes (brain, current_object, current_object_plus_brain) may go to
+ * cloud when admin gateway policy allows (CLOUD_ALLOWED_CONTEXT_MODES).
  */
 export function validateProviderContextCombination(
   providerMode: AiProviderMode,
@@ -40,19 +42,22 @@ export function validateProviderContextCombination(
 ): void {
   if (providerMode === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
     throw new AiPrivacyError(
-      `Cloud-KI darf keinen lokalen Kontext erhalten. Modus „${CONTEXT_MODE_LABELS[contextMode]}“ ist mit Provider „${PROVIDER_MODE_LABELS.cloud}“ nicht erlaubt. Nutze lokale RTX oder wähle „Allgemeiner Chat“.`,
+      `Cloud-KI darf das persönliche Life-Brain niemals erhalten. „${CONTEXT_MODE_LABELS[contextMode]}" ist lokal-exklusiv — kein Cloud-Routing erlaubt. Nutze lokale RTX.`,
     );
   }
 }
 
-/** Validates resolved route against context mode (second line of defense after routing). */
+/**
+ * Validates resolved route against context mode (second line of defense after routing).
+ * Only personal_brain is blocked on cloud route; DnD modes are allowed when policy permits.
+ */
 export function validateResolvedRouteForContext(
   route: AiResolvedRoute,
   contextMode: AiContextMode,
 ): void {
   if (route === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
     throw new AiPrivacyError(
-      `Interner Datenschutzfehler: Cloud-Route für „${CONTEXT_MODE_LABELS[contextMode]}“ blockiert. Lokaler Kontext darf nicht an Cloud-Provider gesendet werden.`,
+      `Interner Datenschutzfehler: Cloud-Route für „${CONTEXT_MODE_LABELS[contextMode]}" blockiert. Persönlicher Life-Brain-Kontext darf nicht an Cloud-Provider gesendet werden.`,
     );
   }
 }
@@ -66,11 +71,18 @@ export function validateContextModeRequirements(
 
   if (needsPage && !pageSlug?.trim()) {
     throw new AiRouterError(
-      `Kontextmodus „${CONTEXT_MODE_LABELS[contextMode]}“ erfordert eine Seite (pageSlug).`,
+      `Kontextmodus „${CONTEXT_MODE_LABELS[contextMode]}" erfordert eine Seite (pageSlug).`,
     );
   }
 }
 
+/**
+ * Enforces RTX requirement based on provider mode and context mode.
+ * - personal_brain in auto mode: always requires RTX (no cloud fallback, privacy law).
+ * - explicit local_rtx: requires RTX regardless of context.
+ * - DnD/world modes (brain, current_object, …) in auto mode: RTX preferred,
+ *   cloud fallback allowed when RTX is offline (handled by gateway policy).
+ */
 export function validateLocalRtxRequired(
   providerMode: AiProviderMode,
   contextMode: AiContextMode,
@@ -78,14 +90,14 @@ export function validateLocalRtxRequired(
 ): void {
   const needsRtx =
     providerMode === "local_rtx" ||
-    (providerMode === "auto" && contextModeRequiresLocalContext(contextMode));
+    (providerMode === "auto" && contextMode === "personal_brain");
 
   if (needsRtx && !rtxOnline) {
     const contextLabel = CONTEXT_MODE_LABELS[contextMode];
     throw new AiRouterError(
       providerMode === "local_rtx"
-        ? "Lokale RTX-Inference ist nicht erreichbar. Bitte RTX-PC prüfen oder Provider auf „Automatisch“/„Cloud“ setzen (nur für Allgemeiner Chat)."
-        : `Für „${contextLabel}“ ist lokale RTX erforderlich, aber RTX ist offline. Cloud-Fallback ist aus Datenschutzgründen nicht erlaubt.`,
+        ? `Lokale RTX-Inference ist nicht erreichbar. Bitte RTX-PC prüfen oder Provider auf „${PROVIDER_MODE_LABELS.auto}" setzen.`
+        : `Für „${contextLabel}" ist lokale RTX erforderlich, aber RTX ist offline. Cloud-Fallback ist aus Datenschutzgründen nicht erlaubt.`,
     );
   }
 }

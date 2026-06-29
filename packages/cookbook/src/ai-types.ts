@@ -27,10 +27,12 @@ export type CookbookAiTaskType =
   | "fill_dungeon_room"
   | "prepare_mail_draft";
 
+/**
+ * Context modes that are permanently local-only in the cookbook routing layer.
+ * Only personal_brain is hard-blocked; DnD/world modes (brain, current_object,
+ * current_object_plus_brain) may go to cloud when admin gateway policy allows.
+ */
 export const COOKBOOK_LOCAL_ONLY_CONTEXT_MODES: readonly CookbookAiContextMode[] = [
-  "brain",
-  "current_object",
-  "current_object_plus_brain",
   "personal_brain",
 ] as const;
 

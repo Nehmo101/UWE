@@ -79,7 +79,9 @@ export const MASTER_ADMIN_PERMISSIONS: readonly AiFeaturePermission[] = [
 
 export const DEFAULT_PRIVACY_RULES: Record<AiFeatureCategory, AiPrivacyLevel> = {
   general_chat: "CLOUD_ALLOWED",
-  dnd_world: "CLOUD_FORBIDDEN",
+  // DnD/world context may go to cloud when admin policy allows (RTX preferred, cloud fallback OK).
+  // personal_brain remains hard local-only and cannot be changed via UI or API.
+  dnd_world: "CLOUD_ALLOWED",
   personal_brain: "CLOUD_FORBIDDEN",
   private_notes: "CLOUD_FORBIDDEN",
   admin_diagnostics: "CLOUD_ALLOWED",

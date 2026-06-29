@@ -78,14 +78,26 @@ export async function patchAiGatewayConfig(
   const denied = requireMasterAdmin(user);
   if (denied) return denied;
 
+  // personal_brain is permanently local-only — reject any attempt to change it.
+  if (body.privacyRules?.personal_brain !== undefined && body.privacyRules.personal_brain !== "CLOUD_FORBIDDEN") {
+    return jsonError(
+      "personal_brain kann nicht auf Cloud gesetzt werden — Life-Brain ist permanent lokal-only.",
+      400,
+    );
+  }
+
   const service = gatewayService();
   const current = await service.getConfig();
+
+  // Always enforce personal_brain = CLOUD_FORBIDDEN regardless of stored value.
+  const mergedPrivacyRules = body.privacyRules
+    ? { ...current.privacyRules, ...body.privacyRules, personal_brain: "CLOUD_FORBIDDEN" as AiPrivacyLevel }
+    : current.privacyRules;
+
   const config = await service.updateConfig({
     routingMode: body.routingMode ?? current.routingMode,
     cloudFallbackEnabled: body.cloudFallbackEnabled ?? current.cloudFallbackEnabled,
-    privacyRules: body.privacyRules
-      ? { ...current.privacyRules, ...body.privacyRules }
-      : current.privacyRules,
+    privacyRules: mergedPrivacyRules,
     dailyBudgetUsd: body.dailyBudgetUsd !== undefined ? body.dailyBudgetUsd : current.dailyBudgetUsd,
     monthlyBudgetUsd:
       body.monthlyBudgetUsd !== undefined ? body.monthlyBudgetUsd : current.monthlyBudgetUsd,

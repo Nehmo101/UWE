@@ -76,6 +76,15 @@ const ROUTING_LABELS: Record<RoutingMode, string> = {
   DISABLED: "Deaktiviert",
 };
 
+const PRIVACY_CATEGORY_LABELS: Record<string, string> = {
+  general_chat: "Allgemeiner Chat",
+  dnd_world: "DnD-Weltwissen (Brain, Objekte)",
+  personal_brain: "Persönliches Life-Brain",
+  private_notes: "Private Notizen",
+  admin_diagnostics: "Admin-Systemdiagnose",
+  image_generation: "Bildfunktionen",
+};
+
 const WIZARD_STEPS = [
   "RTX verbinden",
   "Routing-Modus",
@@ -474,26 +483,42 @@ export function AiGatewayWizard() {
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Privacy-Regeln</h2>
           <p className="uwe-muted">
-            Private Inhalte gehen standardmäßig niemals in die Cloud.
+            Legt fest, welche Inhalte an Cloud-Provider gesendet werden dürfen.
+            RTX wird immer bevorzugt — Cloud ist optionaler Fallback.
           </p>
-          {Object.entries(data.config.privacyRules).map(([category, level]) => (
-            <label key={category} className="uwe-field">
-              {category}
-              <select
-                className="uwe-input"
-                value={level}
-                onChange={(e) =>
-                  void patchConfig({
-                    privacyRules: { [category]: e.target.value as PrivacyLevel },
-                  })
-                }
-              >
-                <option value="CLOUD_ALLOWED">Cloud erlaubt</option>
-                <option value="CLOUD_FORBIDDEN">Cloud verboten</option>
-                <option value="LOCAL_REQUIRED">Lokal erforderlich</option>
-              </select>
-            </label>
-          ))}
+          <p className="uwe-muted">
+            <strong>Hinweis:</strong> DnD-Weltwissen darf per Admin-Policy zur Cloud
+            (Standard: erlaubt, RTX bevorzugt). Persönliches Life-Brain ist permanent
+            lokal-only und nicht konfigurierbar.
+          </p>
+          {Object.entries(data.config.privacyRules).map(([category, level]) => {
+            const isLocked = category === "personal_brain";
+            const label = PRIVACY_CATEGORY_LABELS[category] ?? category;
+            return (
+              <label key={category} className="uwe-field">
+                {label}
+                {isLocked ? (
+                  <span className="uwe-input uwe-input--disabled" aria-disabled="true">
+                    Nur lokal — nicht änderbar
+                  </span>
+                ) : (
+                  <select
+                    className="uwe-input"
+                    value={level}
+                    onChange={(e) =>
+                      void patchConfig({
+                        privacyRules: { [category]: e.target.value as PrivacyLevel },
+                      })
+                    }
+                  >
+                    <option value="CLOUD_ALLOWED">Cloud erlaubt (RTX bevorzugt)</option>
+                    <option value="CLOUD_FORBIDDEN">Cloud verboten (lokal erzwungen)</option>
+                    <option value="LOCAL_REQUIRED">Nur lokal (streng)</option>
+                  </select>
+                )}
+              </label>
+            );
+          })}
         </section>
       )}
 

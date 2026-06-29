@@ -175,27 +175,36 @@ function buildRouterPrompts(
 ): { systemPrompt: string; userPrompt: string } {
 
   if (route === "cloud") {
+    if (contextMode === "general_chat") {
+      const userText = request.userPrompt?.trim();
 
-    const userText = request.userPrompt?.trim();
+      if (!userText) {
 
-    if (!userText) {
+        throw new AiRouterError(
 
-      throw new AiRouterError(
+          "Cloud-Chat erfordert eine Nutzer-Nachricht — lokaler Kontext wird nicht übermittelt.",
 
-        "Cloud-Chat erfordert eine Nutzer-Nachricht — lokaler Kontext wird nicht übermittelt.",
+        );
 
-      );
+      }
 
+      return {
+
+        systemPrompt: GENERAL_CHAT_SYSTEM,
+
+        userPrompt: userText,
+
+      };
     }
 
+    // For DnD context modes (brain, current_object, current_object_plus_brain) on cloud route,
+    // send full task prompts with context — owner policy allows campaign context to cloud
+    // when gateway privacy level is CLOUD_ALLOWED. personal_brain is blocked upstream and
+    // never reaches this path.
     return {
-
-      systemPrompt: GENERAL_CHAT_SYSTEM,
-
-      userPrompt: userText,
-
+      systemPrompt: buildTaskSystemPrompt(request.taskType),
+      userPrompt: buildTaskPrompt(request.taskType, safeContext, request.userPrompt),
     };
-
   }
 
 
@@ -601,7 +610,11 @@ export async function routeAiRequest(
 
 
 
-  validateProviderForContext(resolution.providerId, context, settings);
+  // personal_brain is already blocked upstream; DnD modes may go to cloud when policy allows.
+  validateProviderForContext(resolution.providerId, context, {
+    ...settings,
+    allowLocalContextOnCloud: request.contextMode !== "personal_brain",
+  });
 
 
 

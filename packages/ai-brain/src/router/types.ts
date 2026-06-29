@@ -63,13 +63,22 @@ export class AiRouterError extends Error {
   }
 }
 
-/** Context modes that must never be sent to a cloud provider. */
+/**
+ * Context modes that must NEVER be sent to a cloud provider.
+ * Only personal_brain is hard-blocked; DnD/world modes may go to cloud when
+ * admin gateway policy permits (DEFAULT_PRIVACY_RULES.dnd_world = CLOUD_ALLOWED).
+ */
 export const LOCAL_ONLY_CONTEXT_MODES: readonly AiContextMode[] = [
-  "brain",
-  "current_object",
-  "current_object_plus_brain",
   "personal_brain",
 ] as const;
 
-/** Only mode allowed when route resolves to cloud. */
-export const CLOUD_ALLOWED_CONTEXT_MODES: readonly AiContextMode[] = ["general_chat"] as const;
+/**
+ * Context modes that may be routed to cloud when gateway policy allows.
+ * personal_brain is excluded — it is permanently local-only.
+ */
+export const CLOUD_ALLOWED_CONTEXT_MODES: readonly AiContextMode[] = [
+  "general_chat",
+  "brain",
+  "current_object",
+  "current_object_plus_brain",
+] as const;

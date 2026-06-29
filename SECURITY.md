@@ -150,19 +150,25 @@ In-memory per-process limiter (`@uwe/security`). **Not sufficient alone** for mu
 
 ## Cloud AI Context Boundaries
 
-**Non-negotiable** — enforced server-side by the AI router / privacy guard:
+Enforced server-side by the AI router / privacy guard (`packages/ai-brain`):
 
-| Context | Cloud allowed? |
-|---------|----------------|
-| General chat (prompt only) | Yes |
-| Brain / world knowledge | **No** — local RTX only |
-| Current object (page, NPC, …) | **No** |
-| Object + brain | **No** |
-| Auto mode + brain context + RTX offline | **Blocked** — no cloud fallback |
+| Context | Cloud allowed? | Notes |
+|---------|----------------|-------|
+| General chat (prompt only) | Yes | Always |
+| Brain / world knowledge | **Configurable** | Default: CLOUD_ALLOWED (RTX preferred, cloud fallback OK) |
+| Current object (page, NPC, …) | **Configurable** | Same as brain; admin can set CLOUD_FORBIDDEN |
+| Object + brain | **Configurable** | Same as brain |
+| Auto mode + DnD context + RTX offline | **Allowed** → cloud fallback | When gateway policy is CLOUD_ALLOWED |
+| Personal Life Brain (`personal_brain`) | **Never** — hard rule | Permanently local-only, cannot be configured |
 
-Cloud never receives: sessions, NPCs, locations, canon, DM-only notes, embeddings, or personal life-brain data.
+**Hard rules (non-negotiable, code-enforced):**
+- `personal_brain` (Life Brain) never goes to cloud, regardless of any config.
+- DM-only content is always stripped before cloud routing.
+- datenschutzMode=true blocks all campaign data from cloud.
 
-Details: [SECURITY_NOTES.md](SECURITY_NOTES.md).
+Admin gateway policy (`DEFAULT_PRIVACY_RULES.dnd_world = CLOUD_ALLOWED`) allows DnD world context to reach cloud providers when RTX is offline. This is intentional and owner-approved behaviour (W0 Atlas policy).
+
+Details: [SECURITY_NOTES.md](SECURITY_NOTES.md), [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md).
 
 ---
 

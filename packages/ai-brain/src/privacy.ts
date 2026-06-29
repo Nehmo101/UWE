@@ -26,7 +26,17 @@ export function contextContainsDmOnly(context: AiContext): boolean {
 export function validateProviderForContext(
   providerId: AiProviderId,
   context: AiContext,
-  options: { datenschutzMode: boolean; localOnly: boolean },
+  options: {
+    datenschutzMode: boolean;
+    localOnly: boolean;
+    /**
+     * When true, local campaign/brain context is allowed on the cloud route.
+     * Set to true for DnD modes (brain, current_object, current_object_plus_brain)
+     * when admin gateway policy is CLOUD_ALLOWED. personal_brain must never set this.
+     * Defaults to false for backward-compatible behaviour.
+     */
+    allowLocalContextOnCloud?: boolean;
+  },
 ): void {
   if (options.datenschutzMode && isCloudProvider(providerId)) {
     throw new AiPrivacyError(
@@ -40,7 +50,7 @@ export function validateProviderForContext(
     );
   }
 
-  if (isCloudProvider(providerId) && contextContainsLocalKnowledge(context)) {
+  if (isCloudProvider(providerId) && !options.allowLocalContextOnCloud && contextContainsLocalKnowledge(context)) {
     throw new AiPrivacyError(
       "Cloud-Provider dürfen keinen lokalen Kampagnen-, Brain- oder Objekt-Kontext erhalten.",
     );

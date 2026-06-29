@@ -9,22 +9,25 @@ description: Enforce UWE local-first and privacy rules — RTX-only brain contex
 
 1. **Campaign and brain data stay on the UWE host** — SQLite, uploads, backups local/self-hosted.
 2. **RTX/Ollama/LM Studio = LAN only** — never in Cloudflare Tunnel or public DNS.
-3. **Cloud AI = general chat only** — no world pages, brain chunks, or personal life data.
-4. **Explicit Apply** — AI never writes canon without DM review.
+3. **Personal Life Brain = strictly local** — personal_brain never goes to cloud, hard-coded, not configurable.
+4. **DnD/world context = configurable** — brain/current_object modes may go to cloud when admin policy allows (W0 default: CLOUD_ALLOWED, RTX preferred).
+5. **Explicit Apply** — AI never writes canon without DM review.
 
-## Context modes
+## Context modes (W0 Atlas Policy)
 
-| Mode | Cloud allowed | RTX required |
-|------|---------------|--------------|
-| `general_chat` | Yes | No (falls back to cloud) |
-| `brain` (DnD) | **No** | Yes |
-| `current_object` | **No** | Yes |
-| `current_object_plus_brain` | **No** | Yes |
-| `personal_brain` | **No** | Yes |
+| Mode | Cloud allowed | RTX required | Notes |
+|------|---------------|--------------|-------|
+| `general_chat` | Yes | No (falls back to cloud) | No context in prompt |
+| `brain` (DnD) | **Configurable** | No (cloud fallback OK) | Default: CLOUD_ALLOWED |
+| `current_object` | **Configurable** | No (cloud fallback OK) | Default: CLOUD_ALLOWED |
+| `current_object_plus_brain` | **Configurable** | No (cloud fallback OK) | Default: CLOUD_ALLOWED |
+| `personal_brain` | **Never** | Yes (always) | Hard local-only, not configurable |
 
-Defined in `packages/ai-brain/src/router/types.ts` (`LOCAL_ONLY_CONTEXT_MODES`).
+`LOCAL_ONLY_CONTEXT_MODES = ["personal_brain"]` — only Life Brain is permanently blocked.
 
-Validation: `validateProviderContextCombination`, `validateResolvedRouteForContext`.
+Defined in `packages/ai-brain/src/router/types.ts`.
+
+Validation: `validateProviderContextCombination`, `validateResolvedRouteForContext` (both block only `personal_brain` on cloud routes).
 
 ## Brain separation
 

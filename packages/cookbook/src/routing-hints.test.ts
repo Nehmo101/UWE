@@ -26,9 +26,13 @@ const HARDWARE: CookbookHardwareProfile = {
 };
 
 describe("routing-hints", () => {
-  it("blocks cloud for private brain context", () => {
+  it("blocks cloud for personal_brain context (hard rule)", () => {
     assert.equal(isPrivateContextMode("personal_brain"), true);
     assert.equal(isPrivateContextMode("general_chat"), false);
+    // W0 policy: DnD modes are no longer private (allowed to cloud when policy permits)
+    assert.equal(isPrivateContextMode("brain"), false);
+    assert.equal(isPrivateContextMode("current_object"), false);
+    assert.equal(isPrivateContextMode("current_object_plus_brain"), false);
 
     const hints = buildCookbookRoutingHints({
       providerMode: "cloud",
@@ -42,6 +46,20 @@ describe("routing-hints", () => {
     assert.equal(hints.cloudBlocked, true);
     assert.ok(hints.cloudBlockReason?.includes("Cloud"));
     assert.equal(hints.preferLocal, true);
+  });
+
+  it("does not block cloud for DnD brain context when policy allows (W0 policy)", () => {
+    const hints = buildCookbookRoutingHints({
+      providerMode: "cloud",
+      contextMode: "brain",
+      taskType: "summarize_page",
+      localOnlyMode: false,
+      rtxReady: false,
+      hardware: HARDWARE,
+    });
+
+    assert.equal(hints.cloudBlocked, false);
+    assert.equal(hints.cloudBlockReason, null);
   });
 
   it("blocks cloud when local-only mode is active", () => {

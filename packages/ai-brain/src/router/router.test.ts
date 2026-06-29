@@ -73,6 +73,9 @@ type RouteExpectation =
   | { outcome: "allowed"; route: "local_rtx" | "cloud"; via: "resolveProviderRoute" }
   | { outcome: "blocked"; error: typeof AiPrivacyError | typeof AiRouterError; via: "privacyGuard" | "resolveProviderRoute" };
 
+// W0 policy: personal_brain is the only permanently cloud-blocked context.
+// DnD/world modes (brain, current_object, current_object_plus_brain) may go to
+// cloud when admin gateway policy allows (default: CLOUD_ALLOWED).
 const PROVIDER_CONTEXT_MATRIX: Array<{
   id: number;
   provider: AiProviderMode;
@@ -82,9 +85,10 @@ const PROVIDER_CONTEXT_MATRIX: Array<{
   expect: RouteExpectation;
 }> = [
   { id: 1, provider: "cloud", context: "general_chat", rtxReady: false, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
-  { id: 2, provider: "cloud", context: "brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "blocked", error: AiPrivacyError, via: "privacyGuard" } },
-  { id: 3, provider: "cloud", context: "current_object", rtxReady: true, cloudAvailable: true, expect: { outcome: "blocked", error: AiPrivacyError, via: "privacyGuard" } },
-  { id: 4, provider: "cloud", context: "current_object_plus_brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "blocked", error: AiPrivacyError, via: "privacyGuard" } },
+  // DnD modes with explicit cloud — now allowed (owner policy permits campaign context to cloud)
+  { id: 2, provider: "cloud", context: "brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
+  { id: 3, provider: "cloud", context: "current_object", rtxReady: true, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
+  { id: 4, provider: "cloud", context: "current_object_plus_brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
   { id: 5, provider: "local_rtx", context: "general_chat", rtxReady: true, cloudAvailable: false, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
   { id: 6, provider: "local_rtx", context: "brain", rtxReady: true, cloudAvailable: false, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
   { id: 7, provider: "local_rtx", context: "current_object", rtxReady: true, cloudAvailable: false, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
@@ -92,9 +96,11 @@ const PROVIDER_CONTEXT_MATRIX: Array<{
   { id: 9, provider: "auto", context: "general_chat", rtxReady: true, cloudAvailable: true, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
   { id: 10, provider: "auto", context: "general_chat", rtxReady: false, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
   { id: 11, provider: "auto", context: "brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
-  { id: 12, provider: "auto", context: "brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
-  { id: 13, provider: "auto", context: "current_object", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
-  { id: 14, provider: "auto", context: "current_object_plus_brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
+  // DnD modes with auto + RTX offline — now allowed, falls through to cloud
+  { id: 12, provider: "auto", context: "brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
+  { id: 13, provider: "auto", context: "current_object", rtxReady: false, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
+  { id: 14, provider: "auto", context: "current_object_plus_brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "allowed", route: "cloud", via: "resolveProviderRoute" } },
+  // personal_brain remains permanently cloud-blocked (hard rule, not configurable)
   { id: 15, provider: "cloud", context: "personal_brain", rtxReady: true, cloudAvailable: true, expect: { outcome: "blocked", error: AiPrivacyError, via: "privacyGuard" } },
   { id: 16, provider: "auto", context: "personal_brain", rtxReady: false, cloudAvailable: true, expect: { outcome: "blocked", error: AiRouterError, via: "resolveProviderRoute" } },
   { id: 17, provider: "local_rtx", context: "personal_brain", rtxReady: true, cloudAvailable: false, expect: { outcome: "allowed", route: "local_rtx", via: "resolveProviderRoute" } },
@@ -123,33 +129,32 @@ async function resolveRouteForScenario(
 }
 
 describe("AI Router — Privacy Guard", () => {
-  it("blocks cloud provider with brain context", () => {
+  // W0 policy: only personal_brain is permanently cloud-blocked
+  it("allows cloud provider with brain context (W0 policy)", () => {
+    assert.doesNotThrow(() => validateProviderContextCombination("cloud", "brain"));
+  });
+
+  it("allows cloud provider with current_object context (W0 policy)", () => {
+    assert.doesNotThrow(() => validateProviderContextCombination("cloud", "current_object"));
+  });
+
+  it("allows cloud provider with current_object_plus_brain context (W0 policy)", () => {
+    assert.doesNotThrow(() => validateProviderContextCombination("cloud", "current_object_plus_brain"));
+  });
+
+  it("allows cloud provider with general_chat", () => {
+    assert.doesNotThrow(() => validateProviderContextCombination("cloud", "general_chat"));
+  });
+
+  it("blocks cloud provider with personal_brain (hard rule, not configurable)", () => {
     assert.throws(
-      () => validateProviderContextCombination("cloud", "brain"),
+      () => validateProviderContextCombination("cloud", "personal_brain"),
       (error: unknown) => {
         assert.ok(error instanceof AiPrivacyError);
-        assert.match((error as AiPrivacyError).message, /Cloud-KI darf keinen lokalen Kontext/);
+        assert.match((error as AiPrivacyError).message, /lokal-exklusiv|Life-Brain/);
         return true;
       },
     );
-  });
-
-  it("blocks cloud provider with current_object context", () => {
-    assert.throws(
-      () => validateProviderContextCombination("cloud", "current_object"),
-      (error: unknown) => error instanceof AiPrivacyError,
-    );
-  });
-
-  it("blocks cloud provider with current_object_plus_brain context", () => {
-    assert.throws(
-      () => validateProviderContextCombination("cloud", "current_object_plus_brain"),
-      (error: unknown) => error instanceof AiPrivacyError,
-    );
-  });
-
-  it("allows cloud provider with general_chat only", () => {
-    assert.doesNotThrow(() => validateProviderContextCombination("cloud", "general_chat"));
   });
 
   it("allows local_rtx with all context modes at validation layer", () => {
@@ -164,9 +169,15 @@ describe("AI Router — Privacy Guard", () => {
     }
   });
 
-  it("validateResolvedRouteForContext blocks cloud route for local context", () => {
+  it("validateResolvedRouteForContext allows cloud route for DnD context modes (W0 policy)", () => {
+    assert.doesNotThrow(() => validateResolvedRouteForContext("cloud", "brain"));
+    assert.doesNotThrow(() => validateResolvedRouteForContext("cloud", "current_object"));
+    assert.doesNotThrow(() => validateResolvedRouteForContext("cloud", "current_object_plus_brain"));
+  });
+
+  it("validateResolvedRouteForContext still blocks cloud route for personal_brain", () => {
     assert.throws(
-      () => validateResolvedRouteForContext("cloud", "brain"),
+      () => validateResolvedRouteForContext("cloud", "personal_brain"),
       (error: unknown) => error instanceof AiPrivacyError,
     );
   });
@@ -185,19 +196,36 @@ describe("AI Router — Privacy Guard", () => {
 
   it("contextModeRequiresLocalContext identifies protected modes", () => {
     assert.equal(contextModeRequiresLocalContext("general_chat"), false);
-    assert.equal(contextModeRequiresLocalContext("brain"), true);
+    // W0 policy: brain/DnD modes are no longer local-only; only personal_brain is
+    assert.equal(contextModeRequiresLocalContext("brain"), false);
+    assert.equal(contextModeRequiresLocalContext("current_object"), false);
+    assert.equal(contextModeRequiresLocalContext("personal_brain"), true);
     assert.equal(isCloudRouteAllowedForContext("general_chat"), true);
-    assert.equal(isCloudRouteAllowedForContext("brain"), false);
+    // DnD modes now cloud-allowed when policy permits
+    assert.equal(isCloudRouteAllowedForContext("brain"), true);
+    assert.equal(isCloudRouteAllowedForContext("current_object"), true);
+    assert.equal(isCloudRouteAllowedForContext("current_object_plus_brain"), true);
+    assert.equal(isCloudRouteAllowedForContext("personal_brain"), false);
   });
 
-  it("validateLocalRtxRequired enforces RTX for local context in auto mode", () => {
+  it("validateLocalRtxRequired enforces RTX only for personal_brain in auto mode", () => {
+    // W0 policy: DnD modes in auto allow cloud fallback when RTX offline
+    assert.doesNotThrow(() => validateLocalRtxRequired("auto", "brain", false));
+    assert.doesNotThrow(() => validateLocalRtxRequired("auto", "current_object", false));
+    assert.doesNotThrow(() => validateLocalRtxRequired("auto", "current_object_plus_brain", false));
+    assert.doesNotThrow(() => validateLocalRtxRequired("auto", "general_chat", false));
+    // personal_brain still requires RTX in auto mode
     assert.throws(
-      () => validateLocalRtxRequired("auto", "brain", false),
+      () => validateLocalRtxRequired("auto", "personal_brain", false),
       (error: unknown) => error instanceof AiRouterError,
     );
-    assert.doesNotThrow(() => validateLocalRtxRequired("auto", "general_chat", false));
+    // explicit local_rtx always requires RTX regardless of context
     assert.throws(
       () => validateLocalRtxRequired("local_rtx", "general_chat", false),
+      (error: unknown) => error instanceof AiRouterError,
+    );
+    assert.throws(
+      () => validateLocalRtxRequired("local_rtx", "brain", false),
       (error: unknown) => error instanceof AiRouterError,
     );
   });
@@ -287,7 +315,7 @@ describe("AI Router — provider helpers", () => {
   });
 });
 
-describe("AI Router — cloud regression (no brain data)", () => {
+describe("AI Router — cloud regression", () => {
   let databaseUrl: string;
 
   beforeEach(() => {
@@ -328,33 +356,43 @@ describe("AI Router — cloud regression (no brain data)", () => {
     assert.doesNotMatch(result.prompts.systemPrompt, /Validori|Magister/i);
   });
 
-  it("routeAiRequest blocks auto brain fallback when RTX offline", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const seeded = await seedTerraWorld(repo);
+  // W0 policy: auto + brain + RTX offline now resolves to cloud (no longer blocked).
+  // Tested via resolveProviderRoute (mirrors matrix cases 12-14) since routeAiRequest
+  // with useMock: true simulates RTX as online regardless of env.
+  it("resolveProviderRoute auto + brain + RTX offline resolves to cloud (W0 policy)", async () => {
     snapshotEnv();
     configureOfflineRtxEnv();
-
     try {
-      await assert.rejects(
-        () =>
-          routeAiRequest(
-            { repo },
-            {
-              providerMode: "auto",
-              contextMode: "brain",
-              taskType: "summarize_page",
-              worldSlug: seeded.world.slug,
-              pageSlug: seeded.pages.validori.slug,
-              userPrompt: "Was weiß die Welt?",
-              apiKeyStore: cloudKeyStore(),
-              useMock: false,
-            },
-          ),
-        (error: unknown) => error instanceof AiRouterError,
-      );
+      const resolution = await resolveProviderRoute("auto", "brain", cloudKeyStore(), {
+        useMock: false,
+      });
+      assert.equal(resolution.route, "cloud");
     } finally {
       restoreEnv();
       globalThis.fetch = originalFetch;
     }
+  });
+
+  // personal_brain still blocks cloud in all cases (hard rule)
+  it("routeAiRequest blocks personal_brain + cloud explicitly", async () => {
+    const repo = createUweRepository(databaseUrl);
+    await seedTerraWorld(repo);
+
+    await assert.rejects(
+      () =>
+        routeAiRequest(
+          { repo },
+          {
+            providerMode: "cloud",
+            contextMode: "personal_brain",
+            taskType: "summarize_page",
+            userPrompt: "Was ist in meinem Brain?",
+            apiKeyStore: cloudKeyStore(),
+            useMock: true,
+            cloudProviderId: "openai",
+          },
+        ),
+      (error: unknown) => error instanceof AiPrivacyError,
+    );
   });
 });

@@ -38,8 +38,10 @@ describe("ai-gateway-service", () => {
     assert.equal(isMasterAdminRole("dm"), false);
   });
 
-  it("DEFAULT_PRIVACY_RULES forbids cloud for sensitive categories", () => {
-    assert.equal(DEFAULT_PRIVACY_RULES.dnd_world, "CLOUD_FORBIDDEN");
+  it("DEFAULT_PRIVACY_RULES reflects W0 policy: dnd_world CLOUD_ALLOWED, personal_brain hard-blocked", () => {
+    // W0 policy: DnD world context may go to cloud (RTX preferred, cloud fallback OK)
+    assert.equal(DEFAULT_PRIVACY_RULES.dnd_world, "CLOUD_ALLOWED");
+    // personal_brain remains permanently CLOUD_FORBIDDEN — not configurable
     assert.equal(DEFAULT_PRIVACY_RULES.personal_brain, "CLOUD_FORBIDDEN");
     assert.equal(DEFAULT_PRIVACY_RULES.private_notes, "CLOUD_FORBIDDEN");
     assert.equal(DEFAULT_PRIVACY_RULES.general_chat, "CLOUD_ALLOWED");

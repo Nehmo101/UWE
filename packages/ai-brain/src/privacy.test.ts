@@ -52,29 +52,51 @@ describe("privacy — resolveServerAllowDmOnly", () => {
 });
 
 describe("privacy — cloud provider validation", () => {
-  it("blocks cloud when context has pages", () => {
+  const pageWithContent = [
+    {
+      pageId: "p1",
+      title: "Test",
+      pageType: "npc",
+      visibility: "player_visible" as const,
+      canonicalStatus: "canon" as const,
+      summary: null,
+      tags: [],
+      aliases: [],
+      contentBlocks: [
+        { blockId: "b1", type: "text", visibility: "player_visible" as const, content: "Hello" },
+      ],
+    },
+  ];
+
+  it("blocks cloud when context has pages (legacy: no contextMode/allowLocalContextOnCloud)", () => {
     assert.throws(
       () =>
         validateProviderForContext(
           "openai",
-          emptyContext({
-            pages: [
-              {
-                pageId: "p1",
-                title: "Test",
-                pageType: "npc",
-                visibility: "player_visible",
-                canonicalStatus: "canon",
-                summary: null,
-                tags: [],
-                aliases: [],
-                contentBlocks: [
-                  { blockId: "b1", type: "text", visibility: "player_visible", content: "Hello" },
-                ],
-              },
-            ],
-          }),
+          emptyContext({ pages: pageWithContent }),
           { datenschutzMode: false, localOnly: false },
+        ),
+      (error: unknown) => error instanceof AiPrivacyError,
+    );
+  });
+
+  it("allows cloud for DnD brain context when allowLocalContextOnCloud=true (W0 policy)", () => {
+    assert.doesNotThrow(() =>
+      validateProviderForContext(
+        "openai",
+        emptyContext({ pages: pageWithContent }),
+        { datenschutzMode: false, localOnly: false, allowLocalContextOnCloud: true },
+      ),
+    );
+  });
+
+  it("still blocks cloud for DnD context when datenschutzMode is active", () => {
+    assert.throws(
+      () =>
+        validateProviderForContext(
+          "openai",
+          emptyContext({ pages: pageWithContent }),
+          { datenschutzMode: true, localOnly: false, allowLocalContextOnCloud: true },
         ),
       (error: unknown) => error instanceof AiPrivacyError,
     );
