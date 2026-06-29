@@ -15,8 +15,7 @@ import {
 } from "@uwe/database/server";
 import { resolveUweAppUrls } from "@uwe/auth";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
-import { StudioAppShell } from "@/components/StudioAppShell";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 
 export default async function AdminOverviewPage() {
   const [dashboard, system, backup, productionWarnings, settings] = await Promise.all([
@@ -41,19 +40,23 @@ export default async function AdminOverviewPage() {
         : "error";
 
   return (
-    <StudioAppShell
-      variant="admin"
-      activePath="/admin"
-      title="Admin-Übersicht"
-      summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
-      bottomNav={studioGlobalBottomNav("more")}
-      actions={
-        <HealthBadge
-          status={dashboard.ok ? "ok" : "degraded"}
-          label={dashboard.ok ? "System OK" : "Einschränkungen"}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Heute", href: "/today" }, { label: "Admin" }]}
         />
       }
     >
+      <PageHeader
+        title="Admin-Übersicht"
+        summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
+        actions={
+          <HealthBadge
+            status={dashboard.ok ? "ok" : "degraded"}
+            label={dashboard.ok ? "System OK" : "Einschränkungen"}
+          />
+        }
+      />
           {criticalWarnings.length > 0 && (
             <div className="uwe-form-error" role="alert" style={{ marginBottom: "1rem" }}>
               <strong>Kritische Hinweise:</strong>
@@ -223,6 +226,6 @@ export default async function AdminOverviewPage() {
               </dl>
             </AdminStatusCard>
           </AdminStatusGrid>
-    </StudioAppShell>
+    </SystemShell>
   );
 }

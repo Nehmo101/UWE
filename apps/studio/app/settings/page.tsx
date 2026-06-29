@@ -26,8 +26,7 @@ import {
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { IntegrationsSetupPanel } from "../../components/IntegrationsSetupPanel";
-import { SettingsPageSidebar } from "../../components/SettingsPageSidebar";
-import { StudioAppShell } from "@/components/StudioAppShell";
+import { BreadcrumbTrail, SettingsShell, SystemShell } from "@/src/components/shell";
 import { resolveThemePreferencesForScope } from "@uwe/database/server";
 import { getSpotifyConfigurationSummary } from "@/src/lib/spotify-handlers";
 
@@ -83,30 +82,28 @@ export default async function SettingsPage({ searchParams }: Props) {
   } as const;
 
   return (
-    <StudioAppShell
-      variant="module"
-      activePath={`/settings${activeTab !== "general" ? `?tab=${activeTab}` : ""}`}
-      title="Admin- & Systemeinstellungen"
-      summary="Zentrale Konfiguration für App, Portal, Speicher, KI und Datenschutz."
-      sidebar={<SettingsPageSidebar activeTab={activeTab} />}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Heute", href: "/today" }, { label: "Einstellungen" }]}
+        />
+      }
     >
+      <SettingsShell
+        title="Admin- & Systemeinstellungen"
+        description="Zentrale Konfiguration für App, Portal, Speicher, KI und Datenschutz."
+        tabs={TABS.map((tab) => ({
+          id: tab.id,
+          label: tab.label,
+          href: `/settings?tab=${tab.id}`,
+          active: activeTab === tab.id,
+        }))}
+      >
           {saved === "1" && (
             <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
               Einstellungen gespeichert.
             </p>
           )}
-
-          <nav className="uwe-settings-tabs" aria-label="Einstellungsbereiche">
-            {TABS.map((tab) => (
-              <Link
-                key={tab.id}
-                href={`/settings?tab=${tab.id}`}
-                className={activeTab === tab.id ? "active" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
 
           {activeTab === "general" && (
             <section className="uwe-form">
@@ -851,6 +848,7 @@ export default async function SettingsPage({ searchParams }: Props) {
               </p>
             </section>
           )}
-    </StudioAppShell>
+      </SettingsShell>
+    </SystemShell>
   );
 }
