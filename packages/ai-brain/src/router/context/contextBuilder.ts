@@ -245,7 +245,8 @@ export async function buildRouterContext(
       worldId: world.id,
       taskType: input.taskType,
       allowDmOnly: input.options?.allowDmOnly ?? true,
-      maxEntries: 20,
+      maxEntries: 8,
+      query: input.options?.retrievalQuery?.trim() || undefined,
     });
 
     fullContext = {

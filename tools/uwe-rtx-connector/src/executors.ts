@@ -55,15 +55,21 @@ async function runOllamaChat(
     throw new Error("llm_generate: 'prompt' fehlt im Payload.");
   }
   const model = asString(payload.model, "llama3.2");
+  const maxTokens = asNumber(payload.maxTokens);
   const messages: Array<{ role: string; content: string }> = [];
   const system = asString(payload.system);
   if (system) messages.push({ role: "system", content: system });
   messages.push({ role: "user", content: prompt });
 
+  const body: Record<string, unknown> = { model, messages, stream: false };
+  if (maxTokens != null) {
+    body.options = { num_predict: maxTokens };
+  }
+
   const response = await fetch(`${ollamaUrl.replace(/\/+$/, "")}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, stream: false }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {

@@ -1,5 +1,9 @@
 import type { BrainStoreService } from "@uwe/database/server";
+import { semanticSearchBrainChunks } from "../embeddings/search";
 import type { BrainKnowledgeEntry, BrainKnowledgeQuery, BrainKnowledgeSource } from "./brain-knowledge-source";
+
+const DEFAULT_MAX_ENTRIES = 8;
+const LIST_FALLBACK_MAX_ENTRIES = 8;
 
 function taskRelevantDocumentTypes(taskType: string): string[] | undefined {
   switch (taskType) {
@@ -31,14 +35,43 @@ function taskRelevantFactTypes(taskType: string): string[] | undefined {
   }
 }
 
+function chunkToEntry(
+  result: Awaited<ReturnType<typeof semanticSearchBrainChunks>>[number],
+): BrainKnowledgeEntry {
+  return {
+    id: result.chunkId,
+    title: result.documentTitle,
+    content: result.content,
+    visibility: result.visibility,
+    sourceType: `brain_chunk:${result.documentType}`,
+    objectRef: result.documentId ? `document:${result.documentId}` : null,
+    trustLevel: result.matchMode,
+  };
+}
+
 export function createDbBrainKnowledgeSource(
   brainStore: BrainStoreService,
   worldSlug: string,
 ): BrainKnowledgeSource {
   return {
     async findRelevant(query: BrainKnowledgeQuery): Promise<BrainKnowledgeEntry[]> {
-      const maxEntries = query.maxEntries ?? 20;
+      const maxEntries = query.maxEntries ?? DEFAULT_MAX_ENTRIES;
       const accessContext = query.allowDmOnly ? "dm" : "portal";
+      const searchQuery = query.query?.trim();
+
+      if (searchQuery) {
+        const chunks = await semanticSearchBrainChunks(brainStore, {
+          worldSlug,
+          query: searchQuery,
+          limit: maxEntries,
+          campaignId: query.campaignId,
+          accessContext,
+        });
+
+        if (chunks.length > 0) {
+          return chunks.map(chunkToEntry);
+        }
+      }
 
       const docTypes = taskRelevantDocumentTypes(query.taskType);
       const factTypes = taskRelevantFactTypes(query.taskType);
@@ -86,7 +119,7 @@ export function createDbBrainKnowledgeSource(
         })),
       ];
 
-      return entries.slice(0, maxEntries);
+      return entries.slice(0, searchQuery ? maxEntries : LIST_FALLBACK_MAX_ENTRIES);
     },
   };
 }

@@ -5,43 +5,31 @@ alwaysApply: true
 
 # CI and Testing
 
-## Local commands (mirror GitHub Actions)
+**Canonical gate details:** [AGENTS.md](../../AGENTS.md) — GitHub Cloud CI is authoritative; local `pnpm quality` is optional pre-check.
+
+## Quick commands
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm ci:check` | Fast gate: lint → typecheck → test:ci → build:release |
-| `pnpm quality` | Full gate (same as CI `quality` job): + secret scan, security tests, audit |
-| `pnpm lint` | ESLint, zero warnings |
-| `pnpm typecheck` | Turbo typecheck across workspace |
-| `pnpm test` | Unit + integration smoke tests |
-| `pnpm test:ci` | CI test subset (no security tests) |
-| `pnpm test:security` | Authz, leak scanner, Studio route guards |
-| `pnpm security:audit` | Production dependency audit (high+) |
-| `pnpm docs:check` | Required docs exist, basic Markdown sanity |
-
-## Before every PR
-
-```bash
-pnpm install --frozen-lockfile
-pnpm quality
-```
-
-Do not push or mark a PR ready until `pnpm quality` exits 0.
+| `pnpm ci:light` | PR gate mirror (fast) |
+| `pnpm ci:check` | lint → typecheck → test:ci → build |
+| `pnpm quality` | Full main gate (+ security, audit) |
+| `pnpm quality:quiet` | Same as quality; agent-friendly summary on failure |
+| `pnpm lint` / `typecheck` / `test` / `test:security` | Individual steps |
 
 ## Test expectations
 
-- Bug fixes should include a regression test when practical.
-- New features need tests or documented manual QA steps in the PR.
-- Security-sensitive changes must pass `pnpm test:security`.
-- Touching `packages/database`? Run `pnpm --filter @uwe/database db:generate` before typecheck.
+- Bug fixes: regression test when practical.
+- New features: tests or documented manual QA in PR.
+- Security changes: `pnpm test:security`.
+- `packages/database` changes: `pnpm --filter @uwe/database db:generate` before typecheck.
 
 ## Rules
 
-- CI must not be greened with fake/no-op scripts.
-- Fix root causes; do not disable checks without documented justification.
+- No fake/no-op CI scripts; fix root causes.
 - Commit `pnpm-lock.yaml` after dependency changes.
-- Prisma schema changes need migrations in `packages/database/prisma/migrations/`.
+- Prisma schema → migrations in `packages/database/prisma/migrations/`.
 
 ## Common failures
 
-See `AGENTS.md` and `.cursor/skills/ci-quality-gate/references/failure-patterns.md`.
+See [AGENTS.md](../../AGENTS.md) and `.cursor/skills/ci-quality-gate/references/failure-patterns.md`.

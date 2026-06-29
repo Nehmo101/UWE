@@ -14,6 +14,7 @@
     "ci:check": "pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release",
     "ci:light": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm typecheck && pnpm test:ci && pnpm secret:scan && pnpm docs:check",
     "quality": "pnpm --filter @uwe/database db:generate && pnpm lint && pnpm secret:scan && pnpm typecheck && pnpm test && pnpm test:security && pnpm audit:prod && pnpm build:release && node scripts/bundle-budget-check.mjs",
+    "quality:quiet": "bash scripts/quality-quiet.sh",
     "test:ci": "pnpm --filter @uwe/database db:generate && node scripts/migration-check.mjs && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/integration-smoke.test.ts",
     "security:audit": "pnpm audit:prod",
     "docs:check": "node scripts/docs-check.mjs",

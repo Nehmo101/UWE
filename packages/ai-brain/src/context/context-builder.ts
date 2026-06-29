@@ -284,7 +284,8 @@ async function buildContext(
     pageId,
     taskType,
     allowDmOnly,
-    maxEntries: 20,
+    maxEntries: 8,
+    query: options.retrievalQuery?.trim() || undefined,
   });
   const brainEntries = filterBrainVisibility(
     brainRaw.map(toContextBrainEntry),

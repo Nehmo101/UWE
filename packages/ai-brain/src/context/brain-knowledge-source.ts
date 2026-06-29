@@ -18,6 +18,8 @@ export interface BrainKnowledgeQuery {
   taskType: AiTaskType;
   allowDmOnly: boolean;
   maxEntries?: number;
+  /** When set, prefer semantic/keyword chunk retrieval over listing full documents. */
+  query?: string;
 }
 
 export interface BrainKnowledgeSource {

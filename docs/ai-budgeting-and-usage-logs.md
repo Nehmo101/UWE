@@ -10,6 +10,7 @@ Konfigurierbar im AI Gateway (`/admin/ai-gateway`):
 | Monatsbudget (global) | `monthlyBudgetUsd` |
 | User-Tagesbudget (Standard) | `perUserDailyBudgetUsd` |
 | User-Tagesbudget (individuell) | `ai_user_grants.dailyBudgetUsd` |
+| Tages-Tokenbudget (optional, ENV) | `AI_DAILY_TOKEN_BUDGET` — Summe aus `inputTokens` + `outputTokens` in `ai_usage_logs` |
 
 Vor jedem Gateway-Aufruf: `assertBudgetAvailable()`.
 

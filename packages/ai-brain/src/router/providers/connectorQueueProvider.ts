@@ -31,6 +31,7 @@ export interface ConnectorLlmInput {
   model?: string;
   worldId?: string;
   timeoutMs?: number;
+  maxTokens?: number;
 }
 
 export interface ConnectorLlmResult {
@@ -80,6 +81,7 @@ export async function runConnectorLlmGenerate(
   const payload: Record<string, unknown> = { prompt: input.prompt };
   if (input.system?.trim()) payload.system = input.system;
   if (input.model?.trim()) payload.model = input.model.trim();
+  if (input.maxTokens != null) payload.maxTokens = input.maxTokens;
 
   const job = await service.enqueueJob({
     type: "llm_generate",
@@ -185,6 +187,7 @@ export interface ConnectorLlmRouteInput {
   providerId: AiProviderId;
   worldId?: string;
   timeoutMs?: number;
+  maxTokens?: number;
 }
 
 /**
@@ -213,6 +216,7 @@ export async function tryConnectorLlmGenerate(
     model,
     worldId: input.worldId,
     timeoutMs: input.timeoutMs,
+    maxTokens: input.maxTokens,
   });
 
   const finalModel = llm.model || model;
