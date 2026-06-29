@@ -19,7 +19,7 @@
 
 import type { ConnectorCapability } from "./capabilities";
 
-export const CONNECTOR_LANES = ["audio", "spotify", "gpu", "maintenance"] as const;
+export const CONNECTOR_LANES = ["audio", "spotify", "gpu", "printing", "maintenance"] as const;
 export type ConnectorLane = (typeof CONNECTOR_LANES)[number];
 
 /** How many jobs a single connector should run concurrently per lane. */
@@ -27,6 +27,7 @@ export const LANE_CONCURRENCY: Record<ConnectorLane, number> = {
   audio: 4,
   spotify: 1,
   gpu: 1,
+  printing: 1,
   maintenance: 1,
 };
 
@@ -43,6 +44,8 @@ export const CONNECTOR_JOB_TYPES = [
   "image_generate",
   "embedding_generate",
   "connector_refresh_models",
+  "label_print",
+  "printer_discover",
 ] as const;
 
 export type ConnectorJobType = (typeof CONNECTOR_JOB_TYPES)[number];
@@ -81,6 +84,18 @@ export const CONNECTOR_JOB_DESCRIPTORS: Record<ConnectorJobType, ConnectorJobDes
     lane: "maintenance",
     priority: 60,
     capability: "system_info",
+    latencySensitive: false,
+  },
+  label_print: {
+    lane: "printing",
+    priority: 70,
+    capability: "label_printing",
+    latencySensitive: false,
+  },
+  printer_discover: {
+    lane: "maintenance",
+    priority: 55,
+    capability: "label_printing",
     latencySensitive: false,
   },
 };

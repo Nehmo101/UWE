@@ -17,6 +17,7 @@ import {
   normalizeCapabilities,
   type ConnectorCapability,
   type ConnectorModelInfo,
+  type LocalPrinterInfo,
 } from "@uwe/connector";
 import {
   modelProfileKey,
@@ -24,6 +25,7 @@ import {
 } from "@uwe/connector-model-profile";
 
 import type { DiscoveredModel, LocalLlmSummary } from "./llm-discovery";
+import { discoverLocalPrinters } from "./label-printing";
 
 export interface CapabilityEnv {
   audioEnabled: boolean;
@@ -34,6 +36,8 @@ export interface CapabilityEnv {
   imageExecutorConfigured: boolean;
   systemInfoEnabled: boolean;
   fileCacheEnabled: boolean;
+  printEnabled: boolean;
+  printBackendConfigured: boolean;
 }
 
 export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): CapabilityEnv {
@@ -43,6 +47,8 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
   const spotifyAccessToken = env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() || env.SPOTIFY_ACCESS_TOKEN?.trim();
   const spotifyBackendConfigured = Boolean(spotifyAccessToken && env.SPOTIFY_DEVICE_ID?.trim());
   const imageExecutorConfigured = Boolean(env.UWE_CONNECTOR_IMAGE_CMD?.trim());
+  const printCommandConfigured = Boolean(env.UWE_CONNECTOR_PRINT_CMD?.trim());
+  const printPrintersConfigured = Boolean(env.UWE_CONNECTOR_PRINTERS?.trim());
 
   return {
     audioCommandConfigured,
@@ -53,12 +59,15 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
     imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, true) && imageExecutorConfigured,
     systemInfoEnabled: flag(env.UWE_CONNECTOR_SYSTEM_INFO, true),
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
+    printBackendConfigured: printCommandConfigured || printPrintersConfigured,
+    printEnabled: flag(env.UWE_CONNECTOR_PRINT, true) && (printCommandConfigured || printPrintersConfigured),
   };
 }
 
 export interface DetectedCapabilities {
   capabilities: ConnectorCapability[];
   models: ConnectorModelInfo[];
+  printers: LocalPrinterInfo[];
 }
 
 export interface DetectCapabilitiesOptions {
@@ -89,7 +98,7 @@ export function detectCapabilities(
       ? normalizeCapabilities(forced).filter((capability) => executable.includes(capability))
       : executable;
 
-  return { capabilities, models: toEnabledModelInfos(llms, profiles) };
+  return { capabilities, models: toEnabledModelInfos(llms, profiles), printers: discoverLocalPrinters() };
 }
 
 function executableCapabilities(
@@ -104,6 +113,7 @@ function executableCapabilities(
   if (hasEnabledOllamaCapability(llms, enabledKeys, "embeddings")) detected.push("embedding_local");
   if (env.imageEnabled) detected.push("image_generation");
   if (env.fileCacheEnabled) detected.push("file_cache");
+  if (env.printEnabled) detected.push("label_printing");
   if (env.systemInfoEnabled) detected.push("system_info");
 
   return normalizeCapabilities(detected);

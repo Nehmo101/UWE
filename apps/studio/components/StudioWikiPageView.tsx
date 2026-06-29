@@ -2,13 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Collapsible,
-  GraphRelationList,
-  GraphView,
   MetaPanel,
   SidebarSection,
   VisibilityBadge,
-  WikiContent,
-  WikiSidebar,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
@@ -28,7 +24,8 @@ import {
 } from "@uwe/database/server";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { WikiContextPanel, WikiFlowGraph, WikiTiptapViewer } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 export interface StudioWikiPageViewProps {
@@ -121,63 +118,28 @@ export async function StudioWikiPageView({
           )}
         </div>
       )}
-      <WorldModuleShell
+      <WorldShell
         worldSlug={worldSlug}
         worldName={world.name}
-        activeNav="pages"
-        backLink={{ label: "← Seitenliste", href: `/worlds/${worldSlug}` }}
-        breadcrumb={wikiPageBreadcrumb(
-          world.name,
-          worldSlug,
-          NAV_CATEGORY_LABELS[category as NavCategory],
-          view.page.title,
-          pageHref,
-        )}
-        topBarExtra={
-          !isPlayerPreview ? (
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pagePreviewHref(worldSlug, rawPage.type, slug)}>
-              Vorschau als Spieler
-            </Link>
-          ) : (
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pageHref}>
-              Zurück zur DM-Ansicht
-            </Link>
-          )
+        breadcrumb={
+          <BreadcrumbTrail
+            items={wikiPageBreadcrumb(
+              world.name,
+              worldSlug,
+              NAV_CATEGORY_LABELS[category as NavCategory],
+              view.page.title,
+              pageHref,
+            )}
+          />
         }
-        pageHeader={{
-          title: view.page.title,
-          summary: rawPage.summary,
-          meta: !isPlayerPreview && dmPage ? (
-            <>
-              <VisibilityBadge visibility={dmPage.visibility} />
-              {view.page.tags.map((tag) => (
-                <span key={tag} className="uwe-tag">{tag}</span>
-              ))}
-            </>
-          ) : (
-            view.page.tags.map((tag) => (
-              <span key={tag} className="uwe-tag">{tag}</span>
-            ))
-          ),
-          actions: !isPlayerPreview ? (
-            <>
-              <Link
-                className="uwe-v2-btn"
-                href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
-              >
-                Label erstellen
-              </Link>
-              <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`${pageHref}/edit`}>
-                Bearbeiten
-              </Link>
-            </>
-          ) : undefined,
-        }}
-        context={
+        contextPanel={
           <>
-            <WikiSidebar
+            <WikiContextPanel
+              worldSlug={worldSlug}
               backlinks={view.backlinks}
+              outgoingLinks={view.links}
               relatedPages={view.relatedPages}
+              showCreateMissing={!isPlayerPreview}
             />
             {!isPlayerPreview && dmPage && (
               <>
@@ -193,9 +155,6 @@ export async function StudioWikiPageView({
                     revealState={dmPage.revealState}
                   />
                 </SidebarSection>
-                {/* Management panels collapsed by default so the reading view
-                    stays calm; knowledge (backlinks, related, metadata) above
-                    stays open. One click away (V3 via collapsible). */}
                 <Collapsible variant="sidebar" title="Freigabe" defaultOpen={false}>
                   <ShareLinkPanel
                     worldId={world.id}
@@ -222,30 +181,82 @@ export async function StudioWikiPageView({
           </>
         }
       >
-        <div className="uwe-v2-reader uwe-v2-wiki">
-        <WikiContent html={view.html} />
+        <PageHeader
+          title={view.page.title}
+          summary={rawPage.summary}
+          meta={
+            !isPlayerPreview && dmPage ? (
+              <>
+                <VisibilityBadge visibility={dmPage.visibility} />
+                {view.page.tags.map((tag) => (
+                  <span key={tag} className="uwe-tag">
+                    {tag}
+                  </span>
+                ))}
+              </>
+            ) : (
+              view.page.tags.map((tag) => (
+                <span key={tag} className="uwe-tag">
+                  {tag}
+                </span>
+              ))
+            )
+          }
+          actions={
+            !isPlayerPreview ? (
+              <>
+                <Link
+                  className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                  href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
+                >
+                  Label erstellen
+                </Link>
+                <Link
+                  className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90"
+                  href={`${pageHref}/edit`}
+                >
+                  Bearbeiten
+                </Link>
+                <Link
+                  className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                  href={pagePreviewHref(worldSlug, rawPage.type, slug)}
+                >
+                  Vorschau als Spieler
+                </Link>
+              </>
+            ) : (
+              <Link
+                className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                href={pageHref}
+              >
+                Zurück zur DM-Ansicht
+              </Link>
+            )
+          }
+        />
 
-        <section className="wiki-graph-section uwe-v2-wiki-aside" style={{ marginTop: "2rem" }}>
-          <div className="wiki-graph-head">
-            <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Nachbarschafts-Graph</h2>
-            <Link
-              className="uwe-v2-btn uwe-v2-btn-ghost"
-              href={`/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`}
-            >
-              Im großen Graph öffnen →
-            </Link>
-          </div>
-          {/* Knowledge-first: the relation list surfaces connections immediately;
-              the height-capped graph stays as a compact visual aid below it. */}
-          <GraphRelationList
-            edges={pageGraph.edges}
-            focusPageId={rawPage.id}
-            nodeTitles={Object.fromEntries(pageGraph.nodes.map((node) => [node.id, node.title]))}
-          />
-          <GraphView nodes={pageGraph.nodes} edges={pageGraph.edges} compact />
-        </section>
+        <div className="uwe-v2-reader uwe-v2-wiki">
+          <WikiTiptapViewer html={view.html} />
+
+          <section className="wiki-graph-section uwe-v2-wiki-aside mt-8">
+            <div className="wiki-graph-head mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Nachbarschafts-Graph</h2>
+              <Link
+                className="text-sm hover:underline"
+                href={`/worlds/${worldSlug}/graph?focusPageId=${rawPage.id}&mode=neighbors`}
+              >
+                Im großen Graph öffnen →
+              </Link>
+            </div>
+            <WikiFlowGraph
+              nodes={pageGraph.nodes}
+              edges={pageGraph.edges}
+              height={320}
+              className="rounded-lg border border-border"
+            />
+          </section>
         </div>
-      </WorldModuleShell>
+      </WorldShell>
     </>
   );
 }

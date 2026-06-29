@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { studioNavItems } from "../navigation/studio-nav";
+import { worldNavItems } from "../navigation/world-nav";
 import { studioGlobalBottomNav, studioWorldBottomNav } from "./mobile-nav";
 import { resolvePreferredWorldSlug } from "./today-dashboard";
+
+const STUDIO_NAV_HREFS = new Set(
+  studioNavItems()
+    .filter((item) => item.status === "active")
+    .map((item) => item.href.split("?")[0]!),
+);
+
+function worldNavHrefExists(worldSlug: string, href: string): boolean {
+  const pathname = href.split("?")[0]!;
+  return worldNavItems(worldSlug).some((item) => item.href.split("?")[0] === pathname);
+}
 
 describe("studio mobile nav", () => {
   it("uses exactly the five primary Studio areas", () => {
@@ -17,6 +30,14 @@ describe("studio mobile nav", () => {
     assert.equal(nav[2]?.href, "/capture");
     assert.equal(nav[3]?.href, "/ai");
     assert.equal(nav[4]?.href, "/system");
+  });
+
+  it("maps global bottom nav hrefs into the central Studio IA", () => {
+    for (const item of studioGlobalBottomNav("today")) {
+      if (!item.href) continue;
+      const pathname = item.href.split("?")[0]!;
+      assert.ok(STUDIO_NAV_HREFS.has(pathname), `mobile nav href missing from IA: ${pathname}`);
+    }
   });
 
   it("keeps legacy active keys mapped into the reduced global nav", () => {
@@ -38,6 +59,16 @@ describe("studio mobile nav", () => {
     assert.equal(nav[2]?.href, "/worlds/terra/sessions");
     assert.equal(nav[3]?.href, "/worlds/terra/brain");
     assert.equal(nav[4]?.action, "open-sidebar");
+  });
+
+  it("maps world bottom nav hrefs into the central world IA", () => {
+    for (const item of studioWorldBottomNav("terra", "overview")) {
+      if (!item.href) continue;
+      assert.ok(
+        worldNavHrefExists("terra", item.href),
+        `world mobile nav href missing from IA: ${item.href}`,
+      );
+    }
   });
 
   it("highlights active world bottom nav tab", () => {

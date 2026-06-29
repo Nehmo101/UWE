@@ -14,6 +14,7 @@ import type { ConnectorJobType } from "@uwe/connector";
 
 import type { ClaimedJob } from "./host-client";
 import { log } from "./logging";
+import { runLabelPrintJob, runPrinterDiscover } from "./label-printing";
 
 export interface ExecutorContext {
   ollamaUrl?: string;
@@ -21,6 +22,9 @@ export interface ExecutorContext {
   spotifyAccessToken?: string;
   spotifyDeviceId?: string;
   imageCommand?: string;
+  printCommand?: string;
+  hostUrl?: string;
+  connectorToken?: string;
   requestTimeoutMs: number;
   /** Triggers a fresh local LLM discovery; resolved model count is returned. */
   refreshModels: () => Promise<number>;
@@ -300,6 +304,8 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
       }
       return runCommandWithJson(ctx.imageCommand, payload, ctx.requestTimeoutMs);
     }
+    case "label_print": { if (!ctx.hostUrl||!ctx.connectorToken) throw new Error("label_print: missing host/token"); return runLabelPrintJob(payload,{hostUrl:ctx.hostUrl,connectorToken:ctx.connectorToken,printCommand:ctx.printCommand,requestTimeoutMs:ctx.requestTimeoutMs,jobId:job.id}); }
+    case "printer_discover": return runPrinterDiscover();
     default: {
       throw new Error(`Unbekannter Jobtyp: ${type}`);
     }

@@ -28,6 +28,8 @@ function env(overrides: Partial<CapabilityEnv> = {}): CapabilityEnv {
     imageExecutorConfigured: false,
     systemInfoEnabled: true,
     fileCacheEnabled: false,
+    printEnabled: false,
+    printBackendConfigured: false,
     ...overrides,
   };
 }

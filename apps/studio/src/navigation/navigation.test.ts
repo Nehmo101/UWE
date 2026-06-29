@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -12,7 +12,7 @@ import {
   studioNavItems,
   studioSidebar,
 } from "./studio-nav";
-import { worldNav, worldNavConflicts, worldNavItems } from "./world-nav";
+import { worldNav, worldNavConflicts, worldNavItems, worldSidebar } from "./world-nav";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STUDIO_APP_DIR = join(__dirname, "../../app");
@@ -69,7 +69,14 @@ describe("studio navigation", () => {
 
   it("planned items intentionally lack routes (documented future work)", () => {
     const planned = studioNavItems().filter((item) => item.status === "planned");
-    assert.ok(planned.length > 0, "expected some planned items");
+    const missingRoutes = planned
+      .filter((item) => studioRouteExists(item.href))
+      .map((item) => `${item.id} -> ${item.href}`);
+    assert.deepEqual(
+      missingRoutes,
+      [],
+      `planned items should not have routes yet: ${missingRoutes.join(", ")}`,
+    );
   });
 
   it("resolves active state for nested routes", () => {
@@ -84,7 +91,38 @@ describe("studio navigation", () => {
     const commands = studioCommands();
     assert.ok(commands.some((cmd) => cmd.href === "/today"));
     assert.ok(commands.some((cmd) => cmd.href === "/worlds"));
+    assert.ok(commands.some((cmd) => cmd.href === "/capture"));
+    assert.ok(commands.some((cmd) => cmd.href === "/system"));
     assert.ok(commands.every((cmd) => cmd.group.includes(" / ")));
+  });
+
+  it("marks system hub active for /system/* routes and admin hub for /admin/*", () => {
+    const systemSidebar = studioSidebar("/system/cloudflare");
+    const systemHubActive = systemSidebar
+      .flatMap((group) => group.items)
+      .some((item) => item.id === "system-hub" && item.active);
+    assert.ok(systemHubActive);
+
+    const adminSidebar = studioSidebar("/admin/status");
+    const adminHubActive = adminSidebar
+      .flatMap((group) => group.items)
+      .some((item) => item.id === "system-admin" && item.active);
+    assert.ok(adminHubActive);
+  });
+
+  it("marks worlds list active inside world shell paths", () => {
+    const sidebar = studioSidebar("/worlds/terra/dashboard");
+    const worldsActive = sidebar
+      .flatMap((group) => group.items)
+      .some((item) => item.id === "worlds-list" && item.active);
+    assert.ok(worldsActive);
+  });
+
+  it("keeps createPageAction in a use server module", () => {
+    const actionsPath = join(__dirname, "../../app/actions.ts");
+    const source = readFileSync(actionsPath, "utf8");
+    assert.match(source, /^"use server";/m);
+    assert.match(source, /export async function createPageAction/);
   });
 });
 
@@ -127,5 +165,33 @@ describe("world cockpit navigation", () => {
     const a = worldNav("terra").map((group) => group.items.map((item) => item.id));
     const b = worldNav("hells").map((group) => group.items.map((item) => item.id));
     assert.deepEqual(a, b);
+  });
+
+  it("groups world navigation into cockpit sections", () => {
+    const sections = worldNav("terra");
+    assert.deepEqual(
+      sections.map((section) => section.title),
+      ["Übersicht", "Wiki", "Spiel", "Medien", "Wissen & KI", "Freigabe & Betrieb"],
+    );
+  });
+
+  it("resolves active state for nested world routes", () => {
+    const sidebar = worldSidebar("terra", "/worlds/terra/brain/doc-1");
+    const brainActive = sidebar
+      .flatMap((group) => group.items)
+      .some((item) => item.id === "world-brain" && item.active);
+    assert.ok(brainActive);
+
+    const sessionsSidebar = worldSidebar("terra", "/worlds/terra/sessions/clxyz1234567890abcdefghij");
+    const sessionsActive = sessionsSidebar
+      .flatMap((group) => group.items)
+      .some((item) => item.id === "world-sessions" && item.active);
+    assert.ok(sessionsActive);
+  });
+
+  it("includes inspector and backup under Freigabe & Betrieb", () => {
+    const labels = worldNavItems("terra").map((item) => item.label);
+    assert.ok(labels.includes("Freigaben / Kanon"));
+    assert.ok(labels.includes("Backup"));
   });
 });

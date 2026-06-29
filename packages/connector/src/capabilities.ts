@@ -11,6 +11,7 @@ export const CONNECTOR_CAPABILITIES = [
   "image_generation",
   "embedding_local",
   "file_cache",
+  "label_printing",
   "system_info",
 ] as const;
 
@@ -23,6 +24,7 @@ export const CONNECTOR_CAPABILITY_LABELS: Record<ConnectorCapability, string> = 
   image_generation: "Bildgenerierung",
   embedding_local: "Lokale Embeddings",
   file_cache: "Datei-Cache",
+  label_printing: "Label-Druck",
   system_info: "Systeminfo",
 };
 

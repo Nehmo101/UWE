@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  SidebarSection,
-} from "@uwe/shared-ui";
+import { SidebarSection } from "@uwe/shared-ui";
 import {
   createWorldOverviewService,
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { WorldCockpitShell } from "@/components/WorldCockpitShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { worldCockpitTabItems } from "@/src/lib/studio-navigation";
 import { WorldDashboardClient } from "./WorldDashboardClient";
 
@@ -38,19 +37,24 @@ export default async function WorldDashboardPage({ params }: Props) {
   const cockpitTabs = worldCockpitTabItems(worldSlug, "overview");
 
   return (
-    <WorldCockpitShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="overview"
-      breadcrumb={[]}
-      hideBreadcrumb
-      contextTitle="Quick Create"
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[...worldRootBreadcrumb(world.name, worldSlug), { label: "Übersicht" }]}
+        />
+      }
+      contextPanel={
         <>
           <SidebarSection title="Schnell erstellen">
-            <div className="uwe-quick-create">
+            <div className="flex flex-col gap-1">
               {quickCreate.map((action) => (
-                <Link key={action.href} className="uwe-v2-btn uwe-v2-btn-ghost" href={action.href}>
+                <Link
+                  key={action.href}
+                  className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                  href={action.href}
+                >
                   {action.label}
                 </Link>
               ))}
@@ -58,7 +62,7 @@ export default async function WorldDashboardPage({ params }: Props) {
           </SidebarSection>
 
           <SidebarSection title="Portal-Status">
-            <ul className="uwe-sidebar-links">
+            <ul className="space-y-1 text-sm">
               <li>
                 Portal: <strong>{overview.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
               </li>
@@ -72,16 +76,18 @@ export default async function WorldDashboardPage({ params }: Props) {
                 Gastmodus: <strong>{overview.world.guestModeEnabled ? "an" : "aus"}</strong>
               </li>
               <li>
-                <Link href={`/worlds/${worldSlug}/inspector`}>Inspektor öffnen →</Link>
+                <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
+                  Inspektor öffnen →
+                </Link>
               </li>
             </ul>
           </SidebarSection>
 
           {overview.playerNotesForReview > 0 && (
             <SidebarSection title="Spielernotizen">
-              <ul className="uwe-sidebar-links">
+              <ul className="text-sm">
                 <li>
-                  <Link href={`/worlds/${worldSlug}/notes`}>
+                  <Link href={`/worlds/${worldSlug}/notes`} className="hover:underline">
                     {overview.playerNotesForReview}{" "}
                     {overview.playerNotesForReview === 1 ? "Notiz wartet" : "Notizen warten"} auf
                     Review →
@@ -93,6 +99,7 @@ export default async function WorldDashboardPage({ params }: Props) {
         </>
       }
     >
+      <PageHeader title={world.name} summary={world.description} />
       <WorldDashboardClient
         worldSlug={worldSlug}
         worldName={world.name}
@@ -123,6 +130,6 @@ export default async function WorldDashboardPage({ params }: Props) {
           })),
         }}
       />
-    </WorldCockpitShell>
+    </WorldShell>
   );
 }

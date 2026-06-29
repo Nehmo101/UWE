@@ -35,7 +35,7 @@ export function PortalPublicShell({
   children,
   worldName,
   worldSlug = null,
-  publicActive = "discover",
+  publicActive = "my-worlds",
   worldSidebarItems,
   sidebar,
   bottomNav,
@@ -51,7 +51,7 @@ export function PortalPublicShell({
     worldItems: worldSidebarItems,
   });
 
-  const resolvedBrandHref = brandHref ?? (worldSlug ? `/worlds/${worldSlug}` : "/worlds");
+  const resolvedBrandHref = brandHref ?? (worldSlug ? `/auth/worlds/${worldSlug}` : "/auth/worlds");
 
   const main = (
     <>

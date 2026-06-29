@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { CONNECTOR_CAPABILITIES, CONNECTOR_MODEL_TYPES } from "@uwe/connector";
+import { CONNECTOR_CAPABILITIES, CONNECTOR_MODEL_TYPES, normalizeLocalPrinters } from "@uwe/connector";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { parseBody } from "@uwe/security";
 
@@ -24,6 +24,7 @@ const modelSchema = z.object({
 const heartbeatSchema = z.object({
   capabilities: z.array(z.enum(CONNECTOR_CAPABILITIES)).max(16).optional(),
   models: z.array(modelSchema).max(200).optional(),
+  printers: z.array(z.object({ id: z.string().max(120), name: z.string().max(200), isDefault: z.boolean().optional(), state: z.string().max(64).optional() })).max(50).optional(),
   version: z.string().max(64).nullable().optional(),
   queueEnabled: z.boolean().optional(),
   currentJobs: z.number().int().nonnegative().max(10_000).optional(),
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   const view = await service.heartbeat(auth.connector.id, {
     capabilities: parsed.data.capabilities,
     models: parsed.data.models,
+    printers: parsed.data.printers ? normalizeLocalPrinters(parsed.data.printers) : undefined,
     version: parsed.data.version,
     queueEnabled: parsed.data.queueEnabled,
     currentJobs: parsed.data.currentJobs,

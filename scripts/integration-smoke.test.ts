@@ -198,6 +198,13 @@ describe("integration smoke — minimal app access paths", () => {
     assert.ok(exists("apps/portal/app/reset-password/page.tsx"));
   });
 
+  it("keeps Studio /portal shim redirecting to configured Portal URL", () => {
+    assert.ok(exists("apps/studio/app/portal/page.tsx"));
+    const portalShim = read("apps/studio/app/portal/page.tsx");
+    assert.match(portalShim, /resolvePortalPublicBaseUrl|resolveUweAppUrls/);
+    assert.match(portalShim, /redirect\(/);
+  });
+
   it("keeps DM-only content covered by public leak regression tests", () => {
     const visibilityTest = read("packages/database/src/visibility-security.test.ts");
     assert.match(visibilityTest, /dm_only content must NEVER be readable through portal contexts/);
@@ -384,6 +391,13 @@ describe("integration smoke — mobile navigation", () => {
     const nav = read("apps/studio/src/lib/mobile-nav.ts");
     assert.match(nav, /studioGlobalBottomNav/);
     assert.match(nav, /studioWorldBottomNav/);
+  });
+
+  it("defines central navigation contract modules", () => {
+    assert.ok(exists("apps/studio/src/navigation/studio-nav.ts"));
+    assert.ok(exists("apps/studio/src/navigation/world-nav.ts"));
+    assert.ok(exists("apps/portal/src/navigation/portal-nav.ts"));
+    assert.ok(exists("packages/shared-utils/src/navigation.ts"));
   });
 
   it("includes MobileBottomNav component", () => {

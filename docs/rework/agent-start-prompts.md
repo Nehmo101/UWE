@@ -1,6 +1,6 @@
 # UWE Hard UI/UX Reset — Agent Start Prompts
 
-Diese Datei enthält die Copy-Paste-Start-Prompts für die Agents, die den Hard UI/UX Rework umsetzen. Grundlage ist `docs/rework/hard-ui-ux-reset-plan.md`. Wellenmodell: `1 → 4(5) → 1–2`.
+Diese Datei enthält die Copy-Paste-Start-Prompts für die Agents, die den Hard UI/UX Rework umsetzen. Grundlage ist `docs/rework/hard-ui-ux-reset-plan.md`. Wellenmodell: `1 → 4(5) → 4 → 1` (Wave 0 seriell, Wave 1 parallel, Wave 2 parallel, Abschluss-Orchestrator).
 
 Leitsatz für alle Agents: **FUNKTIONEN BEHALTEN. ALTE OBERFLÄCHE ERSETZEN.** Kein Löschen von Prisma-Models, Services, API-Logik. Backend bleibt erhalten; nicht migrierte Feature-UIs werden als `legacy-ui-disconnected` dokumentiert und aus der aktiven Navigation entfernt.
 
@@ -106,13 +106,125 @@ Leitsatz für alle Agents: **FUNKTIONEN BEHALTEN. ALTE OBERFLÄCHE ERSETZEN.** K
 >
 > Branch `cursor/uwe-knowledge-users-<slug>`, Draft-PR.
 
-## Wave 2 — Integration & Abschluss (1–2 Agents)
+## Wave 2 — Orchestrator (koordiniert B1–B4, dann Abschluss)
 
-> Rolle: Du bist der Integrations-Agent (Welle 2) im UWE Hard UI/UX Rework. Lies `docs/rework/hard-ui-ux-reset-plan.md` (Phase 12, 13, 14) und integriere die Ergebnisse der Wellen 0–1.
+> Rolle: Du bist der Wave-2-Orchestrator für den UWE Hard UI/UX Rework. Wave 0 (Fundament) und Wave 1 (Breite) sind abgeschlossen auf Branch `cursor/uwe-wave1-orchestrator-941c` (Draft-PR #298). Deine Aufgabe ist Abschluss, Integration und Verifikation — koordiniert über Subagents, nicht seriell alles selbst.
+>
+> Zuerst selbst lesen (Pflicht), bevor du Subagents startest:
+> - `docs/rework/implementation-status.md` — Wave-1-Stand, Deferred/Wave-2-Tabelle, lokales QA-Rezept
+> - `docs/rework/hard-ui-ux-reset-plan.md` (Phase 4/5/8/9/11/12/13/14, „Parallelization & Agent Cut")
+> - `docs/rework/agent-start-prompts.md` (Wave-2-Abschnitte B1–B4 unten)
+> - `docs/rework/route-feature-inventory.md`, `docs/design/new-ui-stack.md`, `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`
+>
+> Ausgangslage (nicht erneut anfassen, außer Regression):
+> - Wave 0: UI-Stack, zentrale Navigation, Shells, System-Seiten (QF1, QF7–QF9, QF12–QF14, Phase 7)
+> - Wave 1: QF2 Portal login-first, QF3 Portalzugriff-UI, QF10 Labeldruck, Teil-Migration (`/today`, `/worlds`, Wiki-Liste/Detail/Graph), Wiki-Kern-Komponenten, IA-Tests (1480 Tests, CI grün auf #298)
+> - Bereits erledigt — NICHT reimplementieren: QF1–QF14 (soweit in `implementation-status.md` als done), Portal-Routing-Basis, `portal-access-service`, `label_printing`-Capability
+>
+> Verifiziere Ist-Stand auf Basis von PR #298 / Branch `cursor/uwe-wave1-orchestrator-941c`:
+> `pnpm install --frozen-lockfile && pnpm --filter @uwe/database db:generate && pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release`
+>
+> Starte Subagents parallel (max. 4), je einer pro Domäne. Gib jedem den passenden Abschnitt aus diesem Dokument (B1–B4) plus: „baue auf Wave-0/1-Fundament auf, alles additiv".
+>
+> Konfliktzonen serialisieren:
+> - `packages/auth/src/security/route-policy.ts` → Owner **B3**; andere liefern Deltas
+> - `apps/studio/src/navigation/*` → read-only für Subagents; Orchestrator pflegt Status
+> - Legacy-Shell-Löschung (`WorldModuleShell`, `AdminModuleShell`, `StudioCockpitAppShell`) → erst nach Merge, wenn Referenzcount = 0
+> - Geteilte Test-Dateien: B3 (route-policy/middleware/E2E), B4 (docs-check)
+>
+> Merge-Reihenfolge auf `cursor/uwe-wave2-orchestrator-<slug>`: B1 → B2 → B3 → B4. Nach jedem Merge: `pnpm lint && pnpm typecheck && pnpm test:ci`.
+>
+> QA — WICHTIG: Portal/Session-Flows über `scripts/e2e-servers.mjs` (Prod Build+Start). `/worlds/*` interaktiv über `next dev` lokal blockiert (siehe `implementation-status.md`). `.env`-Änderungen danach revertieren.
+>
+> Gate vor finalem PR: `pnpm quality` (oder mindestens lint → typecheck → test:ci → build:release → test:security → docs:check).
+>
+> Abschluss: Konsolidierter PR (ready wenn CI grün) + Bericht: migrierte Routen, E2E-Ergebnisse, Wiki-Edit-Stand, Legacy-Shell-Retirement, Tests/Build, Risiken, offene `legacy-ui-disconnected`-Items.
+>
+> Branch `cursor/uwe-wave2-orchestrator-<slug>`, Draft-PR bis CI grün.
+
+## Wave 2 — B1: Welt-Routen (WorldModuleShell → WorldShell)
+
+> Rolle: Du bist Agent B1 (Welt-Routen Shell-Migration) im UWE Hard UI/UX Rework Wave 2. Lies `docs/rework/implementation-status.md` (Deferred/Wave 2) und `docs/rework/hard-ui-ux-reset-plan.md` (Phase 4/5, 8/9). Baue auf Wave 0/1 auf (neue Shells, Wiki-Kern-Komponenten, zentrale Navigation).
+>
+> Scope — verbleibende `WorldModuleShell`-Seiten unter `apps/studio/app/worlds/**`:
+> 1. `/worlds/[slug]/[category]/[slug]/edit` — Wiki-Edit (Priorität: Inkonsistenz zu bereits migrierter Detail-Seite)
+> 2. Sessions: `/sessions`, `/sessions/new`, `/sessions/[id]`
+> 3. Dungeons: `/dungeons/**` (Liste, Wizard, Ebenen, Räume)
+> 4. Brain: `/brain/**`
+> 5. Labels (nicht-print): `/labels/**` (RTX-Print bereits Wave 1)
+> 6. Import, Inspector, Notes, Assets, Backup, AI-Runs, DnD-API, Soundboard, `/pages/new`
+>
+> Nutze `WorldShell`, bestehende Wiki-Komponenten (`WikiPageTable`, `WikiContextPanel`, `WikiTiptapViewer`, `PageHeader`, `BreadcrumbTrail`). Business-Logik in `packages/` belassen.
+>
+> Konfliktzone: `packages/auth/src/security/route-policy.ts` nicht anfassen. Zentrale Nav (`apps/studio/src/navigation/*`) read-only. Keine Portal-, Admin- oder Daily-Admin-Routen.
+>
+> Regel: Alte `WorldModuleShell` erst entfernen, wenn alle zugehörigen Seiten auf `WorldShell` verifiziert sind (Löschung macht der Orchestrator).
+>
+> Tests: Regression für migrierte Routen (Render-Smoke, bestehende Session/Dungeon-Tests dürfen nicht brechen). DoD: Migrierte Routen auf `WorldShell`; `pnpm lint/typecheck/test:ci/build:release` grün.
+>
+> Branch `cursor/uwe-wave2-world-shells-<slug>`, Draft-PR.
+
+## Wave 2 — B2: Daily Admin OS + Organisation (StudioCockpitAppShell → StudioShell)
+
+> Rolle: Du bist Agent B2 (Daily Admin OS Shell-Migration) im UWE Hard UI/UX Rework Wave 2. Lies `docs/rework/hard-ui-ux-reset-plan.md` (Phase 4/5, Daily Admin OS) und `docs/daily-admin-os.md`. Baue auf Wave 0/1 auf (`/today` bereits auf `StudioShell`).
+>
+> Scope — Routen noch auf `StudioCockpitAppShell` oder verstreute Legacy-Shells:
+> - `/capture`, `/capture/[id]`
+> - `/projects`, `/workshop/**`, `/contracts`, `/hardware`
+> - `/life-brain/**`
+> - `/calendar`, `/mail/**`, `/jobs`, `/image-studio/**`
+> - `/search`, `/templates/**`
+> - Organisation (falls noch Legacy): `/brain` (global), `/ai`, `/backup`
+>
+> Ziel-Shell: `StudioShell` + `PageHeader`/`BreadcrumbTrail` (wie `/today`). Mobile-Nav weiter aus Nav-Contract (`apps/studio/src/navigation/studio-nav.ts`).
+>
+> Konfliktzone: Keine Welt-Routen (B1), keine Admin/System-Routen (B3), kein Portal, keine `route-policy.ts`. Zentrale Nav read-only.
+>
+> DoD: Alle genannten Routen auf neuer Shell; keine Daily-Admin-Funktion verloren; `pnpm quality` grün.
+>
+> Branch `cursor/uwe-wave2-daily-admin-shells-<slug>`, Draft-PR.
+
+## Wave 2 — B3: Admin/System-Shells + E2E + route-policy
+
+> Rolle: Du bist Agent B3 (Admin/System + E2E) im UWE Hard UI/UX Rework Wave 2. Lies `docs/rework/implementation-status.md` (Portal E2E, route-policy deferred) und `docs/rework/hard-ui-ux-reset-plan.md` (Phase 10, 12). Baue auf Wave 1 QF2 auf. **Du bist Owner von `packages/auth/src/security/route-policy.ts` in Wave 2.**
 >
 > Scope:
-> - Phase 12 Tests auf neue IA umstellen: `apps/studio/src/lib/studio-navigation.test.ts`, `mobile-nav.test.ts`, `apps/portal/src/lib/portal-navigation.test.ts`, `packages/auth/src/security/{route-policy,middleware}.test.ts`, `scripts/studio-route-auth.test.ts`, Security-Leak-Tests. Neue Tests gemäß Plan-Testliste.
-> - Phase 13 Doku-Audit: `README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE_MATURITY_MATRIX.md`, `docs/ROADMAP.md`, `docs/design/new-ui-stack.md`, `docs/rework/hard-ui-ux-reset-plan.md`, `docs/cloudflare-current-setup.md`. Jede Datei unter `docs/` prüfen: keep/update/archive/delete (Constraints: docs-check-Pflichtdateien behalten, jede `.md` startet mit `#`, keine Tabs).
-> - Phase 14 finale Validierung: `pnpm lint/typecheck/test:ci/build:release`, bevorzugt `pnpm quality`. Abschlussbericht: Branchname, neuer Stack, Shell-Struktur, Navigation, neu angebundene Features, UI-offene Features, Quick-Fix-Ergebnisse, Cloudflare-Änderungen, Tests/Build, Risiken, nächste Aufgaben.
+> - Admin-Routen `apps/studio/app/admin/**` von `AdminModuleShell` → `SystemShell`/`SettingsShell`
+> - System-Routen noch auf Legacy: `/system`, `/system/rtx-connector` (printers/navigation/version/cloudflare/host-control bereits Wave 0/1)
+> - Portal E2E: `scripts/e2e-servers.mjs` — Playwright-Login; `/`+`/portal` ohne Session → Login; mit Session → `/auth/worlds`; Studio `/portal`-Redirect; kein Studio NotFound
+> - Optional (nur wenn E2E Findings): login-first Portal-Regressionstests in `packages/auth/src/security/route-policy.test.ts` + `middleware.test.ts`
 >
-> Branch `cursor/uwe-integration-<slug>`, finale PR (kein Draft, wenn CI grün).
+> QA-Pflicht: Prod-E2E-Harness (`scripts/e2e-servers.mjs`), NICHT `next dev` für Auth/Session-Flows.
+>
+> Konfliktzone: Keine Welt-Routen (B1), keine Daily-Admin-Routen (B2). Andere Agents liefern route-policy-Deltas als kommentiertes Snippet.
+>
+> DoD: Admin auf `SystemShell`; E2E grün oder konkrete Failures dokumentiert; route-policy-Tests ergänzt falls nötig; `pnpm quality` grün.
+>
+> Branch `cursor/uwe-wave2-admin-e2e-<slug>`, Draft-PR.
+
+## Wave 2 — B4: RTX Connector Client + Label-Hardware-Doku + Docs-Audit
+
+> Rolle: Du bist Agent B4 (RTX Client + Docs) im UWE Hard UI/UX Rework Wave 2. Lies `docs/rework/hard-ui-ux-reset-plan.md` (Phase 11, 13) und `docs/rework/implementation-status.md` (QF10 Hardware-E2E offen). Baue auf Wave 1 QF10 (`label_printing`) auf.
+>
+> Scope:
+> - Phase 11 Connector-Client-Rework: `apps/rtx-connector-client/**` — `ConnectorShell`, `connector-nav.ts` IA (Host-Verbindung, Runner/Ollama, Modelle, Drucker, Jobs, Logs, Diagnose)
+> - QF10 Hardware-Doku: RTX-Host-Setup für echten Druck (`UWE_CONNECTOR_PRINTERS`, `UWE_CONNECTOR_PRINT_CMD`, CUPS) — in bestehende Connector-/Hosting-Docs integrieren, keine Secrets
+> - Phase 13 Docs-Audit (Pflicht + Kern): `README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE_MATURITY_MATRIX.md`, `docs/ROADMAP.md`, `docs/design/new-ui-stack.md`, `docs/rework/implementation-status.md` (Wave-2-Fortschritt)
+> - `pnpm docs:check` muss grün bleiben
+>
+> Konfliktzone: Keine Studio-Welt-Seiten (B1), keine `route-policy.ts` (B3). Zentrale Nav in Studio/Portal nicht anfassen; `connector-nav.ts` gehört dir.
+>
+> DoD: Connector-Client auf neuer Shell-IA; Docs auf neuen Stack/IA aktualisiert; `pnpm docs:check` + `pnpm quality` grün.
+>
+> Branch `cursor/uwe-wave2-rtx-docs-<slug>`, Draft-PR.
+
+## Wave 2 — Abschluss (Orchestrator, nach B1–B4-Merge)
+
+> Rolle: Du bist der Abschluss-Orchestrator nach Wave-2-Subagents. Integriere B1–B4 auf `cursor/uwe-wave2-orchestrator-<slug>`.
+>
+> Scope:
+> - Legacy-Shells löschen wenn Referenzcount = 0: `WorldModuleShell`, `AdminModuleShell`, `StudioCockpitAppShell`, `WorldCockpitShell`
+> - `legacy-ui-disconnected`-Einträge in `implementation-status.md` bereinigen
+> - Phase 14 finale Validierung: `pnpm quality`
+> - PR #298 auf ready setzen oder neuen Wave-2-PR gegen `main` (kein Draft wenn CI grün)
+> - Abschlussbericht: migrierte Routen, E2E-Ergebnisse, Wiki-Edit, Legacy-Retirement, Testcount, Risiken, verbleibende `legacy-ui-disconnected`-Features

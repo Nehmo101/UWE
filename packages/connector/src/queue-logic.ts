@@ -131,6 +131,7 @@ export const DEFAULT_JOB_TTL_MS: Record<ConnectorLane, number> = {
   audio: 30_000,
   spotify: 30_000,
   gpu: 10 * 60_000,
+  printing: 5 * 60_000,
   maintenance: 2 * 60_000,
 };
 

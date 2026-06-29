@@ -7,7 +7,7 @@ export default function LoginPage() {
       variant="portal"
       title="UWE Portal — Anmeldung"
       lead="Melde dich an, um freigegebene Inhalte deiner Kampagne zu sehen."
-      defaultRedirect="/portal"
+      defaultRedirect="/auth/worlds"
       forcePasswordRedirect="/auth/account/password"
       devDefaultEmail="aman@uwe.local"
       devDefaultPassword="uwe-dev"

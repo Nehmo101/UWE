@@ -23,6 +23,7 @@ describe("security leaks — visibility and portal filtering", () => {
     "packages/auth/src/password.test.ts",
     "packages/auth/src/permissions.test.ts",
     "apps/portal/src/lib/share-access.test.ts",
+    "apps/portal/src/navigation/portal-nav.test.ts",
   ];
 
   for (const testFile of leakTests) {
@@ -47,6 +48,12 @@ describe("security leaks — player preview must not expose secrets", () => {
     const permissions = read("packages/database/src/permissions.ts");
     assert.match(permissions, /filterBlocksForContext/);
     assert.match(permissions, /isPortalBlockVisibility/);
+  });
+
+  it("uses login-first portal navigation without public discovery hrefs", () => {
+    const portalNav = read("apps/portal/src/navigation/portal-nav.ts");
+    assert.doesNotMatch(portalNav, /Welten entdecken/);
+    assert.doesNotMatch(portalNav, /href: "\/worlds"/);
   });
 });
 

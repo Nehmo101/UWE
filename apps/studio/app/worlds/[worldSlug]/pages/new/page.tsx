@@ -22,12 +22,12 @@ import { createPageAction } from "../../../../actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; template?: string }>;
+  searchParams: Promise<{ campaign?: string; template?: string; title?: string }>;
 }
 
 export default async function NewPageForm({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, template: templateId } = await searchParams;
+  const { campaign: campaignSlug, template: templateId, title: prefillTitle } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -108,7 +108,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
         <label>
           Titel
-          <input name="title" required placeholder={template.titlePlaceholder} />
+          <input name="title" required placeholder={template.titlePlaceholder} defaultValue={prefillTitle ?? ""} />
         </label>
 
         {campaigns.length > 0 && (

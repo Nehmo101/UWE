@@ -8,6 +8,7 @@ import type {
   ConnectorCapability,
   ConnectorLane,
   ConnectorModelInfo,
+  LocalPrinterInfo,
 } from "@uwe/connector";
 
 export type { ConnectorModelInfo };
@@ -24,6 +25,7 @@ export interface HostConfig {
 export interface HeartbeatPayload {
   capabilities: ConnectorCapability[];
   models: ConnectorModelInfo[];
+  printers?: LocalPrinterInfo[];
   version: string;
   queueEnabled: boolean;
   currentJobs: number;

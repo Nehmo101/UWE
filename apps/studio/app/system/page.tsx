@@ -175,6 +175,9 @@ export default async function SystemHubPage({ searchParams }: Props) {
               <Link className="uwe-v2-btn" href="/system/rtx-connector">
                 RTX Connector
               </Link>
+              <Link className="uwe-v2-btn" href="/system/printers">
+                Drucker
+              </Link>
               <Link className="uwe-v2-btn" href="/settings?tab=status">
                 Einstellungen → Status
               </Link>

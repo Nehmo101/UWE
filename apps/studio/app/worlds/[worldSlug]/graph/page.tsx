@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  GraphRelationList,
-  ResizableGraphView,
-  VISIBILITY_LABELS,
-} from "@uwe/shared-ui";
+import { GraphRelationList, VISIBILITY_LABELS } from "@uwe/shared-ui";
 import {
   buildWorldGraph,
   getAppRepository,
@@ -14,7 +10,12 @@ import {
   type GraphViewMode,
   type Visibility,
 } from "@uwe/database/server";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import {
+  CampaignSidebar,
+  ConnectionMatrix,
+  WikiFlowGraph,
+} from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -39,9 +40,7 @@ function parseCategories(value: string | string[] | undefined): GraphNodeCategor
   return categories.length ? categories : undefined;
 }
 
-function parseVisibilities(
-  value: string | string[] | undefined,
-): Visibility[] | undefined {
+function parseVisibilities(value: string | string[] | undefined): Visibility[] | undefined {
   if (!value) return undefined;
   const raw = Array.isArray(value) ? value : value.split(",");
   const visibilities = raw.filter((item): item is Visibility =>
@@ -90,11 +89,12 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
     campaignId: selectedCampaign?.id,
   });
 
-  const allTags = [
-    ...new Set(graph.nodes.flatMap((node) => node.tags)),
-  ].sort((a, b) => a.localeCompare(b, "de"));
+  const allTags = [...new Set(graph.nodes.flatMap((node) => node.tags))].sort((a, b) =>
+    a.localeCompare(b, "de"),
+  );
 
   const nodeTitles = Object.fromEntries(graph.nodes.map((node) => [node.id, node.title]));
+  const nodeHrefs = Object.fromEntries(graph.nodes.map((node) => [node.id, node.href]));
   const previewSuffix = isPlayerPreview ? "?preview=player" : "";
   const graphBase = `/worlds/${worldSlug}/graph`;
 
@@ -105,61 +105,63 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
           Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
         </div>
       )}
-      <WorldModuleShell
+      <WorldShell
         worldSlug={worldSlug}
         worldName={world.name}
-        activeNav="graph"
-        breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Wissensgraph", graphBase)}
-        pageHeader={{
-          title: "Link-Graph",
-          summary: "Seiten als Knoten, Wikilinks und Relationen als Kanten.",
-        }}
-        topBarExtra={
-          !isPlayerPreview ? (
-            <Link
-              className="uwe-v2-btn uwe-v2-btn-ghost"
-              href={`${graphBase}?preview=player`}
-            >
-              Vorschau als Spieler
-            </Link>
-          ) : (
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={graphBase}>
-              Zurück zur DM-Ansicht
-            </Link>
-          )
-        }
-        sidebarExtra={
-          <WorldCampaignSidebar
-            items={[
-              {
-                label: "Alle Kampagnen",
-                href: `${graphBase}${previewSuffix}`,
-                active: !query.campaign,
-              },
-              ...campaigns.map((campaign) => ({
-                label: campaign.name,
-                href: `${graphBase}?campaign=${campaign.slug}${isPlayerPreview ? "&preview=player" : ""}`,
-                active: query.campaign === campaign.slug,
-              })),
-            ]}
+        breadcrumb={
+          <BreadcrumbTrail
+            items={worldSectionBreadcrumb(world.name, worldSlug, "Wissensgraph", graphBase)}
           />
         }
-        context={
+        contextPanel={
           <GraphRelationList
             edges={graph.edges}
             focusPageId={graph.focusPageId}
             nodeTitles={nodeTitles}
           />
         }
-        contextTitle="Relationen"
       >
-        <form method="get" className="uwe-graph-filters">
+        <PageHeader
+          title="Link-Graph"
+          summary="Seiten als Knoten, Wikilinks und Relationen als Kanten."
+          actions={
+            !isPlayerPreview ? (
+              <Link
+                className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                href={`${graphBase}?preview=player`}
+              >
+                Vorschau als Spieler
+              </Link>
+            ) : (
+              <Link
+                className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                href={graphBase}
+              >
+                Zurück zur DM-Ansicht
+              </Link>
+            )
+          }
+        />
+
+        <CampaignSidebar
+          className="mb-4"
+          items={[
+            { label: "Alle Kampagnen", href: `${graphBase}${previewSuffix}`, active: !query.campaign },
+            ...campaigns.map((campaign) => ({
+              label: campaign.name,
+              href: `${graphBase}?campaign=${campaign.slug}${isPlayerPreview ? "&preview=player" : ""}`,
+              active: query.campaign === campaign.slug,
+            })),
+          ]}
+        />
+
+        <form method="get" className="mb-4 flex flex-wrap gap-3 text-sm">
           {isPlayerPreview && <input type="hidden" name="preview" value="player" />}
           {query.campaign && <input type="hidden" name="campaign" value={query.campaign} />}
 
-          <label>
+          <label className="flex flex-col gap-1">
             Typ
-            <select name="category" defaultValue={categories?.[0] ?? ""}>
+            <select name="category" defaultValue={categories?.[0] ?? ""} className="rounded-md border border-border px-2 py-1">
               <option value="">Alle Typen</option>
               {GRAPH_NODE_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
@@ -169,9 +171,9 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1">
             Tag
-            <select name="tag" defaultValue={query.tag ?? ""}>
+            <select name="tag" defaultValue={query.tag ?? ""} className="rounded-md border border-border px-2 py-1">
               <option value="">Alle Tags</option>
               {allTags.map((tag) => (
                 <option key={tag} value={tag}>
@@ -181,9 +183,9 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1">
             Sichtbarkeit
-            <select name="visibility" defaultValue={visibilities?.[0] ?? ""}>
+            <select name="visibility" defaultValue={visibilities?.[0] ?? ""} className="rounded-md border border-border px-2 py-1">
               <option value="">Alle</option>
               {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -193,9 +195,9 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1">
             Modus
-            <select name="mode" defaultValue={mode}>
+            <select name="mode" defaultValue={mode} className="rounded-md border border-border px-2 py-1">
               <option value="full">Gesamter Graph</option>
               <option value="focus">Nur Fokus-Seite</option>
               <option value="neighbors">Nachbarn</option>
@@ -203,9 +205,9 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1">
             Fokus-Seite
-            <select name="focusPageId" defaultValue={query.focusPageId ?? ""}>
+            <select name="focusPageId" defaultValue={query.focusPageId ?? ""} className="rounded-md border border-border px-2 py-1">
               <option value="">Kein Fokus</option>
               {focusOptions.map((page) => (
                 <option key={page.id} value={page.id}>
@@ -215,17 +217,26 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+          <button
+            type="submit"
+            className="self-end rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground"
+          >
             Filter anwenden
           </button>
         </form>
 
-        <ResizableGraphView nodes={graph.nodes} edges={graph.edges} />
+        <WikiFlowGraph nodes={graph.nodes} edges={graph.edges} className="mb-6 rounded-lg border border-border" />
+        <ConnectionMatrix
+          edges={graph.edges}
+          nodeTitles={nodeTitles}
+          nodeHrefs={nodeHrefs}
+          className="mb-4"
+        />
 
-        <p className="uwe-v2-empty" style={{ marginTop: "1rem" }}>
+        <p className="text-sm text-muted-foreground">
           {graph.nodes.length} Knoten · {graph.edges.length} Kanten
         </p>
-      </WorldModuleShell>
+      </WorldShell>
     </>
   );
 }

@@ -55,41 +55,96 @@ gate is green (`pnpm lint`, `pnpm typecheck` across 27 packages, `pnpm test:ci`
 - Central error UI (QF14) — `ErrorScreen` (Studio diagnostics) + `PortalErrorScreen`
   (player-safe) wired into both `app/error.tsx`. Build-verified.
 
-## Quick-fix disposition summary
+## Wave 1 — shipped (consolidated orchestrator branch)
 
-- **Implemented in this work (verified):** QF4 (sessions), QF5 (dungeons), QF7 (RTX
-  diagnostics), QF8 (version), QF9 (cloudflare), QF12 (UWE KnowHow), QF13 (host
-  control), QF14 (error UI), plus Phase 7 (navigation overview).
-- **Already present in the codebase (verified, no change needed):** QF1 (dashboard
-  layout route + policy + regression test), QF6 (complete page-type↔nav mapping +
-  empty states), QF11 (`create_knowledge_text` brain action + test); the RTX
-  window-hiding half of QF7 (`CREATE_NO_WINDOW` on all spawns).
-- **Remaining → Wave-1 agents (session/infra/feature scale):** QF2 (portal routing),
-  QF3 (membership/portal access), QF10 (label print via RTX), broad page migration,
-  Obsidian-like wiki core.
+Branch: `cursor/uwe-wave1-orchestrator-941c` (merges A1–A4 subagent branches).
 
-## Deferred / not yet done (Wave 1 — page migration & bug fixes)
+### Quick-fix disposition (updated)
 
-These need per-area work and a stable runtime QA harness (see recipe below).
-They map to the agents in `agent-start-prompts.md`.
+| Item | Status | Notes |
+|---|---|---|
+| QF1 Layout 404 | **done (Wave 0)** | Route + policy + regression test already present |
+| QF2 Portal routing | **done** | Login-first Portal; Studio `/portal` redirect shim; legacy `/worlds/*` redirects |
+| QF3 Membership/portal access | **done** | `portal-access-service`, admin badges, "Portalzugriff prüfen" API/UI |
+| QF4 Sessions create | **done (Wave 0)** | Service + Zod + regression test |
+| QF5 Dungeons create | **done (Wave 0)** | Service + validation + regression test |
+| QF6 Faction/type filter | **done (Wave 0)** | Mapping complete + empty states |
+| QF7 RTX/Ollama CMD | **done (Wave 0)** | `CREATE_NO_WINDOW` + UI error surfacing |
+| QF8 Version | **done (Wave 0)** | `/system/version` + build metadata |
+| QF9 Cloudflare | **done (Wave 0)** | `/system/cloudflare` + `docs/cloudflare-current-setup.md` |
+| QF10 Label print via RTX | **done** | `label_printing` capability, queue service, `/system/printers`, world RTX print UI |
+| QF11 Knowledge text | **done (Wave 0)** | `create_knowledge_text` brain action + test |
+| QF12 UWE KnowHow | **done (Wave 0)** | `/system/uwe-knowhow` |
+| QF13 Host Control | **done (Wave 0)** | `/system/host-control` read-only status |
+| QF14 Error UI | **done (Wave 0)** | Studio diagnostics + Portal player-safe error |
+
+### Page migration (Phase 4/5) — partial
+
+| Route | Shell | Status |
+|---|---|---|
+| `/today` | `StudioShell` | **done** |
+| `/worlds` | `StudioShell` | **done** |
+| `/worlds/[worldSlug]/dashboard` | `WorldShell` | **done** |
+| `/worlds/[worldSlug]` (wiki list) | `WorldShell` | **done** |
+| `/worlds/[worldSlug]/[category]/[slug]` | `WorldShell` | **done** |
+| `/worlds/[worldSlug]/graph` | `WorldShell` | **done** |
+| `/system/printers` | System area | **done** (QF10) |
+| Sessions, dungeons, edit, brain, labels (non-print), etc. | `WorldModuleShell` | **open** (Wave 2) |
+
+### Wiki core (Phase 8/9) — initial
+
+- `WikiPageTable` — TanStack Table (type, tags, visibility, status, last changed)
+- `WikiTiptapViewer`, `WikiContextPanel` (backlinks, outgoing, related, broken links)
+- `WikiFlowGraph` — `@xyflow/react` neighborhood + world graph
+- `ConnectionMatrix`, `CampaignSidebar`
+- **Deferred:** wiki edit page on new shell, column visibility toggles
+
+### Wave 1 agent deliverables
+
+| Agent | Branch | Scope | Status |
+|---|---|---|---|
+| **A1** Portal + Cloudflare | `cursor/uwe-wave1-portal-cloudflare-941c` | QF2, QF3 | **done** |
+| **A2** Page migration + Wiki | `cursor/uwe-wave1-page-migration-941c` | Phase 4/5/8/9 | **done** (partial page set) |
+| **A3** RTX Label print | `cursor/uwe-wave1-label-print-941c` | QF10 | **done** |
+| **A4** Tests + Docs | `cursor/uwe-wave1-tests-docs-941c` | Phase 12/13 | **done** |
+
+### Phase 12 — Tests on new IA
+
+| Test area | File(s) | Status |
+|---|---|---|
+| Studio central nav contract | `apps/studio/src/navigation/navigation.test.ts` | **done** |
+| Studio nav audit | `apps/studio/src/navigation/inspect-navigation.test.ts` | **done** (Wave 0) |
+| Studio mobile nav | `apps/studio/src/lib/mobile-nav.test.ts` | **done** |
+| Portal login-first nav | `apps/portal/src/navigation/portal-nav.test.ts` | **done** |
+| Portal mobile nav | `apps/portal/src/lib/mobile-nav.test.ts` | **done** |
+| Shared nav helpers | `packages/shared-utils/src/navigation.test.ts` | **done** (Wave 0) |
+| Legacy studio nav tests | ~~`studio-navigation.test.ts`~~ | **removed** → `navigation.test.ts` |
+| Legacy portal nav tests | ~~`portal-navigation.test.ts`~~ | **removed** → `portal-nav.test.ts` |
+| Integration smoke | `scripts/integration-smoke.test.ts` | **done** |
+| Security leaks | `scripts/security-leaks.test.ts` | **done** |
+| Portal access | `packages/database/src/portal-access.test.ts` | **done** |
+| Label print queue | `label-print-queue-service.test.ts`, `capabilities.test.ts` | **done** |
+| Route policy + middleware (login-first) | `route-policy.test.ts`, `middleware.test.ts` | **deferred** — policy unchanged; optional E2E regressions |
+| E2E portal login flow | `scripts/e2e-servers.mjs` | **deferred** — recommend before merge to main |
+
+### Phase 13 — Documentation
+
+| Doc | Status |
+|---|---|
+| `docs/rework/implementation-status.md` | **updated** (this file) |
+| `docs/cloudflare-current-setup.md` | **updated** (Studio `/portal` shim) |
+| Full `docs/` audit | **deferred → Wave 2** |
+
+## Deferred / not yet done (Wave 2)
 
 | Item | Plan ref | Status |
 |---|---|---|
-| Wire shells into remaining pages, retire old shells | Phase 4/5 | open |
-| Layout 404 | QF1 | open (repro + regression test) |
-| Portal opens / no Studio NotFound | QF2 | open |
-| Membership & portal access UI | QF3 | open |
-| Sessions create | QF4 | **done (service+action)** — best-effort calendar sync (never fails creation) + Zod validation + regression test; full browser flow QA still open |
-| Dungeons create | QF5 | **done (service+actions)** — service create/hierarchy already tested; added Zod title + childType validation + slug-dedup regression test; full browser wizard QA still open |
-| Faction/type-filter crash | QF6 | likely already fixed (mapping complete + empty states); runtime repro blocked, see note |
-| RTX/Ollama black CMD | QF7 | **done** — Rust already hides window (`CREATE_NO_WINDOW`) + captures stdout/stderr; fixed UI `toMessage` to surface real string errors instead of "Unbekannter Fehler" across all panels. (Optional: spawn timeout in Rust still open.) |
-| Cloudflare setup page/docs | QF9 | **done (in-app)** — `/system/cloudflare` + `docs/cloudflare-current-setup.md`; live Cloudflare API/MCP verification still open |
-| Label print via RTX | QF10 | open |
-| Knowledge text action | QF11 | **already implemented** — `create_knowledge_text` is a registered brain action (`packages/ai-brain/src/actions.ts`) with a task handler + proposal pipeline, covered by `brain-actions.test.ts` ("applies it as a brain document"). UI surfacing/links can be extended in Wave-1. |
-| UWE KnowHow wiki | QF12 | **done (in-app)** — `/system/uwe-knowhow` searchable docs index |
-| Owner Host Control | QF13 | **done (read-only status)** — `/system/host-control` via `getSystemStatus()`; write actions (restart/update) still open |
-| Central error UI | QF14 | **done** — Studio diagnostics + Portal player-safe error/`error.tsx` |
-| Obsidian-like wiki core | Phase 8/9 | open |
+| Retire `WorldModuleShell` on remaining world routes | Phase 4/5 | open |
+| Wiki edit page on `WorldShell` | Phase 8/9 | open |
+| Portal E2E browser verification | QF2 | open |
+| Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) |
+| Route-policy login-first regression tests | Phase 12 | open (optional) |
+| Full docs audit (README, ARCHITECTURE, etc.) | Phase 13 | open |
 
 ### QF6 note
 
@@ -122,15 +177,11 @@ Always revert any `.env` changes and leave the tree clean.
 
 ## Latest full-gate verification
 
-The entire branch passes the CI gate (re-run after the QF4/QF5/QF7 backend changes):
+Consolidated Wave 1 branch (`cursor/uwe-wave1-orchestrator-941c`):
 
 - `pnpm lint` (whole repo, `--max-warnings 0`) — pass
 - `pnpm typecheck` (turbo, 27 packages) — pass
-- `pnpm test:ci` — 1478 tests across 16 suites, pass
-- `pnpm build:release` — both apps build incl. standalone Prisma checks (verified earlier)
+- `pnpm test:ci` — 1480 tests across 16 suites, pass
+- `pnpm build:release` — both apps build incl. standalone Prisma checks — pass
 
-Solo-deliverable scope is complete: foundation (both apps) + System area (navigation,
-version, cloudflare, uwe-knowhow, host-control) + central error UI + QF4/QF5/QF7
-fixes with regression tests. Remaining items (QF2, QF3, QF10, QF11, broad page
-migration, wiki core) require a session-capable runtime or are feature/infra-scale,
-and are handed to the Wave-1 agents (`agent-start-prompts.md`).
+Wave 0 baseline was 1478 tests; +2 from portal-access and label-print regressions.

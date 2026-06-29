@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
 import { formatEuroFromCents, prisma } from "@uwe/database/server";
-import { StudioCockpitAppShell } from "@/components/StudioCockpitAppShell";
-import { studioGlobalBottomNav } from "@/src/lib/mobile-nav";
+import { StudioShell, PageHeader } from "@/src/components/shell";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { TodayDashboardClient } from "./TodayDashboardClient";
 
@@ -16,20 +15,8 @@ export default async function TodayPage() {
   const data = await getTodayDashboardData(prisma, { useMockInference });
 
   return (
-    <StudioCockpitAppShell
-      variant="module"
-      activePath="/today"
-      showRail
-      railActiveId="today"
-      title="Heute"
-      summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
-      actions={
-        <Link href="/capture?quick=1" className="uwe-v2-btn uwe-v2-btn-primary">
-          + Capture
-        </Link>
-      }
-      bottomNav={studioGlobalBottomNav("today")}
-    >
+    <StudioShell breadcrumb={<span>Heute</span>}>
+      <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
       <TodayDashboardClient data={data} />
 
       <div className="uwe-v2-stat-grid">
@@ -175,6 +162,6 @@ export default async function TodayPage() {
       <p className="uwe-dashboard-muted">
         <HealthBadge status={data.systemOk ? "ok" : "degraded"} label={data.systemLabel} />
       </p>
-    </StudioCockpitAppShell>
+    </StudioShell>
   );
 }

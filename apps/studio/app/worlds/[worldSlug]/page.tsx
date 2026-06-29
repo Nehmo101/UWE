@@ -2,14 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   EmptyState,
-  PageTypeBadge,
-  PublishBadge,
-  PageListCards,
   SearchFilterBar,
   SearchResultsList,
-  SidebarNav,
-  SidebarSection,
-  VisibilityBadge,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -17,13 +11,15 @@ import {
   getAppRepository,
   NAV_CATEGORIES,
   NAV_CATEGORY_LABELS,
+  parseStringArray,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   type NavCategory,
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar, WikiPageTable, type WikiPageRow } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -75,69 +71,67 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
 
   const isSearching = Boolean(q?.trim());
   const newPageHref = `/worlds/${worldSlug}/pages/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`;
+  const worldBase = `/worlds/${worldSlug}`;
 
-  const recentPages = [...pages]
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5);
-  const draftCount = pages.filter((page) => page.publishStatus === "draft").length;
+  const tableRows: WikiPageRow[] = pages.map((page) => ({
+    id: page.id,
+    title: page.title,
+    href: buildPageUrl(worldSlug, page.type, page.slug),
+    type: page.type,
+    visibility: page.visibility,
+    publishStatus: page.publishStatus,
+    tags: parseStringArray(page.tags),
+    updatedAt: page.updatedAt.toISOString(),
+  }));
+
+  const campaignItems = campaignNavItems(worldBase, campaigns, campaignSlug);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="pages"
-      campaignSlug={campaignSlug}
-      searchQuery={q ?? ""}
-      breadcrumb={worldRootBreadcrumb(world.name, worldSlug)}
-      contextTitle="Welt-Kontext"
-      pageHeader={{
-        title: world.name,
-        summary: world.description,
-        actions: (
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={newPageHref}>
-            Seite erstellen
-          </Link>
-        ),
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
-          items={campaignNavItems(`/worlds/${worldSlug}`, campaigns, campaignSlug)}
+      breadcrumb={<BreadcrumbTrail items={worldRootBreadcrumb(world.name, worldSlug)} />}
+      contextPanel={
+        <CampaignSidebar
+          items={[
+            { label: "Alle Kampagnen", href: worldBase, active: !campaignSlug },
+            ...campaignItems.map((item) => ({
+              label: item.label,
+              href: item.href,
+              active: item.active,
+            })),
+          ]}
         />
       }
-      context={
-        <>
-          <SidebarSection title="Kontext">
-            <p className="uwe-hint" style={{ margin: 0 }}>
-              {pages.length} Seiten
-              {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
-              {draftCount > 0 ? ` · ${draftCount} Entwürfe` : ""}
-            </p>
-          </SidebarSection>
-          {recentPages.length > 0 && (
-            <SidebarSection title="Zuletzt bearbeitet">
-              <SidebarNav
-                items={recentPages.map((page) => ({
-                  label: page.title,
-                  href: buildPageUrl(worldSlug, page.type, page.slug),
-                }))}
-              />
-            </SidebarSection>
-          )}
-        </>
-      }
     >
-      <div className="uwe-filter-bar">
-        <Link href={`/worlds/${worldSlug}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`} className={!typeFilter ? "active" : undefined}>
+      <PageHeader
+        title={world.name}
+        summary={world.description}
+        actions={
+          <Link
+            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            href={newPageHref}
+          >
+            Seite erstellen
+          </Link>
+        }
+      />
+
+      <div className="mb-4 flex flex-wrap gap-2 text-sm">
+        <Link
+          href={`${worldBase}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}
+          className={`rounded-md px-3 py-1.5 ${!typeFilter ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+        >
           Alle Typen
         </Link>
         {NAV_CATEGORIES.map((cat) => (
           <Link
             key={cat}
-            href={`/worlds/${worldSlug}?${new URLSearchParams({
+            href={`${worldBase}?${new URLSearchParams({
               ...(campaignSlug ? { campaign: campaignSlug } : {}),
               type: cat,
             }).toString()}`}
-            className={typeFilter === cat ? "active" : undefined}
+            className={`rounded-md px-3 py-1.5 ${typeFilter === cat ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
           >
             {NAV_CATEGORY_LABELS[cat]}
           </Link>
@@ -147,7 +141,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
       {isSearching ? (
         <>
           <SearchFilterBar
-            action={`/worlds/${worldSlug}`}
+            action={worldBase}
             query={q}
             hiddenFields={campaignSlug ? { campaign: campaignSlug } : undefined}
             filters={[
@@ -171,65 +165,24 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
               },
             ]}
           />
-          <SearchResultsList
-            results={searchResults}
-            query={q}
-            showVisibility
-            showLabelActions
-          />
+          <SearchResultsList results={searchResults} query={q} showVisibility showLabelActions />
         </>
       ) : pages.length === 0 ? (
         <EmptyState
           title="Keine Seiten"
           description="Für diesen Filter gibt es noch keine Einträge. Erstelle eine neue Seite oder passe den Filter an."
           action={
-            <Link className="uwe-v2-btn uwe-v2-btn-primary" href={newPageHref}>
+            <Link
+              className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+              href={newPageHref}
+            >
               Seite erstellen
             </Link>
           }
         />
       ) : (
-        <>
-          <PageListCards
-            items={pages.map((page) => ({
-              id: page.id,
-              title: page.title,
-              href: buildPageUrl(worldSlug, page.type, page.slug),
-              badges: (
-                <>
-                  <PageTypeBadge type={page.type} />
-                  <VisibilityBadge visibility={page.visibility} />
-                  <PublishBadge status={page.publishStatus} />
-                </>
-              ),
-            }))}
-          />
-          <table className="uwe-page-table uwe-table-hidden-mobile">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Typ</th>
-                <th>Sichtbarkeit</th>
-                <th>Publish</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pages.map((page) => (
-                <tr key={page.id}>
-                  <td data-label="Titel">
-                    <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>
-                      {page.title}
-                    </Link>
-                  </td>
-                  <td data-label="Typ"><PageTypeBadge type={page.type} /></td>
-                  <td data-label="Sichtbarkeit"><VisibilityBadge visibility={page.visibility} /></td>
-                  <td data-label="Publish"><PublishBadge status={page.publishStatus} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+        <WikiPageTable rows={tableRows} />
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

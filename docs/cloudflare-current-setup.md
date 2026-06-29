@@ -57,7 +57,7 @@ Set on the host (not committed). The in-app status reflects these:
 
 - `https://…/studio` (or the studio host) opens Studio.
 - `https://…/portal` (or the portal host) opens the Portal login / "Meine Welten".
-- `/portal` never lands in Studio NotFound.
+- `/portal` never lands in Studio NotFound — Studio exposes a defensive redirect shim at `apps/studio/app/portal/page.tsx` that sends visitors to `NEXT_PUBLIC_PORTAL_URL` (split hostname) or the unified `PORTAL_PATH` mount.
 - **System → Cloudflare** shows tunnel/access/routing status (booleans only).
 
 ## Verification status

@@ -20,6 +20,7 @@ const baseConfig: ConnectorRuntimeConfig = {
 const snapshot: DetectedCapabilities = {
   capabilities: ["audio_local", "llm_local"],
   models: [{ provider: "ollama", name: "llama3.2" }],
+  printers: [],
 };
 
 class FakeClient {

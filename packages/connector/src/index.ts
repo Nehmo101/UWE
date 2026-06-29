@@ -20,6 +20,18 @@ export {
 } from "./degraded";
 
 export {
+  LABEL_PRINT_FORMATS,
+  isLabelPrintFormat,
+  labelPrintDocumentPath,
+  normalizeLocalPrinters,
+  parseLabelPrintJobPayload,
+  type LabelPrintFormat,
+  type LabelPrintJobPayload,
+  type LocalPrinterInfo,
+  type PrinterDiscoverResult,
+} from "./label-printing";
+
+export {
   CONNECTOR_MODEL_TYPES,
   isConnectorModelType,
   type ConnectorModelInfo,

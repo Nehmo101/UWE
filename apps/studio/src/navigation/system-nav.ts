@@ -109,7 +109,7 @@ export const SYSTEM_NAV: NavGroup[] = [
         group: "Setup & Host",
         section: SECTION,
         permission: ["owner", "admin"],
-        status: "planned",
+        status: "active",
         source: "system",
         keywords: ["drucker", "printer", "label", "print"],
       },

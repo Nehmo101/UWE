@@ -25,11 +25,19 @@ interface AdminUserView {
   email: string | null;
   role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
   status?: "invited" | "active" | "disabled";
+  hasPassword?: boolean;
   emailVerifiedAt?: string | null;
   lastLoginAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   worldMemberships: WorldMembershipView[];
+}
+
+interface PortalAccessEvaluationView {
+  allowed: boolean;
+  summary: "granted" | "partial" | "denied";
+  checks: Array<{ id: string; label: string; pass: boolean; detail?: string }>;
+  blockers: string[];
 }
 
 const USER_ROLES = ["owner", "admin", "dm", "player", "readonly", "guest"] as const;
@@ -41,6 +49,15 @@ const STATUS_LABELS: Record<(typeof USER_STATUSES)[number], string> = {
   active: "Aktiv",
   disabled: "Deaktiviert",
 };
+
+function portalAccessBadge(user: AdminUserView) {
+  if (user.status !== "active") return { label: "Inaktiv", className: "uwe-badge uwe-badge-danger" };
+  if (!user.hasPassword || !user.email?.trim()) return { label: "Login unvollständig", className: "uwe-badge uwe-badge-warning" };
+  if (!["owner", "admin", "dm"].includes(user.role) && user.worldMemberships.length === 0) {
+    return { label: "Keine Welten", className: "uwe-badge uwe-badge-warning" };
+  }
+  return { label: "Portal bereit", className: "uwe-badge uwe-badge-success" };
+}
 
 export function UserManagementWorkspace() {
   const [users, setUsers] = useState<AdminUserView[]>([]);
@@ -70,6 +87,9 @@ export function UserManagementWorkspace() {
     role: "player" as (typeof WORLD_ROLES)[number],
     characterName: "",
   });
+  const [portalAccess, setPortalAccess] = useState<PortalAccessEvaluationView | null>(null);
+  const [portalAccessLoading, setPortalAccessLoading] = useState(false);
+  const [portalAccessError, setPortalAccessError] = useState<string | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
 
@@ -107,6 +127,8 @@ export function UserManagementWorkspace() {
       password: "",
     });
     setMembershipForm({ worldId: "", role: "player", characterName: "" });
+    setPortalAccess(null);
+    setPortalAccessError(null);
   }, [selectedUser]);
 
   async function createUser() {
@@ -232,6 +254,26 @@ export function UserManagementWorkspace() {
     await loadUsers();
   }
 
+  async function checkPortalAccess() {
+    if (!selectedUser) return;
+    setPortalAccessLoading(true);
+    setPortalAccessError(null);
+    setPortalAccess(null);
+    try {
+      const response = await fetch(studioApiUrl(`/api/admin/users/${selectedUser.id}/portal-access`));
+      const data = (await response.json()) as { evaluation?: PortalAccessEvaluationView; error?: string };
+      if (!response.ok) {
+        setPortalAccessError(data.error ?? `Portalzugriff konnte nicht geprüft werden (${response.status}).`);
+        return;
+      }
+      if (data.evaluation) setPortalAccess(data.evaluation);
+    } catch (err) {
+      setPortalAccessError(err instanceof Error ? err.message : "Portalzugriff konnte nicht geprüft werden.");
+    } finally {
+      setPortalAccessLoading(false);
+    }
+  }
+
   return (
     <>
       {error && (
@@ -329,6 +371,7 @@ export function UserManagementWorkspace() {
                 <th>E-Mail</th>
                 <th>Rolle</th>
                 <th>Status</th>
+                <th>Portal</th>
                 <th>Letzter Login</th>
                 <th />
               </tr>
@@ -340,6 +383,7 @@ export function UserManagementWorkspace() {
                   <td>{user.email ?? "—"}</td>
                   <td>{SECURITY_ROLE_LABELS[user.role] ?? user.role}</td>
                   <td>{STATUS_LABELS[user.status ?? "active"]}</td>
+                  <td><span className={portalAccessBadge(user).className}>{portalAccessBadge(user).label}</span></td>
                   <td>{formatStudioDateOrDash(user.lastLoginAt)}</td>
                   <td>
                     <button
@@ -530,6 +574,23 @@ export function UserManagementWorkspace() {
           <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void addMembership()}>
             Mitgliedschaft hinzufügen
           </button>
+          <section style={{ marginTop: "1.5rem" }}>
+            <h3>Portalzugriff</h3>
+            <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" disabled={portalAccessLoading} onClick={() => void checkPortalAccess()}>
+              {portalAccessLoading ? "Prüfe…" : "Portalzugriff prüfen"}
+            </button>
+            {portalAccessError ? <p className="uwe-alert uwe-alert-error" role="alert">{portalAccessError}</p> : null}
+            {portalAccess ? (
+              <ul className="uwe-list" style={{ marginTop: "0.75rem" }}>
+                {portalAccess.checks.map((check) => (
+                  <li key={`${check.id}-${check.label}`}>
+                    <span className={check.pass ? "uwe-badge uwe-badge-success" : "uwe-badge uwe-badge-danger"}>{check.pass ? "OK" : "Fehlt"}</span> {check.label}
+                    {check.detail ? ` — ${check.detail}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
         </section>
       )}
     </>

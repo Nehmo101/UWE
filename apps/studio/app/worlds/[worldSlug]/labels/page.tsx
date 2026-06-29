@@ -106,6 +106,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
         >
           Drucklisten ({printLists.length})
         </Link>
+        <Link href={`/worlds/${worldSlug}/labels/print`} className="uwe-tab">RTX-Druck</Link>
       </nav>
 
       {activeTab === "labels" && (

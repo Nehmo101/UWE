@@ -1554,6 +1554,8 @@ enum ConnectorJobType {
   image_generate
   embedding_generate
   connector_refresh_models
+  label_print
+  printer_discover
 }
 
 enum ConnectorJobStatus {
@@ -1570,6 +1572,7 @@ enum ConnectorLane {
   audio
   spotify
   gpu
+  printing
   maintenance
 }
 
@@ -1594,6 +1597,7 @@ model Connector {
   queueEnabled    Boolean         @default(true) @map("queue_enabled")
   capabilities    Json?
   models          Json?
+  printers        Json?
   version         String?
   currentJobs     Int             @default(0) @map("current_jobs")
   lastError       String?         @map("last_error")

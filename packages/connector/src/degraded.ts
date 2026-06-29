@@ -15,6 +15,7 @@ const CAPABILITY_OFFLINE_MESSAGES: Partial<Record<ConnectorCapability, string>> 
   llm_local: "RTX Connector offline — lokale KI ist nicht verfügbar.",
   image_generation: "RTX Connector offline — lokale Bildgenerierung ist pausiert.",
   embedding_local: "RTX Connector offline — lokale Embeddings sind pausiert.",
+  label_printing: "RTX Connector offline — lokaler Label-Druck ist pausiert.",
 };
 
 export function capabilityOfflineMessage(capability: ConnectorCapability): string {

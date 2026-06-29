@@ -37,11 +37,12 @@ export interface RunnerOptions {
 export class ConnectorRunner {
   private readonly client: HostClient;
   private readonly config: ConnectorRuntimeConfig;
-  private snapshot: DetectedCapabilities = { capabilities: [], models: [] };
+  private snapshot: DetectedCapabilities = { capabilities: [], models: [], printers: [] };
   private readonly laneCounts: Record<ConnectorLane, number> = {
     audio: 0,
     spotify: 0,
     gpu: 0,
+    printing: 0,
     maintenance: 0,
   };
   private readonly active = new Set<Promise<void>>();
@@ -79,6 +80,7 @@ export class ConnectorRunner {
       const response = await this.client.heartbeat({
         capabilities: this.snapshot.capabilities,
         models: this.snapshot.models,
+        printers: this.snapshot.printers,
         version: this.options.version,
         queueEnabled: this.config.queueEnabled,
         currentJobs: this.active.size,
@@ -234,6 +236,7 @@ export class ConnectorRunner {
       await this.client.heartbeat({
         capabilities: this.snapshot.capabilities,
         models: this.snapshot.models,
+        printers: this.snapshot.printers,
         version: this.options.version,
         queueEnabled: false,
         currentJobs: this.active.size,

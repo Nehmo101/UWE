@@ -1,0 +1,2 @@
+import assert from "node:assert/strict"; import { describe,it } from "node:test"; import { discoverLocalPrinters, runPrinterDiscover } from "./label-printing";
+describe("label-printing",()=>{it("parses PRINTERS env",()=>{assert.equal(discoverLocalPrinters({UWE_CONNECTOR_PRINTERS:JSON.stringify([{id:"p",name:"P"}])}).length,1);}); it("discover async",async()=>{assert.ok(Array.isArray((await runPrinterDiscover()).printers));});});

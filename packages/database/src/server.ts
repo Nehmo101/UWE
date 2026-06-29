@@ -174,6 +174,16 @@ export {
   USER_SAFE_SELECT,
   isGlobalAdminRole,
 } from "./user-service";
+export {
+  evaluatePortalAccessForUser,
+  portalAccessBadgeFromUser,
+} from "./portal-access-service";
+export type {
+  PortalAccessCheck,
+  PortalAccessEvaluation,
+  PortalAccessSummary,
+  PortalAccessibleWorldSummary,
+} from "./portal-access-service";
 export type {
   CreateManagedUserInput,
   UpdateManagedUserInput,
@@ -631,6 +641,19 @@ export type {
   PrintListItemInput,
   PrintListWithItems,
 } from "./label-print-list-service";
+
+export {
+  createLabelPrintQueueService,
+  LabelPrintQueueService,
+  LABEL_PRINT_QUEUE_STATUS_LABELS,
+} from "./label-print-queue-service";
+
+export type {
+  EnqueuePrintListInput,
+  LabelPrintDocument,
+  LabelPrintQueueItem,
+  LabelPrintQueueStatus,
+} from "./label-print-queue-service";
 
 export {
   assessTextFit,

@@ -1,55 +1,5 @@
-import Link from "next/link";
-import { getCurrentUser, listPortalWorlds } from "@/src/lib/auth";
-import { PortalPublicShell } from "@/src/components/PortalPublicShell";
-import { portalDiscoverBottomNav } from "@/src/lib/mobile-nav";
-import { EmptyState, PageHeaderV2 } from "@uwe/shared-ui";
+import { redirectLegacyWorldsHub } from "@/src/lib/legacy-world-redirect";
 
-export default async function PortalWorldsPage() {
-  const [worlds, user] = await Promise.all([listPortalWorlds(), getCurrentUser()]);
-
-  return (
-    <PortalPublicShell
-      publicActive="discover"
-      bottomNav={portalDiscoverBottomNav("discover")}
-      brandHref="/worlds"
-      topBarExtra={
-        user ? (
-          <Link href="/auth/worlds" className="portal-login-link">
-            Meine Welten
-          </Link>
-        ) : (
-          <Link href="/login" className="portal-login-link">
-            Anmelden
-          </Link>
-        )
-      }
-    >
-      <PageHeaderV2
-        title="Welten entdecken"
-        summary="Wähle eine Welt und erkunde freigegebene Inhalte."
-      />
-
-      {worlds.length === 0 ? (
-        <EmptyState
-          title="Noch keine Welten verfügbar"
-          description="Dir wurden noch keine Welten zugeordnet. Bitte wende dich an deinen Spielleiter."
-          action={
-            <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/login">
-              Anmelden
-            </Link>
-          }
-        />
-      ) : (
-        <div className="wiki-world-grid">
-          {worlds.map((world) => (
-            <article key={world.id} className="wiki-world-card uwe-v2-card uwe-v2-card-padded">
-              <h2>{world.name}</h2>
-              {world.description && <p>{world.description}</p>}
-              <Link href={`/worlds/${world.slug}`}>Welt betreten →</Link>
-            </article>
-          ))}
-        </div>
-      )}
-    </PortalPublicShell>
-  );
+export default async function LegacyWorldsDiscoverPage() {
+  await redirectLegacyWorldsHub();
 }

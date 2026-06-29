@@ -39,6 +39,7 @@ import {
   loadModelProfileStore,
   resolveConnectorDataDir,
 } from "./model-profile-store";
+import { discoverLocalPrintersAsync } from "./label-printing";
 import { ConnectorRunner } from "./runner";
 
 export const CONNECTOR_VERSION = "1.0.0";
@@ -177,10 +178,8 @@ export function createConnectorRunner(
   const discover = async () => {
     const store = loadModelProfileStore(dataDir);
     const llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
-    return detectCapabilities(llms, capabilityEnv, {
-      profiles: store.profiles,
-      forced: config.forcedCapabilities,
-    });
+    const detected = detectCapabilities(llms, capabilityEnv, { profiles: store.profiles, forced: config.forcedCapabilities });
+    return { ...detected, printers: await discoverLocalPrintersAsync() };
   };
 
   const client = new HostClient(config.hostUrl, config.token);
@@ -199,6 +198,9 @@ export function createConnectorRunner(
         undefined,
       spotifyDeviceId: process.env.SPOTIFY_DEVICE_ID?.trim() || undefined,
       imageCommand: process.env.UWE_CONNECTOR_IMAGE_CMD?.trim() || undefined,
+      printCommand: process.env.UWE_CONNECTOR_PRINT_CMD?.trim() || undefined,
+      hostUrl: config.hostUrl,
+      connectorToken: config.token,
       requestTimeoutMs: 120_000,
     },
   });

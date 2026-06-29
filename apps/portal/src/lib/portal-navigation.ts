@@ -1,17 +1,8 @@
-/** Portal information architecture — player-facing navigation only. */
+/** Portal information architecture — login-first, player-facing navigation only. */
 
-export type PortalGlobalNavKey = "start" | "worlds" | "discover" | "account";
-
-export type PortalPublicNavKey = "discover" | "my-worlds" | "login";
-
-export type PortalWorldNavKey =
-  | "dashboard"
-  | "sessions"
-  | "notes"
-  | "handouts"
-  | "soundboard"
-  | "search";
-
+export type PortalGlobalNavKey = "start" | "worlds" | "account";
+export type PortalPublicNavKey = "my-worlds" | "login";
+export type PortalWorldNavKey = "dashboard" | "sessions" | "notes" | "handouts" | "soundboard" | "search";
 export type PortalAccountNavKey = "password" | "security";
 
 export interface PortalNavItem {
@@ -26,36 +17,23 @@ export interface PortalNavSection {
   items: PortalNavItem[];
 }
 
-/** Top-level Portal navigation (authenticated hub). */
 export function portalGlobalNav(active: PortalGlobalNavKey): PortalNavItem[] {
   const items: { key: PortalGlobalNavKey; label: string; href: string }[] = [
-    { key: "start", label: "Start", href: "/portal" },
+    { key: "start", label: "Start", href: "/auth/worlds" },
     { key: "worlds", label: "Meine Welten", href: "/auth/worlds" },
-    { key: "discover", label: "Welt entdecken", href: "/worlds" },
     { key: "account", label: "Account", href: "/auth/account/password" },
   ];
-
-  return items.map((item) => ({
-    ...item,
-    active: item.key === active,
-  }));
+  return items.map((item) => ({ ...item, active: item.key === active }));
 }
 
-/** Public wiki navigation (unauthenticated /worlds). */
 export function portalPublicNav(active?: PortalPublicNavKey): PortalNavItem[] {
   const items: { key: PortalPublicNavKey; label: string; href: string }[] = [
-    { key: "discover", label: "Welten entdecken", href: "/worlds" },
     { key: "my-worlds", label: "Meine Welten", href: "/auth/worlds" },
     { key: "login", label: "Anmelden", href: "/login" },
   ];
-
-  return items.map((item) => ({
-    ...item,
-    active: item.key === active,
-  }));
+  return items.map((item) => ({ ...item, active: item.key === active }));
 }
 
-/** World-scoped player navigation inside /auth/worlds/[slug]. */
 export function portalWorldNav(worldSlug: string, active?: PortalWorldNavKey): PortalNavItem[] {
   const base = `/auth/worlds/${worldSlug}`;
   const items: { key: PortalWorldNavKey; label: string; href: string }[] = [
@@ -66,91 +44,62 @@ export function portalWorldNav(worldSlug: string, active?: PortalWorldNavKey): P
     { key: "soundboard", label: "Soundboard", href: `${base}/soundboard` },
     { key: "search", label: "Suche", href: `${base}?q=` },
   ];
-
-  return items.map((item) => ({
-    ...item,
-    active: item.key === active,
-  }));
+  return items.map((item) => ({ ...item, active: item.key === active }));
 }
 
-/** Account settings navigation. */
 export function portalAccountNav(active: PortalAccountNavKey): PortalNavItem[] {
   const items: { key: PortalAccountNavKey; label: string; href: string }[] = [
     { key: "password", label: "Passwort", href: "/auth/account/password" },
     { key: "security", label: "Sicherheit (2FA)", href: "/auth/account/security" },
   ];
-
-  return items.map((item) => ({
-    ...item,
-    active: item.key === active,
-  }));
+  return items.map((item) => ({ ...item, active: item.key === active }));
 }
 
-/** Grouped sidebar for authenticated Portal pages. */
 export function portalAuthSidebarSections(options: {
   globalActive?: PortalGlobalNavKey;
   worldSlug?: string | null;
   worldActive?: PortalWorldNavKey;
   accountActive?: PortalAccountNavKey;
-  /** Show account links — only on account settings pages. */
   includeAccount?: boolean;
 }): PortalNavSection[] {
   const sections: PortalNavSection[] = [
     { title: "Portal", items: portalGlobalNav(options.globalActive ?? "worlds") },
   ];
-
   if (options.worldSlug) {
-    sections.push({
-      title: "Welt",
-      items: portalWorldNav(options.worldSlug, options.worldActive),
-    });
+    sections.push({ title: "Welt", items: portalWorldNav(options.worldSlug, options.worldActive) });
   }
-
   if (options.includeAccount) {
     sections.push({
       title: "Account",
       items: portalAccountNav(options.accountActive ?? "password"),
     });
   }
-
   return sections;
 }
 
-/** Sidebar for public wiki pages (/worlds/*). */
 export function portalPublicSidebarSections(options: {
   active?: PortalPublicNavKey;
   worldSlug?: string | null;
   worldItems?: PortalNavItem[];
 }): PortalNavSection[] {
   const sections: PortalNavSection[] = [
-    { title: "Portal", items: portalPublicNav(options.active ?? "discover") },
+    { title: "Portal", items: portalPublicNav(options.active ?? "login") },
   ];
-
   if (options.worldSlug && options.worldItems && options.worldItems.length > 0) {
-    sections.push({
-      title: "In dieser Welt",
-      items: options.worldItems,
-    });
+    sections.push({ title: "In dieser Welt", items: options.worldItems });
   }
-
   return sections;
 }
 
-/** Guest wiki navigation for public /worlds routes. */
 export function portalGuestNav(activePath?: string): PortalNavItem[] {
   const items = [
-    { key: "discover", label: "Welten entdecken", href: "/worlds" },
-    { key: "help", label: "Hilfe", href: "/" },
     { key: "login", label: "Anmelden", href: "/login" },
+    { key: "worlds", label: "Meine Welten", href: "/auth/worlds" },
+    { key: "help", label: "Hilfe", href: "/" },
   ];
-
-  return items.map((item) => ({
-    ...item,
-    active: activePath === item.href,
-  }));
+  return items.map((item) => ({ ...item, active: activePath === item.href }));
 }
 
-/** Breadcrumb trail for world-scoped auth pages. */
 export function portalWorldBreadcrumbs(
   worldName: string,
   worldSlug: string,
@@ -160,15 +109,10 @@ export function portalWorldBreadcrumbs(
     { label: "Meine Welten", href: "/auth/worlds" },
     { label: worldName, href: `/auth/worlds/${worldSlug}` },
   ];
-
-  if (current) {
-    items.push({ label: current });
-  }
-
+  if (current) items.push({ label: current });
   return items;
 }
 
-/** Resolve active world nav key from pathname. */
 export function resolvePortalWorldNavKey(pathname: string, worldSlug: string): PortalWorldNavKey {
   const base = `/auth/worlds/${worldSlug}`;
   if (pathname === base || pathname === `${base}/`) return "dashboard";

@@ -18,6 +18,7 @@ import {
   isConnectorJobType,
   laneForJobType,
   normalizeCapabilities,
+  normalizeLocalPrinters,
   selectNextJob,
   type ClaimableJobView,
   type ConnectorCapability,
@@ -25,6 +26,7 @@ import {
   type ConnectorLane,
   type ConnectorModelType,
   type ConnectorStatus,
+  type LocalPrinterInfo,
 } from "@uwe/connector";
 
 import type { Connector, ConnectorJob } from "./generated/prisma/client";
@@ -47,6 +49,7 @@ export interface ConnectorView {
   /** Host/admin allowlist. null means unrestricted for compatibility. */
   allowedCapabilities: ConnectorCapability[] | null;
   models: ConnectorModelInfo[];
+  printers: LocalPrinterInfo[];
   version: string | null;
   currentJobs: number;
   lastError: string | null;
@@ -90,6 +93,7 @@ export interface CreatedConnector {
 export interface HeartbeatInput {
   capabilities?: readonly string[];
   models?: ConnectorModelInfo[];
+  printers?: LocalPrinterInfo[];
   version?: string | null;
   queueEnabled?: boolean;
   currentJobs?: number;
@@ -162,6 +166,10 @@ function parseModels(value: unknown): ConnectorModelInfo[] {
   );
 }
 
+function parsePrinters(value: unknown): LocalPrinterInfo[] {
+  return normalizeLocalPrinters(value);
+}
+
 function applyCapabilityPolicy(
   view: ConnectorView,
   policy?: { reportedCapabilities: ConnectorCapability[]; allowedCapabilities: ConnectorCapability[] | null },
@@ -198,6 +206,7 @@ export function toConnectorView(connector: Connector, now: Date = new Date()): C
     reportedCapabilities: capabilities,
     allowedCapabilities: null,
     models: parseModels(connector.models),
+    printers: parsePrinters(connector.printers),
     version: connector.version,
     currentJobs: connector.currentJobs,
     lastError: connector.lastError,
@@ -336,6 +345,7 @@ export class ConnectorService {
         status: lastError ? "degraded" : "online",
         ...(capabilities ? { capabilities: toPrismaJsonValue(capabilities) } : {}),
         ...(input.models !== undefined ? { models: toPrismaJsonValue(input.models) } : {}),
+        ...(input.printers !== undefined ? { printers: toPrismaJsonValue(input.printers) } : {}),
         ...(input.version !== undefined ? { version: input.version } : {}),
         ...(input.queueEnabled !== undefined ? { queueEnabled: input.queueEnabled } : {}),
         ...(input.currentJobs !== undefined ? { currentJobs: input.currentJobs } : {}),
@@ -495,7 +505,18 @@ export class ConnectorService {
     if (updated.count === 0) {
       return null;
     }
-    return this.db.connectorJob.findUnique({ where: { id: jobId } });
+    const job = await this.db.connectorJob.findUnique({ where: { id: jobId } });
+    if (job?.type === "printer_discover" && result?.printers) {
+      await this.updatePrinters(connectorId, normalizeLocalPrinters(result.printers));
+    }
+    return job;
+  }
+
+  async updatePrinters(connectorId: string, printers: readonly LocalPrinterInfo[]): Promise<void> {
+    await this.db.connector.update({
+      where: { id: connectorId },
+      data: { printers: toPrismaJsonValue([...printers]) },
+    });
   }
 
   async failJob(
