@@ -1,14 +1,20 @@
-import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { ApiTokenWorkspace } from "@/components/ApiTokenWorkspace";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 
 export default function ApiTokensPage() {
   return (
-    <AdminModuleShell
-      activePath="/admin/api-tokens"
-      title="API Tokens"
-      summary="Persönliche API-Tokens mit engen Scopes — nur gehasht gespeichert, Prefix zur Identifikation."
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "API Tokens" }]}
+        />
+      }
     >
+      <PageHeader
+        title="API Tokens"
+        summary="Persönliche API-Tokens mit engen Scopes — nur gehasht gespeichert, Prefix zur Identifikation."
+      />
       <ApiTokenWorkspace />
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

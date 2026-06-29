@@ -9,7 +9,7 @@ import {
   PROJECT_CATEGORY_LABELS,
   PROJECT_STATUS_LABELS,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createProjectAction,
   deleteProjectAction,
@@ -25,11 +25,11 @@ export default async function ProjectsPage() {
   const projects = await createLifeAdminService(prisma).listPersonalProjects({ limit: 200 });
 
   return (
-    <AdminModuleShell
-      activePath="/projects"
-      title="Projekte"
-      summary="Persönliche Projekte — UWE, Hardware, DnD, Werkstatt und mehr."
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Projekte" }]} />}>
+      <PageHeader
+        title="Projekte"
+        summary="Persönliche Projekte — UWE, Hardware, DnD, Werkstatt und mehr."
+      />
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Neues Projekt</h2>
         <form action={createProjectAction} className="uwe-brain-create-form">
@@ -154,6 +154,6 @@ export default async function ProjectsPage() {
       <p className="uwe-dashboard-muted">
         <Link href="/today">← Heute</Link>
       </p>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

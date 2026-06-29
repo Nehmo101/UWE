@@ -19,7 +19,7 @@ import {
   duplicateTemplateAction,
   renameTemplateAction,
 } from "@/app/label-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -51,21 +51,15 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
   const printLists = await printListService.listByWorld(worldSlug);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="labels"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Labels", `/worlds/${worldSlug}/labels`)}
-      pageHeader={{
-        title: "Label-Bibliothek",
-        summary: "6×4 Zoll Labels, Karten und Handouts erstellen, bearbeiten und drucken.",
-        actions: (
-          <Link href={`/worlds/${worldSlug}/labels/new`} className="uwe-v2-btn uwe-v2-btn-primary">
-            Neues Label
-          </Link>
-        ),
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Labels", `/worlds/${worldSlug}/labels`)}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Kontext">
           <p className="uwe-hint" style={{ margin: 0 }}>
             {labelRows.length} Labels · {printLists.length} Drucklisten · Format 6×4 Zoll
@@ -73,6 +67,15 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Label-Bibliothek"
+        summary="6×4 Zoll Labels, Karten und Handouts erstellen, bearbeiten und drucken."
+        actions={
+          <Link href={`/worlds/${worldSlug}/labels/new`} className="uwe-v2-btn uwe-v2-btn-primary">
+            Neues Label
+          </Link>
+        }
+      />
       {(deleted || duplicated || templateSaved || renamed) && (
         <p className="uwe-flash uwe-flash-success">
           {deleted
@@ -279,6 +282,6 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
           )}
         </>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

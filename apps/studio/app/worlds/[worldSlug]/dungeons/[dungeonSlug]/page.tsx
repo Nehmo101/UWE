@@ -20,7 +20,8 @@ import {
   linkAssetToDungeonPageAction,
   updateDungeonEntityAction,
 } from "../../../../dungeon-actions";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -46,21 +47,18 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
   const redirectTo = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dungeons"
-      backLink={{ label: "← Dungeons", href: `/worlds/${worldSlug}/dungeons` }}
-      breadcrumb={dungeonBreadcrumb(world.name, worldSlug, [
-        { label: overview.dungeon.title },
-      ])}
-      pageHeader={{
-        title: overview.dungeon.title,
-        summary: overview.dungeon.summary ?? undefined,
-        meta: <DungeonPrepStatusBadge status={overview.dungeon.prepStatus} />,
-      }}
-      sidebarExtra={
-        <WorldContextSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={dungeonBreadcrumb(world.name, worldSlug, [
+            { label: overview.dungeon.title },
+          ])}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           title="Ebenen"
           items={overview.levels.map((level) => ({
             label: level.title,
@@ -68,8 +66,12 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           }))}
         />
       }
-      showSearch={false}
     >
+      <PageHeader
+        title={overview.dungeon.title}
+        summary={overview.dungeon.summary ?? undefined}
+        meta={<DungeonPrepStatusBadge status={overview.dungeon.prepStatus} />}
+      />
       {saved && <p className="uwe-flash uwe-flash-success">Dungeon gespeichert.</p>}
       {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
 
@@ -197,6 +199,6 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
         </form>
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

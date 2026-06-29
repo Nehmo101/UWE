@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
 import { prisma, UWE_VERSION } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
@@ -64,23 +64,25 @@ export default async function SystemHubPage({ searchParams }: Props) {
 
   const { system, jobs, auth, studioSecurity, rtxExposure, envValidation, publicLeaks } = status;
   const overallBadge = status.ok ? "ok" : "degraded";
-  const activePath =
-    activeTab === "overview" ? "/system" : `/system?tab=${activeTab}`;
 
   return (
-    <AdminModuleShell
-      activePath={activePath}
-      bottomNav="more"
-      title="System"
-      summary="Status, Homelab, Diagnose und Cloudflare — zentraler Hub für Betrieb und Selfhosting."
-      breadcrumbs={[{ label: "Heute", href: "/today" }, { label: "System" }]}
-      actions={
-        <HealthBadge
-          status={overallBadge}
-          label={status.ok ? "System OK" : "Einschränkungen"}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Heute", href: "/today" }, { label: "System" }]}
         />
       }
     >
+      <PageHeader
+        title="System"
+        summary="Status, Homelab, Diagnose und Cloudflare — zentraler Hub für Betrieb und Selfhosting."
+        actions={
+          <HealthBadge
+            status={overallBadge}
+            label={status.ok ? "System OK" : "Einschränkungen"}
+          />
+        }
+      />
       <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
         Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
         {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}
@@ -488,6 +490,6 @@ export default async function SystemHubPage({ searchParams }: Props) {
           </div>
         </>
       )}
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

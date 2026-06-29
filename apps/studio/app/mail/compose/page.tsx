@@ -8,7 +8,7 @@ import {
 } from "@uwe/database/server";
 import type { MailComposeKind } from "@uwe/mail";
 import { MailSendForm } from "@/components/MailSendForm";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 const COMPOSE_KINDS = new Set<MailComposeKind>([
   "session_recap",
@@ -94,13 +94,20 @@ export default async function MailComposePage({ searchParams }: Props) {
   const world = worldSlug ? await getAppRepository().getWorldBySlug(worldSlug) : null;
 
   return (
-    <AdminModuleShell
-      activePath="/mail"
-      backHref="/mail"
-      backLabel="Mail Center"
-      title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
-      summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Mail Center", href: "/mail" },
+            { label: `Mail vorbereiten: ${KIND_LABELS[kind]}` },
+          ]}
+        />
+      }
     >
+      <PageHeader
+        title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
+        summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
+      />
       <p className="uwe-hint">
         Quelle: <code>{draft.sourceType}</code> / <code>{draft.sourceId}</code>
         {world ? (
@@ -122,6 +129,6 @@ export default async function MailComposePage({ searchParams }: Props) {
         warnings={draft.warnings}
         containsDmOnlyHint={draft.containsDmOnlyHint}
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

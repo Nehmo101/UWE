@@ -6,6 +6,7 @@ import {
   isPublicRoute,
   isUnknownProtectedApi,
   matchesRoutePattern,
+  requiresPortalSession,
   requiresStudioAuth,
 } from "./route-policy";
 
@@ -103,5 +104,39 @@ describe("route policy", () => {
     assert.equal(isGuestWikiPath("/worlds/terra"), true);
     assert.equal(isGuestWikiPath("/players/terra"), true);
     assert.equal(isGuestWikiPath("/auth/worlds"), false);
+  });
+});
+
+describe("login-first Portal regression", () => {
+  it("portal root / requires a session (login-first)", () => {
+    assert.equal(classifyRoute("/", "portal").access, "protected-session");
+    assert.equal(requiresPortalSession("/"), true);
+    assert.equal(isPublicRoute("/", "portal"), false);
+  });
+
+  it("/portal requires a session (login-first)", () => {
+    assert.equal(classifyRoute("/portal", "portal").access, "protected-session");
+    assert.equal(requiresPortalSession("/portal"), true);
+    assert.equal(isPublicRoute("/portal", "portal"), false);
+  });
+
+  it("/worlds and /worlds/* require a session", () => {
+    assert.equal(classifyRoute("/worlds", "portal").access, "protected-session");
+    assert.equal(classifyRoute("/worlds/terra", "portal").access, "protected-session");
+    assert.equal(requiresPortalSession("/worlds"), true);
+    assert.equal(requiresPortalSession("/worlds/terra"), true);
+  });
+
+  it("/auth/* routes require a session", () => {
+    assert.equal(classifyRoute("/auth/worlds", "portal").access, "protected-session");
+    assert.equal(classifyRoute("/auth/worlds/terra", "portal").access, "protected-session");
+    assert.equal(requiresPortalSession("/auth/worlds"), true);
+  });
+
+  it("login and forgot-password stay public (auth entrypoints)", () => {
+    assert.equal(isPublicRoute("/login", "portal"), true);
+    assert.equal(isPublicRoute("/forgot-password", "portal"), true);
+    assert.equal(isPublicRoute("/reset-password", "portal"), true);
+    assert.equal(requiresPortalSession("/login"), false);
   });
 });

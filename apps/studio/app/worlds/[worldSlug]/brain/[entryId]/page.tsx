@@ -10,7 +10,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { updateBrainDocumentAction } from "../../../../brain-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -34,24 +34,25 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
   await db.$disconnect();
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="brain"
-      backLink={{ label: "← Brain Store", href: `/worlds/${worldSlug}/brain` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Brain Store",
-        `/worlds/${worldSlug}/brain`,
-        document.title,
-      )}
-      pageHeader={{
-        title: document.title,
-        summary: "Brain-Dokument bearbeiten",
-      }}
-      showSearch={false}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Brain Store",
+            `/worlds/${worldSlug}/brain`,
+            document.title,
+          )}
+        />
+      }
     >
+      <PageHeader
+        title={document.title}
+        summary="Brain-Dokument bearbeiten"
+      />
       <form action={updateBrainDocumentAction} className="uwe-brain-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="documentId" value={document.id} />
@@ -136,6 +137,6 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
           </ul>
         </section>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

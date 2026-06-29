@@ -9,7 +9,7 @@ import {
   normalizeLabel,
   renderLabelHtml,
 } from "@uwe/database/server";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -56,39 +56,22 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
   );
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="labels"
-      backLink={{ label: "← Bearbeiten", href: `/worlds/${worldSlug}/labels/${labelId}` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Labels",
-        `/worlds/${worldSlug}/labels`,
-        label.title,
-        `/worlds/${worldSlug}/labels/${labelId}`,
-      ).concat({ label: "Vorschau" })}
-      pageHeader={{
-        title: "Druckvorschau",
-        summary: "6×4 Zoll — Browser-Druck oder Export als PDF/HTML.",
-        actions: (
-          <>
-            <a
-              href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Drucken
-            </a>
-            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className="uwe-v2-btn">
-              Bearbeiten
-            </Link>
-          </>
-        ),
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Labels",
+            `/worlds/${worldSlug}/labels`,
+            label.title,
+            `/worlds/${worldSlug}/labels/${labelId}`,
+          ).concat({ label: "Vorschau" })}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Export">
           <ul className="uwe-sidebar-links">
             <li>
@@ -105,6 +88,25 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Druckvorschau"
+        summary="6×4 Zoll — Browser-Druck oder Export als PDF/HTML."
+        actions={
+          <>
+            <a
+              href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
+              className="uwe-v2-btn uwe-v2-btn-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Drucken
+            </a>
+            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className="uwe-v2-btn">
+              Bearbeiten
+            </Link>
+          </>
+        }
+      />
       {parsed.content.containsDmOnly && includeDmOnly !== "1" && (
         <p className="uwe-flash uwe-flash-warning">
           Enthält DM-only Inhalte.{" "}
@@ -119,6 +121,6 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
           className="uwe-label-preview-iframe"
         />
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

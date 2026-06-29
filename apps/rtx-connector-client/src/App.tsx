@@ -19,12 +19,14 @@ import { ImagePanel } from "./components/ImagePanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
 import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
+import { PrintersPanel } from "./components/PrintersPanel";
 import { RunnersPanel } from "./components/RunnersPanel";
 import { SecurityPanel } from "./components/SecurityPanel";
-import { SectionPlaceholder } from "./components/SectionPlaceholder";
 import { SetupWizard } from "./components/SetupWizard";
 import { SpotifyPanel } from "./components/SpotifyPanel";
 import { UweReleasePanel } from "./components/UweReleasePanel";
+import { ConnectorShell } from "./components/shell/ConnectorShell";
+import { connectorSidebar } from "./navigation/connector-nav";
 import {
   getConnectorStatus,
   getCookbookDashboard,
@@ -55,115 +57,7 @@ import {
   type RunnerId,
 } from "./lib/tauri";
 
-type Section = {
-  id: string;
-  label: string;
-  phase: string;
-  active: boolean;
-  summary: string;
-};
-
-/** Product navigation — P0 active sections marked `active: true`. */
-const NAV_SECTIONS: Section[] = [
-  {
-    id: "overview",
-    label: "Übersicht",
-    phase: "P0",
-    active: true,
-    summary: "Verbindungsstatus, Schnellaktionen und Connector-Kennzahlen.",
-  },
-  {
-    id: "connection",
-    label: "Verbindung",
-    phase: "P0",
-    active: true,
-    summary: "Host URL, Connector-Token, Start/Stop und Verbindungstest.",
-  },
-  {
-    id: "cookbook",
-    label: "Cookbook",
-    phase: "P2",
-    active: true,
-    summary: "Hardware-aware Modell-Empfehlungen aus @uwe/cookbook.",
-  },
-  {
-    id: "downloads",
-    label: "Downloads",
-    phase: "P1",
-    active: true,
-    summary: "Ollama pull und lokaler Modell-Import.",
-  },
-  {
-    id: "library",
-    label: "Modell-Bibliothek",
-    phase: "P1",
-    active: true,
-    summary: "Verzeichnisse scannen und Modellstatus verwalten.",
-  },
-  {
-    id: "release",
-    label: "UWE-Freigabe",
-    phase: "P1",
-    active: true,
-    summary: "Modelle einzeln für UWE aktivieren und melden.",
-  },
-  {
-    id: "runners",
-    label: "Runner",
-    phase: "P2",
-    active: true,
-    summary: "Ollama, LM Studio, llama.cpp erkennen und testen.",
-  },
-  {
-    id: "spotify",
-    label: "Spotify",
-    phase: "P4",
-    active: true,
-    summary: "Spotify OAuth und Device-Verwaltung nur auf dem RTX-PC.",
-  },
-  {
-    id: "audio",
-    label: "Audio",
-    phase: "P4",
-    active: true,
-    summary: "Lokale Audio-Befehle und Capability-Tests.",
-  },
-  {
-    id: "image",
-    label: "Bildgenerierung",
-    phase: "P4",
-    active: true,
-    summary: "Image-Worker konfigurieren und testen.",
-  },
-  {
-    id: "jobs",
-    label: "Jobs",
-    phase: "P1",
-    active: true,
-    summary: "Aktive und letzte Connector-Jobs nach Lane.",
-  },
-  {
-    id: "logs",
-    label: "Logs",
-    phase: "P1",
-    active: true,
-    summary: "Redigierte Logs nach Kategorie exportieren.",
-  },
-  {
-    id: "security",
-    label: "Sicherheit",
-    phase: "P2",
-    active: true,
-    summary: "Outbound-only, Token-Schutz und Privacy Mode.",
-  },
-  {
-    id: "settings",
-    label: "Einstellungen",
-    phase: "P0",
-    active: true,
-    summary: "Tray, Autostart und Queue-Optionen.",
-  },
-];
+type ConnectorPath = "/" | "/runner" | "/models" | "/printers" | "/jobs" | "/logs" | "/diagnostics";
 
 const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
   status: "stopped",
@@ -243,7 +137,7 @@ function humanizeProcessStatus(status: ConnectorRuntimeStatus["status"]): string
 }
 
 export default function App() {
-  const [selectedSectionId, setSelectedSectionId] = useState("overview");
+  const [activePath, setActivePath] = useState<ConnectorPath>("/");
   const [config, setConfig] = useState<ConnectorClientConfig>(defaultConnectorClientConfig());
   const [modelStore, setModelStore] = useState<ConnectorModelProfileStore>(defaultModelProfileStore());
   const [modelStoreLoaded, setModelStoreLoaded] = useState(false);
@@ -255,10 +149,7 @@ export default function App() {
   const [showWizard, setShowWizard] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
 
-  const selectedSection = useMemo(
-    () => NAV_SECTIONS.find((section) => section.id === selectedSectionId) ?? NAV_SECTIONS[0],
-    [selectedSectionId],
-  );
+  const navGroups = useMemo(() => connectorSidebar(activePath), [activePath]);
 
   const refreshFromBackend = useCallback(async () => {
     setBusyAction("refresh");
@@ -428,41 +319,62 @@ export default function App() {
     }
   }
 
-  function renderOverview() {
+  function renderHost() {
     const isRunning = runtimeStatus.status === "running";
 
     return (
       <>
-        <div className="connector-grid connector-grid-3">
-          <CardV2 title="Verbindungsstatus">
-            <div className="connector-stack">
-              <HealthBadge
-                status={toHealthBadgeStatus(runtimeStatus)}
-                label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
-              />
-              <p className="connector-muted">{runtimeStatus.message}</p>
-              <dl className="connector-kv">
-                <div>
-                  <dt>Host</dt>
-                  <dd>{config.hostUrl || "Nicht gesetzt"}</dd>
-                </div>
-                <div>
-                  <dt>Connector</dt>
-                  <dd>{config.name}</dd>
-                </div>
-                <div>
-                  <dt>Letzter Heartbeat</dt>
-                  <dd>{runtimeStatus.lastHeartbeatAt ?? "Noch keiner"}</dd>
-                </div>
-              </dl>
+        <div className="connector-grid connector-grid-2">
+          <CardV2
+            title="Host und Connector-Token"
+            footer={
+              <div className="connector-actions">
+                <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
+                  Speichern
+                </ButtonV2>
+                <ButtonV2 variant="secondary" onClick={runHostTest} disabled={busyAction !== null}>
+                  Verbindung testen
+                </ButtonV2>
+              </div>
+            }
+          >
+            <div className="connector-form-grid">
+              <label className="connector-field">
+                <span>Connector-Name</span>
+                <input
+                  className="connector-input"
+                  value={config.name}
+                  onChange={(event) => updateConfig("name", event.target.value)}
+                  placeholder="RTX Arbeitszimmer"
+                />
+              </label>
+
+              <label className="connector-field">
+                <span>UWE Host URL</span>
+                <input
+                  className="connector-input"
+                  value={config.hostUrl}
+                  onChange={(event) => updateConfig("hostUrl", event.target.value)}
+                  placeholder="https://uwe.example.org"
+                />
+              </label>
+
+              <label className="connector-field connector-field-full">
+                <span>Connector-Token</span>
+                <input
+                  className="connector-input"
+                  type="password"
+                  value={config.token}
+                  onChange={(event) => updateConfig("token", event.target.value)}
+                  placeholder="uwec_..."
+                />
+              </label>
             </div>
           </CardV2>
 
-          <CardV2 title="Steuerung">
-            <div className="connector-stack">
-              <p className="connector-muted">
-                Startet und stoppt denselben Connector-Core wie <code>pnpm connector:start</code>.
-              </p>
+          <CardV2
+            title="Outbound-Laufzeit"
+            footer={
               <div className="connector-actions">
                 {isRunning ? (
                   <ButtonV2 variant="accent" onClick={runStopConnector} disabled={busyAction !== null}>
@@ -477,139 +389,45 @@ export default function App() {
                   Status aktualisieren
                 </ButtonV2>
               </div>
-            </div>
-          </CardV2>
-
-          <CardV2 title="Rollout">
-            <div className="connector-stack">
-              <p className="connector-stat">P2 aktiv</p>
-              <p className="connector-muted">
-                Zusätzlich zu P1 sind jetzt Cookbook-Empfehlungen, Runner-Erkennung und die
-                Sicherheits-/Privacy-Ansicht nutzbar.
-              </p>
-              {!config.wizardCompleted ? (
-                <ButtonV2 variant="secondary" onClick={() => setShowWizard(true)}>
-                  Erststart-Wizard öffnen
-                </ButtonV2>
-              ) : null}
-            </div>
-          </CardV2>
-        </div>
-
-        <CardV2 title="Lokales Profil">
-          <dl className="connector-kv">
-            <div>
-              <dt>Token</dt>
-              <dd>{maskToken(config.token) || "Noch nicht gesetzt"}</dd>
-            </div>
-            <div>
-              <dt>Queue</dt>
-              <dd>{config.queueEnabled ? "Aktiv" : "Deaktiviert"}</dd>
-            </div>
-            <div>
-              <dt>Wizard</dt>
-              <dd>{config.wizardCompleted ? "Abgeschlossen" : "Ausstehend"}</dd>
-            </div>
-          </dl>
-        </CardV2>
-      </>
-    );
-  }
-
-  function renderConnection() {
-    return (
-      <div className="connector-grid connector-grid-2">
-        <CardV2
-          title="Host und Connector-Token"
-          footer={
-            <div className="connector-actions">
-              <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
-                Speichern
-              </ButtonV2>
-              <ButtonV2 variant="secondary" onClick={runHostTest} disabled={busyAction !== null}>
-                Verbindung testen
-              </ButtonV2>
-            </div>
-          }
-        >
-          <div className="connector-form-grid">
-            <label className="connector-field">
-              <span>Connector-Name</span>
-              <input
-                className="connector-input"
-                value={config.name}
-                onChange={(event) => updateConfig("name", event.target.value)}
-                placeholder="RTX Arbeitszimmer"
-              />
-            </label>
-
-            <label className="connector-field">
-              <span>UWE Host URL</span>
-              <input
-                className="connector-input"
-                value={config.hostUrl}
-                onChange={(event) => updateConfig("hostUrl", event.target.value)}
-                placeholder="https://uwe.example.org"
-              />
-            </label>
-
-            <label className="connector-field connector-field-full">
-              <span>Connector-Token</span>
-              <input
-                className="connector-input"
-                type="password"
-                value={config.token}
-                onChange={(event) => updateConfig("token", event.target.value)}
-                placeholder="uwec_..."
-              />
-            </label>
-          </div>
-        </CardV2>
-
-        <CardV2
-          title="Outbound-Laufzeit"
-          footer={
-            <div className="connector-actions">
-              <ButtonV2 variant="accent" onClick={runStartConnector} disabled={busyAction !== null}>
-                Connector starten
-              </ButtonV2>
-              <ButtonV2 variant="ghost" onClick={runStopConnector} disabled={busyAction !== null}>
-                Connector stoppen
-              </ButtonV2>
-            </div>
-          }
-        >
-          <div className="connector-stack">
-            <HealthBadge
-              status={toHealthBadgeStatus(runtimeStatus)}
-              label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
-            />
-            <p className="connector-muted">{runtimeStatus.message}</p>
-            <p className="connector-muted">
-              Outbound-only: kein öffentlicher Port, kein SSH, kein DB-Zugriff auf dem RTX-PC.
-            </p>
-          </div>
-        </CardV2>
-
-        {testResult ? (
-          <CardV2 title="Letzter Verbindungstest" className="connector-grid-span-2">
+            }
+          >
             <div className="connector-stack">
               <HealthBadge
-                status={testResult.ok ? "ok" : "error"}
-                label={testResult.ok ? "Erfolgreich" : "Fehlgeschlagen"}
+                status={toHealthBadgeStatus(runtimeStatus)}
+                label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
               />
-              <p className="connector-muted">{testResult.message}</p>
-              <p className="connector-muted">Geprüft: {testResult.checkedAt}</p>
+              <p className="connector-muted">{runtimeStatus.message}</p>
+              <dl className="connector-kv">
+                <div>
+                  <dt>Host</dt>
+                  <dd>{config.hostUrl || "Nicht gesetzt"}</dd>
+                </div>
+                <div>
+                  <dt>Token</dt>
+                  <dd>{maskToken(config.token) || "Noch nicht gesetzt"}</dd>
+                </div>
+                <div>
+                  <dt>Letzter Heartbeat</dt>
+                  <dd>{runtimeStatus.lastHeartbeatAt ?? "Noch keiner"}</dd>
+                </div>
+              </dl>
             </div>
           </CardV2>
-        ) : null}
-      </div>
-    );
-  }
 
-  function renderSettings() {
-    return (
-      <div className="connector-grid connector-grid-2">
+          {testResult ? (
+            <CardV2 title="Letzter Verbindungstest" className="connector-grid-span-2">
+              <div className="connector-stack">
+                <HealthBadge
+                  status={testResult.ok ? "ok" : "error"}
+                  label={testResult.ok ? "Erfolgreich" : "Fehlgeschlagen"}
+                />
+                <p className="connector-muted">{testResult.message}</p>
+                <p className="connector-muted">Geprüft: {testResult.checkedAt}</p>
+              </div>
+            </CardV2>
+          ) : null}
+        </div>
+
         <CardV2
           title="Client-Optionen"
           footer={
@@ -673,68 +491,83 @@ export default function App() {
             </label>
           </div>
         </CardV2>
+      </>
+    );
+  }
 
-        <CardV2 title="Sicherheit">
-          <ul className="connector-note-list">
-            <li>Verbindung nur ausgehend zum UWE Host.</li>
-            <li>Connector-Token wird nicht in Logs angezeigt.</li>
-            <li>Tokens werden lokal in AppData gespeichert.</li>
-            <li>Tray-Integration und Windows-Autostart folgen in späteren Phasen.</li>
-          </ul>
-        </CardV2>
-      </div>
+  function renderModels() {
+    return (
+      <>
+        <CookbookPanel
+          onLoadDashboard={loadCookbookDashboard}
+          onPullModel={runOllamaPull}
+          onEnableForUwe={enableModelForUwe}
+        />
+        <DownloadsPanel
+          loaded={modelStoreLoaded}
+          store={modelStore}
+          onLoadStore={loadModelStore}
+          onPullModel={runOllamaPull}
+        />
+        <ModelLibraryPanel
+          loaded={modelStoreLoaded}
+          store={modelStore}
+          onLoadStore={loadModelStore}
+          onSaveStore={persistModelStore}
+          onScanModels={runModelScan}
+        />
+        <UweReleasePanel
+          loaded={modelStoreLoaded}
+          store={modelStore}
+          onLoadStore={loadModelStore}
+          onSaveStore={persistModelStore}
+        />
+      </>
+    );
+  }
+
+  function renderDiagnostics() {
+    return (
+      <>
+        <SecurityPanel
+          privacyMode={config.privacyMode}
+          busy={busyAction !== null}
+          onChangePrivacyMode={(value) => updateConfig("privacyMode", value)}
+          onSave={persistConfig}
+        />
+        <SpotifyPanel
+          config={config}
+          busy={busyAction !== null}
+          onChange={updateConfig}
+          onSave={persistConfig}
+          onAuthUrl={spotifyAuthUrl}
+          onExchangeCode={spotifyExchangeCode}
+          onLoadDevices={spotifyDevices}
+          onSetDevice={spotifySetDevice}
+          onTest={spotifyTest}
+          onDisconnect={spotifyDisconnect}
+        />
+        <AudioPanel
+          config={config}
+          busy={busyAction !== null}
+          onChange={updateConfig}
+          onSave={persistConfig}
+          onTest={testAudio}
+        />
+        <ImagePanel
+          config={config}
+          busy={busyAction !== null}
+          onChange={updateConfig}
+          onSave={persistConfig}
+          onTest={testImage}
+        />
+      </>
     );
   }
 
   function renderContent() {
-    if (!selectedSection.active) {
-      return (
-        <SectionPlaceholder
-          title={selectedSection.label}
-          phase={selectedSection.phase}
-          summary={selectedSection.summary}
-        />
-      );
-    }
-
-    switch (selectedSection.id) {
-      case "downloads":
-        return (
-          <DownloadsPanel
-            loaded={modelStoreLoaded}
-            store={modelStore}
-            onLoadStore={loadModelStore}
-            onPullModel={runOllamaPull}
-          />
-        );
-      case "library":
-        return (
-          <ModelLibraryPanel
-            loaded={modelStoreLoaded}
-            store={modelStore}
-            onLoadStore={loadModelStore}
-            onSaveStore={persistModelStore}
-            onScanModels={runModelScan}
-          />
-        );
-      case "release":
-        return (
-          <UweReleasePanel
-            loaded={modelStoreLoaded}
-            store={modelStore}
-            onLoadStore={loadModelStore}
-            onSaveStore={persistModelStore}
-          />
-        );
-      case "cookbook":
-        return (
-          <CookbookPanel
-            onLoadDashboard={loadCookbookDashboard}
-            onPullModel={runOllamaPull}
-            onEnableForUwe={enableModelForUwe}
-          />
-        );
-      case "runners":
+    switch (activePath) {
+      case "/runner":
         return (
           <RunnersPanel
             onProbeRunners={probeRunnersList}
@@ -742,134 +575,70 @@ export default function App() {
             onTestRunner={runTestRunner}
           />
         );
-      case "security":
-        return (
-          <SecurityPanel
-            privacyMode={config.privacyMode}
-            busy={busyAction !== null}
-            onChangePrivacyMode={(value) => updateConfig("privacyMode", value)}
-            onSave={persistConfig}
-          />
-        );
-      case "spotify":
-        return (
-          <SpotifyPanel
-            config={config}
-            busy={busyAction !== null}
-            onChange={updateConfig}
-            onSave={persistConfig}
-            onAuthUrl={spotifyAuthUrl}
-            onExchangeCode={spotifyExchangeCode}
-            onLoadDevices={spotifyDevices}
-            onSetDevice={spotifySetDevice}
-            onTest={spotifyTest}
-            onDisconnect={spotifyDisconnect}
-          />
-        );
-      case "audio":
-        return (
-          <AudioPanel
-            config={config}
-            busy={busyAction !== null}
-            onChange={updateConfig}
-            onSave={persistConfig}
-            onTest={testAudio}
-          />
-        );
-      case "image":
-        return (
-          <ImagePanel
-            config={config}
-            busy={busyAction !== null}
-            onChange={updateConfig}
-            onSave={persistConfig}
-            onTest={testImage}
-          />
-        );
-      case "jobs":
-        return <JobsPanel onLoadJobs={loadConnectorJobs} />;
-      case "logs":
-        return <LogsPanel onLoadLogs={loadConnectorLogs} />;
-      case "connection":
-        return renderConnection();
-      case "settings":
-        return renderSettings();
-      case "overview":
-      default:
-        return renderOverview();
+      case "/models": return renderModels();
+      case "/printers": return <PrintersPanel />;
+      case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;
+      case "/logs": return <LogsPanel onLoadLogs={loadConnectorLogs} />;
+      case "/diagnostics": return renderDiagnostics();
+      case "/":
+      default: return renderHost();
     }
   }
 
-  if (!bootstrapped) {
-    return <div className="connector-boot">Lade RTX Connector Client …</div>;
-  }
+  const banner = notice || error ? (
+    <>
+      {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
+      {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+    </>
+  ) : null;
+
+  const headerActions = (
+    <>
+      <HealthBadge
+        status={toHealthBadgeStatus(runtimeStatus)}
+        label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
+      />
+      <ButtonV2 variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
+        Neu laden
+      </ButtonV2>
+    </>
+  );
+
+  const overlay = showWizard ? (
+    <SetupWizard
+      initialConfig={config}
+      initialModelStore={modelStore}
+      modelStoreLoaded={modelStoreLoaded}
+      loadModelStore={loadModelStore}
+      saveModelStore={persistModelStore}
+      scanModels={runModelScan}
+      onCompleted={(saved) => {
+        setConfig(saved);
+        setShowWizard(false);
+        void refreshFromBackend();
+        setNotice("Erststart-Wizard abgeschlossen.");
+      }}
+      onDismiss={() => setShowWizard(false)}
+    />
+  ) : null;
 
   return (
-    <div className="connector-shell">
-      {showWizard ? (
-        <SetupWizard
-          initialConfig={config}
-          initialModelStore={modelStore}
-          modelStoreLoaded={modelStoreLoaded}
-          loadModelStore={loadModelStore}
-          saveModelStore={persistModelStore}
-          scanModels={runModelScan}
-          onCompleted={(saved) => {
-            setConfig(saved);
-            setShowWizard(false);
-            void refreshFromBackend();
-            setNotice("Erststart-Wizard abgeschlossen.");
-          }}
-          onDismiss={() => setShowWizard(false)}
-        />
-      ) : null}
-
-      <aside className="connector-sidebar">
-        <div className="connector-brand">
-          <span className="connector-kicker">UWE · Outbound Connector</span>
-          <h1>RTX Connector Client</h1>
-          <p>Lokale Desktop-App für den RTX Connector auf Windows.</p>
-        </div>
-
-        <nav className="connector-nav" aria-label="Hauptnavigation">
-          {NAV_SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              className={`connector-nav-item${section.id === selectedSectionId ? " is-active" : ""}`}
-              onClick={() => setSelectedSectionId(section.id)}
-            >
-              <span>{section.label}</span>
-              <small>{section.active ? section.phase : `Kommt in ${section.phase}`}</small>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="connector-main">
-        <header className="connector-header">
-          <div>
-            <p className="connector-kicker">{selectedSection.phase}</p>
-            <h2>{selectedSection.label}</h2>
-            <p className="connector-muted">{selectedSection.summary}</p>
-          </div>
-
-          <div className="connector-header-actions">
-            <HealthBadge
-              status={toHealthBadgeStatus(runtimeStatus)}
-              label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
-            />
-            <ButtonV2 variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
-              Neu laden
-            </ButtonV2>
-          </div>
-        </header>
-
-        {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
-        {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
-
-        <section className="connector-content">{renderContent()}</section>
-      </main>
-    </div>
+    <ConnectorShell
+      groups={navGroups}
+      brandLabel="RTX Connector"
+      brandKicker="UWE · Outbound Connector"
+      brandDescription="Lokale Desktop-App für den RTX Connector auf Windows."
+      onNavigate={(path) => {
+        setActivePath(path as ConnectorPath);
+        setNotice(null);
+        setError(null);
+      }}
+      headerActions={headerActions}
+      banner={banner}
+      overlay={overlay}
+      loading={!bootstrapped}
+    >
+      {renderContent()}
+    </ConnectorShell>
   );
 }

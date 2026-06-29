@@ -13,7 +13,7 @@ import {
   WorkshopStatusEnum,
   type WorkshopStatus,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { advanceWorkshopStatusAction } from "../life-admin-actions";
 import { createWorkshopAction } from "../workshop-actions";
 
@@ -69,11 +69,11 @@ export default async function WorkshopPage({ searchParams }: Props) {
     filter === "dnd" ? workshops.filter((item) => Boolean(item.worldId)) : workshops;
 
   return (
-    <AdminModuleShell
-      activePath="/workshop"
-      title="Werkstatt"
-      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Werkstatt" }]} />}>
+      <PageHeader
+        title="Werkstatt"
+        summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
+      />
       <section className="uwe-today-attention" aria-label="Werkstatt-Filter">
         <div className="uwe-today-quick-chips">
           {WORKSHOP_FILTERS.map((item) => {
@@ -237,6 +237,6 @@ export default async function WorkshopPage({ searchParams }: Props) {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

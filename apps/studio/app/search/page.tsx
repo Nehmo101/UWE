@@ -13,7 +13,7 @@ import {
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
   searchParams: Promise<{
@@ -52,16 +52,9 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     : [];
 
   return (
-    <AdminModuleShell
-      activePath="/search"
-      bottomNav="search"
-      title="Globale Suche"
-      summary="Durchsuche Seiten, Inhaltsblöcke, NPCs, Orte, Tags und Aliase über alle Welten."
-      topBarExtra={
-        <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
-      }
-      contextTitle="Suchbereiche"
-      context={
+    <StudioShell
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Globale Suche" }]} />}
+      contextPanel={
         <SidebarSection title="Suchbereiche">
           <ul className="uwe-dashboard-muted" style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem" }}>
             {SEARCH_ENTITY_FILTERS.map((filter) => (
@@ -81,6 +74,11 @@ export default async function StudioSearchPage({ searchParams }: Props) {
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Globale Suche"
+        summary="Durchsuche Seiten, Inhaltsblöcke, NPCs, Orte, Tags und Aliase über alle Welten."
+      />
+      <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
       <SearchFilterBar
         action="/search"
         query={q}
@@ -132,6 +130,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
         showVisibility
         showLabelActions
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

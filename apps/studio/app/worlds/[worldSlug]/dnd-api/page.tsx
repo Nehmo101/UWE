@@ -10,7 +10,7 @@ import {
   resolveDndApiConfig,
 } from "@uwe/database/server";
 import { searchAllDndApis } from "@uwe/dnd-api";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DndApiEncounterPanel } from "@/components/DndApiEncounterPanel";
 import { addDndBeyondReferenceAction } from "../../../integration-actions";
@@ -40,16 +40,19 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
   }
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dnd-api"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "DnD API", `/worlds/${worldSlug}/dnd-api`)}
-      pageHeader={{
-        title: "DnD API",
-        summary: "Open5e + D&D 5e SRD API. D&D Beyond nur als manuelle Link-Referenz — kein Scraping.",
-      }}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "DnD API", `/worlds/${worldSlug}/dnd-api`)}
+        />
+      }
     >
+      <PageHeader
+        title="DnD API"
+        summary="Open5e + D&amp;D 5e SRD API. D&amp;D Beyond nur als manuelle Link-Referenz — kein Scraping."
+      />
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-form" style={{ marginBottom: "1rem" }}>
         <h2>Suche (Open5e / SRD)</h2>
         <form method="get" className="uwe-v2-form uwe-form-inline">
@@ -73,7 +76,7 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
             }))}
           />
           <section style={{ marginBottom: "1.5rem" }}>
-            <h2 className="uwe-v2-section-title">{`Alle Ergebnisse für „${q}"`}</h2>
+            <h2 className="uwe-v2-section-title">{`Alle Ergebnisse für „${q}“`}</h2>
             {results.length === 0 ? (
               <EmptyState title="Keine Treffer" description="Andere Schreibweise oder API deaktiviert?" />
             ) : (
@@ -143,6 +146,6 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
           </ul>
         )}
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

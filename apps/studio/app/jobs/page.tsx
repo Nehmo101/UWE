@@ -6,19 +6,16 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { JobsWorkspace } from "@/components/JobsWorkspace";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 export default async function JobsPage() {
   const jobs = createJobService(prisma);
   const [jobList, summary] = await Promise.all([jobs.list({ limit: 100 }), jobs.getSummary()]);
 
   return (
-    <AdminModuleShell
-      activePath="/jobs"
-      title="Job-Warteschlange"
-      summary="Mail, KI, Embeddings, Import und Backup laufen als Hintergrund-Jobs — die UI bleibt reaktionsfähig."
-      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Jobs" }]}
-      context={
+    <StudioShell
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Jobs" }]} />}
+      contextPanel={
         <SidebarSection title="Hinweise">
           <ul className="uwe-hint" style={{ listStyle: "none", padding: 0, margin: 0 }}>
             <li style={{ marginBottom: "0.5rem" }}>
@@ -32,12 +29,16 @@ export default async function JobsPage() {
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Job-Warteschlange"
+        summary="Mail, KI, Embeddings, Import und Backup laufen als Hintergrund-Jobs — die UI bleibt reaktionsfähig."
+      />
       <JobsWorkspace
         initialJobs={JSON.parse(JSON.stringify(jobList))}
         initialSummary={summary}
         typeLabels={JOB_TYPE_LABELS}
         statusLabels={JOB_STATUS_LABELS}
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

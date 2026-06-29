@@ -171,6 +171,9 @@ importers:
       '@uwe/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
+      lucide-react:
+        specifier: ^1.22.0
+        version: 1.22.0(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7

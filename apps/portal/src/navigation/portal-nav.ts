@@ -1,9 +1,9 @@
 /**
  * Portal navigation — login-first, player-facing IA.
  *
- * No public "Welten entdecken" as a main flow. Unauthenticated visitors are
- * sent to login; authenticated players land on "Meine Welten". Part of the
- * central navigation contract (`@uwe/shared-utils/navigation`).
+ * No public world-discovery flow. Unauthenticated visitors are sent to login;
+ * authenticated players land on "Meine Welten". Part of the central navigation
+ * contract (`@uwe/shared-utils/navigation`).
  */
 import {
   findNavConflicts,

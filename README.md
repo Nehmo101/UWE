@@ -588,7 +588,7 @@ Stand: Juni 2026 · Kurz-Wahrheit: [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md
 | Markdown/HTML Wiki-Export | ✅ done | `pnpm export:wiki` |
 | Label-Druck (6×4, PDF/HTML) | ✅ done | [docs/LABELS.md](docs/LABELS.md) |
 | Backup/Restore (API, CLI) | ✅ done | Kern vollständig; Auto-Backup-Scheduler optional — [docs/BACKUP.md](docs/BACKUP.md) |
-| RTX Host Connector | 🔶 partial | Outbound Worker; Audio/Spotify/Image nur mit echten lokalen Backends — [docs/rtx-connector.md](docs/rtx-connector.md) |
+| RTX Host Connector | 🔶 partial | Outbound Worker; ConnectorShell UI (Wave 2); Audio/Spotify/Image nur mit echten lokalen Backends — [docs/rtx-connector.md](docs/rtx-connector.md) |
 | Image Studio | 🔶 partial | Generate/Variant/Inpaint; kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
 | Kalender | 🔶 partial | Monats-/Wochenansicht, Feeds; vollständiger CalDAV-Sync offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
 | DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import + Encounter-Builder — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
@@ -621,6 +621,7 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md]
 - [x] Mail Center, Kalender (Kern), Image Studio (Generate/Variant/Inpaint), DnD API (Kern)
 - [x] Backup/Restore (Welten, Templates, ShareLinks, Verschlüsselung, Pre-Restore-Safety)
 - [x] PostgreSQL dual-client, E2E Auth-Baseline, CI Bundle-Budget + Performance-Smoke
+- [x] Hard UI/UX Reset Wave 0–2: zentraler Nav-Contract, Tailwind v4 + shadcn-Shells, AppShell/StudioShell/PortalShell, ConnectorShell mit connector-nav IA, QF10 Label-Druck via RTX, Drucker-Dokumentation
 
 ### Partial / in progress
 
@@ -707,6 +708,8 @@ Copy `.env.example` to `.env`. Important variables:
 | `SPOTIFY_DEVICE_ID` | Spotify Connect device for connector jobs |
 | `SPOTIFY_ACCESS_TOKEN` / `UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN` | Enables `spotify_connect` together with `SPOTIFY_DEVICE_ID` |
 | `UWE_CONNECTOR_IMAGE_CMD` | Local image worker command; enables `image_generation` when set |
+| `UWE_CONNECTOR_PRINTERS` | JSON array of local printers for `label_printing`; auto-discovers via CUPS `lpstat -p` when unset |
+| `UWE_CONNECTOR_PRINT_CMD` | Custom print command for label jobs (appends `--printer <id> --file <path>`); defaults to CUPS `lp` |
 | `OLLAMA_BASE_URL` | Ollama endpoint for local connector LLM/embedding jobs |
 | `RTX_AGENT_URL` | Deprecated inbound RTX-Agent URL for compatibility |
 | `RTX_AGENT_TOKEN` | Shared Secret für deprecated RTX-Agent (serverseitig, nicht im Frontend) |

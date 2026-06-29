@@ -6,7 +6,7 @@ import { prisma, UWE_VERSION } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { SystemHubBanner } from "@/components/SystemHubBanner";
 
 function overallLevel(ok: boolean): StatusLevel {
@@ -104,19 +104,23 @@ export default async function AdminStatusPage() {
   const overallBadge = status.ok ? "ok" : "degraded";
 
   return (
-    <AdminModuleShell
-      activePath="/admin/status"
-      bottomNav="more"
-      title="Admin Status Dashboard"
-      summary="Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail, Brain, RTX-Inference und Jobs — ohne Secrets."
-      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Systemstatus" }]}
-      actions={
-        <HealthBadge
-          status={overallBadge}
-          label={status.ok ? "System OK" : "Einschränkungen"}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Dashboard", href: "/studio" }, { label: "Systemstatus" }]}
         />
       }
     >
+      <PageHeader
+        title="Admin Status Dashboard"
+        summary="Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail, Brain, RTX-Inference und Jobs — ohne Secrets."
+        actions={
+          <HealthBadge
+            status={overallBadge}
+            label={status.ok ? "System OK" : "Einschränkungen"}
+          />
+        }
+      />
       <SystemHubBanner />
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
             Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
@@ -514,6 +518,6 @@ export default async function AdminStatusPage() {
             API-Keys oder Tokens angezeigt. JSON-API:{" "}
             <Link href="/api/admin/status">/api/admin/status</Link>
           </p>
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

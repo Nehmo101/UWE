@@ -12,7 +12,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 export default async function BrainOverviewPage() {
   const repo = getAppRepository();
@@ -35,11 +35,9 @@ export default async function BrainOverviewPage() {
   await db.$disconnect();
 
   return (
-    <AdminModuleShell
-      activePath="/brain"
-      title="Brain Knowledge Store"
-      summary="Dauerhaftes DnD-Welt- und Kampagnenwissen — getrennt vom privaten Life-Brain unter /life-brain."
-      context={
+    <StudioShell
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Brain Knowledge Store" }]} />}
+      contextPanel={
         <SidebarSection title="Sichtbarkeit">
           <ul className="uwe-hint" style={{ margin: 0, paddingLeft: "1.1rem" }}>
             {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
@@ -51,6 +49,10 @@ export default async function BrainOverviewPage() {
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Brain Knowledge Store"
+        summary="Dauerhaftes DnD-Welt- und Kampagnenwissen — getrennt vom privaten Life-Brain unter /life-brain."
+      />
       {worlds.length === 0 ? (
         <EmptyState
           title="Keine Welten"
@@ -124,6 +126,6 @@ export default async function BrainOverviewPage() {
           </section>
         ))
       )}
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

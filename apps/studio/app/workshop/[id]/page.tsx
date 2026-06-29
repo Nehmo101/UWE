@@ -20,7 +20,7 @@ import {
   WorkshopProjectTypeEnum,
   WorkshopStatusEnum,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createPaintRecipeAction,
   createPrintProfileAction,
@@ -44,11 +44,20 @@ export default async function WorkshopDetailPage({ params }: Props) {
   const captureLinks = await service.listLinksForTarget("workshop_project", id);
 
   return (
-    <AdminModuleShell
-      activePath="/workshop"
-      title={workshop.title}
-      summary={`${WORKSHOP_TYPE_LABELS[workshop.projectType]} · ${WORKSHOP_STATUS_LABELS[workshop.status]}`}
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Werkstatt", href: "/workshop" },
+            { label: workshop.title },
+          ]}
+        />
+      }
     >
+      <PageHeader
+        title={workshop.title}
+        summary={`${WORKSHOP_TYPE_LABELS[workshop.projectType]} · ${WORKSHOP_STATUS_LABELS[workshop.status]}`}
+      />
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Alle Projekte</Link>
         {" · "}
@@ -439,6 +448,6 @@ export default async function WorkshopDetailPage({ params }: Props) {
           Projekt löschen
         </button>
       </form>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
 import { SECURITY_ROLE_LABELS } from "@uwe/auth";
 import { getSecurityDashboardStatus, prisma } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { resolveSecurityDashboardAccess } from "@/src/lib/security-dashboard-access";
 import { formatStudioDateTime } from "@/src/lib/format";
@@ -26,11 +26,17 @@ export default async function AdminSecurityPage() {
 
   if (!access.allowed) {
     return (
-      <AdminModuleShell
-        activePath="/admin/security"
-        title="Security"
-        summary="Sicherheitsübersicht für UWE Admins"
+      <SystemShell
+        breadcrumb={
+          <BreadcrumbTrail
+            items={[{ label: "Admin", href: "/admin" }, { label: "Security" }]}
+          />
+        }
       >
+        <PageHeader
+          title="Security"
+          summary="Sicherheitsübersicht für UWE Admins"
+        />
         <section className="uwe-v2-card">
           <h2 className="uwe-v2-section-title">Zugriff verweigert</h2>
           <p className="uwe-notice uwe-notice-warn">{access.reason}</p>
@@ -43,7 +49,7 @@ export default async function AdminSecurityPage() {
             Melde dich im Portal mit einem OWNER- oder ADMIN-Account an und öffne diese Seite erneut.
           </p>
         </section>
-      </AdminModuleShell>
+      </SystemShell>
     );
   }
 
@@ -51,17 +57,23 @@ export default async function AdminSecurityPage() {
   const criticalWarnings = status.warnings.filter((w) => w.severity === "critical").length;
 
   return (
-    <AdminModuleShell
-      activePath="/admin/security"
-      title="Security Dashboard"
-      summary="Prüft Auth, Rollen, ENV, Routen, Backups, Audit-Log und KI-/Upload-Policies — ohne Secrets."
-      actions={
-        <HealthBadge
-          status={criticalWarnings === 0 ? "ok" : "error"}
-          label={criticalWarnings === 0 ? "Keine kritischen Warnungen" : `${criticalWarnings} kritisch`}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "Security Dashboard" }]}
         />
       }
     >
+      <PageHeader
+        title="Security Dashboard"
+        summary="Prüft Auth, Rollen, ENV, Routen, Backups, Audit-Log und KI-/Upload-Policies — ohne Secrets."
+        actions={
+          <HealthBadge
+            status={criticalWarnings === 0 ? "ok" : "error"}
+            label={criticalWarnings === 0 ? "Keine kritischen Warnungen" : `${criticalWarnings} kritisch`}
+          />
+        }
+      />
       <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
         Stand: {formatStudioDateTime(new Date(status.timestamp))} · Angemeldet: {access.displayName} (
         {SECURITY_ROLE_LABELS[access.userRole ?? ""] ?? access.userRole})
@@ -240,6 +252,6 @@ export default async function AdminSecurityPage() {
       <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>
         JSON-API: <Link href="/api/admin/security">/api/admin/security</Link>
       </p>
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { MailPortalAccountForm, MailPortalAccountsPanel } from "@/components/mail-portal/MailPortalAccounts";
 import { MailPortalInbox } from "@/components/mail-portal/MailPortalInbox";
 import { createMailPortalService, prisma } from "@uwe/database/server";
@@ -21,11 +21,17 @@ export default async function AdminMailPortalPage({ searchParams }: Props) {
   const selectedMessage = messageId ? await service.getMessage(messageId) : null;
 
   return (
-    <AdminModuleShell
-      activePath="/admin/mail"
-      title="Mail Portal"
-      summary="Admin-Postfächer: IMAP/SMTP, Smart Inbox, Priorisierung, KI-Entwürfe. Versand nur nach expliziter Bestätigung."
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "Mail Portal" }]}
+        />
+      }
     >
+      <PageHeader
+        title="Mail Portal"
+        summary="Admin-Postfächer: IMAP/SMTP, Smart Inbox, Priorisierung, KI-Entwürfe. Versand nur nach expliziter Bestätigung."
+      />
       <div className="uwe-admin-mail-portal">
         <MailPortalAccountForm />
         <MailPortalAccountsPanel accounts={accounts} />
@@ -73,6 +79,6 @@ export default async function AdminMailPortalPage({ searchParams }: Props) {
           </ul>
         </section>
       </div>
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

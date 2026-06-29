@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createDungeonAction } from "../../../../dungeon-actions";
 
@@ -24,24 +24,25 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
     : campaigns[0];
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dungeons"
-      backLink={{ label: "← Dungeons", href: `/worlds/${worldSlug}/dungeons` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Dungeons",
-        `/worlds/${worldSlug}/dungeons`,
-        "Neuer Dungeon",
-      )}
-      pageHeader={{
-        title: "Neuer Dungeon",
-        summary: "Dungeon mit Ebenen und Räumen anlegen.",
-      }}
-      showSearch={false}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Dungeons",
+            `/worlds/${worldSlug}/dungeons`,
+            "Neuer Dungeon",
+          )}
+        />
+      }
     >
+      <PageHeader
+        title="Neuer Dungeon"
+        summary="Dungeon mit Ebenen und Räumen anlegen."
+      />
       <form action={createDungeonAction} className="uwe-v2-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         {selectedCampaign && (
@@ -68,6 +69,6 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
           <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/dungeons`}>Abbrechen</Link>
         </div>
       </form>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

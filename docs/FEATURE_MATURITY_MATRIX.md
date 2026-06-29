@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juni 2026 · Branch-Basis `main`.
+Stand: Juni 2026 · Wave 2 · Branch-Basis `cursor/uwe-wave2-rtx-docs-2b4c`.
 
 **Legende**
 
@@ -35,6 +35,8 @@ Stand: Juni 2026 · Branch-Basis `main`.
 | 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke) | Teilweise (Dev seed) | Nein |
 | 12 | Medienverwaltung | Kern fertig | Ja | Ja (Kern) |
 | 13 | Tag-/Taxonomie-Aufräumer | Service + Tests | Teilweise (API) | Nein |
+| 14 | Hard UI/UX Reset — Shells + Nav | Wave 2 | Ja (Studio/Portal/Connector) | Ja (Kern) |
+| 15 | Label-Druck via RTX + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
 
 ---
 
@@ -392,6 +394,38 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 **Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`. Tag-Eingaben: Asset-Editor (`updateAssetAction`) und Life-Brain Document/Fact (`updateLifeBrainDocumentTagsAction`/`updateLifeBrainFactTagsAction`).
 
 **Nächste Schritte:** optional zentrales Tag-Model.
+
+---
+
+## 14. Hard UI/UX Reset — Shells + Nav
+
+| Kriterium | Status |
+|-----------|--------|
+| Vorhanden | **Ja** — Wave 0 + Wave 1 + Wave 2 |
+| Nav-Vertrag | `@uwe/shared-utils/navigation` — zentraler Typ + resolveNavGroups |
+| UI-Stack | Tailwind v4, shadcn-style Primitives, Lucide React |
+| Studio | `StudioShell`, `WorldShell`, `SystemShell`, `AppShell` — Wave 1 |
+| Portal | `PortalShell` — Wave 1 |
+| RTX Connector | `ConnectorShell` + `connector-nav.ts` — Wave 2 |
+| Nutzbar | **Ja** (Studio/Portal/Connector) |
+
+Wave-Übersicht:
+| Wave 0 | Zentraler Nav-Vertrag, UI-Stack (Tailwind v4 + shadcn), `AppShell` |
+| Wave 1 | `StudioShell`/`WorldShell`/`SystemShell`/`PortalShell`, QF10 Label-Druck, Portal |
+| Wave 2 | `ConnectorShell` mit `connector-nav` IA (dieser Branch) |
+
+---
+
+## 15. Label-Druck via RTX + CUPS
+
+| Kriterium | Status |
+|-----------|--------|
+| Vorhanden | **Ja** — `packages/connector/src/label-printing.ts` |
+| Host-Connector | `label_printing` Capability, Queue-Claim, CUPS-Fallback |
+| RTX-Client UI | `PrintersPanel` — zeigt Konfigurationshinweise |
+| Env-Doku | `UWE_CONNECTOR_PRINTERS`, `UWE_CONNECTOR_PRINT_CMD` — `.env.example` |
+| Docs | `docs/rtx-connector.md` — "Label printing (CUPS / local printers)" |
+| Production-ready | **Ja** (CUPS-gestützt; Custom-Cmd optional) |
 
 ---
 

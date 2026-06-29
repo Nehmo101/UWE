@@ -10,7 +10,7 @@ import {
   createLabelFromSourceAction,
   createManualLabelAction,
 } from "@/app/label-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -37,23 +37,21 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
   const assets = await repo.listAssetsByWorld(worldSlug);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="labels"
-      backLink={{ label: "← Labels", href: `/worlds/${worldSlug}/labels` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Labels",
-        `/worlds/${worldSlug}/labels`,
-        "Neu",
-      )}
-      pageHeader={{
-        title: "Neues Label erstellen",
-        summary: "Quelle und Vorlage wählen — Inhalt wird aus bestehenden Pages, Räumen, Blöcken oder Assets übernommen.",
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Labels",
+            `/worlds/${worldSlug}/labels`,
+            "Neu",
+          )}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Hinweis">
           <p className="uwe-hint" style={{ margin: 0 }}>
             Labels sind 6×4 Zoll. DM-only Inhalte werden standardmäßig ausgeschlossen.
@@ -62,6 +60,10 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Neues Label erstellen"
+        summary="Quelle und Vorlage wählen — Inhalt wird aus bestehenden Pages, Räumen, Blöcken oder Assets übernommen."
+      />
       {pages.length === 0 && blocks.length === 0 && assets.length === 0 ? (
         <section className="uwe-panel">
           <h2>Aus Seite, Raum, Block oder Asset</h2>
@@ -213,6 +215,6 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
           </button>
         </form>
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

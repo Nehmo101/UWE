@@ -8,7 +8,8 @@ import {
   getAppRepository,
   type AiRunStatus,
 } from "@uwe/database/server";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -44,17 +45,16 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
   const runsBase = `/worlds/${worldSlug}/ai-runs`;
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="ai-runs"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "KI-Läufe", runsBase)}
-      pageHeader={{
-        title: "AI Run History",
-        summary: `${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen.`,
-      }}
-      sidebarExtra={
-        <WorldContextSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "KI-Läufe", runsBase)}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           title="Status"
           items={statusFilters.map((filter) => ({
             label: filter.label,
@@ -64,6 +64,10 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
         />
       }
     >
+      <PageHeader
+        title="AI Run History"
+        summary={`${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen.`}
+      />
       {runs.length === 0 ? (
         <p className="uwe-v2-empty">Noch keine AI Runs für diese Welt.</p>
       ) : (
@@ -102,6 +106,6 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
           </tbody>
         </table>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

@@ -7,7 +7,7 @@ import {
   PERSONAL_BRAIN_CATEGORY_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createLifeBrainDocumentAction,
   createLifeBrainFactAction,
@@ -23,11 +23,11 @@ export default async function LifeBrainPage() {
   ]);
 
   return (
-    <AdminModuleShell
-      activePath="/life-brain"
-      title="Persönliches Brain"
-      summary="Life-Wissen lokal in UWE — niemals an Cloud-KI. Getrennt vom DnD Brain."
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Persönliches Brain" }]} />}>
+      <PageHeader
+        title="Persönliches Brain"
+        summary="Life-Wissen lokal in UWE — niemals an Cloud-KI. Getrennt vom DnD Brain."
+      />
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
@@ -143,6 +143,6 @@ export default async function LifeBrainPage() {
           </section>
         </>
       )}
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

@@ -11,7 +11,7 @@ import {
   summarizeContractCosts,
   CONTRACT_STATUS_LABELS,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createContractAction,
   deleteContractAction,
@@ -24,11 +24,11 @@ export default async function ContractsPage() {
   const alerts = buildContractAlerts(contracts);
 
   return (
-    <AdminModuleShell
-      activePath="/contracts"
-      title="Verträge & Monatsausgaben"
-      summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen."
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Verträge & Ausgaben" }]} />}>
+      <PageHeader
+        title="Verträge & Monatsausgaben"
+        summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen."
+      />
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Kostenübersicht</h2>
         <p>
@@ -199,6 +199,6 @@ export default async function ContractsPage() {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

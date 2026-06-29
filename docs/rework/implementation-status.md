@@ -7,8 +7,8 @@ and `../design/new-ui-stack.md` (stack reference).
 ## Shipped & verified (Wave 0 foundation + first pages)
 
 All additive: existing UI and its tests are untouched and still pass. Full CI
-gate is green (`pnpm lint`, `pnpm typecheck` across 27 packages, `pnpm test:ci`
-= 1466 tests, `pnpm build:release` for both apps incl. standalone Prisma checks).
+gate is green (`pnpm lint`, `pnpm typecheck` across 28 packages, `pnpm test:ci`
+= 1480 tests, `pnpm build:release` for both apps incl. standalone Prisma checks).
 
 ### Central navigation contract
 
@@ -33,7 +33,8 @@ gate is green (`pnpm lint`, `pnpm typecheck` across 27 packages, `pnpm test:ci`
   states, plus a Lucide icon resolver (`NavIcon`).
 - Shells (Phase 4): `AppShell` (sidebar + topbar + command + mobile drawer +
   context panel) and wrappers `StudioShell`/`WorldShell`/`SystemShell`/
-  `ModuleShell`/`SettingsShell` (Studio) and `PortalShell` (Portal).
+  `ModuleShell`/`SettingsShell` (Studio), `PortalShell` (Portal), and
+  `ConnectorShell` (RTX Connector Client).
 
 ### Migrated pages (new shell, browser-verified)
 
@@ -55,7 +56,7 @@ gate is green (`pnpm lint`, `pnpm typecheck` across 27 packages, `pnpm test:ci`
 - Central error UI (QF14) — `ErrorScreen` (Studio diagnostics) + `PortalErrorScreen`
   (player-safe) wired into both `app/error.tsx`. Build-verified.
 
-## Wave 1 — shipped (consolidated orchestrator branch)
+## Wave 1 — shipped (merged #298)
 
 Branch: `cursor/uwe-wave1-orchestrator-941c` (merges A1–A4 subagent branches).
 
@@ -78,73 +79,108 @@ Branch: `cursor/uwe-wave1-orchestrator-941c` (merges A1–A4 subagent branches).
 | QF13 Host Control | **done (Wave 0)** | `/system/host-control` read-only status |
 | QF14 Error UI | **done (Wave 0)** | Studio diagnostics + Portal player-safe error |
 
-### Page migration (Phase 4/5) — partial
-
-| Route | Shell | Status |
-|---|---|---|
-| `/today` | `StudioShell` | **done** |
-| `/worlds` | `StudioShell` | **done** |
-| `/worlds/[worldSlug]/dashboard` | `WorldShell` | **done** |
-| `/worlds/[worldSlug]` (wiki list) | `WorldShell` | **done** |
-| `/worlds/[worldSlug]/[category]/[slug]` | `WorldShell` | **done** |
-| `/worlds/[worldSlug]/graph` | `WorldShell` | **done** |
-| `/system/printers` | System area | **done** (QF10) |
-| Sessions, dungeons, edit, brain, labels (non-print), etc. | `WorldModuleShell` | **open** (Wave 2) |
-
 ### Wiki core (Phase 8/9) — initial
 
 - `WikiPageTable` — TanStack Table (type, tags, visibility, status, last changed)
 - `WikiTiptapViewer`, `WikiContextPanel` (backlinks, outgoing, related, broken links)
 - `WikiFlowGraph` — `@xyflow/react` neighborhood + world graph
 - `ConnectionMatrix`, `CampaignSidebar`
-- **Deferred:** wiki edit page on new shell, column visibility toggles
+- **Deferred → Wave 3:** column visibility toggles on wiki table
 
-### Wave 1 agent deliverables
+## Wave 2 — shipped (consolidated orchestrator branch)
+
+Branch: `cursor/uwe-wave2-orchestrator-2b4c` (merges B1–B4 subagent branches).
+
+### Wave 2 agent deliverables
 
 | Agent | Branch | Scope | Status |
 |---|---|---|---|
-| **A1** Portal + Cloudflare | `cursor/uwe-wave1-portal-cloudflare-941c` | QF2, QF3 | **done** |
-| **A2** Page migration + Wiki | `cursor/uwe-wave1-page-migration-941c` | Phase 4/5/8/9 | **done** (partial page set) |
-| **A3** RTX Label print | `cursor/uwe-wave1-label-print-941c` | QF10 | **done** |
-| **A4** Tests + Docs | `cursor/uwe-wave1-tests-docs-941c` | Phase 12/13 | **done** |
+| **B1** World routes | `cursor/uwe-wave2-world-shells-2b4c` | 28 world pages → `WorldShell` | **done** |
+| **B2** Daily Admin OS | `cursor/uwe-wave2-daily-admin-shells-2b4c` | 27 routes → `StudioShell` | **done** |
+| **B3** Admin/System + E2E | `cursor/uwe-wave2-admin-e2e-2b4c` | 15 admin/system routes + Portal E2E | **done** |
+| **B4** RTX + Docs | `cursor/uwe-wave2-rtx-docs-2b4c` | ConnectorShell, QF10 hardware docs, Phase 13 audit | **done** |
+
+### Page migration (Phase 4/5) — complete
+
+| Route area | Shell | Status |
+|---|---|---|
+| `/today`, `/worlds` | `StudioShell` | **done (Wave 1)** |
+| `/worlds/[worldSlug]/dashboard`, wiki list/detail/graph | `WorldShell` | **done (Wave 1)** |
+| Wiki edit, sessions, dungeons, brain, labels, assets, etc. | `WorldShell` | **done (Wave 2 B1)** |
+| `/capture`, `/projects`, `/workshop/**`, `/life-brain/**`, `/calendar`, `/mail/**`, `/jobs`, `/image-studio/**`, `/search`, `/templates/**`, `/brain`, `/ai`, `/backup` | `StudioShell` | **done (Wave 2 B2)** |
+| `/admin/**`, `/system`, `/system/rtx-connector`, `/system/printers` | `SystemShell` | **done (Wave 2 B3)** |
+| `/system/navigation`, `/system/version`, `/system/cloudflare`, `/system/host-control`, `/system/uwe-knowhow` | `SystemShell` | **done (Wave 0/1)** |
+| `/settings`, `/account/**` | `StudioAppShell` / `SettingsShell` | **legacy** (Wave 3) |
+
+### Legacy shell retirement (Wave 2 orchestrator)
+
+Deleted (reference count = 0):
+
+- `apps/studio/components/WorldModuleShell.tsx`
+- `apps/studio/components/WorldCockpitShell.tsx`
+- `apps/studio/components/StudioCockpitAppShell.tsx`
+- `apps/studio/components/AdminModuleShell.tsx`
+
+### Phase 11 — ConnectorShell
+
+| File | Action |
+|---|---|
+| `apps/rtx-connector-client/src/components/shell/ConnectorShell.tsx` | **created** — sidebar shell driven by connector-nav IA |
+| `apps/rtx-connector-client/src/components/shell/NavIcon.tsx` | **created** — Lucide icon resolver for nav items |
+| `apps/rtx-connector-client/src/components/PrintersPanel.tsx` | **created** — `/printers` route panel |
+| `apps/rtx-connector-client/src/App.tsx` | **updated** — `ConnectorShell` + `connectorSidebar()` replace inline nav |
+
+IA routes wired: `/` (Host-Verbindung), `/runner` (Runner/Ollama), `/models` (Modelle),
+`/printers` (Drucker), `/jobs` (Jobs), `/logs` (Logs), `/diagnostics` (Diagnose).
+
+### QF10 — Hardware Printer Documentation
+
+| File | Action |
+|---|---|
+| `tools/uwe-rtx-connector/.env.example` | **updated** — `UWE_CONNECTOR_PRINTERS` + `UWE_CONNECTOR_PRINT_CMD` with examples |
+| `docs/rtx-connector.md` | **updated** — "Label printing (CUPS / local printers)" section added |
 
 ### Phase 12 — Tests on new IA
 
 | Test area | File(s) | Status |
 |---|---|---|
 | Studio central nav contract | `apps/studio/src/navigation/navigation.test.ts` | **done** |
-| Studio nav audit | `apps/studio/src/navigation/inspect-navigation.test.ts` | **done** (Wave 0) |
+| Studio nav audit | `apps/studio/src/navigation/inspect-navigation.test.ts` | **done** |
 | Studio mobile nav | `apps/studio/src/lib/mobile-nav.test.ts` | **done** |
 | Portal login-first nav | `apps/portal/src/navigation/portal-nav.test.ts` | **done** |
 | Portal mobile nav | `apps/portal/src/lib/mobile-nav.test.ts` | **done** |
-| Shared nav helpers | `packages/shared-utils/src/navigation.test.ts` | **done** (Wave 0) |
-| Legacy studio nav tests | ~~`studio-navigation.test.ts`~~ | **removed** → `navigation.test.ts` |
-| Legacy portal nav tests | ~~`portal-navigation.test.ts`~~ | **removed** → `portal-nav.test.ts` |
+| Shared nav helpers | `packages/shared-utils/src/navigation.test.ts` | **done** |
 | Integration smoke | `scripts/integration-smoke.test.ts` | **done** |
 | Security leaks | `scripts/security-leaks.test.ts` | **done** |
 | Portal access | `packages/database/src/portal-access.test.ts` | **done** |
 | Label print queue | `label-print-queue-service.test.ts`, `capabilities.test.ts` | **done** |
-| Route policy + middleware (login-first) | `route-policy.test.ts`, `middleware.test.ts` | **deferred** — policy unchanged; optional E2E regressions |
-| E2E portal login flow | `scripts/e2e-servers.mjs` | **deferred** — recommend before merge to main |
+| Route policy login-first | `route-policy.test.ts` | **done (Wave 2 B3)** — 5 Portal login-first assertions |
+| Portal E2E login-first | `e2e/portal-auth.spec.ts` | **done (Wave 2 B3)** — unauthenticated redirect + Studio `/portal` shim |
+| Studio shell E2E | `e2e/studio-shell.spec.ts` | **updated (Wave 2)** — new AppShell selectors |
 
 ### Phase 13 — Documentation
 
 | Doc | Status |
 |---|---|
 | `docs/rework/implementation-status.md` | **updated** (this file) |
-| `docs/cloudflare-current-setup.md` | **updated** (Studio `/portal` shim) |
-| Full `docs/` audit | **deferred → Wave 2** |
+| `docs/cloudflare-current-setup.md` | **updated** (Wave 1) |
+| `README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE_MATURITY_MATRIX.md`, `docs/ROADMAP.md`, `docs/design/new-ui-stack.md` | **updated (Wave 2 B4)** |
 
-## Deferred / not yet done (Wave 2)
+## Deferred / Wave 3 recommendations
 
 | Item | Plan ref | Status |
 |---|---|---|
-| Retire `WorldModuleShell` on remaining world routes | Phase 4/5 | open |
-| Wiki edit page on `WorldShell` | Phase 8/9 | open |
-| Portal E2E browser verification | QF2 | open |
+| `/settings`, `/account/**` on `SettingsShell` (retire `StudioAppShell`) | Phase 4/5 | open |
+| Wiki table column visibility toggles | Phase 8/9 | open |
 | Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) |
-| Route-policy login-first regression tests | Phase 12 | open (optional) |
-| Full docs audit (README, ARCHITECTURE, etc.) | Phase 13 | open |
+| Portal player routes restyle on `PortalShell` | Phase 10 | open |
+| Full visual polish (design-v2 CSS retirement) | Phase 14 | open |
+
+### legacy-ui-disconnected (unchanged)
+
+Public Portal discovery routes (`/worlds`, `/worlds/[slug]`, etc.) remain
+backend-intact but disconnected from active Portal navigation (QF2). No change
+in Wave 2.
 
 ### QF6 note
 
@@ -177,11 +213,13 @@ Always revert any `.env` changes and leave the tree clean.
 
 ## Latest full-gate verification
 
-Consolidated Wave 1 branch (`cursor/uwe-wave1-orchestrator-941c`):
+Consolidated Wave 2 branch (`cursor/uwe-wave2-orchestrator-2b4c`):
 
 - `pnpm lint` (whole repo, `--max-warnings 0`) — pass
-- `pnpm typecheck` (turbo, 27 packages) — pass
+- `pnpm typecheck` (turbo, 28 packages) — pass
 - `pnpm test:ci` — 1480 tests across 16 suites, pass
+- `pnpm test:security` — pass
+- `pnpm docs:check` — pass
 - `pnpm build:release` — both apps build incl. standalone Prisma checks — pass
 
-Wave 0 baseline was 1478 tests; +2 from portal-access and label-print regressions.
+Wave 1 baseline was 1480 tests; route-policy login-first regressions added in B3 (same suite count).

@@ -7,7 +7,7 @@ import {
   GameSessionStatusEnum,
   getAppRepository,
 } from "@uwe/database/server";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createGameSessionAction } from "../../../../session-actions";
 
@@ -27,24 +27,25 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="sessions"
-      backLink={{ label: "← Sessions", href: `/worlds/${worldSlug}/sessions` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Sessions",
-        `/worlds/${worldSlug}/sessions`,
-        "Neu",
-      )}
-      pageHeader={{
-        title: "Neue Session",
-        summary: "Session für Vorbereitung und Spielabend anlegen.",
-      }}
-      showSearch={false}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Sessions",
+            `/worlds/${worldSlug}/sessions`,
+            "Neu",
+          )}
+        />
+      }
     >
+      <PageHeader
+        title="Neue Session"
+        summary="Session für Vorbereitung und Spielabend anlegen."
+      />
       <form action={createGameSessionAction} className="uwe-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
 
@@ -111,6 +112,6 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
           </Link>
         </div>
       </form>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

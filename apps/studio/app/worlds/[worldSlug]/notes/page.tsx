@@ -15,7 +15,8 @@ import {
   deletePlayerNoteAction,
   hidePlayerNoteAction,
 } from "../../../note-actions";
-import { WorldCampaignSidebar, WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -61,21 +62,17 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
   const viewAllSuffix = view === "all" ? "?view=all" : "";
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="notes"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Spielernotizen", `/worlds/${worldSlug}/notes`)}
-      pageHeader={{
-        title: view === "all" ? "Alle Spielernotizen" : "Review Queue",
-        summary:
-          view === "all"
-            ? "Alle Spielernotizen dieser Welt — inkl. Entwürfe und übernommene Notizen."
-            : "Notizen, die Spieler an den GM gesendet haben — übernehmen, verbergen oder löschen.",
-      }}
-      sidebarExtra={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Spielernotizen", `/worlds/${worldSlug}/notes`)}
+        />
+      }
+      contextPanel={
         <>
-          <WorldContextSidebar
+          <CampaignSidebar
             title="Ansicht"
             items={[
               {
@@ -90,7 +87,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
               },
             ]}
           />
-          <WorldCampaignSidebar
+          <CampaignSidebar
             items={[
               {
                 label: "Alle",
@@ -104,16 +101,22 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
               })),
             ]}
           />
+          <SidebarSection title="Kontext">
+            <p className="uwe-hint" style={{ margin: 0 }}>
+              {reviewQueue.length} in Review Queue
+            </p>
+          </SidebarSection>
         </>
       }
-      context={
-        <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {reviewQueue.length} in Review Queue
-          </p>
-        </SidebarSection>
-      }
     >
+      <PageHeader
+        title={view === "all" ? "Alle Spielernotizen" : "Review Queue"}
+        summary={
+          view === "all"
+            ? "Alle Spielernotizen dieser Welt — inkl. Entwürfe und übernommene Notizen."
+            : "Notizen, die Spieler an den GM gesendet haben — übernehmen, verbergen oder löschen."
+        }
+      />
       {allNotes.length === 0 ? (
         <p className="uwe-v2-empty">
           {view === "all" ? "Keine Spielernotizen vorhanden." : "Keine Notizen in der Review Queue."}
@@ -209,6 +212,6 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
           ))}
         </div>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

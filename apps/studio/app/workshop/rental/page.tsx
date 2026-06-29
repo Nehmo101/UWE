@@ -8,7 +8,7 @@ import {
   WORKSHOP_RENTAL_STATUS_LABELS,
   WorkshopRentalStatusEnum,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createTerrainRentalAction,
   deleteTerrainRentalAction,
@@ -19,11 +19,20 @@ export default async function WorkshopRentalPage() {
   const rentals = await createLifeAdminService(prisma).listWorkshopTerrainRentals({ limit: 200 });
 
   return (
-    <AdminModuleShell
-      activePath="/workshop"
-      title="Terrain-Verleih"
-      summary="Sets, Kisten, Kaution und Übergabe-Checklisten — optional für Ausleihe an Spieler."
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Werkstatt", href: "/workshop" },
+            { label: "Terrain-Verleih" },
+          ]}
+        />
+      }
     >
+      <PageHeader
+        title="Terrain-Verleih"
+        summary="Sets, Kisten, Kaution und Übergabe-Checklisten — optional für Ausleihe an Spieler."
+      />
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Werkstatt</Link>
       </p>
@@ -193,6 +202,6 @@ export default async function WorkshopRentalPage() {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

@@ -15,7 +15,8 @@ import {
   PublishStatusEnum,
   CanonicalStatusEnum,
 } from "@uwe/database/server";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { NewPageAiPanel } from "@/components/NewPageAiPanel";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createPageAction } from "../../../../actions";
@@ -58,27 +59,27 @@ export default async function NewPageForm({ params, searchParams }: Props) {
   }
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="new-page"
-      campaignSlug={campaignSlug}
-      backLink={{ label: "← Seitenliste", href: `/worlds/${worldSlug}` }}
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")}
-      pageHeader={{
-        title: "Neue Seite",
-        summary: "Wähle eine Vorlage und lege los — Slug und DM-Notizblöcke werden automatisch angelegt.",
-      }}
-      sidebarExtra={
-        <WorldContextSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           items={[
-            { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
+            { label: "\u2190 \u00dcbersicht", href: `/worlds/${worldSlug}/dashboard` },
             { label: "Seitenliste", href: `/worlds/${worldSlug}` },
           ]}
         />
       }
-      showSearch={false}
     >
+      <PageHeader
+        title="Neue Seite"
+        summary="W\u00e4hle eine Vorlage und lege los \u2014 Slug und DM-Notizbl\u00f6cke werden automatisch angelegt."
+      />
       <div className="uwe-template-grid" role="group" aria-label="Seitenvorlagen">
         {templates.map((entry) => (
           <Link
@@ -99,7 +100,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
       />
 
       <p className="uwe-form-hint">
-        <Link href="/templates">Templates verwalten →</Link>
+        <Link href="/templates">Templates verwalten \u2192</Link>
       </p>
 
       <form action={createPageAction} className="uwe-v2-form" key={template.id}>
@@ -127,7 +128,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
         <label>
           Slug (optional)
-          <input name="slug" placeholder="leer lassen für automatischen Slug" />
+          <input name="slug" placeholder="leer lassen f\u00fcr automatischen Slug" />
         </label>
 
         <label>
@@ -161,9 +162,9 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             ))}
           </select>
           <small className="uwe-field-hint">
-            „Portal sichtbar“ und „Share-Link“ sind nach dem
-              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
-              „Nur GM“ erscheint dort niemals.
+            \u201ePortal sichtbar\u201c und \u201eShare-Link\u201c sind nach dem
+              Ver\u00f6ffentlichen f\u00fcr angemeldete Spieler im Portal sichtbar.
+              \u201eNur GM\u201c erscheint dort niemals.
           </small>
         </label>
 
@@ -196,17 +197,17 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             name="initialContent"
             rows={template.slug === "blank" ? 6 : 12}
             defaultValue={template.blocks[0]?.content ?? ""}
-            placeholder="[[Wikilinks]] unterstützt"
+            placeholder="[[Wikilinks]] unterst\u00fctzt"
           />
         </label>
 
         {extraBlocks.length > 0 && (
           <p className="uwe-form-hint">
-            Diese Vorlage legt zusätzlich {extraBlocks.length}{" "}
-            {extraBlocks.length === 1 ? "Block" : "Blöcke"} an:{" "}
+            Diese Vorlage legt zus\u00e4tzlich {extraBlocks.length}{" "}
+            {extraBlocks.length === 1 ? "Block" : "Bl\u00f6cke"} an:{" "}
             {extraBlocks
               .map((block) =>
-                block.type === "gm_note" ? "DM-Notiz (nur für dich)" : "Inhaltsblock",
+                block.type === "gm_note" ? "DM-Notiz (nur f\u00fcr dich)" : "Inhaltsblock",
               )
               .join(", ")}
             .
@@ -218,6 +219,6 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
         </div>
       </form>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

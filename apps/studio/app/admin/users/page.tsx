@@ -1,14 +1,20 @@
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { UserManagementWorkspace } from "@/components/UserManagementWorkspace";
 
 export default function AdminUsersPage() {
   return (
-    <AdminModuleShell
-      activePath="/admin/users"
-      title="Benutzer"
-      summary="Benutzer anlegen, Rollen und Welt-Mitgliedschaften verwalten. Nur hier angelegte aktive Benutzer können sich einloggen."
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "Benutzer" }]}
+        />
+      }
     >
+      <PageHeader
+        title="Benutzer"
+        summary="Benutzer anlegen, Rollen und Welt-Mitgliedschaften verwalten. Nur hier angelegte aktive Benutzer können sich einloggen."
+      />
       <UserManagementWorkspace />
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

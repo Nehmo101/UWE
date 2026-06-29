@@ -6,7 +6,7 @@ import {
   IMAGE_STUDIO_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { ImageStudioProjectReview } from "@/components/ImageStudioProjectReview";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 
@@ -26,16 +26,25 @@ export default async function ImageStudioProjectPage({ params }: Props) {
   const errorMessage = extractImageStudioErrorMessage(project.metadata);
 
   return (
-    <AdminModuleShell
-      activePath="/image-studio"
-      title={project.title}
-      summary="Versionen prüfen, Entwurf speichern, Asset übernehmen oder im Canvas bearbeiten."
-      actions={
-        <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
-          ← Alle Projekte
-        </Link>
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Image Studio", href: "/image-studio" },
+            { label: project.title },
+          ]}
+        />
       }
     >
+      <PageHeader
+        title={project.title}
+        summary="Versionen prüfen, Entwurf speichern, Asset übernehmen oder im Canvas bearbeiten."
+        actions={
+          <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
+            ← Alle Projekte
+          </Link>
+        }
+      />
       <ImageStudioStatusBadge
         status={project.status}
         label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
@@ -65,6 +74,6 @@ export default async function ImageStudioProjectPage({ params }: Props) {
           targetId: link.targetId,
         }))}
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

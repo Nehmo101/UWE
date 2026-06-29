@@ -1,45 +1,40 @@
 import { expect, test } from "@playwright/test";
 import { loginStudioForShellTests } from "./helpers/auth";
 
-test.describe("Studio shell chrome", () => {
+test.describe("Studio shell chrome (new AppShell)", () => {
   test.beforeEach(async ({ page }) => {
     await loginStudioForShellTests(page);
   });
 
-  test("WorldModuleShell shows sectioned sidebar on world home", async ({ page }) => {
+  test("WorldShell shows world sidebar on world home", async ({ page }) => {
     await page.goto("/worlds/terra");
 
-    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Terra", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Brotkrumen" })).toContainText("Terra");
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Welten & Kampagnen");
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Daily Admin OS");
+    await expect(page.getByRole("link", { name: "Wiki / Seiten" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
   });
 
-  test("WorldModuleShell wiki page shows breadcrumbs and back link", async ({ page }) => {
+  test("WorldShell wiki page shows breadcrumbs", async ({ page }) => {
     await page.goto("/worlds/terra/lore/amans-geheimnis");
 
-    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
-    await expect(page.locator(".uwe-back-link")).toContainText("Seitenliste");
     await expect(page.getByRole("navigation", { name: "Brotkrumen" })).toContainText("Lore");
     await expect(page.getByRole("heading", { name: "Amans Geheimnis" })).toBeVisible();
   });
 
-  test("AdminModuleShell renders Daily Admin chrome on /today", async ({ page }) => {
+  test("StudioShell renders Daily Admin chrome on /today", async ({ page }) => {
     await page.goto("/today");
 
-    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
+    await expect(page.getByRole("link", { name: "UWE Studio" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Heute", exact: true })).toBeVisible();
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Daily Admin OS");
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Capture");
+    await expect(page.getByRole("link", { name: "Heute" })).toBeVisible();
   });
 
-  test("AdminModuleShell highlights Capture in sidebar", async ({ page }) => {
+  test("StudioShell highlights Capture in sidebar", async ({ page }) => {
     await page.goto("/capture");
 
-    await expect(page.locator(".uwe-v2-shell")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Capture Inbox" })).toBeVisible();
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Daily Admin OS");
+    await expect(page.getByRole("link", { name: "Capture / Inbox" })).toBeVisible();
   });
 
   test("StudioAppShell renders settings navigation", async ({ page }) => {

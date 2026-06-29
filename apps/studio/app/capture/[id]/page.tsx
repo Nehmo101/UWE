@@ -6,7 +6,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { CaptureTriagePanel } from "@/components/capture/CaptureTriagePanel";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -29,12 +29,11 @@ export default async function CaptureDetailPage({ params }: Props) {
   const hardwareDevices = await lifeAdmin.listHardwareDevices({ limit: 100 });
 
   return (
-    <AdminModuleShell
-      activePath="/capture"
-      title="Capture sortieren"
-      summary="Vorschlag prüfen und in Projekte, Werkstatt, DnD, Hardware, Verträge oder Life Brain überführen."
-      bottomNav="capture"
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Capture Inbox", href: "/capture" }, { label: "Triage" }]} />}>
+      <PageHeader
+        title="Capture sortieren"
+        summary="Vorschlag prüfen und in Projekte, Werkstatt, DnD, Hardware, Verträge oder Life Brain überführen."
+      />
       <CaptureTriagePanel
             capture={refreshed}
             worlds={worlds.map((world) => ({
@@ -44,6 +43,6 @@ export default async function CaptureDetailPage({ params }: Props) {
             }))}
             hardwareDevices={hardwareDevices}
           />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
  * Starts Studio + Portal against a shared isolated DB for Playwright E2E.
+ *
+ * Portal login-first tests (no session → redirect /login) are in:
+ *   e2e/portal-auth.spec.ts — "Portal login-first — unauthenticated redirect policy"
+ *   e2e/portal-auth.spec.ts — "Studio /portal redirect shim"
+ * These run against the production build started here (NODE_ENV=production),
+ * ensuring real middleware / CSP behaviour is exercised.
  */
 import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";

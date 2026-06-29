@@ -9,7 +9,7 @@ import {
   resolveEffectiveUploadsPath,
   type OwnerSetupSectionId,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { OwnerSetupSectionView } from "@/components/owner-setup/OwnerSetupSectionView";
 import { OwnerSetupTestPanel } from "@/components/owner-setup/OwnerSetupTestPanel";
 import { getCurrentAuthUser, requireAdminAccess } from "@/src/lib/auth";
@@ -52,30 +52,29 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
   ]);
 
   const section = snapshot.sections.find((entry) => entry.id === activeTab);
-  const activePath =
-    activeTab === "system" ? "/admin/setup" : `/admin/setup?tab=${activeTab}`;
 
   const uploadsPath = resolveEffectiveUploadsPath(settings);
   const backupsPath = resolveEffectiveBackupsPath(settings);
   const exportsPath = resolveEffectiveExportsPath(settings);
 
   return (
-    <AdminModuleShell
-      activePath={activePath}
-      bottomNav="more"
-      title="Einrichtung"
-      summary="Zentrale Owner-Einrichtung — System, Zugriff, Cloudflare, Mail, RTX, Drucker und Diagnose ohne Secrets im Klartext."
-      breadcrumbs={[
-        { label: "Admin", href: "/admin" },
-        { label: "Einrichtung" },
-      ]}
-      actions={
-        <HealthBadge
-          status={snapshot.ok ? "ok" : "degraded"}
-          label={canEdit ? "Owner" : "Nur Lesen"}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "Einrichtung" }]}
         />
       }
     >
+      <PageHeader
+        title="Einrichtung"
+        summary="Zentrale Owner-Einrichtung — System, Zugriff, Cloudflare, Mail, RTX, Drucker und Diagnose ohne Secrets im Klartext."
+        actions={
+          <HealthBadge
+            status={snapshot.ok ? "ok" : "degraded"}
+            label={canEdit ? "Owner" : "Nur Lesen"}
+          />
+        }
+      />
       {!canEdit && (
         <p className="uwe-notice" role="status" style={{ marginBottom: "1rem" }}>
           Du siehst die Einrichtung im Lesemodus. Nur <strong>OWNER</strong> darf speichern und
@@ -292,6 +291,6 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
           )}
         </OwnerSetupSectionView>
       )}
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

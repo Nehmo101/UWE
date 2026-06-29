@@ -4,7 +4,7 @@ import { CONNECTOR_OFFLINE_MESSAGE } from "@uwe/connector";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { HealthBadge } from "@uwe/shared-ui";
 
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { resolveHostConnectorConfig } from "@/src/lib/connector-config";
 import { RtxConnectorClient } from "./RtxConnectorClient";
 
@@ -26,23 +26,27 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
   const badge = summary.anyOnline ? "ok" : "degraded";
 
   return (
-    <AdminModuleShell
-      activePath="/system/rtx-connector"
-      bottomNav="more"
-      title="RTX Connector"
-      summary="Optionaler lokaler Worker für KI, Audio und Spotify. UWE bleibt ohne Connector vollständig online."
-      breadcrumbs={[
-        { label: "Heute", href: "/today" },
-        { label: "System", href: "/system" },
-        { label: "RTX Connector" },
-      ]}
-      actions={
-        <HealthBadge
-          status={badge}
-          label={summary.anyOnline ? `${summary.onlineCount} online` : "Connector offline"}
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Heute", href: "/today" },
+            { label: "System", href: "/system" },
+            { label: "RTX Connector" },
+          ]}
         />
       }
     >
+      <PageHeader
+        title="RTX Connector"
+        summary="Optionaler lokaler Worker für KI, Audio und Spotify. UWE bleibt ohne Connector vollständig online."
+        actions={
+          <HealthBadge
+            status={badge}
+            label={summary.anyOnline ? `${summary.onlineCount} online` : "Connector offline"}
+          />
+        }
+      />
       {from === "cookbook" && (
         <section className="uwe-v2-section" role="status">
           <div className="uwe-v2-card" style={{ padding: "1rem", borderColor: "var(--uwe-accent, #888)" }}>
@@ -103,6 +107,6 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
           <code>docs/rtx-connector.md</code> und <code>docs/connector-security.md</code>.
         </p>
       </section>
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

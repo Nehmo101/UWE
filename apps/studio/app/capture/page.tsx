@@ -11,7 +11,7 @@ import {
 } from "@uwe/database/server";
 import { CaptureImageUpload } from "@/components/CaptureImageUpload";
 import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { deleteCaptureAction } from "../capture-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -43,12 +43,11 @@ export default async function CapturePage({ searchParams }: Props) {
   const showQuickForm = quick === "1" || quick === "true";
 
   return (
-    <AdminModuleShell
-      activePath="/capture"
-      title="Capture Inbox"
-      summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
-      bottomNav="capture"
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Capture Inbox" }]} />}>
+      <PageHeader
+        title="Capture Inbox"
+        summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
+      />
           <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
             <h2 className="uwe-v2-section-title">Bild erfassen (Mobile)</h2>
             <p className="uwe-hint">
@@ -131,6 +130,6 @@ export default async function CapturePage({ searchParams }: Props) {
           <p className="uwe-dashboard-muted">
             <Link href="/today">← Zurück zu Heute</Link>
           </p>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

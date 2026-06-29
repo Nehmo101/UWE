@@ -14,7 +14,7 @@ import {
   type InspectorFinding,
   type InspectorSeverity,
 } from "@uwe/database/server";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { applyInspectorFixAction } from "../../../inspector-actions";
 
@@ -104,17 +104,15 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
   const activeShareLinks = report.shareLinks.filter((link) => link.active);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="inspector"
-      contextTitle="Inspektor-Hilfe"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Kanon & Leaks", `/worlds/${worldSlug}/inspector`)}
-      pageHeader={{
-        title: "Inspektor",
-        summary: "Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log).",
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Kanon & Leaks", `/worlds/${worldSlug}/inspector`)}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Portal-Konfiguration">
           <ul className="uwe-sidebar-links">
             <li>
@@ -134,6 +132,10 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Inspektor"
+        summary="Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log)."
+      />
       {fixApplied && (
         <p className="uwe-inspector-ok" role="status">✓ {fixApplied}</p>
       )}
@@ -244,6 +246,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           worldSlug={worldSlug}
         />
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

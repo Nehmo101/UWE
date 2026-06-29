@@ -9,7 +9,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { updateBrainFactAction } from "../../../../../brain-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -33,24 +33,25 @@ export default async function StudioBrainFactPage({ params }: Props) {
   await db.$disconnect();
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="brain"
-      backLink={{ label: "← Brain Store", href: `/worlds/${worldSlug}/brain` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Brain Store",
-        `/worlds/${worldSlug}/brain`,
-        fact.title,
-      )}
-      pageHeader={{
-        title: fact.title,
-        summary: "Brain-Fakt bearbeiten",
-      }}
-      showSearch={false}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Brain Store",
+            `/worlds/${worldSlug}/brain`,
+            fact.title,
+          )}
+        />
+      }
     >
+      <PageHeader
+        title={fact.title}
+        summary="Brain-Fakt bearbeiten"
+      />
       <form action={updateBrainFactAction} className="uwe-brain-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="factId" value={fact.id} />
@@ -125,6 +126,6 @@ export default async function StudioBrainFactPage({ params }: Props) {
           </ul>
         </section>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

@@ -81,10 +81,11 @@ textarea {
   background: transparent;
   color: var(--uwe-fg);
   border-radius: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 1rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   text-align: left;
   cursor: pointer;
   transition:
@@ -93,14 +94,21 @@ textarea {
     transform 120ms ease;
 }
 
+.connector-nav-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .connector-nav-item:hover {
   border-color: color-mix(in srgb, var(--uwe-accent) 45%, var(--uwe-border));
   background: color-mix(in srgb, var(--uwe-accent-muted) 45%, transparent);
   transform: translateY(-1px);
 }
 
-.connector-nav-item small {
+.connector-nav-badge {
   color: var(--uwe-fg-subtle);
+  font-size: 0.7rem;
 }
 
 .connector-nav-item.is-active {
@@ -439,4 +447,39 @@ textarea {
   .connector-kv dd {
     text-align: left;
   }
+}
+
+.connector-panel {
+  background: color-mix(in srgb, var(--uwe-panel-bg) 90%, transparent);
+  border: 1px solid var(--uwe-border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.connector-panel h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.connector-code {
+  background: color-mix(in srgb, var(--uwe-bg) 80%, var(--uwe-border));
+  border: 1px solid var(--uwe-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.connector-steps {
+  padding-left: 1.25rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }

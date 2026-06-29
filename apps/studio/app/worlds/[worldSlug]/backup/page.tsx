@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
 import { listStoredBackups } from "@uwe/backup";
 import { BackupWorkspace } from "@/components/BackupWorkspace";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -24,22 +25,25 @@ export default async function WorldBackupPage({ params }: Props) {
   );
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="backup"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Backup", `/worlds/${worldSlug}/backup`)}
-      pageHeader={{
-        title: `Backup — ${world.name}`,
-        summary: "Welt- und Kampagnen-Backups für diese Welt erstellen, herunterladen und wiederherstellen.",
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Backup", `/worlds/${worldSlug}/backup`)}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}`, campaigns)}
         />
       }
     >
+      <PageHeader
+        title={`Backup — ${world.name}`}
+        summary="Welt- und Kampagnen-Backups für diese Welt erstellen, herunterladen und wiederherstellen."
+      />
       <BackupWorkspace initialBackups={backups} defaultWorldSlug={worldSlug} />
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

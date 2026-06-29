@@ -18,7 +18,8 @@ import {
   linkPageToSoundboardButtonAction,
   updateSoundboardButtonAction,
 } from "@/app/soundboard-actions";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { SoundboardButtonForm } from "./SoundboardButtonForm";
@@ -93,47 +94,50 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   }));
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="soundboard"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Soundboard", `/worlds/${worldSlug}/soundboard`)}
-      pageHeader={{
-        title: "Soundboard",
-        summary: "Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API).",
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
-          items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Soundboard", `/worlds/${worldSlug}/soundboard`)}
         />
       }
-      context={
-        <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {buttons.length} Buttons
-            {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
-          </p>
-        </SidebarSection>
+      contextPanel={
+        <>
+          <CampaignSidebar
+            items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
+          />
+          <SidebarSection title="Kontext">
+            <p className="uwe-hint" style={{ margin: 0 }}>
+              {buttons.length} Buttons
+              {selectedCampaign ? ` in \u201e${selectedCampaign.name}\u201c` : ""}
+            </p>
+          </SidebarSection>
+        </>
       }
     >
+      <PageHeader
+        title="Soundboard"
+        summary="Ambient, Musik und Effekte pro Welt/Kampagne \u2014 lokale Dateien, YouTube und Spotify (Web API)."
+      />
       <SpotifyConnectionPanel worldSlug={worldSlug} />
 
       <section className="uwe-panel">
         <h2>RTX-Audioausgabe</h2>
         {rtxAudioOnline ? (
           <p className="uwe-flash uwe-flash-success">
-            RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
+            RTX Connector online \u2014 Sounds k\u00f6nnen lokal \u00fcber den RTX-PC ausgegeben werden.
           </p>
         ) : (
           <p className="uwe-hint" style={{ margin: 0 }}>
-            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
-            <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
+            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verf\u00fcgbar.{" "}
+            <Link href="/system/rtx-connector">RTX Connector einrichten \u2192</Link>
           </p>
         )}
       </section>
 
       {(created || saved || deleted || linked) && (
-        <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
+        <p className="uwe-flash uwe-flash-success">\u00c4nderungen gespeichert.</p>
       )}
 
       {spotifyConnected && (
@@ -161,7 +165,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
         <p className="uwe-table-sub">
           Audio-Assets zuerst unter{" "}
           <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
-          Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Gerät.
+          Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Ger\u00e4t.
         </p>
       </section>
 
@@ -217,7 +221,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="buttonId" value={button.id} />
                         <button type="submit" className="uwe-v2-btn" style={{ marginTop: "0.5rem" }}>
-                          Löschen
+                          L\u00f6schen
                         </button>
                       </form>
                     </details>
@@ -231,7 +235,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
 
       {buttons.length > 0 && linkablePages.length > 0 && (
         <section className="uwe-panel">
-          <h2>Seite verknüpfen</h2>
+          <h2>Seite verkn\u00fcpfen</h2>
           <form action={linkPageToSoundboardButtonAction} className="uwe-form-grid">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <label>
@@ -245,7 +249,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
               </select>
             </label>
             <label>
-              Seite (Ort, Dungeon, Raum, …)
+              Seite (Ort, Dungeon, Raum, \u2026)
               <select name="pageId" required>
                 {linkablePages.map((page) => (
                   <option key={page.id} value={page.id}>
@@ -255,11 +259,11 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
               </select>
             </label>
             <button type="submit" className="uwe-v2-btn">
-              Verknüpfen
+              Verkn\u00fcpfen
             </button>
           </form>
         </section>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

@@ -25,7 +25,7 @@ import {
   setLabelPrintStatusAction,
   updateLabelAction,
 } from "@/app/label-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -67,53 +67,22 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
     }));
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="labels"
-      backLink={{ label: "← Labels", href: `/worlds/${worldSlug}/labels` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Labels",
-        `/worlds/${worldSlug}/labels`,
-        label.title,
-        `/worlds/${worldSlug}/labels/${labelId}`,
-      )}
-      pageHeader={{
-        title: label.title,
-        summary: `Quelle: ${LABEL_SOURCE_TYPE_LABELS[label.sourceType]} · Vorlage: ${label.template.name} · Status: ${LABEL_PRINT_STATUS_LABELS[label.printStatus]}`,
-        actions: (
-          <ContextActions
-            secondary={
-              <>
-                <Link
-                  href={`/worlds/${worldSlug}/labels/${labelId}/preview`}
-                  className="uwe-v2-btn"
-                >
-                  Vorschau
-                </Link>
-                <a
-                  href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
-                  className="uwe-v2-btn uwe-v2-btn-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Drucken
-                </a>
-              </>
-            }
-            danger={
-              <form action={deleteLabelAction} style={{ display: "inline" }}>
-                <input type="hidden" name="worldSlug" value={worldSlug} />
-                <input type="hidden" name="labelId" value={labelId} />
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger">Löschen</button>
-              </form>
-            }
-          />
-        ),
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Labels",
+            `/worlds/${worldSlug}/labels`,
+            label.title,
+            `/worlds/${worldSlug}/labels/${labelId}`,
+          )}
+        />
+      }
+      contextPanel={
         <>
           <SidebarSection title="Export">
             <ul className="uwe-sidebar-links">
@@ -168,6 +137,39 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
         </>
       }
     >
+      <PageHeader
+        title={label.title}
+        summary={`Quelle: ${LABEL_SOURCE_TYPE_LABELS[label.sourceType]} · Vorlage: ${label.template.name} · Status: ${LABEL_PRINT_STATUS_LABELS[label.printStatus]}`}
+        actions={
+          <ContextActions
+            secondary={
+              <>
+                <Link
+                  href={`/worlds/${worldSlug}/labels/${labelId}/preview`}
+                  className="uwe-v2-btn"
+                >
+                  Vorschau
+                </Link>
+                <a
+                  href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
+                  className="uwe-v2-btn uwe-v2-btn-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Drucken
+                </a>
+              </>
+            }
+            danger={
+              <form action={deleteLabelAction} style={{ display: "inline" }}>
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                <input type="hidden" name="labelId" value={labelId} />
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger">Löschen</button>
+              </form>
+            }
+          />
+        }
+      />
       {(saved || created || duplicated || reset || status) && (
         <p className="uwe-flash uwe-flash-success">
           {created
@@ -221,7 +223,7 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           <input type="hidden" name="text" value={parsed.content.text} />
 
           <fieldset className="uwe-fieldset">
-            <legend>Layout & Kürzung</legend>
+            <legend>Layout &amp; Kürzung</legend>
             <div className="uwe-form-row uwe-form-row-3">
               <label>
                 Modus
@@ -342,6 +344,6 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           <button type="submit" className="uwe-v2-btn">Auf Vorlage zurücksetzen</button>
         </form>
       </div>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

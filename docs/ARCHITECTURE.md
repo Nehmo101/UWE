@@ -1,6 +1,6 @@
 # UWE Architekturübersicht
 
-Stand: 2026-06-26
+Stand: 2026-06-29
 
 Diese Datei beschreibt UWE auf drei Ebenen:
 
@@ -114,6 +114,7 @@ graph TD
   Repo --> Apps["apps/"]
   Apps --> StudioApp["apps/studio<br/>@uwe/studio"]
   Apps --> PortalApp["apps/portal<br/>@uwe/portal"]
+  Apps --> RtxClient["apps/rtx-connector-client<br/>@uwe/rtx-connector-client<br/>Tauri Desktop App"]
 
   Repo --> Packages["packages/"]
   Packages --> Config["config<br/>TypeScript / Shared Config"]
@@ -199,7 +200,43 @@ Faustregel: Wenn ein Feature sowohl Studio als auch Portal betrifft, gehört die
 
 ---
 
-## 8. Kurzfassung
+## 8. UI Stack und Shells
+
+UWE verwendet seit Wave 0 einen einheitlichen UI-Stack und einen zentralen **Navigation Contract**.
+
+### Zentraler Nav-Vertrag
+
+Jede App definiert ihre Navigation in einer eigenen `*-nav.ts`-Datei:
+
+| App | Nav-Datei |
+|---|---|
+| Studio | `apps/studio/src/navigation/studio-nav.ts` |
+| Portal | `apps/portal/src/navigation/portal-nav.ts` |
+| RTX Connector | `apps/rtx-connector-client/src/navigation/connector-nav.ts` |
+
+Alle drei nutzen `@uwe/shared-utils/navigation` für die Nav-Typen und `resolveNavGroups()`.
+
+### Shell-Komponenten
+
+| Shell | App | Beschreibung |
+|---|---|---|
+| `AppShell` | Studio | Basisshell mit AppShell-Sidebar |
+| `StudioShell` | Studio | Daily Admin OS + globale Studio-Navigation |
+| `WorldShell` / `WorldModuleShell` | Studio | Welt-Routen (Wiki, Sessions, Dungeons, Labels) |
+| `SystemShell` | Studio | System-Verwaltung |
+| `PortalShell` | Portal | Login-first Portal-Navigation |
+| `ConnectorShell` | RTX Connector Client | Tauri/Vite-Desktop-Shell mit Connector-IA |
+
+### UI-Stack
+
+- **Tailwind CSS v4** — utility-first, direkt in Studio und Portal
+- **shadcn-style Primitives** — `@uwe/shared-ui`: `ButtonV2`, `CardV2`, `HealthBadge`, etc.
+- **Lucide React** — Icon-Bibliothek (Studio, Portal, RTX Client)
+- **CSS Custom Properties** — `--uwe-accent`, `--uwe-bg`, `--uwe-fg`, etc.
+
+---
+
+## 9. Kurzfassung
 
 ```mermaid
 flowchart LR

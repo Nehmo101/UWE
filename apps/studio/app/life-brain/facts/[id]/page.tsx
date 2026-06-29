@@ -5,7 +5,7 @@ import {
   createLifeAdminService,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   deleteLifeBrainFactAction,
   updateLifeBrainFactTagsAction,
@@ -32,16 +32,25 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
   const { fact, tags, linkedCaptures } = detail;
 
   return (
-    <AdminModuleShell
-      activePath="/life-brain"
-      title={fact.title}
-      summary="Life-Brain-Fakt — nur lokal, nicht für Cloud-KI."
-      actions={
-        <Link href="/life-brain" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-          Zurück zur Suche
-        </Link>
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Persönliches Brain", href: "/life-brain" },
+            { label: fact.title },
+          ]}
+        />
       }
     >
+      <PageHeader
+        title={fact.title}
+        summary="Life-Brain-Fakt — nur lokal, nicht für Cloud-KI."
+        actions={
+          <Link href="/life-brain" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+            Zurück zur Suche
+          </Link>
+        }
+      />
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
@@ -113,6 +122,6 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
           </button>
         </form>
       </article>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

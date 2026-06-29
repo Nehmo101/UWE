@@ -8,7 +8,7 @@ import {
   duplicateTemplateAction,
   setTemplateActiveAction,
 } from "../template-actions";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
   searchParams: Promise<{ error?: string }>;
@@ -21,12 +21,11 @@ export default async function TemplatesPage({ searchParams }: Props) {
   });
 
   return (
-    <AdminModuleShell
-      activePath="/templates"
-      title="Seiten-Templates"
-      summary="Vorlagen für Quick Create — System-Templates lassen sich anpassen und deaktivieren, eigene Templates frei verwalten."
-      breadcrumbs={[{ label: "Dashboard", href: "/studio" }, { label: "Templates" }]}
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Seiten-Templates" }]} />}>
+      <PageHeader
+        title="Seiten-Templates"
+        summary="Vorlagen für Quick Create — System-Templates lassen sich anpassen und deaktivieren, eigene Templates frei verwalten."
+      />
       {error && (
         <p className="uwe-form-error" role="alert">{error}</p>
       )}
@@ -86,6 +85,6 @@ export default async function TemplatesPage({ searchParams }: Props) {
           ))}
         </tbody>
       </table>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

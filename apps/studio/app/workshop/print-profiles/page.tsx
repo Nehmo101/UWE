@@ -1,18 +1,27 @@
 import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { createPrintProfileAction, deletePrintProfileAction } from "../../workshop-actions";
 
 export default async function WorkshopPrintProfilesPage() {
   const profiles = await createLifeAdminService(prisma).listWorkshopPrintProfiles({ limit: 200 });
 
   return (
-    <AdminModuleShell
-      activePath="/workshop"
-      title="3D-Druck-Profile"
-      summary="Historie erfolgreicher und gescheiterter Druckläufe — wiederverwendbar für ähnliche Teile."
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Werkstatt", href: "/workshop" },
+            { label: "3D-Druck-Profile" },
+          ]}
+        />
+      }
     >
+      <PageHeader
+        title="3D-Druck-Profile"
+        summary="Historie erfolgreicher und gescheiterter Druckläufe — wiederverwendbar für ähnliche Teile."
+      />
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Werkstatt</Link>
       </p>
@@ -106,6 +115,6 @@ export default async function WorkshopPrintProfilesPage() {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

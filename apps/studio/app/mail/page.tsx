@@ -7,7 +7,7 @@ import {
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { MailCenterDrafts } from "@/components/mail/MailCenterDrafts";
 import { MailCenterInbox } from "@/components/mail/MailCenterInbox";
 import { MailCenterSetup } from "@/components/mail/MailCenterSetup";
@@ -170,16 +170,16 @@ export default async function MailCenterPage({ searchParams }: Props) {
   );
 
   return (
-    <AdminModuleShell
-      activePath="/mail"
-      title="Mail Center"
-      summary="SMTP, Posteingang, Entwürfe und Compose-Flows — Versand nur nach expliziter Aktion."
-      actions={
-        <Link href="/settings?tab=mail" className="uwe-v2-btn uwe-v2-btn-secondary">
-          Einstellungen
-        </Link>
-      }
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Mail Center" }]} />}>
+      <PageHeader
+        title="Mail Center"
+        summary="SMTP, Posteingang, Entwürfe und Compose-Flows — Versand nur nach expliziter Aktion."
+        actions={
+          <Link href="/settings?tab=mail" className="uwe-v2-btn uwe-v2-btn-secondary">
+            Einstellungen
+          </Link>
+        }
+      />
       <MailCenterTabs
         defaultTab={defaultTab}
         overview={overview}
@@ -210,6 +210,6 @@ export default async function MailCenterPage({ searchParams }: Props) {
         }
         setup={<MailCenterSetup smtpStatus={status} accountCount={accounts.length} />}
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

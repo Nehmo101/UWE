@@ -10,7 +10,8 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { createDungeonRoomAction } from "../../../../../../dungeon-actions";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -32,22 +33,19 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
   const dungeonHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dungeons"
-      backLink={{ label: "← Dungeon", href: dungeonHref }}
-      breadcrumb={dungeonBreadcrumb(world.name, worldSlug, [
-        { label: overview.dungeon.title, href: dungeonHref },
-        { label: overview.level.title },
-      ])}
-      pageHeader={{
-        title: overview.level.title,
-        summary: `Ebene in „${overview.dungeon.title}"`,
-        meta: <DungeonPrepStatusBadge status={overview.level.prepStatus} />,
-      }}
-      sidebarExtra={
-        <WorldContextSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={dungeonBreadcrumb(world.name, worldSlug, [
+            { label: overview.dungeon.title, href: dungeonHref },
+            { label: overview.level.title },
+          ])}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           title="Räume"
           items={overview.rooms.map((room) => ({
             label: room.title,
@@ -55,8 +53,12 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
           }))}
         />
       }
-      showSearch={false}
     >
+      <PageHeader
+        title={overview.level.title}
+        summary={`Ebene in „${overview.dungeon.title}“`}
+        meta={<DungeonPrepStatusBadge status={overview.level.prepStatus} />}
+      />
       {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
 
       <section className="uwe-v2-section">
@@ -129,6 +131,6 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Raum anlegen</button>
         </form>
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

@@ -1,14 +1,20 @@
-import { AdminModuleShell } from "@/components/AdminModuleShell";
 import { AuditLogWorkspace } from "@/components/AuditLogWorkspace";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 
 export default function AuditLogPage() {
   return (
-    <AdminModuleShell
-      activePath="/admin/audit-log"
-      title="Audit Log"
-      summary="Sicherheitsrelevante Aktionen — ohne Secrets, mit gehashten IP/User-Agent-Werten."
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[{ label: "Admin", href: "/admin" }, { label: "Audit Log" }]}
+        />
+      }
     >
+      <PageHeader
+        title="Audit Log"
+        summary="Sicherheitsrelevante Aktionen — ohne Secrets, mit gehashten IP/User-Agent-Werten."
+      />
       <AuditLogWorkspace />
-    </AdminModuleShell>
+    </SystemShell>
   );
 }

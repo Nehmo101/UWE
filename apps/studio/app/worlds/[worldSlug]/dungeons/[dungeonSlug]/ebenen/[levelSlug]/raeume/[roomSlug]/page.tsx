@@ -23,7 +23,8 @@ import {
   linkAssetToDungeonPageAction,
   updateRoomContentAction,
 } from "../../../../../../../../dungeon-actions";
-import { WorldContextSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -75,21 +76,42 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   ].map((item) => item.id);
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dungeons"
-      backLink={{ label: "← Ebene", href: levelHref }}
-      breadcrumb={dungeonBreadcrumb(world.name, worldSlug, [
-        { label: cockpit.dungeon.title, href: dungeonHref },
-        { label: cockpit.level.title, href: levelHref },
-        { label: cockpit.room.title },
-      ])}
-      pageHeader={{
-        title: cockpit.room.title,
-        summary: `${cockpit.level.title} · ${cockpit.dungeon.title}`,
-        meta: <DungeonPrepStatusBadge status={cockpit.room.prepStatus} />,
-        actions: (
+      breadcrumb={
+        <BreadcrumbTrail
+          items={dungeonBreadcrumb(world.name, worldSlug, [
+            { label: cockpit.dungeon.title, href: dungeonHref },
+            { label: cockpit.level.title, href: levelHref },
+            { label: cockpit.room.title },
+          ])}
+        />
+      }
+      contextPanel={
+        <>
+          <CampaignSidebar
+            items={[
+              { label: cockpit.dungeon.title, href: dungeonHref },
+              { label: cockpit.level.title, href: levelHref },
+            ]}
+          />
+          <AiContextPanel
+            kind="dungeon_room"
+            worldSlug={worldSlug}
+            pageSlug={roomSlug}
+            dungeonSlug={dungeonSlug}
+            levelSlug={levelSlug}
+            roomSlug={roomSlug}
+          />
+        </>
+      }
+    >
+      <PageHeader
+        title={cockpit.room.title}
+        summary={`${cockpit.level.title} · ${cockpit.dungeon.title}`}
+        meta={<DungeonPrepStatusBadge status={cockpit.room.prepStatus} />}
+        actions={
           <>
             <Link
               className="uwe-v2-btn"
@@ -108,28 +130,8 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
               </button>
             </form>
           </>
-        ),
-      }}
-      sidebarExtra={
-        <WorldContextSidebar
-          items={[
-            { label: cockpit.dungeon.title, href: dungeonHref },
-            { label: cockpit.level.title, href: levelHref },
-          ]}
-        />
-      }
-      context={
-        <AiContextPanel
-          kind="dungeon_room"
-          worldSlug={worldSlug}
-          pageSlug={roomSlug}
-          dungeonSlug={dungeonSlug}
-          levelSlug={levelSlug}
-          roomSlug={roomSlug}
-        />
-      }
-      showSearch={false}
-    >
+        }
+      />
       {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
       {saved && <p className="uwe-flash uwe-flash-success">Raum gespeichert.</p>}
       {added && <p className="uwe-flash uwe-flash-success">Eintrag hinzugefügt.</p>}
@@ -303,6 +305,6 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           ))}
         </ul>
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

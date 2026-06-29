@@ -7,7 +7,8 @@ import {
   createDungeonCockpitService,
   getAppRepository,
 } from "@uwe/database/server";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -36,26 +37,29 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
   );
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="dungeons"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Dungeons", `/worlds/${worldSlug}/dungeons`)}
-      pageHeader={{
-        title: "Dungeon Cockpit",
-        summary: "Dungeons, Ebenen und Räume strukturiert vorbereiten — mit Vorlesetext, GM-Notizen und zugeordneten Assets.",
-        actions: (
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/dungeons/new`}>
-            Neuer Dungeon
-          </Link>
-        ),
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Dungeons", `/worlds/${worldSlug}/dungeons`)}
+        />
+      }
+      contextPanel={
+        <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/dungeons`, campaigns, campaignSlug)}
         />
       }
     >
+      <PageHeader
+        title="Dungeon Cockpit"
+        summary="Dungeons, Ebenen und Räume strukturiert vorbereiten — mit Vorlesetext, GM-Notizen und zugeordneten Assets."
+        actions={
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/dungeons/new`}>
+            Neuer Dungeon
+          </Link>
+        }
+      />
       <table className="uwe-page-table">
         <thead>
           <tr>
@@ -82,6 +86,6 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
       {dungeonList.length === 0 && (
         <p className="uwe-v2-empty">Noch keine Dungeons. Erstelle den ersten Dungeon für diese Welt.</p>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

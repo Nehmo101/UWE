@@ -16,7 +16,8 @@ import {
 } from "@uwe/database/server";
 import { createBrainDocumentAction, createBrainFactAction } from "../../../brain-actions";
 import { BrainAiGeneratePanel } from "@/components/BrainAiGeneratePanel";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -56,28 +57,31 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
   await db.$disconnect();
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="brain"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Brain Store", `/worlds/${worldSlug}/brain`)}
-      pageHeader={{
-        title: "Brain Knowledge Store",
-        summary: "Dauerhaftes Welt- und Kampagnenwissen in UWE — Sichtbarkeit dm_only, player_visible und public.",
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
-          items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Brain Store", `/worlds/${worldSlug}/brain`)}
         />
       }
-      context={
-        <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            Brain-Wissen wird dauerhaft in UWE gespeichert (alter Laptop).
-          </p>
-        </SidebarSection>
+      contextPanel={
+        <>
+          <CampaignSidebar
+            items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
+          />
+          <SidebarSection title="Kontext">
+            <p className="uwe-hint" style={{ margin: 0 }}>
+              Brain-Wissen wird dauerhaft in UWE gespeichert (alter Laptop).
+            </p>
+          </SidebarSection>
+        </>
       }
     >
+      <PageHeader
+        title="Brain Knowledge Store"
+        summary="Dauerhaftes Welt- und Kampagnenwissen in UWE — Sichtbarkeit dm_only, player_visible und public."
+      />
       {summary && (
         <p className="uwe-brain-summary">
           {summary.documentCount} Dokumente · {summary.factCount} Fakten ·{" "}
@@ -237,6 +241,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           </table>
         )}
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

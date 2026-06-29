@@ -5,7 +5,7 @@ import {
   HARDWARE_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { SystemHubBanner } from "@/components/SystemHubBanner";
 import { HostUpdatePanel } from "@/components/HostUpdatePanel";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -45,11 +45,11 @@ export default async function HardwarePage() {
   const canTriggerHostUpdate = user?.role === "owner";
 
   return (
-    <AdminModuleShell
-      activePath="/hardware"
-      title="Hardware / Homelab"
-      summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Hardware / Homelab" }]} />}>
+      <PageHeader
+        title="Hardware / Homelab"
+        summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
+      />
       <SystemHubBanner />
       <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
 
@@ -439,6 +439,6 @@ export default async function HardwarePage() {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

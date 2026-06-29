@@ -1,4 +1,4 @@
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { resolveAiChatAccess } from "@/src/lib/ai-gateway-access";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
@@ -10,28 +10,23 @@ export default async function AiPage() {
 
   if (!access.allowed) {
     return (
-      <AdminModuleShell
-        activePath="/ai"
-        title="KI"
-        summary={access.message}
-        bottomNav="ai"
-      >
+      <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
+        <PageHeader title="KI" summary={access.message} />
         <p className="uwe-dashboard-muted">
           Master-Admin: Cookbook → KI &amp; RTX Fallback → User-Freigaben →{" "}
           <code>AI_CHAT_USE</code> vergeben.
         </p>
-      </AdminModuleShell>
+      </StudioShell>
     );
   }
 
   return (
-    <AdminModuleShell
-      activePath="/ai"
-      title="KI"
-      summary="Allgemeiner Chat ohne lokalen Brain-/Objekt-Kontext. DnD-Kontext nur in Welten verfügbar."
-      bottomNav="ai"
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
+      <PageHeader
+        title="KI"
+        summary="Allgemeiner Chat ohne lokalen Brain-/Objekt-Kontext. DnD-Kontext nur in Welten verfügbar."
+      />
       <MobileAiPromptPanel useMock={useMock} pollIntervalMs={30_000} />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

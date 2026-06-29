@@ -20,7 +20,7 @@ import {
   updatePrintListAction,
 } from "@/app/label-actions";
 import { enqueueLabelPrintAction } from "@/app/label-print-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -68,22 +68,50 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
   });
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="labels"
-      backLink={{ label: "← Drucklisten", href: `/worlds/${worldSlug}/labels?tab=print-lists` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Labels",
-        `/worlds/${worldSlug}/labels?tab=print-lists`,
-        list.name,
-      )}
-      pageHeader={{
-        title: list.name,
-        summary: `${summary.labelCount} Labels · ${summary.totalCopies} Kopien · Status: ${LABEL_PRINT_STATUS_LABELS[list.status]}`,
-        actions: (
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Labels",
+            `/worlds/${worldSlug}/labels?tab=print-lists`,
+            list.name,
+          )}
+        />
+      }
+      contextPanel={
+        <SidebarSection title="Export">
+          <ul className="uwe-sidebar-links">
+            <li>
+              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}>
+                HTML exportieren
+              </a>
+            </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=pdf`}>
+                PDF exportieren
+              </a>
+            </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}>
+                PNG (ZIP) — erste Seite
+              </a>
+            </li>
+          </ul>
+          <p className="uwe-table-sub" style={{ marginTop: "0.75rem" }}>
+            Bei PDF-Fehlern liefert der Export Print-HTML mit Header{" "}
+            <code>X-UWE-Export-Fallback: 1</code>.
+          </p>
+        </SidebarSection>
+      }
+    >
+      <PageHeader
+        title={list.name}
+        summary={`${summary.labelCount} Labels · ${summary.totalCopies} Kopien · Status: ${LABEL_PRINT_STATUS_LABELS[list.status]}`}
+        actions={
           <ContextActions
             primary={
               <a
@@ -119,34 +147,8 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
               </form>
             }
           />
-        ),
-      }}
-      context={
-        <SidebarSection title="Export">
-          <ul className="uwe-sidebar-links">
-            <li>
-              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}>
-                HTML exportieren
-              </a>
-            </li>
-            <li>
-              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=pdf`}>
-                PDF exportieren
-              </a>
-            </li>
-            <li>
-              <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}>
-                PNG (ZIP) — erste Seite
-              </a>
-            </li>
-          </ul>
-          <p className="uwe-table-sub" style={{ marginTop: "0.75rem" }}>
-            Bei PDF-Fehlern liefert der Export Print-HTML mit Header{" "}
-            <code>X-UWE-Export-Fallback: 1</code>.
-          </p>
-        </SidebarSection>
-      }
-    >
+        }
+      />
       {(saved || created || added || status || queued) && (
         <p className="uwe-flash uwe-flash-success">
           {queued ? "RTX-Druckjob in Warteschlange." : created ? "Druckliste erstellt." : added ? "Label hinzugefügt." : status ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS]}` : "Gespeichert."}
@@ -223,6 +225,6 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           <button type="submit" className="uwe-v2-btn">Als gedruckt markieren</button>
         </form>
       </div>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

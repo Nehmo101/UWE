@@ -9,7 +9,8 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import { WorldCampaignSidebar, WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -40,35 +41,37 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
   await db.$disconnect();
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="sessions"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Sessions", `/worlds/${worldSlug}/sessions`)}
-      contextTitle="Kontext"
-      pageHeader={{
-        title: "Sessions",
-        summary: "Vorbereiten, spielen und nachbereiten — Recaps fürs Portal veröffentlichen.",
-        actions: (
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Sessions", `/worlds/${worldSlug}/sessions`)}
+        />
+      }
+      contextPanel={
+        <>
+          <CampaignSidebar
+            items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
+          />
+          <SidebarSection title="Kontext">
+            <p className="uwe-hint" style={{ margin: 0 }}>
+              {sessions.length} Sessions
+              {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
+            </p>
+          </SidebarSection>
+        </>
+      }
+    >
+      <PageHeader
+        title="Sessions"
+        summary="Vorbereiten, spielen und nachbereiten — Recaps fürs Portal veröffentlichen."
+        actions={
           <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
             Neue Session
           </Link>
-        ),
-      }}
-      sidebarExtra={
-        <WorldCampaignSidebar
-          items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
-        />
-      }
-      context={
-        <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {sessions.length} Sessions
-            {selectedCampaign ? ` in „${selectedCampaign.name}"` : ""}
-          </p>
-        </SidebarSection>
-      }
-    >
+        }
+      />
       <table className="uwe-page-table">
         <thead>
           <tr>
@@ -109,6 +112,6 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
       {sessions.length === 0 && (
         <p className="uwe-v2-empty">Noch keine Sessions. Erstelle die erste Session für diese Kampagne.</p>
       )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

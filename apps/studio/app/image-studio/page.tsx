@@ -7,7 +7,7 @@ import {
   IMAGE_STUDIO_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
@@ -42,16 +42,16 @@ export default async function ImageStudioPage({ searchParams }: Props) {
   );
 
   return (
-    <AdminModuleShell
-      activePath="/image-studio"
-      title="Image Studio"
-      summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
-      actions={
-        <Link href="/settings?tab=image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
-          Einstellungen
-        </Link>
-      }
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Image Studio" }]} />}>
+      <PageHeader
+        title="Image Studio"
+        summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
+        actions={
+          <Link href="/settings?tab=image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
+            Einstellungen
+          </Link>
+        }
+      />
       {!config.enabled && (
         <p className="uwe-notice uwe-notice-warn">
           Image Studio ist deaktiviert. Aktiviere unter{" "}
@@ -97,6 +97,6 @@ export default async function ImageStudioPage({ searchParams }: Props) {
           </ul>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

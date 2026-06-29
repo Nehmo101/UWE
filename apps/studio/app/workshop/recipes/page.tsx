@@ -8,7 +8,7 @@ import {
   WORKSHOP_PAINT_TARGET_LABELS,
   WorkshopPaintTargetEnum,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createPaintRecipeAction,
   deletePaintRecipeAction,
@@ -20,11 +20,20 @@ export default async function WorkshopRecipesPage() {
   const recipes = await service.listWorkshopPaintRecipes({ limit: 200 });
 
   return (
-    <AdminModuleShell
-      activePath="/workshop"
-      title="Paint-Rezepte"
-      summary="Wiederverwendbare Rezepte für Miniaturen, Terrain und Dioramen."
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Werkstatt", href: "/workshop" },
+            { label: "Paint-Rezepte" },
+          ]}
+        />
+      }
     >
+      <PageHeader
+        title="Paint-Rezepte"
+        summary="Wiederverwendbare Rezepte für Miniaturen, Terrain und Dioramen."
+      />
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Werkstatt</Link>
       </p>
@@ -198,6 +207,6 @@ export default async function WorkshopRecipesPage() {
           </div>
         )}
       </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

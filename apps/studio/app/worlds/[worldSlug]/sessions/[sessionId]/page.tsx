@@ -25,7 +25,7 @@ import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { preparePrintListFromSessionAction } from "@/app/label-actions";
 import { pageLabelNewHref } from "@/src/lib/label-links";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -76,47 +76,21 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
   const linkablePages = allPages.filter((p) => !linkedIds.has(p.id));
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="sessions"
-      backLink={{ label: "← Sessions", href: `/worlds/${worldSlug}/sessions` }}
-      breadcrumb={worldDetailBreadcrumb(
-        world.name,
-        worldSlug,
-        "Sessions",
-        `/worlds/${worldSlug}/sessions`,
-        session.title,
-      )}
-      showSearch={false}
-      pageHeader={{
-        title: `Session ${session.sessionNumber}: ${session.title}`,
-        meta: (
-          <>
-            <GameSessionStatusBadge status={session.status} />
-            {session.date && (
-              <span style={{ marginLeft: "0.5rem" }}>
-                {session.date.toLocaleDateString("de-DE")}
-              </span>
-            )}
-            {session.recapPublished && (
-              <span className="uwe-badge uwe-badge-published" style={{ marginLeft: "0.5rem" }}>
-                Im Portal sichtbar
-              </span>
-            )}
-          </>
-        ),
-        actions: !session.recapPublished ? (
-          <form action={publishSessionRecapAction}>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="sessionId" value={sessionId} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Fürs Portal veröffentlichen
-            </button>
-          </form>
-        ) : undefined,
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Sessions",
+            `/worlds/${worldSlug}/sessions`,
+            session.title,
+          )}
+        />
+      }
+      contextPanel={
         <>
           <AiContextPanel
             kind="session"
@@ -133,6 +107,33 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         </>
       }
     >
+      <PageHeader
+        title={`Session ${session.sessionNumber}: ${session.title}`}
+        meta={
+          <>
+            <GameSessionStatusBadge status={session.status} />
+            {session.date && (
+              <span style={{ marginLeft: "0.5rem" }}>
+                {session.date.toLocaleDateString("de-DE")}
+              </span>
+            )}
+            {session.recapPublished && (
+              <span className="uwe-badge uwe-badge-published" style={{ marginLeft: "0.5rem" }}>
+                Im Portal sichtbar
+              </span>
+            )}
+          </>
+        }
+        actions={!session.recapPublished ? (
+          <form action={publishSessionRecapAction}>
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="sessionId" value={sessionId} />
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+              Fürs Portal veröffentlichen
+            </button>
+          </form>
+        ) : undefined}
+      />
       {saved && <p className="uwe-flash uwe-flash-success">Session gespeichert.</p>}
       {published && <p className="uwe-flash uwe-flash-success">Recap fürs Portal veröffentlicht.</p>}
       {linked && <p className="uwe-flash uwe-flash-success">Seite verknüpft.</p>}
@@ -284,6 +285,6 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           </form>
         )}
       </section>
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

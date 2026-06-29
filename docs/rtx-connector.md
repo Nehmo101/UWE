@@ -120,6 +120,69 @@ advertised.
 | `maintenance` | `connector_refresh_models` | 60 |
 | `gpu` | `llm_generate` (50), `image_generate` (30), `embedding_generate` (20) | lowest |
 
+## Label printing (CUPS / local printers)
+
+The connector supports local label printing via the `label_printing` capability.
+When a Studio user sends a label to a connected printer, the host queues a
+`label_print` job; the connector fetches the rendered document (PDF or HTML)
+and forwards it to the local print backend.
+
+### Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `UWE_CONNECTOR_PRINTERS` | no | JSON array of available printers. If empty the connector runs `lpstat -p` (CUPS) for auto-discovery. |
+| `UWE_CONNECTOR_PRINT_CMD` | no | Custom print command. Receives `--printer <id> --file <path>` appended. Default: CUPS `lp -d <id> <file>`. |
+| `UWE_CONNECTOR_PRINT` | no | Master switch (`true`/`false`, default `true`). Set `false` to disable label_printing entirely. |
+
+### UWE_CONNECTOR_PRINTERS format
+
+```json
+[{"id": "zebra-lp2844", "name": "Zebra LP 2844 Label"}]
+```
+
+- `id` — printer identifier passed to CUPS / custom command.
+- `name` — human-readable label shown in Studio printer selection.
+
+If unset, the connector auto-discovers printers via `lpstat -p` (CUPS).
+If CUPS is not installed and no `UWE_CONNECTOR_PRINTERS` is set,
+`label_printing` is **not advertised** and label jobs are not claimed.
+
+### UWE_CONNECTOR_PRINT_CMD
+
+Set this when you need a custom print pipeline instead of bare CUPS `lp`:
+
+```bash
+<UWE_CONNECTOR_PRINT_CMD> --printer <id> --file <path/to/doc.pdf>
+```
+
+### CUPS integration (Linux / macOS)
+
+1. Install CUPS: `sudo apt install cups` (Debian/Ubuntu).
+2. Add the printer via the CUPS web UI (`http://localhost:631`) or `lpadmin`.
+3. Verify with `lpstat -p` — the connector will auto-discover from there.
+
+### CUPS integration (Windows)
+
+Windows does not ship CUPS. Set `UWE_CONNECTOR_PRINT_CMD` pointing to a
+script that calls the Windows print spooler.
+
+In the desktop client, the **Drucker** sidebar area shows configured printers
+and the active print command.
+
+### Example `.env` snippet
+
+```bash
+# Single label printer (Zebra LP 2844 via CUPS):
+UWE_CONNECTOR_PRINTERS=[{"id":"zebra-lp2844","name":"Zebra LP 2844 Label"}]
+
+# Custom print command (optional):
+# UWE_CONNECTOR_PRINT_CMD=lpr -P
+
+# Disable label printing:
+# UWE_CONNECTOR_PRINT=false
+```
+
 ## Security
 
 See [connector-security.md](connector-security.md). Unknown capability names are

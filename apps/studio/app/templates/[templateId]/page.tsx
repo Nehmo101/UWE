@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import { updateTemplateAction } from "../../template-actions";
 import { TemplateForm } from "../TemplateForm";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ templateId: string }>;
@@ -17,20 +17,24 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
   if (!template) notFound();
 
   return (
-    <AdminModuleShell
-      activePath="/templates"
-      title={template.name}
-      summary={
-        template.isSystem
-          ? "System-Template — Änderungen wirken auf Quick Create in allen Welten."
-          : "Eigenes Template bearbeiten."
+    <StudioShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Seiten-Templates", href: "/templates" },
+            { label: template.name },
+          ]}
+        />
       }
-      breadcrumbs={[
-        { label: "Dashboard", href: "/studio" },
-        { label: "Templates", href: "/templates" },
-        { label: template.name },
-      ]}
     >
+      <PageHeader
+        title={template.name}
+        summary={
+          template.isSystem
+            ? "System-Template — Änderungen wirken auf Quick Create in allen Welten."
+            : "Eigenes Template bearbeiten."
+        }
+      />
       {saved && <p className="uwe-inspector-ok" role="status">✓ Gespeichert.</p>}
       {error && <p className="uwe-form-error" role="alert">{error}</p>}
 
@@ -39,6 +43,6 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
         action={updateTemplateAction}
         submitLabel="Template speichern"
       />
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

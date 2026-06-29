@@ -4,7 +4,7 @@ import {
 } from "@uwe/shared-ui";
 import { getAppRepository } from "@uwe/database/server";
 import { importSourceRegistry } from "@uwe/knoteforge-import";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { ImportWorkspace } from "./ImportWorkspace";
 
@@ -23,16 +23,15 @@ export default async function StudioImportPage({ params }: Props) {
   const plannedFormats = importSourceRegistry.plannedFormats();
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="import"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Import", `/worlds/${worldSlug}/import`)}
-      pageHeader={{
-        title: "Import",
-        summary: "KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import.",
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Import", `/worlds/${worldSlug}/import`)}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Hinweise">
           <ul className="uwe-import-context-list">
             <li>Import ist einseitig (KnoteForge → UWE).</li>
@@ -45,11 +44,15 @@ export default async function StudioImportPage({ params }: Props) {
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Import"
+        summary="KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import."
+      />
       <ImportWorkspace
         worldSlug={worldSlug}
         supportedFormats={supportedFormats}
         plannedFormats={plannedFormats}
       />
-    </WorldModuleShell>
+    </WorldShell>
   );
 }

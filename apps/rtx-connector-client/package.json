@@ -19,6 +19,7 @@
     "@uwe/connector-model-profile": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
+    "lucide-react": "^1.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

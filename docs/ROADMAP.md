@@ -1,6 +1,6 @@
 # UWE Roadmap — Was fehlt / ist noch nicht reif
 
-Stand: 2026-06-18 · ergänzt durch Security-/Orchestrator-Audit.
+Stand: 2026-06-29 · ergänzt durch Security-/Orchestrator-Audit.
 
 Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktionsreife Bereiche. Implementierter Code mit Phase-1-Scaffolding verweist hierher.
 
@@ -53,6 +53,17 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 ---
 
 ## Feature-Bereiche (Phase 1 → Phase 2)
+
+### Hard UI/UX Reset (Shells + Nav-Vertrag)
+
+| Wave | Status |
+|------|--------|
+| Wave 0 — Zentraler Nav-Vertrag, UI-Stack (Tailwind v4 + shadcn), AppShell | ✅ done |
+| Wave 1 — StudioShell/WorldShell/SystemShell/PortalShell, QF10 Label-Druck, Portal | ✅ done |
+| Wave 2 — ConnectorShell mit connector-nav IA, QF10 Drucker-Doku | ✅ done |
+| Wave 2 open — Restliche Welt-Routen auf WorldShell, Wiki-Edit auf WorldShell | 🔲 open |
+
+Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, Portal, RTX Connector) nutzen denselben Typ.
 
 ### Image Studio (`docs/IMAGE_STUDIO.md`)
 

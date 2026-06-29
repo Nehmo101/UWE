@@ -10,7 +10,7 @@ import {
   prisma,
   resolveCalendarConfig,
 } from "@uwe/database/server";
-import { AdminModuleShell } from "@/components/AdminModuleShell";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { CalendarMonthGrid } from "@/components/CalendarMonthGrid";
 import { CalendarWeekGrid } from "@/components/CalendarWeekGrid";
 import { createCalendarEventAction, createCalendarFeedAction } from "../integration-actions";
@@ -49,30 +49,30 @@ export default async function CalendarPage({ searchParams }: Props) {
   }));
 
   return (
-    <AdminModuleShell
-      activePath="/calendar"
-      title="Kalender"
-      summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
-      actions={
-        <>
-          <Link
-            href="/calendar?view=month"
-            className={`uwe-v2-btn ${calendarView === "month" ? "uwe-v2-btn-primary" : ""}`}
-          >
-            Monat
-          </Link>
-          <Link
-            href="/calendar?view=week"
-            className={`uwe-v2-btn ${calendarView === "week" ? "uwe-v2-btn-primary" : ""}`}
-          >
-            Woche
-          </Link>
-          <Link href="/api/calendar/events?export=ics" className="uwe-v2-btn">
-            .ics Export
-          </Link>
-        </>
-      }
-    >
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Kalender" }]} />}>
+      <PageHeader
+        title="Kalender"
+        summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
+        actions={
+          <>
+            <Link
+              href="/calendar?view=month"
+              className={`uwe-v2-btn ${calendarView === "month" ? "uwe-v2-btn-primary" : ""}`}
+            >
+              Monat
+            </Link>
+            <Link
+              href="/calendar?view=week"
+              className={`uwe-v2-btn ${calendarView === "week" ? "uwe-v2-btn-primary" : ""}`}
+            >
+              Woche
+            </Link>
+            <Link href="/api/calendar/events?export=ics" className="uwe-v2-btn">
+              .ics Export
+            </Link>
+          </>
+        }
+      />
           {!config.enabled && (
             <p className="uwe-notice uwe-notice-warn">Kalender-Integration ist deaktiviert.</p>
           )}
@@ -236,6 +236,6 @@ export default async function CalendarPage({ searchParams }: Props) {
               </ul>
             )}
           </section>
-    </AdminModuleShell>
+    </StudioShell>
   );
 }

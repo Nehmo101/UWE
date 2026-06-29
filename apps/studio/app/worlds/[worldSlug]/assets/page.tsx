@@ -19,7 +19,7 @@ import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
 import { linkAssetToPageAction, updateAssetAction } from "@/app/asset-actions";
-import { WorldModuleShell } from "@/components/WorldModuleShell";
+import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -74,16 +74,15 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
   const shareByAssetId = new Map(assetShareData.map((item) => [item.assetId, item]));
 
   return (
-    <WorldModuleShell
+    <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      activeNav="assets"
-      breadcrumb={worldSectionBreadcrumb(world.name, worldSlug, "Medien & Assets", `/worlds/${worldSlug}/assets`)}
-      pageHeader={{
-        title: "Asset-Bibliothek",
-        summary: "Bilder, Karten, Handouts und Medien zentral verwalten.",
-      }}
-      context={
+      breadcrumb={
+        <BreadcrumbTrail
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Medien & Assets", `/worlds/${worldSlug}/assets`)}
+        />
+      }
+      contextPanel={
         <SidebarSection title="Kontext">
           <p className="uwe-hint" style={{ margin: 0 }}>
             {assets.length} Assets
@@ -91,6 +90,10 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
         </SidebarSection>
       }
     >
+      <PageHeader
+        title="Asset-Bibliothek"
+        summary="Bilder, Karten, Handouts und Medien zentral verwalten."
+      />
       {(uploaded || linked || saved) && (
         <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
       )}
@@ -354,7 +357,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
               </form>
             </section>
           )}
-    </WorldModuleShell>
+    </WorldShell>
   );
 }
 
