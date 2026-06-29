@@ -59,9 +59,10 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Wave | Status |
 |------|--------|
 | Wave 0 — Zentraler Nav-Vertrag, UI-Stack (Tailwind v4 + shadcn), AppShell | ✅ done |
-| Wave 1 — StudioShell/WorldShell/SystemShell/PortalShell, QF10 Label-Druck, Portal | ✅ done |
-| Wave 2 — ConnectorShell mit connector-nav IA, QF10 Drucker-Doku | ✅ done |
-| Wave 2 open — Restliche Welt-Routen auf WorldShell, Wiki-Edit auf WorldShell | 🔲 open |
+| Wave 1 — StudioShell/WorldShell/SystemShell/PortalShell, QF10 Label-Druck, Portal login-first | ✅ done |
+| Wave 2 — Welt-/Daily-Admin-/Admin-Routen auf neue Shells; ConnectorShell + Drucker-Doku | ✅ done |
+| Wave 3 — Legacy design-v2 Wrapper bereinigt; `/settings`/`/admin` overview + Portal auth/share → AppShell | 🔲 open (C1/C2) |
+| Wave 4 — V1 shared-ui shells + `legacy-bridge.css` retirement | 🔲 open |
 
 Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, Portal, RTX Connector) nutzen denselben Typ.
 

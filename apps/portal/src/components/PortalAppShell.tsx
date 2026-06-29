@@ -2,9 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
-  isDesignV2Enabled,
   NavSidebarSections,
-  PortalShell,
   PortalShellV2,
   type BottomNavItem,
 } from "@uwe/shared-ui";
@@ -41,7 +39,7 @@ export interface PortalAppShellProps {
   canAccessStudio?: boolean;
 }
 
-/** Player-facing Portal shell with consistent navigation. */
+/** Player-facing Portal shell with consistent navigation — pending C1/C2 migration to AppShell PortalShell. */
 export function PortalAppShell({
   children,
   user,
@@ -120,18 +118,8 @@ export function PortalAppShell({
     </>
   );
 
-  return isDesignV2Enabled() ? (
+  return (
     <PortalShellV2
-      worldName={worldName}
-      brandHref="/auth/worlds"
-      topBarExtra={topBarExtra}
-      bottomNav={bottomNav}
-      contextTitle="Navigation"
-      sidebar={<NavSidebarSections sections={sections} />}
-      main={main}
-    />
-  ) : (
-    <PortalShell
       worldName={worldName}
       brandHref="/auth/worlds"
       topBarExtra={topBarExtra}

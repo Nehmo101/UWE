@@ -166,15 +166,53 @@ IA routes wired: `/` (Host-Verbindung), `/runner` (Runner/Ollama), `/models` (Mo
 | `docs/cloudflare-current-setup.md` | **updated** (Wave 1) |
 | `README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE_MATURITY_MATRIX.md`, `docs/ROADMAP.md`, `docs/design/new-ui-stack.md` | **updated (Wave 2 B4)** |
 
-## Deferred / Wave 3 recommendations
+## Wave 3 — in progress (Agent C4: CSS + Phase 14 Docs)
+
+Branch: `cursor/uwe-wave3-css-docs-0eb3`
+
+### C4 deliverables (this branch)
+
+| Item | Status | Notes |
+|---|---|---|
+| Delete `PortalPublicShell` | **done** | ref=0 — `/worlds/*` redirects login-first since Wave 1 QF2 |
+| Merge `StudioAppShellV2` → `StudioAppShell` | **done** | V1 design-v2 fallback path removed; V2-only adapter |
+| Simplify `PortalAppShell` / `PortalGuestShell` | **done** | V2-only (`PortalShellV2`); no `isDesignV2Enabled()` branch |
+| design-v2 bridge review | **done** | `NEXT_PUBLIC_UWE_DESIGN_V2` default-on; `data-uwe-design-v2` on `<body>` in both layouts; `legacy-bridge.css` retained for remaining `.uwe-*` classes |
+| Phase 14 docs | **done** | README, ARCHITECTURE, ROADMAP, FEATURE_MATURITY_MATRIX, this file |
+| E2E portal-shell | **updated** | Legacy `/worlds` redirect tests replace removed `PortalPublicShell` tests |
+
+### Legacy shell retirement (Wave 3 C4)
+
+Deleted (reference count = 0):
+
+- `apps/portal/src/components/PortalPublicShell.tsx`
+- `apps/studio/components/StudioAppShellV2.tsx` (merged into `StudioAppShell.tsx`)
+
+### Remaining wrappers (Wave 3 C1/C2 — route migration)
+
+Still referenced — **do not delete until C1/C2 merges**:
+
+| Wrapper | Routes | Target shell |
+|---|---|---|
+| `StudioAppShell` | `/settings`, `/admin` overview | `SettingsShell` + `SystemShell` |
+| `PortalAppShell` | `/auth/worlds/**`, `/auth/account/**` | `apps/portal/src/components/shell/PortalShell` |
+| `PortalGuestShell` | `/share/[token]/**` | AppShell-based guest shell |
+
+### Program status (Phase 14)
+
+Hard UI/UX Reset: **Wave 4 Rest** — Kern-Migration (Wave 0–2) abgeschlossen; verbleibend:
+C1/C2 route migration für die drei Wrapper oben, Wiki column visibility, optional
+V1 `@uwe/shared-ui` shell retirement + `legacy-bridge.css` cleanup.
+
+## Deferred / Wave 4 recommendations
 
 | Item | Plan ref | Status |
 |---|---|---|
-| `/settings`, `/account/**` on `SettingsShell` (retire `StudioAppShell`) | Phase 4/5 | open |
+| `/settings`, `/account/**` on `SettingsShell` (retire `StudioAppShell`) | Phase 4/5 | open (C1) |
+| Portal auth/share on AppShell `PortalShell` (retire `PortalAppShell`/`PortalGuestShell`) | Phase 10 | open (C2) |
 | Wiki table column visibility toggles | Phase 8/9 | open |
 | Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) |
-| Portal player routes restyle on `PortalShell` | Phase 10 | open |
-| Full visual polish (design-v2 CSS retirement) | Phase 14 | open |
+| V1 shared-ui shells + `legacy-bridge.css` retirement | Phase 14 | open (Wave 4) |
 
 ### legacy-ui-disconnected (unchanged)
 

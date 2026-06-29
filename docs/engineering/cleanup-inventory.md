@@ -89,29 +89,29 @@ Order rationale: start with the most self-contained domain (life-admin), end wit
 | `schema.prisma` + `schema.postgresql.prisma` | Intentional dual schema |
 | `terra-seed.ts` vs `seed.ts` SEED_PAGES | Terra is canonical rich seed |
 
-## Shell V1/V2 consolidation (follow-up)
+## Shell V1/V2 consolidation (Wave 3 C4 update)
 
 Design V2 is **default-on** (`isDesignV2Enabled`, opt-out via
-`NEXT_PUBLIC_UWE_DESIGN_V2=false`). The V1 shells are legacy/compatibility only.
+`NEXT_PUBLIC_UWE_DESIGN_V2=false`). Both app layouts set `data-uwe-design-v2="true"`
+on `<body>` when enabled; `legacy-bridge.css` maps legacy `.uwe-btn`/`.uwe-card`
+classes under that marker.
 
-- **Canonical:** `*V2` shells (`AppShellV2`, `StudioShellV2`, `PortalShellV2`,
-  `AdminShellV2`, …) — exported from `@uwe/shared-ui`.
+- **Canonical:** `*V2` shells (`StudioShellV2`, `PortalShellV2`, `AdminShellV2`, …)
+  — exported from `@uwe/shared-ui`.
 - **Legacy:** `StudioShell`, `PortalShell`, `AdminShell`, `AppShell` — JSDoc
   `@deprecated`; still rendered when Design V2 is disabled.
-- App-level wrappers (`StudioAppShell` vs `StudioAppShellV2`,
-  `AdminModuleShell`, `WorldModuleShell`, `PortalAppShell`) currently branch on
-  `isDesignV2Enabled()`.
+- App-level wrappers simplified in Wave 3 C4:
+  - `StudioAppShellV2` merged into `StudioAppShell` (V2-only).
+  - `PortalPublicShell` deleted (ref=0).
+  - `PortalAppShell` / `PortalGuestShell` always use `PortalShellV2`.
 
-**Done (Studio app shells):** the duplicated pure logic now lives in
-`apps/studio/src/lib/studio-shell-utils.tsx` — `applyCampaignToWorldSections`,
-`worldDefaultOpenTitles`, and the shared `ShellHeaderBlock` (back-link + breadcrumb).
-`StudioAppShell` (V1) and `StudioAppShellV2` import these instead of redefining them,
-so the two cannot drift. Behaviour unchanged; the reduced IA
-(Heute · Welten · Erstellen · Medien & KI · System) is untouched.
+**Done (Studio app shells):** shared logic in `apps/studio/src/lib/studio-shell-utils.tsx`.
 
-**Remaining follow-up:** apply the same extraction to the lower-level `@uwe/shared-ui`
-shells (`StudioShell`/`StudioShellV2`, `AdminShell`/`AdminShellV2`, Portal) and retire
-the V1 shells once Design V2 has soaked.
+**Remaining (Wave 3 C1/C2):** migrate `/settings`, `/admin` overview, Portal auth/share
+off app-level wrappers onto AppShell-based shells, then delete the three remaining wrappers.
+
+**Remaining (Wave 4):** retire V1 `@uwe/shared-ui` shells and `legacy-bridge.css` once
+Design V2 opt-out is no longer needed.
 
 ## wiki-engine — retired (2026-06-26)
 

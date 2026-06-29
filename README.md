@@ -622,9 +622,11 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md]
 - [x] Backup/Restore (Welten, Templates, ShareLinks, Verschlüsselung, Pre-Restore-Safety)
 - [x] PostgreSQL dual-client, E2E Auth-Baseline, CI Bundle-Budget + Performance-Smoke
 - [x] Hard UI/UX Reset Wave 0–2: zentraler Nav-Contract, Tailwind v4 + shadcn-Shells, AppShell/StudioShell/PortalShell, ConnectorShell mit connector-nav IA, QF10 Label-Druck via RTX, Drucker-Dokumentation
+- [x] Hard UI/UX Reset Wave 3 (C4): `PortalPublicShell` + `StudioAppShellV2` entfernt; design-v2 bridge verifiziert; Phase-14-Docs aktualisiert
 
 ### Partial / in progress
 
+- [ ] Hard UI/UX Reset Wave 3 C1/C2 — `/settings`, `/admin` overview, Portal auth/share auf AppShell; Wrapper-Löschung
 - [ ] RTX Host Connector — first-party Image Worker, AI-Brain Queue Adapter, autostart/tray packaging
 - [ ] Image Studio — Canvas-Editor, Cloud-Edit-Härtung
 - [ ] Kalender — vollständiger CalDAV-Sync, Session ↔ Event Auto-Sync

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import {
-  AdminShell,
-  isDesignV2Enabled,
+  AdminShellV2,
   NavSidebarSections,
-  StudioNavSidebar,
-  StudioShell,
+  StudioNavSidebarV2,
+  StudioShellV2,
   type BottomNavItem,
 } from "@uwe/shared-ui";
 import { studioWorldBottomNav } from "@/src/lib/mobile-nav";
@@ -23,7 +22,6 @@ import {
   ShellHeaderBlock,
   worldDefaultOpenTitles,
 } from "@/src/lib/studio-shell-utils";
-import { StudioAppShellV2 } from "./StudioAppShellV2";
 
 export type StudioAppShellVariant = "dashboard" | "admin" | "world" | "module";
 
@@ -63,56 +61,48 @@ export interface StudioAppShellProps {
   unifiedSidebar?: boolean;
 }
 
-/**
- * Unified Studio shell with sectioned navigation.
- *
- * Legacy/fallback adapter: Design V2 is default-on, so this delegates to
- * `StudioAppShellV2` unless `NEXT_PUBLIC_UWE_DESIGN_V2=false`. Shared navigation
- * logic lives in `@/src/lib/studio-shell-utils` so V1/V2 cannot drift.
- */
-export function StudioAppShell(props: StudioAppShellProps) {
-  if (isDesignV2Enabled()) {
-    return <StudioAppShellV2 {...props} />;
-  }
-
-  const {
-    variant = "module",
-    activePath,
-    children,
-    title,
-    summary,
-    actions,
-    bottomNav,
-    showRail = true,
-    railActiveId: railActiveIdProp,
-    showSearch = false,
-    worldSlug,
-    worldActive,
-    campaignSlug,
-    searchQuery = "",
-    bottomNavActive,
-    sidebarExtra,
-    context,
-    contextTitle,
-    breadcrumbs,
-    backHref,
-    backLabel = "Zurück",
-    topBarExtra,
-    searchAction = "/search",
-    searchPlaceholder = "Global suchen…",
-    sidebar: sidebarOverride,
-    cockpitMode = false,
-    cockpitWorlds = [],
-    statusFooter,
-    unifiedSidebar = true,
-  } = props;
-
+/** Studio shell adapter with Design V2 chrome — pending C1/C2 migration to SettingsShell/SystemShell. */
+export function StudioAppShell({
+  variant = "module",
+  activePath,
+  children,
+  title,
+  summary,
+  actions,
+  bottomNav,
+  showRail = true,
+  railActiveId: railActiveIdProp,
+  showSearch = false,
+  worldSlug,
+  worldActive,
+  campaignSlug,
+  searchQuery = "",
+  bottomNavActive,
+  sidebarExtra,
+  context,
+  contextTitle,
+  breadcrumbs,
+  backHref,
+  backLabel = "Zurück",
+  topBarExtra,
+  searchAction = "/search",
+  searchPlaceholder = "Global suchen…",
+  sidebar: sidebarOverride,
+  cockpitMode = false,
+  cockpitWorlds = [],
+  statusFooter,
+  unifiedSidebar = true,
+}: StudioAppShellProps) {
   const railActiveId = railActiveIdProp ?? resolveStudioRailActiveId(activePath);
   const sidebarSections = unifiedSidebar
     ? studioUnifiedSidebarSections(activePath)
     : studioSidebarSections(activePath);
 
+  const shellVariant =
+    variant === "world" ? "world" : variant === "dashboard" ? "dashboard" : cockpitMode ? "cockpit" : "module";
+
   const shellCommon = {
+    variant: shellVariant as "cockpit" | "module" | "world" | "dashboard",
     cockpitMode,
     cockpitWorlds,
     activeWorldSlug: worldSlug ?? null,
@@ -151,9 +141,9 @@ export function StudioAppShell(props: StudioAppShellProps) {
     );
 
     return (
-      <StudioShell
+      <StudioShellV2
         {...shellCommon}
-        subtitle="Welt bearbeiten"
+        variant="world"
         brandHref={`/worlds/${worldSlug}/dashboard`}
         searchAction={`/worlds/${worldSlug}?q=`}
         searchPlaceholder="In dieser Welt suchen…"
@@ -176,14 +166,15 @@ export function StudioAppShell(props: StudioAppShellProps) {
 
   if (variant === "dashboard") {
     return (
-      <StudioShell
+      <StudioShellV2
         {...shellCommon}
+        variant="dashboard"
         pageHeader={pageHeader}
         sidebar={
           unifiedSidebar ? (
             <NavSidebarSections sections={sidebarSections} defaultOpenTitles={["Heute", "Welten"]} />
           ) : (
-            <StudioNavSidebar title="Studio" items={studioDashboardNav(activePath)} />
+            <StudioNavSidebarV2 title="Studio" items={studioDashboardNav(activePath)} />
           )
         }
         main={headerBlock}
@@ -193,7 +184,7 @@ export function StudioAppShell(props: StudioAppShellProps) {
 
   if (variant === "admin") {
     return (
-      <AdminShell
+      <AdminShellV2
         activePath={activePath}
         navItems={sidebarSections.flatMap((section) => section.items)}
         title={title ?? "System"}
@@ -206,8 +197,9 @@ export function StudioAppShell(props: StudioAppShellProps) {
   }
 
   return (
-    <StudioShell
+    <StudioShellV2
       {...shellCommon}
+      variant="module"
       pageHeader={pageHeader}
       sidebar={
         sidebarOverride ?? (

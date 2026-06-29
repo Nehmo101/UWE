@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juni 2026 · Wave 2 · Branch-Basis `cursor/uwe-wave2-rtx-docs-2b4c`.
+Stand: Juni 2026 · Wave 3 (C4 CSS/Docs) · Branch-Basis `cursor/uwe-wave3-css-docs-0eb3`.
 
 **Legende**
 
@@ -35,7 +35,7 @@ Stand: Juni 2026 · Wave 2 · Branch-Basis `cursor/uwe-wave2-rtx-docs-2b4c`.
 | 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke) | Teilweise (Dev seed) | Nein |
 | 12 | Medienverwaltung | Kern fertig | Ja | Ja (Kern) |
 | 13 | Tag-/Taxonomie-Aufräumer | Service + Tests | Teilweise (API) | Nein |
-| 14 | Hard UI/UX Reset — Shells + Nav | Wave 2 | Ja (Studio/Portal/Connector) | Ja (Kern) |
+| 14 | Hard UI/UX Reset — Shells + Nav | Wave 3 (C4) | Ja (Studio/Portal/Connector) | Ja (Kern) |
 | 15 | Label-Druck via RTX + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
 
 ---
@@ -401,18 +401,20 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 | Kriterium | Status |
 |-----------|--------|
-| Vorhanden | **Ja** — Wave 0 + Wave 1 + Wave 2 |
+| Vorhanden | **Ja** — Wave 0 + Wave 1 + Wave 2 + Wave 3 (C4 partial) |
 | Nav-Vertrag | `@uwe/shared-utils/navigation` — zentraler Typ + resolveNavGroups |
-| UI-Stack | Tailwind v4, shadcn-style Primitives, Lucide React |
-| Studio | `StudioShell`, `WorldShell`, `SystemShell`, `AppShell` — Wave 1 |
-| Portal | `PortalShell` — Wave 1 |
+| UI-Stack | Tailwind v4, shadcn-style Primitives, Lucide React, Design V2 default-on |
+| Studio | `StudioShell`, `WorldShell`, `SystemShell`, `SettingsShell` — Wave 1–2 |
+| Portal | `PortalShell` (AppShell) + design-v2 `PortalShellV2` bridge — Wave 1 |
 | RTX Connector | `ConnectorShell` + `connector-nav.ts` — Wave 2 |
 | Nutzbar | **Ja** (Studio/Portal/Connector) |
 
 Wave-Übersicht:
 | Wave 0 | Zentraler Nav-Vertrag, UI-Stack (Tailwind v4 + shadcn), `AppShell` |
-| Wave 1 | `StudioShell`/`WorldShell`/`SystemShell`/`PortalShell`, QF10 Label-Druck, Portal |
-| Wave 2 | `ConnectorShell` mit `connector-nav` IA (dieser Branch) |
+| Wave 1 | `StudioShell`/`WorldShell`/`SystemShell`/`PortalShell`, QF10 Label-Druck, Portal login-first |
+| Wave 2 | Welt-/Daily-Admin-/Admin-Routen auf neue Shells; `ConnectorShell` mit connector-nav IA |
+| Wave 3 (C4) | Legacy-Wrapper bereinigt (`PortalPublicShell`, `StudioAppShellV2`); design-v2 bridge verifiziert |
+| Wave 4 (offen) | `/settings`, `/admin` overview, Portal auth/share auf AppShell; V1 shared-ui shells entfernen |
 
 ---
 

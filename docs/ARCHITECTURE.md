@@ -220,12 +220,18 @@ Alle drei nutzen `@uwe/shared-utils/navigation` für die Nav-Typen und `resolveN
 
 | Shell | App | Beschreibung |
 |---|---|---|
-| `AppShell` | Studio | Basisshell mit AppShell-Sidebar |
+| `AppShell` | Studio, Portal | Basisshell mit Sidebar, Command Palette, Mobile Drawer |
 | `StudioShell` | Studio | Daily Admin OS + globale Studio-Navigation |
-| `WorldShell` / `WorldModuleShell` | Studio | Welt-Routen (Wiki, Sessions, Dungeons, Labels) |
-| `SystemShell` | Studio | System-Verwaltung |
-| `PortalShell` | Portal | Login-first Portal-Navigation |
+| `WorldShell` | Studio | Welt-Routen (Wiki, Sessions, Dungeons, Labels) |
+| `SystemShell` | Studio | Admin + System-Verwaltung |
+| `SettingsShell` | Studio | Tab-Layout innerhalb von StudioShell (Einstellungen) |
+| `PortalShell` | Portal | Login-first Portal-Navigation (`apps/portal/src/components/shell/`) |
 | `ConnectorShell` | RTX Connector Client | Tauri/Vite-Desktop-Shell mit Connector-IA |
+
+Design V2 (`NEXT_PUBLIC_UWE_DESIGN_V2`, default **on**) setzt `data-uwe-design-v2="true"` auf
+`<body>` und aktiviert `packages/shared-ui` `*V2`-Shells plus `legacy-bridge.css` für verbleibende
+`.uwe-btn`/`.uwe-card`-Klassen. App-level Wrapper (`StudioAppShell`, `PortalAppShell`,
+`PortalGuestShell`) delegieren an `*V2` und werden in Wave 3 C1/C2 durch die AppShell-Shells ersetzt.
 
 ### UI-Stack
 

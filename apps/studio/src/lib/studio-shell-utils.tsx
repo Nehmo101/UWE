@@ -4,7 +4,7 @@ import type { WorldNavSection } from "./studio-navigation";
 /**
  * Shared, behaviour-preserving helpers for the Studio app shells.
  *
- * `StudioAppShell` (legacy) and `StudioAppShellV2` (canonical Design V2) previously
+ * `StudioAppShell` (Design V2 adapter; pending SettingsShell/SystemShell migration) previously
  * defined these independently, which risked drift. They live here so both shells stay
  * thin renderers over identical navigation logic.
  */

@@ -2,9 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
-  isDesignV2Enabled,
   PortalNavSidebar,
-  PortalShell,
   PortalShellV2,
   SidebarNav,
   type BottomNavItem,
@@ -34,6 +32,7 @@ export interface PortalGuestShellProps {
   contextTitle?: string;
 }
 
+/** Share-link guest shell — pending C1/C2 migration to AppShell PortalShell. */
 export function PortalGuestShell({
   children,
   worldName,
@@ -92,25 +91,8 @@ export function PortalGuestShell({
       </PortalNavSidebar>
     );
 
-  if (isDesignV2Enabled()) {
-    return (
-      <PortalShellV2
-        appName={brandAppName}
-        worldName={worldName}
-        brandHref={brandHref}
-        bottomNav={bottomNav}
-        context={context}
-        contextTitle={contextTitle}
-        pageHeader={pageHeader}
-        topBarExtra={topBarActions}
-        sidebar={resolvedSidebar}
-        main={main}
-      />
-    );
-  }
-
   return (
-    <PortalShell
+    <PortalShellV2
       appName={brandAppName}
       worldName={worldName}
       brandHref={brandHref}

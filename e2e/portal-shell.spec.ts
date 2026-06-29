@@ -8,22 +8,18 @@ test.describe("Portal shell chrome", () => {
     await loginPortalPlayer(page);
   });
 
-  test("PortalPublicShell on /worlds discover page", async ({ page }) => {
+  test("legacy /worlds discover redirects to authenticated hub", async ({ page }) => {
     await page.goto("/worlds");
 
+    await expect(page).toHaveURL(/\/auth\/worlds/);
     await expect(page.locator(".uwe-v2-shell")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Welten entdecken" })).toBeVisible();
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Welten entdecken");
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Meine Welten");
-    await expect(page.getByRole("link", { name: /Welt betreten/i })).toBeVisible();
   });
 
-  test("PortalPublicShell on public world home", async ({ page }) => {
+  test("legacy /worlds/[slug] redirects to authenticated world home", async ({ page }) => {
     await page.goto("/worlds/terra");
 
+    await expect(page).toHaveURL(/\/auth\/worlds\/terra/);
     await expect(page.locator(".uwe-v2-shell")).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Brotkrumen" })).toContainText("Terra");
-    await expect(page.getByRole("link", { name: /Alle Welten/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
   });
 
