@@ -1,8 +1,14 @@
 # CI — Workflows, Scripts, and Debugging
 
-Stand: 2026-06-26
+Stand: 2026-06-29
 
 UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) and **Turbo** for the monorepo. CI runs on **Node 22** in GitHub Actions.
+
+## Caching and job timeouts
+
+Hosted jobs restore **Turbo** (`.turbo/`) and **Next.js build** caches (`.next/cache` in Studio and Portal) via `actions/cache` before the quality gate on `main`, and Turbo cache before `ci:light` on PRs. This speeds up incremental `typecheck`, `test`, and `build:release` runs without changing gate semantics.
+
+Each hosted job sets `timeout-minutes` to cap runaway jobs (quality 25, PR fast-checks 20, postgres-smoke 15, e2e 30, security 20, docs 10).
 
 ## Cost strategy
 
@@ -53,7 +59,8 @@ The only automatic workflow on pull requests:
 
 1. `pnpm install --frozen-lockfile`
 2. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
-3. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
+3. Restore Turbo cache (`actions/cache`)
+4. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
 
 No `pnpm quality`, no E2E, no security tests, no release build.
 
@@ -62,7 +69,8 @@ No `pnpm quality`, no E2E, no security tests, no release build.
 Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatch`:
 
 1. Install with frozen lockfile
-2. `pnpm quality` — full gate:
+2. Restore Turbo + Next.js build caches (`actions/cache`)
+3. `pnpm quality` — full gate:
    - Prisma client generate
    - Lint (zero warnings)
    - Secret scan
