@@ -36,92 +36,35 @@ Portal            → apps/portal/app/**
 Shared UI         → packages/shared-ui/src/
 ```
 
-## CI-Gate — GitHub Cloud ist maßgeblich
+## CI & Agent-Regeln
 
-**GitHub Cloud CI ist der verbindliche Gate.** Ein PR ist mergebar, wenn seine
-GitHub-Checks grün sind: `pr-check.yml` (`pnpm ci:light`) auf jedem PR, volles
-`pnpm quality` auf `main`. Es gibt **keinen** lokalen oder self-hosted Pflicht-Gate.
+**Kanonical source:** [AGENTS.md](AGENTS.md) — Quality Gate (`pnpm quality` / `pnpm ci:light`), Common Failures, Auth-Import-Tabelle, Cursor-Cloud-Setup.
 
-Lokal `pnpm quality` (oder schneller `pnpm ci:light`) vor dem Push laufen zu lassen
-ist eine **optionale Vorprüfung**, um Fehler früher zu finden:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm quality
-```
-
-`pnpm quality` läuft in dieser Reihenfolge:
-1. `pnpm --filter @uwe/database db:generate` — Prisma Client
-2. `pnpm lint` — ESLint mit `--max-warnings 0`
-3. `pnpm secret:scan` — Secrets-Scan
-4. `pnpm typecheck` — alle Workspace-Packages
-5. `pnpm test` — Unit + Integration
-6. `pnpm test:security` — Authz, Leak-Scanner, Route Guards
-7. `pnpm audit:prod` — Production Dependency Audit (high+)
-8. `pnpm build:release` — Production Build
-
-Maßgeblich sind die grünen GitHub-Checks; der lokale Lauf ist optionale Vorprüfung.
-
-### Schnell-Gate (ohne Security/Audit)
-
-```bash
-pnpm ci:check   # lint → typecheck → test:ci → build:release
-```
-
-## Häufige CI-Fehler
-
-### 1. Unused Imports (lint)
-ESLint `@typescript-eslint/no-unused-vars` ist strikt.
-- Unused Parameter: mit `_` prefixen: `function handler(_request: Request)`
-- Unused Imports: sofort entfernen
-
-### 2. Falsche Auth-Imports (typecheck)
-
-| Symbol | Import von |
-|--------|-----------|
-| `SESSION_COOKIE_NAME`, `PREVIEW_COOKIE_NAME` | `@uwe/auth` oder `packages/auth/src/session` |
-| `getUweRuntimeConfig`, `getSessionCookieOptions` | `@uwe/auth` oder `packages/auth/src/runtime-config` |
-
-`SESSION_COOKIE_NAME` NICHT aus `runtime-config` importieren.
-
-### 3. Prisma Client fehlt (typecheck/test)
-Nach Änderungen in `packages/database` immer zuerst:
-```bash
-pnpm --filter @uwe/database db:generate
-```
-
-### 4. Lockfile out of sync
-Nach `pnpm add` / Dependency-Änderungen: `pnpm install` und `pnpm-lock.yaml` committen.
+Schnell-Gate ohne Security/Audit: `pnpm ci:check`
 
 ## Sicherheits-Regeln
 
-- Keine Secrets, Tokens oder Produktions-Passwörter in Source-Code.
-- `pnpm secret:scan` vor jedem Push.
-- `dm_only`-Inhalte dürfen **niemals** das Portal, Static Export oder anonyme API-Responses erreichen.
-- Filtering in `packages/database/src/permissions.ts` — nicht nur in der UI.
-- Studio-APIs brauchen `requireStudioApiAuth` oder äquivalente Guards.
-- Cloud-AI bekommt **keinen** Kampagnen/Brain-Kontext; RTX bleibt im LAN.
-- CORS, CSP, Security-Headers nicht ohne expliziten Review schwächen.
+Details: [SECURITY.md](SECURITY.md) und `.cursor/rules/security.mdc`.
+
+Kernregeln: keine Secrets in Source; `dm_only` nie ins Portal; Filtering in `packages/database/src/permissions.ts`; Cloud-AI ohne Kampagnen/Brain-Kontext; CSP nicht ohne Review schwächen.
 
 ## TypeScript / React Konventionen
 
 - Strict Typing, kein `any` außer bei untyped Externals.
 - Server Actions für Studio-Formulare; API Routes für Uploads, Health, externe Callbacks.
-- Keine Server-only Module (`node:crypto`, Prisma, Filesystem) in Client Components.
-- Keine Cross-App Imports (`apps/studio` darf nicht von `apps/portal` importieren).
-- Keine toten Features, auskommentierte Blöcke oder Orphan-Files.
-- `@uwe/database/server` Barrel ist groß (~1080 Zeilen) — lieber direkte Service-Imports.
+- Keine Server-only Module in Client Components; keine Cross-App Imports.
+- **`@uwe/database/server`** ist der kanonische Import-Pfad (~1540 Zeilen Barrel, ~344 Importer). Service-Index: [docs/engineering/database-service-map.md](docs/engineering/database-service-map.md).
 
 ## Dev-Mode Gotcha: CSP blockiert `next dev`
 
-Die CSP erlaubt kein `'unsafe-eval'`. `next dev` benötigt das für HMR. Für Browser-Tests in dev temporär `'unsafe-eval'` in `packages/auth/src/security-headers.ts` ergänzen — **vor Commit revertieren**.
+Siehe [AGENTS.md](AGENTS.md) — temporär `'unsafe-eval'` nur für lokale Browser-Tests, vor Commit revertieren.
 
 ## Lokale DB einrichten (einmalig)
 
 ```bash
 cp -n .env.example .env
-pnpm --filter @uwe/database db:deploy   # Migrations
-pnpm --filter @uwe/database db:seed     # Demo-Welt "Terra" + User
+pnpm --filter @uwe/database db:deploy
+pnpm --filter @uwe/database db:seed
 # Login: dm@uwe.local / uwe-dev
 ```
 
@@ -135,16 +78,11 @@ pnpm --filter @uwe/database db:seed     # Demo-Welt "Terra" + User
 
 ## Scope-Disziplin
 
-- Minimaler Diff — nur das ändern, was der Task verlangt.
-- Bestehende Package-Grenzen einhalten.
-- Keine Drive-by Refactors.
-- Bestehende Services erweitern statt Logik duplizieren.
-- Kein Docker / Windows-Installer / inbound RTX-Agent wieder einführen.
+Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services erweitern statt duplizieren.
 
 ## Wichtige Docs
 
-- `AGENTS.md` — vollständige Agent-Qualitäts-Gate-Regeln
-- `docs/ARCHITECTURE.md` — Architektur-Überblick
-- `docs/engineering/ci.md` — CI-Workflows
-- `.cursor/skills/` — 20+ projektspezifische Skills (Architecture, Auth, Security, etc.)
-- `.cursor/rules/` — Coding-Standards, Security, Docs
+- [AGENTS.md](AGENTS.md) — Agent-Gate & Cloud-Setup
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architektur
+- [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
+- [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)

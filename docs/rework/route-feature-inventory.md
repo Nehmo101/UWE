@@ -121,7 +121,7 @@ Status legend:
 | `/auth/worlds/[worldSlug]/soundboard` | Soundboard | rebind-soon |
 | `/auth/account/password`, `/auth/account/security` | Account | rebind-soon |
 | `/share/[token]`, `/share/[token]/pages/[slug]` | Public share links (kept, not main flow) | rebind-soon |
-| `/worlds`, `/worlds/[worldSlug]`, `.../[category]/[slug]`, `.../graph` | Public discovery | legacy-ui-disconnected (remove from main nav, QF2) |
+| `/worlds`, `/worlds/[worldSlug]`, `.../[category]/[slug]`, `.../graph` | Public discovery | legacy-ui-disconnected — **redirect shims only** (Wave 4); use `/auth/worlds/*` |
 
 ## 4. Studio server actions (kept; rebind UI to new forms)
 

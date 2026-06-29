@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "description": "Machine-readable index of UWE Cursor skills — load one SKILL.md by matching trigger, not the whole catalog.",
+  "skills": [
+    {
+      "id": "ai-agent-proposal-workflow",
+      "path": ".cursor/skills/ai-agent-proposal-workflow/SKILL.md",
+      "trigger": "AI inference, Review/Apply proposals, ai_run jobs, Agent Jobs, RTX routing"
+    },
+    {
+      "id": "api-routes",
+      "path": ".cursor/skills/api-routes/SKILL.md",
+      "trigger": "Next.js API routes, auth guards, CSRF, uploads, health, webhooks"
+    },
+    {
+      "id": "auth-rbac-visibility",
+      "path": ".cursor/skills/auth-rbac-visibility/SKILL.md",
+      "trigger": "Login, RBAC, dm_only/player_visible, Portal access, share links"
+    },
+    {
+      "id": "ci-quality-gate",
+      "path": ".cursor/skills/ci-quality-gate/SKILL.md",
+      "trigger": "pnpm quality / ci:light before PR, CI failures, lint/typecheck fixes"
+    },
+    {
+      "id": "daily-admin-os",
+      "path": ".cursor/skills/daily-admin-os/SKILL.md",
+      "trigger": "Today, Capture, Projects, Workshop, Contracts, Hardware (Studio-only)"
+    },
+    {
+      "id": "database-migration-review",
+      "path": ".cursor/skills/database-migration-review/SKILL.md",
+      "trigger": "Prisma migrations, schema changes, db:deploy safety"
+    },
+    {
+      "id": "deployment-cloudflare-check",
+      "path": ".cursor/skills/deployment-cloudflare-check/SKILL.md",
+      "trigger": "Cloudflare Tunnel, Access, production ENV, going live"
+    },
+    {
+      "id": "dnd-content-consistency-check",
+      "path": ".cursor/skills/dnd-content-consistency-check/SKILL.md",
+      "trigger": "Canon conflicts, player leaks, wikilinks, generator safety"
+    },
+    {
+      "id": "hardware-homelab",
+      "path": ".cursor/skills/hardware-homelab/SKILL.md",
+      "trigger": "Linux host scripts, RTX, backups, autostart, homelab CI"
+    },
+    {
+      "id": "image-studio-workflows",
+      "path": ".cursor/skills/image-studio-workflows/SKILL.md",
+      "trigger": "Image Studio jobs, RTX/cloud routing, Capture pipeline"
+    },
+    {
+      "id": "life-brain",
+      "path": ".cursor/skills/life-brain/SKILL.md",
+      "trigger": "Life Brain documents/facts/captures, personal knowledge CRUD"
+    },
+    {
+      "id": "life-brain-retrieval",
+      "path": ".cursor/skills/life-brain-retrieval/SKILL.md",
+      "trigger": "Life Brain embeddings, semantic retrieval, personal_brain mode"
+    },
+    {
+      "id": "local-first-privacy",
+      "path": ".cursor/skills/local-first-privacy/SKILL.md",
+      "trigger": "RTX-only context, no cloud brain leak, AI provider routing"
+    },
+    {
+      "id": "portal-player-view",
+      "path": ".cursor/skills/portal-player-view/SKILL.md",
+      "trigger": "Portal pages, share links, static export, player-safe filtering"
+    },
+    {
+      "id": "pr-review",
+      "path": ".cursor/skills/pr-review/SKILL.md",
+      "trigger": "Reviewing PRs, merge safety, CI readiness"
+    },
+    {
+      "id": "react-next-ui",
+      "path": ".cursor/skills/react-next-ui/SKILL.md",
+      "trigger": "Next.js pages, components, Server Actions, shared-ui"
+    },
+    {
+      "id": "security-audit",
+      "path": ".cursor/skills/security-audit/SKILL.md",
+      "trigger": "Full security review before exposure or after security PRs"
+    },
+    {
+      "id": "uwe-architecture",
+      "path": ".cursor/skills/uwe-architecture/SKILL.md",
+      "trigger": "Package boundaries, where to put code, Studio vs Portal"
+    },
+    {
+      "id": "uwe-brain",
+      "path": ".cursor/skills/uwe-brain/SKILL.md",
+      "trigger": "DnD Brain + Life Brain storage, retrieval, privacy separation"
+    },
+    {
+      "id": "uwe-feature-implementation",
+      "path": ".cursor/skills/uwe-feature-implementation/SKILL.md",
+      "trigger": "New features end-to-end with migrations, tests, player safety"
+    },
+    {
+      "id": "uwe-image-studio-assets",
+      "path": ".cursor/skills/uwe-image-studio-assets/SKILL.md",
+      "trigger": "Image Studio, assets, labels, Capture media workflows"
+    },
+    {
+      "id": "uwe-orchestrator",
+      "path": ".cursor/skills/uwe-orchestrator/SKILL.md",
+      "trigger": "Multi-domain rollout planning, subagent sequencing"
+    },
+    {
+      "id": "uwe-performance-tags-cleanup",
+      "path": ".cursor/skills/uwe-performance-tags-cleanup/SKILL.md",
+      "trigger": "Stress seeds, tag cleanup, perf budgets, repo cleanup inventory"
+    }
+  ]
+}

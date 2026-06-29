@@ -5,38 +5,22 @@ alwaysApply: true
 
 # Security
 
-## Secrets and credentials
+**Full reference:** [SECURITY.md](../../SECURITY.md)
 
-- Never commit secrets, tokens, or production passwords.
-- Run `pnpm secret:scan` before pushing; fix or allowlist with justification.
-- Real values belong in `.env` (local) or deployment secrets — not in source.
+## Non-negotiables
 
-## Auth and sessions
-
-- Change auth/session/token code with extra care and security test coverage.
-- Use established import paths from `@uwe/auth` (see `coding-standards` rule).
-- Secure defaults: strong `AUTH_SECRET`, httpOnly cookies, CSRF on mutations.
-
-## API routes and rate limits
-
-- Studio APIs require `requireStudioApiAuth` or equivalent guards.
-- Portal must never return `dm_only` content to unauthenticated users.
-- Respect existing rate limits on login, password reset, and sensitive endpoints.
+- No secrets/tokens/production passwords in source; `pnpm secret:scan` before push.
+- Studio APIs: `requireStudioApiAuth` or equivalent guards.
+- Portal: never expose `dm_only` to unauthenticated users.
+- Filter visibility in repository/service layer — not UI-only.
+- Cloud AI: no campaign/brain/life context; RTX stays on LAN.
 - Do not weaken CORS, CSP, or security headers without explicit review.
+- No sensitive data in logs; validate uploads via `packages/assets`.
 
-## Player data leaks
+## Auth imports
 
-- Filter visibility in repository/service layer, not only in UI.
-- Static export and Portal render only `player_visible` / `public` published content.
-- Security tests (`pnpm test:security`) must pass for visibility/auth changes.
+See [AGENTS.md](../../AGENTS.md) § Common recurring failures (auth import table).
 
-## Logging and uploads
+## Tests
 
-- No sensitive data in logs (passwords, tokens, session IDs, private notes).
-- Validate upload MIME types and paths via `packages/assets`.
-- RTX agent: inference only, no persistent UWE data storage, no public exposure.
-
-## Dependency risks
-
-- Run `pnpm security:audit` for production dependency vulnerabilities.
-- Document accepted audit findings rather than ignoring silently.
+Security-sensitive changes must pass `pnpm test:security`.

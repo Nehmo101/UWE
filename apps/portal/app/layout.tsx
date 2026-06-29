@@ -5,7 +5,6 @@ import {
   ThemeBootstrapScript,
   ThemeDocumentSync,
   buildVisualThemeHtmlAttributes,
-  isDesignV2Enabled,
   toUweThemePreferences,
   type ThemeAppearance,
 } from "@uwe/shared-ui";
@@ -67,11 +66,9 @@ export default async function RootLayout({
   );
   const serverTheme: ThemeAppearance = settings.app.theme;
 
-  const designV2 = isDesignV2Enabled();
-
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
-      <body {...(designV2 ? { "data-uwe-design-v2": "true" } : {})}>
+      <body>
         <ThemeBootstrapScript
           scope="portal"
           serverPreferences={serverThemePreferences}

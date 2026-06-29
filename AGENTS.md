@@ -10,10 +10,13 @@ pre-check** that catches failures faster:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm quality       # full local mirror of the main gate
+pnpm quality:quiet # recommended for agents — summary + tail on failure
+pnpm quality       # full local mirror of the main gate (verbose)
 # or, faster, mirroring the PR gate:
 pnpm ci:light
 ```
+
+On failure, read only the **last ~60 lines** of output (or the path printed by `quality:quiet`) — not the full log.
 
 `pnpm quality` runs, in order:
 
@@ -64,6 +67,12 @@ After adding dependencies: `pnpm install` and commit `pnpm-lock.yaml`. CI uses `
 - Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).
 - Prefer extending existing services over duplicating logic.
 - Do not edit unrelated files or drive-by refactor.
+
+## Agent token efficiency
+
+- **Search/index exclusions:** `.cursorignore` / `.cursorindexingignore` exclude generated Prisma (~560k lines), lockfile, and build artifacts.
+- **Service index:** `docs/engineering/database-service-map.md` — find `@uwe/database` services without opening the 1540-line barrel.
+- **Skills:** `.cursor/skills/manifest.json` — load one skill by trigger, not the whole catalog.
 
 ## Further reading
 

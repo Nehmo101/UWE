@@ -1,5 +1,5 @@
-import { ForgotPasswordForm } from "@uwe/shared-ui";
+import { PortalForgotPasswordForm } from "@/src/components/PortalForgotPasswordForm";
 
 export default function ForgotPasswordPage() {
-  return <ForgotPasswordForm variant="portal" />;
+  return <PortalForgotPasswordForm />;
 }

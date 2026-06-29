@@ -225,6 +225,8 @@ export interface BuildAiContextOptions {
   localOnly?: boolean;
   sessionId?: string;
   audience?: ContextAudience;
+  /** User/task text for semantic brain retrieval (reduces full-document dumps). */
+  retrievalQuery?: string;
 }
 
 export interface ApiKeyStore {

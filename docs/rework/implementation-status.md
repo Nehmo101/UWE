@@ -204,11 +204,17 @@ Deleted (reference count = 0 after Wave 3 migrations):
 
 ### design-v2 bridge status (Phase 14)
 
-Still active (intentional — legacy CSS coexistence):
+**Retired in Wave 4:**
 
-- `body[data-uwe-design-v2]` set in `apps/studio/app/layout.tsx` and `apps/portal/app/layout.tsx` when `isDesignV2Enabled()` (default on).
-- `packages/shared-ui/src/uwe-v2.css`, `shells-v2/*`, `PortalShellV2` remain for unmigrated shared-ui consumers and CSS bridge tests.
-- New product shells (`apps/*/src/components/shell/*`) use Tailwind + tokens; they do not depend on `PortalShellV2`/`StudioAppShellV2`.
+- `packages/shared-ui/src/shells-v2/*` deleted (ref=0 after app shell migration)
+- `body[data-uwe-design-v2]` removed from Studio/Portal layouts
+
+**Retained (shared-ui widget CSS, not React shells):**
+
+- `packages/shared-ui/src/design-v2/*` imported via `uwe.css` for settings/wiki/legacy widgets
+- `@deprecated` `isDesignV2Enabled()` — no longer used by app layouts
+
+New product shells (`apps/*/src/components/shell/*`) use Tailwind + tokens exclusively.
 
 ### Phase 12 — E2E (Wave 3 additions)
 
@@ -222,10 +228,78 @@ Still active (intentional — legacy CSS coexistence):
 
 | Item | Plan ref | Status |
 |---|---|---|
-| Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) |
-| Full design-v2 CSS file retirement (`uwe-v2.css`, `shells-v2/*`) | Phase 14 | open — bridge still needed for shared-ui auth forms |
-| Portal login page (`LoginForm` / `AuthPageLayout` in shared-ui) | Phase 10 | open — uses shared-ui auth primitives |
-| Legacy `/worlds/*` public discovery UI | QF2 legacy-ui-disconnected | open — routes redirect, backend intact |
+| Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) — optional manual QA documented |
+| Full design-v2 CSS file retirement (`uwe-v2.css`, `shells-v2/*`) | Phase 14 | **done (Wave 4)** — `shells-v2/*` deleted; `data-uwe-design-v2` removed from layouts; legacy CSS bundle in `uwe.css` retained for shared-ui widgets |
+| Portal login page (`LoginForm` / `AuthPageLayout` in shared-ui) | Phase 10 | **done (Wave 3/4)** — `PortalLoginForm` + app-local forgot/reset |
+| Studio Auth (`AuthPageLayout` on login/setup/account) | Phase 10/14 | **done (Wave 4)** — `StudioAuthShell` + Card/Form primitives |
+| Legacy `/worlds/*` public discovery UI | QF2 legacy-ui-disconnected | **documented (Wave 4)** — routes redirect to login-first IA; backend intact |
+| E2E shell debt (`.uwe-v2-shell`, skipped settings) | Phase 12 | **done (Wave 4)** — Portal/Studio shell E2E on new selectors |
+
+## Wave 4 — shipped (consolidated orchestrator branch)
+
+Branch: `cursor/uwe-wave4-orchestrator-4d64` (merges D1–D4 subagent deliverables).
+
+### Wave 4 agent deliverables
+
+| Agent | Branch scope | Status |
+|---|---|---|
+| **D1** Studio Auth-UI | `/login`, forgot/reset, `/setup`, `/account/**` → `StudioAuthShell` + Card | **done** |
+| **D2** design-v2 CSS retirement | `shells-v2/*` deleted, layout `data-uwe-design-v2` removed | **done** |
+| **D3** E2E cleanup | `portal-shell`, `studio-settings`, `portal-auth`, `studio-cockpit-visual` | **done** |
+| **D4** legacy-ui-disconnected + docs | `/worlds/*` redirect documented, Wave-4 status docs | **done** |
+
+### Studio Auth migration (Phase 10/14)
+
+| Route | Before | After |
+|---|---|---|
+| `/login` | `@uwe/shared-ui` `LoginForm` + `AuthPageLayout` | `StudioLoginForm` + `StudioAuthShell` |
+| `/forgot-password`, `/reset-password` | shared-ui forms | `StudioForgotPasswordForm`, `StudioResetPasswordForm` |
+| `/setup` | `AuthPageLayout` + legacy inputs | `StudioAuthShell` + shadcn Input/Button |
+| `/account/password`, `/account/security` | nested `AuthPageLayout` in `SystemShell` | Card-only inside `SystemShell` |
+
+Portal forgot/reset migrated to `PortalForgotPasswordForm` / `PortalResetPasswordForm` (parity with login).
+
+### design-v2 bridge retirement (Phase 14)
+
+Deleted (reference count = 0):
+
+- `packages/shared-ui/src/shells-v2/*` (`AppShellV2`, `StudioShellV2`, `PortalShellV2`, `AdminShellV2`)
+
+Removed from app layouts:
+
+- `body[data-uwe-design-v2]` attribute (`apps/studio/app/layout.tsx`, `apps/portal/app/layout.tsx`)
+
+Retained (shared-ui widget styling):
+
+- `packages/shared-ui/src/design-v2/*` CSS imported via `uwe.css` (settings panels, wiki bridge, theme tokens)
+- `@deprecated` `isDesignV2Enabled()` export for legacy opt-in only
+
+### legacy-ui-disconnected — final disposition
+
+Public Portal discovery routes (`/worlds`, `/worlds/[slug]`, etc.) **remain backend-intact** but **redirect** to login-first IA:
+
+- Unauthenticated → `/login?redirect=…`
+- Authenticated → `/auth/worlds` or scoped `/auth/worlds/[slug]…`
+
+No active navigation entry; no public „Welten entdecken“ flow. Route files kept as redirect shims (`redirectLegacyWorldsHub` / `redirectLegacyWorldPath`).
+
+### Phase 12 — E2E (Wave 4 updates)
+
+| Test area | File(s) | Status |
+|---|---|---|
+| Portal PortalShell chrome | `e2e/portal-shell.spec.ts` | **updated** — no `.uwe-v2-shell`; auth hub + account |
+| Studio SettingsShell | `e2e/studio-settings.spec.ts` | **enabled** — was skipped pending Wave 3 C1 |
+| Portal auth world sidebar | `e2e/portal-auth.spec.ts` | **updated** — role-based nav links |
+| Studio world dashboard | `e2e/studio-cockpit-visual.spec.ts` | **updated** — WorldShell selectors (legacy cockpit chrome removed) |
+
+### Deferred after Wave 4 (program closure)
+
+| Item | Notes |
+|---|---|
+| Physical printer E2E on RTX host | Manual QA + CUPS stubs; unit tests cover queue service |
+| Shared-ui auth exports (`LoginForm`, `AuthPageLayout`) | Deprecated; apps use local auth shells — remove when ref=0 |
+| `packages/shared-ui/src/shells/*` (V1) | Still used by shared-ui widgets; retire with settings migration |
+| `design-v2/legacy-bridge.css` | Inert without `data-uwe-design-v2`; cleanup in follow-up CSS pass |
 
 ## Deferred / Wave 3 recommendations (historical — completed in Wave 3)
 
@@ -236,11 +310,12 @@ Still active (intentional — legacy CSS coexistence):
 | Portal player routes restyle on `PortalShell` | Phase 10 | **done (Wave 3)** |
 | Full visual polish (design-v2 CSS retirement) | Phase 14 | partial — app shells migrated; shared-ui CSS bridge remains |
 
-### legacy-ui-disconnected (unchanged)
+### legacy-ui-disconnected (Wave 4 final)
 
 Public Portal discovery routes (`/worlds`, `/worlds/[slug]`, etc.) remain
-backend-intact but disconnected from active Portal navigation (QF2). No change
-in Wave 2.
+backend-intact but disconnected from active Portal navigation (QF2). Wave 4:
+redirect shims only (`redirectLegacyWorldsHub` / `redirectLegacyWorldPath`) —
+no public discovery UI, no nav entry. Authenticated players use `/auth/worlds/*`.
 
 ### QF6 note
 

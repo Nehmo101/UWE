@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthCard, AuthPageLayout, TwoFactorSetupForm } from "@uwe/shared-ui";
+import { TwoFactorSetupForm } from "@uwe/shared-ui";
 import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export default async function AccountSecurityPage() {
@@ -21,16 +28,23 @@ export default async function AccountSecurityPage() {
         />
       }
     >
-      <AuthPageLayout variant="studio" compact>
-        <AuthCard
-          variant="studio"
-          title="Sicherheit"
-          lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
-          footer={<Link href="/account/password">Passwort ändern</Link>}
-        >
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle>Sicherheit</CardTitle>
+          <CardDescription>
+            Angemeldet als {user.displayName}
+            {user.email ? ` (${user.email})` : ""}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <TwoFactorSetupForm variant="studio" backHref="/account/password" />
-        </AuthCard>
-      </AuthPageLayout>
+          <p className="mt-4 text-sm text-muted-foreground">
+            <Link href="/account/password" className="text-primary hover:underline">
+              Passwort ändern
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </SystemShell>
   );
 }

@@ -38,6 +38,7 @@ export interface AiRouterRequest {
   useMock?: boolean;
   options?: BuildAiContextOptions;
   apiKeyStore?: ApiKeyStore;
+  maxTokens?: number;
 }
 
 export interface AiRouterResult {

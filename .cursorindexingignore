@@ -1,0 +1,20 @@
+# Same exclusions as .cursorignore — keep semantic index lean
+packages/database/src/generated/
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/.turbo/
+**/.cache/
+**/coverage/
+**/playwright-report/
+**/test-results/
+pnpm-lock.yaml
+exports/
+data/
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+docs/ai-orchestrator-subagents-prompts.md
+docs/ai-brain-mail/

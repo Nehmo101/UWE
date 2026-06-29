@@ -36,7 +36,7 @@ test.describe("Portal authenticated player flows", () => {
     await page.goto("/auth/worlds/terra");
 
     await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
-    await expect(page.locator("#uwe-v2-sidebar")).toContainText("Sessions");
+    await expect(page.getByRole("link", { name: /Sessions \/ Recaps/i })).toBeVisible();
   });
 });
 

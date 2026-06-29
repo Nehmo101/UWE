@@ -7,7 +7,6 @@ import {
   ThemeDocumentSync,
   TopBarSessionMount,
   buildVisualThemeHtmlAttributes,
-  isDesignV2Enabled,
   toUweThemePreferences,
   type ThemeAppearance,
 } from "@uwe/shared-ui";
@@ -86,11 +85,9 @@ export default async function RootLayout({
     // still works with static commands.
   }
 
-  const designV2 = isDesignV2Enabled();
-
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
-      <body {...(designV2 ? { "data-uwe-design-v2": "true" } : {})}>
+      <body>
         <ThemeBootstrapScript
           scope="studio"
           serverPreferences={serverThemePreferences}

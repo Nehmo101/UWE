@@ -180,6 +180,7 @@ export async function executeAiPrompt(
       pageSlug: body.pageSlug?.trim() || undefined,
       userPrompt: prompt,
       useMock: body.useMock,
+      maxTokens: body.maxTokens,
       feature: "AI_CHAT_USE",
       options: {
         datenschutzMode: settings.datenschutzMode,

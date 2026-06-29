@@ -1,7 +1,16 @@
 import type { AiContextPage } from "../types";
 
 export function serializePageForBudget(page: AiContextPage): string {
-  const blocks = page.contentBlocks.map((b) => `[${b.type}] ${b.content}`).join("\n");
+  const blockText = page.contentBlocks.map((b) => `[${b.type}] ${b.content}`).join("\n");
+  const PAGE_BLOCK_BUDGET = 1200;
+  let blocks: string;
+  if (page.summary && blockText.length > PAGE_BLOCK_BUDGET) {
+    blocks = `[Zusammenfassung] ${page.summary}\n[Inhalt gekürzt — ${page.contentBlocks.length} Blöcke]`;
+  } else if (blockText.length > PAGE_BLOCK_BUDGET) {
+    blocks = `${blockText.slice(0, PAGE_BLOCK_BUDGET)}… [gekürzt]`;
+  } else {
+    blocks = blockText;
+  }
   const relations = page.relations
     .map(
       (r) =>
