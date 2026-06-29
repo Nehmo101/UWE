@@ -27,12 +27,7 @@ alwaysApply: false
 
 ## Auth imports (typecheck)
 
-| Symbol | Import from |
-|--------|-------------|
-| `SESSION_COOKIE_NAME`, `PREVIEW_COOKIE_NAME` | `@uwe/auth` or `packages/auth/src/session` |
-| `getUweRuntimeConfig`, `getSessionCookieOptions` | `@uwe/auth` or `packages/auth/src/runtime-config` |
-
-Do not import `SESSION_COOKIE_NAME` from `runtime-config`.
+See [AGENTS.md](../../AGENTS.md) § Common recurring failures — auth import table.
 
 ## Error handling
 

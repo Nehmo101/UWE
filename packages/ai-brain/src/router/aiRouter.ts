@@ -90,6 +90,22 @@ import {
   resolveCookbookModelForRequest,
 } from "@uwe/cookbook";
 import { buildCookbookRuntimeProbe } from "../cookbook-bridge";
+import { resolveContextBuilderConfig } from "../context/config";
+import {
+  buildPromptCacheKey,
+  getCachedPromptResponse,
+  hashContextForCache,
+  setCachedPromptResponse,
+} from "../cache/prompt-cache";
+
+function assertContextWithinBudget(contextChars: number): void {
+  const { maxChars } = resolveContextBuilderConfig();
+  if (contextChars > maxChars) {
+    throw new AiRouterError(
+      `Kontext überschreitet das Maximum von ${maxChars} Zeichen (${contextChars}).`,
+    );
+  }
+}
 
 
 
@@ -204,7 +220,12 @@ function buildRouterPrompts(
 
   }
 
-
+  if (contextMode === "personal_brain") {
+    return {
+      systemPrompt: buildTaskSystemPrompt(request.taskType),
+      userPrompt: buildTaskPrompt(request.taskType, safeContext),
+    };
+  }
 
   return {
 
@@ -568,6 +589,8 @@ export async function routeAiRequest(
 
         allowDmOnly: serverAllowDmOnly,
 
+        retrievalQuery: request.userPrompt?.trim() || undefined,
+
       },
 
     });
@@ -583,6 +606,8 @@ export async function routeAiRequest(
 
 
   const safeContext = context;
+
+  assertContextWithinBudget(safeContext.promptContext.length);
 
 
 
@@ -600,11 +625,20 @@ export async function routeAiRequest(
 
 
 
+  const contextHash = hashContextForCache(safeContext.promptContext);
+  const promptCacheKey = buildPromptCacheKey({
+    systemPrompt,
+    userPrompt,
+    model,
+    contextHash,
+  });
+  const cachedResult = getCachedPromptResponse(promptCacheKey);
+
   // Prefer the outbound connector queue for local generation when an online
   // connector advertises `llm_local`; fall back to the direct local provider
   // when no connector is available.
   const connectorOutcome =
-    resolution.route === "local_rtx" && !request.useMock
+    !cachedResult && resolution.route === "local_rtx" && !request.useMock
       ? await tryConnectorLlmGenerate(deps.prisma ?? sharedPrisma, {
           taskType: request.taskType,
           explicitModel: request.model,
@@ -613,21 +647,27 @@ export async function routeAiRequest(
           userPrompt,
           providerId: resolution.providerId,
           worldId: context.worldId || undefined,
+          maxTokens: request.maxTokens,
         })
       : null;
 
   let result: AiRouterResult["result"];
 
-  if (connectorOutcome) {
+  if (cachedResult) {
+    result = cachedResult;
+  } else if (connectorOutcome) {
     result = connectorOutcome.result;
     model = connectorOutcome.model;
+    setCachedPromptResponse(promptCacheKey, result);
   } else {
     const provider = createRoutedProvider(resolution, apiKeyStore, request.useMock);
     result = await runAiTask(provider, {
       model,
       prompt: userPrompt,
       systemPrompt,
+      maxTokens: request.maxTokens,
     });
+    setCachedPromptResponse(promptCacheKey, result);
   }
 
 

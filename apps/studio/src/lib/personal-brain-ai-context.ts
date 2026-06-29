@@ -26,8 +26,8 @@ export async function loadStudioPersonalBrainPromptContext(
   const personalBrain = createPersonalBrainService(db);
   const query = options.query?.trim() ?? "";
   const retrievalLimit = options.retrievalLimit ?? 8;
-  const docFallbackLimit = options.docFallbackLimit ?? 30;
-  const factFallbackLimit = options.factFallbackLimit ?? 30;
+  const docFallbackLimit = options.docFallbackLimit ?? 8;
+  const factFallbackLimit = options.factFallbackLimit ?? 6;
 
   return loadPersonalBrainPromptContext({
     query: query || undefined,

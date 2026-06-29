@@ -2,6 +2,18 @@ import type { PrismaClient } from "./client";
 import { prisma } from "./client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
+function parseOptionalPositiveInt(value: string | undefined): number | null {
+  if (!value?.trim()) {
+    return null;
+  }
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function resolveDailyTokenBudgetLimit(): number | null {
+  return parseOptionalPositiveInt(process.env.AI_DAILY_TOKEN_BUDGET);
+}
+
 // --- Types ---
 
 export type AiRoutingMode = "LOCAL_ONLY" | "LOCAL_THEN_CLOUD" | "CLOUD_ONLY" | "DISABLED";
@@ -136,6 +148,8 @@ export interface AiBudgetStatus {
   dailyLimitUsd: number | null;
   monthlyLimitUsd: number | null;
   userDailyLimitUsd: number | null;
+  dailySpentTokens: number;
+  dailyTokenLimit: number | null;
   withinBudget: boolean;
   reason?: string;
 }
@@ -591,7 +605,7 @@ export class AiGatewayService {
     const dayStart = startOfDay(now);
     const monthStart = startOfMonth(now);
 
-    const [dailyAgg, monthlyAgg, userDailyAgg] = await Promise.all([
+    const [dailyAgg, monthlyAgg, userDailyAgg, dailyTokenAgg] = await Promise.all([
       this.db.aiUsageLog.aggregate({
         where: { createdAt: { gte: dayStart }, success: true },
         _sum: { estimatedCostUsd: true },
@@ -606,11 +620,18 @@ export class AiGatewayService {
             _sum: { estimatedCostUsd: true },
           })
         : Promise.resolve({ _sum: { estimatedCostUsd: null } }),
+      this.db.aiUsageLog.aggregate({
+        where: { createdAt: { gte: dayStart }, success: true },
+        _sum: { inputTokens: true, outputTokens: true },
+      }),
     ]);
 
     const dailySpentUsd = dailyAgg._sum.estimatedCostUsd ?? 0;
     const monthlySpentUsd = monthlyAgg._sum.estimatedCostUsd ?? 0;
     const userDailySpentUsd = userDailyAgg._sum.estimatedCostUsd ?? 0;
+    const dailySpentTokens =
+      (dailyTokenAgg._sum.inputTokens ?? 0) + (dailyTokenAgg._sum.outputTokens ?? 0);
+    const dailyTokenLimit = resolveDailyTokenBudgetLimit();
 
     let userDailyLimitUsd = config.perUserDailyBudgetUsd;
     if (userId) {
@@ -627,6 +648,8 @@ export class AiGatewayService {
       dailyLimitUsd: config.dailyBudgetUsd,
       monthlyLimitUsd: config.monthlyBudgetUsd,
       userDailyLimitUsd,
+      dailySpentTokens,
+      dailyTokenLimit,
       withinBudget: true,
     };
 
@@ -639,6 +662,9 @@ export class AiGatewayService {
     } else if (userDailyLimitUsd != null && userDailySpentUsd >= userDailyLimitUsd) {
       status.withinBudget = false;
       status.reason = "User-Tagesbudget überschritten.";
+    } else if (dailyTokenLimit != null && dailySpentTokens >= dailyTokenLimit) {
+      status.withinBudget = false;
+      status.reason = "Tages-Tokenbudget überschritten.";
     }
 
     return status;

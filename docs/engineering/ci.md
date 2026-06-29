@@ -107,6 +107,7 @@ Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
 | `pnpm ci:light` | PR gate: db:generate → lint → typecheck → test:ci → secret scan → docs |
 | `pnpm ci:check` | Local fast path with release build: lint → typecheck → test:ci → build:release |
 | `pnpm quality` | Full CI quality job (main gate) |
+| `pnpm quality:quiet` | Same as quality; writes full log to temp file, prints tail on failure (for agents) |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Turbo typecheck |
 | `pnpm test` | Unit + integration smoke |
@@ -129,8 +130,11 @@ pnpm lint && pnpm typecheck
 # Before PR (matches GitHub PR gate)
 pnpm ci:light
 
-# Before merge / after large changes (matches main CI)
+# Optional full pre-check (matches main gate)
 pnpm quality
+
+# Agents: prefer quiet mode — avoids dumping thousands of lines into context on failure
+pnpm quality:quiet
 ```
 
 **Note:** Use `pnpm ci:check` when you also want a local release build. Use `pnpm ci:light` to mirror the PR workflow exactly.

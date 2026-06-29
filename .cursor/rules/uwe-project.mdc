@@ -21,7 +21,7 @@ UWE (Universeller Welten-Editor) is a self-hosted **Alltags- und Hobby-Betriebss
 | **Auth** | `packages/auth`, `packages/security` | Sessions, permissions, route guards |
 | **Media** | `packages/assets`, `packages/image-studio` | Uploads, MIME validation, Image Studio jobs |
 | **Generators** | `packages/ai-brain` | DnD generator, brain retrieval, privacy guards |
-| **Hosting** | Docker, `scripts/uwe-host-*`, Windows installer | Self-hosted deployment |
+| **Hosting** | Linux + `scripts/uwe-host-*`, `deploy/systemd/uwe.service` | Self-hosted deployment (no Docker/Windows installer as active path) |
 
 ## Architecture principles
 
@@ -29,22 +29,19 @@ UWE (Universeller Welten-Editor) is a self-hosted **Alltags- und Hobby-Betriebss
 - Studio is write/admin; Portal is read-only player output.
 - Never expose `dm_only` content to Portal or static export.
 - RTX/local inference stays on the home network; cloud AI gets no world/brain/life context.
-- Daily Admin OS data (Capture, Life Brain, Contracts) never reaches Portal or static export.
+- Daily Admin OS data never reaches Portal or static export.
 - AI outputs are proposals/drafts — never auto-applied to canon or personal brain.
 - Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).
 
 ## Agent defaults
 
-- Prefer safe defaults over blocking questions when the right choice is clear from repo conventions.
+- Prefer safe defaults over blocking questions when conventions are clear.
 - Keep changes small, reviewable, and scoped to the task.
-- Run `pnpm quality` before pushing (see `ci-and-testing` rule).
-- Document non-obvious architecture changes in `docs/engineering/` or linked domain docs.
+- CI gate: [AGENTS.md](../../AGENTS.md) (GitHub checks are authoritative).
+- Database services index: [docs/engineering/database-service-map.md](../../docs/engineering/database-service-map.md).
 
 ## Further reading
 
 - `docs/ARCHITECTURE.md` — full architecture overview
-- `docs/engineering/product-orchestrator-plan.md` — multi-domain rollout order and subagent packages
-- `docs/daily-admin-os.md` — Daily Admin OS routes and mobile nav
-- `docs/engineering/ci.md` — CI workflows and local commands
-- `docs/engineering/cursor-workflow.md` — Cursor rules, commands, and PR workflow
-- `AGENTS.md` — quality gate for cloud agents
+- `docs/engineering/cursor-workflow.md` — Cursor rules, commands, agent PR workflow
+- `.cursor/skills/manifest.json` — all 23 skills with one-line triggers

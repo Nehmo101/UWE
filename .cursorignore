@@ -1,0 +1,26 @@
+# Generated Prisma clients (~560k lines after db:generate)
+packages/database/src/generated/
+
+# Dependencies and build artifacts
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/.turbo/
+**/.cache/
+**/coverage/
+**/playwright-report/
+**/test-results/
+
+# Large lockfile and runtime data
+pnpm-lock.yaml
+exports/
+data/
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+
+# Agent context: verbose planning docs (load on demand via docs/)
+docs/ai-orchestrator-subagents-prompts.md
+docs/ai-brain-mail/
