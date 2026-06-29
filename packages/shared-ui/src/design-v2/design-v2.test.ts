@@ -32,9 +32,9 @@ describe("design v2 CSS bundle", () => {
     assert.doesNotMatch(uweCss, /legacy-bridge\.css/);
   });
 
-  it("design-v2 wiki styles target wiki-content", () => {
+  it("design-v2 wiki styles target reader content", () => {
     const wiki = readFileSync(path.join(designV2Dir, "wiki.css"), "utf8");
-    assert.match(wiki, /\.wiki-content/);
+    assert.match(wiki, /\.uwe-v2-wiki-content/);
   });
 
   it("parchment OS handoff tokens match theme preset", () => {
