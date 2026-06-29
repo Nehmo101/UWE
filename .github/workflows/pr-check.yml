@@ -13,6 +13,7 @@ concurrency:
 jobs:
   fast-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +31,14 @@ jobs:
 
       - name: Verify lockfile is in sync
         run: git diff --exit-code pnpm-lock.yaml
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-pr-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-pr-${{ runner.os }}-
 
       - name: Light CI gate
         run: pnpm ci:light
