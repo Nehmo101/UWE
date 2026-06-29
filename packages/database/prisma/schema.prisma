@@ -617,6 +617,8 @@ model World {
   dndBeyondReferences DndBeyondReference[]
   researchSessions    ResearchSession[]
   contentReviews      ContentReview[]
+  atlasMap            AtlasMap?
+  atlasPaletteItems   AtlasPaletteItem[] @relation("AtlasPaletteWorld")
 
   @@map("worlds")
 }
@@ -687,6 +689,9 @@ model Page {
   generatorOutputs       GeneratorOutput[]
   dndBeyondReferences    DndBeyondReference[]
   versions               PageVersion[]
+  atlasNodes             AtlasNode[]    @relation("AtlasNodePage")
+  atlasFeatures          AtlasFeature[] @relation("AtlasFeaturePage")
+  atlasObjects           AtlasObject[]  @relation("AtlasObjectPage")
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -782,6 +787,8 @@ model Asset {
   contentBlocks     ContentBlock[]
   soundboardButtons SoundboardButton[]
   imageStudioVersions ImageStudioVersion[]
+  atlasNodeBackgrounds AtlasNode[]        @relation("AtlasNodeBackground")
+  atlasPaletteItems    AtlasPaletteItem[] @relation("AtlasPaletteAsset")
 
   @@index([worldId, type])
   @@map("assets")
@@ -2726,6 +2733,165 @@ model ResearchSource {
 
   @@index([sessionId])
   @@map("research_sources")
+}
+
+// --- Atlas World Builder ---
+
+enum AtlasNodeLevel {
+  globe
+  continent
+  landscape
+  city
+}
+
+enum AtlasFeatureKind {
+  region
+  river
+  road
+  biome
+  relief
+  label
+  pin
+}
+
+enum AtlasLabelColor {
+  black
+  red
+}
+
+enum AtlasPaletteSource {
+  builtin
+  ai
+  upload
+}
+
+enum AtlasPaletteReviewStatus {
+  pending
+  approved
+}
+
+/// One atlas per world — get-or-create via atlas service.
+model AtlasMap {
+  id          String     @id @default(cuid())
+  worldId     String     @map("world_id")
+  title       String     @default("Atlas")
+  stylePreset String     @default("tolkien-ink") @map("style_preset")
+  settings    Json?
+  visibility  Visibility @default(dm_only)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  world World       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  nodes AtlasNode[]
+
+  @@unique([worldId])
+  @@map("atlas_maps")
+}
+
+model AtlasNode {
+  id                String         @id @default(cuid())
+  mapId             String         @map("map_id")
+  parentId          String?        @map("parent_id")
+  parentFeatureId   String?        @map("parent_feature_id")
+  level             AtlasNodeLevel
+  title             String
+  slug              String?
+  extent            Json?
+  silhouette        Json?
+  seed              Int?
+  backgroundAssetId String?        @map("background_asset_id")
+  pageId            String?        @map("page_id")
+  visibility        Visibility     @default(dm_only)
+  sortOrder         Int            @default(0) @map("sort_order")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  map             AtlasMap       @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  parent          AtlasNode?     @relation("AtlasNodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        AtlasNode[]    @relation("AtlasNodeHierarchy")
+  /// The AtlasFeature (in a parent node) that drills into this node via its parentFeatureId.
+  parentFeature   AtlasFeature?  @relation("AtlasNodeParentFeature", fields: [parentFeatureId], references: [id], onDelete: SetNull)
+  backgroundAsset Asset?         @relation("AtlasNodeBackground", fields: [backgroundAssetId], references: [id], onDelete: SetNull)
+  linkedPage      Page?          @relation("AtlasNodePage", fields: [pageId], references: [id], onDelete: SetNull)
+  features        AtlasFeature[] @relation("AtlasNodeFeatures")
+  /// Features from other nodes that drill into this node for navigation.
+  drillSourceFeatures AtlasFeature[] @relation("AtlasFeatureChildNode")
+  objects         AtlasObject[]
+
+  @@index([mapId, sortOrder])
+  @@index([parentId])
+  @@map("atlas_nodes")
+}
+
+model AtlasFeature {
+  id            String           @id @default(cuid())
+  nodeId        String           @map("node_id")
+  kind          AtlasFeatureKind
+  geometry      Json
+  style         Json?
+  labelText     String?          @map("label_text")
+  labelColor    AtlasLabelColor? @map("label_color")
+  childNodeId   String?          @map("child_node_id")
+  linkedPageId  String?          @map("linked_page_id")
+  layer         Int              @default(0)
+  visibility    Visibility       @default(dm_only)
+  sortOrder     Int              @default(0) @map("sort_order")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  node        AtlasNode    @relation("AtlasNodeFeatures", fields: [nodeId], references: [id], onDelete: Cascade)
+  /// The child node this feature drills into (for nested map navigation).
+  childNode   AtlasNode?   @relation("AtlasFeatureChildNode", fields: [childNodeId], references: [id], onDelete: SetNull)
+  /// Nodes that reference this feature as their parentFeature.
+  childNodes  AtlasNode[]  @relation("AtlasNodeParentFeature")
+  linkedPage  Page?        @relation("AtlasFeaturePage", fields: [linkedPageId], references: [id], onDelete: SetNull)
+
+  @@index([nodeId, layer, sortOrder])
+  @@map("atlas_features")
+}
+
+model AtlasObject {
+  id            String             @id @default(cuid())
+  nodeId        String             @map("node_id")
+  paletteItemId String             @map("palette_item_id")
+  x             Float
+  y             Float
+  scale         Float              @default(1)
+  rotation      Float              @default(0)
+  layer         Int                @default(0)
+  linkedPageId  String?            @map("linked_page_id")
+  visibility    Visibility         @default(dm_only)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  node        AtlasNode        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  paletteItem AtlasPaletteItem @relation(fields: [paletteItemId], references: [id], onDelete: Restrict)
+  linkedPage  Page?            @relation("AtlasObjectPage", fields: [linkedPageId], references: [id], onDelete: SetNull)
+
+  @@index([nodeId, layer])
+  @@map("atlas_objects")
+}
+
+model AtlasPaletteItem {
+  id              String                   @id @default(cuid())
+  worldId         String?                  @map("world_id")
+  name            String
+  kind            String
+  source          AtlasPaletteSource       @default(builtin)
+  assetId         String?                  @map("asset_id")
+  builtinGlyphKey String?                  @map("builtin_glyph_key")
+  reviewStatus    AtlasPaletteReviewStatus @default(approved) @map("review_status")
+  styleTags       Json?                    @map("style_tags")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  world   World?        @relation("AtlasPaletteWorld", fields: [worldId], references: [id], onDelete: Cascade)
+  asset   Asset?        @relation("AtlasPaletteAsset", fields: [assetId], references: [id], onDelete: SetNull)
+  objects AtlasObject[]
+
+  @@index([worldId, kind])
+  @@index([reviewStatus])
+  @@map("atlas_palette_items")
 }
 
 // --- AI Gateway (RTX fallback, permissions, budgets, usage logs) ---
