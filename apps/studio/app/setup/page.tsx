@@ -4,11 +4,14 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AuthCard, AuthPageLayout, authClasses } from "@uwe/shared-ui";
+import { StudioAuthShell } from "@/src/components/StudioAuthShell";
+import { Alert, LoadingState } from "@/src/components/ui/states";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 
 export default function SetupPage() {
   const router = useRouter();
-  const classes = authClasses("studio");
   const [setupAvailable, setSetupAvailable] = useState<boolean | null>(null);
   const [setupConfigured, setSetupConfigured] = useState(true);
   const [setupToken, setSetupToken] = useState("");
@@ -52,72 +55,71 @@ export default function SetupPage() {
   }
 
   if (setupAvailable === null) {
-    return (
-      <AuthPageLayout variant="studio">
-        <section className={classes.card}>
-          <p className="uwe-auth-loading">Setup wird geprüft…</p>
-        </section>
-      </AuthPageLayout>
-    );
+    return <LoadingState title="Setup wird geprüft…" />;
   }
 
   if (!setupAvailable) {
     return (
-      <AuthPageLayout variant="studio">
-        <AuthCard
-          variant="studio"
-          title="Setup abgeschlossen"
-          lead="Ein Owner-Konto existiert bereits. Das einmalige Setup ist deaktiviert."
-          footer={
-            <>
-              <Link href="/login">Zur Anmeldung</Link>
-              {" · "}
-              <Link href="/forgot-password">Passwort vergessen?</Link>
-            </>
-          }
-        />
-      </AuthPageLayout>
+      <StudioAuthShell
+        title="Setup abgeschlossen"
+        description="Ein Owner-Konto existiert bereits. Das einmalige Setup ist deaktiviert."
+        footer={
+          <>
+            <Link href="/login" className="text-primary hover:underline">
+              Zur Anmeldung
+            </Link>
+            {" · "}
+            <Link href="/forgot-password" className="text-primary hover:underline">
+              Passwort vergessen?
+            </Link>
+          </>
+        }
+      />
     );
   }
 
   return (
-    <AuthPageLayout variant="studio">
-      <AuthCard
-        variant="studio"
-        title="UWE Studio — Erstes Setup"
-        lead={
-          "Lege den ersten Owner an. Dieser Schritt ist nur einmal möglich und erfordert das " +
-          "Setup-Token aus UWE_SETUP_TOKEN in deiner .env."
-        }
-        footer={<Link href="/login">Bereits ein Konto? Anmelden</Link>}
-      >
-        {!setupConfigured && (
-          <p className={classes.error} role="alert">
-            <code>UWE_SETUP_TOKEN</code> ist nicht gesetzt. Generiere ein Token (z. B.{" "}
-            <code>openssl rand -hex 32</code>), trage es in <code>.env</code> ein und starte den
-            Server neu.
-          </p>
-        )}
+    <StudioAuthShell
+      title="UWE Studio — Erstes Setup"
+      description={
+        "Lege den ersten Owner an. Dieser Schritt ist nur einmal möglich und erfordert das " +
+        "Setup-Token aus UWE_SETUP_TOKEN in deiner .env."
+      }
+      wide
+      footer={
+        <Link href="/login" className="text-primary hover:underline">
+          Bereits ein Konto? Anmelden
+        </Link>
+      }
+    >
+      {!setupConfigured ? (
+        <Alert tone="danger">
+          <code>UWE_SETUP_TOKEN</code> ist nicht gesetzt. Generiere ein Token (z. B.{" "}
+          <code>openssl rand -hex 32</code>), trage es in <code>.env</code> ein und starte den
+          Server neu.
+        </Alert>
+      ) : null}
 
-        <div className="studio-auth-seed-users">
-          <h2>Produktions-Checkliste</h2>
-          <ol>
-            <li>
-              <code>UWE_SETUP_TOKEN</code> und <code>AUTH_SECRET</code> in <code>.env</code> setzen
-            </li>
-            <li>Owner-Konto hier anlegen (wird danach automatisch deaktiviert)</li>
-            <li>
-              <code>RUN_DB_SEED=false</code> in Produktion — keine Demo-Benutzer
-            </li>
-            <li>
-              Portal: <code>AUTH_REQUIRED=true</code> für öffentliche Deployments
-            </li>
-          </ol>
-        </div>
+      <div className="rounded-[var(--radius)] border border-border bg-muted/30 p-3 text-sm">
+        <p className="font-medium">Produktions-Checkliste</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+          <li>
+            <code>UWE_SETUP_TOKEN</code> und <code>AUTH_SECRET</code> in <code>.env</code> setzen
+          </li>
+          <li>Owner-Konto hier anlegen (wird danach automatisch deaktiviert)</li>
+          <li>
+            <code>RUN_DB_SEED=false</code> in Produktion — keine Demo-Benutzer
+          </li>
+          <li>
+            Portal: <code>AUTH_REQUIRED=true</code> für öffentliche Deployments
+          </li>
+        </ol>
+      </div>
 
-        <form className={classes.form} onSubmit={handleSubmit}>
-          <label htmlFor="setupToken">Setup-Token</label>
-          <input
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <Label htmlFor="setupToken">Setup-Token</Label>
+          <Input
             id="setupToken"
             name="setupToken"
             type="password"
@@ -127,9 +129,11 @@ export default function SetupPage() {
             required
             disabled={!setupConfigured}
           />
+        </div>
 
-          <label htmlFor="displayName">Anzeigename</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="displayName">Anzeigename</Label>
+          <Input
             id="displayName"
             name="displayName"
             type="text"
@@ -138,9 +142,11 @@ export default function SetupPage() {
             required
             disabled={!setupConfigured}
           />
+        </div>
 
-          <label htmlFor="email">E-Mail</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="email">E-Mail</Label>
+          <Input
             id="email"
             name="email"
             type="email"
@@ -150,9 +156,11 @@ export default function SetupPage() {
             required
             disabled={!setupConfigured}
           />
+        </div>
 
-          <label htmlFor="password">Passwort (min. 8 Zeichen)</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="password">Passwort (min. 8 Zeichen)</Label>
+          <Input
             id="password"
             name="password"
             type="password"
@@ -163,22 +171,14 @@ export default function SetupPage() {
             required
             disabled={!setupConfigured}
           />
+        </div>
 
-          {error && (
-            <p className={classes.error} role="alert">
-              {error}
-            </p>
-          )}
+        {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <button
-            type="submit"
-            className="uwe-btn uwe-btn-primary"
-            disabled={loading || !setupConfigured}
-          >
-            {loading ? "Owner anlegen…" : "Owner anlegen"}
-          </button>
-        </form>
-      </AuthCard>
-    </AuthPageLayout>
+        <Button type="submit" disabled={loading || !setupConfigured}>
+          {loading ? "Owner anlegen…" : "Owner anlegen"}
+        </Button>
+      </form>
+    </StudioAuthShell>
   );
 }

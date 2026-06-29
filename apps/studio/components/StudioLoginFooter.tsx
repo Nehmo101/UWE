@@ -16,13 +16,13 @@ export function StudioLoginFooter() {
       .catch(() => setSetupAvailable(false));
   }, []);
 
+  if (!setupAvailable) return null;
+
   return (
-    <>
-      {setupAvailable && (
-        <p className="studio-auth-footer">
-          <Link href="/setup">Erstes Setup</Link>
-        </p>
-      )}
-    </>
+    <p>
+      <Link href="/setup" className="text-primary hover:underline">
+        Erstes Setup
+      </Link>
+    </p>
   );
 }

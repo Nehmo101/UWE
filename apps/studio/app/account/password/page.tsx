@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthCard, AuthPageLayout } from "@uwe/shared-ui";
 import { createPrismaClient, createUserService } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
-import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
+import {
+  BreadcrumbTrail,
+  SystemShell,
+} from "@/src/components/shell";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export default async function AccountPasswordPage() {
@@ -40,20 +49,27 @@ export default async function AccountPasswordPage() {
         />
       }
     >
-      <AuthPageLayout variant="studio" compact>
-        <AuthCard
-          variant="studio"
-          title="Passwort ändern"
-          lead={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
-          footer={<Link href="/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>}
-        >
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle>Passwort ändern</CardTitle>
+          <CardDescription>
+            Angemeldet als {user.displayName}
+            {user.email ? ` (${user.email})` : ""}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <ChangePasswordForm
             backHref="/"
             forcePasswordChange={forcePasswordChange}
             initialPasswordOnly={initialPasswordOnly}
           />
-        </AuthCard>
-      </AuthPageLayout>
+          <p className="mt-4 text-sm text-muted-foreground">
+            <Link href="/account/security" className="text-primary hover:underline">
+              Zwei-Faktor-Authentifizierung (2FA)
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </SystemShell>
   );
 }

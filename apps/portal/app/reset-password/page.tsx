@@ -1,5 +1,5 @@
-import { ResetPasswordForm } from "@uwe/shared-ui";
+import { PortalResetPasswordForm } from "@/src/components/PortalResetPasswordForm";
 
 export default function ResetPasswordPage() {
-  return <ResetPasswordForm variant="portal" />;
+  return <PortalResetPasswordForm />;
 }
