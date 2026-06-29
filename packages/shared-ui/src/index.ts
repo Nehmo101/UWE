@@ -87,14 +87,10 @@ export {
 /** Package export path for design v2 CSS (import in app layouts). */
 export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
 
-// ---------------------------------------------------------------------------
-// Shell exports — Design V2 is the canonical surface (default-on via
-// `isDesignV2Enabled`). The V1 shells below are LEGACY/compatibility only and
-// render when `NEXT_PUBLIC_UWE_DESIGN_V2=false`. Prefer the `*V2` shells for new
-// code. Consolidating V1→V2 is tracked in docs/engineering/cleanup-inventory.md.
-// ---------------------------------------------------------------------------
+/** @deprecated Design V2 React shells removed in Wave 4 — apps use app-local shell components. */
+export { isDesignV2Enabled } from "./design-v2-feature";
 
-/** @deprecated Legacy (Design V1) shells — prefer the `*V2` exports below. */
+/** @deprecated Legacy shared-ui shells — new product code uses app-local shells. */
 export {
   StudioShell,
   StudioNavSidebar,
@@ -118,39 +114,6 @@ export {
   type PortalShellProps,
   type AdminShellProps,
 } from "./shells";
-
-export { isDesignV2Enabled } from "./design-v2-feature";
-
-/** Canonical Design V2 shells (default-on). Prefer these for new code. */
-export {
-  AppShellV2,
-  V2PageHeader,
-  V2TopBarBrand,
-  StudioShellV2,
-  StudioNavSidebarV2,
-  PortalShellV2,
-  PortalNavSidebarV2,
-  AdminShellV2,
-  AdminStatusCardV2,
-  AdminStatusGridV2,
-  IconAi,
-  IconAssets,
-  IconCapture,
-  IconHome,
-  IconMenu,
-  IconSearch,
-  IconSessions,
-  IconToday,
-  V2_NAV_ICONS,
-  resolveV2BottomNavIcon,
-  type AppShellV2Props,
-  type StudioShellV2Props,
-  type StudioShellV2Variant,
-  type StudioNavSidebarV2Props,
-  type PortalShellV2Props,
-  type AdminShellV2Props,
-  type V2NavIconKey,
-} from "./shells-v2";
 
 export {
   SettingToggleRow,

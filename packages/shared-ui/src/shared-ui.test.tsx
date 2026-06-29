@@ -26,7 +26,6 @@ import {
   RtxStatusBadge,
   VisibilityBadge,
 } from "./StatusBadges";
-import { resolveV2BottomNavIcon } from "./shells-v2/icons";
 import { SearchResultsList } from "./SearchResults";
 import { filterPaletteCommands } from "./CommandPalette";
 import { GraphView } from "./GraphView";
@@ -309,14 +308,6 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /\.uwe-rtx-badge/);
     assert.match(uweCss, /uwe-rtx-badge\[data-rtx-state="online"\]/);
     assert.match(uweCss, /uwe-rtx-badge-dot/);
-  });
-
-  it("maps emoji nav icons to consistent V2 SVG icons", () => {
-    for (const emoji of ["🌍", "👤", "🔗", "🎨", "📜", "🔍", "⌂"]) {
-      const html = renderToStaticMarkup(<>{resolveV2BottomNavIcon(emoji)}</>);
-      assert.match(html, /uwe-v2-nav-icon/, `expected SVG icon for ${emoji}`);
-      assert.doesNotMatch(html, new RegExp(emoji), `expected no raw emoji for ${emoji}`);
-    }
   });
 });
 
