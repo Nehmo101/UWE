@@ -110,7 +110,7 @@ Branch: `cursor/uwe-wave2-orchestrator-2b4c` (merges B1–B4 subagent branches).
 | `/capture`, `/projects`, `/workshop/**`, `/life-brain/**`, `/calendar`, `/mail/**`, `/jobs`, `/image-studio/**`, `/search`, `/templates/**`, `/brain`, `/ai`, `/backup` | `StudioShell` | **done (Wave 2 B2)** |
 | `/admin/**`, `/system`, `/system/rtx-connector`, `/system/printers` | `SystemShell` | **done (Wave 2 B3)** |
 | `/system/navigation`, `/system/version`, `/system/cloudflare`, `/system/host-control`, `/system/uwe-knowhow` | `SystemShell` | **done (Wave 0/1)** |
-| `/settings`, `/account/**` | `StudioAppShell` / `SettingsShell` | **legacy** (Wave 3) |
+| `/settings`, `/account/**` | `SystemShell` / `StudioShell` + `SettingsShell` | **done (Wave 3)** |
 
 ### Legacy shell retirement (Wave 2 orchestrator)
 
@@ -166,15 +166,75 @@ IA routes wired: `/` (Host-Verbindung), `/runner` (Runner/Ollama), `/models` (Mo
 | `docs/cloudflare-current-setup.md` | **updated** (Wave 1) |
 | `README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE_MATURITY_MATRIX.md`, `docs/ROADMAP.md`, `docs/design/new-ui-stack.md` | **updated (Wave 2 B4)** |
 
-## Deferred / Wave 3 recommendations
+## Wave 3 — shipped (consolidated orchestrator branch)
+
+Branch: `cursor/uwe-wave3-orchestrator-c345` (merges C1–C4 subagent branches).
+
+### Wave 3 agent deliverables
+
+| Agent | Branch | Scope | Status |
+|---|---|---|---|
+| **C1** Settings/Account/Admin | `cursor/uwe-wave3-settings-account-c345` | `/settings`, `/admin` hub, `/account/**` → SystemShell/StudioShell | **done** |
+| **C2** Portal shells | `cursor/uwe-wave3-portal-shells-c345` | Portal auth layouts, `/share/**`, Card-based auth pages | **done** |
+| **C3** Wiki + E2E | `cursor/uwe-wave3-wiki-e2e-c345` | Wiki column visibility, Portal auth E2E, Settings E2E | **done** |
+| **C4** Legacy retirement + docs | `cursor/uwe-wave3-css-docs-c345` | Delete legacy shells (ref=0), Phase 14 docs | **done** |
+
+### Page migration (Phase 4/5/10) — Wave 3 completion
+
+| Route area | Shell | Status |
+|---|---|---|
+| `/settings` | `SystemShell` + `SettingsShell` | **done (Wave 3 C1)** |
+| `/admin` (hub) | `SystemShell` | **done (Wave 3 C1)** |
+| `/account/password`, `/account/security` | `StudioShell` + `SettingsShell` + Card | **done (Wave 3 C1)** |
+| Portal `/auth/**` layouts | `PortalAuthLayout` → `PortalShell` | **done (Wave 3 C2)** |
+| Portal `/share/**` | `PortalShareShell` (player-safe) | **done (Wave 3 C2)** |
+| Portal account/worlds hub content | Card primitives (no `portal-content-card`) | **done (Wave 3 C2)** |
+| Wiki table column visibility | TanStack column toggles on `WikiPageTable` | **done (Wave 3 C3)** |
+
+### Legacy shell retirement (Wave 3 orchestrator)
+
+Deleted (reference count = 0 after Wave 3 migrations):
+
+- `apps/studio/components/StudioAppShell.tsx`
+- `apps/studio/components/StudioAppShellV2.tsx`
+- `apps/studio/components/SettingsPageSidebar.tsx` (replaced by `SettingsShell`)
+- `apps/portal/src/components/PortalAppShell.tsx`
+- `apps/portal/src/components/PortalGuestShell.tsx`
+- `apps/portal/src/components/PortalPublicShell.tsx`
+
+### design-v2 bridge status (Phase 14)
+
+Still active (intentional — legacy CSS coexistence):
+
+- `body[data-uwe-design-v2]` set in `apps/studio/app/layout.tsx` and `apps/portal/app/layout.tsx` when `isDesignV2Enabled()` (default on).
+- `packages/shared-ui/src/uwe-v2.css`, `shells-v2/*`, `PortalShellV2` remain for unmigrated shared-ui consumers and CSS bridge tests.
+- New product shells (`apps/*/src/components/shell/*`) use Tailwind + tokens; they do not depend on `PortalShellV2`/`StudioAppShellV2`.
+
+### Phase 12 — E2E (Wave 3 additions)
+
+| Test area | File(s) | Status |
+|---|---|---|
+| Studio SystemShell settings | `e2e/studio-shell.spec.ts` | **updated (Wave 3 C3)** |
+| Portal PortalShell auth chrome | `e2e/portal-shell.spec.ts` | **updated (Wave 3 C3)** |
+| Portal authenticated session flow | `e2e/portal-auth.spec.ts` | **extended (Wave 3 C3)** |
+
+### Deferred / Wave 4 recommendations
 
 | Item | Plan ref | Status |
 |---|---|---|
-| `/settings`, `/account/**` on `SettingsShell` (retire `StudioAppShell`) | Phase 4/5 | open |
-| Wiki table column visibility toggles | Phase 8/9 | open |
 | Physical printer E2E on RTX host | QF10 | open (CI stubs CUPS) |
-| Portal player routes restyle on `PortalShell` | Phase 10 | open |
-| Full visual polish (design-v2 CSS retirement) | Phase 14 | open |
+| Full design-v2 CSS file retirement (`uwe-v2.css`, `shells-v2/*`) | Phase 14 | open — bridge still needed for shared-ui auth forms |
+| Portal login page (`LoginForm` / `AuthPageLayout` in shared-ui) | Phase 10 | open — uses shared-ui auth primitives |
+| Legacy `/worlds/*` public discovery UI | QF2 legacy-ui-disconnected | open — routes redirect, backend intact |
+
+## Deferred / Wave 3 recommendations (historical — completed in Wave 3)
+
+| Item | Plan ref | Status |
+|---|---|---|
+| `/settings`, `/account/**` on `SettingsShell` (retire `StudioAppShell`) | Phase 4/5 | **done (Wave 3)** |
+| Wiki table column visibility toggles | Phase 8/9 | **done (Wave 3)** |
+| Portal player routes restyle on `PortalShell` | Phase 10 | **done (Wave 3)** |
+| Full visual polish (design-v2 CSS retirement) | Phase 14 | partial — app shells migrated; shared-ui CSS bridge remains |
 
 ### legacy-ui-disconnected (unchanged)
 
@@ -213,7 +273,18 @@ Always revert any `.env` changes and leave the tree clean.
 
 ## Latest full-gate verification
 
-Consolidated Wave 2 branch (`cursor/uwe-wave2-orchestrator-2b4c`):
+Consolidated Wave 3 branch (`cursor/uwe-wave3-orchestrator-c345`):
+
+- `pnpm lint` (whole repo, `--max-warnings 0`) — pending CI
+- `pnpm typecheck` (turbo, 28 packages) — pending CI
+- `pnpm test:ci` — pending CI
+- `pnpm test:security` — pending CI
+- `pnpm docs:check` — pending CI
+- `pnpm build:release` — pending CI
+
+Wave 2 baseline was 1480 tests; Wave 3 adds Portal auth session E2E and updates shell selectors.
+
+Previous Wave 2 verification (`cursor/uwe-wave2-orchestrator-2b4c`):
 
 - `pnpm lint` (whole repo, `--max-warnings 0`) — pass
 - `pnpm typecheck` (turbo, 28 packages) — pass
