@@ -49,6 +49,18 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         source: "organization",
         keywords: ["werkstatt", "workshop", "recipes", "rental"],
       },
+      {
+        id: "org-ideas",
+        label: "Ideen",
+        href: "/ideas",
+        icon: "lightbulb",
+        group: "Arbeit & Projekte",
+        section: SECTION,
+        permission: ["owner"],
+        status: "active",
+        source: "organization",
+        keywords: ["ideen", "ideas", "cursor", "prompt", "agent", "ideen-management"],
+      },
     ],
   },
   {

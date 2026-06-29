@@ -67,6 +67,18 @@ export interface AgentJobCompletionInput {
   githubRunId?: string | null;
 }
 
+export interface CursorAgentPollResult {
+  /** Already-normalized DevAgentJob status (mapped from the Cursor API status). */
+  status: DevAgentJobStatus;
+  /** Raw Cursor status string, kept for diagnostics in result.cursor. */
+  rawStatus?: string | null;
+  branchName?: string | null;
+  prUrl?: string | null;
+  url?: string | null;
+  summary?: string | null;
+  errorMessage?: string | null;
+}
+
 export class DevAgentJobService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -183,6 +195,39 @@ export class DevAgentJobService {
     });
   }
 
+  async applyCursorPollResult(id: string, result: CursorAgentPollResult) {
+    const existing = await this.getJob(id);
+    if (!existing) {
+      throw new Error("Agent-Job nicht gefunden.");
+    }
+
+    const terminal = result.status === "completed" || result.status === "failed";
+    const completedAt = terminal ? (existing.completedAt ?? new Date()) : null;
+    const errorMessage =
+      result.status === "failed"
+        ? (result.errorMessage ?? existing.errorMessage ?? "Cursor Agent fehlgeschlagen.")
+        : null;
+
+    return this.updateJob(id, {
+      status: result.status,
+      branchName: result.branchName ?? existing.branchName,
+      prUrl: result.prUrl ?? existing.prUrl,
+      errorMessage,
+      completedAt,
+      result: {
+        ...(existing.result && typeof existing.result === "object"
+          ? (existing.result as Record<string, unknown>)
+          : {}),
+        cursor: {
+          status: result.rawStatus ?? null,
+          url: result.url ?? null,
+          summary: result.summary ?? null,
+          at: new Date().toISOString(),
+        },
+      },
+    });
+  }
+
   async applyCompletionCallback(id: string, input: AgentJobCompletionInput) {
     const existing = await this.getJob(id);
     if (!existing) {
@@ -241,6 +286,7 @@ export interface AgentJobsConfig {
   githubWorkflow: string | null;
   githubTokenConfigured: boolean;
   cursorCloudConfigured: boolean;
+  defaultBranch: string;
   defaultProvider: DevAgentJobProvider;
   autoMerge: boolean;
 }
@@ -252,6 +298,7 @@ export function resolveAgentJobsConfig(env: NodeJS.ProcessEnv = process.env): Ag
     githubWorkflow: env.AGENT_JOBS_GITHUB_WORKFLOW?.trim() || "cursor-agent.yml",
     githubTokenConfigured: Boolean(env.GITHUB_TOKEN?.trim() || env.AGENT_JOBS_GITHUB_TOKEN?.trim()),
     cursorCloudConfigured: Boolean(env.CURSOR_CLOUD_API_KEY?.trim()),
+    defaultBranch: env.AGENT_JOBS_DEFAULT_BRANCH?.trim() || "main",
     defaultProvider: (env.AGENT_JOBS_DEFAULT_PROVIDER?.trim() as DevAgentJobProvider) || "github_actions",
     autoMerge: env.AGENT_JOBS_AUTO_MERGE === "true",
   };

@@ -2454,6 +2454,28 @@ model DevAgentJob {
   @@map("dev_agent_jobs")
 }
 
+enum DevIdeaStatus {
+  in_planning
+  implemented
+  rejected
+}
+
+model DevIdea {
+  id              String        @id @default(cuid())
+  title           String
+  body            String        @default("")
+  status          DevIdeaStatus @default(in_planning)
+  chatTranscript  Json?         @map("chat_transcript")
+  generatedPrompt String?       @map("generated_prompt")
+  devAgentJobId   String?       @map("dev_agent_job_id")
+  metadata        Json?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, updatedAt])
+  @@map("dev_ideas")
+}
+
 model DndBeyondReference {
   id         String   @id @default(cuid())
   worldId    String   @map("world_id")

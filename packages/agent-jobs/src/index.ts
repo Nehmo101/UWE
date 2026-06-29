@@ -7,6 +7,12 @@ import { slugifyKey } from "@uwe/shared-utils";
 import { fetchWorkflowRunStatus } from "./github-status";
 
 export { fetchWorkflowRunStatus, fetchPullRequestForBranch, type WorkflowRunStatus, type PullRequestSummary } from "./github-status";
+export {
+  fetchCursorAgentStatus,
+  mapCursorStatusToDevAgentStatus,
+  type CursorAgentStatus,
+  type CursorMappedStatus,
+} from "./cursor-status";
 
 export type DevAgentJobProvider = "github_actions" | "cursor_cloud" | "cursor_cli_local";
 
@@ -175,13 +181,18 @@ export async function dispatchCursorCloudJob(
     };
   }
 
-  const data = (await response.json()) as { id?: string; branchName?: string; prUrl?: string };
+  const data = (await response.json()) as {
+    id?: string;
+    branchName?: string;
+    prUrl?: string;
+    target?: { branchName?: string; prUrl?: string };
+  };
   return {
     success: true,
     provider: "cursor_cloud",
     cursorJobId: data.id,
-    branchName: data.branchName,
-    prUrl: data.prUrl,
+    branchName: data.target?.branchName ?? data.branchName,
+    prUrl: data.target?.prUrl ?? data.prUrl,
   };
 }
 

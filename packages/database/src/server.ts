@@ -1409,6 +1409,25 @@ export type {
 } from "./agent-job-service";
 
 export {
+  createDevIdeaService,
+  DevIdeaService,
+  parseDevIdeaTranscript,
+  DEV_IDEA_STATUS_LABELS,
+  DEV_IDEA_STATUSES,
+  DevIdeaStatusEnum,
+} from "./dev-idea-service";
+
+export type {
+  CreateDevIdeaInput,
+  UpdateDevIdeaInput,
+  ListDevIdeasOptions,
+  DevIdea,
+  DevIdeaStatus,
+  DevIdeaChatMessage,
+  DevIdeaChatRole,
+} from "./dev-idea-service";
+
+export {
   ConnectorService,
   createConnectorService,
   toConnectorView,
