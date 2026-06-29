@@ -40,6 +40,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     );
   }
 
+  const provider = parsed.data.provider ?? "cursor_cloud";
+  if (provider === "cursor_cloud") {
+    if (!config.cursorCloudConfigured) {
+      return NextResponse.json(
+        { error: "CURSOR_CLOUD_API_KEY fehlt — Cursor-Übergabe nicht möglich." },
+        { status: 503 },
+      );
+    }
+    if (!config.githubRepo) {
+      return NextResponse.json(
+        { error: "AGENT_JOBS_GITHUB_REPO nicht gesetzt (Format: owner/repo)." },
+        { status: 503 },
+      );
+    }
+    const [owner, repo] = config.githubRepo.split("/");
+    if (!owner || !repo) {
+      return NextResponse.json(
+        { error: "AGENT_JOBS_GITHUB_REPO ungültig — erwartet owner/repo." },
+        { status: 503 },
+      );
+    }
+  }
+
   const ideas = createDevIdeaService(prisma);
   const idea = await ideas.getIdea(parsedParams.data.id);
   if (!idea) {
@@ -63,7 +86,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const devJob = await agentJobs.createJob({
     title: idea.title,
     prompt,
-    provider: parsed.data.provider ?? "cursor_cloud",
+    provider,
   });
 
   await ideas.linkAgentJob(idea.id, devJob.id);

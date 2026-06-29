@@ -286,6 +286,7 @@ export interface AgentJobsConfig {
   githubWorkflow: string | null;
   githubTokenConfigured: boolean;
   cursorCloudConfigured: boolean;
+  defaultBranch: string;
   defaultProvider: DevAgentJobProvider;
   autoMerge: boolean;
 }
@@ -297,6 +298,7 @@ export function resolveAgentJobsConfig(env: NodeJS.ProcessEnv = process.env): Ag
     githubWorkflow: env.AGENT_JOBS_GITHUB_WORKFLOW?.trim() || "cursor-agent.yml",
     githubTokenConfigured: Boolean(env.GITHUB_TOKEN?.trim() || env.AGENT_JOBS_GITHUB_TOKEN?.trim()),
     cursorCloudConfigured: Boolean(env.CURSOR_CLOUD_API_KEY?.trim()),
+    defaultBranch: env.AGENT_JOBS_DEFAULT_BRANCH?.trim() || "main",
     defaultProvider: (env.AGENT_JOBS_DEFAULT_PROVIDER?.trim() as DevAgentJobProvider) || "github_actions",
     autoMerge: env.AGENT_JOBS_AUTO_MERGE === "true",
   };

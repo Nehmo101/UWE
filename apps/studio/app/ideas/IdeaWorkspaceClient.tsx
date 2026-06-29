@@ -46,7 +46,13 @@ interface IdeaWorkspaceClientProps {
   ideas: IdeaDto[];
   agentJobsById: Record<string, IdeaAgentJobDto>;
   initialSelectedId: string | null;
-  agentJobs: { enabled: boolean; cursorConfigured: boolean; defaultProvider: string };
+  agentJobs: {
+    enabled: boolean;
+    cursorConfigured: boolean;
+    githubRepo: string | null;
+    defaultBranch: string;
+    defaultProvider: string;
+  };
 }
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
@@ -401,7 +407,13 @@ function PromptColumn({
 }: {
   idea: IdeaDto | null;
   job: IdeaAgentJobDto | null;
-  agentJobs: { enabled: boolean; cursorConfigured: boolean; defaultProvider: string };
+  agentJobs: {
+    enabled: boolean;
+    cursorConfigured: boolean;
+    githubRepo: string | null;
+    defaultBranch: string;
+    defaultProvider: string;
+  };
   onPrompt: (prompt: string) => void;
   onDispatched: (job: IdeaAgentJobDto) => void;
   onJobUpdate: (job: IdeaAgentJobDto) => void;
@@ -519,12 +531,57 @@ function PromptColumn({
     }
   }
 
+  const cursorDispatchReady =
+    agentJobs.enabled && agentJobs.cursorConfigured && Boolean(agentJobs.githubRepo);
+
   const dispatchDisabled =
-    dispatchBusy || draft.trim().length === 0 || !agentJobs.enabled;
+    dispatchBusy || draft.trim().length === 0 || !cursorDispatchReady;
+
+  const dispatchTitle = !agentJobs.enabled
+    ? "Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED)."
+    : !agentJobs.cursorConfigured
+      ? "CURSOR_CLOUD_API_KEY fehlt."
+      : !agentJobs.githubRepo
+        ? "AGENT_JOBS_GITHUB_REPO fehlt (Format: owner/repo)."
+        : undefined;
 
   return (
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
       <h2 className="uwe-v2-section-title">Aktueller Prompt</h2>
+
+      {agentJobs.enabled && (
+        <p className="uwe-dashboard-muted uwe-idea-cursor-target">
+          Cursor-Ziel:{" "}
+          {agentJobs.githubRepo ? (
+            <>
+              <code>
+                github.com/{agentJobs.githubRepo}
+              </code>
+              {" · Branch "}
+              <code>{agentJobs.defaultBranch}</code>
+            </>
+          ) : (
+            <>
+              GitHub-Repo nicht konfiguriert
+              {" — setze "}
+              <code>AGENT_JOBS_GITHUB_REPO=owner/repo</code>
+            </>
+          )}
+          {agentJobs.githubRepo && (
+            <>
+              {" · "}
+              <a
+                href="https://cursor.com/docs/integrations/github"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Cursor GitHub App
+              </a>
+              {" muss auf diesem Repo installiert sein."}
+            </>
+          )}
+        </p>
+      )}
 
       <div className="uwe-idea-chat-controls">
         <label className="uwe-idea-provider">
@@ -573,7 +630,7 @@ function PromptColumn({
           className="uwe-v2-btn uwe-v2-btn-primary"
           onClick={() => void dispatch()}
           disabled={dispatchDisabled}
-          title={!agentJobs.enabled ? "Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED)." : undefined}
+          title={dispatchTitle}
         >
           {dispatchBusy ? "Übergebe…" : "An Cursor übergeben"}
         </button>
@@ -581,13 +638,19 @@ function PromptColumn({
 
       {!agentJobs.enabled && (
         <p className="uwe-dashboard-muted">
-          Cursor-Übergabe inaktiv — setze <code>AGENT_JOBS_ENABLED=true</code> und
+          Cursor-Übergabe inaktiv — setze <code>AGENT_JOBS_ENABLED=true</code>,
+          <code> AGENT_JOBS_GITHUB_REPO=owner/repo</code> und
           <code> CURSOR_CLOUD_API_KEY</code>. Der Prompt kann trotzdem kopiert werden.
         </p>
       )}
       {agentJobs.enabled && !agentJobs.cursorConfigured && (
         <p className="uwe-dashboard-muted">
-          Hinweis: <code>CURSOR_CLOUD_API_KEY</code> fehlt — Übergabe schlägt fehl, Kopieren geht.
+          Hinweis: <code>CURSOR_CLOUD_API_KEY</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.
+        </p>
+      )}
+      {agentJobs.enabled && agentJobs.cursorConfigured && !agentJobs.githubRepo && (
+        <p className="uwe-dashboard-muted">
+          Hinweis: <code>AGENT_JOBS_GITHUB_REPO</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.
         </p>
       )}
       {error && <p className="uwe-notice-warn">{error}</p>}

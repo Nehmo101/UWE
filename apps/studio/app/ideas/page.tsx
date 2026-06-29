@@ -94,6 +94,8 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
         agentJobs={{
           enabled: config.enabled,
           cursorConfigured: config.cursorCloudConfigured,
+          githubRepo: config.githubRepo,
+          defaultBranch: config.defaultBranch,
           defaultProvider: config.defaultProvider,
         }}
       />
