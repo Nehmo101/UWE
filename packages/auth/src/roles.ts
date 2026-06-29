@@ -84,5 +84,8 @@ export function getRequiredRolesForPagePath(pathname: string): readonly UweRole[
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     return ADMIN_ACCESS_ROLES;
   }
+  if (pathname === "/ideas" || pathname.startsWith("/ideas/")) {
+    return ["owner"];
+  }
   return STUDIO_ACCESS_ROLES;
 }

@@ -52,6 +52,7 @@ describe("role guards", () => {
 
     assert.deepEqual(getRequiredRolesForPagePath("/admin/status"), ADMIN_ACCESS_ROLES);
     assert.deepEqual(getRequiredRolesForPagePath("/worlds/demo"), STUDIO_ACCESS_ROLES);
+    assert.deepEqual(getRequiredRolesForPagePath("/ideas"), ["owner"]);
   });
 
   it("allows studio access for owner, admin and dm", () => {
