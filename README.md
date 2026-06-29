@@ -727,7 +727,7 @@ Weitere Brain-/Inferenz-Variablen: siehe `.env.example`, `tools/uwe-rtx-connecto
 | Linux Host | `deploy/scripts/uwe-backup.sh` |
 | Architektur & Rollen | [docs/BACKUP.md](docs/BACKUP.md) · [docs/backup-restore.md](docs/backup-restore.md) |
 
-Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized). ShareLinks werden ohne Tokens exportiert; Restore regeneriert Tokens. **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`. Optional: Auto-Backup-Scheduler noch in Arbeit — siehe [docs/BACKUP.md](docs/BACKUP.md).
+Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized). ShareLinks werden ohne Tokens exportiert; Restore regeneriert Tokens. **Nicht enthalten:** Passwort-Hashes, Session-Tokens, API-Keys. Restore nur als `owner`. Auto-Backup über Settings → Host-Scheduler — siehe [docs/BACKUP.md](docs/BACKUP.md).
 
 ---
 
