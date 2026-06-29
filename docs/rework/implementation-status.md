@@ -296,10 +296,20 @@ No active navigation entry; no public „Welten entdecken“ flow. Route files k
 
 | Item | Notes |
 |---|---|
-| Physical printer E2E on RTX host | Manual QA + CUPS stubs; unit tests cover queue service |
-| Shared-ui auth exports (`LoginForm`, `AuthPageLayout`) | Deprecated; apps use local auth shells — remove when ref=0 |
-| `packages/shared-ui/src/shells/*` (V1) | Still used by shared-ui widgets; retire with settings migration |
-| `design-v2/legacy-bridge.css` | Inert without `data-uwe-design-v2`; cleanup in follow-up CSS pass |
+| Physical printer E2E on RTX host | CI UI smoke in `e2e/studio-label-print.spec.ts`; physical flow skipped unless `UWE_E2E_LABEL_PRINT=1` — manual QA in `docs/rtx-connector.md` |
+| `packages/shared-ui/src/shells/*` (V1) | Still used by WorldCockpit widgets, AdminStatusCard, StudioStatusFooter — retire when ref=0 after settings/wiki migration |
+
+### Post-Wave 4 cleanup (shipped)
+
+Branch: `cursor/uwe-postwave4-orchestrator-88d9`
+
+| Item | Status |
+|---|---|
+| Shared-ui auth exports (`LoginForm`, `AuthPageLayout`, …) | **removed** — apps use local auth shells + `TwoFactorSetupForm` |
+| `design-v2/legacy-bridge.css` | **removed** — inert after Wave 4 layout flag removal |
+| `isDesignV2Enabled()` export | **removed** — ref=0 |
+| App `globals.css` `data-uwe-design-v2` bridge blocks | **removed** |
+| QF10 label print E2E | **partial** — `/system/printers` UI smoke in CI; physical print manual QA documented |
 
 ## Deferred / Wave 3 recommendations (historical — completed in Wave 3)
 

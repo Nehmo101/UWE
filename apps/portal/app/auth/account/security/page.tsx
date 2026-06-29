@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TwoFactorSetupForm } from "@uwe/shared-ui";
+import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { PageHeader } from "@/src/components/shell";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { getCurrentUser } from "@/src/lib/auth";
@@ -19,7 +19,7 @@ export default async function PortalAccountSecurityPage() {
       />
       <Card className="max-w-md">
         <CardContent className="pt-6">
-          <TwoFactorSetupForm variant="portal" backHref="/auth/account/password" />
+          <TwoFactorSetupForm backHref="/auth/account/password" />
           <p className="mt-4 text-sm text-muted-foreground">
             <Link href="/auth/account/password" className="text-primary hover:underline">
               Passwort ändern
