@@ -228,3 +228,132 @@ Leitsatz für alle Agents: **FUNKTIONEN BEHALTEN. ALTE OBERFLÄCHE ERSETZEN.** K
 > - Phase 14 finale Validierung: `pnpm quality`
 > - PR #298 auf ready setzen oder neuen Wave-2-PR gegen `main` (kein Draft wenn CI grün)
 > - Abschlussbericht: migrierte Routen, E2E-Ergebnisse, Wiki-Edit, Legacy-Retirement, Testcount, Risiken, verbleibende `legacy-ui-disconnected`-Features
+
+## Wave 3 — Orchestrator (koordiniert C1–C4, dann Abschluss)
+
+> Rolle: Du bist der Wave-3-Orchestrator für den UWE Hard UI/UX Rework. Wave 0–2 sind auf `main` (#297–#299). Abschluss: Legacy-Oberflächen, Portal-Polish, Wiki-Feinschliff, Phase-14-Validierung.
+>
+> Siehe `docs/rework/implementation-status.md` (Wave 3 shipped) und PR #303 (Legacy-Shell-Löschung + Docs).
+
+## Wave 4 — Orchestrator (Abschluss design-v2, Auth-UI, E2E, legacy-ui-disconnected)
+
+> Rolle: Du bist der **Wave-4-Orchestrator** für den UWE Hard UI/UX Rework. Wave 0–3 sind abgeschlossen und auf `main` gemergt (#297–#299, #300–#304, #303). Deine Aufgabe ist der **Programm-Abschluss**: verbleibende design-v2-Brücke abbauen, Auth-Oberflächen vereinheitlichen, E2E-Debt bereinigen, optional RTX-Label-E2E — koordiniert über Subagents, nicht seriell alles selbst.
+>
+> Zuerst selbst lesen (Pflicht), bevor du Subagents startest:
+>
+> - `docs/rework/implementation-status.md` — Wave-3-Stand, **Deferred / Wave 4 recommendations**
+> - `docs/rework/hard-ui-ux-reset-plan.md` (Phase 10, 14, „Parallelization & Agent Cut")
+> - `docs/rework/agent-start-prompts.md` — dieses Dokument (Wave-4-Abschnitte D1–D4)
+> - `docs/rework/route-feature-inventory.md` — `legacy-ui-disconnected`-Tabelle
+> - `docs/design/new-ui-stack.md`
+> - `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`
+>
+> Ausgangslage (nicht erneut anfassen, außer Regression):
+>
+> - Alle aktiven Produkt-Routen auf neuen Shells (`StudioShell`, `WorldShell`, `SystemShell`, `PortalShell`, `ConnectorShell`)
+> - Legacy App-Shells gelöscht: `StudioAppShell*`, `PortalAppShell`, `PortalGuestShell`, `PortalPublicShell`
+> - Portal Login teilweise auf `PortalLoginForm` (app-lokal); Studio Auth-Seiten nutzen noch `@uwe/shared-ui` `AuthPageLayout`/`LoginForm`
+> - `body[data-uwe-design-v2]` + `packages/shared-ui` (`uwe-v2.css`, `shells-v2/*`) noch als CSS-Brücke aktiv
+> - E2E-Debt: `e2e/portal-shell.spec.ts` referenziert noch `.uwe-v2-shell`; `e2e/studio-settings.spec.ts` ist `test.skip`
+>
+> Verbleibender Wave-4-Scope:
+>
+> | Bereich | Ist | Ziel |
+> |---------|-----|------|
+> | Studio `/login`, `/forgot-password`, `/reset-password`, `/setup` | `AuthPageLayout` (shared-ui) | App-UI-Primitives + schlanke Auth-Layout-Komponente |
+> | Studio `/account/**` | teils `AuthPageLayout` innerhalb `SystemShell` | Card-only, kein verschachteltes AuthPageLayout |
+> | Portal Auth (falls noch shared-ui) | `PortalLoginForm` prüfen | vollständig Tailwind/Card, keine `authClasses` |
+> | design-v2 Bridge | `isDesignV2Enabled`, `data-uwe-design-v2`, `shells-v2/*` | schrittweise ref=0, dann löschen |
+> | E2E | veraltete Selektoren, skipped Tests | auf neue Shell-Selektoren, alle grün |
+> | Label-Druck E2E | CI-Stubs | optional: CUPS-Stubs erweitern oder dokumentierte Manual-QA |
+> | `legacy-ui-disconnected` `/worlds/*` | Redirect/Backend intact | Entscheidung: endgültig entfernen ODER dokumentiert behalten |
+>
+> Vorgehen — du als Orchestrator:
+>
+> 1. Verifiziere Ist-Stand auf `main`:
+>    ```bash
+>    pnpm install --frozen-lockfile
+>    pnpm --filter @uwe/database db:generate
+>    pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build:release
+>    ```
+> 2. Erstelle Branch `cursor/uwe-wave4-orchestrator-<slug>` von `main`.
+> 3. Starte Subagents parallel (max. 4):
+>
+>    **D1 — Studio Auth-UI** (`cursor/uwe-wave4-studio-auth-<slug>`)
+>    Scope: Studio `/login`, `/forgot-password`, `/reset-password`, `/setup`, `/account/**` — weg von `AuthPageLayout`, hin zu `Card`/Form-Primitives wie Wave 3 Account-Muster. Keine Business-Logik ändern.
+>
+>    **D2 — design-v2 CSS Retirement** (`cursor/uwe-wave4-design-v2-css-<slug>`)
+>    Scope: Referenz-Scan für `shells-v2/*`, `PortalShellV2`, `isDesignV2Enabled`, `data-uwe-design-v2`. Nur löschen wenn ref=0. `packages/shared-ui/src/auth/*` schrittweise auf Tailwind-taugliche Primitives umstellen oder App-lokale Auth-Komponenten. Owner von `app/layout.tsx` design-v2-Flag.
+>
+>    **D3 — E2E Bereinigung** (`cursor/uwe-wave4-e2e-<slug>`)
+>    Scope: `e2e/portal-shell.spec.ts` auf `PortalShell`-Selektoren; `e2e/studio-settings.spec.ts` ent-skip; Portal+Studio Auth-Flows via `scripts/e2e-servers.mjs`. Optional Label-E2E-Stubs in CI.
+>
+>    **D4 — legacy-ui-disconnected + Docs** (`cursor/uwe-wave4-legacy-docs-<slug>`)
+>    Scope: `/worlds/*` Public-Discovery — Produktentscheidung umsetzen (entfernen vs. dokumentiert behalten). `implementation-status.md` Wave-4-Abschluss, `README`/`ROADMAP`/`FEATURE_MATURITY_MATRIX`. `pnpm docs:check`.
+>
+> 4. Konfliktzonen serialisieren:
+>
+>    | Zone | Owner | Andere |
+>    |------|-------|--------|
+>    | `packages/shared-ui/src/auth/*` | D2 | D1 liefert App-Migration zuerst |
+>    | `apps/studio/app/layout.tsx`, `apps/portal/app/layout.tsx` | D2 | read-only für D1/D3 |
+>    | `e2e/**` | D3 | D1 koordiniert Auth-Selektoren |
+>    | `docs/rework/implementation-status.md` | D4 / Orchestrator | — |
+>    | `packages/auth/src/security/route-policy.ts` | Orchestrator | nur bei `/worlds`-Entfernung |
+>
+> 5. Merge-Reihenfolge: D1 → D2 → D3 → D4. Nach jedem Merge: `pnpm lint && pnpm typecheck && pnpm test:ci`.
+>
+> 6. Nach D1–D4: `pnpm quality`, PR ready (kein Draft wenn CI grün), Phase-14-Finale in `implementation-status.md`.
+>
+> QA — WICHTIG:
+> - Auth/Session: `scripts/e2e-servers.mjs` (Production Build+Start)
+> - Portal Spieler: `aman@uwe.local` / `uwe-dev`; Studio: `dm@uwe.local` / `uwe-dev`
+> - `.env`-Änderungen für lokale QA danach revertieren
+>
+> Leitsatz: **FUNKTIONEN BEHALTEN, ALTE OBERFLÄCHE ERSETZEN.** design-v2/CSS erst entfernen wenn ref=0 und E2E grün.
+>
+> Branch `cursor/uwe-wave4-orchestrator-<slug>`, Draft-PR bis CI grün.
+
+## Wave 4 — D1: Studio Auth-UI
+
+> Rolle: Du bist Agent D1 (Studio Auth-UI) im UWE Hard UI/UX Rework Wave 4. Baue auf Wave 3 auf (`SystemShell`, Card-Primitives).
+>
+> Scope: `apps/studio/app/login/page.tsx`, `forgot-password`, `reset-password`, `setup`, `/account/**` — ersetze `@uwe/shared-ui` `AuthPageLayout`/`AuthCard` durch app-lokale Auth-Layouts mit `Card`, `Input`, `Button`, `Label`. Form-Logik in shared-ui (`LoginForm` etc.) nur anfassen wenn nötig; bevorzuge dünne Wrapper in Studio.
+>
+> Konfliktzone: `packages/shared-ui/src/auth/*` gehört D2. Keine route-policy-Änderungen.
+>
+> DoD: Studio Auth-Seiten ohne `AuthPageLayout`; `pnpm quality` grün; E2E-Selektoren an D3 liefern.
+>
+> Branch `cursor/uwe-wave4-studio-auth-<slug>`, Draft-PR.
+
+## Wave 4 — D2: design-v2 CSS Retirement
+
+> Rolle: Du bist Agent D2 (design-v2 CSS Retirement) im UWE Hard UI/UX Rework Wave 4.
+>
+> Scope: Referenz-Scan + schrittweises Löschen von `shells-v2/*`, `PortalShellV2`-Exports (wenn ref=0), Reduktion von `data-uwe-design-v2`-Abhängigkeit. Migriere verbleibende shared-ui Auth-Komponenten auf token-basierte Klassen oder markiere als deprecated mit ref=0-Ziel.
+>
+> Konfliktzone: App-Auth-Seiten (D1) zuerst; Layout-Flags koordinieren.
+>
+> DoD: Klare ref=0-Liste; gelöschte Dateien dokumentiert; keine visuelle Regression auf migrierten Seiten; `pnpm quality` grün.
+>
+> Branch `cursor/uwe-wave4-design-v2-css-<slug>`, Draft-PR.
+
+## Wave 4 — D3: E2E Bereinigung
+
+> Rolle: Du bist Agent D3 (E2E) im UWE Hard UI/UX Rework Wave 4.
+>
+> Scope: `e2e/portal-shell.spec.ts` (keine `.uwe-v2-shell`-Selektoren), `e2e/studio-settings.spec.ts` (ent-skip), ggf. Label-Print-Stubs. Harness: `scripts/e2e-servers.mjs`.
+>
+> DoD: Alle Shell-E2E grün oder begründet skipped; `pnpm test:e2e` bzw. CI-Job grün.
+>
+> Branch `cursor/uwe-wave4-e2e-<slug>`, Draft-PR.
+
+## Wave 4 — D4: legacy-ui-disconnected + Docs
+
+> Rolle: Du bist Agent D4 (Legacy + Docs) im UWE Hard UI/UX Rework Wave 4.
+>
+> Scope: Portal `/worlds/*` legacy-ui-disconnected — Entfernung oder finale Dokumentation. `implementation-status.md` Wave-4-Abschluss, Kern-Docs, `pnpm docs:check`.
+>
+> DoD: `legacy-ui-disconnected`-Tabelle final; Programm-Abschluss vs. bewusst offene Items dokumentiert.
+>
+> Branch `cursor/uwe-wave4-legacy-docs-<slug>`, Draft-PR.
