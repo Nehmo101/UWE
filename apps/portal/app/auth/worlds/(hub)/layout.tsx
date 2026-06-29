@@ -1,6 +1,10 @@
-import { PortalAppShell } from "@/src/components/PortalAppShell";
+import {
+  BreadcrumbTrail,
+  PageHeader,
+  PortalAuthChrome,
+  PortalShell,
+} from "@/src/components/shell";
 import { getCurrentUser } from "@/src/lib/auth";
-import { portalAuthBottomNav } from "@/src/lib/mobile-nav";
 import { ADMIN_ACCESS_ROLES, hasAnyRole, resolveUweAppUrls } from "@uwe/auth";
 import type { ReactNode } from "react";
 
@@ -11,20 +15,25 @@ export default async function AuthWorldsHubLayout({ children }: { children: Reac
   const studioUrl = appUrls.studioUrl ?? null;
 
   return (
-    <PortalAppShell
-      user={user}
-      canAccessStudio={canAccessStudio}
-      studioUrl={studioUrl}
-      globalActive="worlds"
-      bottomNav={portalAuthBottomNav(null, "worlds")}
-      pageHeader={{
-        title: "Meine Welten",
-        summary: user
-          ? `Angemeldet als ${user.displayName}`
-          : "Melde dich an, um freigegebene Welten zu sehen.",
-      }}
+    <PortalShell
+      headerActions={
+        <PortalAuthChrome
+          user={user}
+          canAccessStudio={canAccessStudio}
+          studioUrl={studioUrl}
+        />
+      }
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Meine Welten" }]} />}
     >
+      <PageHeader
+        title="Meine Welten"
+        summary={
+          user
+            ? `Angemeldet als ${user.displayName}`
+            : "Melde dich an, um freigegebene Welten zu sehen."
+        }
+      />
       {children}
-    </PortalAppShell>
+    </PortalShell>
   );
 }

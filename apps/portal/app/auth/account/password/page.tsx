@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createPrismaClient } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/src/components/ChangePasswordForm";
+import { PageHeader } from "@/src/components/shell";
+import { Card, CardContent } from "@/src/components/ui/card";
 import { getCurrentUser } from "@/src/lib/auth";
 
 export default async function PortalAccountPasswordPage() {
@@ -23,20 +25,25 @@ export default async function PortalAccountPasswordPage() {
   }
 
   return (
-    <section className="portal-content-card portal-content-card-narrow">
-      <h1>Passwort ändern</h1>
-      <p className="auth-lead">
-        Angemeldet als {user.displayName}
-        {user.email ? ` (${user.email})` : ""}.
-      </p>
-      <ChangePasswordForm
-        backHref="/auth/worlds"
-        forcePasswordChange={user.forcePasswordChange}
-        initialPasswordOnly={initialPasswordOnly}
+    <>
+      <PageHeader
+        title="Passwort ändern"
+        summary={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
       />
-      <p className="auth-footer">
-        <Link href="/auth/account/security">Zwei-Faktor-Authentifizierung (2FA)</Link>
-      </p>
-    </section>
+      <Card className="max-w-md">
+        <CardContent className="pt-6">
+          <ChangePasswordForm
+            backHref="/auth/worlds"
+            forcePasswordChange={user.forcePasswordChange}
+            initialPasswordOnly={initialPasswordOnly}
+          />
+          <p className="mt-4 text-sm text-muted-foreground">
+            <Link href="/auth/account/security" className="text-primary hover:underline">
+              Zwei-Faktor-Authentifizierung (2FA)
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </>
   );
 }

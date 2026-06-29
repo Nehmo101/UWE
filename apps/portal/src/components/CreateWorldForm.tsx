@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert } from "@/src/components/ui/states";
+import { Button } from "@/src/components/ui/button";
+import { Input, Textarea } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 
 export function CreateWorldForm() {
   const router = useRouter();
@@ -45,16 +49,19 @@ export function CreateWorldForm() {
   }
 
   return (
-    <form className="uwe-form auth-create-world-form" onSubmit={handleSubmit}>
-      <h2>Neue Welt erstellen</h2>
-      <p className="auth-lead">
-        Nur für Owner/Admin. Gastzugang bleibt read-only — neue Welten sind zunächst nur für
-        angemeldete Spieler sichtbar.
-      </p>
+    <form className="mb-6 space-y-4 rounded-[var(--radius)] border border-border p-4" onSubmit={handleSubmit}>
+      <div>
+        <h2 className="text-lg font-semibold">Neue Welt erstellen</h2>
+        <p className="text-sm text-muted-foreground">
+          Nur für Owner/Admin. Gastzugang bleibt read-only — neue Welten sind zunächst nur für
+          angemeldete Spieler sichtbar.
+        </p>
+      </div>
 
-      <label>
-        Name
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="world-name">Name</Label>
+        <Input
+          id="world-name"
           name="name"
           required
           minLength={2}
@@ -63,11 +70,12 @@ export function CreateWorldForm() {
           onChange={(event) => setName(event.target.value)}
           placeholder="z. B. Terra"
         />
-      </label>
+      </div>
 
-      <label>
-        Beschreibung (optional)
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="world-description">Beschreibung (optional)</Label>
+        <Textarea
+          id="world-description"
           name="description"
           rows={3}
           maxLength={500}
@@ -75,26 +83,23 @@ export function CreateWorldForm() {
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Kurzbeschreibung für Spieler"
         />
-      </label>
+      </div>
 
-      <label className="uwe-checkbox-row">
+      <label className="flex items-start gap-2 text-sm">
         <input
           type="checkbox"
+          className="mt-1"
           checked={guestModeEnabled}
           onChange={(event) => setGuestModeEnabled(event.target.checked)}
         />
         Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar
       </label>
 
-      {error ? (
-        <p className="uwe-form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={submitting}>
+      <Button type="submit" disabled={submitting}>
         {submitting ? "Erstelle…" : "Welt erstellen"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -17,6 +17,8 @@ export interface AppShellProps {
   brandLabel: string;
   brandHref?: string;
   breadcrumb?: React.ReactNode;
+  /** Top-bar actions (logout, studio link, etc.). */
+  headerActions?: React.ReactNode;
   contextPanel?: React.ReactNode;
   footer?: React.ReactNode;
   children: React.ReactNode;
@@ -33,6 +35,7 @@ export function AppShell({
   brandLabel,
   brandHref = "/",
   breadcrumb,
+  headerActions,
   contextPanel,
   footer,
   children,
@@ -51,6 +54,9 @@ export function AppShell({
         <header className="flex h-14 items-center gap-3 border-b border-border px-4">
           <MobileNav groups={groups} brandLabel={brandLabel} />
           <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
+          {headerActions ? (
+            <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
+          ) : null}
           {commands.length > 0 ? <CommandHint /> : null}
         </header>
 

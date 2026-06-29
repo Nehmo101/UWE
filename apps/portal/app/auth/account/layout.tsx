@@ -1,7 +1,9 @@
-import { PortalAppShell } from "@/src/components/PortalAppShell";
+import {
+  BreadcrumbTrail,
+  PortalAuthChrome,
+  PortalShell,
+} from "@/src/components/shell";
 import { getCurrentUser } from "@/src/lib/auth";
-import { portalAuthBottomNav } from "@/src/lib/mobile-nav";
-import type { PortalAccountNavKey } from "@/src/lib/portal-navigation";
 import { ADMIN_ACCESS_ROLES, hasAnyRole, resolveUweAppUrls } from "@uwe/auth";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
@@ -13,20 +15,27 @@ export default async function AuthAccountLayout({ children }: { children: ReactN
   const studioUrl = appUrls.studioUrl ?? null;
   const pathname = (await headers()).get("x-uwe-pathname") ?? "/auth/account/password";
 
-  const accountActive: PortalAccountNavKey = pathname.includes("/security")
-    ? "security"
-    : "password";
+  const accountLabel = pathname.includes("/security") ? "Sicherheit (2FA)" : "Passwort";
 
   return (
-    <PortalAppShell
-      user={user}
-      canAccessStudio={canAccessStudio}
-      studioUrl={studioUrl}
-      globalActive="account"
-      accountActive={accountActive}
-      bottomNav={portalAuthBottomNav(null, "account")}
+    <PortalShell
+      headerActions={
+        <PortalAuthChrome
+          user={user}
+          canAccessStudio={canAccessStudio}
+          studioUrl={studioUrl}
+        />
+      }
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Meine Welten", href: "/auth/worlds" },
+            { label: accountLabel },
+          ]}
+        />
+      }
     >
       {children}
-    </PortalAppShell>
+    </PortalShell>
   );
 }

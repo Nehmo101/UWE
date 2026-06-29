@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { Alert } from "@/src/components/ui/states";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 
 interface ChangePasswordFormProps {
   backHref?: string;
@@ -59,9 +63,9 @@ export function ChangePasswordForm({
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {(forcePasswordChange || initialPasswordOnly) && (
-        <p className="auth-lead">
+        <p className="text-sm text-muted-foreground">
           {initialPasswordOnly
             ? "Lege dein erstes Passwort fest, um dein Konto zu aktivieren."
             : "Du musst dein Passwort ändern, bevor du fortfahren kannst."}
@@ -69,9 +73,9 @@ export function ChangePasswordForm({
       )}
 
       {!initialPasswordOnly && (
-        <>
-          <label htmlFor="current-password">Aktuelles Passwort</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="current-password">Aktuelles Passwort</Label>
+          <Input
             id="current-password"
             name="currentPassword"
             type="password"
@@ -80,52 +84,56 @@ export function ChangePasswordForm({
             onChange={(event) => setCurrentPassword(event.target.value)}
             required
           />
-        </>
+        </div>
       )}
 
-      <label htmlFor="new-password">Neues Passwort</label>
-      <input
-        id="new-password"
-        name="newPassword"
-        type="password"
-        autoComplete="new-password"
-        value={newPassword}
-        onChange={(event) => setNewPassword(event.target.value)}
-        minLength={8}
-        required
-      />
+      <div className="space-y-2">
+        <Label htmlFor="new-password">Neues Passwort</Label>
+        <Input
+          id="new-password"
+          name="newPassword"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+          minLength={8}
+          required
+        />
+      </div>
 
-      <label htmlFor="confirm-password">Neues Passwort bestätigen</label>
-      <input
-        id="confirm-password"
-        name="confirmPassword"
-        type="password"
-        autoComplete="new-password"
-        value={confirmPassword}
-        onChange={(event) => setConfirmPassword(event.target.value)}
-        minLength={8}
-        required
-      />
+      <div className="space-y-2">
+        <Label htmlFor="confirm-password">Neues Passwort bestätigen</Label>
+        <Input
+          id="confirm-password"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          minLength={8}
+          required
+        />
+      </div>
 
-      {error && <p className="auth-error">{error}</p>}
-      {success && (
-        <p className="auth-lead" role="status">
-          {success}
-        </p>
-      )}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {success ? <Alert tone="success">{success}</Alert> : null}
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
+      <Button type="submit" disabled={loading}>
         {loading ? "Speichern…" : initialPasswordOnly ? "Passwort festlegen" : "Passwort ändern"}
-      </button>
+      </Button>
 
-      <p className="auth-form-footer">
-        <Link href={backHref}>Zurück</Link>
-        {initialPasswordOnly && (
+      <p className="text-sm text-muted-foreground">
+        <Link href={backHref} className="text-primary hover:underline">
+          Zurück
+        </Link>
+        {initialPasswordOnly ? (
           <>
             {" · "}
-            <Link href="/forgot-password">Passwort-Reset anfordern</Link>
+            <Link href="/forgot-password" className="text-primary hover:underline">
+              Passwort-Reset anfordern
+            </Link>
           </>
-        )}
+        ) : null}
       </p>
     </form>
   );
