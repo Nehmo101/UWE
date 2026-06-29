@@ -18,7 +18,6 @@ describe("design v2 CSS bundle", () => {
       "mobile.css",
       "wiki.css",
       "parchment-os-shell.css",
-      "legacy-bridge.css",
       "index.css",
     ];
     for (const file of required) {
@@ -27,17 +26,15 @@ describe("design v2 CSS bundle", () => {
     }
   });
 
-  it("uwe.css imports design-v2 and legacy bridge", () => {
+  it("uwe.css imports design-v2 bundle", () => {
     const uweCss = readFileSync(path.join(__dirname, "../uwe.css"), "utf8");
     assert.match(uweCss, /@import "\.\/design-v2\/index\.css"/);
-    assert.match(uweCss, /@import "\.\/design-v2\/legacy-bridge\.css"/);
+    assert.doesNotMatch(uweCss, /legacy-bridge\.css/);
   });
 
-  it("legacy bridge maps graph height and wiki content under v2", () => {
-    const bridge = readFileSync(path.join(designV2Dir, "legacy-bridge.css"), "utf8");
-    assert.match(bridge, /max-height:\s*220px/);
-    assert.match(bridge, /data-uwe-design-v2/);
-    assert.match(bridge, /body\[data-uwe-design-v2\] \.wiki-content/);
+  it("design-v2 wiki styles target wiki-content", () => {
+    const wiki = readFileSync(path.join(designV2Dir, "wiki.css"), "utf8");
+    assert.match(wiki, /\.wiki-content/);
   });
 
   it("parchment OS handoff tokens match theme preset", () => {

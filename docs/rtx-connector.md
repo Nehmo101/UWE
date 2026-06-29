@@ -183,6 +183,33 @@ UWE_CONNECTOR_PRINTERS=[{"id":"zebra-lp2844","name":"Zebra LP 2844 Label"}]
 # UWE_CONNECTOR_PRINT=false
 ```
 
+## Manual QA — label printing
+
+GitHub CI has no CUPS printer or RTX connector hardware. Unit tests cover
+`label-print-queue-service` and connector capability detection; the Studio
+`/system/printers` UI is smoke-tested in `e2e/studio-label-print.spec.ts`.
+
+Run this checklist on a homelab with UWE Host + RTX connector before relying on
+physical label output:
+
+1. **Connector env** — copy `tools/uwe-rtx-connector/.env.example` to `.env` and set:
+   - `UWE_CONNECTOR_TOKEN` (from Studio → System → RTX Connector)
+   - `UWE_CONNECTOR_PRINTERS` or install CUPS and verify `lpstat -p`
+   - optional `UWE_CONNECTOR_PRINT_CMD` for Windows/custom spoolers
+2. **Start connector** — `pnpm connector:start` (or desktop client); confirm heartbeat in Studio.
+3. **Discover printers** — Studio → System → Drucker → **Suchen**; expect at least one printer row.
+4. **Queue smoke** — enqueue a label from a world Labels/Print flow; `/system/printers` queue shows the job.
+5. **Physical print** — job reaches `completed`; label exits the configured printer.
+
+Optional Playwright homelab run (skipped in CI by default):
+
+```bash
+UWE_E2E_LABEL_PRINT=1 pnpm test:e2e e2e/studio-label-print.spec.ts
+```
+
+CI stubs for `UWE_CONNECTOR_PRINT_CMD` remain a follow-up; until then use the
+checklist above instead of expecting green physical-print E2E in GitHub Cloud.
+
 ## Security
 
 See [connector-security.md](connector-security.md). Unknown capability names are

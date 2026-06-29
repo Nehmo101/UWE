@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TwoFactorSetupForm } from "@uwe/shared-ui";
+import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
 import {
   Card,
@@ -37,7 +37,7 @@ export default async function AccountSecurityPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TwoFactorSetupForm variant="studio" backHref="/account/password" />
+          <TwoFactorSetupForm backHref="/account/password" />
           <p className="mt-4 text-sm text-muted-foreground">
             <Link href="/account/password" className="text-primary hover:underline">
               Passwort ändern

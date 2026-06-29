@@ -87,9 +87,6 @@ export {
 /** Package export path for design v2 CSS (import in app layouts). */
 export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
 
-/** @deprecated Design V2 React shells removed in Wave 4 — apps use app-local shell components. */
-export { isDesignV2Enabled } from "./design-v2-feature";
-
 /** @deprecated Legacy shared-ui shells — new product code uses app-local shells. */
 export {
   StudioShell,
@@ -140,21 +137,13 @@ export {
 } from "./Feedback";
 
 export {
-  AuthCard,
-  AuthPageLayout,
-  ForgotPasswordForm,
-  LoginForm,
   LogoutButton,
-  ResetPasswordForm,
   SessionIdleGuard,
-  TwoFactorSetupForm,
   UweLandingPage,
   UweSessionChrome,
-  authClasses,
   readPublicAppUrls,
   resolveAuthLinks,
   type AuthLinkTargets,
-  type AuthUiVariant,
   type UweAuthApp,
 } from "./auth";
 

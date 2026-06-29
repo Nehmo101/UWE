@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import type { AuthUiVariant } from "./AuthPageLayout";
-import { authClasses } from "./AuthPageLayout";
+import { Alert } from "@/src/components/ui/states";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 
 interface TwoFactorSetupFormProps {
-  variant: AuthUiVariant;
   backHref?: string;
 }
 
@@ -15,11 +16,7 @@ interface SetupPayload {
   otpauthUri: string;
 }
 
-export function TwoFactorSetupForm({
-  variant,
-  backHref = "/",
-}: TwoFactorSetupFormProps) {
-  const classes = authClasses(variant);
+export function TwoFactorSetupForm({ backHref = "/" }: TwoFactorSetupFormProps) {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingSetup, setPendingSetup] = useState<SetupPayload | null>(null);
@@ -104,99 +101,101 @@ export function TwoFactorSetupForm({
   }
 
   if (loading) {
-    return <p className={classes.lead}>Lade Sicherheitseinstellungen…</p>;
+    return <p className="text-sm text-muted-foreground">Lade Sicherheitseinstellungen…</p>;
   }
 
   return (
-    <div className={classes.form}>
-      {success && (
-        <p className={classes.success} role="status">
-          {success}
-        </p>
-      )}
-      {error && (
-        <p className={classes.error} role="alert">
-          {error}
-        </p>
-      )}
+    <div className="space-y-4">
+      {success ? <Alert tone="success">{success}</Alert> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {enabled ? (
         <>
-          <p className={classes.lead}>
-            Zwei-Faktor-Authentifizierung ist <strong>aktiv</strong>. Beim Login wird nach dem Passwort
-            ein TOTP-Code verlangt.
+          <p className="text-sm text-muted-foreground">
+            Zwei-Faktor-Authentifizierung ist <strong>aktiv</strong>. Beim Login wird nach dem
+            Passwort ein TOTP-Code verlangt.
           </p>
-          <form onSubmit={disableTwoFactor}>
-            <label htmlFor="disable-2fa-code">Code zum Deaktivieren</label>
-            <input
-              id="disable-2fa-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={8}
-              value={disableCode}
-              onChange={(event) => setDisableCode(event.target.value)}
-              required
-            />
-            <button type="submit" className="uwe-btn" disabled={busy}>
+          <form className="space-y-4" onSubmit={disableTwoFactor}>
+            <div className="space-y-2">
+              <Label htmlFor="disable-2fa-code">Code zum Deaktivieren</Label>
+              <Input
+                id="disable-2fa-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={8}
+                value={disableCode}
+                onChange={(event) => setDisableCode(event.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" variant="destructive" disabled={busy}>
               {busy ? "Deaktiviere…" : "2FA deaktivieren"}
-            </button>
+            </Button>
           </form>
         </>
       ) : pendingSetup ? (
         <>
-          <p className={classes.lead}>
-            Scanne den Schlüssel in deiner Authenticator-App (Google Authenticator, Authy, 1Password …)
-            oder trage ihn manuell ein.
+          <p className="text-sm text-muted-foreground">
+            Scanne den Schlüssel in deiner Authenticator-App (Google Authenticator, Authy,
+            1Password …) oder trage ihn manuell ein.
           </p>
-          <p>
+          <p className="text-sm">
             <strong>Geheimschlüssel:</strong>{" "}
-            <code style={{ wordBreak: "break-all" }}>{pendingSetup.secret}</code>
+            <code className="break-all">{pendingSetup.secret}</code>
           </p>
-          <p className={classes.footer}>
-            <a href={pendingSetup.otpauthUri}>otpauth-Link öffnen</a>
+          <p className="text-sm">
+            <a href={pendingSetup.otpauthUri} className="text-primary hover:underline">
+              otpauth-Link öffnen
+            </a>
           </p>
-          <form onSubmit={activateSetup}>
-            <label htmlFor="confirm-2fa-code">Bestätigungscode aus der App</label>
-            <input
-              id="confirm-2fa-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={8}
-              value={confirmCode}
-              onChange={(event) => setConfirmCode(event.target.value)}
-              required
-            />
-            <button type="submit" className="uwe-btn uwe-btn-primary" disabled={busy}>
-              {busy ? "Aktiviere…" : "2FA aktivieren"}
-            </button>
-            <button
-              type="button"
-              className="uwe-btn"
-              disabled={busy}
-              onClick={() => {
-                setPendingSetup(null);
-                setConfirmCode("");
-              }}
-            >
-              Abbrechen
-            </button>
+          <form className="space-y-4" onSubmit={activateSetup}>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-2fa-code">Bestätigungscode aus der App</Label>
+              <Input
+                id="confirm-2fa-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={8}
+                value={confirmCode}
+                onChange={(event) => setConfirmCode(event.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={busy}>
+                {busy ? "Aktiviere…" : "2FA aktivieren"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setPendingSetup(null);
+                  setConfirmCode("");
+                }}
+              >
+                Abbrechen
+              </Button>
+            </div>
           </form>
         </>
       ) : (
         <>
-          <p className={classes.lead}>
+          <p className="text-sm text-muted-foreground">
             Schütze dein Konto mit TOTP (6-stelliger Code aus einer Authenticator-App).
           </p>
-          <button type="button" className="uwe-btn uwe-btn-primary" disabled={busy} onClick={beginSetup}>
+          <Button type="button" disabled={busy} onClick={beginSetup}>
             {busy ? "Starte…" : "2FA einrichten"}
-          </button>
+          </Button>
         </>
       )}
 
-      <p className={classes.footer}>
-        <Link href={backHref}>Zurück</Link>
+      <p className="text-sm text-muted-foreground">
+        <Link href={backHref} className="text-primary hover:underline">
+          Zurück
+        </Link>
       </p>
     </div>
   );
