@@ -8,20 +8,22 @@ export interface OwnerApiUser {
 
 /**
  * Resolve the current request's user for Owner-only API routes.
- * Mirrors `requireUser()`'s dev-bypass: when Studio auth is not required
- * (trusted-network dev mode) the operator is treated as the Owner.
- * Returns `null` when the caller is not the Owner.
+ *
+ * Prefers the real session user (so AI usage logging references a valid user).
+ * Mirrors `requireUser()`'s dev-bypass only as a fallback: when there is no
+ * session and Studio auth is not required (trusted-network dev mode), the
+ * operator is treated as the Owner. Returns `null` when the caller is not the Owner.
  */
 export async function resolveOwnerApiUser(): Promise<OwnerApiUser | null> {
+  const user = await getCurrentAuthUser();
+  if (user) {
+    return user.role === "owner" ? { userId: user.id, role: user.role } : null;
+  }
+
   if (!studioAuthRequired()) {
     return { userId: "dev-bypass", role: "owner" };
   }
-
-  const user = await getCurrentAuthUser();
-  if (!user || user.role !== "owner") {
-    return null;
-  }
-  return { userId: user.id, role: user.role };
+  return null;
 }
 
 export function ownerForbiddenResponse(): NextResponse {
