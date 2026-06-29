@@ -582,25 +582,25 @@ Stand: Juni 2026 · Kurz-Wahrheit: [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md
 | TOTP 2FA | ✅ done | `/account/security` (Studio + Portal) |
 | Rollen (owner/admin/dm/player) | ✅ done | [SECURITY.md](SECURITY.md) |
 | DM-only / Portal-Leak-Schutz | ✅ done | Hard tests + Inspector + Leak Scanner |
-| Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Kalender-Widget/Capture-Bild noch offen |
+| Daily Admin OS (Today, Capture, Life-Brain) | ✅ done | Basis-UI; Capture-Bild-Upload teils offen |
 | DnD-KI-Generator, Brain, RTX-Router | ✅ done | Cloud nur für Allgemeinen Chat; Connector lokal vorerst Ollama-only |
 | Static HTML Export | ✅ done | `pnpm export:static` |
 | Markdown/HTML Wiki-Export | ✅ done | `pnpm export:wiki` |
 | Label-Druck (6×4, PDF/HTML) | ✅ done | [docs/LABELS.md](docs/LABELS.md) |
-| Backup/Restore (API, CLI) | ✅ done | Kern vollständig; Auto-Backup-Scheduler optional — [docs/BACKUP.md](docs/BACKUP.md) |
+| Backup/Restore (API, CLI) | ✅ done | Inkl. Auto-Backup-Scheduler — [docs/BACKUP.md](docs/BACKUP.md) |
 | RTX Host Connector | 🔶 partial | Outbound Worker; ConnectorShell UI (Wave 2); Audio/Spotify/Image nur mit echten lokalen Backends — [docs/rtx-connector.md](docs/rtx-connector.md) |
-| Image Studio | 🔶 partial | Generate/Variant/Inpaint; kein Canvas-Editor — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
-| Kalender | 🔶 partial | Monats-/Wochenansicht, Feeds; vollständiger CalDAV-Sync offen — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
-| DnD API (Open5e, SRD) | 🔶 partial | Suche + Statblock-Import + Encounter-Builder — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
-| Agent Jobs | 🔶 partial | Dispatch + Polling; kein Auto-Merge — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
+| Image Studio | 🔶 partial | Generate/Variant/Inpaint + Masken-Canvas — [docs/IMAGE_STUDIO.md](docs/IMAGE_STUDIO.md) |
+| Kalender | 🔶 partial | Monats-/Wochenansicht, Feeds, Session-Sync, CalDAV-Vollsync — [docs/CALENDAR_INTEGRATION.md](docs/CALENDAR_INTEGRATION.md) |
+| DnD API (Open5e, SRD) | ✅ done | Suche + Statblock-Import + Encounter-Builder — [docs/DND_API_INTEGRATION.md](docs/DND_API_INTEGRATION.md) |
+| Agent Jobs | 🔶 partial | Dispatch + Polling; kein Auto-Merge (by design) — [docs/AGENT_JOBS.md](docs/AGENT_JOBS.md) |
 | Mail Center (SMTP) | ✅ done | Studio-only — [docs/ai-brain-mail/README.md](docs/ai-brain-mail/README.md) |
 | Tag-/Taxonomie-Aufräumer | 🔶 partial | `/admin/tags` + Merge-API; zentrales Tag-Model optional — [docs/engineering/tag-taxonomy.md](docs/engineering/tag-taxonomy.md) |
-| Secrets/Reveal (Spoiler-System) | 🔶 partial | Backend + Leak-Schutz; Studio-Editor-UI fehlt — [docs/secrets.md](docs/secrets.md) |
+| Secrets/Reveal (Spoiler-System) | ✅ done | Page + ContentBlock Editor, Leak-Schutz — [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md) §7 |
 | Performance-Budget + Stress-Seed | 🔶 partial | CI smoke + Bundle-Budget; keine Browser-LCP-Gates — [docs/engineering/performance.md](docs/engineering/performance.md) |
 | E2E-Tests Auth-Flows | ✅ done | Playwright-Baseline (`e2e/`) im CI |
 | PostgreSQL-Option | ✅ done | Dual-Client + Baseline-Migration — [docs/postgresql.md](docs/postgresql.md) |
 | Asset-Datei-Import (Bulk) | 🔲 planned | Einzel-Upload vorhanden |
-| Import Undo | 🔲 planned | Preview vorhanden; kein Import-Rollback |
+| Import Undo | ✅ done | Activity-Log-Undo nach KnoteForge-Execute — [docs/FEATURE_MATURITY_MATRIX.md](docs/FEATURE_MATURITY_MATRIX.md) §6 |
 
 ---
 
@@ -621,27 +621,21 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURE_MATURITY_MATRIX.md]
 - [x] Mail Center, Kalender (Kern), Image Studio (Generate/Variant/Inpaint), DnD API (Kern)
 - [x] Backup/Restore (Welten, Templates, ShareLinks, Verschlüsselung, Pre-Restore-Safety)
 - [x] PostgreSQL dual-client, E2E Auth-Baseline, CI Bundle-Budget + Performance-Smoke
-- [x] Hard UI/UX Reset Wave 0–2: zentraler Nav-Contract, Tailwind v4 + shadcn-Shells, AppShell/StudioShell/PortalShell, ConnectorShell mit connector-nav IA, QF10 Label-Druck via RTX, Drucker-Dokumentation
-- [x] Hard UI/UX Reset Wave 3 (C4): `PortalPublicShell` + `StudioAppShellV2` entfernt; design-v2 bridge verifiziert; Phase-14-Docs aktualisiert
+- [x] Hard UI/UX Reset Wave 0–4: Shells, Nav-Vertrag, Legacy-Retirement, Auth-UI, E2E (siehe `docs/rework/implementation-status.md`)
+
+- [x] Image Studio Masken-Canvas, CalDAV-Vollsync, Auto-Backup-Scheduler, Import Undo (PR #313)
 
 ### Partial / in progress
 
-- [ ] Hard UI/UX Reset Wave 3 C1/C2 — `/settings`, `/admin` overview, Portal auth/share auf AppShell; Wrapper-Löschung
-- [ ] RTX Host Connector — first-party Image Worker, AI-Brain Queue Adapter, autostart/tray packaging
-- [ ] Image Studio — Canvas-Editor, Cloud-Edit-Härtung
-- [ ] Kalender — vollständiger CalDAV-Sync, Session ↔ Event Auto-Sync
-- [ ] Agent Jobs — Completion-Callback, Cursor CLI Härtung
-- [ ] Daily Admin OS — Kalender auf `/today`, Capture-Bild-Upload, Mobile auf allen Welt-Views
-- [ ] Secrets/Reveal Studio-UI, Import Undo
-- [ ] Tag-Taxonomie — optionales zentrales Tag-Model, Asset/Life-Brain Tag-Felder
-- [ ] Performance — größere Stress-Welt, Browser-LCP-Gates
+Siehe [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) — aktuell kein bestätigter Produkt-Backlog.
+
+Weitere Lücken ohne festen Slot: RTX Connector Packaging, Capture-Bild-Upload,
+Life-Brain Retrieval, Performance-Browser-Gates, Tag-Taxonomie (optional).
 
 ### Planned / not started
 
 - [ ] Asset-Datei-Import (Karten, Sounds, Handouts als Bulk)
-- [ ] Geplanter Auto-Backup-Scheduler (`autoBackupEnabled`)
 - [ ] Distributed Session Store bei horizontaler Skalierung
-- [ ] Code Cleanup / Reduction (Legacy-Pfade, tote CSS)
 
 ---
 

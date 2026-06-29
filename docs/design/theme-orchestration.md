@@ -26,7 +26,7 @@ Detailseite. Fünf Workstreams, je eigener Branch + PR, gemäß Abhängigkeitsgr
 | WS-4 | #229 | `claude/view-ws4-readability` | Lesebreite (`.wiki-reader`), Verwaltungs-Panels (Freigabe/KI) in `Collapsible`; stacked auf WS-1 | ✅ merged (#229) |
 | WS-5 | #230 | `claude/view-ws5-consistency` | A11y (Bottom-Nav-Label 0.7rem), toter `.wiki-layout`-CSS entfernt, Doku auf Parchment-OS-Realität | ✅ merged (#230) |
 
-Alle fünf in `main` (squash). **Offene Nacharbeit:** manuelle Browser-QA über alle 9 Presets
+Alle fünf in `main` (squash). Automatisierter Kontrast-Audit (axe-core) und Portal-Theme-Sync sind erledigt (PRs #239, #243, #259–#260).
 (§8 des Plans) sowie die bewusst zurückgestellten Punkte — Badge-System-Vereinheitlichung
 (`.uwe-badge-*` vs `.wiki-badge-*`) und Blöcke/`WorldContextSidebar`-Deduplizierung.
 

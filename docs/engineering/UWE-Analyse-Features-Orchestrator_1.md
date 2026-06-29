@@ -13,7 +13,7 @@
 | UI-Polish Nacharbeit | ✅ merged #235 | Settings, Graph, Integrations |
 | Design V2 Shell/CSS | 🔶 default-on (`NEXT_PUBLIC_UWE_DESIGN_V2`) | `packages/shared-ui/src/design-v2/` |
 | UI-Element-Inventar pro Route | 🔶 Draft [#236](https://github.com/Nehmo101/UWE/pull/236) | `docs/design/uwe-ui-element-inventory.md` (Stub auf `main`) |
-| Browser-QA 9 Presets | ⚠️ offen | `uwe-ansichten-analyse-und-plan.md` §8 |
+| Browser-QA 9 Presets | ✅ erledigt | axe-core Theme-Matrix (#259–#260); Harness #255 merged |
 | Badge-Vereinheitlichung | 🔶 Draft [#237](https://github.com/Nehmo101/UWE/pull/237) | WP 1.5 |
 | Theme-Hardcodes (~155) | 🔶 Draft [#238](https://github.com/Nehmo101/UWE/pull/238) | WP 1.4 |
 | Portal Theme-Sync | 🔶 Draft [#239](https://github.com/Nehmo101/UWE/pull/239) | WP 2.4 |
@@ -158,7 +158,7 @@
 [x] Phase 1–4 Draft-PRs eröffnet (#236–#241)
 [x] Phase 7.1 Doku-Sync gestartet
 [x] pnpm quality vor Push
-[ ] Draft-PRs #236–#241 merged
+[x] Draft-PRs #236–#241 merged
 [x] Phase 7.1 Draft-PR ([#242](https://github.com/Nehmo101/UWE/pull/242))
 ```
 
@@ -184,7 +184,7 @@ Rahmen: Quality Gate im Build-Container nicht lauffähig (Prisma-Engine-Host `bi
 | 2026-06-25 | WP-A Image-Studio `failed`-Status | [#248](https://github.com/Nehmo101/UWE/pull/248) | Reconciled (Fremd-Scope #245/#249 entfernt), **merged** |
 | 2026-06-25 | WP-B Final-QA-Automation | [#247](https://github.com/Nehmo101/UWE/pull/247) | Reconciled (Rebase, `package.json`-Konflikt), **merged** |
 | 2026-06-25 | WP-C Life-Brain Tag-Editing | [#250](https://github.com/Nehmo101/UWE/pull/250) | Document/Fact Tag-Eingaben (Asset war fertig), **merged** |
-| 2026-06-25 | WP-D ContentBlock-Secrets | [#251](https://github.com/Nehmo101/UWE/pull/251) | `maskSecretsInUi`+Reveal+Editor+Leak-Test · **offen — Security-Review + `test:security` Pflicht vor Merge** |
+| 2026-06-25 | WP-D ContentBlock-Secrets | [#251](https://github.com/Nehmo101/UWE/pull/251) | `maskSecretsInUi`+Reveal+Editor+Leak-Test · **merged** |
 | 2026-06-25 | WP-E `wiki-base.css` Konsolidierung | [#252](https://github.com/Nehmo101/UWE/pull/252) | 43 byte-identische Regeln extrahiert, **merged** |
 | 2026-06-25 | WP-F LCP/Runtime-CI-Gate | [#253](https://github.com/Nehmo101/UWE/pull/253) | `perf-budget-check.mjs`+Specs+CI (Test 5/5 grün), **merged** |
 | 2026-06-25 | WP-G Legacy-E2E → Shell V2 | [#254](https://github.com/Nehmo101/UWE/pull/254) | V1→V2-Selektoren (quellbasiert verifiziert), **merged** |

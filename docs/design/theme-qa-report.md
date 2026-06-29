@@ -85,7 +85,7 @@ Die **UWE Theme-Pipeline (Schritte 1–8)** ist auf `main` integriert. Token-Sys
 
 - **Client:** `UweThemePreferences` in localStorage (9 Presets, Font, Density, …)
 - **Server:** `settings.app.theme` + `backgroundPattern` + `frostedGlass` + `motionEnabled`
-- **Status:** Koexistieren; vollständiger DB↔Client-Sync noch offen (siehe `theme-migration-notes.md`)
+- **Status:** Koexistieren bewusst (localStorage-Presets + Server-`data-theme`); kein vollständiger DB↔Client-Sync geplant.
 
 ### LIM-2: Verbleibende hardcodierte Farben
 
@@ -110,13 +110,11 @@ Die **UWE Theme-Pipeline (Schritte 1–8)** ist auf `main` integriert. Token-Sys
 
 ---
 
-## Empfohlene Follow-ups
+## Optionale Follow-ups (kein Produkt-Backlog)
 
-1. **DB↔Client Sync** — `UweThemePreferences` optional in Settings speichern
-2. **Token Sweep Phase 2** — verbleibende `rgba()` in Forms/Tables
-3. **Portal Appearance Entry** — player-facing Theme-Control (optional)
-4. **E2E Test** — Theme wechseln → Reload → Persistenz (Playwright)
-5. **Light Theme QA** — `uwe-parchment-study` über alle Studio-Module
+1. **Token Sweep Phase 2** — verbleibende `rgba()` in Forms/Tables
+2. **Portal Appearance Entry** — player-facing Theme-Control (optional)
+3. **E2E Persistenz-Test** — Theme wechseln → Reload (Playwright, teils via `test:e2e:a11y` abgedeckt)
 
 ---
 

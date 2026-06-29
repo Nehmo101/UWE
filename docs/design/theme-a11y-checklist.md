@@ -71,14 +71,7 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 
 ---
 
-## Offene Punkte (Backlog)
-
-### Theme-System
-
-- [ ] **Vollständiges Light Theme**: Topbar, Sidebar, Cards, Formulare, Portal-Auth und Wiki-Nav nutzen noch hardcoded Dark-Farben.
-- [ ] **Portal Theme-Sync**: Studio speichert Theme in DB; Portal wendet `data-theme` noch nicht an.
-- [ ] **PWA `theme-color` dynamisch**: Manifest/Viewport noch statisch indigo/purple.
-- [ ] **Kontrast-Audit automatisiert**: Kein CI-Check (z. B. axe/pa11y) für alle Badge-Kombinationen.
+## Optionale Verbesserungen (kein Produkt-Backlog)
 
 ### Keyboard & Fokus
 
@@ -95,10 +88,11 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 - [ ] **FAB + Sticky Action Bar**: Auf sehr kleinen Screens kann es an unterem Rand eng werden.
 - [ ] **Portal Wiki Reader**: Kein Bottom Nav auf `/worlds/.../[category]/[slug]`.
 
-### Tests
+### Erledigt (nicht mehr Backlog)
 
-- [ ] **E2E Accessibility**: Kein Playwright + axe-core Smoke Test.
-- [ ] **Manuelle Geräte-Matrix**: iOS Safari, Android Chrome, VoiceOver/TalkBack noch nicht dokumentiert getestet.
+- Portal Theme-Sync (`ThemeDocumentSync`, PR #239)
+- E2E Accessibility (`pnpm test:e2e:a11y`, PR #243)
+- Automatisierter Kontrast-Audit (axe-core Theme-Matrix, PRs #259–#260)
 
 ---
 

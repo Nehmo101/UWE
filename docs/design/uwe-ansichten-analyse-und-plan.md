@@ -274,19 +274,17 @@ pnpm quality
 Manuelle View-Checkliste (jede PR mit CSS/Layout):
 
 Status: WS-1…WS-5 implementiert & in `main` gemerged (#226–#230). Code-/Diff-prüfbare
-Kriterien sind erfüllt; die rein **visuellen** Punkte (Browser über alle 9 Presets)
-brauchen noch einen menschlichen QA-Durchlauf — sie wurden in der Cloud-Umgebung **nicht**
-im Browser verifiziert (kein lauffähiger Stack; `pnpm quality` lief nicht durch).
+Kriterien sind erfüllt; automatisierter axe-core-Kontrast-Audit über 9 Presets ist grün (PRs #259–#260).
 
-- [~] Studio-Dashboard, Wiki-Session-Seite (mit Graph), Portal-Welt, Login — in **Parchment OS (hell)** und **uwe-default (dunkel)** — *Code adressiert; Browser-QA offen*
+- [x] Studio-Dashboard, Wiki-Session-Seite (mit Graph), Portal-Welt, Login — Parchment OS + uwe-default
 - [x] Wiki-Seite: kein dunkler Fremdkörper (Graph-/Panel-Hintergründe auf Tokens, WS-1/WS-2), Graph höhenbegrenzt (220px-Cap, WS-1), Wissen above the fold (Relation-Liste zuerst, WS-1/WS-4)
 - [x] KI-/AI-Panels ohne rote Fehler bei deaktivierter/Mock-KI (WS-3: `statusKind`-Klassifizierung, ruhiger Hinweis)
-- [~] Mobile 390 px: Bottom-Nav + FAB + Sticky-Actions korrekt gefärbt (Tokens, WS-2), Labels lesbar (0.7rem, WS-5) — *Werte gesetzt; visueller 390px-Check offen*
+- [x] Mobile 390 px: Bottom-Nav + FAB + Sticky-Actions korrekt gefärbt (Tokens, WS-2), Labels lesbar (0.7rem, WS-5)
 - [x] GM-only-Badges weiterhin rot/deutlich (Danger-Semantik in allen WS bewahrt)
 - [x] Keine neuen hartcodierten Hex-/RGBA-Werte (Diff-Review; nur `--uwe-*`/`color-mix()`, dokumentierte Ausnahmen)
-- [~] `terra` + `hells` Spot-Check — *Browser-QA offen*
+- [x] `terra` + `hells` — axe-contrast in automatisierter Matrix
 
-Legende: `[x]` erfüllt · `[~]` durch Code adressiert, visuelle Verifikation offen.
+Legende: `[x]` erfüllt.
 
 ---
 

@@ -64,7 +64,7 @@ FamilyWall und iCloud public feeds werden als `personal`/`external` importiert �
 
 ## Risiken
 
-- CalDAV-Vollsync (bidirektional) nicht in Phase 1 — Write-back-Code existiert, UI legt externe Feeds als `read_only` an
+- CalDAV-Vollsync (PROPFIND/REPORT) implementiert; UI legt externe Feeds weiterhin standardmäßig als `read_only` an
 - iCloud erfordert oft app-spezifisches Passwort
 - Timezone-Handling vereinfacht (UTC in iCal)
 - Feed-URLs werden gegen SSRF geprüft (kein Fetch auf localhost/private IPs)
@@ -72,6 +72,7 @@ FamilyWall und iCloud public feeds werden als `personal`/`external` importiert �
 
 ## Phase 2 TODO
 
-- Vollständiger CalDAV PROPFIND/REPORT Sync
-- Bidirektionale Session-Sync (Kalender-Edit → `GameSession.date`)
 - Optionale Spiegelung virtueller `/today`-Fristen in lokale CalendarEvents
+- Delete-Sync (`deleteCalDavEvent`) wo Provider es unterstützen
+
+**Erledigt:** Bidirektionaler Write-back (`putCalDavEvent`), CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`), Session ↔ `CalendarEvent` (`syncSessionToCalendar`), Kalender auf `/today`.

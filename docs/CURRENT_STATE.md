@@ -4,7 +4,7 @@ Kurze, eindeutige Wahrheit über den aktiven Stand. Bei Widersprüchen in andere
 Dokumenten gilt diese Datei (Runtime/CI) bzw.
 [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) (Feature-Reifegrade).
 
-Stand: Juni 2026.
+Stand: Juni 2026 (Doku-Sync 2026-06-29, Backlog #313 umgesetzt).
 
 ## Aktive Runtime
 
@@ -51,16 +51,28 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 - **Stable/Core:** Worlds, Wiki, Assets, Portal, Auth, Visibility, Host Setup,
   Backup, Search, Static/Wiki Export.
-- **Beta:** Calendar, DnD API, Daily Admin OS, Secrets/Reveal, Kanonprüfung,
-  Prepare-for-next-session.
-- **Lab / nicht production-ready:** Image Studio, Agent Jobs / Orchestrator,
-  Performance-Budget / große Testwelt, Import Undo (fehlt), Life-Brain Retrieval (fehlt).
+- **Beta:** Calendar (inkl. CalDAV-Vollsync), DnD API, Daily Admin OS,
+  Secrets/Reveal (Page + Block), Kanonprüfung, Prepare-for-next-session,
+  Agent Jobs (Dispatch + Polling), Image Studio (Masken-Canvas), Import Undo,
+  Auto-Backup-Scheduler.
+- **Lab / nicht production-ready:** Performance-Budget / große Testwelt,
+  Life-Brain Retrieval (fehlt).
 - **Deprecated/Removed:** Docker, Windows-One-Click-Installer, inbound RTX-Agent.
 
-## Bekannte nicht-production-ready Bereiche
+## Produkt-Backlog (bestätigt offen)
 
-- **Import Undo fehlt** — Imports sind nur per Backup zurückrollbar; UI warnt vor Execute.
-- **Agent Jobs** — kein Completion-Callback/PR-Sync; Status bleibt ggf. `running`.
-- **Image Studio** — kein Canvas-Editor; Cloud-Edit/Fehlerhandling unvollständig.
+Aktuell **keine** bestätigten offenen Produkt-Backlog-Punkte (Stand nach PR #313).
+
+Zuletzt umgesetzt: Image Studio Masken-Canvas, CalDAV PROPFIND/REPORT-Vollsync,
+Auto-Backup-Scheduler (`autoBackupEnabled` → Host-`schedule.json`), Import Undo.
+
+**Nicht im Backlog** (bewusst nicht verfolgt): Asset-Level-Secrets, manuelle Browser-QA
+über 9 Theme-Presets, vollständiges Light-Theme-Refactoring, DB↔Client-Theme-Sync,
+`docs:check` für Skills-README, DnD-API-Cache-Aufräumen, Agent-Jobs-Completion-Callback.
+
+## Weitere bekannte Lücken (ohne festen Backlog-Slot)
+
 - **Life-Brain Retrieval** — kein Embedding/Retrieval; nur Speicherung.
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
+- **Capture Bild-Upload** — `file_image`-Typ in DB, UI teils offen.
+- **Agent Jobs** — Dispatch + Polling funktional; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](SECURITY_SETTINGS.md)).

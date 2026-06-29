@@ -55,6 +55,6 @@ Die Rolle wird über Portal-Session oder den Header `X-UWE-Actor-Role` aufgelös
 
 ## Noch offene Erweiterungen
 
-- PageTemplates, PlayerNotes, ShareLinks (ohne Tokens) im Backup-Format
-- Geplante Auto-Backups (`autoBackupEnabled` → Scheduler)
-- Users/Memberships vollständig im Restore-Pfad
+- ~~Geplante Auto-Backups~~ — **Erledigt:** `autoBackupEnabled` schreibt `schedule.json` für Host-Timer (`backup-schedule-sync.ts`)
+
+**Erledigt:** PageTemplates, PlayerNotes, ShareLinks (ohne Tokens) im Backup-Format; Users/Memberships im Restore-Pfad.

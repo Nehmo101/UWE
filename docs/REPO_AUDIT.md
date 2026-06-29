@@ -558,8 +558,8 @@ Von `20260611214509_init_uwe_data_model` bis `20260614074010_daily_admin_os_exte
 - ✅ Settings UI (General, Worlds, Portal, Privacy, Storage, AI, Mail, Backup)
 - ✅ CI: lint, typecheck, test, build (`ci.yml`)
 - ✅ Linux Host + `systemd` (`deploy/scripts/setup-uwe-host.sh`, `uwe.service`) — **kein** Docker/Windows-Installer mehr
-- ✅ Image Studio Phase 2 (`generate`/`variant`/`inpaint`; kein Canvas-Editor)
-- ✅ Kalender Phase 2 (lokal, iCal/CalDAV/FamilyWall, Wochenansicht; CalDAV write-back optional)
+- ✅ Image Studio Phase 2 (`generate`/`variant`/`inpaint` + Masken-Canvas)
+- ✅ Kalender Phase 2 (lokal, iCal/CalDAV/FamilyWall, Wochenansicht, CalDAV-Vollsync)
 - ✅ DnD API Phase 2 (Open5e/SRD-Suche, Statblock-Import)
 - ✅ Agent Jobs Phase 2 (GitHub Actions / Cursor Cloud Dispatch, Polling)
 
@@ -573,16 +573,19 @@ Kurzfassung — **nicht** als fertig verkaufen:
 
 | Feature | Echter Status |
 |---------|---------------|
-| **Image Studio** | Phase 2: Prompt + Inpaint-UI — kein Canvas-Editor |
-| **Kalender** | Phase 2: Wochenansicht + optional CalDAV Write-back |
-| **DnD API** | Open5e + Statblock-Import + Encounter-Builder |
-| **Agent Jobs** | Dispatch + GitHub-Status-Polling — kein Completion-Callback |
-| **Secrets/Reveal** | Backend + Tests — keine Studio-Editor-UI |
-| **Import Undo** | Nicht vorhanden (nur Preview) |
-| **Performance-Budget / Stress-Testwelt** | Nicht vorhanden |
-| **Tag-Aufräumer** | Nicht vorhanden |
+| **Image Studio** | Generate/Variant/Inpaint + Masken-Canvas — Cloud-Edit teils offen |
+| **Kalender** | Wochenansicht + CalDAV-Vollsync + Write-back |
+| **DnD API** | Open5e + Statblock-Import + Encounter-Builder — Kern fertig |
+| **Agent Jobs** | Dispatch + Polling — kein Auto-Merge (by design) |
+| **Secrets/Reveal** | Page + Block Editor, Leak-Tests — Kern fertig |
+| **Import Undo** | Activity-Log-Undo nach KnoteForge-Execute |
+| **Auto-Backup-Scheduler** | `autoBackupEnabled` → Host-`schedule.json` |
+| **Performance-Budget / Stress-Testwelt** | CI-Smoke only |
+| **Tag-Aufräumer** | API + `/admin/tags`; zentrales Model optional |
 
-Weiterhin offen (Roadmap):
+Produkt-Backlog (bestätigt): siehe [CURRENT_STATE.md](CURRENT_STATE.md).
+
+Weitere Lücken (ohne festen Backlog-Slot):
 
 - ✅ **Studio DM-Login** — Session-Login (owner/admin/dm); `AUTH_REQUIRED=true` für Produktion
 - ✅ **Image Studio Phase 2** — Inpaint-UI, Varianten-Batch, Seiten-Link
@@ -592,6 +595,10 @@ Weiterhin offen (Roadmap):
 - ✅ **PostgreSQL-Option** — dual-client + Baseline-Migration
 - ✅ **Markdown/HTML Export** — `pnpm export:wiki`
 - ❌ **Asset-Datei-Import** — Roadmap (README)
+- ✅ **Auto-Backup-Scheduler** — Settings → `schedule.json` für Host-Timer
+- ✅ **Import Undo** — Activity Log nach KnoteForge-Execute
+- ✅ **CalDAV Vollsync** — PROPFIND/REPORT (`syncCalDavCollection`)
+- ✅ **Image Studio Canvas** — `ImageStudioMaskCanvas` für Inpaint
 - ❌ **Vollständige Mobile-UI** für alle Welt-Unterseiten (Soundboard, Labels, Dungeons teils ohne Bottom Nav)
 - ❌ **Capture Bild-Upload** — `file_image` Typ in DB, UI für Datei-Upload prüfen/ergänzen
 - ❌ **Personal Brain Embeddings** — Life-Brain ohne Retrieval wie DnD-Brain

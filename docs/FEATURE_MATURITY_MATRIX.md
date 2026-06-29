@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juni 2026 · Wave 3 (C4 CSS/Docs) · Branch-Basis `cursor/uwe-wave3-css-docs-0eb3`.
+Stand: Juni 2026 (Doku-Sync 2026-06-29) · Wave 4 abgeschlossen.
 
 **Legende**
 
@@ -24,11 +24,11 @@ Stand: Juni 2026 · Wave 3 (C4 CSS/Docs) · Branch-Basis `cursor/uwe-wave3-css-d
 |---|---------|--------------|---------|------------------|
 | 1 | Image Studio | Phase 2 (Inpaint-UI) | Ja (Generierung + Inpaint) | Nein |
 | 2 | Calendar / iOS / FamilyWall | Phase 2 | Ja (lokal + Feeds + Wochenansicht) | Teilweise |
-| 3 | DnD API / offene Quellen | Phase 2 | Ja (Suche + Statblock-Import) | Teilweise |
-| 4 | Agent Jobs / Orchestrator | Phase 2 (Polling) | Ja (mit Limits) | Nein |
+| 3 | DnD API / offene Quellen | Stable (Kern) | Ja (Suche + Statblock-Import) | Ja (Kern) |
+| 4 | Agent Jobs / Orchestrator | Phase 1 done | Ja (mit Limits) | Teilweise |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
 | 6 | Import Preview / Undo | Preview ja, Undo nein | Preview ja | Preview ja |
-| 7 | Secrets-/Reveal-System | Backend ja, Editor-UI ja (Page + ContentBlock) | Teilweise | Teilweise |
+| 7 | Secrets-/Reveal-System | Stable (Page + Block) | Ja | Ja (Kern) |
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
 | 10 | Global Search 2.0 | Erweiterte Suche v1 | Ja | Ja (Kern) |
@@ -54,20 +54,17 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 ### 🔶 Beta (nutzbar, nicht voll production-ready)
 
-- Calendar (iCal/CalDAV/FamilyWall — kein voller CalDAV-Sync)
-- DnD API (Open5e/SRD — Cache-Inkonsistenzen offen)
+- Calendar (iCal/CalDAV/FamilyWall — PROPFIND/REPORT-Vollsync)
+- DnD API (Open5e/SRD — Kern fertig)
 - Daily Admin OS (Today/Capture/Projekte/… — teilweise)
-- Secrets/Reveal (Page + Block; Asset-Ebene offen)
+- Secrets/Reveal (Page + Block — production-ready Kern)
 - Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
+- Agent Jobs (Dispatch + Polling — kein Auto-Merge by design)
 
 ### 🧪 Lab / nicht production-ready
 
-- **Image Studio** — generate/variant/inpaint je nach Provider/RTX; kein Canvas,
-  Cloud-Edit/`failed`-Handling unvollständig.
-- **Agent Jobs / Orchestrator** — Dispatch + Polling; Completion-Callback / PR-Sync /
-  zuverlässige Statusrückmeldung offen. Kein automatischer Welt-/Brain-Kontext in Cloud-Agenten.
+- **Image Studio** — Cloud-Edit/Fehler-Handling teils unvollständig (Masken-Canvas vorhanden).
 - **Performance-Budget / große Testwelt** — CI-Smoke + Bundle-Budget; keine Browser-LCP-Gates.
-- **Import Undo** — nicht vorhanden (nur Import Preview). Vor Execute Backup nötig.
 - **Life-Brain Retrieval** — kein Embedding/Retrieval; Daily Admin OS speichert nur.
 
 ### ⛔ Deprecated / Removed
@@ -83,17 +80,17 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | Ja |
-| Scaffolding | Canvas/Editor-Drafts = Scaffolding |
-| UI | Ja — `/image-studio` (`ImageStudioJobForm` + Projektliste) |
+| Scaffolding | `ImageEditorDraft` (optional) |
+| UI | Ja — `/image-studio` (`ImageStudioJobForm` + `ImageStudioMaskCanvas`) |
 | API | Ja — `GET/POST /api/image-studio` |
 | DB | Ja — `ImageStudioProject`, `ImageStudioVersion`, `ImageStudioLink` |
 | Tests | Minimal — 1 Config-Test, Route-Authz, Smoke |
 | Nutzbar | **Ja** für `generate` / `variant` / `inpaint` (RTX + Maske) |
-| Production-ready | **Nein** — kein Canvas-Editor, Cloud nur generate/variant |
+| Production-ready | **Teilweise** — Masken-Canvas für Inpaint; Cloud nur generate/variant |
 
-**Was funktioniert:** Prompt → Job → RTX oder optional Cloud DALL-E → `dm_only` Asset + Version; Inpaint-Maske + Varianten-Batch; Seiten-Link aus Editor.
+**Was funktioniert:** Prompt → Job → RTX oder optional Cloud DALL-E → `dm_only` Asset + Version; Masken-Canvas für Inpaint + Varianten-Batch; Seiten-Link aus Editor.
 
-**Was nicht:** Canvas, Drafts, Cloud-Edit, zuverlässiges `failed`-Handling in allen Pfaden.
+**Was nicht:** Drafts, Cloud-Edit, zuverlässiges `failed`-Handling in allen Pfaden.
 
 **Risiken**
 
@@ -105,7 +102,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 1. Phase-1-UI auf `generate`/`variant` beschränken oder Quellbild-Upload.
 2. `ImageStudioProject.status = failed` bei Job-Fehler.
-3. Phase 2: Canvas, `ImageEditorDraft`, Links aus Assets/Labels.
+3. Optional: `ImageEditorDraft`, erweiterte Links aus Assets/Labels.
 
 **Referenzen:** `docs/IMAGE_STUDIO.md`, `packages/image-studio/`, `apps/studio/app/image-studio/`
 
@@ -134,15 +131,13 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 - SSRF bei Feed-URLs (behoben: `assertUserProvidedFetchUrlAllowed`).
 - `CALENDAR_CALDAV_ENABLED` / `CALENDAR_FAMILYWALL_ENABLED` waren nicht enforced (behoben).
-- Kein PROPFIND/REPORT — kein vollständiger CalDAV-Sync.
+- PROPFIND/REPORT-Vollsync (`syncCalDavCollection`) — externe Events werden importiert und fehlende UIDs entfernt.
 - Timezone vereinfacht (UTC).
 
 **Nächste Schritte**
 
-1. UI für `read_write` CalDAV + pro-Feed verschlüsselte Credentials.
-2. Delete-Sync (`deleteCalDavEvent`).
-3. `/today`-Aggregation mit Kalender-Events.
-4. CalDAV-Mock-Integrationstest.
+1. Delete-Sync (`deleteCalDavEvent`) wo Provider es unterstützen.
+2. CalDAV-Mock-Integrationstest.
 
 **Referenzen:** `docs/CALENDAR_INTEGRATION.md`, `packages/calendar/`, `apps/studio/app/calendar/`
 
@@ -159,7 +154,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | DB | Ja — `DndApiCacheEntry`, `DndBeyondReference` |
 | Tests | Minimal — Export-Smoke, Route-Authz |
 | Nutzbar | **Ja** — Open5e-Suche + Monster-Detail, SRD-Monster, Beyond-Links |
-| Production-ready | **Teilweise** — Lizenz-Hinweise ergänzt, Cache-Inkonsistenzen offen |
+| Production-ready | **Ja (Kern)** — Suche, Statblock-Import, Encounter-Builder |
 
 **Quellen**
 
@@ -191,13 +186,13 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | Ja (Runtime) + Docs-only (Orchestrator) |
-| Scaffolding | `cursor_cli_local`, Completion-Callback, Orchestrator-Prompts |
+| Scaffolding | `cursor_cli_local`, Orchestrator-Prompts (Doku-only) |
 | UI | Ja — `/admin/agent-jobs`, `/jobs` |
 | API | Ja — `/api/agent-jobs`, Job-Queue `agent_job` |
 | DB | Ja — `DevAgentJob` |
 | Tests | Minimal — Config-Resolution |
 | Nutzbar | **Ja** — Dispatch zu GitHub Actions / Cursor Cloud |
-| Production-ready | **Nein** — Status bleibt `running`, kein PR-Sync |
+| Production-ready | **Teilweise** — Dispatch + Polling; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](../SECURITY_SETTINGS.md)) |
 
 **Runtime vs. Doku**
 
@@ -217,11 +212,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 - Placeholder `.cursor-agent-prompt.txt` auf Branch wenn CLI fehlt.
 - Retry ohne Idempotenz → doppelte Runs.
 
-**Nächste Schritte**
-
-1. Webhook/Callback für `DevAgentJob.completed` + `prUrl`.
-2. Echter `githubRunId` statt Placeholder.
-3. Prompt-Sanitizer für offensichtliche Secrets (optional).
+**Optional (nicht im Produkt-Backlog):** Prompt-Sanitizer, robusteres Run-ID-Tracking.
 
 **Referenzen:** `docs/AGENT_JOBS.md`, `packages/agent-jobs/`, `.github/workflows/cursor-agent.yml`
 
@@ -240,7 +231,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Nutzbar | **Ja** |
 | Production-ready | **Teilweise** — README war veraltet (korrigiert) |
 
-**Lücken:** Kalender auf `/today`, `nextActionDate`, Bild-Capture-Upload, Life-Brain-Retrieval.
+**Lücken:** `nextActionDate`, Bild-Capture-Upload, Life-Brain-Retrieval. Kalender auf `/today` ist implementiert (PR #245).
 
 **Referenzen:** `docs/daily-admin-os.md`, `apps/studio/app/today/`
 
@@ -251,18 +242,18 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Kriterium | Status |
 |-----------|--------|
 | Import Preview | **Production-ready** |
-| Import Undo | **Nicht vorhanden** |
+| Import Undo | **Beta** — Activity-Log-Undo nach KnoteForge-Execute |
 
 | Kriterium | Preview | Undo |
 |-----------|---------|------|
-| UI | `ImportWorkspace.tsx` | — |
-| API | `/api/import/preview`, `/api/import/execute` | — |
-| DB | — | Kein `UndoOperation` für Imports |
-| Tests | `importer.test.ts`, CSRF-Authz | — |
+| UI | `ImportWorkspace.tsx` | Undo über Activity Log |
+| API | `/api/import/preview`, `/api/import/execute` | `undo-service` (`import.execute`) |
+| DB | — | `UndoOperation` + Import-Payload |
+| Tests | `importer.test.ts`, CSRF-Authz | `activity-undo.test.ts` |
 
-**Risiko:** Nutzer können Import für irreversibel halten. Rollback nur via Backup.
+**Risiko:** Undo deckt den letzten Import-Execute ab; komplexe Mehrfach-Imports erfordern weiterhin Backup.
 
-**Nächste Schritte:** Import-spezifisches Undo oder klare UI-Warnung + Backup-Hinweis.
+**Nächste Schritte:** Undo für weitere Import-Quellen; klare UI-Hinweise bei irreversiblen Teilschritten.
 
 **Referenzen:** `packages/knoteforge-import/`, `packages/database/src/undo-service.ts`
 
@@ -278,10 +269,8 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | API | Ja — AuthZ, `POST /api/admin/secrets/reveal` (Audit only) |
 | DB | Ja — Migration `visibility_secret_system` (ContentBlock-Felder bereits im Schema) |
 | Tests | Ja — `visibility-leak.test.ts` (inkl. Block-Secret-Leak + `maskSecretsInUi`), AuthZ |
-| Nutzbar | **Ja (Page- + ContentBlock-Ebene)** — Leseschutz aktiv, Authoring im Editor; Asset-Ebene offen |
-| Production-ready | **Teilweise** — Page- + ContentBlock-Editor-UI vorhanden; Asset-Level-Secrets offen |
-
-**Offen (zurückgestellt):** Asset-Level-Secrets (Folge-WP).
+| Nutzbar | **Ja (Page- + ContentBlock-Ebene)** — Leseschutz aktiv, Authoring im Editor |
+| Production-ready | **Ja (Kern)** — Page- + ContentBlock-Editor-UI, Leak-Tests |
 
 **Referenzen:** `docs/secrets.md`, `packages/auth/src/content-access.ts`
 

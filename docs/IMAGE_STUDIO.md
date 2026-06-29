@@ -47,8 +47,8 @@ Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImag
 
 ## RTX Bild-Endpoint (Legacy)
 
-> Image Studio ist **Lab / nicht production-ready** (kein Canvas, Cloud-Edit/Fehler-
-> handling unvollständig — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md)).
+> Image Studio ist **Beta** — Masken-Canvas für Inpainting vorhanden; Cloud-Edit/Fehler-
+> handling teils unvollständig — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
 Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md));
@@ -79,9 +79,8 @@ Response: `{ "image": "<base64>", "mime_type": "image/png" }`
 - `ImageStudioVersion` — Version mit Operation + Asset-Referenz
 - `ImageStudioLink` — Verknüpfung zu Page, Label, Session, etc.
 
-## Offene TODOs (Phase 2)
+## Offene TODOs
 
-- Canvas-Inpainting-UI mit Maskenzeichnung
-- Direkte Verknüpfung aus Seiten-Editor
-- Batch-Varianten
-- Label-Druck Integration
+- Cloud-Edit/`failed`-Handling in allen Pfaden vereinheitlichen
+
+**Erledigt:** Generate/Variant/Inpaint-API, Masken-Canvas (`ImageStudioMaskCanvas`), Seiten-Link aus Editor, Label-Druck-Integration (Basis).

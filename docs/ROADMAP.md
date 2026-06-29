@@ -39,6 +39,7 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | PageTemplates (custom) | ✅ Full-Backup | — |
 | ShareLinks | ✅ Export ohne Token; Restore regeneriert Token | Passwörter müssen neu gesetzt werden |
 | PlayerNotes | ✅ Opt-in (`includePlayerNotes`) | Datenschutz beachten |
+| Auto-Backup-Scheduler | ✅ | `autoBackupEnabled` → Host-`schedule.json` — siehe [BACKUP.md](BACKUP.md) |
 
 ---
 
@@ -61,34 +62,34 @@ Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktio
 | Wave 0 — Zentraler Nav-Vertrag, UI-Stack (Tailwind v4 + shadcn), AppShell | ✅ done |
 | Wave 1 — StudioShell/WorldShell/SystemShell/PortalShell, QF10 Label-Druck, Portal login-first | ✅ done |
 | Wave 2 — Welt-/Daily-Admin-/Admin-Routen auf neue Shells; ConnectorShell + Drucker-Doku | ✅ done |
-| Wave 3 — Legacy design-v2 Wrapper bereinigt; `/settings`/`/admin` overview + Portal auth/share → AppShell | 🔲 open (C1/C2) |
-| Wave 4 — V1 shared-ui shells + `legacy-bridge.css` retirement | 🔲 open |
+| Wave 3 — Legacy design-v2 Wrapper bereinigt; Settings/Admin/Portal auth/share | ✅ done |
+| Wave 4 — V1 shared-ui shells + Auth-UI + E2E + legacy-ui-disconnected | ✅ done |
 
 Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, Portal, RTX Connector) nutzen denselben Typ.
 
 ### Image Studio (`docs/IMAGE_STUDIO.md`)
 
-| Phase 1 | Phase 2 TODO |
-|---------|--------------|
-| `/image-studio`, Job-Queue, RTX/Cloud-Routing | ✅ Inpaint-UI, Varianten-Batch, Seiten-Link |
+| Phase 1 | Phase 2 |
+|---------|---------|
+| `/image-studio`, Job-Queue, RTX/Cloud-Routing, Inpaint-API | ✅ Masken-Canvas für Inpainting (`ImageStudioMaskCanvas`) |
 
 ### Kalender (`docs/CALENDAR_INTEGRATION.md`)
 
-| Phase 1 | Phase 2 TODO |
-|---------|--------------|
-| `/calendar`, iCal-Import, FamilyWall read-only | ✅ Feed-Passwort, Zwei-Wege-Sync, Wochenansicht |
+| Phase 1 | Phase 2 |
+|---------|---------|
+| `/calendar`, iCal/CalDAV/FamilyWall, Wochenansicht, Session-Sync, Write-back-Basis | ✅ CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`) |
 
 ### DnD API (`docs/DND_API_INTEGRATION.md`)
 
-| Phase 1 | Phase 2 TODO |
-|---------|--------------|
-| Package `@uwe/dnd-api`, dm_only | ✅ Statblock-Import, Encounter-Builder |
+| Phase 1 | Status |
+|---------|--------|
+| Package `@uwe/dnd-api`, Suche, Statblock-Import, Encounter-Builder | ✅ done |
 
 ### Agent Jobs (`docs/AGENT_JOBS.md`)
 
-| Phase 1 | Phase 2 TODO |
-|---------|--------------|
-| Admin-UI, Job-Queue, GitHub Workflow | ✅ Retry + GitHub-Status-Polling |
+| Phase 1 | Status |
+|---------|--------|
+| Admin-UI, Job-Queue, GitHub Workflow, Polling | ✅ done (kein Auto-Merge — by design) |
 
 ---
 

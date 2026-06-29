@@ -26,7 +26,7 @@ Subagents: Skill-Namen aus `cursor-workflow.md` oder `.cursor/skills/README.md` 
 | 1.1 | Doppelte `pnpm`-Keys in Root-`package.json` | ✅ erledigt | Ein Block `overrides.nodemailer` |
 | 1.2 | Veraltete Architektur-Referenzen (Studio-Login) | ✅ erledigt | `uwe-feature-implementation/references/architecture.md` |
 | 1.3 | Inline `Intl.DateTimeFormat` → `format.ts` | Niedrig | ~7 Studio-Seiten, siehe CODE_CLEANUP_REPORT |
-| 1.4 | `docs:check` optional um Skills-README erweitern | Niedrig | Noch offen |
+| 1.4 | `docs:check` optional um Skills-README erweitern | — | Nicht geplant (bewusst zurückgestellt) |
 
 ---
 
