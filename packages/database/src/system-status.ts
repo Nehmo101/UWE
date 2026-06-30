@@ -24,6 +24,7 @@ import {
   resolveEffectiveUploadsPath,
 } from "./settings-service";
 import {
+  getTurnstileConfig,
   getUweRuntimeConfig,
   isPublicExposureConfigured,
   isSplitHostnameDeployment,
@@ -70,6 +71,10 @@ export interface CloudflareStatusSummary {
   portalUrlMatchesPublicBase: boolean;
   studioOnSeparateHost: boolean;
   deploymentModel: UweDeploymentModel;
+  /** Cloudflare Turnstile "Verify you are human" check on the login forms. */
+  humanVerificationEnabled: boolean;
+  /** Whether a Turnstile secret key is configured for server-side verification. */
+  humanVerificationConfigured: boolean;
 }
 
 export interface ProxyStatus {
@@ -211,6 +216,7 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
   const publicBase = runtime.publicAppUrl?.replace(/\/$/, "") ?? null;
   const portalBase = urls.portalUrl?.replace(/\/$/, "") ?? null;
   const splitHostname = isSplitHostnameDeployment(env);
+  const turnstile = getTurnstileConfig(env);
 
   return {
     publicAppUrl: runtime.publicAppUrl,
@@ -234,6 +240,8 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
       ),
       studioOnSeparateHost: splitHostname,
       deploymentModel: urls.deploymentModel,
+      humanVerificationEnabled: turnstile.enabled,
+      humanVerificationConfigured: turnstile.secretConfigured,
     },
     authRequired: runtime.authRequired,
     sessionCookieSecure: runtime.sessionCookieSecure,

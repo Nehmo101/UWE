@@ -201,6 +201,16 @@ export {
 
 export { resolveClientIp } from "./proxy";
 
+export type { TurnstileConfig, TurnstileVerifyResult, VerifyTurnstileOptions } from "./turnstile";
+export {
+  TURNSTILE_SCRIPT_ORIGIN,
+  TURNSTILE_SCRIPT_URL,
+  TURNSTILE_VERIFY_ENDPOINT,
+  getTurnstileConfig,
+  isTurnstileEnabled,
+  verifyTurnstileToken,
+} from "./turnstile";
+
 export {
   API_TOKEN_PREFIX,
   API_TOKEN_PREFIX_DISPLAY_LENGTH,

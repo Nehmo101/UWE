@@ -9,7 +9,12 @@ import {
   logLoginAttempt,
   resolveLoginFailureReason,
 } from "@uwe/database/server";
-import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
+import {
+  getSessionCookieOptionsForRequest,
+  SESSION_COOKIE_NAME,
+  sessionExpiresAt,
+  verifyTurnstileToken,
+} from "@uwe/auth";
 import { checkRateLimitAsync, clientIpFromHeaders, resetRateLimitAsync } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -17,9 +22,14 @@ export async function POST(request: Request) {
   if (authError) return authError;
 
   const auditRequest = auditRequestFromHeaders(request.headers);
-  const body = (await request.json()) as { email?: string; password?: string };
+  const body = (await request.json()) as {
+    email?: string;
+    password?: string;
+    turnstileToken?: string;
+  };
   const email = body.email?.trim();
   const password = body.password;
+  const turnstileToken = body.turnstileToken;
 
   if (!email || !password) {
     const db = createPrismaClient();
@@ -63,6 +73,30 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Zu viele Anmeldeversuche. Bitte warte einen Moment." },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
+
+  const turnstile = await verifyTurnstileToken(turnstileToken, { remoteIp: ip });
+  if (!turnstile.success) {
+    const db = createPrismaClient();
+    try {
+      await logLoginAttempt({
+        db,
+        surface: "portal",
+        request: auditRequest,
+        email,
+        reason: "human_verification_failed",
+        httpStatus: 403,
+        errorMessage: "Bitte bestätige, dass du ein Mensch bist.",
+        extraMetadata: { turnstileErrorCodes: turnstile.errorCodes },
+      });
+    } finally {
+      await db.$disconnect();
+    }
+
+    return NextResponse.json(
+      { error: "Bitte bestätige, dass du ein Mensch bist." },
+      { status: 403 },
     );
   }
 

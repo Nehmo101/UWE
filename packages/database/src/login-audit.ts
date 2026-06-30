@@ -7,6 +7,7 @@ export type LoginAuditSurface = "studio" | "portal";
 export type LoginAuditReason =
   | "missing_credentials"
   | "rate_limited"
+  | "human_verification_failed"
   | "invalid_credentials"
   | "account_inactive"
   | "studio_access_denied"
@@ -16,6 +17,7 @@ export type LoginAuditReason =
 export const LOGIN_AUDIT_REASON_LABELS: Record<LoginAuditReason, string> = {
   missing_credentials: "E-Mail oder Passwort fehlt",
   rate_limited: "Zu viele Anmeldeversuche (Rate-Limit)",
+  human_verification_failed: "„Mensch“-Prüfung (Turnstile) fehlgeschlagen",
   invalid_credentials: "Ungültige Anmeldedaten",
   account_inactive: "Konto deaktiviert",
   studio_access_denied: "Kein Studio-Zugriff für diese Rolle",

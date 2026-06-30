@@ -139,11 +139,13 @@ export {
 export {
   LogoutButton,
   SessionIdleGuard,
+  TurnstileWidget,
   UweLandingPage,
   UweSessionChrome,
   readPublicAppUrls,
   resolveAuthLinks,
   type AuthLinkTargets,
+  type TurnstileWidgetProps,
   type UweAuthApp,
 } from "./auth";
 

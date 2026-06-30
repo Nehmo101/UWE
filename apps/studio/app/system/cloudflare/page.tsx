@@ -33,6 +33,11 @@ export default async function SystemCloudflarePage() {
     { label: "Public Exposure konfiguriert", value: yesNo(proxy.publicExposureConfigured) },
   ];
 
+  const humanCheck: { label: string; value: string }[] = [
+    { label: "„Mensch“-Prüfung (Turnstile) aktiv", value: yesNo(cf.humanVerificationEnabled) },
+    { label: "Turnstile-Secret konfiguriert", value: yesNo(cf.humanVerificationConfigured) },
+  ];
+
   const security: { label: string; value: string }[] = [
     { label: "Auth erforderlich", value: yesNo(proxy.authRequired) },
     { label: "Session-Cookie Secure", value: yesNo(proxy.sessionCookieSecure) },
@@ -65,6 +70,7 @@ export default async function SystemCloudflarePage() {
 
         <StatusCard title="Routing" rows={routing} />
         <StatusCard title="Cloudflare" rows={cloudflare} />
+        <StatusCard title="„Ich bin ein Mensch“-Prüfung" rows={humanCheck} />
         <StatusCard title="Sicherheit" rows={security} />
       </div>
     </SystemShell>

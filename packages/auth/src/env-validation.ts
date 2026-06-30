@@ -1,4 +1,5 @@
 import { getUweRuntimeConfig, isPublicExposureConfigured } from "./runtime-config";
+import { getTurnstileConfig } from "./turnstile";
 
 export type EnvValidationSeverity = "error" | "warning" | "info";
 
@@ -111,6 +112,18 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
       severity: "error",
       envKey: "SESSION_COOKIE_SECURE",
       message: "SESSION_COOKIE_SECURE=true bei HTTPS/öffentlicher URL erforderlich.",
+    });
+  }
+
+  const turnstile = getTurnstileConfig(env);
+  const turnstileSiteKeySet = Boolean(env.TURNSTILE_SITE_KEY?.trim());
+  if (turnstileSiteKeySet !== turnstile.secretConfigured) {
+    issues.push({
+      id: "env:turnstile-partial",
+      severity: "warning",
+      envKey: turnstileSiteKeySet ? "TURNSTILE_SECRET_KEY" : "TURNSTILE_SITE_KEY",
+      message:
+        "Turnstile-„Mensch-Prüfung“ unvollständig — TURNSTILE_SITE_KEY und TURNSTILE_SECRET_KEY müssen beide gesetzt sein, sonst bleibt die Prüfung inaktiv.",
     });
   }
 

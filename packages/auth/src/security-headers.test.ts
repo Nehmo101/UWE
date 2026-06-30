@@ -36,6 +36,42 @@ describe("security headers", () => {
     assert.match(devCsp, /script-src 'self' 'unsafe-inline' 'unsafe-eval'/);
   });
 
+  it("keeps a tight default CSP when Turnstile is not configured", () => {
+    const csp = buildContentSecurityPolicy({}, { NODE_ENV: "production" });
+    assert.doesNotMatch(csp, /challenges\.cloudflare\.com/);
+    assert.match(csp, /connect-src 'self'(;|$)/);
+    assert.match(csp, /frame-src 'none'/);
+  });
+
+  it("allows Cloudflare Turnstile origins only when the human-check is enabled", () => {
+    const env = {
+      NODE_ENV: "production",
+      TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+    };
+    const csp = buildContentSecurityPolicy({ allowYouTubeEmbeds: true }, env);
+
+    assert.match(csp, /script-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+    assert.match(csp, /connect-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+    assert.match(csp, /frame-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+    // YouTube frame sources remain intact alongside Turnstile.
+    assert.match(csp, /frame-src https:\/\/www\.youtube\.com/);
+    assert.doesNotMatch(csp, /\*/);
+  });
+
+  it("disables Turnstile CSP origins via the kill-switch", () => {
+    const csp = buildContentSecurityPolicy(
+      {},
+      {
+        NODE_ENV: "production",
+        TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+        TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+        TURNSTILE_ENABLED: "false",
+      },
+    );
+    assert.doesNotMatch(csp, /challenges\.cloudflare\.com/);
+  });
+
   it("does not send HSTS from static header builders (Next.js config)", () => {
     const devHeaders = getUweSecurityHeaders({ NODE_ENV: "development" });
     assert.equal(devHeaders["Strict-Transport-Security"], undefined);

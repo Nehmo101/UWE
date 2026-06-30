@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { TurnstileWidget } from "@uwe/shared-ui";
 import { readFormFieldValue, redirectAfterAuth } from "@/src/lib/auth-form-utils";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
@@ -20,6 +21,8 @@ interface PortalLoginFormProps {
   forcePasswordRedirect?: string;
   devDefaultEmail?: string;
   devDefaultPassword?: string;
+  /** Cloudflare Turnstile site key — when set, a "Verify you are human" check is required. */
+  turnstileSiteKey?: string | null;
 }
 
 function PortalLoginFormInner({
@@ -29,6 +32,7 @@ function PortalLoginFormInner({
   forcePasswordRedirect = "/auth/account/password",
   devDefaultEmail,
   devDefaultPassword,
+  turnstileSiteKey,
 }: PortalLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? defaultRedirect;
@@ -49,9 +53,18 @@ function PortalLoginFormInner({
     challengeToken: string;
   } | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const turnstileEnabled = Boolean(turnstileSiteKey);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileRefresh, setTurnstileRefresh] = useState(0);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (turnstileEnabled && !turnstileToken) {
+      setError("Bitte bestätige zuerst, dass du ein Mensch bist.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -64,7 +77,11 @@ function PortalLoginFormInner({
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: submittedEmail, password: submittedPassword }),
+        body: JSON.stringify({
+          email: submittedEmail,
+          password: submittedPassword,
+          turnstileToken,
+        }),
       });
 
       let payload: {
@@ -83,6 +100,9 @@ function PortalLoginFormInner({
 
       if (!response.ok) {
         setError(payload.error ?? "Ungültige Anmeldedaten.");
+        // Turnstile tokens are single-use — force a fresh challenge for the retry.
+        setTurnstileToken(null);
+        setTurnstileRefresh((value) => value + 1);
         return;
       }
 
@@ -100,6 +120,8 @@ function PortalLoginFormInner({
       redirectAfterAuth(redirectTo);
     } catch {
       setError("Verbindung zum Server fehlgeschlagen. Bitte erneut versuchen.");
+      setTurnstileToken(null);
+      setTurnstileRefresh((value) => value + 1);
     } finally {
       setLoading(false);
     }
@@ -238,6 +260,21 @@ function PortalLoginFormInner({
           />
         </div>
 
+        {turnstileSiteKey ? (
+          <div className="space-y-2">
+            <Label htmlFor="login-turnstile">Sicherheitsprüfung</Label>
+            <TurnstileWidget
+              siteKey={turnstileSiteKey}
+              onToken={setTurnstileToken}
+              refreshSignal={turnstileRefresh}
+              className="min-h-[65px]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Cloudflare bestätigt, dass du ein Mensch bist, bevor du UWE betrittst.
+            </p>
+          </div>
+        ) : null}
+
         {resetSuccess ? (
           <Alert tone="success">Passwort wurde geändert. Du kannst dich jetzt anmelden.</Alert>
         ) : null}
@@ -245,7 +282,7 @@ function PortalLoginFormInner({
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading || (turnstileEnabled && !turnstileToken)}>
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
           <Link href="/forgot-password" className="text-sm text-primary hover:underline">
