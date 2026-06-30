@@ -150,6 +150,20 @@ export async function deleteContractAction(formData: FormData) {
   revalidateAdminPaths();
 }
 
+export async function syncAiUsageContractAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const periodRaw = String(formData.get("period") || "current_month");
+  const period =
+    periodRaw === "last_30_days" || periodRaw === "current_year"
+      ? periodRaw
+      : "current_month";
+
+  await lifeAdmin().syncAiUsageContractExpense({ period });
+  revalidateAdminPaths();
+  redirect(`/contracts?period=${period}&aiSynced=1`);
+}
+
 export async function createHardwareAction(formData: FormData) {
   assertStudioTrusted();
 
