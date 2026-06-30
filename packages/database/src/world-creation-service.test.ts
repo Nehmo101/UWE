@@ -37,6 +37,7 @@ describe("world creation service", () => {
     assert.equal(world.name, "Neue Kampagne");
     assert.equal(world.slug, "neue-kampagne");
     assert.equal(world.guestModeEnabled, true);
+    assert.equal(world.isSandbox, false);
 
     const membership = await db.worldMembership.findUnique({
       where: { userId_worldId: { userId: owner.id, worldId: world.id } },

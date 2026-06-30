@@ -10,6 +10,7 @@ export const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
   art_miniature_terrain: "Kunst/Miniatur/Terrain",
   link: "Link",
   file_image: "Datei/Bild",
+  voice_memo: "Sprachmemo",
 };
 
 export const QUICK_CAPTURE_TYPE_OPTIONS: Array<{

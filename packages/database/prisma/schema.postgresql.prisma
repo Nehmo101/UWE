@@ -341,6 +341,7 @@ enum CaptureType {
   art_miniature_terrain
   link
   file_image
+  voice_memo
 }
 
 enum PersonalProjectStatus {
@@ -584,6 +585,7 @@ model World {
   description      String?
   guestModeEnabled     Boolean  @default(false) @map("guest_mode_enabled")
   guestCommentsEnabled Boolean  @default(false) @map("guest_comments_enabled")
+  isSandbox            Boolean  @default(false) @map("is_sandbox")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
@@ -706,9 +708,10 @@ model GameSession {
   notes           String?
   openPlots       String?           @map("open_plots")
   playerDecisions String?           @map("player_decisions")
-  recapPublished  Boolean           @default(false) @map("recap_published")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  recapPublished         Boolean           @default(false) @map("recap_published")
+  playerVisibleSchedule  Boolean           @default(false) @map("player_visible_schedule")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
 
   world        World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
