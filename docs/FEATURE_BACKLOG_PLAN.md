@@ -572,6 +572,9 @@ Tag-Dashboards. **Risiko:** Datenmigration (durch additiv + Backfill + Dual-Writ
 
 ## 12. Offene Fragen (Runde 2)
 
+> **Runde 2 beantwortet (2026-06-30).** Alle Beschlüsse konsolidiert in **§13**; der
+> Umsetzungs-Orchestrator liegt in [prompts/feature-backlog-orchestrator.md](prompts/feature-backlog-orchestrator.md).
+
 **Charaktersheet „Voll 5e“ (2.2):**
 1. **Regelversion:** 2014 (PHB) oder 2024er Regeln — oder pro Welt wählbar?
 2. **Homebrew:** eigene Klassen/Spezies/Items/Zauber nötig, oder reicht SRD/Open5e-Umfang?
@@ -599,3 +602,33 @@ Tag-Dashboards. **Risiko:** Datenmigration (durch additiv + Backfill + Dual-Writ
 16. KI-Sortierung (4.4): Kategorien **Musik/Haushalt** gewünscht? (RTX-only Pflicht.)
 17. Mobile-Portal (2.1): Bottom-Nav statt Drawer als Standard?
 18. **Priorisierung:** Reihenfolge A→B→C→D ok, oder „Pull“-Themen sofort?
+
+---
+
+## 13. Beschlossen (final, Runde 1 + 2)
+
+Alle Entscheidungen gesperrt — Subagenten verhandeln sie **nicht** neu. Umsetzung erfolgt über
+den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/feature-backlog-orchestrator.md).
+
+| Thema | Beschluss |
+|-------|-----------|
+| Secrets (1.6) | **Kein Vault.** Read-only Secrets-Status-Seite + verschlüsselte DB-Felder (`token-crypto.ts`); Bootstrap-Secrets bleiben ENV; Rotations-Warnung. |
+| NL-Command-Center (1.18) | Befehls-Whitelist → strukturierter Intent → **Klartext-Bestätigung** → Ausführung über bestehende Services → Audit. Kein freies LLM-Tool-Calling. |
+| Charaktersheet (2.2) | **Voll 5e**, Regeln **2024**, **Homebrew** unterstützt, **Auto-Berechnung**, **Level-Up-Assistent**, **Initiative-Wert anzeigen** (kein Würfel-/Initiative-Tracker), **mehrere Charaktere pro Spieler**. Eigenes `Character`-Modell. |
+| Faction-Sim (3.15) | KI-Vorschlag → Review → **datierte `WorldEvent`s** auf Entitätsseiten. **Nur per Knopf.** **Strukturierter** Fraktions-State. Nur lokale RTX. |
+| World-Clock (3.16) | Eigener, **pro Welt konfigurierbarer** Kalender (Monate/Jahr, Tage/Monat, Monatsnamen, aktuelles In-Game-Datum). Voraussetzung für Faction-Sim + Timeline. |
+| Globale Suche (4.5) | **Nur lexikalisch**, cross-domain. Kein Embedding/Semantik in diesem Backlog. |
+| Kosten-Dashboard (1.16) | **In `/contracts` integrieren** (kein separates Admin-Dashboard). |
+| Kanon-Status (3.3) | Bestehenden `canonicalStatus` **erweitern** (prepared/played/discarded). |
+| Inventar (2.10) | **Gruppen-Treasury + Währung** (koppelt an Character-Sheet). |
+| KI-Sortierung (4.4) | Allgemeine Lebens-Kategorien ergänzen (`PersonalProjectCategory`), lokale RTX statt Heuristik. *(Annahme: inkl. Musik/Haushalt/Allgemein — kurz bestätigen.)* |
+| Mobile-Portal (2.1) | **Bottom-Nav** als Standard. |
+| Tag-Modell (4.6/F1) | Zentrales `Tag` + `EntityTag`, additive Migration + Backfill + Dual-Write. |
+| Tag-Modell, Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
+
+**Eine offene Mini-Bestätigung:** KI-Sortierung „Allgemein kategorien“ wird als „zusätzliche
+allgemeine Kategorien (u. a. Musik, Haushalt, Allgemein)“ interpretiert. Falls anders gemeint,
+kurz melden — blockiert die Umsetzung nicht.
+
+**Status:** weiterhin **keine** Produktcode-Änderung. Nächster Schritt = Orchestrator-Lauf gemäß
+Prompt; pro Arbeitspaket kleiner, getesteter Draft-PR.
