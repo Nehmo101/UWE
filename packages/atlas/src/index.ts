@@ -82,3 +82,16 @@ export {
   parseExtent,
   tryParseGeometry,
 } from "./serialization";
+
+// Procedural draft generator
+export {
+  generateDraft,
+  rerollDraft,
+} from "./procedural";
+export type {
+  DraftFeatureKind,
+  ProceduralPromptHints,
+  ProceduralBounds,
+  DraftFeature,
+  AtlasDraft,
+} from "./procedural";
