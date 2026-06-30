@@ -26,6 +26,7 @@
     "@tiptap/react": "^2.26.1",
     "@tiptap/starter-kit": "^2.26.1",
     "@uwe/agent-jobs": "workspace:*",
+    "@uwe/atlas": "workspace:*",
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",

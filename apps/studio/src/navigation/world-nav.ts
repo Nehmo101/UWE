@@ -48,6 +48,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "verbindungen",
           "links",
         ]),
+        item("world-atlas", "Atlas / Karte", `${base}/atlas`, "map", "Wiki", [
+          "atlas",
+          "karte",
+          "map",
+          "weltkarte",
+        ]),
       ],
     },
     {
