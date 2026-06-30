@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { BuildVersionFooter } from "@/src/components/system/BuildVersion";
@@ -29,7 +30,10 @@ export default async function SystemVersionPage() {
         <header className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Version &amp; Updates</h1>
           <p className="text-sm text-muted-foreground">
-            Aktuelle Build- und Deploy-Metadaten dieser UWE-Instanz.
+            Aktuelle Build- und Deploy-Metadaten dieser UWE-Instanz.{" "}
+            <Link href="/system/whats-new" className="text-primary hover:underline">
+              Was ist neu →
+            </Link>
           </p>
         </header>
 

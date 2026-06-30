@@ -210,6 +210,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["version", "commit", "update", "build"],
       },
       {
+        id: "system-whats-new",
+        label: "Was ist neu",
+        href: "/system/whats-new",
+        icon: "sparkles",
+        group: "Betrieb",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["changelog", "release", "neu", "update", "was ist neu"],
+      },
+      {
         id: "system-knowhow",
         label: "UWE KnowHow",
         href: "/system/uwe-knowhow",
