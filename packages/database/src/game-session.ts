@@ -97,6 +97,7 @@ export interface DmGameSessionView extends PortalGameSessionView {
   openPlots: string | null;
   playerDecisions: string | null;
   recapPublished: boolean;
+  playerVisibleSchedule: boolean;
 }
 
 function withParsedPageArrays<T extends { tags: unknown; aliases: unknown }>(page: T) {
@@ -126,6 +127,7 @@ export function toDmGameSessionView(session: GameSessionWithLinks): DmGameSessio
     openPlots: session.openPlots,
     playerDecisions: session.playerDecisions,
     recapPublished: session.recapPublished,
+    playerVisibleSchedule: session.playerVisibleSchedule,
     linkedPages: mapLinkedPages(session),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -456,6 +458,27 @@ export class GameSessionService {
       where: {
         worldId: world.id,
         recapPublished: true,
+      },
+      include: this.sessionInclude(),
+      orderBy: [{ sessionNumber: "desc" }],
+    });
+  }
+
+  /** Player-safe sessions: published recaps plus DM-announced upcoming sessions. */
+  async listVisibleToPlayersForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
+    if (!world) return [];
+
+    return this.db.gameSession.findMany({
+      where: {
+        worldId: world.id,
+        OR: [
+          { recapPublished: true },
+          {
+            playerVisibleSchedule: true,
+            status: { in: ["planned", "prepared"] },
+          },
+        ],
       },
       include: this.sessionInclude(),
       orderBy: [{ sessionNumber: "desc" }],

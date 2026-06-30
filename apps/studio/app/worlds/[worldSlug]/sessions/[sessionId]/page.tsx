@@ -122,6 +122,11 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
                 Im Portal sichtbar
               </span>
             )}
+            {session.playerVisibleSchedule && !session.recapPublished && (
+              <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
+                Termin im Portal angekündigt
+              </span>
+            )}
           </>
         }
         actions={!session.recapPublished ? (
@@ -184,6 +189,15 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             <textarea name="notes" rows={4} defaultValue={session.notes ?? ""} />
           </label>
         </fieldset>
+
+        <label className="uwe-checkbox" style={{ marginTop: "1rem" }}>
+          <input
+            type="checkbox"
+            name="playerVisibleSchedule"
+            defaultChecked={session.playerVisibleSchedule}
+          />
+          Termin für Spieler im Portal ankündigen (nur Datum/Titel — kein Recap/Prep)
+        </label>
 
         <fieldset className="uwe-fieldset">
           <legend>Spieler-Recap</legend>
