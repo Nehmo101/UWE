@@ -116,6 +116,8 @@ export async function enforceStudioPageAuth(pathname: string): Promise<void> {
   if (
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
+    pathname === "/maintenance" ||
+    pathname.startsWith("/maintenance/") ||
     pathname === "/forgot-password" ||
     pathname.startsWith("/forgot-password/") ||
     pathname === "/reset-password" ||

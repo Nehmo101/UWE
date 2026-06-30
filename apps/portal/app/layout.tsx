@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
 import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
@@ -14,6 +15,7 @@ import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 import { PortalSessionChrome } from "../components/PortalSessionChrome";
+import { enforcePortalMaintenance } from "@/src/lib/maintenance";
 
 const spaceMono = Space_Mono({
   weight: ["400", "700"],
@@ -55,6 +57,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-uwe-pathname") ?? "/";
+  await enforcePortalMaintenance(pathname);
+
   const { settings, updatedAt } = await getSystemSettingsSnapshot();
   const portalEnabled = isPortalGloballyEnabled(settings);
   const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {

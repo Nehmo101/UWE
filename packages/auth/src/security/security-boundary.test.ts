@@ -184,6 +184,7 @@ describe("security boundary", () => {
         normalizedFile.includes("/api/auth/") ||
         normalizedFile.endsWith("/health/public/route.ts") ||
         normalizedFile.endsWith("/health/route.ts") ||
+        normalizedFile.endsWith("/maintenance/status/route.ts") ||
         normalizedFile.endsWith("/spotify/callback/route.ts")
       ) {
         continue;
@@ -211,7 +212,7 @@ describe("security boundary", () => {
     for (const file of walk(portalApiDir)) {
       const content = fs.readFileSync(file, "utf8");
       const normalizedFile = file.replace(/\\/g, "/");
-      if (normalizedFile.endsWith("/health/public/route.ts") || normalizedFile.endsWith("/health/route.ts")) {
+      if (normalizedFile.endsWith("/health/public/route.ts") || normalizedFile.endsWith("/health/route.ts") || normalizedFile.endsWith("/maintenance/status/route.ts")) {
         continue;
       }
       if (normalizedFile.endsWith("/health/private/route.ts")) {

@@ -12,6 +12,8 @@ import {
   mergeTags,
   normalizeTagKey,
   suggestTagMerges,
+  backfillEntityTagsFromJson,
+  getTagCoverageStats,
 } from "./tag-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -98,5 +100,32 @@ describe("tag service", () => {
 
     const after = await collectTagInventory(db, { worldId });
     assert.ok(!after.some((entry) => entry.tag === "Stadt" || entry.tag === "STADT"));
+  });
+
+  it("backfills entity tags from json tag arrays", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const page = await repo.createPage({
+      worldId,
+      title: "Backfill Tag Page",
+      slug: "backfill-tag-page",
+      type: "note",
+      tags: ["quest", "hook"],
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    const result = await backfillEntityTagsFromJson(db, { worldId });
+    assert.ok(result.entitiesProcessed >= 1);
+    assert.ok(result.entityTagsCreated >= 2);
+
+    const coverage = await getTagCoverageStats(db, { worldId });
+    const pageStats = coverage.types.find((entry) => entry.entityType === "page");
+    assert.ok(pageStats);
+    assert.ok(pageStats!.entityTagTagged >= 1);
+
+    const inventory = await collectTagInventory(db, { worldId });
+    assert.ok(inventory.some((entry) => entry.tag === "quest" || entry.tag === "hook"));
+
+    await db.page.delete({ where: { id: page.id } });
   });
 });

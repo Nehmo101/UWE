@@ -1,4 +1,6 @@
 import type { PrismaClient } from "./client";
+import type { EntityTagEntityType } from "./generated/prisma/client";
+import { createEntityTagService } from "./entity-tag-service";
 import { parseStringArray, toPrismaJsonValue } from "./json-utils";
 
 export type TagEntityType =
@@ -43,6 +45,161 @@ export interface TagMergeResult {
   mergedFrom: string[];
   toTag: string;
   updatedEntities: number;
+}
+
+export interface BackfillEntityTagsResult {
+  tagsUpserted: number;
+  entityTagsCreated: number;
+  entityTagsSkipped: number;
+  entitiesProcessed: number;
+}
+
+export interface TagCoverageTypeStats {
+  entityType: EntityTagEntityType;
+  totalEntities: number;
+  jsonTagged: number;
+  entityTagTagged: number;
+}
+
+export interface TagCoverageStats {
+  types: TagCoverageTypeStats[];
+  totalTags: number;
+  totalEntityTags: number;
+}
+
+const JSON_TAG_ENTITY_TYPES = [
+  "page",
+  "asset",
+  "soundboard_button",
+  "personal_brain_document",
+  "personal_brain_fact",
+] as const satisfies readonly EntityTagEntityType[];
+
+type JsonTagEntityType = (typeof JSON_TAG_ENTITY_TYPES)[number];
+
+interface JsonTagEntityRow {
+  id: string;
+  title: string;
+  tags: unknown;
+  worldId?: string | null;
+  publishStatus?: string | null;
+  visibility?: string | null;
+}
+
+async function loadJsonTagEntities(
+  db: PrismaClient,
+  entityType: JsonTagEntityType,
+  worldId?: string,
+): Promise<JsonTagEntityRow[]> {
+  switch (entityType) {
+    case "page":
+      return db.page.findMany({
+        where: worldId ? { worldId } : undefined,
+        select: {
+          id: true,
+          title: true,
+          tags: true,
+          worldId: true,
+          publishStatus: true,
+          visibility: true,
+        },
+      });
+    case "asset":
+      return db.asset.findMany({
+        where: worldId ? { worldId } : undefined,
+        select: {
+          id: true,
+          title: true,
+          tags: true,
+          worldId: true,
+          visibility: true,
+        },
+      });
+    case "soundboard_button":
+      return db.soundboardButton.findMany({
+        where: worldId ? { worldId } : undefined,
+        select: { id: true, title: true, tags: true, worldId: true },
+      });
+    case "personal_brain_document":
+      return db.personalBrainDocument.findMany({
+        select: { id: true, title: true, tags: true },
+      });
+    case "personal_brain_fact":
+      return db.personalBrainFact.findMany({
+        select: { id: true, title: true, tags: true },
+      });
+    default:
+      return [];
+  }
+}
+
+async function syncEntityTagsForJsonEntity(
+  db: PrismaClient,
+  entityType: JsonTagEntityType,
+  entityId: string,
+  tags: string[],
+  worldId?: string | null,
+): Promise<void> {
+  const entityTags = createEntityTagService(db);
+  await entityTags.replaceEntityTags(entityType, entityId, tags, { worldId });
+}
+
+async function collectEntityTagInventory(
+  db: PrismaClient,
+  options: { worldId?: string } = {},
+): Promise<TagInventoryEntry[]> {
+  const worldId = options.worldId;
+  const links = await db.entityTag.findMany({
+    where: worldId ? { worldId } : undefined,
+    include: { tag: true },
+  });
+
+  const map = new Map<string, TagInventoryEntry>();
+  const entityMeta = new Map<string, JsonTagEntityRow>();
+
+  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+    for (const row of await loadJsonTagEntities(db, entityType, worldId)) {
+      entityMeta.set(`${entityType}:${row.id}`, row);
+    }
+  }
+
+  const addRef = (tagLabel: string, ref: TagReference) => {
+    const key = tagLabel;
+    let entry = map.get(key);
+    if (!entry) {
+      entry = {
+        tag: key,
+        normalizedKey: normalizeTagKey(tagLabel),
+        count: 0,
+        references: [],
+        onlyOnDrafts: true,
+        onlyDmOnly: true,
+      };
+      map.set(key, entry);
+    }
+    entry.count++;
+    entry.references.push(ref);
+    if (ref.publishStatus !== "draft") {
+      entry.onlyOnDrafts = false;
+    }
+    if (ref.visibility !== "dm_only") {
+      entry.onlyDmOnly = false;
+    }
+  };
+
+  for (const link of links) {
+    const meta = entityMeta.get(`${link.entityType}:${link.entityId}`);
+    addRef(link.tag.label, {
+      entityType: link.entityType as TagEntityType,
+      entityId: link.entityId,
+      title: meta?.title ?? link.entityId,
+      worldId: link.worldId,
+      publishStatus: meta?.publishStatus ?? null,
+      visibility: meta?.visibility ?? null,
+    });
+  }
+
+  return [...map.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "de"));
 }
 
 /** Normalize tag for comparison (lowercase, umlaut folding, whitespace). */
@@ -110,6 +267,13 @@ export async function collectTagInventory(
   db: PrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagInventoryEntry[]> {
+  const entityTagCount = await db.entityTag.count({
+    where: options.worldId ? { worldId: options.worldId } : undefined,
+  });
+  if (entityTagCount > 0) {
+    return collectEntityTagInventory(db, options);
+  }
+
   const worldId = options.worldId;
   const map = new Map<string, TagInventoryEntry>();
 
@@ -333,33 +497,35 @@ export async function mergeTags(
 
   const pages = await db.page.findMany({
     where: options.worldId ? { worldId: options.worldId } : undefined,
-    select: { id: true, tags: true },
+    select: { id: true, tags: true, worldId: true },
   });
   for (const page of pages) {
     const tags = parseStringArray(page.tags);
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.page.update({ where: { id: page.id }, data: { tags: toPrismaJsonValue(next) } });
+      await syncEntityTagsForJsonEntity(db, "page", page.id, next, page.worldId);
       updatedEntities++;
     }
   }
 
   const assets = await db.asset.findMany({
     where: options.worldId ? { worldId: options.worldId } : undefined,
-    select: { id: true, tags: true },
+    select: { id: true, tags: true, worldId: true },
   });
   for (const asset of assets) {
     const tags = parseStringArray(asset.tags);
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.asset.update({ where: { id: asset.id }, data: { tags: toPrismaJsonValue(next) } });
+      await syncEntityTagsForJsonEntity(db, "asset", asset.id, next, asset.worldId);
       updatedEntities++;
     }
   }
 
   const buttons = await db.soundboardButton.findMany({
     where: options.worldId ? { worldId: options.worldId } : undefined,
-    select: { id: true, tags: true },
+    select: { id: true, tags: true, worldId: true },
   });
   for (const button of buttons) {
     const tags = parseStringArray(button.tags);
@@ -369,6 +535,7 @@ export async function mergeTags(
         where: { id: button.id },
         data: { tags: toPrismaJsonValue(next) },
       });
+      await syncEntityTagsForJsonEntity(db, "soundboard_button", button.id, next, button.worldId);
       updatedEntities++;
     }
   }
@@ -382,6 +549,7 @@ export async function mergeTags(
         where: { id: doc.id },
         data: { tags: toPrismaJsonValue(next) },
       });
+      await syncEntityTagsForJsonEntity(db, "personal_brain_document", doc.id, next, null);
       updatedEntities++;
     }
   }
@@ -395,6 +563,7 @@ export async function mergeTags(
         where: { id: fact.id },
         data: { tags: toPrismaJsonValue(next) },
       });
+      await syncEntityTagsForJsonEntity(db, "personal_brain_fact", fact.id, next, null);
       updatedEntities++;
     }
   }
@@ -406,6 +575,95 @@ export async function mergeTags(
   };
 }
 
+export async function backfillEntityTagsFromJson(
+  db: PrismaClient,
+  options: { worldId?: string; dryRun?: boolean } = {},
+): Promise<BackfillEntityTagsResult> {
+  const entityTags = createEntityTagService(db);
+  const result: BackfillEntityTagsResult = {
+    tagsUpserted: 0,
+    entityTagsCreated: 0,
+    entityTagsSkipped: 0,
+    entitiesProcessed: 0,
+  };
+
+  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    for (const row of rows) {
+      const tags = parseStringArray(row.tags);
+      if (tags.length === 0) continue;
+
+      result.entitiesProcessed++;
+      if (options.dryRun) {
+        result.tagsUpserted += tags.length;
+        result.entityTagsCreated += tags.length;
+        continue;
+      }
+
+      for (const tag of tags) {
+        await entityTags.upsertTag({ key: tag, label: tag });
+        result.tagsUpserted++;
+      }
+
+      const existing = await db.entityTag.findMany({
+        where: { entityType, entityId: row.id },
+        select: { id: true },
+      });
+      const existingCount = existing.length;
+
+      await syncEntityTagsForJsonEntity(db, entityType, row.id, tags, row.worldId ?? null);
+
+      const afterCount = tags.length;
+      result.entityTagsCreated += Math.max(0, afterCount - existingCount);
+      result.entityTagsSkipped += existingCount;
+    }
+  }
+
+  return result;
+}
+
+export async function getTagCoverageStats(
+  db: PrismaClient,
+  options: { worldId?: string } = {},
+): Promise<TagCoverageStats> {
+  const types: TagCoverageTypeStats[] = [];
+
+  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    const entityIds = rows.map((row) => row.id);
+    const jsonTagged = rows.filter((row) => parseStringArray(row.tags).length > 0).length;
+
+    let entityTagTagged = 0;
+    if (entityIds.length > 0) {
+      const taggedIds = await db.entityTag.findMany({
+        where: {
+          entityType,
+          entityId: { in: entityIds },
+        },
+        select: { entityId: true },
+        distinct: ["entityId"],
+      });
+      entityTagTagged = taggedIds.length;
+    }
+
+    types.push({
+      entityType,
+      totalEntities: rows.length,
+      jsonTagged,
+      entityTagTagged,
+    });
+  }
+
+  const [totalTags, totalEntityTags] = await Promise.all([
+    db.tag.count(),
+    db.entityTag.count({
+      where: options.worldId ? { worldId: options.worldId } : undefined,
+    }),
+  ]);
+
+  return { types, totalTags, totalEntityTags };
+}
+
 export function createTagService(db: PrismaClient) {
   return {
     collectInventory: (options?: { worldId?: string }) => collectTagInventory(db, options),
@@ -414,6 +672,9 @@ export function createTagService(db: PrismaClient) {
     suggestMerges: suggestTagMerges,
     merge: (options: { worldId?: string; fromTags: string[]; toTag: string }) =>
       mergeTags(db, options),
+    backfillFromJson: (options?: { worldId?: string; dryRun?: boolean }) =>
+      backfillEntityTagsFromJson(db, options),
+    getCoverageStats: (options?: { worldId?: string }) => getTagCoverageStats(db, options),
     normalizeKey: normalizeTagKey,
     canonicalize: canonicalizeTag,
   };

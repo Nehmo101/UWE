@@ -30,6 +30,7 @@ import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
 import { enforceStudioPageAuth } from "@/src/lib/auth";
+import { enforceStudioMaintenance } from "@/src/lib/maintenance";
 import "@uwe/shared-ui/uwe.css";
 import "@uwe/shared-ui/wiki-base.css";
 import "./globals.css";
@@ -62,6 +63,7 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const pathname = headersList.get("x-uwe-pathname") ?? "/";
+  await enforceStudioMaintenance(pathname);
   await enforceStudioPageAuth(pathname);
 
   const { settings, updatedAt } = await getSystemSettingsSnapshot();
