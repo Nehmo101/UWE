@@ -129,6 +129,44 @@ describe("portal dashboard", () => {
     await db.$disconnect();
   });
 
+  it("shows nextSession when playerVisibleSchedule is enabled without recap", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const sessions = createGameSessionService(databaseUrl);
+    const repo = createUweRepository(databaseUrl);
+
+    const world = await repo.getWorldBySlug(worldSlug);
+    assert.ok(world);
+    const campaign = (await repo.listCampaignsByWorld(worldSlug))[0];
+    assert.ok(campaign);
+
+    const upcoming = await sessions.create({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Session 3 Ankündigung",
+      sessionNumber: 3,
+      status: "planned",
+      summaryPlayer: "Geheime Prep — darf nicht leaken",
+      playerVisibleSchedule: true,
+    });
+
+    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+    assert.ok(playerCtx);
+
+    const dashboard = await auth.getPortalDashboard(worldSlug, playerCtx);
+    assert.ok(dashboard);
+    assert.ok(dashboard.nextSession);
+    assert.equal(dashboard.nextSession.id, upcoming.id);
+    assert.equal(dashboard.nextSession.title, "Session 3 Ankündigung");
+
+    const detail = await auth.getGameSessionForViewer(worldSlug, upcoming.id, playerCtx);
+    assert.ok(detail);
+    assert.equal(detail.summaryPlayer, null);
+    assert.equal(detail.openPlots, null);
+
+    await db.$disconnect();
+  });
+
   it("auto-unlocks linked unlock_after_session pages when recap is published", async () => {
     const db = createPrismaClient(databaseUrl);
     const repo = createUweRepository(databaseUrl);

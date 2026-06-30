@@ -956,7 +956,7 @@ export class AuthService {
       return [];
     }
 
-    const sessions = await this.gameSessions.listPublishedForPortal(worldSlug);
+    const sessions = await this.gameSessions.listVisibleToPlayersForPortal(worldSlug);
     return sessions.map((session) => this.toPortalSessionViewForViewer(session, ctx));
   }
 
@@ -971,7 +971,13 @@ export class AuthService {
     }
 
     const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
-    if (!session.recapPublished && !isDm) {
+    const playerMayViewSchedule =
+      !isDm &&
+      ctx.effectiveRole === "player" &&
+      session.playerVisibleSchedule &&
+      (session.status === "planned" || session.status === "prepared");
+
+    if (!session.recapPublished && !isDm && !playerMayViewSchedule) {
       return null;
     }
 

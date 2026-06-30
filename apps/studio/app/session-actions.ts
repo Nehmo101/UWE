@@ -111,6 +111,7 @@ export async function updateGameSessionAction(formData: FormData) {
     notes: String(formData.get("notes") || "") || null,
     openPlots: String(formData.get("openPlots") || "") || null,
     playerDecisions: String(formData.get("playerDecisions") || "") || null,
+    playerVisibleSchedule: formData.get("playerVisibleSchedule") === "on",
     linkedPageIds,
   });
 
