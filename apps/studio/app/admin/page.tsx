@@ -98,6 +98,12 @@ export default async function AdminOverviewPage() {
               <Link className="uwe-v2-btn" href="/admin/secrets">
                 Secrets-Status
               </Link>
+              <Link className="uwe-v2-btn" href="/admin/cockpit">
+                Owner Cockpit
+              </Link>
+              <Link className="uwe-v2-btn" href="/admin/activity">
+                Verlauf
+              </Link>
               <Link className="uwe-v2-btn" href="/admin/status">
                 Systemstatus
               </Link>

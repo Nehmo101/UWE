@@ -862,6 +862,27 @@ export {
 export type { ProductionSafetyWarning } from "./production-safety";
 
 export {
+  getOwnerCockpitSnapshot,
+} from "./owner-cockpit-service";
+
+export type {
+  OwnerCockpitErrorItem,
+  OwnerCockpitSnapshot,
+  OwnerCockpitWorldRow,
+} from "./owner-cockpit-service";
+
+export {
+  listUnifiedActivity,
+} from "./unified-activity-service";
+
+export type {
+  ListUnifiedActivityOptions,
+  UnifiedActivityEntry,
+  UnifiedActivitySeverity,
+  UnifiedActivitySource,
+} from "./unified-activity-service";
+
+export {
   assertSecurityDashboardHasNoSecrets,
   buildSecurityWarnings,
   getSecurityDashboardStatus,
