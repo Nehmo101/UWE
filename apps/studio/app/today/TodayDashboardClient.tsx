@@ -128,10 +128,15 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
               <div className="uwe-today-card-list">
                 {data.lifeAdmin.recentCaptures.map((capture) => (
                   <article key={capture.id} className="uwe-today-card">
-                    <h3>{capture.title || "Ohne Titel"}</h3>
+                    <h3>
+                      <Link href={`/capture/${capture.id}`}>{capture.title || "Ohne Titel"}</Link>
+                    </h3>
                     <p>
                       {CAPTURE_TYPE_LABELS[capture.captureType]} ·{" "}
                       {DATE_FORMAT.format(capture.capturedAt)}
+                    </p>
+                    <p>
+                      <Link href={`/capture/${capture.id}`}>Triage →</Link>
                     </p>
                   </article>
                 ))}
@@ -140,7 +145,11 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
               <p className="uwe-dashboard-muted">Inbox ist leer — tippe + Capture.</p>
             )}
             <p>
-              <Link href="/capture">Zur Capture Inbox →</Link>
+              <Link href="/capture">
+                {data.lifeAdmin.inboxCaptureCount > 0
+                  ? `${data.lifeAdmin.inboxCaptureCount} triagieren →`
+                  : "Zur Capture Inbox →"}
+              </Link>
             </p>
           </section>
         );

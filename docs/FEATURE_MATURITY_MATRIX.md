@@ -65,7 +65,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 - **Image Studio** — Cloud-Edit/Fehler-Handling teils unvollständig (Masken-Canvas vorhanden).
 - **Performance-Budget / große Testwelt** — CI-Smoke + Bundle-Budget; keine Browser-LCP-Gates.
-- **Life-Brain Retrieval** — kein Embedding/Retrieval; Daily Admin OS speichert nur.
+- **Life-Brain Retrieval** — RTX-Embeddings + Keyword-Suche (Studio-UI `/life-brain`, API); semantischer Kontext für lokale KI.
 
 ### ⛔ Deprecated / Removed
 
@@ -223,7 +223,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | Ja |
-| Scaffolding | Life-Brain ohne Embeddings, Capture `file_image` ohne Upload |
+| Scaffolding | Life-Brain-UI (Suche/Index) ergänzt; Capture Upload shipped |
 | UI | Ja — `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain` |
 | API | Server Actions (`life-admin-actions.ts`, `capture-actions.ts`) |
 | DB | Ja — Capture, Projects, Workshop, Contracts, Hardware, PersonalBrain |
@@ -231,7 +231,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Nutzbar | **Ja** |
 | Production-ready | **Teilweise** — README war veraltet (korrigiert) |
 
-**Lücken:** `nextActionDate`, Bild-Capture-Upload, Life-Brain-Retrieval. Kalender auf `/today` ist implementiert (PR #245).
+**Lücken:** `nextActionDate`, Global Search für Admin-Entitäten, RTX Capture-Triage. Kalender auf `/today` ist implementiert (PR #245).
 
 **Referenzen:** `docs/daily-admin-os.md`, `apps/studio/app/today/`
 

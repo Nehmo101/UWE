@@ -72,7 +72,7 @@ Auto-Backup-Scheduler (`autoBackupEnabled` → Host-`schedule.json`), Import Und
 
 ## Weitere bekannte Lücken (ohne festen Backlog-Slot)
 
-- **Life-Brain Retrieval** — kein Embedding/Retrieval; nur Speicherung.
+- **Life-Brain Retrieval** — RTX-Embeddings + Keyword-Suche (API + `/life-brain`-UI); kein Cloud-Fallback.
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
-- **Capture Bild-Upload** — `file_image`-Typ in DB, UI teils offen.
+- **Capture Bild-Upload** — implementiert (`/api/capture/upload`, Quick Capture); UI auf `/capture`.
 - **Agent Jobs** — Dispatch + Polling funktional; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](SECURITY_SETTINGS.md)).

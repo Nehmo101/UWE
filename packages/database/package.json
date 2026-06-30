@@ -13,6 +13,7 @@
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",
     "./capture-constants": "./src/capture-constants.ts",
+    "./personal-brain-constants": "./src/personal-brain-constants.ts",
     "./dashboard-layout": "./src/dashboard-layout-types.ts",
     "./test-helpers": "./src/test-helpers.ts"
   },
