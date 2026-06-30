@@ -26,7 +26,8 @@ export type CookbookAiTaskType =
   | "create_player_handout"
   | "fill_dungeon_room"
   | "prepare_mail_draft"
-  | "atlas_name_region";
+  | "atlas_name_region"
+  | "atlas_describe_region";
 
 export const COOKBOOK_LOCAL_ONLY_CONTEXT_MODES: readonly CookbookAiContextMode[] = [
   "brain",

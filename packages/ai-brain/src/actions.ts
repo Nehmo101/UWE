@@ -10,7 +10,8 @@ export type BrainActionId =
   | "player_handout"
   | "fill_dungeon_room"
   | "mail_draft"
-  | "atlas_name_regions";
+  | "atlas_name_regions"
+  | "atlas_describe_region";
 
 export type AiProposalTargetType =
   | "session_summary_dm"
@@ -19,7 +20,8 @@ export type AiProposalTargetType =
   | "brain_document"
   | "idea_page"
   | "mail_draft"
-  | "atlas_draft_names";
+  | "atlas_draft_names"
+  | "atlas_region_description";
 
 export interface BrainActionDefinition {
   id: BrainActionId;
@@ -134,6 +136,18 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "dm_internal",
     defaultProposalTarget: "atlas_draft_names",
     defaultProposalLabel: "Atlas-Namen Vorschläge",
+  },
+  atlas_describe_region: {
+    id: "atlas_describe_region",
+    label: "Region beschreiben",
+    description:
+      "Schreibt eine atmosphärische DM-Beschreibung für eine ausgewählte Kartenregion. Nie automatisch in den Kanon.",
+    taskType: "atlas_describe_region",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "atlas_region_description",
+    defaultProposalLabel: "Regionsbeschreibung (Entwurf)",
   },
 };
 

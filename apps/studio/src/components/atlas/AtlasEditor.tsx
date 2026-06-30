@@ -23,8 +23,13 @@ import {
   saveAtlasFeaturesAction,
   saveAtlasObjectsAction,
   createChildNodeAction,
+  linkPinToPageAction,
+  createPinPageAction,
+  createAtlasHandoutPageAction,
+  setNodeBackgroundAssetAction,
 } from "@/app/atlas-actions";
 import { ProceduralDraftPanel } from "./ProceduralDraftPanel";
+import { RegionDescribePanel } from "./RegionDescribePanel";
 
 // ---------------------------------------------------------------------------
 // Types shared in this module
@@ -37,8 +42,10 @@ export type ToolMode =
   | "biome"
   | "road"
   | "label"
+  | "pin"
   | "stamp"
-  | "eraser";
+  | "eraser"
+  | "measure";
 
 export type LabelColor = "black" | "red";
 
@@ -65,6 +72,8 @@ export interface EditorFeature {
   labelColor?: LabelColor | null;
   /** DB-persisted child node id (drill-down target). */
   childNodeId?: string | null;
+  /** Linked wiki page id (for pins and regions). */
+  linkedPageId?: string | null;
   layer?: number;
   sortOrder?: number;
   visibility?: string;
@@ -225,6 +234,10 @@ interface EditorState {
   biomeDensity: number;
   /** Points being collected for the active polygon/path draw. */
   drawingPoints: [number, number][];
+  /** Measure tool: up to 2 world-space points. */
+  measurePoints: [number, number][];
+  /** Whether to show the hex grid overlay. */
+  showHexGrid: boolean;
   /** Viewport: pan offset + zoom */
   panX: number;
   panY: number;
@@ -252,12 +265,16 @@ type EditorAction =
   | { type: "PAN"; dx: number; dy: number }
   | { type: "ZOOM"; delta: number; cx: number; cy: number; canvasW: number; canvasH: number }
   | { type: "MARK_CLEAN" }
-  | { type: "MOVE_SELECTED"; dx: number; dy: number; canvasW: number; canvasH: number };
+  | { type: "MOVE_SELECTED"; dx: number; dy: number; canvasW: number; canvasH: number }
+  | { type: "ADD_MEASURE_POINT"; point: [number, number] }
+  | { type: "CLEAR_MEASURE" }
+  | { type: "TOGGLE_HEX_GRID" }
+  | { type: "SET_FEATURE_LINKED_PAGE"; key: string; linkedPageId: string | null };
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case "SET_TOOL":
-      return { ...state, tool: action.tool, drawingPoints: [], selectedKey: null };
+      return { ...state, tool: action.tool, drawingPoints: [], measurePoints: [], selectedKey: null };
 
     case "SET_LABEL_COLOR":
       return { ...state, labelColor: action.color };
@@ -328,7 +345,29 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
 
     case "CANCEL_DRAW":
-      return { ...state, drawingPoints: [] };
+      return { ...state, drawingPoints: [], measurePoints: [] };
+
+    case "ADD_MEASURE_POINT": {
+      const pts = state.measurePoints.length >= 2
+        ? [action.point]
+        : [...state.measurePoints, action.point];
+      return { ...state, measurePoints: pts as [number, number][] };
+    }
+
+    case "CLEAR_MEASURE":
+      return { ...state, measurePoints: [] };
+
+    case "TOGGLE_HEX_GRID":
+      return { ...state, showHexGrid: !state.showHexGrid };
+
+    case "SET_FEATURE_LINKED_PAGE":
+      return {
+        ...state,
+        features: state.features.map((f) =>
+          f._key === action.key ? { ...f, linkedPageId: action.linkedPageId } : f,
+        ),
+        dirty: true,
+      };
 
     case "PLACE_LABEL": {
       const feat: EditorFeature = {
@@ -612,6 +651,8 @@ export interface AtlasEditorProps {
   parentChainItems?: NodeAncestorItem[];
   /** Polygon rings from the parent feature — rendered as faint locked underlay. */
   parentSilhouette?: [number, number][][];
+  /** Background asset ID for this node (used to construct URL). */
+  backgroundAssetId?: string | null;
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -620,6 +661,13 @@ const LEVEL_LABELS: Record<string, string> = {
   landscape: "Landschaft",
   city: "Stadt",
 };
+
+// ---------------------------------------------------------------------------
+// Scale constant for measure tool
+// ---------------------------------------------------------------------------
+
+/** Normalised canvas [0, 1] across = 100 leagues (matches ScaleBar label). */
+const MAP_SCALE_LEAGUES = 100;
 
 export function AtlasEditor({
   worldSlug,
@@ -631,6 +679,7 @@ export function AtlasEditor({
   preset = TOLKIEN_INK,
   parentChainItems = [],
   parentSilhouette,
+  backgroundAssetId,
 }: AtlasEditorProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -646,6 +695,23 @@ export function AtlasEditor({
 
   // Procedural draft panel
   const [showProceduralPanel, setShowProceduralPanel] = useState(false);
+
+  // Region describe panel
+  const [describeFeature, setDescribeFeature] = useState<EditorFeature | null>(null);
+
+  // Pin page link dialog
+  const [pinLinkFeature, setPinLinkFeature] = useState<EditorFeature | null>(null);
+  const [pinPageIdInput, setPinPageIdInput] = useState("");
+  const [pinNewPageTitle, setPinNewPageTitle] = useState("");
+  const [pinNewPageType, setPinNewPageType] = useState<"location" | "region">("location");
+  const [isPinLinking, startPinLinkTransition] = useTransition();
+
+  // Background asset upload state
+  const bgUploadRef = useRef<HTMLInputElement | null>(null);
+  const [bgUploadPending, setBgUploadPending] = useState(false);
+  const [bgAssetId, setBgAssetId] = useState<string | null>(backgroundAssetId ?? null);
+  const bgImageRef = useRef<HTMLImageElement | null>(null);
+  const [bgImageLoaded, setBgImageLoaded] = useState(false);
 
   // Drill-down dialog state
   const [drillDownFeatureId, setDrillDownFeatureId] = useState<string | null>(null);
@@ -667,6 +733,8 @@ export function AtlasEditor({
     activeBiomeKind: BiomeKind.forest,
     biomeDensity: 1.0,
     drawingPoints: [],
+    measurePoints: [],
+    showHexGrid: false,
     panX: 0,
     panY: 0,
     zoom: 1,
@@ -676,6 +744,25 @@ export function AtlasEditor({
   useEffect(() => {
     dispatch({ type: "INIT_FEATURES", features: initialFeatures, objects: initialObjects });
   }, [initialFeatures, initialObjects]);
+
+  // Load background image when bgAssetId changes
+  useEffect(() => {
+    if (!bgAssetId) {
+      bgImageRef.current = null;
+      setBgImageLoaded(false);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      bgImageRef.current = img;
+      setBgImageLoaded(true);
+    };
+    img.onerror = () => {
+      bgImageRef.current = null;
+      setBgImageLoaded(false);
+    };
+    img.src = `/api/assets/${bgAssetId}/file`;
+  }, [bgAssetId]);
 
   // ---------------------------------------------------------------------------
   // Canvas render
@@ -689,7 +776,7 @@ export function AtlasEditor({
 
     const W = canvas.width;
     const H = canvas.height;
-    const { panX, panY, zoom, features, objects, selectedKey, drawingPoints, tool } = state;
+    const { panX, panY, zoom, features, objects, selectedKey, drawingPoints, tool, measurePoints, showHexGrid } = state;
 
     function w2c(nx: number, ny: number): [number, number] {
       return worldToCanvas(nx, ny, panX, panY, zoom, W, H);
@@ -698,6 +785,17 @@ export function AtlasEditor({
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = preset.colors.parchment;
     ctx.fillRect(0, 0, W, H);
+
+    // Reference image underlay (faint, behind everything)
+    if (bgImageRef.current && bgImageLoaded) {
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      const [ix0, iy0] = w2c(0, 0);
+      const [ix1, iy1] = w2c(1, 1);
+      ctx.drawImage(bgImageRef.current, ix0, iy0, ix1 - ix0, iy1 - iy0);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
 
     const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
     grad.addColorStop(0, "rgba(0,0,0,0)");
@@ -1033,7 +1131,84 @@ export function AtlasEditor({
         ctx.restore();
       }
     }
-  }, [state, preset, parentSilhouette]);
+
+    // Hex grid overlay
+    if (showHexGrid) {
+      const HEX_R = 0.05; // hex radius in normalised space
+      const hexW = Math.sqrt(3) * HEX_R;
+      const hexH = 2 * HEX_R;
+      ctx.save();
+      ctx.strokeStyle = "rgba(80,50,20,0.20)";
+      ctx.lineWidth = 0.8 * zoom;
+
+      const cols = Math.ceil(1.2 / hexW) + 2;
+      const rows = Math.ceil(1.2 / (hexH * 0.75)) + 2;
+      for (let row = -1; row < rows; row++) {
+        for (let col = -1; col < cols; col++) {
+          const offsetX = (row % 2) * (hexW / 2);
+          const cx = col * hexW + offsetX;
+          const cy = row * hexH * 0.75;
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 180) * (60 * i - 30);
+            const hx = cx + HEX_R * Math.cos(angle);
+            const hy = cy + HEX_R * Math.sin(angle);
+            const [px, py] = w2c(hx, hy);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Measure tool overlay
+    if (measurePoints.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2 * zoom;
+      ctx.setLineDash([6 * zoom, 3 * zoom]);
+
+      for (let i = 0; i < measurePoints.length; i++) {
+        const [mx, my] = w2c(measurePoints[i]![0], measurePoints[i]![1]);
+        ctx.beginPath();
+        ctx.arc(mx, my, 6 * zoom, 0, Math.PI * 2);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f59e0b";
+        ctx.fill();
+        ctx.setLineDash([6 * zoom, 3 * zoom]);
+      }
+
+      if (measurePoints.length === 2) {
+        const [ax, ay] = w2c(measurePoints[0]![0], measurePoints[0]![1]);
+        const [bx, by] = w2c(measurePoints[1]![0], measurePoints[1]![1]);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+
+        // Distance label
+        const dx = measurePoints[1]![0] - measurePoints[0]![0];
+        const dy = measurePoints[1]![1] - measurePoints[0]![1];
+        const dist = Math.sqrt(dx * dx + dy * dy) * MAP_SCALE_LEAGUES;
+        const midX = (ax + bx) / 2;
+        const midY = (ay + by) / 2;
+        const label = `${dist.toFixed(1)} ${preset.decorations.scaleUnit}`;
+        ctx.setLineDash([]);
+        ctx.font = `bold ${Math.round(13 * zoom)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.fillRect(midX - tw / 2 - 4, midY - 18 * zoom, tw + 8, 16 * zoom);
+        ctx.fillStyle = "#92400e";
+        ctx.fillText(label, midX, midY);
+      }
+      ctx.restore();
+    }
+  }, [state, preset, parentSilhouette, bgImageLoaded]);
 
   useEffect(() => {
     render();
@@ -1181,8 +1356,18 @@ export function AtlasEditor({
       return;
     }
 
+    if (tool === "pin") {
+      dispatch({ type: "PLACE_PIN", point: wp });
+      return;
+    }
+
     if (tool === "stamp") {
       dispatch({ type: "PLACE_STAMP", point: wp });
+      return;
+    }
+
+    if (tool === "measure") {
+      dispatch({ type: "ADD_MEASURE_POINT", point: wp });
       return;
     }
   }
@@ -1276,6 +1461,77 @@ export function AtlasEditor({
   }
 
   // ---------------------------------------------------------------------------
+  // Export PNG
+  // ---------------------------------------------------------------------------
+
+  function handleExportPng() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `atlas-${nodeTitle.replace(/\s+/g, "-").toLowerCase()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }
+
+  async function handleCreateHandout() {
+    const fd = new FormData();
+    fd.set("worldSlug", worldSlug);
+    fd.set("nodeId", nodeId);
+    fd.set("title", `${nodeTitle} — Handout`);
+    const result = await createAtlasHandoutPageAction(fd);
+    router.push(`/worlds/${worldSlug}/pages/${result.pageSlug}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Background image upload
+  // ---------------------------------------------------------------------------
+
+  async function handleBgUpload(file: File) {
+    setBgUploadPending(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("title", `${nodeTitle} — Unterlegbild`);
+      fd.append("visibility", "dm_only");
+      const response = await fetch(`/api/worlds/${worldSlug}/assets/upload`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: fd,
+      });
+      if (!response.ok) throw new Error("Upload fehlgeschlagen");
+      const data = await response.json() as { id: string };
+      const assetId = data.id;
+
+      // Persist on the node
+      const actionFd = new FormData();
+      actionFd.set("worldSlug", worldSlug);
+      actionFd.set("nodeId", nodeId);
+      actionFd.set("assetId", assetId);
+      await setNodeBackgroundAssetAction(actionFd);
+      setBgAssetId(assetId);
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : "Upload-Fehler");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } finally {
+      setBgUploadPending(false);
+    }
+  }
+
+  async function handleBgClear() {
+    const fd = new FormData();
+    fd.set("worldSlug", worldSlug);
+    fd.set("nodeId", nodeId);
+    fd.set("assetId", "");
+    await setNodeBackgroundAssetAction(fd);
+    setBgAssetId(null);
+  }
+
+  // ---------------------------------------------------------------------------
   // Keyboard shortcuts
   // ---------------------------------------------------------------------------
 
@@ -1292,8 +1548,11 @@ export function AtlasEditor({
         case "b": dispatch({ type: "SET_TOOL", tool: "biome" }); break;
         case "d": dispatch({ type: "SET_TOOL", tool: "road" }); break;
         case "l": dispatch({ type: "SET_TOOL", tool: "label" }); break;
+        case "i": dispatch({ type: "SET_TOOL", tool: "pin" }); break;
         case "t": dispatch({ type: "SET_TOOL", tool: "stamp" }); break;
         case "e": dispatch({ type: "SET_TOOL", tool: "eraser" }); break;
+        case "m": dispatch({ type: "SET_TOOL", tool: "measure" }); break;
+        case "h": dispatch({ type: "TOGGLE_HEX_GRID" }); break;
       }
     }
     window.addEventListener("keydown", onKey);
@@ -1314,8 +1573,10 @@ export function AtlasEditor({
     biome: "crosshair",
     road: "crosshair",
     label: "text",
+    pin: "crosshair",
     stamp: "copy",
     eraser: "not-allowed",
+    measure: "crosshair",
   };
 
   const isDrawingTool = state.tool === "polygon" || state.tool === "path" || state.tool === "biome" || state.tool === "road";
@@ -1375,7 +1636,9 @@ export function AtlasEditor({
             { mode: "biome" as ToolMode, label: "Biom", shortcut: "B" },
             { mode: "road" as ToolMode, label: "Straße", shortcut: "D" },
             { mode: "label" as ToolMode, label: "Label", shortcut: "L" },
+            { mode: "pin" as ToolMode, label: "Pin", shortcut: "I" },
             { mode: "stamp" as ToolMode, label: "Glyph", shortcut: "T" },
+            { mode: "measure" as ToolMode, label: "Messen", shortcut: "M" },
             { mode: "eraser" as ToolMode, label: "Löschen", shortcut: "E" },
           ] as { mode: ToolMode; label: string; shortcut: string }[]
         ).map(({ mode, label, shortcut }) => (
@@ -1415,7 +1678,38 @@ export function AtlasEditor({
           ))}
         </label>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Hex grid toggle */}
+          <button
+            type="button"
+            className={`uwe-v2-btn ${state.showHexGrid ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+            onClick={() => dispatch({ type: "TOGGLE_HEX_GRID" })}
+            title="Hexgitter ein-/ausblenden (H)"
+            aria-pressed={state.showHexGrid}
+          >
+            ⬡ Hex
+          </button>
+
+          {/* Export PNG */}
+          <button
+            type="button"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
+            onClick={handleExportPng}
+            title="Aktuelle Kartenansicht als PNG exportieren"
+          >
+            ↓ PNG
+          </button>
+
+          {/* Als Handout */}
+          <button
+            type="button"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
+            onClick={() => void handleCreateHandout()}
+            title="Handout-Seite aus dieser Karte erstellen"
+          >
+            ↗ Handout
+          </button>
+
           {saveMsg && <span style={{ fontSize: 13, color: "green" }}>{saveMsg}</span>}
           {state.dirty && !saveMsg && (
             <span style={{ fontSize: 12, color: "var(--uwe-muted)" }}>Ungespeicherte Änderungen</span>
@@ -1620,6 +1914,31 @@ export function AtlasEditor({
               )}
             </div>
           )}
+
+          {/* Measure hint */}
+          {state.tool === "measure" && (
+            <div style={{
+              position: "absolute",
+              bottom: 12,
+              left: 12,
+              background: "rgba(255,255,240,0.92)",
+              border: "1px solid #f59e0b",
+              borderRadius: 4,
+              padding: "0.25rem 0.5rem",
+              fontSize: 12,
+              pointerEvents: "none",
+              color: "#92400e",
+            }}>
+              {state.measurePoints.length === 0 && "Ersten Punkt klicken"}
+              {state.measurePoints.length === 1 && "Zweiten Punkt klicken"}
+              {state.measurePoints.length === 2 && (() => {
+                const dx = state.measurePoints[1]![0] - state.measurePoints[0]![0];
+                const dy = state.measurePoints[1]![1] - state.measurePoints[0]![1];
+                const dist = Math.sqrt(dx * dx + dy * dy) * MAP_SCALE_LEAGUES;
+                return `Distanz: ${dist.toFixed(1)} ${preset.decorations.scaleUnit} — erneut klicken zum Zurücksetzen`;
+              })()}
+            </div>
+          )}
         </div>
 
         {/* Selection panel */}
@@ -1682,6 +2001,47 @@ export function AtlasEditor({
                   </div>
                 )}
 
+                {/* Region AI describe */}
+                {selectedFeature.kind === "region" && (
+                  <button
+                    type="button"
+                    onClick={() => setDescribeFeature(selectedFeature)}
+                    className="uwe-v2-btn uwe-v2-btn-secondary"
+                    style={{ marginTop: "0.25rem", width: "100%" }}
+                  >
+                    ✦ Beschreiben
+                  </button>
+                )}
+
+                {/* Pin → Page link */}
+                {selectedFeature.kind === "pin" && (
+                  <div style={{ marginTop: "0.5rem" }}>
+                    {selectedFeature.linkedPageId ? (
+                      <a
+                        href={`/worlds/${worldSlug}/pages/${selectedFeature.linkedPageId}`}
+                        className="uwe-v2-btn uwe-v2-btn-secondary"
+                        style={{ display: "block", width: "100%", textAlign: "center", marginBottom: "0.25rem", fontSize: 12 }}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        ↗ Wiki-Seite
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPinLinkFeature(selectedFeature);
+                        setPinPageIdInput(selectedFeature.linkedPageId ?? "");
+                        setPinNewPageTitle(selectedFeature.labelText ?? "");
+                      }}
+                      className="uwe-v2-btn uwe-v2-btn-secondary"
+                      style={{ width: "100%", fontSize: 12 }}
+                    >
+                      {selectedFeature.linkedPageId ? "↗ Seite ändern" : "↗ Seite verknüpfen"}
+                    </button>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => dispatch({ type: "ERASE_SELECTED" })}
@@ -1724,12 +2084,97 @@ export function AtlasEditor({
               <li>B — Biom</li>
               <li>D — Straße</li>
               <li>L — Label</li>
+              <li>I — Pin</li>
               <li>T — Glyph</li>
+              <li>M — Messen</li>
+              <li>H — Hex-Gitter</li>
               <li>E — Radierer</li>
               <li>Del — Element löschen</li>
               <li>Esc — Abbrechen</li>
             </ul>
             <p style={{ marginTop: "0.5rem" }}>Wheel: Zoom · Drag Hintergrund: Pan</p>
+          </div>
+
+          {/* Measure tool status */}
+          {state.tool === "measure" && (
+            <div style={{
+              padding: "0.75rem",
+              background: "var(--uwe-surface)",
+              border: "1px solid var(--uwe-border)",
+              borderRadius: "var(--uwe-radius)",
+              fontSize: 12,
+            }}>
+              <strong>Messen</strong>
+              <p style={{ color: "var(--uwe-muted)", margin: "0.25rem 0" }}>
+                {state.measurePoints.length === 0
+                  ? "1. Punkt klicken"
+                  : state.measurePoints.length === 1
+                    ? "2. Punkt klicken"
+                    : (() => {
+                        const dx = state.measurePoints[1]![0] - state.measurePoints[0]![0];
+                        const dy = state.measurePoints[1]![1] - state.measurePoints[0]![1];
+                        const dist = Math.sqrt(dx * dx + dy * dy) * MAP_SCALE_LEAGUES;
+                        return `${dist.toFixed(1)} ${preset.decorations.scaleUnit}`;
+                      })()
+                }
+              </p>
+              {state.measurePoints.length === 2 && (
+                <button
+                  type="button"
+                  className="uwe-v2-btn uwe-v2-btn-secondary"
+                  style={{ fontSize: 11, padding: "0.1rem 0.4rem" }}
+                  onClick={() => dispatch({ type: "CLEAR_MEASURE" })}
+                >
+                  Zurücksetzen
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Background image underlay */}
+          <div style={{
+            padding: "0.75rem",
+            background: "var(--uwe-surface)",
+            border: "1px solid var(--uwe-border)",
+            borderRadius: "var(--uwe-radius)",
+            fontSize: 12,
+          }}>
+            <strong>Unterlegbild</strong>
+            <p style={{ color: "var(--uwe-muted)", margin: "0.25rem 0" }}>
+              {bgAssetId ? "Bild aktiv" : "Kein Bild"}
+            </p>
+            <input
+              type="file"
+              ref={bgUploadRef}
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleBgUpload(file);
+                e.target.value = "";
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+                style={{ fontSize: 11 }}
+                disabled={bgUploadPending}
+                onClick={() => bgUploadRef.current?.click()}
+              >
+                {bgUploadPending ? "Lädt hoch…" : "Bild hochladen"}
+              </button>
+              {bgAssetId && (
+                <button
+                  type="button"
+                  className="uwe-v2-btn uwe-v2-btn-secondary"
+                  style={{ fontSize: 11 }}
+                  onClick={() => void handleBgClear()}
+                >
+                  Bild entfernen
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1799,6 +2244,159 @@ export function AtlasEditor({
           }}
           onClose={() => setShowProceduralPanel(false)}
         />
+      )}
+
+      {/* Region describe panel */}
+      {describeFeature && (
+        <RegionDescribePanel
+          worldSlug={worldSlug}
+          feature={describeFeature}
+          onClose={() => setDescribeFeature(null)}
+        />
+      )}
+
+      {/* Pin page link dialog */}
+      {pinLinkFeature && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: "var(--uwe-bg)",
+            border: "1px solid var(--uwe-border)",
+            borderRadius: "var(--uwe-radius)",
+            padding: "1.5rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            minWidth: 360,
+            maxWidth: 480,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0 }}>Pin mit Wiki-Seite verknüpfen</h3>
+              <button
+                type="button"
+                onClick={() => setPinLinkFeature(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}
+                aria-label="Schließen"
+              >×</button>
+            </div>
+
+            {/* Link existing page */}
+            <div>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                Bestehende Seite verknüpfen (Seiten-ID)
+                <input
+                  className="uwe-input"
+                  value={pinPageIdInput}
+                  onChange={(e) => setPinPageIdInput(e.target.value)}
+                  placeholder="Seiten-ID einfügen…"
+                />
+              </label>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+                style={{ marginTop: "0.5rem", width: "100%" }}
+                disabled={!pinPageIdInput.trim() || isPinLinking}
+                onClick={() => {
+                  if (!pinLinkFeature || !pinPageIdInput.trim()) return;
+                  const feat = pinLinkFeature;
+                  const pageId = pinPageIdInput.trim();
+                  setPinLinkFeature(null);
+                  startPinLinkTransition(async () => {
+                    if (feat.id) {
+                      const fd = new FormData();
+                      fd.set("worldSlug", worldSlug);
+                      fd.set("nodeId", nodeId);
+                      fd.set("featureId", feat.id);
+                      fd.set("pageId", pageId);
+                      await linkPinToPageAction(fd);
+                    }
+                    dispatch({
+                      type: "SET_FEATURE_LINKED_PAGE",
+                      key: feat._key,
+                      linkedPageId: pageId,
+                    });
+                  });
+                }}
+              >
+                Verknüpfen
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div style={{ flex: 1, height: 1, background: "var(--uwe-border)" }} />
+              <span style={{ fontSize: 12, color: "var(--uwe-muted)" }}>oder neue Seite</span>
+              <div style={{ flex: 1, height: 1, background: "var(--uwe-border)" }} />
+            </div>
+
+            {/* Create new page */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                Titel der neuen Seite
+                <input
+                  className="uwe-input"
+                  value={pinNewPageTitle}
+                  onChange={(e) => setPinNewPageTitle(e.target.value)}
+                  placeholder="z.B. Stadt Eisenheim"
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                Seitentyp
+                <select
+                  className="uwe-input"
+                  value={pinNewPageType}
+                  onChange={(e) => setPinNewPageType(e.target.value as "location" | "region")}
+                >
+                  <option value="location">Ort (location)</option>
+                  <option value="region">Region (region)</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-primary"
+                style={{ width: "100%" }}
+                disabled={!pinNewPageTitle.trim() || isPinLinking}
+                onClick={() => {
+                  if (!pinLinkFeature || !pinNewPageTitle.trim()) return;
+                  const feat = pinLinkFeature;
+                  const title = pinNewPageTitle.trim();
+                  const type = pinNewPageType;
+                  setPinLinkFeature(null);
+                  startPinLinkTransition(async () => {
+                    const fd = new FormData();
+                    fd.set("worldSlug", worldSlug);
+                    fd.set("nodeId", nodeId);
+                    fd.set("featureId", feat.id ?? "");
+                    fd.set("title", title);
+                    fd.set("pageType", type);
+                    const result = await createPinPageAction(fd);
+                    dispatch({
+                      type: "SET_FEATURE_LINKED_PAGE",
+                      key: feat._key,
+                      linkedPageId: result.pageId,
+                    });
+                  });
+                }}
+              >
+                {isPinLinking ? "Erstelle…" : "Seite erstellen & verknüpfen"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="uwe-v2-btn uwe-v2-btn-secondary"
+              onClick={() => setPinLinkFeature(null)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Drill-down child node creation dialog */}

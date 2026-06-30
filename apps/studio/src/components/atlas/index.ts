@@ -11,3 +11,8 @@ export {
   ProceduralDraftPanel,
   type ProceduralDraftPanelProps,
 } from "./ProceduralDraftPanel";
+
+export {
+  RegionDescribePanel,
+  type RegionDescribePanelProps,
+} from "./RegionDescribePanel";

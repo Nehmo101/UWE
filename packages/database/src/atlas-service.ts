@@ -555,6 +555,14 @@ export function createAtlasService(db: PrismaClient) {
     });
   }
 
+  /** Link (or unlink) an AtlasFeature to a wiki Page via linkedPageId. */
+  async function linkFeatureToPage(featureId: string, pageId: string | null) {
+    return db.atlasFeature.update({
+      where: { id: featureId },
+      data: { linkedPageId: pageId },
+    });
+  }
+
   return {
     getOrCreateAtlasForWorld,
     getAtlasMap,
@@ -579,6 +587,7 @@ export function createAtlasService(db: PrismaClient) {
     approvePaletteItem,
     getAtlasForContext,
     linkNodeToPage,
+    linkFeatureToPage,
     isAtlasEntityAccessible,
     createChildNode,
     getNodeWithHierarchy,

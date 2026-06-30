@@ -30,7 +30,8 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("fill_dungeon_room"));
     assert.ok(ids.includes("mail_draft"));
     assert.ok(ids.includes("atlas_name_regions"), "atlas_name_regions action must be present");
-    assert.equal(BRAIN_ACTION_LIST.length, 9);
+    assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
+    assert.equal(BRAIN_ACTION_LIST.length, 10);
   });
 
   it("marks player-safe actions correctly", () => {

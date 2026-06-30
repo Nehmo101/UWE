@@ -10,6 +10,7 @@ import {
   type CreateAtlasNodeInput,
   type UpdateAtlasFeatureInput,
   type UpdateAtlasNodeInput,
+  type PageType,
 } from "@uwe/database/server";
 import type { AtlasNodeLevel } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
@@ -141,6 +142,7 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
     style?: unknown;
     labelText?: string | null;
     labelColor?: string | null;
+    linkedPageId?: string | null;
     layer?: number;
     sortOrder?: number;
     visibility?: string;
@@ -175,6 +177,7 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
         style: feat.style as CreateAtlasFeatureInput["style"],
         labelText: feat.labelText ?? null,
         labelColor: feat.labelColor as CreateAtlasFeatureInput["labelColor"],
+        linkedPageId: feat.linkedPageId ?? null,
         layer: feat.layer ?? 0,
         sortOrder: feat.sortOrder ?? 0,
         visibility: (feat.visibility ?? "dm_only") as CreateAtlasFeatureInput["visibility"],
@@ -187,6 +190,7 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
           style: input.style,
           labelText: input.labelText,
           labelColor: input.labelColor,
+          linkedPageId: input.linkedPageId,
           layer: input.layer,
           sortOrder: input.sortOrder,
           visibility: input.visibility,
@@ -359,6 +363,161 @@ function hashString(s: string): number {
     h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   }
   return h >>> 0;
+}
+
+// ---------------------------------------------------------------------------
+// Pin → Page linking
+// ---------------------------------------------------------------------------
+
+/**
+ * Link a pin feature (by featureId) to an existing wiki page (by pageId).
+ */
+export async function linkPinToPageAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const featureId = String(formData.get("featureId"));
+  const pageId = String(formData.get("pageId")) || null;
+  const nodeId = String(formData.get("nodeId"));
+
+  const { db, atlas } = getAtlasDeps();
+  try {
+    await atlas.linkFeatureToPage(featureId, pageId);
+  } finally {
+    await db.$disconnect();
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+}
+
+/**
+ * Create a new wiki page (region or location type) and link the given pin feature to it.
+ * Returns the new pageId so the client can store it in the EditorFeature.
+ */
+export async function createPinPageAction(
+  formData: FormData,
+): Promise<{ pageId: string; pageSlug: string }> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const featureId = String(formData.get("featureId"));
+  const nodeId = String(formData.get("nodeId"));
+  const title = String(formData.get("title") || "Unbenannter Ort").trim();
+  const pageType = (String(formData.get("pageType") || "location") as PageType);
+
+  const { db, atlas, repo } = getAtlasDeps();
+  let pageId: string;
+  let pageSlug: string;
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) throw new Error("Welt nicht gefunden");
+
+    // Build a URL-safe slug from the title
+    const slug =
+      title
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .slice(0, 60) || `pin-${Date.now()}`;
+
+    const page = await repo.createPage({
+      worldId: world.id,
+      title,
+      slug,
+      type: pageType,
+      visibility: "dm_only",
+    });
+    pageId = page.id;
+    pageSlug = page.slug;
+
+    if (featureId) {
+      await atlas.linkFeatureToPage(featureId, pageId);
+    }
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  return { pageId, pageSlug };
+}
+
+// ---------------------------------------------------------------------------
+// Export PNG → Handout stub
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a handout page stub linked to the current atlas node.
+ * Returns the new handout page URL for the client to redirect to.
+ */
+export async function createAtlasHandoutPageAction(
+  formData: FormData,
+): Promise<{ pageId: string; pageSlug: string }> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const title = String(formData.get("title") || "Karten-Handout").trim();
+
+  const { db, atlas, repo } = getAtlasDeps();
+  let pageId: string;
+  let pageSlug: string;
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) throw new Error("Welt nicht gefunden");
+
+    const slug =
+      `handout-${title
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .slice(0, 50)}-${Date.now() % 10000}`;
+
+    const page = await repo.createPage({
+      worldId: world.id,
+      title,
+      slug,
+      type: "handout" as PageType,
+      visibility: "dm_only",
+      summary: `Karten-Handout für Atlas-Knoten ${nodeId}`,
+    });
+    pageId = page.id;
+    pageSlug = page.slug;
+
+    // Link the atlas node to the handout page
+    await atlas.linkNodeToPage(nodeId, pageId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  revalidatePath(`/worlds/${worldSlug}/pages`);
+  return { pageId, pageSlug };
+}
+
+// ---------------------------------------------------------------------------
+// Background image underlay
+// ---------------------------------------------------------------------------
+
+/** Set (or clear) the backgroundAssetId on an atlas node. */
+export async function setNodeBackgroundAssetAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const assetId = String(formData.get("assetId") || "") || null;
+
+  const { db, atlas } = getAtlasDeps();
+  try {
+    await atlas.updateNode(nodeId, { backgroundAssetId: assetId } satisfies UpdateAtlasNodeInput);
+  } finally {
+    await db.$disconnect();
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
 }
 
 export async function saveAtlasObjectsAction(formData: FormData) {

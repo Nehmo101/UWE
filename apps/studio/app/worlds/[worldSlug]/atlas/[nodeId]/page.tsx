@@ -31,12 +31,14 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
   let mapStylePreset: string | null = null;
   let parentChainItems: NodeAncestorItem[] = [];
   let parentSilhouette: [number, number][][] | undefined;
+  let backgroundAssetId: string | null = null;
 
   try {
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
     if (!hierarchy) notFound();
 
     node = hierarchy.node;
+    backgroundAssetId = node.backgroundAssetId ?? null;
 
     const map = await db.atlasMap.findUnique({ where: { id: node.mapId } });
     mapStylePreset = map?.stylePreset ?? null;
@@ -82,6 +84,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     labelText: f.labelText ?? null,
     labelColor: (f.labelColor as EditorFeature["labelColor"]) ?? null,
     childNodeId: f.childNodeId ?? null,
+    linkedPageId: f.linkedPageId ?? null,
     layer: f.layer,
     sortOrder: f.sortOrder,
     visibility: f.visibility,
@@ -128,6 +131,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
         preset={preset}
         parentChainItems={parentChainItems}
         parentSilhouette={parentSilhouette}
+        backgroundAssetId={backgroundAssetId}
       />
     </WorldShell>
   );
