@@ -6,3 +6,8 @@ export {
   type NodeAncestorItem,
   BUILTIN_GLYPHS,
 } from "./AtlasEditor";
+
+export {
+  ProceduralDraftPanel,
+  type ProceduralDraftPanelProps,
+} from "./ProceduralDraftPanel";

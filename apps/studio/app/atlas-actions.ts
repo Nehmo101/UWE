@@ -14,6 +14,8 @@ import {
 import type { AtlasNodeLevel } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
+import { generateDraft, rerollDraft } from "@uwe/atlas/procedural";
+import type { AtlasDraft, ProceduralPromptHints, ProceduralBounds } from "@uwe/atlas/procedural";
 
 function getAtlasDeps() {
   const db = createPrismaClient();
@@ -281,6 +283,83 @@ export async function deleteAtlasFeatureAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 // AtlasObject (stamp/glyph placements)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Procedural draft generation
+// ---------------------------------------------------------------------------
+
+export interface GenerateAtlasDraftResult {
+  draft: AtlasDraft;
+  error?: never;
+}
+export interface GenerateAtlasDraftError {
+  draft?: never;
+  error: string;
+}
+
+/**
+ * Generate a procedural map draft server-side from a seed and optional hints.
+ * Pure computation — no DB access, no RTX required.
+ * Returns the draft JSON for the client to preview and optionally apply.
+ */
+export async function generateAtlasDraftAction(
+  formData: FormData,
+): Promise<GenerateAtlasDraftResult | GenerateAtlasDraftError> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  if (worldSlug) {
+    await requireStudioWorldEdit(worldSlug);
+  }
+
+  const seedRaw = String(formData.get("seed") || "");
+  const seed = seedRaw ? (parseInt(seedRaw, 10) || hashString(seedRaw)) : Math.floor(Math.random() * 0xffffff);
+
+  const hintsJson = String(formData.get("hints") || "{}");
+  let hints: ProceduralPromptHints = {};
+  try {
+    hints = JSON.parse(hintsJson) as ProceduralPromptHints;
+  } catch {
+    // ignore bad JSON — use empty hints
+  }
+
+  const boundsJson = String(formData.get("bounds") || "null");
+  let bounds: ProceduralBounds | undefined;
+  try {
+    const parsed = JSON.parse(boundsJson) as ProceduralBounds | null;
+    if (parsed && typeof parsed.minX === "number") bounds = parsed;
+  } catch {
+    // use default bounds
+  }
+
+  const prevDraftJson = String(formData.get("prevDraft") || "null");
+  const lockedIdsJson = String(formData.get("lockedIds") || "null");
+
+  try {
+    let draft: AtlasDraft;
+    if (prevDraftJson !== "null") {
+      const prevDraft = JSON.parse(prevDraftJson) as AtlasDraft;
+      const lockedIds = lockedIdsJson !== "null"
+        ? (JSON.parse(lockedIdsJson) as string[])
+        : undefined;
+      draft = rerollDraft(prevDraft, seed, lockedIds);
+    } else {
+      draft = generateDraft(seed, hints, bounds);
+    }
+    return { draft };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Generierung fehlgeschlagen" };
+  }
+}
+
+/** Simple string hash for seed generation from a text phrase. */
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
 
 export async function saveAtlasObjectsAction(formData: FormData) {
   await requireStudioActionAuth();

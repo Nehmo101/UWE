@@ -24,6 +24,7 @@ import {
   saveAtlasObjectsAction,
   createChildNodeAction,
 } from "@/app/atlas-actions";
+import { ProceduralDraftPanel } from "./ProceduralDraftPanel";
 
 // ---------------------------------------------------------------------------
 // Types shared in this module
@@ -247,6 +248,7 @@ type EditorAction =
   | { type: "PLACE_STAMP"; point: [number, number] }
   | { type: "ERASE_SELECTED" }
   | { type: "INIT_FEATURES"; features: EditorFeature[]; objects: EditorObject[] }
+  | { type: "APPEND_DRAFT_FEATURES"; features: EditorFeature[] }
   | { type: "PAN"; dx: number; dy: number }
   | { type: "ZOOM"; delta: number; cx: number; cy: number; canvasW: number; canvasH: number }
   | { type: "MARK_CLEAN" }
@@ -403,6 +405,13 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         features: action.features,
         objects: action.objects,
         dirty: false,
+      };
+
+    case "APPEND_DRAFT_FEATURES":
+      return {
+        ...state,
+        features: [...state.features, ...action.features],
+        dirty: true,
       };
 
     case "PAN":
@@ -634,6 +643,9 @@ export function AtlasEditor({
   const [labelText, setLabelText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Procedural draft panel
+  const [showProceduralPanel, setShowProceduralPanel] = useState(false);
 
   // Drill-down dialog state
   const [drillDownFeatureId, setDrillDownFeatureId] = useState<string | null>(null);
@@ -1410,6 +1422,14 @@ export function AtlasEditor({
           )}
           <button
             type="button"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
+            onClick={() => setShowProceduralPanel(true)}
+            title="Prozeduralen Karten-Entwurf mit KI-Benennung generieren"
+          >
+            ✦ Entwurf generieren
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={isPending || !state.dirty}
             className="uwe-v2-btn uwe-v2-btn-primary"
@@ -1767,6 +1787,18 @@ export function AtlasEditor({
             </div>
           </form>
         </div>
+      )}
+
+      {/* Procedural draft panel */}
+      {showProceduralPanel && (
+        <ProceduralDraftPanel
+          worldSlug={worldSlug}
+          nodeId={nodeId}
+          onApply={(features) => {
+            dispatch({ type: "APPEND_DRAFT_FEATURES", features });
+          }}
+          onClose={() => setShowProceduralPanel(false)}
+        />
       )}
 
       {/* Drill-down child node creation dialog */}
