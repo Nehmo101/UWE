@@ -67,6 +67,7 @@ describe("calendar-aggregation-service", () => {
         vendor: "",
         status: "active" as const,
         expenseType: "subscription" as const,
+        source: "manual" as const,
         billingInterval: "monthly" as const,
         categoryLabel: "",
         amountCents: 1000,

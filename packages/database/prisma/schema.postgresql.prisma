@@ -74,10 +74,13 @@ enum PublishStatus {
 enum CanonicalStatus {
   idea
   draft
+  prepared
+  played
   canon
   deprecated
   contradictory
   non_canon
+  discarded
 }
 
 enum ContentBlockType {
@@ -412,6 +415,25 @@ enum ContractExpenseType {
   utility
   software
   other
+}
+
+enum ContractExpenseSource {
+  manual
+  ai_usage
+}
+
+enum EntityTagEntityType {
+  page
+  asset
+  soundboard_button
+  personal_brain_document
+  personal_brain_fact
+  capture
+  project
+  workshop
+  contract
+  hardware
+  dev_idea
 }
 
 enum ContractBillingInterval {
@@ -2108,6 +2130,7 @@ model ContractExpense {
   vendor          String                  @default("")
   status          ContractStatus          @default(active)
   expenseType     ContractExpenseType     @default(other) @map("expense_type")
+  source          ContractExpenseSource   @default(manual)
   billingInterval ContractBillingInterval @default(monthly) @map("billing_interval")
   categoryLabel   String                  @default("") @map("category_label")
   amountCents     Int?                    @map("amount_cents")
@@ -2822,4 +2845,34 @@ model AiUsageLog {
   @@index([createdAt])
   @@index([feature, createdAt])
   @@map("ai_usage_logs")
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  color       String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  entityTags EntityTag[]
+
+  @@map("tags")
+}
+
+model EntityTag {
+  id         String              @id @default(cuid())
+  tagId      String              @map("tag_id")
+  entityType EntityTagEntityType @map("entity_type")
+  entityId   String              @map("entity_id")
+  worldId    String?             @map("world_id")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@index([worldId])
+  @@map("entity_tags")
 }

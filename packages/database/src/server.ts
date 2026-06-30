@@ -244,6 +244,20 @@ export type {
 } from "./tag-service";
 
 export {
+  createEntityTagService,
+  EntityTagService,
+} from "./entity-tag-service";
+export type {
+  AttachEntityTagInput,
+  EntityTag,
+  EntityTagEntityType,
+  Tag,
+  TagWithUsageCount,
+  UpsertTagInput,
+} from "./entity-tag-service";
+export { EntityTagEntityTypeEnum } from "./entity-tag-service";
+
+export {
   SEARCH_ENTITY_FILTERS,
   SEARCH_ENTITY_FILTER_LABELS,
   buildSearchIndex,
@@ -775,6 +789,9 @@ export {
   resolveDecryptedProviderKeys,
   getPersistentPathConfiguration,
   isGuestPortalAccessAllowed,
+  isMaintenanceModeActive,
+  isPortalLocked,
+  isStudioLocked,
   isPortalGloballyEnabled,
   isPublicSharingEnabled,
   resolveLocalOnlyMode,
@@ -866,6 +883,7 @@ export type {
   StorageSettings,
   BackupSettings,
   PrivacySettings,
+  MaintenanceSettings,
   MailSettings,
   ImageStudioSettings,
   ImageStudioPortalSettings,
@@ -1032,6 +1050,7 @@ export {
   WorkshopRentalStatusEnum,
   ContractStatusEnum,
   ContractExpenseTypeEnum,
+  ContractExpenseSourceEnum,
   ContractBillingIntervalEnum,
   HardwareStatusEnum,
 } from "./life-admin-service";
@@ -1077,6 +1096,7 @@ export type {
   WorkshopRentalStatus,
   ContractExpense,
   ContractExpenseType,
+  ContractExpenseSource,
   ContractStatus,
   HardwareDevice,
   HardwareStatus,

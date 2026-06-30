@@ -116,6 +116,29 @@ export interface AuthSettings {
   sessionInactivityTimeoutMinutes: number;
 }
 
+/** Owner emergency / maintenance locks (stored in system_settings JSON). */
+export interface MaintenanceSettings {
+  maintenanceMode: boolean;
+  lockPortal: boolean;
+  lockStudio: boolean;
+  message: string;
+}
+
+export interface UweSystemSettings {
+  app: AppSettings;
+  worlds: WorldSettings;
+  campaigns: CampaignSettings;
+  portal: PortalSettings;
+  ai: AiSettings;
+  mail: MailSettings;
+  imageStudio: ImageStudioSettings;
+  storage: StorageSettings;
+  backup: BackupSettings;
+  privacy: PrivacySettings;
+  auth: AuthSettings;
+  maintenance: MaintenanceSettings;
+}
+
 export interface MailSmtpStatus {
   host: string | null;
   port: number | null;
@@ -168,20 +191,6 @@ export interface ImageStudioSettings {
   message: string;
 }
 
-export interface UweSystemSettings {
-  app: AppSettings;
-  worlds: WorldSettings;
-  campaigns: CampaignSettings;
-  portal: PortalSettings;
-  ai: AiSettings;
-  mail: MailSettings;
-  imageStudio: ImageStudioSettings;
-  storage: StorageSettings;
-  backup: BackupSettings;
-  privacy: PrivacySettings;
-  auth: AuthSettings;
-}
-
 export type UweSystemSettingsUpdate = {
   app?: Partial<AppSettings>;
   worlds?: Partial<WorldSettings>;
@@ -194,6 +203,7 @@ export type UweSystemSettingsUpdate = {
   backup?: Partial<BackupSettings>;
   privacy?: Partial<PrivacySettings>;
   auth?: Partial<AuthSettings>;
+  maintenance?: Partial<MaintenanceSettings>;
 };
 
 const SETTINGS_ID = "default";
@@ -452,6 +462,12 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   auth: {
     sessionInactivityTimeoutMinutes: 30,
   },
+  maintenance: {
+    maintenanceMode: false,
+    lockPortal: false,
+    lockStudio: false,
+    message: "",
+  },
 };
 
 function buildProviderKeyPlaceholders(
@@ -579,6 +595,10 @@ function mergeSettings(
       ...base.auth,
       ...(isRecord(stored.auth) ? (stored.auth as unknown as AuthSettings) : {}),
     },
+    maintenance: {
+      ...base.maintenance,
+      ...(isRecord(stored.maintenance) ? (stored.maintenance as unknown as MaintenanceSettings) : {}),
+    },
   };
 
   return normalizeSettings(merged);
@@ -618,6 +638,11 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       sessionInactivityTimeoutMinutes: normalizeSessionInactivityTimeoutMinutes(
         settings.auth?.sessionInactivityTimeoutMinutes,
       ),
+    },
+    maintenance: {
+      ...DEFAULT_SYSTEM_SETTINGS.maintenance,
+      ...settings.maintenance,
+      message: typeof settings.maintenance?.message === "string" ? settings.maintenance.message : "",
     },
   };
 }
@@ -790,6 +815,18 @@ export function isGuestPortalAccessAllowed(
   return settings.portal.guestAccessEnabled && worldGuestModeEnabled;
 }
 
+export function isMaintenanceModeActive(settings: UweSystemSettings): boolean {
+  return settings.maintenance.maintenanceMode;
+}
+
+export function isPortalLocked(settings: UweSystemSettings): boolean {
+  return settings.maintenance.maintenanceMode || settings.maintenance.lockPortal;
+}
+
+export function isStudioLocked(settings: UweSystemSettings): boolean {
+  return settings.maintenance.maintenanceMode || settings.maintenance.lockStudio;
+}
+
 export function isPortalGloballyEnabled(settings: UweSystemSettings): boolean {
   return settings.portal.portalEnabled;
 }
@@ -869,6 +906,7 @@ export class SettingsService {
       backup: { ...current.backup, ...update.backup },
       privacy: { ...current.privacy, ...update.privacy },
       auth: { ...current.auth, ...update.auth },
+      maintenance: { ...current.maintenance, ...update.maintenance },
     });
 
     await this.db.systemSettings.upsert({
