@@ -8,6 +8,7 @@ export interface CreateWorldRequest {
   slug?: string;
   description?: string | null;
   guestModeEnabled?: boolean;
+  isSandbox?: boolean;
 }
 
 export interface CreatedWorldResult {
@@ -16,6 +17,7 @@ export interface CreatedWorldResult {
   slug: string;
   description: string | null;
   guestModeEnabled: boolean;
+  isSandbox: boolean;
 }
 
 export class WorldCreationService {
@@ -42,6 +44,7 @@ export class WorldCreationService {
         slug,
         description: input.description?.trim() || null,
         guestModeEnabled: input.guestModeEnabled ?? false,
+        isSandbox: input.isSandbox ?? false,
       },
     });
 
@@ -58,7 +61,11 @@ export class WorldCreationService {
       targetType: "world",
       targetId: world.id,
       worldId: world.id,
-      metadata: { slug: world.slug, guestModeEnabled: world.guestModeEnabled },
+      metadata: {
+        slug: world.slug,
+        guestModeEnabled: world.guestModeEnabled,
+        isSandbox: world.isSandbox,
+      },
     });
 
     return {
@@ -67,6 +74,7 @@ export class WorldCreationService {
       slug: world.slug,
       description: world.description,
       guestModeEnabled: world.guestModeEnabled,
+      isSandbox: world.isSandbox,
     };
   }
 }

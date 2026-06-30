@@ -37,6 +37,7 @@ export interface CreateGameSessionInput {
   notes?: string | null;
   openPlots?: string | null;
   playerDecisions?: string | null;
+  playerVisibleSchedule?: boolean;
   linkedPageIds?: string[];
 }
 
@@ -52,6 +53,7 @@ export interface UpdateGameSessionInput {
   openPlots?: string | null;
   playerDecisions?: string | null;
   recapPublished?: boolean;
+  playerVisibleSchedule?: boolean;
   linkedPageIds?: string[];
 }
 
@@ -261,6 +263,7 @@ export class GameSessionService {
         notes: input.notes ?? null,
         openPlots: input.openPlots ?? null,
         playerDecisions: input.playerDecisions ?? null,
+        playerVisibleSchedule: input.playerVisibleSchedule ?? false,
         linkedPages: linkedPageIds.length
           ? {
               create: linkedPageIds.map((pageId) => ({ pageId })),
@@ -340,6 +343,7 @@ export class GameSessionService {
         openPlots: input.openPlots,
         playerDecisions: input.playerDecisions,
         recapPublished: input.recapPublished,
+        playerVisibleSchedule: input.playerVisibleSchedule,
       },
       include: this.sessionInclude(),
     });
