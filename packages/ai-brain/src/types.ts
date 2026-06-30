@@ -25,7 +25,8 @@ export type AiTaskType =
   | "prepare_next_session"
   | "create_player_handout"
   | "fill_dungeon_room"
-  | "prepare_mail_draft";
+  | "prepare_mail_draft"
+  | "atlas_name_region";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

@@ -156,6 +156,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   create_player_handout: "dnd",
   fill_dungeon_room: "dnd",
   prepare_mail_draft: "chat",
+  atlas_name_region: "dnd",
 };
 
 export function workflowSlotForTask(taskType: AiTaskType): ConnectorWorkflowSlot {

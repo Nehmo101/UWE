@@ -107,6 +107,24 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
     ];
   }
 
+  if (action.id === "atlas_name_regions") {
+    return [
+      {
+        id: `${baseId}-atlas-names`,
+        label: action.defaultProposalLabel,
+        content: resultText.trim(),
+        targetType: "atlas_draft_names",
+        targetId: pageId ?? null,
+        visibility: "dm_only",
+        status: "pending",
+        metadata: {
+          source: "ai_generated",
+          autoApply: false,
+        },
+      },
+    ];
+  }
+
   return [
     {
       id: `${baseId}-main`,
