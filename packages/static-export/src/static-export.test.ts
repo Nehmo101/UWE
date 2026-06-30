@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { createUweRepository } from "@uwe/database/server";
+import { createUweRepository, createAtlasService, createPrismaClient } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { exportWorldStatic } from "./export-world";
 import { portalUrlToStaticHref, relativeHref } from "./paths";
@@ -82,6 +82,24 @@ describe("static export", () => {
         },
       ],
     });
+
+    const db = createPrismaClient(databaseUrl);
+    const atlas = createAtlasService(db);
+    const map = await atlas.getOrCreateAtlasForWorld(world.id);
+    await atlas.updateAtlasMap(map.id, { visibility: "player_visible" });
+    await atlas.createNode({
+      mapId: map.id,
+      level: "continent",
+      title: "Westland",
+      visibility: "player_visible",
+    });
+    await atlas.createNode({
+      mapId: map.id,
+      level: "continent",
+      title: "Geheimland",
+      visibility: "dm_only",
+    });
+    await db.$disconnect();
   });
 
   after(async () => {
@@ -165,5 +183,22 @@ describe("static export", () => {
       relativeHref("locations/validori", "locations/arbor/"),
       "../arbor/",
     );
+  });
+
+  it("exports portal-filtered atlas json when databaseUrl is set", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const exportRoot = path.join(outputDir, "atlas-json");
+    const result = await exportWorldStatic(repo, {
+      worldSlug,
+      outputDir: exportRoot,
+      databaseUrl,
+    });
+
+    assert.ok(result.files.includes("atlas/data.json"));
+    const atlasJson = JSON.parse(
+      fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
+    ) as { nodes: { title: string }[] };
+    assert.equal(atlasJson.nodes.length, 1);
+    assert.equal(atlasJson.nodes[0]?.title, "Westland");
   });
 });

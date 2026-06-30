@@ -1843,6 +1843,12 @@ export function AtlasEditor({
           ))}
         </label>
 
+        {state.tool === "curvedLabel" && state.drawingPoints.length >= 1 && (
+          <span className="uwe-muted" style={{ fontSize: 12 }}>
+            Pfad zeichnen, dann <kbd>Enter</kbd> für Label-Text
+          </span>
+        )}
+
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           {/* Hex grid toggle */}
           <button

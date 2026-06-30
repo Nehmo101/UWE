@@ -4,36 +4,25 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ## Erledigt auf `main`
 
-- Gebogene Labels (`curvedLabel`-Werkzeug, Shortcut **C**): Pfad zeichnen → **Enter** → Text eingeben. Gespeichert als `LabelAnchor.pathCoordinates` in `@uwe/atlas/label-layout`.
+- **Gebogene Labels** (`curvedLabel`, Shortcut **C**): Pfad zeichnen → **Enter** → Text. Gespeichert als `LabelAnchor.pathCoordinates` (`@uwe/atlas/label-layout`).
+- **Static Export:** Portal-gefilterte Atlas-Daten als `atlas/data.json` beim Static Export (`writeAtlasStaticJson` in `@uwe/static-export`).
 
-## Geplant: Cursor / Agent-Job Text-Provider
+## Bewusst zurückgestellt
 
-Asynchroner Text-Provider über den bestehenden `agent_job`-Mechanismus (`docs/AGENT_JOBS.md`).
+### Cursor / Agent-Job als Text-Provider
 
-**Nicht geeignet für:** Bild-/Stempel-Generierung (weiter RTX/Cloud Image Studio).
+`agent_job` / `dev_agent_job` ist für **Repository-Entwicklung** (GitHub Actions, Cursor Cloud Agents), nicht für In-App-Lore.
 
-**Integrationspunkt (Entwurf):**
+Stub: `packages/ai-brain/src/providers/agentJobTextProvider.ts` — wirft bewusst, bis ein dedizierter Async-Lore-Worker existiert.
 
-```typescript
-// packages/ai-brain/src/providers/agentJobTextProvider.ts (Stub)
-export interface AgentJobTextRequest {
-  prompt: string;
-  taskType: string;
-  worldSlug?: string;
-}
+Atlas-Lore nutzt: `runBrainAction`, prozeduraler Entwurf, RTX/Cloud über AI Gateway.
 
-export async function enqueueAgentJobTextDraft(
-  request: AgentJobTextRequest,
-): Promise<{ jobId: string }> {
-  // Enqueue type: "agent_job" with Atlas/Lore payload; result → AiRun proposal
-  throw new Error("Agent-Job text provider not wired yet");
-}
-```
+### Fog of War
 
-**Voraussetzungen:** GitHub Agent Job konfiguriert, Proposal-Workflow (`runBrainAction` / `AiProposal`), kein Auto-Apply.
+Bewusst nicht im MVP (Owner-Entscheidung).
 
 ## Weitere Ideen
 
-- Statischer Export: Atlas-Karten in `packages/static-export`
-- Fog of War via `revealState` / `SessionUnlock` (bewusst nicht im MVP)
+- Statischer **HTML**-Atlas-Viewer im Export-Bundle (JSON liegt bereits vor)
 - Mehrere Atlanten pro Welt
+- Gebogene Labels: Feintuning (Letter-Spacing pro Zoom, Pfad-Reversal)

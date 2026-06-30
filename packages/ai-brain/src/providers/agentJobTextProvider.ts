@@ -1,6 +1,9 @@
 /**
  * Pluggable async text provider via GitHub Agent Jobs.
- * Stub — wire in a future PR (see docs/engineering/atlas-follow-ups.md).
+ *
+ * **Scope note:** `agent_job` in UWE targets repo/dev automation (`dev_agent_job`),
+ * not in-app campaign lore. Atlas lore text uses `runBrainAction` / RTX / Cloud LLM.
+ * This module documents the future hook if a dedicated async lore worker is added.
  */
 
 export interface AgentJobTextRequest {

@@ -24,11 +24,15 @@ import {
   rewriteViewForStatic,
   type StaticNavItem,
 } from "./templates";
+import { writeAtlasStaticJson } from "./export-atlas";
+import { createPrismaClient } from "@uwe/database/server";
 
 export interface StaticExportOptions {
   worldSlug: string;
   outputDir: string;
   uploadsDir?: string;
+  /** When set, also exports portal-filtered Atlas JSON to atlas/data.json */
+  databaseUrl?: string;
 }
 
 export interface StaticExportResult {
@@ -134,6 +138,18 @@ export async function exportWorldStatic(
   const searchIndexFile = path.join(outputDir, "search-index.json");
   fs.writeFileSync(searchIndexFile, JSON.stringify(searchIndex, null, 2), "utf8");
   writtenFiles.push("search-index.json");
+
+  if (options.databaseUrl) {
+    const db = createPrismaClient(options.databaseUrl);
+    try {
+      const atlasRelative = await writeAtlasStaticJson(db, options.worldSlug, outputDir);
+      if (atlasRelative) {
+        writtenFiles.push(atlasRelative);
+      }
+    } finally {
+      await db.$disconnect();
+    }
+  }
 
   let assetCount = 2;
   if (options.uploadsDir && uploadRefs.size > 0) {
