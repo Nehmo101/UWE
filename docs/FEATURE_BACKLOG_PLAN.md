@@ -314,6 +314,11 @@ Bereits ~80 % fertige Bausteine zu Ende verdrahten. Wenig/keine Migration.
 
 ## 8. Kritische Fragen an dich (Entscheidungsbedarf vor Umsetzung)
 
+> **Runde 1 beantwortet (2026-06-30).** Entschieden/vertieft in **§11**: Secrets (1),
+> NL-Command-Center (2), Charaktersheet = **Voll 5e** (5), Faction-Sim = **KI-Vorschlag + Review,
+> dateierte Events auf Entitätsseiten** (6), Globale Suche (10), Tag-Modell = **freigegeben** (11).
+> **Noch offen (Runde 2):** 3, 4, 7, 8, 9, 12, 13 hier — plus neue Detailfragen in **§12**.
+
 Bitte beantworte diese, bevor wir Wellen B–D konkretisieren:
 
 1. **Secrets-Vault (1.6):** Voller Vault ist wegen des Henne-Ei-Problems heikel. OK mit
@@ -360,3 +365,237 @@ Bitte beantworte diese, bevor wir Wellen B–D konkretisieren:
 Nach deinen Antworten auf §8 überführe ich die beschlossenen Punkte als konkrete, abhakbare
 Einträge in [ROADMAP.md](ROADMAP.md) (eine Quelle der Wahrheit) und schneide pro Welle-A-Item
 einen kleinen, testbaren Umsetzungs-PR. **Bis dahin wird nichts am Produktcode geändert.**
+
+---
+
+## 11. Entscheidungen & vertiefte Designs (Runde 1)
+
+Code-belegte Detailplanung zu den in Runde 1 beantworteten Punkten. **Weiterhin reine Planung —
+keine Umsetzung.**
+
+### 11.1 Secrets / API-Key Vault (Frage 1) — Empfehlung & bester Weg
+
+**Ausgangslage (belegt):** `packages/database/src/token-crypto.ts` verschlüsselt mit AES-256-GCM;
+der Schlüssel wird aus `SESSION_SECRET`/`AUTH_SECRET` **aus der ENV** abgeleitet
+(`resolveTokenEncryptionSecret`). Provider-/Endpoint-Keys liegen bereits verschlüsselt
+(`AiCloudProvider.apiKeyEnc`, `InferenceEndpoint.apiKeyEnc`, Spotify-Tokens).
+
+**Henne-Ei-Kern:** Der Schlüssel, der DB-Secrets entschlüsselt, **darf nicht in der DB liegen**.
+Ein „echter Vault“, der `AUTH_SECRET` selbst verwaltet, ist daher unmöglich/sinnlos.
+
+**Empfehlung (3 Teile, „best case“ = max. Übersicht, min. neue Angriffsfläche):**
+
+1. **Konsolidieren statt neu bauen:** Alle verbleibenden Keys (SMTP, RTX-Connector-Token,
+   Cloudflare, CalDAV, Cloud-AI) konsequent über das **bestehende** `encryptSecret`/`decryptSecret`
+   in DB-Spalten ablegen — als **write-only**-Felder (Frontend bekommt nie Klartext zurück, nur
+   `gesetzt / letzte 4 Zeichen / aktualisiert am`).
+2. **Read-only „Secrets-Status“-Seite** (`/admin/secrets` oder Tab in `/admin/setup`): listet jedes
+   bekannte Secret mit **Quelle** (ENV vs. DB-verschlüsselt), **Status** (gesetzt/fehlt), maskiertem
+   Last-4, Stand und — wo sinnvoll — einem **Test**-Button. Kein Klartext, kein Download.
+   Das liefert genau das Idee-Ziel „Übersicht statt unübersichtliche ENV“ ohne Vault-Risiko.
+3. **Bootstrap-Secrets bleiben ENV** (`AUTH_SECRET`, `SESSION_SECRET`, `STUDIO_API_TOKEN`,
+   `DATABASE_URL`) — sie werden gebraucht, bevor DB/App nutzbar sind. Die Status-Seite spiegelt sie
+   nur wider.
+
+**Rotations-Warnung einbauen:** `AUTH_SECRET`-Rotation entwertet alle DB-verschlüsselten Secrets
+(Spotify etc.). Die Status-Seite muss warnen und einen geführten „betroffene Secrets neu
+eingeben“-Flow anbieten statt stiller Brüche.
+
+**Layer/Aufwand:** SVC (Secret-Status-Service, ggf. Erweiterung `owner-setup-service`/settings) +
+STU (read-only Seite); optional kleine DB-Migration, falls weitere Keys in verschlüsselte Spalten
+wandern. **Niedrig–mittel.** → Verschiebt sich von Welle D nach **Welle A/B** (geringes Risiko).
+
+### 11.2 NL Admin Command Center (Frage 2) — was genau gemeint ist
+
+**Kein** frei agierender LLM-Agent mit DB-Schreibrechten. Stattdessen Pipeline
+**„natürliche Sprache → strukturierter Intent → Bestätigung → Ausführung über bestehende Services“:**
+
+1. **Eingabe:** Owner/Admin tippt z. B. „Mach Carina zur Spielerin in Terra und gib ihr
+   Portalzugriff.“ (erweitertes Command-Palette-Feld oder `/admin/command`).
+2. **Intent-Parsing (lokale RTX bevorzugt):** Das LLM darf **nur ein striktes JSON-Schema** aus
+   einer **Whitelist bekannter Befehle** ausfüllen (z. B. `assign_world_role`, `invite_user`,
+   `set_portal_access`, `disable_user`, `create_world`, `toggle_maintenance`). Output =
+   `{intent, params, matchedEntities}`. Unbekannt/uneindeutig → „bitte präzisieren“ statt Raten.
+   **Keine** Ausführungsrechte für das Modell.
+3. **Resolver + Validierung (deterministisch, server-seitig):** Namen→IDs auflösen (Carina→welcher
+   User? Terra→welche Welt?), `requireAdminAccess()` prüfen, Plausibilität. Mehrdeutigkeit
+   (zwei „Carinas“) → Auswahldialog.
+4. **Bestätigungs-Vorschau:** UI zeigt die **konkrete** Aktion im Klartext + Bestätigen/Abbrechen.
+   **Nichts** wird ohne Klick ausgeführt.
+5. **Ausführung** über **dieselben** geprüften Services wie die Formulare (`user-service.ts` …) —
+   nicht über das LLM.
+6. **Audit:** jeder ausgeführte Befehl → `AuditLog`.
+
+**Warum so:** Prompt-Injection kann maximal ein Schema befüllen, nie echte Mutationen auslösen;
+Rechte-Checks bleiben deterministisch; passt exakt zum bestehenden Proposal/Bestätigungs-Muster
+(`AiRun`/`AiProposal`). **Privacy:** nur Owner/Admin, RTX bevorzugt; falls Cloud, dann nur die
+Befehls-Grammatik, **keine Weltdaten**.
+
+**Start-Scope:** kleine Befehls-Whitelist (User/Rolle/Welt/Portal/Maintenance), später erweitern.
+**Layer/Aufwand:** AI (Intent-Schema) + SVC (Resolver/Executor-Bridge) + STU (Palette/Vorschau).
+**Mittel; Risiko hoch → bewusst Welle D.**
+
+### 11.3 Charaktersheet — **Voll 5e** (Frage 5)
+
+Größtes Einzelthema. „Voll 5e“ heißt strukturierte Charakterdaten **mit Berechnungen**, nicht nur
+Freitext-Blöcke.
+
+**Datenmodell — Empfehlung: eigenes `Character`-Modell** (nicht nur `ContentBlock.metadata`), weil
+Voll-5e Validierung/Rechnen braucht: Attribute, Skills, HP/AC/Speed, Klassen+Level, Spezies,
+Hintergrund, Proficiencies, Zauber/Slots, Inventar, Features, Zustände, Währung. Die bestehende
+`player_character`-**Page** bleibt als Wiki-/Portrait-/Lore-Hülle und wird mit dem `Character`
+verknüpft. Das koppelt sauber an **Inventar (2.10)** (Charakter-Inventar + Party-Treasury).
+
+**Berechnungen (Regeltabellen nötig):** Attribut-Modifikatoren, Proficiency-Bonus nach Level,
+Save-DCs, Skill-Boni, Spell-Slots je Klasse/Level, passive Wahrnehmung, optional AC.
+
+**UI:** editierbarer Sheet im **Portal** (Spieler) + **Studio** (DM-Override), Sektionen
+(Werte/Kampf/Skills/Zauber/Inventar/Features/Bio), mobil-tauglich (koppelt an Mobile-Portal 2.1).
+**Visibility:** Spieler editieren ihren eigenen Sheet (player-safe), DM sieht/justiert alles.
+
+**Empfohlene Phasen (testbar):**
+- **P1 Kern-Sheet:** Werte, Kampf, Skills, Inventar, Bio + Auto-Berechnungen.
+- **P2 Zauber + Klassen-/Item-Katalog** (SRD/Open5e via vorhandenem `@uwe/dnd-api`).
+- **P3 Level-Up-Assistent + Druck/Export (PDF/Label) + optional Würfel/Initiative.**
+
+**Layer/Aufwand:** DB (neues Modell + Migration) + SVC (Regeln/Berechnung) + POR/STU (Sheet-UI).
+**Hoch.** Wegen Größe in **Welle C** als eigener mehrteiliger Strang.
+
+> **Offene Detailfragen → §12** (Regelversion 2014/2024, Homebrew, Datenquelle, Auto-Berechnung,
+> Leveling, Editierrechte, Würfeln, mehrere Charaktere pro Spieler).
+
+### 11.4 Faction-Simulator als KI-Vorschlag mit datierten Events (Frage 6)
+
+Bestätigt: **KI-Vorschlag → Review → bei Annahme erscheinen die Ereignisse auf den konkreten Seiten
+(Fraktion/NPC/Ort) „zu welchem Datum was passiert“.**
+
+**Wichtige Konsequenz (Kopplung):** „zu welchem Datum“ erfordert eine **In-Game-Zeit** und ein
+**Ereignis-Modell**. Damit hängen jetzt drei Ideen zusammen und müssen gemeinsam geplant werden:
+
+- **3.16 World-Clock** liefert das In-Game-Datum (→ wird von „Welle D optional“ zu **Voraussetzung**).
+- **neues `WorldEvent`/Chronik-Modell** trägt die datierten Ereignisse.
+- **2.8 Spieler-Timeline** konsumiert dieselben Events (spoiler-gefiltert).
+
+**Designskizze:**
+
+1. **Fraktions-State (leichtgewichtig):** je Fraktions-Page strukturierte Felder
+   (Ziele/Agenda, Ressourcen/Macht, Beziehungen) — als JSON-Block (`ContentBlock.metadata`) oder
+   kleines `FactionState`-Modell. Start: minimal.
+2. **Lauf (nur lokale RTX — Weltdaten!):** DM startet „Fraktionen weiterbewegen“ (optional über
+   X In-Game-Tage / ausgewählte Fraktionen). Erzeugt einen **`AiProposal`** mit einer Liste von
+   Ereignissen: betroffene Entitäten, Beschreibung (player-safe + DM-Teil), **In-Game-Datum**,
+   Konsequenzen.
+3. **Review:** je Ereignis annehmen/bearbeiten/verwerfen — **wiederverwendet**
+   `AiProposal`/`ai-review-service`/`AiApplyLog` (inkl. Undo).
+4. **Bei Annahme → `WorldEvent`** wird angelegt und an alle beteiligten Pages gehängt; rendert dort
+   als datierte **„Chronik“** und speist Welt-/Spieler-Timeline und **„Was ist offen?“ (3.12)**.
+
+**`WorldEvent`-Modell (Vorschlag):**
+`WorldEvent { id, worldId, inGameDate (strukturiert, s. World-Clock), title, summaryPlayer,
+summaryDm, visibility, secretLevel, sourceType (faction_sim|manual|session), sourceAiProposalId? }`
++ Join `WorldEventEntityLink { eventId, pageId, role }`. Portal-Ausspielung strikt
+visibility-/secret-gefiltert (kein DM-Leak).
+
+**Layer/Aufwand:** DB (`WorldEvent` + Join + In-Game-Datum) + AI (Sim-Prompt) + SVC + STU/POR.
+**Hoch**, aber baut auf vorhandener Proposal/Review-Pipeline auf. **Reihenfolge:** erst World-Clock +
+`WorldEvent` (Welle C), dann Faction-Sim obendrauf (Ende C / D).
+
+> **Offene Detailfragen → §12** (In-Game-Datumsformat, Umfang Fraktions-State, Automatik-Grad,
+> Ereignisse pro Lauf).
+
+### 11.5 Globale Suche 2.0 (Frage 10) — lexikalisch vs. semantisch
+
+**Heute (belegt):** `search-service.ts` ist **lexikalisch** (Keyword/Substring + Scoring über
+title/slug/summary/tags/aliases/content), **seiten-zentriert** (`SearchResultItem.pageId`,
+`type: PageType`), baut einen In-Memory-Index je Scope (`buildSearchIndexForScope`), cross-world für
+Wiki-Seiten — **indiziert aber kein** Daily-Admin (Capture/Projects/Workshop/Contracts/Hardware),
+keine allgemeinen Medien, kein Life-Brain (separat in `personal-brain-search.ts`).
+
+**Zwei Dimensionen von „2.0“:**
+
+- **(A) Breite / cross-domain (das eigentliche Anliegen):** mehr Entitätstypen in **eine** Suche
+  („über alle Welten, Projekte, Medien, Notizen“). Braucht einen **generischen Ergebnistyp**
+  (statt seiten-zentriert): `entityType + href + quellspezifische Felder`. **Privacy:**
+  Life-Brain/persönliche Daten bleiben owner-only und dürfen **nie** in Welt-/Portal-Suche bluten;
+  Portal-Suche strikt nur player-safe Weltinhalte. **Lexikalisch, moderater Aufwand.**
+- **(B) Tiefe / semantisch (Embeddings):** „nach Bedeutung finden“. Erfordert Embeddings →
+  **RTX-only** (local-first-privacy). Brain hat Embedding-Ansätze (`BrainChunk`, `embedding`-Job),
+  **aber Life-Brain-Retrieval fehlt noch** (Matrix §10/Lab). **Größere Investition**
+  (Embedding-Pipeline für alle Entitäten, Vektor-Storage, Reindex, RTX-Abhängigkeit).
+
+**Empfehlung (phasiert):**
+- **Phase 1 (jetzt): lexikalische cross-domain Suche** — `search-service` auf einen vereinheitlichten
+  Index (Welten + Daily-Admin + Medien + owner-only Life-Brain) mit generischem Ergebnistyp und
+  strikter Privacy-Skopierung. Liefert ~90 % des gefühlten Werts ohne RTX-Abhängigkeit.
+- **Phase 2 (optional, später): semantische Suche** nur über lokale RTX, baut auf der dann ohnehin
+  nötigen Brain-Embedding-Infrastruktur auf und schließt zugleich die Life-Brain-Retrieval-Lücke.
+
+→ **Frage zur Bestätigung in §12:** Phase-1-lexikalisch als erster Schritt ok, semantisch später?
+
+### 11.6 Zentrales Tag-Modell (Frage 11) — freigegeben, Migrationsplan
+
+**Heute (belegt):** Tags sind **Json-Arrays** auf 5 Entitäten (page, asset, soundboard_button,
+personal_brain_document, personal_brain_fact); `tag-service.ts` bietet `normalizeTagKey`/
+`canonicalizeTag`/`collectTagInventory`/`mergeTags`. **Kein `Tag`-Table.**
+
+**Zielmodell:**
+`Tag { id, key (normalisiert, unique), label (Anzeige), color?, description? }` +
+`EntityTag { id, tagId, entityType, entityId, worldId?, @@unique([tagId, entityType, entityId]) }`.
+
+**Migration (additiv, idempotent, rückwärtskompatibel):**
+1. `Tag` + `EntityTag` als **additive** Migration (kein Datenverlust).
+2. **Backfill-Skript:** alle vorhandenen Json-`tags` lesen → `Tag` per normalisiertem Key upserten →
+   `EntityTag`-Zeilen anlegen. **Wiederverwendet `normalizeTagKey`/`canonicalizeTag`**, damit die
+   Merge-Semantik erhalten bleibt.
+3. **Dual-Write-Übergang:** Json-`tags` kurz parallel mitschreiben (eine Release), dann Lese-Pfad auf
+   `EntityTag` umstellen und Json als deprecated/derived behandeln.
+4. **Abdeckung erweitern** auf die gewünschten Entitäten (Capture/Project/Workshop/Contract/Hardware/
+   DevIdea) — nur via `EntityTag`, kein neues Json-Feld nötig.
+5. `tag-service` (`collectInventory`/`merge`/`suggest`) auf `EntityTag` neu aufsetzen (eine Quelle).
+
+**Entsperrt:** Tag-System (4.6), cross-domain Such-Facetten (4.5), Miniaturen-/Ideen-/Bug-Filter,
+Tag-Dashboards. **Risiko:** Datenmigration (durch additiv + Backfill + Dual-Write gemildert).
+**Layer/Aufwand:** DB + SVC + STU. **Welle B (Fundament F1).**
+
+### 11.7 Re-Sequenzierung nach Runde 1
+
+| Item | Vorher | Jetzt | Grund |
+|------|--------|-------|-------|
+| World-Clock (3.16) + neues `WorldEvent`-Modell | Welle D (optional) | **Welle C (Voraussetzung)** | Faction-Sim braucht In-Game-Datum + Events |
+| Spieler-Timeline (2.8) | Welle C | **Welle C (an `WorldEvent` gekoppelt)** | konsumiert dieselben Events |
+| Faction-Sim (3.15) | Welle D | **Ende C / D, nach World-Clock+Events** | baut darauf auf |
+| Secrets-Status-Seite (1.6) | Welle D | **Welle A/B** | geringes Risiko, hoher Überblicksnutzen |
+| Voll-5e-Sheet (2.2) | — | **Welle C, mehrteilig (P1–P3)** | groß; zieht Inventar (2.10) mit |
+| Tag-Modell (F1) | Welle B | **Welle B (bestätigt, zuerst)** | entsperrt Suche/Filter |
+
+---
+
+## 12. Offene Fragen (Runde 2)
+
+**Charaktersheet „Voll 5e“ (2.2):**
+1. **Regelversion:** 2014 (PHB) oder 2024er Regeln — oder pro Welt wählbar?
+2. **Homebrew:** eigene Klassen/Spezies/Items/Zauber nötig, oder reicht SRD/Open5e-Umfang?
+   (Nicht-SRD-Inhalte dürfen rechtlich nicht mitgeliefert werden — du gibst sie selbst ein.)
+3. **Auto-Berechnung** (Modifikatoren/Slots/Proficiency) oder nur speichern, was eingetragen wird?
+4. **Leveling:** Level-Up-Assistent oder manuell?
+5. **Editierrechte:** Spieler vollständig auf eigenem Sheet? DM alles? „Sheet-Lock“ in Session?
+6. **Würfeln/Initiative-Tracker** im Scope (v1) oder reine Verwaltung?
+7. **Mehrere Charaktere** pro Spieler / pro Kampagne?
+
+**Faction-Sim + World-Clock (3.15/3.16):**
+8. **In-Game-Datumsformat:** an Realkalender angelehnt, oder eigener Welt-Kalender (Monatsnamen,
+   Jahreslänge)? Wie tief soll die World-Clock minimal sein?
+9. **Fraktions-State:** minimal (Freitext-Agenda) oder strukturiert (Ziele/Ressourcen/Beziehungen)?
+10. **Automatik-Grad:** nur auf Knopfdruck, oder automatisch bei Recap-Publish / Zeitsprung?
+11. **Umfang pro Lauf:** 1 Ereignis pro Fraktion oder mehrere (begrenzbar)?
+
+**Globale Suche (4.5):**
+12. Phase-1 **lexikalische** cross-domain Suche zuerst, **semantisch** (RTX-only) später — ok?
+
+**Aus Runde 1 noch offen (§8):**
+13. Kosten-Dashboard (1.16): AI-Kosten **getrennt** von `/contracts` (eigenes Admin-Dashboard)?
+14. Kanon-Status (3.3): `canonicalStatus` **erweitern** statt 5. Status-Feld?
+15. Inventar (2.10): Start mit **Gruppen-Inventar**? Währung modellieren? (koppelt an Voll-5e-Sheet)
+16. KI-Sortierung (4.4): Kategorien **Musik/Haushalt** gewünscht? (RTX-only Pflicht.)
+17. Mobile-Portal (2.1): Bottom-Nav statt Drawer als Standard?
+18. **Priorisierung:** Reihenfolge A→B→C→D ok, oder „Pull“-Themen sofort?
