@@ -35,6 +35,9 @@ export {
   getNextContentBlockSortOrder,
   createIdeaPage,
   UweRepository,
+  listPageLinksForPage,
+  updatePageLink,
+  deletePageLink,
   PORTAL_BLOCK_VISIBILITIES,
   PORTAL_PAGE_VISIBILITIES,
   isPortalPageVisibility,
@@ -79,8 +82,19 @@ export type {
   UpdateAssetInput,
   PageWithBlocks,
   PageSummary,
+  PageLinkWithPages,
+  PageLinksForPage,
+  PageLinkPageInfo,
   PublicPage,
 } from "./repository";
+
+export {
+  PAGE_LINK_RELATION_PRESETS,
+  PAGE_LINK_RELATION_LABELS,
+  isPageLinkRelationPreset,
+  pageLinkRelationLabel,
+  type PageLinkRelationPreset,
+} from "./page-link-presets";
 
 export {
   CanonicalStatusEnum,

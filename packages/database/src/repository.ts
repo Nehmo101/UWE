@@ -17,6 +17,8 @@ import type {
   AssetType,
   CanonicalStatus,
   ContentBlockType,
+  Page,
+  PageLink,
   PageType,
   Prisma,
   PublishStatus,
@@ -159,6 +161,18 @@ export type PageWithBlocks = Prisma.PageGetPayload<{
 export type PageSummary = Prisma.PageGetPayload<{
   include: { campaign: true };
 }>;
+
+export type PageLinkPageInfo = Pick<Page, "id" | "title" | "slug" | "type">;
+
+export type PageLinkWithPages = PageLink & {
+  sourcePage: PageLinkPageInfo;
+  targetPage: PageLinkPageInfo;
+};
+
+export interface PageLinksForPage {
+  outgoing: PageLinkWithPages[];
+  incoming: PageLinkWithPages[];
+}
 
 export type PublicPage = PageWithBlocks;
 
@@ -562,6 +576,73 @@ export class UweRepository {
     });
   }
 
+  async listPageLinksForPage(pageId: string): Promise<PageLinksForPage> {
+    const pageSelect = {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+    } as const;
+
+    const [outgoing, incoming] = await Promise.all([
+      this.db.pageLink.findMany({
+        where: { sourcePageId: pageId },
+        include: {
+          sourcePage: { select: pageSelect },
+          targetPage: { select: pageSelect },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      this.db.pageLink.findMany({
+        where: { targetPageId: pageId },
+        include: {
+          sourcePage: { select: pageSelect },
+          targetPage: { select: pageSelect },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
+    return { outgoing, incoming };
+  }
+
+  async updatePageLink(
+    id: string,
+    input: {
+      relationType?: string;
+      label?: string | null;
+    },
+  ) {
+    const data: Prisma.PageLinkUpdateInput = {};
+    if (input.relationType !== undefined) {
+      data.relationType = input.relationType;
+    }
+    if (input.label !== undefined) {
+      data.label = input.label;
+    }
+
+    return this.db.pageLink.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deletePageLink(id: string) {
+    return this.db.pageLink.delete({
+      where: { id },
+    });
+  }
+
+  async getPageLinkById(id: string) {
+    return this.db.pageLink.findUnique({
+      where: { id },
+      include: {
+        sourcePage: { select: { id: true, worldId: true } },
+        targetPage: { select: { id: true, worldId: true } },
+      },
+    });
+  }
+
   async getPageById(pageId: string): Promise<PageWithBlocks | null> {
     const page = await this.db.page.findUnique({
       where: { id: pageId },
@@ -844,6 +925,22 @@ export async function getDbWorldBySlug(worldSlug: string, databaseUrl?: string) 
 
 export async function getDbPageById(pageId: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getPageById(pageId);
+}
+
+export async function listPageLinksForPage(pageId: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).listPageLinksForPage(pageId);
+}
+
+export async function updatePageLink(
+  id: string,
+  input: { relationType?: string; label?: string | null },
+  databaseUrl?: string,
+) {
+  return createUweRepository(databaseUrl).updatePageLink(id, input);
+}
+
+export async function deletePageLink(id: string, databaseUrl?: string) {
+  return createUweRepository(databaseUrl).deletePageLink(id);
 }
 
 export async function getPageWithLinks(pageId: string, databaseUrl?: string) {
