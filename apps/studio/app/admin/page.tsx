@@ -95,6 +95,9 @@ export default async function AdminOverviewPage() {
               <Link className="uwe-v2-btn" href="/admin/mail">
                 Mail Portal
               </Link>
+              <Link className="uwe-v2-btn" href="/admin/secrets">
+                Secrets-Status
+              </Link>
               <Link className="uwe-v2-btn" href="/admin/status">
                 Systemstatus
               </Link>

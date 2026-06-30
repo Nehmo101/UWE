@@ -73,6 +73,7 @@ export const TARGET_STUDIO_NAV: {
       { label: "Einrichtung", href: "/admin/setup" },
       { label: "Benutzer", href: "/admin/users" },
       { label: "Security", href: "/admin/security" },
+      { label: "Secrets-Status", href: "/admin/secrets" },
       { label: "Audit Log", href: "/admin/audit-log" },
       { label: "Jobs", href: "/jobs" },
       { label: "Backup", href: "/backup" },

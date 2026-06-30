@@ -281,6 +281,9 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
               <Link href="/admin/status" className="uwe-v2-btn uwe-v2-btn-primary">
                 Vollständige Diagnose
               </Link>
+              <Link href="/admin/secrets" className="uwe-v2-btn">
+                Secrets-Status
+              </Link>
               <Link href="/system?tab=diagnose" className="uwe-v2-btn">
                 System-Hub Diagnose
               </Link>

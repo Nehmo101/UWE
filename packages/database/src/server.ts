@@ -443,6 +443,22 @@ export type {
 } from "./admin-status";
 
 export {
+  assertSecretsStatusHasNoSecrets,
+  getSecretsStatusSnapshot,
+} from "./secrets-status-service";
+
+export type {
+  SecretItemStatus,
+  SecretSource,
+  SecretsStatusItem,
+  SecretsStatusOptions,
+  SecretsStatusSection,
+  SecretsStatusSnapshot,
+  SecretsStatusWarning,
+  SecretsStatusWarningSeverity,
+} from "./secrets-status-service";
+
+export {
   assertOwnerSetupHasNoSecrets,
   formatSetupSourceBadge,
   getOwnerSetupSnapshot,
