@@ -19,7 +19,7 @@ import {
 } from "./index";
 
 describe("Brain Actions — catalog", () => {
-  it("defines all eight P09 target actions", () => {
+  it("defines all P09 target actions plus atlas naming", () => {
     const ids = BRAIN_ACTION_LIST.map((action) => action.id);
     assert.ok(ids.includes("session_recap"));
     assert.ok(ids.includes("next_session_prep"));
@@ -29,7 +29,9 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("player_handout"));
     assert.ok(ids.includes("fill_dungeon_room"));
     assert.ok(ids.includes("mail_draft"));
-    assert.equal(BRAIN_ACTION_LIST.length, 8);
+    assert.ok(ids.includes("atlas_name_regions"), "atlas_name_regions action must be present");
+    assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
+    assert.equal(BRAIN_ACTION_LIST.length, 10);
   });
 
   it("marks player-safe actions correctly", () => {

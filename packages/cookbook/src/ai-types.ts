@@ -25,7 +25,9 @@ export type CookbookAiTaskType =
   | "prepare_next_session"
   | "create_player_handout"
   | "fill_dungeon_room"
-  | "prepare_mail_draft";
+  | "prepare_mail_draft"
+  | "atlas_name_region"
+  | "atlas_describe_region";
 
 /**
  * Context modes that are permanently local-only in the cookbook routing layer.

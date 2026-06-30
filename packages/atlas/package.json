@@ -1,0 +1,28 @@
+{
+  "name": "@uwe/atlas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UWE Atlas World Builder — geometry types, style presets, draw model, and serialization helpers",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./geometry": "./src/geometry.ts",
+    "./constants": "./src/constants.ts",
+    "./style-presets": "./src/style-presets.ts",
+    "./draw-model": "./src/draw-model.ts",
+    "./serialization": "./src/serialization.ts",
+    "./terrain": "./src/terrain.ts",
+    "./procedural": "./src/procedural.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

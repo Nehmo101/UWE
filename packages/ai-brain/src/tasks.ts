@@ -18,6 +18,8 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   create_player_handout: "Spieler-Handout erstellen",
   fill_dungeon_room: "Dungeonraum füllen",
   prepare_mail_draft: "Mail-Entwurf vorbereiten",
+  atlas_name_region: "Atlas-Regionen benennen",
+  atlas_describe_region: "Atlas-Region beschreiben",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -55,6 +57,10 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Fülle einen Dungeonraum mit Atmosphäre, Beschreibung, Interaktionen, Gefahren, Loot-Hinweisen und GM-Notizen. Passend zum bestehenden Setting.",
   prepare_mail_draft:
     "Bereite einen Mail-Entwurf für Spieler vor (Betreff + Text). Nur spieler-sichere Inhalte, keine DM-only-Geheimnisse. Keine automatische Versendung.",
+  atlas_name_region:
+    "Schlage stimmungsvolle, zum Weltbuilding passende Namen für die Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nutze den Kampagnen-Kontext für thematische Kohärenz. Gib für jede Einheit einen primären Namen und optional einen Alternativnamen an. Format: eine Zeile je Eintrag 'ID: Name (optional: Alternativname)'. Nie automatisch in den Kanon übernehmen.",
+  atlas_describe_region:
+    "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
 };
 
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {

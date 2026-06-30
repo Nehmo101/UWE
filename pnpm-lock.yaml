@@ -74,6 +74,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../../packages/assets
+      '@uwe/atlas':
+        specifier: workspace:*
+        version: link:../../packages/atlas
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -259,6 +262,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../../packages/assets
+      '@uwe/atlas':
+        specifier: workspace:*
+        version: link:../../packages/atlas
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -437,6 +443,21 @@ importers:
       '@uwe/config':
         specifier: workspace:*
         version: link:../config
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/atlas:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

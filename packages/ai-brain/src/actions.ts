@@ -9,7 +9,9 @@ export type BrainActionId =
   | "canon_check"
   | "player_handout"
   | "fill_dungeon_room"
-  | "mail_draft";
+  | "mail_draft"
+  | "atlas_name_regions"
+  | "atlas_describe_region";
 
 export type AiProposalTargetType =
   | "session_summary_dm"
@@ -17,7 +19,9 @@ export type AiProposalTargetType =
   | "page_content_block"
   | "brain_document"
   | "idea_page"
-  | "mail_draft";
+  | "mail_draft"
+  | "atlas_draft_names"
+  | "atlas_region_description";
 
 export interface BrainActionDefinition {
   id: BrainActionId;
@@ -120,6 +124,30 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "mail",
     defaultProposalTarget: "mail_draft",
     defaultProposalLabel: "Mail-Entwurf",
+  },
+  atlas_name_regions: {
+    id: "atlas_name_regions",
+    label: "Atlas-Regionen benennen",
+    description:
+      "Schlägt stimmungsvolle Namen für Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nie automatisch in den Kanon.",
+    taskType: "atlas_name_region",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "atlas_draft_names",
+    defaultProposalLabel: "Atlas-Namen Vorschläge",
+  },
+  atlas_describe_region: {
+    id: "atlas_describe_region",
+    label: "Region beschreiben",
+    description:
+      "Schreibt eine atmosphärische DM-Beschreibung für eine ausgewählte Kartenregion. Nie automatisch in den Kanon.",
+    taskType: "atlas_describe_region",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "atlas_region_description",
+    defaultProposalLabel: "Regionsbeschreibung (Entwurf)",
   },
 };
 
