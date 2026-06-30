@@ -32,4 +32,14 @@ describe("label-layout", () => {
     assert.equal(a.length, 6);
     assert.equal(a[0]!.char, "G");
   });
+
+  it("layoutCharactersOnPath supports path reversal", () => {
+    const path: [number, number][] = [
+      [0, 0],
+      [1, 0],
+    ];
+    const forward = layoutCharactersOnPath("AB", path, 0.2);
+    const reversed = layoutCharactersOnPath("AB", path, 0.2, true);
+    assert.notDeepEqual(forward[0]!.x, reversed[0]!.x);
+  });
 });

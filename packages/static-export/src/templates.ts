@@ -213,6 +213,7 @@ export function renderWorldIndexPage(input: {
   pages: { title: string; href: string; summary: string | null; category: string }[];
   navItems: StaticNavItem[];
   worldSlug: string;
+  atlasHref?: string;
 }): string {
   const cards = input.pages
     .map(
@@ -241,6 +242,11 @@ export function renderWorldIndexPage(input: {
             : ""
         }
         <p class="uwe-portal-hero-meta">${input.pages.length} veröffentlichte Seiten</p>
+        ${
+          input.atlasHref
+            ? `<p class="uwe-portal-hero-meta"><a href="${escapeAttr(input.atlasHref)}" style="color:#38bdf8;text-decoration:none;">Atlas / Karte öffnen →</a></p>`
+            : ""
+        }
       </section>
       <div class="static-page-grid">${cards}</div>
     `,

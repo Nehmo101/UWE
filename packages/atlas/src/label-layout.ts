@@ -78,16 +78,18 @@ export function layoutCharactersOnPath(
   text: string,
   path: Coordinate[],
   letterSpacing = 0.012,
+  reverse = false,
 ): CharacterPlacement[] {
+  const points = reverse ? [...path].reverse() : path;
   const chars = [...text.toUpperCase().replace(/\s+/g, " ")];
-  if (chars.length === 0 || path.length < 2) return [];
+  if (chars.length === 0 || points.length < 2) return [];
 
-  const total = pathLength(path);
+  const total = pathLength(points);
   const blockWidth = Math.max(letterSpacing, (chars.length - 1) * letterSpacing);
   const start = Math.max(0, (total - blockWidth) / 2);
 
   return chars.map((char, index) => {
-    const { point, rotation } = pointAtDistance(path, start + index * letterSpacing);
+    const { point, rotation } = pointAtDistance(points, start + index * letterSpacing);
     return { char, x: point[0], y: point[1], rotation };
   });
 }

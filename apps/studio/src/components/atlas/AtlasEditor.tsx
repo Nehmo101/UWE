@@ -61,6 +61,7 @@ export interface FeatureGeometry {
   text?: string;
   rotation?: number;
   pathCoordinates?: [number, number][];
+  pathReversed?: boolean;
   closed?: boolean;
 }
 
@@ -295,7 +296,8 @@ type EditorAction =
   | { type: "ADD_MEASURE_POINT"; point: [number, number] }
   | { type: "CLEAR_MEASURE" }
   | { type: "TOGGLE_HEX_GRID" }
-  | { type: "SET_FEATURE_LINKED_PAGE"; key: string; linkedPageId: string | null };
+  | { type: "SET_FEATURE_LINKED_PAGE"; key: string; linkedPageId: string | null }
+  | { type: "TOGGLE_SELECTED_PATH_REVERSAL" };
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
@@ -486,6 +488,27 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         features: state.features.filter((f) => f._key !== key),
         objects: state.objects.filter((o) => o._key !== key),
         selectedKey: null,
+        dirty: true,
+      };
+    }
+
+    case "TOGGLE_SELECTED_PATH_REVERSAL": {
+      if (!state.selectedKey) return state;
+      const key = state.selectedKey;
+      return {
+        ...state,
+        features: state.features.map((feat) => {
+          if (feat._key !== key || feat.geometry.type !== "LabelAnchor") return feat;
+          const pathCoords = feat.geometry.pathCoordinates;
+          if (!pathCoords || pathCoords.length < 2) return feat;
+          return {
+            ...feat,
+            geometry: {
+              ...feat.geometry,
+              pathReversed: !feat.geometry.pathReversed,
+            },
+          };
+        }),
         dirty: true,
       };
     }
@@ -1138,7 +1161,12 @@ export function AtlasEditor({
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            const placements = layoutCharactersOnPath(labelText, pathCoords, 0.01 * (14 / zoom));
+            const placements = layoutCharactersOnPath(
+              labelText,
+              pathCoords,
+              0.01 * (14 / zoom),
+              feat.geometry.pathReversed === true,
+            );
             for (const placement of placements) {
               const [cx, cy] = w2c(placement.x, placement.y);
               ctx.save();
@@ -2294,6 +2322,18 @@ export function AtlasEditor({
                 )}
                 {selectedFeature.labelText && (
                   <div><strong>Text:</strong> {selectedFeature.labelText}</div>
+                )}
+                {selectedFeature.geometry.type === "LabelAnchor" &&
+                  selectedFeature.geometry.pathCoordinates &&
+                  selectedFeature.geometry.pathCoordinates.length >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "TOGGLE_SELECTED_PATH_REVERSAL" })}
+                    className="uwe-v2-btn uwe-v2-btn-secondary"
+                    style={{ marginTop: "0.5rem", width: "100%", fontSize: 12 }}
+                  >
+                    {selectedFeature.geometry.pathReversed ? "↔ Pfad normal" : "↔ Pfad umkehren"}
+                  </button>
                 )}
 
                 {/* Drill-down button only for saved region features */}

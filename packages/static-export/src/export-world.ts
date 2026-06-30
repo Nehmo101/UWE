@@ -24,7 +24,7 @@ import {
   rewriteViewForStatic,
   type StaticNavItem,
 } from "./templates";
-import { writeAtlasStaticJson } from "./export-atlas";
+import { writeAtlasStaticBundle } from "./export-atlas";
 import { createPrismaClient } from "@uwe/database/server";
 
 export interface StaticExportOptions {
@@ -122,12 +122,34 @@ export async function exportWorldStatic(
     };
   });
 
+  let atlasHref: string | undefined;
+
+  if (options.databaseUrl) {
+    const db = createPrismaClient(options.databaseUrl);
+    try {
+      const atlasBundle = await writeAtlasStaticBundle(
+        db,
+        repo,
+        options.worldSlug,
+        outputDir,
+        world.name,
+      );
+      if (atlasBundle) {
+        writtenFiles.push(...atlasBundle.files);
+        atlasHref = "atlas/";
+      }
+    } finally {
+      await db.$disconnect();
+    }
+  }
+
   const indexHtml = renderWorldIndexPage({
     worldName: world.name,
     worldDescription: world.description,
     pages: indexPages,
     navItems,
     worldSlug: options.worldSlug,
+    atlasHref,
   });
 
   const indexFile = path.join(outputDir, "index.html");
@@ -138,18 +160,6 @@ export async function exportWorldStatic(
   const searchIndexFile = path.join(outputDir, "search-index.json");
   fs.writeFileSync(searchIndexFile, JSON.stringify(searchIndex, null, 2), "utf8");
   writtenFiles.push("search-index.json");
-
-  if (options.databaseUrl) {
-    const db = createPrismaClient(options.databaseUrl);
-    try {
-      const atlasRelative = await writeAtlasStaticJson(db, options.worldSlug, outputDir);
-      if (atlasRelative) {
-        writtenFiles.push(atlasRelative);
-      }
-    } finally {
-      await db.$disconnect();
-    }
-  }
 
   let assetCount = 2;
   if (options.uploadsDir && uploadRefs.size > 0) {

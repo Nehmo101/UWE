@@ -5,7 +5,9 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 ## Erledigt auf `main`
 
 - **Gebogene Labels** (`curvedLabel`, Shortcut **C**): Pfad zeichnen → **Enter** → Text. Gespeichert als `LabelAnchor.pathCoordinates` (`@uwe/atlas/label-layout`).
-- **Static Export:** Portal-gefilterte Atlas-Daten als `atlas/data.json` beim Static Export (`writeAtlasStaticJson` in `@uwe/static-export`).
+- **Gebogene Labels — Pfad umkehren:** Auswahl-Panel „↔ Pfad umkehren“ (`LabelAnchor.pathReversed`).
+- **Static Export:** Portal-gefilterte Atlas-Daten als `atlas/data.json` beim Static Export (`writeAtlasStaticBundle` in `@uwe/static-export`).
+- **Static HTML Atlas-Viewer:** `atlas/index.html` + `atlas/atlas-viewer.js` — Drill-down, Pan/Zoom, Wiki-Links; Link vom Wiki-Index.
 
 ## Bewusst zurückgestellt
 
@@ -23,6 +25,5 @@ Bewusst nicht im MVP (Owner-Entscheidung).
 
 ## Weitere Ideen
 
-- Statischer **HTML**-Atlas-Viewer im Export-Bundle (JSON liegt bereits vor)
 - Mehrere Atlanten pro Welt
-- Gebogene Labels: Feintuning (Letter-Spacing pro Zoom, Pfad-Reversal)
+- Gebogene Labels: Letter-Spacing pro Zoom (Feintuning)

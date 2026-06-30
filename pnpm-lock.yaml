@@ -907,6 +907,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../assets
+      '@uwe/atlas':
+        specifier: workspace:*
+        version: link:../atlas
       '@uwe/database':
         specifier: workspace:*
         version: link:../database

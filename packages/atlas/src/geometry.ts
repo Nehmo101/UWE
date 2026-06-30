@@ -55,6 +55,8 @@ export interface LabelAnchor {
   rotation?: number;
   /** When set, text follows this polyline (curved label). */
   pathCoordinates?: Coordinate[];
+  /** When true, characters are laid out from end to start of the path. */
+  pathReversed?: boolean;
 }
 
 /** Discriminated union of all supported geometry shapes. */

@@ -29,6 +29,7 @@ export interface ViewerFeatureGeometry {
   rings?: [number, number][][];
   text?: string;
   pathCoordinates?: [number, number][];
+  pathReversed?: boolean;
 }
 
 export interface ViewerFeature {
@@ -590,7 +591,12 @@ export function AtlasViewer({
             ctx.fillStyle = inkColor;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            const placements = layoutCharactersOnPath(labelText, pathCoords, 0.01 * (14 / zoom));
+            const placements = layoutCharactersOnPath(
+              labelText,
+              pathCoords,
+              0.01 * (14 / zoom),
+              feat.geometry.pathReversed === true,
+            );
             for (const placement of placements) {
               const [cx, cy] = w2c(placement.x, placement.y);
               ctx.save();

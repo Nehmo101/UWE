@@ -185,7 +185,7 @@ describe("static export", () => {
     );
   });
 
-  it("exports portal-filtered atlas json when databaseUrl is set", async () => {
+  it("exports portal-filtered atlas bundle when databaseUrl is set", async () => {
     const repo = createUweRepository(databaseUrl);
     const exportRoot = path.join(outputDir, "atlas-json");
     const result = await exportWorldStatic(repo, {
@@ -195,10 +195,17 @@ describe("static export", () => {
     });
 
     assert.ok(result.files.includes("atlas/data.json"));
+    assert.ok(result.files.includes("atlas/index.html"));
+    assert.ok(result.files.includes("atlas/atlas-viewer.js"));
+
     const atlasJson = JSON.parse(
       fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
-    ) as { nodes: { title: string }[] };
+    ) as { nodes: { title: string }[]; preset: { colors: { parchment: string } } };
     assert.equal(atlasJson.nodes.length, 1);
     assert.equal(atlasJson.nodes[0]?.title, "Westland");
+    assert.ok(atlasJson.preset.colors.parchment);
+
+    const indexHtml = fs.readFileSync(path.join(exportRoot, "index.html"), "utf8");
+    assert.match(indexHtml, /Atlas \/ Karte öffnen/);
   });
 });
