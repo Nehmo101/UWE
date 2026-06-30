@@ -94,6 +94,13 @@ export {
   ATLAS_STAMP_STYLE_PROMPT,
   assembleStampPrompt,
 } from "./stamp-prompt";
+
+export {
+  layoutCharactersOnPath,
+  pathLength,
+  pointAtDistance,
+} from "./label-layout";
+export type { CharacterPlacement } from "./label-layout";
 export type {
   DraftFeatureKind,
   ProceduralPromptHints,

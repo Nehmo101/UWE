@@ -19,6 +19,7 @@ import {
   scatterGlyphsAlongPath,
   buildReliefShading,
 } from "@uwe/atlas/terrain";
+import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import {
   saveAtlasFeaturesAction,
   saveAtlasObjectsAction,
@@ -45,6 +46,7 @@ export type ToolMode =
   | "biome"
   | "road"
   | "label"
+  | "curvedLabel"
   | "pin"
   | "stamp"
   | "eraser"
@@ -58,6 +60,7 @@ export interface FeatureGeometry {
   rings?: [number, number][][];
   text?: string;
   rotation?: number;
+  pathCoordinates?: [number, number][];
   closed?: boolean;
 }
 
@@ -279,6 +282,7 @@ type EditorAction =
   | { type: "FINISH_PATH" }
   | { type: "CANCEL_DRAW" }
   | { type: "PLACE_LABEL"; point: [number, number]; text: string }
+  | { type: "PLACE_CURVED_LABEL"; path: [number, number][]; text: string }
   | { type: "PLACE_PIN"; point: [number, number] }
   | { type: "PLACE_STAMP"; point: [number, number] }
   | { type: "ERASE_SELECTED" }
@@ -408,6 +412,32 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         features: [...state.features, feat],
+        selectedKey: feat._key,
+        dirty: true,
+      };
+    }
+
+    case "PLACE_CURVED_LABEL": {
+      if (action.path.length < 2) return state;
+      const mid = action.path[Math.floor(action.path.length / 2)] ?? action.path[0]!;
+      const feat: EditorFeature = {
+        _key: nextKey(),
+        kind: "label",
+        geometry: {
+          type: "LabelAnchor",
+          coordinates: mid,
+          text: action.text,
+          pathCoordinates: action.path,
+        },
+        labelText: action.text,
+        labelColor: state.labelColor,
+        layer: 60,
+        visibility: "dm_only",
+      };
+      return {
+        ...state,
+        features: [...state.features, feat],
+        drawingPoints: [],
         selectedKey: feat._key,
         dirty: true,
       };
@@ -713,7 +743,11 @@ export function AtlasEditor({
   const panStart = useRef({ x: 0, y: 0 });
   const movingSelected = useRef(false);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
-  const [labelPrompt, setLabelPrompt] = useState<[number, number] | null>(null);
+  const [labelPrompt, setLabelPrompt] = useState<
+    | { mode: "straight"; point: [number, number] }
+    | { mode: "curved"; path: [number, number][] }
+    | null
+  >(null);
   const [labelText, setLabelText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -1093,16 +1127,54 @@ export function AtlasEditor({
         const [px, py] = w2c(coord[0], coord[1]);
 
         if (feat.geometry.type === "LabelAnchor") {
-          ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
-          ctx.fillStyle =
+          const labelText = feat.labelText ?? feat.geometry.text ?? "Label";
+          const inkColor =
             feat.labelColor === "red" ? preset.colors.inkAccent : preset.colors.ink;
-          ctx.textAlign = "center";
-          ctx.fillText(feat.labelText ?? feat.geometry.text ?? "Label", px, py);
-          if (isSelected) {
-            ctx.strokeStyle = "#2563eb";
-            ctx.lineWidth = 1.5;
-            const tw = ctx.measureText(feat.labelText ?? "Label").width;
-            ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
+          const pathCoords = feat.geometry.pathCoordinates;
+
+          if (pathCoords && pathCoords.length >= 2) {
+            ctx.font = `bold ${Math.round(13 * zoom)}px ${preset.typography.labelRegion}`;
+            ctx.fillStyle = inkColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            const placements = layoutCharactersOnPath(labelText, pathCoords, 0.01 * (14 / zoom));
+            for (const placement of placements) {
+              const [cx, cy] = w2c(placement.x, placement.y);
+              ctx.save();
+              ctx.translate(cx, cy);
+              ctx.rotate(placement.rotation);
+              ctx.fillText(placement.char, 0, 0);
+              ctx.restore();
+            }
+
+            if (isSelected) {
+              ctx.save();
+              ctx.strokeStyle = "#2563eb";
+              ctx.lineWidth = 1.2 * zoom;
+              ctx.setLineDash([4 * zoom, 3 * zoom]);
+              ctx.beginPath();
+              const [fx, fy] = w2c(pathCoords[0]![0], pathCoords[0]![1]);
+              ctx.moveTo(fx, fy);
+              for (let i = 1; i < pathCoords.length; i++) {
+                const [lx, ly] = w2c(pathCoords[i]![0], pathCoords[i]![1]);
+                ctx.lineTo(lx, ly);
+              }
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.restore();
+            }
+          } else {
+            ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
+            ctx.fillStyle = inkColor;
+            ctx.textAlign = "center";
+            ctx.fillText(labelText, px, py);
+            if (isSelected) {
+              ctx.strokeStyle = "#2563eb";
+              ctx.lineWidth = 1.5;
+              const tw = ctx.measureText(labelText).width;
+              ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
+            }
           }
         } else {
           ctx.beginPath();
@@ -1424,8 +1496,13 @@ export function AtlasEditor({
     }
 
     if (tool === "label") {
-      setLabelPrompt(wp);
+      setLabelPrompt({ mode: "straight", point: wp });
       setLabelText("");
+      return;
+    }
+
+    if (tool === "curvedLabel") {
+      dispatch({ type: "ADD_DRAW_POINT", point: wp });
       return;
     }
 
@@ -1621,16 +1698,24 @@ export function AtlasEditor({
         case "b": dispatch({ type: "SET_TOOL", tool: "biome" }); break;
         case "d": dispatch({ type: "SET_TOOL", tool: "road" }); break;
         case "l": dispatch({ type: "SET_TOOL", tool: "label" }); break;
+        case "c": dispatch({ type: "SET_TOOL", tool: "curvedLabel" }); break;
         case "i": dispatch({ type: "SET_TOOL", tool: "pin" }); break;
         case "t": dispatch({ type: "SET_TOOL", tool: "stamp" }); break;
         case "e": dispatch({ type: "SET_TOOL", tool: "eraser" }); break;
         case "m": dispatch({ type: "SET_TOOL", tool: "measure" }); break;
+        case "Enter":
+          if (state.tool === "curvedLabel" && state.drawingPoints.length >= 2) {
+            setLabelPrompt({ mode: "curved", path: [...state.drawingPoints] });
+            dispatch({ type: "CANCEL_DRAW" });
+            setLabelText("");
+          }
+          break;
         case "h": dispatch({ type: "TOGGLE_HEX_GRID" }); break;
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [state.tool, state.drawingPoints]);
 
   // ---------------------------------------------------------------------------
   // JSX
@@ -1646,13 +1731,19 @@ export function AtlasEditor({
     biome: "crosshair",
     road: "crosshair",
     label: "text",
+    curvedLabel: "crosshair",
     pin: "crosshair",
     stamp: "copy",
     eraser: "not-allowed",
     measure: "crosshair",
   };
 
-  const isDrawingTool = state.tool === "polygon" || state.tool === "path" || state.tool === "biome" || state.tool === "road";
+  const isDrawingTool =
+    state.tool === "polygon" ||
+    state.tool === "path" ||
+    state.tool === "biome" ||
+    state.tool === "road" ||
+    state.tool === "curvedLabel";
 
   return (
     <div className="uwe-atlas-editor" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -1709,6 +1800,7 @@ export function AtlasEditor({
             { mode: "biome" as ToolMode, label: "Biom", shortcut: "B" },
             { mode: "road" as ToolMode, label: "Straße", shortcut: "D" },
             { mode: "label" as ToolMode, label: "Label", shortcut: "L" },
+            { mode: "curvedLabel" as ToolMode, label: "Gebogen", shortcut: "C" },
             { mode: "pin" as ToolMode, label: "Pin", shortcut: "I" },
             { mode: "stamp" as ToolMode, label: "Glyph", shortcut: "T" },
             { mode: "measure" as ToolMode, label: "Messen", shortcut: "M" },
@@ -2418,7 +2510,15 @@ export function AtlasEditor({
             onSubmit={(e) => {
               e.preventDefault();
               if (labelText.trim()) {
-                dispatch({ type: "PLACE_LABEL", point: labelPrompt, text: labelText.trim() });
+                if (labelPrompt.mode === "straight") {
+                  dispatch({ type: "PLACE_LABEL", point: labelPrompt.point, text: labelText.trim() });
+                } else {
+                  dispatch({
+                    type: "PLACE_CURVED_LABEL",
+                    path: labelPrompt.path,
+                    text: labelText.trim(),
+                  });
+                }
               }
               setLabelPrompt(null);
               setLabelText("");
@@ -2434,7 +2534,9 @@ export function AtlasEditor({
               minWidth: 300,
             }}
           >
-            <h3 style={{ margin: 0 }}>Label-Text</h3>
+            <h3 style={{ margin: 0 }}>
+              {labelPrompt.mode === "curved" ? "Gebogenes Label" : "Label-Text"}
+            </h3>
             <input
               className="uwe-input"
               value={labelText}

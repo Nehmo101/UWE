@@ -17,6 +17,7 @@ import {
   scatterGlyphsAlongPath,
   buildReliefShading,
 } from "@uwe/atlas/terrain";
+import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -27,6 +28,7 @@ export interface ViewerFeatureGeometry {
   coordinates?: [number, number] | [number, number][];
   rings?: [number, number][][];
   text?: string;
+  pathCoordinates?: [number, number][];
 }
 
 export interface ViewerFeature {
@@ -578,15 +580,36 @@ export function AtlasViewer({
         const [px, py] = w2c(coord[0], coord[1]);
 
         if (feat.geometry.type === "LabelAnchor") {
-          ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
-          ctx.fillStyle = feat.labelColor === "red" ? preset.colors.inkAccent : preset.colors.ink;
-          ctx.textAlign = "center";
-          ctx.fillText(feat.labelText ?? feat.geometry.text ?? "Label", px, py);
-          if (isHovered) {
-            ctx.strokeStyle = "#2563eb";
-            ctx.lineWidth = 1.5;
-            const tw = ctx.measureText(feat.labelText ?? "Label").width;
-            ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
+          const labelText = feat.labelText ?? feat.geometry.text ?? "Label";
+          const inkColor =
+            feat.labelColor === "red" ? preset.colors.inkAccent : preset.colors.ink;
+          const pathCoords = feat.geometry.pathCoordinates;
+
+          if (pathCoords && pathCoords.length >= 2) {
+            ctx.font = `bold ${Math.round(13 * zoom)}px ${preset.typography.labelRegion}`;
+            ctx.fillStyle = inkColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const placements = layoutCharactersOnPath(labelText, pathCoords, 0.01 * (14 / zoom));
+            for (const placement of placements) {
+              const [cx, cy] = w2c(placement.x, placement.y);
+              ctx.save();
+              ctx.translate(cx, cy);
+              ctx.rotate(placement.rotation);
+              ctx.fillText(placement.char, 0, 0);
+              ctx.restore();
+            }
+          } else {
+            ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
+            ctx.fillStyle = inkColor;
+            ctx.textAlign = "center";
+            ctx.fillText(labelText, px, py);
+            if (isHovered) {
+              ctx.strokeStyle = "#2563eb";
+              ctx.lineWidth = 1.5;
+              const tw = ctx.measureText(labelText).width;
+              ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
+            }
           }
         } else {
           ctx.beginPath();

@@ -16,7 +16,7 @@ description: Coordinate UWE product evolution across Daily Admin OS, DnD Studio,
 
 | Rule | Enforcement |
 |------|-------------|
-| Cloud AI gets no brain/world/life/campaign context | `packages/ai-brain/src/router/privacyGuard.ts` |
+| Cloud AI gets no brain/world/life/campaign context | `packages/ai-brain/src/router/privacyGuard.ts` — **`personal_brain` hard local**; DnD/world configurable via AI Gateway privacy matrix (W0) |
 | AI outputs = Proposal/Draft/Run — never auto-apply | AI Runs, Generator, Life Brain |
 | Portal filters visibility server-side | `packages/database/src/permissions.ts`, `pnpm test:security` |
 | RTX never public | LAN only, `DEPLOYMENT_SECURITY.md` |

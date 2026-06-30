@@ -14,7 +14,8 @@
     "./serialization": "./src/serialization.ts",
     "./terrain": "./src/terrain.ts",
     "./procedural": "./src/procedural.ts",
-    "./stamp-prompt": "./src/stamp-prompt.ts"
+    "./stamp-prompt": "./src/stamp-prompt.ts",
+    "./label-layout": "./src/label-layout.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

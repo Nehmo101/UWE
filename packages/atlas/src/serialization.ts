@@ -104,6 +104,9 @@ function parseLabelAnchor(raw: Record<string, unknown>): LabelAnchor {
     coordinates: assertCoordinate(raw.coordinates, "coordinates"),
     text: raw.text,
     ...(typeof raw.rotation === "number" ? { rotation: raw.rotation } : {}),
+    ...(Array.isArray(raw.pathCoordinates)
+      ? { pathCoordinates: assertCoordinateArray(raw.pathCoordinates, "pathCoordinates") }
+      : {}),
   };
 }
 

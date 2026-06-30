@@ -51,8 +51,10 @@ export interface LabelAnchor {
   type: "LabelAnchor";
   coordinates: Coordinate;
   text: string;
-  /** Optional rotation in degrees (clockwise). */
+  /** Optional rotation in degrees (clockwise) for straight labels. */
   rotation?: number;
+  /** When set, text follows this polyline (curved label). */
+  pathCoordinates?: Coordinate[];
 }
 
 /** Discriminated union of all supported geometry shapes. */
