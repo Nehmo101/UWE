@@ -88,6 +88,12 @@ export {
   generateDraft,
   rerollDraft,
 } from "./procedural";
+
+// AI stamp generation — P5
+export {
+  ATLAS_STAMP_STYLE_PROMPT,
+  assembleStampPrompt,
+} from "./stamp-prompt";
 export type {
   DraftFeatureKind,
   ProceduralPromptHints,

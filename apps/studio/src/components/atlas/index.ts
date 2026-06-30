@@ -4,6 +4,7 @@ export {
   type EditorFeature,
   type EditorObject,
   type NodeAncestorItem,
+  type EditorPaletteItem,
   BUILTIN_GLYPHS,
 } from "./AtlasEditor";
 
@@ -11,3 +12,8 @@ export {
   ProceduralDraftPanel,
   type ProceduralDraftPanelProps,
 } from "./ProceduralDraftPanel";
+
+export {
+  AtlasStampGenerator,
+  type AtlasStampGeneratorProps,
+} from "./AtlasStampGenerator";
