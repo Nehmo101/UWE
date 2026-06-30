@@ -39,6 +39,7 @@ import {
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
+import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -377,6 +378,13 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzuf\u00fcgen</button>
           </form>
         </CollapsibleSection>
+
+        <PageLinksPanel
+          worldSlug={worldSlug}
+          pageId={page.id}
+          pageSlug={slug}
+          category={category}
+        />
 
         {generatorPanel && (
           <ContextualGeneratorPanel
