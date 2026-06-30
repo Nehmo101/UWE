@@ -21,6 +21,7 @@ const VALID_CAPTURE_TYPES = new Set<CaptureType>([
   "art_miniature_terrain",
   "link",
   "file_image",
+  "voice_memo",
 ]);
 
 function lifeAdmin() {
@@ -67,7 +68,11 @@ export async function createCaptureAction(formData: FormData) {
   const extraMetadata = parseMetadataJson(String(formData.get("metadataJson") || ""));
   if (extraMetadata) Object.assign(metadata, extraMetadata);
 
-  const requiresContent = captureType !== "file_image" && captureType !== "link";
+  const originalFilename =
+    typeof metadata.originalFilename === "string" ? metadata.originalFilename.trim() : null;
+
+  const requiresContent =
+    captureType !== "file_image" && captureType !== "voice_memo" && captureType !== "link";
   if (requiresContent && !content && !title) {
     throw new Error("Inhalt oder Titel erforderlich.");
   }
@@ -77,9 +82,12 @@ export async function createCaptureAction(formData: FormData) {
   if (captureType === "file_image" && !storageKey) {
     throw new Error("Datei-Upload erforderlich.");
   }
+  if (captureType === "voice_memo" && !storageKey) {
+    throw new Error("Sprachmemo-Upload erforderlich.");
+  }
 
   const capture = await lifeAdmin().createCapture({
-    title: title || content.slice(0, 80) || url?.slice(0, 80) || "Capture",
+    title: title || content.slice(0, 80) || originalFilename || url?.slice(0, 80) || "Capture",
     content,
     captureType,
     url,

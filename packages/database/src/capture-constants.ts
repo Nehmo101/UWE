@@ -21,6 +21,7 @@ export const QUICK_CAPTURE_TYPE_OPTIONS: Array<{
   placeholder: string;
   showUrl: boolean;
   showFile: boolean;
+  fileAccept?: string;
 }> = [
   {
     id: "quick_note",
@@ -45,6 +46,16 @@ export const QUICK_CAPTURE_TYPE_OPTIONS: Array<{
     placeholder: "Beschreibung des Anhangs (optional)",
     showUrl: false,
     showFile: true,
+    fileAccept: "image/*,application/pdf,.txt,.md",
+  },
+  {
+    id: "voice_memo",
+    label: "Sprachmemo",
+    captureType: "voice_memo",
+    placeholder: "Kurze Notiz zum Memo (optional)",
+    showUrl: false,
+    showFile: true,
+    fileAccept: "audio/*,.mp3,.wav,.ogg,.webm,.m4a",
   },
   {
     id: "dnd_idea",

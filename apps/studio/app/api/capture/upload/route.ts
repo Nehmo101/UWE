@@ -15,8 +15,11 @@ import {
   logAuditEvent,
   prisma,
   resolveEffectiveUploadsPath,
+  saveCaptureUploadFile,
 } from "@uwe/database/server";
 import { guardStudioMutation } from "@uwe/security";
+
+const ATTACHMENT_CAPTURE_TYPES = new Set(["file_image", "voice_memo"]);
 
 export async function POST(request: Request) {
   const authError = guardStudioMutation(request, { rateLimit: "upload" });
@@ -28,17 +31,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Datei erforderlich." }, { status: 400 });
   }
 
+  const uploadOnly = formData.get("uploadOnly") === "1";
   const worldSlug = String(formData.get("worldSlug") ?? "").trim();
-  const title = String(formData.get("title") ?? "").trim() || file.name || "Capture Bild";
+  const title = String(formData.get("title") ?? "").trim() || file.name || "Capture Anhang";
   const content = String(formData.get("content") ?? "").trim();
-  const captureType = String(formData.get("captureType") ?? "file_image");
-
-  const repo = getAppRepository();
-  const world = worldSlug ? await repo.getWorldBySlug(worldSlug) : null;
+  const captureTypeRaw = String(formData.get("captureType") ?? "file_image");
+  const captureType = ATTACHMENT_CAPTURE_TYPES.has(captureTypeRaw) ? captureTypeRaw : "file_image";
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const settings = await getSystemSettings();
   const uploadsRoot = resolveEffectiveUploadsPath(settings);
+
+  if (uploadOnly) {
+    try {
+      const validated = saveCaptureUploadFile(buffer, {
+        originalFilename: file.name,
+        declaredMimeType: file.type,
+        uploadsRoot,
+        imagesOnly: captureType === "file_image",
+        audioOnly: captureType === "voice_memo",
+      });
+      return NextResponse.json({
+        storageKey: validated.storageKey,
+        originalFilename: file.name,
+        mimeType: validated.mimeType,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload fehlgeschlagen.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
+  const repo = getAppRepository();
+  const world = worldSlug ? await repo.getWorldBySlug(worldSlug) : null;
 
   let storageKey: string;
   let mimeType: string;
@@ -65,14 +90,21 @@ export async function POST(request: Request) {
   fs.writeFileSync(filePath, buffer);
 
   const lifeAdmin = createLifeAdminService(prisma);
+  const defaultContent =
+    captureType === "voice_memo" ? `Sprachmemo: ${title}` : `Bild-Upload: ${title}`;
   const capture = await lifeAdmin.createCapture({
     title,
-    content: content || `Bild-Upload: ${title}`,
-    captureType: captureType === "file_image" ? "file_image" : "quick_note",
+    content: content || defaultContent,
+    captureType: captureType as "file_image" | "voice_memo",
     storageKey,
     worldId: world?.id ?? null,
     status: "inbox",
-    metadata: { mimeType, size: buffer.length, source: "mobile_capture" },
+    metadata: {
+      mimeType,
+      size: buffer.length,
+      source: "mobile_capture",
+      originalFilename: file.name,
+    },
   });
 
   let assetId: string | null = null;

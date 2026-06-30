@@ -41,6 +41,8 @@ export function QuickCaptureForm({
     startUpload(async () => {
       const body = new FormData();
       body.append("file", file);
+      body.append("uploadOnly", "1");
+      body.append("captureType", selected.captureType);
       const response = await fetch(studioApiUrl("/api/capture/upload"), { method: "POST", body });
       const payload = (await response.json()) as {
         storageKey?: string;
@@ -103,6 +105,9 @@ export function QuickCaptureForm({
             data-active={option.id === selectedId ? "true" : "false"}
             onClick={() => {
               setSelectedId(option.id);
+              setStorageKey(null);
+              setUploadName(null);
+              setUploadMime(null);
               setUploadError(null);
             }}
           >
@@ -121,7 +126,11 @@ export function QuickCaptureForm({
         <textarea
           name="content"
           rows={compact ? 3 : 4}
-          required={selected.captureType !== "file_image" && selected.captureType !== "link"}
+          required={
+            selected.captureType !== "file_image" &&
+            selected.captureType !== "voice_memo" &&
+            selected.captureType !== "link"
+          }
           placeholder={selected.placeholder}
           autoFocus={autoFocus}
         />
@@ -141,10 +150,13 @@ export function QuickCaptureForm({
 
       {selected.showFile ? (
         <div className="uwe-capture-field">
-          <span>Datei</span>
+          <span>{selected.captureType === "voice_memo" ? "Audio" : "Datei"}</span>
           <input
             type="file"
-            accept="image/*,application/pdf,.txt,.md"
+            accept={
+              selected.fileAccept ??
+              "image/*,application/pdf,.txt,.md,audio/*,.mp3,.wav,.ogg,.webm,.m4a"
+            }
             onChange={handleFileChange}
             disabled={isUploading}
           />
