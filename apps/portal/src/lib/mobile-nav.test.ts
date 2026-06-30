@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { portalNavItems, portalWorldNav } from "../navigation/portal-nav";
-import { portalAuthBottomNav } from "./mobile-nav";
+import { portalAuthBottomNav, resolvePortalAuthBottomNav } from "./mobile-nav";
 
 function portalNavHrefExists(href: string, worldSlug: string | null): boolean {
   const pathname = href.split("?")[0]!;
@@ -39,5 +39,13 @@ describe("portal mobile nav (login-first contract)", () => {
       const pathname = item.href.split("?")[0]!;
       assert.ok(worldHrefs.has(pathname), `world mobile href not in portalWorldNav: ${pathname}`);
     }
+  });
+
+  it("marks Mehr active on wiki and graph routes", () => {
+    const wikiNav = resolvePortalAuthBottomNav("/auth/worlds/terra/wiki", "terra");
+    assert.ok(wikiNav.some((item) => item.label === "Mehr" && item.active));
+
+    const graphNav = resolvePortalAuthBottomNav("/auth/worlds/terra/graph", "terra");
+    assert.ok(graphNav.some((item) => item.label === "Mehr" && item.active));
   });
 });

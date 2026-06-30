@@ -760,6 +760,10 @@ body {
     padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
   }
 
+  .portal-main-with-bottom-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .auth-form input,
   .auth-form button,
   .auth-preview select,
