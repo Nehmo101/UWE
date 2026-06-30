@@ -74,6 +74,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../../packages/assets
+      '@uwe/atlas':
+        specifier: workspace:*
+        version: link:../../packages/atlas
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth

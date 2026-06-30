@@ -23,6 +23,7 @@
     "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-table": "^8.21.3",
     "@uwe/assets": "workspace:*",
+    "@uwe/atlas": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
