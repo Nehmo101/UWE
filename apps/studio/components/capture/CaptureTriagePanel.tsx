@@ -90,9 +90,17 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
         ) : null}
         {capture.storageKey ? (
           <p>
-            <a href={`/api/capture/files/${capture.id}`} target="_blank" rel="noreferrer">
-              Anhang öffnen
-            </a>
+            {capture.captureType === "voice_memo" ? (
+              <audio controls src={`/api/capture/files/${capture.id}`} className="uwe-capture-audio">
+                <a href={`/api/capture/files/${capture.id}`} target="_blank" rel="noreferrer">
+                  Sprachmemo abspielen
+                </a>
+              </audio>
+            ) : (
+              <a href={`/api/capture/files/${capture.id}`} target="_blank" rel="noreferrer">
+                Anhang öffnen
+              </a>
+            )}
           </p>
         ) : null}
       </header>

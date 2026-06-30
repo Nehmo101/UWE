@@ -17,6 +17,8 @@ const CAPTURE_IMAGE_KINDS: ReadonlySet<DetectedFileKind> = new Set([
   "webp",
 ]);
 
+const CAPTURE_AUDIO_KINDS: ReadonlySet<DetectedFileKind> = new Set(["mp3", "wav", "ogg", "webm"]);
+
 export function saveCaptureUploadFile(
   buffer: Buffer,
   options: {
@@ -24,6 +26,7 @@ export function saveCaptureUploadFile(
     declaredMimeType?: string | null;
     uploadsRoot?: string;
     imagesOnly?: boolean;
+    audioOnly?: boolean;
   },
 ): ValidatedUpload {
   const validated = validateUploadInput({
@@ -35,6 +38,9 @@ export function saveCaptureUploadFile(
 
   if (options.imagesOnly && !CAPTURE_IMAGE_KINDS.has(validated.kind)) {
     throw new Error("Capture file_image accepts images only (PNG, JPEG, GIF, WebP).");
+  }
+  if (options.audioOnly && !CAPTURE_AUDIO_KINDS.has(validated.kind)) {
+    throw new Error("Capture voice_memo accepts audio only (MP3, WAV, OGG, WebM).");
   }
 
   ensureUploadDirectory(CAPTURE_UPLOAD_NAMESPACE, undefined, options.uploadsRoot);

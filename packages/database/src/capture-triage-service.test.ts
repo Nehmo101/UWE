@@ -23,9 +23,10 @@ describe("capture triage service", () => {
   });
 
   it("exposes quick capture type options for mobile UI", () => {
-    assert.ok(QUICK_CAPTURE_TYPE_OPTIONS.length >= 9);
+    assert.ok(QUICK_CAPTURE_TYPE_OPTIONS.length >= 10);
     assert.ok(QUICK_CAPTURE_TYPE_OPTIONS.some((option) => option.id === "life_brain"));
     assert.ok(QUICK_CAPTURE_TYPE_OPTIONS.some((option) => option.captureType === "file_image"));
+    assert.ok(QUICK_CAPTURE_TYPE_OPTIONS.some((option) => option.captureType === "voice_memo"));
   });
 
   it("labels all triage actions in German", () => {
@@ -46,6 +47,20 @@ describe("capture triage service", () => {
     assert.equal(proposal.suggestedTarget, "dnd_page");
     assert.ok(proposal.suggestedTags.includes("dnd_idea"));
     assert.match(proposal.suggestedNextAction, /DnD/i);
+  });
+
+  it("suggests life brain for voice memo captures", async () => {
+    const capture = await lifeAdmin.createCapture({
+      title: "Gedanken zur Session",
+      content: "",
+      captureType: "voice_memo",
+      storageKey: "_capture/test.webm",
+      metadata: { mimeType: "audio/webm", originalFilename: "memo.webm" },
+    });
+
+    const proposal = buildCaptureAiProposal(capture);
+    assert.equal(proposal.suggestedTarget, "life_brain");
+    assert.ok(proposal.suggestedTags.includes("voice_memo"));
   });
 
   it("stores proposal in capture metadata via ensureAiProposal", async () => {

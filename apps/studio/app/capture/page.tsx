@@ -46,7 +46,7 @@ export default async function CapturePage({ searchParams }: Props) {
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Capture Inbox" }]} />}>
       <PageHeader
         title="Capture Inbox"
-        summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Dateien und To-dos ohne RTX."
+        summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Sprachmemos, Dateien und To-dos ohne RTX."
       />
           <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
             <h2 className="uwe-v2-section-title">Bild erfassen (Mobile)</h2>

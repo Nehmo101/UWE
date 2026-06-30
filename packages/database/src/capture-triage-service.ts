@@ -201,6 +201,8 @@ function inferProposalTarget(capture: CaptureEntry): CaptureProposalTarget {
       return capture.url ? "life_brain" : "inbox";
     case "file_image":
       return "workshop_project";
+    case "voice_memo":
+      return "life_brain";
     default:
       break;
   }
