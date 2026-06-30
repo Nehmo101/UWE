@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveStylePreset, type AtlasStylePreset } from "@uwe/atlas/style-presets";
+import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import {
   createAtlasService,
   type PrismaClient,
@@ -19,6 +20,14 @@ export interface AtlasStaticExportPayload {
     stylePreset: string;
   } | null;
   preset: Pick<AtlasStylePreset, "colors" | "typography" | "decorations">;
+  /** Canonical builtin pictogram registry (so the viewer needs no hardcoded copy). */
+  builtinGlyphs: Array<{
+    key: string;
+    name: string;
+    kind: string;
+    pathData: string;
+    color: string;
+  }>;
   pageLinks: Record<string, string>;
   nodes: Array<{
     id: string;
@@ -101,6 +110,13 @@ export async function writeAtlasStaticBundle(
       typography: preset.typography,
       decorations: preset.decorations,
     },
+    builtinGlyphs: BUILTIN_GLYPHS.map((glyph) => ({
+      key: glyph.key,
+      name: glyph.name,
+      kind: glyph.kind,
+      pathData: glyph.pathData,
+      color: glyph.color,
+    })),
     pageLinks,
     nodes: snapshot.nodes.map((node) => ({
       id: node.id,

@@ -18,6 +18,7 @@ import {
   buildReliefShading,
 } from "@uwe/atlas/terrain";
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
+import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -99,26 +100,8 @@ export interface AtlasViewerProps {
 }
 
 // ---------------------------------------------------------------------------
-// Builtin glyph definitions (must mirror Studio to render correctly)
+// Builtin glyph definitions — canonical registry in @uwe/atlas/glyphs.
 // ---------------------------------------------------------------------------
-
-interface BuiltinGlyph {
-  key: string;
-  name: string;
-  pathData: string;
-  color?: string;
-}
-
-const BUILTIN_GLYPHS: BuiltinGlyph[] = [
-  { key: "mountain", name: "Berg", pathData: "M12 2 L22 20 L2 20 Z M7 20 L12 10 L17 20", color: "#7a6b52" },
-  { key: "mountain_snow", name: "Schneeberg", pathData: "M12 2 L22 20 L2 20 Z M9 11 L12 6 L15 11 Z", color: "#a8b8c4" },
-  { key: "tree", name: "Wald", pathData: "M12 3 L19 17 L5 17 Z M12 17 L12 22 M10 22 L14 22", color: "#4a6741" },
-  { key: "city", name: "Stadt", pathData: "M7 22 L7 12 L9 12 L9 10 L11 10 L11 8 L13 8 L13 10 L15 10 L15 12 L17 12 L17 22 Z M10 22 L10 16 L14 16 L14 22", color: "#1a1008" },
-  { key: "village", name: "Dorf", pathData: "M12 4 L20 11 L20 22 L4 22 L4 11 Z M4 11 L12 4 L20 11 M9 22 L9 15 L15 15 L15 22", color: "#6b4a2a" },
-  { key: "ruin", name: "Ruine", pathData: "M5 22 L5 12 L8 12 L8 8 M8 8 L10 10 M16 8 L16 12 L19 12 L19 22 M10 14 L14 14 L14 22 L10 22 Z", color: "#8b7355" },
-  { key: "castle", name: "Burg", pathData: "M4 22 L4 14 L6 14 L6 12 L8 12 L8 14 L10 14 L10 12 L14 12 L14 14 L16 14 L16 12 L18 12 L18 14 L20 14 L20 22 Z M10 22 L10 17 L14 17 L14 22", color: "#1a1008" },
-  { key: "water", name: "See/Meer", pathData: "M2 12 Q6 8 10 12 Q14 16 18 12 Q20 10 22 12 M2 16 Q6 12 10 16 Q14 20 18 16 Q20 14 22 16", color: "#a8c4d4" },
-];
 
 // ---------------------------------------------------------------------------
 // Biome colours

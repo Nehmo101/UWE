@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./geometry": "./src/geometry.ts",
     "./constants": "./src/constants.ts",
+    "./glyphs": "./src/glyphs.ts",
     "./style-presets": "./src/style-presets.ts",
     "./draw-model": "./src/draw-model.ts",
     "./serialization": "./src/serialization.ts",

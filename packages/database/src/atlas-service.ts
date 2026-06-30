@@ -9,6 +9,7 @@ import type {
   Prisma,
   Visibility,
 } from "./generated/prisma/client";
+import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import type { PrismaClient } from "./client";
 import {
   isDmOnlyVisibility,
@@ -148,25 +149,23 @@ export interface CreateAtlasPaletteItemInput {
 // ---------------------------------------------------------------------------
 
 /**
- * Canonical set of builtin glyph stamps. These are seeded as GLOBAL
- * (worldId === null) AtlasPaletteItem rows so that placing a builtin stamp
- * always references a real palette item (AtlasObject.paletteItemId FK is
- * Restrict and required).
+ * Canonical set of builtin glyph stamps, derived from the single source of
+ * truth in `@uwe/atlas/glyphs`. These are seeded as GLOBAL (worldId === null)
+ * AtlasPaletteItem rows so that placing a builtin stamp always references a
+ * real palette item (AtlasObject.paletteItemId FK is Restrict and required).
+ *
+ * Adding a pictogram to `@uwe/atlas/glyphs` automatically seeds it here — the
+ * `ensureBuiltinPaletteItems` seed is idempotent and back-fills new keys.
  */
 export const BUILTIN_ATLAS_GLYPHS: Array<{
   key: string;
   name: string;
   kind: string;
-}> = [
-  { key: "mountain", name: "Berg", kind: "relief" },
-  { key: "mountain_snow", name: "Schneeberg", kind: "relief" },
-  { key: "tree", name: "Wald", kind: "biome" },
-  { key: "city", name: "Stadt", kind: "pin" },
-  { key: "village", name: "Dorf", kind: "pin" },
-  { key: "ruin", name: "Ruine", kind: "pin" },
-  { key: "castle", name: "Burg", kind: "pin" },
-  { key: "water", name: "See/Meer", kind: "biome" },
-];
+}> = BUILTIN_GLYPHS.map((glyph) => ({
+  key: glyph.key,
+  name: glyph.name,
+  kind: glyph.kind,
+}));
 
 // ---------------------------------------------------------------------------
 // Visibility helpers

@@ -374,7 +374,7 @@ describe("AtlasService — ensureBuiltinPaletteItems", () => {
     db = createPrismaClient(createTestDatabaseUrl());
   });
 
-  it("creates exactly 8 global builtin palette items", async () => {
+  it("creates one global builtin palette item per registry entry", async () => {
     const service = createAtlasService(db);
     await service.ensureBuiltinPaletteItems();
 
@@ -382,7 +382,10 @@ describe("AtlasService — ensureBuiltinPaletteItems", () => {
       where: { worldId: null, source: "builtin", builtinGlyphKey: { not: null } },
     });
     assert.equal(builtins.length, BUILTIN_ATLAS_GLYPHS.length);
-    assert.equal(builtins.length, 8);
+    assert.ok(
+      builtins.length >= 20,
+      "expected at least 20 builtin glyphs (8 original + ≥12 new pictograms)",
+    );
 
     const keys = builtins.map((b) => b.builtinGlyphKey).sort();
     assert.deepEqual(keys, BUILTIN_ATLAS_GLYPHS.map((g) => g.key).sort());
@@ -402,7 +405,7 @@ describe("AtlasService — ensureBuiltinPaletteItems", () => {
     const builtins = await db.atlasPaletteItem.findMany({
       where: { worldId: null, builtinGlyphKey: { not: null } },
     });
-    assert.equal(builtins.length, 8);
+    assert.equal(builtins.length, BUILTIN_ATLAS_GLYPHS.length);
   });
 });
 
@@ -428,7 +431,7 @@ describe("AtlasService — getOrCreateAtlasForWorld seeds builtin glyphs", () =>
     const after = await db.atlasPaletteItem.findMany({
       where: { worldId: null, builtinGlyphKey: { not: null } },
     });
-    assert.equal(after.length, 8);
+    assert.equal(after.length, BUILTIN_ATLAS_GLYPHS.length);
   });
 
   it("listPaletteItems includes the global builtin glyphs", async () => {

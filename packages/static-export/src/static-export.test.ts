@@ -200,10 +200,18 @@ describe("static export", () => {
 
     const atlasJson = JSON.parse(
       fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
-    ) as { nodes: { title: string }[]; preset: { colors: { parchment: string } } };
+    ) as {
+      nodes: { title: string }[];
+      preset: { colors: { parchment: string } };
+      builtinGlyphs: { key: string; pathData: string }[];
+    };
     assert.equal(atlasJson.nodes.length, 1);
     assert.equal(atlasJson.nodes[0]?.title, "Westland");
     assert.ok(atlasJson.preset.colors.parchment);
+
+    // Canonical pictogram registry is injected so the static viewer needs no copy.
+    assert.ok(atlasJson.builtinGlyphs.length >= 20);
+    assert.ok(atlasJson.builtinGlyphs.every((g) => g.key && g.pathData));
 
     const indexHtml = fs.readFileSync(path.join(exportRoot, "index.html"), "utf8");
     assert.match(indexHtml, /Atlas \/ Karte öffnen/);

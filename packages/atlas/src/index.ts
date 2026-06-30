@@ -50,6 +50,21 @@ export type {
   AtlasStylePreset,
 } from "./style-presets";
 
+// Builtin pictogram (glyph) registry — single source of truth
+export {
+  ATLAS_GLYPH_CATEGORIES,
+  BUILTIN_GLYPHS,
+  BUILTIN_GLYPH_KEYS,
+  getGlyphByKey,
+  listGlyphsByCategory,
+  groupGlyphsByCategory,
+} from "./glyphs";
+export type {
+  AtlasGlyphCategory,
+  AtlasGlyphCategoryInfo,
+  BuiltinGlyph,
+} from "./glyphs";
+
 // Draw model
 export {
   DRAW_LAYERS,

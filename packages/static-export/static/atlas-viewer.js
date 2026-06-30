@@ -25,6 +25,8 @@
     snow: "rgba(120,150,200,0.50)",
   };
 
+  // Fallback only — the export injects the canonical registry into
+  // data.builtinGlyphs (from @uwe/atlas/glyphs); see resolveGlyphs().
   const BUILTIN_GLYPHS = [
     { key: "mountain", pathData: "M12 2 L22 20 L2 20 Z M7 20 L12 10 L17 20", color: "#7a6b52" },
     { key: "mountain_snow", pathData: "M12 2 L22 20 L2 20 Z M9 11 L12 6 L15 11 Z", color: "#a8b8c4" },
@@ -597,8 +599,12 @@
         ctx.restore();
       }
 
+      const glyphs =
+        this.data.builtinGlyphs && this.data.builtinGlyphs.length
+          ? this.data.builtinGlyphs
+          : BUILTIN_GLYPHS;
       for (const obj of this.getNodeObjects()) {
-        const glyph = BUILTIN_GLYPHS.find((g) => g.key === obj.paletteItemId);
+        const glyph = glyphs.find((g) => g.key === obj.paletteItemId);
         if (!glyph) continue;
         const [ox, oy] = w2c(obj.x, obj.y);
         const size = 24 * zoom * obj.scale;

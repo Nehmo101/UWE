@@ -21,6 +21,11 @@ import {
 } from "@uwe/atlas/terrain";
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import {
+  BUILTIN_GLYPHS,
+  ATLAS_GLYPH_CATEGORIES,
+  type BuiltinGlyph,
+} from "@uwe/atlas/glyphs";
+import {
   saveAtlasFeaturesAction,
   saveAtlasObjectsAction,
   createChildNodeAction,
@@ -105,17 +110,9 @@ export interface EditorObject {
 }
 
 // ---------------------------------------------------------------------------
-// Builtin glyph palette (hardcoded SVG paths for MVP)
+// Builtin glyph palette — canonical registry lives in @uwe/atlas/glyphs.
+// Add new pictograms there; the editor picks them up automatically.
 // ---------------------------------------------------------------------------
-
-export interface BuiltinGlyph {
-  key: string;
-  name: string;
-  kind: string;
-  /** SVG path data — drawn centred at (0,0) in a 24×24 viewBox. */
-  pathData: string;
-  color?: string;
-}
 
 /**
  * Combined palette item — covers both builtin SVG glyphs and DB-stored
@@ -137,65 +134,6 @@ export interface EditorPaletteItem {
   imageData?: string;
   mimeType?: string;
 }
-
-export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
-  {
-    key: "mountain",
-    name: "Berg",
-    kind: "relief",
-    pathData: "M12 2 L22 20 L2 20 Z M7 20 L12 10 L17 20",
-    color: "#7a6b52",
-  },
-  {
-    key: "mountain_snow",
-    name: "Schneeberg",
-    kind: "relief",
-    pathData: "M12 2 L22 20 L2 20 Z M9 11 L12 6 L15 11 Z",
-    color: "#a8b8c4",
-  },
-  {
-    key: "tree",
-    name: "Wald",
-    kind: "biome",
-    pathData: "M12 3 L19 17 L5 17 Z M12 17 L12 22 M10 22 L14 22",
-    color: "#4a6741",
-  },
-  {
-    key: "city",
-    name: "Stadt",
-    kind: "pin",
-    pathData: "M7 22 L7 12 L9 12 L9 10 L11 10 L11 8 L13 8 L13 10 L15 10 L15 12 L17 12 L17 22 Z M10 22 L10 16 L14 16 L14 22",
-    color: "#1a1008",
-  },
-  {
-    key: "village",
-    name: "Dorf",
-    kind: "pin",
-    pathData: "M12 4 L20 11 L20 22 L4 22 L4 11 Z M4 11 L12 4 L20 11 M9 22 L9 15 L15 15 L15 22",
-    color: "#6b4a2a",
-  },
-  {
-    key: "ruin",
-    name: "Ruine",
-    kind: "pin",
-    pathData: "M5 22 L5 12 L8 12 L8 8 M8 8 L10 10 M16 8 L16 12 L19 12 L19 22 M10 14 L14 14 L14 22 L10 22 Z",
-    color: "#8b7355",
-  },
-  {
-    key: "castle",
-    name: "Burg",
-    kind: "pin",
-    pathData: "M4 22 L4 14 L6 14 L6 12 L8 12 L8 14 L10 14 L10 12 L14 12 L14 14 L16 14 L16 12 L18 12 L18 14 L20 14 L20 22 Z M10 22 L10 17 L14 17 L14 22",
-    color: "#1a1008",
-  },
-  {
-    key: "water",
-    name: "See/Meer",
-    kind: "biome",
-    pathData: "M2 12 Q6 8 10 12 Q14 16 18 12 Q20 10 22 12 M2 16 Q6 12 10 16 Q14 20 18 16 Q20 14 22 16",
-    color: "#a8c4d4",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Biome fill colours for canvas rendering
@@ -2190,37 +2128,53 @@ export function AtlasEditor({
           border: "1px solid var(--uwe-border)",
           borderRadius: "var(--uwe-radius)",
         }}>
-          {/* Builtin glyphs row */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-            <span style={{ fontSize: 12, color: "var(--uwe-muted)", alignSelf: "center" }}>Eingebaut:</span>
-            {BUILTIN_GLYPHS.map((g) => (
-              <button
-                key={g.key}
-                type="button"
-                onClick={() => dispatch({ type: "SET_GLYPH", key: g.key })}
-                title={g.name}
-                aria-pressed={state.activeGlyphKey === g.key}
-                style={{
-                  padding: "0.25rem",
-                  background: state.activeGlyphKey === g.key
-                    ? "var(--uwe-accent-10)"
-                    : "var(--uwe-bg)",
-                  border: state.activeGlyphKey === g.key
-                    ? "2px solid var(--uwe-accent)"
-                    : "1px solid var(--uwe-border)",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 2,
-                }}
+          {/* Builtin glyphs, grouped by Atlas category */}
+          {ATLAS_GLYPH_CATEGORIES.map((category) => {
+            const glyphs = BUILTIN_GLYPHS.filter((g) => g.kind === category.key);
+            if (glyphs.length === 0) return null;
+            return (
+              <div
+                key={category.key}
+                style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
               >
-                <GlyphSvg glyph={g} size={22} />
-                <span style={{ fontSize: 9 }}>{g.name}</span>
-              </button>
-            ))}
-          </div>
+                <span
+                  style={{ fontSize: 12, color: "var(--uwe-muted)" }}
+                  title={category.description}
+                >
+                  {category.label}
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+                  {glyphs.map((g) => (
+                    <button
+                      key={g.key}
+                      type="button"
+                      onClick={() => dispatch({ type: "SET_GLYPH", key: g.key })}
+                      title={g.name}
+                      aria-pressed={state.activeGlyphKey === g.key}
+                      style={{
+                        padding: "0.25rem",
+                        background: state.activeGlyphKey === g.key
+                          ? "var(--uwe-accent-10)"
+                          : "var(--uwe-bg)",
+                        border: state.activeGlyphKey === g.key
+                          ? "2px solid var(--uwe-accent)"
+                          : "1px solid var(--uwe-border)",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 2,
+                      }}
+                    >
+                      <GlyphSvg glyph={g} size={22} />
+                      <span style={{ fontSize: 9 }}>{g.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
 
           {/* AI palette items */}
           {stampPaletteItems.length > 0 && (
