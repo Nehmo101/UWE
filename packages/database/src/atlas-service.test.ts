@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { createAtlasService, isAtlasEntityAccessible } from "./atlas-service";
+import {
+  BUILTIN_ATLAS_GLYPHS,
+  createAtlasService,
+  isAtlasEntityAccessible,
+} from "./atlas-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 // ---------------------------------------------------------------------------
@@ -356,6 +360,93 @@ describe("AtlasService — palette items", () => {
 
     const approved = await service.approvePaletteItem(item.id);
     assert.equal(approved.reviewStatus, "approved");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Builtin palette items — ensureBuiltinPaletteItems
+// ---------------------------------------------------------------------------
+
+describe("AtlasService — ensureBuiltinPaletteItems", () => {
+  let db: PrismaClient;
+
+  before(() => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  it("creates exactly 8 global builtin palette items", async () => {
+    const service = createAtlasService(db);
+    await service.ensureBuiltinPaletteItems();
+
+    const builtins = await db.atlasPaletteItem.findMany({
+      where: { worldId: null, source: "builtin", builtinGlyphKey: { not: null } },
+    });
+    assert.equal(builtins.length, BUILTIN_ATLAS_GLYPHS.length);
+    assert.equal(builtins.length, 8);
+
+    const keys = builtins.map((b) => b.builtinGlyphKey).sort();
+    assert.deepEqual(keys, BUILTIN_ATLAS_GLYPHS.map((g) => g.key).sort());
+
+    for (const item of builtins) {
+      assert.equal(item.worldId, null);
+      assert.equal(item.source, "builtin");
+      assert.equal(item.reviewStatus, "approved");
+    }
+  });
+
+  it("is idempotent — calling twice does not create duplicates", async () => {
+    const service = createAtlasService(db);
+    await service.ensureBuiltinPaletteItems();
+    await service.ensureBuiltinPaletteItems();
+
+    const builtins = await db.atlasPaletteItem.findMany({
+      where: { worldId: null, builtinGlyphKey: { not: null } },
+    });
+    assert.equal(builtins.length, 8);
+  });
+});
+
+describe("AtlasService — getOrCreateAtlasForWorld seeds builtin glyphs", () => {
+  let db: PrismaClient;
+
+  before(() => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  it("creates builtin palette items when an atlas is opened/created", async () => {
+    const world = await seedWorld(db, "atlas-builtin-seed");
+    const service = createAtlasService(db);
+
+    const before = await db.atlasPaletteItem.findMany({
+      where: { worldId: null, builtinGlyphKey: { not: null } },
+    });
+    assert.equal(before.length, 0);
+
+    const map = await service.getOrCreateAtlasForWorld(world.id);
+    assert.equal(map.worldId, world.id);
+
+    const after = await db.atlasPaletteItem.findMany({
+      where: { worldId: null, builtinGlyphKey: { not: null } },
+    });
+    assert.equal(after.length, 8);
+  });
+
+  it("listPaletteItems includes the global builtin glyphs", async () => {
+    const world = await seedWorld(db, "atlas-builtin-list");
+    const service = createAtlasService(db);
+
+    await service.getOrCreateAtlasForWorld(world.id);
+
+    const items = await service.listPaletteItems(world.id);
+    const builtinNames = items
+      .filter((i) => i.builtinGlyphKey !== null)
+      .map((i) => i.name);
+    for (const glyph of BUILTIN_ATLAS_GLYPHS) {
+      assert.ok(
+        builtinNames.includes(glyph.name),
+        `expected listPaletteItems to include builtin "${glyph.name}"`,
+      );
+    }
   });
 });
 

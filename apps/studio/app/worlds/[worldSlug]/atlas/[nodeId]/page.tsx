@@ -3,6 +3,7 @@ import {
   createAtlasService,
   createPrismaClient,
   getAppRepository,
+  buildPageUrl,
 } from "@uwe/database/server";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
@@ -30,9 +31,12 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
   let rawObjects: Awaited<ReturnType<typeof atlas.listObjectsForNode>> = [];
   let rawPaletteItems: Awaited<ReturnType<typeof atlas.listPaletteItems>> = [];
   let mapStylePreset: string | null = null;
+  let mapVisibility: string = "dm_only";
+  let nodeVisibility: string = "dm_only";
   let parentChainItems: NodeAncestorItem[] = [];
   let parentSilhouette: [number, number][][] | undefined;
   let backgroundAssetId: string | null = null;
+  let linkedPageHrefById: Record<string, string> = {};
 
   try {
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
@@ -40,13 +44,37 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
 
     node = hierarchy.node;
     backgroundAssetId = node.backgroundAssetId ?? null;
+    nodeVisibility = node.visibility ?? "dm_only";
 
     const map = await db.atlasMap.findUnique({ where: { id: node.mapId } });
     mapStylePreset = map?.stylePreset ?? null;
+    mapVisibility = map?.visibility ?? "dm_only";
 
     rawFeatures = await atlas.listFeaturesForNode(nodeId);
     rawObjects = await atlas.listObjectsForNode(nodeId);
+
+    // Ensure builtin glyph palette items exist (idempotent) so older atlases
+    // can place builtin stamps with a real palette item id.
+    await atlas.ensureBuiltinPaletteItems();
     rawPaletteItems = await atlas.listPaletteItems(world.id);
+
+    // Resolve linked wiki pages to their correct Studio URLs (by slug/type).
+    const linkedPageIds = Array.from(
+      new Set(
+        rawFeatures
+          .map((f) => f.linkedPageId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    if (linkedPageIds.length > 0) {
+      const pages = await db.page.findMany({
+        where: { id: { in: linkedPageIds } },
+        select: { id: true, type: true, slug: true },
+      });
+      linkedPageHrefById = Object.fromEntries(
+        pages.map((p) => [p.id, buildPageUrl(worldSlug, p.type, p.slug)]),
+      );
+    }
 
     // Build parent chain items for breadcrumb/hierarchy display.
     parentChainItems = hierarchy.parentChain.map((a) => ({
@@ -87,6 +115,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     labelColor: (f.labelColor as EditorFeature["labelColor"]) ?? null,
     childNodeId: f.childNodeId ?? null,
     linkedPageId: f.linkedPageId ?? null,
+    linkedPageHref: f.linkedPageId ? (linkedPageHrefById[f.linkedPageId] ?? null) : null,
     layer: f.layer,
     sortOrder: f.sortOrder,
     visibility: f.visibility,
@@ -113,7 +142,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
   };
 
   const editorPaletteItems: EditorPaletteItem[] = rawPaletteItems
-    .filter((p) => p.source === "ai" || p.source === "upload")
+    .filter((p) => p.source === "ai" || p.source === "upload" || p.source === "builtin")
     .map((p) => {
       const tags = (p.styleTags ?? {}) as StyleTagsRecord;
       return {
@@ -122,6 +151,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
         kind: p.kind,
         source: p.source as "builtin" | "ai" | "upload",
         reviewStatus: p.reviewStatus as "approved" | "pending",
+        builtinGlyphKey: p.builtinGlyphKey ?? null,
         imageData: tags.imageData,
         mimeType: tags.mimeType,
       };
@@ -157,6 +187,8 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
         parentSilhouette={parentSilhouette}
         backgroundAssetId={backgroundAssetId}
         initialPaletteItems={editorPaletteItems}
+        nodeVisibility={nodeVisibility}
+        mapVisibility={mapVisibility}
       />
     </WorldShell>
   );

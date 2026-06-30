@@ -114,20 +114,18 @@ pnpm --filter @uwe/database db:seed     # demo world "Terra" + users
 - Seeded dev/demo login: **`dm@uwe.local` / `uwe-dev`** (Studio DM). Other seeded
   player accounts also use `uwe-dev`.
 
-### Known dev-mode gotcha: strict CSP blocks `next dev` hydration
+### Dev-mode CSP and `next dev` hydration
 
-The committed CSP (`packages/auth/src/security-headers.ts`) sets
-`script-src 'self' 'unsafe-inline'` (no `'unsafe-eval'`). This is correct for
-production, but Next.js **dev** mode (`next dev`) needs `'unsafe-eval'` for Fast
-Refresh/HMR. In a browser against `pnpm dev`, client hydration fails
-(`EvalError: ... 'unsafe-eval' is not an allowed source`) and the login form
-falls back to a broken native GET — i.e. interactive UI does not work in dev.
+The CSP (`packages/auth/src/security-headers.ts`) is environment-aware:
+`script-src` is `'self' 'unsafe-inline'` in **production** and
+`'self' 'unsafe-inline' 'unsafe-eval'` in **development**. The extra
+`'unsafe-eval'` in the dev branch is exactly what Next.js Fast Refresh/HMR and
+client hydration need, so interactive UI **works** in a browser against
+`pnpm dev` — no temporary CSP patching is required for manual dev testing.
 
-- Production builds are unaffected. The project's E2E harness
-  (`scripts/e2e-servers.mjs`) runs `next build` + `next start` with
-  `NODE_ENV=production`, where the strict CSP works; that is how `pnpm test:e2e`
-  verifies auth flows.
-- For manual browser testing in dev, temporarily add `'unsafe-eval'` to the
-  dev branch of the CSP in `security-headers.ts` (production unchanged) and
-  revert before committing — CSP changes need explicit security review per
+- Production stays strict (no `'unsafe-eval'`). Do **not** add `'unsafe-eval'`
+  to the production branch — CSP changes there need explicit security review per
   `.cursor/rules/security.mdc`.
+- The E2E harness (`scripts/e2e-servers.mjs`) still runs `next build` +
+  `next start` with `NODE_ENV=production` to exercise the real production
+  CSP/middleware; that is how `pnpm test:e2e` verifies auth flows.

@@ -55,9 +55,9 @@ Kernregeln: keine Secrets in Source; `dm_only` nie ins Portal; Filtering in `pac
 - Keine Server-only Module in Client Components; keine Cross-App Imports.
 - **`@uwe/database/server`** ist der kanonische Import-Pfad (~1540 Zeilen Barrel, ~344 Importer). Service-Index: [docs/engineering/database-service-map.md](docs/engineering/database-service-map.md).
 
-## Dev-Mode Gotcha: CSP blockiert `next dev`
+## Dev-Mode CSP
 
-Siehe [AGENTS.md](AGENTS.md) — temporär `'unsafe-eval'` nur für lokale Browser-Tests, vor Commit revertieren.
+Die CSP ist umgebungsabhängig: Der Dev-Zweig enthält bereits `'unsafe-eval'`, daher funktioniert `next dev` (HMR + Hydration) im Browser ohne CSP-Patch. Produktion bleibt strikt. Siehe [AGENTS.md](AGENTS.md).
 
 ## Lokale DB einrichten (einmalig)
 

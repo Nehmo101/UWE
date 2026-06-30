@@ -68,6 +68,20 @@ export interface PageLinkMap {
   [pageId: string]: string;
 }
 
+/** Serializable palette item passed from the server loader. */
+export interface PaletteItemInfo {
+  source: string;
+  builtinGlyphKey: string | null;
+  /** Base64 image data for ai/upload stamps (may already be a data URL). */
+  imageData?: string;
+  mimeType?: string;
+}
+
+/** Map from AtlasObject.paletteItemId → its palette item metadata. */
+export interface PaletteItemMap {
+  [paletteItemId: string]: PaletteItemInfo;
+}
+
 export interface AtlasViewerProps {
   worldSlug: string;
   nodeId: string;
@@ -80,6 +94,8 @@ export interface AtlasViewerProps {
   parentSilhouette?: [number, number][][];
   /** pageId → portal slug for clickable wiki links. */
   pageLinkMap?: PageLinkMap;
+  /** paletteItemId → palette item metadata for stamp rendering. */
+  paletteItems?: PaletteItemMap;
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +310,7 @@ export function AtlasViewer({
   parentChainItems = [],
   parentSilhouette,
   pageLinkMap = {},
+  paletteItems = {},
 }: AtlasViewerProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -303,11 +320,37 @@ export function AtlasViewer({
   const [hovered, setHovered] = useState<HitResult | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string; href?: string } | null>(null);
 
+  // Preloaded images for AI/upload stamp rendering on canvas, keyed by
+  // paletteItemId. Mirrors the Studio editor's stampImagesRef approach.
+  const stampImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  // Bumped when a stamp image finishes loading to trigger a redraw.
+  const [stampImagesVersion, setStampImagesVersion] = useState(0);
+
+  // Preload AI/upload stamp images whenever the palette map changes.
+  useEffect(() => {
+    for (const [id, item] of Object.entries(paletteItems)) {
+      if (item.source === "builtin") continue;
+      if (!item.imageData) continue;
+      if (stampImagesRef.current.has(id)) continue;
+      const img = new window.Image();
+      const data = item.imageData;
+      img.src = data.startsWith("data:")
+        ? data
+        : `data:${item.mimeType ?? "image/png"};base64,${data}`;
+      img.onload = () => setStampImagesVersion((v) => v + 1);
+      stampImagesRef.current.set(id, img);
+    }
+  }, [paletteItems]);
+
   // ---------------------------------------------------------------------------
   // Canvas render
   // ---------------------------------------------------------------------------
 
   const render = useCallback(() => {
+    // Referenced so the callback re-runs when a stamp image finishes loading.
+    const _stampImagesVersion = stampImagesVersion;
+    void _stampImagesVersion;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -630,8 +673,9 @@ export function AtlasViewer({
 
     // Draw stamp objects
     for (const obj of objects) {
-      const glyph = BUILTIN_GLYPHS.find((g) => g.key === obj.paletteItemId);
-      if (!glyph) continue;
+      const paletteItem = paletteItems[obj.paletteItemId];
+      if (!paletteItem) continue;
+
       const isObjHovered = obj._key === hoveredKey;
       const [ox, oy] = w2c(obj.x, obj.y);
       const size = 24 * zoom * obj.scale;
@@ -644,21 +688,43 @@ export function AtlasViewer({
         ctx.lineWidth = 2;
         ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6);
       }
-      const scale = size / 24;
-      ctx.scale(scale, scale);
-      ctx.translate(-12, -12);
-      ctx.strokeStyle = glyph.color ?? preset.colors.ink;
-      ctx.lineWidth = 1.5 / scale;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      drawSvgPath(ctx, glyph.pathData);
-      ctx.stroke();
+
+      if (paletteItem.source === "builtin") {
+        const glyph = BUILTIN_GLYPHS.find((g) => g.key === paletteItem.builtinGlyphKey);
+        if (glyph) {
+          const scale = size / 24;
+          ctx.scale(scale, scale);
+          ctx.translate(-12, -12);
+          ctx.strokeStyle = glyph.color ?? preset.colors.ink;
+          ctx.lineWidth = 1.5 / scale;
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          drawSvgPath(ctx, glyph.pathData);
+          ctx.stroke();
+        }
+      } else if (paletteItem.imageData) {
+        const preloaded = stampImagesRef.current.get(obj.paletteItemId);
+        if (preloaded && preloaded.complete && preloaded.naturalWidth > 0) {
+          ctx.drawImage(preloaded, -size / 2, -size / 2, size, size);
+        } else {
+          // Placeholder box until the image finishes loading.
+          ctx.strokeStyle = preset.colors.ink;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-size / 2, -size / 2, size, size);
+          ctx.fillStyle = preset.colors.ink;
+          ctx.font = `${Math.round(size * 0.6)}px serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("✦", 0, 0);
+        }
+      }
+
       ctx.restore();
     }
 
     ctx.restore();
-  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap]);
+  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap, paletteItems, stampImagesVersion]);
 
   useEffect(() => {
     render();

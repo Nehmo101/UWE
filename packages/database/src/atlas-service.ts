@@ -144,6 +144,31 @@ export interface CreateAtlasPaletteItemInput {
 }
 
 // ---------------------------------------------------------------------------
+// Builtin glyphs
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical set of builtin glyph stamps. These are seeded as GLOBAL
+ * (worldId === null) AtlasPaletteItem rows so that placing a builtin stamp
+ * always references a real palette item (AtlasObject.paletteItemId FK is
+ * Restrict and required).
+ */
+export const BUILTIN_ATLAS_GLYPHS: Array<{
+  key: string;
+  name: string;
+  kind: string;
+}> = [
+  { key: "mountain", name: "Berg", kind: "relief" },
+  { key: "mountain_snow", name: "Schneeberg", kind: "relief" },
+  { key: "tree", name: "Wald", kind: "biome" },
+  { key: "city", name: "Stadt", kind: "pin" },
+  { key: "village", name: "Dorf", kind: "pin" },
+  { key: "ruin", name: "Ruine", kind: "pin" },
+  { key: "castle", name: "Burg", kind: "pin" },
+  { key: "water", name: "See/Meer", kind: "biome" },
+];
+
+// ---------------------------------------------------------------------------
 // Visibility helpers
 // ---------------------------------------------------------------------------
 
@@ -181,12 +206,39 @@ export function createAtlasService(db: PrismaClient) {
   // AtlasMap
   // -------------------------------------------------------------------------
 
+  /**
+   * Idempotently ensure the global builtin glyph palette items exist. Calling
+   * this multiple times never creates duplicates: each glyph is keyed by
+   * (worldId === null, builtinGlyphKey).
+   */
+  async function ensureBuiltinPaletteItems() {
+    for (const glyph of BUILTIN_ATLAS_GLYPHS) {
+      const existing = await db.atlasPaletteItem.findFirst({
+        where: { worldId: null, builtinGlyphKey: glyph.key },
+      });
+      if (existing) continue;
+      await db.atlasPaletteItem.create({
+        data: {
+          worldId: null,
+          name: glyph.name,
+          kind: glyph.kind,
+          source: "builtin",
+          builtinGlyphKey: glyph.key,
+          reviewStatus: "approved",
+        },
+      });
+    }
+  }
+
   async function getOrCreateAtlasForWorld(worldId: string) {
     const existing = await db.atlasMap.findUnique({ where: { worldId } });
-    if (existing) return existing;
-    return db.atlasMap.create({
-      data: { worldId },
-    });
+    const map =
+      existing ??
+      (await db.atlasMap.create({
+        data: { worldId },
+      }));
+    await ensureBuiltinPaletteItems();
+    return map;
   }
 
   async function getAtlasMap(mapId: string) {
@@ -565,6 +617,7 @@ export function createAtlasService(db: PrismaClient) {
 
   return {
     getOrCreateAtlasForWorld,
+    ensureBuiltinPaletteItems,
     getAtlasMap,
     updateAtlasMap,
     createNode,

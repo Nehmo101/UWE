@@ -107,6 +107,7 @@ function parseLabelAnchor(raw: Record<string, unknown>): LabelAnchor {
     ...(Array.isArray(raw.pathCoordinates)
       ? { pathCoordinates: assertCoordinateArray(raw.pathCoordinates, "pathCoordinates") }
       : {}),
+    ...(typeof raw.pathReversed === "boolean" ? { pathReversed: raw.pathReversed } : {}),
   };
 }
 

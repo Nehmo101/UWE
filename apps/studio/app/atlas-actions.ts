@@ -12,7 +12,7 @@ import {
   type UpdateAtlasNodeInput,
   type PageType,
 } from "@uwe/database/server";
-import type { AtlasNodeLevel } from "@uwe/database/server";
+import type { AtlasNodeLevel, Visibility } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 import { generateDraft, rerollDraft } from "@uwe/atlas/procedural";
@@ -125,11 +125,71 @@ export async function updateAtlasNodeAction(formData: FormData) {
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
 }
 
+/**
+ * Set the Portal visibility of an atlas node (dm_only ↔ player_visible).
+ * A node must be player_visible (along with its map and the individual
+ * features/objects) for players to see its content in the Portal.
+ */
+export async function setAtlasNodeVisibilityAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const visibility = String(formData.get("visibility") || "dm_only") as Visibility;
+
+  const { db, atlas } = getAtlasDeps();
+
+  try {
+    await atlas.updateNode(nodeId, { visibility } satisfies UpdateAtlasNodeInput);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+}
+
+/**
+ * Set the Portal visibility of the world's atlas map (dm_only ↔ player_visible).
+ * `getAtlasForContext` returns null for the Portal while the map is dm_only, so
+ * the map must be published before players can see any atlas content.
+ */
+export async function setAtlasMapVisibilityAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId") || "");
+  const visibility = String(formData.get("visibility") || "dm_only") as Visibility;
+
+  const { db, atlas, repo } = getAtlasDeps();
+
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) throw new Error("Welt nicht gefunden");
+    const map = await atlas.getOrCreateAtlasForWorld(world.id);
+    await atlas.updateAtlasMap(map.id, { visibility });
+  } finally {
+    await db.$disconnect();
+  }
+
+  if (nodeId) {
+    revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
+}
+
 // ---------------------------------------------------------------------------
 // AtlasFeature (polygon regions, rivers, labels, pins, …)
 // ---------------------------------------------------------------------------
 
-export async function saveAtlasFeaturesAction(formData: FormData) {
+export interface SaveAtlasFeaturesResult {
+  saved: Array<{ clientKey: string; id: string }>;
+}
+
+export async function saveAtlasFeaturesAction(
+  formData: FormData,
+): Promise<SaveAtlasFeaturesResult> {
   await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);
@@ -139,6 +199,8 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
 
   interface FeaturePayload {
     id?: string;
+    /** Client-only stable key, echoed back so the editor can apply created ids. */
+    clientKey?: string;
     kind: string;
     geometry: unknown;
     style?: unknown;
@@ -158,6 +220,7 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
   }
 
   const { db, atlas } = getAtlasDeps();
+  const saved: Array<{ clientKey: string; id: string }> = [];
 
   try {
     const existing = await atlas.listFeaturesForNode(nodeId);
@@ -198,8 +261,10 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
           visibility: input.visibility,
         };
         await atlas.updateFeature(feat.id, update);
+        if (feat.clientKey) saved.push({ clientKey: feat.clientKey, id: feat.id });
       } else {
-        await atlas.createFeature(input);
+        const created = await atlas.createFeature(input);
+        if (feat.clientKey) saved.push({ clientKey: feat.clientKey, id: created.id });
       }
     }
   } finally {
@@ -207,6 +272,7 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
   }
 
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  return { saved };
 }
 
 // ---------------------------------------------------------------------------
@@ -522,7 +588,13 @@ export async function setNodeBackgroundAssetAction(formData: FormData): Promise<
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
 }
 
-export async function saveAtlasObjectsAction(formData: FormData) {
+export interface SaveAtlasObjectsResult {
+  saved: Array<{ clientKey: string; id: string }>;
+}
+
+export async function saveAtlasObjectsAction(
+  formData: FormData,
+): Promise<SaveAtlasObjectsResult> {
   await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);
@@ -532,6 +604,8 @@ export async function saveAtlasObjectsAction(formData: FormData) {
 
   interface ObjectPayload {
     id?: string;
+    /** Client-only stable key, echoed back so the editor can apply created ids. */
+    clientKey?: string;
     paletteItemId: string;
     x: number;
     y: number;
@@ -549,6 +623,7 @@ export async function saveAtlasObjectsAction(formData: FormData) {
   }
 
   const { db, atlas } = getAtlasDeps();
+  const saved: Array<{ clientKey: string; id: string }> = [];
 
   try {
     const existing = await atlas.listObjectsForNode(nodeId);
@@ -572,8 +647,9 @@ export async function saveAtlasObjectsAction(formData: FormData) {
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as UpdateAtlasNodeInput["visibility"],
         });
+        if (obj.clientKey) saved.push({ clientKey: obj.clientKey, id: obj.id });
       } else {
-        await atlas.createObject({
+        const created = await atlas.createObject({
           nodeId,
           paletteItemId: obj.paletteItemId,
           x: obj.x,
@@ -583,6 +659,7 @@ export async function saveAtlasObjectsAction(formData: FormData) {
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as CreateAtlasFeatureInput["visibility"],
         });
+        if (obj.clientKey) saved.push({ clientKey: obj.clientKey, id: created.id });
       }
     }
   } finally {
@@ -590,6 +667,7 @@ export async function saveAtlasObjectsAction(formData: FormData) {
   }
 
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  return { saved };
 }
 
 // ---------------------------------------------------------------------------

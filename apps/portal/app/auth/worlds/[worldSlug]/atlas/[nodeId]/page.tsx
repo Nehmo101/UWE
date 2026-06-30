@@ -9,11 +9,12 @@ import { ADMIN_ACCESS_ROLES, hasAnyRole, resolveUweAppUrls } from "@uwe/auth";
 import {
   createAtlasService,
   createPrismaClient,
+  isAtlasEntityAccessible,
   PORTAL_PAGE_VISIBILITIES,
 } from "@uwe/database/server";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
-import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap } from "@/src/components/atlas/AtlasViewer";
+import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap } from "@/src/components/atlas/AtlasViewer";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
@@ -38,6 +39,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
   let parentSilhouette: [number, number][][] | undefined;
   let mapStylePreset: string | null = null;
   const pageLinkMap: PageLinkMap = {};
+  const paletteItems: PaletteItemMap = {};
 
   let keySeq = 0;
   function nextKey() { return `vk-${++keySeq}`; }
@@ -75,8 +77,12 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       .filter((a) => visibleNodeIds.has(a.id))
       .map((a) => ({ id: a.id, title: a.title, level: a.level }));
 
-    // Parent silhouette from parent feature geometry
-    if (hierarchy.parentFeature) {
+    // Parent silhouette from parent feature geometry — only when the parent
+    // feature is portal-visible, so dm_only parent geometry never leaks.
+    if (
+      hierarchy.parentFeature &&
+      isAtlasEntityAccessible(hierarchy.parentFeature, "portal")
+    ) {
       const geo = hierarchy.parentFeature.geometry as {
         type?: string;
         rings?: [number, number][][];
@@ -114,6 +120,36 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       linkedPageId: o.linkedPageId ?? null,
       _key: nextKey(),
     }));
+
+    // Resolve the palette items referenced by the visible objects so the viewer
+    // can render builtin glyphs (by builtinGlyphKey) and AI/upload image stamps.
+    const paletteItemIds = [
+      ...new Set(viewerObjects.map((o) => o.paletteItemId)),
+    ];
+
+    if (paletteItemIds.length > 0) {
+      const items = await db.atlasPaletteItem.findMany({
+        where: { id: { in: paletteItemIds } },
+        select: {
+          id: true,
+          source: true,
+          builtinGlyphKey: true,
+          styleTags: true,
+        },
+      });
+      for (const item of items) {
+        const tags = (item.styleTags ?? {}) as {
+          imageData?: string;
+          mimeType?: string;
+        };
+        paletteItems[item.id] = {
+          source: item.source,
+          builtinGlyphKey: item.builtinGlyphKey ?? null,
+          imageData: tags.imageData,
+          mimeType: tags.mimeType,
+        };
+      }
+    }
 
     // Resolve linkedPageIds → portal page slugs for wiki links
     const pageIds = [
@@ -185,6 +221,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
           parentChainItems={parentChainItems}
           parentSilhouette={parentSilhouette}
           pageLinkMap={pageLinkMap}
+          paletteItems={paletteItems}
         />
       </section>
     </PortalShell>

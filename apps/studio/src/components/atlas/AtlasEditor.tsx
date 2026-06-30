@@ -30,6 +30,8 @@ import {
   setNodeBackgroundAssetAction,
   approveAtlasPaletteItemAction,
   deleteAtlasPaletteItemAction,
+  setAtlasNodeVisibilityAction,
+  setAtlasMapVisibilityAction,
 } from "@/app/atlas-actions";
 import { ProceduralDraftPanel } from "./ProceduralDraftPanel";
 import { RegionDescribePanel } from "./RegionDescribePanel";
@@ -81,6 +83,8 @@ export interface EditorFeature {
   childNodeId?: string | null;
   /** Linked wiki page id (for pins and regions). */
   linkedPageId?: string | null;
+  /** Resolved Studio URL for the linked wiki page (by slug/type). */
+  linkedPageHref?: string | null;
   layer?: number;
   sortOrder?: number;
   visibility?: string;
@@ -118,12 +122,14 @@ export interface BuiltinGlyph {
  * AI-generated stamp images (source=ai).
  */
 export interface EditorPaletteItem {
-  /** DB id for ai/upload sources; glyph key for builtin. */
+  /** DB palette item id — ALWAYS the real `AtlasPaletteItem.id` (cuid), for every source. */
   id: string;
   name: string;
   kind: string;
   source: "builtin" | "ai" | "upload";
   reviewStatus: "approved" | "pending";
+  /** Glyph key (e.g. "mountain") for builtin items — maps to a local BUILTIN_GLYPHS entry. */
+  builtinGlyphKey?: string | null;
   /** SVG path data — present for builtin glyphs. */
   pathData?: string;
   color?: string;
@@ -285,7 +291,7 @@ type EditorAction =
   | { type: "PLACE_LABEL"; point: [number, number]; text: string }
   | { type: "PLACE_CURVED_LABEL"; path: [number, number][]; text: string }
   | { type: "PLACE_PIN"; point: [number, number] }
-  | { type: "PLACE_STAMP"; point: [number, number] }
+  | { type: "PLACE_STAMP"; point: [number, number]; paletteItemId: string }
   | { type: "ERASE_SELECTED" }
   | { type: "INIT_FEATURES"; features: EditorFeature[]; objects: EditorObject[] }
   | { type: "APPEND_DRAFT_FEATURES"; features: EditorFeature[] }
@@ -296,7 +302,11 @@ type EditorAction =
   | { type: "ADD_MEASURE_POINT"; point: [number, number] }
   | { type: "CLEAR_MEASURE" }
   | { type: "TOGGLE_HEX_GRID" }
-  | { type: "SET_FEATURE_LINKED_PAGE"; key: string; linkedPageId: string | null }
+  | { type: "SET_FEATURE_LINKED_PAGE"; key: string; linkedPageId: string | null; linkedPageHref?: string | null }
+  | { type: "SET_FEATURE_VISIBILITY"; key: string; visibility: string }
+  | { type: "SET_OBJECT_VISIBILITY"; key: string; visibility: string }
+  | { type: "APPLY_SAVED_FEATURE_IDS"; saved: Array<{ clientKey: string; id: string }> }
+  | { type: "APPLY_SAVED_OBJECT_IDS"; saved: Array<{ clientKey: string; id: string }> }
   | { type: "TOGGLE_SELECTED_PATH_REVERSAL" };
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
@@ -392,10 +402,57 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         features: state.features.map((f) =>
-          f._key === action.key ? { ...f, linkedPageId: action.linkedPageId } : f,
+          f._key === action.key
+            ? {
+                ...f,
+                linkedPageId: action.linkedPageId,
+                linkedPageHref:
+                  action.linkedPageHref !== undefined ? action.linkedPageHref : f.linkedPageHref,
+              }
+            : f,
         ),
         dirty: true,
       };
+
+    case "SET_FEATURE_VISIBILITY":
+      return {
+        ...state,
+        features: state.features.map((f) =>
+          f._key === action.key ? { ...f, visibility: action.visibility } : f,
+        ),
+        dirty: true,
+      };
+
+    case "SET_OBJECT_VISIBILITY":
+      return {
+        ...state,
+        objects: state.objects.map((o) =>
+          o._key === action.key ? { ...o, visibility: action.visibility } : o,
+        ),
+        dirty: true,
+      };
+
+    case "APPLY_SAVED_FEATURE_IDS": {
+      const byKey = new Map(action.saved.map((s) => [s.clientKey, s.id]));
+      return {
+        ...state,
+        features: state.features.map((f) => {
+          const id = byKey.get(f._key);
+          return id ? { ...f, id } : f;
+        }),
+      };
+    }
+
+    case "APPLY_SAVED_OBJECT_IDS": {
+      const byKey = new Map(action.saved.map((s) => [s.clientKey, s.id]));
+      return {
+        ...state,
+        objects: state.objects.map((o) => {
+          const id = byKey.get(o._key);
+          return id ? { ...o, id } : o;
+        }),
+      };
+    }
 
     case "PLACE_LABEL": {
       const feat: EditorFeature = {
@@ -464,7 +521,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case "PLACE_STAMP": {
       const obj: EditorObject = {
         _key: nextKey(),
-        paletteItemId: state.activeGlyphKey,
+        paletteItemId: action.paletteItemId,
         x: action.point[0],
         y: action.point[1],
         scale: 1,
@@ -728,8 +785,12 @@ export interface AtlasEditorProps {
   parentSilhouette?: [number, number][][];
   /** Background asset ID for this node (used to construct URL). */
   backgroundAssetId?: string | null;
-  /** AI and upload palette items from DB (combined with BUILTIN_GLYPHS for stamp tool). */
+  /** Builtin, AI and upload palette items from DB (combined with BUILTIN_GLYPHS for stamp tool). */
   initialPaletteItems?: EditorPaletteItem[];
+  /** Current Portal visibility of this node ("dm_only" | "player_visible"). */
+  nodeVisibility?: string;
+  /** Current Portal visibility of the world's atlas map ("dm_only" | "player_visible"). */
+  mapVisibility?: string;
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -758,6 +819,8 @@ export function AtlasEditor({
   parentSilhouette,
   backgroundAssetId,
   initialPaletteItems = [],
+  nodeVisibility: initialNodeVisibility = "dm_only",
+  mapVisibility: initialMapVisibility = "dm_only",
 }: AtlasEditorProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -803,6 +866,11 @@ export function AtlasEditor({
 
   // Palette items state (can be refreshed after stamp save)
   const [paletteItems, setPaletteItems] = useState<EditorPaletteItem[]>(initialPaletteItems);
+
+  // Portal publishing (node + map visibility)
+  const [nodeVisibility, setNodeVisibility] = useState<string>(initialNodeVisibility);
+  const [mapVisibility, setMapVisibility] = useState<string>(initialMapVisibility);
+  const [isVisibilityPending, startVisibilityTransition] = useTransition();
 
   // Drill-down dialog state
   const [drillDownFeatureId, setDrillDownFeatureId] = useState<string | null>(null);
@@ -870,6 +938,27 @@ export function AtlasEditor({
   useEffect(() => {
     setPaletteItems(initialPaletteItems);
   }, [initialPaletteItems]);
+
+  // Sync visibility props when they change (e.g. after revalidate)
+  useEffect(() => {
+    setNodeVisibility(initialNodeVisibility);
+  }, [initialNodeVisibility]);
+  useEffect(() => {
+    setMapVisibility(initialMapVisibility);
+  }, [initialMapVisibility]);
+
+  // Lookup: builtin glyph key -> DB palette item id (for placement).
+  const builtinKeyToId = new Map<string, string>();
+  for (const p of paletteItems) {
+    if (p.source === "builtin" && p.builtinGlyphKey) {
+      builtinKeyToId.set(p.builtinGlyphKey, p.id);
+    }
+  }
+  // Lookup: DB palette item id -> palette item (for rendering & selection panel).
+  const paletteItemById = new Map<string, EditorPaletteItem>();
+  for (const p of paletteItems) paletteItemById.set(p.id, p);
+  // AI/upload stamps only — builtin glyphs are shown via the local BUILTIN_GLYPHS row.
+  const stampPaletteItems = paletteItems.filter((p) => p.source !== "builtin");
 
   // ---------------------------------------------------------------------------
   // Canvas render
@@ -1215,14 +1304,16 @@ export function AtlasEditor({
       ctx.restore();
     }
 
-    // Draw stamp objects
+    // Draw stamp objects — obj.paletteItemId is now always a DB palette item id.
     for (const obj of objects) {
-      const builtinGlyph = BUILTIN_GLYPHS.find((g) => g.key === obj.paletteItemId);
-      const aiPaletteItem = builtinGlyph
-        ? undefined
-        : currentPaletteItems.find((p) => p.id === obj.paletteItemId);
+      const paletteItem = currentPaletteItems.find((p) => p.id === obj.paletteItemId);
+      if (!paletteItem) continue;
 
-      if (!builtinGlyph && !aiPaletteItem) continue;
+      const builtinGlyph = paletteItem.builtinGlyphKey
+        ? BUILTIN_GLYPHS.find((g) => g.key === paletteItem.builtinGlyphKey)
+        : undefined;
+      // AI/upload items render the preloaded image; builtin items render the SVG glyph.
+      const aiPaletteItem = builtinGlyph ? undefined : paletteItem;
 
       const isSelected = obj._key === selectedKey;
       const [ox, oy] = w2c(obj.x, obj.y);
@@ -1540,7 +1631,17 @@ export function AtlasEditor({
     }
 
     if (tool === "stamp") {
-      dispatch({ type: "PLACE_STAMP", point: wp });
+      const activeKey = state.activeGlyphKey;
+      const isBuiltinKey = BUILTIN_GLYPHS.some((g) => g.key === activeKey);
+      // Builtin selections use the glyph key; resolve to the real DB palette id.
+      // AI/upload selections already use the palette id as activeGlyphKey.
+      const resolvedId = builtinKeyToId.get(activeKey) ?? activeKey;
+      if (isBuiltinKey && !builtinKeyToId.has(activeKey)) {
+        setSaveMsg("Builtin-Glyph-Palette fehlt — bitte Seite neu laden.");
+        setTimeout(() => setSaveMsg(null), 3000);
+        return;
+      }
+      dispatch({ type: "PLACE_STAMP", point: wp, paletteItemId: resolvedId });
       return;
     }
 
@@ -1615,26 +1716,81 @@ export function AtlasEditor({
 
   function handleSave() {
     startTransition(async () => {
-      const featuresFd = new FormData();
-      featuresFd.set("worldSlug", worldSlug);
-      featuresFd.set("nodeId", nodeId);
-      featuresFd.set("features", JSON.stringify(state.features));
-      await saveAtlasFeaturesAction(featuresFd);
+      try {
+        const featuresFd = new FormData();
+        featuresFd.set("worldSlug", worldSlug);
+        featuresFd.set("nodeId", nodeId);
+        featuresFd.set("features", JSON.stringify(
+          state.features.map((f) => ({ ...f, clientKey: f._key })),
+        ));
+        const featuresResult = await saveAtlasFeaturesAction(featuresFd);
 
-      const objectsFd = new FormData();
-      objectsFd.set("worldSlug", worldSlug);
-      objectsFd.set("nodeId", nodeId);
-      objectsFd.set("objects", JSON.stringify(
-        state.objects.map((o) => ({
-          ...o,
-          paletteItemId: o.paletteItemId,
-        })),
-      ));
-      await saveAtlasObjectsAction(objectsFd);
+        const objectsFd = new FormData();
+        objectsFd.set("worldSlug", worldSlug);
+        objectsFd.set("nodeId", nodeId);
+        objectsFd.set("objects", JSON.stringify(
+          state.objects.map((o) => ({ ...o, clientKey: o._key })),
+        ));
+        const objectsResult = await saveAtlasObjectsAction(objectsFd);
 
-      dispatch({ type: "MARK_CLEAN" });
-      setSaveMsg("Gespeichert ✓");
-      setTimeout(() => setSaveMsg(null), 2000);
+        // Apply persisted ids back onto freshly-drawn items so drill-down,
+        // pin linking and handouts work immediately without a manual reload.
+        if (featuresResult?.saved?.length) {
+          dispatch({ type: "APPLY_SAVED_FEATURE_IDS", saved: featuresResult.saved });
+        }
+        if (objectsResult?.saved?.length) {
+          dispatch({ type: "APPLY_SAVED_OBJECT_IDS", saved: objectsResult.saved });
+        }
+
+        dispatch({ type: "MARK_CLEAN" });
+        setSaveMsg("Gespeichert ✓");
+        setTimeout(() => setSaveMsg(null), 2000);
+      } catch (err) {
+        setSaveMsg(
+          `Fehler beim Speichern: ${err instanceof Error ? err.message : "Unbekannt"}`,
+        );
+        setTimeout(() => setSaveMsg(null), 4000);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Portal publishing (node + map visibility)
+  // ---------------------------------------------------------------------------
+
+  function handleToggleNodeVisibility() {
+    const next = nodeVisibility === "player_visible" ? "dm_only" : "player_visible";
+    setNodeVisibility(next);
+    startVisibilityTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("worldSlug", worldSlug);
+        fd.set("nodeId", nodeId);
+        fd.set("visibility", next);
+        await setAtlasNodeVisibilityAction(fd);
+      } catch {
+        setNodeVisibility((prev) => (prev === next ? (next === "player_visible" ? "dm_only" : "player_visible") : prev));
+        setSaveMsg("Sichtbarkeit des Knotens konnte nicht gesetzt werden.");
+        setTimeout(() => setSaveMsg(null), 3000);
+      }
+    });
+  }
+
+  function handleToggleMapVisibility() {
+    const next = mapVisibility === "player_visible" ? "dm_only" : "player_visible";
+    setMapVisibility(next);
+    startVisibilityTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("worldSlug", worldSlug);
+        fd.set("nodeId", nodeId);
+        fd.set("visibility", next);
+        await setAtlasMapVisibilityAction(fd);
+      } catch {
+        setMapVisibility((prev) => (prev === next ? (next === "player_visible" ? "dm_only" : "player_visible") : prev));
+        setSaveMsg("Portal-Freigabe der Karte konnte nicht gesetzt werden.");
+        setTimeout(() => setSaveMsg(null), 3000);
+      }
     });
   }
 
@@ -1909,6 +2065,35 @@ export function AtlasEditor({
             ↗ Handout
           </button>
 
+          <div style={{ height: 24, width: 1, background: "var(--uwe-border)" }} />
+
+          {/* Portal-Freigabe (map-level) */}
+          <button
+            type="button"
+            className={`uwe-v2-btn ${mapVisibility === "player_visible" ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+            onClick={handleToggleMapVisibility}
+            disabled={isVisibilityPending}
+            title={
+              "Portal-Freigabe der Karte. Spieler sehen Inhalte nur, wenn Karte + " +
+              "Knoten + die einzelnen Features/Objekte auf 'player_visible' stehen."
+            }
+            aria-pressed={mapVisibility === "player_visible"}
+          >
+            {mapVisibility === "player_visible" ? "🌐 Karte freigegeben" : "🔒 Karte privat"}
+          </button>
+
+          {/* Node-level visibility */}
+          <button
+            type="button"
+            className={`uwe-v2-btn ${nodeVisibility === "player_visible" ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+            onClick={handleToggleNodeVisibility}
+            disabled={isVisibilityPending}
+            title="Portal-Sichtbarkeit dieses Knotens (Ebene)."
+            aria-pressed={nodeVisibility === "player_visible"}
+          >
+            {nodeVisibility === "player_visible" ? "🌐 Ebene sichtbar" : "🔒 Ebene privat"}
+          </button>
+
           {saveMsg && <span style={{ fontSize: 13, color: "green" }}>{saveMsg}</span>}
           {state.dirty && !saveMsg && (
             <span style={{ fontSize: 12, color: "var(--uwe-muted)" }}>Ungespeicherte Änderungen</span>
@@ -2038,7 +2223,7 @@ export function AtlasEditor({
           </div>
 
           {/* AI palette items */}
-          {paletteItems.length > 0 && (
+          {stampPaletteItems.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
               <div style={{
                 fontSize: 11,
@@ -2049,9 +2234,9 @@ export function AtlasEditor({
                 KI-Stempel
               </div>
               {/* Approved stamps */}
-              {paletteItems.filter((p) => p.reviewStatus === "approved").length > 0 && (
+              {stampPaletteItems.filter((p) => p.reviewStatus === "approved").length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
-                  {paletteItems
+                  {stampPaletteItems
                     .filter((p) => p.reviewStatus === "approved")
                     .map((p) => (
                       <button
@@ -2095,11 +2280,11 @@ export function AtlasEditor({
                 </div>
               )}
               {/* Pending stamps — approve or delete */}
-              {paletteItems.filter((p) => p.reviewStatus === "pending").length > 0 && (
+              {stampPaletteItems.filter((p) => p.reviewStatus === "pending").length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   <span style={{ fontSize: 11, color: "var(--uwe-muted)" }}>Ausstehend (Genehmigung erforderlich):</span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                    {paletteItems
+                    {stampPaletteItems
                       .filter((p) => p.reviewStatus === "pending")
                       .map((p) => (
                         <div
@@ -2378,9 +2563,9 @@ export function AtlasEditor({
                 {/* Pin → Page link */}
                 {selectedFeature.kind === "pin" && (
                   <div style={{ marginTop: "0.5rem" }}>
-                    {selectedFeature.linkedPageId ? (
+                    {selectedFeature.linkedPageHref ? (
                       <a
-                        href={`/worlds/${worldSlug}/pages/${selectedFeature.linkedPageId}`}
+                        href={selectedFeature.linkedPageHref}
                         className="uwe-v2-btn uwe-v2-btn-secondary"
                         style={{ display: "block", width: "100%", textAlign: "center", marginBottom: "0.25rem", fontSize: 12 }}
                         target="_blank"
@@ -2404,6 +2589,24 @@ export function AtlasEditor({
                   </div>
                 )}
 
+                {/* Per-feature Portal visibility */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_FEATURE_VISIBILITY",
+                      key: selectedFeature._key,
+                      visibility:
+                        selectedFeature.visibility === "player_visible" ? "dm_only" : "player_visible",
+                    })
+                  }
+                  className={`uwe-v2-btn ${selectedFeature.visibility === "player_visible" ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+                  style={{ marginTop: "0.5rem", width: "100%", fontSize: 12 }}
+                  title="Portal-Sichtbarkeit dieses Elements"
+                >
+                  {selectedFeature.visibility === "player_visible" ? "🌐 Für Spieler sichtbar" : "🔒 Nur DM"}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => dispatch({ type: "ERASE_SELECTED" })}
@@ -2416,8 +2619,30 @@ export function AtlasEditor({
             )}
             {selectedObject && (
               <div style={{ marginTop: "0.5rem" }}>
-                <div><strong>Glyph:</strong> {selectedObject.paletteItemId}</div>
+                <div>
+                  <strong>Glyph:</strong>{" "}
+                  {paletteItemById.get(selectedObject.paletteItemId)?.name ?? selectedObject.paletteItemId}
+                </div>
                 <div><strong>Skalierung:</strong> {selectedObject.scale.toFixed(2)}×</div>
+
+                {/* Per-object Portal visibility */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_OBJECT_VISIBILITY",
+                      key: selectedObject._key,
+                      visibility:
+                        selectedObject.visibility === "player_visible" ? "dm_only" : "player_visible",
+                    })
+                  }
+                  className={`uwe-v2-btn ${selectedObject.visibility === "player_visible" ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+                  style={{ marginTop: "0.5rem", width: "100%", fontSize: 12 }}
+                  title="Portal-Sichtbarkeit dieses Stempels"
+                >
+                  {selectedObject.visibility === "player_visible" ? "🌐 Für Spieler sichtbar" : "🔒 Nur DM"}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => dispatch({ type: "ERASE_SELECTED" })}
@@ -2428,6 +2653,26 @@ export function AtlasEditor({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Portal publishing hint */}
+          <div style={{
+            padding: "0.75rem",
+            background: "var(--uwe-surface)",
+            border: "1px solid var(--uwe-border)",
+            borderRadius: "var(--uwe-radius)",
+            fontSize: 12,
+          }}>
+            <strong>Portal-Freigabe</strong>
+            <p style={{ color: "var(--uwe-muted)", margin: "0.25rem 0 0", lineHeight: 1.5 }}>
+              Spieler sehen Inhalte erst, wenn <em>Karte</em>, <em>Ebene</em> und das
+              jeweilige <em>Feature/Objekt</em> auf „Für Spieler sichtbar“ stehen.
+              Neue Elemente sind standardmäßig „Nur DM“.
+            </p>
+            <p style={{ margin: "0.4rem 0 0", color: "var(--uwe-muted)" }}>
+              Karte: <strong>{mapVisibility === "player_visible" ? "freigegeben" : "privat"}</strong>
+              {" · "}Ebene: <strong>{nodeVisibility === "player_visible" ? "sichtbar" : "privat"}</strong>
+            </p>
           </div>
 
           <div style={{

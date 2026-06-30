@@ -161,6 +161,35 @@ describe("geometry / LabelAnchor", () => {
     assert.deepEqual(roundTrip(label), label);
   });
 
+  it("round-trips a curved LabelAnchor preserving pathCoordinates and pathReversed (true)", () => {
+    const label: LabelAnchor = {
+      type: "LabelAnchor",
+      coordinates: [0.4, 0.6],
+      text: "Misty Mountains",
+      pathCoordinates: [
+        [0.1, 0.5],
+        [0.4, 0.6],
+        [0.7, 0.5],
+      ],
+      pathReversed: true,
+    };
+    assert.deepEqual(roundTrip(label), label);
+  });
+
+  it("round-trips a curved LabelAnchor preserving pathReversed (false)", () => {
+    const label: LabelAnchor = {
+      type: "LabelAnchor",
+      coordinates: [0.4, 0.6],
+      text: "Anduin",
+      pathCoordinates: [
+        [0.1, 0.5],
+        [0.7, 0.5],
+      ],
+      pathReversed: false,
+    };
+    assert.deepEqual(roundTrip(label), label);
+  });
+
   it("rejects a LabelAnchor with no text", () => {
     assert.throws(
       () => parseGeometry({ type: "LabelAnchor", coordinates: [0, 0] }),
