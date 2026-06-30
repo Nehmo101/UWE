@@ -18,10 +18,13 @@ const VISIBILITY_VALUES = new Set<Visibility>([
 const CANONICAL_STATUS_VALUES = new Set<CanonicalStatus>([
   "idea",
   "draft",
+  "prepared",
+  "played",
   "canon",
   "deprecated",
   "contradictory",
   "non_canon",
+  "discarded",
 ]);
 
 const TOP_LEVEL_KEYS = new Set([
@@ -36,6 +39,7 @@ const TOP_LEVEL_KEYS = new Set([
   "backup",
   "privacy",
   "auth",
+  "maintenance",
 ]);
 
 const APP_KEYS = new Set([
@@ -61,6 +65,7 @@ const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
+const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
 
 const UNSAFE_PATH_PATTERNS = [
   /\0/,
@@ -551,6 +556,37 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (Object.keys(auth).length > 0) {
         update.auth = auth;
+      }
+    }
+  }
+
+  if ("maintenance" in body) {
+    const sectionErrors = validateSection(
+      body.maintenance,
+      MAINTENANCE_KEYS,
+      "settings.maintenance",
+      (key, value, sectionErrors) => {
+        if (key === "message") {
+          if (typeof value !== "string") {
+            sectionErrors.push("settings.maintenance.message muss ein Text sein.");
+          }
+          return;
+        }
+        if (typeof value !== "boolean") {
+          sectionErrors.push(`settings.maintenance.${key} muss true oder false sein.`);
+        }
+      },
+    );
+    errors.push(...sectionErrors);
+    if (sectionErrors.length === 0 && isRecord(body.maintenance)) {
+      const maintenance: NonNullable<UweSystemSettingsUpdate["maintenance"]> = {};
+      for (const key of MAINTENANCE_KEYS) {
+        if (key in body.maintenance) {
+          (maintenance as Record<string, unknown>)[key] = body.maintenance[key];
+        }
+      }
+      if (Object.keys(maintenance).length > 0) {
+        update.maintenance = maintenance;
       }
     }
   }

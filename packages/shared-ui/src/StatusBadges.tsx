@@ -74,10 +74,13 @@ export const REVEAL_STATE_DESCRIPTIONS: Record<RevealState, string> = {
 export const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   idea: "Idee",
   draft: "Entwurf",
+  prepared: "Vorbereitet",
+  played: "Gespielt",
   canon: "Kanon",
   deprecated: "Veraltet",
   contradictory: "Widersprüchlich",
   non_canon: "Nicht kanonisch",
+  discarded: "Verworfen",
 };
 
 export const PAGE_TYPE_LABELS: Record<PageType, string> = {
