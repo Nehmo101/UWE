@@ -37,7 +37,6 @@ interface TurnstileApi {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var turnstile: TurnstileApi | undefined;
 }
 
