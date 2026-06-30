@@ -101,6 +101,9 @@ export async function exportWorldWiki(
   if (!world) {
     throw new Error(`World not found: ${options.worldSlug}`);
   }
+  if (world.isSandbox) {
+    throw new Error(`Sandbox world "${options.worldSlug}" cannot be exported.`);
+  }
 
   const outputDir = path.resolve(options.outputDir);
   fs.mkdirSync(outputDir, { recursive: true });

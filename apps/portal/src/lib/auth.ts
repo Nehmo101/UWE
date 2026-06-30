@@ -117,6 +117,7 @@ export async function assertWorldReadable(
 
   if (
     !world ||
+    world.isSandbox ||
     !ctx ||
     !canReadWorld(ctx.user, {
       id: world.id,

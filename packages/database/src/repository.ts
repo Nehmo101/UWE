@@ -497,6 +497,7 @@ export class UweRepository {
 
   async listWorldsWithGuestMode() {
     return this.db.world.findMany({
+      where: { isSandbox: false },
       orderBy: [{ name: "asc" }],
       select: {
         id: true,

@@ -51,6 +51,8 @@ export async function POST(request: Request) {
       slug?: string;
       description?: string;
       guestModeEnabled?: boolean;
+      isSandbox?: boolean;
+      templateId?: string;
     };
 
     const service = createWorldCreationService(db);
@@ -59,6 +61,8 @@ export async function POST(request: Request) {
       slug: payload.slug,
       description: payload.description ?? null,
       guestModeEnabled: payload.guestModeEnabled,
+      isSandbox: payload.isSandbox,
+      templateId: payload.templateId,
     });
 
     return NextResponse.json({ world }, { status: 201 });

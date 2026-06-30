@@ -65,6 +65,12 @@ export async function POST(request: Request) {
     if (!world) {
       return NextResponse.json({ error: `World not found: ${worldSlug}` }, { status: 404 });
     }
+    if (world.isSandbox) {
+      return NextResponse.json(
+        { error: "Sandbox-Testwelten können nicht exportiert werden." },
+        { status: 400 },
+      );
+    }
 
     const result = await exportWorldStatic(repo, {
       worldSlug,

@@ -6,10 +6,14 @@ import { cn } from "@/src/components/ui/cn";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
+import { listWorldTemplateOptions } from "@uwe/database/server";
 
 export default async function AuthWorldsPage() {
   const user = await getCurrentUser();
-  const worlds = await listAuthWorlds();
+  const [worlds, templates] = await Promise.all([
+    listAuthWorlds(),
+    Promise.resolve(listWorldTemplateOptions()),
+  ]);
   const canCreateWorld = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
 
   if (worlds.length === 0) {
@@ -17,7 +21,7 @@ export default async function AuthWorldsPage() {
       <Card>
         <CardContent className="pt-6">
           {canCreateWorld ? (
-            <CreateWorldForm />
+            <CreateWorldForm templates={templates} />
           ) : (
             <EmptyState
               title="Keine Welten gefunden"
@@ -43,7 +47,7 @@ export default async function AuthWorldsPage() {
   return (
     <Card>
       <CardContent className="pt-6">
-        {canCreateWorld ? <CreateWorldForm /> : null}
+        {canCreateWorld ? <CreateWorldForm templates={templates} /> : null}
 
         <ul className="divide-y divide-border">
           {worlds.map((world) => (

@@ -1,7 +1,15 @@
+import type { ContentBlockType } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { createAuthService } from "./auth";
 import { logAuditEvent } from "./audit-log-service";
 import { pickUniqueSlug, slugifyPageTitle } from "./page-templates";
+import {
+  buildSeedPageBlocks,
+  getWorldTemplate,
+  resolveWorldTemplateId,
+  seedPageDefaults,
+  type WorldTemplateId,
+} from "./world-templates";
 
 export interface CreateWorldRequest {
   name: string;
@@ -9,6 +17,7 @@ export interface CreateWorldRequest {
   description?: string | null;
   guestModeEnabled?: boolean;
   isSandbox?: boolean;
+  templateId?: WorldTemplateId | string | null;
 }
 
 export interface CreatedWorldResult {
@@ -18,6 +27,8 @@ export interface CreatedWorldResult {
   description: string | null;
   guestModeEnabled: boolean;
   isSandbox: boolean;
+  templateId: WorldTemplateId;
+  seededPageCount: number;
 }
 
 export class WorldCreationService {
@@ -32,6 +43,15 @@ export class WorldCreationService {
       throw new Error("WORLD_NAME_REQUIRED");
     }
 
+    const templateId = resolveWorldTemplateId(input.templateId);
+    const template = getWorldTemplate(templateId);
+    if (!template) {
+      throw new Error("WORLD_TEMPLATE_INVALID");
+    }
+
+    const isSandbox = input.isSandbox ?? false;
+    const guestModeEnabled = isSandbox ? false : (input.guestModeEnabled ?? false);
+
     const existingSlugs = (await this.db.world.findMany({ select: { slug: true } })).map(
       (world) => world.slug,
     );
@@ -43,8 +63,8 @@ export class WorldCreationService {
         name,
         slug,
         description: input.description?.trim() || null,
-        guestModeEnabled: input.guestModeEnabled ?? false,
-        isSandbox: input.isSandbox ?? false,
+        guestModeEnabled,
+        isSandbox,
       },
     });
 
@@ -54,6 +74,8 @@ export class WorldCreationService {
       worldId: world.id,
       role: "owner",
     });
+
+    const seededPageCount = await this.applyWorldTemplate(world.id, template);
 
     await logAuditEvent(this.db, {
       actorUserId: userId,
@@ -65,6 +87,8 @@ export class WorldCreationService {
         slug: world.slug,
         guestModeEnabled: world.guestModeEnabled,
         isSandbox: world.isSandbox,
+        templateId,
+        seededPageCount,
       },
     });
 
@@ -75,7 +99,66 @@ export class WorldCreationService {
       description: world.description,
       guestModeEnabled: world.guestModeEnabled,
       isSandbox: world.isSandbox,
+      templateId,
+      seededPageCount,
     };
+  }
+
+  private async applyWorldTemplate(
+    worldId: string,
+    template: NonNullable<ReturnType<typeof getWorldTemplate>>,
+  ): Promise<number> {
+    if (template.seedPages.length === 0) {
+      return 0;
+    }
+
+    let campaignId: string | null = null;
+    if (template.campaign) {
+      const campaign = await this.db.campaign.create({
+        data: {
+          worldId,
+          name: template.campaign.name,
+          slug: template.campaign.slug,
+          description: template.campaign.description ?? null,
+        },
+      });
+      campaignId = campaign.id;
+    }
+
+    const existingPageSlugs = new Set<string>();
+    let created = 0;
+
+    for (const seed of template.seedPages) {
+      const { pageType, visibility } = seedPageDefaults(seed);
+      const basePageSlug = seed.slug?.trim() || slugifyPageTitle(seed.title);
+      const pageSlug = pickUniqueSlug(basePageSlug || "seite", [...existingPageSlugs]);
+      existingPageSlugs.add(pageSlug);
+
+      const blocks = buildSeedPageBlocks(seed);
+      await this.db.page.create({
+        data: {
+          worldId,
+          campaignId,
+          title: seed.title,
+          slug: pageSlug,
+          type: pageType,
+          visibility,
+          publishStatus: "draft",
+          canonicalStatus: "draft",
+          contentBlocks: {
+            create: blocks.map((block) => ({
+              type: block.type as ContentBlockType,
+              sortOrder: block.sortOrder,
+              visibility: block.visibility,
+              content: block.content,
+            })),
+          },
+        },
+      });
+      created += 1;
+    }
+
+    return created;
   }
 }
 
