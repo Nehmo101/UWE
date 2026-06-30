@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { createLifeAdminService } from "./life-admin-service";
 
 export const ADMIN_SEARCH_ENTITY_TYPES = [
   "capture",
@@ -239,49 +240,44 @@ export async function searchAdminEntities(
     }
   }
 
-  if (!entityFilter || entityFilter === "personal_brain_document") {
-    const documents = await db.personalBrainDocument.findMany({
-      where: {
-        OR: [{ title: { contains: query } }, { content: { contains: query } }],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const document of documents) {
-      const score = bestScore([document.title, document.content], query);
-      if (score <= 0) continue;
-      results.push({
-        id: document.id,
-        entityType: "personal_brain_document",
-        title: document.title,
-        snippet: snippetFrom(document.content, query),
-        href: hrefFor("personal_brain_document", document.id),
-        group: "Persönlich · Life Brain",
-        score,
-      });
-    }
-  }
+  if (
+    !entityFilter ||
+    entityFilter === "personal_brain_document" ||
+    entityFilter === "personal_brain_fact"
+  ) {
+    const lifeAdmin = createLifeAdminService(db);
+    const brainSearch = await lifeAdmin.searchPersonalBrain({ query, limit: perTypeLimit });
 
-  if (!entityFilter || entityFilter === "personal_brain_fact") {
-    const facts = await db.personalBrainFact.findMany({
-      where: {
-        OR: [{ title: { contains: query } }, { content: { contains: query } }],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const fact of facts) {
-      const score = bestScore([fact.title, fact.content], query);
-      if (score <= 0) continue;
-      results.push({
-        id: fact.id,
-        entityType: "personal_brain_fact",
-        title: fact.title,
-        snippet: snippetFrom(fact.content, query),
-        href: hrefFor("personal_brain_fact", fact.id),
-        group: "Persönlich · Life Brain",
-        score,
-      });
+    if (!entityFilter || entityFilter === "personal_brain_document") {
+      for (const hit of brainSearch.documents) {
+        const score = Math.round(hit.score * 100);
+        if (score <= 0) continue;
+        results.push({
+          id: hit.item.id,
+          entityType: "personal_brain_document",
+          title: hit.item.title,
+          snippet: snippetFrom(hit.item.content, query),
+          href: hrefFor("personal_brain_document", hit.item.id),
+          group: "Persönlich · Life Brain",
+          score,
+        });
+      }
+    }
+
+    if (!entityFilter || entityFilter === "personal_brain_fact") {
+      for (const hit of brainSearch.facts) {
+        const score = Math.round(hit.score * 100);
+        if (score <= 0) continue;
+        results.push({
+          id: hit.item.id,
+          entityType: "personal_brain_fact",
+          title: hit.item.title,
+          snippet: snippetFrom(hit.item.content, query),
+          href: hrefFor("personal_brain_fact", hit.item.id),
+          group: "Persönlich · Life Brain",
+          score,
+        });
+      }
     }
   }
 

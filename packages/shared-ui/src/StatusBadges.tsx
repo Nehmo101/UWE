@@ -83,6 +83,18 @@ export const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   discarded: "Verworfen",
 };
 
+export const CANONICAL_DESCRIPTIONS: Record<CanonicalStatus, string> = {
+  idea: "Rohe Idee — noch nicht ausgearbeitet, kein etablierter Kanon.",
+  draft: "In Bearbeitung — Inhalt wird ausformuliert, aber noch nicht am Tisch gespielt.",
+  prepared: "Für die nächste Session vorbereitet — bereit zum Spielen.",
+  played: "Am Tisch gespielt — Ereignis ist passiert, Kanon noch nicht finalisiert.",
+  canon: "Etablierter Kanon — verbindliche Wahrheit der Kampagne.",
+  deprecated: "Veraltet — durch neuere Kanon-Entwicklung überholt, aber noch referenzierbar.",
+  contradictory: "Widersprüchlich — kollidiert mit etabliertem Kanon, Klärung nötig.",
+  non_canon: "Nicht kanonisch — absichtlich außerhalb der Kampagnen-Wahrheit (What-If, Alt-Version).",
+  discarded: "Verworfen — nicht mehr relevant, wird nicht weiterverfolgt.",
+};
+
 export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   lore: "Lore",
   location: "Ort",
@@ -238,7 +250,30 @@ export function RevealStateBadge({ revealState }: { revealState: RevealState }) 
 }
 
 export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
-  return <span className="uwe-badge uwe-badge-canon">{CANONICAL_LABELS[status]}</span>;
+  const className =
+    status === "canon"
+      ? "uwe-badge uwe-badge-canon"
+      : status === "played"
+        ? "uwe-badge uwe-badge-published"
+        : status === "prepared"
+          ? "uwe-badge uwe-badge-player"
+          : status === "idea" || status === "draft"
+            ? "uwe-badge uwe-badge-draft"
+            : status === "contradictory"
+              ? "uwe-badge uwe-badge-danger"
+              : status === "non_canon"
+                ? "uwe-badge uwe-badge-warning"
+                : "uwe-badge";
+
+  return (
+    <span
+      className={className}
+      title={CANONICAL_DESCRIPTIONS[status]}
+      aria-label={`Kanon-Status: ${CANONICAL_LABELS[status]}. ${CANONICAL_DESCRIPTIONS[status]}`}
+    >
+      {CANONICAL_LABELS[status]}
+    </span>
+  );
 }
 
 export function PageTypeBadge({ type }: { type: PageType }) {

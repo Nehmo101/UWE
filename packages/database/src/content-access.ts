@@ -170,6 +170,7 @@ export interface SearchIndexPageInput extends ContentAccessFields {
   summary: string | null;
   tags: unknown;
   aliases: unknown;
+  canonicalStatus: Page["canonicalStatus"];
   contentBlocks: ContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;

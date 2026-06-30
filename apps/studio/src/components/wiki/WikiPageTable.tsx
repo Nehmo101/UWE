@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
-import { PageTypeBadge, PublishBadge, VisibilityBadge } from "@uwe/shared-ui";
-import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+import { CanonicalBadge, PageTypeBadge, PublishBadge, VisibilityBadge } from "@uwe/shared-ui";
+import type { CanonicalStatus, PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import { DataTable } from "../ui/data-table";
 
 export interface WikiPageRow {
@@ -12,6 +12,7 @@ export interface WikiPageRow {
   type: PageType;
   visibility: Visibility;
   publishStatus: PublishStatus;
+  canonicalStatus: CanonicalStatus;
   tags: string[];
   updatedAt: string;
 }
@@ -58,6 +59,12 @@ const columns: ColumnDef<WikiPageRow>[] = [
     header: "Status",
     meta: { label: "Status" },
     cell: ({ row }) => <PublishBadge status={row.original.publishStatus} />,
+  },
+  {
+    accessorKey: "canonicalStatus",
+    header: "Kanon",
+    meta: { label: "Kanon" },
+    cell: ({ row }) => <CanonicalBadge status={row.original.canonicalStatus} />,
   },
   {
     accessorKey: "updatedAt",

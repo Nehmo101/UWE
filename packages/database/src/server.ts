@@ -1154,6 +1154,16 @@ export type {
 } from "./admin-search-service";
 
 export {
+  searchStudioCrossDomain,
+} from "./cross-domain-search-service";
+
+export type {
+  StudioCrossDomainResult,
+  StudioCrossDomainSearchOptions,
+  StudioSearchScope,
+} from "./cross-domain-search-service";
+
+export {
   resolveAdminEntityLinks,
   listResolvedAdminLinksForEntity,
   ADMIN_LINK_RELATION_LABELS,
