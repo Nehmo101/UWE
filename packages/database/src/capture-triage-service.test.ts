@@ -107,7 +107,8 @@ describe("capture triage service", () => {
 
     const result = await triage.executeTriage(capture.id, "to_workshop_project");
     assert.equal(result.targetType, "workshop_project");
-    assert.equal(result.redirectPath, "/workshop");
+    assert.ok(result.redirectPath.startsWith("/workshop/"));
+    assert.equal(result.redirectPath, `/workshop/${result.targetId}`);
   });
 
   it("promotes capture to contract expense", async () => {

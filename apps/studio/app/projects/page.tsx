@@ -62,6 +62,10 @@ export default async function ProjectsPage() {
             <input name="nextAction" />
           </label>
           <label>
+            Fälligkeitsdatum
+            <input name="nextActionDate" type="date" />
+          </label>
+          <label>
             Beschreibung
             <textarea name="description" rows={3} />
           </label>
@@ -87,6 +91,9 @@ export default async function ProjectsPage() {
           <div className="uwe-today-card-list">
             {projects.map((project) => (
               <article key={project.id} className="uwe-today-card uwe-v2-card uwe-v2-card-padded">
+                <h3>
+                  <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                </h3>
                 <form action={updateProjectAction} className="uwe-brain-create-form">
                   <input type="hidden" name="id" value={project.id} />
                   <label>
@@ -116,6 +123,18 @@ export default async function ProjectsPage() {
                   <label>
                     Nächste Aktion
                     <input name="nextAction" defaultValue={project.nextAction ?? ""} />
+                  </label>
+                  <label>
+                    Fälligkeitsdatum
+                    <input
+                      name="nextActionDate"
+                      type="date"
+                      defaultValue={
+                        project.nextActionDate
+                          ? project.nextActionDate.toISOString().slice(0, 10)
+                          : ""
+                      }
+                    />
                   </label>
                   <label>
                     Beschreibung

@@ -10,6 +10,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
+import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 const VALID_CAPTURE_TYPES = new Set<CaptureType>([
   "quick_note",
@@ -130,7 +131,25 @@ export async function generateCaptureProposalAction(formData: FormData) {
   assertStudioTrusted();
 
   const id = String(formData.get("id"));
-  await triageService().ensureAiProposal(id);
+  const useMock = process.env.AI_USE_MOCK === "true";
+
+  if (useMock) {
+    await triageService().ensureAiProposal(id);
+  } else {
+    await triageService().ensureAiProposal(id);
+    await enqueueAndDispatch({
+      type: "ai_run",
+      title: "Capture Triage Vorschlag",
+      payload: {
+        captureTriageProposal: true,
+        captureId: id,
+        useMock: false,
+      },
+      relatedType: "capture",
+      relatedId: id,
+    });
+  }
+
   revalidateCapturePaths();
 
   const returnTo = String(formData.get("returnTo") || `/capture/${id}`);

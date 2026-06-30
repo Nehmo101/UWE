@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { studioCommands, studioSidebar } from "../../navigation/studio-nav";
+import { resolveStudioBottomNav } from "../../lib/mobile-nav";
 import { AppShell } from "./AppShell";
 
 export interface StudioShellProps {
@@ -24,6 +25,7 @@ export function StudioShell({ breadcrumb, contextPanel, footer, children }: Stud
       breadcrumb={breadcrumb}
       contextPanel={contextPanel}
       footer={footer}
+      bottomNav={resolveStudioBottomNav(pathname)}
     >
       {children}
     </AppShell>

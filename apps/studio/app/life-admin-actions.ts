@@ -58,6 +58,7 @@ export async function createProjectAction(formData: FormData) {
     status: (String(formData.get("status") || "idea") as PersonalProjectStatus) || "idea",
     category: (String(formData.get("category") || "other") as PersonalProjectCategory) || "other",
     nextAction: String(formData.get("nextAction") || "").trim() || null,
+    nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
     notes: String(formData.get("notes") || ""),
     costCents: parseOptionalInt(formData.get("costCents")),
     worldId: String(formData.get("worldId") || "").trim() || null,
@@ -76,10 +77,12 @@ export async function updateProjectAction(formData: FormData) {
     status: String(formData.get("status")) as PersonalProjectStatus,
     category: String(formData.get("category")) as PersonalProjectCategory,
     nextAction: String(formData.get("nextAction") || "").trim() || null,
+    nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
     notes: String(formData.get("notes") || ""),
     costCents: parseOptionalInt(formData.get("costCents")),
   });
   revalidateAdminPaths();
+  revalidatePath(`/projects/${id}`);
 }
 
 export async function deleteProjectAction(formData: FormData) {
@@ -87,6 +90,7 @@ export async function deleteProjectAction(formData: FormData) {
 
   await lifeAdmin().deletePersonalProject(String(formData.get("id")));
   revalidateAdminPaths();
+  redirect("/projects");
 }
 
 export async function advanceWorkshopStatusAction(formData: FormData) {
@@ -313,10 +317,24 @@ export async function createLifeBrainFactAction(formData: FormData) {
 export async function updateLifeBrainDocumentTagsAction(formData: FormData) {
   assertStudioTrusted();
 
-  await lifeAdmin().updatePersonalBrainDocument(String(formData.get("id")), {
+  const id = String(formData.get("id"));
+  const document = await lifeAdmin().updatePersonalBrainDocument(id, {
     tags: parseCommaTags(formData),
   });
+
+  await enqueueAndDispatch({
+    type: "embedding",
+    title: `Life Brain Index · ${document.title}`,
+    payload: {
+      personalBrainDocumentId: document.id,
+      useMock: process.env.AI_USE_MOCK === "true",
+    },
+    relatedType: "personal_brain_document",
+    relatedId: document.id,
+  });
+
   revalidateAdminPaths();
+  revalidatePath(`/life-brain/documents/${id}`);
 }
 
 export async function updateLifeBrainFactTagsAction(formData: FormData) {

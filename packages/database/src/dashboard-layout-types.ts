@@ -22,6 +22,7 @@ export const STUDIO_TODAY_WIDGET_TYPES = [
   "dnd-favorite",
   "capture-inbox",
   "projects",
+  "contracts",
   "homelab",
 ] as const;
 
@@ -85,6 +86,7 @@ export const DEFAULT_STUDIO_TODAY_LAYOUT: DashboardWidgetConfig[] = [
   widget("dnd-favorite", "dnd-favorite", 0, 2),
   widget("capture-inbox", "capture-inbox", 0, 3),
   widget("projects", "projects", 1, 2),
+  widget("contracts", "contracts", 1, 1),
   widget("homelab", "homelab", 1, 3),
 ];
 

@@ -39,4 +39,5 @@ export async function indexLifeBrainDocumentAction(formData: FormData) {
     useMock: process.env.AI_USE_MOCK === "true",
   });
   revalidatePath("/life-brain");
+  revalidatePath(`/life-brain/documents/${documentId}`);
 }

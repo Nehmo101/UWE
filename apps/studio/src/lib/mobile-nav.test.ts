@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { studioNavItems } from "../navigation/studio-nav";
 import { worldNavItems } from "../navigation/world-nav";
-import { studioGlobalBottomNav, studioWorldBottomNav } from "./mobile-nav";
+import { studioGlobalBottomNav, studioWorldBottomNav, studioAdminBottomNav, resolveStudioBottomNav } from "./mobile-nav";
 import { resolvePreferredWorldSlug } from "./today-dashboard";
 
 const STUDIO_NAV_HREFS = new Set(
@@ -80,6 +80,42 @@ describe("studio mobile nav", () => {
     assert.equal(toolsNav[3]?.active, true);
     const moreNav = studioWorldBottomNav("terra", "more");
     assert.equal(moreNav[4]?.active, true);
+  });
+
+  it("uses Daily Admin OS bottom nav with five tabs", () => {
+    const nav = studioAdminBottomNav("capture");
+    assert.deepEqual(
+      nav.map((item) => item.label),
+      ["Heute", "Capture", "Suche", "KI", "Mehr"],
+    );
+    assert.equal(nav.length, 5);
+    assert.equal(nav[1]?.active, true);
+    assert.equal(nav[1]?.href, "/capture");
+    assert.equal(nav[2]?.href, "/search?scope=admin");
+    assert.equal(nav[3]?.href, "/life-brain");
+    assert.equal(nav[4]?.href, "/system");
+  });
+
+  it("resolves admin nav for Daily Admin OS paths", () => {
+    const todayNav = resolveStudioBottomNav("/today");
+    assert.equal(todayNav[0]?.active, true);
+    assert.equal(todayNav[0]?.href, "/today");
+
+    const projectNav = resolveStudioBottomNav("/projects/abc");
+    assert.equal(projectNav[4]?.active, true);
+    assert.equal(projectNav[4]?.href, "/system");
+
+    const searchNav = resolveStudioBottomNav("/search?scope=admin");
+    assert.equal(searchNav[2]?.active, true);
+  });
+
+  it("falls back to global nav outside admin paths", () => {
+    const nav = resolveStudioBottomNav("/worlds/terra/dashboard");
+    assert.deepEqual(
+      nav.map((item) => item.label),
+      ["Heute", "Welten", "Erstellen", "Medien & KI", "System"],
+    );
+    assert.equal(nav[1]?.active, true);
   });
 });
 

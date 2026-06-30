@@ -45,7 +45,7 @@ interface Props {
   hardwareDevices: HardwareDevice[];
 }
 
-const TRIAGE_ACTIONS: CaptureTriageAction[] = [
+const BASE_TRIAGE_ACTIONS: CaptureTriageAction[] = [
   "to_personal_project",
   "to_workshop_project",
   "to_dnd_page",
@@ -55,6 +55,13 @@ const TRIAGE_ACTIONS: CaptureTriageAction[] = [
   "archive",
   "delete",
 ];
+
+function triageActionsForCapture(capture: CaptureEntry): CaptureTriageAction[] {
+  if (capture.captureType === "file_image") {
+    return ["to_image_studio", ...BASE_TRIAGE_ACTIONS];
+  }
+  return BASE_TRIAGE_ACTIONS;
+}
 
 function readIntent(capture: CaptureEntry): string | null {
   if (!capture.metadata || typeof capture.metadata !== "object" || Array.isArray(capture.metadata)) {
@@ -66,6 +73,7 @@ function readIntent(capture: CaptureEntry): string | null {
 
 export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) {
   const proposal = parseCaptureAiProposal(capture);
+  const triageActions = triageActionsForCapture(capture);
   const intent = readIntent(capture);
   const typeLabel =
     intent === "life_brain"
@@ -108,6 +116,11 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
       <section className="uwe-v2-card uwe-v2-section">
         <div className="uwe-capture-proposal-head">
           <h3 className="uwe-v2-section-title">KI-Vorschlag (Review)</h3>
+          {proposal ? (
+            <span className="uwe-badge uwe-badge-muted">
+              {proposal.source === "rtx" ? "RTX" : "Heuristik"}
+            </span>
+          ) : null}
           {!proposal ? (
             <form action={generateCaptureProposalAction}>
               <input type="hidden" name="id" value={capture.id} />
@@ -194,7 +207,7 @@ export function CaptureTriagePanel({ capture, worlds, hardwareDevices }: Props) 
         </p>
 
         <div className="uwe-capture-triage-actions">
-          {TRIAGE_ACTIONS.map((action) => (
+          {triageActions.map((action) => (
             <details key={action} className="uwe-capture-triage-action">
               <summary>{CAPTURE_TRIAGE_ACTION_LABELS[action]}</summary>
               <form action={triageCaptureAction} className="uwe-capture-triage-form">
