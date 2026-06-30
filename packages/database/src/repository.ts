@@ -374,7 +374,12 @@ export class UweRepository {
 
   async listPagesByWorld(
     worldSlug: string,
-    options?: { campaignId?: string | null; type?: PageType; navCategory?: NavCategory },
+    options?: {
+      campaignId?: string | null;
+      type?: PageType;
+      navCategory?: NavCategory;
+      canonicalStatus?: CanonicalStatus | CanonicalStatus[];
+    },
   ): Promise<PageSummary[]> {
     const world = await this.getWorldBySlug(worldSlug);
     if (!world) return [];
@@ -385,11 +390,19 @@ export class UweRepository {
         ? [options.type]
         : undefined;
 
+    const canonicalFilter = options?.canonicalStatus;
     const pages = await this.db.page.findMany({
       where: {
         worldId: world.id,
         ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
         ...(types ? { type: { in: types } } : {}),
+        ...(canonicalFilter
+          ? {
+              canonicalStatus: Array.isArray(canonicalFilter)
+                ? { in: canonicalFilter }
+                : canonicalFilter,
+            }
+          : {}),
       },
       include: { campaign: true },
       orderBy: [{ title: "asc" }],

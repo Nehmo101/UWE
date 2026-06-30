@@ -8,12 +8,13 @@ import {
 } from "@uwe/shared-ui";
 import {
   ADMIN_SEARCH_ENTITY_LABELS,
+  ADMIN_SEARCH_ENTITY_TYPES,
   getAppRepository,
   prisma,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
-  searchAdminEntities,
-  type AdminSearchResultItem,
+  searchStudioCrossDomain,
+  type AdminSearchEntityType,
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
@@ -27,6 +28,7 @@ interface Props {
     scope?: string;
     world?: string;
     type?: string;
+    entityType?: string;
     visibility?: string;
     campaign?: string;
   }>;
@@ -45,6 +47,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     scope: scopeParam,
     world: worldSlug,
     type: entityFilter,
+    entityType: adminEntityType,
     visibility,
     campaign: campaignSlug,
   } = await searchParams;
@@ -62,25 +65,24 @@ export default async function StudioSearchPage({ searchParams }: Props) {
 
   const trimmedQuery = q?.trim() ?? "";
 
-  const [results, adminResults]: [
-    Awaited<ReturnType<typeof repo.search>>,
-    AdminSearchResultItem[],
-  ] = await Promise.all([
-    trimmedQuery && scope !== "admin"
-      ? repo.search("dm", {
-          query: trimmedQuery,
+  const { wiki: results, admin: adminResults } = trimmedQuery
+    ? await searchStudioCrossDomain(prisma, {
+        query: trimmedQuery,
+        scope,
+        wiki: {
           worldSlug: worldSlug || undefined,
           campaignId: selectedCampaign?.id,
           entityFilter: entityFilter as SearchEntityFilter | undefined,
           visibilityFilter: visibility ? [visibility as Visibility] : undefined,
           urlMode: "studio",
           limit: 100,
-        })
-      : Promise.resolve([]),
-    trimmedQuery && scope !== "worlds"
-      ? searchAdminEntities(prisma, { query: trimmedQuery, limit: 50 })
-      : Promise.resolve([]),
-  ]);
+        },
+        admin: {
+          entityType: adminEntityType as AdminSearchEntityType | undefined,
+          limit: 50,
+        },
+      })
+    : { wiki: [], admin: [] };
 
   const hasWikiResults = results.length > 0;
   const hasAdminResults = adminResults.length > 0;
@@ -155,24 +157,38 @@ export default async function StudioSearchPage({ searchParams }: Props) {
                 },
               ]
             : []),
-          {
-            name: "type",
-            label: "Typ",
-            value: entityFilter,
-            options: SEARCH_ENTITY_FILTERS.map((filter) => ({
-              value: filter,
-              label: SEARCH_ENTITY_FILTER_LABELS[filter],
-            })),
-          },
-          {
-            name: "visibility",
-            label: "Sichtbarkeit",
-            value: visibility,
-            options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            })),
-          },
+          ...(scope === "admin"
+            ? [
+                {
+                  name: "entityType",
+                  label: "Admin-Typ",
+                  value: adminEntityType,
+                  options: ADMIN_SEARCH_ENTITY_TYPES.map((type) => ({
+                    value: type,
+                    label: ADMIN_SEARCH_ENTITY_LABELS[type],
+                  })),
+                },
+              ]
+            : [
+                {
+                  name: "type",
+                  label: "Typ",
+                  value: entityFilter,
+                  options: SEARCH_ENTITY_FILTERS.map((filter) => ({
+                    value: filter,
+                    label: SEARCH_ENTITY_FILTER_LABELS[filter],
+                  })),
+                },
+                {
+                  name: "visibility",
+                  label: "Sichtbarkeit",
+                  value: visibility,
+                  options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  })),
+                },
+              ]),
         ]}
       />
 

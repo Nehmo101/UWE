@@ -3,6 +3,7 @@ import { canViewContentBlock, canViewPage } from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import type {
   ContentBlock,
+  CanonicalStatus,
   PageType,
   PublishStatus,
   Visibility,
@@ -65,6 +66,7 @@ export interface SearchOptions {
   campaignId?: string | null;
   entityFilter?: SearchEntityFilter;
   visibilityFilter?: Visibility[];
+  canonicalStatusFilter?: CanonicalStatus | CanonicalStatus[];
   limit?: number;
   urlMode?: SearchUrlMode;
 }
@@ -79,6 +81,7 @@ export interface SearchResultItem {
   campaignName: string | null;
   visibility: Visibility;
   publishStatus: PublishStatus;
+  canonicalStatus: CanonicalStatus;
   href: string;
   matchedFields: SearchMatchField[];
   snippet: string | null;
@@ -95,6 +98,7 @@ export interface SearchIndexEntry {
   aliases: string[];
   visibility: Visibility;
   publishStatus: PublishStatus;
+  canonicalStatus: CanonicalStatus;
   worldSlug: string;
   worldName: string;
   campaignName: string | null;
@@ -111,6 +115,7 @@ type IndexedPage = {
   aliases: unknown;
   visibility: Visibility;
   publishStatus: PublishStatus;
+  canonicalStatus: CanonicalStatus;
   campaignId: string | null;
   contentBlocks: ContentBlock[];
   world: { slug: string; name: string };
@@ -212,6 +217,7 @@ export function buildSearchIndex(
       aliases: parseStringArray(page.aliases),
       visibility: page.visibility,
       publishStatus: page.publishStatus,
+      canonicalStatus: page.canonicalStatus,
       worldSlug: page.world.slug,
       worldName: page.world.name,
       campaignName: page.campaign?.name ?? null,
@@ -327,6 +333,15 @@ export function searchIndex(
       continue;
     }
 
+    if (options.canonicalStatusFilter) {
+      const allowed = Array.isArray(options.canonicalStatusFilter)
+        ? options.canonicalStatusFilter
+        : [options.canonicalStatusFilter];
+      if (!allowed.includes(entry.canonicalStatus)) {
+        continue;
+      }
+    }
+
     const matchedFields = findMatches(entry, query, options.entityFilter);
     if (matchedFields.length === 0) {
       continue;
@@ -342,6 +357,7 @@ export function searchIndex(
       campaignName: entry.campaignName,
       visibility: entry.visibility,
       publishStatus: entry.publishStatus,
+      canonicalStatus: entry.canonicalStatus,
       href: buildResultHref(entry.worldSlug, entry.type, entry.slug, urlMode),
       matchedFields,
       snippet: pickSnippet(entry, matchedFields, query),
@@ -354,17 +370,29 @@ export function searchIndex(
 
 async function loadPagesForSearch(
   db: PrismaClient,
-  options: Pick<SearchOptions, "worldSlug" | "campaignId" | "entityFilter">,
+  options: Pick<
+    SearchOptions,
+    "worldSlug" | "campaignId" | "entityFilter" | "canonicalStatusFilter"
+  >,
 ): Promise<IndexedPage[]> {
   const types = options.entityFilter
     ? pageTypesForEntityFilter(options.entityFilter)
     : null;
+
+  const canonicalFilter = options.canonicalStatusFilter;
 
   return db.page.findMany({
     where: {
       ...(options.worldSlug ? { world: { slug: options.worldSlug } } : {}),
       ...(options.campaignId ? { campaignId: options.campaignId } : {}),
       ...(types ? { type: { in: types } } : {}),
+      ...(canonicalFilter
+        ? {
+            canonicalStatus: Array.isArray(canonicalFilter)
+              ? { in: canonicalFilter }
+              : canonicalFilter,
+          }
+        : {}),
     },
     include: {
       contentBlocks: { orderBy: { sortOrder: "asc" } },

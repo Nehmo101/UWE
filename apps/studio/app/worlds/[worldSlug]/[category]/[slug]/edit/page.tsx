@@ -204,12 +204,16 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </fieldset>
 
           <label>
-            Canonical Status
+            Kanon-Status
             <select name="canonicalStatus" defaultValue={page.canonicalStatus}>
               {Object.values(CanonicalStatusEnum).map((v) => (
                 <option key={v} value={v}>{CANONICAL_LABELS[v]}</option>
               ))}
             </select>
+            <small className="uwe-field-hint">
+              Steuert den Kanon-Lebenszyklus: von Idee über Vorbereitung bis etabliertem Kanon
+              oder verworfenen Inhalten.
+            </small>
           </label>
 
           <label>

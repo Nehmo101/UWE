@@ -243,7 +243,7 @@ describe("route authorization — /api/search/* (command palette + search page)"
   it("requires auth on command palette search", () => {
     const source = read("apps/studio/app/api/command/search/route.ts");
     assert.match(source, AUTH_GUARD);
-    assert.match(source, /search\("dm"/);
+    assert.match(source, /search\("dm"|searchStudioCrossDomain/);
   });
 });
 

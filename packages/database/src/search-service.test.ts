@@ -307,4 +307,32 @@ describe("UWE global search", () => {
 
     await db.$disconnect();
   });
+
+  it("filters by canonical status for DM search", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const repo = createUweRepository(databaseUrl);
+
+    const notCanon = await searchForWikiContext(db, "dm", {
+      query: "Verschwörung",
+      worldSlug,
+      canonicalStatusFilter: "canon",
+      urlMode: "studio",
+    });
+    assert.equal(notCanon.length, 0);
+
+    const page = await repo.getPageBySlug(worldSlug, "geheime-verschwoerung");
+    assert.ok(page);
+    await repo.updatePage(page!.id, { canonicalStatus: "canon" });
+
+    const canonOnly = await searchForWikiContext(db, "dm", {
+      query: "Verschwörung",
+      worldSlug,
+      canonicalStatusFilter: "canon",
+      urlMode: "studio",
+    });
+    assert.ok(canonOnly.some((result) => result.slug === "geheime-verschwoerung"));
+    assert.ok(canonOnly.every((result) => result.canonicalStatus === "canon"));
+
+    await db.$disconnect();
+  });
 });
