@@ -141,6 +141,7 @@ export function PortalWorldDashboardClient({ worldSlug, dashboard }: PortalWorld
         return (
           <DashboardSection
             title="Bekannte NPCs"
+            href={`/auth/worlds/${worldSlug}/npcs`}
             empty={dashboard.knownNpcs.length === 0 ? "Noch keine NPCs freigeschaltet." : undefined}
           >
             <PageLinks worldSlug={worldSlug} items={dashboard.knownNpcs} />

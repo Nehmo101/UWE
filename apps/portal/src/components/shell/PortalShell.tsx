@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import type { NavGroup } from "@uwe/shared-utils/navigation";
 import { navGroupsToCommands, resolveNavGroups } from "@uwe/shared-utils/navigation";
+import { resolvePortalAuthBottomNav } from "../../lib/mobile-nav";
 import { PORTAL_NAV, portalWorldNav } from "../../navigation/portal-nav";
 import { AppShell } from "./AppShell";
 
@@ -40,6 +41,7 @@ export function PortalShell({
   const sourceGroups =
     navGroups ?? (worldSlug ? [...PORTAL_NAV, ...portalWorldNav(worldSlug)] : PORTAL_NAV);
   const resolvedLabel = brandLabel ?? worldName ?? "UWE Portal";
+  const bottomNav = navGroups ? undefined : resolvePortalAuthBottomNav(pathname, worldSlug ?? null);
 
   return (
     <AppShell
@@ -51,6 +53,7 @@ export function PortalShell({
       headerActions={headerActions}
       contextPanel={contextPanel}
       footer={footer}
+      bottomNav={bottomNav}
     >
       {children}
     </AppShell>

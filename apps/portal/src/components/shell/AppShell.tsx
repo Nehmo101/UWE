@@ -3,6 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation";
+import {
+  MobileBottomNav,
+  SidebarContextProvider,
+  type BottomNavItem,
+} from "@uwe/shared-ui";
 import { NavIcon } from "../ui/icon";
 import { CommandPalette } from "../ui/command-palette";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
@@ -21,6 +26,8 @@ export interface AppShellProps {
   headerActions?: React.ReactNode;
   contextPanel?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Mobile thumb-zone navigation (shown below md breakpoint). */
+  bottomNav?: BottomNavItem[];
   children: React.ReactNode;
 }
 
@@ -38,40 +45,73 @@ export function AppShell({
   headerActions,
   contextPanel,
   footer,
+  bottomNav,
   children,
 }: AppShellProps) {
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
+
+  const closeMobileNav = React.useCallback(() => setMobileNavOpen(false), []);
+  const toggleMobileNav = React.useCallback(() => setMobileNavOpen((open) => !open), []);
+
+  React.useEffect(() => {
+    function onToggleSidebar() {
+      toggleMobileNav();
+    }
+    document.addEventListener("uwe:toggle-sidebar", onToggleSidebar);
+    return () => document.removeEventListener("uwe:toggle-sidebar", onToggleSidebar);
+  }, [toggleMobileNav]);
+
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
-        <SidebarBrand label={brandLabel} href={brandHref} />
-        <ScrollArea className="flex-1">
-          <SidebarNav groups={groups} />
-        </ScrollArea>
-        {footer ? <div className="border-t border-border p-3 text-xs text-muted-foreground">{footer}</div> : null}
-      </aside>
+    <SidebarContextProvider closeSidebar={closeMobileNav}>
+      <div
+        className="flex min-h-screen w-full bg-background text-foreground"
+        data-has-bottom-nav={hasBottomNav ? "true" : "false"}
+      >
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
+          <SidebarBrand label={brandLabel} href={brandHref} />
+          <ScrollArea className="flex-1">
+            <SidebarNav groups={groups} />
+          </ScrollArea>
+          {footer ? <div className="border-t border-border p-3 text-xs text-muted-foreground">{footer}</div> : null}
+        </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-3 border-b border-border px-4">
-          <MobileNav groups={groups} brandLabel={brandLabel} />
-          <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
-          {headerActions ? (
-            <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
-          ) : null}
-          {commands.length > 0 ? <CommandHint /> : null}
-        </header>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-14 items-center gap-3 border-b border-border px-4">
+            <MobileNav
+              groups={groups}
+              brandLabel={brandLabel}
+              open={mobileNavOpen}
+              onOpenChange={setMobileNavOpen}
+            />
+            <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
+            {headerActions ? (
+              <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
+            ) : null}
+            {commands.length > 0 ? <CommandHint /> : null}
+          </header>
 
-        <div className="flex min-h-0 flex-1">
-          <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-          {contextPanel ? (
-            <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border p-4 lg:block">
-              {contextPanel}
-            </aside>
-          ) : null}
+          <div className="flex min-h-0 flex-1">
+            <main
+              className={cn(
+                "min-w-0 flex-1 overflow-y-auto p-4 md:p-6",
+                hasBottomNav && "portal-main-with-bottom-nav",
+              )}
+            >
+              {children}
+            </main>
+            {contextPanel ? (
+              <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border p-4 lg:block">
+                {contextPanel}
+              </aside>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      {commands.length > 0 ? <CommandPalette commands={commands} /> : null}
-    </div>
+        {commands.length > 0 ? <CommandPalette commands={commands} /> : null}
+        {hasBottomNav && bottomNav ? <MobileBottomNav items={bottomNav} /> : null}
+      </div>
+    </SidebarContextProvider>
   );
 }
 
@@ -122,9 +162,19 @@ function SidebarNav({ groups }: { groups: ResolvedNavGroup[] }) {
   );
 }
 
-function MobileNav({ groups, brandLabel }: { groups: ResolvedNavGroup[]; brandLabel: string }) {
+function MobileNav({
+  groups,
+  brandLabel,
+  open,
+  onOpenChange,
+}: {
+  groups: ResolvedNavGroup[];
+  brandLabel: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger
         className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border md:hidden"
         aria-label="Navigation öffnen"

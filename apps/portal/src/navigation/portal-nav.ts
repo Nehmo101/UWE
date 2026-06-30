@@ -73,6 +73,12 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
       items: [
         worldItem("portal-world-overview", "Übersicht", base, "house", ["übersicht", "dashboard"]),
         worldItem("portal-world-wiki", "Wiki", `${base}/wiki`, "book-open", ["wiki", "seiten"]),
+        worldItem("portal-world-npcs", "NPCs", `${base}/npcs`, "users", ["npcs", "personen"]),
+        worldItem("portal-world-graph", "Beziehungsnetz", `${base}/graph`, "share-2", [
+          "graph",
+          "beziehungen",
+          "netzwerk",
+        ]),
         worldItem("portal-world-sessions", "Sessions / Recaps", `${base}/sessions`, "calendar-days", [
           "sessions",
           "recap",

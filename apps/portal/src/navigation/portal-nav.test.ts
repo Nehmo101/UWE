@@ -60,6 +60,9 @@ describe("portal navigation (login-first)", () => {
 
   it("defines world-scoped player navigation with expected destinations", () => {
     const items = portalWorldNav("terra").flatMap((group) => group.items);
+    assert.equal(items.find((item) => item.id === "portal-world-wiki")?.href, "/auth/worlds/terra/wiki");
+    assert.equal(items.find((item) => item.id === "portal-world-npcs")?.href, "/auth/worlds/terra/npcs");
+    assert.equal(items.find((item) => item.id === "portal-world-graph")?.href, "/auth/worlds/terra/graph");
     assert.equal(items.find((item) => item.id === "portal-world-sessions")?.href, "/auth/worlds/terra/sessions");
     assert.equal(items.find((item) => item.id === "portal-world-handouts")?.href, "/auth/worlds/terra/assets");
     assert.equal(items.find((item) => item.id === "portal-world-soundboard")?.href, "/auth/worlds/terra/soundboard");
@@ -86,6 +89,20 @@ describe("portal navigation (login-first)", () => {
       atlasSidebar
         .flatMap((group) => group.items)
         .some((item) => item.id === "portal-world-atlas" && item.active),
+    );
+
+    const wikiSidebar = portalSidebar("/auth/worlds/terra/wiki", "terra");
+    assert.ok(
+      wikiSidebar
+        .flatMap((group) => group.items)
+        .some((item) => item.id === "portal-world-wiki" && item.active),
+    );
+
+    const graphSidebar = portalSidebar("/auth/worlds/terra/graph", "terra");
+    assert.ok(
+      graphSidebar
+        .flatMap((group) => group.items)
+        .some((item) => item.id === "portal-world-graph" && item.active),
     );
   });
 });
