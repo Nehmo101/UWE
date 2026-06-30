@@ -1,1 +1,8 @@
-export { AtlasEditor, type AtlasEditorProps, type EditorFeature, type EditorObject, BUILTIN_GLYPHS } from "./AtlasEditor";
+export {
+  AtlasEditor,
+  type AtlasEditorProps,
+  type EditorFeature,
+  type EditorObject,
+  type NodeAncestorItem,
+  BUILTIN_GLYPHS,
+} from "./AtlasEditor";

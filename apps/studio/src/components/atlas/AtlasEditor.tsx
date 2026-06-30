@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   TOLKIEN_INK,
   type AtlasStylePreset,
@@ -18,7 +19,11 @@ import {
   scatterGlyphsAlongPath,
   buildReliefShading,
 } from "@uwe/atlas/terrain";
-import { saveAtlasFeaturesAction, saveAtlasObjectsAction } from "@/app/atlas-actions";
+import {
+  saveAtlasFeaturesAction,
+  saveAtlasObjectsAction,
+  createChildNodeAction,
+} from "@/app/atlas-actions";
 
 // ---------------------------------------------------------------------------
 // Types shared in this module
@@ -57,6 +62,8 @@ export interface EditorFeature {
   style?: Record<string, unknown>;
   labelText?: string | null;
   labelColor?: LabelColor | null;
+  /** DB-persisted child node id (drill-down target). */
+  childNodeId?: string | null;
   layer?: number;
   sortOrder?: number;
   visibility?: string;
@@ -578,23 +585,45 @@ function ScaleBar({ preset }: { preset: AtlasStylePreset }) {
 // Main AtlasEditor component
 // ---------------------------------------------------------------------------
 
+export interface NodeAncestorItem {
+  id: string;
+  title: string;
+  level: string;
+}
+
 export interface AtlasEditorProps {
   worldSlug: string;
   nodeId: string;
   nodeTitle: string;
+  nodeLevel?: string;
   initialFeatures: EditorFeature[];
   initialObjects: EditorObject[];
   preset?: AtlasStylePreset;
+  /** Ancestor chain root-first, e.g. [Globe, Continent, Landscape]. Used for breadcrumb. */
+  parentChainItems?: NodeAncestorItem[];
+  /** Polygon rings from the parent feature — rendered as faint locked underlay. */
+  parentSilhouette?: [number, number][][];
 }
+
+const LEVEL_LABELS: Record<string, string> = {
+  globe: "Globus",
+  continent: "Kontinent",
+  landscape: "Landschaft",
+  city: "Stadt",
+};
 
 export function AtlasEditor({
   worldSlug,
   nodeId,
   nodeTitle,
+  nodeLevel,
   initialFeatures,
   initialObjects,
   preset = TOLKIEN_INK,
+  parentChainItems = [],
+  parentSilhouette,
 }: AtlasEditorProps) {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const panning = useRef(false);
@@ -605,6 +634,16 @@ export function AtlasEditor({
   const [labelText, setLabelText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Drill-down dialog state
+  const [drillDownFeatureId, setDrillDownFeatureId] = useState<string | null>(null);
+  const [drillTitle, setDrillTitle] = useState("");
+  const [drillLevel, setDrillLevel] = useState<string>(() => {
+    const levels = ["globe", "continent", "landscape", "city"];
+    const curIdx = levels.indexOf(nodeLevel ?? "continent");
+    return levels[Math.min(curIdx + 1, levels.length - 1)] ?? "city";
+  });
+  const [isDrillPending, startDrillTransition] = useTransition();
 
   const [state, dispatch] = useReducer(editorReducer, {
     features: [],
@@ -653,6 +692,33 @@ export function AtlasEditor({
     grad.addColorStop(1, "rgba(80,50,20,0.18)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
+
+    // Parent silhouette underlay — faint locked boundary from parent feature.
+    if (parentSilhouette && parentSilhouette.length > 0) {
+      ctx.save();
+      ctx.beginPath();
+      for (const ring of parentSilhouette) {
+        if (!ring.length) continue;
+        const [sx, sy] = w2c(ring[0]![0], ring[0]![1]);
+        ctx.moveTo(sx, sy);
+        for (let i = 1; i < ring.length; i++) {
+          const [px, py] = w2c(ring[i]![0], ring[i]![1]);
+          ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+      ctx.strokeStyle = preset.colors.ink;
+      ctx.lineWidth = 2.5 * zoom;
+      ctx.globalAlpha = 0.15;
+      ctx.setLineDash([8 * zoom, 5 * zoom]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.06;
+      ctx.fillStyle = preset.colors.ink;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.strokeStyle = preset.colors.ink;
@@ -765,6 +831,35 @@ export function AtlasEditor({
           ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.ink;
           ctx.lineWidth = isSelected ? 2.5 * zoom : 1.5 * zoom;
           ctx.stroke();
+
+          // Drill-down indicator: small arrow badge on region features that
+          // already have a child node linked.
+          if (feat.childNodeId && feat.geometry.type === "Polygon") {
+            const rings = feat.geometry.rings ?? [];
+            if (rings[0] && rings[0].length) {
+              // Compute centroid of first ring
+              let cx2 = 0;
+              let cy2 = 0;
+              for (const [rx, ry] of rings[0]) { cx2 += rx; cy2 += ry; }
+              cx2 /= rings[0].length;
+              cy2 /= rings[0].length;
+              const [bx, by] = w2c(cx2, cy2);
+              const r = 8 * zoom;
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(bx, by, r, 0, Math.PI * 2);
+              ctx.fillStyle = isSelected ? "#2563eb" : "#4a90d9";
+              ctx.globalAlpha = 0.85;
+              ctx.fill();
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = "#fff";
+              ctx.font = `bold ${Math.round(11 * zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("↓", bx, by);
+              ctx.restore();
+            }
+          }
         }
       } else if (feat.geometry.type === "Path") {
         const coords = (feat.geometry.coordinates as [number, number][]) ?? [];
@@ -926,7 +1021,7 @@ export function AtlasEditor({
         ctx.restore();
       }
     }
-  }, [state, preset]);
+  }, [state, preset, parentSilhouette]);
 
   useEffect(() => {
     render();
@@ -1215,6 +1310,40 @@ export function AtlasEditor({
 
   return (
     <div className="uwe-atlas-editor" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      {/* Hierarchy breadcrumb */}
+      {(parentChainItems.length > 0 || nodeLevel) && (
+        <nav
+          aria-label="Atlas-Hierarchie"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.25rem",
+            fontSize: 13,
+            padding: "0.4rem 0.75rem",
+            background: "var(--uwe-surface)",
+            border: "1px solid var(--uwe-border)",
+            borderRadius: "var(--uwe-radius)",
+          }}
+        >
+          {parentChainItems.map((item, idx) => (
+            <span key={item.id} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              {idx > 0 && <span style={{ color: "var(--uwe-muted)" }}>›</span>}
+              <a
+                href={`/worlds/${worldSlug}/atlas/${item.id}`}
+                style={{ color: "var(--uwe-accent)", textDecoration: "none" }}
+              >
+                {LEVEL_LABELS[item.level] ?? item.level}: {item.title}
+              </a>
+            </span>
+          ))}
+          {parentChainItems.length > 0 && <span style={{ color: "var(--uwe-muted)" }}>›</span>}
+          <span style={{ fontWeight: 600 }}>
+            {nodeLevel ? `${LEVEL_LABELS[nodeLevel] ?? nodeLevel}: ` : ""}{nodeTitle}
+          </span>
+        </nav>
+      )}
+
       {/* Toolbar */}
       <div className="uwe-atlas-toolbar" style={{
         display: "flex",
@@ -1505,11 +1634,39 @@ export function AtlasEditor({
                 {selectedFeature.labelText && (
                   <div><strong>Text:</strong> {selectedFeature.labelText}</div>
                 )}
+
+                {/* Drill-down button only for saved region features */}
+                {selectedFeature.kind === "region" && selectedFeature.id && (
+                  <div style={{ marginTop: "0.5rem" }}>
+                    {selectedFeature.childNodeId ? (
+                      <a
+                        href={`/worlds/${worldSlug}/atlas/${selectedFeature.childNodeId}`}
+                        className="uwe-v2-btn uwe-v2-btn-secondary"
+                        style={{ display: "block", width: "100%", textAlign: "center", marginBottom: "0.25rem" }}
+                      >
+                        ↓ Drill Down
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDrillDownFeatureId(selectedFeature.id!);
+                          setDrillTitle(selectedFeature.labelText ?? nodeTitle);
+                        }}
+                        className="uwe-v2-btn uwe-v2-btn-secondary"
+                        style={{ width: "100%", marginBottom: "0.25rem" }}
+                      >
+                        ↓ Unterebene erstellen
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => dispatch({ type: "ERASE_SELECTED" })}
                   className="uwe-v2-btn uwe-v2-btn-danger"
-                  style={{ marginTop: "0.5rem", width: "100%" }}
+                  style={{ marginTop: "0.25rem", width: "100%" }}
                 >
                   Löschen
                 </button>
@@ -1604,6 +1761,92 @@ export function AtlasEditor({
                 type="button"
                 className="uwe-v2-btn uwe-v2-btn-secondary"
                 onClick={() => { setLabelPrompt(null); setLabelText(""); }}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Drill-down child node creation dialog */}
+      {drillDownFeatureId && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!drillTitle.trim()) return;
+              const featureId = drillDownFeatureId;
+              const title = drillTitle.trim();
+              const level = drillLevel;
+              setDrillDownFeatureId(null);
+              startDrillTransition(async () => {
+                const fd = new FormData();
+                fd.set("worldSlug", worldSlug);
+                fd.set("parentNodeId", nodeId);
+                fd.set("parentFeatureId", featureId);
+                fd.set("level", level);
+                fd.set("title", title);
+                const result = await createChildNodeAction(fd);
+                router.push(`/worlds/${worldSlug}/atlas/${result.nodeId}`);
+              });
+            }}
+            style={{
+              background: "var(--uwe-bg)",
+              border: "1px solid var(--uwe-border)",
+              borderRadius: "var(--uwe-radius)",
+              padding: "1.5rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+              minWidth: 320,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>Unterebene erstellen</h3>
+            <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+              Name
+              <input
+                className="uwe-input"
+                value={drillTitle}
+                onChange={(e) => setDrillTitle(e.target.value)}
+                placeholder="z.B. Nordküste"
+                autoFocus
+                required
+              />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+              Ebene
+              <select
+                className="uwe-input"
+                value={drillLevel}
+                onChange={(e) => setDrillLevel(e.target.value)}
+              >
+                {["globe", "continent", "landscape", "city"].map((lvl) => (
+                  <option key={lvl} value={lvl}>{LEVEL_LABELS[lvl] ?? lvl}</option>
+                ))}
+              </select>
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="submit"
+                className="uwe-v2-btn uwe-v2-btn-primary"
+                style={{ flex: 1 }}
+                disabled={isDrillPending}
+              >
+                {isDrillPending ? "Erstelle…" : "Erstellen & öffnen"}
+              </button>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+                onClick={() => setDrillDownFeatureId(null)}
               >
                 Abbrechen
               </button>

@@ -1571,6 +1571,8 @@ export {
   type CreateAtlasObjectInput,
   type UpdateAtlasObjectInput,
   type CreateAtlasPaletteItemInput,
+  type NodeAncestor,
+  type NodeWithHierarchy,
 } from "./atlas-service";
 
 export type {

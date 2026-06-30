@@ -476,3 +476,192 @@ describe("AtlasService — linkNodeToPage", () => {
     assert.equal(linked.pageId, page.id);
   });
 });
+
+// ---------------------------------------------------------------------------
+// createChildNode
+// ---------------------------------------------------------------------------
+
+describe("AtlasService — createChildNode", () => {
+  let db: PrismaClient;
+  let mapId: string;
+
+  before(async () => {
+    db = createPrismaClient(createTestDatabaseUrl());
+    const world = await seedWorld(db, "atlas-child-node");
+    const atlas = await db.atlasMap.create({ data: { worldId: world.id } });
+    mapId = atlas.id;
+  });
+
+  it("creates a child node linked to parent node and feature", async () => {
+    const service = createAtlasService(db);
+
+    const parent = await service.createNode({
+      mapId,
+      level: "continent",
+      title: "Nordkontinent",
+      visibility: "dm_only",
+    });
+
+    const feature = await service.createFeature({
+      nodeId: parent.id,
+      kind: "region",
+      geometry: {
+        type: "Polygon",
+        rings: [[[0.1, 0.1], [0.5, 0.1], [0.5, 0.5], [0.1, 0.5]]],
+      },
+      visibility: "dm_only",
+    });
+
+    const child = await service.createChildNode(
+      parent.id,
+      feature.id,
+      "landscape",
+      "Nordlandschaft",
+    );
+
+    assert.equal(child.parentId, parent.id);
+    assert.equal(child.parentFeatureId, feature.id);
+    assert.equal(child.level, "landscape");
+    assert.equal(child.title, "Nordlandschaft");
+    assert.equal(child.mapId, mapId);
+
+    // silhouette should be copied from parent feature geometry
+    assert.ok(child.silhouette !== null);
+
+    // Parent feature should be updated to point to child
+    const updatedFeature = await service.getFeature(feature.id);
+    assert.ok(updatedFeature);
+    assert.equal(updatedFeature.childNodeId, child.id);
+  });
+
+  it("returns existing child node on repeated calls (idempotent)", async () => {
+    const service = createAtlasService(db);
+
+    const parent = await service.createNode({
+      mapId,
+      level: "continent",
+      title: "Südkontinent",
+    });
+
+    const feature = await service.createFeature({
+      nodeId: parent.id,
+      kind: "region",
+      geometry: { type: "Polygon", rings: [[[0.2, 0.2], [0.6, 0.2], [0.6, 0.6], [0.2, 0.6]]] },
+    });
+
+    const child1 = await service.createChildNode(parent.id, feature.id, "landscape", "Südland");
+    const child2 = await service.createChildNode(parent.id, feature.id, "landscape", "Südland");
+
+    assert.equal(child1.id, child2.id);
+  });
+
+  it("throws when parent node does not exist", async () => {
+    const service = createAtlasService(db);
+    await assert.rejects(
+      () => service.createChildNode("nonexistent-id", "nonexistent-feat", "city", "X"),
+      /not found/i,
+    );
+  });
+
+  it("throws when feature does not belong to the parent node", async () => {
+    const service = createAtlasService(db);
+
+    const parent1 = await service.createNode({ mapId, level: "continent", title: "P1" });
+    const parent2 = await service.createNode({ mapId, level: "continent", title: "P2" });
+    const feature = await service.createFeature({
+      nodeId: parent2.id,
+      kind: "region",
+      geometry: {},
+    });
+
+    await assert.rejects(
+      () => service.createChildNode(parent1.id, feature.id, "city", "X"),
+      /does not belong/i,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getNodeWithHierarchy
+// ---------------------------------------------------------------------------
+
+describe("AtlasService — getNodeWithHierarchy", () => {
+  let db: PrismaClient;
+  let mapId: string;
+
+  before(async () => {
+    db = createPrismaClient(createTestDatabaseUrl());
+    const world = await seedWorld(db, "atlas-hierarchy");
+    const atlas = await db.atlasMap.create({ data: { worldId: world.id } });
+    mapId = atlas.id;
+  });
+
+  it("returns null for non-existent node", async () => {
+    const service = createAtlasService(db);
+    const result = await service.getNodeWithHierarchy("no-such-node");
+    assert.equal(result, null);
+  });
+
+  it("returns node with empty parent chain for root nodes", async () => {
+    const service = createAtlasService(db);
+    const globe = await service.createNode({ mapId, level: "globe", title: "Terra" });
+
+    const result = await service.getNodeWithHierarchy(globe.id);
+    assert.ok(result);
+    assert.equal(result.node.id, globe.id);
+    assert.equal(result.parentChain.length, 0);
+    assert.equal(result.parentFeature, null);
+  });
+
+  it("returns full parent chain for deeply nested node", async () => {
+    const service = createAtlasService(db);
+
+    const globe = await service.createNode({ mapId, level: "globe", title: "Planet" });
+    const continentFeature = await service.createFeature({
+      nodeId: globe.id,
+      kind: "region",
+      geometry: { type: "Polygon", rings: [[[0, 0], [1, 0], [1, 1], [0, 1]]] },
+    });
+    const continent = await service.createChildNode(globe.id, continentFeature.id, "continent", "Nordkontinent");
+
+    const landscapeFeature = await service.createFeature({
+      nodeId: continent.id,
+      kind: "region",
+      geometry: { type: "Polygon", rings: [[[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]] },
+    });
+    const landscape = await service.createChildNode(continent.id, landscapeFeature.id, "landscape", "Nordlandschaft");
+
+    const result = await service.getNodeWithHierarchy(landscape.id);
+    assert.ok(result);
+    assert.equal(result.node.id, landscape.id);
+    assert.equal(result.parentChain.length, 2);
+    assert.equal(result.parentChain[0]!.title, "Planet");
+    assert.equal(result.parentChain[0]!.level, "globe");
+    assert.equal(result.parentChain[1]!.title, "Nordkontinent");
+    assert.equal(result.parentChain[1]!.level, "continent");
+
+    assert.ok(result.parentFeature);
+    assert.equal(result.parentFeature.id, landscapeFeature.id);
+  });
+
+  it("includes parent feature silhouette geometry", async () => {
+    const service = createAtlasService(db);
+
+    const parent = await service.createNode({ mapId, level: "continent", title: "SilhouetteParent" });
+    const geometry = {
+      type: "Polygon",
+      rings: [[[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]],
+    };
+    const feature = await service.createFeature({
+      nodeId: parent.id,
+      kind: "region",
+      geometry,
+    });
+    const child = await service.createChildNode(parent.id, feature.id, "landscape", "SilhouetteChild");
+
+    const result = await service.getNodeWithHierarchy(child.id);
+    assert.ok(result?.parentFeature);
+    const storedGeo = result.parentFeature.geometry as { type: string };
+    assert.equal(storedGeo.type, "Polygon");
+  });
+});

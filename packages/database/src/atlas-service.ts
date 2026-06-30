@@ -1,6 +1,8 @@
 import type {
+  AtlasFeature,
   AtlasFeatureKind,
   AtlasLabelColor,
+  AtlasNode,
   AtlasNodeLevel,
   AtlasPaletteReviewStatus,
   AtlasPaletteSource,
@@ -13,6 +15,22 @@ import {
   isPlayerPortalVisibility,
 } from "./content-access";
 import type { AccessContext } from "./permissions";
+
+// ---------------------------------------------------------------------------
+// Hierarchy types
+// ---------------------------------------------------------------------------
+
+export interface NodeAncestor {
+  id: string;
+  title: string;
+  level: AtlasNodeLevel;
+}
+
+export interface NodeWithHierarchy {
+  node: AtlasNode;
+  parentChain: NodeAncestor[];
+  parentFeature: AtlasFeature | null;
+}
 
 // ---------------------------------------------------------------------------
 // Input types
@@ -428,6 +446,105 @@ export function createAtlasService(db: PrismaClient) {
   }
 
   // -------------------------------------------------------------------------
+  // Hierarchy helpers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Create a child node linked to a parent node via a region feature.
+   * The parent feature's polygon geometry is stored as the child's silhouette
+   * so the editor can render a locked parent-boundary underlay.
+   * Also sets the parent feature's childNodeId to point back to the new node.
+   */
+  async function createChildNode(
+    parentNodeId: string,
+    parentFeatureId: string,
+    level: AtlasNodeLevel,
+    title: string,
+  ): Promise<AtlasNode> {
+    const parentNode = await db.atlasNode.findUnique({ where: { id: parentNodeId } });
+    if (!parentNode) throw new Error(`Parent node ${parentNodeId} not found`);
+
+    const parentFeature = await db.atlasFeature.findUnique({ where: { id: parentFeatureId } });
+    if (!parentFeature) throw new Error(`Parent feature ${parentFeatureId} not found`);
+    if (parentFeature.nodeId !== parentNodeId) {
+      throw new Error(`Feature ${parentFeatureId} does not belong to node ${parentNodeId}`);
+    }
+
+    // If the feature already points to a child node, return that node.
+    if (parentFeature.childNodeId) {
+      const existing = await db.atlasNode.findUnique({ where: { id: parentFeature.childNodeId } });
+      if (existing) return existing;
+    }
+
+    const childNode = await db.atlasNode.create({
+      data: {
+        mapId: parentNode.mapId,
+        parentId: parentNodeId,
+        parentFeatureId,
+        level,
+        title,
+        silhouette: parentFeature.geometry as Prisma.InputJsonValue,
+        visibility: parentNode.visibility,
+        sortOrder: 0,
+      },
+    });
+
+    // Link the parent feature back to the new child node.
+    await db.atlasFeature.update({
+      where: { id: parentFeatureId },
+      data: { childNodeId: childNode.id },
+    });
+
+    return childNode;
+  }
+
+  /**
+   * Return a node together with its full ancestor chain (root first) and the
+   * parent feature whose silhouette the editor uses as a locked boundary underlay.
+   */
+  async function getNodeWithHierarchy(nodeId: string): Promise<NodeWithHierarchy | null> {
+    const node = await db.atlasNode.findUnique({ where: { id: nodeId } });
+    if (!node) return null;
+
+    const parentChain: NodeAncestor[] = [];
+    let current: AtlasNode = node;
+
+    // Walk up to root (max depth guard: 8 levels is more than enough for
+    // Globe → Continent → Landscape → City).
+    for (let depth = 0; depth < 8 && current.parentId; depth++) {
+      const parent: AtlasNode | null = await db.atlasNode.findUnique({ where: { id: current.parentId } });
+      if (!parent) break;
+      parentChain.unshift({ id: parent.id, title: parent.title, level: parent.level });
+      current = parent;
+    }
+
+    const parentFeature = node.parentFeatureId
+      ? await db.atlasFeature.findUnique({ where: { id: node.parentFeatureId } })
+      : null;
+
+    return { node, parentChain, parentFeature };
+  }
+
+  /**
+   * Link an existing feature to an existing child node (and keep back-references
+   * on both sides in sync).
+   */
+  async function linkFeatureToChildNode(featureId: string, childNodeId: string): Promise<void> {
+    const childNode = await db.atlasNode.findUnique({ where: { id: childNodeId } });
+    if (!childNode) throw new Error(`Child node ${childNodeId} not found`);
+
+    await db.atlasFeature.update({
+      where: { id: featureId },
+      data: { childNodeId },
+    });
+
+    await db.atlasNode.update({
+      where: { id: childNodeId },
+      data: { parentFeatureId: featureId },
+    });
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -463,6 +580,9 @@ export function createAtlasService(db: PrismaClient) {
     getAtlasForContext,
     linkNodeToPage,
     isAtlasEntityAccessible,
+    createChildNode,
+    getNodeWithHierarchy,
+    linkFeatureToChildNode,
   };
 }
 

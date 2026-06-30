@@ -11,6 +11,7 @@ import {
   type UpdateAtlasFeatureInput,
   type UpdateAtlasNodeInput,
 } from "@uwe/database/server";
+import type { AtlasNodeLevel } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -198,6 +199,64 @@ export async function saveAtlasFeaturesAction(formData: FormData) {
   }
 
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Drill-down hierarchy actions
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a child node for a parent feature (or return existing one) and
+ * navigate to the child editor.  Called from the client with useTransition so
+ * it can return the new nodeId without a server-side redirect.
+ */
+export async function createChildNodeAction(formData: FormData): Promise<{ nodeId: string }> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const parentNodeId = String(formData.get("parentNodeId"));
+  const parentFeatureId = String(formData.get("parentFeatureId"));
+  const level = String(formData.get("level") || "continent") as AtlasNodeLevel;
+  const title = String(formData.get("title") || "Neuer Bereich").trim();
+
+  const { db, atlas } = getAtlasDeps();
+
+  let nodeId: string;
+  try {
+    const child = await atlas.createChildNode(parentNodeId, parentFeatureId, level, title);
+    nodeId = child.id;
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
+  revalidatePath(`/worlds/${worldSlug}/atlas/${parentNodeId}`);
+  return { nodeId };
+}
+
+/**
+ * Link an existing feature to an existing child node (used when re-linking
+ * after manual node creation).
+ */
+export async function linkFeatureToChildNodeAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const featureId = String(formData.get("featureId"));
+  const childNodeId = String(formData.get("childNodeId"));
+  const parentNodeId = String(formData.get("parentNodeId"));
+
+  const { db, atlas } = getAtlasDeps();
+
+  try {
+    await atlas.linkFeatureToChildNode(featureId, childNodeId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas/${parentNodeId}`);
 }
 
 export async function deleteAtlasFeatureAction(formData: FormData) {
