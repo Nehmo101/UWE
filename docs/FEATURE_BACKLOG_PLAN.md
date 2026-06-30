@@ -213,10 +213,9 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
   **Globale Suche 2.0**, Miniaturen-Filter, Idea/Bug-Kategorisierung und Projekt-Dashboards
   zugleich aufwerten. **Empfehlung: zuerst dieses Fundament.** Migration der bestehenden
   Json-Tags nötig (rückwärtskompatibel planen).
-- **#4 KI-Sortierung — heuristisch vs. LLM.** Die „KI“-Sortierung ist real-rule-based. Echtes
-  LLM-Routing ist möglich, aber: Captures sind **persönliche Daten** → nur **lokale RTX**, nie
-  Cloud (`local-first-privacy`-Skill). **Frage:** Kategorien „Musik/Haushalt“ neu einführen
-  (`PersonalProjectCategory` erweitern)? Sollen die überhaupt ins Produkt?
+- **#4 KI-Sortierung — aus dem Backlog gestrichen (Owner-Entscheidung 2026-06-30).** Die heutige
+  heuristische Triage (`capture-triage-service.ts`) bleibt unverändert; ein LLM-/Kategorien-Ausbau
+  ist **nicht** geplant.
 - **#9/#10 Prompt-Bibliothek & Feature-Registry — reuse `DevIdea`/Agent-Jobs.** Statt neuer
   Systeme: `DevIdea` um `type`(feature/bug/prompt) + Lifecycle-Status erweitern; Prompt-Bibliothek
   als eigener `DevIdea`-Typ oder kleines `PromptTemplate`-Modell. Frage: soll die Registry
@@ -239,7 +238,7 @@ Diese vier Investitionen sind **keine** Einzelfeatures, sondern Hebel:
 |-----------|-----------------|--------|
 | **F1 — Zentrales Tag-Modell** | Tag-System (4.6), Globale Suche 2.0 (4.5), Miniaturen-Filter (4.1), Feature/Bug-Tagging (4.10/4.11), Projekt-Dashboards (4.7) | `Tag` + `EntityTag`-Join; `tag-service` migrieren; Json-Tags rückwärtskompatibel. |
 | **F2 — Einheitlicher Verlauf/Audit-Browser** | Owner-Cockpit (1.1), Audit-Log (1.3), Kosten-Dashboard (1.16), Moderation (1.13) | `ActivityLog`+`AuditLog`+`AiUsageLog` in einer filterbaren View bündeln (read-only). |
-| **F3 — Strukturierter Generator + Proposal/Review als Standard** | NPC/Quest/Item/Encounter (3.7–3.10), Faction-Sim (3.15), KI-Sortierung (4.4), Doc-Generator (4.8) | Feld-Schema je Typ über `generator-service.ts`; alle KI-Ausgaben → Review. |
+| **F3 — Strukturierter Generator + Proposal/Review als Standard** | NPC/Quest/Item/Encounter (3.7–3.10), Faction-Sim (3.15), Doc-Generator (4.8) | Feld-Schema je Typ über `generator-service.ts`; alle KI-Ausgaben → Review. |
 | **F4 — Player-safe „angekündigte Session“ + Cross-domain Suchindex** | Mobile Portal (2.1), Player-Dashboard (2.11), Globale Suche 2.0 (4.5) | `playerVisibleSchedule`-Flag (behebt `nextSession`-Bug); Suchindex auf Daily-Admin erweitern. |
 
 ---
@@ -300,7 +299,6 @@ Bereits ~80 % fertige Bausteine zu Ende verdrahten. Wenig/keine Migration.
 | Faction-Simulator als KI-Proposal | 3.15 | DB, AI, SVC, STU | hoch — Qualität/Determinismus |
 | NL Admin Command Center (eingeschränkt + Bestätigung) | 1.18 | AI, SVC, STU | hoch — Sicherheit |
 | World-Clock (In-Game-Zeit/Regionalkalender) | 3.16 | DB, SVC, STU | mittel–hoch — Scope |
-| KI-Sortierung via lokale RTX (LLM statt Heuristik) | 4.4 | AI, SVC | mittel — Privacy (RTX-only) |
 | Import-Zentrale (PDF/Obsidian/Multi-Ziel) | 1.7 | SVC, STU | mittel–hoch |
 | Migration-Inspector-UI | 1.10 | SVC, STU | mittel |
 | Secrets-Status-Seite (kein voller Vault) | 1.6 | SVC, STU | niedrig–mittel (s. Frage) |
@@ -352,7 +350,7 @@ Bitte beantworte diese, bevor wir Wellen B–D konkretisieren:
   erweitern (Scope-Disziplin laut `AGENTS.md`).
 - **Cloud-KI mit Welt-/Brain-/Life-Kontext** für irgendeine der Ideen — verstößt gegen die
   nicht-verhandelbare Datenschutzregel.
-- **Auto-Kanonisierung** von KI-Ausgaben (Faction-Sim, Generatoren, Sortierung) — immer
+- **Auto-Kanonisierung** von KI-Ausgaben (Faction-Sim, Generatoren) — immer
   Proposal→Review.
 - **Voller generischer Secret-Store** in der DB (siehe Frage 1).
 - **Zeitliche Schätzungen** — Aufwand wird hier technisch (Layer/Invasivität/Abhängigkeiten)
@@ -621,14 +619,10 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Kosten-Dashboard (1.16) | **In `/contracts` integrieren** (kein separates Admin-Dashboard). |
 | Kanon-Status (3.3) | Bestehenden `canonicalStatus` **erweitern** (prepared/played/discarded). |
 | Inventar (2.10) | **Gruppen-Treasury + Währung** (koppelt an Character-Sheet). |
-| KI-Sortierung (4.4) | Allgemeine Lebens-Kategorien ergänzen (`PersonalProjectCategory`), lokale RTX statt Heuristik. *(Annahme: inkl. Musik/Haushalt/Allgemein — kurz bestätigen.)* |
+| KI-Sortierung (4.4) | **Aus dem Backlog gestrichen** (Owner-Entscheidung 2026-06-30) — kein Kategorien-/LLM-Ausbau. |
 | Mobile-Portal (2.1) | **Bottom-Nav** als Standard. |
 | Tag-Modell (4.6/F1) | Zentrales `Tag` + `EntityTag`, additive Migration + Backfill + Dual-Write. |
-| Tag-Modell, Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
-
-**Eine offene Mini-Bestätigung:** KI-Sortierung „Allgemein kategorien“ wird als „zusätzliche
-allgemeine Kategorien (u. a. Musik, Haushalt, Allgemein)“ interpretiert. Falls anders gemeint,
-kurz melden — blockiert die Umsetzung nicht.
+| Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** weiterhin **keine** Produktcode-Änderung. Nächster Schritt = Orchestrator-Lauf gemäß
 Prompt; pro Arbeitspaket kleiner, getesteter Draft-PR.

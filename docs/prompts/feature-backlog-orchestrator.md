@@ -55,16 +55,14 @@ Arbeit startet.
 - Kosten-Dashboard: in /contracts integrieren (kein separates Admin-Dashboard).
 - Kanon-Status: bestehenden CanonicalStatus erweitern (prepared/played/discarded), kein neues Feld.
 - Inventar: Gruppen-Treasury + Waehrung (koppelt an Character-Sheet).
-- KI-Sortierung: allgemeine Lebens-Kategorien ergaenzen (PersonalProjectCategory), lokale RTX
-  statt Heuristik. Annahme: inkl. Musik/Haushalt/Allgemein.
 - Mobile-Portal: Bottom-Nav als Standard.
 - Tag-Modell: zentrales Tag + EntityTag, additive Migration + Backfill + Dual-Write.
 
 ## Non-negotiables (immer)
 - KI-Ausgaben = Proposal/Review, nie Auto-Apply an Kanon/Brain. AiRun/AiProposal/AiApplyLog
-  wiederverwenden (Faction-Sim, Generatoren, KI-Sortierung).
-- Brain/Welt/Life-Kontext NIE an Cloud-KI; RTX-only fuer Wissen. Faction-Sim, KI-Sortierung,
-  strukturierte Generatoren laufen lokal (RTX). privacyGuard.ts ist maßgeblich.
+  wiederverwenden (Faction-Sim, Generatoren).
+- Brain/Welt/Life-Kontext NIE an Cloud-KI; RTX-only fuer Wissen. Faction-Sim und strukturierte
+  Generatoren laufen lokal (RTX). privacyGuard.ts ist maßgeblich.
 - Portal filtert Sichtbarkeit server-seitig (permissions.ts/content-access.ts, pnpm test:security);
   kein dm_only-Leak. NEUE Portal-Views (Timeline, Graph, NPC-Liste, WorldEvents, Charaktersheet)
   muessen visibility-/secret-gefiltert sein.
@@ -165,8 +163,7 @@ C0c data-model (seriell, nach C0b): Quest-Lifecycle-Felder, strukturierter Statb
 
 ### Welle D — Ambitioniert / Rest (hoher Parallelismus, je Modul getrennt)
 D0 data-model (seriell): BugReport; MiniatureCollectionItem; DevIdea-Erweiterung (type/lifecycle:
-   existing/planned/broken/deprecated); PersonalProjectCategory += allgemeine Kategorien
-   (Musik/Haushalt/Allgemein); ggf. Import/Document-Modelle.
+   existing/planned/broken/deprecated); ggf. Import/Document-Modelle.
 Dann parallel (disjunkte Module):
 - D1 NL-Admin-Command-Center: Intent-Schema (Whitelist) + Resolver/Executor-Bridge + Palette/
   Bestaetigungs-UI + Audit. AI + SECURITY-Review. (RTX bevorzugt; bei Cloud nur Grammatik.)
@@ -177,17 +174,15 @@ Dann parallel (disjunkte Module):
 - D6 Bug-Center (Report-Form + Screenshot via @uwe/assets + Status). Synergie mit D5-Intake.
 - D7 Miniaturen-Sammlung + Fotovergleich-UI (Workshop erweitern, Sammlungs-Modell).
 - D8 Projekt-Dashboards (inkl. neue Kategorien) + /projects/[id]-Detail.
-- D9 KI-Sortierung via lokale RTX (LLM statt Heuristik) + allgemeine Kategorien. Owner:
-  capture-triage-service.ts. PRIVACY-Review (RTX-only).
-- D10 AI-Provider Modell-pro-Feature (AI-Gateway-UI). Owner: ai-gateway.
-- D11 (optional) Rollen pro Bereich (feingranulare Capabilities), wenn gewuenscht.
+- D9 AI-Provider Modell-pro-Feature (AI-Gateway-UI). Owner: ai-gateway.
+- D10 (optional) Rollen pro Bereich (feingranulare Capabilities), wenn gewuenscht.
 
 ## Subagent-Roster (spezialisiert; ein Domain pro Branch)
 - data-model-engineer  (Prisma-Modelle/Enums + Migration + server.ts-Exports; database-migration-review)
 - backend-service-engineer  (packages/database Services; uwe-feature-implementation)
 - studio-ui-engineer  (apps/studio UI/Server-Actions; react-next-ui)
 - portal-ui-engineer  (apps/portal player-safe Views; portal-player-view + auth-rbac-visibility)
-- ai-pipeline-engineer  (Generatoren/Faction-Sim/KI-Sortierung; ai-agent-proposal-workflow + local-first-privacy)
+- ai-pipeline-engineer  (Generatoren/Faction-Sim; ai-agent-proposal-workflow + local-first-privacy)
 - security-reviewer  (Privacy/Portal-Leak/Maintenance/NL-Commands; security-audit)
 - search-engineer  (cross-domain Suche; uwe-feature-implementation)
 - test-engineer  (Unit/Service/Security-Tests + e2e wo sinnvoll; ci-quality-gate)
@@ -205,8 +200,10 @@ Dann parallel (disjunkte Module):
 - C5/C9 -> ai-agent-proposal-workflow, local-first-privacy, dnd-content-consistency-check
 - C6/C7 -> uwe-feature-implementation, react-next-ui, portal-player-view
 - C11 -> dnd-content-consistency-check, image-studio-workflows (Labels)
-- D1/D9 -> ai-agent-proposal-workflow, local-first-privacy, security-audit
+- D1 -> ai-agent-proposal-workflow, local-first-privacy, security-audit
 - D3/D4/D5/D6/D7/D8 -> uwe-feature-implementation, react-next-ui
+- D9 (AI-Provider Modell-pro-Feature) -> ai-agent-proposal-workflow, local-first-privacy
+- D10 (Rollen pro Bereich, optional) -> auth-rbac-visibility, security-audit
 - alle data-model-Schritte -> database-migration-review
 - vor jedem PR -> ci-quality-gate
 
@@ -226,7 +223,7 @@ Dann parallel (disjunkte Module):
   next dev, vor Commit zuruecknehmen — siehe AGENTS.md).
 - Automatisiert: Service-/Permission-Tests; Security-Tests fuer Portal-Sichtbarkeit
   (pnpm test:security) bei jeder neuen Portal-Oberflaeche (Timeline/Graph/NPC-Liste/WorldEvents/
-  Charaktersheet); Privacy-Tests fuer Faction-Sim/KI-Sortierung (kein Cloud-Leak); Migration-
+  Charaktersheet); Privacy-Tests fuer Faction-Sim (kein Cloud-Leak); Migration-
   Tests/Backfill-Idempotenz fuer Tag-Modell.
 - Faction-Sim/Generatoren: Proposal-Erzeugung + Apply-/Undo-Pfad testen; kein Auto-Apply.
 - Maintenance-Mode (B7) und NL-Commands (D1): explizite AuthZ-/Bypass-/Audit-Tests.
@@ -259,7 +256,7 @@ NICHT zwei schema.prisma-Tasks gleichzeitig starten.
 - **Schema ist der Engpass.** Die strikte „erst ein data-model-Subagent, dann parallele
   Feature-Tracks“-Regel verhindert `schema.prisma`-Merge-Konflikte und hält trotzdem hohen
   Parallelismus (4–6 Tracks je Welle).
-- **Sicherheit zuerst** bei Faction-Sim, KI-Sortierung, NL-Command-Center und Notfallmodus —
-  jeweils Pflicht-Review durch `security-reviewer` + `pnpm test:security`.
+- **Sicherheit zuerst** bei Faction-Sim, NL-Command-Center und Notfallmodus — jeweils
+  Pflicht-Review durch `security-reviewer` + `pnpm test:security`.
 - **Entscheidungen sind gesperrt** ([../FEATURE_BACKLOG_PLAN.md](../FEATURE_BACKLOG_PLAN.md) §13);
   Subagenten setzen sie um, statt sie neu zu diskutieren.
