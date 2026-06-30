@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import {
   ADMIN_SEARCH_ENTITY_LABELS,
-  getAppRepository,
   prisma,
-  searchAdminEntities,
+  searchStudioCrossDomain,
 } from "@uwe/database/server";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import {
@@ -24,14 +23,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const [wikiResults, adminResults] = await Promise.all([
-    getAppRepository().search("dm", {
-      query,
-      limit: 8,
-      urlMode: "studio",
-    }),
-    searchAdminEntities(prisma, { query, limit: 6 }),
-  ]);
+  const { wiki: wikiResults, admin: adminResults } = await searchStudioCrossDomain(prisma, {
+    query,
+    wiki: { limit: 8, urlMode: "studio" },
+    admin: { limit: 6 },
+  });
 
   return NextResponse.json({
     results: [
