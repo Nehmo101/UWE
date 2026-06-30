@@ -40,6 +40,7 @@ export const PUBLIC_ASSET_ROUTES = [
 export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/health",
   "/api/health/public",
+  "/api/maintenance/status",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/forgot-password",
@@ -147,6 +148,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
 export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/health",
   "/api/health/public",
+  "/api/maintenance/status",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/setup",

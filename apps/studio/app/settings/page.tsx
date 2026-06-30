@@ -42,6 +42,7 @@ const TABS = [
   { id: "image-studio", label: "Image Studio" },
   { id: "mail", label: "Mail" },
   { id: "backup", label: "Backup" },
+  { id: "maintenance", label: "Notfallmodus" },
   { id: "status", label: "Systemstatus" },
 ] as const;
 
@@ -834,6 +835,47 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Speichern
               </button>
             </form>
+          )}
+
+          {activeTab === "maintenance" && (
+            <section className="uwe-form">
+              <h2>Owner-Notfallmodus</h2>
+              <p className="uwe-hint">
+                Sperrt Studio und/oder Portal für alle Nutzer außer Owner. Nützlich bei Wartung,
+                Migrationen oder Sicherheitsvorfällen.
+              </p>
+              <form action={updateSettingsAction} className="uwe-form">
+                <input type="hidden" name="tab" value="maintenance" />
+                <SettingToggleRow
+                  name="maintenanceMode"
+                  label="Wartungsmodus (Studio + Portal)"
+                  defaultChecked={settings.maintenance.maintenanceMode}
+                  hint="Aktiviert alle Sperren unten implizit."
+                />
+                <SettingToggleRow
+                  name="lockStudio"
+                  label="Studio sperren"
+                  defaultChecked={settings.maintenance.lockStudio}
+                />
+                <SettingToggleRow
+                  name="lockPortal"
+                  label="Portal sperren"
+                  defaultChecked={settings.maintenance.lockPortal}
+                />
+                <label>
+                  Hinweistext für Nutzer
+                  <textarea
+                    name="maintenanceMessage"
+                    rows={4}
+                    defaultValue={settings.maintenance.message}
+                    placeholder="UWE ist vorübergehend im Wartungsmodus."
+                  />
+                </label>
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+                  Speichern
+                </button>
+              </form>
+            </section>
           )}
 
           {activeTab === "status" && (

@@ -188,6 +188,14 @@ export async function updateSettingsAction(formData: FormData) {
         backgroundRemovalEnabled: parseBoolean(formData.get("imageStudioBgRemoval")),
       };
       break;
+    case "maintenance":
+      update.maintenance = {
+        maintenanceMode: parseBoolean(formData.get("maintenanceMode")),
+        lockStudio: parseBoolean(formData.get("lockStudio")),
+        lockPortal: parseBoolean(formData.get("lockPortal")),
+        message: String(formData.get("maintenanceMessage") || ""),
+      };
+      break;
     default:
       throw new Error(`Unknown settings tab: ${tab}`);
   }
