@@ -9,6 +9,7 @@ import {
   useDashboardLayout,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
+import { formatEuroFromCents } from "@uwe/database/server";
 import { STUDIO_TODAY_PAGE_KEY } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { TodayDashboardData } from "@/src/lib/today-dashboard";
@@ -37,39 +38,62 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
           <section className="uwe-v2-section">
             <h2 className="uwe-v2-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">
-              <span className="uwe-system-ampel-item" data-status={statusDot(data.systemOk)}>
+              <Link
+                href="/admin/status"
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.systemOk)}
+              >
                 UWE {data.systemLabel}
-              </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(data.dbOk)}>
+              </Link>
+              <Link
+                href="/hardware"
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.dbOk)}
+              >
                 DB {data.dbOk ? "OK" : "Fehler"}
-              </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(data.backupOk, true)}>
+              </Link>
+              <Link
+                href="/hardware"
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.backupOk, true)}
+              >
                 Backup {data.backupOk ? "OK" : "prüfen"}
-              </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(data.rtxReady, true)}>
+              </Link>
+              <Link
+                href="/system/rtx-connector"
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.rtxReady, true)}
+              >
                 RTX {data.rtxReady ? "bereit" : "offline"}
-              </span>
-              <span
+              </Link>
+              <Link
+                href="/life-brain"
                 className="uwe-system-ampel-item"
                 data-status={statusDot(data.brainEnabled, !data.brainEnabled)}
               >
                 Brain {data.brainEnabled ? "aktiv" : "aus"}
-              </span>
-              <span className="uwe-system-ampel-item" data-status={statusDot(data.mailOk, true)}>
+              </Link>
+              <Link
+                href="/mail"
+                className="uwe-system-ampel-item"
+                data-status={statusDot(data.mailOk, true)}
+              >
                 Mail {data.mailOk ? "OK" : "prüfen"}
-              </span>
-              <span
+              </Link>
+              <Link
+                href="/settings"
                 className="uwe-system-ampel-item"
                 data-status={statusDot(data.portalAuthRequired, !data.portalAuthRequired)}
               >
                 Portal {data.portalAuthRequired ? "Auth" : "offen"}
-              </span>
-              <span
+              </Link>
+              <Link
+                href="/hardware"
                 className="uwe-system-ampel-item"
                 data-status={statusDot(data.cloudflareOk, !data.cloudflareOk)}
               >
                 CF {data.cloudflareOk ? "OK" : "Tunnel"}
-              </span>
+              </Link>
             </div>
             {data.homelab.alerts.criticalCount > 0 && (
               <div className="uwe-form-error uwe-v2-section" role="alert">
@@ -128,10 +152,15 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
               <div className="uwe-today-card-list">
                 {data.lifeAdmin.recentCaptures.map((capture) => (
                   <article key={capture.id} className="uwe-today-card">
-                    <h3>{capture.title || "Ohne Titel"}</h3>
+                    <h3>
+                      <Link href={`/capture/${capture.id}`}>{capture.title || "Ohne Titel"}</Link>
+                    </h3>
                     <p>
                       {CAPTURE_TYPE_LABELS[capture.captureType]} ·{" "}
                       {DATE_FORMAT.format(capture.capturedAt)}
+                    </p>
+                    <p>
+                      <Link href={`/capture/${capture.id}`}>Triage →</Link>
                     </p>
                   </article>
                 ))}
@@ -140,7 +169,11 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
               <p className="uwe-dashboard-muted">Inbox ist leer — tippe + Capture.</p>
             )}
             <p>
-              <Link href="/capture">Zur Capture Inbox →</Link>
+              <Link href="/capture">
+                {data.lifeAdmin.inboxCaptureCount > 0
+                  ? `${data.lifeAdmin.inboxCaptureCount} triagieren →`
+                  : "Zur Capture Inbox →"}
+              </Link>
             </p>
           </section>
         );
@@ -152,13 +185,56 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
             <div className="uwe-today-card-list">
               {data.lifeAdmin.activeProjects.map((project) => (
                 <article key={project.id} className="uwe-today-card">
-                  <h3>{project.name}</h3>
+                  <h3>
+                    <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                  </h3>
                   <p>{project.nextAction || project.status}</p>
                 </article>
               ))}
             </div>
             <p>
               <Link href="/projects">Alle Projekte →</Link>
+            </p>
+          </section>
+        );
+      case "contracts":
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Verträge & Ausgaben</h2>
+            <p>
+              {data.lifeAdmin.contractsNeedingReview > 0
+                ? `${data.lifeAdmin.contractsNeedingReview} zur Prüfung`
+                : "Keine offenen Prüfungen"}
+            </p>
+            {data.lifeAdmin.contractCosts.activeCount > 0 && (
+              <p className="uwe-dashboard-muted">
+                ~{formatEuroFromCents(data.lifeAdmin.contractCosts.monthlyTotalCents)}/Monat ·{" "}
+                {formatEuroFromCents(data.lifeAdmin.contractCosts.yearlyTotalCents)}/Jahr (
+                {data.lifeAdmin.contractCosts.activeCount} aktiv)
+              </p>
+            )}
+            {data.lifeAdmin.contractAlerts.length > 0 ? (
+              <ul className="uwe-today-card-list">
+                {data.lifeAdmin.contractAlerts.slice(0, 3).map((alert) => (
+                  <li key={`${alert.contractId}-${alert.kind}`} className="uwe-today-card">
+                    <p>{alert.message}</p>
+                    {alert.dueDate && (
+                      <p>
+                        <Link
+                          href={`/mail/compose?kind=contract_reminder&sourceId=${alert.contractId}`}
+                        >
+                          Mail vorbereiten
+                        </Link>
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="uwe-dashboard-muted">Keine Fristen in den nächsten Wochen.</p>
+            )}
+            <p>
+              <Link href="/contracts">Verträge verwalten →</Link>
             </p>
           </section>
         );

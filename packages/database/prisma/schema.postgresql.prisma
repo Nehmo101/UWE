@@ -2002,6 +2002,7 @@ model PersonalProject {
   status      PersonalProjectStatus   @default(idea)
   category    PersonalProjectCategory @default(other)
   nextAction  String?                 @map("next_action")
+  nextActionDate DateTime?            @map("next_action_date")
   notes       String                  @default("")
   links       Json?
   costCents   Int?                    @map("cost_cents")
@@ -2037,6 +2038,7 @@ model WorkshopProject {
   resultPhotos     Json?               @map("result_photos")
   costCents        Int?                @map("cost_cents")
   nextAction       String?             @map("next_action")
+  nextActionDate   DateTime?           @map("next_action_date")
   notes            String              @default("")
   worldId          String?             @map("world_id")
   pageId           String?             @map("page_id")

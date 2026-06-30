@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAppRepository } from "@uwe/database/server";
+import {
+  ADMIN_SEARCH_ENTITY_LABELS,
+  getAppRepository,
+  prisma,
+  searchAdminEntities,
+} from "@uwe/database/server";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import {
   parseQuery,
@@ -19,19 +24,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const results = await getAppRepository().search("dm", {
-    query,
-    limit: 8,
-    urlMode: "studio",
-  });
+  const [wikiResults, adminResults] = await Promise.all([
+    getAppRepository().search("dm", {
+      query,
+      limit: 8,
+      urlMode: "studio",
+    }),
+    searchAdminEntities(prisma, { query, limit: 6 }),
+  ]);
 
   return NextResponse.json({
-    results: results.map((result) => ({
-      id: result.pageId,
-      label: result.title,
-      href: result.href,
-      group: "Seiten",
-      hint: `${PAGE_TYPE_LABELS[result.type]} · ${result.worldName}`,
-    })),
+    results: [
+      ...wikiResults.map((result) => ({
+        id: result.pageId,
+        label: result.title,
+        href: result.href,
+        group: "Seiten",
+        hint: `${PAGE_TYPE_LABELS[result.type]} · ${result.worldName}`,
+      })),
+      ...adminResults.map((item) => ({
+        id: item.id,
+        label: item.title,
+        href: item.href,
+        group: item.group,
+        hint: item.snippet ?? ADMIN_SEARCH_ENTITY_LABELS[item.entityType],
+      })),
+    ],
   });
 }

@@ -1072,6 +1072,7 @@ export type {
   PromoteCaptureToLifeBrainInput,
   PersonalBrainDocumentDetail,
   PersonalBrainFactDetail,
+  PersonalProjectDetail,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
   CreateWorkshopPaintRecipeInput,
@@ -1127,6 +1128,28 @@ export type {
   CaptureTriageOptions,
   CaptureTriageResult,
 } from "./capture-triage-service";
+
+export {
+  searchAdminEntities,
+  ADMIN_SEARCH_ENTITY_TYPES,
+  ADMIN_SEARCH_ENTITY_LABELS,
+} from "./admin-search-service";
+
+export type {
+  AdminSearchEntityType,
+  AdminSearchOptions,
+  AdminSearchResultItem,
+} from "./admin-search-service";
+
+export {
+  resolveAdminEntityLinks,
+  listResolvedAdminLinksForEntity,
+  ADMIN_LINK_RELATION_LABELS,
+  ADMIN_LINK_SOURCE_LABELS,
+  ADMIN_LINK_TARGET_LABELS,
+} from "./admin-entity-link-resolver";
+
+export type { ResolvedAdminEntityLink } from "./admin-entity-link-resolver";
 
 export type { ContractBillingInterval } from "./generated/prisma/client";
 

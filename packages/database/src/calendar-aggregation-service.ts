@@ -38,9 +38,9 @@ export type CalendarEventWithFeed = CalendarEvent & {
 export interface CalendarAggregationInput {
   events: CalendarEventWithFeed[];
   contractAlerts: ReturnType<typeof buildContractAlerts>;
-  workshops: Array<{ id: string; title: string; metadata: unknown }>;
+  workshops: Array<{ id: string; title: string; metadata: unknown; nextActionDate?: Date | null }>;
   hardware: Array<{ id: string; name: string; metadata: unknown }>;
-  personalProjects: Array<{ id: string; name: string; metadata: unknown }>;
+  personalProjects: Array<{ id: string; name: string; metadata: unknown; nextActionDate?: Date | null }>;
   sessions: Array<{
     id: string;
     title: string;
@@ -245,7 +245,9 @@ export function aggregateCalendarItems(
   }
 
   for (const workshop of input.workshops) {
-    const dueDate = readMetadataDate(workshop.metadata, ["dueDate", "deadline", "due_at"]);
+    const dueDate =
+      workshop.nextActionDate ??
+      readMetadataDate(workshop.metadata, ["dueDate", "deadline", "due_at"]);
     if (!dueDate || !isWithinHorizon(dueDate, now, horizonDays)) {
       continue;
     }
@@ -259,7 +261,7 @@ export function aggregateCalendarItems(
       source: "workshop",
       kind: "workshop_deadline",
       moduleLabel: "Werkstatt",
-      href: "/workshop",
+      href: `/workshop/${workshop.id}`,
       urgency: classifyUrgency(dueDate, now),
     });
   }
@@ -289,7 +291,8 @@ export function aggregateCalendarItems(
   }
 
   for (const project of input.personalProjects) {
-    const dueDate = readMetadataDate(project.metadata, ["dueDate", "deadline"]);
+    const dueDate =
+      project.nextActionDate ?? readMetadataDate(project.metadata, ["dueDate", "deadline"]);
     if (!dueDate || !isWithinHorizon(dueDate, now, horizonDays)) {
       continue;
     }
@@ -303,7 +306,7 @@ export function aggregateCalendarItems(
       source: "personal_project",
       kind: "personal",
       moduleLabel: "Projekt",
-      href: "/projects",
+      href: `/projects/${project.id}`,
       urgency: classifyUrgency(dueDate, now),
     });
   }
@@ -395,7 +398,7 @@ export class CalendarAggregationService {
       }),
       this.db.workshopProject.findMany({
         where: { status: { in: ["planned", "in_progress", "material_missing"] } },
-        select: { id: true, title: true, metadata: true },
+        select: { id: true, title: true, metadata: true, nextActionDate: true },
       }),
       this.db.hardwareDevice.findMany({
         where: { status: { in: ["active", "planned", "offline"] } },
@@ -403,7 +406,7 @@ export class CalendarAggregationService {
       }),
       this.db.personalProject.findMany({
         where: { status: { in: ["planned", "active", "blocked"] } },
-        select: { id: true, name: true, metadata: true },
+        select: { id: true, name: true, metadata: true, nextActionDate: true },
       }),
       options.worldId
         ? this.db.gameSession.findMany({

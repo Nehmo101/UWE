@@ -7,17 +7,24 @@ import {
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
+  ADMIN_SEARCH_ENTITY_LABELS,
   getAppRepository,
+  prisma,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
+  searchAdminEntities,
+  type AdminSearchResultItem,
   type SearchEntityFilter,
   type Visibility,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
+type SearchScope = "admin" | "worlds" | "all";
+
 interface Props {
   searchParams: Promise<{
     q?: string;
+    scope?: string;
     world?: string;
     type?: string;
     visibility?: string;
@@ -25,9 +32,23 @@ interface Props {
   }>;
 }
 
+function resolveScope(raw: string | undefined): SearchScope {
+  if (raw === "admin" || raw === "worlds") {
+    return raw;
+  }
+  return "all";
+}
+
 export default async function StudioSearchPage({ searchParams }: Props) {
-  const { q, world: worldSlug, type: entityFilter, visibility, campaign: campaignSlug } =
-    await searchParams;
+  const {
+    q,
+    scope: scopeParam,
+    world: worldSlug,
+    type: entityFilter,
+    visibility,
+    campaign: campaignSlug,
+  } = await searchParams;
+  const scope = resolveScope(scopeParam);
 
   const repo = getAppRepository();
   const [worlds, campaigns] = await Promise.all([
@@ -39,17 +60,31 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     ? campaigns.find((entry) => entry.slug === campaignSlug)
     : null;
 
-  const results = q?.trim()
-    ? await repo.search("dm", {
-        query: q,
-        worldSlug: worldSlug || undefined,
-        campaignId: selectedCampaign?.id,
-        entityFilter: entityFilter as SearchEntityFilter | undefined,
-        visibilityFilter: visibility ? [visibility as Visibility] : undefined,
-        urlMode: "studio",
-        limit: 100,
-      })
-    : [];
+  const trimmedQuery = q?.trim() ?? "";
+
+  const [results, adminResults]: [
+    Awaited<ReturnType<typeof repo.search>>,
+    AdminSearchResultItem[],
+  ] = await Promise.all([
+    trimmedQuery && scope !== "admin"
+      ? repo.search("dm", {
+          query: trimmedQuery,
+          worldSlug: worldSlug || undefined,
+          campaignId: selectedCampaign?.id,
+          entityFilter: entityFilter as SearchEntityFilter | undefined,
+          visibilityFilter: visibility ? [visibility as Visibility] : undefined,
+          urlMode: "studio",
+          limit: 100,
+        })
+      : Promise.resolve([]),
+    trimmedQuery && scope !== "worlds"
+      ? searchAdminEntities(prisma, { query: trimmedQuery, limit: 50 })
+      : Promise.resolve([]),
+  ]);
+
+  const hasWikiResults = results.length > 0;
+  const hasAdminResults = adminResults.length > 0;
+  const hasAnyResults = hasWikiResults || hasAdminResults;
 
   return (
     <StudioShell
@@ -64,6 +99,10 @@ export default async function StudioSearchPage({ searchParams }: Props) {
             ))}
           </ul>
           <p className="uwe-dashboard-muted" style={{ fontSize: "0.75rem", marginTop: "1rem" }}>
+            Persönliche Admin-Daten (Capture, Projekte, Verträge, …) erscheinen im Bereich
+            „Studio-only“.
+          </p>
+          <p className="uwe-dashboard-muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
             Als DM siehst du alle Inhalte inkl. Entwürfe und GM-only Seiten.
           </p>
           {!worldSlug && (
@@ -76,13 +115,27 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     >
       <PageHeader
         title="Globale Suche"
-        summary="Durchsuche Seiten, Inhaltsblöcke, NPCs, Orte, Tags und Aliase über alle Welten."
+        summary="Durchsuche Wiki-Inhalte und persönliche Admin-Daten — Capture, Projekte, Verträge und mehr."
       />
-      <GlobalSearchForm action="/search" query={q ?? ""} placeholder="Alles durchsuchen…" />
+      <GlobalSearchForm
+        action="/search"
+        query={q ?? ""}
+        placeholder="Alles durchsuchen…"
+        extraFields={<input type="hidden" name="scope" value={scope} />}
+      />
       <SearchFilterBar
         action="/search"
         query={q}
         filters={[
+          {
+            name: "scope",
+            label: "Bereich",
+            value: scope === "all" ? "" : scope,
+            options: [
+              { value: "worlds", label: "Welten / Wiki" },
+              { value: "admin", label: "Daily Admin OS" },
+            ],
+          },
           {
             name: "world",
             label: "Welt",
@@ -123,13 +176,61 @@ export default async function StudioSearchPage({ searchParams }: Props) {
         ]}
       />
 
-      <SearchResultsList
-        results={results}
-        query={q}
-        showWorld={!worldSlug}
-        showVisibility
-        showLabelActions
-      />
+      {!trimmedQuery ? (
+        <SearchResultsList results={[]} query={q} showWorld={!worldSlug} showVisibility showLabelActions />
+      ) : !hasAnyResults ? (
+        <p className="uwe-dashboard-muted">Keine Treffer für „{trimmedQuery}“.</p>
+      ) : (
+        <>
+          {hasWikiResults && scope !== "admin" && (
+            <SearchResultsList
+              results={results}
+              query={q}
+              showWorld={!worldSlug}
+              showVisibility
+              showLabelActions
+            />
+          )}
+
+          {hasAdminResults && scope !== "worlds" && (
+            <section className="uwe-v2-section">
+              <h2 className="uwe-v2-section-title">
+                Daily Admin OS{" "}
+                <span className="uwe-badge uwe-badge-muted" style={{ fontSize: "0.75rem" }}>
+                  Studio-only
+                </span>
+              </h2>
+              <p className="uwe-search-count">
+                {adminResults.length} Treffer für „{trimmedQuery}&ldquo;
+              </p>
+              <ul className="uwe-search-results">
+                {adminResults.map((item) => (
+                  <li key={`${item.entityType}-${item.id}`} className="uwe-search-result">
+                    <article>
+                      <header className="uwe-search-result-header">
+                        <h2>
+                          <Link href={item.href}>{item.title}</Link>
+                        </h2>
+                        <div className="uwe-search-result-badges">
+                          <span className="uwe-badge uwe-badge-muted">
+                            {ADMIN_SEARCH_ENTITY_LABELS[item.entityType]}
+                          </span>
+                        </div>
+                      </header>
+                      <div className="uwe-search-result-meta">
+                        <span>{item.group}</span>
+                      </div>
+                      {item.snippet && (
+                        <p className="uwe-search-result-snippet">{item.snippet}</p>
+                      )}
+                    </article>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
+      )}
     </StudioShell>
   );
 }

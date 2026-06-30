@@ -5,6 +5,7 @@ import type {
   WorkshopProjectType,
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import { createImageStudioService } from "./integrations-service";
 import {
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
@@ -24,6 +25,7 @@ export type CaptureTriageAction =
   | "to_hardware_device"
   | "to_contract"
   | "to_life_brain"
+  | "to_image_studio"
   | "archive"
   | "delete";
 
@@ -41,7 +43,7 @@ export type CaptureProposalStatus = "draft" | "accepted" | "rejected";
 export interface CaptureAiProposal {
   status: CaptureProposalStatus;
   generatedAt: string;
-  source: "heuristic";
+  source: "heuristic" | "rtx";
   suggestedCategory: string;
   suggestedTags: string[];
   suggestedTarget: CaptureProposalTarget;
@@ -324,6 +326,13 @@ export class CaptureTriageService {
     return capture;
   }
 
+  async applyAiProposal(captureId: string, proposal: CaptureAiProposal): Promise<void> {
+    const capture = await this.getCaptureOrThrow(captureId);
+    await this.lifeAdmin.updateCapture(captureId, {
+      metadata: mergeCaptureMetadata(capture, { aiProposal: proposal }),
+    });
+  }
+
   async ensureAiProposal(captureId: string): Promise<CaptureAiProposal> {
     const capture = await this.getCaptureOrThrow(captureId);
     const existing = parseCaptureAiProposal(capture);
@@ -379,6 +388,8 @@ export class CaptureTriageService {
         return this.promoteToContract(capture);
       case "to_life_brain":
         return this.promoteToLifeBrain(capture, options);
+      case "to_image_studio":
+        return this.promoteToImageStudio(capture);
       default: {
         const _exhaustive: never = action;
         throw new Error(`Unbekannte Triage-Aktion: ${String(_exhaustive)}`);
@@ -434,7 +445,33 @@ export class CaptureTriageService {
       captureId: capture.id,
       targetType: "personal_project",
       targetId: project.id,
-      redirectPath: "/projects",
+      redirectPath: `/projects/${project.id}`,
+    };
+  }
+
+  private async promoteToImageStudio(capture: CaptureEntry): Promise<CaptureTriageResult> {
+    const imageStudio = createImageStudioService(this.db);
+    const project = await imageStudio.createProject({
+      title: capture.title || "Capture-Bild",
+      prompt: capture.content || null,
+      metadata: {
+        sourceCaptureId: capture.id,
+        storageKey: capture.storageKey,
+        captureType: capture.captureType,
+      },
+    });
+
+    await this.lifeAdmin.updateCapture(capture.id, {
+      status: "linked",
+      metadata: mergeCaptureMetadata(capture, {
+        imageStudioProjectId: project.id,
+      }),
+    });
+
+    return {
+      action: "to_image_studio",
+      captureId: capture.id,
+      redirectPath: `/image-studio?project=${project.id}`,
     };
   }
 
@@ -462,7 +499,7 @@ export class CaptureTriageService {
       captureId: capture.id,
       targetType: "workshop_project",
       targetId: workshop.id,
-      redirectPath: "/workshop",
+      redirectPath: `/workshop/${workshop.id}`,
     };
   }
 
@@ -645,6 +682,7 @@ export const CAPTURE_TRIAGE_ACTION_LABELS: Record<CaptureTriageAction, string> =
   to_hardware_device: "Zu Hardware-Gerät hängen",
   to_contract: "Zu Vertrag machen",
   to_life_brain: "Ins Life Brain übernehmen",
+  to_image_studio: "In Image Studio öffnen",
   archive: "Archivieren",
   delete: "Löschen",
 };

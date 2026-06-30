@@ -44,6 +44,7 @@ import {
   type PersonalBrainSearchOptions,
   type PersonalBrainSearchResult,
 } from "./personal-brain-search";
+import { endOfWeek } from "./calendar-aggregation-service";
 
 export type {
   CaptureEntry,
@@ -226,6 +227,7 @@ export interface CreatePersonalProjectInput {
   status?: PersonalProjectStatus;
   category?: PersonalProjectCategory;
   nextAction?: string | null;
+  nextActionDate?: Date | null;
   notes?: string;
   links?: Array<{ label: string; url: string }> | null;
   costCents?: number | null;
@@ -250,6 +252,7 @@ export interface CreateWorkshopProjectInput {
   resultPhotos?: unknown;
   costCents?: number | null;
   nextAction?: string | null;
+  nextActionDate?: Date | null;
   notes?: string;
   worldId?: string | null;
   pageId?: string | null;
@@ -405,6 +408,12 @@ export interface CreateGeneratorOutputInput {
   tone?: string | null;
 }
 
+export interface PersonalProjectDetail {
+  project: NonNullable<Awaited<ReturnType<LifeAdminService["getPersonalProject"]>>>;
+  linkedCaptures: Awaited<ReturnType<LifeAdminService["listLinkedCapturesForTarget"]>>;
+  entityLinks: Awaited<ReturnType<LifeAdminService["listLinksForSource"]>>;
+}
+
 export interface TodayAdminSummary {
   inboxCaptureCount: number;
   activeProjectCount: number;
@@ -419,6 +428,8 @@ export interface TodayAdminSummary {
   activeProjects: Awaited<ReturnType<LifeAdminService["listPersonalProjects"]>>;
   activeWorkshops: Awaited<ReturnType<LifeAdminService["listWorkshopProjects"]>>;
   workshopOpenTasks: Awaited<ReturnType<LifeAdminService["listWorkshopOpenTasks"]>>;
+  duePersonalProjects: Awaited<ReturnType<LifeAdminService["listPersonalProjects"]>>;
+  dueWorkshopProjects: Awaited<ReturnType<LifeAdminService["listWorkshopProjects"]>>;
 }
 
 export class LifeAdminService {
@@ -605,6 +616,7 @@ export class LifeAdminService {
     status?: PersonalProjectStatus | PersonalProjectStatus[];
     category?: PersonalProjectCategory;
     limit?: number;
+    dueBefore?: Date;
   } = {}) {
     const statusFilter = options.status
       ? Array.isArray(options.status)
@@ -616,8 +628,16 @@ export class LifeAdminService {
       where: {
         status: statusFilter,
         category: options.category,
+        ...(options.dueBefore
+          ? {
+              nextActionDate: {
+                not: null,
+                lte: options.dueBefore,
+              },
+            }
+          : {}),
       },
-      orderBy: [{ updatedAt: "desc" }],
+      orderBy: [{ nextActionDate: "asc" }, { updatedAt: "desc" }],
       take: options.limit ?? 50,
     });
   }
@@ -630,6 +650,7 @@ export class LifeAdminService {
         status: input.status ?? "idea",
         category: input.category ?? "other",
         nextAction: input.nextAction ?? undefined,
+        nextActionDate: input.nextActionDate ?? undefined,
         notes: input.notes ?? "",
         links: toPrismaJsonValue(input.links),
         costCents: input.costCents ?? undefined,
@@ -644,6 +665,20 @@ export class LifeAdminService {
     return this.db.personalProject.findUnique({ where: { id } });
   }
 
+  async getPersonalProjectDetail(id: string): Promise<PersonalProjectDetail | null> {
+    const project = await this.getPersonalProject(id);
+    if (!project) {
+      return null;
+    }
+
+    const [linkedCaptures, entityLinks] = await Promise.all([
+      this.listLinkedCapturesForTarget("personal_project", id),
+      this.listLinksForSource("personal_project", id),
+    ]);
+
+    return { project, linkedCaptures, entityLinks };
+  }
+
   async updatePersonalProject(id: string, input: Partial<CreatePersonalProjectInput>) {
     return this.db.personalProject.update({
       where: { id },
@@ -653,6 +688,7 @@ export class LifeAdminService {
         status: input.status,
         category: input.category,
         nextAction: input.nextAction ?? undefined,
+        nextActionDate: input.nextActionDate === undefined ? undefined : input.nextActionDate,
         notes: input.notes,
         links: input.links === undefined ? undefined : toPrismaJsonValue(input.links),
         costCents: input.costCents ?? undefined,
@@ -679,6 +715,7 @@ export class LifeAdminService {
     status?: WorkshopStatus | WorkshopStatus[];
     projectType?: WorkshopProjectType;
     limit?: number;
+    dueBefore?: Date;
   } = {}) {
     const statusFilter = options.status
       ? Array.isArray(options.status)
@@ -690,8 +727,16 @@ export class LifeAdminService {
       where: {
         status: statusFilter,
         projectType: options.projectType,
+        ...(options.dueBefore
+          ? {
+              nextActionDate: {
+                not: null,
+                lte: options.dueBefore,
+              },
+            }
+          : {}),
       },
-      orderBy: [{ updatedAt: "desc" }],
+      orderBy: [{ nextActionDate: "asc" }, { updatedAt: "desc" }],
       take: options.limit ?? 50,
       include: {
         world: { select: { slug: true, name: true } },
@@ -780,6 +825,7 @@ export class LifeAdminService {
         resultPhotos: toPrismaJsonValue(input.resultPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
+        nextActionDate: input.nextActionDate ?? undefined,
         notes: input.notes ?? "",
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
@@ -818,6 +864,7 @@ export class LifeAdminService {
         resultPhotos: input.resultPhotos === undefined ? undefined : toPrismaJsonValue(input.resultPhotos),
         costCents: input.costCents ?? undefined,
         nextAction: input.nextAction ?? undefined,
+        nextActionDate: input.nextActionDate === undefined ? undefined : input.nextActionDate,
         notes: input.notes,
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
@@ -1341,6 +1388,13 @@ export class LifeAdminService {
     targetType: "personal_brain_document" | "personal_brain_fact",
     targetId: string,
   ) {
+    return this.listLinkedCapturesForTarget(targetType, targetId);
+  }
+
+  async listLinkedCapturesForTarget(
+    targetType: AdminLinkTargetType,
+    targetId: string,
+  ) {
     const links = await this.db.adminEntityLink.findMany({
       where: {
         targetType,
@@ -1672,6 +1726,8 @@ export class LifeAdminService {
       activeProjects,
       activeWorkshops,
       workshopOpenTasks,
+      duePersonalProjects,
+      dueWorkshopProjects,
     ] = await Promise.all([
       this.db.captureEntry.count({ where: { status: "inbox" } }),
       this.db.personalProject.count({
@@ -1694,6 +1750,16 @@ export class LifeAdminService {
         limit: 5,
       }),
       this.listWorkshopOpenTasks(8),
+      this.listPersonalProjects({
+        status: ["active", "planned", "blocked"],
+        limit: 8,
+        dueBefore: endOfWeek(new Date()),
+      }),
+      this.listWorkshopProjects({
+        status: ["in_progress", "material_missing", "planned"],
+        limit: 8,
+        dueBefore: endOfWeek(new Date()),
+      }),
     ]);
 
     return {
@@ -1710,6 +1776,8 @@ export class LifeAdminService {
       activeProjects,
       activeWorkshops,
       workshopOpenTasks,
+      duePersonalProjects,
+      dueWorkshopProjects,
     };
   }
 }

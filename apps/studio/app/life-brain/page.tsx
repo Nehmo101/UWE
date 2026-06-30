@@ -7,13 +7,21 @@ import {
   PERSONAL_BRAIN_CATEGORY_LABELS,
   prisma,
 } from "@uwe/database/server";
+import { LifeBrainIndexPanel } from "@/components/life-brain/LifeBrainIndexPanel";
+import { LifeBrainSearchPanel } from "@/components/life-brain/LifeBrainSearchPanel";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   createLifeBrainDocumentAction,
   createLifeBrainFactAction,
-  deleteLifeBrainDocumentAction,
-  deleteLifeBrainFactAction,
 } from "../life-admin-actions";
+
+function truncateContent(text: string, maxLength = 160): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, maxLength - 1)}…`;
+}
 
 export default async function LifeBrainPage() {
   const service = createLifeAdminService(prisma);
@@ -31,6 +39,9 @@ export default async function LifeBrainPage() {
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
+
+      <LifeBrainIndexPanel />
+      <LifeBrainSearchPanel />
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Neues Dokument</h2>
@@ -101,19 +112,18 @@ export default async function LifeBrainPage() {
             <div className="uwe-today-card-list">
               {documents.map((doc) => (
                 <article key={doc.id} className="uwe-today-card">
-                  <h3>{doc.title}</h3>
+                  <h3>
+                    <Link href={`/life-brain/documents/${doc.id}`}>{doc.title}</Link>
+                  </h3>
                   <p className="uwe-dashboard-muted">
                     {doc.category ? PERSONAL_BRAIN_CATEGORY_LABELS[doc.category] ?? doc.category : "Allgemein"}
                     {parseStringArray(doc.tags).length > 0 &&
                       ` · ${parseStringArray(doc.tags).join(", ")}`}
                   </p>
-                  {doc.content && <p>{doc.content}</p>}
-                  <form action={deleteLifeBrainDocumentAction}>
-                    <input type="hidden" name="id" value={doc.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-                      Löschen
-                    </button>
-                  </form>
+                  {doc.content && <p>{truncateContent(doc.content)}</p>}
+                  <p>
+                    <Link href={`/life-brain/documents/${doc.id}`}>Details →</Link>
+                  </p>
                 </article>
               ))}
             </div>
@@ -124,19 +134,18 @@ export default async function LifeBrainPage() {
             <div className="uwe-today-card-list">
               {facts.map((fact) => (
                 <article key={fact.id} className="uwe-today-card">
-                  <h3>{fact.title}</h3>
+                  <h3>
+                    <Link href={`/life-brain/facts/${fact.id}`}>{fact.title}</Link>
+                  </h3>
                   <p className="uwe-dashboard-muted">
                     {fact.factType}
                     {parseStringArray(fact.tags).length > 0 &&
                       ` · ${parseStringArray(fact.tags).join(", ")}`}
                   </p>
-                  {fact.content && <p>{fact.content}</p>}
-                  <form action={deleteLifeBrainFactAction}>
-                    <input type="hidden" name="id" value={fact.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-                      Löschen
-                    </button>
-                  </form>
+                  {fact.content && <p>{truncateContent(fact.content)}</p>}
+                  <p>
+                    <Link href={`/life-brain/facts/${fact.id}`}>Details →</Link>
+                  </p>
                 </article>
               ))}
             </div>

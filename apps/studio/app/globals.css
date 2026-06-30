@@ -908,3 +908,9 @@ body {
   font-size: 0.85rem;
   margin: 0;
 }
+
+@media (max-width: 767px) {
+  .studio-main-with-bottom-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}

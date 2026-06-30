@@ -6,7 +6,9 @@ import {
   PERSONAL_BRAIN_CATEGORY_LABELS,
   prisma,
 } from "@uwe/database/server";
+import { AdminEntityLinksPanel } from "@/components/admin/AdminEntityLinksPanel";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { indexLifeBrainDocumentAction } from "../../../life-brain-actions";
 import {
   deleteLifeBrainDocumentAction,
   updateLifeBrainDocumentTagsAction,
@@ -83,7 +85,9 @@ export default async function LifeBrainDocumentDetailPage({ params }: Props) {
             <ul className="uwe-today-card-list">
               {linkedCaptures.map((capture) => (
                 <li key={capture.id} className="uwe-today-card">
-                  <strong>{capture.title}</strong>
+                  <strong>
+                    <Link href={`/capture/${capture.id}`}>{capture.title || "Capture"}</Link>
+                  </strong>
                   <p className="uwe-dashboard-muted">
                     {CAPTURE_TYPE_LABELS[capture.captureType]} ·{" "}
                     {DATE_FORMAT.format(capture.capturedAt)}
@@ -96,12 +100,23 @@ export default async function LifeBrainDocumentDetailPage({ params }: Props) {
                       </a>
                     </p>
                   )}
-                  <Link href="/capture">Capture-Inbox</Link>
                 </li>
               ))}
             </ul>
           </section>
         )}
+
+        <AdminEntityLinksPanel sourceType="personal_brain_document" sourceId={document.id} />
+
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Indexierung</h2>
+          <form action={indexLifeBrainDocumentAction}>
+            <input type="hidden" name="documentId" value={document.id} />
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+              Embedding neu erzeugen
+            </button>
+          </form>
+        </section>
 
         <section className="uwe-v2-section">
           <h2 className="uwe-v2-section-title">Tags bearbeiten</h2>

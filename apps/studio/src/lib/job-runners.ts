@@ -5,6 +5,9 @@ import {
   createAiReviewService,
   createAiRunServiceFromClient,
   createBrainStoreService,
+  buildCaptureAiProposal,
+  createCaptureTriageService,
+  createLifeAdminService,
   createMailService,
   createPersonalBrainService,
   createPrismaClient,
@@ -28,6 +31,8 @@ import {
   reindexPersonalBrain,
   resolveAiBrainSettings,
   runBrainAction,
+  buildRtxCaptureProposalPrompt,
+  parseRtxCaptureProposalResponse,
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
@@ -355,6 +360,56 @@ async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<str
   };
 }
 
+async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const payload = (ctx.job.payload ?? {}) as { captureId?: string; useMock?: boolean };
+  const captureId = payload.captureId;
+  if (!captureId) {
+    throw new Error("captureId fehlt im Capture-Triage-Job.");
+  }
+
+  const lifeAdmin = createLifeAdminService(prisma);
+  const capture = await lifeAdmin.getCapture(captureId);
+  if (!capture) {
+    throw new Error(`Capture ${captureId} nicht gefunden.`);
+  }
+
+  const fallback = buildCaptureAiProposal(capture);
+  const prompt = buildRtxCaptureProposalPrompt({
+    title: capture.title,
+    content: capture.content,
+    captureType: capture.captureType,
+    url: capture.url,
+  });
+
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "RTX-Klassifikation…");
+  await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    throw new Error("Capture-Triage: job.userId fehlt — Gateway-Kontext nicht verfügbar.");
+  }
+
+  const { executeAiPrompt } = await import("./ai-prompt-handlers");
+  const result = await executeAiPrompt(
+    {
+      prompt,
+      providerMode: "local_rtx",
+      contextMode: "general_chat",
+      useMock: payload.useMock ?? process.env.AI_USE_MOCK === "true",
+    },
+    gatewayUser,
+  );
+
+  if (result.kind === "deferred") {
+    throw new Error("RTX offline — Capture-Vorschlag wird erneut versucht.");
+  }
+
+  const proposal = parseRtxCaptureProposalResponse(result.text, fallback);
+  await createCaptureTriageService(prisma).applyAiProposal(captureId, proposal);
+  await ctx.jobs.updateProgress(ctx.jobId, 100, "Capture-Vorschlag aktualisiert");
+  return { captureId, source: proposal.source, suggestedTarget: proposal.suggestedTarget };
+}
+
 export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
   const payload = (ctx.job.payload ?? {}) as AiRunJobPayload &
     BrainActionJobPayload &
@@ -364,6 +419,9 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
   }
   if (payload.actionId) {
     return runBrainActionJob(ctx);
+  }
+  if ((payload as { captureTriageProposal?: boolean; captureId?: string }).captureTriageProposal) {
+    return runCaptureTriageProposalJob(ctx);
   }
   if (!payload.taskType || !payload.worldSlug || !payload.pageSlug || !payload.providerId || !payload.model) {
     throw new Error("KI-Job-Payload unvollständig.");

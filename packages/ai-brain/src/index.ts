@@ -19,6 +19,10 @@ import type {
   GenerateTextResult,
 } from "./types";
 
+export {
+  buildRtxCaptureProposalPrompt,
+  parseRtxCaptureProposalResponse,
+} from "./capture-triage/rtx-proposal";
 export * from "./types";
 export { buildAiContext, buildAiContextBySlug, listSessionsForBrain } from "./context/context-builder";
 export {
