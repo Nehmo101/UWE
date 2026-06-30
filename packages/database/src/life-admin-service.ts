@@ -5,6 +5,7 @@ import type {
   CaptureStatus,
   CaptureType,
   ContractBillingInterval,
+  ContractExpenseSource,
   ContractExpenseType,
   ContractStatus,
   HardwareStatus,
@@ -45,6 +46,14 @@ import {
   type PersonalBrainSearchResult,
 } from "./personal-brain-search";
 import { endOfWeek } from "./calendar-aggregation-service";
+import {
+  buildAiUsageContractName,
+  createAiUsageRollupService,
+  resolveAiUsagePeriodBounds,
+  usdToEuroCents,
+  type AiUsageRollupPeriod,
+  type AiUsageRollupSummary,
+} from "./ai-usage-rollup-service";
 
 export type {
   CaptureEntry,
@@ -306,6 +315,7 @@ export interface CreateContractExpenseInput {
   vendor?: string;
   status?: ContractStatus;
   expenseType?: ContractExpenseType;
+  source?: ContractExpenseSource;
   billingInterval?: ContractBillingInterval;
   categoryLabel?: string;
   amountCents?: number | null;
@@ -1096,6 +1106,7 @@ export class LifeAdminService {
 
   async listContractExpenses(options: {
     status?: ContractStatus | ContractStatus[];
+    source?: ContractExpenseSource;
     limit?: number;
   } = {}) {
     const statusFilter = options.status
@@ -1105,7 +1116,10 @@ export class LifeAdminService {
       : undefined;
 
     return this.db.contractExpense.findMany({
-      where: { status: statusFilter },
+      where: {
+        status: statusFilter,
+        ...(options.source ? { source: options.source } : {}),
+      },
       orderBy: [{ renewalDate: "asc" }, { updatedAt: "desc" }],
       take: options.limit ?? 50,
     });
@@ -1118,6 +1132,7 @@ export class LifeAdminService {
         vendor: input.vendor ?? "",
         status: input.status ?? "active",
         expenseType: input.expenseType ?? "other",
+        source: input.source ?? "manual",
         billingInterval: input.billingInterval ?? "monthly",
         categoryLabel: input.categoryLabel ?? "",
         amountCents: input.amountCents ?? undefined,
@@ -1146,6 +1161,7 @@ export class LifeAdminService {
         vendor: input.vendor,
         status: input.status,
         expenseType: input.expenseType,
+        source: input.source,
         billingInterval: input.billingInterval,
         categoryLabel: input.categoryLabel,
         amountCents: input.amountCents ?? undefined,
@@ -1172,6 +1188,69 @@ export class LifeAdminService {
       },
     });
     return this.db.contractExpense.delete({ where: { id } });
+  }
+
+  async getAiUsageCostRollups(options: {
+    period?: AiUsageRollupPeriod;
+  } = {}): Promise<AiUsageRollupSummary> {
+    return createAiUsageRollupService(this.db).getRollupSummary({
+      period: options.period ?? "current_month",
+    });
+  }
+
+  async syncAiUsageContractExpense(options: { period?: AiUsageRollupPeriod } = {}) {
+    const period = options.period ?? "current_month";
+    const bounds = resolveAiUsagePeriodBounds(period);
+    const rollup = await createAiUsageRollupService(this.db).getRollupSummary({
+      since: bounds.since,
+      until: bounds.until,
+    });
+    const name = buildAiUsageContractName(bounds.periodLabel);
+    const amountCents = usdToEuroCents(rollup.estimatedCostUsd);
+    const metadata = {
+      periodKey: bounds.periodLabel,
+      period,
+      requestCount: rollup.requestCount,
+      inputTokens: rollup.inputTokens,
+      outputTokens: rollup.outputTokens,
+      estimatedCostUsd: rollup.estimatedCostUsd,
+      syncedAt: new Date().toISOString(),
+    };
+
+    const existing = await this.db.contractExpense.findFirst({
+      where: { source: "ai_usage", name },
+    });
+
+    if (existing) {
+      return this.db.contractExpense.update({
+        where: { id: existing.id },
+        data: {
+          amountCents,
+          status: amountCents > 0 ? "active" : "archived",
+          categoryLabel: "KI / Cloud",
+          notes:
+            "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). RTX-Läufe sind 0 USD.",
+          metadata: toPrismaJsonValue(metadata),
+        },
+      });
+    }
+
+    return this.db.contractExpense.create({
+      data: {
+        name,
+        vendor: "Cloud-KI (Schätzung)",
+        status: amountCents > 0 ? "active" : "archived",
+        expenseType: "software",
+        source: "ai_usage",
+        billingInterval: "monthly",
+        categoryLabel: "KI / Cloud",
+        amountCents,
+        startDate: bounds.since,
+        notes:
+          "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). RTX-Läufe sind 0 USD.",
+        metadata: toPrismaJsonValue(metadata),
+      },
+    });
   }
 
   async listHardwareDevices(options: {

@@ -225,17 +225,22 @@ export {
   resolveStressScale,
 } from "./perf-budgets";
 export {
+  backfillEntityTagsFromJson,
   canonicalizeTag,
   collectTagInventory,
   createTagService,
   findSimilarTagGroups,
   findUnusedTags,
+  getTagCoverageStats,
   mergeTags,
   normalizeTagKey,
   suggestTagMerges,
 } from "./tag-service";
 export type {
+  BackfillEntityTagsResult,
   SimilarTagGroup,
+  TagCoverageStats,
+  TagCoverageTypeStats,
   TagEntityType,
   TagInventoryEntry,
   TagMergeResult,
@@ -797,6 +802,13 @@ export {
   resolveLocalOnlyMode,
 } from "./settings-service";
 
+export {
+  evaluateMaintenanceGate,
+  resolveMaintenanceGateContext,
+} from "./maintenance-gate";
+
+export type { MaintenanceGateContext, MaintenanceGateInput } from "./maintenance-gate";
+
 export type { SystemSettingsSnapshot } from "./settings-service";
 
 export {
@@ -1152,6 +1164,22 @@ export {
 export type { ResolvedAdminEntityLink } from "./admin-entity-link-resolver";
 
 export type { ContractBillingInterval } from "./generated/prisma/client";
+
+export {
+  buildAiUsageContractName,
+  createAiUsageRollupService,
+  formatUsdAmount,
+  resolveAiUsagePeriodBounds,
+  resolveUsdToEuroRate,
+  usdToEuroCents,
+  AiUsageRollupService,
+} from "./ai-usage-rollup-service";
+export type {
+  AiUsageFeatureRollup,
+  AiUsageRollupPeriod,
+  AiUsageRollupSummary,
+  AiUsageUserRollup,
+} from "./ai-usage-rollup-service";
 
 export {
   buildContractAlerts,

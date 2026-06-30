@@ -7,33 +7,175 @@ import {
   ContractStatusEnum,
   createLifeAdminService,
   formatEuroFromCents,
+  formatUsdAmount,
   prisma,
   summarizeContractCosts,
   CONTRACT_STATUS_LABELS,
+  type AiUsageRollupPeriod,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { requireStudioAccess } from "@/src/lib/auth";
 import {
   createContractAction,
   deleteContractAction,
+  syncAiUsageContractAction,
   updateContractAction,
 } from "../life-admin-actions";
 
-export default async function ContractsPage() {
-  const contracts = await createLifeAdminService(prisma).listContractExpenses({ limit: 200 });
-  const costs = summarizeContractCosts(contracts);
+const AI_PERIOD_OPTIONS: Array<{ value: AiUsageRollupPeriod; label: string }> = [
+  { value: "current_month", label: "Aktueller Monat" },
+  { value: "last_30_days", label: "Letzte 30 Tage" },
+  { value: "current_year", label: "Aktuelles Jahr" },
+];
+
+function resolveAiPeriod(value: string | undefined): AiUsageRollupPeriod {
+  if (value === "last_30_days" || value === "current_year") {
+    return value;
+  }
+  return "current_month";
+}
+
+type Props = {
+  searchParams: Promise<{ period?: string; aiSynced?: string }>;
+};
+
+export default async function ContractsPage({ searchParams }: Props) {
+  await requireStudioAccess();
+
+  const { period: periodParam, aiSynced } = await searchParams;
+  const aiPeriod = resolveAiPeriod(periodParam);
+  const lifeAdmin = createLifeAdminService(prisma);
+
+  const [manualContracts, aiUsageContracts, aiRollup] = await Promise.all([
+    lifeAdmin.listContractExpenses({ source: "manual", limit: 200 }),
+    lifeAdmin.listContractExpenses({ source: "ai_usage", limit: 12 }),
+    lifeAdmin.getAiUsageCostRollups({ period: aiPeriod }),
+  ]);
+
+  const contracts = manualContracts;
+  const costs = summarizeContractCosts([...manualContracts, ...aiUsageContracts]);
   const alerts = buildContractAlerts(contracts);
+  const syncedAiContract = aiUsageContracts.find((entry) =>
+    entry.name.includes(aiRollup.periodLabel),
+  );
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Verträge & Ausgaben" }]} />}>
       <PageHeader
         title="Verträge & Monatsausgaben"
-        summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen."
+        summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen und KI-Kosten."
       />
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">KI-Kosten (Schätzung)</h2>
+        <p className="uwe-dashboard-muted">
+          Rollup aus <code>ai_usage_logs</code> — nur Cloud-Schätzungen (RTX = 0 USD). Keine
+          Prompt-Inhalte.
+        </p>
+        <div className="uwe-brain-create-form" style={{ marginBottom: "1rem" }}>
+          {AI_PERIOD_OPTIONS.map((option) => (
+            <Link
+              key={option.value}
+              href={`/contracts?period=${option.value}`}
+              className={
+                option.value === aiPeriod
+                  ? "uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
+                  : "uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+              }
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
+        <p>
+          Zeitraum: <strong>{aiRollup.periodLabel}</strong> · Anfragen: {aiRollup.requestCount} ·
+          Tokens: {aiRollup.inputTokens + aiRollup.outputTokens} · Geschätzt:{" "}
+          <strong>{formatUsdAmount(aiRollup.estimatedCostUsd)}</strong>
+        </p>
+        {aiSynced === "1" && (
+          <p className="uwe-dashboard-muted">KI-Monatskosten als Vertragseintrag übernommen.</p>
+        )}
+        {syncedAiContract && (
+          <p className="uwe-dashboard-muted">
+            Verknüpfter Eintrag: {syncedAiContract.name} ·{" "}
+            {formatEuroFromCents(syncedAiContract.amountCents ?? 0)} (EUR-Schätzung)
+          </p>
+        )}
+        <form action={syncAiUsageContractAction} style={{ marginBottom: "1rem" }}>
+          <input type="hidden" name="period" value={aiPeriod} />
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+            Monatskosten als Vertragseintrag übernehmen
+          </button>
+        </form>
+
+        {aiRollup.byFeature.length > 0 && (
+          <>
+            <h3 className="uwe-v2-section-title">Nach Feature</h3>
+            <table className="uwe-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Anfragen</th>
+                  <th>Tokens</th>
+                  <th>USD (Schätzung)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aiRollup.byFeature.map((row) => (
+                  <tr key={row.feature}>
+                    <td>{row.feature}</td>
+                    <td>{row.requestCount}</td>
+                    <td>{row.inputTokens + row.outputTokens}</td>
+                    <td>{formatUsdAmount(row.estimatedCostUsd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {aiRollup.byUser.length > 0 && (
+          <>
+            <h3 className="uwe-v2-section-title">Nach User</h3>
+            <table className="uwe-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Anfragen</th>
+                  <th>Tokens</th>
+                  <th>USD (Schätzung)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aiRollup.byUser.map((row) => (
+                  <tr key={row.userId ?? "system"}>
+                    <td>{row.userDisplayName ?? "Unbekannt"}</td>
+                    <td>{row.requestCount}</td>
+                    <td>{row.inputTokens + row.outputTokens}</td>
+                    <td>{formatUsdAmount(row.estimatedCostUsd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {aiRollup.requestCount === 0 && (
+          <p className="uwe-dashboard-muted">Keine erfolgreichen KI-Aufrufe in diesem Zeitraum.</p>
+        )}
+
+        <p className="uwe-dashboard-muted">
+          Detail-Logs und Budgets:{" "}
+          <Link href="/admin/ai-gateway">AI Gateway (Owner)</Link>
+        </p>
+      </section>
+
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Kostenübersicht</h2>
         <p>
-          Monatlich (aktiv): {formatEuroFromCents(costs.monthlyTotalCents)} · Jährlich:{" "}
-          {formatEuroFromCents(costs.yearlyTotalCents)} · Aktive Verträge: {costs.activeCount}
+          Monatlich (aktiv, inkl. KI-Schätzung): {formatEuroFromCents(costs.monthlyTotalCents)} ·
+          Jährlich: {formatEuroFromCents(costs.yearlyTotalCents)} · Aktive Verträge:{" "}
+          {costs.activeCount}
         </p>
         {alerts.length > 0 && (
           <ul className="uwe-inspector-findings">
@@ -199,6 +341,20 @@ export default async function ContractsPage() {
           </div>
         )}
       </section>
+
+      {aiUsageContracts.length > 0 && (
+        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+          <h2 className="uwe-v2-section-title">KI-Vertragseinträge (automatisch)</h2>
+          <ul className="uwe-inspector-findings">
+            {aiUsageContracts.map((entry) => (
+              <li key={entry.id}>
+                <strong>{entry.name}</strong> · {formatEuroFromCents(entry.amountCents ?? 0)} ·{" "}
+                {CONTRACT_STATUS_LABELS[entry.status]}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </StudioShell>
   );
 }
