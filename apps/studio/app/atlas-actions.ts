@@ -17,6 +17,8 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 import { generateDraft, rerollDraft } from "@uwe/atlas/procedural";
 import type { AtlasDraft, ProceduralPromptHints, ProceduralBounds } from "@uwe/atlas/procedural";
+import { runImageStudioTask, resolveImageProviderConfig } from "@uwe/image-studio";
+import { assembleStampPrompt } from "@uwe/atlas/stamp-prompt";
 
 function getAtlasDeps() {
   const db = createPrismaClient();
@@ -588,4 +590,232 @@ export async function saveAtlasObjectsAction(formData: FormData) {
   }
 
   revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+}
+
+// ---------------------------------------------------------------------------
+// AI Stamp Generation — P5
+// ---------------------------------------------------------------------------
+
+export interface StampVariantResult {
+  imageBase64: string;
+  mimeType: string;
+  prompt: string;
+  providerUsed: string;
+}
+
+export interface GenerateAtlasStampVariantsSuccess {
+  variants: StampVariantResult[];
+  error?: never;
+}
+export interface GenerateAtlasStampVariantsError {
+  variants?: never;
+  error: string;
+}
+
+/**
+ * Generate 5 AI stamp image variants from a keyword.
+ *
+ * Uses `runImageStudioTask` with `contextMode=prompt_only` so no world/brain
+ * data is injected into the cloud prompt.  All 5 calls run in parallel.
+ *
+ * Returns base64-encoded PNG images for client preview and optional save.
+ */
+export async function generateAtlasStampVariantsAction(
+  formData: FormData,
+): Promise<GenerateAtlasStampVariantsSuccess | GenerateAtlasStampVariantsError> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  if (worldSlug) {
+    await requireStudioWorldEdit(worldSlug);
+  }
+
+  const keyword = String(formData.get("keyword") || "").trim();
+  if (!keyword) {
+    return { error: "Keyword ist erforderlich." };
+  }
+
+  const prompt = assembleStampPrompt(keyword);
+  const config = resolveImageProviderConfig();
+
+  const VARIANT_COUNT = 5;
+
+  const jobs = Array.from({ length: VARIANT_COUNT }, () =>
+    runImageStudioTask(
+      {
+        task: "generate",
+        prompt,
+        contextMode: "prompt_only",
+        width: 512,
+        height: 512,
+      },
+      config,
+    ),
+  );
+
+  const settled = await Promise.allSettled(jobs);
+
+  const variants: StampVariantResult[] = [];
+  const errors: string[] = [];
+
+  for (const result of settled) {
+    if (result.status === "rejected") {
+      errors.push(String(result.reason));
+      continue;
+    }
+    const r = result.value;
+    if (!r.success || !r.imageBase64) {
+      errors.push(r.error ?? "Unbekannter Fehler");
+      continue;
+    }
+    variants.push({
+      imageBase64: r.imageBase64,
+      mimeType: r.mimeType ?? "image/png",
+      prompt,
+      providerUsed: r.providerUsed,
+    });
+  }
+
+  if (variants.length === 0) {
+    return {
+      error:
+        errors[0] ??
+        "KI-Bildgenerierung nicht verfügbar. RTX Agent offline und Cloud-KI nicht konfiguriert.",
+    };
+  }
+
+  return { variants };
+}
+
+export interface SaveAtlasStampVariantsSuccess {
+  savedIds: string[];
+  error?: never;
+}
+export interface SaveAtlasStampVariantsError {
+  savedIds?: never;
+  error: string;
+}
+
+/**
+ * Save selected AI stamp variants as AtlasPaletteItems.
+ *
+ * Each item is saved with `source=ai` and `reviewStatus=pending` until the DM
+ * approves it via `approveAtlasPaletteItemAction`.
+ *
+ * The base64 image data is stored in `styleTags` so that the Atlas editor can
+ * render it without a separate asset upload round-trip.
+ */
+export async function saveAtlasStampVariantsAction(
+  formData: FormData,
+): Promise<SaveAtlasStampVariantsSuccess | SaveAtlasStampVariantsError> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  const keyword = String(formData.get("keyword") || "").trim();
+  const nodeId = String(formData.get("nodeId") || "").trim();
+
+  const variantsJson = String(formData.get("variants") || "[]");
+  let variants: Array<{ imageBase64: string; mimeType: string; prompt: string }>;
+  try {
+    variants = JSON.parse(variantsJson) as Array<{
+      imageBase64: string;
+      mimeType: string;
+      prompt: string;
+    }>;
+  } catch {
+    return { error: "Ungültige Varianten-JSON" };
+  }
+
+  if (!variants.length) {
+    return { error: "Keine Varianten zum Speichern ausgewählt." };
+  }
+
+  const { db, atlas, repo } = getAtlasDeps();
+  const savedIds: string[] = [];
+
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) return { error: "Welt nicht gefunden" };
+
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i]!;
+      const item = await atlas.createPaletteItem({
+        worldId: world.id,
+        name: keyword ? `${keyword} ${i + 1}` : `KI-Stempel ${i + 1}`,
+        kind: "ai_stamp",
+        source: "ai",
+        reviewStatus: "pending",
+        styleTags: {
+          imageData: v.imageBase64,
+          mimeType: v.mimeType,
+          prompt: v.prompt,
+          keyword,
+        },
+      });
+      savedIds.push(item.id);
+    }
+  } finally {
+    await db.$disconnect();
+  }
+
+  if (nodeId) {
+    revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
+
+  return { savedIds };
+}
+
+/**
+ * Approve a pending AtlasPaletteItem (AI stamp review).
+ */
+export async function approveAtlasPaletteItemAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  const itemId = String(formData.get("itemId") || "");
+  const nodeId = String(formData.get("nodeId") || "");
+
+  const { db, atlas } = getAtlasDeps();
+
+  try {
+    await atlas.approvePaletteItem(itemId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  if (nodeId) {
+    revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
+}
+
+/**
+ * Delete an AtlasPaletteItem (remove AI stamp from palette).
+ */
+export async function deleteAtlasPaletteItemAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  const itemId = String(formData.get("itemId") || "");
+  const nodeId = String(formData.get("nodeId") || "");
+
+  const { db } = getAtlasDeps();
+
+  try {
+    await db.atlasPaletteItem.delete({ where: { id: itemId } });
+  } finally {
+    await db.$disconnect();
+  }
+
+  if (nodeId) {
+    revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
+  }
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
 }

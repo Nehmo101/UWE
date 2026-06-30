@@ -13,7 +13,8 @@
     "./draw-model": "./src/draw-model.ts",
     "./serialization": "./src/serialization.ts",
     "./terrain": "./src/terrain.ts",
-    "./procedural": "./src/procedural.ts"
+    "./procedural": "./src/procedural.ts",
+    "./stamp-prompt": "./src/stamp-prompt.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

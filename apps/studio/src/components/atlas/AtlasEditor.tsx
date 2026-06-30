@@ -27,9 +27,12 @@ import {
   createPinPageAction,
   createAtlasHandoutPageAction,
   setNodeBackgroundAssetAction,
+  approveAtlasPaletteItemAction,
+  deleteAtlasPaletteItemAction,
 } from "@/app/atlas-actions";
 import { ProceduralDraftPanel } from "./ProceduralDraftPanel";
 import { RegionDescribePanel } from "./RegionDescribePanel";
+import { AtlasStampGenerator } from "./AtlasStampGenerator";
 
 // ---------------------------------------------------------------------------
 // Types shared in this module
@@ -104,6 +107,25 @@ export interface BuiltinGlyph {
   /** SVG path data — drawn centred at (0,0) in a 24×24 viewBox. */
   pathData: string;
   color?: string;
+}
+
+/**
+ * Combined palette item — covers both builtin SVG glyphs and DB-stored
+ * AI-generated stamp images (source=ai).
+ */
+export interface EditorPaletteItem {
+  /** DB id for ai/upload sources; glyph key for builtin. */
+  id: string;
+  name: string;
+  kind: string;
+  source: "builtin" | "ai" | "upload";
+  reviewStatus: "approved" | "pending";
+  /** SVG path data — present for builtin glyphs. */
+  pathData?: string;
+  color?: string;
+  /** Base64 image data — present for AI stamps. */
+  imageData?: string;
+  mimeType?: string;
 }
 
 export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
@@ -653,6 +675,8 @@ export interface AtlasEditorProps {
   parentSilhouette?: [number, number][][];
   /** Background asset ID for this node (used to construct URL). */
   backgroundAssetId?: string | null;
+  /** AI and upload palette items from DB (combined with BUILTIN_GLYPHS for stamp tool). */
+  initialPaletteItems?: EditorPaletteItem[];
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -680,6 +704,7 @@ export function AtlasEditor({
   parentChainItems = [],
   parentSilhouette,
   backgroundAssetId,
+  initialPaletteItems = [],
 }: AtlasEditorProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -692,6 +717,9 @@ export function AtlasEditor({
   const [labelText, setLabelText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Preloaded images for AI stamp rendering on canvas
+  const stampImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Procedural draft panel
   const [showProceduralPanel, setShowProceduralPanel] = useState(false);
@@ -712,6 +740,12 @@ export function AtlasEditor({
   const [bgAssetId, setBgAssetId] = useState<string | null>(backgroundAssetId ?? null);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
   const [bgImageLoaded, setBgImageLoaded] = useState(false);
+
+  // AI stamp generator panel
+  const [showStampGenerator, setShowStampGenerator] = useState(false);
+
+  // Palette items state (can be refreshed after stamp save)
+  const [paletteItems, setPaletteItems] = useState<EditorPaletteItem[]>(initialPaletteItems);
 
   // Drill-down dialog state
   const [drillDownFeatureId, setDrillDownFeatureId] = useState<string | null>(null);
@@ -764,6 +798,22 @@ export function AtlasEditor({
     img.src = `/api/assets/${bgAssetId}/file`;
   }, [bgAssetId]);
 
+  // Preload AI stamp images whenever palette items change
+  useEffect(() => {
+    for (const item of paletteItems) {
+      if (item.imageData && item.mimeType && !stampImagesRef.current.has(item.id)) {
+        const img = new window.Image();
+        img.src = `data:${item.mimeType};base64,${item.imageData}`;
+        stampImagesRef.current.set(item.id, img);
+      }
+    }
+  }, [paletteItems]);
+
+  // Sync palette items when prop changes (e.g. after router.refresh())
+  useEffect(() => {
+    setPaletteItems(initialPaletteItems);
+  }, [initialPaletteItems]);
+
   // ---------------------------------------------------------------------------
   // Canvas render
   // ---------------------------------------------------------------------------
@@ -777,6 +827,7 @@ export function AtlasEditor({
     const W = canvas.width;
     const H = canvas.height;
     const { panX, panY, zoom, features, objects, selectedKey, drawingPoints, tool, measurePoints, showHexGrid } = state;
+    const currentPaletteItems = paletteItems;
 
     function w2c(nx: number, ny: number): [number, number] {
       return worldToCanvas(nx, ny, panX, panY, zoom, W, H);
@@ -1066,8 +1117,13 @@ export function AtlasEditor({
 
     // Draw stamp objects
     for (const obj of objects) {
-      const glyph = BUILTIN_GLYPHS.find((g) => g.key === obj.paletteItemId);
-      if (!glyph) continue;
+      const builtinGlyph = BUILTIN_GLYPHS.find((g) => g.key === obj.paletteItemId);
+      const aiPaletteItem = builtinGlyph
+        ? undefined
+        : currentPaletteItems.find((p) => p.id === obj.paletteItemId);
+
+      if (!builtinGlyph && !aiPaletteItem) continue;
+
       const isSelected = obj._key === selectedKey;
       const [ox, oy] = w2c(obj.x, obj.y);
       const size = 24 * zoom * obj.scale;
@@ -1081,16 +1137,33 @@ export function AtlasEditor({
         ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6);
       }
 
-      const scale = size / 24;
-      ctx.scale(scale, scale);
-      ctx.translate(-12, -12);
-      ctx.strokeStyle = glyph.color ?? preset.colors.ink;
-      ctx.lineWidth = 1.5 / scale;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      drawSvgPath(ctx, glyph.pathData);
-      ctx.stroke();
+      if (builtinGlyph) {
+        const scale = size / 24;
+        ctx.scale(scale, scale);
+        ctx.translate(-12, -12);
+        ctx.strokeStyle = builtinGlyph.color ?? preset.colors.ink;
+        ctx.lineWidth = 1.5 / scale;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        drawSvgPath(ctx, builtinGlyph.pathData);
+        ctx.stroke();
+      } else if (aiPaletteItem) {
+        const preloaded = stampImagesRef.current.get(aiPaletteItem.id);
+        if (preloaded && preloaded.complete && preloaded.naturalWidth > 0) {
+          ctx.drawImage(preloaded, -size / 2, -size / 2, size, size);
+        } else {
+          // Fallback: draw a placeholder box with a "✦" glyph
+          ctx.strokeStyle = preset.colors.ink;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-size / 2, -size / 2, size, size);
+          ctx.fillStyle = preset.colors.ink;
+          ctx.font = `${Math.round(size * 0.6)}px serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("✦", 0, 0);
+        }
+      }
 
       ctx.restore();
     }
@@ -1208,7 +1281,7 @@ export function AtlasEditor({
       }
       ctx.restore();
     }
-  }, [state, preset, parentSilhouette, bgImageLoaded]);
+  }, [state, preset, parentSilhouette, bgImageLoaded, paletteItems]);
 
   useEffect(() => {
     render();
@@ -1724,6 +1797,14 @@ export function AtlasEditor({
           </button>
           <button
             type="button"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
+            onClick={() => setShowStampGenerator(true)}
+            title="KI-Stempel generieren (Tolkien-Stil Linienkunst)"
+          >
+            ✦ Stempel generieren
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={isPending || !state.dirty}
             className="uwe-v2-btn uwe-v2-btn-primary"
@@ -1791,41 +1872,184 @@ export function AtlasEditor({
       {state.tool === "stamp" && (
         <div className="uwe-atlas-palette" style={{
           display: "flex",
-          flexWrap: "wrap",
+          flexDirection: "column",
           gap: "0.5rem",
           padding: "0.5rem",
           background: "var(--uwe-surface)",
           border: "1px solid var(--uwe-border)",
           borderRadius: "var(--uwe-radius)",
         }}>
-          <span style={{ fontSize: 12, color: "var(--uwe-muted)", alignSelf: "center" }}>Palette:</span>
-          {BUILTIN_GLYPHS.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              onClick={() => dispatch({ type: "SET_GLYPH", key: g.key })}
-              title={g.name}
-              aria-pressed={state.activeGlyphKey === g.key}
-              style={{
-                padding: "0.25rem",
-                background: state.activeGlyphKey === g.key
-                  ? "var(--uwe-accent-10)"
-                  : "var(--uwe-bg)",
-                border: state.activeGlyphKey === g.key
-                  ? "2px solid var(--uwe-accent)"
-                  : "1px solid var(--uwe-border)",
-                borderRadius: 4,
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              <GlyphSvg glyph={g} size={22} />
-              <span style={{ fontSize: 9 }}>{g.name}</span>
-            </button>
-          ))}
+          {/* Builtin glyphs row */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "var(--uwe-muted)", alignSelf: "center" }}>Eingebaut:</span>
+            {BUILTIN_GLYPHS.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => dispatch({ type: "SET_GLYPH", key: g.key })}
+                title={g.name}
+                aria-pressed={state.activeGlyphKey === g.key}
+                style={{
+                  padding: "0.25rem",
+                  background: state.activeGlyphKey === g.key
+                    ? "var(--uwe-accent-10)"
+                    : "var(--uwe-bg)",
+                  border: state.activeGlyphKey === g.key
+                    ? "2px solid var(--uwe-accent)"
+                    : "1px solid var(--uwe-border)",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <GlyphSvg glyph={g} size={22} />
+                <span style={{ fontSize: 9 }}>{g.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* AI palette items */}
+          {paletteItems.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+              <div style={{
+                fontSize: 11,
+                color: "var(--uwe-muted)",
+                borderTop: "1px solid var(--uwe-border)",
+                paddingTop: "0.35rem",
+              }}>
+                KI-Stempel
+              </div>
+              {/* Approved stamps */}
+              {paletteItems.filter((p) => p.reviewStatus === "approved").length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+                  {paletteItems
+                    .filter((p) => p.reviewStatus === "approved")
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => dispatch({ type: "SET_GLYPH", key: p.id })}
+                        title={p.name}
+                        aria-pressed={state.activeGlyphKey === p.id}
+                        style={{
+                          padding: "0.25rem",
+                          background: state.activeGlyphKey === p.id
+                            ? "var(--uwe-accent-10)"
+                            : "var(--uwe-bg)",
+                          border: state.activeGlyphKey === p.id
+                            ? "2px solid var(--uwe-accent)"
+                            : "1px solid var(--uwe-border)",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 2,
+                          width: 44,
+                        }}
+                      >
+                        {p.imageData && p.mimeType ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`data:${p.mimeType};base64,${p.imageData}`}
+                            alt={p.name}
+                            style={{ width: 30, height: 30, objectFit: "contain" }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 18 }}>✦</span>
+                        )}
+                        <span style={{ fontSize: 8, maxWidth: 40, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {p.name}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )}
+              {/* Pending stamps — approve or delete */}
+              {paletteItems.filter((p) => p.reviewStatus === "pending").length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  <span style={{ fontSize: 11, color: "var(--uwe-muted)" }}>Ausstehend (Genehmigung erforderlich):</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                    {paletteItems
+                      .filter((p) => p.reviewStatus === "pending")
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            padding: "0.25rem",
+                            border: "1px dashed var(--uwe-border)",
+                            borderRadius: 4,
+                            background: "var(--uwe-bg)",
+                            width: 60,
+                          }}
+                        >
+                          {p.imageData && p.mimeType ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`data:${p.mimeType};base64,${p.imageData}`}
+                              alt={p.name}
+                              style={{ width: 30, height: 30, objectFit: "contain", opacity: 0.6 }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: 18, opacity: 0.6 }}>✦</span>
+                          )}
+                          <span style={{ fontSize: 8, maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {p.name}
+                          </span>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            <button
+                              type="button"
+                              title="Genehmigen"
+                              className="uwe-v2-btn uwe-v2-btn-secondary"
+                              style={{ fontSize: 10, padding: "0.1rem 0.3rem", lineHeight: 1 }}
+                              onClick={() => {
+                                const fd = new FormData();
+                                fd.set("worldSlug", worldSlug);
+                                fd.set("nodeId", nodeId);
+                                fd.set("itemId", p.id);
+                                void approveAtlasPaletteItemAction(fd).then(() => {
+                                  setPaletteItems((prev) =>
+                                    prev.map((pi) =>
+                                      pi.id === p.id ? { ...pi, reviewStatus: "approved" as const } : pi,
+                                    ),
+                                  );
+                                });
+                              }}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              type="button"
+                              title="Löschen"
+                              className="uwe-v2-btn uwe-v2-btn-danger"
+                              style={{ fontSize: 10, padding: "0.1rem 0.3rem", lineHeight: 1 }}
+                              onClick={() => {
+                                const fd = new FormData();
+                                fd.set("worldSlug", worldSlug);
+                                fd.set("nodeId", nodeId);
+                                fd.set("itemId", p.id);
+                                void deleteAtlasPaletteItemAction(fd).then(() => {
+                                  setPaletteItems((prev) => prev.filter((pi) => pi.id !== p.id));
+                                });
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -2252,6 +2476,18 @@ export function AtlasEditor({
           worldSlug={worldSlug}
           feature={describeFeature}
           onClose={() => setDescribeFeature(null)}
+        />
+      )}
+
+      {/* AI Stamp Generator panel */}
+      {showStampGenerator && (
+        <AtlasStampGenerator
+          worldSlug={worldSlug}
+          nodeId={nodeId}
+          onClose={() => setShowStampGenerator(false)}
+          onSaved={() => {
+            // Palette items will be refreshed by router.refresh() inside AtlasStampGenerator
+          }}
         />
       )}
 

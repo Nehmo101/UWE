@@ -9,7 +9,7 @@ import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import type { BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import { AtlasEditor } from "@/src/components/atlas";
-import type { EditorFeature, EditorObject, NodeAncestorItem } from "@/src/components/atlas";
+import type { EditorFeature, EditorObject, EditorPaletteItem, NodeAncestorItem } from "@/src/components/atlas";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
@@ -28,6 +28,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
   let node: Awaited<ReturnType<typeof atlas.getNode>> | null = null;
   let rawFeatures: Awaited<ReturnType<typeof atlas.listFeaturesForNode>> = [];
   let rawObjects: Awaited<ReturnType<typeof atlas.listObjectsForNode>> = [];
+  let rawPaletteItems: Awaited<ReturnType<typeof atlas.listPaletteItems>> = [];
   let mapStylePreset: string | null = null;
   let parentChainItems: NodeAncestorItem[] = [];
   let parentSilhouette: [number, number][][] | undefined;
@@ -45,6 +46,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
 
     rawFeatures = await atlas.listFeaturesForNode(nodeId);
     rawObjects = await atlas.listObjectsForNode(nodeId);
+    rawPaletteItems = await atlas.listPaletteItems(world.id);
 
     // Build parent chain items for breadcrumb/hierarchy display.
     parentChainItems = hierarchy.parentChain.map((a) => ({
@@ -103,6 +105,28 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     _key: nextKey(),
   }));
 
+  type StyleTagsRecord = {
+    imageData?: string;
+    mimeType?: string;
+    prompt?: string;
+    keyword?: string;
+  };
+
+  const editorPaletteItems: EditorPaletteItem[] = rawPaletteItems
+    .filter((p) => p.source === "ai" || p.source === "upload")
+    .map((p) => {
+      const tags = (p.styleTags ?? {}) as StyleTagsRecord;
+      return {
+        id: p.id,
+        name: p.name,
+        kind: p.kind,
+        source: p.source as "builtin" | "ai" | "upload",
+        reviewStatus: p.reviewStatus as "approved" | "pending",
+        imageData: tags.imageData,
+        mimeType: tags.mimeType,
+      };
+    });
+
   // Build a richer breadcrumb using the parent chain.
   const hierarchyBreadcrumb: BreadcrumbItem[] = [
     ...worldSectionBreadcrumb(world.name, worldSlug, "Atlas", `/worlds/${worldSlug}/atlas`),
@@ -132,6 +156,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
         parentChainItems={parentChainItems}
         parentSilhouette={parentSilhouette}
         backgroundAssetId={backgroundAssetId}
+        initialPaletteItems={editorPaletteItems}
       />
     </WorldShell>
   );
