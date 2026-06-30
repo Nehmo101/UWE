@@ -116,6 +116,41 @@ export {
   pointAtDistance,
 } from "./label-layout";
 export type { CharacterPlacement } from "./label-layout";
+
+// Stamp variation — deterministic scale/rotation jitter (CoK-style)
+export {
+  randomStampVariation,
+  stampSeedFromKey,
+} from "./stamp-variation";
+export type {
+  StampVariationOptions,
+  StampVariation,
+} from "./stamp-variation";
+
+// Path smoothing — Catmull-Rom densification + tapered widths
+export {
+  smoothPath,
+  sampleTaperedWidths,
+} from "./path-smoothing";
+export type { SmoothPathOptions } from "./path-smoothing";
+
+// Path attachments — objects auto-placed along a path
+export { generatePathAttachments } from "./path-attachments";
+export type {
+  PathAttachmentKind,
+  PathAttachmentSide,
+  PathAttachmentOptions,
+  PathAttachmentPlacement,
+} from "./path-attachments";
+
+// Export grid — square/hex grid line geometry for map export
+export { buildGridLines } from "./export-grid";
+export type {
+  GridKind,
+  ExportRect,
+  GridSpec,
+  GridLine,
+} from "./export-grid";
 export type {
   DraftFeatureKind,
   ProceduralPromptHints,

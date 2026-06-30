@@ -19,6 +19,7 @@ import {
 } from "@uwe/atlas/terrain";
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
+import { smoothPath } from "@uwe/atlas/path-smoothing";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -419,7 +420,7 @@ export function AtlasViewer({
         }
 
         if (feat.kind === "biome") {
-          const bs = feat.style as unknown as { biomeKind: BiomeKind; density: number } | undefined;
+          const bs = feat.style as unknown as { biomeKind: BiomeKind; density: number; seed?: number } | undefined;
           const bk = (bs?.biomeKind ?? BiomeKind.forest) as BiomeKind;
           ctx.fillStyle = BIOME_FILL[bk];
           ctx.fill();
@@ -458,7 +459,7 @@ export function AtlasViewer({
 
           if (rings[0] && rings[0].length >= 3) {
             const density = bs?.density ?? 1.0;
-            const seed = hashKey(feat._key);
+            const seed = bs?.seed ?? hashKey(feat._key);
             const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
             const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed);
             for (const sg of glyphs) {
@@ -542,7 +543,13 @@ export function AtlasViewer({
           }
         }
       } else if (feat.geometry.type === "Path") {
-        const coords = (feat.geometry.coordinates as [number, number][]) ?? [];
+        const rawCoords = (feat.geometry.coordinates as [number, number][]) ?? [];
+        const pathStyle = feat.style as unknown as { smooth?: boolean; width?: number } | undefined;
+        const widthMul = pathStyle?.width ?? 1;
+        const coords =
+          pathStyle?.smooth && rawCoords.length >= 3
+            ? (smoothPath(rawCoords, { segments: 12, tension: 0.5 }) as [number, number][])
+            : rawCoords;
         if (coords.length >= 2) {
           if (feat.kind === "road") {
             ctx.beginPath();
@@ -553,13 +560,13 @@ export function AtlasViewer({
               ctx.lineTo(cx2, cy2);
             }
             ctx.strokeStyle = isHovered ? "#2563eb" : preset.colors.road;
-            ctx.lineWidth = isHovered ? 2.5 * zoom : 2.0 * zoom;
+            ctx.lineWidth = (isHovered ? 2.5 * zoom : 2.0 * zoom) * widthMul;
             ctx.setLineDash([8 * zoom, 4 * zoom]);
             ctx.stroke();
             ctx.setLineDash([]);
           } else {
-            const maxW = isHovered ? 2.8 * zoom : 2.2 * zoom;
-            const minW = isHovered ? 1.2 * zoom : 0.8 * zoom;
+            const maxW = (isHovered ? 2.8 * zoom : 2.2 * zoom) * widthMul;
+            const minW = (isHovered ? 1.2 * zoom : 0.8 * zoom) * widthMul;
             ctx.strokeStyle = isHovered ? "#2563eb" : preset.colors.inkAccent;
             for (let i = 0; i < coords.length - 1; i++) {
               const t = coords.length > 2 ? i / (coords.length - 2) : 0;

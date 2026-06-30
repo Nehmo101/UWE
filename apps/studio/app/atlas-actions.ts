@@ -19,6 +19,7 @@ import { generateDraft, rerollDraft } from "@uwe/atlas/procedural";
 import type { AtlasDraft, ProceduralPromptHints, ProceduralBounds } from "@uwe/atlas/procedural";
 import { runImageStudioTask, resolveImageProviderConfig } from "@uwe/image-studio";
 import { assembleStampPrompt } from "@uwe/atlas/stamp-prompt";
+import { validateUploadInput, UploadValidationError } from "@uwe/assets";
 
 function getAtlasDeps() {
   const db = createPrismaClient();
@@ -870,6 +871,96 @@ export async function approveAtlasPaletteItemAction(formData: FormData): Promise
     revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
   }
   revalidatePath(`/worlds/${worldSlug}/atlas`);
+}
+
+// ---------------------------------------------------------------------------
+// Custom stamp upload — P5 (CoK-style "upload your own image as a stamp")
+// ---------------------------------------------------------------------------
+
+export interface UploadAtlasStampSuccess {
+  id: string;
+  name: string;
+  imageData: string;
+  mimeType: string;
+  error?: never;
+}
+export interface UploadAtlasStampError {
+  id?: never;
+  error: string;
+}
+
+const STAMP_IMAGE_KINDS = new Set(["png", "jpeg", "gif", "webp"]);
+
+/**
+ * Upload a custom image as an AtlasPaletteItem stamp (Canvas of Kings-style
+ * "upload your own asset"). Validates the file via `@uwe/assets` (magic-byte
+ * sniffing, size limit, blocked-extension check) and restricts the result to
+ * image kinds, then stores it inline as base64 in `styleTags` — mirroring AI
+ * stamp variants — so the editor can render it immediately without a
+ * separate asset fetch round-trip.
+ */
+export async function uploadAtlasStampAction(
+  formData: FormData,
+): Promise<UploadAtlasStampSuccess | UploadAtlasStampError> {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  const name = String(formData.get("name") || "Eigener Stempel").trim().slice(0, 80) || "Eigener Stempel";
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { error: "Keine Datei übermittelt." };
+  }
+
+  const { db, atlas, repo } = getAtlasDeps();
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) return { error: "Welt nicht gefunden" };
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    let validated;
+    try {
+      validated = validateUploadInput({
+        buffer,
+        originalFilename: file.name,
+        declaredMimeType: file.type,
+        worldId: world.id,
+      });
+    } catch (err) {
+      if (err instanceof UploadValidationError) {
+        return { error: err.message };
+      }
+      throw err;
+    }
+
+    if (!STAMP_IMAGE_KINDS.has(validated.kind)) {
+      return { error: "Nur PNG, JPEG, GIF oder WebP sind als Stempel erlaubt." };
+    }
+
+    const imageData = validated.buffer.toString("base64");
+    const item = await atlas.createPaletteItem({
+      worldId: world.id,
+      name,
+      kind: "upload_stamp",
+      source: "upload",
+      reviewStatus: "approved",
+      styleTags: { imageData, mimeType: validated.mimeType },
+    });
+
+    // Deliberately no revalidatePath here: the editor applies this result as
+    // an optimistic client-side palette update (see handleStampUpload). The
+    // editor's `INIT_FEATURES` effect resets all unsaved map edits whenever
+    // its `initialFeatures`/`initialObjects` props change, so revalidating
+    // this node's route would silently discard in-progress edits the moment
+    // a stamp is uploaded. Other pages query palette items fresh from the DB
+    // on every navigation, so no route needs explicit revalidation here.
+    return { id: item.id, name: item.name, imageData, mimeType: validated.mimeType };
+  } finally {
+    await db.$disconnect();
+  }
 }
 
 /**

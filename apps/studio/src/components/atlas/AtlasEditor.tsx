@@ -20,6 +20,14 @@ import {
   buildReliefShading,
 } from "@uwe/atlas/terrain";
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
+import { randomStampVariation } from "@uwe/atlas/stamp-variation";
+import { smoothPath } from "@uwe/atlas/path-smoothing";
+import {
+  generatePathAttachments,
+  type PathAttachmentKind,
+  type PathAttachmentSide,
+} from "@uwe/atlas/path-attachments";
+import { buildGridLines, type GridKind } from "@uwe/atlas/export-grid";
 import {
   BUILTIN_GLYPHS,
   ATLAS_GLYPH_CATEGORIES,
@@ -37,6 +45,7 @@ import {
   deleteAtlasPaletteItemAction,
   setAtlasNodeVisibilityAction,
   setAtlasMapVisibilityAction,
+  uploadAtlasStampAction,
 } from "@/app/atlas-actions";
 import { ProceduralDraftPanel } from "./ProceduralDraftPanel";
 import { RegionDescribePanel } from "./RegionDescribePanel";
@@ -75,6 +84,16 @@ export interface FeatureGeometry {
 export interface BiomeStyle {
   biomeKind: BiomeKind;
   density: number;
+  /** Optional explicit scatter seed — lets the DM "reroll" the glyph layout. */
+  seed?: number;
+}
+
+/** Style metadata for river/road path features (CoK-style smoothing & width). */
+export interface PathStyle {
+  /** When true, the polyline is rendered as a smooth Catmull-Rom curve. */
+  smooth?: boolean;
+  /** Stroke width multiplier (1 = default). */
+  width?: number;
 }
 
 export interface EditorFeature {
@@ -208,6 +227,8 @@ interface EditorState {
   measurePoints: [number, number][];
   /** Whether to show the hex grid overlay. */
   showHexGrid: boolean;
+  /** When true, newly placed stamps get randomized scale + rotation (CoK-style). */
+  randomizeStamps: boolean;
   /** Viewport: pan offset + zoom */
   panX: number;
   panY: number;
@@ -229,7 +250,15 @@ type EditorAction =
   | { type: "PLACE_LABEL"; point: [number, number]; text: string }
   | { type: "PLACE_CURVED_LABEL"; path: [number, number][]; text: string }
   | { type: "PLACE_PIN"; point: [number, number] }
-  | { type: "PLACE_STAMP"; point: [number, number]; paletteItemId: string }
+  | { type: "PLACE_STAMP"; point: [number, number]; paletteItemId: string; scale?: number; rotation?: number }
+  | { type: "SET_RANDOMIZE_STAMPS"; value: boolean }
+  | { type: "SET_OBJECT_SCALE"; key: string; scale: number }
+  | { type: "SET_OBJECT_ROTATION"; key: string; rotation: number }
+  | { type: "SET_BIOME_FEATURE_DENSITY"; key: string; density: number }
+  | { type: "REROLL_BIOME_FEATURE"; key: string; seed: number }
+  | { type: "SET_PATH_SMOOTH"; key: string; smooth: boolean }
+  | { type: "SET_PATH_WIDTH"; key: string; width: number }
+  | { type: "ADD_OBJECTS"; objects: EditorObject[] }
   | { type: "ERASE_SELECTED" }
   | { type: "INIT_FEATURES"; features: EditorFeature[]; objects: EditorObject[] }
   | { type: "APPEND_DRAFT_FEATURES"; features: EditorFeature[] }
@@ -462,8 +491,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         paletteItemId: action.paletteItemId,
         x: action.point[0],
         y: action.point[1],
-        scale: 1,
-        rotation: 0,
+        scale: action.scale ?? 1,
+        rotation: action.rotation ?? 0,
         layer: 50,
         visibility: "dm_only",
       };
@@ -474,6 +503,92 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         dirty: true,
       };
     }
+
+    case "SET_RANDOMIZE_STAMPS":
+      return { ...state, randomizeStamps: action.value };
+
+    case "SET_OBJECT_SCALE":
+      return {
+        ...state,
+        objects: state.objects.map((o) =>
+          o._key === action.key
+            ? { ...o, scale: Math.max(0.1, Math.min(5, action.scale)) }
+            : o,
+        ),
+        dirty: true,
+      };
+
+    case "SET_OBJECT_ROTATION":
+      return {
+        ...state,
+        objects: state.objects.map((o) =>
+          o._key === action.key
+            ? { ...o, rotation: ((action.rotation % 360) + 360) % 360 }
+            : o,
+        ),
+        dirty: true,
+      };
+
+    case "SET_BIOME_FEATURE_DENSITY":
+      return {
+        ...state,
+        features: state.features.map((f) => {
+          if (f._key !== action.key || f.kind !== "biome") return f;
+          const prev = (f.style as unknown as BiomeStyle | undefined) ?? {
+            biomeKind: BiomeKind.forest,
+            density: 1,
+          };
+          return {
+            ...f,
+            style: { ...prev, density: Math.max(0.2, Math.min(3, action.density)) },
+          };
+        }),
+        dirty: true,
+      };
+
+    case "REROLL_BIOME_FEATURE":
+      return {
+        ...state,
+        features: state.features.map((f) => {
+          if (f._key !== action.key || f.kind !== "biome") return f;
+          const prev = (f.style as unknown as BiomeStyle | undefined) ?? {
+            biomeKind: BiomeKind.forest,
+            density: 1,
+          };
+          return { ...f, style: { ...prev, seed: action.seed } };
+        }),
+        dirty: true,
+      };
+
+    case "SET_PATH_SMOOTH":
+      return {
+        ...state,
+        features: state.features.map((f) => {
+          if (f._key !== action.key || (f.kind !== "river" && f.kind !== "road")) return f;
+          const prev = (f.style as unknown as PathStyle | undefined) ?? {};
+          return { ...f, style: { ...prev, smooth: action.smooth } };
+        }),
+        dirty: true,
+      };
+
+    case "SET_PATH_WIDTH":
+      return {
+        ...state,
+        features: state.features.map((f) => {
+          if (f._key !== action.key || (f.kind !== "river" && f.kind !== "road")) return f;
+          const prev = (f.style as unknown as PathStyle | undefined) ?? {};
+          return { ...f, style: { ...prev, width: Math.max(0.3, Math.min(4, action.width)) } };
+        }),
+        dirty: true,
+      };
+
+    case "ADD_OBJECTS":
+      if (action.objects.length === 0) return state;
+      return {
+        ...state,
+        objects: [...state.objects, ...action.objects],
+        dirty: true,
+      };
 
     case "ERASE_SELECTED": {
       if (!state.selectedKey) return state;
@@ -802,6 +917,23 @@ export function AtlasEditor({
   // AI stamp generator panel
   const [showStampGenerator, setShowStampGenerator] = useState(false);
 
+  // Path-attachment controls (CoK-style "objects along a path")
+  const [pathAttachKind, setPathAttachKind] = useState<PathAttachmentKind>("trees");
+  const [pathAttachSide, setPathAttachSide] = useState<PathAttachmentSide>("both");
+  const [pathAttachSpacing, setPathAttachSpacing] = useState(0.06);
+
+  // Export dialog (CoK-style "export a definable area, with or without a grid")
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportGridKind, setExportGridKind] = useState<GridKind | "none">("none");
+  const [exportCellSize, setExportCellSize] = useState(40);
+  const [exportLineWidth, setExportLineWidth] = useState(1);
+  const [exportOpacity, setExportOpacity] = useState(0.6);
+  const [exportColor, setExportColor] = useState("#000000");
+
+  // Custom stamp upload (CoK-style "upload your own image as a stamp")
+  const stampUploadRef = useRef<HTMLInputElement | null>(null);
+  const [stampUploadPending, setStampUploadPending] = useState(false);
+
   // Palette items state (can be refreshed after stamp save)
   const [paletteItems, setPaletteItems] = useState<EditorPaletteItem[]>(initialPaletteItems);
 
@@ -832,6 +964,7 @@ export function AtlasEditor({
     drawingPoints: [],
     measurePoints: [],
     showHexGrid: false,
+    randomizeStamps: false,
     panX: 0,
     panY: 0,
     zoom: 1,
@@ -897,6 +1030,50 @@ export function AtlasEditor({
   for (const p of paletteItems) paletteItemById.set(p.id, p);
   // AI/upload stamps only — builtin glyphs are shown via the local BUILTIN_GLYPHS row.
   const stampPaletteItems = paletteItems.filter((p) => p.source !== "builtin");
+
+  // Generate glyph objects lining a selected river/road (CoK-style attachments).
+  function handleGenerateAttachments(feature: EditorFeature) {
+    const coords = (feature.geometry.coordinates as [number, number][]) ?? [];
+    if (coords.length < 2) {
+      setSaveMsg("Pfad zu kurz für Säumen.");
+      setTimeout(() => setSaveMsg(null), 2500);
+      return;
+    }
+    const placements = generatePathAttachments(coords, {
+      kind: pathAttachKind,
+      spacing: pathAttachSpacing,
+      side: pathAttachSide,
+      offset: 0.025,
+      seed: (Math.floor(Math.random() * 0x7fffffff) || 1),
+    });
+    const newObjects: EditorObject[] = [];
+    let missing = false;
+    for (const p of placements) {
+      const paletteId = builtinKeyToId.get(p.glyphKey);
+      if (!paletteId) {
+        missing = true;
+        continue;
+      }
+      newObjects.push({
+        _key: nextKey(),
+        paletteItemId: paletteId,
+        x: p.x,
+        y: p.y,
+        scale: p.scale,
+        rotation: p.rotation,
+        layer: 50,
+        visibility: "dm_only",
+      });
+    }
+    if (newObjects.length === 0) {
+      setSaveMsg(missing ? "Glyph-Palette fehlt — Seite neu laden." : "Keine Objekte erzeugt.");
+      setTimeout(() => setSaveMsg(null), 2500);
+      return;
+    }
+    dispatch({ type: "ADD_OBJECTS", objects: newObjects });
+    setSaveMsg(`${newObjects.length} Objekte am Pfad platziert`);
+    setTimeout(() => setSaveMsg(null), 2500);
+  }
 
   // ---------------------------------------------------------------------------
   // Canvas render
@@ -1039,7 +1216,7 @@ export function AtlasEditor({
           if (rings[0] && rings[0].length >= 3) {
             const bs2 = feat.style as unknown as BiomeStyle | undefined;
             const density = bs2?.density ?? 1.0;
-            const seed = hashKey(feat._key);
+            const seed = bs2?.seed ?? hashKey(feat._key);
             const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
             const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed);
 
@@ -1107,7 +1284,13 @@ export function AtlasEditor({
           }
         }
       } else if (feat.geometry.type === "Path") {
-        const coords = (feat.geometry.coordinates as [number, number][]) ?? [];
+        const rawCoords = (feat.geometry.coordinates as [number, number][]) ?? [];
+        const pathStyle = feat.style as unknown as PathStyle | undefined;
+        const widthMul = pathStyle?.width ?? 1;
+        const coords =
+          pathStyle?.smooth && rawCoords.length >= 3
+            ? (smoothPath(rawCoords, { segments: 12, tension: 0.5 }) as [number, number][])
+            : rawCoords;
         if (coords.length >= 2) {
           if (feat.kind === "road") {
             // Road: dashed brown path
@@ -1119,14 +1302,14 @@ export function AtlasEditor({
               ctx.lineTo(cx2, cy2);
             }
             ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.road;
-            ctx.lineWidth = isSelected ? 2.5 * zoom : 2.0 * zoom;
+            ctx.lineWidth = (isSelected ? 2.5 * zoom : 2.0 * zoom) * widthMul;
             ctx.setLineDash([8 * zoom, 4 * zoom]);
             ctx.stroke();
             ctx.setLineDash([]);
           } else {
             // River: tapered path (wider at start, narrower at end)
-            const maxW = isSelected ? 2.8 * zoom : 2.2 * zoom;
-            const minW = isSelected ? 1.2 * zoom : 0.8 * zoom;
+            const maxW = (isSelected ? 2.8 * zoom : 2.2 * zoom) * widthMul;
+            const minW = (isSelected ? 1.2 * zoom : 0.8 * zoom) * widthMul;
             ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.inkAccent;
 
             for (let i = 0; i < coords.length - 1; i++) {
@@ -1579,7 +1762,15 @@ export function AtlasEditor({
         setTimeout(() => setSaveMsg(null), 3000);
         return;
       }
-      dispatch({ type: "PLACE_STAMP", point: wp, paletteItemId: resolvedId });
+      if (state.randomizeStamps) {
+        const v = randomStampVariation(
+          (Date.now() ^ Math.floor(wp[0] * 100003) ^ Math.floor(wp[1] * 99991)) | 0,
+          { scaleMin: 0.7, scaleMax: 1.4, rotateMin: -180, rotateMax: 180 },
+        );
+        dispatch({ type: "PLACE_STAMP", point: wp, paletteItemId: resolvedId, scale: v.scale, rotation: v.rotation });
+      } else {
+        dispatch({ type: "PLACE_STAMP", point: wp, paletteItemId: resolvedId });
+      }
       return;
     }
 
@@ -1736,18 +1927,98 @@ export function AtlasEditor({
   // Export PNG
   // ---------------------------------------------------------------------------
 
-  function handleExportPng() {
+  /**
+   * Export the current map view as PNG with an optional square/hex grid overlay
+   * (CoK-style "export a definable area, with or without a grid"). The framed
+   * area is the current viewport — pan/zoom to frame, then export.
+   */
+  function handleExportWithGrid() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.toBlob((blob) => {
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const off = document.createElement("canvas");
+    off.width = W;
+    off.height = H;
+    const octx = off.getContext("2d");
+    if (!octx) return;
+
+    // Copy the rendered map (backing-store pixels) onto the export canvas.
+    octx.drawImage(canvas, 0, 0);
+
+    if (exportGridKind !== "none") {
+      const dpr = window.devicePixelRatio || 1;
+      const lines = buildGridLines(
+        { x: 0, y: 0, width: W, height: H },
+        { kind: exportGridKind, cellSize: exportCellSize * dpr },
+      );
+      octx.save();
+      octx.globalAlpha = exportOpacity;
+      octx.strokeStyle = exportColor;
+      octx.lineWidth = exportLineWidth * dpr;
+      octx.beginPath();
+      for (const line of lines) {
+        octx.moveTo(line.x1, line.y1);
+        octx.lineTo(line.x2, line.y2);
+      }
+      octx.stroke();
+      octx.restore();
+    }
+
+    off.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `atlas-${nodeTitle.replace(/\s+/g, "-").toLowerCase()}.png`;
+      const gridSuffix = exportGridKind === "none" ? "" : `-${exportGridKind}grid`;
+      a.download = `atlas-${nodeTitle.replace(/\s+/g, "-").toLowerCase()}${gridSuffix}.png`;
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
+
+    setShowExportDialog(false);
+  }
+
+  /** Upload a custom image file as a palette stamp (optimistic add, no refresh). */
+  async function handleStampUpload(file: File) {
+    setStampUploadPending(true);
+    try {
+      const fd = new FormData();
+      fd.set("worldSlug", worldSlug);
+      fd.set("nodeId", nodeId);
+      fd.set("name", file.name.replace(/\.[^.]+$/, ""));
+      fd.set("file", file);
+      const result = await uploadAtlasStampAction(fd);
+      if (!("id" in result) || !result.id) {
+        setSaveMsg(result.error ?? "Upload fehlgeschlagen");
+        setTimeout(() => setSaveMsg(null), 3500);
+        return;
+      }
+      // Optimistically add to the palette so it is immediately usable without a
+      // route refresh (which would discard unsaved edits).
+      setPaletteItems((prev) => [
+        ...prev,
+        {
+          id: result.id,
+          name: result.name,
+          kind: "upload_stamp",
+          source: "upload",
+          reviewStatus: "approved",
+          builtinGlyphKey: null,
+          imageData: result.imageData,
+          mimeType: result.mimeType,
+        },
+      ]);
+      dispatch({ type: "SET_GLYPH", key: result.id });
+      setSaveMsg(`Stempel „${result.name}“ hinzugefügt`);
+      setTimeout(() => setSaveMsg(null), 2500);
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : "Upload-Fehler");
+      setTimeout(() => setSaveMsg(null), 3500);
+    } finally {
+      setStampUploadPending(false);
+    }
   }
 
   async function handleCreateHandout() {
@@ -1983,14 +2254,14 @@ export function AtlasEditor({
             ⬡ Hex
           </button>
 
-          {/* Export PNG */}
+          {/* Export PNG (with optional grid overlay) */}
           <button
             type="button"
             className="uwe-v2-btn uwe-v2-btn-secondary"
-            onClick={handleExportPng}
-            title="Aktuelle Kartenansicht als PNG exportieren"
+            onClick={() => setShowExportDialog(true)}
+            title="Aktuelle Kartenansicht als PNG exportieren (mit optionalem Gitter)"
           >
-            ↓ PNG
+            ↓ Export
           </button>
 
           {/* Als Handout */}
@@ -2128,6 +2399,44 @@ export function AtlasEditor({
           border: "1px solid var(--uwe-border)",
           borderRadius: "var(--uwe-radius)",
         }}>
+          {/* Variation toggle row (CoK-style random scale/rotation) */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "SET_RANDOMIZE_STAMPS", value: !state.randomizeStamps })}
+              aria-pressed={state.randomizeStamps}
+              className={`uwe-v2-btn ${state.randomizeStamps ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+              style={{ fontSize: 12, padding: "0.2rem 0.5rem" }}
+              title="Beim Platzieren Größe und Drehung zufällig variieren"
+            >
+              🎲 Variation {state.randomizeStamps ? "an" : "aus"}
+            </button>
+            <span style={{ fontSize: 11, color: "var(--uwe-muted)" }}>
+              Zufällige Skalierung &amp; Drehung pro Stempel
+            </span>
+            <button
+              type="button"
+              onClick={() => stampUploadRef.current?.click()}
+              disabled={stampUploadPending}
+              className="uwe-v2-btn uwe-v2-btn-secondary"
+              style={{ fontSize: 12, padding: "0.2rem 0.5rem", marginLeft: "auto" }}
+              title="Eigenes Bild als Stempel hochladen"
+            >
+              {stampUploadPending ? "⬆ Lädt…" : "⬆ Eigener Stempel"}
+            </button>
+            <input
+              ref={stampUploadRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void handleStampUpload(file);
+              }}
+            />
+          </div>
+
           {/* Builtin glyphs, grouped by Atlas category */}
           {ATLAS_GLYPH_CATEGORIES.map((category) => {
             const glyphs = BUILTIN_GLYPHS.filter((g) => g.kind === category.key);
@@ -2454,9 +2763,140 @@ export function AtlasEditor({
                 <div><strong>Art:</strong> {selectedFeature.kind}</div>
                 <div><strong>Layer:</strong> {selectedFeature.layer ?? 0}</div>
                 {selectedFeature.kind === "biome" && selectedFeature.style && (
-                  <div>
+                  <div style={{ marginTop: "0.25rem" }}>
                     <div><strong>Biom:</strong> {BIOME_LABELS[(selectedFeature.style as unknown as BiomeStyle).biomeKind]}</div>
-                    <div><strong>Dichte:</strong> {(selectedFeature.style as unknown as BiomeStyle).density.toFixed(1)}</div>
+                    <label style={{ display: "block", marginTop: "0.35rem", fontSize: 12 }}>
+                      <span>Dichte: {(selectedFeature.style as unknown as BiomeStyle).density.toFixed(1)}</span>
+                      <input
+                        type="range"
+                        min="0.2"
+                        max="3"
+                        step="0.1"
+                        value={(selectedFeature.style as unknown as BiomeStyle).density}
+                        onChange={(e) =>
+                          dispatch({
+                            type: "SET_BIOME_FEATURE_DENSITY",
+                            key: selectedFeature._key,
+                            density: parseFloat(e.target.value),
+                          })
+                        }
+                        style={{ width: "100%" }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: "REROLL_BIOME_FEATURE",
+                          key: selectedFeature._key,
+                          seed: (Math.floor(Math.random() * 0x7fffffff) || 1),
+                        })
+                      }
+                      className="uwe-v2-btn uwe-v2-btn-secondary"
+                      style={{ marginTop: "0.35rem", width: "100%", fontSize: 12 }}
+                      title="Glyph-Streuung dieses Bioms neu würfeln"
+                    >
+                      🎲 Neu streuen
+                    </button>
+                  </div>
+                )}
+
+                {(selectedFeature.kind === "river" || selectedFeature.kind === "road") && (
+                  <div style={{ marginTop: "0.5rem", borderTop: "1px solid var(--uwe-border)", paddingTop: "0.5rem" }}>
+                    <strong style={{ fontSize: 12 }}>Pfad-Optionen</strong>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch({
+                          type: "SET_PATH_SMOOTH",
+                          key: selectedFeature._key,
+                          smooth: !((selectedFeature.style as unknown as PathStyle | undefined)?.smooth ?? false),
+                        })
+                      }
+                      aria-pressed={(selectedFeature.style as unknown as PathStyle | undefined)?.smooth ?? false}
+                      className={`uwe-v2-btn ${(selectedFeature.style as unknown as PathStyle | undefined)?.smooth ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+                      style={{ marginTop: "0.35rem", width: "100%", fontSize: 12 }}
+                      title="Pfad als geschwungene Kurve rendern"
+                    >
+                      〰 Geschwungen {(selectedFeature.style as unknown as PathStyle | undefined)?.smooth ? "an" : "aus"}
+                    </button>
+                    <label style={{ display: "block", marginTop: "0.35rem", fontSize: 12 }}>
+                      <span>Breite: {((selectedFeature.style as unknown as PathStyle | undefined)?.width ?? 1).toFixed(1)}×</span>
+                      <input
+                        type="range"
+                        min="0.3"
+                        max="4"
+                        step="0.1"
+                        value={(selectedFeature.style as unknown as PathStyle | undefined)?.width ?? 1}
+                        onChange={(e) =>
+                          dispatch({
+                            type: "SET_PATH_WIDTH",
+                            key: selectedFeature._key,
+                            width: parseFloat(e.target.value),
+                          })
+                        }
+                        style={{ width: "100%" }}
+                      />
+                    </label>
+
+                    <div style={{ marginTop: "0.5rem", fontSize: 12, fontWeight: 600 }}>Säumen mit</div>
+                    <div style={{ display: "flex", gap: 4, marginTop: "0.25rem" }}>
+                      {([
+                        ["trees", "Bäume"],
+                        ["houses", "Häuser"],
+                        ["towers", "Türme"],
+                      ] as [PathAttachmentKind, string][]).map(([k, label]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setPathAttachKind(k)}
+                          aria-pressed={pathAttachKind === k}
+                          className={`uwe-v2-btn ${pathAttachKind === k ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+                          style={{ flex: 1, fontSize: 11, padding: "0.15rem 0.2rem" }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 4, marginTop: "0.25rem" }}>
+                      {([
+                        ["both", "Beide"],
+                        ["left", "Links"],
+                        ["right", "Rechts"],
+                      ] as [PathAttachmentSide, string][]).map(([s, label]) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setPathAttachSide(s)}
+                          aria-pressed={pathAttachSide === s}
+                          className={`uwe-v2-btn ${pathAttachSide === s ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+                          style={{ flex: 1, fontSize: 11, padding: "0.15rem 0.2rem" }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <label style={{ display: "block", marginTop: "0.35rem", fontSize: 12 }}>
+                      <span>Abstand: {pathAttachSpacing.toFixed(2)}</span>
+                      <input
+                        type="range"
+                        min="0.03"
+                        max="0.15"
+                        step="0.01"
+                        value={pathAttachSpacing}
+                        onChange={(e) => setPathAttachSpacing(parseFloat(e.target.value))}
+                        style={{ width: "100%" }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateAttachments(selectedFeature)}
+                      className="uwe-v2-btn uwe-v2-btn-secondary"
+                      style={{ marginTop: "0.35rem", width: "100%", fontSize: 12 }}
+                      title="Objekte entlang dieses Pfads platzieren"
+                    >
+                      ✚ Säumen
+                    </button>
                   </div>
                 )}
                 {selectedFeature.labelText && (
@@ -2577,7 +3017,42 @@ export function AtlasEditor({
                   <strong>Glyph:</strong>{" "}
                   {paletteItemById.get(selectedObject.paletteItemId)?.name ?? selectedObject.paletteItemId}
                 </div>
-                <div><strong>Skalierung:</strong> {selectedObject.scale.toFixed(2)}×</div>
+                <label style={{ display: "block", marginTop: "0.4rem", fontSize: 12 }}>
+                  <span>Skalierung: {selectedObject.scale.toFixed(2)}×</span>
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="3"
+                    step="0.05"
+                    value={selectedObject.scale}
+                    onChange={(e) =>
+                      dispatch({
+                        type: "SET_OBJECT_SCALE",
+                        key: selectedObject._key,
+                        scale: parseFloat(e.target.value),
+                      })
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </label>
+                <label style={{ display: "block", marginTop: "0.25rem", fontSize: 12 }}>
+                  <span>Drehung: {Math.round(selectedObject.rotation)}°</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="1"
+                    value={selectedObject.rotation}
+                    onChange={(e) =>
+                      dispatch({
+                        type: "SET_OBJECT_ROTATION",
+                        key: selectedObject._key,
+                        rotation: parseFloat(e.target.value),
+                      })
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </label>
 
                 {/* Per-object Portal visibility */}
                 <button
@@ -2802,6 +3277,113 @@ export function AtlasEditor({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Export dialog (PNG, optional square/hex grid overlay) */}
+      {showExportDialog && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: "var(--uwe-bg)",
+            border: "1px solid var(--uwe-border)",
+            borderRadius: "var(--uwe-radius)",
+            padding: "1.5rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.85rem",
+            minWidth: 320,
+            maxWidth: 420,
+          }}>
+            <h3 style={{ margin: 0 }}>Karte exportieren</h3>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--uwe-muted)" }}>
+              Exportiert die aktuelle Kartenansicht (Ausschnitt durch Pan/Zoom) als PNG.
+            </p>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+              Gitter
+              <select
+                className="uwe-input"
+                value={exportGridKind}
+                onChange={(e) => setExportGridKind(e.target.value as GridKind | "none")}
+              >
+                <option value="none">Kein Gitter</option>
+                <option value="square">Quadratisch</option>
+                <option value="hex">Hexagonal</option>
+              </select>
+            </label>
+
+            {exportGridKind !== "none" && (
+              <>
+                <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                  Zellgröße ({exportCellSize}px)
+                  <input
+                    type="range"
+                    min={15}
+                    max={150}
+                    step={5}
+                    value={exportCellSize}
+                    onChange={(e) => setExportCellSize(Number(e.target.value))}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                  Linienbreite ({exportLineWidth}px)
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={4}
+                    step={0.5}
+                    value={exportLineWidth}
+                    onChange={(e) => setExportLineWidth(Number(e.target.value))}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
+                  Deckkraft ({Math.round(exportOpacity * 100)}%)
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1}
+                    step={0.05}
+                    value={exportOpacity}
+                    onChange={(e) => setExportOpacity(Number(e.target.value))}
+                  />
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: 13 }}>
+                  Farbe
+                  <input
+                    type="color"
+                    value={exportColor}
+                    onChange={(e) => setExportColor(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-primary"
+                style={{ flex: 1 }}
+                onClick={handleExportWithGrid}
+              >
+                ↓ PNG herunterladen
+              </button>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+                onClick={() => setShowExportDialog(false)}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -16,7 +16,11 @@
     "./terrain": "./src/terrain.ts",
     "./procedural": "./src/procedural.ts",
     "./stamp-prompt": "./src/stamp-prompt.ts",
-    "./label-layout": "./src/label-layout.ts"
+    "./label-layout": "./src/label-layout.ts",
+    "./stamp-variation": "./src/stamp-variation.ts",
+    "./path-smoothing": "./src/path-smoothing.ts",
+    "./path-attachments": "./src/path-attachments.ts",
+    "./export-grid": "./src/export-grid.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
