@@ -12,13 +12,28 @@ import {
   TOLKIEN_INK,
   type AtlasStylePreset,
 } from "@uwe/atlas/style-presets";
+import { BiomeKind } from "@uwe/atlas/constants";
+import {
+  scatterGlyphsInPolygon,
+  scatterGlyphsAlongPath,
+  buildReliefShading,
+} from "@uwe/atlas/terrain";
 import { saveAtlasFeaturesAction, saveAtlasObjectsAction } from "@/app/atlas-actions";
 
 // ---------------------------------------------------------------------------
 // Types shared in this module
 // ---------------------------------------------------------------------------
 
-export type ToolMode = "select" | "polygon" | "path" | "label" | "stamp" | "eraser";
+export type ToolMode =
+  | "select"
+  | "polygon"
+  | "path"
+  | "biome"
+  | "road"
+  | "label"
+  | "stamp"
+  | "eraser";
+
 export type LabelColor = "black" | "red";
 
 export interface FeatureGeometry {
@@ -28,6 +43,11 @@ export interface FeatureGeometry {
   text?: string;
   rotation?: number;
   closed?: boolean;
+}
+
+export interface BiomeStyle {
+  biomeKind: BiomeKind;
+  density: number;
 }
 
 export interface EditorFeature {
@@ -57,7 +77,7 @@ export interface EditorObject {
 }
 
 // ---------------------------------------------------------------------------
-// Builtin glyph palette (hardcoded SVG paths for P1 MVP)
+// Builtin glyph palette (hardcoded SVG paths for MVP)
 // ---------------------------------------------------------------------------
 
 export interface BuiltinGlyph {
@@ -74,7 +94,6 @@ export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
     key: "mountain",
     name: "Berg",
     kind: "relief",
-    // Simple mountain triangle
     pathData: "M12 2 L22 20 L2 20 Z M7 20 L12 10 L17 20",
     color: "#7a6b52",
   },
@@ -89,7 +108,6 @@ export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
     key: "tree",
     name: "Wald",
     kind: "biome",
-    // Triangle tree
     pathData: "M12 3 L19 17 L5 17 Z M12 17 L12 22 M10 22 L14 22",
     color: "#4a6741",
   },
@@ -97,7 +115,6 @@ export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
     key: "city",
     name: "Stadt",
     kind: "pin",
-    // Simple castle tower
     pathData: "M7 22 L7 12 L9 12 L9 10 L11 10 L11 8 L13 8 L13 10 L15 10 L15 12 L17 12 L17 22 Z M10 22 L10 16 L14 16 L14 22",
     color: "#1a1008",
   },
@@ -105,7 +122,6 @@ export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
     key: "village",
     name: "Dorf",
     kind: "pin",
-    // House shape
     pathData: "M12 4 L20 11 L20 22 L4 22 L4 11 Z M4 11 L12 4 L20 11 M9 22 L9 15 L15 15 L15 22",
     color: "#6b4a2a",
   },
@@ -131,6 +147,43 @@ export const BUILTIN_GLYPHS: BuiltinGlyph[] = [
     color: "#a8c4d4",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Biome fill colours for canvas rendering
+// ---------------------------------------------------------------------------
+
+const BIOME_FILL: Record<BiomeKind, string> = {
+  forest: "rgba(74,103,65,0.28)",
+  mountains: "rgba(122,107,82,0.24)",
+  hills: "rgba(154,136,96,0.20)",
+  grassland: "rgba(164,196,130,0.24)",
+  desert: "rgba(220,196,130,0.30)",
+  swamp: "rgba(94,120,80,0.32)",
+  coast: "rgba(168,196,212,0.38)",
+  snow: "rgba(220,228,240,0.38)",
+};
+
+const BIOME_STROKE: Record<BiomeKind, string> = {
+  forest: "rgba(40,80,30,0.55)",
+  mountains: "rgba(90,75,50,0.55)",
+  hills: "rgba(110,95,65,0.50)",
+  grassland: "rgba(80,120,50,0.45)",
+  desert: "rgba(160,130,60,0.50)",
+  swamp: "rgba(40,80,40,0.55)",
+  coast: "rgba(60,110,160,0.55)",
+  snow: "rgba(120,150,200,0.50)",
+};
+
+const BIOME_LABELS: Record<BiomeKind, string> = {
+  forest: "Wald",
+  mountains: "Gebirge",
+  hills: "Hügel",
+  grassland: "Grasland",
+  desert: "Wüste",
+  swamp: "Sumpf",
+  coast: "Küste",
+  snow: "Schnee",
+};
 
 // ---------------------------------------------------------------------------
 // Key counter for stable client keys
@@ -160,6 +213,8 @@ interface EditorState {
   tool: ToolMode;
   labelColor: LabelColor;
   activeGlyphKey: string;
+  activeBiomeKind: BiomeKind;
+  biomeDensity: number;
   /** Points being collected for the active polygon/path draw. */
   drawingPoints: [number, number][];
   /** Viewport: pan offset + zoom */
@@ -173,6 +228,8 @@ type EditorAction =
   | { type: "SET_TOOL"; tool: ToolMode }
   | { type: "SET_LABEL_COLOR"; color: LabelColor }
   | { type: "SET_GLYPH"; key: string }
+  | { type: "SET_BIOME_KIND"; kind: BiomeKind }
+  | { type: "SET_BIOME_DENSITY"; density: number }
   | { type: "SELECT"; key: string | null }
   | { type: "ADD_DRAW_POINT"; point: [number, number] }
   | { type: "FINISH_POLYGON" }
@@ -199,6 +256,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case "SET_GLYPH":
       return { ...state, activeGlyphKey: action.key };
 
+    case "SET_BIOME_KIND":
+      return { ...state, activeBiomeKind: action.kind };
+
+    case "SET_BIOME_DENSITY":
+      return { ...state, biomeDensity: action.density };
+
     case "SELECT":
       return { ...state, selectedKey: action.key };
 
@@ -207,15 +270,20 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "FINISH_POLYGON": {
       if (state.drawingPoints.length < 3) return { ...state, drawingPoints: [] };
+
+      const isBiome = state.tool === "biome";
       const feat: EditorFeature = {
         _key: nextKey(),
-        kind: "region",
+        kind: isBiome ? "biome" : "region",
         geometry: {
           type: "Polygon",
           rings: [state.drawingPoints],
         },
+        style: isBiome
+          ? ({ biomeKind: state.activeBiomeKind, density: state.biomeDensity } satisfies BiomeStyle)
+          : undefined,
         labelColor: state.labelColor,
-        layer: 10,
+        layer: isBiome ? 10 : 10,
         visibility: "dm_only",
       };
       return {
@@ -229,14 +297,16 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "FINISH_PATH": {
       if (state.drawingPoints.length < 2) return { ...state, drawingPoints: [] };
+
+      const isRoad = state.tool === "road";
       const feat: EditorFeature = {
         _key: nextKey(),
-        kind: "river",
+        kind: isRoad ? "road" : "river",
         geometry: {
           type: "Path",
           coordinates: state.drawingPoints,
         },
-        layer: 30,
+        layer: isRoad ? 40 : 30,
         visibility: "dm_only",
       };
       return {
@@ -337,7 +407,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       const factor = action.delta < 0 ? 1.1 : 0.9;
       const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.zoom * factor));
 
-      // Zoom around cursor point
       const { cx, cy } = action;
       const panX = cx - (cx - state.panX) * (newZoom / state.zoom);
       const panY = cy - (cy - state.panY) * (newZoom / state.zoom);
@@ -348,8 +417,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case "MOVE_SELECTED": {
       if (!state.selectedKey) return state;
       const key = state.selectedKey;
-      const dnx = action.dx / (action.canvasW);
-      const dny = action.dy / (action.canvasH);
+      const dnx = action.dx / action.canvasW;
+      const dny = action.dy / action.canvasH;
 
       const features = state.features.map((f) => {
         if (f._key !== key) return f;
@@ -462,11 +531,8 @@ function CompassRose() {
       aria-label="Kompassrose"
     >
       <circle cx="40" cy="40" r="36" fill="#f2e8c9" stroke="#1a1008" strokeWidth="1.5" />
-      {/* N arrow */}
       <polygon points="40,8 35,36 40,30 45,36" fill="#1a1008" />
-      {/* S arrow */}
       <polygon points="40,72 35,44 40,50 45,44" fill="#8b1a10" />
-      {/* E/W ticks */}
       <line x1="4" y1="40" x2="76" y2="40" stroke="#1a1008" strokeWidth="0.8" strokeDasharray="2,3" />
       <line x1="40" y1="4" x2="40" y2="76" stroke="#1a1008" strokeWidth="0.8" strokeDasharray="2,3" />
       <text x="40" y="5" textAnchor="middle" fontSize="9" fontFamily="serif" fill="#1a1008" fontWeight="bold">N</text>
@@ -547,6 +613,8 @@ export function AtlasEditor({
     tool: "select",
     labelColor: "black",
     activeGlyphKey: BUILTIN_GLYPHS[0]!.key,
+    activeBiomeKind: BiomeKind.forest,
+    biomeDensity: 1.0,
     drawingPoints: [],
     panX: 0,
     panY: 0,
@@ -554,7 +622,6 @@ export function AtlasEditor({
     dirty: false,
   });
 
-  // Initialize from props
   useEffect(() => {
     dispatch({ type: "INIT_FEATURES", features: initialFeatures, objects: initialObjects });
   }, [initialFeatures, initialObjects]);
@@ -577,19 +644,16 @@ export function AtlasEditor({
       return worldToCanvas(nx, ny, panX, panY, zoom, W, H);
     }
 
-    // Parchment background
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = preset.colors.parchment;
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle vignette
     const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
     grad.addColorStop(0, "rgba(0,0,0,0)");
     grad.addColorStop(1, "rgba(80,50,20,0.18)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Draw map boundary
     ctx.save();
     ctx.strokeStyle = preset.colors.ink;
     ctx.lineWidth = 2 * zoom;
@@ -598,7 +662,6 @@ export function AtlasEditor({
     ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
     ctx.restore();
 
-    // Draw features (bottom → top by layer)
     const sortedFeatures = [...features].sort((a, b) => (a.layer ?? 0) - (b.layer ?? 0));
 
     for (const feat of sortedFeatures) {
@@ -618,27 +681,155 @@ export function AtlasEditor({
           }
           ctx.closePath();
         }
-        ctx.fillStyle =
-          feat.labelColor === "red"
-            ? "rgba(139,26,16,0.18)"
-            : "rgba(26,16,8,0.12)";
-        ctx.fill();
-        ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.ink;
-        ctx.lineWidth = isSelected ? 2.5 * zoom : 1.5 * zoom;
-        ctx.stroke();
+
+        if (feat.kind === "biome") {
+          const bs = feat.style as unknown as BiomeStyle | undefined;
+          const bk = (bs?.biomeKind ?? BiomeKind.forest) as BiomeKind;
+          ctx.fillStyle = BIOME_FILL[bk];
+          ctx.fill();
+          ctx.strokeStyle = isSelected ? "#2563eb" : BIOME_STROKE[bk];
+          ctx.lineWidth = isSelected ? 2.5 * zoom : 1.5 * zoom;
+          ctx.stroke();
+
+          // Relief shading for elevated biomes
+          const needsRelief = bk === BiomeKind.mountains || bk === BiomeKind.hills || bk === BiomeKind.snow;
+          if (needsRelief && rings[0] && rings[0].length >= 3) {
+            const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
+            const relief = buildReliefShading(poly, bk);
+
+            const [rx0, ry0] = w2c(relief.bbox[0], relief.bbox[1]);
+            const [rx1, ry1] = w2c(relief.bbox[2], relief.bbox[3]);
+
+            ctx.save();
+            ctx.beginPath();
+            for (const ring of rings) {
+              if (!ring.length) continue;
+              const [rsx, rsy] = w2c(ring[0]![0], ring[0]![1]);
+              ctx.moveTo(rsx, rsy);
+              for (let i = 1; i < ring.length; i++) {
+                const [rcx, rcy] = w2c(ring[i]![0], ring[i]![1]);
+                ctx.lineTo(rcx, rcy);
+              }
+              ctx.closePath();
+            }
+            ctx.clip();
+
+            const reliefGrad = ctx.createLinearGradient(rx0, ry0, rx1, ry1);
+            reliefGrad.addColorStop(0, relief.highlightColor);
+            reliefGrad.addColorStop(1, relief.shadowColor);
+            ctx.globalAlpha = relief.opacity;
+            ctx.fillStyle = reliefGrad;
+            ctx.fillRect(rx0, ry0, rx1 - rx0, ry1 - ry0);
+            ctx.globalAlpha = 1;
+            ctx.restore();
+          }
+
+          // Scattered glyphs inside biome polygon
+          if (rings[0] && rings[0].length >= 3) {
+            const bs2 = feat.style as unknown as BiomeStyle | undefined;
+            const density = bs2?.density ?? 1.0;
+            const seed = hashKey(feat._key);
+            const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
+            const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed);
+
+            for (const sg of glyphs) {
+              const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
+              if (!glyph) continue;
+              const [gx, gy] = w2c(sg.x, sg.y);
+              const size = 16 * zoom * sg.scale;
+
+              ctx.save();
+              ctx.translate(gx, gy);
+              ctx.rotate((sg.rotation * Math.PI) / 180);
+              const s = size / 24;
+              ctx.scale(s, s);
+              ctx.translate(-12, -12);
+              ctx.strokeStyle = glyph.color ?? preset.colors.ink;
+              ctx.lineWidth = 1.2 / s;
+              ctx.lineJoin = "round";
+              ctx.lineCap = "round";
+              ctx.globalAlpha = 0.75;
+              ctx.beginPath();
+              drawSvgPath(ctx, glyph.pathData);
+              ctx.stroke();
+              ctx.globalAlpha = 1;
+              ctx.restore();
+            }
+          }
+        } else {
+          ctx.fillStyle =
+            feat.labelColor === "red"
+              ? "rgba(139,26,16,0.18)"
+              : "rgba(26,16,8,0.12)";
+          ctx.fill();
+          ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.ink;
+          ctx.lineWidth = isSelected ? 2.5 * zoom : 1.5 * zoom;
+          ctx.stroke();
+        }
       } else if (feat.geometry.type === "Path") {
         const coords = (feat.geometry.coordinates as [number, number][]) ?? [];
         if (coords.length >= 2) {
-          ctx.beginPath();
-          const [sx, sy] = w2c(coords[0]![0], coords[0]![1]);
-          ctx.moveTo(sx, sy);
-          for (let i = 1; i < coords.length; i++) {
-            const [cx2, cy2] = w2c(coords[i]![0], coords[i]![1]);
-            ctx.lineTo(cx2, cy2);
+          if (feat.kind === "road") {
+            // Road: dashed brown path
+            ctx.beginPath();
+            const [sx, sy] = w2c(coords[0]![0], coords[0]![1]);
+            ctx.moveTo(sx, sy);
+            for (let i = 1; i < coords.length; i++) {
+              const [cx2, cy2] = w2c(coords[i]![0], coords[i]![1]);
+              ctx.lineTo(cx2, cy2);
+            }
+            ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.road;
+            ctx.lineWidth = isSelected ? 2.5 * zoom : 2.0 * zoom;
+            ctx.setLineDash([8 * zoom, 4 * zoom]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          } else {
+            // River: tapered path (wider at start, narrower at end)
+            const maxW = isSelected ? 2.8 * zoom : 2.2 * zoom;
+            const minW = isSelected ? 1.2 * zoom : 0.8 * zoom;
+            ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.inkAccent;
+
+            for (let i = 0; i < coords.length - 1; i++) {
+              const t = coords.length > 2 ? i / (coords.length - 2) : 0;
+              const w = maxW * (1 - t * 0.65) + minW * (t * 0.65);
+              const [sx, sy] = w2c(coords[i]![0], coords[i]![1]);
+              const [ex, ey] = w2c(coords[i + 1]![0], coords[i + 1]![1]);
+              ctx.beginPath();
+              ctx.moveTo(sx, sy);
+              ctx.lineTo(ex, ey);
+              ctx.lineWidth = w;
+              ctx.stroke();
+            }
+
+            // Ridge scatter along rivers drawn at high zoom
+            if (zoom >= 1.5 && coords.length >= 2) {
+              const seed = hashKey(feat._key);
+              const pathGeo = { type: "Path" as const, coordinates: coords };
+              const ridgeGlyphs = scatterGlyphsAlongPath(pathGeo, BiomeKind.hills, 0.06, undefined, seed);
+              for (const sg of ridgeGlyphs) {
+                const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
+                if (!glyph) continue;
+                const [gx, gy] = w2c(sg.x, sg.y);
+                const size = 10 * zoom * sg.scale;
+                ctx.save();
+                ctx.translate(gx, gy);
+                ctx.rotate((sg.rotation * Math.PI) / 180);
+                const s = size / 24;
+                ctx.scale(s, s);
+                ctx.translate(-12, -12);
+                ctx.strokeStyle = preset.colors.inkAccent;
+                ctx.lineWidth = 1.0 / s;
+                ctx.lineJoin = "round";
+                ctx.lineCap = "round";
+                ctx.globalAlpha = 0.35;
+                ctx.beginPath();
+                drawSvgPath(ctx, glyph.pathData);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                ctx.restore();
+              }
+            }
           }
-          ctx.strokeStyle = isSelected ? "#2563eb" : preset.colors.inkAccent;
-          ctx.lineWidth = isSelected ? 2.5 * zoom : 1.8 * zoom;
-          ctx.stroke();
         }
       } else if (feat.geometry.type === "Point" || feat.geometry.type === "LabelAnchor") {
         const coord = feat.geometry.coordinates as [number, number];
@@ -658,7 +849,6 @@ export function AtlasEditor({
             ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
           }
         } else {
-          // Pin
           ctx.beginPath();
           ctx.arc(px, py, 5 * zoom, 0, Math.PI * 2);
           ctx.fillStyle = isSelected ? "#2563eb" : preset.colors.inkAccent;
@@ -686,7 +876,6 @@ export function AtlasEditor({
         ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6);
       }
 
-      // Draw glyph as canvas path
       const scale = size / 24;
       ctx.scale(scale, scale);
       ctx.translate(-12, -12);
@@ -701,12 +890,12 @@ export function AtlasEditor({
       ctx.restore();
     }
 
-    // Draw current polygon/path being drawn
+    // Draw current polygon/path/biome/road being drawn
     if (drawingPoints.length > 0) {
       ctx.save();
       ctx.strokeStyle = "#2563eb";
       ctx.lineWidth = 1.5 * zoom;
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash(tool === "road" ? [8 * zoom, 4 * zoom] : [4, 4]);
       ctx.beginPath();
       const [sx, sy] = w2c(drawingPoints[0]![0], drawingPoints[0]![1]);
       ctx.moveTo(sx, sy);
@@ -715,8 +904,8 @@ export function AtlasEditor({
         ctx.lineTo(cx2, cy2);
       }
       ctx.stroke();
+      ctx.setLineDash([]);
 
-      // Vertex dots
       for (const [nx, ny] of drawingPoints) {
         const [px, py] = w2c(nx, ny);
         ctx.beginPath();
@@ -726,8 +915,7 @@ export function AtlasEditor({
       }
       ctx.restore();
 
-      // Close hint for polygon
-      if (tool === "polygon" && drawingPoints.length >= 3) {
+      if ((tool === "polygon" || tool === "biome") && drawingPoints.length >= 3) {
         const [sx2, sy2] = w2c(drawingPoints[0]![0], drawingPoints[0]![1]);
         ctx.save();
         ctx.beginPath();
@@ -785,14 +973,12 @@ export function AtlasEditor({
     const H = canvas.clientHeight;
     const THRESH = 10 / (state.zoom * Math.max(W, H));
 
-    // Check objects first (top layer)
     for (let i = state.objects.length - 1; i >= 0; i--) {
       const o = state.objects[i]!;
       const dx = o.x - wx;
       const dy = o.y - wy;
       if (Math.sqrt(dx * dx + dy * dy) < THRESH * 2) return o._key;
     }
-    // Check label/point features
     for (let i = state.features.length - 1; i >= 0; i--) {
       const f = state.features[i]!;
       const geo = f.geometry;
@@ -804,7 +990,6 @@ export function AtlasEditor({
         if (Math.sqrt(dx * dx + dy * dy) < THRESH * 2) return f._key;
       }
     }
-    // Check polygon/path proximity (rough)
     for (let i = state.features.length - 1; i >= 0; i--) {
       const f = state.features[i]!;
       const geo = f.geometry;
@@ -845,7 +1030,6 @@ export function AtlasEditor({
         dispatch({ type: "SELECT", key: hit });
         movingSelected.current = false;
       } else {
-        // start pan
         dispatch({ type: "SELECT", key: null });
         panning.current = true;
         panStart.current = { x: cx, y: cy };
@@ -862,9 +1046,8 @@ export function AtlasEditor({
       return;
     }
 
-    if (tool === "polygon" || tool === "path") {
-      // Check if clicking near first point to close polygon
-      if (tool === "polygon" && state.drawingPoints.length >= 3) {
+    if (tool === "polygon" || tool === "biome") {
+      if (state.drawingPoints.length >= 3) {
         const [fx, fy] = worldToCanvas(
           state.drawingPoints[0]![0],
           state.drawingPoints[0]![1],
@@ -876,6 +1059,11 @@ export function AtlasEditor({
           return;
         }
       }
+      dispatch({ type: "ADD_DRAW_POINT", point: wp });
+      return;
+    }
+
+    if (tool === "path" || tool === "road") {
       dispatch({ type: "ADD_DRAW_POINT", point: wp });
       return;
     }
@@ -930,9 +1118,9 @@ export function AtlasEditor({
   }
 
   function onDoubleClick(_e: React.PointerEvent<HTMLCanvasElement>) {
-    if (state.tool === "polygon") {
+    if (state.tool === "polygon" || state.tool === "biome") {
       dispatch({ type: "FINISH_POLYGON" });
-    } else if (state.tool === "path") {
+    } else if (state.tool === "path" || state.tool === "road") {
       dispatch({ type: "FINISH_PATH" });
     }
   }
@@ -969,7 +1157,6 @@ export function AtlasEditor({
       objectsFd.set("objects", JSON.stringify(
         state.objects.map((o) => ({
           ...o,
-          // Map builtin glyph key to paletteItemId for the server
           paletteItemId: o.paletteItemId,
         })),
       ));
@@ -995,6 +1182,8 @@ export function AtlasEditor({
         case "s": dispatch({ type: "SET_TOOL", tool: "select" }); break;
         case "p": dispatch({ type: "SET_TOOL", tool: "polygon" }); break;
         case "r": dispatch({ type: "SET_TOOL", tool: "path" }); break;
+        case "b": dispatch({ type: "SET_TOOL", tool: "biome" }); break;
+        case "d": dispatch({ type: "SET_TOOL", tool: "road" }); break;
         case "l": dispatch({ type: "SET_TOOL", tool: "label" }); break;
         case "t": dispatch({ type: "SET_TOOL", tool: "stamp" }); break;
         case "e": dispatch({ type: "SET_TOOL", tool: "eraser" }); break;
@@ -1015,10 +1204,14 @@ export function AtlasEditor({
     select: "default",
     polygon: "crosshair",
     path: "crosshair",
+    biome: "crosshair",
+    road: "crosshair",
     label: "text",
     stamp: "copy",
     eraser: "not-allowed",
   };
+
+  const isDrawingTool = state.tool === "polygon" || state.tool === "path" || state.tool === "biome" || state.tool === "road";
 
   return (
     <div className="uwe-atlas-editor" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -1037,7 +1230,9 @@ export function AtlasEditor({
           [
             { mode: "select" as ToolMode, label: "Auswahl", shortcut: "S" },
             { mode: "polygon" as ToolMode, label: "Region", shortcut: "P" },
-            { mode: "path" as ToolMode, label: "Pfad", shortcut: "R" },
+            { mode: "path" as ToolMode, label: "Fluss", shortcut: "R" },
+            { mode: "biome" as ToolMode, label: "Biom", shortcut: "B" },
+            { mode: "road" as ToolMode, label: "Straße", shortcut: "D" },
             { mode: "label" as ToolMode, label: "Label", shortcut: "L" },
             { mode: "stamp" as ToolMode, label: "Glyph", shortcut: "T" },
             { mode: "eraser" as ToolMode, label: "Löschen", shortcut: "E" },
@@ -1094,6 +1289,60 @@ export function AtlasEditor({
           </button>
         </div>
       </div>
+
+      {/* Biome brush options */}
+      {state.tool === "biome" && (
+        <div className="uwe-atlas-biome-bar" style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          alignItems: "center",
+          padding: "0.5rem",
+          background: "var(--uwe-surface)",
+          border: "1px solid var(--uwe-border)",
+          borderRadius: "var(--uwe-radius)",
+        }}>
+          <span style={{ fontSize: 12, color: "var(--uwe-muted)" }}>Biom:</span>
+          {(Object.values(BiomeKind) as BiomeKind[]).map((bk) => (
+            <button
+              key={bk}
+              type="button"
+              onClick={() => dispatch({ type: "SET_BIOME_KIND", kind: bk })}
+              aria-pressed={state.activeBiomeKind === bk}
+              className={`uwe-v2-btn ${state.activeBiomeKind === bk ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+              style={{ fontSize: 12, padding: "0.2rem 0.5rem" }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  background: BIOME_FILL[bk],
+                  border: `1px solid ${BIOME_STROKE[bk]}`,
+                  marginRight: 4,
+                  verticalAlign: "middle",
+                }}
+              />
+              {BIOME_LABELS[bk]}
+            </button>
+          ))}
+          <div style={{ height: 24, width: 1, background: "var(--uwe-border)" }} />
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: 12 }}>
+            Dichte:
+            <input
+              type="range"
+              min="0.2"
+              max="3.0"
+              step="0.1"
+              value={state.biomeDensity}
+              onChange={(e) => dispatch({ type: "SET_BIOME_DENSITY", density: parseFloat(e.target.value) })}
+              style={{ width: 80 }}
+            />
+            <span style={{ minWidth: 28, textAlign: "right" }}>{state.biomeDensity.toFixed(1)}</span>
+          </label>
+        </div>
+      )}
 
       {/* Glyph palette when stamp tool active */}
       {state.tool === "stamp" && (
@@ -1200,7 +1449,7 @@ export function AtlasEditor({
           </div>
 
           {/* Draw hint */}
-          {(state.tool === "polygon" || state.tool === "path") && (
+          {isDrawingTool && (
             <div style={{
               position: "absolute",
               bottom: 12,
@@ -1212,9 +1461,14 @@ export function AtlasEditor({
               fontSize: 12,
               pointerEvents: "none",
             }}>
-              {state.tool === "polygon"
+              {(state.tool === "polygon" || state.tool === "biome")
                 ? `${state.drawingPoints.length} Punkte — Doppelklick oder Klick auf Startpunkt zum Schließen | Esc abbr.`
                 : `${state.drawingPoints.length} Punkte — Doppelklick zum Abschließen | Esc abbr.`}
+              {state.tool === "biome" && (
+                <span style={{ marginLeft: 8, fontWeight: 600 }}>
+                  [{BIOME_LABELS[state.activeBiomeKind]}]
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -1242,6 +1496,12 @@ export function AtlasEditor({
               <div style={{ marginTop: "0.5rem" }}>
                 <div><strong>Art:</strong> {selectedFeature.kind}</div>
                 <div><strong>Layer:</strong> {selectedFeature.layer ?? 0}</div>
+                {selectedFeature.kind === "biome" && selectedFeature.style && (
+                  <div>
+                    <div><strong>Biom:</strong> {BIOME_LABELS[(selectedFeature.style as unknown as BiomeStyle).biomeKind]}</div>
+                    <div><strong>Dichte:</strong> {(selectedFeature.style as unknown as BiomeStyle).density.toFixed(1)}</div>
+                  </div>
+                )}
                 {selectedFeature.labelText && (
                   <div><strong>Text:</strong> {selectedFeature.labelText}</div>
                 )}
@@ -1282,8 +1542,10 @@ export function AtlasEditor({
             <strong>Shortcuts</strong>
             <ul style={{ margin: "0.25rem 0 0", paddingLeft: "1rem", lineHeight: "1.8" }}>
               <li>S — Auswahl</li>
-              <li>P — Polygon</li>
-              <li>R — Pfad</li>
+              <li>P — Region</li>
+              <li>R — Fluss</li>
+              <li>B — Biom</li>
+              <li>D — Straße</li>
               <li>L — Label</li>
               <li>T — Glyph</li>
               <li>E — Radierer</li>
@@ -1435,4 +1697,14 @@ function distToSegment(p: [number, number], a: [number, number], b: [number, num
   if (lenSq === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
   const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / lenSq));
   return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+/** Stable integer hash for a short string (used as scatter seed). */
+function hashKey(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return h;
 }

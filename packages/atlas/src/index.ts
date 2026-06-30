@@ -2,12 +2,7 @@
  * @uwe/atlas — Atlas World Builder engine package.
  *
  * Framework-agnostic geometry types, style presets, draw model, serialization
- * helpers, and constants for the UWE Atlas World Builder.
- *
- * NOT included here (planned for later phases):
- *   - Procedural generator / biome brush scatter (P2)
- *   - River pathing algorithm (P2)
- *   - Canvas / WebGL renderer (P4)
+ * helpers, constants, and terrain scatter/relief engine.
  */
 
 // Geometry types
@@ -30,6 +25,7 @@ export {
   AtlasLabelColor,
   AtlasPaletteSource,
   AtlasPaletteReviewStatus,
+  BiomeKind,
   LAYER_Z,
 } from "./constants";
 export type {
@@ -38,6 +34,7 @@ export type {
   AtlasLabelColor as AtlasLabelColorValue,
   AtlasPaletteSource as AtlasPaletteSourceValue,
   AtlasPaletteReviewStatus as AtlasPaletteReviewStatusValue,
+  BiomeKind as BiomeKindValue,
 } from "./constants";
 
 // Style presets
@@ -65,7 +62,16 @@ export type {
   DrawLayerMap,
   DrawContext,
   MapDrawDescriptor,
+  ScatteredGlyphItem,
+  ReliefShadingDescriptor,
 } from "./draw-model";
+
+// Terrain scatter / relief engine (types re-exported via draw-model above)
+export {
+  scatterGlyphsInPolygon,
+  scatterGlyphsAlongPath,
+  buildReliefShading,
+} from "./terrain";
 
 // Serialization
 export {

@@ -11,7 +11,8 @@
     "./constants": "./src/constants.ts",
     "./style-presets": "./src/style-presets.ts",
     "./draw-model": "./src/draw-model.ts",
-    "./serialization": "./src/serialization.ts"
+    "./serialization": "./src/serialization.ts",
+    "./terrain": "./src/terrain.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

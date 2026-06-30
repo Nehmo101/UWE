@@ -92,6 +92,27 @@ export type AtlasPaletteReviewStatus =
   (typeof AtlasPaletteReviewStatus)[keyof typeof AtlasPaletteReviewStatus];
 
 // ---------------------------------------------------------------------------
+// BiomeKind
+// ---------------------------------------------------------------------------
+
+/**
+ * Semantic biome / climate kind for a filled polygon feature.
+ * Used by the biome brush tool and the scatter/relief engine.
+ */
+export const BiomeKind = {
+  forest: "forest",
+  mountains: "mountains",
+  hills: "hills",
+  grassland: "grassland",
+  desert: "desert",
+  swamp: "swamp",
+  coast: "coast",
+  snow: "snow",
+} as const;
+
+export type BiomeKind = (typeof BiomeKind)[keyof typeof BiomeKind];
+
+// ---------------------------------------------------------------------------
 // Draw layer ordering indices
 // ---------------------------------------------------------------------------
 

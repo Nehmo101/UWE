@@ -8,6 +8,10 @@
 import type { AtlasGeometry, BBox } from "./geometry";
 import type { AtlasFeatureKind } from "./constants";
 import type { AtlasStylePreset } from "./style-presets";
+import type { ScatteredGlyphItem, ReliefShadingDescriptor } from "./terrain";
+
+// Re-export terrain render types so consumers can import them from the draw-model.
+export type { ScatteredGlyphItem, ReliefShadingDescriptor } from "./terrain";
 
 // ---------------------------------------------------------------------------
 // Layer definitions
@@ -74,7 +78,15 @@ export interface DrawStyle {
 // ---------------------------------------------------------------------------
 
 /** All draw items for a single map node, organised by layer. */
-export type DrawLayerMap = { [L in DrawLayer]: DrawItem[] };
+export interface DrawLayerMap extends Record<DrawLayer, DrawItem[]> {
+  /**
+   * Scattered glyph instances produced by `scatterGlyphsInPolygon` /
+   * `scatterGlyphsAlongPath` — rendered in the biome and relief layers.
+   */
+  scatteredGlyphs: ScatteredGlyphItem[];
+  /** Relief-shading gradient descriptors produced by `buildReliefShading`. */
+  reliefShadings: ReliefShadingDescriptor[];
+}
 
 export function emptyDrawLayerMap(): DrawLayerMap {
   return {
@@ -86,6 +98,8 @@ export function emptyDrawLayerMap(): DrawLayerMap {
     objects: [],
     labels: [],
     overlay: [],
+    scatteredGlyphs: [],
+    reliefShadings: [],
   };
 }
 
