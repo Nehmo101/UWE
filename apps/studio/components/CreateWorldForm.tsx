@@ -4,11 +4,23 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function CreateWorldForm() {
+export interface WorldTemplateChoice {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Props {
+  templates?: WorldTemplateChoice[];
+}
+
+export function CreateWorldForm({ templates = [] }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "blank");
   const [guestModeEnabled, setGuestModeEnabled] = useState(false);
+  const [isSandbox, setIsSandbox] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +36,9 @@ export function CreateWorldForm() {
         body: JSON.stringify({
           name,
           description: description.trim() || undefined,
-          guestModeEnabled,
+          templateId,
+          guestModeEnabled: isSandbox ? false : guestModeEnabled,
+          isSandbox,
         }),
       });
 
@@ -49,9 +63,32 @@ export function CreateWorldForm() {
     <form className="uwe-v2-form studio-create-world-form" onSubmit={handleSubmit}>
       <h2 className="uwe-v2-section-title">Neue Welt erstellen</h2>
       <p className="uwe-hint">
-        Nur für Owner/Admin. Nach dem Anlegen kannst du Wiki, Soundboard (Spotify), Sessions und
-        Assets in der Welt verwalten.
+        Nur für Owner/Admin. Wähle eine Vorlage für den Startaufbau — Sandbox-Welten sind von
+        Backup, Export und Portal ausgeschlossen.
       </p>
+
+      {templates.length > 0 ? (
+        <fieldset className="uwe-template-grid" aria-label="Welt-Vorlage">
+          <legend className="sr-only">Welt-Vorlage</legend>
+          {templates.map((template) => (
+            <label
+              key={template.id}
+              className={`uwe-template-card${template.id === templateId ? " active" : ""}`}
+            >
+              <input
+                type="radio"
+                name="templateId"
+                value={template.id}
+                checked={templateId === template.id}
+                onChange={() => setTemplateId(template.id)}
+                className="sr-only"
+              />
+              <strong>{template.name}</strong>
+              <span>{template.description}</span>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
 
       <label>
         Name
@@ -81,7 +118,17 @@ export function CreateWorldForm() {
       <label className="uwe-checkbox-row">
         <input
           type="checkbox"
+          checked={isSandbox}
+          onChange={(event) => setIsSandbox(event.target.checked)}
+        />
+        Sandbox-Testwelt — nur im Studio sichtbar, kein Backup/Export/Portal
+      </label>
+
+      <label className={`uwe-checkbox-row${isSandbox ? " uwe-muted" : ""}`}>
+        <input
+          type="checkbox"
           checked={guestModeEnabled}
+          disabled={isSandbox}
           onChange={(event) => setGuestModeEnabled(event.target.checked)}
         />
         Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar

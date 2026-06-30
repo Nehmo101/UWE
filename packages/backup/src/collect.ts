@@ -66,8 +66,14 @@ async function resolveScopeIds(
   scope: CollectScope,
 ): Promise<{ worldIds: string[]; campaignIds: string[] }> {
   if (scope.type === "full") {
-    const worlds = await db.world.findMany({ select: { id: true } });
-    const campaigns = await db.campaign.findMany({ select: { id: true } });
+    const worlds = await db.world.findMany({
+      where: { isSandbox: false },
+      select: { id: true },
+    });
+    const campaigns = await db.campaign.findMany({
+      where: { world: { isSandbox: false } },
+      select: { id: true },
+    });
     return {
       worldIds: worlds.map((world) => world.id),
       campaignIds: campaigns.map((campaign) => campaign.id),
@@ -81,6 +87,9 @@ async function resolveScopeIds(
   const world = await db.world.findUnique({ where: { slug: scope.worldSlug } });
   if (!world) {
     throw new Error(`Welt „${scope.worldSlug}" wurde nicht gefunden.`);
+  }
+  if (world.isSandbox) {
+    throw new Error(`Sandbox-Welt „${scope.worldSlug}" ist von Backups ausgeschlossen.`);
   }
 
   if (scope.type === "world") {

@@ -7,11 +7,23 @@ import { Button } from "@/src/components/ui/button";
 import { Input, Textarea } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 
-export function CreateWorldForm() {
+export interface WorldTemplateChoice {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Props {
+  templates?: WorldTemplateChoice[];
+}
+
+export function CreateWorldForm({ templates = [] }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "blank");
   const [guestModeEnabled, setGuestModeEnabled] = useState(false);
+  const [isSandbox, setIsSandbox] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +39,9 @@ export function CreateWorldForm() {
         body: JSON.stringify({
           name,
           description: description.trim() || undefined,
-          guestModeEnabled,
+          templateId,
+          guestModeEnabled: isSandbox ? false : guestModeEnabled,
+          isSandbox,
         }),
       });
 
@@ -53,10 +67,35 @@ export function CreateWorldForm() {
       <div>
         <h2 className="text-lg font-semibold">Neue Welt erstellen</h2>
         <p className="text-sm text-muted-foreground">
-          Nur für Owner/Admin. Gastzugang bleibt read-only — neue Welten sind zunächst nur für
-          angemeldete Spieler sichtbar.
+          Nur für Owner/Admin. Wähle eine Vorlage für den Startaufbau. Sandbox-Welten sind von
+          Backup, Export und Portal-Listen ausgeschlossen.
         </p>
       </div>
+
+      {templates.length > 0 ? (
+        <fieldset className="grid gap-3 sm:grid-cols-2" aria-label="Welt-Vorlage">
+          <legend className="sr-only">Welt-Vorlage</legend>
+          {templates.map((template) => (
+            <label
+              key={template.id}
+              className={`flex cursor-pointer flex-col gap-1 rounded-md border p-3 text-sm${
+                template.id === templateId ? " border-primary bg-muted/40" : " border-border"
+              }`}
+            >
+              <input
+                type="radio"
+                name="templateId"
+                value={template.id}
+                checked={templateId === template.id}
+                onChange={() => setTemplateId(template.id)}
+                className="sr-only"
+              />
+              <strong>{template.name}</strong>
+              <span className="text-muted-foreground">{template.description}</span>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="world-name">Name</Label>
@@ -89,7 +128,18 @@ export function CreateWorldForm() {
         <input
           type="checkbox"
           className="mt-1"
+          checked={isSandbox}
+          onChange={(event) => setIsSandbox(event.target.checked)}
+        />
+        Sandbox-Testwelt — nur im Studio sichtbar, kein Backup/Export/Portal
+      </label>
+
+      <label className={`flex items-start gap-2 text-sm${isSandbox ? " opacity-60" : ""}`}>
+        <input
+          type="checkbox"
+          className="mt-1"
           checked={guestModeEnabled}
+          disabled={isSandbox}
           onChange={(event) => setGuestModeEnabled(event.target.checked)}
         />
         Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar

@@ -542,6 +542,7 @@ export class AuthService {
 
   async listAccessibleWorldsForUser(userId: string | null) {
     const worlds = await this.db.world.findMany({
+      where: { isSandbox: false },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -727,10 +728,11 @@ export class AuthService {
       select: {
         id: true,
         guestModeEnabled: true,
+        isSandbox: true,
       },
     });
 
-    if (!world) {
+    if (!world || world.isSandbox) {
       return null;
     }
 

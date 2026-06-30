@@ -47,6 +47,14 @@ export {
 } from "./world-creation-service";
 
 export type { CreateWorldRequest, CreatedWorldResult } from "./world-creation-service";
+export {
+  getWorldTemplate,
+  listWorldTemplateOptions,
+  resolveWorldTemplateId,
+  type WorldTemplateId,
+  type WorldTemplateOption,
+} from "./world-templates";
+export { NON_SANDBOX_WORLD_WHERE, assertWorldExportAllowed } from "./world-sandbox";
 
 export type {
   Campaign as DbCampaign,
