@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import {
   createTagService,
   getAppRepository,
+  getTagCoverageStats,
+  backfillEntityTagsFromJson,
   prisma,
   suggestTagMerges,
 } from "@uwe/database/server";
@@ -32,6 +34,7 @@ export async function GET(request: Request) {
   const suggestions = suggestTagMerges(inventory);
   const unused = tags.findUnused(inventory);
   const similar = tags.findSimilarGroups(inventory);
+  const coverage = await getTagCoverageStats(prisma, worldId ? { worldId } : {});
 
   const repo = getAppRepository();
   const worlds = await repo.listWorlds();
@@ -41,6 +44,7 @@ export async function GET(request: Request) {
     suggestions,
     unused,
     similar,
+    coverage,
     worlds: worlds.map((world) => ({
       id: world.id,
       name: world.name,
@@ -62,10 +66,19 @@ export async function POST(request: Request) {
     worldId?: string | null;
     fromTags?: string[] | string;
     toTag?: string;
+    dryRun?: boolean;
   };
 
-  if (body.action !== "merge") {
+  if (body.action !== "merge" && body.action !== "backfill") {
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+  }
+
+  if (body.action === "backfill") {
+    const result = await backfillEntityTagsFromJson(prisma, {
+      worldId: body.worldId ?? undefined,
+      dryRun: body.dryRun === true,
+    });
+    return NextResponse.json({ ok: true, result });
   }
 
   const toTag = String(body.toTag || "").trim();

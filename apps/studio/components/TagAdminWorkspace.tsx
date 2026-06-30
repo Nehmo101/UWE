@@ -42,6 +42,16 @@ interface TagsResponse {
   suggestions: TagMergeSuggestion[];
   unused: TagInventoryEntry[];
   similar: SimilarTagGroup[];
+  coverage?: {
+    types: Array<{
+      entityType: string;
+      totalEntities: number;
+      jsonTagged: number;
+      entityTagTagged: number;
+    }>;
+    totalTags: number;
+    totalEntityTags: number;
+  };
   worlds: WorldOption[];
 }
 
@@ -54,6 +64,8 @@ export function TagAdminWorkspace() {
   const [mergeFromTags, setMergeFromTags] = useState("");
   const [mergeStatus, setMergeStatus] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
 
   const loadTags = useCallback(async () => {
     setLoading(true);
@@ -124,6 +136,41 @@ export function TagAdminWorkspace() {
     setMergeFromTags(suggestion.sourceTags.join(", "));
   }
 
+  async function handleBackfill() {
+    setBackfilling(true);
+    setBackfillStatus(null);
+
+    try {
+      const response = await fetch(studioApiUrl("/api/admin/tags"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "backfill",
+          worldId: worldId || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error ?? `Backfill fehlgeschlagen (${response.status}).`);
+      }
+
+      const payload = (await response.json()) as {
+        result: { entitiesProcessed: number; entityTagsCreated: number };
+      };
+      setBackfillStatus(
+        `Backfill abgeschlossen — ${payload.result.entitiesProcessed} Entitäten, ${payload.result.entityTagsCreated} neue EntityTag-Zeilen.`,
+      );
+      await loadTags();
+    } catch (backfillError) {
+      setBackfillStatus(
+        backfillError instanceof Error ? backfillError.message : "Backfill fehlgeschlagen.",
+      );
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   return (
     <>
       <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
@@ -153,6 +200,36 @@ export function TagAdminWorkspace() {
 
       {data && !loading && (
         <>
+          {data.coverage && (
+            <section className="uwe-v2-card uwe-v2-section">
+              <h2 className="uwe-v2-section-title">EntityTag-Abdeckung</h2>
+              <p className="uwe-dashboard-muted">
+                {data.coverage.totalTags} zentrale Tags · {data.coverage.totalEntityTags}{" "}
+                EntityTag-Verknüpfungen
+              </p>
+              <div className="uwe-today-card-list">
+                {data.coverage.types.map((entry) => (
+                  <article key={entry.entityType} className="uwe-today-card">
+                    <h3>{entry.entityType}</h3>
+                    <p className="uwe-dashboard-muted">
+                      Json: {entry.jsonTagged}/{entry.totalEntities} · EntityTag:{" "}
+                      {entry.entityTagTagged}/{entry.totalEntities}
+                    </p>
+                  </article>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+                disabled={backfilling}
+                onClick={() => void handleBackfill()}
+              >
+                {backfilling ? "Backfill läuft…" : "Json-Tags → EntityTag backfillen"}
+              </button>
+              {backfillStatus && <p className="uwe-hint">{backfillStatus}</p>}
+            </section>
+          )}
+
           <section className="uwe-v2-card uwe-v2-section">
             <h2 className="uwe-v2-section-title">Merge-Vorschläge ({data.suggestions.length})</h2>
             {data.suggestions.length === 0 ? (

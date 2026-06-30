@@ -9,7 +9,7 @@ import type {
   Prisma,
   Visibility,
 } from "./generated/prisma/client";
-import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
+import { BUILTIN_GLYPHS, type BuiltinGlyph } from "@uwe/atlas/glyphs";
 import type { PrismaClient } from "./client";
 import {
   isDmOnlyVisibility,
@@ -161,7 +161,7 @@ export const BUILTIN_ATLAS_GLYPHS: Array<{
   key: string;
   name: string;
   kind: string;
-}> = BUILTIN_GLYPHS.map((glyph) => ({
+}> = BUILTIN_GLYPHS.map((glyph: BuiltinGlyph) => ({
   key: glyph.key,
   name: glyph.name,
   kind: glyph.kind,

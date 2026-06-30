@@ -14,10 +14,12 @@ const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/logout",
   "/setup",
+  "/maintenance",
   "/forgot-password",
   "/reset-password",
   "/api/auth",
   "/api/health",
+  "/api/maintenance",
   "/api/agent-jobs/callback",
   // RTX Host Connector authenticates with its own token in the route handler.
   "/api/connectors",
