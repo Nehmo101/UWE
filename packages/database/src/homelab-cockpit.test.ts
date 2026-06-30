@@ -62,6 +62,8 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
         portalUrlMatchesPublicBase: false,
         studioOnSeparateHost: false,
         deploymentModel: "local",
+        humanVerificationEnabled: false,
+        humanVerificationConfigured: false,
       },
       authRequired: true,
       sessionCookieSecure: false,

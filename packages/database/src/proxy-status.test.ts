@@ -25,5 +25,19 @@ describe("proxy status for split-hostname deployments", () => {
     assert.equal(proxy.cloudflare.allowlistConfigured, true);
     assert.equal(proxy.cloudflare.studioOnSeparateHost, true);
     assert.equal(proxy.cloudflare.portalUrlMatchesPublicBase, true);
+    // Turnstile is opt-in: off by default when no keys are configured.
+    assert.equal(proxy.cloudflare.humanVerificationEnabled, false);
+    assert.equal(proxy.cloudflare.humanVerificationConfigured, false);
+  });
+
+  it("reports the Turnstile human-check as enabled when both keys are set", () => {
+    const proxy = getProxyStatus({
+      PUBLIC_APP_URL: "https://uweanddragons.org",
+      TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+    });
+
+    assert.equal(proxy.cloudflare.humanVerificationEnabled, true);
+    assert.equal(proxy.cloudflare.humanVerificationConfigured, true);
   });
 });

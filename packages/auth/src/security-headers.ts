@@ -4,6 +4,7 @@ import {
   isRequestSecure,
   type RequestLikeForCookieOptions,
 } from "./runtime-config";
+import { TURNSTILE_SCRIPT_ORIGIN, isTurnstileEnabled } from "./turnstile";
 
 export interface SecurityHeaderOptions {
   /**
@@ -27,14 +28,38 @@ const STRICT_TRANSPORT_SECURITY_VALUE = "max-age=31536000; includeSubDomains";
  * We allow `'unsafe-inline'` only for script-src and style-src in production
  * because UWE does not use a nonce pipeline yet. All other directives stay
  * tight; external script CDNs are not used.
+ *
+ * When the Cloudflare Turnstile human-check is enabled, the Cloudflare
+ * `challenges.cloudflare.com` origin is added to `script-src`, `connect-src`
+ * and `frame-src` so the widget can load and render. Without it the strict CSP
+ * would block the "Verify you are human" box on the login form.
  */
 export function buildContentSecurityPolicy(
   options: SecurityHeaderOptions = {},
   env: NodeJS.ProcessEnv = process.env,
 ): string {
-  const scriptSrc = isProductionEnv(env)
-    ? "'self' 'unsafe-inline'"
-    : "'self' 'unsafe-inline' 'unsafe-eval'";
+  const turnstileEnabled = isTurnstileEnabled(env);
+
+  const scriptSrc = ["'self'", "'unsafe-inline'"];
+  if (!isProductionEnv(env)) {
+    scriptSrc.push("'unsafe-eval'");
+  }
+  if (turnstileEnabled) {
+    scriptSrc.push(TURNSTILE_SCRIPT_ORIGIN);
+  }
+
+  const connectSrc = ["'self'"];
+  if (turnstileEnabled) {
+    connectSrc.push(TURNSTILE_SCRIPT_ORIGIN);
+  }
+
+  const frameSrc: string[] = [];
+  if (options.allowYouTubeEmbeds) {
+    frameSrc.push("https://www.youtube.com", "https://www.youtube-nocookie.com");
+  }
+  if (turnstileEnabled) {
+    frameSrc.push(TURNSTILE_SCRIPT_ORIGIN);
+  }
 
   const directives = [
     "default-src 'self'",
@@ -42,22 +67,15 @@ export function buildContentSecurityPolicy(
     "form-action 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    `script-src ${scriptSrc}`,
+    `script-src ${scriptSrc.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src ${connectSrc.join(" ")}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
+    frameSrc.length > 0 ? `frame-src ${frameSrc.join(" ")}` : "frame-src 'none'",
   ];
-
-  if (options.allowYouTubeEmbeds) {
-    directives.push(
-      "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
-    );
-  } else {
-    directives.push("frame-src 'none'");
-  }
 
   return directives.join("; ");
 }

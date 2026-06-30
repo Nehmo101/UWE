@@ -45,6 +45,49 @@ Set on the host (not committed). The in-app status reflects these:
 | `CLOUDFLARE_TUNNEL` | Mark tunnel deployment | `true` |
 | `SESSION_COOKIE_SECURE` | Secure cookies (HTTPS only) | `true` in production |
 
+## "Verify you are human" check (Cloudflare Turnstile)
+
+UWE can show a Cloudflare **Turnstile** "Verify you are human" widget on the
+Studio and Portal login forms — the same kind of human-check pictured on managed
+Cloudflare sites — and verify the resulting token server-side before sign-in.
+This is the in-app entry gate that protects login regardless of whether a
+Cloudflare Tunnel/Access sits in front.
+
+Configuration (host env, never committed):
+
+| Variable | Purpose |
+|---|---|
+| `TURNSTILE_SITE_KEY` | Public site key rendered in the browser widget |
+| `TURNSTILE_SECRET_KEY` | Secret key used for server-side `siteverify` (never sent to the client) |
+| `TURNSTILE_ENABLED` | Optional kill-switch (`false` disables even when keys are set) |
+
+Behaviour:
+
+- The check is **opt-in**: with no keys configured every helper is a no-op, so
+  local development and self-hosters without Cloudflare keep working unchanged.
+- When both keys are present, login is blocked until a valid token is verified.
+  Verification **fails closed** (network/timeout errors block the attempt) and
+  failed attempts are recorded in the login audit log
+  (`human_verification_failed`).
+- The strict CSP is widened **only when enabled** to allow the Turnstile origin
+  (`https://challenges.cloudflare.com`) in `script-src`, `connect-src` and
+  `frame-src`. See `packages/auth/src/security-headers.ts`.
+- Create keys at **Cloudflare → Turnstile** (managed widget). Cloudflare also
+  publishes always-pass/always-block test keys for QA — never use them in
+  production.
+
+Verification module: `packages/auth/src/turnstile.ts`. Live status (booleans
+only, no secrets) is shown under **System → Cloudflare** (`/system/cloudflare`).
+
+### Edge-level alternative (full-page interstitial)
+
+For a full-page "Checking your browser / Verify you are human" interstitial in
+front of *everything* (not just login), enable a Cloudflare **Managed Challenge**
+at the edge: Cloudflare dashboard → Security → WAF → custom rule matching the UWE
+hostname(s) with action *Managed Challenge* (or "I'm Under Attack" mode). That is
+a dashboard/WAF setting with no UWE code change and can be combined with the
+in-app Turnstile widget above.
+
 ## Cookies behind the proxy
 
 - Session cookies are `httpOnly` and `Secure` (`SESSION_COOKIE_SECURE=true`),
