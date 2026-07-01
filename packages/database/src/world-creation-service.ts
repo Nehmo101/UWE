@@ -3,6 +3,7 @@ import type { PrismaClient } from "./client";
 import { createAuthService } from "./auth";
 import { logAuditEvent } from "./audit-log-service";
 import { pickUniqueSlug, slugifyPageTitle } from "./page-templates";
+import { createWorldCalendarService } from "./world-calendar-service";
 import {
   buildSeedPageBlocks,
   getWorldTemplate,
@@ -29,6 +30,7 @@ export interface CreatedWorldResult {
   isSandbox: boolean;
   templateId: WorldTemplateId;
   seededPageCount: number;
+  seededCalendar: boolean;
 }
 
 export class WorldCreationService {
@@ -76,6 +78,11 @@ export class WorldCreationService {
     });
 
     const seededPageCount = await this.applyWorldTemplate(world.id, template);
+    let seededCalendar = false;
+    if (template.seedCalendar) {
+      await createWorldCalendarService(this.db).upsertForWorld({ worldId: world.id });
+      seededCalendar = true;
+    }
 
     await logAuditEvent(this.db, {
       actorUserId: userId,
@@ -89,6 +96,7 @@ export class WorldCreationService {
         isSandbox: world.isSandbox,
         templateId,
         seededPageCount,
+        seededCalendar,
       },
     });
 
@@ -101,6 +109,7 @@ export class WorldCreationService {
       isSandbox: world.isSandbox,
       templateId,
       seededPageCount,
+      seededCalendar,
     };
   }
 

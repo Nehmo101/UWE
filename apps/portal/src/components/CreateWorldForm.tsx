@@ -11,10 +11,31 @@ export interface WorldTemplateChoice {
   id: string;
   name: string;
   description: string;
+  seedPageCount?: number;
+  includesCampaign?: boolean;
+  includesCalendar?: boolean;
 }
 
 interface Props {
   templates?: WorldTemplateChoice[];
+}
+
+function formatTemplateHint(template: WorldTemplateChoice): string | null {
+  if (template.id === "blank") {
+    return "Keine Startseiten — du legst alles selbst an.";
+  }
+
+  const parts: string[] = [];
+  if (template.seedPageCount) {
+    parts.push(`${template.seedPageCount} Startseite(n)`);
+  }
+  if (template.includesCampaign) {
+    parts.push("Standard-Kampagne");
+  }
+  if (template.includesCalendar) {
+    parts.push("Weltkalender");
+  }
+  return parts.length > 0 ? `Enthält: ${parts.join(" · ")}` : null;
 }
 
 export function CreateWorldForm({ templates = [] }: Props) {
@@ -96,6 +117,12 @@ export function CreateWorldForm({ templates = [] }: Props) {
           ))}
         </fieldset>
       ) : null}
+
+      {(() => {
+        const selected = templates.find((entry) => entry.id === templateId);
+        const hint = selected ? formatTemplateHint(selected) : null;
+        return hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null;
+      })()}
 
       <div className="space-y-2">
         <Label htmlFor="world-name">Name</Label>

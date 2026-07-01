@@ -6,6 +6,7 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { ADMIN_ACCESS_ROLES, hasAnyRole, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { createWorldBodySchema, parseBody } from "@uwe/security";
 import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
@@ -39,31 +40,13 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    const parsed = await parseBody(request, createWorldBodySchema);
+    if (!parsed.success) {
+      return parsed.response;
     }
 
-    const payload = body as {
-      name?: string;
-      slug?: string;
-      description?: string;
-      guestModeEnabled?: boolean;
-      isSandbox?: boolean;
-      templateId?: string;
-    };
-
     const service = createWorldCreationService(db);
-    const world = await service.createWorldForUser(user.id, {
-      name: payload.name ?? "",
-      slug: payload.slug,
-      description: payload.description ?? null,
-      guestModeEnabled: payload.guestModeEnabled,
-      isSandbox: payload.isSandbox,
-      templateId: payload.templateId,
-    });
+    const world = await service.createWorldForUser(user.id, parsed.data);
 
     return NextResponse.json({ world }, { status: 201 });
   } catch (error) {

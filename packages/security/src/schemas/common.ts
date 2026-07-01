@@ -206,6 +206,25 @@ export const aiGeneratorBodySchema = z.object({
   sync: z.boolean().optional(),
 });
 
+export const WORLD_TEMPLATE_IDS = [
+  "blank",
+  "dnd",
+  "wiki",
+  "roman",
+  "wargame",
+] as const;
+
+export const worldTemplateIdSchema = z.enum(WORLD_TEMPLATE_IDS);
+
+export const createWorldBodySchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  slug: slugSchema.optional(),
+  description: z.string().trim().max(500).optional(),
+  guestModeEnabled: z.boolean().optional(),
+  isSandbox: z.boolean().optional(),
+  templateId: worldTemplateIdSchema.optional(),
+});
+
 /** Accepts any object — pair with domain validators (e.g. validateSettingsUpdate). */
 export const passthroughBodySchema = z.object({}).passthrough();
 

@@ -408,6 +408,16 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 ---
 
+## 12f. World Templates
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| Welt-Archetypen | Beta | `world-templates.ts`, `world-creation-service.ts` |
+| Erstellungs-UI | Beta | Studio/Portal `CreateWorldForm`, `/api/worlds` |
+| Kalender-Seed | Beta | DnD + Wargame → `WorldCalendar` bei Erstellung |
+
+---
+
 ## 13. Tag-/Taxonomie-Aufräumer
 
 | Kriterium | Status |

@@ -2,12 +2,15 @@ import type { PageType, Visibility } from "./generated/prisma/client";
 import { getPageTemplate } from "./page-templates";
 
 /** Archetype selected when creating a new world (distinct from page templates). */
-export type WorldTemplateId = "blank" | "dnd" | "wiki" | "roman";
+export type WorldTemplateId = "blank" | "dnd" | "wiki" | "roman" | "wargame";
 
 export interface WorldTemplateOption {
   id: WorldTemplateId;
   name: string;
   description: string;
+  seedPageCount: number;
+  includesCampaign: boolean;
+  includesCalendar: boolean;
 }
 
 export interface WorldTemplateSeedPage {
@@ -32,47 +35,27 @@ export interface WorldTemplateDefinition {
   description: string;
   campaign?: WorldTemplateCampaignSeed;
   seedPages: WorldTemplateSeedPage[];
+  /** Creates a default WorldCalendar when the world is created. */
+  seedCalendar?: boolean;
 }
-
-export const WORLD_TEMPLATE_OPTIONS: WorldTemplateOption[] = [
-  {
-    id: "blank",
-    name: "Leere Welt",
-    description: "Keine Startseiten — du legst alles selbst an.",
-  },
-  {
-    id: "dnd",
-    name: "DnD-Kampagne",
-    description: "Kampagne plus NPC, Ort, Fraktion, Quest und Session-Plan als Startwiki.",
-  },
-  {
-    id: "wiki",
-    name: "Projekt-Wiki",
-    description: "Wissenswiki mit Übersicht, Themenbereich und Referenzseite.",
-  },
-  {
-    id: "roman",
-    name: "Roman / Erzählung",
-    description: "Figuren, Schauplatz und Kapitelstruktur für Fiction-Projekte.",
-  },
-];
 
 const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
   {
     id: "blank",
     name: "Leere Welt",
-    description: "Keine Startseiten.",
+    description: "Keine Startseiten — du legst alles selbst an.",
     seedPages: [],
   },
   {
     id: "dnd",
     name: "DnD-Kampagne",
-    description: "Klassisches Kampagnen-Setup aus Seiten-Vorlagen.",
+    description: "Kampagne plus NPC, Ort, Fraktion, Quest und Session-Plan als Startwiki.",
     campaign: {
       name: "Hauptkampagne",
       slug: "hauptkampagne",
       description: "Standardkampagne für Abenteuer, NPCs und Sessions.",
     },
+    seedCalendar: true,
     seedPages: [
       { title: "Start-NPC", slug: "start-npc", pageTemplateId: "npc" },
       { title: "Startort", slug: "startort", pageTemplateId: "ort" },
@@ -159,10 +142,58 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
       },
     ],
   },
+  {
+    id: "wargame",
+    name: "Wargame / Tabletop-Schlacht",
+    description: "Tabletop-Gefechte mit Armeen, Terrain und Szenario-Setup.",
+    campaign: {
+      name: "Haupttheater",
+      slug: "haupttheater",
+      description: "Einsatzgebiet für Szenarien, Armeen und Schlachten.",
+    },
+    seedCalendar: true,
+    seedPages: [
+      { title: "Spielerarmee", slug: "spielerarmee", pageTemplateId: "fraktion" },
+      { title: "Gegner", slug: "gegner", pageTemplateId: "fraktion" },
+      { title: "Schlachtfeld", slug: "schlachtfeld", pageTemplateId: "ort" },
+      {
+        title: "Szenario",
+        slug: "szenario",
+        pageTemplateId: "blank",
+        starterContent: [
+          "## Ziel",
+          "Was soll auf dem Tisch entschieden werden?",
+          "",
+          "## Aufstellung",
+          "- Spielerarmee: [[Spielerarmee]]",
+          "- Gegner: [[Gegner]]",
+          "- Terrain: [[Schlachtfeld]]",
+          "",
+          "## Siegbedingungen",
+          "- ",
+        ].join("\n"),
+        visibility: "dm_only",
+      },
+      {
+        title: "Einheitenreferenz",
+        slug: "einheitenreferenz",
+        pageTemplateId: "handout",
+        starterContent: "Kurzreferenz für Einheiten, Werte und Spezialregeln.",
+        visibility: "player_visible",
+      },
+    ],
+  },
 ];
 
 export function listWorldTemplateOptions(): WorldTemplateOption[] {
-  return WORLD_TEMPLATE_OPTIONS;
+  return WORLD_TEMPLATES.map((template) => ({
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    seedPageCount: template.seedPages.length,
+    includesCampaign: Boolean(template.campaign),
+    includesCalendar: Boolean(template.seedCalendar),
+  }));
 }
 
 export function getWorldTemplate(id: string | null | undefined): WorldTemplateDefinition | null {
