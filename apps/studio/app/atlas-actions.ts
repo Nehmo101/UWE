@@ -493,7 +493,7 @@ export async function linkPinToPageAction(formData: FormData): Promise<void> {
 
 /**
  * Create a new wiki page (region or location type) and link the given pin feature to it.
- * Returns the new pageId so the client can store it in the EditorFeature.
+ * Returns the new pageId so the client can store it on the linked feature.
  */
 export async function createPinPageAction(
   formData: FormData,

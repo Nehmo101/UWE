@@ -34,7 +34,7 @@ interface HostDoc {
 export interface AtlasStudioHostProps {
   worldSlug: string;
   /** Full DM-context atlas doc (unfiltered) loaded into the embedded editor. */
-  doc: HostDoc;
+  doc: Record<string, unknown>;
   /** Maps client palette keys (e.g. builtin glyph keys) → real AtlasPaletteItem DB ids. */
   paletteIdMap?: Record<string, string>;
 }
