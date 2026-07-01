@@ -363,6 +363,136 @@ body {
   margin-top: 0.15rem;
 }
 
+.portal-story-timeline {
+  position: relative;
+  margin-top: 1.5rem;
+  padding-left: 1.35rem;
+}
+
+.portal-story-timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 2px;
+  background: color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-border));
+}
+
+.portal-story-timeline-compact {
+  margin-top: 1rem;
+}
+
+.portal-story-now {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent) 8%, var(--uwe-card));
+}
+
+.portal-story-now-label,
+.portal-story-now-progress {
+  font-size: 0.8125rem;
+  color: var(--uwe-muted);
+}
+
+.portal-story-year {
+  margin: 0 0 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--uwe-muted);
+}
+
+.portal-story-year-group + .portal-story-year-group {
+  margin-top: 1.5rem;
+}
+
+.portal-story-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.portal-story-event {
+  position: relative;
+  margin: 0;
+  padding: 1rem 1rem 1rem 0.35rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-card) 96%, var(--uwe-bg));
+}
+
+.portal-story-event::before {
+  content: "";
+  position: absolute;
+  left: -1.15rem;
+  top: 1.15rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--uwe-accent);
+  box-shadow: 0 0 0 3px var(--uwe-bg);
+}
+
+.portal-story-event-meta time {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--uwe-accent);
+}
+
+.portal-story-event-title {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.portal-story-event-summary {
+  margin: 0.55rem 0 0;
+  color: var(--uwe-muted);
+  line-height: 1.55;
+}
+
+.portal-story-links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.portal-story-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-panel) 88%, var(--uwe-bg));
+  color: var(--uwe-fg);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.portal-story-links a:hover {
+  border-color: color-mix(in srgb, var(--uwe-accent) 45%, var(--uwe-border));
+}
+
+.portal-story-more {
+  margin-top: 1rem;
+}
+
+.portal-story-section .portal-story-timeline::before {
+  bottom: 0.5rem;
+}
+
 .auth-world-list em {
   color: var(--uwe-accent);
   font-style: normal;

@@ -1,16 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import {
-  buildPageUrl,
-  createAuthService,
-  createPrismaClient,
-  createWorldCalendarService,
-  formatInGameDate,
-  getAppRepository,
-  parseWorldCalendarMonths,
-  type PageType,
-} from "@uwe/database/server";
+  buildPortalTimelineGroups,
+  loadPortalTimelineData,
+} from "@/src/lib/portal-timeline-data";
+import { PortalStoryTimeline } from "@/src/components/PortalStoryTimeline";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -24,58 +18,31 @@ export default async function PortalTimelinePage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-  const repo = getAppRepository();
-
-  let events;
-  let months = parseWorldCalendarMonths(undefined);
-
-  try {
-    const world = await repo.getWorldBySlug(worldSlug);
-    if (!world) {
-      notFound();
-    }
-
-    const calendars = createWorldCalendarService(db);
-    const calendar = await calendars.getByWorldId(world.id);
-    months = parseWorldCalendarMonths(calendar?.months);
-    events = await auth.listWorldEventsForViewer(worldSlug, ctx);
-  } finally {
-    await db.$disconnect();
+  const data = await loadPortalTimelineData(worldSlug, ctx);
+  if (!data) {
+    notFound();
   }
+
+  const groups = buildPortalTimelineGroups(data.events, data.months, data.epochLabel);
 
   return (
     <section className="portal-content-card">
       <h1>Timeline</h1>
       <p className="auth-lead">
-        Chronologische Ereignisse — nur freigegebene, spoilerarme Zusammenfassungen.
+        Die Geschichte eurer Kampagne — chronologisch, spoilerarm und nur mit freigegebenen
+        Zusammenfassungen.
       </p>
 
-      {events.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="auth-muted">Noch keine sichtbaren Ereignisse in der Timeline.</p>
       ) : (
-        <ol className="auth-page-list">
-          {events.map((event) => (
-            <li key={event.id}>
-              <strong>{formatInGameDate(event.inGameDate, months)}</strong>
-              <span>{event.title}</span>
-              {event.summaryPlayer && <p className="auth-muted">{event.summaryPlayer}</p>}
-              {event.linkedPages.length > 0 && (
-                <p className="auth-muted">
-                  {event.linkedPages.map((page, index) => (
-                    <span key={page.id}>
-                      {index > 0 ? ", " : null}
-                      <Link href={buildPageUrl(worldSlug, page.type as PageType, page.slug)}>
-                        {page.title}
-                      </Link>
-                    </span>
-                  ))}
-                </p>
-              )}
-            </li>
-          ))}
-        </ol>
+        <PortalStoryTimeline
+          worldSlug={worldSlug}
+          groups={groups}
+          currentDateLabel={data.currentDateLabel}
+          eventsThroughCurrentDate={data.eventsThroughCurrentDate}
+          totalEvents={data.events.length}
+        />
       )}
     </section>
   );
