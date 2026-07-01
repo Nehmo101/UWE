@@ -83,6 +83,12 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "sessions",
           "recap",
         ]),
+        worldItem("portal-world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", [
+          "gruppenschatz",
+          "treasury",
+          "inventar",
+          "währung",
+        ]),
         worldItem("portal-world-timeline", "Timeline", `${base}/timeline`, "clock", [
           "timeline",
           "chronik",

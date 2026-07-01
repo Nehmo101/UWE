@@ -176,6 +176,7 @@ export type WorldNavKey =
   | "sessions"
   | "calendar"
   | "chronicle"
+  | "treasury"
   | "dungeons"
   | "assets"
   | "labels"
@@ -235,6 +236,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
         { key: "sessions", label: "Sessions", href: `${base}/sessions` },
         { key: "calendar", label: "Weltuhr", href: `${base}/calendar` },
         { key: "chronicle", label: "Chronik", href: `${base}/chronicle` },
+        { key: "treasury", label: "Gruppenschatz", href: `${base}/treasury` },
         { key: "notes", label: "Spielernotizen", href: `${base}/notes` },
       ],
     },
@@ -285,7 +287,7 @@ export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNav
 export function worldBottomNavKey(active: WorldNavKey, isSearching = false): WorldBottomNavKey {
   if (active === "overview") return "overview";
   if (active === "pages" || active === "new-page" || isSearching) return "content";
-  if (active === "sessions" || active === "notes" || active === "calendar" || active === "chronicle") return "sessions";
+  if (active === "sessions" || active === "notes" || active === "calendar" || active === "chronicle" || active === "treasury") return "sessions";
   if (
     active === "brain" ||
     active === "graph" ||
@@ -372,6 +374,7 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/sessions`)) return "sessions";
   if (normalized.startsWith(`${base}/calendar`)) return "calendar";
   if (normalized.startsWith(`${base}/chronicle`)) return "chronicle";
+  if (normalized.startsWith(`${base}/treasury`)) return "treasury";
   if (normalized.startsWith(`${base}/dungeons`)) return "dungeons";
   if (normalized.startsWith(`${base}/assets`)) return "assets";
   if (normalized.startsWith(`${base}/labels`)) return "labels";
