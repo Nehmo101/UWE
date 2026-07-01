@@ -61,6 +61,18 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         source: "organization",
         keywords: ["ideen", "ideas", "cursor", "prompt", "agent", "ideen-management"],
       },
+      {
+        id: "org-bugs",
+        label: "Bug-Center",
+        href: "/bugs",
+        icon: "bug",
+        group: "Arbeit & Projekte",
+        section: SECTION,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "organization",
+        keywords: ["bug", "bugs", "fehler", "bug-center", "bug-report"],
+      },
     ],
   },
   {

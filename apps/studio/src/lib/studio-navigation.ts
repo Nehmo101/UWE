@@ -329,6 +329,7 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/workshop") ||
     normalized.startsWith("/projects") ||
     normalized.startsWith("/ideas") ||
+    normalized.startsWith("/bugs") ||
     normalized.startsWith("/contracts")
   ) {
     return "create";
