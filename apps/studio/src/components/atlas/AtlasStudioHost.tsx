@@ -118,7 +118,7 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
       fd.set("seed", String(seed));
       try {
         const result = await generateAtlasDraftAction(fd);
-        if (result && "draft" in result) {
+        if (result && "draft" in result && result.draft) {
           post({ type: "ai-draft-result", features: result.draft.features });
         }
       } catch (error) {
