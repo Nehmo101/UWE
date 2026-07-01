@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { updateBugReportAction } from "../bug-actions";
 import { BugReportForm } from "./BugReportForm";
+import { BugScreenshotUpload } from "./BugScreenshotUpload";
 import { BugReportList } from "./BugReportList";
 import {
   BugSeverityBadge,
@@ -177,10 +178,7 @@ function BugDetailPanel({
           Modul / Bereich
           <input name="module" defaultValue={report.module ?? ""} />
         </label>
-        <label>
-          Screenshot (Asset-ID, optional)
-          <input name="screenshotAssetId" defaultValue={report.screenshotAssetId ?? ""} />
-        </label>
+        <BugScreenshotUpload initialAssetId={report.screenshotAssetId} />
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
           Speichern
         </button>

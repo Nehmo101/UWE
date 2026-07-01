@@ -117,7 +117,7 @@ export class GraphEngine {
     this.wake();
     return this.locked;
   }
-  fit(anim = true) {
+  fit(_anim = true) {
     const rect = this.canvas.getBoundingClientRect();
     if (!rect.width) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

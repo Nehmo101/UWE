@@ -13,11 +13,12 @@ import {
   createDevIdeaService,
   DEV_IDEA_STATUSES,
   prisma,
+  syncFeatureMatrixToDevIdeas,
   type DevIdeaLifecycle,
   type DevIdeaStatus,
   type DevIdeaType,
 } from "@uwe/database/server";
-import { requireOwner } from "@/src/lib/auth";
+import { requireAdminAccess, requireOwner } from "@/src/lib/auth";
 
 function ideas() { return createDevIdeaService(prisma); }
 function parseStatus(v: FormDataEntryValue | null): DevIdeaStatus | undefined {
@@ -66,4 +67,16 @@ export async function deleteIdeaAction(formData: FormData): Promise<void> {
   await ideas().deleteIdea(id); revalidatePath("/ideas");
   const params = new URLSearchParams(); const view = parseIdeaWorkspaceView(String(formData.get("view") ?? ""));
   if (view !== "all") params.set("view", view); redirect(params.toString() ? `/ideas?${params.toString()}` : "/ideas");
+}
+export async function syncFeatureMatrixAction(formData: FormData): Promise<void> {
+  await requireAdminAccess();
+  await syncFeatureMatrixToDevIdeas(prisma);
+  revalidatePath("/ideas");
+  const params = new URLSearchParams();
+  params.set("view", "features");
+  const lifecycle = String(formData.get("lifecycle") ?? "").trim();
+  if (lifecycle && (DEV_IDEA_LIFECYCLES as readonly string[]).includes(lifecycle)) params.set("lifecycle", lifecycle);
+  const moduleFilter = String(formData.get("module") ?? "").trim();
+  if (moduleFilter && (DEV_IDEA_MODULES as readonly string[]).includes(moduleFilter)) params.set("module", moduleFilter);
+  redirect(`/ideas?${params.toString()}`);
 }

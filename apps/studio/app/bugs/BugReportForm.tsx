@@ -1,4 +1,5 @@
 import { createBugReportAction } from "../bug-actions";
+import { BugScreenshotUpload } from "./BugScreenshotUpload";
 import { BUG_REPORT_SEVERITY_LABELS, BUG_SEVERITY_ORDER } from "./bug-constants";
 
 interface BugReportFormProps {
@@ -42,10 +43,7 @@ export function BugReportForm({ filterStatus, filterSeverity }: BugReportFormPro
           <option value="Database" />
         </datalist>
       </label>
-      <label>
-        Screenshot (Asset-ID, optional)
-        <input name="screenshotAssetId" placeholder="cuid… nach Upload in Assets" />
-      </label>
+      <BugScreenshotUpload />
       <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
         Bug melden
       </button>
