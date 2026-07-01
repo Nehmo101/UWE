@@ -1,4 +1,10 @@
 import type { Character, DndRulesEdition, Prisma, PrismaClient } from "./generated/prisma/client";
+import {
+  computeSpellSlots,
+  toCharacterSpellView,
+  type CharacterSpellView,
+  type SpellSlotSummary,
+} from "./character-spell-service";
 
 export interface AbilityScores {
   strength: number;
@@ -149,6 +155,8 @@ export interface PortalCharacterView {
   pageTitle: string | null;
   notes: string;
   sheet: CharacterSheetSnapshot;
+  spells: CharacterSpellView[];
+  spellSlots: SpellSlotSummary;
 }
 
 export function toPortalCharacterView(
@@ -160,13 +168,36 @@ export function toPortalCharacterView(
     | "rulesEdition"
     | "abilities"
     | "combat"
+    | "classes"
     | "ownerUserId"
     | "pageId"
     | "notes"
   > & {
     page?: { slug: string; title: string } | null;
+    spells?: Array<{
+      id: string;
+      spellKey: string;
+      spellLevel: number;
+      prepared: boolean;
+      source: string | null;
+      notes: string;
+    }>;
   },
 ): PortalCharacterView {
+  const spells = (character.spells ?? []).map((spell) =>
+    toCharacterSpellView({
+      id: spell.id,
+      characterId: character.id,
+      spellKey: spell.spellKey,
+      spellLevel: spell.spellLevel,
+      prepared: spell.prepared,
+      source: spell.source,
+      notes: spell.notes,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }),
+  );
+
   return {
     id: character.id,
     displayName: character.displayName,
@@ -178,6 +209,8 @@ export function toPortalCharacterView(
     pageTitle: character.page?.title ?? null,
     notes: character.notes,
     sheet: buildCharacterSheetSnapshot(character),
+    spells,
+    spellSlots: computeSpellSlots(character.level, character.classes),
   };
 }
 

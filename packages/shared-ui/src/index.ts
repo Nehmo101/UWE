@@ -275,3 +275,9 @@ export {
   type UseDashboardLayoutOptions,
   type UseDashboardLayoutState,
 } from "./layout-editor";
+
+export {
+  CharacterSpellSection,
+  type CharacterSpellSectionProps,
+  type SpellSearchResult,
+} from "./CharacterSpellSection";

@@ -1,11 +1,18 @@
-import { CollapsibleSection } from "@uwe/shared-ui";
+import { CharacterSpellSection, CollapsibleSection } from "@uwe/shared-ui";
 import {
   createCharacterService,
   createPrismaClient,
   type PortalCharacterView,
   toPortalCharacterView,
 } from "@uwe/database/server";
-import { updateStudioCharacterSheetAction } from "@/app/worlds/[worldSlug]/character-sheet-actions";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  addHomebrewSpellAction,
+  addSpellAction,
+  removeSpellAction,
+  togglePreparedAction,
+  updateStudioCharacterSheetAction,
+} from "@/app/worlds/[worldSlug]/character-sheet-actions";
 
 interface Props {
   worldSlug: string;
@@ -131,6 +138,24 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
           Charakterbogen speichern
         </button>
       </form>
+
+      <CharacterSpellSection
+        spells={character.spells}
+        spellSlots={character.spellSlots}
+        canEdit
+        hiddenFields={{
+          worldSlug,
+          pageId,
+          pageSlug,
+          category,
+          characterId: character.id,
+        }}
+        addSpellAction={addSpellAction}
+        removeSpellAction={removeSpellAction}
+        togglePreparedAction={togglePreparedAction}
+        addHomebrewSpellAction={addHomebrewSpellAction}
+        searchSpellsUrl={studioApiUrl("/api/dnd/spells/search")}
+      />
     </CollapsibleSection>
   );
 }

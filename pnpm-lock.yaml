@@ -83,6 +83,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@uwe/dnd-api':
+        specifier: workspace:*
+        version: link:../../packages/dnd-api
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
