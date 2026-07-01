@@ -11,7 +11,7 @@ describe("studio middleware deny-by-default", () => {
     delete process.env.CLOUDFLARE_TUNNEL;
   });
 
-  it("allows GET /setup without Authorization when STUDIO_API_TOKEN is set", () => {
+  it("allows GET /setup without Authorization when STUDIO_API_TOKEN is set", async () => {
     process.env.STUDIO_API_TOKEN = "host-setup-token";
     process.env.AUTH_REQUIRED = "true";
     process.env.PUBLIC_APP_URL = "https://uwe.example";
@@ -19,31 +19,31 @@ describe("studio middleware deny-by-default", () => {
     const request = new NextRequest("http://127.0.0.1:3000/setup", {
       headers: { host: "127.0.0.1:3000" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.notEqual(response.status, 401);
     assert.notEqual(response.status, 403);
   });
 
-  it("allows GET /api/auth/setup without Authorization when STUDIO_API_TOKEN is set", () => {
+  it("allows GET /api/auth/setup without Authorization when STUDIO_API_TOKEN is set", async () => {
     process.env.STUDIO_API_TOKEN = "host-setup-token";
     process.env.PUBLIC_APP_URL = "https://uwe.example";
 
     const request = new NextRequest("http://127.0.0.1:3000/api/auth/setup", {
       headers: { host: "127.0.0.1:3000" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.notEqual(response.status, 401);
     assert.notEqual(response.status, 403);
   });
 
-  it("blocks protected studio API without bearer token when STUDIO_API_TOKEN is set", () => {
+  it("blocks protected studio API without bearer token when STUDIO_API_TOKEN is set", async () => {
     process.env.STUDIO_API_TOKEN = "host-setup-token";
     process.env.PUBLIC_APP_URL = "https://uwe.example";
 
     const request = new NextRequest("http://127.0.0.1:3000/api/settings", {
       headers: { host: "127.0.0.1:3000" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.equal(response.status, 401);
   });
 
@@ -57,13 +57,13 @@ describe("studio middleware deny-by-default", () => {
         authorization: "Bearer wrong-token",
       },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.equal(response.status, 401);
     const body = (await response.json()) as { error?: string };
     assert.match(body.error ?? "", /Studio-API-Token|Ungültiges Studio-API-Token/);
   });
 
-  it("allows protected studio API with valid bearer token", () => {
+  it("allows protected studio API with valid bearer token", async () => {
     process.env.STUDIO_API_TOKEN = "host-setup-token";
     process.env.PUBLIC_APP_URL = "https://uwe.example";
     process.env.AUTH_REQUIRED = "false";
@@ -74,42 +74,42 @@ describe("studio middleware deny-by-default", () => {
         authorization: "Bearer host-setup-token",
       },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.notEqual(response.status, 401);
     assert.notEqual(response.status, 403);
   });
 
-  it("blocks cross-site API requests", () => {
+  it("blocks cross-site API requests", async () => {
     const request = new NextRequest("http://studio.local/api/settings", {
       headers: { "sec-fetch-site": "cross-site", host: "studio.local" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.equal(response.status, 403);
   });
 
-  it("allows same-origin API requests when auth is not required", () => {
+  it("allows same-origin API requests when auth is not required", async () => {
     process.env.AUTH_REQUIRED = "false";
     const request = new NextRequest("http://studio.local/api/settings", {
       headers: { "sec-fetch-site": "same-origin", host: "studio.local" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.notEqual(response.status, 403);
   });
 
-  it("allows health endpoint without cross-origin block", () => {
+  it("allows health endpoint without cross-origin block", async () => {
     const request = new NextRequest("http://studio.local/api/health", {
       headers: { "sec-fetch-site": "cross-site", host: "studio.local" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.notEqual(response.status, 403);
   });
 
-  it("adds security headers to page responses", () => {
+  it("adds security headers to page responses", async () => {
     process.env.AUTH_REQUIRED = "false";
     const request = new NextRequest("http://studio.local/", {
       headers: { host: "studio.local" },
     });
-    const response = middleware(request);
+    const response = await middleware(request);
     assert.equal(response.headers.get("X-Frame-Options"), "SAMEORIGIN");
     assert.ok(response.headers.get("Content-Security-Policy"));
   });

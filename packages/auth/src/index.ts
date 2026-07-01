@@ -281,6 +281,13 @@ export {
   getMiddlewareMatcher,
 } from "./security/middleware";
 
+export {
+  fetchMaintenanceMiddlewareDecision,
+  MAINTENANCE_EVALUATE_API_PATH,
+} from "./security/maintenance-middleware";
+
+export type { MaintenanceMiddlewareDecision } from "./security/maintenance-middleware";
+
 export type { LegacyPathRedirect } from "./legacy-path-redirects";
 export { resolveLegacyPathRedirect } from "./legacy-path-redirects";
 

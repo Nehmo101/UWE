@@ -39,8 +39,23 @@ const BYPASS_PATH_PREFIXES = [
   "/api/auth",
 ];
 
+export const MAINTENANCE_MIDDLEWARE_BYPASS_PREFIXES = [
+  ...BYPASS_PATH_PREFIXES,
+  "/api/maintenance/evaluate",
+] as const;
+
 function isBypassPath(pathname: string): boolean {
   return BYPASS_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+export function isMaintenanceGateBypassPath(pathname: string): boolean {
+  return isBypassPath(pathname);
+}
+
+export function isMaintenanceMiddlewareBypassPath(pathname: string): boolean {
+  return MAINTENANCE_MIDDLEWARE_BYPASS_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }

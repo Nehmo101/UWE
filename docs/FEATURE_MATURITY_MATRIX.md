@@ -398,6 +398,16 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 ---
 
+## 12e. Owner-Notfallmodus
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| Wartungsmodus | Beta | `SystemSettings.maintenance`, `/settings?tab=maintenance`, NL-Command |
+| Middleware-Gate | Beta | `maintenance-gate.ts`, `/api/maintenance/evaluate`, Studio/Portal `middleware.ts` |
+| Owner-Bypass | Beta | `evaluateMaintenanceGate` + Layout-Enforcement |
+
+---
+
 ## 13. Tag-/Taxonomie-Aufräumer
 
 | Kriterium | Status |

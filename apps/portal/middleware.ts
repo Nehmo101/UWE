@@ -3,9 +3,11 @@ import type { NextRequest } from "next/server";
 import {
   applySecurityHeaders,
   evaluatePortalMiddleware,
+  fetchMaintenanceMiddlewareDecision,
   isCrossSiteBrowserRequest,
   resolveLegacyPathRedirect,
 } from "@uwe/auth";
+import { isMaintenanceMiddlewareBypassPath } from "@uwe/database/maintenance-gate";
 
 function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null {
   if (!request.nextUrl.pathname.startsWith("/api/")) {
@@ -27,7 +29,7 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const legacyRedirect = resolveLegacyPathRedirect(request.nextUrl.pathname, "portal", process.env);
   if (legacyRedirect) {
     const target = legacyRedirect.external
@@ -49,6 +51,40 @@ export function middleware(request: NextRequest) {
   const crossOriginError = rejectCrossOriginApiRequest(request);
   if (crossOriginError) {
     return crossOriginError;
+  }
+
+  const pathname = request.nextUrl.pathname;
+
+  if (!isMaintenanceMiddlewareBypassPath(pathname)) {
+    const maintenance = await fetchMaintenanceMiddlewareDecision(
+      request.nextUrl.origin,
+      pathname,
+      "portal",
+      request.headers.get("cookie"),
+    );
+    if (maintenance) {
+      if (pathname.startsWith("/api/")) {
+        return applySecurityHeaders(
+          NextResponse.json(
+            { error: maintenance.message, maintenance: true },
+            { status: 503 },
+          ),
+          process.env,
+          { allowYouTubeEmbeds: true },
+          request,
+        );
+      }
+
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = maintenance.redirectPath ?? "/maintenance";
+      redirectUrl.search = "";
+      return applySecurityHeaders(
+        NextResponse.redirect(redirectUrl),
+        process.env,
+        { allowYouTubeEmbeds: true },
+        request,
+      );
+    }
   }
 
   const decision = evaluatePortalMiddleware({
@@ -114,6 +150,7 @@ export const config = {
     "/login",
     "/forgot-password",
     "/reset-password",
+    "/maintenance",
     "/portal",
     "/worlds/:path*",
     "/players/:path*",

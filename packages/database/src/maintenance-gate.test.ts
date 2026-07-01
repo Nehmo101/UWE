@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   evaluateMaintenanceGate,
+  isMaintenanceMiddlewareBypassPath,
   resolveMaintenanceGateContext,
 } from "./maintenance-gate";
 import { DEFAULT_SYSTEM_SETTINGS, type UweSystemSettings } from "./settings-service";
@@ -93,5 +94,10 @@ describe("maintenance gate", () => {
     });
 
     assert.equal(decision.blocked, false);
+  });
+
+  it("skips middleware fetch for evaluate API path", () => {
+    assert.equal(isMaintenanceMiddlewareBypassPath("/api/maintenance/evaluate"), true);
+    assert.equal(isMaintenanceMiddlewareBypassPath("/today"), false);
   });
 });

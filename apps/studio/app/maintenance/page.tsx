@@ -15,8 +15,8 @@ export default async function MaintenancePage() {
       <section className="uwe-card uwe-card-padded">
         <p>{message}</p>
         <p className="uwe-hint">
-          Owner-Konten können Studio weiterhin nutzen, um den Notfallmodus in den Einstellungen
-          zu deaktivieren.
+          Owner-Konten können Studio weiterhin nutzen, um den Notfallmodus in den{" "}
+          <a href="/settings?tab=maintenance">Einstellungen</a> zu deaktivieren.
         </p>
       </section>
     </SystemShell>
