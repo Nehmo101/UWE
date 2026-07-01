@@ -926,6 +926,9 @@ importers:
       '@uwe/config':
         specifier: workspace:*
         version: link:../config
+      esbuild:
+        specifier: 0.28.0
+        version: 0.28.0
       prisma:
         specifier: ^7.8.0
         version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(better-sqlite3@12.10.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
