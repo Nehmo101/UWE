@@ -4740,3 +4740,35 @@ textarea.uwe-idea-prompt-text {
   gap: 0.25rem;
   font-size: 0.85rem;
 }
+
+/* --- Bug-Center (list + detail workspace) --- */
+.uwe-bug-list-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.uwe-bug-list-module {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+.uwe-bug-filter-form {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--uwe-border, #d9d2c2);
+}
+
+.uwe-bug-screenshot {
+  margin: 0.75rem 0;
+}
+
+.uwe-bug-screenshot-image {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  margin-top: 0.5rem;
+  border: 1px solid var(--uwe-border, #d9d2c2);
+  border-radius: var(--uwe-radius-md, 8px);
+}
