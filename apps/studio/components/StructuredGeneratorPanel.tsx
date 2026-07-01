@@ -7,7 +7,7 @@ import type {
   GeneratorActionDefinition,
   StructuredGeneratorField,
   StructuredGeneratorSchema,
-} from "@uwe/database/server";
+} from "@uwe/database/generator-types";
 
 interface Props {
   worldSlug: string;

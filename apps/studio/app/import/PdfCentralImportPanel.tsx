@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { ImportTargetType, MarkdownImportPreviewResult } from "@uwe/database/server";
+import type { ImportTargetType, MarkdownImportPreviewResult } from "@uwe/database/import-constants";
 import {
   executeImportCentralPdfJobAction,
   previewImportCentralPdfJobAction,

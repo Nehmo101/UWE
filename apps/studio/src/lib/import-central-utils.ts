@@ -1,4 +1,4 @@
-import type { ImportSourceType, ImportTargetType } from "@uwe/database/server";
+import type { ImportSourceType, ImportTargetType } from "@uwe/database/import-constants";
 
 const MARKDOWN_SOURCE_TYPES = new Set<ImportSourceType>(["markdown", "obsidian"]);
 const MARKDOWN_TARGET_TYPES = new Set<ImportTargetType>([

@@ -34,25 +34,10 @@ export const IMAGE_STUDIO_OPERATION_LABELS: Record<ImageStudioOperation, string>
   variant: "Variante",
 };
 
-export const IMAGE_STUDIO_STATUS_LABELS: Record<ImageStudioStatus, string> = {
-  draft: "Entwurf",
-  processing: "In Bearbeitung",
-  completed: "Fertig",
-  failed: "Fehlgeschlagen",
-};
-
-export function imageStudioStatusBadgeClass(status: ImageStudioStatus): string {
-  switch (status) {
-    case "completed":
-      return "uwe-badge uwe-badge-success";
-    case "processing":
-      return "uwe-badge uwe-badge-warning";
-    case "failed":
-      return "uwe-badge uwe-badge-danger";
-    default:
-      return "uwe-badge";
-  }
-}
+export {
+  IMAGE_STUDIO_STATUS_LABELS,
+  imageStudioStatusBadgeClass,
+} from "./integrations-ui";
 
 export function extractImageStudioErrorMessage(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {

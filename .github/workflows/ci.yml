@@ -56,13 +56,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Get lockfile hash
+        id: lockfile
+        run: echo "hash=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
       - name: Restore Turbo cache
         uses: actions/cache/restore@v4
         with:
           path: .turbo
-          key: turbo-quality-${{ runner.os }}-${{ github.sha }}-${{ github.run_attempt }}
+          key: turbo-quality-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
             turbo-quality-${{ runner.os }}-
+            turbo-pr-${{ runner.os }}-
             turbo-${{ runner.os }}-
 
       - name: Restore Next.js build cache
@@ -71,7 +76,7 @@ jobs:
           path: |
             apps/studio/.next/cache
             apps/portal/.next/cache
-          key: next-${{ runner.os }}-${{ github.sha }}-${{ github.run_attempt }}
+          key: next-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
             next-${{ runner.os }}-
 
@@ -87,7 +92,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .turbo
-          key: turbo-quality-${{ runner.os }}-${{ github.sha }}-${{ github.run_attempt }}
+          key: turbo-quality-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
 
       - name: Save Next.js build cache
         if: always()
@@ -96,9 +101,23 @@ jobs:
           path: |
             apps/studio/.next/cache
             apps/portal/.next/cache
-          key: next-${{ runner.os }}-${{ github.sha }}-${{ github.run_attempt }}
+          key: next-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            deploy-scripts:
+              - 'deploy/scripts/**'
 
       - name: Shellcheck host setup scripts
+        if: steps.filter.outputs.deploy-scripts == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck

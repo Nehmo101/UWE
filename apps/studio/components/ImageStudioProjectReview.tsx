@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { ImageStudioStatus } from "@uwe/database/server";
+import type { ImageStudioStatus } from "@uwe/database/integrations-ui";
 import {
   adoptImageStudioAssetAction,
   saveImageStudioDraftAction,

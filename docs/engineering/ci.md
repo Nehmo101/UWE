@@ -6,9 +6,19 @@ UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) a
 
 ## Caching and job timeouts
 
-Hosted jobs restore **Turbo** (`.turbo/`) and **Next.js build** caches (`.next/cache` in Studio and Portal) via `actions/cache` before the quality gate on `main`, and Turbo cache before `ci:light` on PRs. This speeds up incremental `typecheck`, `test`, and `build:release` runs without changing gate semantics.
+Hosted jobs restore **Turbo** (`.turbo/`) and **Next.js build** caches (`.next/cache` in Studio and Portal) via `actions/cache`. Cache keys are keyed by **lockfile hash** so PR and main runs reuse the same Turbo cache across commits until dependencies change.
 
-Each hosted job sets `timeout-minutes` to cap runaway jobs (quality 25, PR fast-checks 20, postgres-smoke 15, e2e 30, security 20, docs 10).
+PR gate runs **`lint`** first (~2 min, fail-fast), then **`fast-checks`** with `pnpm ci:light:pr:gate` (affected typecheck/test, no duplicate lint). Main gate runs full `pnpm quality`.
+
+| Job | Timeout | Typical warm duration |
+|-----|---------|----------------------|
+| PR `lint` | 10 min | ~1–3 min |
+| PR `fast-checks` | 25 min | ~6–10 min |
+| Main `quality` | 50 min | ~10–20 min |
+| `postgres-smoke` | 15 min | ~3–5 min |
+| `e2e` (scheduled/manual) | 30 min | ~15–25 min |
+| `security-*` | 20 min | ~5–10 min |
+| `shellcheck` | 5 min | ~1 min (deploy scripts only) |
 
 ## Cost strategy
 
@@ -16,7 +26,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 | Event | Workflow | Gate |
 |-------|----------|------|
-| **Pull request** | `pr-check.yml` | `pnpm ci:light` (lint, typecheck, test:ci, secret scan, docs) |
+| **Pull request** | `pr-check.yml` | `lint` + `ci:light:pr:gate` (affected typecheck/test, secret scan, docs) |
 | **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke (when DB paths change) |
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
@@ -43,7 +53,8 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 **Required status checks** — only these should block merges:
 
-- `fast-checks` (job in `pr-check.yml`)
+- `fast-checks` (heavy gate in `pr-check.yml`; fails fast when `lint` failed)
+- `lint` (recommended — fail-fast ESLint before typecheck/tests)
 
 **Do not mark as required** (path-filtered, expensive, or post-merge gates):
 
@@ -55,15 +66,17 @@ Configure in GitHub: **Settings → Branches → Branch protection rules → `ma
 
 ### PR Check (`pr-check.yml`)
 
-The only automatic workflow on pull requests:
+The only automatic workflow on pull requests (two jobs):
 
-1. Path filter — docs-only PRs (markdown, `docs/**`, `.cursor/**`) skip the heavy gate; job `fast-checks` still completes successfully for branch protection
-2. `pnpm install --frozen-lockfile` (code changes only)
-3. Lockfile in sync (`git diff --exit-code pnpm-lock.yaml`)
-4. Restore Turbo cache (`actions/cache`)
-5. `pnpm ci:light` — db:generate, lint, typecheck, test:ci, secret scan, docs:check
+1. **`detect-changes`** — path filter (docs-only vs code)
+2. **`lint`** — `pnpm install` + lockfile check + `pnpm lint` (~2 min); skipped for docs-only PRs
+3. **`fast-checks`** — if lint failed: exit immediately (saves runner minutes); if docs-only: success without gate; else:
+   - Restore Turbo cache (`actions/cache`, lockfile hash key)
+   - `pnpm ci:light:pr:gate` — db:generate, **affected** typecheck/test, secret scan, docs:check
 
-No `pnpm quality`, no E2E, no security tests, no release build.
+`turbo.json` no longer runs `^build` before `typecheck`/`test` (tsc and node tests do not need compiled package outputs). Main-only `build:release` still builds Studio and Portal.
+
+No `pnpm quality`, no E2E, no security tests, no release build on PRs.
 
 ### CI (`ci.yml`)
 
@@ -112,7 +125,9 @@ Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
 
 | Script | Equivalent CI step |
 |--------|-------------------|
-| `pnpm ci:light` | PR gate: db:generate → lint → typecheck → test:ci → secret scan → docs |
+| `pnpm ci:light` | Local full PR mirror: db:generate → lint → typecheck → test:ci → secret scan → docs |
+| `pnpm ci:light:pr` | Local full PR mirror incl. lint |
+| `pnpm ci:light:pr:gate` | Same as CI `fast-checks` job (affected packages, no lint) |
 | `pnpm ci:check` | Local fast path with release build: lint → typecheck → test:ci → build:release |
 | `pnpm quality` | Full CI quality job (main gate) |
 | `pnpm quality:quiet` | Same as quality; writes full log to temp file, prints tail on failure (for agents) |
@@ -194,6 +209,21 @@ Fix or document accepted risks. Audit level is **high** and above for production
 Only **`fast-checks`** in `pr-check.yml` should block PR merges.
 
 Post-merge gates on `main` (CI, Security) catch issues after merge — run `pnpm quality` locally before merging when possible.
+
+### Observed cost drivers (2026-07)
+
+From GitHub Actions usage on a busy agent day (~200 runs):
+
+| Workflow | Share of minutes | Notes |
+|----------|------------------|-------|
+| **PR Check** | ~57% | ~10–16 min/run; ~40% failure/cancel rate wastes minutes |
+| **CI (main)** | ~30% | Full `pnpm quality`; build failures after ~10 min are costly |
+| **Copilot review** | ~12% | Runs on many PRs in parallel with PR Check |
+| **Deploy / Docs** | ~1% | Deploy is self-hosted; Docs Check is cheap |
+
+**Mitigations in place:** lint fail-fast job, affected-package PR gate, Turbo cache keyed by lockfile, no `^build` before typecheck/test, shellcheck only when deploy scripts change, concurrency cancel on PR pushes (avoids duplicate green runs but wastes minutes when agents push faster than CI finishes).
+
+**Manual levers:** reduce agent push frequency per branch; disable Copilot auto-review on `cursor/*` branches if not needed; batch merges to `main` to avoid duplicate full gates.
 
 ## Related
 

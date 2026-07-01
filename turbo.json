@@ -10,10 +10,10 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": []
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": []
     }
   }
 }

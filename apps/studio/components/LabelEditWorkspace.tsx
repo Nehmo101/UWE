@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { LabelElement } from "@uwe/database/server";
+import type { LabelElement } from "@uwe/database/label-elements";
 import { LabelEditor, type LabelEditorAsset } from "./LabelEditor";
 
 export type LabelFitStatus = "fits" | "tight" | "overflow";

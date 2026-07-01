@@ -12,14 +12,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fast-checks:
+  detect-changes:
     runs-on: ubuntu-latest
-    # Must cover a fully cold Turbo cache (~30 min); warm runs finish far faster.
-    timeout-minutes: 40
-    env:
-      # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
-      # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
-      TURBO_CONCURRENCY: 4
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,57 +33,101 @@ jobs:
               - '!docs/**'
               - '!.cursor/**'
 
+  lint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
-        if: steps.changes.outputs.code == 'true'
         with:
           version: 10.12.1
 
       - uses: actions/setup-node@v4
-        if: steps.changes.outputs.code == 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
-        if: steps.changes.outputs.code == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Verify lockfile is in sync
-        if: steps.changes.outputs.code == 'true'
         run: git diff --exit-code pnpm-lock.yaml
 
+      - name: Lint (fail fast)
+        run: pnpm lint
+
+  fast-checks:
+    needs: [detect-changes, lint]
+    if: always()
+    runs-on: ubuntu-latest
+    # Warm Turbo cache: ~6–10 min after lint passes. Cold first run can take longer.
+    timeout-minutes: 25
+    env:
+      # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
+      # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
+      TURBO_CONCURRENCY: 4
+    steps:
+      - name: Propagate lint failure
+        if: needs.lint.result == 'failure'
+        run: |
+          echo "Lint failed — skipping typecheck/tests to save runner minutes."
+          exit 1
+
+      - uses: actions/checkout@v4
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        with:
+          # Needed for turbo --filter="...[origin/main]" in ci:light:pr:gate.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        run: pnpm install --frozen-lockfile
+
       - name: Get lockfile hash
-        if: steps.changes.outputs.code == 'true'
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
         id: lockfile
         run: echo "hash=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1 | cut -c1-12)" >> "$GITHUB_OUTPUT"
 
       - name: Restore Turbo cache
-        if: steps.changes.outputs.code == 'true'
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
         uses: actions/cache/restore@v4
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: turbo-pr-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-
-            turbo-${{ runner.os }}-
-            turbo-quality-${{ runner.os }}-
             turbo-pr-${{ runner.os }}-
+            turbo-quality-${{ runner.os }}-
+            turbo-${{ runner.os }}-
 
-      - name: Light CI gate
-        if: steps.changes.outputs.code == 'true'
-        run: pnpm ci:light
+      - name: Light CI gate (affected packages, no lint)
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        run: pnpm ci:light:pr:gate
 
       # Save with `always()` so even a red or timed-out gate seeds the cache —
       # otherwise a cold cache times the job out and the cache is never written
       # (post-step of actions/cache is skipped on cancellation), which loops
       # every subsequent run back into the same timeout.
       - name: Save Turbo cache
-        if: always() && steps.changes.outputs.code == 'true'
+        if: always() && needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
         uses: actions/cache/save@v4
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: turbo-pr-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
 
       - name: Docs-only PR — skip heavy gate
-        if: steps.changes.outputs.code != 'true'
+        if: needs.detect-changes.outputs.code != 'true'
         run: echo "Docs-only changes; fast-checks satisfied without ci:light."

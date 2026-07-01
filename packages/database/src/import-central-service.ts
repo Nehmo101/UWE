@@ -1,4 +1,10 @@
-import type { ImportSourceType, ImportTargetType, PageType } from "./generated/prisma/client";
+import type { PageType } from "./generated/prisma/client";
+import type {
+  ImportSourceType,
+  ImportTargetType,
+  MarkdownImportPreviewItem,
+  MarkdownImportPreviewResult,
+} from "./import-constants";
 import type { PrismaClient } from "./client";
 import { createLifeAdminService, type LifeAdminService } from "./life-admin-service";
 import { normalizePdfTextForImport, extractPdfText } from "./pdf-text-extract";
@@ -25,21 +31,7 @@ export interface MarkdownImportContext {
   worldSlug?: string | null;
 }
 
-export interface MarkdownImportPreviewItem {
-  itemId: string;
-  title: string;
-  excerpt: string;
-  pageType?: string;
-  category?: string | null;
-  tags?: string[];
-}
-
-export interface MarkdownImportPreviewResult {
-  items: MarkdownImportPreviewItem[];
-  totalDocuments: number;
-  errors: string[];
-  canExecute: boolean;
-}
+export type { MarkdownImportPreviewItem, MarkdownImportPreviewResult } from "./import-constants";
 
 export interface MarkdownImportExecuteResult {
   created: number;
