@@ -1,5 +1,13 @@
 import type { PortalCharacterView } from "@uwe/database/server";
-import { updateCharacterSheetAction } from "../../app/character-sheet-actions";
+import { CharacterSpellSection } from "@uwe/shared-ui";
+import {
+  addHomebrewSpellAction,
+  addSpellAction,
+  removeSpellAction,
+  searchOpen5eSpellsAction,
+  togglePreparedAction,
+  updateCharacterSheetAction,
+} from "../../app/character-sheet-actions";
 
 interface CharacterSheetPanelProps {
   worldSlug: string;
@@ -149,6 +157,23 @@ export function CharacterSheetPanel({
       ) : (
         <p className="auth-muted">Nur der Charaktereigentümer kann die Werte bearbeiten.</p>
       )}
+
+      <CharacterSpellSection
+        spells={character.spells}
+        spellSlots={character.spellSlots}
+        canEdit={canEdit}
+        hiddenFields={{
+          worldSlug,
+          characterId: character.id,
+          pageSlug,
+          returnPath,
+        }}
+        addSpellAction={addSpellAction}
+        removeSpellAction={removeSpellAction}
+        togglePreparedAction={togglePreparedAction}
+        addHomebrewSpellAction={addHomebrewSpellAction}
+        searchSpellsAction={searchOpen5eSpellsAction}
+      />
     </section>
   );
 }

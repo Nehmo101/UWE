@@ -102,6 +102,19 @@ export {
   CharacterService,
 } from "./character-service";
 
+export {
+  buildHomebrewSpellKey,
+  computeSpellSlots,
+  createCharacterSpellService,
+  effectiveCasterLevel,
+  extractOpen5eSpellLevel,
+  formatSpellDisplayName,
+  parseCharacterClasses,
+  parseHomebrewSpellInput,
+  toCharacterSpellView,
+  CharacterSpellService,
+} from "./character-spell-service";
+
 export type {
   AbilityScores,
   CharacterCombat,
@@ -111,6 +124,13 @@ export type {
   UpdateCharacterInput,
   UpsertCharacterSpellInput,
 } from "./character-service";
+
+export type {
+  CharacterClassEntry,
+  CharacterSpellView,
+  ParsedHomebrewSpell,
+  SpellSlotSummary,
+} from "./character-spell-service";
 
 export {
   createPartyTreasuryService,
