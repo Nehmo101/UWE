@@ -19,8 +19,10 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
     migrations: {
       ok: true,
       appliedCount: 1,
+      appliedMigrations: ["20240101000000_init"],
       pendingMigrations: [],
       failedMigrations: [],
+      failedDetails: [],
       message: "OK",
     },
     storage: {

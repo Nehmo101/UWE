@@ -42,6 +42,7 @@ import { CampaignSidebar } from "@/src/components/wiki";
 import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
 import { PageChroniclePanel } from "@/components/wiki/PageChroniclePanel";
 import { FactionStateEditPanel } from "@/components/wiki/FactionStateEditPanel";
+import { FactionSimulatorSection } from "@/components/wiki/FactionSimulatorSection";
 import { QuestStatusEditPanel } from "@/components/wiki/QuestStatusEditPanel";
 import { CharacterSheetEditPanel } from "@/components/wiki/CharacterSheetEditPanel";
 import { ItemBuilderSection } from "@/components/wiki/ItemBuilderSection";
@@ -405,12 +406,24 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         />
 
         {page.type === PageTypeEnum.faction && (
-          <FactionStateEditPanel
-            worldSlug={worldSlug}
-            pageId={page.id}
-            pageSlug={slug}
-            category={category}
-          />
+          <>
+            <FactionStateEditPanel
+              worldSlug={worldSlug}
+              pageId={page.id}
+              pageSlug={slug}
+              category={category}
+            />
+            <FactionSimulatorSection
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              pageId={page.id}
+              pageType={page.type}
+              worldId={world.id}
+              rtxReady={generatorPanel?.rtxReady ?? false}
+              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+            />
+          </>
         )}
 
         {page.type === PageTypeEnum.quest && (
@@ -466,7 +479,11 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             worldSlug={worldSlug}
             pageSlug={slug}
             pageTitle={page.title}
-            actions={generatorPanel.actions}
+            actions={
+              page.type === PageTypeEnum.faction
+                ? generatorPanel.actions.filter((action) => action.id !== "simulate_faction")
+                : generatorPanel.actions
+            }
             missingHints={generatorPanel.missingHints}
             rtxReady={generatorPanel.rtxReady}
             rtxEnabled={generatorPanel.rtxEnabled}

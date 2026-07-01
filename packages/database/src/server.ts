@@ -91,6 +91,16 @@ export {
 export type { UpsertFactionStateInput } from "./faction-state-service";
 
 export {
+  buildFactionSimulationPrompt,
+  summarizeFactionStateForUi,
+} from "./faction-simulation-prompt";
+
+export type {
+  FactionSimulationPromptInput,
+  FactionSimulationStateSnapshot,
+} from "./faction-simulation-prompt";
+
+export {
   abilityModifier,
   ABILITY_KEYS,
   buildCharacterSheetSnapshot,
