@@ -69,11 +69,18 @@ export type {
 } from "./world-calendar-service";
 
 export {
+  compareInGameDates,
   createWorldEventService,
+  toPortalWorldEventView,
+  WORLD_EVENT_ENTITY_ROLE_LABELS,
   WorldEventService,
 } from "./world-event-service";
 
-export type { CreateWorldEventInput } from "./world-event-service";
+export type {
+  CreateWorldEventInput,
+  PortalWorldEventView,
+  WorldEventWithLinks,
+} from "./world-event-service";
 
 export {
   createFactionStateService,

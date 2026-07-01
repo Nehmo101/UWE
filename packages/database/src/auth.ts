@@ -16,6 +16,7 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   filterPlayerNotesForViewer,
+  isSecretVisibleToPlayer,
   scopeFromAccessContext,
   sessionExpiresAt,
 } from "@uwe/auth";
@@ -44,6 +45,13 @@ import {
   type DmGameSessionView,
   type PortalGameSessionView,
 } from "./game-session";
+import {
+  createWorldEventService,
+  toPortalWorldEventView,
+  compareInGameDates,
+  type PortalWorldEventView,
+  type WorldEventWithLinks,
+} from "./world-event-service";
 import {
   SoundboardService,
   isSoundboardButtonVisibleInPortal,
@@ -942,6 +950,63 @@ export class AuthService {
       ...view,
       linkedPages: filterPagesForViewer(ctx, view.linkedPages),
     };
+  }
+
+  private canViewWorldEventForPortal(
+    ctx: AccessContext,
+    event: Pick<WorldEventWithLinks, "visibility" | "secretLevel">,
+  ): boolean {
+    if (event.visibility !== "player_visible" && event.visibility !== "public") {
+      return false;
+    }
+    if (ctx.effectiveRole === "player") {
+      return isSecretVisibleToPlayer(event);
+    }
+    return ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm" || ctx.effectiveRole === "admin";
+  }
+
+  private toPortalWorldEventViewForViewer(
+    event: WorldEventWithLinks,
+    ctx: AccessContext,
+  ): PortalWorldEventView {
+    const view = toPortalWorldEventView(event);
+    const visiblePages = filterPagesForViewer(
+      ctx,
+      event.entityLinks.map((link) => link.page),
+    );
+    const visibleIds = new Set(visiblePages.map((page) => page.id));
+    return {
+      ...view,
+      linkedPages: view.linkedPages.filter((page) => visibleIds.has(page.id)),
+    };
+  }
+
+  async listWorldEventsForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+  ): Promise<PortalWorldEventView[]> {
+    const mayView =
+      ctx.effectiveRole === "player" ||
+      ctx.effectiveRole === "owner" ||
+      ctx.effectiveRole === "dm" ||
+      ctx.effectiveRole === "admin";
+    if (!mayView) {
+      return [];
+    }
+
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
+    if (!world) {
+      return [];
+    }
+
+    const events = createWorldEventService(this.db);
+    const rows = await events.listForWorld(world.id);
+    const portalRows = rows as WorldEventWithLinks[];
+
+    return portalRows
+      .filter((event) => this.canViewWorldEventForPortal(ctx, event))
+      .map((event) => this.toPortalWorldEventViewForViewer(event, ctx))
+      .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
 
   async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
