@@ -6,5 +6,7 @@ describe("@uwe/dnd-api", () => {
     const mod = await import("./index");
     assert.equal(typeof mod.searchAllDndApis, "function");
     assert.equal(typeof mod.searchOpen5eMonsters, "function");
+    assert.equal(typeof mod.searchOpen5eEquipment, "function");
+    assert.equal(typeof mod.searchEquipment, "function");
   });
 });

@@ -348,6 +348,8 @@ export const dndSpellSearchQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
 });
 
+export const dndEquipmentSearchQuerySchema = dndSpellSearchQuerySchema;
+
 const levelUpBooleanField = z
   .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
   .optional();
@@ -369,6 +371,17 @@ export const studioCharacterLevelUpApplySchema = characterLevelUpApplySchema.ext
   pageId: idSchema,
   pageSlug: slugSchema,
   category: slugSchema,
+});
+
+export const studioApplySrdEquipmentSchema = z.object({
+  worldSlug: slugSchema,
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+  provider: z.enum(["open5e", "dnd5e_srd"]),
+  equipmentId: z.string().trim().min(1).max(200),
+  name: nonEmptyString.max(500),
+  sourceUrl: z.string().trim().max(2000).optional(),
 });
 
 export const characterSheetPrintQuerySchema = z.object({
