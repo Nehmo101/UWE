@@ -90,6 +90,32 @@ export {
 export type { UpsertFactionStateInput } from "./faction-state-service";
 
 export {
+  abilityModifier,
+  createCharacterService,
+  DEFAULT_ABILITY_SCORES,
+  proficiencyBonus,
+  CharacterService,
+} from "./character-service";
+
+export type {
+  AbilityScores,
+  CreateCharacterInput,
+  UpsertCharacterSpellInput,
+} from "./character-service";
+
+export {
+  createPartyTreasuryService,
+  DEFAULT_CURRENCIES,
+  PartyTreasuryService,
+} from "./party-treasury-service";
+
+export type {
+  CreateInventoryItemInput,
+  CurrencyLedger,
+  UpsertPartyTreasuryInput,
+} from "./party-treasury-service";
+
+export {
   getWorldTemplate,
   listWorldTemplateOptions,
   resolveWorldTemplateId,

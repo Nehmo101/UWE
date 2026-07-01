@@ -450,6 +450,11 @@ enum WorldEventEntityRole {
   faction
 }
 
+enum DndRulesEdition {
+  dnd5e_2014
+  dnd5e_2024
+}
+
 enum ContractBillingInterval {
   monthly
   yearly
@@ -524,6 +529,7 @@ model User {
   aiUsageLogs          AiUsageLog[]
   reviewComments         ReviewComment[]
   dashboardLayouts       DashboardLayout[]
+  ownedCharacters        Character[]
 
   @@map("users")
 }
@@ -660,6 +666,9 @@ model World {
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
   factionStates       FactionState[]
+  characters          Character[]
+  partyTreasury       PartyTreasury?
+  inventoryItems      InventoryItem[]
 
   @@map("worlds")
 }
@@ -683,6 +692,7 @@ model Campaign {
   playerNotes       PlayerNote[]
   brainDocuments    BrainDocument[]
   brainFacts        BrainFact[]
+  characters        Character[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -735,6 +745,8 @@ model Page {
   atlasObjects           AtlasObject[]  @relation("AtlasObjectPage")
   worldEventLinks        WorldEventEntityLink[]
   factionState           FactionState?
+  character              Character?
+  inventoryItems         InventoryItem[]
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -819,6 +831,99 @@ model FactionState {
 
   @@index([worldId])
   @@map("faction_states")
+}
+
+model Character {
+  id           String          @id @default(cuid())
+  worldId      String          @map("world_id")
+  pageId       String?         @unique @map("page_id")
+  ownerUserId  String          @map("owner_user_id")
+  campaignId   String?         @map("campaign_id")
+  displayName  String          @map("display_name")
+  rulesEdition DndRulesEdition @default(dnd5e_2024) @map("rules_edition")
+  level        Int             @default(1)
+  abilities    Json
+  skills       Json?
+  combat       Json?
+  spellcasting Json?
+  classes      Json?
+  species      Json?
+  background   Json?
+  features     Json?
+  bio          Json?
+  notes        String          @default("")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  world          World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page           Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  owner          User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  campaign       Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  spells         CharacterSpell[]
+  inventoryItems InventoryItem[]
+
+  @@index([worldId, ownerUserId])
+  @@map("characters")
+}
+
+model CharacterSpell {
+  id          String   @id @default(cuid())
+  characterId String   @map("character_id")
+  spellKey    String   @map("spell_key")
+  spellLevel  Int      @default(0) @map("spell_level")
+  prepared    Boolean  @default(false)
+  source      String?
+  notes       String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, spellKey])
+  @@index([characterId])
+  @@map("character_spells")
+}
+
+model PartyTreasury {
+  id         String   @id @default(cuid())
+  worldId    String   @unique @map("world_id")
+  name       String   @default("Gruppenschatz")
+  currencies Json
+  notes      String   @default("")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  world World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  items InventoryItem[]
+
+  @@map("party_treasuries")
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  characterId String?  @map("character_id")
+  treasuryId  String?  @map("treasury_id")
+  pageId      String?  @map("page_id")
+  name        String
+  quantity    Int      @default(1)
+  weight      Float?
+  value       Json?
+  properties  Json?
+  notes       String   @default("")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world     World          @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  character Character?     @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  treasury  PartyTreasury? @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+  page      Page?          @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([worldId])
+  @@index([characterId])
+  @@index([treasuryId])
+  @@map("inventory_items")
 }
 
 model GameSession {
