@@ -361,7 +361,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Nutzbar | **Ja** |
 | Production-ready | **Ja** (Kern) |
 
-**Phase 2 (Batch 4):** `AssetAlbum`, Galerie-Blöcke v2 (`metadata.assetIds`), Batch-Tag-Vorschläge (heuristisch). Zentrales `EntityTag`-Backfill weiter offen.
+**Phase 2 (Batch 4):** `AssetAlbum`, Galerie-Blöcke v2 (`metadata.assetIds`), Batch-Tag-Vorschläge (heuristisch). Zentrales `EntityTag`-Backfill für alle `EntityTagEntityType`-Domains (Json + `metadata.tags`).
 
 **Referenzen:** `packages/assets/`, `asset-album-service.ts`, `apps/studio/app/worlds/[worldSlug]/assets/`
 

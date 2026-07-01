@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   createTagService,
+  ENTITY_TAG_ENTITY_TYPE_LABELS,
   getAppRepository,
   getTagCoverageStats,
   backfillEntityTagsFromJson,
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
     unused,
     similar,
     coverage,
+    entityTypeLabels: ENTITY_TAG_ENTITY_TYPE_LABELS,
     worlds: worlds.map((world) => ({
       id: world.id,
       name: world.name,

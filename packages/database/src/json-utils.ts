@@ -8,6 +8,20 @@ export function parseStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+export function parseTagsFromMetadata(metadata: unknown): string[] {
+  if (typeof metadata !== "object" || metadata === null) {
+    return [];
+  }
+  return parseStringArray((metadata as Record<string, unknown>).tags);
+}
+
+export function asMetadataRecord(metadata: unknown): Record<string, unknown> {
+  if (typeof metadata !== "object" || metadata === null) {
+    return {};
+  }
+  return { ...(metadata as Record<string, unknown>) };
+}
+
 export function toJsonArray(values: string[] | undefined): string[] {
   return values ?? [];
 }
