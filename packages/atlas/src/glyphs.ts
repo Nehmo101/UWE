@@ -315,10 +315,13 @@ export function groupGlyphsByCategory(): Array<{
 // ---------------------------------------------------------------------------
 
 /**
- * The preferred scatter glyph for each biome kind, used by
- * `scatterGlyphsInPolygon` to fill biome polygons with pictograms. `null`
- * means the biome is not glyph-scattered (e.g. open water/coast). Every key
- * references a stable `BUILTIN_GLYPHS.key`.
+ * Biome kind → preferred scatter glyph — the single-file runtime / spec §7
+ * reference map. `null` means the biome is not glyph-scattered (e.g. open
+ * water/coast). Every non-null value references a stable `BUILTIN_GLYPHS.key`.
+ *
+ * NOTE: `scatterGlyphsInPolygon` (terrain.ts) uses its OWN internal biome→glyph
+ * mapping; this exported map is a separate reference and the two may
+ * intentionally differ (e.g. hills → "rock" here vs "mountain" in terrain.ts).
  */
 export const BIOME_SCATTER_GLYPH: Record<BiomeKind, string | null> = {
   forest: "tree",

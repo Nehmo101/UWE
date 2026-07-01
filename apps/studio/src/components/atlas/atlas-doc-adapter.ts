@@ -131,7 +131,8 @@ export function buildStudioAtlasDoc(input: BuildStudioAtlasDocInput): AtlasDocV2
       visibility: o.visibility,
       _key: o._key,
     })),
-    tileLayer: tileLayer ?? { ...EMPTY_TILE_LAYER },
+    // Fresh cells object per doc — never share the constant's mutable cells reference.
+    tileLayer: tileLayer ?? { ...EMPTY_TILE_LAYER, cells: {} },
   };
 }
 
