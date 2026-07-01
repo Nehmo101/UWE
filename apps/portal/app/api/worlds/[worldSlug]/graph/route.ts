@@ -5,6 +5,7 @@ import {
   getAppRepository,
   getSystemSettings,
   isPortalGloballyEnabled,
+  type GraphViewMode,
 } from "@uwe/database/server";
 import { assertCanReadWorldWithContext } from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -41,6 +42,13 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const graph = await buildWorldGraph(repo, worldSlug, "portal");
+  const url = new URL(request.url);
+  const focusPageId = url.searchParams.get("focusPageId") ?? undefined;
+  const mode = (url.searchParams.get("mode") as GraphViewMode | null) ?? "full";
+
+  const graph = await buildWorldGraph(repo, worldSlug, "portal", {
+    focusPageId,
+    mode: focusPageId ? mode : "full",
+  });
   return NextResponse.json(graph);
 }

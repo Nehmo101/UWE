@@ -6,10 +6,12 @@ import { createPrismaClient } from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ focusPageId?: string; mode?: string }>;
 }
 
-export default async function AuthWorldGraphPage({ params }: Props) {
+export default async function AuthWorldGraphPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { focusPageId, mode } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
@@ -42,7 +44,11 @@ export default async function AuthWorldGraphPage({ params }: Props) {
         Sichtbare Wiki-Seiten und ihre Verknüpfungen — nur Inhalte, die für deine Rolle freigegeben
         sind.
       </p>
-      <PortalGraphView worldSlug={worldSlug} />
+      <PortalGraphView
+        worldSlug={worldSlug}
+        focusPageId={focusPageId}
+        mode={mode === "focus" || mode === "neighbors" || mode === "backlinks" ? mode : undefined}
+      />
     </section>
   );
 }
