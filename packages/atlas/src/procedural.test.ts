@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { generateDraft, rerollDraft } from "./procedural";
+import { generateDraft, rerollDraft, proceduralDraft } from "./procedural";
 
 // ---------------------------------------------------------------------------
 // generateDraft — determinism
@@ -278,6 +278,49 @@ describe("rerollDraft", () => {
     const a = rerollDraft(original, 99, toLC);
     const b = rerollDraft(original, 99, toLC);
     assert.deepEqual(a.features, b.features);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// proceduralDraft — minimal deterministic draft
+// ---------------------------------------------------------------------------
+
+describe("proceduralDraft — determinism", () => {
+  it("same numeric seed → deep-equal output", () => {
+    assert.deepEqual(proceduralDraft(7), proceduralDraft(7));
+  });
+
+  it("same string seed → deep-equal output (hashed seed path)", () => {
+    assert.deepEqual(proceduralDraft("terra"), proceduralDraft("terra"));
+  });
+
+  it("different seeds → different geometry", () => {
+    const a = JSON.stringify(proceduralDraft(1).features);
+    const b = JSON.stringify(proceduralDraft(2).features);
+    assert.notEqual(a, b);
+  });
+});
+
+describe("proceduralDraft — structure", () => {
+  it("echoes the seed and returns exactly a biome polygon + a river path", () => {
+    const draft = proceduralDraft(123);
+    assert.equal(draft.seed, 123);
+    assert.equal(draft.features.length, 2);
+
+    const biome = draft.features.find((f) => f.kind === "biome");
+    const river = draft.features.find((f) => f.kind === "river");
+    assert.ok(biome, "must have a biome feature");
+    assert.ok(river, "must have a river feature");
+    assert.equal(biome.geometry.type, "Polygon");
+    assert.equal(river.geometry.type, "Path");
+    assert.ok(typeof biome.style.biomeKind === "string");
+    assert.ok((biome.style.density as number) >= 1);
+  });
+
+  it("accepts a string seed and echoes it verbatim", () => {
+    const draft = proceduralDraft("seed-abc");
+    assert.equal(draft.seed, "seed-abc");
+    assert.equal(draft.features.length, 2);
   });
 });
 
