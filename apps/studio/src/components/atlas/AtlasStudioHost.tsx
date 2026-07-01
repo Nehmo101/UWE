@@ -13,7 +13,12 @@
  * and deletes the React editor. Kept here as prepared, reviewable infrastructure.
  */
 
-import { ATLAS_BRIDGE_HOST_SOURCE, isEditorMessage, splitDocForSave } from "@uwe/atlas/bridge";
+import {
+  ATLAS_BRIDGE_HOST_SOURCE,
+  applySavedIds,
+  isEditorMessage,
+  splitDocForSave,
+} from "@uwe/atlas/bridge";
 import { useCallback, useEffect, useRef } from "react";
 
 import {
@@ -24,10 +29,12 @@ import {
   saveAtlasTileLayerAction,
   setAtlasMapVisibilityAction,
   setAtlasNodeVisibilityAction,
+  updateAtlasNodeAction,
 } from "@/app/atlas-actions";
 
 interface HostDoc {
-  nodes?: Array<{ id: string }>;
+  nodes?: Array<{ id: string; title?: string }>;
+  rootNodeId?: string;
   [field: string]: unknown;
 }
 
@@ -51,27 +58,32 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
   const handleSave = useCallback(
     async (savedDoc: unknown) => {
       const resolvePaletteId = (id: string): string | undefined => paletteIdMap[id];
-      const payloads = splitDocForSave(savedDoc, { resolvePaletteId });
-      const byNode = new Map(payloads.map((p) => [p.nodeId, p]));
       const d = (savedDoc ?? {}) as HostDoc;
-      // Save every declared node — including those emptied out — so deletions of
-      // all of a node's items still propagate through the diff-syncing actions.
-      const nodeIds = Array.isArray(d.nodes) ? d.nodes.map((n) => n.id) : [...byNode.keys()];
+      const rootNodeId = typeof d.rootNodeId === "string" ? d.rootNodeId : undefined;
+      // Studio loads features/objects for rootNodeId only. Breadcrumb ancestors in
+      // doc.nodes are display context — diff-syncing them would wipe their data.
+      const payloads = splitDocForSave(savedDoc, { nodeId: rootNodeId, resolvePaletteId });
+      const byNode = new Map(payloads.map((p) => [p.nodeId, p]));
+      const nodeIds = rootNodeId ? [rootNodeId] : [...byNode.keys()];
       try {
+        const allSaved: Array<{ clientKey: string; id: string }> = [];
         for (const nodeId of nodeIds) {
           const payload = byNode.get(nodeId) ?? { nodeId, features: [], objects: [] };
           const featuresFd = new FormData();
           featuresFd.set("worldSlug", worldSlug);
           featuresFd.set("nodeId", nodeId);
           featuresFd.set("features", JSON.stringify(payload.features));
-          await saveAtlasFeaturesAction(featuresFd);
+          const featuresResult = await saveAtlasFeaturesAction(featuresFd);
+          allSaved.push(...featuresResult.saved);
 
           const objectsFd = new FormData();
           objectsFd.set("worldSlug", worldSlug);
           objectsFd.set("nodeId", nodeId);
           objectsFd.set("objects", JSON.stringify(payload.objects));
-          await saveAtlasObjectsAction(objectsFd);
+          const objectsResult = await saveAtlasObjectsAction(objectsFd);
+          allSaved.push(...objectsResult.saved);
         }
+        applySavedIds(savedDoc, allSaved);
         // Terrain tiles live on the map (not per node) — persist once.
         const tileLayer = (d as { tileLayer?: unknown }).tileLayer;
         if (tileLayer && typeof tileLayer === "object") {
@@ -129,6 +141,23 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     [post, worldSlug],
   );
 
+  const handleNodeRename = useCallback(
+    async (nodeId: string, title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      const fd = new FormData();
+      fd.set("worldSlug", worldSlug);
+      fd.set("nodeId", nodeId);
+      fd.set("title", trimmed);
+      try {
+        await updateAtlasNodeAction(fd);
+      } catch (error) {
+        console.error("Atlas-Bridge: Knoten umbenennen fehlgeschlagen —", error);
+      }
+    },
+    [worldSlug],
+  );
+
   const handleHandout = useCallback(
     async (nodeId: string, title: string) => {
       const fd = new FormData();
@@ -169,13 +198,16 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         case "handout-request":
           void handleHandout(data.nodeId, data.title);
           break;
+        case "node-rename":
+          void handleNodeRename(data.nodeId, data.title);
+          break;
         default:
           break;
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [doc, handleAiDraft, handleHandout, handleSave, handleVisibility, post]);
+  }, [doc, handleAiDraft, handleHandout, handleNodeRename, handleSave, handleVisibility, post]);
 
   return (
     <iframe

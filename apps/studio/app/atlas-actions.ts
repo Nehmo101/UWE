@@ -239,6 +239,7 @@ export async function saveAtlasFeaturesAction(
     style?: unknown;
     labelText?: string | null;
     labelColor?: string | null;
+    childNodeId?: string | null;
     linkedPageId?: string | null;
     layer?: number;
     sortOrder?: number;
@@ -275,6 +276,7 @@ export async function saveAtlasFeaturesAction(
         style: feat.style as CreateAtlasFeatureInput["style"],
         labelText: feat.labelText ?? null,
         labelColor: feat.labelColor as CreateAtlasFeatureInput["labelColor"],
+        childNodeId: feat.childNodeId ?? null,
         linkedPageId: feat.linkedPageId ?? null,
         layer: feat.layer ?? 0,
         sortOrder: feat.sortOrder ?? 0,
@@ -288,6 +290,7 @@ export async function saveAtlasFeaturesAction(
           style: input.style,
           labelText: input.labelText,
           labelColor: input.labelColor,
+          childNodeId: input.childNodeId,
           linkedPageId: input.linkedPageId,
           layer: input.layer,
           sortOrder: input.sortOrder,

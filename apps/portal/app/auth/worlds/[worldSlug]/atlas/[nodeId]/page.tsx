@@ -1,13 +1,5 @@
 import { notFound } from "next/navigation";
 import {
-  BreadcrumbTrail,
-  PortalAuthChrome,
-  PortalShell,
-} from "@/src/components/shell";
-import { getCurrentUser } from "@/src/lib/auth";
-import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
-import {
   createAtlasService,
   createPrismaClient,
   isAtlasEntityAccessible,
@@ -23,14 +15,10 @@ interface Props {
 
 export default async function PortalAtlasNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
-  const user = await getCurrentUser();
-  const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
-  const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
 
-  let worldName = worldSlug;
   let nodeTitle = "";
   let nodeLevel: string | undefined;
   let viewerFeatures: ViewerFeature[] = [];
@@ -51,7 +39,6 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       select: { name: true },
     });
     if (!world) notFound();
-    worldName = world.name;
 
     // Fetch atlas with portal context — this filters dm_only nodes/features/objects
     const atlasData = await atlas.getAtlasForContext(worldSlug, "portal");
@@ -201,51 +188,28 @@ export default async function PortalAtlasNodePage({ params }: Props) {
 
   const preset = resolveStylePreset(mapStylePreset);
 
-  // Build breadcrumb
-  const breadcrumbItems = [
-    { label: "Meine Welten", href: "/auth/worlds" },
-    { label: worldName, href: `/auth/worlds/${worldSlug}` },
-    { label: "Atlas", href: `/auth/worlds/${worldSlug}/atlas` },
-    ...parentChainItems.map((item) => ({
-      label: item.title,
-      href: `/auth/worlds/${worldSlug}/atlas/${item.id}`,
-    })),
-    { label: nodeTitle },
-  ];
-
+  // Shell (sidebar, top bar, mobile bottom nav) comes from the world layout;
+  // the AtlasViewer renders its own hierarchy breadcrumb from parentChainItems.
   return (
-    <PortalShell
-      worldSlug={worldSlug}
-      worldName={worldName}
-      headerActions={
-        <PortalAuthChrome
-          user={user}
-          canAccessStudio={canAccessStudio}
-          studioUrl={studioUrl}
-        />
-      }
-      breadcrumb={<BreadcrumbTrail items={breadcrumbItems} />}
-    >
-      <section className="portal-content-card">
-        <a href={`/auth/worlds/${worldSlug}/atlas`} className="uwe-back-link">
-          ← Zurück zum Atlas
-        </a>
+    <section className="portal-content-card">
+      <a href={`/auth/worlds/${worldSlug}/atlas`} className="uwe-back-link">
+        ← Zurück zum Atlas
+      </a>
 
-        <AtlasViewer
-          worldSlug={worldSlug}
-          nodeId={nodeId}
-          nodeTitle={nodeTitle}
-          nodeLevel={nodeLevel}
-          features={viewerFeatures}
-          objects={viewerObjects}
-          preset={preset}
-          parentChainItems={parentChainItems}
-          parentSilhouette={parentSilhouette}
-          pageLinkMap={pageLinkMap}
-          paletteItems={paletteItems}
-          tileLayer={tileLayer}
-        />
-      </section>
-    </PortalShell>
+      <AtlasViewer
+        worldSlug={worldSlug}
+        nodeId={nodeId}
+        nodeTitle={nodeTitle}
+        nodeLevel={nodeLevel}
+        features={viewerFeatures}
+        objects={viewerObjects}
+        preset={preset}
+        parentChainItems={parentChainItems}
+        parentSilhouette={parentSilhouette}
+        pageLinkMap={pageLinkMap}
+        paletteItems={paletteItems}
+        tileLayer={tileLayer}
+      />
+    </section>
   );
 }

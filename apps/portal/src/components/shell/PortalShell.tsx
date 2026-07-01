@@ -24,7 +24,13 @@ export interface PortalShellProps {
   children: React.ReactNode;
 }
 
-/** Player-facing Portal shell — login-first IA, optional world scope. */
+/**
+ * Player-facing Portal shell — login-first IA, optional world scope.
+ *
+ * The mobile bottom nav is the default on every authenticated portal page
+ * (rendered mobile-only via CSS); only custom `navGroups` overrides
+ * (guest/share links) opt out of it.
+ */
 export function PortalShell({
   worldSlug,
   worldName,
