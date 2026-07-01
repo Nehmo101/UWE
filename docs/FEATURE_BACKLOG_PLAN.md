@@ -142,7 +142,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 |---|------|:--:|------------------|--------------------|
 | 1 | World Database | 🔶 | `PageType` (location/region/npc/faction/item/monster/quest/secret/lore/...), `page-types.ts`, Kategorie-Routen | **Kein `god`/`deity`/`event`**-Typ (als `lore`/`note` modelliert); keine welt-weite „Secrets-Registry“. |
 | 2 | Verlinkungssystem | 🔶 | `PageLink` (`relationType`/`label`), Wikilinks (`wikilink-utils.ts`), `graph-service.ts`, Backlinks-UI | **Keine Studio-UI zum Anlegen/Bearbeiten typisierter `PageLink`** (nur Import/Seed/API); `relationType` ist freier String ohne Presets. |
-| 3 | Kanon-Status | 🔶 | `Page.canonicalStatus` (idea/draft/canon/deprecated/contradictory/non_canon), editierbar | Kein `prepared`/`happened-in-play`/`discarded`. Überlappt mit `publishStatus`. **Empfehlung: vereinheitlichen** (siehe Fragen). |
+| 3 | Kanon-Status | 🔶 | `Page.canonicalStatus` inkl. prepared/played/discarded; Edit-UI, Suche & Seitenliste filterbar; „Was ist offen?“ nutzt Lifecycle | Deprecated/contradictory weiter als Spezialstatus. |
 | 4 | Spoiler-Level | 🔶 | `Visibility`, `SecretLevel`(none/spoiler/dm_secret)+`RevealState`(hidden/preview/revealed), `content-access.ts`, `SessionUnlock` | Kein erstklassiges „teilweise bekannt“ (am ehesten `RevealState.preview`). Starkes Modell, andere Taxonomie. |
 | 5 | Session Manager | 🔶 | `GameSession` (prep/notes/post/openPlots), `game-session.ts`, Routen, KI-Recap, Kalender-Sync | Kein dedizierter **Live-Modus** (eine `notes`-Textarea); Recap ist manuell (Proposal→Publish), nicht automatisch. |
 | 6 | Dungeon Cockpit | ✅ | `dungeon-cockpit.ts` (dungeon→level→room→encounter/trap/puzzle/loot/secret/map), volle Routen, `prepStatus`, Label/Print | Nahezu vollständig. |
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#390). EntityTag-Backfill deckt alle Domains ab; Globale Suche lexikalisch cross-domain (Wiki + Daily Admin + Medien + Tags).
+#357–#391). EntityTag-Backfill + cross-domain Suche; Kanon-Lifecycle-Filter (prepared/played/discarded) in Studio.

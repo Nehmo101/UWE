@@ -275,6 +275,13 @@ export {
 } from "./page-link-presets";
 
 export {
+  CANONICAL_LIFECYCLE_FILTER_STATUSES,
+  isCanonicalLifecycleFilterStatus,
+} from "./canon-lifecycle";
+
+export type { CanonicalLifecycleFilterStatus } from "./canon-lifecycle";
+
+export {
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
   AssetTypeEnum,

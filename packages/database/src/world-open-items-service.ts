@@ -8,7 +8,8 @@ export type WorldOpenItemCategory =
   | "session_plot"
   | "draft_npc"
   | "open_puzzle"
-  | "prepared_content";
+  | "prepared_content"
+  | "played_awaiting_canon";
 
 export interface WorldOpenItem {
   id: string;
@@ -26,6 +27,7 @@ export const WORLD_OPEN_ITEM_CATEGORY_LABELS: Record<WorldOpenItemCategory, stri
   draft_npc: "NPCs in Arbeit",
   open_puzzle: "Offene Rätsel",
   prepared_content: "Vorbereitet, noch nicht gespielt",
+  played_awaiting_canon: "Gespielt — Kanon noch offen",
 };
 
 const STALE_DAYS = 30;
@@ -75,6 +77,10 @@ export class WorldOpenItemsService {
     const items: WorldOpenItem[] = [];
 
     for (const page of pages) {
+      if (page.canonicalStatus === "discarded") {
+        continue;
+      }
+
       if (page.type === "quest" && isOpenQuest(page.questStatus)) {
         items.push({
           id: `quest-${page.id}`,
@@ -122,6 +128,18 @@ export class WorldOpenItemsService {
           summary: page.summary,
           href: buildPageUrl(world.slug, page.type as PageType, page.slug),
           meta: `Typ: ${page.type}`,
+          updatedAt: page.updatedAt,
+        });
+      }
+
+      if (page.canonicalStatus === "played") {
+        items.push({
+          id: `played-${page.id}`,
+          category: "played_awaiting_canon",
+          title: page.title,
+          summary: page.summary,
+          href: buildPageUrl(world.slug, page.type as PageType, page.slug),
+          meta: "Am Tisch gespielt — Kanon finalisieren",
           updatedAt: page.updatedAt,
         });
       }
@@ -212,5 +230,6 @@ export function groupOpenItemsByCategory(
     draft_npc: items.filter((item) => item.category === "draft_npc"),
     open_puzzle: items.filter((item) => item.category === "open_puzzle"),
     prepared_content: items.filter((item) => item.category === "prepared_content"),
+    played_awaiting_canon: items.filter((item) => item.category === "played_awaiting_canon"),
   };
 }

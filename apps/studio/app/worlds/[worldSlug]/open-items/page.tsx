@@ -17,9 +17,10 @@ interface Props {
 const CATEGORY_ORDER: WorldOpenItemCategory[] = [
   "open_quest",
   "session_plot",
+  "played_awaiting_canon",
+  "prepared_content",
   "draft_npc",
   "open_puzzle",
-  "prepared_content",
 ];
 
 export default async function WorldOpenItemsPage({ params }: Props) {
@@ -53,7 +54,7 @@ export default async function WorldOpenItemsPage({ params }: Props) {
     >
       <PageHeader
         title="Was ist offen?"
-        summary="Vereinheitlichte Übersicht: offene Quests, Session-Plots, NPCs in Arbeit, Rätsel und vorbereitete Inhalte."
+        summary="Vereinheitlichte Übersicht: offene Quests, Session-Plots, vorbereitete und gespielte Inhalte, NPCs in Arbeit und Rätsel. Verworfene Seiten werden ausgeblendet."
       />
 
       {items.length === 0 ? (
