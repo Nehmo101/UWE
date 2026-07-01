@@ -25,6 +25,7 @@ const config = [
       "**/.turbo/**",
       "**/src-tauri/target/**",
       "packages/database/src/generated/**",
+      "design-system/_ds_bundle.js",
       "data/**",
       "exports/**",
       "**/*.d.ts",
