@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { getOwnerCockpitSnapshot, prisma } from "@uwe/database/server";
+import {
+  getOwnerCockpitSnapshot,
+  prisma,
+  UNIFIED_ACTIVITY_SOURCE_LABELS,
+} from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { formatStudioDateTime } from "@/src/lib/format";
 
@@ -100,7 +104,7 @@ export default async function OwnerCockpitPage() {
               <h3>{entry.actionLabel}</h3>
               <p>{entry.summary}</p>
               <p className="uwe-dashboard-muted">
-                {entry.source} · {formatStudioDateTime(entry.timestamp.toISOString())}
+                {UNIFIED_ACTIVITY_SOURCE_LABELS[entry.source as keyof typeof UNIFIED_ACTIVITY_SOURCE_LABELS] ?? entry.source} · {formatStudioDateTime(entry.timestamp.toISOString())}
               </p>
             </article>
           ))}
