@@ -286,3 +286,10 @@ export {
   type CharacterSpellSectionProps,
   type SpellSearchResult,
 } from "./CharacterSpellSection";
+
+export {
+  CharacterDerivedStatsSection,
+  CharacterProficiencyFields,
+  type CharacterDerivedStatsSectionProps,
+  type CharacterProficiencyFieldsProps,
+} from "./CharacterDerivedStats";

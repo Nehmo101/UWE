@@ -8,6 +8,8 @@ export interface SpellSearchResult {
   name: string;
   url?: string;
   spellLevel: number;
+  school?: string | null;
+  description?: string;
 }
 
 export interface CharacterSpellSectionProps {
@@ -124,11 +126,18 @@ export function CharacterSpellSection({
               <div className="auth-character-spell-main">
                 <strong>{spell.displayName}</strong>
                 <SpellLevelBadge level={spell.spellLevel} />
+                {spell.school && <span className="uwe-badge">{spell.school}</span>}
                 {spell.source === "homebrew" && (
                   <span className="uwe-badge uwe-badge-visibility">Homebrew</span>
                 )}
                 {spell.prepared && <span className="uwe-badge">Vorbereitet</span>}
               </div>
+              {spell.description.trim() && (
+                <details className="auth-character-spell-description">
+                  <summary>Beschreibung</summary>
+                  <p className="auth-muted">{spell.description}</p>
+                </details>
+              )}
               {canEdit && (
                 <div className="auth-character-spell-actions">
                   <form action={togglePreparedAction}>
@@ -157,6 +166,10 @@ export function CharacterSpellSection({
         <>
           <div className="auth-character-spell-search">
             <h4>Open5e / SRD suchen</h4>
+            <p className="auth-muted">
+              Zauberdaten aus der Open5e-API (open5e.com, SRD-Inhalte). SRD/Open5e-Attribution
+              bei externen Quellen beachten.
+            </p>
             <label>
               Zaubername
               <input
@@ -179,8 +192,14 @@ export function CharacterSpellSection({
                       <input type="hidden" name="spellLevel" value={result.spellLevel} />
                       <input type="hidden" name="source" value="open5e" />
                       <input type="hidden" name="prepared" value="true" />
+                      <input type="hidden" name="displayName" value={result.name} />
+                      {result.school && <input type="hidden" name="school" value={result.school} />}
+                      {result.description && (
+                        <input type="hidden" name="description" value={result.description} />
+                      )}
                       <button type="submit" className="auth-btn auth-btn-small">
                         {result.name} · Grad {result.spellLevel}
+                        {result.school ? ` · ${result.school}` : ""}
                       </button>
                     </form>
                   </li>
@@ -198,6 +217,14 @@ export function CharacterSpellSection({
             <label>
               Grad
               <input name="spellLevel" type="number" min={0} max={9} defaultValue={0} />
+            </label>
+            <label>
+              Schule
+              <input name="school" maxLength={100} placeholder="z. B. Hervorrufung" />
+            </label>
+            <label>
+              Beschreibung
+              <textarea name="description" rows={3} maxLength={5000} />
             </label>
             <label className="auth-checkbox-label">
               <input name="prepared" type="checkbox" defaultChecked />

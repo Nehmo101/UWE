@@ -8,6 +8,7 @@ Compact index for agents — **import from `@uwe/database/server`** (canonical b
 | **Auth & users** | `auth.ts`, `user-service.ts`, `two-factor-service.ts`, `api-token-service.ts`, `login-audit.ts`, `owner-setup-service.ts` |
 | **Wiki / pages** | `page-service.ts`, `page-template-service.ts`, `page-templates.ts`, `tag-service.ts`, `search-service.ts`, `graph-service.ts` |
 | **Worlds & campaigns** | `world-creation-service.ts`, `world-inspector.ts`, `world-overview.ts`, `game-session.ts`, `dungeon-cockpit.ts` |
+| **Characters (DnD)** | `character-service.ts` (Sheet + Derived Stats 2024), `character-spell-service.ts` (Slots, Open5e/Homebrew-Zauber), `character-level-up-service.ts`, `character-sheet-export.ts` |
 | **Brain (DnD)** | `brain-store-service.ts`, `generator-service.ts`, `research-service.ts` |
 | **Life Brain / admin** | `life-admin-service.ts`, `personal-brain-service.ts`, `personal-brain-context.ts`, `personal-brain-search.ts`, `capture-triage-service.ts` |
 | **AI gateway** | `ai-gateway-service.ts`, `ai-run-service.ts`, `ai-review-service.ts`, `inference-endpoint-service.ts` |

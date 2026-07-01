@@ -1,5 +1,10 @@
 import type { LevelUpSuggestions, PortalCharacterView } from "@uwe/database/server";
-import { CharacterLevelUpPanel, CharacterSpellSection } from "@uwe/shared-ui";
+import {
+  CharacterDerivedStatsSection,
+  CharacterLevelUpPanel,
+  CharacterProficiencyFields,
+  CharacterSpellSection,
+} from "@uwe/shared-ui";
 import {
   addHomebrewSpellAction,
   addSpellAction,
@@ -104,6 +109,8 @@ export function CharacterSheetPanel({
         </tbody>
       </table>
 
+      <CharacterDerivedStatsSection derived={sheet.derived} />
+
       {canEdit ? (
         <form action={updateCharacterSheetAction} className="auth-note-form auth-character-sheet-form">
           <input type="hidden" name="worldSlug" value={worldSlug} />
@@ -166,6 +173,8 @@ export function CharacterSheetPanel({
               defaultValue={sheet.combat.initiativeBonus ?? 0}
             />
           </label>
+
+          <CharacterProficiencyFields derived={sheet.derived} />
 
           <button type="submit" className="auth-btn auth-btn-small">
             Charakterbogen speichern

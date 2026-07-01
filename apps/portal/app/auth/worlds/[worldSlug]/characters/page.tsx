@@ -45,7 +45,8 @@ export default async function PortalCharactersPage({ params }: Props) {
                 <strong>{character.displayName}</strong>
                 <span className="auth-muted">
                   Stufe {character.sheet.level} · RK {character.sheet.armorClass ?? "—"} · Init{" "}
-                  {formatModifier(character.sheet.initiative)}
+                  {formatModifier(character.sheet.initiative)} · Passive Wahrnehmung{" "}
+                  {character.sheet.derived.passivePerception}
                 </span>
               </Link>
             ) : (
@@ -53,7 +54,8 @@ export default async function PortalCharactersPage({ params }: Props) {
                 <strong>{character.displayName}</strong>
                 <span className="auth-muted">
                   Stufe {character.sheet.level} · RK {character.sheet.armorClass ?? "—"} · Init{" "}
-                  {formatModifier(character.sheet.initiative)}
+                  {formatModifier(character.sheet.initiative)} · Passive Wahrnehmung{" "}
+                  {character.sheet.derived.passivePerception}
                 </span>
               </div>
             )}

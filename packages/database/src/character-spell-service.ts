@@ -13,6 +13,8 @@ export interface CharacterSpellView {
   spellLevel: number;
   prepared: boolean;
   source: string | null;
+  school: string | null;
+  description: string;
   notes: string;
 }
 
@@ -22,6 +24,8 @@ export interface ParsedHomebrewSpell {
   spellLevel: number;
   prepared: boolean;
   source: "homebrew";
+  school: string | null;
+  description: string;
   notes: string;
 }
 
@@ -161,10 +165,13 @@ export function toCharacterSpellView(spell: CharacterSpell): CharacterSpellView 
   return {
     id: spell.id,
     spellKey: spell.spellKey,
-    displayName: formatSpellDisplayName(spell.spellKey, spell.notes, spell.source),
+    displayName:
+      spell.displayName?.trim() || formatSpellDisplayName(spell.spellKey, spell.notes, spell.source),
     spellLevel: spell.spellLevel,
     prepared: spell.prepared,
     source: spell.source,
+    school: spell.school,
+    description: spell.description,
     notes: spell.notes,
   };
 }
@@ -190,6 +197,43 @@ export function extractOpen5eSpellLevel(raw: unknown): number {
   return 0;
 }
 
+/** Extracts the spell school (e.g. "Evocation") from a raw Open5e spell payload. */
+export function extractOpen5eSpellSchool(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const school = (raw as Record<string, unknown>).school;
+  if (typeof school === "string" && school.trim()) {
+    return school.trim().slice(0, 100);
+  }
+  if (school && typeof school === "object") {
+    const name = (school as Record<string, unknown>).name;
+    if (typeof name === "string" && name.trim()) {
+      return name.trim().slice(0, 100);
+    }
+  }
+  return null;
+}
+
+/** Extracts a truncated description from a raw Open5e spell payload. */
+export function extractOpen5eSpellDescription(raw: unknown, maxLength = 600): string {
+  if (!raw || typeof raw !== "object") {
+    return "";
+  }
+  const desc = (raw as Record<string, unknown>).desc;
+  if (typeof desc === "string") {
+    return desc.trim().slice(0, maxLength);
+  }
+  if (Array.isArray(desc)) {
+    return desc
+      .filter((entry): entry is string => typeof entry === "string")
+      .join("\n")
+      .trim()
+      .slice(0, maxLength);
+  }
+  return "";
+}
+
 export function buildHomebrewSpellKey(name: string): string {
   return `homebrew:${slugifyKey(name, "spell")}`;
 }
@@ -198,6 +242,8 @@ export function parseHomebrewSpellInput(input: {
   name?: string;
   spellLevel?: unknown;
   prepared?: unknown;
+  school?: string;
+  description?: string;
 }): ParsedHomebrewSpell | null {
   const name = input.name?.trim() ?? "";
   if (!name) {
@@ -221,12 +267,17 @@ export function parseHomebrewSpellInput(input: {
     input.prepared === "on" ||
     input.prepared === "1";
 
+  const school = input.school?.trim().slice(0, 100) || null;
+  const description = input.description?.trim().slice(0, 5000) ?? "";
+
   return {
     spellKey: buildHomebrewSpellKey(name),
     displayName: name,
     spellLevel,
     prepared,
     source: "homebrew",
+    school,
+    description,
     notes: name,
   };
 }

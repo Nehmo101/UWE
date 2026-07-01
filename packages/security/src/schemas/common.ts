@@ -267,6 +267,9 @@ export const playerCharacterBlockSchema = z.object({
 
 const abilityScoreField = z.coerce.number().int().min(1).max(30);
 
+const savingThrowChoiceField = z.enum(["none", "proficient"]).optional();
+const skillChoiceField = z.enum(["none", "proficient", "expertise"]).optional();
+
 export const characterSheetUpdateSchema = z.object({
   worldSlug: slugSchema,
   characterId: idSchema,
@@ -282,6 +285,33 @@ export const characterSheetUpdateSchema = z.object({
   charisma: abilityScoreField.optional(),
   armorClass: z.coerce.number().int().min(1).max(99).optional(),
   initiativeBonus: z.coerce.number().int().min(-10).max(20).optional(),
+  spellcastingAbility: z
+    .enum(["auto", "none", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"])
+    .optional(),
+  save_strength: savingThrowChoiceField,
+  save_dexterity: savingThrowChoiceField,
+  save_constitution: savingThrowChoiceField,
+  save_intelligence: savingThrowChoiceField,
+  save_wisdom: savingThrowChoiceField,
+  save_charisma: savingThrowChoiceField,
+  skill_acrobatics: skillChoiceField,
+  skill_animal_handling: skillChoiceField,
+  skill_arcana: skillChoiceField,
+  skill_athletics: skillChoiceField,
+  skill_deception: skillChoiceField,
+  skill_history: skillChoiceField,
+  skill_insight: skillChoiceField,
+  skill_intimidation: skillChoiceField,
+  skill_investigation: skillChoiceField,
+  skill_medicine: skillChoiceField,
+  skill_nature: skillChoiceField,
+  skill_perception: skillChoiceField,
+  skill_performance: skillChoiceField,
+  skill_persuasion: skillChoiceField,
+  skill_religion: skillChoiceField,
+  skill_sleight_of_hand: skillChoiceField,
+  skill_stealth: skillChoiceField,
+  skill_survival: skillChoiceField,
   notes: z.string().trim().max(10_000).optional(),
 });
 
@@ -302,6 +332,9 @@ export const characterSpellAddSchema = z.object({
     .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
     .optional(),
   source: z.string().trim().max(50).optional(),
+  displayName: z.string().trim().max(200).optional(),
+  school: z.string().trim().max(100).optional(),
+  description: z.string().trim().max(5000).optional(),
   notes: z.string().trim().max(500).optional(),
   pageSlug: slugSchema.optional(),
   returnPath: z.string().trim().max(500).optional(),
@@ -334,6 +367,8 @@ export const characterSpellHomebrewAddSchema = z.object({
   prepared: z
     .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
     .optional(),
+  school: z.string().trim().max(100).optional(),
+  description: z.string().trim().max(5000).optional(),
   pageSlug: slugSchema.optional(),
   returnPath: z.string().trim().max(500).optional(),
 });
