@@ -7,6 +7,7 @@ import { portalGraphApiUrl, remapPortalGraphHrefs } from "@/src/lib/portal-graph
 
 interface PortalGraphViewProps {
   worldSlug: string;
+  worldName?: string;
   focusPageId?: string;
   mode?: GraphViewMode;
 }
@@ -16,7 +17,7 @@ interface GraphPayload {
   edges: GraphEdge[];
 }
 
-export function PortalGraphView({ worldSlug, focusPageId, mode }: PortalGraphViewProps) {
+export function PortalGraphView({ worldSlug, worldName, focusPageId, mode }: PortalGraphViewProps) {
   const [graph, setGraph] = useState<GraphPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,11 +74,11 @@ export function PortalGraphView({ worldSlug, focusPageId, mode }: PortalGraphVie
   }
 
   return (
-    <>
-      <GraphView nodes={graph.nodes} edges={graph.edges} />
-      <p className="auth-muted">
-        {graph.nodes.length} Knoten · {graph.edges.length} Kanten
-      </p>
-    </>
+    <GraphView
+      nodes={graph.nodes}
+      edges={graph.edges}
+      worldName={worldName}
+      focusPageId={focusPageId}
+    />
   );
 }
