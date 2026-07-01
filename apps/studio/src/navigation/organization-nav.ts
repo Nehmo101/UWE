@@ -38,6 +38,18 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         keywords: ["verträge", "contracts"],
       },
       {
+        id: "org-documents",
+        label: "Dokumente",
+        href: "/documents",
+        icon: "file-text",
+        group: "Arbeit & Projekte",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "organization",
+        keywords: ["dokumente", "documents", "vorlagen", "templates", "generator"],
+      },
+      {
         id: "org-workshop",
         label: "Werkstatt",
         href: "/workshop",
