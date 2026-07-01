@@ -61,6 +61,18 @@
   .glyph-btn .ico { width: 22px; height: 22px; }
   .grp-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
 
+  .tb-btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
+
+  /* Export-Dialog (Ausschnitt + Grid, CoK-Workflow) */
+  .dlg-backdrop { position: absolute; inset: 0; background: rgba(33, 29, 23, 0.45); display: none; align-items: center; justify-content: center; z-index: 30; backdrop-filter: blur(2px); }
+  .dlg { width: 390px; max-width: calc(100% - 40px); background: var(--uwe-bg-elevated); border: 2px solid var(--uwe-fg); border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); padding: 16px 18px; }
+  .dlg h3 { margin: 0 0 14px; font-family: var(--serif); font-size: 17px; font-weight: 600; }
+  .dlg .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 11.5px; }
+  .dlg label.chk { display: flex; align-items: center; gap: 6px; font-size: 11.5px; cursor: pointer; }
+
+  /* Auswahl-Panel Formularelemente (Pfad-Anhänge) */
+  .sel-select { width: 100%; height: 26px; border: 1px solid var(--uwe-border); border-radius: 7px; background: var(--uwe-bg-elevated); color: var(--uwe-fg); font-family: var(--mono); font-size: 11px; margin-top: 4px; }
+
   /* Mode-driven visibility (server-filter is authoritative in production; this is UX). */
   .atlas-app.is-view .editor-only { display: none !important; }
   .atlas-app:not(.is-view) .view-only { display: none !important; }
@@ -85,6 +97,8 @@
         <button id="brush-m" class="on">M</button>
         <button id="brush-l">L</button>
       </div>
+      <button id="btn-undo" class="tb-btn editor-only" title="Rückgängig (Strg+Z)" disabled>↶</button>
+      <button id="btn-redo" class="tb-btn editor-only" title="Wiederholen (Strg+Y / Strg+Umschalt+Z)" disabled>↷</button>
       <button id="btn-grid" class="tb-btn on" title="Gitter ein/aus">▦ Gitter</button>
       <button id="btn-vis" class="tb-btn editor-only" title="Portal-Sichtbarkeit dieser Ebene">🔒 Ebene privat</button>
       <button id="btn-ai" class="tb-btn editor-only" title="Prozeduralen KI-Entwurf vorschlagen — Proposal/Review, kein Auto-Apply">✦ KI-Entwurf</button>
@@ -158,6 +172,43 @@
         <span id="ai-review-text"></span>
         <button id="btn-ai-accept" class="tb-btn on">Übernehmen</button>
         <button id="btn-ai-discard" class="tb-btn">Verwerfen</button>
+      </div>
+
+      <div id="export-dialog" class="dlg-backdrop editor-only">
+        <div class="dlg">
+          <h3>◆ Karte exportieren</h3>
+          <div class="row"><span>Bereich</span>
+            <div class="seg" id="exp-area">
+              <button data-v="viewport">Ansicht</button>
+              <button data-v="all">Ganze Karte</button>
+              <button data-v="rect">Rechteck…</button>
+            </div>
+          </div>
+          <div class="row"><span>Gitter</span>
+            <div class="seg" id="exp-grid">
+              <button data-v="none">Ohne</button>
+              <button data-v="square">Quadrate</button>
+              <button data-v="hex">Hex</button>
+            </div>
+          </div>
+          <div class="row"><span>Zellgröße</span><input id="exp-cell" type="range" min="24" max="128" step="8" value="64" style="flex:1;" /><b id="exp-cell-val">64px</b></div>
+          <div class="row"><span>Auflösung</span>
+            <div class="seg" id="exp-res">
+              <button data-v="1">1×</button>
+              <button data-v="2">2×</button>
+              <button data-v="3">3×</button>
+            </div>
+          </div>
+          <div class="row">
+            <label class="chk"><input id="exp-deco" type="checkbox" checked />Kompass &amp; Maßstab</label>
+            <label class="chk"><input id="exp-frame" type="checkbox" checked />Tintenrahmen</label>
+          </div>
+          <div id="exp-hint" style="font-size:10.5px;color:var(--uwe-fg-muted);margin-bottom:12px;"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="exp-cancel" class="tb-btn">Abbrechen</button>
+            <button id="exp-go" class="tb-btn on">↓ PNG exportieren</button>
+          </div>
+        </div>
       </div>
 
       <div id="toast" style="position:absolute; bottom:44px; left:50%; transform:translateX(-50%); display:none; padding:8px 14px; background:var(--uwe-fg); color:var(--uwe-on-accent); border-radius:9px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.25);"></div>
@@ -251,7 +302,7 @@ const state = {
   tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree",
   showGrid: true, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
-  toast: null, aiReview: null,
+  toast: null, aiReview: null, stampVariation: true,
 };
 let doc = null;
 let drawingPoints = [];
@@ -260,6 +311,19 @@ let aiDraftFeatures = null;
 let labelRed = false;
 let keyCounter = 0;
 const nextKey = () => "ck-" + (++keyCounter);
+
+// Mehrfachauswahl (CoK: gemeinsam bewegen/löschen). state.selectedKey bleibt
+// der Primär-Key (steuert das Auswahl-Panel), selection ist die volle Menge.
+const selection = new Set();
+let marquee = null;          // {x0,y0,x1,y1} normalisiert — Shift-Rahmenauswahl
+let moveUndoPushed = false;  // ein Undo-Schritt pro Drag, nicht pro Pixel
+
+// Pfad-Anhänge (CoK: Objekte säumen Straßen/Flüsse automatisch)
+const attachOpts = { kind: "trees", side: "both", spacing: 0.05 };
+
+// Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
+const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, rect: null, picking: false };
+let exportPickStart = null;  // [nx,ny] während des Rechteck-Aufziehens
 
 const el = (id) => document.getElementById(id);
 const root = el("atlas-root");
@@ -369,6 +433,72 @@ function persist(msg) {
 function markDirty() { if (!state.dirty) setState({ dirty: true, saveStatus: "Ungespeichert" }); }
 
 // ===========================================================================
+// Undo/Redo — Doc-Snapshots (JSON). Jede Mutation ruft vorher pushUndo().
+// Deterministische Engine (Seeds) macht Redo bit-stabil.
+// ===========================================================================
+const UNDO_LIMIT = 40;
+const undoStack = [];
+const redoStack = [];
+function pushUndo() {
+  undoStack.push(JSON.stringify(doc));
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  refreshChrome();
+}
+function applyHistory(json) {
+  doc = migrate(JSON.parse(json));
+  selection.clear();
+  drawingPoints = [];
+  if (!doc.nodes.some((n) => n.id === state.nodeId)) state.nodeId = doc.rootNodeId;
+  setState({ selectedKey: null, dirty: true, saveStatus: "Ungespeichert" });
+  draw();
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(doc));
+  applyHistory(undoStack.pop());
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(doc));
+  applyHistory(redoStack.pop());
+}
+
+// ===========================================================================
+// Auswahl-Helfer (Einzel- + Mehrfachauswahl)
+// ===========================================================================
+function selectOnly(k) {
+  selection.clear();
+  if (k) selection.add(k);
+  setState({ selectedKey: k || null });
+}
+function toggleSel(k) {
+  if (selection.has(k)) selection.delete(k);
+  else selection.add(k);
+  const keys = [...selection];
+  setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+}
+function clearSel() { selection.clear(); setState({ selectedKey: null }); }
+function eraseSelection() {
+  if (!selection.size) return;
+  pushUndo();
+  doc.features = doc.features.filter((f) => !selection.has(f._key));
+  doc.objects = doc.objects.filter((o) => !selection.has(o._key));
+  clearSel(); markDirty(); draw();
+}
+function setSelectionVisibility(vis) {
+  if (!selection.size) return;
+  pushUndo();
+  for (const k of selection) {
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { o.visibility = vis; continue; }
+    const f = doc.features.find((x) => x._key === k);
+    if (f) f.visibility = vis;
+  }
+  markDirty(); refreshChrome(); draw();
+}
+
+// ===========================================================================
 // Studio-Bridge (M3) — postMessage an/vom Host
 // ===========================================================================
 function bridgePost(msg) { try { window.parent.postMessage({ source: "uwe-atlas", ...msg }, "*"); } catch (_) {} }
@@ -398,6 +528,7 @@ function receiveAiDraft(features) {
 }
 function acceptAiDraft() {
   if (aiDraftFeatures) {
+    pushUndo();
     for (const f of aiDraftFeatures) {
       doc.features.push({ ...f, id: nextKey(), nodeId: state.nodeId, layer: f.kind === "biome" ? 10 : 30, visibility: "dm_only" });
     }
@@ -440,7 +571,7 @@ function parentSilhouette() {
   if (isView() && f.visibility !== "player_visible") return null;
   return f.geometry.rings;
 }
-function navTo(id) { setState({ nodeId: id, selectedKey: null, panX: 0, panY: 0, zoom: 1 }); drawingPoints = []; requestAnimationFrame(draw); }
+function navTo(id) { selection.clear(); setState({ nodeId: id, selectedKey: null, panX: 0, panY: 0, zoom: 1 }); drawingPoints = []; requestAnimationFrame(draw); }
 
 // ===========================================================================
 // Canvas-Setup & Koordinaten
@@ -470,8 +601,15 @@ function tileAt(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / 
 function draw() {
   const c = canvas; if (!c || !doc) return;
   const ctx = c.getContext("2d"); if (!ctx) return;
-  const W = cssW, H = cssH, pr = preset, z = state.zoom;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawScene(ctx, cssW, cssH, true);
+}
+
+// Kern-Renderer — auch vom PNG-Export genutzt (chrome=false unterdrückt
+// Auswahl-/Editor-Overlays; Pan/Zoom kommen aus state und werden vom Export
+// temporär überschrieben).
+function drawScene(ctx, W, H, chrome) {
+  const pr = preset, z = state.zoom;
   ctx.clearRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = false;
 
@@ -501,13 +639,15 @@ function draw() {
     ctx.setLineDash([]); ctx.globalAlpha = 0.06; ctx.fillStyle = pr.colors.ink; ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
   }
 
-  if (state.showGrid) drawGrid(ctx);
+  if (state.showGrid && chrome) drawGrid(ctx);
 
   ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2 * z; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
 
   const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
   for (const f of feats) drawFeature(ctx, f);
   for (const o of nodeObjects()) drawObject(ctx, o);
+
+  if (!chrome) return;
 
   if (aiDraftFeatures && aiDraftFeatures.length) {
     ctx.save(); ctx.globalAlpha = 0.5;
@@ -516,6 +656,23 @@ function draw() {
   }
   drawPending(ctx);
   drawMeasure(ctx);
+  drawSelectionRects(ctx);
+}
+
+// Shift-Rahmenauswahl + Export-Rechteck als gestrichelte Overlays.
+function drawSelectionRects(ctx) {
+  const rects = [];
+  if (marquee) rects.push({ r: marquee, color: "#2f6f63" });
+  if (exp.rect && (exp.picking || el("export-dialog").style.display === "flex")) rects.push({ r: exp.rect, color: "#c2622b" });
+  for (const { r, color } of rects) {
+    const [ax, ay] = n2c(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
+    const [bx, by] = n2c(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.setLineDash([7, 4]);
+    ctx.strokeRect(ax, ay, bx - ax, by - ay);
+    ctx.globalAlpha = 0.07; ctx.fillStyle = color; ctx.fillRect(ax, ay, bx - ax, by - ay);
+    ctx.restore();
+  }
 }
 
 function drawGrid(ctx) {
@@ -527,7 +684,7 @@ function drawGrid(ctx) {
 }
 
 function drawFeature(ctx, f) {
-  const pr = preset, z = state.zoom, sel = f._key === state.selectedKey, geo = f.geometry;
+  const pr = preset, z = state.zoom, sel = selection.has(f._key), geo = f.geometry;
   ctx.save();
   if (geo.type === "Polygon") {
     const rings = geo.rings || []; ctx.beginPath();
@@ -536,6 +693,17 @@ function drawFeature(ctx, f) {
       const bk = (f.style && f.style.biomeKind) || "forest";
       ctx.fillStyle = BIOME_POLY_FILL[bk] || BIOME_POLY_FILL.forest; ctx.fill();
       ctx.strokeStyle = sel ? "#c2622b" : "rgba(60,45,25,0.5)"; ctx.lineWidth = (sel ? 2.5 : 1.5) * z; ctx.stroke();
+      // Relief-Schummerung (NW-Licht) — gleiche Engine wie der Portal-Viewer.
+      const sh = engine.buildReliefShading({ type: "Polygon", rings }, bk);
+      const [gx0, gy0] = n2c(sh.bbox[0], sh.bbox[1]); const [gx1, gy1] = n2c(sh.bbox[2], sh.bbox[3]);
+      if (gx1 > gx0 && gy1 > gy0) {
+        ctx.save(); ctx.clip();
+        const grad = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+        grad.addColorStop(0, sh.highlightColor); grad.addColorStop(1, sh.shadowColor);
+        ctx.globalAlpha = sh.opacity; ctx.fillStyle = grad;
+        ctx.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0);
+        ctx.restore();
+      }
       scatterInPolygon(ctx, rings, bk, (f.style && f.style.density) || 1, f._key);
     } else {
       ctx.fillStyle = f.labelColor === "red" ? "rgba(139,26,16,0.16)" : "rgba(26,16,8,0.10)"; ctx.fill();
@@ -572,7 +740,9 @@ function drawFeature(ctx, f) {
       const text = (f.labelText || geo.text || "Label"), ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
       if (geo.pathCoordinates && geo.pathCoordinates.length >= 2) {
         ctx.font = "bold " + Math.round(14 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        const pl = engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.012 * (14 / z), geo.pathReversed === true);
+        // Konstantes Spacing in Weltkoordinaten: Font UND Abstand skalieren mit
+        // dem Zoom, das Label bleibt in jeder Stufe kompakt lesbar.
+        const pl = engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.0085, geo.pathReversed === true);
         for (const p of pl) { const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation); ctx.fillText(p.char, 0, 0); ctx.restore(); }
         if (sel) {
           ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.2 * z; ctx.setLineDash([4, 3]); ctx.beginPath();
@@ -593,7 +763,7 @@ function drawFeature(ctx, f) {
 
 function drawObject(ctx, o) {
   const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
-  const z = state.zoom, sel = o._key === state.selectedKey;
+  const z = state.zoom, sel = selection.has(o._key);
   const [ox, oy] = n2c(o.x, o.y); const size = 26 * z * o.scale;
   ctx.save(); ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
   if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6); }
@@ -637,9 +807,16 @@ function drawMeasure(ctx) {
 
 // Streuung: reale @uwe/atlas-API erwartet ein Polygon-Objekt + numerischen Seed
 // (hashStringToSeed brückt den String-_key). Rückgabe trägt glyphKey.
+// CoK-Verhalten: Straßen/Flüsse der Ebene schneiden freie Korridore in die
+// Streuung (ScatterExclusion in @uwe/atlas/terrain).
+function scatterExclusions() {
+  return nodeFeatures()
+    .filter((f) => (f.kind === "road" || f.kind === "river") && f.geometry && f.geometry.type === "Path" && (f.geometry.coordinates || []).length >= 2)
+    .map((f) => ({ path: f.geometry.coordinates, width: f.kind === "road" ? 0.032 : 0.026 }));
+}
 function scatterInPolygon(ctx, rings, bk, density, keySeed) {
   const seed = typeof keySeed === "number" ? keySeed : engine.hashStringToSeed(String(keySeed));
-  const points = engine.scatterGlyphsInPolygon({ type: "Polygon", rings }, bk, density * 0.6, seed);
+  const points = engine.scatterGlyphsInPolygon({ type: "Polygon", rings }, bk, density * 0.6, seed, scatterExclusions());
   const z = state.zoom;
   ctx.save(); ctx.globalAlpha = 0.7; ctx.lineJoin = "round"; ctx.lineCap = "round";
   for (const p of points) {
@@ -667,7 +844,15 @@ function onPointerDown(e) {
   const rightOrMiddle = e.button === 1 || e.button === 2;
   if (e.button === 1) { panning = true; return; }
 
+  // Export-Rechteck aufziehen (Dialog-Modus „Rechteck…")
+  if (exp.picking) {
+    exportPickStart = [nx, ny];
+    exp.rect = { x0: nx, y0: ny, x1: nx, y1: ny };
+    draw(); return;
+  }
+
   if (tool === "terrain") {
+    pushUndo();
     if (e.button === 2) { erasingTiles = true; paintTiles(cx, cy, true); }
     else { paintingTiles = true; paintTiles(cx, cy, false); }
     return;
@@ -675,9 +860,11 @@ function onPointerDown(e) {
   if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
   if (tool === "select") {
     const hit = hitTest(nx, ny);
-    if (hit && hit === state.selectedKey) moving = true;
-    else if (hit) setState({ selectedKey: hit });
-    else { setState({ selectedKey: null }); panning = true; }
+    if (hit && e.shiftKey) { toggleSel(hit); requestAnimationFrame(draw); return; }
+    if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; return; }
+    if (hit) { selectOnly(hit); requestAnimationFrame(draw); return; }
+    if (e.shiftKey) { marquee = { x0: nx, y0: ny, x1: nx, y1: ny }; return; }
+    clearSel(); panning = true; requestAnimationFrame(draw);
     return;
   }
   if (tool === "eraser") { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); return; }
@@ -698,10 +885,15 @@ function onPointerMove(e) {
   pendingCoord = { tile: tc + ", " + tr, world: nx.toFixed(3) + ", " + ny.toFixed(3) };
   if (!coordRaf) coordRaf = requestAnimationFrame(() => { coordRaf = null; el("status-tile").textContent = pendingCoord.tile; el("status-world").textContent = pendingCoord.world; });
 
+  if (exp.picking && exportPickStart) { exp.rect = { x0: exportPickStart[0], y0: exportPickStart[1], x1: nx, y1: ny }; draw(); return; }
+  if (marquee) { marquee.x1 = nx; marquee.y1 = ny; draw(); return; }
   if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
   if (erasingTiles) { paintTiles(cx, cy, true); return; }
-  if (moving && state.selectedKey) { const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return; }
+  if (moving && selection.size) {
+    if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
+    const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return;
+  }
   last = { x: cx, y: cy };
 }
 
@@ -715,6 +907,30 @@ function onPointerUp(e) {
       if (hit) handleViewClick(hit);
     }
     panning = false; return;
+  }
+  if (exp.picking && exportPickStart) {
+    const r = exp.rect;
+    exp.rect = { x0: Math.min(r.x0, r.x1), y0: Math.min(r.y0, r.y1), x1: Math.max(r.x0, r.x1), y1: Math.max(r.y0, r.y1) };
+    exp.picking = false; exportPickStart = null;
+    if ((exp.rect.x1 - exp.rect.x0) < 0.01 || (exp.rect.y1 - exp.rect.y0) < 0.01) exp.rect = null;
+    openExportDialog();
+    return;
+  }
+  if (marquee) {
+    const r = { x0: Math.min(marquee.x0, marquee.x1), y0: Math.min(marquee.y0, marquee.y1), x1: Math.max(marquee.x0, marquee.x1), y1: Math.max(marquee.y0, marquee.y1) };
+    marquee = null;
+    const inRect = (x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+    for (const o of nodeObjects()) if (inRect(o.x, o.y)) selection.add(o._key);
+    for (const f of nodeFeatures()) {
+      const g = f.geometry;
+      if ((g.type === "Point" || g.type === "LabelAnchor") && g.coordinates && inRect(g.coordinates[0], g.coordinates[1])) selection.add(f._key);
+      else if (g.type === "Path" && (g.coordinates || []).some(([x, y]) => inRect(x, y))) selection.add(f._key);
+      else if (g.type === "Polygon" && g.rings && g.rings[0]) { const c = engine.centroid(g.rings[0]); if (inRect(c[0], c[1])) selection.add(f._key); }
+    }
+    const keys = [...selection];
+    setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+    draw();
+    return;
   }
   if (paintingTiles || erasingTiles) markDirty();
   panning = moving = paintingTiles = erasingTiles = false;
@@ -730,6 +946,7 @@ function onWheel(e) {
   setState({ zoom: nz, panX, panY }); requestAnimationFrame(draw);
 }
 function onDblClick() {
+  if (exp.picking) return;
   if (state.tool === "region" || state.tool === "biome") finishPolygon();
   else if (state.tool === "path" || state.tool === "road") finishPath();
   else if (state.tool === "curve") finishCurve();
@@ -750,28 +967,66 @@ function paintTiles(cx, cy, erase) {
 
 // ---- Objekte / Features mutieren ----
 function placeStamp(nx, ny) {
-  doc.objects.push({ id: nextKey(), _key: nextKey(), nodeId: state.nodeId, paletteItemId: state.glyphKey, x: nx, y: ny, scale: 1, rotation: 0, layer: 50, visibility: "dm_only" });
+  pushUndo();
+  const k = nextKey();
+  let scale = 1, rotation = 0;
+  if (state.stampVariation) {
+    // CoK-Zufallsvariation — deterministisch pro Objekt-Key (stamp-variation.ts).
+    const v = engine.randomStampVariation(engine.stampSeedFromKey(k), { scaleMin: 0.78, scaleMax: 1.28, rotateMin: -12, rotateMax: 12 });
+    scale = Math.round(v.scale * 100) / 100; rotation = Math.round(v.rotation * 10) / 10;
+  }
+  doc.objects.push({ id: nextKey(), _key: k, nodeId: state.nodeId, paletteItemId: state.glyphKey, x: nx, y: ny, scale, rotation, layer: 50, visibility: "dm_only" });
   markDirty(); draw();
 }
 function addPin(pt) {
+  pushUndo();
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" };
-  doc.features.push(f); setState({ selectedKey: f._key }); markDirty(); draw();
+  doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 function addLabel(pt, text, path) {
+  pushUndo();
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" };
-  doc.features.push(f); setState({ selectedKey: f._key }); markDirty(); draw();
+  doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 function finishPolygon() {
   if (drawingPoints.length < 3) { drawingPoints = []; draw(); return; }
+  pushUndo();
   const isBiome = state.tool === "biome";
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isBiome ? "biome" : "region", geometry: { type: "Polygon", rings: [[...drawingPoints]] }, style: isBiome ? { biomeKind: state.brush, density: 1 } : undefined, labelColor: "black", layer: isBiome ? 10 : 20, visibility: "dm_only" };
-  doc.features.push(f); drawingPoints = []; setState({ selectedKey: f._key }); markDirty(); draw();
+  doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
 }
 function finishPath() {
   if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
+  pushUndo();
   const isRoad = state.tool === "road";
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style: isRoad ? undefined : { smooth: true }, layer: isRoad ? 40 : 30, visibility: "dm_only" };
-  doc.features.push(f); drawingPoints = []; setState({ selectedKey: f._key }); markDirty(); draw();
+  doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
+}
+
+// ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
+const ATTACH_KINDS = [["trees", "Bäume"], ["houses", "Häuser"], ["towers", "Türme"]];
+const ATTACH_SIDES = [["both", "beidseitig"], ["left", "links"], ["right", "rechts"]];
+const ATTACH_SPACING = [["0.035", "eng"], ["0.05", "mittel"], ["0.08", "weit"]];
+function generateAttachments(f, reroll) {
+  const geo = f.geometry;
+  if (!geo || geo.type !== "Path" || (geo.coordinates || []).length < 2) return;
+  pushUndo();
+  if (reroll) f._attachRoll = (f._attachRoll || 0) + 1;
+  const seed = (engine.hashStringToSeed(String(f._key)) + (f._attachRoll || 0) * 101) >>> 0;
+  let coords = geo.coordinates;
+  if (f.style && f.style.smooth && coords.length >= 3) coords = engine.smoothPath(coords, { segments: 8 });
+  const places = engine.generatePathAttachments(
+    { type: "Path", coordinates: coords },
+    { kind: attachOpts.kind, spacing: attachOpts.spacing, side: attachOpts.side, offset: 0.02, jitter: 0.3, seed },
+  );
+  // Frühere Anhänge dieses Pfads ersetzen (attachedTo ist client-only; die
+  // Studio-Save-Action whitelistet Felder und ignoriert es server-seitig).
+  doc.objects = doc.objects.filter((o) => o.attachedTo !== f._key);
+  for (const p of places) {
+    doc.objects.push({ id: nextKey(), _key: nextKey(), nodeId: state.nodeId, paletteItemId: p.glyphKey, x: p.x, y: p.y, scale: Math.round(p.scale * 100) / 100, rotation: Math.round(p.rotation * 10) / 10, layer: 50, visibility: "dm_only", attachedTo: f._key });
+  }
+  markDirty(); flash("✦ " + places.length + " Objekte entlang des Pfads platziert");
+  draw();
 }
 function finishCurve() {
   if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
@@ -783,14 +1038,23 @@ function finishCurve() {
   addLabel(mid, text, path);
 }
 
+// Bewegt die GESAMTE Auswahl (CoK: Gruppen gemeinsam verschieben).
 function moveSelected(dx, dy) {
-  const k = state.selectedKey;
-  const o = doc.objects.find((o) => o._key === k); if (o) { o.x = Math.max(0, Math.min(1, o.x + dx)); o.y = Math.max(0, Math.min(1, o.y + dy)); markDirty(); draw(); return; }
-  const f = doc.features.find((f) => f._key === k); if (f) { f.geometry = engine.translateGeometry(f.geometry, dx, dy); markDirty(); draw(); }
+  let changed = false;
+  for (const k of selection) {
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { o.x = Math.max(0, Math.min(1, o.x + dx)); o.y = Math.max(0, Math.min(1, o.y + dy)); changed = true; continue; }
+    const f = doc.features.find((x) => x._key === k);
+    if (f) { f.geometry = engine.translateGeometry(f.geometry, dx, dy); changed = true; }
+  }
+  if (changed) { markDirty(); draw(); }
 }
 function eraseKey(k) {
+  pushUndo();
   doc.features = doc.features.filter((f) => f._key !== k); doc.objects = doc.objects.filter((o) => o._key !== k);
-  if (state.selectedKey === k) setState({ selectedKey: null }); markDirty(); draw();
+  selection.delete(k);
+  if (state.selectedKey === k) setState({ selectedKey: selection.size ? [...selection][selection.size - 1] : null });
+  markDirty(); draw();
 }
 function eraseAt(nx, ny) { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); }
 
@@ -813,9 +1077,14 @@ function hitTestEntity(wx, wy) { const key = hitTest(wx, wy); if (!key) return n
 // ===========================================================================
 function onKeyDown(e) {
   if (isView()) return;
-  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-  if (e.key === "Escape") { drawingPoints = []; measurePoints = []; setState({ selectedKey: null }); draw(); return; }
-  if (e.key === "Delete" || e.key === "Backspace") { if (state.selectedKey) { e.preventDefault(); eraseKey(state.selectedKey); } return; }
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
+  if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) { e.preventDefault(); redo(); return; }
+  if (e.key === "Escape") {
+    if (exp.picking) { exp.picking = false; exportPickStart = null; exp.rect = null; openExportDialog(); return; }
+    drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
+  }
+  if (e.key === "Delete" || e.key === "Backspace") { if (selection.size) { e.preventDefault(); eraseSelection(); } return; }
   if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road") finishPath(); else if (state.tool === "region" || state.tool === "biome") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
   const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
 }
@@ -831,14 +1100,108 @@ function exportJSON() {
 function exportPNG() {
   const c = canvas; const off = document.createElement("canvas"); off.width = c.width; off.height = c.height;
   const octx = off.getContext("2d"); octx.drawImage(c, 0, 0);
+  downloadCanvas(off);
+}
+function downloadCanvas(off) {
   off.toBlob((blob) => { if (!blob) return; const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "atlas-" + (node().title || "karte").toLowerCase().replace(/\s+/g, "-") + ".png"; a.click(); URL.revokeObjectURL(url); }, "image/png");
+}
+
+// ---- Export-Dialog (CoK): Ausschnitt + Square/Hex-Grid + Deko in ein PNG ----
+function openExportDialog() {
+  el("export-dialog").style.display = "flex";
+  refreshExportDialog();
+  requestAnimationFrame(draw);
+}
+function closeExportDialog() {
+  el("export-dialog").style.display = "none";
+  exp.picking = false; exportPickStart = null;
+  requestAnimationFrame(draw);
+}
+function refreshExportDialog() {
+  for (const b of el("exp-area").querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === exp.area);
+  for (const b of el("exp-grid").querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === exp.grid);
+  for (const b of el("exp-res").querySelectorAll("button")) b.classList.toggle("on", Number(b.dataset.v) === exp.res);
+  el("exp-cell").value = String(exp.cell);
+  el("exp-cell-val").textContent = exp.cell + "px";
+  el("exp-cell").disabled = exp.grid === "none";
+  el("exp-deco").checked = exp.deco;
+  el("exp-frame").checked = exp.frame;
+  const r = resolveExportRectWorld();
+  const leagues = ((r.w / WORLD_W) * 100).toFixed(0);
+  el("exp-hint").textContent =
+    (exp.area === "rect" && !exp.rect ? "Noch kein Rechteck gewählt — „Rechteck…“ klicken und auf der Karte aufziehen. " : "") +
+    "Export: " + Math.round(r.w * exp.res) + "×" + Math.round(r.h * exp.res) + "px · ~" + leagues + " leagues breit";
+}
+function resolveExportRectWorld() {
+  if (exp.area === "all") return { x: 0, y: 0, w: WORLD_W, h: WORLD_H };
+  if (exp.area === "rect" && exp.rect) {
+    const r = exp.rect;
+    return { x: r.x0 * WORLD_W, y: r.y0 * WORLD_H, w: (r.x1 - r.x0) * WORLD_W, h: (r.y1 - r.y0) * WORLD_H };
+  }
+  const [wx0, wy0] = c2w(0, 0); const [wx1, wy1] = c2w(cssW, cssH);
+  const x = Math.max(0, wx0), y = Math.max(0, wy0);
+  return { x, y, w: Math.max(1, Math.min(WORLD_W, wx1) - x), h: Math.max(1, Math.min(WORLD_H, wy1) - y) };
+}
+function startExportRectPick() {
+  el("export-dialog").style.display = "none";
+  exp.area = "rect"; exp.rect = null; exp.picking = true;
+  flash("Export-Rechteck auf der Karte aufziehen (Esc bricht ab)");
+}
+function doExport() {
+  const rect = resolveExportRectWorld();
+  if (rect.w < 4 || rect.h < 4) { flash("Export-Bereich zu klein."); return; }
+  const scale = exp.res;
+  const off = document.createElement("canvas");
+  off.width = Math.max(1, Math.round(rect.w * scale));
+  off.height = Math.max(1, Math.round(rect.h * scale));
+  const octx = off.getContext("2d"); if (!octx) return;
+
+  // Pan/Zoom + Editor-Overlays temporär für den Offscreen-Render überschreiben.
+  const saved = { zoom: state.zoom, panX: state.panX, panY: state.panY };
+  const savedSel = [...selection]; selection.clear();
+  const savedDraft = aiDraftFeatures; aiDraftFeatures = null;
+  state.zoom = scale; state.panX = -rect.x * scale; state.panY = -rect.y * scale;
+  try {
+    drawScene(octx, off.width, off.height, false);
+    if (exp.grid !== "none") {
+      const lines = engine.buildGridLines(
+        { x: 0, y: 0, width: off.width, height: off.height },
+        { kind: exp.grid, cellSize: exp.cell * scale },
+      );
+      octx.save(); octx.strokeStyle = preset.colors.ink; octx.globalAlpha = 0.3; octx.lineWidth = Math.max(1, scale * 0.6);
+      octx.beginPath();
+      for (const l of lines) { octx.moveTo(l.x1, l.y1); octx.lineTo(l.x2, l.y2); }
+      octx.stroke(); octx.restore();
+    }
+    if (exp.deco) {
+      const R = Math.max(26, Math.min(off.width, off.height) * 0.055);
+      engine.drawCompassRose(octx, { x: off.width - R - 18, y: R * 1.45 + 18, radius: R, ink: preset.colors.ink, accent: preset.colors.inkAccent, parchment: preset.colors.parchment });
+      const bw = Math.max(90 * scale, Math.round(off.width * 0.16));
+      const bh = 9 * scale;
+      const barLeagues = Math.max(1, Math.round(((bw / scale) / WORLD_W) * 100));
+      engine.drawScaleBar(octx, { x: 20 * scale, y: off.height - bh - 30 * scale, width: bw, height: bh, ink: preset.colors.ink, parchment: preset.colors.parchment, label: "0 — " + barLeagues + " leagues", font: (12 * scale) + "px " + preset.typography.labelCity });
+    }
+    if (exp.frame) {
+      octx.strokeStyle = preset.colors.ink;
+      octx.lineWidth = Math.max(2, scale * 1.4); octx.strokeRect(4, 4, off.width - 8, off.height - 8);
+      octx.lineWidth = 1; octx.strokeRect(10, 10, off.width - 20, off.height - 20);
+    }
+  } finally {
+    state.zoom = saved.zoom; state.panX = saved.panX; state.panY = saved.panY;
+    for (const k of savedSel) selection.add(k);
+    aiDraftFeatures = savedDraft;
+  }
+  downloadCanvas(off);
+  closeExportDialog();
+  flash("↓ PNG exportiert (" + off.width + "×" + off.height + ")");
 }
 function clearAll() {
   if (!confirm("Aktuelle Ebene leeren? Tiles, Features und Objekte dieser Ebene werden entfernt. (DB-Sync separat)")) return;
+  pushUndo();
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
   if (state.nodeId === doc.rootNodeId) doc.tileLayer.cells = {};
-  drawingPoints = []; setState({ selectedKey: null }); markDirty(); draw();
+  drawingPoints = []; clearSel(); markDirty(); draw();
 }
 
 // ===========================================================================
@@ -848,6 +1211,7 @@ function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: 
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
 function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k }); }
 function toggleNodeVis() {
+  pushUndo();
   const n = node(); n.visibility = n.visibility === "player_visible" ? "dm_only" : "player_visible"; markDirty();
   if (embedded) bridgePost({ type: "visibility", scope: "node", nodeId: n.id, visibility: n.visibility });
   refreshChrome();
@@ -908,6 +1272,9 @@ function refreshChrome() {
   el("brush-s").classList.toggle("on", st.brushSize === 0);
   el("brush-m").classList.toggle("on", st.brushSize === 1);
   el("brush-l").classList.toggle("on", st.brushSize === 2);
+  // Undo/Redo
+  el("btn-undo").disabled = !undoStack.length;
+  el("btn-redo").disabled = !redoStack.length;
   // Grid / visibility toggles
   el("btn-grid").classList.toggle("on", st.showGrid);
   const visBtn = el("btn-vis"), visOn = !!(n && n.visibility === "player_visible");
@@ -924,8 +1291,9 @@ function refreshChrome() {
   let subHtml = "", subShow = false;
   if (!view) {
     if (st.tool === "terrain" || st.tool === "biome") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">' + (st.tool === "biome" ? "Biom-Fläche" : "Terrain") + ":</b> " + BIOME_LABEL[st.brush] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize]; }
-    else if (st.tool === "stamp") { subShow = true; const g = engine.getGlyphByKey(st.glyphKey); subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + (g ? g.name : st.glyphKey) + " — Linksklick platzieren, Rechtsklick löschen"; }
+    else if (st.tool === "stamp") { subShow = true; const g = engine.getGlyphByKey(st.glyphKey); subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + (g ? g.name : st.glyphKey) + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>'; }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
+    else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "region" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
     else if (st.tool === "label") { subShow = true; subHtml = 'Klick auf die Karte für Label-Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
     else if (st.tool === "curve") { subShow = true; subHtml = 'Pfad klicken · Doppelklick/Enter → Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
@@ -936,23 +1304,46 @@ function refreshChrome() {
   const selP = el("sel-panel");
   const selO = doc && doc.objects.find((o) => o._key === st.selectedKey);
   const selF = doc && doc.features.find((f) => f._key === st.selectedKey);
-  if (selO) {
+  if (selection.size > 1) {
+    el("sel-kind").textContent = "Gruppe";
+    el("sel-controls").innerHTML =
+      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + selection.size + " Elemente</div>" +
+      '<div style="font-size:11px;color:var(--uwe-fg-muted);">Ziehen bewegt die ganze Gruppe</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;">' +
+      '<button class="tb-btn" data-batch="show" style="flex:1;justify-content:center;">🌐 Portal</button>' +
+      '<button class="tb-btn" data-batch="hide" style="flex:1;justify-content:center;">🔒 GM</button>' +
+      "</div>";
+    selP.style.display = "block";
+  } else if (selO) {
     const g = engine.getGlyphByKey(selO.paletteItemId);
     el("sel-kind").textContent = "Objekt";
     el("sel-controls").innerHTML =
       '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (g ? g.name : selO.paletteItemId) + "</div>" +
       '<div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ' + selO.scale.toFixed(2) + " · " + Math.round(selO.rotation) + "°</div>" +
-      '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben</div>' +
+      '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben · Shift+Klick erweitert Auswahl</div>' +
       (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
     selP.style.display = "block";
   } else if (selF) {
     const kind = ({ region: "Region", biome: "Biom", river: "Fluss", road: "Straße", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
     const vis = selF.visibility === "player_visible";
+    const isPathKind = selF.kind === "river" || selF.kind === "road";
+    const opt = (list, cur) => list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
     el("sel-kind").textContent = kind;
     el("sel-controls").innerHTML =
       '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (selF.labelText || kind) + "</div>" +
       '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
-      (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "");
+      (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
+      (isPathKind
+        ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
+          '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objekte säumen</div>' +
+          '<select id="att-kind" class="sel-select">' + opt(ATTACH_KINDS, attachOpts.kind) + "</select>" +
+          '<select id="att-side" class="sel-select">' + opt(ATTACH_SIDES, attachOpts.side) + "</select>" +
+          '<select id="att-space" class="sel-select">' + opt(ATTACH_SPACING, attachOpts.spacing) + "</select>" +
+          '<div style="display:flex;gap:6px;margin-top:8px;">' +
+          '<button class="tb-btn" data-att="gen" style="flex:1;justify-content:center;">✦ Säumen</button>' +
+          '<button class="tb-btn" data-att="roll" title="Neuer Zufalls-Seed">↻</button>' +
+          "</div></div>"
+        : "");
     selP.style.display = "block";
   } else { selP.style.display = "none"; }
 
@@ -1002,12 +1393,51 @@ function wire() {
   el("btn-ai").addEventListener("click", requestAiDraft);
   el("btn-handout").addEventListener("click", requestHandout);
   el("btn-json").addEventListener("click", exportJSON);
-  el("btn-png").addEventListener("click", exportPNG);
+  el("btn-png").addEventListener("click", () => { if (isView()) exportPNG(); else openExportDialog(); });
   el("btn-clear").addEventListener("click", clearAll);
-  el("btn-erase-sel").addEventListener("click", () => { if (state.selectedKey) eraseKey(state.selectedKey); });
+  el("btn-undo").addEventListener("click", undo);
+  el("btn-redo").addEventListener("click", redo);
+  el("btn-erase-sel").addEventListener("click", () => { if (selection.size) eraseSelection(); });
   el("btn-ai-accept").addEventListener("click", acceptAiDraft);
   el("btn-ai-discard").addEventListener("click", discardAiDraft);
-  el("subbar").addEventListener("click", (e) => { const t = e.target.closest("[data-act]"); if (t && t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); } });
+  el("subbar").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-act]"); if (!t) return;
+    if (t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); }
+    else if (t.dataset.act === "vari") { setState({ stampVariation: !state.stampVariation }); }
+  });
+
+  // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
+  el("sel-panel").addEventListener("click", (e) => {
+    const att = e.target.closest("[data-att]");
+    if (att) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f) generateAttachments(f, att.dataset.att === "roll");
+      return;
+    }
+    const batch = e.target.closest("[data-batch]");
+    if (batch) setSelectionVisibility(batch.dataset.batch === "show" ? "player_visible" : "dm_only");
+  });
+  el("sel-panel").addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.id === "att-kind") attachOpts.kind = t.value;
+    else if (t.id === "att-side") attachOpts.side = t.value;
+    else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
+  });
+
+  // Export-Dialog
+  el("exp-area").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.v === "rect") { startExportRectPick(); requestAnimationFrame(draw); return; }
+    exp.area = b.dataset.v; refreshExportDialog(); requestAnimationFrame(draw);
+  });
+  el("exp-grid").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.grid = b.dataset.v; refreshExportDialog(); });
+  el("exp-res").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.res = Number(b.dataset.v); refreshExportDialog(); });
+  el("exp-cell").addEventListener("input", (e) => { exp.cell = Number(e.target.value); refreshExportDialog(); });
+  el("exp-deco").addEventListener("change", (e) => { exp.deco = e.target.checked; });
+  el("exp-frame").addEventListener("change", (e) => { exp.frame = e.target.checked; });
+  el("exp-cancel").addEventListener("click", closeExportDialog);
+  el("exp-go").addEventListener("click", doExport);
+  el("export-dialog").addEventListener("click", (e) => { if (e.target === el("export-dialog")) closeExportDialog(); });
 
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
