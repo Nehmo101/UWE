@@ -9,7 +9,7 @@ import {
   IDEA_WORKSPACE_VIEW_LABELS, IDEA_WORKSPACE_VIEWS,
   type DevIdeaLifecycleId, type DevIdeaMaturityLevelId, type DevIdeaModuleId, type DevIdeaTypeId, type IdeaWorkspaceView,
 } from "@uwe/database/dev-idea-constants";
-import { studioApiUrl from "@/src/lib/studio-api-url";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import {
   createIdeaAction,
   deleteIdeaAction,

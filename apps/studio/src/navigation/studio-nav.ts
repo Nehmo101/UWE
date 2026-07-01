@@ -236,18 +236,6 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["agent", "jobs"],
       },
       {
-        id: "tools-import-central",
-        label: "Import-Zentrale",
-        href: "/import",
-        icon: "file-input",
-        group: TOOLS,
-        section: TOOLS,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "studio",
-        keywords: ["import", "knoteforge", "markdown", "obsidian", "pdf", "zentrale"],
-      },
-      {
         id: "tools-jobs",
         label: "Jobs",
         href: "/jobs",
