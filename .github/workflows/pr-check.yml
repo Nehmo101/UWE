@@ -14,7 +14,7 @@ concurrency:
 jobs:
   fast-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -47,13 +47,20 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         run: git diff --exit-code pnpm-lock.yaml
 
+      - name: Get lockfile hash
+        if: steps.changes.outputs.code == 'true'
+        id: lockfile
+        run: echo "hash=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
       - name: Restore Turbo cache
         if: steps.changes.outputs.code == 'true'
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: turbo-pr-${{ runner.os }}-${{ github.sha }}
+          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
+            turbo-${{ runner.os }}-
+            turbo-quality-${{ runner.os }}-
             turbo-pr-${{ runner.os }}-
 
       - name: Light CI gate
