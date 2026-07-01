@@ -7,15 +7,16 @@ import { createWorldCreationService } from "./world-creation-service";
 import { getWorldTemplate, listWorldTemplateOptions } from "./world-templates";
 
 describe("world templates", () => {
-  it("lists DnD, Wiki and Roman archetypes", () => {
+  it("lists DnD, Wiki, Roman and Wargame archetypes", () => {
     const options = listWorldTemplateOptions();
     assert.deepEqual(
       options.map((entry) => entry.id),
-      ["blank", "dnd", "wiki", "roman"],
+      ["blank", "dnd", "wiki", "roman", "wargame"],
     );
     assert.ok(getWorldTemplate("dnd")?.seedPages.length);
     assert.ok(getWorldTemplate("wiki")?.seedPages.length);
     assert.ok(getWorldTemplate("roman")?.seedPages.length);
+    assert.ok(getWorldTemplate("wargame")?.seedPages.length);
   });
 });
 
@@ -54,6 +55,7 @@ describe("world creation service", () => {
     assert.equal(world.isSandbox, false);
     assert.equal(world.templateId, "blank");
     assert.equal(world.seededPageCount, 0);
+    assert.equal(world.seededCalendar, false);
 
     const membership = await db.worldMembership.findUnique({
       where: { userId_worldId: { userId: owner.id, worldId: world.id } },
@@ -82,15 +84,47 @@ describe("world creation service", () => {
 
     assert.equal(world.templateId, "dnd");
     assert.equal(world.seededPageCount, 5);
+    assert.equal(world.seededCalendar, true);
 
     const campaigns = await db.campaign.findMany({ where: { worldId: world.id } });
     assert.equal(campaigns.length, 1);
     assert.equal(campaigns[0]?.slug, "hauptkampagne");
 
+    const calendar = await db.worldCalendar.findUnique({ where: { worldId: world.id } });
+    assert.ok(calendar);
+
     const pages = await db.page.findMany({ where: { worldId: world.id }, orderBy: { title: "asc" } });
     assert.equal(pages.length, 5);
     assert.ok(pages.some((page) => page.type === "npc"));
     assert.ok(pages.some((page) => page.type === "session"));
+
+    await db.$disconnect();
+  });
+
+  it("seeds Wargame template pages, campaign and calendar", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const owner = await auth.createUser({
+      displayName: "Wargame Owner",
+      email: "wargame-owner@uwe.local",
+      password: "test-password-123456",
+      role: "owner",
+    });
+
+    const service = createWorldCreationService(db);
+    const world = await service.createWorldForUser(owner.id, {
+      name: "Meine Wargame Welt",
+      templateId: "wargame",
+    });
+
+    assert.equal(world.templateId, "wargame");
+    assert.equal(world.seededPageCount, 5);
+    assert.equal(world.seededCalendar, true);
+
+    const pages = await db.page.findMany({ where: { worldId: world.id } });
+    assert.ok(pages.some((page) => page.type === "faction"));
+    assert.ok(pages.some((page) => page.slug === "szenario"));
 
     await db.$disconnect();
   });

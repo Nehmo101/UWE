@@ -68,7 +68,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 9 | Health Checks | ✅ | `/api/health` (Studio+Portal), `/admin/status`, `homelab-cockpit.ts` (DB/Portal/Cloudflare/RTX/Ollama/Backup) | Klein: Cloudflare-Health ist Heuristik, keine Live-Tunnel-API. Kern erfüllt. |
 | 10 | Migration Inspector | 🔶 | `migration-status.ts`, `/admin/migrations`, Checklist-Link | Dedizierte **read-only** Inspector-UI mit angewendeter Liste + Fehler-Metadaten (Batch 5). Kein In-App-Repair. |
 | 11 | User Management | ✅ | `/admin/users` + `UserManagementWorkspace`, `user-service.ts` (create/invite/disable/role/reset), `WorldMembership` | Invite-Mail hängt an Mail-Config. Kern erfüllt. |
-| 12 | World Templates | ⬜ | `world-creation-service.ts` (nur leere Welt), `PageTemplate` (nur **Seiten**-Templates) | **Echtes Neubau-Thema**: Welt-Archetypen (DnD/Wargame/Roman/Projektwiki) bei Welt-Erstellung. Empfehlung: Template = Satz Seed-Seiten/Templates + Default-Settings. |
+| 12 | World Templates | ✅ Beta | `world-templates.ts`, `CreateWorldForm`, DnD/Wiki/Roman/Wargame + Kalender-Seed | Archetypen bei Welterstellung in Studio + Portal; blank/dnd/wiki/roman/wargame. |
 | 13 | Content Moderation / Freigabe | ✅ | `ContentReview` + `/admin/reviews`, `review-service.ts`, `AiProposal`/`ai-review-service.ts` (kein Auto-Apply) | Review-zentriert; nicht jeder KI-Pfad erzeugt zwingend Review. Kern erfüllt. |
 | 14 | System-Changelog | 🔶 | `/system/version` (Build-Info), `/system/uwe-knowhow` (durchsucht `CHANGELOG.md`/docs) | Kein **„Was ist neu“** nach Update (geparste Release-Notes/Modal). |
 | 15 | Owner Notfallmodus | ✅ Beta | `maintenanceMode`/`lockPortal`/`lockStudio`, Middleware + Owner-Bypass, Settings-UI | Shipped: Gate in Middleware + Layout, `/api/maintenance/evaluate`, NL-Command. |
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#386, Faction-Simulator UI, Owner-Notfallmodus Middleware). Nächste offene Neubau-Themen: World Templates, Spieler-Timeline Polish.
+#357–#387, Faction-Simulator UI, Owner-Notfallmodus, World Templates). Nächste offene Neubau-Themen: Spieler-Timeline Polish, EntityTag backfill.
