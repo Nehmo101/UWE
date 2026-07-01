@@ -70,6 +70,7 @@ export async function patchAiGatewayConfig(
     routingMode?: AiRoutingMode;
     cloudFallbackEnabled?: boolean;
     privacyRules?: Partial<Record<AiFeatureCategory, AiPrivacyLevel>>;
+    featureModels?: Partial<Record<AiFeatureCategory, { providerId?: string | null; model?: string | null } | null>>;
     dailyBudgetUsd?: number | null;
     monthlyBudgetUsd?: number | null;
     perUserDailyBudgetUsd?: number | null;
@@ -86,19 +87,33 @@ export async function patchAiGatewayConfig(
     );
   }
 
+  if (body.featureModels?.personal_brain?.providerId && body.featureModels.personal_brain.providerId !== "local_rtx") {
+    return jsonError("personal_brain darf keinen Cloud-Provider nutzen — Life-Brain ist permanent lokal-only.", 400);
+  }
   const service = gatewayService();
   const current = await service.getConfig();
-
-  // Always enforce personal_brain = CLOUD_FORBIDDEN regardless of stored value.
   const mergedPrivacyRules = body.privacyRules
     ? { ...current.privacyRules, ...body.privacyRules, personal_brain: "CLOUD_FORBIDDEN" as AiPrivacyLevel }
     : current.privacyRules;
-
+  let mergedFeatureModels = current.featureModels;
+  if (body.featureModels) {
+    mergedFeatureModels = { ...current.featureModels };
+    for (const [key, value] of Object.entries(body.featureModels)) {
+      const category = key as AiFeatureCategory;
+      if (value === null || (!value?.providerId?.trim() && !value?.model?.trim())) {
+        delete mergedFeatureModels[category];
+      } else {
+        mergedFeatureModels[category] = {
+          providerId: value.providerId?.trim() || null,
+          model: value.model?.trim() || null,
+        };
+      }
+    }
+  }
   const config = await service.updateConfig({
     routingMode: body.routingMode ?? current.routingMode,
     cloudFallbackEnabled: body.cloudFallbackEnabled ?? current.cloudFallbackEnabled,
-    privacyRules: mergedPrivacyRules,
-    dailyBudgetUsd: body.dailyBudgetUsd !== undefined ? body.dailyBudgetUsd : current.dailyBudgetUsd,
+    privacyRules: mergedPrivacyRules, featureModels: mergedFeatureModels, dailyBudgetUsd: body.dailyBudgetUsd !== undefined ? body.dailyBudgetUsd : current.dailyBudgetUsd,
     monthlyBudgetUsd:
       body.monthlyBudgetUsd !== undefined ? body.monthlyBudgetUsd : current.monthlyBudgetUsd,
     perUserDailyBudgetUsd:
@@ -112,8 +127,7 @@ export async function patchAiGatewayConfig(
       kind: "ai_gateway_config",
       routingMode: config.routingMode,
       cloudFallbackEnabled: config.cloudFallbackEnabled,
-      privacyRulesChanged: Boolean(body.privacyRules),
-      budgetsChanged:
+      privacyRulesChanged: Boolean(body.privacyRules), featureModelsChanged: Boolean(body.featureModels), budgetsChanged:
         body.dailyBudgetUsd !== undefined ||
         body.monthlyBudgetUsd !== undefined ||
         body.perUserDailyBudgetUsd !== undefined,
