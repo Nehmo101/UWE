@@ -424,6 +424,12 @@ export interface PersonalProjectDetail {
   entityLinks: Awaited<ReturnType<LifeAdminService["listLinksForSource"]>>;
 }
 
+export interface PersonalProjectDashboardStats {
+  total: number;
+  byCategory: Record<PersonalProjectCategory, number>;
+  byStatus: Record<PersonalProjectStatus, number>;
+}
+
 export interface TodayAdminSummary {
   inboxCaptureCount: number;
   activeProjectCount: number;
@@ -719,6 +725,49 @@ export class LifeAdminService {
       },
     });
     return this.db.personalProject.delete({ where: { id } });
+  }
+
+  async getPersonalProjectDashboardStats(): Promise<PersonalProjectDashboardStats> {
+    const [categoryRows, statusRows, total] = await Promise.all([
+      this.db.personalProject.groupBy({
+        by: ["category"],
+        _count: { _all: true },
+      }),
+      this.db.personalProject.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.db.personalProject.count(),
+    ]);
+
+    const byCategory: Record<PersonalProjectCategory, number> = {
+      uwe: 0,
+      hardware_homelab: 0,
+      dnd: 0,
+      art_workshop: 0,
+      printing_3d: 0,
+      other: 0,
+    };
+
+    for (const row of categoryRows) {
+      byCategory[row.category] = row._count._all;
+    }
+
+    const byStatus: Record<PersonalProjectStatus, number> = {
+      idea: 0,
+      planned: 0,
+      active: 0,
+      blocked: 0,
+      paused: 0,
+      done: 0,
+      archived: 0,
+    };
+
+    for (const row of statusRows) {
+      byStatus[row.status] = row._count._all;
+    }
+
+    return { total, byCategory, byStatus };
   }
 
   async listWorkshopProjects(options: {
