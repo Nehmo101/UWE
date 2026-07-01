@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#392). EntityTag-Primärquelle in tag-service; cross-domain Suche; Kanon-Lifecycle-Filter.
+#357–#393). EntityTag-Primärquelle; cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish.

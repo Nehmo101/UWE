@@ -75,6 +75,8 @@ export interface ListActivityOptions {
   limit?: number;
   offset?: number;
   actions?: ActivityAction[];
+  since?: Date;
+  until?: Date;
 }
 
 export class ActivityLogService {
@@ -110,6 +112,14 @@ export class ActivityLogService {
       where: {
         ...(options.worldId ? { worldId: options.worldId } : {}),
         ...(options.actions ? { action: { in: options.actions } } : {}),
+        ...(options.since || options.until
+          ? {
+              createdAt: {
+                ...(options.since ? { gte: options.since } : {}),
+                ...(options.until ? { lt: options.until } : {}),
+              },
+            }
+          : {}),
       },
       include: { undoEntry: { select: { id: true, undoneAt: true } } },
       orderBy: { createdAt: "desc" },
@@ -135,9 +145,19 @@ export class ActivityLogService {
     }));
   }
 
-  async count(worldId?: string): Promise<number> {
+  async count(worldId?: string, since?: Date, until?: Date): Promise<number> {
     return this.db.activityLog.count({
-      where: worldId ? { worldId } : undefined,
+      where: {
+        ...(worldId ? { worldId } : {}),
+        ...(since || until
+          ? {
+              createdAt: {
+                ...(since ? { gte: since } : {}),
+                ...(until ? { lt: until } : {}),
+              },
+            }
+          : {}),
+      },
     });
   }
 }

@@ -15,8 +15,15 @@ interface UnifiedEntry {
   worldId: string | null;
   worldSlug: string | null;
   actorUserId: string | null;
+  actorDisplayName: string | null;
   targetHref: string | null;
   severity: "info" | "warn" | "error";
+}
+
+interface WorldOption {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 const SOURCE_LABELS: Record<UnifiedEntry["source"], string> = {
@@ -27,11 +34,14 @@ const SOURCE_LABELS: Record<UnifiedEntry["source"], string> = {
 
 export function UnifiedActivityWorkspace() {
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
+  const [worlds, setWorlds] = useState<WorldOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState("");
-  const [worldId, setWorldId] = useState("");
+  const [worldSlug, setWorldSlug] = useState("");
+  const [severity, setSeverity] = useState("");
+  const [sinceDays, setSinceDays] = useState("30");
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -39,7 +49,9 @@ export function UnifiedActivityWorkspace() {
 
     const params = new URLSearchParams();
     if (source) params.set("source", source);
-    if (worldId) params.set("worldId", worldId);
+    if (worldSlug) params.set("worldSlug", worldSlug);
+    if (severity) params.set("severity", severity);
+    if (sinceDays) params.set("sinceDays", sinceDays);
     params.set("limit", "100");
 
     try {
@@ -47,15 +59,20 @@ export function UnifiedActivityWorkspace() {
       if (!response.ok) {
         throw new Error(`Verlauf konnte nicht geladen werden (${response.status}).`);
       }
-      const data = (await response.json()) as { entries: UnifiedEntry[]; total: number };
+      const data = (await response.json()) as {
+        entries: UnifiedEntry[];
+        total: number;
+        worlds: WorldOption[];
+      };
       setEntries(data.entries);
       setTotal(data.total);
+      setWorlds(data.worlds);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unbekannter Fehler");
     } finally {
       setLoading(false);
     }
-  }, [source, worldId]);
+  }, [source, worldSlug, severity, sinceDays]);
 
   useEffect(() => {
     void loadEntries();
@@ -76,8 +93,33 @@ export function UnifiedActivityWorkspace() {
             </select>
           </label>
           <label>
-            Welt-ID (optional)
-            <input value={worldId} onChange={(event) => setWorldId(event.target.value)} />
+            Welt
+            <select value={worldSlug} onChange={(event) => setWorldSlug(event.target.value)}>
+              <option value="">Alle Welten</option>
+              {worlds.map((world) => (
+                <option key={world.id} value={world.slug}>
+                  {world.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Schweregrad
+            <select value={severity} onChange={(event) => setSeverity(event.target.value)}>
+              <option value="">Alle</option>
+              <option value="info">Info</option>
+              <option value="warn">Warnung</option>
+              <option value="error">Fehler</option>
+            </select>
+          </label>
+          <label>
+            Zeitraum
+            <select value={sinceDays} onChange={(event) => setSinceDays(event.target.value)}>
+              <option value="7">Letzte 7 Tage</option>
+              <option value="30">Letzte 30 Tage</option>
+              <option value="90">Letzte 90 Tage</option>
+              <option value="">Gesamt</option>
+            </select>
           </label>
           <div style={{ alignSelf: "end" }}>
             <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void loadEntries()}>
@@ -85,6 +127,9 @@ export function UnifiedActivityWorkspace() {
             </button>
           </div>
         </div>
+        {worldSlug && source === "ai_usage" && (
+          <p className="uwe-hint">KI-Nutzung ist global — Weltfilter blendet nur Aktivität/Audit ein.</p>
+        )}
       </section>
 
       {loading && <p>Lade Verlauf…</p>}
@@ -92,7 +137,10 @@ export function UnifiedActivityWorkspace() {
 
       {!loading && !error && (
         <section className="uwe-v2-card uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Einträge ({total})</h2>
+          <h2 className="uwe-v2-section-title">
+            Einträge ({entries.length}
+            {total > entries.length ? ` von ${total}` : ""})
+          </h2>
           {entries.length === 0 ? (
             <p className="uwe-dashboard-muted">Keine Einträge gefunden.</p>
           ) : (
@@ -100,7 +148,9 @@ export function UnifiedActivityWorkspace() {
               {entries.map((entry) => (
                 <article key={entry.id} className="uwe-today-card">
                   <header style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                    <span className={`uwe-badge uwe-badge-${entry.severity === "error" ? "secret" : entry.severity === "warn" ? "draft" : "type"}`}>
+                    <span
+                      className={`uwe-badge uwe-badge-${entry.severity === "error" ? "secret" : entry.severity === "warn" ? "draft" : "type"}`}
+                    >
                       {SOURCE_LABELS[entry.source]}
                     </span>
                     <strong>{entry.actionLabel}</strong>
@@ -109,7 +159,11 @@ export function UnifiedActivityWorkspace() {
                   <p>{entry.summary}</p>
                   <p className="uwe-dashboard-muted">
                     {entry.worldSlug ? `Welt: ${entry.worldSlug}` : "Global"}
-                    {entry.actorUserId ? ` · Actor: ${entry.actorUserId}` : ""}
+                    {entry.actorDisplayName
+                      ? ` · ${entry.actorDisplayName}`
+                      : entry.actorUserId
+                        ? ` · User ${entry.actorUserId}`
+                        : ""}
                   </p>
                   {entry.targetHref && (
                     <Link className="uwe-v2-btn uwe-v2-btn-sm uwe-v2-btn-secondary" href={entry.targetHref}>

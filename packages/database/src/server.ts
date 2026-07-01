@@ -1155,6 +1155,8 @@ export type {
 
 export {
   listUnifiedActivity,
+  countUnifiedActivity,
+  UNIFIED_ACTIVITY_SOURCE_LABELS,
 } from "./unified-activity-service";
 
 export type {
