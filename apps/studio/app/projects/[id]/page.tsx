@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  asLinkList,
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
   formatEuroFromCents,
+  formatLinksForForm,
   PersonalProjectCategoryEnum,
   PersonalProjectStatusEnum,
   prisma,
@@ -35,6 +37,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   }
 
   const { project, linkedCaptures } = detail;
+  const links = asLinkList(project.links);
 
   return (
     <StudioShell
@@ -64,6 +67,51 @@ export default async function ProjectDetailPage({ params }: Props) {
               Fällig: {DATE_FORMAT.format(project.nextActionDate)}
             </p>
           )}
+        </section>
+      )}
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Übersicht</h2>
+        <div className="uwe-dashboard-grid">
+          <article className="uwe-v2-card uwe-dashboard-card">
+            <h3>Status & Kategorie</h3>
+            <p>{PROJECT_STATUS_LABELS[project.status]}</p>
+            <p className="uwe-dashboard-muted">{PROJECT_CATEGORY_LABELS[project.category]}</p>
+          </article>
+          <article className="uwe-v2-card uwe-dashboard-card">
+            <h3>Kosten</h3>
+            <p>{project.costCents != null ? formatEuroFromCents(project.costCents) : "—"}</p>
+          </article>
+          <article className="uwe-v2-card uwe-dashboard-card">
+            <h3>Links</h3>
+            {links.length > 0 ? (
+              <ul>
+                {links.map((entry) => (
+                  <li key={entry.url}>
+                    <a href={entry.url} target="_blank" rel="noreferrer">
+                      {entry.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="uwe-dashboard-muted">Keine Links</p>
+            )}
+          </article>
+        </div>
+      </section>
+
+      {project.description && (
+        <section className="uwe-v2-card uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Beschreibung</h2>
+          <p>{project.description}</p>
+        </section>
+      )}
+
+      {project.notes && (
+        <section className="uwe-v2-card uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Notizen</h2>
+          <p style={{ whiteSpace: "pre-wrap" }}>{project.notes}</p>
         </section>
       )}
 
@@ -118,6 +166,10 @@ export default async function ProjectDetailPage({ params }: Props) {
           <label>
             Notizen
             <textarea name="notes" rows={2} defaultValue={project.notes} />
+          </label>
+          <label>
+            Links (eine Zeile pro Link: <code>Label | https://…</code>)
+            <textarea name="links" rows={3} defaultValue={formatLinksForForm(project.links)} />
           </label>
           <label>
             Kosten (Cent)
