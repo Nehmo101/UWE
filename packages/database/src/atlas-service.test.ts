@@ -484,15 +484,24 @@ describe("AtlasService — getAtlasForContext visibility filtering", () => {
     await db.atlasFeature.create({
       data: { nodeId: visibleNode.id, kind: "river", geometry: {}, visibility: "player_visible" },
     });
+    // Objects on visible node — dm_only (hidden from portal) + player_visible (shown)
+    const paletteItem = await seedPaletteItem(db, world.id);
+    await db.atlasObject.create({
+      data: { nodeId: visibleNode.id, paletteItemId: paletteItem.id, x: 0.1, y: 0.1, visibility: "dm_only" },
+    });
+    await db.atlasObject.create({
+      data: { nodeId: visibleNode.id, paletteItemId: paletteItem.id, x: 0.2, y: 0.2, visibility: "player_visible" },
+    });
   });
 
-  it("DM context sees all nodes and features", async () => {
+  it("DM context sees all nodes, features and objects", async () => {
     const service = createAtlasService(db);
     const result = await service.getAtlasForContext(worldSlug, "dm");
 
     assert.ok(result);
     assert.equal(result.nodes.length, 2);
     assert.equal(result.features.length, 2);
+    assert.equal(result.objects.length, 2);
   });
 
   it("portal context hides dm_only atlas map", async () => {
@@ -521,6 +530,15 @@ describe("AtlasService — getAtlasForContext visibility filtering", () => {
     assert.ok(result);
     assert.equal(result.features.length, 1);
     assert.equal(result.features[0]!.kind, "river");
+  });
+
+  it("portal context shows only player_visible objects", async () => {
+    const service = createAtlasService(db);
+    const result = await service.getAtlasForContext(worldSlug, "portal");
+
+    assert.ok(result);
+    assert.equal(result.objects.length, 1);
+    assert.equal(result.objects[0]!.visibility, "player_visible");
   });
 
   it("returns null for non-existent world", async () => {

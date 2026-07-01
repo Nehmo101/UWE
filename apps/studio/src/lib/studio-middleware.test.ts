@@ -110,7 +110,7 @@ describe("studio middleware deny-by-default", () => {
       headers: { host: "studio.local" },
     });
     const response = middleware(request);
-    assert.equal(response.headers.get("X-Frame-Options"), "DENY");
+    assert.equal(response.headers.get("X-Frame-Options"), "SAMEORIGIN");
     assert.ok(response.headers.get("Content-Security-Policy"));
   });
 });

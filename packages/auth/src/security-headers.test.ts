@@ -14,16 +14,17 @@ describe("security headers", () => {
     const headers = getUweSecurityHeaders({ NODE_ENV: "development" });
 
     assert.match(headers["Content-Security-Policy"], /default-src 'self'/);
-    assert.match(headers["Content-Security-Policy"], /frame-ancestors 'none'/);
+    // Same-origin framing is allowed (Studio → atlas.html iframe); cross-origin stays blocked.
+    assert.match(headers["Content-Security-Policy"], /frame-ancestors 'self'/);
     assert.equal(headers["X-Content-Type-Options"], "nosniff");
     assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
-    assert.equal(headers["X-Frame-Options"], "DENY");
+    assert.equal(headers["X-Frame-Options"], "SAMEORIGIN");
     assert.match(headers["Permissions-Policy"], /camera=\(\)/);
   });
 
   it("allows only explicit YouTube frame sources", () => {
     const csp = buildContentSecurityPolicy({ allowYouTubeEmbeds: true });
-    assert.match(csp, /frame-src https:\/\/www\.youtube\.com https:\/\/www\.youtube-nocookie\.com/);
+    assert.match(csp, /frame-src 'self' https:\/\/www\.youtube\.com https:\/\/www\.youtube-nocookie\.com/);
     assert.doesNotMatch(csp, /\*/);
   });
 
@@ -40,7 +41,8 @@ describe("security headers", () => {
     const csp = buildContentSecurityPolicy({}, { NODE_ENV: "production" });
     assert.doesNotMatch(csp, /challenges\.cloudflare\.com/);
     assert.match(csp, /connect-src 'self'(;|$)/);
-    assert.match(csp, /frame-src 'none'/);
+    // Tight default: frame-src is same-origin only (no external hosts).
+    assert.match(csp, /frame-src 'self'(;|$)/);
   });
 
   it("allows Cloudflare Turnstile origins only when the human-check is enabled", () => {
@@ -55,7 +57,7 @@ describe("security headers", () => {
     assert.match(csp, /connect-src [^;]*https:\/\/challenges\.cloudflare\.com/);
     assert.match(csp, /frame-src [^;]*https:\/\/challenges\.cloudflare\.com/);
     // YouTube frame sources remain intact alongside Turnstile.
-    assert.match(csp, /frame-src https:\/\/www\.youtube\.com/);
+    assert.match(csp, /frame-src[^;]*https:\/\/www\.youtube\.com/);
     assert.doesNotMatch(csp, /\*/);
   });
 

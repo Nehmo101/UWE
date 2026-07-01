@@ -53,7 +53,10 @@ export function buildContentSecurityPolicy(
     connectSrc.push(TURNSTILE_SCRIPT_ORIGIN);
   }
 
-  const frameSrc: string[] = [];
+  // 'self' permits the Studio to embed the same-origin single-file Atlas editor
+  // (atlas.html) in an <iframe> (M3). Kept to same-origin only — no external hosts
+  // beyond the explicit YouTube/Turnstile opt-ins below.
+  const frameSrc: string[] = ["'self'"];
   if (options.allowYouTubeEmbeds) {
     frameSrc.push("https://www.youtube.com", "https://www.youtube-nocookie.com");
   }
@@ -66,7 +69,9 @@ export function buildContentSecurityPolicy(
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    "frame-ancestors 'none'",
+    // 'self' allows same-origin framing (Studio → atlas.html iframe); still blocks
+    // cross-origin clickjacking. Paired with X-Frame-Options: SAMEORIGIN.
+    "frame-ancestors 'self'",
     `script-src ${scriptSrc.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
@@ -116,7 +121,9 @@ export function getUweSecurityHeaders(
     "Content-Security-Policy": buildContentSecurityPolicy(options, env),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "X-Frame-Options": "DENY",
+    // SAMEORIGIN (not DENY) so the Studio can iframe the same-origin Atlas editor;
+    // cross-origin framing stays blocked (mirrors frame-ancestors 'self').
+    "X-Frame-Options": "SAMEORIGIN",
     "Permissions-Policy":
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
     "Cross-Origin-Opener-Policy": "same-origin",

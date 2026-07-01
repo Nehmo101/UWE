@@ -17,6 +17,8 @@
  * Framework-agnostic: no DOM, React, or Prisma imports.
  */
 
+import type { BiomeKind } from "./constants";
+
 // ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
@@ -130,6 +132,13 @@ export const BUILTIN_GLYPHS: readonly BuiltinGlyph[] = [
     pathData: "M3 21 L3 10 L13 10 L13 6 L21 6 L21 21 M3 14 L13 14 M13 12 L21 12",
     color: "#7a6a52",
   },
+  {
+    key: "rock",
+    name: "Fels",
+    kind: "relief",
+    pathData: "M4 20 Q5 12 11 12 Q13 9 16 12 Q20 13 20 20 Z M9 16 L11 13 M14 18 L16 14",
+    color: "#7a6a52",
+  },
 
   // --- Biome — Vegetation & Gewässer ---------------------------------------
   {
@@ -232,6 +241,35 @@ export const BUILTIN_GLYPHS: readonly BuiltinGlyph[] = [
     pathData: "M3 9 L12 4 L21 9 Z M4 11 L20 11 M5 11 L5 18 M9 11 L9 18 M15 11 L15 18 M19 11 L19 18 M4 18 L20 18 M2 21 L22 21",
     color: "#2a1d10",
   },
+  // --- Pin — Canvas-of-Kings-Erweiterung -----------------------------------
+  {
+    key: "tent",
+    name: "Zelt",
+    kind: "pin",
+    pathData: "M12 4 L21 20 L3 20 Z M12 4 L12 20 M9 20 L12 15 L15 20",
+    color: "#8a5a3a",
+  },
+  {
+    key: "stall",
+    name: "Marktstand",
+    kind: "pin",
+    pathData: "M4 10 L6 5 L18 5 L20 10 Z M5 10 L5 20 M19 10 L19 20 M5 20 L19 20 M4 10 L20 10 M9 20 L9 14 L15 14 L15 20",
+    color: "#6b4a2a",
+  },
+  {
+    key: "wall",
+    name: "Stadtmauer",
+    kind: "pin",
+    pathData: "M3 20 L3 12 L6 12 L6 10 L9 10 L9 12 L12 12 L12 10 L15 10 L15 12 L18 12 L18 10 L21 10 L21 20 Z M3 16 L21 16",
+    color: "#5a5044",
+  },
+  {
+    key: "gate",
+    name: "Tor",
+    kind: "pin",
+    pathData: "M5 20 L5 10 Q5 5 12 5 Q19 5 19 10 L19 20 M9 20 L9 12 Q9 9 12 9 Q15 9 15 12 L15 20 M4 10 L20 10",
+    color: "#4a4038",
+  },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -271,3 +309,24 @@ export function groupGlyphsByCategory(): Array<{
     glyphs: listGlyphsByCategory(category.key),
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Biome → scatter glyph mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * The preferred scatter glyph for each biome kind, used by
+ * `scatterGlyphsInPolygon` to fill biome polygons with pictograms. `null`
+ * means the biome is not glyph-scattered (e.g. open water/coast). Every key
+ * references a stable `BUILTIN_GLYPHS.key`.
+ */
+export const BIOME_SCATTER_GLYPH: Record<BiomeKind, string | null> = {
+  forest: "tree",
+  mountains: "mountain",
+  hills: "rock",
+  swamp: "tree",
+  desert: "rock",
+  grassland: "tree",
+  coast: null,
+  snow: "mountain",
+};

@@ -3186,14 +3186,18 @@ enum AtlasPaletteReviewStatus {
 
 /// One atlas per world — get-or-create via atlas service.
 model AtlasMap {
-  id          String     @id @default(cuid())
-  worldId     String     @map("world_id")
-  title       String     @default("Atlas")
-  stylePreset String     @default("tolkien-ink") @map("style_preset")
-  settings    Json?
-  visibility  Visibility @default(dm_only)
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id            String     @id @default(cuid())
+  worldId       String     @map("world_id")
+  title         String     @default("Atlas")
+  stylePreset   String     @default("tolkien-ink") @map("style_preset")
+  settings      Json?
+  /// Atlas document schema version of the persisted map (v1 legacy → v2 tile-layer). Migrated to v2 on load.
+  schemaVersion Int        @default(1) @map("schema_version")
+  /// Terrain tile layer: { cols, rows, tile, cells:{ "c,r": biomeKind } }. Null until the map is painted.
+  tileLayer     Json?      @map("tile_layer")
+  visibility    Visibility @default(dm_only)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
   world World       @relation(fields: [worldId], references: [id], onDelete: Cascade)
   nodes AtlasNode[]
