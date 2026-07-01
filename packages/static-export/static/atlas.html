@@ -541,6 +541,25 @@ function requestHandout() {
   if (embedded) { bridgePost({ type: "handout-request", nodeId: node().id, title: (node().title || "Atlas") + " — Handout" }); flash("Handout-Erstellung angefragt…"); }
   else flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
 }
+function renameNode(nodeId, currentTitle) {
+  if (isView()) return;
+  const next = prompt("Ebene umbenennen:", currentTitle || "");
+  if (next == null) return;
+  const trimmed = next.trim();
+  if (!trimmed || trimmed === currentTitle) return;
+  const n = doc.nodes.find((x) => x.id === nodeId);
+  if (n) n.title = trimmed;
+  if (embedded) bridgePost({ type: "node-rename", nodeId, title: trimmed });
+  refreshChrome(); draw();
+  flash("Ebene umbenannt");
+}
+function renameFeatureLabel(f, next) {
+  if (isView() || !f) return;
+  const trimmed = (next || "").trim();
+  f.labelText = trimmed || null;
+  if (f.geometry && f.geometry.type === "LabelAnchor") f.geometry.text = trimmed || "";
+  markDirty(); refreshChrome(); draw();
+}
 
 // ===========================================================================
 // Hierarchie / Node-Helfer (Portal-Filter server-äquivalent im Client gespiegelt)
@@ -1264,7 +1283,13 @@ function refreshChrome() {
       btn.addEventListener("click", () => navTo(item.id)); bc.appendChild(btn);
       const sep = document.createElement("span"); sep.style.cssText = "color:var(--uwe-fg-subtle);font-size:11px;"; sep.textContent = "›"; bc.appendChild(sep);
     }
-    const title = document.createElement("span"); title.style.cssText = "font-family:var(--serif);font-size:15px;font-weight:600;"; title.textContent = n ? n.title : "—"; bc.appendChild(title);
+    const title = document.createElement("button");
+    title.type = "button";
+    title.style.cssText = "background:none;border:0;padding:2px 4px;font-family:var(--serif);font-size:15px;font-weight:600;color:var(--uwe-fg);cursor:" + (view ? "default" : "pointer") + ";";
+    title.textContent = n ? n.title : "—";
+    title.title = view ? "" : "Klicken zum Umbenennen";
+    if (!view && n) title.addEventListener("click", () => renameNode(n.id, n.title));
+    bc.appendChild(title);
     const lv = document.createElement("span"); lv.style.cssText = "font-size:10px;color:var(--uwe-fg-subtle);"; lv.textContent = n ? "· " + levelLabel(n.level) : ""; bc.appendChild(lv);
   }
 
@@ -1329,9 +1354,13 @@ function refreshChrome() {
     const isPathKind = selF.kind === "river" || selF.kind === "road";
     const opt = (list, cur) => list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
     el("sel-kind").textContent = kind;
+    const labelVal = selF.labelText || "";
     el("sel-controls").innerHTML =
-      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (selF.labelText || kind) + "</div>" +
-      '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
+      (view
+        ? '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (labelVal || kind) + "</div>"
+        : '<label style="display:block;font-size:10px;color:var(--uwe-fg-muted);margin-bottom:4px;">Name</label>' +
+          '<input id="sel-label-input" type="text" value="' + labelVal.replace(/"/g, "&quot;") + '" style="width:100%;padding:6px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-family:var(--serif);font-size:14px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);" placeholder="' + kind + '-Name">') +
+      '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';margin-top:6px;">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
       (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
       (isPathKind
         ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
@@ -1344,6 +1373,13 @@ function refreshChrome() {
           '<button class="tb-btn" data-att="roll" title="Neuer Zufalls-Seed">↻</button>' +
           "</div></div>"
         : "");
+    if (!view) {
+      const inp = el("sel-label-input");
+      if (inp) {
+        inp.addEventListener("change", () => renameFeatureLabel(selF, inp.value));
+        inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { inp.blur(); e.preventDefault(); } });
+      }
+    }
     selP.style.display = "block";
   } else { selP.style.display = "none"; }
 
