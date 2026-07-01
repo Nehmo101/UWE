@@ -1,10 +1,11 @@
 import type { AccessContext } from "@uwe/auth";
 import { filterPagesForViewer } from "@uwe/auth";
 import type { PrismaClient } from "./client";
-import type { PageType } from "./generated/prisma/client";
+import type { PageType, QuestLifecycleStatus } from "./generated/prisma/client";
 import type { PortalGameSessionView } from "./game-session";
 import type { PortalPlayerNoteView } from "./player-note-service";
 import { navCategoryForPageType } from "./page-types";
+import { isOpenQuest } from "./quest-lifecycle-service";
 
 /** Compact page card for the player portal dashboard. */
 export interface PortalDashboardPage {
@@ -114,6 +115,7 @@ export class PortalDashboardService {
         type: PageType;
         summary: string | null;
         updatedAt: Date;
+        questStatus?: QuestLifecycleStatus | null;
       }>;
       publishedSessions: PortalGameSessionView[];
       playerNotes: PortalPlayerNoteView[];
@@ -129,6 +131,11 @@ export class PortalDashboardService {
       ctx.user && ctx.worldMembership?.role === "player"
         ? ctx.worldMembership.characterName
         : null;
+
+    const openQuests = options.visiblePages
+      .filter((page) => QUEST_TYPES.includes(page.type) && isOpenQuest(page.questStatus))
+      .slice(0, 6)
+      .map(toDashboardPage);
 
     const pages = options.visiblePages.map(toDashboardPage);
 
@@ -164,10 +171,6 @@ export class PortalDashboardService {
           summaryPlayer: played[0].summaryPlayer,
         }
       : null;
-
-    const openQuests = pages
-      .filter((page) => QUEST_TYPES.includes(page.type))
-      .slice(0, 6);
 
     const knownNpcs = pages
       .filter((page) => NPC_TYPES.includes(page.type))
