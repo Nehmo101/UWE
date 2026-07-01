@@ -5,7 +5,9 @@ import {
   resolveRequiredPermission,
   isMasterAdminRole,
   DEFAULT_PRIVACY_RULES, resolveFeatureModelOverride,
+  AiGatewayService,
 } from "./ai-gateway-service";
+import type { PrismaClient } from "./client";
 
 describe("ai-gateway-service", () => {
   it("resolveFeatureCategory maps personal_brain correctly", () => {
@@ -62,5 +64,35 @@ describe("ai-gateway-service", () => {
 
   it("resolveFeatureCategory maps image feature", () => {
     assert.equal(resolveFeatureCategory({ feature: "AI_IMAGE_USE" }), "image_generation");
+  });
+
+  it("getConfig forces personal_brain to CLOUD_FORBIDDEN even for a tampered DB row", async () => {
+    const tamperedDb = {
+      aiGatewayConfig: {
+        findUnique: async () => ({
+          id: "default",
+          routingMode: "LOCAL_THEN_CLOUD",
+          cloudFallbackEnabled: true,
+          privacyRules: {
+            personal_brain: "CLOUD_ALLOWED",
+            private_notes: "CLOUD_ALLOWED",
+            dnd_world: "LOCAL_REQUIRED",
+          },
+          featureModels: {},
+          dailyBudgetUsd: null,
+          monthlyBudgetUsd: null,
+          perUserDailyBudgetUsd: null,
+          updatedAt: new Date(),
+        }),
+      },
+    } as unknown as PrismaClient;
+
+    const service = new AiGatewayService(tamperedDb, "test-encryption-secret");
+    const config = await service.getConfig();
+
+    assert.equal(config.privacyRules.personal_brain, "CLOUD_FORBIDDEN");
+    // Other categories remain configurable via the stored row.
+    assert.equal(config.privacyRules.private_notes, "CLOUD_ALLOWED");
+    assert.equal(config.privacyRules.dnd_world, "LOCAL_REQUIRED");
   });
 });

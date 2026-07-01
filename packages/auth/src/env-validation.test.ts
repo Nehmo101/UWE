@@ -43,9 +43,62 @@ describe("env validation", () => {
       STUDIO_ACCESS_ALLOWED_EMAILS: "owner@example.com",
       AUTH_REQUIRED: "true",
       SESSION_COOKIE_SECURE: "true",
+      UWE_MEDIA_SIGNING_SECRET: "a-strong-random-media-secret",
     });
 
     assert.equal(hasBlockingEnvIssues(issues), false);
+  });
+
+  it("flags missing or dev-default media signing secret as error in production", () => {
+    const base = {
+      NODE_ENV: "production",
+      AUTH_SECRET: "a-strong-random-secret-value-here",
+      RUN_DB_SEED: "false",
+    };
+
+    const missing = validateUweEnvironment({ ...base });
+    assert.ok(
+      missing.some(
+        (issue) => issue.id === "env:media-signing-secret" && issue.severity === "error",
+      ),
+    );
+
+    const devDefault = validateUweEnvironment({
+      ...base,
+      UWE_MEDIA_SIGNING_SECRET: "uwe-dev-media-signing-secret",
+    });
+    assert.ok(
+      devDefault.some(
+        (issue) => issue.id === "env:media-signing-secret" && issue.severity === "error",
+      ),
+    );
+
+    const strong = validateUweEnvironment({
+      ...base,
+      UWE_MEDIA_SIGNING_SECRET: "a-strong-random-media-secret",
+    });
+    assert.ok(!strong.some((issue) => issue.id === "env:media-signing-secret"));
+  });
+
+  it("does not flag media signing secret outside production", () => {
+    const issues = validateUweEnvironment({
+      NODE_ENV: "development",
+      AUTH_SECRET: "a-strong-random-secret-value-here",
+    });
+    assert.ok(!issues.some((issue) => issue.id === "env:media-signing-secret"));
+  });
+
+  it("warns (not errors) about missing STUDIO_API_TOKEN in production without public exposure", () => {
+    const issues = validateUweEnvironment({
+      NODE_ENV: "production",
+      AUTH_SECRET: "a-strong-random-secret-value-here",
+      RUN_DB_SEED: "false",
+      UWE_MEDIA_SIGNING_SECRET: "a-strong-random-media-secret",
+    });
+
+    const tokenIssue = issues.find((issue) => issue.id === "env:studio-api-token-recommended");
+    assert.ok(tokenIssue);
+    assert.equal(tokenIssue.severity, "warning");
   });
 
   it("requires studio access allowlist when Cloudflare Access is enabled", () => {
