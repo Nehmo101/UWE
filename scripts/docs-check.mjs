@@ -37,7 +37,10 @@ function checkMarkdownFile(relativePath) {
   }
 
   if (relativePath.endsWith(".md") && !content.startsWith("#")) {
-    issues.push(`${relativePath}: should start with a top-level heading`);
+    const startsWithFrontmatter = content.startsWith("---\n");
+    if (!startsWithFrontmatter) {
+      issues.push(`${relativePath}: should start with a top-level heading`);
+    }
   }
 
   const lines = content.split("\n");
