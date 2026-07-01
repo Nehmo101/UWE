@@ -63,8 +63,9 @@ jobs:
     needs: [detect-changes, lint]
     if: always()
     runs-on: ubuntu-latest
-    # Warm Turbo cache: ~6–10 min after lint passes. Cold first run can take longer.
-    timeout-minutes: 25
+    # Warm Turbo cache: ~6–10 min after lint passes. Cold first run can take
+    # longer; the Studio production build adds a few minutes on a cold cache.
+    timeout-minutes: 35
     env:
       # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
       # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
@@ -127,6 +128,24 @@ jobs:
         with:
           path: .turbo
           key: turbo-pr-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+
+      # Restore-only: main's quality job saves the shared next-* cache, so PRs
+      # without lockfile changes warm-start from main's Studio build cache.
+      - name: Restore Next.js build cache
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/studio/.next/cache
+          key: next-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+          restore-keys: |
+            next-${{ runner.os }}-
+
+      # ci:light:pr:gate does not build — catch Studio production build breaks
+      # (e.g. client components importing server-only modules) in the PR gate.
+      # db:generate already ran as part of ci:light:pr:gate.
+      - name: Studio production build
+        if: needs.detect-changes.outputs.code == 'true' && needs.lint.result == 'success'
+        run: pnpm --filter @uwe/studio build
 
       - name: Docs-only PR — skip heavy gate
         if: needs.detect-changes.outputs.code != 'true'
