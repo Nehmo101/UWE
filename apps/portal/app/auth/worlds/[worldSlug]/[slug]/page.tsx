@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CharacterSheetPanel } from "@/src/components/CharacterSheetPanel";
 import { PlayerCharacterEditPanel } from "@/src/components/PlayerCharacterEditPanel";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
@@ -11,9 +12,11 @@ import {
 } from "@uwe/shared-ui";
 import {
   createAuthService,
+  createCharacterService,
   createPrismaClient,
   getAppRepository,
   type PageWithBlocks,
+  type PortalCharacterView,
 } from "@uwe/database/server";
 
 interface Props {
@@ -37,6 +40,8 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let notes;
   let canComment = false;
   let canEditCharacter = false;
+  let characterSheet: PortalCharacterView | null = null;
+  let canEditSheet = false;
   let campaignId: string | null = null;
   let blockHtml: string[] = [];
 
@@ -74,6 +79,19 @@ export default async function AuthWorldPageDetail({ params }: Props) {
       canEditCharacter = visiblePage.contentBlocks.some((block) =>
         canEditPlayerCharacterBlock(ctx, visiblePage, block),
       );
+
+      const characters = createCharacterService(db);
+      const linked = await characters.getByPageId(visiblePage.id);
+      if (linked) {
+        characterSheet = await auth.getCharacterForViewer(worldSlug, linked.id, ctx);
+        canEditSheet = Boolean(
+          characterSheet &&
+            ctx.user &&
+            characterSheet.ownerUserId === ctx.user.id &&
+            ctx.effectiveRole === "player" &&
+            !ctx.previewAsUserId,
+        );
+      }
     }
   } finally {
     await db.$disconnect();
@@ -113,6 +131,16 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           </section>
         ))}
       </div>
+
+      {characterSheet && (
+        <CharacterSheetPanel
+          worldSlug={worldSlug}
+          pageSlug={slug}
+          character={characterSheet}
+          returnPath={returnPath}
+          canEdit={canEditSheet}
+        />
+      )}
 
       {canEditCharacter && (
         <PlayerCharacterEditPanel worldSlug={worldSlug} page={page} returnPath={returnPath} />

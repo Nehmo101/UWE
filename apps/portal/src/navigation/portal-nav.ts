@@ -83,6 +83,12 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "sessions",
           "recap",
         ]),
+        worldItem("portal-world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", [
+          "gruppenschatz",
+          "treasury",
+          "inventar",
+          "währung",
+        ]),
         worldItem("portal-world-timeline", "Timeline", `${base}/timeline`, "clock", [
           "timeline",
           "chronik",
@@ -92,6 +98,11 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "quests",
           "questlog",
           "aufgaben",
+        ]),
+        worldItem("portal-world-characters", "Charaktere", `${base}/characters`, "user", [
+          "charaktere",
+          "charakterbogen",
+          "sheet",
         ]),
         worldItem("portal-world-handouts", "Handouts", `${base}/assets`, "image", ["handouts", "karten", "assets"]),
         worldItem("portal-world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", ["notizen", "notes"]),

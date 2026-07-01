@@ -115,6 +115,16 @@ export class PartyTreasuryService {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
   }
+
+  async deleteItem(worldId: string, itemId: string) {
+    const item = await this.db.inventoryItem.findFirst({
+      where: { id: itemId, worldId, treasuryId: { not: null } },
+    });
+    if (!item) {
+      throw new Error("Inventar-Item nicht gefunden.");
+    }
+    return this.db.inventoryItem.delete({ where: { id: itemId } });
+  }
 }
 
 export function createPartyTreasuryService(db: PrismaClient): PartyTreasuryService {

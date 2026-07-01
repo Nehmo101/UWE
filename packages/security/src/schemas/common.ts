@@ -241,6 +241,32 @@ export const playerCharacterBlockSchema = z.object({
   returnPath: z.string().trim().max(500).optional(),
 });
 
+const abilityScoreField = z.coerce.number().int().min(1).max(30);
+
+export const characterSheetUpdateSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+  displayName: z.string().trim().min(1).max(200).optional(),
+  level: z.coerce.number().int().min(1).max(30).optional(),
+  strength: abilityScoreField.optional(),
+  dexterity: abilityScoreField.optional(),
+  constitution: abilityScoreField.optional(),
+  intelligence: abilityScoreField.optional(),
+  wisdom: abilityScoreField.optional(),
+  charisma: abilityScoreField.optional(),
+  armorClass: z.coerce.number().int().min(1).max(99).optional(),
+  initiativeBonus: z.coerce.number().int().min(-10).max(20).optional(),
+  notes: z.string().trim().max(10_000).optional(),
+});
+
+export const studioCharacterSheetUpdateSchema = characterSheetUpdateSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
 export const assetFileQuerySchema = z.object({
   world: slugSchema,
 });

@@ -91,15 +91,24 @@ export type { UpsertFactionStateInput } from "./faction-state-service";
 
 export {
   abilityModifier,
+  ABILITY_KEYS,
+  buildCharacterSheetSnapshot,
   createCharacterService,
   DEFAULT_ABILITY_SCORES,
+  parseAbilityScores,
+  parseCharacterCombat,
   proficiencyBonus,
+  toPortalCharacterView,
   CharacterService,
 } from "./character-service";
 
 export type {
   AbilityScores,
+  CharacterCombat,
+  CharacterSheetSnapshot,
   CreateCharacterInput,
+  PortalCharacterView,
+  UpdateCharacterInput,
   UpsertCharacterSpellInput,
 } from "./character-service";
 

@@ -17,8 +17,10 @@ import {
   filterPagesForViewer,
   filterPlayerNotesForViewer,
   isSecretVisibleToPlayer,
+  isWorldStaff,
   scopeFromAccessContext,
   sessionExpiresAt,
+  canEditPlayerCharacterBlock,
 } from "@uwe/auth";
 import {
   generateSessionToken,
@@ -73,7 +75,12 @@ import {
   sessionUnlockLabel,
   type PortalDashboardData,
 } from "./portal-dashboard-service";
-import { canEditPlayerCharacterBlock } from "@uwe/auth";
+import {
+  createCharacterService,
+  toPortalCharacterView,
+  type PortalCharacterView,
+  type UpdateCharacterInput,
+} from "./character-service";
 import { logAuditEvent } from "./audit-log-service";
 import { USER_SAFE_SELECT } from "./user-service";
 
@@ -132,12 +139,14 @@ export class AuthService {
   private readonly soundboard: SoundboardService;
   private readonly playerNotes: PlayerNoteService;
   private readonly portalDashboard: PortalDashboardService;
+  private readonly characters;
 
   constructor(private readonly db: PrismaClient) {
     this.gameSessions = new GameSessionService(db);
     this.soundboard = new SoundboardService(db);
     this.playerNotes = new PlayerNoteService(db);
     this.portalDashboard = createPortalDashboardService(db);
+    this.characters = createCharacterService(db);
   }
 
   async createUser(input: CreateUserInput): Promise<SafeUser> {
@@ -1372,6 +1381,124 @@ export class AuthService {
       session.sessionNumber,
       label,
     );
+  }
+
+  async listCharactersForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+  ): Promise<PortalCharacterView[]> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return [];
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
+    if (isWorldStaff(ctx)) {
+      const characters = await this.characters.listForWorld(world.id);
+      return characters.map((character) => toPortalCharacterView(character));
+    }
+
+    if (!ctx.user) {
+      return [];
+    }
+
+    const characters = await this.characters.listForOwner(world.id, ctx.user.id);
+    const visible: PortalCharacterView[] = [];
+
+    for (const character of characters) {
+      if (character.pageId && character.page) {
+        const page = await this.db.page.findUnique({
+          where: { id: character.pageId },
+          select: {
+            id: true,
+            visibility: true,
+            publishStatus: true,
+            secretLevel: true,
+            revealState: true,
+          },
+        });
+        if (page && !canViewPage(ctx, page)) {
+          continue;
+        }
+      }
+      visible.push(toPortalCharacterView(character));
+    }
+
+    return visible;
+  }
+
+  async getCharacterForViewer(
+    worldSlug: string,
+    characterId: string,
+    ctx: AccessContext,
+  ): Promise<PortalCharacterView | null> {
+    const character = await this.characters.getById(characterId);
+    if (!character) {
+      return null;
+    }
+
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world || character.worldId !== world.id) {
+      return null;
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return null;
+    }
+
+    if (!isWorldStaff(ctx)) {
+      if (!ctx.user || character.ownerUserId !== ctx.user.id) {
+        return null;
+      }
+
+      if (character.pageId) {
+        const page = await this.db.page.findUnique({
+          where: { id: character.pageId },
+          select: {
+            id: true,
+            visibility: true,
+            publishStatus: true,
+            secretLevel: true,
+            revealState: true,
+          },
+        });
+        if (page && !canViewPage(ctx, page)) {
+          return null;
+        }
+      }
+    }
+
+    return toPortalCharacterView(character);
+  }
+
+  async updateCharacterForOwner(
+    worldSlug: string,
+    characterId: string,
+    input: UpdateCharacterInput,
+    ctx: AccessContext,
+  ): Promise<PortalCharacterView | null> {
+    if (ctx.previewAsUserId || ctx.effectiveRole !== "player" || !ctx.user) {
+      return null;
+    }
+
+    const existing = await this.getCharacterForViewer(worldSlug, characterId, ctx);
+    if (!existing || existing.ownerUserId !== ctx.user.id) {
+      return null;
+    }
+
+    const updated = await this.characters.update(characterId, input);
+    return updated ? toPortalCharacterView(updated) : null;
   }
 
   async updatePlayerCharacterBlockForViewer(
