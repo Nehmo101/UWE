@@ -189,6 +189,10 @@ export const GENERATOR_ACTION_IDS = [
   "generate_encounter",
   "generate_read_aloud",
   "remove_spoilers",
+  "simulate_faction",
+  "generate_npc",
+  "generate_quest",
+  "generate_item",
 ] as const;
 
 export const generatorActionIdSchema = z.enum(GENERATOR_ACTION_IDS);
@@ -197,6 +201,7 @@ export const aiGeneratorBodySchema = z.object({
   actionId: generatorActionIdSchema,
   worldSlug: slugSchema,
   pageSlug: slugSchema,
+  structuredInput: z.record(z.string(), z.string()).optional(),
   useMock: z.boolean().optional(),
   sync: z.boolean().optional(),
 });

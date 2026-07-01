@@ -17,7 +17,8 @@ export type GeneratorContextType =
   | "npc"
   | "location"
   | "faction"
-  | "quest";
+  | "quest"
+  | "item";
 
 export type GeneratorActionId =
   | "fill_missing_fields"
@@ -29,7 +30,10 @@ export type GeneratorActionId =
   | "generate_encounter"
   | "generate_read_aloud"
   | "remove_spoilers"
-  | "simulate_faction";
+  | "simulate_faction"
+  | "generate_npc"
+  | "generate_quest"
+  | "generate_item";
 
 export interface GeneratorContext {
   contextType: GeneratorContextType;
@@ -61,6 +65,7 @@ const PAGE_TYPE_TO_CONTEXT: Partial<Record<PageType, GeneratorContextType>> = {
   location: "location",
   faction: "faction",
   quest: "quest",
+  item: "item",
   session: "session",
   dungeon: "dungeon",
   dungeon_level: "dungeon_level",
@@ -111,8 +116,9 @@ const CONTEXT_ACTIONS: Partial<Record<GeneratorContextType, GeneratorActionId[]>
   encounter: ["generate_encounter", "fill_missing_fields"],
   handout: ["generate_handout", "remove_spoilers", "generate_player_text"],
   dungeon: ["prepare_next_session", "fill_missing_fields"],
-  npc: ["fill_missing_fields", "generate_dm_notes", "generate_player_text", "check_canon"],
-  quest: ["fill_missing_fields", "generate_player_text", "check_canon"],
+  npc: ["generate_npc", "fill_missing_fields", "generate_dm_notes", "generate_player_text", "check_canon"],
+  quest: ["generate_quest", "fill_missing_fields", "generate_player_text", "check_canon"],
+  item: ["generate_item", "fill_missing_fields", "generate_player_text", "check_canon"],
   faction: ["simulate_faction", "fill_missing_fields", "generate_dm_notes", "check_canon"],
 };
 
@@ -164,7 +170,40 @@ const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> =
     requiresLocalRtx: true,
     reviewRequired: true,
   },
+  generate_npc: {
+    id: "generate_npc",
+    label: "NPC strukturiert generieren",
+    description:
+      "RTX-only: Stimme, Motivation, Beziehung und Plot-Nutzen als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalRtx: true,
+    reviewRequired: true,
+  },
+  generate_quest: {
+    id: "generate_quest",
+    label: "Quest strukturiert generieren",
+    description:
+      "RTX-only: Auftraggeber, Ziel, Twist und Belohnung als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalRtx: true,
+    reviewRequired: true,
+  },
+  generate_item: {
+    id: "generate_item",
+    label: "Item strukturiert generieren",
+    description:
+      "RTX-only: Eigenschaften, Seltenheit und Lore als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalRtx: true,
+    reviewRequired: true,
+  },
 };
+
+export function mapStructuredGeneratorAction(
+  actionId: GeneratorActionId,
+): "npc" | "quest" | "item" | null {
+  if (actionId === "generate_npc") return "npc";
+  if (actionId === "generate_quest") return "quest";
+  if (actionId === "generate_item") return "item";
+  return null;
+}
 
 export function resolveGeneratorContextFromPage(input: {
   pageId: string;
@@ -274,7 +313,28 @@ export const DEFAULT_GENERATOR_PRESETS: Array<{
     name: "NPC Schnell",
     targetType: "npc",
     description: "Basis-NPC mit Motivation und Geheimnis",
-    template: { fields: ["name", "motivation", "secret", "voice"] },
+    template: {
+      structured: true,
+      fields: ["voice", "motivation", "relationship", "plotHook", "secret"],
+    },
+  },
+  {
+    name: "Quest Schnell",
+    targetType: "quest",
+    description: "Quest mit Auftraggeber, Twist und Belohnung",
+    template: {
+      structured: true,
+      fields: ["patron", "objective", "twist", "failure", "reward"],
+    },
+  },
+  {
+    name: "Item Schnell",
+    targetType: "item",
+    description: "Magischer Gegenstand mit Eigenschaften und Lore",
+    template: {
+      structured: true,
+      fields: ["rarity", "properties", "value", "curse", "lore"],
+    },
   },
   {
     name: "Ort Schnell",
