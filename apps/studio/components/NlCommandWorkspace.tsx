@@ -7,9 +7,14 @@ import { formatStudioDateTime } from "@/src/lib/format";
 interface NlCommandIntentPayload {
   intent:
     | "set_maintenance_mode"
+    | "set_lock_portal"
+    | "set_lock_studio"
     | "list_users"
     | "list_worlds"
-    | "get_migration_status";
+    | "list_open_bugs"
+    | "get_secrets_status"
+    | "get_migration_status"
+    | "list_pending_migrations";
   enabled?: boolean;
   message?: string;
 }
@@ -55,9 +60,13 @@ interface AuditEntry {
 const EXAMPLE_COMMANDS = [
   "Zeige alle Benutzer",
   "list worlds",
+  "list open bugs",
+  "secrets status",
+  "pending migrations",
   "migration status",
   "Wartungsmodus aktivieren",
-  "disable maintenance mode",
+  "lock portal",
+  "unlock studio",
 ];
 
 export function NlCommandWorkspace() {
@@ -154,8 +163,9 @@ export function NlCommandWorkspace() {
       <section className="uwe-v2-card">
         <h2 className="uwe-v2-section-title">Admin-Befehl</h2>
         <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
-          Whitelist-basierte Befehle — strukturierter Intent, Klartext-Bestätigung vor Mutationen,
-          Ausführung über bestehende Services. Kein freies LLM-Tool-Calling.
+          Whitelist-basierte Befehle — strukturierter Intent, Klartext-Bestätigung vor Mutationen
+          (Wartungsmodus, Portal-/Studio-Sperre), Ausführung über bestehende Services. Lesen: Benutzer,
+          Welten, offene Bugs, Secrets-Status, Migrationen. Kein freies LLM-Tool-Calling.
         </p>
 
         <form onSubmit={handleParse} className="uwe-v2-stack">
@@ -216,10 +226,20 @@ export function NlCommandWorkspace() {
                 <code>{parsed.intent.intent}</code>
               </dd>
             </div>
-            {parsed.intent.intent === "set_maintenance_mode" ? (
+            {parsed.intent.intent === "set_maintenance_mode" ||
+            parsed.intent.intent === "set_lock_portal" ||
+            parsed.intent.intent === "set_lock_studio" ? (
               <div>
-                <dt>Wartungsmodus</dt>
-                <dd>{parsed.intent.enabled ? "aktivieren" : "deaktivieren"}</dd>
+                <dt>Aktion</dt>
+                <dd>
+                  {parsed.intent.intent === "set_maintenance_mode"
+                    ? "Wartungsmodus"
+                    : parsed.intent.intent === "set_lock_portal"
+                      ? "Portal-Sperre"
+                      : "Studio-Sperre"}
+                  {": "}
+                  {parsed.intent.enabled ? "aktivieren" : "deaktivieren"}
+                </dd>
               </div>
             ) : null}
           </dl>
