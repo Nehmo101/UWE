@@ -125,6 +125,22 @@ export type {
 } from "./party-treasury-service";
 
 export {
+  createQuestLifecycleService,
+  isOpenQuest,
+  QUEST_LIFECYCLE_LABELS,
+  QuestLifecycleService,
+} from "./quest-lifecycle-service";
+
+export {
+  createStructuredStatblockService,
+  StructuredStatblockService,
+} from "./structured-statblock-service";
+
+export type { UpsertStructuredStatblockInput } from "./structured-statblock-service";
+
+export type { QuestLifecycleStatus } from "./generated/prisma/client";
+
+export {
   getWorldTemplate,
   listWorldTemplateOptions,
   resolveWorldTemplateId,

@@ -94,6 +94,11 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "chronik",
           "ereignisse",
         ]),
+        worldItem("portal-world-quests", "Questlog", `${base}/quests`, "scroll", [
+          "quests",
+          "questlog",
+          "aufgaben",
+        ]),
         worldItem("portal-world-characters", "Charaktere", `${base}/characters`, "user", [
           "charaktere",
           "charakterbogen",

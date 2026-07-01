@@ -455,6 +455,12 @@ enum DndRulesEdition {
   dnd5e_2024
 }
 
+enum QuestLifecycleStatus {
+  open
+  completed
+  failed
+}
+
 enum ContractBillingInterval {
   monthly
   yearly
@@ -667,6 +673,7 @@ model World {
   characters          Character[]
   partyTreasury       PartyTreasury?
   inventoryItems      InventoryItem[]
+  structuredStatblocks StructuredStatblock[]
 
   @@map("worlds")
 }
@@ -711,6 +718,7 @@ model Page {
   revealState     RevealState        @default(hidden) @map("reveal_state")
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
+  questStatus     QuestLifecycleStatus? @map("quest_status")
   tags            Json?
   aliases         Json?
   createdAt       DateTime           @default(now()) @map("created_at")
@@ -742,6 +750,7 @@ model Page {
   factionState           FactionState?
   character              Character?
   inventoryItems         InventoryItem[]
+  structuredStatblock    StructuredStatblock?
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -919,6 +928,22 @@ model InventoryItem {
   @@index([characterId])
   @@index([treasuryId])
   @@map("inventory_items")
+}
+
+model StructuredStatblock {
+  id           String          @id @default(cuid())
+  worldId      String          @map("world_id")
+  pageId       String          @unique @map("page_id")
+  rulesEdition DndRulesEdition @default(dnd5e_2024) @map("rules_edition")
+  data         Json
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("structured_statblocks")
 }
 
 model GameSession {
