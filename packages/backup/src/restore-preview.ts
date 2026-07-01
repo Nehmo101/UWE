@@ -84,6 +84,27 @@ export async function previewRestore(
     }
   }
 
+  const dailyAdmin = bundle.data.dailyAdmin;
+  if (dailyAdmin) {
+    const dailyAdminSections: Array<[string, number]> = [
+      ["captureEntry", dailyAdmin.captureEntries?.length ?? 0],
+      ["personalProject", dailyAdmin.personalProjects?.length ?? 0],
+      ["workshopProject", dailyAdmin.workshopProjects?.length ?? 0],
+      ["workshopPaintRecipe", dailyAdmin.workshopPaintRecipes?.length ?? 0],
+      ["workshopPrintProfile", dailyAdmin.workshopPrintProfiles?.length ?? 0],
+      ["workshopTerrainRental", dailyAdmin.workshopTerrainRentals?.length ?? 0],
+      ["contractExpense", dailyAdmin.contractExpenses?.length ?? 0],
+      ["hardwareDevice", dailyAdmin.hardwareDevices?.length ?? 0],
+      ["personalBrainDocument", dailyAdmin.personalBrainDocuments?.length ?? 0],
+      ["personalBrainFact", dailyAdmin.personalBrainFacts?.length ?? 0],
+    ];
+    for (const [entityType, count] of dailyAdminSections) {
+      if (count > 0) {
+        pushItem(items, entityType, `${count} Einträge`, "new");
+      }
+    }
+  }
+
   if (bundle.manifest.includesAuthSessions) {
     warnings.push("Auth-Sessions werden beim Restore nicht importiert.");
   }

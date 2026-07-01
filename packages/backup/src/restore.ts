@@ -740,6 +740,296 @@ export async function executeRestore(
     });
   }
 
+  // Daily Admin OS section is optional — archives created before it existed restore unchanged.
+  const dailyAdmin = bundle.data.dailyAdmin;
+  if (dailyAdmin) {
+    const remapOptional = (oldId: string | null): string | null =>
+      oldId ? idMap.get(oldId) ?? null : null;
+
+    for (const entry of dailyAdmin.captureEntries ?? []) {
+      const existing = await db.captureEntry.findUnique({ where: { id: entry.id } });
+      if (existing) continue;
+
+      await db.captureEntry.create({
+        data: {
+          id: remapId(idMap, entry.id),
+          title: entry.title,
+          content: entry.content,
+          captureType: entry.captureType as never,
+          status: entry.status as never,
+          url: entry.url,
+          storageKey: entry.storageKey,
+          worldId: remapOptional(entry.worldId),
+          pageId: remapOptional(entry.pageId),
+          metadata: entry.metadata as never,
+          capturedAt: new Date(entry.capturedAt),
+          triagedAt: entry.triagedAt ? new Date(entry.triagedAt) : null,
+        },
+      });
+      result.created++;
+    }
+
+    for (const project of dailyAdmin.personalProjects ?? []) {
+      const existing = await db.personalProject.findUnique({ where: { id: project.id } });
+      if (existing) continue;
+
+      await db.personalProject.create({
+        data: {
+          id: remapId(idMap, project.id),
+          name: project.name,
+          description: project.description,
+          status: project.status as never,
+          category: project.category as never,
+          nextAction: project.nextAction,
+          nextActionDate: project.nextActionDate ? new Date(project.nextActionDate) : null,
+          notes: project.notes,
+          links: project.links as never,
+          costCents: project.costCents,
+          worldId: remapOptional(project.worldId),
+          pageId: remapOptional(project.pageId),
+          metadata: project.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const project of dailyAdmin.workshopProjects ?? []) {
+      const existing = await db.workshopProject.findUnique({ where: { id: project.id } });
+      if (existing) {
+        idMap.set(project.id, existing.id);
+        continue;
+      }
+
+      await db.workshopProject.create({
+        data: {
+          id: remapId(idMap, project.id),
+          title: project.title,
+          projectType: project.projectType as never,
+          status: project.status as never,
+          description: project.description,
+          materialsNeeded: project.materialsNeeded as never,
+          materialsUsed: project.materialsUsed as never,
+          colorsUsed: project.colorsUsed as never,
+          filamentsUsed: project.filamentsUsed as never,
+          stlLinks: project.stlLinks as never,
+          imageGallery: project.imageGallery as never,
+          referenceImages: project.referenceImages as never,
+          progressPhotos: project.progressPhotos as never,
+          resultPhotos: project.resultPhotos as never,
+          costCents: project.costCents,
+          nextAction: project.nextAction,
+          nextActionDate: project.nextActionDate ? new Date(project.nextActionDate) : null,
+          notes: project.notes,
+          worldId: remapOptional(project.worldId),
+          pageId: remapOptional(project.pageId),
+          metadata: project.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const recipe of dailyAdmin.workshopPaintRecipes ?? []) {
+      const existing = await db.workshopPaintRecipe.findUnique({ where: { id: recipe.id } });
+      if (existing) continue;
+
+      await db.workshopPaintRecipe.create({
+        data: {
+          id: remapId(idMap, recipe.id),
+          name: recipe.name,
+          targetType: recipe.targetType as never,
+          primer: recipe.primer,
+          basecoat: recipe.basecoat,
+          wash: recipe.wash,
+          highlights: recipe.highlights,
+          colorsUsed: recipe.colorsUsed as never,
+          resultPhotoUrl: recipe.resultPhotoUrl,
+          rating: recipe.rating,
+          notes: recipe.notes,
+          workshopProjectId: remapOptional(recipe.workshopProjectId),
+        },
+      });
+      result.created++;
+    }
+
+    for (const profile of dailyAdmin.workshopPrintProfiles ?? []) {
+      const existing = await db.workshopPrintProfile.findUnique({ where: { id: profile.id } });
+      if (existing) continue;
+
+      await db.workshopPrintProfile.create({
+        data: {
+          id: remapId(idMap, profile.id),
+          name: profile.name,
+          printer: profile.printer,
+          nozzle: profile.nozzle,
+          filament: profile.filament,
+          layerHeight: profile.layerHeight,
+          supports: profile.supports,
+          result: profile.result,
+          errors: profile.errors,
+          improvements: profile.improvements,
+          notes: profile.notes,
+          workshopProjectId: remapOptional(profile.workshopProjectId),
+        },
+      });
+      result.created++;
+    }
+
+    for (const rental of dailyAdmin.workshopTerrainRentals ?? []) {
+      const existing = await db.workshopTerrainRental.findUnique({ where: { id: rental.id } });
+      if (existing) continue;
+
+      await db.workshopTerrainRental.create({
+        data: {
+          id: remapId(idMap, rental.id),
+          terrainSetName: rental.terrainSetName,
+          boxLabel: rental.boxLabel,
+          replacementValueCents: rental.replacementValueCents,
+          rentalPriceCents: rental.rentalPriceCents,
+          depositCents: rental.depositCents,
+          status: rental.status as never,
+          damages: rental.damages,
+          handoverChecklist: rental.handoverChecklist as never,
+          returnChecklist: rental.returnChecklist as never,
+          notes: rental.notes,
+          workshopProjectId: remapOptional(rental.workshopProjectId),
+        },
+      });
+      result.created++;
+    }
+
+    for (const expense of dailyAdmin.contractExpenses ?? []) {
+      const existing = await db.contractExpense.findUnique({ where: { id: expense.id } });
+      if (existing) continue;
+
+      await db.contractExpense.create({
+        data: {
+          id: remapId(idMap, expense.id),
+          name: expense.name,
+          vendor: expense.vendor,
+          status: expense.status as never,
+          expenseType: expense.expenseType as never,
+          source: expense.source as never,
+          billingInterval: expense.billingInterval as never,
+          categoryLabel: expense.categoryLabel,
+          amountCents: expense.amountCents,
+          currency: expense.currency,
+          billingDay: expense.billingDay,
+          startDate: expense.startDate ? new Date(expense.startDate) : null,
+          nextPaymentDate: expense.nextPaymentDate ? new Date(expense.nextPaymentDate) : null,
+          renewalDate: expense.renewalDate ? new Date(expense.renewalDate) : null,
+          cancelByDate: expense.cancelByDate ? new Date(expense.cancelByDate) : null,
+          portalUrl: expense.portalUrl,
+          notes: expense.notes,
+          metadata: expense.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const device of dailyAdmin.hardwareDevices ?? []) {
+      const existing = await db.hardwareDevice.findUnique({ where: { id: device.id } });
+      if (existing) continue;
+
+      await db.hardwareDevice.create({
+        data: {
+          id: remapId(idMap, device.id),
+          name: device.name,
+          role: device.role,
+          status: device.status as never,
+          hostname: device.hostname,
+          ipAddress: device.ipAddress,
+          localUrl: device.localUrl,
+          publicUrl: device.publicUrl,
+          operatingSystem: device.operatingSystem,
+          specs: device.specs as never,
+          setupSteps: device.setupSteps as never,
+          errorNotes: device.errorNotes,
+          notes: device.notes,
+          metadata: device.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const document of dailyAdmin.personalBrainDocuments ?? []) {
+      const existing = await db.personalBrainDocument.findUnique({
+        where: { id: document.id },
+      });
+      if (existing) {
+        idMap.set(document.id, existing.id);
+        continue;
+      }
+
+      await db.personalBrainDocument.create({
+        data: {
+          id: remapId(idMap, document.id),
+          title: document.title,
+          content: document.content,
+          category: document.category,
+          tags: document.tags as never,
+          metadata: document.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const chunk of dailyAdmin.personalBrainChunks ?? []) {
+      const documentId = idMap.get(chunk.documentId);
+      if (!documentId) continue;
+
+      const existing = await db.personalBrainChunk.findUnique({ where: { id: chunk.id } });
+      if (existing) continue;
+
+      await db.personalBrainChunk.create({
+        data: {
+          id: remapId(idMap, chunk.id),
+          documentId,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.content,
+          tokenCount: chunk.tokenCount,
+          embedding: chunk.embedding as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const fact of dailyAdmin.personalBrainFacts ?? []) {
+      const existing = await db.personalBrainFact.findUnique({ where: { id: fact.id } });
+      if (existing) continue;
+
+      await db.personalBrainFact.create({
+        data: {
+          id: remapId(idMap, fact.id),
+          factType: fact.factType,
+          title: fact.title,
+          content: fact.content,
+          tags: fact.tags as never,
+          metadata: fact.metadata as never,
+        },
+      });
+      result.created++;
+    }
+
+    for (const link of dailyAdmin.adminEntityLinks ?? []) {
+      const sourceId = idMap.get(link.sourceId);
+      const targetId = idMap.get(link.targetId);
+      if (!sourceId || !targetId) continue;
+
+      await db.adminEntityLink.create({
+        data: {
+          id: remapId(idMap, link.id),
+          sourceType: link.sourceType as never,
+          sourceId,
+          targetType: link.targetType as never,
+          targetId,
+          relationType: link.relationType,
+          label: link.label,
+        },
+      });
+      result.created++;
+    }
+  }
+
   const afterCounts = await db.world.count();
   if (afterCounts === beforeCounts && result.created === 0 && result.updated === 0) {
     result.errors.push("Es wurden keine Daten wiederhergestellt.");

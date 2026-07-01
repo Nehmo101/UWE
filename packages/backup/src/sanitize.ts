@@ -1,4 +1,4 @@
-import type { BackupData, BackupSettingsRecord } from "./types";
+import type { BackupDailyAdminData, BackupData, BackupSettingsRecord } from "./types";
 
 const SECRET_FIELD_NAMES = new Set([
   "passwordhash",
@@ -72,6 +72,30 @@ export function sanitizeBackupData(data: BackupData): BackupData {
     pageTemplates: (data.pageTemplates ?? []).map((template) => sanitizeRecord(template)),
     shareLinks: (data.shareLinks ?? []).map((link) => sanitizeRecord(link)),
     playerNotes: (data.playerNotes ?? []).map((note) => sanitizeRecord(note)),
+    dailyAdmin: data.dailyAdmin ? sanitizeDailyAdminData(data.dailyAdmin) : undefined,
+  };
+}
+
+function sanitizeDailyAdminData(dailyAdmin: BackupDailyAdminData): BackupDailyAdminData {
+  return {
+    captureEntries: dailyAdmin.captureEntries.map((entry) => sanitizeRecord(entry)),
+    personalProjects: dailyAdmin.personalProjects.map((project) => sanitizeRecord(project)),
+    workshopProjects: dailyAdmin.workshopProjects.map((project) => sanitizeRecord(project)),
+    workshopPaintRecipes: dailyAdmin.workshopPaintRecipes.map((recipe) => sanitizeRecord(recipe)),
+    workshopPrintProfiles: dailyAdmin.workshopPrintProfiles.map((profile) =>
+      sanitizeRecord(profile),
+    ),
+    workshopTerrainRentals: dailyAdmin.workshopTerrainRentals.map((rental) =>
+      sanitizeRecord(rental),
+    ),
+    contractExpenses: dailyAdmin.contractExpenses.map((expense) => sanitizeRecord(expense)),
+    hardwareDevices: dailyAdmin.hardwareDevices.map((device) => sanitizeRecord(device)),
+    personalBrainDocuments: dailyAdmin.personalBrainDocuments.map((document) =>
+      sanitizeRecord(document),
+    ),
+    personalBrainChunks: dailyAdmin.personalBrainChunks.map((chunk) => sanitizeRecord(chunk)),
+    personalBrainFacts: dailyAdmin.personalBrainFacts.map((fact) => sanitizeRecord(fact)),
+    adminEntityLinks: dailyAdmin.adminEntityLinks.map((link) => sanitizeRecord(link)),
   };
 }
 

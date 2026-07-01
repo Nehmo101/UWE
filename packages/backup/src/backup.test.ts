@@ -258,4 +258,174 @@ describe("UWE backup and restore", () => {
     assert.equal(bundle.data.campaigns[0]?.slug, "test-campaign");
     assert.ok(bundle.data.pages.every((page) => page.campaignId === bundle.data.campaigns[0]?.id));
   });
+
+  it("includes Daily Admin OS data in full backups and restores it", async () => {
+    process.env.UWE_UPLOADS_ROOT = uploadsRoot;
+    const db = createPrismaClient(databaseUrl);
+    const world = await db.world.findUniqueOrThrow({ where: { slug: worldSlug } });
+
+    const captureStorageKey = buildStorageKey("_capture", "capture-photo.png");
+    ensureUploadDirectory("_capture", uploadsRoot);
+    fs.writeFileSync(
+      resolveAssetFilePath(captureStorageKey, uploadsRoot),
+      Buffer.from("capture-bytes"),
+    );
+
+    const capture = await db.captureEntry.create({
+      data: {
+        title: "Idee für Werkstatt",
+        content: "Neues Terrain bauen",
+        captureType: "file_image",
+        status: "inbox",
+        storageKey: captureStorageKey,
+        worldId: world.id,
+      },
+    });
+    const personalProject = await db.personalProject.create({
+      data: {
+        name: "Balkon renovieren",
+        status: "active",
+        category: "other",
+      },
+    });
+    const workshopProject = await db.workshopProject.create({
+      data: {
+        title: "Turm-Terrain",
+        projectType: "dnd_terrain",
+        status: "in_progress",
+      },
+    });
+    await db.workshopPaintRecipe.create({
+      data: {
+        name: "Steingrau",
+        targetType: "terrain",
+        workshopProjectId: workshopProject.id,
+      },
+    });
+    await db.workshopPrintProfile.create({
+      data: { name: "0.2mm Standard", workshopProjectId: workshopProject.id },
+    });
+    await db.workshopTerrainRental.create({
+      data: { terrainSetName: "Dungeon-Set", workshopProjectId: workshopProject.id },
+    });
+    await db.contractExpense.create({
+      data: { name: "Internet-Vertrag", vendor: "ISP", amountCents: 3999 },
+    });
+    await db.hardwareDevice.create({
+      data: { name: "RTX-Host", role: "ai", status: "active", hostname: "rtx.local" },
+    });
+    const brainDocument = await db.personalBrainDocument.create({
+      data: { title: "Hausnotizen", content: "Zählerstände und Wartung" },
+    });
+    await db.personalBrainChunk.create({
+      data: {
+        documentId: brainDocument.id,
+        chunkIndex: 0,
+        content: "Zählerstände und Wartung",
+      },
+    });
+    await db.personalBrainFact.create({
+      data: { factType: "custom", title: "WLAN-Kanal", content: "Kanal 36" },
+    });
+    await db.adminEntityLink.create({
+      data: {
+        sourceType: "capture",
+        sourceId: capture.id,
+        targetType: "personal_project",
+        targetId: personalProject.id,
+      },
+    });
+    await db.$disconnect();
+
+    const bundle = await createBackupBundle(databaseUrl, { type: "full" });
+    assert.ok(bundle.data.dailyAdmin);
+    assert.equal(bundle.data.dailyAdmin!.captureEntries.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.personalProjects.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.workshopProjects.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.workshopPaintRecipes.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.workshopPrintProfiles.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.workshopTerrainRentals.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.contractExpenses.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.hardwareDevices.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.personalBrainDocuments.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.personalBrainChunks.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.personalBrainFacts.length, 1);
+    assert.equal(bundle.data.dailyAdmin!.adminEntityLinks.length, 1);
+    assert.equal(bundle.manifest.stats.dailyAdminEntities, 12);
+
+    const zipPath = path.join(backupsDir, "daily-admin-roundtrip.zip");
+    writeBackupZip(bundle, zipPath, uploadsRoot);
+    assert.ok(bundle.manifest.assetFiles.includes(`assets/${captureStorageKey}`));
+    const zipBuffer = fs.readFileSync(zipPath);
+
+    const targetDbUrl = createTestDatabaseUrl();
+    const targetUploads = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-da-restore-"));
+    const targetDb = createPrismaClient(targetDbUrl);
+    const loaded = loadBackupFromBuffer(zipBuffer, "daily-admin-roundtrip.zip");
+
+    const result = await executeRestore(targetDb, loaded, {
+      confirmed: true,
+      autoResolveSlugConflicts: true,
+    }, zipBuffer, targetUploads);
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(await targetDb.captureEntry.count(), 1);
+    assert.equal(await targetDb.personalProject.count(), 1);
+    assert.equal(await targetDb.workshopProject.count(), 1);
+    assert.equal(await targetDb.workshopPaintRecipe.count(), 1);
+    assert.equal(await targetDb.workshopPrintProfile.count(), 1);
+    assert.equal(await targetDb.workshopTerrainRental.count(), 1);
+    assert.equal(await targetDb.contractExpense.count(), 1);
+    assert.equal(await targetDb.hardwareDevice.count(), 1);
+    assert.equal(await targetDb.personalBrainDocument.count(), 1);
+    assert.equal(await targetDb.personalBrainChunk.count(), 1);
+    assert.equal(await targetDb.personalBrainFact.count(), 1);
+    assert.equal(await targetDb.adminEntityLink.count(), 1);
+
+    const restoredCapture = await targetDb.captureEntry.findFirstOrThrow();
+    assert.equal(restoredCapture.storageKey, captureStorageKey);
+    assert.ok(
+      fs.existsSync(resolveAssetFilePath(captureStorageKey, targetUploads)),
+      "Capture-Upload-Datei muss mit wiederhergestellt werden",
+    );
+
+    const restoredRecipe = await targetDb.workshopPaintRecipe.findFirstOrThrow();
+    const restoredWorkshopProject = await targetDb.workshopProject.findFirstOrThrow();
+    assert.equal(restoredRecipe.workshopProjectId, restoredWorkshopProject.id);
+
+    const restoredChunk = await targetDb.personalBrainChunk.findFirstOrThrow();
+    const restoredDocument = await targetDb.personalBrainDocument.findFirstOrThrow();
+    assert.equal(restoredChunk.documentId, restoredDocument.id);
+
+    const restoredLink = await targetDb.adminEntityLink.findFirstOrThrow();
+    assert.equal(restoredLink.sourceId, restoredCapture.id);
+    assert.equal(
+      restoredLink.targetId,
+      (await targetDb.personalProject.findFirstOrThrow()).id,
+    );
+
+    await targetDb.$disconnect();
+    fs.rmSync(targetUploads, { recursive: true, force: true });
+  });
+
+  it("restores legacy archives without a daily admin section", async () => {
+    const bundle = await createBackupBundle(databaseUrl, { type: "full" });
+    delete bundle.data.dailyAdmin;
+    delete bundle.manifest.stats.dailyAdminEntities;
+
+    const targetDbUrl = createTestDatabaseUrl();
+    const targetDb = createPrismaClient(targetDbUrl);
+
+    const result = await executeRestore(targetDb, bundle, {
+      confirmed: true,
+      autoResolveSlugConflicts: true,
+    });
+
+    assert.equal(result.errors.length, 0);
+    assert.ok(result.created > 0);
+    assert.equal(await targetDb.captureEntry.count(), 0);
+    assert.ok(await targetDb.world.findUnique({ where: { slug: worldSlug } }));
+
+    await targetDb.$disconnect();
+  });
 });
