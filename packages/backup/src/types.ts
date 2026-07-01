@@ -396,6 +396,9 @@ export interface CreateBackupOptions {
   worldSlug?: string;
   campaignSlug?: string;
   uploadsRoot?: string;
+  /** Explicit backups directory — used as-is (preferred in production). */
+  backupsDir?: string;
+  /** Base directory for env-based backups path resolution (tests/dev). */
   outputDir?: string;
   format?: "zip" | "json";
   encrypt?: boolean;

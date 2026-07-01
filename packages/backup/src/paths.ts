@@ -14,8 +14,29 @@ export function resolveBackupsDir(baseDir?: string): string {
 
 export function ensureBackupsDir(baseDir?: string): string {
   const dir = resolveBackupsDir(baseDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return ensureBackupsDirectory(dir);
+}
+
+/** Ensures a concrete backups directory exists without env re-resolution. */
+export function ensureBackupsDirectory(backupsDir: string): string {
+  try {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  } catch (error) {
+    if (!fs.existsSync(backupsDir)) {
+      throw error;
+    }
+  }
+  return backupsDir;
+}
+
+export function resolveBackupsDirectory(options?: {
+  backupsDir?: string;
+  baseDir?: string;
+}): string {
+  if (options?.backupsDir) {
+    return ensureBackupsDirectory(options.backupsDir);
+  }
+  return ensureBackupsDir(options?.baseDir);
 }
 
 export function resolveSchemaVersion(): string {

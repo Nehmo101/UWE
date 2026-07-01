@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
-import { listStoredBackups } from "@uwe/backup";
 import { BackupWorkspace } from "@/components/BackupWorkspace";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { listStudioBackups } from "@/src/lib/backup-paths";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -18,7 +18,7 @@ export default async function WorldBackupPage({ params }: Props) {
   if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
-  const backups = listStoredBackups().filter(
+  const backups = (await listStudioBackups()).filter(
     (backup) =>
       backup.manifest.worldSlug === worldSlug ||
       backup.manifest.type === "full",

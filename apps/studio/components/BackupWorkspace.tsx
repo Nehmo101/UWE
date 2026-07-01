@@ -120,6 +120,7 @@ export function BackupWorkspace({
         setSchedule(data.schedule as BackupSchedule);
       }
     }
+    void refreshBackups();
     void loadPermissions();
     void loadSchedule();
   }, []);

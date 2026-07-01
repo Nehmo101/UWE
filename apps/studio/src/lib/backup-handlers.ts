@@ -12,7 +12,6 @@ import {
   canDownloadBackup,
   canPreviewRestore,
   canRestoreBackup,
-  listStoredBackups,
   loadBackupFromBuffer,
   loadBackupFromFile,
   normalizeRetentionCount,
@@ -23,6 +22,7 @@ import type { UweRole } from "@uwe/auth";
 import { getUserFromRequestCookieHeader } from "./auth-session";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 import { jsonError } from "./api-response";
+import { listStudioBackups } from "./backup-paths";
 
 export interface BackupCreateBody {
   type: BackupType;
@@ -33,7 +33,7 @@ export interface BackupCreateBody {
 }
 
 export async function getBackupList() {
-  const backups = listStoredBackups();
+  const backups = await listStudioBackups();
   return NextResponse.json({ backups });
 }
 
@@ -132,7 +132,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
 }
 
 export async function getBackupDownload(backupId: string) {
-  const backups = listStoredBackups();
+  const backups = await listStudioBackups();
   const backup = backups.find((entry) => entry.id === backupId || entry.filename === backupId);
 
   if (!backup || !fs.existsSync(backup.path)) {
@@ -167,7 +167,7 @@ export interface RestoreRequestBody {
 
 async function loadBackupFromRequest(body: RestoreRequestBody) {
   if (body.backupId) {
-    const backups = listStoredBackups();
+    const backups = await listStudioBackups();
     const backup = backups.find(
       (entry) => entry.id === body.backupId || entry.filename === body.backupId,
     );

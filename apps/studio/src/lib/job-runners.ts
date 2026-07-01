@@ -17,6 +17,7 @@ import {
   getSystemSettings,
   logAuditEvent,
   prisma,
+  resolveEffectiveBackupsPath,
   resolveLocalOnlyMode,
   type JobService,
   type JobView,
@@ -58,11 +59,10 @@ import {
   createPreRestoreSafetyCopy,
   loadBackupFromBuffer,
   loadBackupFromFile,
-  listStoredBackups,
-  resolveBackupsDir,
   type BackupType,
   type CreateBackupOptions,
 } from "@uwe/backup";
+import { listStudioBackups } from "./backup-paths";
 
 export interface JobRunnerContext {
   jobs: JobService;
@@ -87,6 +87,7 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
 
   const systemSettings = await getSystemSettings();
   const scheduled = Boolean((ctx.job.payload as { scheduled?: boolean } | null)?.scheduled);
+  const backupsDir = resolveEffectiveBackupsPath(systemSettings);
 
   const options: CreateBackupOptions = {
     type: payload.type,
@@ -94,11 +95,11 @@ export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string
     campaignSlug: payload.campaignSlug,
     format: payload.format ?? "zip",
     retentionCount: systemSettings.backup.retentionCount,
+    backupsDir,
   };
 
   if (options.format === "json") {
     const bundle = await exportBackupJson(undefined, options);
-    const backupsDir = resolveBackupsDir();
     fs.mkdirSync(backupsDir, { recursive: true });
     const filename = `uwe-backup-${payload.type}-${Date.now()}.json`;
     const outputPath = path.join(backupsDir, filename);
@@ -784,7 +785,7 @@ export interface RestoreJobPayload {
 
 async function loadBackupForRestore(payload: RestoreJobPayload) {
   if (payload.backupId) {
-    const backups = listStoredBackups();
+    const backups = await listStudioBackups();
     const backup = backups.find(
       (entry) => entry.id === payload.backupId || entry.filename === payload.backupId,
     );
