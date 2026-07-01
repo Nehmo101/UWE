@@ -139,9 +139,33 @@ export class PortalDashboardService {
 
     const pages = options.visiblePages.map(toDashboardPage);
 
+    // Next session: the input already only contains player-safe sessions
+    // (published recaps plus DM-announced schedules via playerVisibleSchedule,
+    // see GameSessionService.listVisibleToPlayersForPortal). Independent of the
+    // recap status, pick the next upcoming planned/prepared session: past-dated
+    // stale plans are ignored, dated sessions win over undated announcements,
+    // ties fall back to the session number. `summaryPlayer` is already nulled
+    // for unpublished recaps by toPortalGameSessionView — no DM prep leaks.
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     const upcoming = options.publishedSessions
       .filter((session) => session.status === "planned" || session.status === "prepared")
-      .sort((a, b) => a.sessionNumber - b.sessionNumber);
+      .filter(
+        (session) =>
+          session.date === null || session.date.getTime() >= startOfToday.getTime(),
+      )
+      .sort((a, b) => {
+        if (a.date && b.date) {
+          const byDate = a.date.getTime() - b.date.getTime();
+          if (byDate !== 0) return byDate;
+        } else if (a.date) {
+          return -1;
+        } else if (b.date) {
+          return 1;
+        }
+        return a.sessionNumber - b.sessionNumber;
+      });
 
     const nextSession = upcoming[0]
       ? {

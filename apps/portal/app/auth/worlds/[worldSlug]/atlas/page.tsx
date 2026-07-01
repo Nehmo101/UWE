@@ -1,13 +1,5 @@
 import { notFound } from "next/navigation";
 import {
-  BreadcrumbTrail,
-  PortalAuthChrome,
-  PortalShell,
-} from "@/src/components/shell";
-import { getCurrentUser } from "@/src/lib/auth";
-import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
-import {
   createAtlasService,
   createPrismaClient,
 } from "@uwe/database/server";
@@ -120,9 +112,6 @@ interface Props {
 
 export default async function PortalAtlasIndexPage({ params }: Props) {
   const { worldSlug } = await params;
-  const user = await getCurrentUser();
-  const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
-  const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
@@ -155,80 +144,61 @@ export default async function PortalAtlasIndexPage({ params }: Props) {
     countByLevel[node.level] = (countByLevel[node.level] ?? 0) + 1;
   }
 
+  // Shell (sidebar, top bar, mobile bottom nav) comes from the world layout —
+  // no nested PortalShell here.
   return (
-    <PortalShell
-      worldSlug={worldSlug}
-      worldName={worldName}
-      headerActions={
-        <PortalAuthChrome
-          user={user}
-          canAccessStudio={canAccessStudio}
-          studioUrl={studioUrl}
-        />
-      }
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Meine Welten", href: "/auth/worlds" },
-            { label: worldName, href: `/auth/worlds/${worldSlug}` },
-            { label: "Atlas" },
-          ]}
-        />
-      }
-    >
-      <section className="portal-content-card">
-        <a href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
-          ← Zurück zur Übersicht
-        </a>
+    <section className="portal-content-card">
+      <a href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
+        ← Zurück zur Übersicht
+      </a>
 
-        <h1>Atlas — {worldName}</h1>
+      <h1>Atlas — {worldName}</h1>
 
-        {nodes.length === 0 ? (
-          <p className="uwe-hint" style={{ color: "var(--uwe-muted)", marginTop: "1rem" }}>
-            Für diese Welt ist derzeit kein Atlas für Spieler sichtbar.
-          </p>
-        ) : (
-          <>
-            {/* Level summary chips */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-              {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => (
-                <span
-                  key={lvl}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    padding: "0.2rem 0.6rem",
-                    background: "var(--uwe-surface)",
-                    border: "1px solid var(--uwe-border)",
-                    borderRadius: "var(--uwe-radius)",
-                    fontSize: 13,
-                  }}
-                >
-                  {LEVEL_ICONS[lvl]} {LEVEL_LABELS[lvl]}
-                  <strong>{countByLevel[lvl]}</strong>
-                </span>
-              ))}
-            </div>
+      {nodes.length === 0 ? (
+        <p className="uwe-hint" style={{ color: "var(--uwe-muted)", marginTop: "1rem" }}>
+          Für diese Welt ist derzeit kein Atlas für Spieler sichtbar.
+        </p>
+      ) : (
+        <>
+          {/* Level summary chips */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
+            {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => (
+              <span
+                key={lvl}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  padding: "0.2rem 0.6rem",
+                  background: "var(--uwe-surface)",
+                  border: "1px solid var(--uwe-border)",
+                  borderRadius: "var(--uwe-radius)",
+                  fontSize: 13,
+                }}
+              >
+                {LEVEL_ICONS[lvl]} {LEVEL_LABELS[lvl]}
+                <strong>{countByLevel[lvl]}</strong>
+              </span>
+            ))}
+          </div>
 
-            {/* Node tree */}
-            <ul
-              style={{
-                listStyle: "none",
-                padding: 0,
-                margin: "0 0 1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.25rem",
-              }}
-            >
-              {tree.map((item) => (
-                <NodeTreeRow key={item.node.id} item={item} worldSlug={worldSlug} />
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
-    </PortalShell>
+          {/* Node tree */}
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: "0 0 1.5rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.25rem",
+            }}
+          >
+            {tree.map((item) => (
+              <NodeTreeRow key={item.node.id} item={item} worldSlug={worldSlug} />
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
