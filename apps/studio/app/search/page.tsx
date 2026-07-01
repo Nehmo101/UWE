@@ -7,6 +7,7 @@ import {
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
+  ENTITY_TAG_ENTITY_TYPE_LABELS,
   ADMIN_SEARCH_ENTITY_LABELS,
   ADMIN_SEARCH_ENTITY_TYPES,
   getAppRepository,
@@ -65,7 +66,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
 
   const trimmedQuery = q?.trim() ?? "";
 
-  const { wiki: results, admin: adminResults } = trimmedQuery
+  const { wiki: results, admin: adminResults, media: mediaResults, tags: tagResults } = trimmedQuery
     ? await searchStudioCrossDomain(prisma, {
         query: trimmedQuery,
         scope,
@@ -82,11 +83,13 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           limit: 50,
         },
       })
-    : { wiki: [], admin: [] };
+    : { wiki: [], admin: [], media: [], tags: [] };
 
   const hasWikiResults = results.length > 0;
   const hasAdminResults = adminResults.length > 0;
-  const hasAnyResults = hasWikiResults || hasAdminResults;
+  const hasMediaResults = mediaResults.length > 0;
+  const hasTagResults = tagResults.length > 0;
+  const hasAnyResults = hasWikiResults || hasAdminResults || hasMediaResults || hasTagResults;
 
   return (
     <StudioShell
@@ -206,6 +209,75 @@ export default async function StudioSearchPage({ searchParams }: Props) {
               showVisibility
               showLabelActions
             />
+          )}
+
+          {hasMediaResults && scope !== "admin" && (
+            <section className="uwe-v2-section">
+              <h2 className="uwe-v2-section-title">Medien & Soundboard</h2>
+              <p className="uwe-search-count">
+                {mediaResults.length} Treffer für „{trimmedQuery}&ldquo;
+              </p>
+              <ul className="uwe-search-results">
+                {mediaResults.map((item) => (
+                  <li key={`${item.entityType}-${item.id}`} className="uwe-search-result">
+                    <article>
+                      <header className="uwe-search-result-header">
+                        <h2>
+                          <Link href={item.href}>{item.title}</Link>
+                        </h2>
+                        <div className="uwe-search-result-badges">
+                          <span className="uwe-badge uwe-badge-muted">
+                            {item.entityType === "asset" ? "Asset" : "Soundboard"}
+                          </span>
+                        </div>
+                      </header>
+                      <div className="uwe-search-result-meta">
+                        <span>
+                          {item.worldName} ({item.worldSlug})
+                        </span>
+                      </div>
+                      {item.snippet && (
+                        <p className="uwe-search-result-snippet">{item.snippet}</p>
+                      )}
+                    </article>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {hasTagResults && (
+            <section className="uwe-v2-section">
+              <h2 className="uwe-v2-section-title">Tag-Treffer</h2>
+              <p className="uwe-search-count">
+                {tagResults.length} Entitäten mit passenden Tags für „{trimmedQuery}&ldquo;
+              </p>
+              <ul className="uwe-search-results">
+                {tagResults.map((item) => (
+                  <li key={`tag-${item.entityType}-${item.id}`} className="uwe-search-result">
+                    <article>
+                      <header className="uwe-search-result-header">
+                        <h2>
+                          <Link href={item.href}>{item.title}</Link>
+                        </h2>
+                        <div className="uwe-search-result-badges">
+                          <span className="uwe-badge uwe-badge-muted">
+                            {ENTITY_TAG_ENTITY_TYPE_LABELS[item.entityType] ?? item.entityType}
+                          </span>
+                        </div>
+                      </header>
+                      <div className="uwe-search-result-meta">
+                        <span>{item.group}</span>
+                        {item.worldName && <span> · {item.worldName}</span>}
+                      </div>
+                      <p className="uwe-search-result-snippet">
+                        Tags: {item.matchedTags.join(", ")}
+                      </p>
+                    </article>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {hasAdminResults && scope !== "worlds" && (

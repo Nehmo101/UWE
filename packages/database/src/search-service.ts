@@ -9,6 +9,7 @@ import type {
   Visibility,
 } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
+import { loadEntityTagsByEntityIds } from "./entity-tag-search-service";
 import { buildPageUrl } from "./page-types";
 import {
   type AccessContext as WikiAccessContext,
@@ -443,5 +444,23 @@ export async function searchGlobalForDm(
   db: PrismaClient,
   options: SearchOptions,
 ): Promise<SearchResultItem[]> {
-  return searchForWikiContext(db, "dm", options);
+  const pages = await loadPagesForSearch(db, options);
+  const pageIds = pages.map((page) => page.id);
+  const entityTagsByPage = await loadEntityTagsByEntityIds(db, "page", pageIds);
+
+  const enrichedPages = pages.map((page) => {
+    const mergedTags = [
+      ...new Set([
+        ...parseStringArray(page.tags),
+        ...(entityTagsByPage.get(page.id) ?? []),
+      ]),
+    ];
+    return {
+      ...page,
+      tags: mergedTags,
+    };
+  });
+
+  const index = buildSearchIndexForScope(enrichedPages, "studio");
+  return searchIndex(index, options);
 }
