@@ -1,11 +1,21 @@
+import type { WorldMemberRole } from "@uwe/auth";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "./client";
 import { logAuditEvent, type AuditRequestContext } from "./audit-log-service";
 import { createBugReportService } from "./bug-report-service";
 import { getMigrationStatus } from "./migration-status";
+import {
+  formatEntityResolveError,
+  parseUserRoleToken,
+  parseWorldMemberRoleToken,
+  resolveUserQuery,
+  resolveWorldQuery,
+  worldMemberRoleLabel,
+} from "./nl-command-entity-resolver";
 import { getSecretsStatusSnapshot } from "./secrets-status-service";
 import { createSettingsService } from "./settings-service";
 import { createUserService } from "./user-service";
+import type { UserRole } from "./generated/prisma/client";
 
 /** Whitelisted admin command intents — unknown commands are rejected. */
 export const NL_COMMAND_INTENTS = [
@@ -18,6 +28,11 @@ export const NL_COMMAND_INTENTS = [
   "get_secrets_status",
   "get_migration_status",
   "list_pending_migrations",
+  "assign_world_role",
+  "remove_world_membership",
+  "disable_user",
+  "enable_user",
+  "invite_user",
 ] as const;
 
 export type NlCommandIntentName = (typeof NL_COMMAND_INTENTS)[number];
@@ -35,7 +50,19 @@ export type NlCommandIntent =
   | { intent: "list_open_bugs" }
   | { intent: "get_secrets_status" }
   | { intent: "get_migration_status" }
-  | { intent: "list_pending_migrations" };
+  | { intent: "list_pending_migrations" }
+  | { intent: "assign_world_role"; userQuery: string; worldQuery: string; role: WorldMemberRole }
+  | { intent: "remove_world_membership"; userQuery: string; worldQuery: string }
+  | { intent: "disable_user"; userQuery: string }
+  | { intent: "enable_user"; userQuery: string }
+  | {
+      intent: "invite_user";
+      email: string;
+      displayName?: string;
+      role?: UserRole;
+      worldQuery?: string;
+      worldRole?: WorldMemberRole;
+    };
 
 export type ParseCommandResult =
   | { ok: true; intent: NlCommandIntent; requiresConfirmation: boolean }
@@ -61,7 +88,9 @@ export type NlCommandExecutionResult =
         | "confirmation_required"
         | "confirmation_invalid"
         | "confirmation_expired"
-        | "forbidden";
+        | "forbidden"
+        | "ambiguous"
+        | "invalid";
     };
 
 const CONFIRMATION_TTL_MS = 5 * 60_000;
@@ -95,6 +124,16 @@ function canonicalIntentPayload(intent: NlCommandIntent): string {
       return "get_migration_status";
     case "list_pending_migrations":
       return "list_pending_migrations";
+    case "assign_world_role":
+      return `assign_world_role:${intent.userQuery}:${intent.worldQuery}:${intent.role}`;
+    case "remove_world_membership":
+      return `remove_world_membership:${intent.userQuery}:${intent.worldQuery}`;
+    case "disable_user":
+      return `disable_user:${intent.userQuery}`;
+    case "enable_user":
+      return `enable_user:${intent.userQuery}`;
+    case "invite_user":
+      return `invite_user:${intent.email}:${intent.displayName ?? ""}:${intent.role ?? ""}:${intent.worldQuery ?? ""}:${intent.worldRole ?? ""}`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -110,7 +149,12 @@ export function isMutationIntent(intent: NlCommandIntent): boolean {
   return (
     intent.intent === "set_maintenance_mode" ||
     intent.intent === "set_lock_portal" ||
-    intent.intent === "set_lock_studio"
+    intent.intent === "set_lock_studio" ||
+    intent.intent === "assign_world_role" ||
+    intent.intent === "remove_world_membership" ||
+    intent.intent === "disable_user" ||
+    intent.intent === "enable_user" ||
+    intent.intent === "invite_user"
   );
 }
 
@@ -266,6 +310,180 @@ function parseMigrationStatusIntent(text: string): NlCommandIntent | null {
   return matchesAny(text, patterns) ? { intent: "get_migration_status" } : null;
 }
 
+function extractWorldQuery(text: string): string | null {
+  const quoted = text.match(/\b(?:in|für|for|world|welt)\s+(["'])([^"']+)\1/i);
+  if (quoted?.[2]) {
+    return quoted[2].trim();
+  }
+  const plain = text.match(/\b(?:in|für|for|world|welt)\s+([a-z0-9_-]+)/i);
+  return plain?.[1]?.trim() ?? null;
+}
+
+function extractUserQuery(text: string): string | null {
+  const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w+/);
+  if (emailMatch?.[0]) {
+    return emailMatch[0];
+  }
+
+  const userLabel = text.match(/\b(?:user|benutzer|nutzer)\s+(\S+)/i);
+  if (userLabel?.[1]) {
+    return userLabel[1].replace(/[.,;]+$/, "");
+  }
+
+  const machUser = text.match(
+    /\b(?:mach|set|assign|weise)\s+([a-zäöüß0-9._-]+)/i,
+  );
+  if (machUser?.[1]) {
+    return machUser[1];
+  }
+
+  const removeUser = text.match(
+    /\b(?:entferne|remove|delete)\s+([a-zäöüß0-9._-]+)/i,
+  );
+  if (removeUser?.[1]) {
+    return removeUser[1];
+  }
+
+  const disableUser = text.match(
+    /\b(?:deaktiviere|disable|sperre)\s+(?:benutzer|user|nutzer|account)?\s*([a-zäöüß0-9._-]+)/i,
+  );
+  if (disableUser?.[1]) {
+    return disableUser[1];
+  }
+
+  const enableUser = text.match(
+    /\b(?:aktiviere|enable|freischalte)\s+(?:benutzer|user|nutzer|account)?\s*([a-zäöüß0-9._-]+)/i,
+  );
+  if (enableUser?.[1]) {
+    return enableUser[1];
+  }
+
+  return null;
+}
+
+function extractWorldMemberRole(text: string): WorldMemberRole | null {
+  const labeled = text.match(
+    /\b(?:zur|als|as|role|rolle)\s+(player|spieler(?:in)?|dm|co[-_]?dm|owner|besitzer|weltbesitzer)\b/i,
+  );
+  if (labeled?.[1]) {
+    return parseWorldMemberRoleToken(labeled[1]);
+  }
+
+  const bare = text.match(/\b(player|spieler(?:in)?|dm|co[-_]?dm|owner|besitzer|weltbesitzer)\b/i);
+  if (bare?.[1]) {
+    return parseWorldMemberRoleToken(bare[1]);
+  }
+
+  return null;
+}
+
+function parseAssignWorldRoleIntent(text: string): NlCommandIntent | null {
+  const hasAssignKeyword = /\b(assign|set|mach|weise|rolle|portalzugriff|portal.?zugang)\b/.test(
+    text,
+  );
+  if (!hasAssignKeyword) {
+    return null;
+  }
+
+  const worldQuery = extractWorldQuery(text);
+  const userQuery = extractUserQuery(text);
+  const role = extractWorldMemberRole(text);
+  if (!worldQuery || !userQuery || !role) {
+    return null;
+  }
+
+  return { intent: "assign_world_role", userQuery, worldQuery, role };
+}
+
+function parseRemoveWorldMembershipIntent(text: string): NlCommandIntent | null {
+  const patterns = [
+    /\b(entferne|remove|delete|lösche)\b.*\b(aus|from)\b/,
+    /\b(aus|from)\b.*\b(entfernen|remove|delete)\b/,
+  ];
+  if (!matchesAny(text, patterns)) {
+    return null;
+  }
+
+  const worldQuery = extractWorldQuery(text);
+  const userQuery = extractUserQuery(text);
+  if (!worldQuery || !userQuery) {
+    return null;
+  }
+
+  return { intent: "remove_world_membership", userQuery, worldQuery };
+}
+
+function parseDisableUserIntent(text: string): NlCommandIntent | null {
+  const patterns = [
+    /\b(deaktiviere|deaktivieren|disable|sperre|sperren)\b.*\b(user|benutzer|nutzer|account)\b/,
+    /\b(benutzer|user|nutzer|account)\b.*\b(deaktivieren|disable|sperren)\b/,
+    /\bdisable user\b/,
+  ];
+  if (!matchesAny(text, patterns)) {
+    return null;
+  }
+
+  const userQuery = extractUserQuery(text);
+  if (!userQuery) {
+    return null;
+  }
+
+  return { intent: "disable_user", userQuery };
+}
+
+function parseEnableUserIntent(text: string): NlCommandIntent | null {
+  const patterns = [
+    /\b(aktiviere|aktivieren|enable|freischalte|freischalten)\b.*\b(user|benutzer|nutzer|account)\b/,
+    /\b(benutzer|user|nutzer|account)\b.*\b(aktivieren|enable|freischalten)\b/,
+    /\benable user\b/,
+  ];
+  if (!matchesAny(text, patterns)) {
+    return null;
+  }
+
+  const userQuery = extractUserQuery(text);
+  if (!userQuery) {
+    return null;
+  }
+
+  return { intent: "enable_user", userQuery };
+}
+
+function parseInviteUserIntent(text: string): NlCommandIntent | null {
+  const patterns = [
+    /\b(invite|einladen|lade\s+ein|einladung)\b/,
+    /\bneuen?\s+benutzer\b.*\b(einladen|invite|anlegen)\b/,
+  ];
+  if (!matchesAny(text, patterns)) {
+    return null;
+  }
+
+  const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w+/);
+  if (!emailMatch?.[0]) {
+    return null;
+  }
+
+  const roleMatch = text.match(
+    /\b(?:als|as|role|rolle)\s+(player|spieler(?:in)?|dm|admin|owner|readonly|guest|gast)\b/i,
+  );
+  const role = roleMatch?.[1] ? parseUserRoleToken(roleMatch[1]) : undefined;
+
+  const nameMatch = text.match(/\b(?:name|namens)\s+([a-zäöüß][\wäöüß.-]*)/i);
+  const displayName = nameMatch?.[1]?.trim();
+
+  const worldQuery = extractWorldQuery(text) ?? undefined;
+  const worldRole = worldQuery ? extractWorldMemberRole(text) ?? "player" : undefined;
+
+  return {
+    intent: "invite_user",
+    email: emailMatch[0].toLowerCase(),
+    displayName,
+    role: role ?? undefined,
+    worldQuery,
+    worldRole,
+  };
+}
+
 /**
  * Deterministic intent parser — regex/keyword whitelist only.
  * No LLM involvement; unknown input is rejected.
@@ -305,11 +523,26 @@ export function parseCommandIntent(text: string): ParseCommandResult {
   const migration = parseMigrationStatusIntent(normalized);
   if (migration) candidates.push(migration);
 
+  const assignRole = parseAssignWorldRoleIntent(normalized);
+  if (assignRole) candidates.push(assignRole);
+
+  const removeMembership = parseRemoveWorldMembershipIntent(normalized);
+  if (removeMembership) candidates.push(removeMembership);
+
+  const disableUser = parseDisableUserIntent(normalized);
+  if (disableUser) candidates.push(disableUser);
+
+  const enableUser = parseEnableUserIntent(normalized);
+  if (enableUser) candidates.push(enableUser);
+
+  const inviteUser = parseInviteUserIntent(normalized);
+  if (inviteUser) candidates.push(inviteUser);
+
   if (candidates.length === 0) {
     return {
       ok: false,
       error:
-        "Unbekannter Befehl. Erlaubt: Wartungsmodus, Portal-/Studio-Sperre, Benutzerliste, Weltenliste, offene Bugs, Secrets-Status, Migrationsstatus.",
+        "Unbekannter Befehl. Erlaubt: Wartungsmodus, Portal-/Studio-Sperre, Benutzerliste, Weltenliste, offene Bugs, Secrets-/Migrationsstatus, Weltrolle zuweisen, Benutzer einladen/deaktivieren/aktivieren, Mitgliedschaft entfernen.",
       code: "unknown_command",
     };
   }
@@ -357,6 +590,16 @@ export function buildConfirmationMessage(intent: NlCommandIntent): string {
       return "Aktuellen Migrationsstatus der Datenbank anzeigen (nur Lesen).";
     case "list_pending_migrations":
       return "Ausstehende Datenbank-Migrationen anzeigen (nur Lesen).";
+    case "assign_world_role":
+      return `${intent.userQuery} als ${worldMemberRoleLabel(intent.role)} in „${intent.worldQuery}“ zuweisen (Portal-/Welt-Zugang).`;
+    case "remove_world_membership":
+      return `${intent.userQuery} aus Welt „${intent.worldQuery}“ entfernen.`;
+    case "disable_user":
+      return `Benutzer „${intent.userQuery}“ deaktivieren (Sessions werden beendet).`;
+    case "enable_user":
+      return `Benutzer „${intent.userQuery}“ wieder aktivieren.`;
+    case "invite_user":
+      return `Einladung an ${intent.email} senden${intent.role ? ` (Rolle: ${intent.role})` : ""}${intent.worldQuery ? ` und Welt „${intent.worldQuery}“ zuweisen` : ""}.`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -406,10 +649,23 @@ async function logNlCommandAudit(
   extraMetadata?: Record<string, unknown>,
 ): Promise<void> {
   const isMutation = isMutationIntent(intent);
+  const userIntents = new Set([
+    "assign_world_role",
+    "remove_world_membership",
+    "disable_user",
+    "enable_user",
+    "invite_user",
+  ]);
+  const targetType = userIntents.has(intent.intent)
+    ? "user"
+    : isMutation
+      ? "settings"
+      : "system";
   await logAuditEvent(db, {
     actorUserId: ctx.actorUserId,
     action: "content_updated",
-    targetType: isMutation ? "settings" : "system",
+    targetType,
+    targetId: typeof extraMetadata?.userId === "string" ? extraMetadata.userId : undefined,
     request: ctx.request,
     metadata: {
       source: "nl_command",
@@ -634,6 +890,229 @@ export class NlCommandService {
             pendingMigrations: pending,
             failedMigrations: status.failedMigrations,
             appliedCount: status.appliedCount,
+          },
+        };
+      }
+      case "assign_world_role": {
+        const userResult = await resolveUserQuery(this.db, intent.userQuery);
+        if (!userResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Benutzer", userResult),
+            code: userResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+        const worldResult = await resolveWorldQuery(this.db, intent.worldQuery);
+        if (!worldResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Welt", worldResult),
+            code: worldResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+
+        const userService = createUserService(this.db);
+        const membership = await userService.upsertWorldMembership({
+          userId: userResult.entity.id,
+          worldId: worldResult.entity.id,
+          role: intent.role,
+        });
+        const summary = `${userResult.entity.displayName} ist jetzt ${worldMemberRoleLabel(intent.role)} in „${worldResult.entity.name}“.`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: userResult.entity.id,
+          worldId: worldResult.entity.id,
+          role: intent.role,
+          membershipId: membership.id,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: {
+            user: {
+              id: userResult.entity.id,
+              displayName: userResult.entity.displayName,
+              email: userResult.entity.email,
+            },
+            world: worldResult.entity,
+            role: intent.role,
+            membershipId: membership.id,
+          },
+        };
+      }
+      case "remove_world_membership": {
+        const userResult = await resolveUserQuery(this.db, intent.userQuery);
+        if (!userResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Benutzer", userResult),
+            code: userResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+        const worldResult = await resolveWorldQuery(this.db, intent.worldQuery);
+        if (!worldResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Welt", worldResult),
+            code: worldResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+
+        try {
+          await createUserService(this.db).removeWorldMembership(
+            userResult.entity.id,
+            worldResult.entity.id,
+          );
+        } catch (error) {
+          if (error instanceof Error && error.message === "MEMBERSHIP_NOT_FOUND") {
+            return {
+              ok: false,
+              error: `${userResult.entity.displayName} ist kein Mitglied von „${worldResult.entity.name}“.`,
+              code: "invalid",
+            };
+          }
+          throw error;
+        }
+
+        const summary = `${userResult.entity.displayName} wurde aus „${worldResult.entity.name}“ entfernt.`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: userResult.entity.id,
+          worldId: worldResult.entity.id,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: {
+            userId: userResult.entity.id,
+            worldId: worldResult.entity.id,
+          },
+        };
+      }
+      case "disable_user": {
+        const userResult = await resolveUserQuery(this.db, intent.userQuery);
+        if (!userResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Benutzer", userResult),
+            code: userResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+
+        try {
+          await createUserService(this.db).disableUser(userResult.entity.id, ctx.actorUserId);
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.message === "CANNOT_DISABLE_SELF") {
+              return { ok: false, error: "Du kannst deinen eigenen Account nicht deaktivieren.", code: "forbidden" };
+            }
+            if (error.message === "LAST_OWNER") {
+              return { ok: false, error: "Der letzte aktive Owner kann nicht deaktiviert werden.", code: "forbidden" };
+            }
+          }
+          throw error;
+        }
+
+        const summary = `Benutzer „${userResult.entity.displayName}“ wurde deaktiviert.`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: userResult.entity.id,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: { userId: userResult.entity.id, displayName: userResult.entity.displayName },
+        };
+      }
+      case "enable_user": {
+        const userResult = await resolveUserQuery(this.db, intent.userQuery);
+        if (!userResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Benutzer", userResult),
+            code: userResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+
+        await createUserService(this.db).enableUser(userResult.entity.id, ctx.actorUserId);
+        const summary = `Benutzer „${userResult.entity.displayName}“ wurde aktiviert.`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: userResult.entity.id,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: { userId: userResult.entity.id, displayName: userResult.entity.displayName },
+        };
+      }
+      case "invite_user": {
+        const userService = createUserService(this.db);
+        const existing = await this.db.user.findUnique({
+          where: { email: intent.email },
+          select: { id: true, displayName: true, status: true },
+        });
+        if (existing) {
+          return {
+            ok: false,
+            error: `Ein Benutzer mit der E-Mail ${intent.email} existiert bereits (${existing.displayName}, Status: ${existing.status}).`,
+            code: "invalid",
+          };
+        }
+
+        const displayName =
+          intent.displayName?.trim() ||
+          intent.email.split("@")[0]?.replace(/[._-]+/g, " ") ||
+          intent.email;
+
+        const invite = await userService.createInvite({
+          displayName,
+          email: intent.email,
+          role: intent.role ?? "player",
+          actorUserId: ctx.actorUserId,
+        });
+
+        let worldAssignment: { worldId: string; worldName: string; role: WorldMemberRole } | null =
+          null;
+        if (intent.worldQuery) {
+          const worldResult = await resolveWorldQuery(this.db, intent.worldQuery);
+          if (!worldResult.ok) {
+            return {
+              ok: false,
+              error: formatEntityResolveError("Welt", worldResult),
+              code: worldResult.code === "ambiguous" ? "ambiguous" : "invalid",
+            };
+          }
+          await userService.upsertWorldMembership({
+            userId: invite.user.id,
+            worldId: worldResult.entity.id,
+            role: intent.worldRole ?? "player",
+          });
+          worldAssignment = {
+            worldId: worldResult.entity.id,
+            worldName: worldResult.entity.name,
+            role: intent.worldRole ?? "player",
+          };
+        }
+
+        const summary = worldAssignment
+          ? `Einladung an ${intent.email} erstellt und Welt „${worldAssignment.worldName}“ zugewiesen.`
+          : `Einladung an ${intent.email} erstellt.`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: invite.user.id,
+          email: intent.email,
+          role: intent.role ?? "player",
+          worldId: worldAssignment?.worldId,
+          worldRole: worldAssignment?.role,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: {
+            user: invite.user,
+            expiresAt: invite.expiresAt.toISOString(),
+            worldAssignment,
           },
         };
       }

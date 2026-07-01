@@ -14,9 +14,20 @@ interface NlCommandIntentPayload {
     | "list_open_bugs"
     | "get_secrets_status"
     | "get_migration_status"
-    | "list_pending_migrations";
+    | "list_pending_migrations"
+    | "assign_world_role"
+    | "remove_world_membership"
+    | "disable_user"
+    | "enable_user"
+    | "invite_user";
   enabled?: boolean;
   message?: string;
+  userQuery?: string;
+  worldQuery?: string;
+  role?: string;
+  email?: string;
+  displayName?: string;
+  worldRole?: string;
 }
 
 interface ParseSuccessResponse {
@@ -60,13 +71,14 @@ interface AuditEntry {
 const EXAMPLE_COMMANDS = [
   "Zeige alle Benutzer",
   "list worlds",
+  "Mach Carina zur Spielerin in Terra",
+  "invite player@example.com as player in terra",
+  "disable user carina",
   "list open bugs",
   "secrets status",
   "pending migrations",
-  "migration status",
   "Wartungsmodus aktivieren",
   "lock portal",
-  "unlock studio",
 ];
 
 export function NlCommandWorkspace() {

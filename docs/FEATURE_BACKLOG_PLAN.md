@@ -76,7 +76,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 15 | Owner Notfallmodus | ✅ Beta | `maintenanceMode`/`lockPortal`/`lockStudio`, Middleware + Owner-Bypass, Settings-UI | Shipped: Gate in Middleware + Layout, `/api/maintenance/evaluate`, NL-Command. |
 | 16 | Kosten-Dashboard | ✅ | `AiUsageLog` (Tokens/`estimatedCostUsd`/Feature/User), Budget+CSV im AI-Gateway-Wizard; AI-Kosten in `/contracts` integriert | Shipped gemäß Beschluss §13 (Integration in `/contracts`, kein separates Dashboard). |
 | 17 | AI Agent Queue | 🔶 | `Job`/`JobLog` + `/jobs` (ai_run/import/canon_check/embedding/research), `DevAgentJob` + `/admin/agent-jobs` (Queue + Dispatch fertig) | Keine 1-Klick-Presets für lange Kampagnen-Jobs. |
-| 18 | Admin Command Center (NL) | 🔶 | `nl-command-service.ts` (Whitelist-Intents: Maintenance/Lock/List/Status, Bestätigungs-Workflow, Audit) | User-/Welt-Management-Intents (assign_world_role, invite_user, disable/enable_user, remove_world_membership) in PR #395 (offen); `create_world` + globale Rollenänderung fehlen. |
+| 18 | Admin Command Center (NL) | 🔶 | `nl-command-service.ts`, `/command`, `NlCommandWorkspace`, Bestätigungs-Token + Audit | User/Welt-Management (assign_world_role, invite_user, disable/enable_user, remove_world_membership) shipped (#395). `create_world` + globale Rollenänderung fehlen. Kein LLM-Intent-Parsing — deterministische Grammatik. |
 
 ### Details & kritische Fragen — Admin/Owner
 
@@ -625,5 +625,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status (2026-07-01):** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe
-GitHub PRs #357–#394; PR #395 mit NL-User-/Welt-Management-Intents offen). EntityTag-Primärquelle;
-cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish; Restlücken siehe §2–§5.
+GitHub PRs #357–#395). EntityTag-Primärquelle; cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish; NL-Command User/Welt-Management; Restlücken siehe §2–§5.
