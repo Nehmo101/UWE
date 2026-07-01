@@ -101,7 +101,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 
 | # | Idee | Status | Bestehende Basis | Lücke / Empfehlung |
 |---|------|:--:|------------------|--------------------|
-| 1 | Mobile-first Portal | 🔶 | `PortalShell` (Drawer/Sheet), responsive CSS, `portal-dashboard-service.ts`; `MobileBottomNav` & `portalAuthBottomNav` existieren, **aber nicht verdrahtet** | Keine Thumb-Zone-Bottom-Nav in Produktion. Nav-Item **„Wiki“ → `…/wiki` 404** (`portal-nav.ts:75`). „Link öffnen → sofort sehen“ erfordert Login+Welt-Wahl. |
+| 1 | Mobile-first Portal | ✅ | `PortalShell` (Drawer/Sheet), responsive CSS, `portal-dashboard-service.ts`; `MobileBottomNav` + `resolvePortalAuthBottomNav` sind auf allen eingeloggten Portal-Seiten Standard (Thumb-Zone: Start/Wiki/Charaktere/Quests/Mehr; Graph im „Mehr“-Drawer) | ~~Nav-Item „Wiki“ → 404~~ behoben: `/auth/worlds/[slug]/wiki`-Route existiert. „Link öffnen → sofort sehen“ erfordert weiterhin Login+Welt-Wahl. |
 | 2 | Charaktersheet Designer | 🔶 | `PageType.player_character`, `PlayerCharacterEditPanel`, `player-character-permissions.ts`, Dashboard-Widget | **Kein `Character`-Modell**, kein 5e-Sheet (Werte/HP/Zauber/Inventar), kein `player_character`-Template. Aktuell freie Wiki-Blöcke. |
 | 3 | Session Recap | ✅ | `GameSession` (`summaryPlayer`/`openPlots`/`playerDecisions`/`recapPublished`), `SessionRecapFeed`, `publishRecap`, KI-Recap | Text/Markdown, kein „Story-Timeline“-Layout (minor). Kern erfüllt. |
 | 4 | Questlog | 🔶 | `PageType.quest`, `QuestLifecycleStatus`, `/auth/worlds/[slug]/quests`, `QuestStatusEditPanel` | **Global-Suche-Filter `quests`** fehlt noch in älteren Docs — **seit Batch 5 im Code**. Portal-Detail zeigt Quest-Status-Badge. |
