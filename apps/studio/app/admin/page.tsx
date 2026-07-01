@@ -89,6 +89,12 @@ export default async function AdminOverviewPage() {
               <Link className="uwe-v2-btn" href="/admin/setup">
                 Einrichtung
               </Link>
+              <Link className="uwe-v2-btn" href="/admin/checklist">
+                Aufgabenliste
+              </Link>
+              <Link className="uwe-v2-btn" href="/admin/roles">
+                Rollen & Rechte
+              </Link>
               <Link className="uwe-v2-btn" href="/settings">
                 Einstellungen
               </Link>

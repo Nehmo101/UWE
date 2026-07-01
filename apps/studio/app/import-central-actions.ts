@@ -201,7 +201,7 @@ export async function executeImportCentralJobAction(
   jobId: string,
   content: string,
   itemIds?: string[],
-): Promise<{ resultSummary: Record<string, unknown> }> {
+): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
   assertStudioTrusted();
 
   const job = await requireImportJob(jobId);
@@ -242,9 +242,21 @@ export async function executeImportCentralJobAction(
       createdIds: result.createdIds,
     };
 
-    await importJobs().markCompleted(jobId, resultSummary);
+    const undo = createUndoService(prisma);
+    const undoEntry = await undo.captureImportCentralExecute({
+      targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
+      worldId: job.targetWorldId,
+      jobId,
+      createdPersonalBrainDocumentIds:
+        job.targetType === "personal_brain" ? result.createdIds : [],
+      createdCaptureIds: job.targetType === "capture" ? result.createdIds : [],
+      createdPageIds: job.targetType === "dnd_page" ? result.createdIds : [],
+    });
+
+    const undoToken = undoEntry?.id ?? null;
+    await importJobs().markCompleted(jobId, resultSummary, undoToken);
     revalidateImportCentral();
-    return { resultSummary };
+    return { resultSummary, undoToken };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
     await importJobs().markFailed(jobId, message);

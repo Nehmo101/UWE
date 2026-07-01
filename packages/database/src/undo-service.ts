@@ -26,7 +26,8 @@ export type UndoOperation =
   | "ai.session.recap"
   | "ai.session.summary_dm"
   | "ai.brain_document.create"
-  | "import.execute";
+  | "import.execute"
+  | "import_central.execute";
 
 interface PageSnapshot {
   kind: "page";
@@ -105,6 +106,16 @@ interface ImportExecuteSnapshot {
   updatedPages: ImportPageUpdateSnapshot[];
 }
 
+interface ImportCentralExecuteSnapshot {
+  kind: "import_central_execute";
+  targetType: "personal_brain" | "capture" | "dnd_page";
+  worldId?: string | null;
+  jobId?: string;
+  createdPersonalBrainDocumentIds: string[];
+  createdCaptureIds: string[];
+  createdPageIds: string[];
+}
+
 type UndoSnapshot =
   | PageSnapshot
   | BlockSnapshot
@@ -113,7 +124,8 @@ type UndoSnapshot =
   | SessionRecapSnapshot
   | SessionSummaryDmSnapshot
   | BrainDocumentCreateSnapshot
-  | ImportExecuteSnapshot;
+  | ImportExecuteSnapshot
+  | ImportCentralExecuteSnapshot;
 
 export interface UndoResult {
   ok: boolean;
@@ -349,6 +361,45 @@ export class UndoService {
     });
   }
 
+  /** Batch snapshot for a completed Import-Zentrale markdown job. */
+  async captureImportCentralExecute(input: {
+    targetType: "personal_brain" | "capture" | "dnd_page";
+    worldId?: string | null;
+    jobId?: string;
+    createdPersonalBrainDocumentIds?: string[];
+    createdCaptureIds?: string[];
+    createdPageIds?: string[];
+  }) {
+    const snapshot: ImportCentralExecuteSnapshot = {
+      kind: "import_central_execute",
+      targetType: input.targetType,
+      worldId: input.worldId ?? null,
+      jobId: input.jobId,
+      createdPersonalBrainDocumentIds: input.createdPersonalBrainDocumentIds ?? [],
+      createdCaptureIds: input.createdCaptureIds ?? [],
+      createdPageIds: input.createdPageIds ?? [],
+    };
+
+    const total =
+      snapshot.createdPersonalBrainDocumentIds.length +
+      snapshot.createdCaptureIds.length +
+      snapshot.createdPageIds.length;
+
+    if (total === 0) {
+      return null;
+    }
+
+    return this.db.undoEntry.create({
+      data: {
+        worldId: input.worldId ?? null,
+        operation: "import_central.execute" satisfies UndoOperation,
+        targetType: "system",
+        targetId: input.jobId ?? `import-central-${input.targetType}`,
+        snapshot: toPrismaJsonValue(snapshot),
+      },
+    });
+  }
+
   /**
    * Restore the snapshot of an undo entry. Restores are conservative: if the
    * target no longer exists for an update snapshot, the undo fails with a
@@ -407,6 +458,12 @@ export class UndoService {
 
     if (snapshot.kind === "import_execute") {
       const result = await this.undoImportExecute(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "import_central_execute") {
+      const result = await this.undoImportCentralExecute(snapshot);
       if (result.ok) await this.markUndone(entryId);
       return result;
     }
@@ -663,6 +720,56 @@ export class UndoService {
     return {
       ok: true,
       message: `Import rückgängig gemacht (${snapshot.createdPageIds.length} Seiten gelöscht, ${snapshot.updatedPages.length} Updates zurückgesetzt).`,
+    };
+  }
+
+  private async undoImportCentralExecute(
+    snapshot: ImportCentralExecuteSnapshot,
+  ): Promise<UndoResult> {
+    for (const documentId of snapshot.createdPersonalBrainDocumentIds) {
+      const doc = await this.db.personalBrainDocument.findUnique({ where: { id: documentId } });
+      if (doc) {
+        await this.db.personalBrainDocument.delete({ where: { id: documentId } });
+      }
+    }
+
+    for (const captureId of snapshot.createdCaptureIds) {
+      const capture = await this.db.captureEntry.findUnique({ where: { id: captureId } });
+      if (capture) {
+        await this.db.captureEntry.delete({ where: { id: captureId } });
+      }
+    }
+
+    for (const pageId of snapshot.createdPageIds) {
+      const page = await this.db.page.findUnique({ where: { id: pageId } });
+      if (page) {
+        await this.db.page.delete({ where: { id: pageId } });
+      }
+    }
+
+    const total =
+      snapshot.createdPersonalBrainDocumentIds.length +
+      snapshot.createdCaptureIds.length +
+      snapshot.createdPageIds.length;
+
+    if (total === 0) {
+      return { ok: false, message: "Import-Undo enthält keine Änderungen." };
+    }
+
+    const parts: string[] = [];
+    if (snapshot.createdPersonalBrainDocumentIds.length > 0) {
+      parts.push(`${snapshot.createdPersonalBrainDocumentIds.length} Life-Brain-Dokument(e)`);
+    }
+    if (snapshot.createdCaptureIds.length > 0) {
+      parts.push(`${snapshot.createdCaptureIds.length} Capture-Einträge`);
+    }
+    if (snapshot.createdPageIds.length > 0) {
+      parts.push(`${snapshot.createdPageIds.length} DnD-Seite(n)`);
+    }
+
+    return {
+      ok: true,
+      message: `Markdown-Import rückgängig gemacht (${parts.join(", ")} gelöscht).`,
     };
   }
 }
