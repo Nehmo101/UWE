@@ -1673,7 +1673,11 @@ export {
   parseDevIdeaTranscript,
   DEV_IDEA_STATUS_LABELS,
   DEV_IDEA_STATUSES,
+  DEV_IDEA_TYPE_LABELS,
+  DEV_IDEA_LIFECYCLE_LABELS,
   DevIdeaStatusEnum,
+  DevIdeaTypeEnum,
+  DevIdeaLifecycleEnum,
 } from "./dev-idea-service";
 
 export type {
@@ -1682,9 +1686,80 @@ export type {
   ListDevIdeasOptions,
   DevIdea,
   DevIdeaStatus,
+  DevIdeaType,
+  DevIdeaLifecycle,
   DevIdeaChatMessage,
   DevIdeaChatRole,
 } from "./dev-idea-service";
+
+export {
+  createBugReportService,
+  BugReportService,
+  BUG_REPORT_STATUS_LABELS,
+  BUG_REPORT_SEVERITY_LABELS,
+  BugReportStatusEnum,
+  BugReportSeverityEnum,
+} from "./bug-report-service";
+
+export type {
+  CreateBugReportInput,
+  UpdateBugReportInput,
+  ListBugReportsOptions,
+  BugReport,
+  BugReportStatus,
+  BugReportSeverity,
+} from "./bug-report-service";
+
+export {
+  createMiniatureCollectionService,
+  MiniatureCollectionService,
+  MINIATURE_COLLECTION_STATUS_LABELS,
+  MiniatureCollectionStatusEnum,
+} from "./miniature-collection-service";
+
+export type {
+  CreateMiniatureCollectionItemInput,
+  UpdateMiniatureCollectionItemInput,
+  ListMiniatureCollectionOptions,
+  MiniatureCollectionItem,
+  MiniatureCollectionStatus,
+} from "./miniature-collection-service";
+
+export {
+  createImportJobService,
+  ImportJobService,
+  IMPORT_JOB_STATUS_LABELS,
+  IMPORT_SOURCE_TYPE_LABELS,
+  IMPORT_TARGET_TYPE_LABELS,
+  ImportJobStatusEnum,
+  ImportSourceTypeEnum,
+  ImportTargetTypeEnum,
+} from "./import-job-service";
+
+export type {
+  CreateImportJobInput,
+  UpdateImportJobInput,
+  ListImportJobsOptions,
+  ImportJob,
+  ImportJobStatus,
+  ImportSourceType,
+  ImportTargetType,
+} from "./import-job-service";
+
+export {
+  createDocumentTemplateService,
+  DocumentTemplateService,
+  DOCUMENT_TEMPLATE_CATEGORY_LABELS,
+  DocumentTemplateCategoryEnum,
+} from "./document-template-service";
+
+export type {
+  CreateDocumentTemplateInput,
+  UpdateDocumentTemplateInput,
+  ListDocumentTemplatesOptions,
+  DocumentTemplate,
+  DocumentTemplateCategory,
+} from "./document-template-service";
 
 export {
   ConnectorService,
