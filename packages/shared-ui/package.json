@@ -26,6 +26,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/soundboard": "workspace:*",
+    "lucide-react": "^1.22.0",
     "next": "^15.3.4"
   },
   "devDependencies": {

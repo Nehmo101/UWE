@@ -852,6 +852,9 @@ importers:
       '@uwe/soundboard':
         specifier: workspace:*
         version: link:../soundboard
+      lucide-react:
+        specifier: ^1.22.0
+        version: 1.22.0(react@19.2.7)
       next:
         specifier: ^15.3.4
         version: 15.5.19(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

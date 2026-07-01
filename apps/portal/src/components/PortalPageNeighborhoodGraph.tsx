@@ -27,7 +27,7 @@ export async function PortalPageNeighborhoodGraph({
           Im Beziehungsnetz öffnen →
         </Link>
       </div>
-      <GraphView nodes={nodes} edges={pageGraph.edges} height={320} />
+      <GraphView nodes={nodes} edges={pageGraph.edges} compact focusPageId={pageId} height={320} />
     </section>
   );
 }
