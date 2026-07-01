@@ -54,7 +54,8 @@ const BASE_ACTIONS: DndGeneratorAction[] = [
   {
     id: "prepare_next_session",
     label: "Nächste Session vorbereiten",
-    description: "Agenda, Szenen, NPCs, Encounters und Handouts als Review-Vorschlag.",
+    description:
+      "Regelbasierte Outline aus Session-Metadaten (ohne KI-Modell): Agenda, Szenen, NPCs, Encounter-Platzhalter und Handout-Ideen als Review-Vorschlag.",
     taskType: "prepare_next_session",
     brainActionId: "next_session_prep",
     playerSafe: false,

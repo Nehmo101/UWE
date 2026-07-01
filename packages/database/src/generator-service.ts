@@ -137,7 +137,8 @@ const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> =
   prepare_next_session: {
     id: "prepare_next_session",
     label: "Nächste Session vorbereiten",
-    description: "Session-Paket als Review-Proposal — nie automatisch übernehmen.",
+    description:
+      "Regelbasierte Outline aus Session-Metadaten (ohne KI-Modell) — als Review-Vorschlag, nie automatisch übernehmen.",
     requiresLocalRtx: true,
     reviewRequired: true,
   },
