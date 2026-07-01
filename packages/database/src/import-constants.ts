@@ -1,8 +1,3 @@
-// Client-safe import-job constants and types.
-//
-// This module must stay free of runtime imports (Prisma client, Node-only
-// modules) so that client components can import the label maps without
-// pulling the server-only dependency graph into the browser bundle.
 import type {
   ImportJobStatus,
   ImportSourceType,
@@ -38,3 +33,20 @@ export const IMPORT_TARGET_TYPE_LABELS: Record<ImportTargetType, string> = {
   capture: "Capture",
   dnd_page: "DnD-Seite",
 };
+
+/** Client-safe preview shapes for Import Central panels. */
+export interface MarkdownImportPreviewItem {
+  itemId: string;
+  title: string;
+  excerpt: string;
+  pageType?: string;
+  category?: string | null;
+  tags?: string[];
+}
+
+export interface MarkdownImportPreviewResult {
+  items: MarkdownImportPreviewItem[];
+  totalDocuments: number;
+  errors: string[];
+  canExecute: boolean;
+}

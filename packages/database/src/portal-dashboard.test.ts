@@ -174,6 +174,58 @@ describe("portal dashboard", () => {
     await db.$disconnect();
   });
 
+  it("picks the next future announced session and skips stale past announcements", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const sessions = createGameSessionService(databaseUrl);
+    const repo = createUweRepository(databaseUrl);
+
+    const world = await repo.getWorldBySlug(worldSlug);
+    assert.ok(world);
+    const campaign = (await repo.listCampaignsByWorld(worldSlug))[0];
+    assert.ok(campaign);
+
+    const pastDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const stale = await sessions.create({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Verwaiste Ankündigung",
+      sessionNumber: 4,
+      status: "planned",
+      date: pastDate,
+      playerVisibleSchedule: true,
+    });
+
+    const announced = await sessions.create({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Session 5 Ankündigung",
+      sessionNumber: 5,
+      status: "planned",
+      date: futureDate,
+      summaryPlayer: "Geheime Prep — darf nicht leaken",
+      playerVisibleSchedule: true,
+    });
+
+    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+    assert.ok(playerCtx);
+
+    const dashboard = await auth.getPortalDashboard(worldSlug, playerCtx);
+    assert.ok(dashboard);
+    assert.ok(dashboard.nextSession);
+    // Dated upcoming announcement wins over the undated one; the stale
+    // past-dated announcement never becomes "next".
+    assert.equal(dashboard.nextSession.id, announced.id);
+    assert.notEqual(dashboard.nextSession.id, stale.id);
+    assert.equal(dashboard.nextSession.date?.getTime(), futureDate.getTime());
+    // Announced without a published recap → recap fields stay hidden.
+    assert.equal(dashboard.nextSession.summaryPlayer, null);
+
+    await db.$disconnect();
+  });
+
   it("auto-unlocks linked unlock_after_session pages when recap is published", async () => {
     const db = createPrismaClient(databaseUrl);
     const repo = createUweRepository(databaseUrl);

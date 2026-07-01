@@ -20,6 +20,7 @@ import {
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
+import { paintTerrainBlobs } from "@uwe/atlas/canvas-render";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -84,6 +85,13 @@ export interface PaletteItemMap {
   [paletteItemId: string]: PaletteItemInfo;
 }
 
+/** Map-level terrain tile layer — { cols, rows, cells: { "col,row": biome } }. */
+export interface ViewerTileLayer {
+  cols: number;
+  rows: number;
+  cells: Record<string, string>;
+}
+
 export interface AtlasViewerProps {
   worldSlug: string;
   nodeId: string;
@@ -98,6 +106,8 @@ export interface AtlasViewerProps {
   pageLinkMap?: PageLinkMap;
   /** paletteItemId → palette item metadata for stamp rendering. */
   paletteItems?: PaletteItemMap;
+  /** Terrain tile layer of the map (server-gated via getAtlasForContext). */
+  tileLayer?: ViewerTileLayer | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +117,18 @@ export interface AtlasViewerProps {
 // ---------------------------------------------------------------------------
 // Biome colours
 // ---------------------------------------------------------------------------
+
+/** Solid tile-layer fills — same palette as the single-file editor runtime. */
+const TILE_FILL: Record<string, string> = {
+  grassland: "#a9c47f",
+  coast: "#9fc0d2",
+  hills: "#c2a878",
+  desert: "#dcc47c",
+  forest: "#7a9463",
+  mountains: "#b4a487",
+  swamp: "#8a9b78",
+  snow: "#dde6f0",
+};
 
 const BIOME_FILL: Record<BiomeKind, string> = {
   forest: "rgba(74,103,65,0.28)",
@@ -295,6 +317,7 @@ export function AtlasViewer({
   parentSilhouette,
   pageLinkMap = {},
   paletteItems = {},
+  tileLayer = null,
 }: AtlasViewerProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -355,6 +378,24 @@ export function AtlasViewer({
 
     ctx.fillStyle = preset.colors.parchment;
     ctx.fillRect(0, 0, W, H);
+
+    // Terrain tile layer (flowing CoK-style blobs) — same renderer as the
+    // Studio editor runtime, so players see the DM's painted base terrain.
+    if (tileLayer && tileLayer.cells && tileLayer.cols > 0 && tileLayer.rows > 0) {
+      const { cols, rows } = tileLayer;
+      paintTerrainBlobs(ctx, {
+        cols,
+        rows,
+        getCell: (c, r) => tileLayer.cells[`${c},${r}`],
+        tileRect: (c, r) => {
+          const [x, y] = w2c(c / cols, r / rows);
+          const [x1, y1] = w2c((c + 1) / cols, (r + 1) / rows);
+          return { x, y, w: x1 - x, h: y1 - y };
+        },
+        fillFor: (biome) => TILE_FILL[biome] ?? "#ccc",
+        radiusRatio: 0.4,
+      });
+    }
 
     const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
     grad.addColorStop(0, "rgba(0,0,0,0)");
@@ -624,10 +665,12 @@ export function AtlasViewer({
             ctx.fillStyle = inkColor;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
+            // Constant spacing in world units — font and spacing both scale
+            // with zoom, keeping curved labels compact at every zoom level.
             const placements = layoutCharactersOnPath(
               labelText,
               pathCoords,
-              0.01 * (14 / zoom),
+              0.0085,
               feat.geometry.pathReversed === true,
             );
             for (const placement of placements) {
@@ -714,7 +757,7 @@ export function AtlasViewer({
     }
 
     ctx.restore();
-  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap, paletteItems, stampImagesVersion]);
+  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap, paletteItems, stampImagesVersion, tileLayer]);
 
   useEffect(() => {
     render();

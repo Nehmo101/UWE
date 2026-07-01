@@ -10,7 +10,7 @@
  * Type-only imports (`import type { ... }`) are erased at compile time and
  * are therefore allowed. Runtime constants (label maps, formatters, enums)
  * must live in a client-safe subpath export instead, e.g.
- * `@uwe/database/import-job-constants` or `@uwe/database/enums`.
+ * `@uwe/database/import-constants` or `@uwe/database/enums`.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -103,7 +103,7 @@ describe("client/server boundary — no runtime imports from @uwe/database/serve
       [],
       [
         "Client components must not import runtime values from @uwe/database/server.",
-        "Move the constants to a client-safe subpath export (see @uwe/database/import-job-constants)",
+        "Move the constants to a client-safe subpath export (see @uwe/database/import-constants)",
         "or use `import type` for type-only usage.",
         ...violations.map((v) => `  ${v.file}: ${v.statement}`),
       ].join("\n"),

@@ -48,6 +48,53 @@ export interface ScatteredGlyphItem {
 }
 
 // ---------------------------------------------------------------------------
+// ScatterExclusion
+// ---------------------------------------------------------------------------
+
+/**
+ * A corridor the scatter must keep clear of — typically a road or river
+ * crossing the biome polygon (Canvas-of-Kings behaviour: a forest plot
+ * respects the roads running through it).
+ */
+export interface ScatterExclusion {
+  /** Polyline of the corridor centreline in normalised canvas space. */
+  path: [number, number][];
+  /** Full corridor width in normalised canvas units (glyphs stay width/2 away). */
+  width: number;
+}
+
+/** Shortest distance from a point to a segment (endpoints clamped). */
+function distToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+/** True when the point lies inside any exclusion corridor. */
+function inExclusion(x: number, y: number, exclusions: ScatterExclusion[]): boolean {
+  for (const ex of exclusions) {
+    const half = ex.width / 2;
+    if (half <= 0) continue;
+    const pts = ex.path;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i]!;
+      const [bx, by] = pts[i + 1]!;
+      if (distToSegment(x, y, ax, ay, bx, by) < half) return true;
+    }
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // ReliefShadingDescriptor
 // ---------------------------------------------------------------------------
 
@@ -137,6 +184,9 @@ function ringArea(ring: [number, number][]): number {
  * @param biomeKind - Biome type determining which glyph key to use.
  * @param density   - Multiplier for glyph count (1.0 = natural density).
  * @param seed      - PRNG seed for deterministic output (default: 1337).
+ * @param exclusions - Optional corridors (roads/rivers) the scatter keeps clear of.
+ *                     Rejection happens before any further PRNG draw, so a call
+ *                     without exclusions stays bit-identical to previous output.
  * @returns         Array of glyph placement descriptors.
  */
 export function scatterGlyphsInPolygon(
@@ -144,6 +194,7 @@ export function scatterGlyphsInPolygon(
   biomeKind: BiomeKind,
   density: number,
   seed = 1337,
+  exclusions?: ScatterExclusion[],
 ): ScatteredGlyphItem[] {
   const glyphKey = BIOME_GLYPH[biomeKind];
   if (!glyphKey || density <= 0) return [];
@@ -172,6 +223,7 @@ export function scatterGlyphsInPolygon(
       pointInRing(x, y, hr as [number, number][]),
     );
     if (inHole) continue;
+    if (exclusions && exclusions.length && inExclusion(x, y, exclusions)) continue;
 
     const scale = 0.55 + rng() * 0.6; // [0.55, 1.15]
     const rotation = (rng() - 0.5) * 20; // ±10 degrees

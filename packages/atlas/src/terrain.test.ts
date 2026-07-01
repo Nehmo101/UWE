@@ -263,3 +263,49 @@ describe("buildReliefShading", () => {
     assert.deepEqual(a, b);
   });
 });
+
+// ---------------------------------------------------------------------------
+// scatterGlyphsInPolygon / exclusions
+// ---------------------------------------------------------------------------
+
+describe("scatterGlyphsInPolygon / exclusions", () => {
+  /** A road crossing the unit square horizontally through the middle. */
+  const ROAD: { path: [number, number][]; width: number } = {
+    path: [
+      [0, 0.5],
+      [1, 0.5],
+    ],
+    width: 0.2,
+  };
+
+  it("keeps the corridor clear of glyphs", () => {
+    const items = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 1337, [ROAD]);
+    assert.ok(items.length > 0, "still places glyphs outside the corridor");
+    for (const item of items) {
+      assert.ok(
+        Math.abs(item.y - 0.5) >= ROAD.width / 2,
+        `glyph at y=${item.y} lies inside the excluded corridor`,
+      );
+    }
+  });
+
+  it("is bit-identical to the no-exclusion output when none are passed", () => {
+    const plain = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 1337);
+    const empty = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 1337, []);
+    assert.deepEqual(empty, plain);
+  });
+
+  it("is deterministic with exclusions (same seed, same corridors)", () => {
+    const a = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 7, [ROAD]);
+    const b = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 7, [ROAD]);
+    assert.deepEqual(a, b);
+  });
+
+  it("ignores zero-width corridors", () => {
+    const plain = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 1337);
+    const zero = scatterGlyphsInPolygon(UNIT_SQUARE, BiomeKind.forest, 1.0, 1337, [
+      { path: ROAD.path, width: 0 },
+    ]);
+    assert.deepEqual(zero, plain);
+  });
+});

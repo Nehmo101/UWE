@@ -2,7 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { LabelElement, LabelElementType } from "@uwe/database/server";
+import type { LabelElement, LabelElementType } from "@uwe/database/label-elements";
 
 const CANVAS_W = 6;
 const CANVAS_H = 4;

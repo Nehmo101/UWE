@@ -19,6 +19,12 @@ export interface AtlasStaticExportPayload {
     title: string;
     stylePreset: string;
   } | null;
+  /**
+   * Terrain tile layer of the (portal-visible) map — { cols, rows, tile, cells }.
+   * Taken from the filtered snapshot, so it is only present when the map itself
+   * passed the portal gate.
+   */
+  tileLayer: unknown;
   preset: Pick<AtlasStylePreset, "colors" | "typography" | "decorations">;
   /** Canonical builtin pictogram registry (so the viewer needs no hardcoded copy). */
   builtinGlyphs: Array<{
@@ -28,6 +34,19 @@ export interface AtlasStaticExportPayload {
     pathData: string;
     color: string;
   }>;
+  /**
+   * Palette items referenced by the exported (portal-visible) objects —
+   * approved-only, resolved to builtin glyph keys or inline image stamps.
+   */
+  paletteItems: Record<
+    string,
+    {
+      source: string;
+      builtinGlyphKey: string | null;
+      imageData?: string;
+      mimeType?: string;
+    }
+  >;
   pageLinks: Record<string, string>;
   nodes: Array<{
     id: string;
@@ -96,6 +115,39 @@ export async function writeAtlasStaticBundle(
 
   const preset = resolveStylePreset(snapshot.map.stylePreset);
 
+  // Resolve the palette items the visible objects reference. Only approved
+  // items ship — pending AI stamps/uploads must never reach the player bundle.
+  const referencedPaletteIds = [
+    ...new Set(snapshot.objects.map((object) => object.paletteItemId)),
+  ];
+  const paletteItems: AtlasStaticExportPayload["paletteItems"] = {};
+  if (referencedPaletteIds.length > 0) {
+    const items = await db.atlasPaletteItem.findMany({
+      where: {
+        id: { in: referencedPaletteIds },
+        reviewStatus: "approved",
+      },
+      select: {
+        id: true,
+        source: true,
+        builtinGlyphKey: true,
+        styleTags: true,
+      },
+    });
+    for (const item of items) {
+      const tags = (item.styleTags ?? {}) as {
+        imageData?: string;
+        mimeType?: string;
+      };
+      paletteItems[item.id] = {
+        source: item.source,
+        builtinGlyphKey: item.builtinGlyphKey ?? null,
+        imageData: tags.imageData,
+        mimeType: tags.mimeType,
+      };
+    }
+  }
+
   const payload: AtlasStaticExportPayload = {
     worldSlug,
     exportedAt: new Date().toISOString(),
@@ -105,6 +157,7 @@ export async function writeAtlasStaticBundle(
       title: snapshot.map.title,
       stylePreset: snapshot.map.stylePreset,
     },
+    tileLayer: snapshot.map.tileLayer ?? null,
     preset: {
       colors: preset.colors,
       typography: preset.typography,
@@ -117,6 +170,7 @@ export async function writeAtlasStaticBundle(
       pathData: glyph.pathData,
       color: glyph.color,
     })),
+    paletteItems,
     pageLinks,
     nodes: snapshot.nodes.map((node) => ({
       id: node.id,

@@ -45,12 +45,19 @@ export interface EditorHandoutRequestMessage {
   nodeId: string;
   title: string;
 }
+export interface EditorNodeRenameMessage {
+  source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
+  type: "node-rename";
+  nodeId: string;
+  title: string;
+}
 export type EditorToHostMessage =
   | EditorReadyMessage
   | EditorSaveMessage
   | EditorVisibilityMessage
   | EditorAiDraftRequestMessage
-  | EditorHandoutRequestMessage;
+  | EditorHandoutRequestMessage
+  | EditorNodeRenameMessage;
 
 export interface HostSavedMessage {
   source: typeof ATLAS_BRIDGE_HOST_SOURCE;
@@ -74,6 +81,7 @@ const EDITOR_TYPES = new Set([
   "visibility",
   "ai-draft-request",
   "handout-request",
+  "node-rename",
 ]);
 const HOST_TYPES = new Set(["saved", "ai-draft-result", "load"]);
 

@@ -101,6 +101,31 @@ describe("NlCommandService", () => {
     }
   });
 
+  it("parses user management intents", () => {
+    const assign = parseCommandIntent("Mach Carina zur Spielerin in Terra");
+    assert.equal(assign.ok, true);
+    if (assign.ok && assign.intent.intent === "assign_world_role") {
+      assert.equal(assign.intent.userQuery.toLowerCase(), "carina");
+      assert.equal(assign.intent.worldQuery.toLowerCase(), "terra");
+      assert.equal(assign.intent.role, "player");
+      assert.equal(assign.requiresConfirmation, true);
+    }
+
+    const invite = parseCommandIntent("invite player@example.com as player in terra");
+    assert.equal(invite.ok, true);
+    if (invite.ok && invite.intent.intent === "invite_user") {
+      assert.equal(invite.intent.email, "player@example.com");
+      assert.equal(invite.intent.role, "player");
+      assert.equal(invite.intent.worldQuery, "terra");
+    }
+
+    const disable = parseCommandIntent("disable user carina");
+    assert.equal(disable.ok, true);
+    if (disable.ok) {
+      assert.equal(disable.intent.intent, "disable_user");
+    }
+  });
+
   it("parses maintenance enable/disable intents", () => {
     const enable = parseCommandIntent("Wartungsmodus aktivieren");
     assert.equal(enable.ok, true);
@@ -267,6 +292,54 @@ describe("NlCommandService", () => {
       confirmationIssuedAt: issuedAt,
     });
     assert.equal(result.ok, true);
+
+    await db.$disconnect();
+  });
+
+  it("assigns world role with confirmation", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const owner = await auth.createUser({
+      displayName: "NL Assign Owner",
+      email: "nl-assign-owner@example.com",
+      password: "test-password-123",
+      role: "owner",
+    });
+    const player = await auth.createUser({
+      displayName: "NL Assign Player",
+      email: "nl-assign-player@example.com",
+      password: "test-password-123",
+      role: "player",
+    });
+
+    const world = await db.world.create({
+      data: {
+        name: "NL Assign World",
+        slug: "nl-assign-world",
+      },
+    });
+
+    const intent = {
+      intent: "assign_world_role" as const,
+      userQuery: "NL Assign Player",
+      worldQuery: "nl-assign-world",
+      role: "player" as const,
+    };
+    const issuedAt = Date.now();
+    const token = issueConfirmationToken(intent, owner.id, issuedAt);
+
+    const service = createNlCommandService(db);
+    const result = await service.execute(intent, { actorUserId: owner.id }, {
+      confirmationToken: token,
+      confirmationIssuedAt: issuedAt,
+    });
+    assert.equal(result.ok, true);
+
+    const membership = await db.worldMembership.findUnique({
+      where: { userId_worldId: { userId: player.id, worldId: world.id } },
+    });
+    assert.ok(membership);
+    assert.equal(membership.role, "player");
 
     await db.$disconnect();
   });

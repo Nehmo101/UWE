@@ -1,13 +1,5 @@
 import { notFound } from "next/navigation";
 import {
-  BreadcrumbTrail,
-  PortalAuthChrome,
-  PortalShell,
-} from "@/src/components/shell";
-import { getCurrentUser } from "@/src/lib/auth";
-import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
-import {
   createAtlasService,
   createPrismaClient,
   isAtlasEntityAccessible,
@@ -15,7 +7,7 @@ import {
 } from "@uwe/database/server";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
-import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap } from "@/src/components/atlas/AtlasViewer";
+import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap, ViewerTileLayer } from "@/src/components/atlas/AtlasViewer";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
@@ -23,14 +15,10 @@ interface Props {
 
 export default async function PortalAtlasNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
-  const user = await getCurrentUser();
-  const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
-  const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
 
-  let worldName = worldSlug;
   let nodeTitle = "";
   let nodeLevel: string | undefined;
   let viewerFeatures: ViewerFeature[] = [];
@@ -38,6 +26,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
   let parentChainItems: NodeAncestorItem[] = [];
   let parentSilhouette: [number, number][][] | undefined;
   let mapStylePreset: string | null = null;
+  let tileLayer: ViewerTileLayer | null = null;
   const pageLinkMap: PageLinkMap = {};
   const paletteItems: PaletteItemMap = {};
 
@@ -50,7 +39,6 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       select: { name: true },
     });
     if (!world) notFound();
-    worldName = world.name;
 
     // Fetch atlas with portal context — this filters dm_only nodes/features/objects
     const atlasData = await atlas.getAtlasForContext(worldSlug, "portal");
@@ -63,9 +51,29 @@ export default async function PortalAtlasNodePage({ params }: Props) {
     nodeTitle = nodeRecord.title;
     nodeLevel = nodeRecord.level;
 
-    // Get the atlas map style preset
+    // Get the atlas map style preset + terrain tile layer. The map itself is
+    // already portal-gated: getAtlasForContext returned non-null above, which
+    // requires the AtlasMap to be portal-visible.
     const map = await db.atlasMap.findUnique({ where: { id: nodeRecord.mapId } });
     mapStylePreset = map?.stylePreset ?? null;
+    const rawTileLayer = map?.tileLayer as {
+      cols?: number;
+      rows?: number;
+      cells?: Record<string, string>;
+    } | null;
+    if (
+      rawTileLayer &&
+      typeof rawTileLayer.cols === "number" &&
+      typeof rawTileLayer.rows === "number" &&
+      rawTileLayer.cells &&
+      typeof rawTileLayer.cells === "object"
+    ) {
+      tileLayer = {
+        cols: rawTileLayer.cols,
+        rows: rawTileLayer.rows,
+        cells: rawTileLayer.cells,
+      };
+    }
 
     // Get hierarchy for breadcrumb + parent silhouette
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
@@ -180,50 +188,28 @@ export default async function PortalAtlasNodePage({ params }: Props) {
 
   const preset = resolveStylePreset(mapStylePreset);
 
-  // Build breadcrumb
-  const breadcrumbItems = [
-    { label: "Meine Welten", href: "/auth/worlds" },
-    { label: worldName, href: `/auth/worlds/${worldSlug}` },
-    { label: "Atlas", href: `/auth/worlds/${worldSlug}/atlas` },
-    ...parentChainItems.map((item) => ({
-      label: item.title,
-      href: `/auth/worlds/${worldSlug}/atlas/${item.id}`,
-    })),
-    { label: nodeTitle },
-  ];
-
+  // Shell (sidebar, top bar, mobile bottom nav) comes from the world layout;
+  // the AtlasViewer renders its own hierarchy breadcrumb from parentChainItems.
   return (
-    <PortalShell
-      worldSlug={worldSlug}
-      worldName={worldName}
-      headerActions={
-        <PortalAuthChrome
-          user={user}
-          canAccessStudio={canAccessStudio}
-          studioUrl={studioUrl}
-        />
-      }
-      breadcrumb={<BreadcrumbTrail items={breadcrumbItems} />}
-    >
-      <section className="portal-content-card">
-        <a href={`/auth/worlds/${worldSlug}/atlas`} className="uwe-back-link">
-          ← Zurück zum Atlas
-        </a>
+    <section className="portal-content-card">
+      <a href={`/auth/worlds/${worldSlug}/atlas`} className="uwe-back-link">
+        ← Zurück zum Atlas
+      </a>
 
-        <AtlasViewer
-          worldSlug={worldSlug}
-          nodeId={nodeId}
-          nodeTitle={nodeTitle}
-          nodeLevel={nodeLevel}
-          features={viewerFeatures}
-          objects={viewerObjects}
-          preset={preset}
-          parentChainItems={parentChainItems}
-          parentSilhouette={parentSilhouette}
-          pageLinkMap={pageLinkMap}
-          paletteItems={paletteItems}
-        />
-      </section>
-    </PortalShell>
+      <AtlasViewer
+        worldSlug={worldSlug}
+        nodeId={nodeId}
+        nodeTitle={nodeTitle}
+        nodeLevel={nodeLevel}
+        features={viewerFeatures}
+        objects={viewerObjects}
+        preset={preset}
+        parentChainItems={parentChainItems}
+        parentSilhouette={parentSilhouette}
+        pageLinkMap={pageLinkMap}
+        paletteItems={paletteItems}
+        tileLayer={tileLayer}
+      />
+    </section>
   );
 }

@@ -34,7 +34,13 @@ jobs:
 
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Must cover a fully cold Turbo/Next cache (full gate incl. builds);
+    # warm runs finish far faster.
+    timeout-minutes: 50
+    env:
+      # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
+      # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
+      TURBO_CONCURRENCY: 4
     steps:
       - uses: actions/checkout@v4
 
@@ -50,28 +56,68 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Get lockfile hash
+        id: lockfile
+        run: echo "hash=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
       - name: Restore Turbo cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .turbo
-          key: turbo-quality-${{ runner.os }}-${{ github.sha }}
+          key: turbo-quality-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
             turbo-quality-${{ runner.os }}-
+            turbo-pr-${{ runner.os }}-
+            turbo-${{ runner.os }}-
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             apps/studio/.next/cache
             apps/portal/.next/cache
-          key: next-${{ runner.os }}-${{ github.sha }}
+          key: next-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
           restore-keys: |
             next-${{ runner.os }}-
 
       - name: Full quality gate
         run: pnpm quality
 
+      # Save with `always()` so even a red or timed-out gate seeds the caches —
+      # otherwise a cold cache times the job out and no cache is ever written
+      # (the actions/cache post step is skipped on cancellation), which loops
+      # every subsequent run back into the same timeout.
+      - name: Save Turbo cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .turbo
+          key: turbo-quality-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+
+      - name: Save Next.js build cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/studio/.next/cache
+            apps/portal/.next/cache
+          key: next-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            deploy-scripts:
+              - 'deploy/scripts/**'
+
       - name: Shellcheck host setup scripts
+        if: steps.filter.outputs.deploy-scripts == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck

@@ -3,7 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 import Link from "next/link";
-import type { GeneratorActionDefinition, MissingContentHint } from "@uwe/database/server";
+import type { GeneratorActionDefinition, MissingContentHint } from "@uwe/database/generator-types";
 
 interface ContextualGeneratorPanelProps {
   worldSlug: string;

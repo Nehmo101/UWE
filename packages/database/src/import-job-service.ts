@@ -18,13 +18,11 @@ export { ImportJobStatus as ImportJobStatusEnum } from "./generated/prisma/clien
 export { ImportSourceType as ImportSourceTypeEnum } from "./generated/prisma/client";
 export { ImportTargetType as ImportTargetTypeEnum } from "./generated/prisma/client";
 
-// Label maps live in the client-safe module so client components can use them
-// without importing the server-only barrel; re-exported here for back-compat.
 export {
   IMPORT_JOB_STATUS_LABELS,
   IMPORT_SOURCE_TYPE_LABELS,
   IMPORT_TARGET_TYPE_LABELS,
-} from "./import-job-constants";
+} from "./import-constants";
 
 export interface CreateImportJobInput {
   sourceType: ImportSourceType;

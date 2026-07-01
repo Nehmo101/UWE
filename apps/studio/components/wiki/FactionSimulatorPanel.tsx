@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import type { GeneratorActionDefinition } from "@uwe/database/server";
+import type { GeneratorActionDefinition } from "@uwe/database/generator-types";
 
 interface Props {
   worldSlug: string;

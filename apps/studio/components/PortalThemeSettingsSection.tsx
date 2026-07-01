@@ -5,7 +5,7 @@ import {
   fromUweThemePreferences,
   toUweThemePreferences,
 } from "@uwe/shared-ui";
-import type { ThemePreferencesRecord } from "@uwe/database/server";
+import type { ThemePreferencesRecord } from "@uwe/database/theme-preferences";
 import { saveThemePreferencesAction } from "../app/theme-actions";
 
 export function PortalThemeSettingsSection({

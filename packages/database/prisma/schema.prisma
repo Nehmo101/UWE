@@ -886,6 +886,9 @@ model CharacterSpell {
   spellLevel  Int      @default(0) @map("spell_level")
   prepared    Boolean  @default(false)
   source      String?
+  displayName String?  @map("display_name")
+  school      String?
+  description String   @default("")
   notes       String   @default("")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
