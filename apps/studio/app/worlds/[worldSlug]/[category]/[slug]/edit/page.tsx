@@ -44,6 +44,7 @@ import { PageChroniclePanel } from "@/components/wiki/PageChroniclePanel";
 import { FactionStateEditPanel } from "@/components/wiki/FactionStateEditPanel";
 import { QuestStatusEditPanel } from "@/components/wiki/QuestStatusEditPanel";
 import { CharacterSheetEditPanel } from "@/components/wiki/CharacterSheetEditPanel";
+import { StructuredGeneratorSection } from "@/components/wiki/StructuredGeneratorSection";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -427,6 +428,17 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             category={category}
           />
         )}
+
+        <StructuredGeneratorSection
+          worldSlug={worldSlug}
+          pageSlug={slug}
+          pageTitle={page.title}
+          pageType={page.type}
+          pageId={page.id}
+          worldId={world.id}
+          rtxReady={generatorPanel?.rtxReady ?? false}
+          rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+        />
 
         {generatorPanel && (
           <ContextualGeneratorPanel

@@ -28,7 +28,10 @@ export type AiTaskType =
   | "prepare_mail_draft"
   | "atlas_name_region"
   | "atlas_describe_region"
-  | "simulate_faction";
+  | "simulate_faction"
+  | "generate_structured_npc"
+  | "generate_structured_quest"
+  | "generate_structured_item";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

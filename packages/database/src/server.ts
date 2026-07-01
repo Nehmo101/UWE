@@ -138,6 +138,22 @@ export {
 
 export type { UpsertStructuredStatblockInput } from "./structured-statblock-service";
 
+export {
+  buildStructuredGeneratorPrompt,
+  formatStructuredGeneratorMarkdown,
+  getStructuredGeneratorSchema,
+  isStructuredGeneratorTarget,
+  parseStructuredGeneratorOutput,
+  STRUCTURED_GENERATOR_SCHEMAS,
+} from "./structured-generator-schemas";
+
+export type {
+  StructuredGeneratorField,
+  StructuredGeneratorOutput,
+  StructuredGeneratorSchema,
+  StructuredGeneratorTarget,
+} from "./structured-generator-schemas";
+
 export type { QuestLifecycleStatus } from "./generated/prisma/client";
 
 export {
@@ -1467,6 +1483,7 @@ export {
   DEFAULT_GENERATOR_PRESETS,
   detectMissingContent,
   listGeneratorActions,
+  mapStructuredGeneratorAction,
   resolveGeneratorContextFromPage,
 } from "./generator-service";
 

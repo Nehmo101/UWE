@@ -159,6 +159,9 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   atlas_name_region: "dnd",
   atlas_describe_region: "dnd",
   simulate_faction: "dnd",
+  generate_structured_npc: "dnd",
+  generate_structured_quest: "dnd",
+  generate_structured_item: "dnd",
 };
 
 export function workflowSlotForTask(taskType: AiTaskType): ConnectorWorkflowSlot {

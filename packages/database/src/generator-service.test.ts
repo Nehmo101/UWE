@@ -60,4 +60,24 @@ describe("generator service", () => {
 
     assert.ok(hints.some((hint) => hint.field === "player_text"));
   });
+
+  it("lists structured npc generator for npc pages", () => {
+    const actions = listGeneratorActions({
+      contextType: "npc",
+      contextId: "n1",
+      worldSlug: "terra",
+    });
+
+    assert.ok(actions.some((action) => action.id === "generate_npc"));
+  });
+
+  it("lists structured quest generator for quest pages", () => {
+    const actions = listGeneratorActions({
+      contextType: "quest",
+      contextId: "q1",
+      worldSlug: "terra",
+    });
+
+    assert.ok(actions.some((action) => action.id === "generate_quest"));
+  });
 });

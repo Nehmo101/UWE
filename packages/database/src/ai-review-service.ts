@@ -23,6 +23,12 @@ import { syncAiProposalReview } from "./review-bridge";
 import { createWorldEventService } from "./world-event-service";
 import { parseInGameDate, type InGameDate } from "./world-calendar-service";
 import type { Visibility } from "./generated/prisma/client";
+import {
+  formatStructuredGeneratorMarkdown,
+  getStructuredGeneratorSchema,
+  parseStructuredGeneratorOutput,
+  type StructuredGeneratorTarget,
+} from "./structured-generator-schemas";
 
 const BRAIN_DOCUMENT_TYPES: BrainDocumentType[] = [
   "world_knowledge",
@@ -616,6 +622,19 @@ export class AiReviewService {
         );
       }
 
+      if (isStructuredGeneratorTaskType(proposal.aiRun.taskType)) {
+        return await this.applyStructuredGeneratorProposal(
+          proposalId,
+          proposal,
+          content,
+          world,
+          sourcePage,
+          input,
+          applyAction,
+          edited,
+        );
+      }
+
       if (input.mode === "idea") {
         const title =
           input.title?.trim() ||
@@ -881,6 +900,141 @@ export class AiReviewService {
     };
   }
 
+  private async applyStructuredGeneratorProposal(
+    proposalId: string,
+    proposal: {
+      id: string;
+      aiRunId: string;
+      worldId: string;
+      sessionId: string | null;
+      editedText: string | null;
+      aiRun: { taskType: string; world: { id: string; slug: string } | null };
+    },
+    content: string,
+    world: { id: string; slug: string },
+    sourcePage: { id: string; title: string; type: string; slug: string },
+    input: ApplyAiProposalInput,
+    applyAction: "apply" | "edit_apply",
+    edited: boolean,
+  ) {
+    const targetType = structuredGeneratorTargetFromTask(proposal.aiRun.taskType);
+    if (!targetType) {
+      return { ok: false as const, message: "Unbekannter strukturierter Generator-Typ." };
+    }
+
+    const schema = getStructuredGeneratorSchema(targetType);
+    const parsed = parseStructuredGeneratorOutput(content, schema);
+    const repo = new UweRepository(this.db);
+    const markdown = formatStructuredGeneratorMarkdown(schema, parsed);
+
+    let undoEntryId: string | undefined;
+
+    if (parsed.summary) {
+      undoEntryId = (await this.undo.capturePageUpdate(sourcePage.id)).id;
+      await repo.updatePage(sourcePage.id, { summary: parsed.summary });
+    }
+
+    const sortOrder = await repo.getNextContentBlockSortOrder(sourcePage.id);
+    const block = await repo.addContentBlock(sourcePage.id, {
+      type: "gm_note",
+      sortOrder,
+      content: markdown,
+      visibility: "dm_only",
+      metadata: {
+        aiRunId: proposal.aiRunId,
+        proposalId,
+        source: "structured_generator",
+        taskType: proposal.aiRun.taskType,
+        fields: parsed.fields,
+      },
+    });
+
+    undoEntryId = (await this.undo.captureAiBlockCreate(block.id, world.id)).id;
+
+    if (parsed.playerText) {
+      const playerSortOrder = await repo.getNextContentBlockSortOrder(sourcePage.id);
+      await repo.addContentBlock(sourcePage.id, {
+        type: "player_text",
+        sortOrder: playerSortOrder,
+        content: parsed.playerText,
+        visibility: "player_visible",
+        metadata: {
+          aiRunId: proposal.aiRunId,
+          proposalId,
+          source: "structured_generator",
+          taskType: proposal.aiRun.taskType,
+        },
+      });
+    }
+
+    const applySummary = `Strukturierten ${schema.label}-Vorschlag auf „${sourcePage.title}“ übernommen.`;
+    const targetHref = buildPageUrl(world.slug, sourcePage.type as import("./generated/prisma/client").PageType, sourcePage.slug);
+    const now = new Date();
+
+    await this.db.aiProposal.update({
+      where: { id: proposalId },
+      data: {
+        status: "applied",
+        appliedAt: now,
+        editedText: input.editedText ?? proposal.editedText,
+        appliedTargetType: "content_block",
+        appliedTargetId: block.id,
+      },
+    });
+
+    await this.db.aiRun.update({
+      where: { id: proposal.aiRunId },
+      data: {
+        status: "applied",
+        appliedAt: now,
+        targetType: "content_block",
+        targetId: block.id,
+      },
+    });
+
+    await this.db.aiApplyLog.create({
+      data: {
+        proposalId,
+        aiRunId: proposal.aiRunId,
+        worldId: proposal.worldId,
+        action: applyAction,
+        summary: applySummary,
+        undoEntryId,
+        details: {
+          mode: input.mode,
+          edited,
+          blockId: block.id,
+          fields: parsed.fields,
+        },
+      },
+    });
+
+    await this.activity.log({
+      worldId: world.id,
+      worldSlug: world.slug,
+      action: "ai_proposal_applied",
+      targetType: "ai_proposal",
+      targetId: proposalId,
+      targetLabel: proposal.aiRun.taskType,
+      targetHref,
+      summary: applySummary,
+      details: {
+        aiRunId: proposal.aiRunId,
+        mode: input.mode,
+        blockId: block.id,
+      },
+    });
+
+    const refreshed = await this.getProposal(proposalId);
+    return {
+      ok: true as const,
+      message: applySummary,
+      proposal: refreshed ?? undefined,
+      appliedTargetType: "content_block",
+      appliedTargetId: block.id,
+    };
+  }
+
   private toView(
     entry: {
       id: string;
@@ -930,6 +1084,21 @@ interface ParsedFactionSimulationEvent {
   summaryPlayer?: string | null;
   summaryDm?: string | null;
   visibility?: Visibility;
+}
+
+function isStructuredGeneratorTaskType(taskType: string): boolean {
+  return (
+    taskType === "generate_structured_npc" ||
+    taskType === "generate_structured_quest" ||
+    taskType === "generate_structured_item"
+  );
+}
+
+function structuredGeneratorTargetFromTask(taskType: string): StructuredGeneratorTarget | null {
+  if (taskType === "generate_structured_npc") return "npc";
+  if (taskType === "generate_structured_quest") return "quest";
+  if (taskType === "generate_structured_item") return "item";
+  return null;
 }
 
 function parseFactionSimulationEvents(content: string): ParsedFactionSimulationEvent[] {

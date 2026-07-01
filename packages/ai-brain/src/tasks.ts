@@ -21,6 +21,9 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   atlas_name_region: "Atlas-Regionen benennen",
   atlas_describe_region: "Atlas-Region beschreiben",
   simulate_faction: "Fraktion simulieren",
+  generate_structured_npc: "NPC strukturiert generieren",
+  generate_structured_quest: "Quest strukturiert generieren",
+  generate_structured_item: "Item strukturiert generieren",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -64,6 +67,12 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
   simulate_faction:
     "Simuliere einen Zeitsprung für die Fraktion im Kontext: Welche Ereignisse, Ressourcen- und Beziehungsänderungen ergeben sich? Antworte NUR als JSON-Objekt {\"events\":[...]} — jedes Event mit title, inGameDate {year,month,day}, summaryPlayer, summaryDm (optional), visibility (player_visible|private|dm_only). Keine Kanon-Änderungen ohne Review.",
+  generate_structured_npc:
+    "Generiere strukturierte NPC-Inhalte aus den Vorgaben. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: voice, motivation, relationship, plotHook, secret. Keine Kanon-Änderung ohne Review.",
+  generate_structured_quest:
+    "Generiere strukturierte Quest-Inhalte. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: patron, objective, twist, failure, reward.",
+  generate_structured_item:
+    "Generiere strukturierte Item-Inhalte. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: rarity, properties, value, curse, lore.",
 };
 
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {
