@@ -244,3 +244,31 @@ export function canManageBackups(ctx: CapabilityContext): boolean {
 export function canManageApiTokens(ctx: CapabilityContext): boolean {
   return hasCapability(ctx, "api_tokens");
 }
+
+export type UweRoleId = keyof typeof GLOBAL_CAPABILITIES;
+export type WorldRoleId = keyof typeof WORLD_CAPABILITIES;
+
+export interface RoleCapabilityMatrixRow {
+  capability: RoleCapability;
+  label: string;
+  global: Record<UweRoleId, boolean>;
+  world: Record<WorldRoleId, boolean>;
+}
+
+/** Read-only matrix for admin UI — global and world membership roles. */
+export function buildRoleCapabilityMatrix(): RoleCapabilityMatrixRow[] {
+  const capabilities = Object.keys(ROLE_CAPABILITY_LABELS) as RoleCapability[];
+  const globalRoles = Object.keys(GLOBAL_CAPABILITIES) as UweRoleId[];
+  const worldRoles = Object.keys(WORLD_CAPABILITIES) as WorldRoleId[];
+
+  return capabilities.map((capability) => ({
+    capability,
+    label: ROLE_CAPABILITY_LABELS[capability],
+    global: Object.fromEntries(
+      globalRoles.map((role) => [role, GLOBAL_CAPABILITIES[role].has(capability)]),
+    ) as Record<UweRoleId, boolean>,
+    world: Object.fromEntries(
+      worldRoles.map((role) => [role, WORLD_CAPABILITIES[role].has(capability)]),
+    ) as Record<WorldRoleId, boolean>,
+  }));
+}

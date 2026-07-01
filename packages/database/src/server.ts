@@ -689,6 +689,24 @@ export type {
   SetupSettingSource,
 } from "./owner-setup-service";
 
+export { getAdminOnboardingChecklist } from "./admin-onboarding-checklist-service";
+
+export type {
+  AdminChecklistItem,
+  AdminOnboardingChecklist,
+  ChecklistItemStatus as AdminChecklistItemStatus,
+} from "./admin-onboarding-checklist-service";
+
+export {
+  CAMPAIGN_JOB_PRESETS,
+  resolveCampaignPresetHref,
+} from "./campaign-job-presets";
+
+export type {
+  CampaignJobPreset,
+  CampaignJobPresetKind,
+} from "./campaign-job-presets";
+
 export {
   assessRtxExposure,
   assessStudioSecurity,
