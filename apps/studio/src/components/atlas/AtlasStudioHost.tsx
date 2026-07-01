@@ -44,7 +44,8 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
 
   const post = useCallback((message: Record<string, unknown>) => {
     const win = iframeRef.current?.contentWindow;
-    if (win) win.postMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, ...message }, window.location.origin);
+    // Spread first so `source` is authoritative and cannot be overridden by a caller.
+    if (win) win.postMessage({ ...message, source: ATLAS_BRIDGE_HOST_SOURCE }, window.location.origin);
   }, []);
 
   const handleSave = useCallback(
@@ -90,6 +91,8 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
 
   const handleVisibility = useCallback(
     async (scope: "node" | "map", nodeId: string | undefined, visibility: string) => {
+      // Node-scope visibility requires a node id; skip rather than hit the server with none.
+      if (scope === "node" && !nodeId) return;
       const fd = new FormData();
       fd.set("worldSlug", worldSlug);
       if (nodeId) fd.set("nodeId", nodeId);
@@ -109,6 +112,9 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
       // Proposal only — the editor shows the result as a ghost overlay for
       // manual Übernehmen/Verwerfen; never auto-applied to canon.
       const fd = new FormData();
+      // Always scope by world so draft generation is authorized (requireStudioWorldEdit)
+      // consistently with the other atlas actions.
+      fd.set("worldSlug", worldSlug);
       fd.set("seed", String(seed));
       try {
         const result = await generateAtlasDraftAction(fd);
@@ -119,7 +125,7 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         console.error("Atlas-Bridge: KI-Entwurf fehlgeschlagen —", error);
       }
     },
-    [post],
+    [post, worldSlug],
   );
 
   const handleHandout = useCallback(
@@ -141,6 +147,9 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     function onMessage(event: MessageEvent) {
       // The iframe is same-origin; reject anything else outright.
       if (event.origin !== window.location.origin) return;
+      // Only trust the embedded editor iframe — not other same-origin tabs/windows
+      // that could spoof a bridge message.
+      if (event.source !== iframeRef.current?.contentWindow) return;
       const data = event.data;
       if (!isEditorMessage(data)) return;
       switch (data.type) {
