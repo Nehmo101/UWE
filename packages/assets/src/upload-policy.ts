@@ -54,7 +54,7 @@ export interface ValidatedUpload {
 }
 
 export function resolveUploadPolicyConfig(): UploadPolicyConfig {
-  const maxBytes = parsePositiveIntEnv("UWE_UPLOAD_MAX_BYTES", DEFAULT_MAX_BYTES);
+  const maxBytes = resolveMaxUploadBytesEnv(DEFAULT_MAX_BYTES);
   const allowDocuments = parseBoolEnv("UWE_UPLOAD_ALLOW_DOCUMENTS", true);
   const allowGif = parseBoolEnv("UWE_UPLOAD_ALLOW_GIF", true);
 
@@ -74,11 +74,24 @@ export function resolveUploadMaxBytes(): number {
   return resolveUploadPolicyConfig().maxBytes;
 }
 
-function parsePositiveIntEnv(name: string, fallback: number): number {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+/**
+ * Resolve the max upload size from the environment.
+ *
+ * `UWE_UPLOAD_MAX_BYTES` is the canonical variable. For back-compat with the
+ * removed `upload-validation.ts` / `upload-security.ts` modules we also accept
+ * their legacy variables as fallbacks, in this precedence order:
+ *   1. `UWE_UPLOAD_MAX_BYTES` (canonical)
+ *   2. `UPLOAD_MAX_BYTES`     (legacy, from upload-validation.ts)
+ *   3. `UWE_MAX_UPLOAD_BYTES` (legacy, from upload-security.ts)
+ */
+function resolveMaxUploadBytesEnv(fallback: number): number {
+  for (const name of ["UWE_UPLOAD_MAX_BYTES", "UPLOAD_MAX_BYTES", "UWE_MAX_UPLOAD_BYTES"]) {
+    const raw = process.env[name]?.trim();
+    if (!raw) continue;
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return fallback;
 }
 
 function parseBoolEnv(name: string, fallback: boolean): boolean {

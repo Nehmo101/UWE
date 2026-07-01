@@ -76,11 +76,11 @@ Regressionstest: `scripts/studio-route-auth.test.ts`
 - `requireRestoreOwnerAuth` für `POST /api/backup/restore/execute`
 - Optional `RESTORE_OWNER_TOKEN` in `.env` — Remote-Skripte brauchen Owner-Token, Studio-UI (same-origin) weiterhin ohne Extra-Token
 
-### Upload-Härtung (`packages/assets/src/upload-validation.ts`)
+### Upload-Härtung (`packages/assets/src/upload-policy.ts`)
 
 - Magic-Byte-Erkennung + MIME-Allowlist
 - Blockiert HTML, JS, SVG, XML
-- Default 50 MB (`UPLOAD_MAX_BYTES` konfigurierbar)
+- Default 25 MB (`UWE_UPLOAD_MAX_BYTES` konfigurierbar; Legacy-Fallbacks `UPLOAD_MAX_BYTES` / `UWE_MAX_UPLOAD_BYTES`)
 - Asset-Auslieferung: gefährliche MIME-Typen als `attachment`
 
 ### Security-Headers (`packages/auth/src/security-headers.ts`)

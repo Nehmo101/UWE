@@ -5,6 +5,7 @@ import {
   UploadValidationError,
   ZipSecurityError,
   assertSafeZipEntryName,
+  buildAssetDownloadHeaders,
   buildSecureStorageKey,
   detectFileKind,
   extractSafeZipEntries,
@@ -36,6 +37,8 @@ describe("upload security policy", () => {
 
   afterEach(() => {
     delete process.env.UWE_UPLOAD_MAX_BYTES;
+    delete process.env.UPLOAD_MAX_BYTES;
+    delete process.env.UWE_MAX_UPLOAD_BYTES;
   });
 
   it("blocks .html uploads by extension", () => {
@@ -165,6 +168,64 @@ describe("upload security policy", () => {
         return true;
       },
     );
+  });
+
+  it("falls back to legacy UPLOAD_MAX_BYTES when canonical env is unset", () => {
+    process.env.UPLOAD_MAX_BYTES = "32";
+    assert.throws(
+      () =>
+        validateUploadInput({
+          buffer: MIN_PNG,
+          originalFilename: "big.png",
+          declaredMimeType: "image/png",
+          worldId,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof UploadValidationError);
+        assert.equal(error.code, "file_too_large");
+        return true;
+      },
+    );
+  });
+
+  it("falls back to legacy UWE_MAX_UPLOAD_BYTES when canonical env is unset", () => {
+    process.env.UWE_MAX_UPLOAD_BYTES = "32";
+    assert.throws(
+      () =>
+        validateUploadInput({
+          buffer: MIN_PNG,
+          originalFilename: "big.png",
+          declaredMimeType: "image/png",
+          worldId,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof UploadValidationError);
+        assert.equal(error.code, "file_too_large");
+        return true;
+      },
+    );
+  });
+
+  it("prefers canonical UWE_UPLOAD_MAX_BYTES over legacy fallbacks", () => {
+    process.env.UWE_UPLOAD_MAX_BYTES = String(1024 * 1024);
+    process.env.UPLOAD_MAX_BYTES = "32";
+    process.env.UWE_MAX_UPLOAD_BYTES = "32";
+    const result = validateUploadInput({
+      buffer: MIN_PNG,
+      originalFilename: "small.png",
+      declaredMimeType: "image/png",
+      worldId,
+    });
+    assert.equal(result.kind, "png");
+  });
+
+  it("serves SVG assets as attachment (never inline)", () => {
+    const headers = buildAssetDownloadHeaders({
+      mimeType: "image/svg+xml",
+      size: 128,
+      title: "icon.svg",
+    });
+    assert.match(headers["Content-Disposition"] ?? "", /^attachment;/);
   });
 
   it("never embeds original filename in storage path", () => {
