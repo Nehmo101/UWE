@@ -1,4 +1,54 @@
 import type { UweRepository } from "./repository";
+import type { PrismaClient } from "./client";
+import { createWorldCalendarService } from "./world-calendar-service";
+import { createWorldEventService } from "./world-event-service";
+
+export async function seedTerraChronicle(
+  db: PrismaClient,
+  worldId: string,
+  pages: {
+    validori: { id: string };
+    nepurga: { id: string };
+  },
+) {
+  const calendars = createWorldCalendarService(db);
+  const calendar = await calendars.upsertForWorld({
+    worldId,
+    name: "Kalender von Terra",
+    epochLabel: "Zeitalter des Erwachens",
+    currentDate: { year: 472, month: 3, day: 12 },
+    months: [
+      { key: "frost", name: "Frostmond", daysInMonth: 30 },
+      { key: "bluete", name: "Blütenmond", daysInMonth: 30 },
+      { key: "sonne", name: "Sonnenmond", daysInMonth: 30 },
+      { key: "ernte", name: "Erntemond", daysInMonth: 30 },
+    ],
+    dayNames: ["Sol", "Lun", "Mar", "Mer", "Jov", "Ven", "Sat"],
+  });
+
+  const events = createWorldEventService(db);
+  await events.create({
+    worldId,
+    calendarId: calendar.id,
+    inGameDate: { year: 472, month: 2, day: 14 },
+    title: "Rat von Validori tagt",
+    summaryPlayer:
+      "Die Magister von Validori beraten über Handelswege und Gerüchte aus Nepurga.",
+    summaryDm: "Der Rat plant eine geheime Gesandtschaft nach Nepurga.",
+    visibility: "player_visible",
+    linkedPages: [{ pageId: pages.validori.id, role: "location" }],
+  });
+
+  await events.create({
+    worldId,
+    calendarId: calendar.id,
+    inGameDate: { year: 472, month: 3, day: 1 },
+    title: "Nepurga erweitert Grenzposten",
+    summaryPlayer: "Truppenbewegungen nahe Arbor werden beobachtet.",
+    visibility: "player_visible",
+    linkedPages: [{ pageId: pages.nepurga.id, role: "faction" }],
+  });
+}
 
 export async function seedTerraWorld(repo: UweRepository) {
   const world = await repo.createWorld({

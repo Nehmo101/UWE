@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  advanceInGameDate,
   createPrismaClient,
   createWorldCalendarService,
   getAppRepository,
+  parseInGameDate,
+  parseWorldCalendarMonths,
   type WorldCalendarMonth,
 } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
@@ -93,5 +96,48 @@ export async function updateWorldCalendarAction(formData: FormData) {
   }
 
   revalidatePath(`/worlds/${worldSlug}/calendar`);
+  redirect(`/worlds/${worldSlug}/calendar?saved=1`);
+}
+
+export async function advanceWorldCalendarAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug"));
+  const advanceDays = Number(formData.get("advanceDays"));
+
+  if (!Number.isFinite(advanceDays) || advanceDays < 1 || advanceDays > 365) {
+    throw new Error("Vorlauf muss zwischen 1 und 365 Tagen liegen.");
+  }
+
+  await requireStudioWorldEdit(worldSlug);
+
+  const db = createPrismaClient();
+  try {
+    const repo = getAppRepository();
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) {
+      throw new Error("Welt nicht gefunden.");
+    }
+
+    const calendars = createWorldCalendarService(db);
+    let calendar = await calendars.getByWorldId(world.id);
+    if (!calendar) {
+      calendar = await calendars.upsertForWorld({ worldId: world.id });
+    }
+
+    const months = parseWorldCalendarMonths(calendar.months);
+    const current = parseInGameDate(calendar.currentDate);
+    const next = advanceInGameDate(current, Math.floor(advanceDays), months);
+
+    await calendars.upsertForWorld({
+      worldId: world.id,
+      currentDate: next,
+    });
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/calendar`);
+  revalidatePath(`/worlds/${worldSlug}/chronicle`);
   redirect(`/worlds/${worldSlug}/calendar?saved=1`);
 }

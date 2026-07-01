@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juli 2026 (Doku-Sync Batch 5) · Rest-Batches 1–5 + Waves A–D weitgehend umgesetzt.
+Stand: Juli 2026 (Doku-Sync Wave C) · Rest-Batches 1–5 + Waves A–D + Wave C (Chronik) umgesetzt.
 
 **Legende**
 
@@ -384,6 +384,17 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | UI | `/admin/migrations` — angewendet / ausstehend / fehlerhaft (read-only) |
 | Service | `migration-status.ts` (+ `appliedMigrations`, `failedDetails`) |
 | Nutzbar | **Ja** |
+
+---
+
+## 12d. DnD — World-Clock & Chronik (Welle C)
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| World-Clock | Beta | `WorldCalendar`, `/worlds/[slug]/calendar`, `advanceInGameDate` |
+| Welt-Chronik (Studio) | Beta | `/worlds/[slug]/chronicle`, `PageChroniclePanel` |
+| Spieler-Timeline | Beta | `/auth/worlds/[slug]/timeline`, `PortalPageChronicleSection` |
+| Fraktions-State | Beta | `FactionState`, `FactionStateEditPanel`, `simulate_faction` (Review) |
 
 ---
 

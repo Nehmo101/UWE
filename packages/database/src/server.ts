@@ -53,6 +53,7 @@ export type { CreateWorldRequest, CreatedWorldResult } from "./world-creation-se
 
 export {
   createWorldCalendarService,
+  advanceInGameDate,
   DEFAULT_IN_GAME_DATE,
   DEFAULT_WORLD_CALENDAR_MONTHS,
   formatInGameDate,
@@ -383,7 +384,7 @@ export {
 } from "./auth-seed";
 export type { SeedAuthUsersResult } from "./auth-seed";
 
-export { seedTerraWorld } from "./terra-seed";
+export { seedTerraWorld, seedTerraChronicle } from "./terra-seed";
 export { seedStressWorld, PERF_SMOKE_SCALE, PERF_STRESS_SCALE } from "./stress-seed";
 export type { StressSeedResult } from "./stress-seed";
 export {

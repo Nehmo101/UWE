@@ -123,3 +123,47 @@ export function parseDayNames(value: unknown): string[] | null {
   const names = value.filter((entry): entry is string => typeof entry === "string");
   return names.length > 0 ? names : null;
 }
+
+/** Advance an in-game date by a number of calendar days (wraps months/years). */
+export function advanceInGameDate(
+  date: InGameDate,
+  days: number,
+  months: WorldCalendarMonth[],
+): InGameDate {
+  if (months.length === 0 || days === 0) {
+    return { ...date };
+  }
+
+  let year = date.year;
+  let month = date.month;
+  let day = date.day;
+  let remaining = Math.max(0, Math.floor(days));
+
+  while (remaining > 0) {
+    const monthDef = months[month - 1] ?? months[0]!;
+    const daysInMonth = Math.max(1, monthDef.daysInMonth);
+    if (day < 1) {
+      day = 1;
+    }
+    if (day > daysInMonth) {
+      day = daysInMonth;
+    }
+
+    const daysLeftInMonth = daysInMonth - day + 1;
+    if (remaining < daysLeftInMonth) {
+      day += remaining;
+      remaining = 0;
+      break;
+    }
+
+    remaining -= daysLeftInMonth;
+    month += 1;
+    day = 1;
+    if (month > months.length) {
+      month = 1;
+      year += 1;
+    }
+  }
+
+  return { year, month, day };
+}

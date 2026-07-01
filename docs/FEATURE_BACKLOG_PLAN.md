@@ -108,7 +108,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 5 | Handout-Bereich | ✅ | `PageType.handout` + Template, `Asset`(image/map/handout/document), Portal `/assets`, `ShareLink`, `generate_handout` | Handouts auf Assets **und** Wiki-Seiten verteilt; kein typisierter Unterbereich (Rätsel/Briefe). Kern erfüllt. |
 | 6 | Spielernotizen | ✅ | `PlayerNote` (private/dm_only/party + status-Workflow), `/auth/.../notes`, DM-Review in Studio, Backup opt-in | Kein Realtime-Collab (Formular-CRUD). Kern erfüllt. |
 | 7 | NPC-Liste für Spieler | 🔶 | `PageType.npc`, `filterPagesForViewer`/`gm_note`-Schutz, `PagePlayerAccess`/`SessionUnlock`, Dashboard `knownNpcs`, Suchfilter `npcs` | **Keine dedizierte NPC-Listen-Route**; `player_character`+`monster` im selben Widget gemischt. |
-| 8 | Timeline (Spielersicht) | ⬜ | `ContentBlockType.timeline` (unstrukturiert), `GameSession.date`/`sessionNumber` | **Echtes Neubau-Thema**: chronologische, spoiler-freie Ereignis-Ansicht; kein Renderer, kein Event-Aggregat. |
+| 8 | Timeline (Spielersicht) | 🔶 | `WorldEvent` + `/auth/worlds/[slug]/timeline`, `PortalPageChronicleSection` | Portal-Timeline + Entitäts-Chronik shipped (Welle C). Optional: Story-Layout. |
 | 9 | Beziehungsnetz | ✅ | `graph-service.ts`, Portal `/auth/worlds/[slug]/graph`, `PortalGraphView`, `portal-nav` | Optional: Graph in Mobile-Bottom-Nav. Kern erfüllt (Welle A). |
 | 10 | Inventar / Gruppenbesitz | ⬜ | verwandt: `PageType.loot` (Dungeon), `PageType.item` (Handouts) | **Echtes Neubau-Thema**: kein Inventar/Party-Treasury-Modell (Geld/Items/Artefakte). |
 | 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service`, `playerVisibleSchedule`, Session-Edit-Checkbox | **`nextSession` sichtbar wenn DM Termin ankündigt** (opt-in). Batch 5: Studio-Hinweis wenn geplant aber nicht angekündigt. |
@@ -155,7 +155,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 13 | Kanon-Konfliktprüfung | 🔶 | `canon-rules.ts` (Terra-spezifisch + Duplikate), `canon_check`-Job→`world-inspector`, `BrainFactType.canon` | Keine „NPC ist tot“/Timeline-Checks; Regeln nicht welt-generisch; KI-abhängig. |
 | 14 | Broken Link Scanner | ✅ | `world-inspector.ts` (`broken_wiki_link`/`orphan_page`/`duplicate_name`/`hidden_link_in_portal_page`) + Fix-Aktionen, `canon_check`-Job | „Unused NPC“ nur als `orphan_page` (info). Kern erfüllt. |
 | 15 | Faction Simulator | ⬜ | Fraktionen existieren als `PageType.faction` + Graph | **Echtes Neubau-Thema**: kein Fraktions-State, keine Zwischen-Session-Logik, keine UI. |
-| 16 | World Clock | ⬜ | `packages/calendar` ist **real-world**; `ContentBlockType.timeline` unstrukturiert | **Echtes Neubau-Thema**: keine In-Game-Zeit/Regionalkalender/„Welt-Uhr vorstellen“. |
+| 16 | World Clock | ✅ | `WorldCalendar`, `/worlds/[slug]/calendar`, `advanceInGameDate`, Terra-Seed | Kern: konfigurierbarer Kalender + aktuelles Datum + Vorlauf-Buttons. Feiertage optional später. |
 | 17 | Print Center | 🔶 | `Label`/`LabelTemplate`/`PrintList`, `label-service.ts` (6×4"), PDF/HTML-Export, RTX/CUPS-Print, Session→Printliste | „Verträge“ in Daily-Admin (`/contracts`), nicht im Print-Center; keine benannten NPC-/Item-Karten-Templates. |
 | 18 | Statblock Studio | 🔶 | `ContentBlockType.statblock`, Open5e→Markdown-Import (`statblock-format.ts`), Label kann Statblock-Text | **Kein strukturierter Statblock-Editor**; Export **nur Markdown** (kein Homebrewery/5e.tools/JSON); kein 1-Klick „Statblock→6×4-Label“. |
 
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#383). Nächste offene Neubau-Themen: World-Clock, Faction-Sim, Spieler-Timeline, Owner-Notfallmodus.
+#357–#383). Nächste offene Neubau-Themen: Faction-Sim (Ende C), Owner-Notfallmodus, World Templates.

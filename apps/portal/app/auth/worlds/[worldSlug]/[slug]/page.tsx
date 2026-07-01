@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CharacterSheetPanel } from "@/src/components/CharacterSheetPanel";
 import { PortalPageNeighborhoodGraph } from "@/src/components/PortalPageNeighborhoodGraph";
+import { PortalPageChronicleSection } from "@/src/components/PortalPageChronicleSection";
 import { PlayerCharacterEditPanel } from "@/src/components/PlayerCharacterEditPanel";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
@@ -150,6 +151,8 @@ export default async function AuthWorldPageDetail({ params }: Props) {
       </div>
 
       <PortalPageNeighborhoodGraph worldSlug={worldSlug} pageId={page.id} />
+
+      <PortalPageChronicleSection worldSlug={worldSlug} pageId={page.id} ctx={ctx} />
 
       {characterSheet && (
         <CharacterSheetPanel

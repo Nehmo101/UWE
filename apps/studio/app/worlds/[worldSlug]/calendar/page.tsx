@@ -10,7 +10,7 @@ import {
   parseInGameDate,
   parseWorldCalendarMonths,
 } from "@uwe/database/server";
-import { updateWorldCalendarAction } from "@/app/world-calendar-actions";
+import { updateWorldCalendarAction, advanceWorldCalendarAction } from "@/app/world-calendar-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -84,6 +84,17 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
           <strong>{formattedDate}</strong>
           {calendar.epochLabel ? ` (${calendar.epochLabel})` : null}
         </p>
+        <div className="uwe-inline-actions" style={{ marginTop: "1rem", gap: "0.5rem" }}>
+          {[1, 7, 30].map((days) => (
+            <form key={days} action={advanceWorldCalendarAction} style={{ display: "inline" }}>
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="advanceDays" value={days} />
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+                +{days} {days === 1 ? "Tag" : "Tage"}
+              </button>
+            </form>
+          ))}
+        </div>
       </section>
 
       <form action={updateWorldCalendarAction} className="uwe-v2-form uwe-v2-card">

@@ -5,7 +5,7 @@ import { createUweRepository } from "../src/repository";
 import { seedAuthDemoContent, seedAuthUsers } from "../src/auth-seed";
 import { ensureSystemPageTemplates } from "../src/page-template-service";
 import { ensureSystemMailTemplates } from "../src/mail-template-service";
-import { seedTerraWorld } from "../src/terra-seed";
+import { seedTerraWorld, seedTerraChronicle } from "../src/terra-seed";
 
 async function main() {
   const repo = createUweRepository();
@@ -26,6 +26,11 @@ async function main() {
   );
 
   const result = await seedTerraWorld(repo);
+
+  await seedTerraChronicle(prisma, result.world.id, {
+    validori: result.pages.validori,
+    nepurga: result.pages.nepurga,
+  });
 
   await auth.setWorldGuestMode(result.world.id, true);
 

@@ -1018,6 +1018,35 @@ export class AuthService {
       .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
 
+  async listWorldEventsForPageViewer(
+    worldSlug: string,
+    pageId: string,
+    ctx: AccessContext,
+  ): Promise<PortalWorldEventView[]> {
+    const mayView =
+      ctx.effectiveRole === "player" ||
+      ctx.effectiveRole === "owner" ||
+      ctx.effectiveRole === "dm" ||
+      ctx.effectiveRole === "admin";
+    if (!mayView) {
+      return [];
+    }
+
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
+    if (!world) {
+      return [];
+    }
+
+    const events = createWorldEventService(this.db);
+    const rows = await events.listForPage(pageId);
+    const portalRows = rows as WorldEventWithLinks[];
+
+    return portalRows
+      .filter((event) => this.canViewWorldEventForPortal(ctx, event))
+      .map((event) => this.toPortalWorldEventViewForViewer(event, ctx))
+      .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
+  }
+
   async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
     const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
 
