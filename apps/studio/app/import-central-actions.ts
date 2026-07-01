@@ -3,21 +3,28 @@
 import {
   createImportJobService,
   createUweRepository,
+  executeMarkdownImport,
+  previewMarkdownImport,
   prisma,
   type ImportSourceType,
   type ImportTargetType,
+  type MarkdownImportPreviewResult,
 } from "@uwe/database/server";
 import {
   importSourceRegistry,
   parseImportContent,
   previewFromContent,
-  type ImportFormat,
   type ImportPreviewResult,
 } from "@uwe/knoteforge-import";
 import { revalidatePath } from "next/cache";
 import { assertStudioTrusted } from "@/src/lib/authz";
 import { getCurrentUser } from "@/src/lib/auth";
-import { isImportCentralComboSupported } from "@/src/lib/import-central-utils";
+import {
+  importCentralUsesWorldTarget,
+  isImportCentralComboSupported,
+  isImportCentralMarkdownTarget,
+  importCentralSourceFormat,
+} from "@/src/lib/import-central-utils";
 
 const VALID_SOURCE_TYPES = new Set<ImportSourceType>([
   "knoteforge",
@@ -35,17 +42,6 @@ const VALID_TARGET_TYPES = new Set<ImportTargetType>([
 
 function importJobs() {
   return createImportJobService(prisma);
-}
-
-function sourceTypeToFormat(sourceType: ImportSourceType): ImportFormat | null {
-  switch (sourceType) {
-    case "knoteforge":
-      return "json";
-    case "markdown":
-      return "markdown";
-    default:
-      return null;
-  }
 }
 
 function revalidateImportCentral() {
@@ -68,6 +64,23 @@ function readWorldSlug(metadata: unknown): string | null {
   return typeof slug === "string" && slug.trim() ? slug.trim() : null;
 }
 
+async function resolveWorldContext(targetWorldId: string | null) {
+  if (!targetWorldId) {
+    return { worldId: null, worldSlug: null };
+  }
+
+  const world = await prisma.world.findUnique({
+    where: { id: targetWorldId },
+    select: { id: true, slug: true },
+  });
+
+  if (!world) {
+    throw new Error("Welt nicht gefunden.");
+  }
+
+  return { worldId: world.id, worldSlug: world.slug };
+}
+
 export async function createImportCentralJobAction(formData: FormData): Promise<{ jobId: string }> {
   assertStudioTrusted();
 
@@ -86,21 +99,19 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
   const sourceType = sourceTypeRaw as ImportSourceType;
   const targetType = targetTypeRaw as ImportTargetType;
 
-  const needsWorld = targetType === "world" || targetType === "dnd_page";
+  if (!isImportCentralComboSupported(sourceType, targetType)) {
+    throw new Error("Diese Import-Kombination ist noch nicht verfügbar.");
+  }
+
+  const needsWorld = importCentralUsesWorldTarget(targetType);
   if (needsWorld && !targetWorldId) {
     throw new Error("Bitte eine Welt auswählen.");
   }
 
   let worldSlug: string | null = null;
   if (targetWorldId) {
-    const world = await prisma.world.findUnique({
-      where: { id: targetWorldId },
-      select: { id: true, slug: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden.");
-    }
-    worldSlug = world.slug;
+    const world = await resolveWorldContext(targetWorldId);
+    worldSlug = world.worldSlug;
   }
 
   const user = await getCurrentUser();
@@ -120,7 +131,7 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
 export async function previewImportCentralJobAction(
   jobId: string,
   content: string,
-): Promise<{ preview: ImportPreviewResult }> {
+): Promise<{ preview: ImportPreviewResult | MarkdownImportPreviewResult }> {
   assertStudioTrusted();
 
   const job = await requireImportJob(jobId);
@@ -128,7 +139,30 @@ export async function previewImportCentralJobAction(
     throw new Error("Vorschau für diese Kombination ist noch nicht verfügbar.");
   }
 
-  const format = sourceTypeToFormat(job.sourceType);
+  if (content.length > 10 * 1024 * 1024) {
+    throw new Error("Import-Datei ist zu groß (max. 10 MB).");
+  }
+
+  if (isImportCentralMarkdownTarget(job.targetType)) {
+    const worldSlug = readWorldSlug(job.metadata);
+    const preview = previewMarkdownImport(content, {
+      targetType: job.targetType,
+      sourceType: job.sourceType,
+      fileName: job.fileName,
+      worldId: job.targetWorldId,
+      worldSlug,
+    });
+
+    await importJobs().updateJob(jobId, {
+      status: "preview",
+      previewPayload: preview as unknown as Record<string, unknown>,
+    });
+
+    revalidateImportCentral();
+    return { preview };
+  }
+
+  const format = importCentralSourceFormat(job.sourceType);
   if (!format) {
     throw new Error("Quelltyp unterstützt keine Vorschau.");
   }
@@ -136,10 +170,6 @@ export async function previewImportCentralJobAction(
   const worldSlug = readWorldSlug(job.metadata);
   if (!worldSlug) {
     throw new Error("Welt-Kontext fehlt für diesen Import-Job.");
-  }
-
-  if (content.length > 10 * 1024 * 1024) {
-    throw new Error("Import-Datei ist zu groß (max. 10 MB).");
   }
 
   if (!importSourceRegistry.supportedFormats().includes(format)) {
@@ -164,6 +194,62 @@ export async function previewImportCentralJobAction(
 
   revalidateImportCentral();
   return { preview };
+}
+
+export async function executeImportCentralJobAction(
+  jobId: string,
+  content: string,
+  itemIds?: string[],
+): Promise<{ resultSummary: Record<string, unknown> }> {
+  assertStudioTrusted();
+
+  const job = await requireImportJob(jobId);
+  if (!isImportCentralComboSupported(job.sourceType, job.targetType)) {
+    throw new Error("Import für diese Kombination ist noch nicht verfügbar.");
+  }
+
+  if (!isImportCentralMarkdownTarget(job.targetType)) {
+    throw new Error("Dieser Import-Job wird über den Welt-Import ausgeführt.");
+  }
+
+  if (content.length > 10 * 1024 * 1024) {
+    throw new Error("Import-Datei ist zu groß (max. 10 MB).");
+  }
+
+  await importJobs().markExecuting(jobId);
+
+  try {
+    const worldSlug = readWorldSlug(job.metadata);
+    const result = await executeMarkdownImport(
+      prisma,
+      content,
+      {
+        targetType: job.targetType,
+        sourceType: job.sourceType,
+        fileName: job.fileName,
+        worldId: job.targetWorldId,
+        worldSlug,
+      },
+      { itemIds },
+    );
+
+    const resultSummary = {
+      created: result.created,
+      updated: result.updated,
+      failed: result.failed,
+      skipped: result.skipped,
+      createdIds: result.createdIds,
+    };
+
+    await importJobs().markCompleted(jobId, resultSummary);
+    revalidateImportCentral();
+    return { resultSummary };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
+    await importJobs().markFailed(jobId, message);
+    revalidateImportCentral();
+    throw new Error(message);
+  }
 }
 
 export async function markImportCentralExecutingAction(jobId: string): Promise<void> {
