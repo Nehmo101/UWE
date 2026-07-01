@@ -69,6 +69,12 @@ interface IdeaWorkspaceClientProps {
   };
 }
 
+type WorkspaceContext = {
+  view: IdeaWorkspaceView;
+  lifecycle: string | null;
+  module: string | null;
+};
+
 const STATUS_LABELS: Record<IdeaStatus, string> = {
   in_planning: "In Planung",
   implemented: "Umgesetzt",
