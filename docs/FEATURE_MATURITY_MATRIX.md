@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juli 2026 (Doku-Sync Wave C) · Rest-Batches 1–5 + Waves A–D + Wave C (Chronik) umgesetzt.
+Stand: 2026-07-01 (Doku-Sync nach PR #394) · Rest-Batches 1–5 + Backlog-Wellen A–D (PRs #357–#394) umgesetzt.
 
 **Legende**
 
@@ -27,14 +27,14 @@ Stand: Juli 2026 (Doku-Sync Wave C) · Rest-Batches 1–5 + Waves A–D + Wave C
 | 3 | DnD API / offene Quellen | Stable (Kern) | Ja (Suche + Statblock-Import) | Ja (Kern) |
 | 4 | Agent Jobs / Orchestrator | Phase 1 done | Ja (mit Limits) | Teilweise |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
-| 6 | Import Preview / Undo | Preview ja, Undo nein | Preview ja | Preview ja |
+| 6 | Import Preview / Undo | Preview ja, Undo Beta | Ja | Preview ja |
 | 7 | Secrets-/Reveal-System | Stable (Page + Block) | Ja | Ja (Kern) |
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
-| 10 | Global Search 2.0 | Erweiterte Suche v1 | Ja | Ja (Kern) |
+| 10 | Global Search 2.0 | Cross-domain lexikalisch (#391) | Ja | Ja (Kern) |
 | 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke + sandbox) | Ja (perf-test sandbox) | Nein |
 | 12 | Medienverwaltung | Phase 2 (Alben) | Ja | Ja (Kern) |
-| 13 | Tag-/Taxonomie-Aufräumer | Service + Tests | Teilweise (API) | Nein |
+| 13 | Tag-/Taxonomie-Aufräumer | EntityTag-Primärquelle (#393) | Ja (Admin-UI + Merge) | Teilweise (Backfill unverifiziert) |
 | 14 | Hard UI/UX Reset — Shells + Nav | Wave 3 (C4) | Ja (Studio/Portal/Connector) | Ja (Kern) |
 | 15 | Label-Druck via RTX + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
 
@@ -60,6 +60,11 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 - Secrets/Reveal (Page + Block — production-ready Kern)
 - Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
 - Agent Jobs (Dispatch + Polling — kein Auto-Merge by design)
+- Charaktersheet Voll-5e (Kern + Level-Up + Spell-Slots), Party-Treasury/Inventar (Studio + Portal)
+- Strukturierte Generatoren NPC/Quest/Item (Review-pflichtig), Statblock Studio (JSON-Editor + Exporte + Label)
+- Bug Center (`/bugs`), NL-Admin-Kommandos (Whitelist-Intents), Unified Activity + Owner Cockpit (#394)
+- World-Clock/Chronik/Spieler-Timeline/Faction-Sim (Welle C), Kanon-Lifecycle (#392), Cross-Domain-Suche (#391)
+- Import-Zentrale (Multi-Quelle; Obsidian/PDF-UI fehlt), Miniaturen-Sammlung (`/miniatures`), „Was ist offen?“-View
 
 ### 🧪 Lab / nicht production-ready
 
@@ -231,7 +236,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Nutzbar | **Ja** |
 | Production-ready | **Teilweise** — README war veraltet (korrigiert) |
 
-**Lücken:** `nextActionDate`, Global Search für Admin-Entitäten, RTX Capture-Triage. Kalender auf `/today` ist implementiert (PR #245).
+**Lücken:** `nextActionDate`. Cross-domain Suche deckt Admin-Entitäten inzwischen ab (#391); Capture-Triage bleibt heuristisch (LLM-Ausbau per Owner-Entscheid gestrichen). Kalender auf `/today` ist implementiert (PR #245).
 
 **Referenzen:** `docs/daily-admin-os.md`, `apps/studio/app/today/`
 
@@ -314,15 +319,15 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 | Kriterium | Status |
 |-----------|--------|
-| Vorhanden | Ja (kein separates „2.0“-Produkt) |
-| UI | `/search`, Command Palette, Portal/Welt-Embeds |
+| Vorhanden | Ja — inkl. cross-domain Suche (#391) |
+| UI | `/search` (Wiki + Daily Admin + Medien + EntityTag-Facetten), Command Palette, Portal/Welt-Embeds |
 | API | RSC + `GET /api/command/search` (kein `/api/search` REST) |
-| DB | `search-service.ts`, 14 Entity-Filter |
+| DB | `search-service.ts` + `cross-domain-search-service.ts`, Entity-Filter |
 | Tests | Ja — `search-service.test.ts`, Leak-Tests |
 | Nutzbar | **Ja** |
 | Production-ready | **Ja** (Kern) |
 
-**Fehlt vs. hypothetisches 2.0:** Semantic/Embedding-Suche, dedizierte Search-API, dokumentierte v2-Roadmap.
+**Fehlt vs. hypothetisches 2.0:** Semantic/Embedding-Suche (per Beschluss bewusst außerhalb des Backlogs), dedizierte Search-API.
 
 **Referenzen:** `packages/database/src/search-service.ts`, `apps/studio/app/search/page.tsx`
 
@@ -373,7 +378,11 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 |---------|--------|-------|
 | Beziehungsnetz | Beta | `/auth/worlds/[slug]/graph`, `PortalGraphView` |
 | Questlog + Lifecycle | Beta | `/auth/worlds/[slug]/quests`, `quest-lifecycle-service`, Suche `entityFilter=quests` |
-| Nächste Session | Beta | `playerVisibleSchedule`, `portal-dashboard-service` |
+| Nächste Session | Beta — bekannter Bug: `nextSession` praktisch immer `null` (recapPublished-Filter), Fix in Arbeit | `playerVisibleSchedule`, `portal-dashboard-service` |
+| Wiki-/NPC-Routen | Beta | `/auth/worlds/[slug]/wiki`, `/auth/worlds/[slug]/npcs` (Wave A1) |
+| Charaktersheet (Spielersicht) | Beta | `/auth/worlds/[slug]/characters` |
+| Gruppenschatz (Spielersicht) | Beta — player-safe Filtering noch nicht verifiziert | `/auth/worlds/[slug]/treasury` |
+| Mobile Bottom-Nav | Beta — nicht überall Default (Folge-PR in Arbeit) | `MobileBottomNav`, `resolvePortalAuthBottomNav`, `PortalShell` |
 
 ---
 
@@ -418,6 +427,38 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 ---
 
+## 12g. DnD — Charaktere, Treasury, Generatoren, Statblock, Open Items (Backlog-Wellen)
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| Charaktersheet (Voll 5e, Kern) | Beta — offen: SRD/Open5e-Zauberkatalog-Import, einzelne derived Stats (Folge-PR in Arbeit) | `Character`-Modell, `character-service.ts`, `character-level-up-service.ts`, `character-spell-service.ts`, Print-Route |
+| Party-Treasury / Inventar | Beta | `PartyTreasury`/`InventoryItem`, `party-treasury-service.ts`, `/worlds/[slug]/treasury` |
+| Strukturierte Generatoren | Beta — Quest-/Magic-Item-Builder-UI (strukturierte Felder) fehlen | `generator-service.ts` (`generate_npc`/`generate_quest`/`generate_item`, reviewRequired), `GeneratorPreset`/`GeneratorOutput`, `StructuredGeneratorSection` |
+| Statblock Studio (strukturiert) | Beta — visueller Feld-Editor fehlt (JSON-Textarea) | `StructuredStatblock`, `StatblockStudioPanel`, `statblock-structured-export.ts` (JSON/5e.tools/Homebrewery), `createStatblockLabelAction` |
+| Encounter-XP-Budget | Beta | `packages/dnd-api/src/encounter-xp-budget.ts` |
+| „Was ist offen?“-View | Beta | `/worlds/[slug]/open-items`, `world-open-items-service.ts` |
+| SRD-Equipment-Import | Beta | `ItemBuilderSection`, `/api/dnd/equipment/search`, `applySrdEquipmentToItemAction` |
+
+---
+
+## 12h. Admin & Daily Admin — Bug Center, NL-Kommandos, Import-Zentrale, Dokumente, Miniaturen
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| Bug Center | Beta | `BugReport`, `/bugs` (Report-Form, Liste, Screenshot-Upload) |
+| NL-Admin-Kommandos | Beta — User-/Welt-Intents in PR #395 offen; `create_world` + globale Rollenänderung fehlen | `nl-command-service.ts` (Maintenance/Lock/List/Status, Bestätigung, Audit) |
+| Unified Activity + Owner Cockpit | Beta | `/admin/activity`, `/admin/cockpit` (#394) |
+| Secrets-Status (read-only) | Beta | `/admin/secrets` |
+| Admin-Checklist | Beta | `/admin/checklist` |
+| Auto-Backup vor Migration | Beta | `db:deploy:safe` (`packages/database/scripts/db-deploy-safe.mjs`) |
+| Import-Zentrale (Multi-Quelle) | Beta — Obsidian-/PDF-UI fehlt | `ImportSourceType` (knoteforge/obsidian/pdf/markdown/bulk_image), Preview/Execute/Undo |
+| Dokumentengenerator | Scaffolding — Generier-Workflow fehlt | `DocumentTemplate` (contract/guide/checklist), `/documents` |
+| Miniaturen-Sammlung | Beta — Fotovergleich-Slider fehlt | `MiniatureCollectionItem`, `/miniatures` |
+| Feature Registry (DevIdea) | Teilweise — Filter-UI + Prompt-CRUD fehlen | `DevIdea` (`ideaType`/`lifecycle`/`module`/`maturityLevel`), `/ideas` |
+| Projekt-Dashboards | Teilweise — pro-Domäne-Kacheln fehlen | `PersonalProject.category`, `/projects`, `/today` |
+
+---
+
 ## 13. Tag-/Taxonomie-Aufräumer
 
 | Kriterium | Status |
@@ -426,14 +467,14 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Scaffolding | Studio-Admin-UI vorhanden |
 | UI | **Ja** — `/admin/tags` + Asset-Tag-Feld + Life-Brain Tag-Editing (Document/Fact) |
 | API | `createTagService`, `mergeTags`, `suggestTagMerges` |
-| DB | JSON-Tags (kein Tag-Model) |
+| DB | **`Tag` + `EntityTag`** — seit #393 Primärquelle; Json-Tags als Dual-Write-Übergang |
 | Tests | `tag-service.test.ts` |
 | Nutzbar | **Ja** — Admin-UI + Merge/Suggestions + Tag-Eingaben |
 | Production-ready | **Ja** — Admin-UI + Tag-Felder auf Asset & Life-Brain |
 
-**Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`. Tag-Eingaben: Asset-Editor (`updateAssetAction`) und Life-Brain Document/Fact (`updateLifeBrainDocumentTagsAction`/`updateLifeBrainFactTagsAction`).
+**Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`. Tag-Eingaben: Asset-Editor (`updateAssetAction`) und Life-Brain Document/Fact (`updateLifeBrainDocumentTagsAction`/`updateLifeBrainFactTagsAction`). Zentrales `Tag`/`EntityTag`-Modell mit Backfill (EntityTag-Primärquelle seit #393).
 
-**Nächste Schritte:** optional zentrales Tag-Model.
+**Nächste Schritte:** Backfill-Vollständigkeit verifizieren, dann Json-Dual-Write abschalten.
 
 ---
 

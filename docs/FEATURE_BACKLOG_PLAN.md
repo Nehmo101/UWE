@@ -12,22 +12,24 @@ Stand: 2026-07-01 · Eingabe: großer Ideen-Backlog (59 Ideen in 4 Bereichen)
 ## 0. Kernaussage (TL;DR)
 
 Der Backlog liest sich wie eine Liste „neuer“ Features — tatsächlich ist UWE aber **schon sehr
-weit**. Von 59 Ideen sind nach Code-Audit:
+weit**. Von 59 Ideen sind nach Code-Audit (zuletzt 2026-07-01, nach den Umsetzungs-Wellen
+PRs #357–#394):
 
 | Status | Anzahl | Bedeutung |
 |--------|--------|-----------|
-| ✅ **Vorhanden** (EXISTS) | **9** | End-to-end nutzbar für den beschriebenen Kern |
-| 🔶 **Teilweise** (PARTIAL) | **43** | Datenmodell/Service/Teil-UI da — Ausbau nötig |
-| ⬜ **Fehlt** (MISSING) | **7** | Kein nennenswerter Code vorhanden |
+| ✅ **Vorhanden** (EXISTS) | **37** | End-to-end nutzbar für den beschriebenen Kern |
+| 🔶 **Teilweise** (PARTIAL) | **22** | Datenmodell/Service/Teil-UI da — Ausbau nötig |
+| ⬜ **Fehlt** (MISSING) | **0** | Kein nennenswerter Code vorhanden |
 
-**Konsequenz für die Planung:** Das ist zu ~73 % ein **„Ausbauen & Sichtbarmachen“**-Projekt,
-kein „von null bauen“-Projekt. Der größte Hebel liegt nicht in neuen Systemen, sondern darin,
-bereits zu 80 % fertige Bausteine **fertig zu verdrahten** und einige **Quer­schnitts-Fundamente**
+**Konsequenz für die Planung:** Nach den Umsetzungs-Wellen sind 37 von 59 Ideen im Kern
+nutzbar; die verbleibenden 22 sind reine **Ausbau-Themen** (Teil-UIs, Feinschliff,
+Verifikation), kein Neubau. Die **Quer­schnitts-Fundamente**
 (zentrales Tag-Modell, einheitlicher Activity-/Audit-Browser, strukturierte Entitäten,
-cross-domain Suche) zu legen, von denen viele Einzelideen profitieren.
+cross-domain Suche) sind gelegt.
 
-**Nur 7 echte Neubau-Themen:** World-Templates, Owner-Notfallmodus, Spieler-Timeline,
-Inventar/Gruppenbesitz, Faction-Simulator, World-Clock (In-Game-Zeit), Bug-Center.
+**Die 7 echten Neubau-Themen sind inzwischen alle umgesetzt (Beta):** World-Templates,
+Owner-Notfallmodus, Spieler-Timeline, Inventar/Gruppenbesitz, Faction-Simulator,
+World-Clock (In-Game-Zeit), Bug-Center.
 
 **Architektur-Leitplanken (gelten für *jede* Umsetzung unten):**
 
@@ -53,28 +55,28 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 
 ---
 
-## 2. Bereich 1 — Admin / Owner (18 Ideen: 3 ✅ · 13 🔶 · 2 ⬜)
+## 2. Bereich 1 — Admin / Owner (18 Ideen: 13 ✅ · 5 🔶 · 0 ⬜)
 
 | # | Idee | Status | Bestehende Basis | Lücke / Empfehlung |
 |---|------|:--:|------------------|--------------------|
-| 1 | Owner Cockpit | 🔶 | `/admin`, `/admin/status`, `admin-status.ts`, `system-status.ts`, `/today` Ampel | Kein **einzelner** Cockpit-Screen mit aktiven Welten + User-Zahlen + letzte Änderungen + Fehler zusammen. Empfehlung: Aggregations-View, der bestehende Services bündelt (kein neues Datenmodell). |
+| 1 | Owner Cockpit | ✅ | `/admin/cockpit` (Aggregations-View), `/admin/activity` (Verlauf), `admin-status.ts`, `system-status.ts`, `/today` Ampel | Shipped inkl. Polish (#394). Kern erfüllt. |
 | 2 | Rollen & Rechte | 🔶 | `UserRole` (owner/admin/dm/player/readonly/guest), `WorldMembership.role` (owner/dm/co_dm/player), `role-capabilities.ts`, `/admin/users` | Keine **pro-Bereich**-Rechte (z. B. „Mail-Admin, aber kein Backup“). Frage: braucht es echte feingranulare Capabilities oder reichen Rollen? |
-| 3 | Audit Log | 🔶 | `AuditLog` + `/admin/audit-log`; `ActivityLog` + `activity-log-service.ts` (Inhalts-/KI-Änderungen) | **Zwei** Logs, kein vereinheitlichter „Wer hat was geändert“-Browser. `ActivityLog` hat außer einem Security-Slice keine Browse-UI. Empfehlung: ein gemeinsamer Verlauf-Browser. |
-| 4 | Backup / Restore | 🔶 | `packages/backup` (full/world/campaign), `/backup`, Pre-Restore-Safety, Auto-Scheduler (`schedule.json` + systemd-Timer) | **Auto-Snapshot vor Migrationen** ist nur dokumentiert, nicht im aktiven Linux-Pfad erzwungen. Empfehlung: `db:deploy`-Wrapper, der vorher `backup:create` ruft. |
-| 5 | AI Provider Management | 🔶 | `/admin/ai-gateway`, `ai-gateway-service.ts`, `AiGatewayConfig`/`AiCloudProvider`/`InferenceEndpoint`, RTX-Router | **Modell pro Feature** fehlt als UI (Privacy pro Feature existiert). Provider sind über Gateway + RTX-Connector verteilt, keine flache Provider-Liste. |
-| 6 | Secrets / API-Key Vault | 🔶 | `token-crypto.ts` (AES-256-GCM via `AUTH_SECRET`), `AiCloudProvider.apiKeyEnc`, `ApiToken`, `/admin/api-tokens` | Kein **einheitlicher Vault** für `AUTH_SECRET`/SMTP/RTX/Cloudflare — bleibt ENV/Host-Secret. **Kritische Frage unten** (Henne-Ei-Problem). |
-| 7 | Import-Zentrale | 🔶 | `packages/knoteforge-import` (json/markdown), `/worlds/[slug]/import`, Preview+Execute+Undo | Nur **welt-bezogener** Import, **kein** Ziel-Picker (Personal-Brain/DnD/Capture), **kein** Obsidian/PDF/Bulk-Bild. |
-| 8 | Admin Aufgabenliste | 🔶 | `/admin/setup` (Tabs system/access/cloudflare/mail/rtx/printer), `owner-setup-service.ts` (`nextSteps[]`), `/today` Homelab-Alerts | Keine **eine** Checkliste Mail+Backup+AI+Cloudflare+User+Worlds mit Fortschritt %. |
+| 3 | Audit Log | ✅ | `AuditLog` + `/admin/audit-log`; `ActivityLog` + `activity-log-service.ts`; vereinheitlichter Verlauf-Browser `/admin/activity` (#394) | Shipped: gemeinsamer „Wer hat was geändert“-Browser bündelt beide Logs. |
+| 4 | Backup / Restore | ✅ | `packages/backup` (full/world/campaign), `/backup`, Pre-Restore-Safety, Auto-Scheduler; `db:deploy:safe` (`db-deploy-safe.mjs`) | Shipped: `db:deploy:safe` erzwingt Auto-Backup vor Migrationen im aktiven Linux-Pfad. |
+| 5 | AI Provider Management | ✅ | `/admin/ai-gateway`, `ai-gateway-service.ts`, `AiGatewayConfig`/`AiCloudProvider`/`InferenceEndpoint`, RTX-Router; Wizard-Schritt „Modell pro Feature“ (`featureModels`) | Shipped: Modell-pro-Feature-UI im AI-Gateway-Wizard. |
+| 6 | Secrets / API-Key Vault | ✅ | `token-crypto.ts` (AES-256-GCM via `AUTH_SECRET`), `AiCloudProvider.apiKeyEnc`, `ApiToken`, `/admin/api-tokens`, read-only `/admin/secrets` | Shipped gemäß Beschluss §13 (kein Vault): read-only Secrets-Status-Seite. |
+| 7 | Import-Zentrale | 🔶 | `packages/knoteforge-import`, `/worlds/[slug]/import`, Import-Zentrale (`ImportSourceType`: knoteforge/obsidian/pdf/markdown/bulk_image), Preview+Execute+Undo | Obsidian-/PDF-**UI** fehlt noch (Backend-Quellen vorhanden). |
+| 8 | Admin Aufgabenliste | ✅ | `/admin/checklist`, `/admin/setup` (Tabs system/access/cloudflare/mail/rtx/printer), `owner-setup-service.ts` (`nextSteps[]`), `/today` Homelab-Alerts | Shipped: eine Admin-Checkliste. |
 | 9 | Health Checks | ✅ | `/api/health` (Studio+Portal), `/admin/status`, `homelab-cockpit.ts` (DB/Portal/Cloudflare/RTX/Ollama/Backup) | Klein: Cloudflare-Health ist Heuristik, keine Live-Tunnel-API. Kern erfüllt. |
-| 10 | Migration Inspector | 🔶 | `migration-status.ts`, `/admin/migrations`, Checklist-Link | Dedizierte **read-only** Inspector-UI mit angewendeter Liste + Fehler-Metadaten (Batch 5). Kein In-App-Repair. |
+| 10 | Migration Inspector | ✅ | `migration-status.ts`, `/admin/migrations` (read-only: angewendet/ausstehend/fehlerhaft), Checklist-Link | Shipped. Kein In-App-Repair (by design). |
 | 11 | User Management | ✅ | `/admin/users` + `UserManagementWorkspace`, `user-service.ts` (create/invite/disable/role/reset), `WorldMembership` | Invite-Mail hängt an Mail-Config. Kern erfüllt. |
 | 12 | World Templates | ✅ Beta | `world-templates.ts`, `CreateWorldForm`, DnD/Wiki/Roman/Wargame + Kalender-Seed | Archetypen bei Welterstellung in Studio + Portal; blank/dnd/wiki/roman/wargame. |
 | 13 | Content Moderation / Freigabe | ✅ | `ContentReview` + `/admin/reviews`, `review-service.ts`, `AiProposal`/`ai-review-service.ts` (kein Auto-Apply) | Review-zentriert; nicht jeder KI-Pfad erzeugt zwingend Review. Kern erfüllt. |
 | 14 | System-Changelog | 🔶 | `/system/version` (Build-Info), `/system/uwe-knowhow` (durchsucht `CHANGELOG.md`/docs) | Kein **„Was ist neu“** nach Update (geparste Release-Notes/Modal). |
 | 15 | Owner Notfallmodus | ✅ Beta | `maintenanceMode`/`lockPortal`/`lockStudio`, Middleware + Owner-Bypass, Settings-UI | Shipped: Gate in Middleware + Layout, `/api/maintenance/evaluate`, NL-Command. |
-| 16 | Kosten-Dashboard | 🔶 | `AiUsageLog` (Tokens/`estimatedCostUsd`/Feature/User), Budget+CSV im AI-Gateway-Wizard; `ContractExpense`/`/contracts` (Life-Admin) | Kein **vereinheitlichtes** Dashboard pro User/Welt/Feature. **Frage:** AI-Kosten wirklich „in Verträge“ mischen? |
-| 17 | AI Agent Queue | 🔶 | `Job`/`JobLog` + `/jobs` (ai_run/import/canon_check/embedding/research), `DevAgentJob` + `/admin/agent-jobs` | `DevAgentJob` = Repo-Automation, nicht „Terra analysieren / NPCs erzeugen“. Keine 1-Klick-Presets für lange Kampagnen-Jobs. |
-| 18 | Admin Command Center (NL) | 🔶 | `StudioCommandPalette` (statische Nav-Befehle), `/api/command/search` (Wiki-Suche) | **Keine** natürliche Sprache, keine Mutations-Befehle. **Sicherheits-kritisch** (siehe Fragen). |
+| 16 | Kosten-Dashboard | ✅ | `AiUsageLog` (Tokens/`estimatedCostUsd`/Feature/User), Budget+CSV im AI-Gateway-Wizard; AI-Kosten in `/contracts` integriert | Shipped gemäß Beschluss §13 (Integration in `/contracts`, kein separates Dashboard). |
+| 17 | AI Agent Queue | 🔶 | `Job`/`JobLog` + `/jobs` (ai_run/import/canon_check/embedding/research), `DevAgentJob` + `/admin/agent-jobs` (Queue + Dispatch fertig) | Keine 1-Klick-Presets für lange Kampagnen-Jobs. |
+| 18 | Admin Command Center (NL) | 🔶 | `nl-command-service.ts` (Whitelist-Intents: Maintenance/Lock/List/Status, Bestätigungs-Workflow, Audit) | User-/Welt-Management-Intents (assign_world_role, invite_user, disable/enable_user, remove_world_membership) in PR #395 (offen); `create_world` + globale Rollenänderung fehlen. |
 
 ### Details & kritische Fragen — Admin/Owner
 
@@ -97,21 +99,21 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 
 ---
 
-## 3. Bereich 2 — Spieler (11 Ideen: 3 ✅ · 6 🔶 · 2 ⬜)
+## 3. Bereich 2 — Spieler (11 Ideen: 9 ✅ · 2 🔶 · 0 ⬜)
 
 | # | Idee | Status | Bestehende Basis | Lücke / Empfehlung |
 |---|------|:--:|------------------|--------------------|
 | 1 | Mobile-first Portal | 🔶 | `PortalShell` (Drawer/Sheet), responsive CSS, `portal-dashboard-service.ts`; `MobileBottomNav` & `portalAuthBottomNav` existieren, **aber nicht verdrahtet** | Keine Thumb-Zone-Bottom-Nav in Produktion. Nav-Item **„Wiki“ → `…/wiki` 404** (`portal-nav.ts:75`). „Link öffnen → sofort sehen“ erfordert Login+Welt-Wahl. |
-| 2 | Charaktersheet Designer | 🔶 | `PageType.player_character`, `PlayerCharacterEditPanel`, `player-character-permissions.ts`, Dashboard-Widget | **Kein `Character`-Modell**, kein 5e-Sheet (Werte/HP/Zauber/Inventar), kein `player_character`-Template. Aktuell freie Wiki-Blöcke. |
+| 2 | Charaktersheet Designer | ✅ Beta | `Character`-Modell, `character-service.ts` (abilityModifier/proficiencyBonus/computeModifiers), `character-level-up-service.ts` (Level-Up-Assistent), `character-spell-service.ts` (`computeSpellSlots` full/half/third caster), Studio-Sheet-Edit + Portal `/auth/worlds/[slug]/characters` + Print-Route | Offen (Folge-PR in Arbeit): SRD/Open5e-Zauberkatalog-Import; einzelne derived Stats (z. B. passive Wahrnehmung) unvollständig. |
 | 3 | Session Recap | ✅ | `GameSession` (`summaryPlayer`/`openPlots`/`playerDecisions`/`recapPublished`), `SessionRecapFeed`, `publishRecap`, KI-Recap | Text/Markdown, kein „Story-Timeline“-Layout (minor). Kern erfüllt. |
-| 4 | Questlog | 🔶 | `PageType.quest`, `QuestLifecycleStatus`, `/auth/worlds/[slug]/quests`, `QuestStatusEditPanel` | **Global-Suche-Filter `quests`** fehlt noch in älteren Docs — **seit Batch 5 im Code**. Portal-Detail zeigt Quest-Status-Badge. |
+| 4 | Questlog | ✅ Beta | `PageType.quest`, `QuestLifecycleStatus` (questStatus-Workflow), `/auth/worlds/[slug]/quests`, `QuestStatusEditPanel`, Suchfilter `quests` | Kern erfüllt (Status-Feld + Route + Suchfilter, ~90 %). |
 | 5 | Handout-Bereich | ✅ | `PageType.handout` + Template, `Asset`(image/map/handout/document), Portal `/assets`, `ShareLink`, `generate_handout` | Handouts auf Assets **und** Wiki-Seiten verteilt; kein typisierter Unterbereich (Rätsel/Briefe). Kern erfüllt. |
 | 6 | Spielernotizen | ✅ | `PlayerNote` (private/dm_only/party + status-Workflow), `/auth/.../notes`, DM-Review in Studio, Backup opt-in | Kein Realtime-Collab (Formular-CRUD). Kern erfüllt. |
-| 7 | NPC-Liste für Spieler | 🔶 | `PageType.npc`, `filterPagesForViewer`/`gm_note`-Schutz, `PagePlayerAccess`/`SessionUnlock`, Dashboard `knownNpcs`, Suchfilter `npcs` | **Keine dedizierte NPC-Listen-Route**; `player_character`+`monster` im selben Widget gemischt. |
+| 7 | NPC-Liste für Spieler | ✅ Beta | `PageType.npc`, `filterPagesForViewer`/`gm_note`-Schutz, `PagePlayerAccess`/`SessionUnlock`, dedizierte Portal-Route `/auth/worlds/[slug]/npcs` (Wave A1), Suchfilter `npcs` | Kern erfüllt. |
 | 8 | Timeline (Spielersicht) | ✅ Beta | `PortalStoryTimeline`, `/auth/worlds/[slug]/timeline`, Jahres-Story-Layout | Story-Timeline mit Jahresgruppen, Kampagnen-„Jetzt“-Marker, Entitäts-Chronik. |
 | 9 | Beziehungsnetz | ✅ | `graph-service.ts`, Portal `/auth/worlds/[slug]/graph`, `PortalGraphView`, `portal-nav` | Optional: Graph in Mobile-Bottom-Nav. Kern erfüllt (Welle A). |
-| 10 | Inventar / Gruppenbesitz | ⬜ | verwandt: `PageType.loot` (Dungeon), `PageType.item` (Handouts) | **Echtes Neubau-Thema**: kein Inventar/Party-Treasury-Modell (Geld/Items/Artefakte). |
-| 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service`, `playerVisibleSchedule`, Session-Edit-Checkbox | **`nextSession` sichtbar wenn DM Termin ankündigt** (opt-in). Batch 5: Studio-Hinweis wenn geplant aber nicht angekündigt. |
+| 10 | Inventar / Gruppenbesitz | ✅ Beta | `PartyTreasury` + `InventoryItem`, `party-treasury-service.ts` (Währung cp/sp/ep/gp/pp), Studio `/worlds/[slug]/treasury` + Portal `/auth/worlds/[slug]/treasury` | Offen: player-safe Filtering der Portal-Sicht noch nicht verifiziert. |
+| 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service`, `playerVisibleSchedule`, Session-Edit-Checkbox | Bekannter Bug: `nextSession` ist praktisch immer `null` (recapPublished-Filter, s. Details) — Fix parallel in Arbeit. |
 
 ### Details & kritische Fragen — Spieler
 
@@ -136,28 +138,28 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 
 ---
 
-## 4. Bereich 3 — DnD (18 Ideen: 2 ✅ · 14 🔶 · 2 ⬜)
+## 4. Bereich 3 — DnD (18 Ideen: 10 ✅ · 8 🔶 · 0 ⬜)
 
 | # | Idee | Status | Bestehende Basis | Lücke / Empfehlung |
 |---|------|:--:|------------------|--------------------|
 | 1 | World Database | 🔶 | `PageType` (location/region/npc/faction/item/monster/quest/secret/lore/...), `page-types.ts`, Kategorie-Routen | **Kein `god`/`deity`/`event`**-Typ (als `lore`/`note` modelliert); keine welt-weite „Secrets-Registry“. |
-| 2 | Verlinkungssystem | 🔶 | `PageLink` (`relationType`/`label`), Wikilinks (`wikilink-utils.ts`), `graph-service.ts`, Backlinks-UI | **Keine Studio-UI zum Anlegen/Bearbeiten typisierter `PageLink`** (nur Import/Seed/API); `relationType` ist freier String ohne Presets. |
-| 3 | Kanon-Status | 🔶 | `Page.canonicalStatus` inkl. prepared/played/discarded; Edit-UI, Suche & Seitenliste filterbar; „Was ist offen?“ nutzt Lifecycle | Deprecated/contradictory weiter als Spezialstatus. |
+| 2 | Verlinkungssystem | ✅ Beta | `PageLink` (`relationType`/`label`), Wikilinks (`wikilink-utils.ts`), `graph-service.ts`, Backlinks-UI, `PageLinksPanel` (typisierte Links im Editor) | Kern shipped; Kuratierung der `relationType`-Presets optional. |
+| 3 | Kanon-Status | ✅ | `Page.canonicalStatus` inkl. prepared/played/discarded (#392); Edit-UI, Suche & Seitenliste filterbar; „Was ist offen?“ nutzt Lifecycle | Shipped gemäß Beschluss §13. Deprecated/contradictory weiter als Spezialstatus. |
 | 4 | Spoiler-Level | 🔶 | `Visibility`, `SecretLevel`(none/spoiler/dm_secret)+`RevealState`(hidden/preview/revealed), `content-access.ts`, `SessionUnlock` | Kein erstklassiges „teilweise bekannt“ (am ehesten `RevealState.preview`). Starkes Modell, andere Taxonomie. |
 | 5 | Session Manager | 🔶 | `GameSession` (prep/notes/post/openPlots), `game-session.ts`, Routen, KI-Recap, Kalender-Sync | Kein dedizierter **Live-Modus** (eine `notes`-Textarea); Recap ist manuell (Proposal→Publish), nicht automatisch. |
 | 6 | Dungeon Cockpit | ✅ | `dungeon-cockpit.ts` (dungeon→level→room→encounter/trap/puzzle/loot/secret/map), volle Routen, `prepStatus`, Label/Print | Nahezu vollständig. |
-| 7 | Encounter Builder | 🔶 | `dnd-api/encounter-builder.ts` (`buildEncounterMarkdown`), `DndApiEncounterPanel`, `encounter-logic.ts`, `generate_encounter` | **Kein CR/XP-Budget-Rechner**, keine Schwierigkeits-Mathematik/Terrain/Taktik-UI; erzeugt Markdown-Seiten, keine strukturierten Objekte. |
-| 8 | NPC Generator | 🔶 | NPC-Template, Preset „NPC Schnell“, Kontext-Aktionen (`fill_missing`/`dm_notes`/`extract_brain_facts`) | **Kein** dedizierter `generate_npc`-Workflow mit strukturierter Ausgabe (Stimme/Beziehung/Plot-Nutzen). |
-| 9 | Quest Builder | 🔶 | `PageType.quest` + Template, Quest-Kontext-Aktionen | **Keine** Quest-Builder-UI (Auftraggeber-Picker, strukturierte Twist/Failure-Felder), kein `generate_quest`. |
-| 10 | Magic Item Builder | 🔶 | `PageType.item`; `searchDnd5eSrd("equipment")` existiert, aber **nicht** in der Such-UI | **Schwach.** Kein Item-Template, kein Item-Generator, kein SRD-Equipment-Import-UI. |
-| 11 | Prepare Next Session | 🔶 | KI-Aktion `prepare_next_session`/`next_session_prep`, `prepare-session.ts` (heuristischer Outline-Builder), Review-pflichtig | Deterministische Heuristik statt echter Kampagnen-Analyse; keine dedizierte Route; `world-inspector` speist Prep nicht. |
-| 12 | „Was ist offen?“ | 🔶 | `GameSession.openPlots`, `world-overview.ts`, Dashboard `open-plots`, Portal-Recaps | Kein vereinheitlichter View für vergessene NPCs/ungelöste Rätsel/Foreshadowing; `openPlots` ist Freitext. |
+| 7 | Encounter Builder | ✅ Beta | `dnd-api/encounter-builder.ts` (`buildEncounterMarkdown`), `encounter-xp-budget.ts` (CR/XP-Budget + Schwierigkeit), `DndApiEncounterPanel`, `encounter-logic.ts`, `generate_encounter` | Terrain-/Taktik-UI optional; Ausgabe weiter Markdown-orientiert. |
+| 8 | NPC Generator | ✅ Beta | `generator-service.ts` (`generate_npc`, strukturierte Ausgabe, reviewRequired), `StructuredGeneratorSection`, `GeneratorPreset`/`GeneratorOutput`-Modelle | Kern shipped (Proposal→Review). |
+| 9 | Quest Builder | 🔶 | `PageType.quest` + Template, `generate_quest` (generator-service, reviewRequired), `StructuredGeneratorSection` | Dedizierte Quest-Builder-UI (Auftraggeber-Picker, strukturierte Twist/Failure-Felder) fehlt. |
+| 10 | Magic Item Builder | 🔶 | `PageType.item`, `generate_item` (generator-service, reviewRequired), SRD-Equipment-Import-UI (`ItemBuilderSection` + `/api/dnd/equipment/search`) | Dedizierter Magic-Item-Builder mit strukturierten Feldern fehlt. |
+| 11 | Prepare Next Session | 🔶 | KI-Aktion `prepare_next_session`/`next_session_prep`, `prepare-session.ts` (heuristischer Outline-Builder), dedizierte Route `/worlds/[slug]/prepare-session`, Review-pflichtig | Deterministische Heuristik statt echter Kampagnen-Analyse; `world-inspector` speist Prep nicht. |
+| 12 | „Was ist offen?“ | ✅ Beta | `GameSession.openPlots`, `world-overview.ts`, `world-inspector` (orphan_page/broken_wiki_link), vereinheitlichter View `/worlds/[slug]/open-items` (Quests/Plots/prepared/played/NPC-Entwürfe/Rätsel) | `openPlots` bleibt Freitext. |
 | 13 | Kanon-Konfliktprüfung | 🔶 | `canon-rules.ts` (Terra-spezifisch + Duplikate), `canon_check`-Job→`world-inspector`, `BrainFactType.canon` | Keine „NPC ist tot“/Timeline-Checks; Regeln nicht welt-generisch; KI-abhängig. |
 | 14 | Broken Link Scanner | ✅ | `world-inspector.ts` (`broken_wiki_link`/`orphan_page`/`duplicate_name`/`hidden_link_in_portal_page`) + Fix-Aktionen, `canon_check`-Job | „Unused NPC“ nur als `orphan_page` (info). Kern erfüllt. |
-| 15 | Faction Simulator | ⬜ | Fraktionen existieren als `PageType.faction` + Graph | **Echtes Neubau-Thema**: kein Fraktions-State, keine Zwischen-Session-Logik, keine UI. |
+| 15 | Faction Simulator | ✅ Beta | `FactionState` + `FactionStateEditPanel`, `FactionSimulatorPanel`, `simulate_faction` (KI-Proposal→Review, kein Auto-Kanon), datierte `WorldEvent`-Chronik | Shipped über den Review-Pfad (Beschluss §13). |
 | 16 | World Clock | ✅ | `WorldCalendar`, `/worlds/[slug]/calendar`, `advanceInGameDate`, Terra-Seed | Kern: konfigurierbarer Kalender + aktuelles Datum + Vorlauf-Buttons. Feiertage optional später. |
-| 17 | Print Center | 🔶 | `Label`/`LabelTemplate`/`PrintList`, `label-service.ts` (6×4"), PDF/HTML-Export, RTX/CUPS-Print, Session→Printliste | „Verträge“ in Daily-Admin (`/contracts`), nicht im Print-Center; keine benannten NPC-/Item-Karten-Templates. |
-| 18 | Statblock Studio | 🔶 | `ContentBlockType.statblock`, Open5e→Markdown-Import (`statblock-format.ts`), Label kann Statblock-Text | **Kein strukturierter Statblock-Editor**; Export **nur Markdown** (kein Homebrewery/5e.tools/JSON); kein 1-Klick „Statblock→6×4-Label“. |
+| 17 | Print Center | 🔶 | `Label`/`LabelTemplate`/`PrintList`, `label-service.ts` (6×4"), `/worlds/[slug]/print-center`, PDF/HTML-Export, RTX/CUPS-Print, Session→Printliste | „Verträge“ in Daily-Admin (`/contracts`), nicht im Print-Center; keine benannten NPC-/Item-Karten-Templates. |
+| 18 | Statblock Studio | ✅ Beta | `StructuredStatblock`-Modell + Service, `StatblockStudioPanel` (JSON-Editor), Exporte JSON/5e.tools/Homebrewery (`statblock-structured-export.ts`), 1-Klick `createStatblockLabelAction` (Statblock→Label) | Visueller Feld-Editor fehlt (aktuell JSON-Textarea). |
 
 ### Details & kritische Fragen — DnD
 
@@ -184,22 +186,22 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 
 ---
 
-## 5. Bereich 4 — Andere UWE-Features (12 Ideen: 1 ✅ · 10 🔶 · 1 ⬜)
+## 5. Bereich 4 — Andere UWE-Features (12 Ideen: 5 ✅ · 7 🔶 · 0 ⬜)
 
 | # | Idee | Status | Bestehende Basis | Lücke / Empfehlung |
 |---|------|:--:|------------------|--------------------|
-| 1 | Miniaturen-Datenbank | 🔶 | `WorkshopProject` (`projectType: miniature`, `WorkshopStatus`), `WorkshopPaintRecipe`, `/workshop` | **Kein Sammlungs-Modell** (Hersteller/System/Fraktion/Menge, Status gekauft/gebaut/grundiert/bemalt). Projekt ≠ Sammlung. |
-| 2 | Fotovergleich | 🔶 | `WorkshopProject.referenceImages`/`progressPhotos`/`resultPhotos`/`imageGallery` (Json), Grid-Anzeige | **Kein** Vorher/Nachher-UI (Slider/Side-by-side), keine Fortschritts-Timeline. |
-| 3 | Inbox / Raw Capture | ✅ | `CaptureEntry` (+Typen quick_note/dnd_idea/link/file_image/...), `/capture`, Upload-API | **Kein `voice_memo`**/Audio-Capture-Typ in der UI. Sonst Kern erfüllt. |
+| 1 | Miniaturen-Datenbank | ✅ Beta | `MiniatureCollectionItem`-Modell (Status purchased/built/primed/painted, `comparePhotoAssetIds`), `/miniatures`-Route; daneben `WorkshopProject`/`WorkshopPaintRecipe`, `/workshop` | Sammlungs-Modell + Route shipped. |
+| 2 | Fotovergleich | 🔶 | `MiniatureCollectionItem.comparePhotoAssetIds`, `WorkshopProject.referenceImages`/`progressPhotos`/`resultPhotos`/`imageGallery` (Json), Grid-Anzeige | Vorher/Nachher-**Slider-UI** fehlt weiterhin, keine Fortschritts-Timeline. |
+| 3 | Inbox / Raw Capture | ✅ | `CaptureEntry` (+Typen quick_note/dnd_idea/link/file_image/`voice_memo`/...), `/capture`, Upload-API | `voice_memo`-Capture shipped. Kern erfüllt. |
 | 4 | KI-Sortierung | 🔶 | `capture-triage-service.ts` (`buildCaptureAiProposal`, Ziele project/workshop/dnd/hardware/contract/life_brain) | **Nur Heuristik (`source: "heuristic"`), kein LLM**; keine Kategorien Musik/Haushalt. |
-| 5 | Globale Suche 2.0 | 🔶 | `search-service.ts`, `cross-domain-search-service.ts`, `/search` (Wiki + Daily Admin + Medien + EntityTag-Facetten) | Semantische Suche weiter offen (RTX-only, später). |
-| 6 | Tag-System | 🔶 | `tag-service.ts` (EntityTag-Primärquelle + Json-Gap-Fallback), `/admin/tags`, Backfill/Merge Dual-Write | Json-Felder bleiben deprecated bis vollständiger Backfill. |
+| 5 | Globale Suche 2.0 | ✅ | `search-service.ts`, `cross-domain-search-service.ts` (#391), `/search` (Wiki + Daily Admin + Medien + EntityTag-Facetten) | Shipped gemäß Beschluss §13 (nur lexikalisch); semantische Suche bewusst außerhalb des Backlogs. |
+| 6 | Tag-System | 🔶 | `tag-service.ts` (EntityTag-Primärquelle seit #393 + Json-Gap-Fallback), `/admin/tags`, Backfill/Merge | Dual-Write noch aktiv; Backfill-Vollständigkeit unverifiziert; Json-Felder bleiben deprecated bis vollständiger Backfill. |
 | 7 | Projekt-Dashboards | 🔶 | `PersonalProject` (Kategorien uwe/hardware/dnd/art/printing/other), `/projects` (flache Liste), `/today`, Welt-Dashboard | Keine **pro-Domäne**-Dashboards (Musik/Haushalt fehlen als Kategorie); kein `/projects/[id]`-Detail. |
-| 8 | Dokumentengenerator | 🔶 | Seiten-Templates, DnD-Generator (`generate_handout`), Mail-Templates, Label-Templates | **Kein generischer** Dokumentengenerator (Verträge/Guides/Checklisten außerhalb DnD/Mail/Label). |
+| 8 | Dokumentengenerator | 🔶 | `DocumentTemplate`-Modell (contract/guide/checklist) + `/documents`-Route; Seiten-Templates, DnD-Generator (`generate_handout`), Mail-Templates, Label-Templates | Generier-**Workflow** fehlt noch (Modell + Route vorhanden). |
 | 9 | Prompt-Bibliothek | 🔶 | `DevIdea.generatedPrompt`/`/ideas`, `GeneratorPreset` (DnD), `admin/ai-prompt`→`/ai` | **Keine** In-App-CRUD-Bibliothek für Cursor/Orchestrator/Subagent-Prompts (liegen als Markdown in `docs/`/`.cursor/`). |
-| 10 | Feature Registry (Ideenmgmt) | 🔶 | `DevIdea` (`status: in_planning/implemented/rejected`), `dev-idea-service.ts`, `/ideas` | **Kein** existing/planned/broken/deprecated-Lebenszyklus, kein Feature-vs-Bug-Typ, keine Modul-/Reifegrad-Felder. |
-| 11 | Bug Center | ⬜ | nur Tangente: Capture-Keyword „bug“→project | **Echtes Neubau-Thema**: kein `BugReport`-Modell, kein UI-Report-Flow, kein Screenshot-Attach/Status. |
-| 12 | Testworld | 🔶 | `seed.ts`→Terra; `stress-seed.ts`→`perf-test` (opt-in via `db:seed:stress`) | Kein erstklassiges „Sandbox“-Konzept/Flag; `perf-test` ist Performance-fokussiert. |
+| 10 | Feature Registry (Ideenmgmt) | 🔶 | `DevIdea` mit `ideaType`/`lifecycle`/`module`/`maturityLevel`/`generatedPrompt`, `dev-idea-service.ts`, `/ideas` | Lifecycle-/Typ-/Modul-Felder shipped; **Filter-UI + Prompt-CRUD** fehlen. |
+| 11 | Bug Center | ✅ Beta | `BugReport`-Modell, `/bugs` (Report-Form, Liste, Screenshot-Upload, Status-Badges) | Shipped. |
+| 12 | Testworld | ✅ Beta | `World.isSandbox`-Flag; `seed.ts`→Terra; `stress-seed.ts`→`perf-test`-Sandbox (opt-in via `db:seed:stress`) | Sandbox-Flag shipped; 1-Klick „Demo-Welt klonen“ optional offen. |
 
 ### Details & kritische Fragen — Andere
 
@@ -239,6 +241,9 @@ Diese vier Investitionen sind **keine** Einzelfeatures, sondern Hebel:
 ---
 
 ## 7. Empfohlene Roadmap (Wellen)
+
+> **Update 2026-07-01:** Die Wellen A–D sind über die Orchestrator-Batches umgesetzt
+> (PRs #357–#394). Verbleibende Lücken stehen in den Status-Tabellen §2–§5.
 
 Sequenzierung nach **Wert/Risiko**, kompatibel zum bestehenden „Wave“-Vorgehen. Aufwand wird
 **technisch** beschrieben (welche Layer), nicht in Zeit.
@@ -619,5 +624,6 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Tag-Modell (4.6/F1) | Zentrales `Tag` + `EntityTag`, additive Migration + Backfill + Dual-Write. |
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
-**Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#393). EntityTag-Primärquelle; cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish.
+**Status (2026-07-01):** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe
+GitHub PRs #357–#394; PR #395 mit NL-User-/Welt-Management-Intents offen). EntityTag-Primärquelle;
+cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish; Restlücken siehe §2–§5.
