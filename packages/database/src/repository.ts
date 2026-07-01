@@ -121,6 +121,7 @@ export interface CreatePageInput {
   revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
+  questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
   tags?: string[];
   aliases?: string[];
   contentBlocks?: CreateContentBlockInput[];
@@ -139,6 +140,7 @@ export interface UpdatePageInput {
   revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
+  questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
   tags?: string[];
   aliases?: string[];
 }
@@ -268,6 +270,7 @@ export class UweRepository {
         revealState: input.revealState ?? "hidden",
         canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
         prepStatus: input.prepStatus ?? null,
+        questStatus: input.questStatus ?? null,
         tags: toJsonArray(input.tags),
         aliases: toJsonArray(input.aliases),
         contentBlocks: input.contentBlocks
@@ -308,6 +311,7 @@ export class UweRepository {
         revealState: input.revealState,
         canonicalStatus: input.canonicalStatus,
         prepStatus: input.prepStatus,
+        questStatus: input.questStatus,
         tags: input.tags ? toJsonArray(input.tags) : undefined,
         aliases: input.aliases ? toJsonArray(input.aliases) : undefined,
       },

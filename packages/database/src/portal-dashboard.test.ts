@@ -93,6 +93,7 @@ describe("portal dashboard", () => {
   it("shows only visibility-filtered dashboard content for players", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
+    const repo = createUweRepository(databaseUrl);
 
     const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
     assert.ok(playerCtx);
@@ -102,6 +103,12 @@ describe("portal dashboard", () => {
     assert.equal(dashboard.characterName, "Lyra");
     assert.equal(dashboard.openQuests.length, 1);
     assert.equal(dashboard.openQuests[0].id, questPageId);
+
+    await repo.updatePage(questPageId, { questStatus: "completed" });
+    const dashboardAfter = await auth.getPortalDashboard(worldSlug, playerCtx);
+    assert.ok(dashboardAfter);
+    assert.equal(dashboardAfter.openQuests.length, 0);
+
     assert.ok(!dashboard.knownNpcs.some((page) => page.id === dmOnlyPageId));
 
     await db.$disconnect();
