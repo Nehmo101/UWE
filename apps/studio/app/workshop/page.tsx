@@ -98,6 +98,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
         <Link href="/workshop/recipes">Paint-Rezepte</Link>
         <Link href="/workshop/print-profiles">Druck-Profile</Link>
         <Link href="/workshop/rental">Terrain-Verleih</Link>
+        <Link href="/miniatures">Miniaturen-Sammlung</Link>
       </nav>
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
