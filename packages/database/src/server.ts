@@ -645,6 +645,18 @@ export {
 } from "./world-overview";
 
 export {
+  createWorldOpenItemsService,
+  groupOpenItemsByCategory,
+  WORLD_OPEN_ITEM_CATEGORY_LABELS,
+  WorldOpenItemsService,
+} from "./world-open-items-service";
+
+export type {
+  WorldOpenItem,
+  WorldOpenItemCategory,
+} from "./world-open-items-service";
+
+export {
   createPortalDashboardService,
   PortalDashboardService,
   sessionUnlockLabel,

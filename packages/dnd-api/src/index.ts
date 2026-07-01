@@ -137,3 +137,19 @@ export async function searchAllDndApis(
 
 export { formatOpen5eMonsterAsMarkdown } from "./statblock-format";
 export { buildEncounterMarkdown, type EncounterMonsterInput } from "./encounter-builder";
+export {
+  analyzeEncounterXp,
+  ENCOUNTER_DIFFICULTY_LABELS,
+  encounterMultiplier,
+  getEncounterBudgetThresholds,
+  normalizeChallengeRating,
+  xpForChallengeRating,
+  type EncounterBudgetThresholds,
+  type EncounterDifficultyBand,
+  type EncounterXpAnalysis,
+} from "./encounter-xp-budget";
+export {
+  exportStructuredStatblockFiveTools,
+  exportStructuredStatblockHomebrewery,
+  exportStructuredStatblockJson,
+} from "./statblock-structured-export";
