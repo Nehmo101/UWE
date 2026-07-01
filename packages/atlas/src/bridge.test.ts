@@ -14,6 +14,10 @@ describe("bridge message guards", () => {
   it("accepts well-formed editor messages and checks origin + type", () => {
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "save", doc: {} }), true);
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "ready", mode: "editor" }), true);
+    assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "node-rename", nodeId: "n1", title: "Terra" }),
+      true,
+    );
     // wrong source (a host message must not pass the editor guard)
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "save" }), false);
     // unknown type
@@ -68,6 +72,20 @@ describe("splitDocForSave", () => {
     assert.equal(payloads[0]!.nodeId, "n2");
     assert.equal(payloads[0]!.features.length, 1);
     assert.equal(payloads[0]!.objects.length, 1);
+  });
+
+  it("returns empty payloads for rootNodeId with no features (clear-all save)", () => {
+    const emptyChild = {
+      rootNodeId: "child",
+      nodes: [
+        { id: "root", title: "Continent" },
+        { id: "child", title: "Region" },
+      ],
+      features: [],
+      objects: [],
+    };
+    const payloads = splitDocForSave(emptyChild, { nodeId: "child" });
+    assert.equal(payloads.length, 0);
   });
 
   it("resolves client palette keys to DB ids when a resolver is given", () => {
