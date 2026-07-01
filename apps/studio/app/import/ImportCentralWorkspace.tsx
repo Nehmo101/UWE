@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import type { ImportSourceType, ImportTargetType } from "@uwe/database/server";
+import type { ImportSourceType, ImportTargetType } from "@uwe/database/import-job-constants";
 import {
   IMPORT_JOB_STATUS_LABELS,
   IMPORT_SOURCE_TYPE_LABELS,
   IMPORT_TARGET_TYPE_LABELS,
-} from "@uwe/database/server";
+} from "@uwe/database/import-job-constants";
 import type { ImportFormat } from "@uwe/knoteforge-import";
 import {
   importCentralSourceAccept,

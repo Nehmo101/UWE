@@ -14,6 +14,8 @@
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",
     "./capture-constants": "./src/capture-constants.ts",
+    "./import-job-constants": "./src/import-job-constants.ts",
+    "./contract-expense-utils": "./src/contract-expense-utils.ts",
     "./personal-brain-constants": "./src/personal-brain-constants.ts",
     "./dev-idea-constants": "./src/dev-idea-constants.ts",
     "./dashboard-layout": "./src/dashboard-layout-types.ts",

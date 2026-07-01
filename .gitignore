@@ -55,3 +55,4 @@ exports/*
 *.tsbuildinfo
 perf-results.json
 qa-artifacts/
+.worktrees/

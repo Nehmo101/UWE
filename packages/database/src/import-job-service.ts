@@ -18,29 +18,13 @@ export { ImportJobStatus as ImportJobStatusEnum } from "./generated/prisma/clien
 export { ImportSourceType as ImportSourceTypeEnum } from "./generated/prisma/client";
 export { ImportTargetType as ImportTargetTypeEnum } from "./generated/prisma/client";
 
-export const IMPORT_JOB_STATUS_LABELS: Record<ImportJobStatus, string> = {
-  pending: "Ausstehend",
-  preview: "Vorschau",
-  executing: "Wird ausgeführt",
-  completed: "Abgeschlossen",
-  failed: "Fehlgeschlagen",
-  rolled_back: "Zurückgerollt",
-};
-
-export const IMPORT_SOURCE_TYPE_LABELS: Record<ImportSourceType, string> = {
-  knoteforge: "KnoteForge JSON",
-  obsidian: "Obsidian",
-  pdf: "PDF",
-  markdown: "Markdown",
-  bulk_image: "Bulk-Bilder",
-};
-
-export const IMPORT_TARGET_TYPE_LABELS: Record<ImportTargetType, string> = {
-  world: "Welt",
-  personal_brain: "Life Brain",
-  capture: "Capture",
-  dnd_page: "DnD-Seite",
-};
+// Label maps live in the client-safe module so client components can use them
+// without importing the server-only barrel; re-exported here for back-compat.
+export {
+  IMPORT_JOB_STATUS_LABELS,
+  IMPORT_SOURCE_TYPE_LABELS,
+  IMPORT_TARGET_TYPE_LABELS,
+} from "./import-job-constants";
 
 export interface CreateImportJobInput {
   sourceType: ImportSourceType;

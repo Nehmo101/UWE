@@ -21,6 +21,7 @@ const config = [
     ignores: [
       "**/node_modules/**",
       "**/.next/**",
+      ".worktrees/**",
       "**/dist/**",
       "**/.turbo/**",
       "**/src-tauri/target/**",

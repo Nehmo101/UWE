@@ -9,7 +9,7 @@ import {
   useDashboardLayout,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
-import { formatEuroFromCents } from "@uwe/database/server";
+import { formatEuroFromCents } from "@uwe/database/contract-expense-utils";
 import { STUDIO_TODAY_PAGE_KEY } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { TodayDashboardData } from "@/src/lib/today-dashboard";
