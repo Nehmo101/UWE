@@ -83,6 +83,120 @@ export function paintTerrainBlobs(
   }
 }
 
+/** Options for {@link drawCompassRose}. */
+export interface CompassRoseOptions {
+  /** Centre x in canvas pixels. */
+  x: number;
+  /** Centre y in canvas pixels. */
+  y: number;
+  /** Outer radius in canvas pixels. */
+  radius: number;
+  /** Main ink colour (disc outline, north/ordinal points, "N" letter). */
+  ink: string;
+  /** Accent colour for the south point (tolkien-ink red). */
+  accent: string;
+  /** Disc fill colour (parchment). */
+  parchment: string;
+}
+
+/**
+ * Draw an eight-point compass rose (long cardinal points, short ordinal
+ * points, "N" letter above the north tip). Pure Canvas 2D — used by the map
+ * runtime overlay and baked into PNG exports.
+ */
+export function drawCompassRose(ctx: CanvasRenderingContext2D, opts: CompassRoseOptions): void {
+  const { x, y, radius: r, ink, accent, parchment } = opts;
+  if (r <= 0) return;
+
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = parchment;
+  ctx.fill();
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1, r * 0.045);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.62, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(0.5, r * 0.02);
+  ctx.stroke();
+
+  // Eight points starting at north, clockwise. Cardinals are long, ordinals short.
+  for (let i = 0; i < 8; i++) {
+    const cardinal = i % 2 === 0;
+    const len = cardinal ? r * 0.9 : r * 0.5;
+    const half = cardinal ? r * 0.14 : r * 0.09;
+    const a = -Math.PI / 2 + (i * Math.PI) / 4;
+    const tipX = x + Math.cos(a) * len;
+    const tipY = y + Math.sin(a) * len;
+    const lx = x + Math.cos(a - Math.PI / 2) * half;
+    const ly = y + Math.sin(a - Math.PI / 2) * half;
+    const rx = x + Math.cos(a + Math.PI / 2) * half;
+    const ry = y + Math.sin(a + Math.PI / 2) * half;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(lx, ly);
+    ctx.lineTo(rx, ry);
+    ctx.closePath();
+    ctx.fillStyle = i === 4 ? accent : ink;
+    ctx.fill();
+  }
+
+  ctx.fillStyle = ink;
+  ctx.font = `bold ${Math.max(8, Math.round(r * 0.3))}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("N", x, y - r * 0.98);
+}
+
+/** Options for {@link drawScaleBar}. */
+export interface ScaleBarOptions {
+  /** Left edge in canvas pixels. */
+  x: number;
+  /** Top edge in canvas pixels. */
+  y: number;
+  /** Bar width in canvas pixels. */
+  width: number;
+  /** Bar height in canvas pixels. */
+  height: number;
+  /** Number of alternating segments (default 4). */
+  segments?: number;
+  /** Ink colour (dark segments, outline, label). */
+  ink: string;
+  /** Parchment colour (light segments). */
+  parchment: string;
+  /** Optional label rendered centred below the bar (e.g. "0 — 100 leagues"). */
+  label?: string;
+  /** Optional CSS font for the label. */
+  font?: string;
+}
+
+/**
+ * Draw a classic alternating-segment map scale bar with an optional unit
+ * label below. Pure Canvas 2D — used by the runtime and PNG exports.
+ */
+export function drawScaleBar(ctx: CanvasRenderingContext2D, opts: ScaleBarOptions): void {
+  const { x, y, width, height, segments = 4, ink, parchment, label, font } = opts;
+  if (width <= 0 || height <= 0 || segments < 1) return;
+
+  const segW = width / segments;
+  for (let i = 0; i < segments; i++) {
+    ctx.fillStyle = i % 2 === 0 ? ink : parchment;
+    ctx.fillRect(x + i * segW, y, segW, height);
+  }
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1, height * 0.12);
+  ctx.strokeRect(x, y, width, height);
+
+  if (label) {
+    ctx.fillStyle = ink;
+    ctx.font = font ?? `${Math.max(8, Math.round(height * 1.4))}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(label, x + width / 2, y + height + Math.max(2, height * 0.4));
+  }
+}
+
 /**
  * Draw an SVG path string onto a Canvas 2D context. Minimal parser supporting
  * only absolute `M L H V Z Q C` commands — the exact subset every
