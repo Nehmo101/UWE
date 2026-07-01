@@ -84,6 +84,19 @@ export type {
 } from "./world-event-service";
 
 export {
+  buildPortalTimelineYearLabel,
+  countPortalTimelineEventsThroughDate,
+  enrichPortalTimelineEvents,
+  groupPortalTimelineEventsByYear,
+  isInGameDateBeforeOrEqual,
+} from "./portal-timeline";
+
+export type {
+  PortalTimelineEventView,
+  PortalTimelineYearGroup,
+} from "./portal-timeline";
+
+export {
   createFactionStateService,
   FactionStateService,
 } from "./faction-state-service";

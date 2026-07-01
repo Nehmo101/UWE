@@ -108,7 +108,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 5 | Handout-Bereich | ✅ | `PageType.handout` + Template, `Asset`(image/map/handout/document), Portal `/assets`, `ShareLink`, `generate_handout` | Handouts auf Assets **und** Wiki-Seiten verteilt; kein typisierter Unterbereich (Rätsel/Briefe). Kern erfüllt. |
 | 6 | Spielernotizen | ✅ | `PlayerNote` (private/dm_only/party + status-Workflow), `/auth/.../notes`, DM-Review in Studio, Backup opt-in | Kein Realtime-Collab (Formular-CRUD). Kern erfüllt. |
 | 7 | NPC-Liste für Spieler | 🔶 | `PageType.npc`, `filterPagesForViewer`/`gm_note`-Schutz, `PagePlayerAccess`/`SessionUnlock`, Dashboard `knownNpcs`, Suchfilter `npcs` | **Keine dedizierte NPC-Listen-Route**; `player_character`+`monster` im selben Widget gemischt. |
-| 8 | Timeline (Spielersicht) | 🔶 | `WorldEvent` + `/auth/worlds/[slug]/timeline`, `PortalPageChronicleSection` | Portal-Timeline + Entitäts-Chronik shipped (Welle C). Optional: Story-Layout. |
+| 8 | Timeline (Spielersicht) | ✅ Beta | `PortalStoryTimeline`, `/auth/worlds/[slug]/timeline`, Jahres-Story-Layout | Story-Timeline mit Jahresgruppen, Kampagnen-„Jetzt“-Marker, Entitäts-Chronik. |
 | 9 | Beziehungsnetz | ✅ | `graph-service.ts`, Portal `/auth/worlds/[slug]/graph`, `PortalGraphView`, `portal-nav` | Optional: Graph in Mobile-Bottom-Nav. Kern erfüllt (Welle A). |
 | 10 | Inventar / Gruppenbesitz | ⬜ | verwandt: `PageType.loot` (Dungeon), `PageType.item` (Handouts) | **Echtes Neubau-Thema**: kein Inventar/Party-Treasury-Modell (Geld/Items/Artefakte). |
 | 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service`, `playerVisibleSchedule`, Session-Edit-Checkbox | **`nextSession` sichtbar wenn DM Termin ankündigt** (opt-in). Batch 5: Studio-Hinweis wenn geplant aber nicht angekündigt. |
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#387, Faction-Simulator UI, Owner-Notfallmodus, World Templates). Nächste offene Neubau-Themen: Spieler-Timeline Polish, EntityTag backfill.
+#357–#388, World Templates). Nächste offene Neubau-Themen: EntityTag backfill.
