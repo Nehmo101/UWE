@@ -42,6 +42,7 @@ export const TARGET_STUDIO_NAV: {
     items: [
       { label: "Capture", href: "/capture" },
       { label: "Templates", href: "/templates" },
+      { label: "Import-Zentrale", href: "/import" },
       { label: "Werkstatt", href: "/workshop" },
       { label: "Projekte", href: "/projects" },
       { label: "Verträge", href: "/contracts" },
@@ -326,6 +327,7 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
   if (
     normalized.startsWith("/capture") ||
     normalized.startsWith("/templates") ||
+    normalized.startsWith("/import") ||
     normalized.startsWith("/workshop") ||
     normalized.startsWith("/projects") ||
     normalized.startsWith("/ideas") ||

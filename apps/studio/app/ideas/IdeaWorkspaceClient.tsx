@@ -1,8 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  DEV_IDEA_LIFECYCLE_LABELS, DEV_IDEA_LIFECYCLES, DEV_IDEA_MATURITY_LABELS, DEV_IDEA_MATURITY_LEVELS,
+  DEV_IDEA_MODULE_LABELS, DEV_IDEA_MODULES, DEV_IDEA_TYPE_LABELS, DEV_IDEA_TYPES,
+  IDEA_WORKSPACE_VIEW_LABELS, IDEA_WORKSPACE_VIEWS,
+  type DevIdeaLifecycleId, type DevIdeaMaturityLevelId, type DevIdeaModuleId, type DevIdeaTypeId, type IdeaWorkspaceView,
+} from "@uwe/database/dev-idea-constants";
+import { studioApiUrl from "@/src/lib/studio-api-url";
 import {
   createIdeaAction,
   deleteIdeaAction,
@@ -25,6 +32,10 @@ export interface IdeaDto {
   title: string;
   body: string;
   status: IdeaStatus;
+  ideaType: DevIdeaTypeId;
+  lifecycle: DevIdeaLifecycleId;
+  module: string | null;
+  maturityLevel: string | null;
   transcript: IdeaChatMessage[];
   generatedPrompt: string | null;
   devAgentJobId: string | null;
@@ -46,6 +57,9 @@ interface IdeaWorkspaceClientProps {
   ideas: IdeaDto[];
   agentJobsById: Record<string, IdeaAgentJobDto>;
   initialSelectedId: string | null;
+  initialView: IdeaWorkspaceView;
+  initialLifecycleFilter: string | null;
+  initialModuleFilter: string | null;
   agentJobs: {
     enabled: boolean;
     cursorConfigured: boolean;
@@ -91,6 +105,13 @@ function statusBadgeClass(status: IdeaStatus): string {
   }
 }
 
+
+function lifecycleBadgeClass(lifecycle: DevIdeaLifecycleId): string { switch (lifecycle) { case "existing": return "uwe-badge uwe-badge-success"; case "broken": return "uwe-badge uwe-badge-danger"; case "deprecated": return "uwe-badge uwe-badge-draft"; default: return "uwe-badge uwe-badge-warning"; } }
+function moduleLabel(module: string | null): string | null { if (!module) return null; return DEV_IDEA_MODULE_LABELS[module as DevIdeaModuleId] ?? module; }
+function maturityLabel(maturity: string | null): string | null { if (!maturity) return null; return DEV_IDEA_MATURITY_LABELS[maturity as DevIdeaMaturityLevelId] ?? maturity; }
+function truncatePrompt(text: string, max = 120): string { const trimmed = text.trim(); return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`; }
+function buildIdeasHref(options: { view: IdeaWorkspaceView; lifecycle?: string | null; module?: string | null; idea?: string | null; }): string { const params = new URLSearchParams(); if (options.view !== "all") params.set("view", options.view); if (options.lifecycle) params.set("lifecycle", options.lifecycle); if (options.module) params.set("module", options.module); if (options.idea) params.set("idea", options.idea); const q = params.toString(); return q ? `/ideas?${q}` : "/ideas"; }
+
 function jobBadgeClass(status: string): string {
   if (status === "completed") return "uwe-badge uwe-badge-success";
   if (status === "failed" || status === "cancelled") return "uwe-badge uwe-badge-danger";
@@ -101,140 +122,111 @@ export function IdeaWorkspaceClient({
   ideas: initialIdeas,
   agentJobsById: initialJobs,
   initialSelectedId,
+  initialView,
+  initialLifecycleFilter,
+  initialModuleFilter,
   agentJobs,
 }: IdeaWorkspaceClientProps) {
   const router = useRouter();
   const [ideas, setIdeas] = useState<IdeaDto[]>(initialIdeas);
   const [jobs, setJobs] = useState<Record<string, IdeaAgentJobDto>>(initialJobs);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialSelectedId ?? initialIdeas[0]?.id ?? null,
-  );
+  const view = initialView;
+  const lifecycleFilter = initialLifecycleFilter;
+  const moduleFilter = initialModuleFilter;
+  const workspaceContext: WorkspaceContext = { view, lifecycle: lifecycleFilter, module: moduleFilter };
 
-  useEffect(() => {
-    setIdeas(initialIdeas);
-  }, [initialIdeas]);
-  useEffect(() => {
-    setJobs(initialJobs);
-  }, [initialJobs]);
+  useEffect(() => { setIdeas(initialIdeas); }, [initialIdeas]);
+  useEffect(() => { setJobs(initialJobs); }, [initialJobs]);
 
-  const selected = useMemo(
-    () => ideas.find((idea) => idea.id === selectedId) ?? null,
-    [ideas, selectedId],
-  );
+  const filteredIdeas = useMemo(() => ideas.filter((idea) => {
+    if (view === "features" && idea.ideaType !== "feature") return false;
+    if (view === "prompts" && idea.ideaType !== "prompt") return false;
+    if (lifecycleFilter && idea.lifecycle !== lifecycleFilter) return false;
+    if (moduleFilter && idea.module !== moduleFilter) return false;
+    return true;
+  }), [ideas, view, lifecycleFilter, moduleFilter]);
 
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? filteredIdeas[0]?.id ?? null);
+  useEffect(() => { setSelectedId(initialSelectedId ?? filteredIdeas[0]?.id ?? null); }, [initialSelectedId, filteredIdeas]);
+  const selected = useMemo(() => filteredIdeas.find((i) => i.id === selectedId) ?? filteredIdeas[0] ?? null, [filteredIdeas, selectedId]);
   function patchIdea(id: string, patch: Partial<IdeaDto>) {
     setIdeas((current) => current.map((idea) => (idea.id === id ? { ...idea, ...patch } : idea)));
   }
 
   return (
     <div className="uwe-v2-dashboard-grid" data-columns="3">
-      <IdeaListColumn
-        ideas={ideas}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
-      <ChatColumn
-        key={`chat-${selected?.id ?? "none"}`}
-        idea={selected}
-        onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })}
-      />
-      <PromptColumn
-        key={`prompt-${selected?.id ?? "none"}`}
-        idea={selected}
-        job={selected?.devAgentJobId ? (jobs[selected.devAgentJobId] ?? null) : null}
-        agentJobs={agentJobs}
-        onPrompt={(generatedPrompt) => selected && patchIdea(selected.id, { generatedPrompt })}
-        onDispatched={(job) => {
-          if (!selected) return;
-          patchIdea(selected.id, { devAgentJobId: job.id });
-          setJobs((current) => ({ ...current, [job.id]: job }));
-        }}
-        onJobUpdate={(job) => setJobs((current) => ({ ...current, [job.id]: job }))}
-        onRefresh={() => router.refresh()}
-      />
+      <IdeaListColumn ideas={filteredIdeas} selectedId={selected?.id ?? null} onSelect={setSelectedId} view={view} lifecycleFilter={lifecycleFilter} moduleFilter={moduleFilter} workspaceContext={workspaceContext} />
+      <ChatColumn key={`chat-${selected?.id ?? "none"}`} idea={selected} workspaceContext={workspaceContext} onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })} />
+      <PromptColumn key={`prompt-${selected?.id ?? "none"}`} idea={selected} highlightPrompt={view === "prompts"} job={selected?.devAgentJobId ? (jobs[selected.devAgentJobId] ?? null) : null} agentJobs={agentJobs} onPrompt={(p) => selected && patchIdea(selected.id, { generatedPrompt: p })} onDispatched={(job) => { if (!selected) return; patchIdea(selected.id, { devAgentJobId: job.id }); setJobs((c) => ({ ...c, [job.id]: job })); }} onJobUpdate={(job) => setJobs((c) => ({ ...c, [job.id]: job }))} onRefresh={() => router.refresh()} />
     </div>
   );
 }
 
-function IdeaListColumn({
-  ideas,
-  selectedId,
-  onSelect,
-}: {
-  ideas: IdeaDto[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
+function IdeaRegistryFields({ ideaTypeDefault = "feature", lifecycleDefault = "planned", moduleDefault = "", maturityDefault = "" }: { ideaTypeDefault?: DevIdeaTypeId; lifecycleDefault?: DevIdeaLifecycleId; moduleDefault?: string; maturityDefault?: string; }) {
+  return (<>
+    <label>Typ<select name="ideaType" defaultValue={ideaTypeDefault}>{DEV_IDEA_TYPES.map((type) => (<option key={type} value={type}>{DEV_IDEA_TYPE_LABELS[type]}</option>))}</select></label>
+    <label>Lifecycle<select name="lifecycle" defaultValue={lifecycleDefault}>{DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}</select></label>
+    <label>Modul<select name="module" defaultValue={moduleDefault}><option value="">— keins —</option>{DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}</select></label>
+    <label>Reifegrad<select name="maturityLevel" defaultValue={maturityDefault}><option value="">— keiner —</option>{DEV_IDEA_MATURITY_LEVELS.map((l) => (<option key={l} value={l}>{DEV_IDEA_MATURITY_LABELS[l]}</option>))}</select></label>
+  </>);
+}
+
+function WorkspaceContextFields({ view, lifecycle, module }: WorkspaceContext) {
+  return (<><input type="hidden" name="view" value={view} />{lifecycle ? <input type="hidden" name="lifecycle" value={lifecycle} /> : null}{module ? <input type="hidden" name="module" value={module} /> : null}</>);
+}
+
+function IdeaListColumn({ ideas, selectedId, onSelect, view, lifecycleFilter, moduleFilter, workspaceContext }: { ideas: IdeaDto[]; selectedId: string | null; onSelect: (id: string) => void; view: IdeaWorkspaceView; lifecycleFilter: string | null; moduleFilter: string | null; workspaceContext: WorkspaceContext; }) {
+  const createIdeaTypeDefault: DevIdeaTypeId = view === "prompts" ? "prompt" : "feature";
+  const createLifecycleDefault: DevIdeaLifecycleId = view === "prompts" ? "existing" : "planned";
   return (
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Ideen ({ideas.length})</h2>
-
+      <div className="uwe-idea-workspace-head">
+        <h2 className="uwe-v2-section-title">{IDEA_WORKSPACE_VIEW_LABELS[view]} ({ideas.length})</h2>
+        <div className="uwe-capture-filter-tabs uwe-idea-workspace-tabs">
+          {IDEA_WORKSPACE_VIEWS.map((tab) => (<Link key={tab} href={buildIdeasHref({ view: tab, lifecycle: lifecycleFilter, module: moduleFilter })} data-active={view === tab ? "true" : "false"}>{IDEA_WORKSPACE_VIEW_LABELS[tab]}</Link>))}
+        </div>
+      </div>
+      <div className="uwe-idea-workspace-filters">
+        <label>Lifecycle<select value={lifecycleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: e.target.value || null, module: moduleFilter, idea: selectedId }); }} aria-label="Lifecycle filtern"><option value="">Alle</option>{DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}</select></label>
+        {(view === "all" || view === "features") && (<label>Modul<select value={moduleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: lifecycleFilter, module: e.target.value || null, idea: selectedId }); }} aria-label="Modul filtern"><option value="">Alle</option>{DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}</select></label>)}
+      </div>
       <form action={createIdeaAction} className="uwe-brain-create-form">
-        <label>
-          Neue Idee (Überschrift)
-          <input name="title" required placeholder="z. B. Dark-Mode für Portal" />
-        </label>
-        <label>
-          Beschreibung
-          <textarea name="body" rows={2} placeholder="Worum geht es?" />
-        </label>
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
-          Idee anlegen
-        </button>
+        <WorkspaceContextFields {...workspaceContext} />
+        <label>{view === "prompts" ? "Neuer Prompt (Titel)" : "Neue Idee (Überschrift)"}<input name="title" required placeholder={view === "prompts" ? "z. B. Atlas-Orchestrator Subagent" : "z. B. Dark-Mode für Portal"} /></label>
+        <label>Beschreibung<textarea name="body" rows={2} placeholder="Worum geht es?" /></label>
+        <IdeaRegistryFields ideaTypeDefault={createIdeaTypeDefault} lifecycleDefault={createLifecycleDefault} />
+        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">{view === "prompts" ? "Prompt anlegen" : "Idee anlegen"}</button>
       </form>
-
-      {ideas.length === 0 ? (
-        <p className="uwe-dashboard-muted">Noch keine Ideen — lege oben eine an.</p>
-      ) : (
-        <ul className="uwe-idea-list">
-          {ideas.map((idea) => (
-            <li
-              key={idea.id}
-              className={`uwe-idea-list-item${idea.id === selectedId ? " is-active" : ""}`}
-            >
-              <button
-                type="button"
-                className="uwe-idea-list-select"
-                aria-pressed={idea.id === selectedId}
-                onClick={() => onSelect(idea.id)}
-              >
-                <span className="uwe-idea-list-title">{idea.title}</span>
+      {ideas.length === 0 ? (<p className="uwe-dashboard-muted">{view === "prompts" ? "Noch keine Prompt-Einträge." : view === "features" ? "Keine Features in dieser Ansicht." : "Noch keine Ideen."}</p>) : (
+        <ul className="uwe-idea-list">{ideas.map((idea) => (
+          <li key={idea.id} className={`uwe-idea-list-item${idea.id === selectedId ? " is-active" : ""}${view === "prompts" && idea.generatedPrompt ? " has-prompt" : ""}`}>
+            <button type="button" className="uwe-idea-list-select" aria-pressed={idea.id === selectedId} onClick={() => onSelect(idea.id)}>
+              <span className="uwe-idea-list-title">{idea.title}</span>
+              <span className="uwe-idea-list-badges">
+                {(view === "features" || idea.ideaType === "feature") ? <span className={lifecycleBadgeClass(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</span> : null}
+                {view === "all" ? <span className="uwe-badge uwe-badge-type">{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</span> : null}
                 <span className={statusBadgeClass(idea.status)}>{STATUS_LABELS[idea.status]}</span>
-              </button>
-              <div className="uwe-idea-list-actions">
-                <form action={updateIdeaStatusAction} className="uwe-idea-status-form">
-                  <input type="hidden" name="id" value={idea.id} />
-                  <select name="status" defaultValue={idea.status} aria-label="Status">
-                    {STATUS_ORDER.map((status) => (
-                      <option key={status} value={status}>
-                        {STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
-                    Setzen
-                  </button>
-                </form>
-                <form action={deleteIdeaAction}>
-                  <input type="hidden" name="id" value={idea.id} />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
-                    Löschen
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </span>
+              {(view === "features" || view === "all") && (idea.module || idea.maturityLevel) ? <span className="uwe-idea-list-meta">{[moduleLabel(idea.module), maturityLabel(idea.maturityLevel)].filter(Boolean).join(" · ")}</span> : null}
+              {view === "prompts" && idea.generatedPrompt ? <span className="uwe-idea-prompt-snippet">{truncatePrompt(idea.generatedPrompt)}</span> : null}
+            </button>
+            <div className="uwe-idea-list-actions">
+              <form action={updateIdeaStatusAction} className="uwe-idea-status-form"><WorkspaceContextFields {...workspaceContext} /><input type="hidden" name="id" value={idea.id} /><select name="status" defaultValue={idea.status} aria-label="Status">{STATUS_ORDER.map((s) => (<option key={s} value={s}>{STATUS_LABELS[s]}</option>))}</select><button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">Setzen</button></form>
+              <form action={deleteIdeaAction}><WorkspaceContextFields {...workspaceContext} /><input type="hidden" name="id" value={idea.id} /><button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">Löschen</button></form>
+            </div>
+          </li>
+        ))}</ul>
       )}
     </section>
   );
 }
-
 function ChatColumn({
   idea,
+  workspaceContext,
   onTranscript,
 }: {
   idea: IdeaDto | null;
+  workspaceContext: WorkspaceContext;
   onTranscript: (transcript: IdeaChatMessage[]) => void;
 }) {
   const [message, setMessage] = useState("");
@@ -306,21 +298,28 @@ function ChatColumn({
         </div>
         {editing ? (
           <form action={updateIdeaAction} className="uwe-brain-create-form">
+            <WorkspaceContextFields {...workspaceContext} />
             <input type="hidden" name="id" value={idea.id} />
             <label>
               Überschrift
               <input name="title" defaultValue={idea.title} required />
             </label>
-            <label>
-              Beschreibung (Fließtext)
-              <textarea name="body" rows={4} defaultValue={idea.body} />
-            </label>
+            <label>Beschreibung (Fließtext)<textarea name="body" rows={4} defaultValue={idea.body} /></label>
+            <IdeaRegistryFields ideaTypeDefault={idea.ideaType} lifecycleDefault={idea.lifecycle} moduleDefault={idea.module ?? ""} maturityDefault={idea.maturityLevel ?? ""} />
             <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
               Speichern
             </button>
           </form>
         ) : (
-          idea.body && <p className="uwe-idea-detail-body">{idea.body}</p>
+          <>
+            <div className="uwe-idea-detail-meta">
+              <span className="uwe-badge uwe-badge-type">{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</span>
+              <span className={lifecycleBadgeClass(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</span>
+              {idea.module ? <span className="uwe-dashboard-muted">{moduleLabel(idea.module)}</span> : null}
+              {idea.maturityLevel ? <span className="uwe-dashboard-muted">{maturityLabel(idea.maturityLevel)}</span> : null}
+            </div>
+            {idea.body ? <p className="uwe-idea-detail-body">{idea.body}</p> : null}
+          </>
         )}
       </div>
 
@@ -398,6 +397,7 @@ function ChatColumn({
 
 function PromptColumn({
   idea,
+  highlightPrompt,
   job,
   agentJobs,
   onPrompt,
@@ -406,6 +406,7 @@ function PromptColumn({
   onRefresh,
 }: {
   idea: IdeaDto | null;
+  highlightPrompt: boolean;
   job: IdeaAgentJobDto | null;
   agentJobs: {
     enabled: boolean;
@@ -546,8 +547,8 @@ function PromptColumn({
         : undefined;
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Aktueller Prompt</h2>
+    <section className={`uwe-v2-card uwe-v2-card-padded uwe-v2-section${highlightPrompt && draft.trim().length > 0 ? " uwe-idea-prompt-highlight" : ""}`}>
+      <h2 className="uwe-v2-section-title">{highlightPrompt ? "Prompt-Bibliothek" : "Aktueller Prompt"}</h2>
 
       {agentJobs.enabled && (
         <p className="uwe-dashboard-muted uwe-idea-cursor-target">
@@ -608,9 +609,7 @@ function PromptColumn({
         </button>
       </div>
 
-      <textarea
-        className="uwe-idea-prompt-text"
-        value={draft}
+      <textarea className={`uwe-idea-prompt-text${highlightPrompt ? " uwe-idea-prompt-text-library" : ""}`} value={draft}
         onChange={(event) => setDraft(event.target.value)}
         rows={10}
         placeholder="Hier erscheint der aus dem KI-Chat erzeugte Cursor-Prompt. Du kannst ihn vor der Übergabe anpassen."
