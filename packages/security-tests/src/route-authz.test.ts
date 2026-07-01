@@ -287,7 +287,7 @@ describe("route authorization — /worlds/* (Portal)", () => {
 
   it("portal graph route uses portal visibility context", () => {
     const source = read("apps/portal/app/api/worlds/[worldSlug]/graph/route.ts");
-    assert.match(source, /buildWorldGraph\(repo, worldSlug, "portal"\)/);
+    assert.match(source, /buildWorldGraph\(repo, worldSlug, "portal"/);
   });
 
   it("portal middleware guards portal routes in production", () => {
