@@ -5,10 +5,13 @@ import {
   SearchFilterBar,
   SearchResultsList,
   VISIBILITY_LABELS,
+  CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
+  CANONICAL_LIFECYCLE_FILTER_STATUSES,
   getAppRepository,
+  isCanonicalLifecycleFilterStatus,
   NAV_CATEGORIES,
   NAV_CATEGORY_LABELS,
   parseStringArray,
@@ -17,6 +20,7 @@ import {
   type NavCategory,
   type SearchEntityFilter,
   type Visibility,
+  type CanonicalStatus,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar, WikiPageTable, type WikiPageRow } from "@/src/components/wiki";
@@ -31,6 +35,7 @@ interface Props {
     q?: string;
     filter?: string;
     visibility?: string;
+    canon?: string;
   }>;
 }
 
@@ -42,8 +47,13 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     q,
     filter: entityFilter,
     visibility,
+    canon: canonFilter,
   } = await searchParams;
   const repo = getAppRepository();
+
+  const canonicalStatus = isCanonicalLifecycleFilterStatus(canonFilter)
+    ? (canonFilter as CanonicalStatus)
+    : undefined;
 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -56,6 +66,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
   const pages = await repo.listPagesByWorld(worldSlug, {
     campaignId: selectedCampaign?.id,
     navCategory: typeFilter as NavCategory | undefined,
+    canonicalStatus,
   });
 
   const searchResults = q?.trim()
@@ -65,6 +76,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         campaignId: selectedCampaign?.id,
         entityFilter: entityFilter as SearchEntityFilter | undefined,
         visibilityFilter: visibility ? [visibility as Visibility] : undefined,
+        canonicalStatusFilter: canonicalStatus,
         urlMode: "studio",
       })
     : [];
@@ -72,6 +84,18 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
   const isSearching = Boolean(q?.trim());
   const newPageHref = `/worlds/${worldSlug}/pages/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`;
   const worldBase = `/worlds/${worldSlug}`;
+  const filterHiddenFields = {
+    ...(campaignSlug ? { campaign: campaignSlug } : {}),
+    ...(typeFilter ? { type: typeFilter } : {}),
+    ...(q?.trim() ? { q: q.trim() } : {}),
+  };
+  const canonFilterOptions = [
+    { value: "", label: "Alle Kanon-Status" },
+    ...CANONICAL_LIFECYCLE_FILTER_STATUSES.map((status) => ({
+      value: status,
+      label: CANONICAL_LABELS[status],
+    })),
+  ];
 
   const tableRows: WikiPageRow[] = pages.map((page) => ({
     id: page.id,
@@ -139,12 +163,26 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         ))}
       </div>
 
+      <SearchFilterBar
+        action={worldBase}
+        query={q}
+        hiddenFields={filterHiddenFields}
+        filters={[
+          {
+            name: "canon",
+            label: "Kanon-Status",
+            value: canonFilter,
+            options: canonFilterOptions,
+          },
+        ]}
+      />
+
       {isSearching ? (
         <>
           <SearchFilterBar
             action={worldBase}
             query={q}
-            hiddenFields={campaignSlug ? { campaign: campaignSlug } : undefined}
+            hiddenFields={filterHiddenFields}
             filters={[
               {
                 name: "filter",
@@ -163,6 +201,12 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
                   value,
                   label,
                 })),
+              },
+              {
+                name: "canon",
+                label: "Kanon-Status",
+                value: canonFilter,
+                options: canonFilterOptions,
               },
             ]}
           />

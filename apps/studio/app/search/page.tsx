@@ -5,12 +5,15 @@ import {
   SearchResultsList,
   SidebarSection,
   VISIBILITY_LABELS,
+  CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
   ENTITY_TAG_ENTITY_TYPE_LABELS,
   ADMIN_SEARCH_ENTITY_LABELS,
   ADMIN_SEARCH_ENTITY_TYPES,
+  CANONICAL_LIFECYCLE_FILTER_STATUSES,
   getAppRepository,
+  isCanonicalLifecycleFilterStatus,
   prisma,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
@@ -18,6 +21,7 @@ import {
   type AdminSearchEntityType,
   type SearchEntityFilter,
   type Visibility,
+  type CanonicalStatus,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
@@ -32,6 +36,7 @@ interface Props {
     entityType?: string;
     visibility?: string;
     campaign?: string;
+    canon?: string;
   }>;
 }
 
@@ -51,8 +56,19 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     entityType: adminEntityType,
     visibility,
     campaign: campaignSlug,
+    canon: canonFilter,
   } = await searchParams;
   const scope = resolveScope(scopeParam);
+  const canonicalStatus = isCanonicalLifecycleFilterStatus(canonFilter)
+    ? (canonFilter as CanonicalStatus)
+    : undefined;
+  const canonFilterOptions = [
+    { value: "", label: "Alle Kanon-Status" },
+    ...CANONICAL_LIFECYCLE_FILTER_STATUSES.map((status) => ({
+      value: status,
+      label: CANONICAL_LABELS[status],
+    })),
+  ];
 
   const repo = getAppRepository();
   const [worlds, campaigns] = await Promise.all([
@@ -75,6 +91,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           campaignId: selectedCampaign?.id,
           entityFilter: entityFilter as SearchEntityFilter | undefined,
           visibilityFilter: visibility ? [visibility as Visibility] : undefined,
+          canonicalStatusFilter: canonicalStatus,
           urlMode: "studio",
           limit: 100,
         },
@@ -190,6 +207,12 @@ export default async function StudioSearchPage({ searchParams }: Props) {
                     value,
                     label,
                   })),
+                },
+                {
+                  name: "canon",
+                  label: "Kanon-Status",
+                  value: canonFilter,
+                  options: canonFilterOptions,
                 },
               ]),
         ]}

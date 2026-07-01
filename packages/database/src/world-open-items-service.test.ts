@@ -50,6 +50,26 @@ describe("world open items", () => {
       canonicalStatus: "draft",
     });
 
+    await repo.createPage({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Verworfener Spion",
+      slug: "verworfener-spion",
+      type: "npc",
+      publishStatus: "draft",
+      canonicalStatus: "discarded",
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      campaignId: campaign.id,
+      title: "Gespielte Szene",
+      slug: "gespielte-szene",
+      type: "note",
+      canonicalStatus: "played",
+      publishStatus: "published",
+    });
+
     await sessions.create({
       worldId: world.id,
       campaignId: campaign.id,
@@ -74,6 +94,10 @@ describe("world open items", () => {
 
     assert.ok(grouped.open_quest.some((item) => item.title === "Den Turm finden"));
     assert.ok(grouped.draft_npc.some((item) => item.title === "Händlerin Mara"));
+    assert.ok(!grouped.draft_npc.some((item) => item.title === "Verworfener Spion"));
+    assert.ok(
+      grouped.played_awaiting_canon.some((item) => item.title === "Gespielte Szene"),
+    );
     assert.equal(grouped.session_plot.length, 2);
     assert.ok(grouped.session_plot.some((item) => item.summary?.includes("Meisterdieb")));
 
