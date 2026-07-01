@@ -1,4 +1,10 @@
-import { CharacterLevelUpPanel, CharacterSpellSection, CollapsibleSection } from "@uwe/shared-ui";
+import {
+  CharacterDerivedStatsSection,
+  CharacterLevelUpPanel,
+  CharacterProficiencyFields,
+  CharacterSpellSection,
+  CollapsibleSection,
+} from "@uwe/shared-ui";
 import {
   buildLevelUpSuggestions,
   createCharacterService,
@@ -86,6 +92,8 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
         </div>
       </dl>
 
+      <CharacterDerivedStatsSection derived={sheet.derived} />
+
       <form action={updateStudioCharacterSheetAction} className="uwe-v2-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="pageId" value={pageId} />
@@ -147,6 +155,8 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
           Notizen
           <textarea name="notes" rows={3} defaultValue={character.notes} />
         </label>
+
+        <CharacterProficiencyFields derived={sheet.derived} />
 
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Charakterbogen speichern

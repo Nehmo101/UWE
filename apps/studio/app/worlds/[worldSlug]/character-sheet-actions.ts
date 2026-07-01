@@ -10,7 +10,10 @@ import {
   createCharacterSpellService,
   createPrismaClient,
   DEFAULT_ABILITY_SCORES,
+  extractCharacterProficiencyFormInput,
+  extractOpen5eSpellDescription,
   extractOpen5eSpellLevel,
+  extractOpen5eSpellSchool,
   getAppRepository,
   parseHomebrewSpellInput,
   resolveDndApiConfig,
@@ -63,6 +66,7 @@ function buildUpdateInput(parsed: StudioCharacterSheetForm): UpdateCharacterInpu
     ...(parsed.level !== undefined ? { level: parsed.level } : {}),
     ...(hasAbilityInput ? { abilities } : {}),
     ...(combat ? { combat } : {}),
+    ...extractCharacterProficiencyFormInput(parsed),
     ...(parsed.notes !== undefined ? { notes: parsed.notes } : {}),
   };
 }
@@ -223,6 +227,9 @@ export async function addSpellAction(formData: FormData) {
       spellLevel: parsed.spellLevel ?? 0,
       prepared: parsePreparedFlag(parsed.prepared ?? true),
       source: parsed.source ?? "open5e",
+      displayName: parsed.displayName ?? null,
+      school: parsed.school ?? null,
+      description: parsed.description ?? "",
       notes: parsed.notes ?? "",
     });
   } finally {
@@ -275,6 +282,8 @@ export async function addHomebrewSpellAction(formData: FormData) {
     name: parsed.name,
     spellLevel: parsed.spellLevel,
     prepared: parsed.prepared,
+    school: parsed.school,
+    description: parsed.description,
   });
   if (!homebrew) {
     throw new Error("Homebrew-Zauber unvollständig.");
@@ -288,6 +297,9 @@ export async function addHomebrewSpellAction(formData: FormData) {
       spellLevel: homebrew.spellLevel,
       prepared: homebrew.prepared,
       source: homebrew.source,
+      displayName: homebrew.displayName,
+      school: homebrew.school,
+      description: homebrew.description,
       notes: homebrew.notes,
     });
   } finally {
@@ -316,5 +328,7 @@ export async function searchOpen5eSpellsAction(query: string) {
     name: item.name,
     url: item.url,
     spellLevel: extractOpen5eSpellLevel(item.raw),
+    school: extractOpen5eSpellSchool(item.raw),
+    description: extractOpen5eSpellDescription(item.raw),
   }));
 }
