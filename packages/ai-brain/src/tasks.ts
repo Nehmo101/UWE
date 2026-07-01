@@ -20,6 +20,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   prepare_mail_draft: "Mail-Entwurf vorbereiten",
   atlas_name_region: "Atlas-Regionen benennen",
   atlas_describe_region: "Atlas-Region beschreiben",
+  simulate_faction: "Fraktion simulieren",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -61,6 +62,8 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Schlage stimmungsvolle, zum Weltbuilding passende Namen für die Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nutze den Kampagnen-Kontext für thematische Kohärenz. Gib für jede Einheit einen primären Namen und optional einen Alternativnamen an. Format: eine Zeile je Eintrag 'ID: Name (optional: Alternativname)'. Nie automatisch in den Kanon übernehmen.",
   atlas_describe_region:
     "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
+  simulate_faction:
+    "Simuliere einen Zeitsprung für die Fraktion im Kontext: Welche Ereignisse, Ressourcen- und Beziehungsänderungen ergeben sich? Antworte NUR als JSON-Objekt {\"events\":[...]} — jedes Event mit title, inGameDate {year,month,day}, summaryPlayer, summaryDm (optional), visibility (player_visible|private|dm_only). Keine Kanon-Änderungen ohne Review.",
 };
 
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {

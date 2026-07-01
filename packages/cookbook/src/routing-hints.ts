@@ -26,6 +26,7 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   suggest_backlinks: "deep_research",
   find_open_threads: "deep_research",
   prepare_mail_draft: "player_safe_rewrite",
+  simulate_faction: "dnd_generator",
 };
 
 export function mapTaskToUseCase(taskType: CookbookAiTaskType): CookbookUseCaseId {
