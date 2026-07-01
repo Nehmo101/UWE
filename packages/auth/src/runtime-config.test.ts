@@ -10,6 +10,7 @@ import {
   isRequestSecure,
   originMatchesTrustedHost,
   resolvePortalSessionHref,
+  resolveStudioSessionHref,
   resolveUweAppUrls,
 } from "./runtime-config";
 import { resolveClientIp } from "./proxy";
@@ -226,6 +227,40 @@ describe("runtime config", () => {
       PUBLIC_APP_URL: "https://uwe.example.org",
     });
     assert.equal(href, "https://uwe.example.org/portal");
+  });
+
+  it("builds studio session href on split-hostname studio surface", () => {
+    const href = resolveStudioSessionHref(
+      {
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      },
+      { currentApp: "studio" },
+    );
+    assert.equal(href, "/today");
+  });
+
+  it("builds studio session href from portal on split-hostname", () => {
+    const href = resolveStudioSessionHref(
+      {
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_PORTAL_URL: "https://uweandragons.org",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      },
+      { currentApp: "portal" },
+    );
+    assert.equal(href, "https://studio.uweanddragons.org/today");
+  });
+
+  it("builds studio session href for unified-path deployments", () => {
+    const href = resolveStudioSessionHref(
+      {
+        PUBLIC_APP_URL: "https://uwe.example.org",
+      },
+      { currentApp: "studio" },
+    );
+    assert.equal(href, "/studio");
   });
 });
 

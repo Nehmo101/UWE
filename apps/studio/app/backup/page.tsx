@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { SidebarSection } from "@uwe/shared-ui";
-import { listStoredBackups } from "@uwe/backup";
 import { BackupWorkspace } from "@/components/BackupWorkspace";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { listStudioBackups } from "@/src/lib/backup-paths";
 
 export default async function BackupPage() {
-  const backups = listStoredBackups();
+  const backups = await listStudioBackups();
 
   return (
     <StudioShell

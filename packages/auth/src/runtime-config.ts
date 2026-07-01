@@ -240,6 +240,12 @@ export function resolvePortalLoginHref(
   return `${resolvePortalPublicBaseUrl(env)}/login`;
 }
 
+/** Logged-in Studio work area — not the marketing landing at `/`. */
+export const STUDIO_SESSION_ENTRY_PATH = "/today";
+
+/** Legacy unified-path mount; `/studio` redirects to {@link STUDIO_SESSION_ENTRY_PATH}. */
+const STUDIO_LEGACY_MOUNT_PATH = "/studio";
+
 /** Logged-in Studio entry — relative on Studio, absolute when linked from Portal. */
 export function resolveStudioSessionHref(
   env: NodeJS.ProcessEnv = process.env,
@@ -248,14 +254,17 @@ export function resolveStudioSessionHref(
   const currentApp = options.currentApp ?? "studio";
   const urls = resolveUweAppUrls(env);
   const studioBase = resolveStudioPublicBaseUrl(env);
-  const entryPath = urls.deploymentModel === "split-hostname" ? "/" : "/studio";
+  const entryPath =
+    urls.deploymentModel === "split-hostname"
+      ? STUDIO_SESSION_ENTRY_PATH
+      : STUDIO_LEGACY_MOUNT_PATH;
 
   if (currentApp === "studio") {
     return entryPath;
   }
 
   if (urls.deploymentModel === "split-hostname") {
-    return studioBase;
+    return `${studioBase}${entryPath}`;
   }
 
   if (studioBase.endsWith(urls.studioPath)) {

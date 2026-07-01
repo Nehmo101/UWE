@@ -75,8 +75,15 @@ const IDEA_TASKS = new Set([
   "create_encounter",
 ]);
 
+const STRUCTURED_GENERATOR_TASKS = new Set([
+  "generate_structured_npc",
+  "generate_structured_quest",
+  "generate_structured_item",
+]);
+
 export function suggestApplyMode(taskType: string): AiProposalApplyMode {
   if (taskType === "generate_player_recap") return "player_recap";
+  if (STRUCTURED_GENERATOR_TASKS.has(taskType)) return "content_block";
   if (IDEA_TASKS.has(taskType)) return "idea";
   return "content_block";
 }
@@ -84,6 +91,9 @@ export function suggestApplyMode(taskType: string): AiProposalApplyMode {
 export function allowedApplyModes(taskType: string): AiProposalApplyMode[] {
   if (taskType === "generate_player_recap") {
     return ["player_recap", "content_block", "idea"];
+  }
+  if (STRUCTURED_GENERATOR_TASKS.has(taskType)) {
+    return ["content_block"];
   }
   if (IDEA_TASKS.has(taskType)) {
     return ["idea", "content_block"];

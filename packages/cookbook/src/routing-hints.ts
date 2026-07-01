@@ -27,6 +27,9 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   find_open_threads: "deep_research",
   prepare_mail_draft: "player_safe_rewrite",
   simulate_faction: "dnd_generator",
+  generate_structured_npc: "dnd_generator",
+  generate_structured_quest: "dnd_generator",
+  generate_structured_item: "dnd_generator",
 };
 
 export function mapTaskToUseCase(taskType: CookbookAiTaskType): CookbookUseCaseId {

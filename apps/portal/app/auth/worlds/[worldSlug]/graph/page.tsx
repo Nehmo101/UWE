@@ -6,10 +6,12 @@ import { createPrismaClient } from "@uwe/database/server";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ focusPageId?: string; mode?: string }>;
 }
 
-export default async function AuthWorldGraphPage({ params }: Props) {
+export default async function AuthWorldGraphPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { focusPageId, mode } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
@@ -17,14 +19,16 @@ export default async function AuthWorldGraphPage({ params }: Props) {
   }
 
   const db = createPrismaClient();
+  let worldName = "";
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!world) {
       notFound();
     }
+    worldName = world.name;
 
     try {
       assertPortalCanReadWorld(ctx, world.id);
@@ -36,13 +40,15 @@ export default async function AuthWorldGraphPage({ params }: Props) {
   }
 
   return (
-    <section className="portal-content-card">
-      <h1>Beziehungsnetz</h1>
-      <p className="auth-lead">
-        Sichtbare Wiki-Seiten und ihre Verknüpfungen — nur Inhalte, die für deine Rolle freigegeben
-        sind.
-      </p>
-      <PortalGraphView worldSlug={worldSlug} />
+    <section className="portal-graph-explorer">
+      {/* Sichtbarer Titel liegt als Overlay im Graphen; hier nur für Screenreader. */}
+      <h1 className="uwe-graph-a11y">Beziehungsnetz — {worldName}</h1>
+      <PortalGraphView
+        worldSlug={worldSlug}
+        worldName={worldName}
+        focusPageId={focusPageId}
+        mode={mode === "focus" || mode === "neighbors" || mode === "backlinks" ? mode : undefined}
+      />
     </section>
   );
 }

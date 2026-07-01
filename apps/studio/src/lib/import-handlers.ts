@@ -151,7 +151,14 @@ export async function postImportExecute(body: ImportRequestBody) {
       metadata: { format: body.format },
     });
 
-    return NextResponse.json({ job: completed, result: completed?.result });
+    return NextResponse.json({
+      job: completed,
+      result: completed?.result,
+      undoEntryId:
+        completed?.result && typeof completed.result === "object" && completed.result !== null
+          ? (completed.result as { undoEntryId?: string | null }).undoEntryId ?? null
+          : null,
+    });
   }
 
   const job = await enqueueAndDispatch({

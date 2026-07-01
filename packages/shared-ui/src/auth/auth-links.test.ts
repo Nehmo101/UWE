@@ -73,7 +73,20 @@ describe("auth-links", () => {
       },
     });
     assert.equal(links.portalHref, "https://uweanddragons.org/auth/worlds");
-    assert.equal(links.studioHref, "/");
+    assert.equal(links.studioHref, "/today");
+  });
+
+  it("links to studio dashboard from portal on split-hostname deployment", () => {
+    const links = resolveAuthLinks({
+      isLoggedIn: true,
+      currentApp: "portal",
+      env: {
+        PUBLIC_APP_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      },
+    });
+    assert.equal(links.studioHref, "https://studio.uweanddragons.org/today");
   });
 
   it("links from Studio landing to Portal login when logged out", () => {

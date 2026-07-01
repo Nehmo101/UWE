@@ -1,5 +1,10 @@
 import type { GeneratorActionId } from "@uwe/database/server";
 import type { AiTaskType } from "@uwe/ai-brain";
+import {
+  buildStructuredGeneratorPrompt,
+  getStructuredGeneratorSchema,
+  mapStructuredGeneratorAction,
+} from "@uwe/database/server";
 
 const GENERATOR_ACTION_TASK_MAP: Record<GeneratorActionId, AiTaskType> = {
   fill_missing_fields: "improve_lore_text",
@@ -12,13 +17,26 @@ const GENERATOR_ACTION_TASK_MAP: Record<GeneratorActionId, AiTaskType> = {
   generate_read_aloud: "fill_dungeon_room",
   remove_spoilers: "generate_player_recap",
   simulate_faction: "simulate_faction",
+  generate_npc: "generate_structured_npc",
+  generate_quest: "generate_structured_quest",
+  generate_item: "generate_structured_item",
 };
 
 export function mapGeneratorActionToTaskType(actionId: GeneratorActionId): AiTaskType {
   return GENERATOR_ACTION_TASK_MAP[actionId];
 }
 
-export function buildGeneratorUserPrompt(actionId: GeneratorActionId, pageTitle: string): string {
+export function buildGeneratorUserPrompt(
+  actionId: GeneratorActionId,
+  pageTitle: string,
+  structuredInput?: Record<string, string>,
+): string {
+  const structuredTarget = mapStructuredGeneratorAction(actionId);
+  if (structuredTarget) {
+    const schema = getStructuredGeneratorSchema(structuredTarget);
+    return buildStructuredGeneratorPrompt(schema, pageTitle, structuredInput ?? {});
+  }
+
   switch (actionId) {
     case "fill_missing_fields":
       return `Ergänze fehlende Felder für „${pageTitle}“. Nur Vorschläge — keine automatische Übernahme.`;

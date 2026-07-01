@@ -4,12 +4,16 @@ import {
   resolveFeatureCategory,
   resolveRequiredPermission,
   isMasterAdminRole,
-  DEFAULT_PRIVACY_RULES,
+  DEFAULT_PRIVACY_RULES, resolveFeatureModelOverride,
 } from "./ai-gateway-service";
 
 describe("ai-gateway-service", () => {
   it("resolveFeatureCategory maps personal_brain correctly", () => {
     assert.equal(resolveFeatureCategory({ contextMode: "personal_brain" }), "personal_brain");
+  });
+
+  it("resolveFeatureModelOverride returns configured override", () => {
+    assert.deepEqual(resolveFeatureModelOverride({ featureModels: { dnd_world: { providerId: "openai", model: "gpt-4o" } } }, "dnd_world"), { providerId: "openai", model: "gpt-4o" });
   });
 
   it("resolveFeatureCategory maps general_chat correctly", () => {

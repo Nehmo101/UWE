@@ -536,6 +536,8 @@ model User {
   reviewComments         ReviewComment[]
   dashboardLayouts       DashboardLayout[]
   ownedCharacters        Character[]
+  bugReports             BugReport[]
+  importJobs             ImportJob[]
 
   @@map("users")
 }
@@ -676,6 +678,7 @@ model World {
   partyTreasury       PartyTreasury?
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
+  importJobs           ImportJob[]
 
   @@map("worlds")
 }
@@ -2289,6 +2292,7 @@ model WorkshopProject {
   paintRecipes   WorkshopPaintRecipe[]
   printProfiles  WorkshopPrintProfile[]
   terrainRentals WorkshopTerrainRental[]
+  miniatureCollectionItems MiniatureCollectionItem[]
 
   @@index([status])
   @@index([projectType])
@@ -2726,20 +2730,172 @@ enum DevIdeaStatus {
   rejected
 }
 
+enum DevIdeaType {
+  feature
+  bug
+  prompt
+}
+
+enum DevIdeaLifecycle {
+  existing
+  planned
+  broken
+  deprecated
+}
+
+enum BugReportStatus {
+  open
+  in_progress
+  resolved
+  wont_fix
+}
+
+enum BugReportSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum MiniatureCollectionStatus {
+  purchased
+  built
+  primed
+  painted
+}
+
+enum ImportJobStatus {
+  pending
+  preview
+  executing
+  completed
+  failed
+  rolled_back
+}
+
+enum ImportSourceType {
+  knoteforge
+  obsidian
+  pdf
+  markdown
+  bulk_image
+}
+
+enum ImportTargetType {
+  world
+  personal_brain
+  capture
+  dnd_page
+}
+
+enum DocumentTemplateCategory {
+  contract
+  guide
+  checklist
+  other
+}
+
 model DevIdea {
-  id              String        @id @default(cuid())
+  id              String           @id @default(cuid())
   title           String
-  body            String        @default("")
-  status          DevIdeaStatus @default(in_planning)
-  chatTranscript  Json?         @map("chat_transcript")
-  generatedPrompt String?       @map("generated_prompt")
-  devAgentJobId   String?       @map("dev_agent_job_id")
+  body            String           @default("")
+  status          DevIdeaStatus    @default(in_planning)
+  ideaType        DevIdeaType      @default(feature) @map("idea_type")
+  lifecycle       DevIdeaLifecycle @default(planned)
+  module          String?
+  maturityLevel   String?          @map("maturity_level")
+  chatTranscript  Json?            @map("chat_transcript")
+  generatedPrompt String?          @map("generated_prompt")
+  devAgentJobId   String?          @map("dev_agent_job_id")
   metadata        Json?
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
   @@index([status, updatedAt])
+  @@index([ideaType, lifecycle])
   @@map("dev_ideas")
+}
+
+model BugReport {
+  id                String            @id @default(cuid())
+  title             String
+  description       String            @default("")
+  status            BugReportStatus   @default(open)
+  severity          BugReportSeverity @default(medium)
+  module            String?
+  screenshotAssetId String?           @map("screenshot_asset_id")
+  reporterUserId    String?           @map("reporter_user_id")
+  metadata          Json?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  reporter User? @relation(fields: [reporterUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@index([severity])
+  @@map("bug_reports")
+}
+
+model MiniatureCollectionItem {
+  id                   String                    @id @default(cuid())
+  name                 String
+  manufacturer         String?
+  gameSystem           String?                   @map("game_system")
+  faction              String?
+  quantity             Int                       @default(1)
+  status               MiniatureCollectionStatus @default(purchased)
+  notes                String                    @default("")
+  referenceImageAssetId String?                  @map("reference_image_asset_id")
+  comparePhotoAssetIds Json?                     @map("compare_photo_asset_ids")
+  workshopProjectId    String?                   @map("workshop_project_id")
+  metadata             Json?
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+
+  workshopProject WorkshopProject? @relation(fields: [workshopProjectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([manufacturer])
+  @@index([gameSystem])
+  @@map("miniature_collection_items")
+}
+
+model ImportJob {
+  id             String           @id @default(cuid())
+  sourceType     ImportSourceType @map("source_type")
+  targetType     ImportTargetType @map("target_type")
+  targetWorldId  String?          @map("target_world_id")
+  status         ImportJobStatus  @default(pending)
+  fileName       String?          @map("file_name")
+  previewPayload Json?            @map("preview_payload")
+  resultSummary  Json?            @map("result_summary")
+  undoToken      String?          @map("undo_token")
+  errorMessage   String?          @map("error_message")
+  createdByUserId String?         @map("created_by_user_id")
+  metadata       Json?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  targetWorld World? @relation(fields: [targetWorldId], references: [id], onDelete: SetNull)
+  createdBy   User?  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([targetType])
+  @@map("import_jobs")
+}
+
+model DocumentTemplate {
+  id        String                   @id @default(cuid())
+  name      String
+  category  DocumentTemplateCategory @default(other)
+  body      String                   @default("")
+  variables Json?
+  metadata  Json?
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("document_templates")
 }
 
 model DndBeyondReference {
@@ -3185,6 +3341,7 @@ model AiGatewayConfig {
   routingMode          AiRoutingMode @default(LOCAL_THEN_CLOUD) @map("routing_mode")
   cloudFallbackEnabled Boolean       @default(false) @map("cloud_fallback_enabled")
   privacyRules         Json          @default("{}") @map("privacy_rules")
+  featureModels        Json          @default("{}") @map("feature_models")
   dailyBudgetUsd       Float?        @map("daily_budget_usd")
   monthlyBudgetUsd     Float?        @map("monthly_budget_usd")
   perUserDailyBudgetUsd Float?       @map("per_user_daily_budget_usd")

@@ -1,15 +1,30 @@
-import type { DevIdea, DevIdeaStatus } from "./generated/prisma/client";
+import type { DevIdea, DevIdeaLifecycle, DevIdeaStatus, DevIdeaType } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
 
-export type { DevIdea, DevIdeaStatus } from "./generated/prisma/client";
+export type { DevIdea, DevIdeaLifecycle, DevIdeaStatus, DevIdeaType } from "./generated/prisma/client";
 
 export { DevIdeaStatus as DevIdeaStatusEnum } from "./generated/prisma/client";
+export { DevIdeaType as DevIdeaTypeEnum } from "./generated/prisma/client";
+export { DevIdeaLifecycle as DevIdeaLifecycleEnum } from "./generated/prisma/client";
 
 export const DEV_IDEA_STATUS_LABELS: Record<DevIdeaStatus, string> = {
   in_planning: "In Planung",
   implemented: "Umgesetzt",
   rejected: "Abgelehnt",
+};
+
+export const DEV_IDEA_TYPE_LABELS: Record<DevIdeaType, string> = {
+  feature: "Feature",
+  bug: "Bug",
+  prompt: "Prompt",
+};
+
+export const DEV_IDEA_LIFECYCLE_LABELS: Record<DevIdeaLifecycle, string> = {
+  existing: "Vorhanden",
+  planned: "Geplant",
+  broken: "Defekt",
+  deprecated: "Veraltet",
 };
 
 export const DEV_IDEA_STATUSES: readonly DevIdeaStatus[] = [
@@ -32,6 +47,10 @@ export interface CreateDevIdeaInput {
   title: string;
   body?: string;
   status?: DevIdeaStatus;
+  ideaType?: DevIdeaType;
+  lifecycle?: DevIdeaLifecycle;
+  module?: string | null;
+  maturityLevel?: string | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -39,6 +58,10 @@ export interface UpdateDevIdeaInput {
   title?: string;
   body?: string;
   status?: DevIdeaStatus;
+  ideaType?: DevIdeaType;
+  lifecycle?: DevIdeaLifecycle;
+  module?: string | null;
+  maturityLevel?: string | null;
   generatedPrompt?: string | null;
   devAgentJobId?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -46,6 +69,9 @@ export interface UpdateDevIdeaInput {
 
 export interface ListDevIdeasOptions {
   status?: DevIdeaStatus;
+  ideaType?: DevIdeaType;
+  lifecycle?: DevIdeaLifecycle;
+  module?: string;
   limit?: number;
 }
 
@@ -84,7 +110,12 @@ export class DevIdeaService {
 
   async listIdeas(options: ListDevIdeasOptions = {}): Promise<DevIdea[]> {
     return this.db.devIdea.findMany({
-      where: options.status ? { status: options.status } : undefined,
+      where: {
+        ...(options.status ? { status: options.status } : {}),
+        ...(options.ideaType ? { ideaType: options.ideaType } : {}),
+        ...(options.lifecycle ? { lifecycle: options.lifecycle } : {}),
+        ...(options.module ? { module: options.module } : {}),
+      },
       orderBy: { updatedAt: "desc" },
       take: options.limit ?? 200,
     });
@@ -104,6 +135,10 @@ export class DevIdeaService {
         title,
         body: input.body ?? "",
         status: input.status ?? "in_planning",
+        ideaType: input.ideaType ?? "feature",
+        lifecycle: input.lifecycle ?? "planned",
+        module: input.module ?? null,
+        maturityLevel: input.maturityLevel ?? null,
         metadata: toPrismaJsonValue(input.metadata),
       },
     });
@@ -116,6 +151,10 @@ export class DevIdeaService {
         ...(input.title !== undefined ? { title: input.title.trim() } : {}),
         ...(input.body !== undefined ? { body: input.body } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.ideaType !== undefined ? { ideaType: input.ideaType } : {}),
+        ...(input.lifecycle !== undefined ? { lifecycle: input.lifecycle } : {}),
+        ...(input.module !== undefined ? { module: input.module } : {}),
+        ...(input.maturityLevel !== undefined ? { maturityLevel: input.maturityLevel } : {}),
         ...(input.generatedPrompt !== undefined
           ? { generatedPrompt: input.generatedPrompt }
           : {}),

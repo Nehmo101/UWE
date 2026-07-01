@@ -34,6 +34,7 @@ interface GatewayDashboard {
     routingMode: RoutingMode;
     cloudFallbackEnabled: boolean;
     privacyRules: Record<string, PrivacyLevel>;
+    featureModels: Record<string, { providerId?: string | null; model?: string | null }>;
     dailyBudgetUsd: number | null;
     monthlyBudgetUsd: number | null;
     perUserDailyBudgetUsd: number | null;
@@ -85,11 +86,23 @@ const PRIVACY_CATEGORY_LABELS: Record<string, string> = {
   image_generation: "Bildfunktionen",
 };
 
+const FEATURE_MODEL_LABELS: Record<string, string> = {
+  general_chat: "Allgemeiner Chat",
+  dnd_world: "DnD Generator / Brain / Welt",
+  personal_brain: "Life Brain (persönlich)",
+  private_notes: "Zusammenfassungen / Notizen",
+  admin_diagnostics: "Admin-Diagnose",
+  image_generation: "Image Studio",
+};
+
+const FEATURE_MODEL_KEYS = Object.keys(FEATURE_MODEL_LABELS);
+
 const WIZARD_STEPS = [
   "RTX verbinden",
   "Routing-Modus",
   "Cloud-Fallback",
   "Provider",
+  "Modell pro Feature",
   "Privacy",
   "Budgets",
   "User-Freigaben",
@@ -175,7 +188,7 @@ export function AiGatewayWizard() {
   }, []);
 
   useEffect(() => {
-    if (step === 6 || step === 7) {
+    if (step === 7 || step === 8) {
       void loadAdminUsers();
     }
   }, [step, loadAdminUsers]);
@@ -202,10 +215,15 @@ export function AiGatewayWizard() {
   }, [usageFilters]);
 
   useEffect(() => {
-    if (step === 7) {
+    if (step === 8) {
       void loadFilteredUsage();
     }
   }, [step, loadFilteredUsage]);
+
+  async function patchFeatureModel(featureKey: string, patch: { providerId?: string | null; model?: string | null }) {
+    const current = data?.config.featureModels?.[featureKey] ?? {};
+    await patchConfig({ featureModels: { [featureKey]: { providerId: patch.providerId !== undefined ? patch.providerId : (current.providerId ?? null), model: patch.model !== undefined ? patch.model : (current.model ?? null) } } });
+  }
 
   async function deleteGrant(userId: string) {
     setMessage(null);
@@ -481,6 +499,73 @@ export function AiGatewayWizard() {
 
       {step === 4 && (
         <section className="uwe-v2-card uwe-v2-section">
+          <h2>Modell pro Feature</h2>
+          <p className="uwe-muted">
+            Optional: Provider und Modell pro Feature überschreiben. Leer = Gateway-Standard.
+          </p>
+          <table className="uwe-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Provider</th>
+                <th>Modell</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURE_MODEL_KEYS.map((featureKey) => {
+                const override = data.config.featureModels?.[featureKey] ?? {};
+                const isLocalOnly = featureKey === "personal_brain";
+                const selectedProvider = isLocalOnly ? "local_rtx" : (override.providerId ?? "");
+                return (
+                  <tr key={featureKey}>
+                    <td>{FEATURE_MODEL_LABELS[featureKey] ?? featureKey}</td>
+                    <td>
+                      {isLocalOnly ? (
+                        <span className="uwe-muted">RTX (fest)</span>
+                      ) : (
+                        <select
+                          className="uwe-input"
+                          value={selectedProvider}
+                          onChange={(e) =>
+                            void patchFeatureModel(featureKey, {
+                              providerId: e.target.value || null,
+                            })
+                          }
+                        >
+                          <option value="">— Standard —</option>
+                          <option value="local_rtx">RTX (lokal)</option>
+                          {data.providers
+                            .filter((p) => p.isEnabled)
+                            .map((p) => (
+                              <option key={p.providerId} value={p.providerId}>
+                                {p.label}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </td>
+                    <td>
+                      <input
+                        className="uwe-input"
+                        defaultValue={override.model ?? ""}
+                        onBlur={(e) => {
+                          const model = e.target.value.trim() || null;
+                          if (model !== (override.model ?? null)) {
+                            void patchFeatureModel(featureKey, { model });
+                          }
+                        }}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {step === 5 && (
+        <section className="uwe-v2-card uwe-v2-section">
           <h2>Privacy-Regeln</h2>
           <p className="uwe-muted">
             Legt fest, welche Inhalte an Cloud-Provider gesendet werden dürfen.
@@ -522,7 +607,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 5 && (
+      {step === 6 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Budgets</h2>
           <p>
@@ -570,7 +655,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 6 && (
+      {step === 7 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>User-Freigaben</h2>
           <p className="uwe-muted">
@@ -649,7 +734,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 7 && (
+      {step === 8 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Routing-Simulation, Fallback-Test &amp; Usage Logs</h2>
 

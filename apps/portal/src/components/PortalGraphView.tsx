@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GraphEdge, GraphNode } from "@uwe/database/graph-types";
+import type { GraphEdge, GraphNode, GraphViewMode } from "@uwe/database/graph-types";
 import { GraphView } from "@uwe/shared-ui";
+import { portalGraphApiUrl, remapPortalGraphHrefs } from "@/src/lib/portal-graph";
 
 interface PortalGraphViewProps {
   worldSlug: string;
+  worldName?: string;
+  focusPageId?: string;
+  mode?: GraphViewMode;
 }
 
 interface GraphPayload {
@@ -13,14 +17,7 @@ interface GraphPayload {
   edges: GraphEdge[];
 }
 
-function remapNodeHrefs(worldSlug: string, nodes: GraphNode[]): GraphNode[] {
-  return nodes.map((node) => ({
-    ...node,
-    href: `/auth/worlds/${worldSlug}/${node.slug}`,
-  }));
-}
-
-export function PortalGraphView({ worldSlug }: PortalGraphViewProps) {
+export function PortalGraphView({ worldSlug, worldName, focusPageId, mode }: PortalGraphViewProps) {
   const [graph, setGraph] = useState<GraphPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,16 +27,19 @@ export function PortalGraphView({ worldSlug }: PortalGraphViewProps) {
     async function loadGraph() {
       setError(null);
       try {
-        const response = await fetch(`/api/worlds/${encodeURIComponent(worldSlug)}/graph`, {
-          credentials: "same-origin",
-        });
+        const response = await fetch(
+          portalGraphApiUrl(worldSlug, { focusPageId, mode }),
+          {
+            credentials: "same-origin",
+          },
+        );
         if (!response.ok) {
           throw new Error(`Graph konnte nicht geladen werden (${response.status}).`);
         }
         const payload = (await response.json()) as GraphPayload;
         if (!cancelled) {
           setGraph({
-            nodes: remapNodeHrefs(worldSlug, payload.nodes),
+            nodes: remapPortalGraphHrefs(worldSlug, payload.nodes),
             edges: payload.edges,
           });
         }
@@ -55,7 +55,7 @@ export function PortalGraphView({ worldSlug }: PortalGraphViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [worldSlug]);
+  }, [worldSlug, focusPageId, mode]);
 
   if (error) {
     return (
@@ -74,11 +74,11 @@ export function PortalGraphView({ worldSlug }: PortalGraphViewProps) {
   }
 
   return (
-    <>
-      <GraphView nodes={graph.nodes} edges={graph.edges} />
-      <p className="auth-muted">
-        {graph.nodes.length} Knoten · {graph.edges.length} Kanten
-      </p>
-    </>
+    <GraphView
+      nodes={graph.nodes}
+      edges={graph.edges}
+      worldName={worldName}
+      focusPageId={focusPageId}
+    />
   );
 }

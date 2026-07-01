@@ -275,3 +275,14 @@ export {
   type UseDashboardLayoutOptions,
   type UseDashboardLayoutState,
 } from "./layout-editor";
+
+export {
+  CharacterLevelUpPanel,
+  type CharacterLevelUpPanelProps,
+} from "./CharacterLevelUpPanel";
+
+export {
+  CharacterSpellSection,
+  type CharacterSpellSectionProps,
+  type SpellSearchResult,
+} from "./CharacterSpellSection";

@@ -11,6 +11,7 @@ import {
   createLifeAdminService,
   createSettingsService,
   mergeHardwareRunbookMetadata,
+  parseLinksFromForm,
   prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -60,6 +61,7 @@ export async function createProjectAction(formData: FormData) {
     nextAction: String(formData.get("nextAction") || "").trim() || null,
     nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
     notes: String(formData.get("notes") || ""),
+    links: parseLinksFromForm(String(formData.get("links") || "")),
     costCents: parseOptionalInt(formData.get("costCents")),
     worldId: String(formData.get("worldId") || "").trim() || null,
   });
@@ -79,6 +81,7 @@ export async function updateProjectAction(formData: FormData) {
     nextAction: String(formData.get("nextAction") || "").trim() || null,
     nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
     notes: String(formData.get("notes") || ""),
+    links: parseLinksFromForm(String(formData.get("links") || "")),
     costCents: parseOptionalInt(formData.get("costCents")),
   });
   revalidateAdminPaths();

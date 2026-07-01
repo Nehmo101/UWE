@@ -1,4 +1,5 @@
 export { AppShell, type AppShellProps } from "./AppShell";
+export { StudioAuthChrome, type StudioAuthChromeProps } from "./StudioAuthChrome";
 export { StudioShell, type StudioShellProps } from "./StudioShell";
 export { WorldShell, type WorldShellProps } from "./WorldShell";
 export { BreadcrumbTrail, type BreadcrumbTrailProps } from "./BreadcrumbTrail";

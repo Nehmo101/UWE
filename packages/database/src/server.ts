@@ -91,17 +91,74 @@ export type { UpsertFactionStateInput } from "./faction-state-service";
 
 export {
   abilityModifier,
+  ABILITY_KEYS,
+  buildCharacterSheetSnapshot,
   createCharacterService,
   DEFAULT_ABILITY_SCORES,
+  parseAbilityScores,
+  parseCharacterCombat,
   proficiencyBonus,
+  toPortalCharacterView,
   CharacterService,
 } from "./character-service";
 
+export {
+  buildHomebrewSpellKey,
+  computeSpellSlots,
+  createCharacterSpellService,
+  effectiveCasterLevel,
+  extractOpen5eSpellLevel,
+  formatSpellDisplayName,
+  parseCharacterClasses,
+  parseHomebrewSpellInput,
+  toCharacterSpellView,
+  CharacterSpellService,
+} from "./character-spell-service";
+
 export type {
   AbilityScores,
+  CharacterCombat,
+  CharacterSheetSnapshot,
   CreateCharacterInput,
+  PortalCharacterView,
+  UpdateCharacterInput,
   UpsertCharacterSpellInput,
 } from "./character-service";
+
+export type {
+  CharacterClassEntry,
+  CharacterSpellView,
+  ParsedHomebrewSpell,
+  SpellSlotSummary,
+} from "./character-spell-service";
+
+export {
+  buildLevelUpApplyPayload,
+  buildLevelUpSuggestions,
+  getClassHitDie,
+  PICKABLE_CLASSES,
+} from "./character-level-up-service";
+
+export type {
+  ApplyLevelUpOptions,
+  LevelUpApplyPayload,
+  LevelUpCharacterInput,
+  LevelUpFieldKey,
+  LevelUpFieldSuggestion,
+  LevelUpSuggestions,
+  PickableClassName,
+} from "./character-level-up-service";
+
+export {
+  buildCharacterSheetMarkdown,
+  buildCharacterSheetPrintHtml,
+  buildCharacterSheetPrintStyles,
+} from "./character-sheet-export";
+
+export type {
+  CharacterInventoryItemView,
+  CharacterSheetExportInput,
+} from "./character-sheet-export";
 
 export {
   createPartyTreasuryService,
@@ -128,6 +185,22 @@ export {
 } from "./structured-statblock-service";
 
 export type { UpsertStructuredStatblockInput } from "./structured-statblock-service";
+
+export {
+  buildStructuredGeneratorPrompt,
+  formatStructuredGeneratorMarkdown,
+  getStructuredGeneratorSchema,
+  isStructuredGeneratorTarget,
+  parseStructuredGeneratorOutput,
+  STRUCTURED_GENERATOR_SCHEMAS,
+} from "./structured-generator-schemas";
+
+export type {
+  StructuredGeneratorField,
+  StructuredGeneratorOutput,
+  StructuredGeneratorSchema,
+  StructuredGeneratorTarget,
+} from "./structured-generator-schemas";
 
 export type { QuestLifecycleStatus } from "./generated/prisma/client";
 
@@ -530,6 +603,26 @@ export {
 
 export type { MigrationStatus } from "./migration-status";
 
+export {
+  NL_COMMAND_INTENTS,
+  NlCommandService,
+  buildConfirmationMessage,
+  createNlCommandService,
+  isMutationIntent,
+  isNlCommandIntentName,
+  issueConfirmationToken,
+  parseCommandIntent,
+  verifyConfirmationToken,
+} from "./nl-command-service";
+
+export type {
+  NlCommandExecutionContext,
+  NlCommandExecutionResult,
+  NlCommandIntent,
+  NlCommandIntentName,
+  ParseCommandResult,
+} from "./nl-command-service";
+
 export { getAppRuntimeStatus, getProxyStatus, getStorageStatus, getSystemStatus } from "./system-status";
 
 export type {
@@ -596,6 +689,24 @@ export type {
   SetupSettingSource,
 } from "./owner-setup-service";
 
+export { getAdminOnboardingChecklist } from "./admin-onboarding-checklist-service";
+
+export type {
+  AdminChecklistItem,
+  AdminOnboardingChecklist,
+  ChecklistItemStatus as AdminChecklistItemStatus,
+} from "./admin-onboarding-checklist-service";
+
+export {
+  CAMPAIGN_JOB_PRESETS,
+  resolveCampaignPresetHref,
+} from "./campaign-job-presets";
+
+export type {
+  CampaignJobPreset,
+  CampaignJobPresetKind,
+} from "./campaign-job-presets";
+
 export {
   assessRtxExposure,
   assessStudioSecurity,
@@ -618,6 +729,18 @@ export {
   createWorldOverviewService,
   WorldOverviewService,
 } from "./world-overview";
+
+export {
+  createWorldOpenItemsService,
+  groupOpenItemsByCategory,
+  WORLD_OPEN_ITEM_CATEGORY_LABELS,
+  WorldOpenItemsService,
+} from "./world-open-items-service";
+
+export type {
+  WorldOpenItem,
+  WorldOpenItemCategory,
+} from "./world-open-items-service";
 
 export {
   createPortalDashboardService,
@@ -1458,6 +1581,7 @@ export {
   DEFAULT_GENERATOR_PRESETS,
   detectMissingContent,
   listGeneratorActions,
+  mapStructuredGeneratorAction,
   resolveGeneratorContextFromPage,
 } from "./generator-service";
 
@@ -1635,7 +1759,11 @@ export {
   parseDevIdeaTranscript,
   DEV_IDEA_STATUS_LABELS,
   DEV_IDEA_STATUSES,
+  DEV_IDEA_TYPE_LABELS,
+  DEV_IDEA_LIFECYCLE_LABELS,
   DevIdeaStatusEnum,
+  DevIdeaTypeEnum,
+  DevIdeaLifecycleEnum,
 } from "./dev-idea-service";
 
 export type {
@@ -1644,9 +1772,110 @@ export type {
   ListDevIdeasOptions,
   DevIdea,
   DevIdeaStatus,
+  DevIdeaType,
+  DevIdeaLifecycle,
   DevIdeaChatMessage,
   DevIdeaChatRole,
 } from "./dev-idea-service";
+
+export {
+  parseFeatureMatrixOverviewTable,
+  parseFeatureMatrixUpsertCandidates,
+  rowToUpsertCandidate,
+  loadFeatureMatrixMarkdown,
+  syncFeatureMatrixToDevIdeas,
+  maturityToLifecycle,
+  FEATURE_MATRIX_ENRICHMENT,
+} from "./feature-matrix-sync-service";
+
+export type {
+  FeatureMatrixRow,
+  FeatureMatrixUpsertCandidate,
+  FeatureMatrixSyncResult,
+} from "./feature-matrix-sync-service";
+
+export {
+  createBugReportService,
+  BugReportService,
+  BUG_REPORT_STATUS_LABELS,
+  BUG_REPORT_SEVERITY_LABELS,
+  BugReportStatusEnum,
+  BugReportSeverityEnum,
+} from "./bug-report-service";
+
+export type {
+  CreateBugReportInput,
+  UpdateBugReportInput,
+  ListBugReportsOptions,
+  BugReport,
+  BugReportStatus,
+  BugReportSeverity,
+} from "./bug-report-service";
+
+export {
+  createMiniatureCollectionService,
+  MiniatureCollectionService,
+  MINIATURE_COLLECTION_STATUS_LABELS,
+  MiniatureCollectionStatusEnum,
+} from "./miniature-collection-service";
+
+export type {
+  CreateMiniatureCollectionItemInput,
+  UpdateMiniatureCollectionItemInput,
+  ListMiniatureCollectionOptions,
+  MiniatureCollectionItem,
+  MiniatureCollectionStatus,
+} from "./miniature-collection-service";
+
+export {
+  createImportJobService,
+  ImportJobService,
+  IMPORT_JOB_STATUS_LABELS,
+  IMPORT_SOURCE_TYPE_LABELS,
+  IMPORT_TARGET_TYPE_LABELS,
+  ImportJobStatusEnum,
+  ImportSourceTypeEnum,
+  ImportTargetTypeEnum,
+} from "./import-job-service";
+
+export type {
+  CreateImportJobInput,
+  UpdateImportJobInput,
+  ListImportJobsOptions,
+  ImportJob,
+  ImportJobStatus,
+  ImportSourceType,
+  ImportTargetType,
+} from "./import-job-service";
+
+export {
+  executeMarkdownImport,
+  previewMarkdownImport,
+  ImportCentralError,
+  PDF_NOT_SUPPORTED_MESSAGE,
+} from "./import-central-service";
+
+export type {
+  MarkdownImportContext,
+  MarkdownImportPreviewItem,
+  MarkdownImportPreviewResult,
+  MarkdownImportExecuteResult,
+} from "./import-central-service";
+
+export {
+  createDocumentTemplateService,
+  DocumentTemplateService,
+  DOCUMENT_TEMPLATE_CATEGORY_LABELS,
+  DocumentTemplateCategoryEnum,
+} from "./document-template-service";
+
+export type {
+  CreateDocumentTemplateInput,
+  UpdateDocumentTemplateInput,
+  ListDocumentTemplatesOptions,
+  DocumentTemplate,
+  DocumentTemplateCategory,
+} from "./document-template-service";
 
 export {
   ConnectorService,
@@ -1758,18 +1987,15 @@ export {
   AI_FEATURE_PERMISSIONS,
   AI_FEATURE_PERMISSION_LABELS,
   MASTER_ADMIN_PERMISSIONS,
-  DEFAULT_PRIVACY_RULES,
-  resolveFeatureCategory,
-  resolveRequiredPermission,
-  isMasterAdminRole,
+  DEFAULT_PRIVACY_RULES, AI_FEATURE_MODEL_KEYS, AI_FEATURE_MODEL_LABELS,
+  resolveFeatureCategory, resolveRequiredPermission, isMasterAdminRole, resolveFeatureModelOverride,
 } from "./ai-gateway-service";
 export type {
   AiRoutingMode,
   AiPrivacyLevel,
   AiFeatureCategory,
   AiFeaturePermission,
-  AiGatewayConfigRecord,
-  AiCloudProviderRecord,
+  AiGatewayConfigRecord, AiFeatureModelConfig, AiFeatureModels, AiCloudProviderRecord,
   AiUserGrantRecord,
   AiUsageLogRecord,
   AiBudgetStatus,

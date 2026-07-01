@@ -62,6 +62,7 @@ export {
 export {
   ROLE_CAPABILITY_LABELS,
   WORLD_MEMBER_ROLE_LABELS,
+  buildRoleCapabilityMatrix,
   canAccessSystemAdmin,
   canApproveReviews,
   canDirectlyEditCanon,
@@ -77,7 +78,13 @@ export {
   mustSubmitProposal,
 } from "./role-capabilities";
 
-export type { CapabilityContext, RoleCapability } from "./role-capabilities";
+export type {
+  CapabilityContext,
+  RoleCapability,
+  RoleCapabilityMatrixRow,
+  UweRoleId,
+  WorldRoleId,
+} from "./role-capabilities";
 
 export {
   detectPrivateReferences,

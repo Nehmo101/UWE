@@ -60,6 +60,7 @@ export async function postGeneratorAction(body: {
   actionId: GeneratorActionId;
   worldSlug: string;
   pageSlug: string;
+  structuredInput?: Record<string, string>;
   useMock?: boolean;
   sync?: boolean;
   workerUrl?: string;
@@ -77,7 +78,7 @@ export async function postGeneratorAction(body: {
   }
 
   const taskType = mapGeneratorActionToTaskType(body.actionId);
-  const userPrompt = buildGeneratorUserPrompt(body.actionId, page.title);
+  const userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, body.structuredInput);
   const inference = await getInferenceStatus({ useMock: body.useMock });
   const model =
     process.env.AI_INFERENCE_DEFAULT_MODEL?.trim() ||

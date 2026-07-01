@@ -14,7 +14,8 @@ import { applyBackupRetention, normalizeRetentionCount } from "./retention";
 import { validateBackupBundleOrThrow } from "./validate";
 import {
   buildBackupFilename,
-  ensureBackupsDir,
+  resolveBackupsDirectory,
+  resolveBackupsDir,
   resolveSchemaVersion,
 } from "./paths";
 import type {
@@ -98,7 +99,10 @@ export async function exportBackupZip(
   options: CreateBackupOptions,
 ): Promise<{ bundle: BackupBundle; outputPath: string }> {
   const bundle = await createBackupBundle(databaseUrl, options);
-  const backupsDir = ensureBackupsDir(options.outputDir);
+  const backupsDir = resolveBackupsDirectory({
+    backupsDir: options.backupsDir,
+    baseDir: options.outputDir,
+  });
   const filename = buildBackupFilename(bundle.manifest).replace(/\.zip$/, ".json");
 
   if (options.format === "json") {
@@ -132,86 +136,109 @@ export async function exportBackupZip(
   return { bundle, outputPath };
 }
 
-export function listStoredBackups(backupsDir?: string): StoredBackupInfo[] {
-  const dir = ensureBackupsDir(backupsDir);
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+function parseStoredBackupEntry(dir: string, entry: fs.Dirent): StoredBackupInfo | null {
+  const filePath = path.join(dir, entry.name);
+  const stat = fs.statSync(filePath);
+  const raw = fs.readFileSync(filePath);
+
+  if (entry.name.endsWith(".enc")) {
+    return {
+      id: entry.name,
+      filename: entry.name,
+      path: filePath,
+      manifest: {
+        version: "1.0" as const,
+        uweVersion: UWE_VERSION,
+        schemaVersion: "unknown",
+        type: "full" as const,
+        createdAt: stat.mtime.toISOString(),
+        includesUsers: false,
+        includesAuthSessions: false,
+        includesSettings: false,
+        encrypted: true,
+        stats: {
+          worlds: 0,
+          campaigns: 0,
+          pages: 0,
+          contentBlocks: 0,
+          pageLinks: 0,
+          assets: 0,
+          gameSessions: 0,
+          labels: 0,
+          labelTemplates: 0,
+          printLists: 0,
+          soundboardButtons: 0,
+          pageTemplates: 0,
+          worldMemberships: 0,
+          shareLinks: 0,
+          playerNotes: 0,
+        },
+        assetFiles: [],
+      },
+      size: stat.size,
+      createdAt: stat.mtime.toISOString(),
+    };
+  }
+
+  const content = isEncryptedBackupPayload(raw) ? decryptBackupPayload(raw) : raw;
+
+  if (entry.name.endsWith(".json")) {
+    const bundle = JSON.parse(content.toString("utf8")) as BackupBundle;
+    validateBackupBundleOrThrow(bundle);
+    return {
+      id: entry.name,
+      filename: entry.name,
+      path: filePath,
+      manifest: bundle.manifest,
+      size: stat.size,
+      createdAt: bundle.manifest.createdAt,
+    };
+  }
+
+  const bundle = readBackupZip(content);
+  validateBackupBundleOrThrow(bundle);
+  return {
+    id: entry.name,
+    filename: entry.name,
+    path: filePath,
+    manifest: bundle.manifest,
+    size: stat.size,
+    createdAt: bundle.manifest.createdAt,
+  };
+}
+
+export function listStoredBackups(explicitBackupsDir?: string): StoredBackupInfo[] {
+  const dir = explicitBackupsDir ?? resolveBackupsDir();
+
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch {
+    if (!fs.existsSync(dir)) {
+      return [];
+    }
+  }
+
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
 
   return entries
     .filter(
       (entry) =>
         entry.isFile() && /\.(zip|json|enc)$/i.test(entry.name) && !entry.name.startsWith("."),
     )
-    .map((entry) => {
-      const filePath = path.join(dir, entry.name);
-      const stat = fs.statSync(filePath);
-      const raw = fs.readFileSync(filePath);
-
-      if (entry.name.endsWith(".enc")) {
-        return {
-          id: entry.name,
-          filename: entry.name,
-          path: filePath,
-          manifest: {
-            version: "1.0" as const,
-            uweVersion: UWE_VERSION,
-            schemaVersion: "unknown",
-            type: "full" as const,
-            createdAt: stat.mtime.toISOString(),
-            includesUsers: false,
-            includesAuthSessions: false,
-            includesSettings: false,
-            encrypted: true,
-            stats: {
-              worlds: 0,
-              campaigns: 0,
-              pages: 0,
-              contentBlocks: 0,
-              pageLinks: 0,
-              assets: 0,
-              gameSessions: 0,
-              labels: 0,
-              labelTemplates: 0,
-              printLists: 0,
-              soundboardButtons: 0,
-              pageTemplates: 0,
-              worldMemberships: 0,
-              shareLinks: 0,
-              playerNotes: 0,
-            },
-            assetFiles: [],
-          },
-          size: stat.size,
-          createdAt: stat.mtime.toISOString(),
-        };
+    .flatMap((entry) => {
+      try {
+        const parsed = parseStoredBackupEntry(dir, entry);
+        return parsed ? [parsed] : [];
+      } catch {
+        return [];
       }
-
-      const content = isEncryptedBackupPayload(raw)
-        ? decryptBackupPayload(raw)
-        : raw;
-
-      if (entry.name.endsWith(".json")) {
-        const bundle = JSON.parse(content.toString("utf8")) as BackupBundle;
-        validateBackupBundleOrThrow(bundle);
-        return {
-          id: entry.name,
-          filename: entry.name,
-          path: filePath,
-          manifest: bundle.manifest,
-          size: stat.size,
-          createdAt: bundle.manifest.createdAt,
-        };
-      }
-
-      const bundle = readBackupZip(content);
-      validateBackupBundleOrThrow(bundle);
-      return {
-        id: entry.name,
-        filename: entry.name,
-        path: filePath,
-        manifest: bundle.manifest,
-        size: stat.size,
-        createdAt: bundle.manifest.createdAt,
-      };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

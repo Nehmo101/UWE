@@ -51,6 +51,39 @@ describe("life admin service", () => {
     assert.equal(workshop.projectType, "dnd_terrain");
   });
 
+  it("returns personal project dashboard stats by category and status", async () => {
+    await service.createPersonalProject({ name: "UWE stats", category: "uwe", status: "active" });
+    await service.createPersonalProject({
+      name: "Homelab stats",
+      category: "hardware_homelab",
+      status: "planned",
+    });
+
+    const stats = await service.getPersonalProjectDashboardStats();
+    assert.ok(stats.total >= 2);
+    assert.ok(stats.byCategory.uwe >= 1);
+    assert.ok(stats.byCategory.hardware_homelab >= 1);
+    assert.ok(stats.byStatus.active >= 1);
+    assert.ok(stats.byStatus.planned >= 1);
+  });
+
+  it("loads personal project detail with linked captures", async () => {
+    const project = await service.createPersonalProject({
+      name: "Detail test",
+      category: "dnd",
+      status: "idea",
+      notes: "Campaign prep",
+      links: [{ label: "Wiki", url: "https://example.com/wiki" }],
+      costCents: 1200,
+    });
+
+    const detail = await service.getPersonalProjectDetail(project.id);
+    assert.ok(detail);
+    assert.equal(detail.project.name, "Detail test");
+    assert.equal(detail.project.notes, "Campaign prep");
+    assert.equal(detail.project.costCents, 1200);
+  });
+
   it("supports workshop hobby cockpit entities and capture promotion", async () => {
     const capture = await service.createCapture({
       title: "Goblin squad paint test",

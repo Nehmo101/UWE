@@ -1,32 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
-import { resolveNavGroups, navGroupsToCommands } from "@uwe/shared-utils/navigation";
-import { SYSTEM_NAV } from "../../navigation/system-nav";
-import { AppShell } from "./AppShell";
+import { StudioShell, type StudioShellProps } from "./StudioShell";
 
-export interface SystemShellProps {
-  breadcrumb?: React.ReactNode;
-  contextPanel?: React.ReactNode;
-  footer?: React.ReactNode;
-  children: React.ReactNode;
-}
+export type SystemShellProps = StudioShellProps;
 
-/** System area shell — owner/admin operations. */
-export function SystemShell({ breadcrumb, contextPanel, footer, children }: SystemShellProps) {
-  const pathname = usePathname() ?? "/system";
-  return (
-    <AppShell
-      groups={resolveNavGroups(SYSTEM_NAV, pathname)}
-      commands={navGroupsToCommands(SYSTEM_NAV)}
-      brandLabel="UWE System"
-      brandHref="/system"
-      breadcrumb={breadcrumb}
-      contextPanel={contextPanel}
-      footer={footer}
-    >
-      {children}
-    </AppShell>
-  );
+/**
+ * Backward-compatible alias for {@link StudioShell}.
+ * Admin/system pages keep importing SystemShell, but the sidebar always uses
+ * the full Studio IA so navigation stays consistent across routes.
+ */
+export function SystemShell(props: SystemShellProps) {
+  return <StudioShell {...props} />;
 }

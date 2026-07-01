@@ -189,6 +189,10 @@ export const GENERATOR_ACTION_IDS = [
   "generate_encounter",
   "generate_read_aloud",
   "remove_spoilers",
+  "simulate_faction",
+  "generate_npc",
+  "generate_quest",
+  "generate_item",
 ] as const;
 
 export const generatorActionIdSchema = z.enum(GENERATOR_ACTION_IDS);
@@ -197,6 +201,7 @@ export const aiGeneratorBodySchema = z.object({
   actionId: generatorActionIdSchema,
   worldSlug: slugSchema,
   pageSlug: slugSchema,
+  structuredInput: z.record(z.string(), z.string()).optional(),
   useMock: z.boolean().optional(),
   sync: z.boolean().optional(),
 });
@@ -239,6 +244,149 @@ export const playerCharacterBlockSchema = z.object({
   blockId: idSchema,
   content: nonEmptyString.max(50_000),
   returnPath: z.string().trim().max(500).optional(),
+});
+
+const abilityScoreField = z.coerce.number().int().min(1).max(30);
+
+export const characterSheetUpdateSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+  displayName: z.string().trim().min(1).max(200).optional(),
+  level: z.coerce.number().int().min(1).max(30).optional(),
+  strength: abilityScoreField.optional(),
+  dexterity: abilityScoreField.optional(),
+  constitution: abilityScoreField.optional(),
+  intelligence: abilityScoreField.optional(),
+  wisdom: abilityScoreField.optional(),
+  charisma: abilityScoreField.optional(),
+  armorClass: z.coerce.number().int().min(1).max(99).optional(),
+  initiativeBonus: z.coerce.number().int().min(-10).max(20).optional(),
+  notes: z.string().trim().max(10_000).optional(),
+});
+
+export const studioCharacterSheetUpdateSchema = characterSheetUpdateSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+const spellLevelField = z.coerce.number().int().min(0).max(9);
+
+export const characterSpellAddSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  spellLevel: spellLevelField.optional(),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  source: z.string().trim().max(50).optional(),
+  notes: z.string().trim().max(500).optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellRemoveSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellTogglePreparedSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellHomebrewAddSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  name: z.string().trim().min(1).max(200),
+  spellLevel: spellLevelField.optional(),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const studioCharacterSpellAddSchema = characterSpellAddSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const studioCharacterSpellRemoveSchema = characterSpellRemoveSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const studioCharacterSpellTogglePreparedSchema =
+  characterSpellTogglePreparedSchema.extend({
+    pageId: idSchema,
+    pageSlug: slugSchema,
+    category: slugSchema,
+  });
+
+export const studioCharacterSpellHomebrewAddSchema = characterSpellHomebrewAddSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const dndSpellSearchQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+});
+
+export const dndEquipmentSearchQuerySchema = dndSpellSearchQuerySchema;
+
+const levelUpBooleanField = z
+  .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+  .optional();
+
+export const characterLevelUpApplySchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pickedClass: z.string().trim().min(1).max(100).optional(),
+  hpIncrease: z.coerce.number().int().min(0).max(50).optional(),
+  applyLevel: levelUpBooleanField,
+  applyMaxHp: levelUpBooleanField,
+  applyCurrentHp: levelUpBooleanField,
+  applyClasses: levelUpBooleanField,
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const studioCharacterLevelUpApplySchema = characterLevelUpApplySchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const studioApplySrdEquipmentSchema = z.object({
+  worldSlug: slugSchema,
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+  provider: z.enum(["open5e", "dnd5e_srd"]),
+  equipmentId: z.string().trim().min(1).max(200),
+  name: nonEmptyString.max(500),
+  sourceUrl: z.string().trim().max(2000).optional(),
+});
+
+export const characterSheetPrintQuerySchema = z.object({
+  characterId: idSchema,
+  format: z.enum(["html", "markdown"]).optional(),
 });
 
 export const assetFileQuerySchema = z.object({
