@@ -555,6 +555,26 @@ export {
 
 export type { MigrationStatus } from "./migration-status";
 
+export {
+  NL_COMMAND_INTENTS,
+  NlCommandService,
+  buildConfirmationMessage,
+  createNlCommandService,
+  isMutationIntent,
+  isNlCommandIntentName,
+  issueConfirmationToken,
+  parseCommandIntent,
+  verifyConfirmationToken,
+} from "./nl-command-service";
+
+export type {
+  NlCommandExecutionContext,
+  NlCommandExecutionResult,
+  NlCommandIntent,
+  NlCommandIntentName,
+  ParseCommandResult,
+} from "./nl-command-service";
+
 export { getAppRuntimeStatus, getProxyStatus, getStorageStatus, getSystemStatus } from "./system-status";
 
 export type {
