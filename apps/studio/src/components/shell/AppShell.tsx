@@ -46,12 +46,12 @@ export function AppShell({
   return (
     <SidebarContextProvider closeSidebar={() => undefined}>
       <div
-        className="flex min-h-screen w-full bg-background text-foreground"
+        className="flex h-dvh w-full overflow-hidden bg-background text-foreground"
         data-has-bottom-nav={hasBottomNav ? "true" : "false"}
       >
-        <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
+        <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
           <SidebarBrand label={brandLabel} href={brandHref} />
-          <ScrollArea className="flex-1">
+          <ScrollArea variant="sidebar" className="min-h-0 flex-1">
             <SidebarNav groups={groups} />
           </ScrollArea>
           {footer ? <div className="border-t border-border p-3 text-xs text-muted-foreground">{footer}</div> : null}
@@ -152,7 +152,7 @@ function MobileNav({ groups, brandLabel }: { groups: ResolvedNavGroup[]; brandLa
       </SheetTrigger>
       <SheetContent side="left" title={brandLabel}>
         <div className="mb-2 px-2 font-semibold">{brandLabel}</div>
-        <ScrollArea className="flex-1">
+        <ScrollArea variant="sidebar" className="min-h-0 flex-1">
           <SheetClose asChild>
             <div>
               <SidebarNav groups={groups} />
