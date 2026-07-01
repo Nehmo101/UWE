@@ -5,7 +5,8 @@ import {
   PortalShell,
 } from "@/src/components/shell";
 import { getCurrentUser } from "@/src/lib/auth";
-import { ADMIN_ACCESS_ROLES, hasAnyRole, resolveUweAppUrls } from "@uwe/auth";
+import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
+import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
 import {
   createAtlasService,
   createPrismaClient,
@@ -24,8 +25,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
   const user = await getCurrentUser();
   const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
-  const appUrls = resolveUweAppUrls();
-  const studioUrl = appUrls.studioUrl ?? null;
+  const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
