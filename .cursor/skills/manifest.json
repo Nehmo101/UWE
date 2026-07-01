@@ -116,6 +116,11 @@
       "id": "uwe-performance-tags-cleanup",
       "path": ".cursor/skills/uwe-performance-tags-cleanup/SKILL.md",
       "trigger": "Stress seeds, tag cleanup, perf budgets, repo cleanup inventory"
+    },
+    {
+      "id": "uwe-design-system",
+      "path": ".cursor/skills/uwe-design-system/SKILL.md",
+      "trigger": "Parchment OS, colors/type/spacing tokens, UI kits, on-brand mocks/prototypes"
     }
   ]
 }

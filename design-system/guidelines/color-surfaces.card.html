@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Parchment OS — surfaces" subtitle="Warm paper stack: bg · elevated · panel · card" -->
+<!DOCTYPE html>
+<html lang="en" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 18px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { border: 1px solid var(--uwe-border); border-radius: 10px; overflow: hidden; }
+  .chip { height: 64px; }
+  .meta { padding: 8px 10px; font-family: var(--uwe-font-mono); font-size: 11px; }
+  .meta b { display: block; font-weight: 700; color: var(--uwe-fg); }
+  .meta span { color: var(--uwe-fg-muted); }
+</style>
+</head>
+<body>
+<div class="swatches">
+  <div class="sw"><div class="chip" style="background:var(--uwe-bg)"></div><div class="meta"><b>bg</b><span>#f1e8d4</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-bg-elevated)"></div><div class="meta"><b>bg-elevated</b><span>#fbf6ea</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-panel)"></div><div class="meta"><b>panel</b><span>#ece1c9</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-card-bg)"></div><div class="meta"><b>card-bg</b><span>#fbf6ea</span></div></div>
+</div>
+</body>
+</html>

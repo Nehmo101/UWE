@@ -1,0 +1,78 @@
+<!-- @dsCard group="UWE Portal" viewport="1280x760" name="Portal — player wiki" subtitle="Login → world hub → article · only player-visible content" -->
+<!DOCTYPE html>
+<html lang="de" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UWE Portal</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; }
+  #app { height: 100vh; overflow-y: auto; }
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; height: var(--uwe-topbar-height);
+    padding: 0 20px; background: var(--uwe-panel); border-bottom: 2px solid var(--uwe-fg); }
+  .topbar .spacer { flex: 1; }
+  .wrap { display: grid; grid-template-columns: 15rem 1fr; gap: 28px; max-width: 1160px; margin: 0 auto; padding: 24px 24px 60px; }
+  .pnav { border-right: 1px solid var(--uwe-border); padding-right: 20px; }
+  .pnav h3 { font-family: var(--uwe-font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--uwe-fg-subtle); margin: 0 0 8px; }
+  .pnav a { display: block; padding: 6px 8px; border-radius: 6px; color: var(--uwe-fg-muted); text-decoration: none; font-size: 14px; }
+  .pnav a:hover { color: var(--uwe-fg); background: color-mix(in srgb, var(--uwe-accent) 8%, transparent); }
+  .pnav a.active { color: var(--uwe-fg); font-weight: 600; }
+  [data-lucide] { stroke: currentColor; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel">
+  const { Brand, Button, Badge } = window.UWEDesignSystem_f43eab;
+
+  function App() {
+    const { LoginScreen, ArticleScreen, WorldHubScreen, PIcon } = window.UWEPortalScreens;
+    const [view, setView] = React.useState("login"); // login | hub | article
+
+    if (view === "login") return <LoginScreen onLogin={() => setView("hub")} />;
+
+    return (
+      <React.Fragment>
+        <header className="topbar">
+          <Brand appName="UWE" subtitle="Portal" href="#" />
+          <div className="spacer" />
+          <span style={{ fontSize: 13, color: "var(--uwe-fg-muted)", fontFamily: "var(--uwe-font-mono)" }}>Angemeldet als Carina</span>
+          <Button variant="subtle" size="sm" onClick={() => setView("login")}>Abmelden</Button>
+        </header>
+        <div className="wrap">
+          <nav className="pnav">
+            <h3>Welt Terra</h3>
+            <a href="#" className={view === "hub" ? "active" : ""} onClick={(e)=>{e.preventDefault();setView("hub");}}>Übersicht</a>
+            <a href="#" onClick={(e)=>{e.preventDefault();setView("hub");}}>Orte</a>
+            <a href="#" onClick={(e)=>{e.preventDefault();setView("hub");}}>NPCs</a>
+            <a href="#" onClick={(e)=>{e.preventDefault();setView("hub");}}>Handouts</a>
+            <a href="#" onClick={(e)=>{e.preventDefault();setView("hub");}}>Sessions</a>
+            <div style={{ height: 16 }} />
+            <h3>Konto</h3>
+            <a href="#">Sicherheit (2FA)</a>
+            <a href="#">Passwort</a>
+          </nav>
+          <main>
+            {view === "hub" ? <WorldHubScreen onOpen={() => setView("article")} /> : <ArticleScreen onNav={() => setView("hub")} />}
+          </main>
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+  const draw = () => window.lucide && window.lucide.createIcons();
+  const obs = new MutationObserver(draw);
+  obs.observe(document.getElementById("app"), { childList: true, subtree: true });
+  setTimeout(draw, 300);
+</script>
+</body>
+</html>

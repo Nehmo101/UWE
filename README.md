@@ -15,6 +15,39 @@
 
 Architektur: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+## Design Style Guide
+
+UWE ships a dedicated **Design Style Guide** — the single source of truth for
+UWE's visual language: color tokens, typography, the nine-theme engine,
+reusable UI components, and full-screen recreations of Studio and Portal.
+
+📁 [`design-system/`](design-system/) · start with [`design-system/README.md`](design-system/README.md)
+
+**Signature look — Parchment OS** (the default theme for both Studio and Portal):
+warm paper `#f1e8d4`, ink text `#211d17`, terracotta accent `#c2622b`, teal links,
+a dark-ink sidebar, **Space Mono** UI + **Newsreader** headings.
+
+| Layer | Where |
+|-------|-------|
+| Tokens (colors, type, spacing) + 9 themes | `design-system/styles.css` → `design-system/tokens/*` |
+| Reusable components (Button, Card, badges, SecretReveal, …) | `design-system/components/*` |
+| Product recreations (Studio cockpit, Portal wiki) | `design-system/ui_kits/*` |
+| Foundation specimen cards | `design-system/guidelines/*` |
+| Full guide (voice, visual foundations, iconography) | `design-system/README.md` |
+
+Consuming a page is one link + one theme attribute:
+
+```html
+<html data-uwe-theme="uwe-parchment-os">
+<link rel="stylesheet" href="design-system/styles.css" />
+<script src="design-system/_ds_bundle.js"></script>
+<script>const { Button, Card } = window.UWEDesignSystem_f43eab;</script>
+```
+
+Foundations mirror the live product (`packages/shared-ui/src/uwe.css`,
+`src/theme/themes.ts`, `src/design-v2/*`); the guide is the canonical reference
+when building new UWE interfaces or assets.
+
 ### Daily Admin OS
 
 UWE ist ein **tägliches privates Admin-Cockpit** neben dem DnD-Editor: Heute-Dashboard, Capture-Inbox, Projekte, Werkstatt, Verträge, Hardware/Homelab und persönliches Life-Brain.

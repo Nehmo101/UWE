@@ -1,0 +1,388 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/core/**",
+              "components/domain/**",
+              "components/forms/**",
+              "components/navigation/**",
+              "ui_kits/portal/**",
+              "ui_kits/studio/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Space Mono|Newsreader))/i]",
+        "message": "Font not provided by the design system. Available: Space Mono, Newsreader."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: tone."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:neutral|accent|danger|success|warning)$/]",
+        "message": "<Badge> tone must be one of 'neutral' | 'accent' | 'danger' | 'success' | 'warning'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Brand'] > JSXAttribute > JSXIdentifier[name!=/^(?:appName|subtitle|size|href|key|ref|className|style|children)$/]",
+        "message": "<Brand> doesn't accept that prop. Declared props: appName, subtitle, size, href."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Brand'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Brand> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BreadcrumbItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|href|key|ref|className|style|children)$/]",
+        "message": "<BreadcrumbItem> doesn't accept that prop. Declared props: label, href."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|as|icon|iconAfter|disabled|fullWidth|href|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, as, icon, iconAfter, disabled, fullWidth, href."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|footer|padded|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: title, footer, padded."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='EmptyState'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|title|description|action|key|ref|className|style|children)$/]",
+        "message": "<EmptyState> doesn't accept that prop. Declared props: icon, title, description, action."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|hint|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: label, hint."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PageHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|summary|meta|actions|key|ref|className|style|children)$/]",
+        "message": "<PageHeader> doesn't accept that prop. Declared props: title, summary, meta, actions."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PageTypeBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:type|key|ref|className|style|children)$/]",
+        "message": "<PageTypeBadge> doesn't accept that prop. Declared props: type."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RtxStatusBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:state|label|key|ref|className|style|children)$/]",
+        "message": "<RtxStatusBadge> doesn't accept that prop. Declared props: state, label."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SecretReveal'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|revealHint|defaultRevealed|key|ref|className|style|children)$/]",
+        "message": "<SecretReveal> doesn't accept that prop. Declared props: label, revealHint, defaultRevealed."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SelectOption'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|label|key|ref|className|style|children)$/]",
+        "message": "<SelectOption> doesn't accept that prop. Declared props: value, label."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SidebarNavItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|href|icon|active|badge|key|ref|className|style|children)$/]",
+        "message": "<SidebarNavItem> doesn't accept that prop. Declared props: label, href, icon, active, badge."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|label|hint|key|ref|className|style|children)$/]",
+        "message": "<StatCard> doesn't accept that prop. Declared props: value, label, hint."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Textarea'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|hint|key|ref|className|style|children)$/]",
+        "message": "<Textarea> doesn't accept that prop. Declared props: label, hint."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='VisibilityBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:visibility|key|ref|className|style|children)$/]",
+        "message": "<VisibilityBadge> doesn't accept that prop. Declared props: visibility."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "Badge": {
+        "replaces": []
+      },
+      "Brand": {
+        "replaces": []
+      },
+      "BreadcrumbItem": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "EmptyState": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "PageHeader": {
+        "replaces": []
+      },
+      "PageTypeBadge": {
+        "replaces": []
+      },
+      "RtxStatusBadge": {
+        "replaces": []
+      },
+      "SecretReveal": {
+        "replaces": []
+      },
+      "SelectOption": {
+        "replaces": []
+      },
+      "SidebarNavItem": {
+        "replaces": []
+      },
+      "StatCard": {
+        "replaces": []
+      },
+      "Tag": {
+        "replaces": []
+      },
+      "Textarea": {
+        "replaces": []
+      },
+      "VisibilityBadge": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--uwe-accent",
+      "--uwe-accent-hover",
+      "--uwe-accent-muted",
+      "--uwe-bg",
+      "--uwe-bg-elevated",
+      "--uwe-border",
+      "--uwe-border-muted",
+      "--uwe-card",
+      "--uwe-card-bg",
+      "--uwe-content-gap",
+      "--uwe-context-width",
+      "--uwe-danger",
+      "--uwe-density-scale",
+      "--uwe-dm-only",
+      "--uwe-fg",
+      "--uwe-fg-muted",
+      "--uwe-fg-subtle",
+      "--uwe-focus-ring",
+      "--uwe-focus-shadow",
+      "--uwe-font-family",
+      "--uwe-font-mono",
+      "--uwe-font-newsreader",
+      "--uwe-font-sans",
+      "--uwe-font-serif",
+      "--uwe-font-space-mono",
+      "--uwe-info",
+      "--uwe-input-bg",
+      "--uwe-leading-normal",
+      "--uwe-leading-relaxed",
+      "--uwe-leading-snug",
+      "--uwe-leading-tight",
+      "--uwe-link",
+      "--uwe-muted",
+      "--uwe-on-accent",
+      "--uwe-panel",
+      "--uwe-player-visible",
+      "--uwe-radius-lg",
+      "--uwe-radius-md",
+      "--uwe-radius-sm",
+      "--uwe-reader-max",
+      "--uwe-safe-bottom",
+      "--uwe-safe-top",
+      "--uwe-section-gap",
+      "--uwe-shadow-lg",
+      "--uwe-shadow-md",
+      "--uwe-shadow-sm",
+      "--uwe-shell-gradient-end",
+      "--uwe-shell-gradient-mid",
+      "--uwe-shell-gradient-start",
+      "--uwe-sidebar-bg",
+      "--uwe-sidebar-fg",
+      "--uwe-sidebar-fg-muted",
+      "--uwe-sidebar-width",
+      "--uwe-sidebar-width-collapsed",
+      "--uwe-spacing-2xl",
+      "--uwe-spacing-lg",
+      "--uwe-spacing-md",
+      "--uwe-spacing-sm",
+      "--uwe-spacing-xl",
+      "--uwe-spacing-xs",
+      "--uwe-success",
+      "--uwe-surface",
+      "--uwe-text-2xl",
+      "--uwe-text-2xs",
+      "--uwe-text-3xl",
+      "--uwe-text-4xl",
+      "--uwe-text-base",
+      "--uwe-text-lg",
+      "--uwe-text-md",
+      "--uwe-text-sm",
+      "--uwe-text-xl",
+      "--uwe-text-xs",
+      "--uwe-topbar-height",
+      "--uwe-touch-min",
+      "--uwe-tracking-eyebrow",
+      "--uwe-tracking-normal",
+      "--uwe-tracking-tight",
+      "--uwe-tracking-wide",
+      "--uwe-transition",
+      "--uwe-transition-fast",
+      "--uwe-ui-scale",
+      "--uwe-v2-radius-btn",
+      "--uwe-v2-radius-card",
+      "--uwe-warning",
+      "--uwe-weight-bold",
+      "--uwe-weight-medium",
+      "--uwe-weight-regular",
+      "--uwe-weight-semibold",
+      "--uwe-wiki-link",
+      "--uwe-wiki-link-hover",
+      "--uwe-zone-card-bg",
+      "--uwe-zone-card-border",
+      "--uwe-zone-chrome-bg",
+      "--uwe-zone-chrome-fg",
+      "--uwe-zone-heading-fg",
+      "--uwe-zone-heading-font"
+    ],
+    "tokenKinds": {
+      "--uwe-font-space-mono": "font",
+      "--uwe-font-newsreader": "font",
+      "--uwe-font-mono": "font",
+      "--uwe-font-serif": "font",
+      "--uwe-font-sans": "font",
+      "--uwe-font-family": "font",
+      "--uwe-text-2xs": "font",
+      "--uwe-text-xs": "font",
+      "--uwe-text-sm": "font",
+      "--uwe-text-base": "font",
+      "--uwe-text-md": "font",
+      "--uwe-text-lg": "font",
+      "--uwe-text-xl": "font",
+      "--uwe-text-2xl": "font",
+      "--uwe-text-3xl": "font",
+      "--uwe-text-4xl": "font",
+      "--uwe-weight-regular": "font",
+      "--uwe-weight-medium": "font",
+      "--uwe-weight-semibold": "font",
+      "--uwe-weight-bold": "font",
+      "--uwe-leading-tight": "font",
+      "--uwe-leading-snug": "font",
+      "--uwe-leading-normal": "font",
+      "--uwe-leading-relaxed": "font",
+      "--uwe-tracking-tight": "font",
+      "--uwe-tracking-normal": "font",
+      "--uwe-tracking-wide": "font",
+      "--uwe-tracking-eyebrow": "font",
+      "--uwe-density-scale": "other",
+      "--uwe-ui-scale": "other",
+      "--uwe-spacing-xs": "spacing",
+      "--uwe-spacing-sm": "spacing",
+      "--uwe-spacing-md": "spacing",
+      "--uwe-spacing-lg": "spacing",
+      "--uwe-spacing-xl": "spacing",
+      "--uwe-spacing-2xl": "spacing",
+      "--uwe-radius-sm": "radius",
+      "--uwe-radius-md": "radius",
+      "--uwe-radius-lg": "radius",
+      "--uwe-v2-radius-btn": "radius",
+      "--uwe-v2-radius-card": "radius",
+      "--uwe-shadow-sm": "shadow",
+      "--uwe-shadow-md": "shadow",
+      "--uwe-shadow-lg": "shadow",
+      "--uwe-topbar-height": "spacing",
+      "--uwe-sidebar-width": "spacing",
+      "--uwe-sidebar-width-collapsed": "spacing",
+      "--uwe-context-width": "spacing",
+      "--uwe-reader-max": "spacing",
+      "--uwe-content-gap": "spacing",
+      "--uwe-section-gap": "spacing",
+      "--uwe-touch-min": "spacing",
+      "--uwe-safe-bottom": "color",
+      "--uwe-safe-top": "color",
+      "--uwe-transition-fast": "other",
+      "--uwe-transition": "other",
+      "--uwe-bg": "color",
+      "--uwe-bg-elevated": "color",
+      "--uwe-surface": "color",
+      "--uwe-panel": "color",
+      "--uwe-card-bg": "color",
+      "--uwe-input-bg": "color",
+      "--uwe-border": "color",
+      "--uwe-border-muted": "color",
+      "--uwe-fg": "color",
+      "--uwe-fg-muted": "color",
+      "--uwe-fg-subtle": "color",
+      "--uwe-accent": "color",
+      "--uwe-accent-hover": "color",
+      "--uwe-accent-muted": "color",
+      "--uwe-on-accent": "color",
+      "--uwe-link": "color",
+      "--uwe-wiki-link": "color",
+      "--uwe-wiki-link-hover": "color",
+      "--uwe-danger": "color",
+      "--uwe-warning": "color",
+      "--uwe-success": "color",
+      "--uwe-info": "color",
+      "--uwe-dm-only": "color",
+      "--uwe-player-visible": "color",
+      "--uwe-sidebar-bg": "color",
+      "--uwe-sidebar-fg": "color",
+      "--uwe-sidebar-fg-muted": "color",
+      "--uwe-shell-gradient-start": "color",
+      "--uwe-shell-gradient-mid": "color",
+      "--uwe-shell-gradient-end": "color",
+      "--uwe-muted": "color",
+      "--uwe-card": "color",
+      "--uwe-focus-ring": "color",
+      "--uwe-focus-shadow": "shadow",
+      "--uwe-zone-chrome-bg": "color",
+      "--uwe-zone-chrome-fg": "color",
+      "--uwe-zone-heading-fg": "color",
+      "--uwe-zone-heading-font": "font",
+      "--uwe-zone-card-bg": "color",
+      "--uwe-zone-card-border": "color"
+    },
+    "fontFamilies": [
+      "Newsreader",
+      "Space Mono"
+    ]
+  }
+}

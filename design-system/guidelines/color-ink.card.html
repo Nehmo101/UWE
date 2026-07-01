@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Ink text & lines" subtitle="fg · fg-muted · fg-subtle · border" -->
+<!DOCTYPE html>
+<html lang="en" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 18px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { border: 1px solid var(--uwe-border); border-radius: 10px; overflow: hidden; }
+  .chip { height: 64px; }
+  .meta { padding: 8px 10px; font-family: var(--uwe-font-mono); font-size: 11px; }
+  .meta b { display: block; font-weight: 700; color: var(--uwe-fg); }
+  .meta span { color: var(--uwe-fg-muted); }
+</style>
+</head>
+<body>
+<div class="swatches">
+  <div class="sw"><div class="chip" style="background:var(--uwe-fg)"></div><div class="meta"><b>fg (ink)</b><span>#211d17</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-fg-muted)"></div><div class="meta"><b>fg-muted</b><span>#574e40</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-fg-subtle)"></div><div class="meta"><b>fg-subtle</b><span>#665d4f</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-border)"></div><div class="meta"><b>border</b><span>#e0d4ba</span></div></div>
+</div>
+</body>
+</html>

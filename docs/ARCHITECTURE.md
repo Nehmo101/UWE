@@ -240,6 +240,8 @@ Design V2 (`NEXT_PUBLIC_UWE_DESIGN_V2`, default **on**) setzt `data-uwe-design-v
 - **Lucide React** — Icon-Bibliothek (Studio, Portal, RTX Client)
 - **CSS Custom Properties** — `--uwe-accent`, `--uwe-bg`, `--uwe-fg`, etc.
 
+Kanonischer visueller Style Guide (Tokens, 9 Themes, Komponenten, Studio/Portal-Nachbauten): [`design-system/`](../design-system/README.md).
+
 ---
 
 ## 9. Kurzfassung

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Semantic & visibility" subtitle="danger · warning · success + Nur GM / Portal sichtbar" -->
+<!DOCTYPE html>
+<html lang="en" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 18px; }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .sw { border: 1px solid var(--uwe-border); border-radius: 10px; overflow: hidden; }
+  .chip { height: 56px; }
+  .meta { padding: 7px 9px; font-family: var(--uwe-font-mono); font-size: 10.5px; }
+  .meta b { display: block; font-weight: 700; color: var(--uwe-fg); }
+  .meta span { color: var(--uwe-fg-muted); }
+</style>
+</head>
+<body>
+<div class="swatches">
+  <div class="sw"><div class="chip" style="background:var(--uwe-danger)"></div><div class="meta"><b>danger</b><span>#c2622b</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-warning)"></div><div class="meta"><b>warning</b><span>#e0b15a</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-success)"></div><div class="meta"><b>success</b><span>#2f6f63</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-dm-only)"></div><div class="meta"><b>dm-only</b><span>Nur GM</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--uwe-player-visible)"></div><div class="meta"><b>player-visible</b><span>Portal</span></div></div>
+</div>
+</body>
+</html>
