@@ -14,7 +14,8 @@ concurrency:
 jobs:
   fast-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Must cover a fully cold Turbo cache (~30 min); warm runs finish far faster.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -54,11 +55,12 @@ jobs:
 
       - name: Restore Turbo cache
         if: steps.changes.outputs.code == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
+          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
+            turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-
             turbo-${{ runner.os }}-
             turbo-quality-${{ runner.os }}-
             turbo-pr-${{ runner.os }}-
@@ -66,6 +68,17 @@ jobs:
       - name: Light CI gate
         if: steps.changes.outputs.code == 'true'
         run: pnpm ci:light
+
+      # Save with `always()` so even a red or timed-out gate seeds the cache —
+      # otherwise a cold cache times the job out and the cache is never written
+      # (post-step of actions/cache is skipped on cancellation), which loops
+      # every subsequent run back into the same timeout.
+      - name: Save Turbo cache
+        if: always() && steps.changes.outputs.code == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Docs-only PR — skip heavy gate
         if: steps.changes.outputs.code != 'true'
