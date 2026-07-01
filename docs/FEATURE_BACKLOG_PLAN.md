@@ -74,7 +74,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 15 | Owner Notfallmodus | ✅ Beta | `maintenanceMode`/`lockPortal`/`lockStudio`, Middleware + Owner-Bypass, Settings-UI | Shipped: Gate in Middleware + Layout, `/api/maintenance/evaluate`, NL-Command. |
 | 16 | Kosten-Dashboard | 🔶 | `AiUsageLog` (Tokens/`estimatedCostUsd`/Feature/User), Budget+CSV im AI-Gateway-Wizard; `ContractExpense`/`/contracts` (Life-Admin) | Kein **vereinheitlichtes** Dashboard pro User/Welt/Feature. **Frage:** AI-Kosten wirklich „in Verträge“ mischen? |
 | 17 | AI Agent Queue | 🔶 | `Job`/`JobLog` + `/jobs` (ai_run/import/canon_check/embedding/research), `DevAgentJob` + `/admin/agent-jobs` | `DevAgentJob` = Repo-Automation, nicht „Terra analysieren / NPCs erzeugen“. Keine 1-Klick-Presets für lange Kampagnen-Jobs. |
-| 18 | Admin Command Center (NL) | 🔶 | `StudioCommandPalette` (statische Nav-Befehle), `/api/command/search` (Wiki-Suche) | **Keine** natürliche Sprache, keine Mutations-Befehle. **Sicherheits-kritisch** (siehe Fragen). |
+| 18 | Admin Command Center (NL) | 🔶 | `nl-command-service.ts`, `/command`, `NlCommandWorkspace`, Bestätigungs-Token + Audit | User/Welt-Management (Rolle zuweisen, einladen, deaktivieren) shipped (#395). Kein LLM-Intent-Parsing — deterministische Grammatik. |
 
 ### Details & kritische Fragen — Admin/Owner
 
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#393). EntityTag-Primärquelle; cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish.
+#357–#395). EntityTag-Primärquelle; cross-domain Suche; Kanon-Lifecycle; Verlauf-Browser polish; NL-Command User/Welt-Management.
