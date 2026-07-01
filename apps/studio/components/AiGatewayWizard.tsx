@@ -34,6 +34,7 @@ interface GatewayDashboard {
     routingMode: RoutingMode;
     cloudFallbackEnabled: boolean;
     privacyRules: Record<string, PrivacyLevel>;
+    featureModels: Record<string, { providerId?: string | null; model?: string | null }>;
     dailyBudgetUsd: number | null;
     monthlyBudgetUsd: number | null;
     perUserDailyBudgetUsd: number | null;
@@ -90,6 +91,7 @@ const WIZARD_STEPS = [
   "Routing-Modus",
   "Cloud-Fallback",
   "Provider",
+  "Modell pro Feature",
   "Privacy",
   "Budgets",
   "User-Freigaben",
@@ -175,7 +177,7 @@ export function AiGatewayWizard() {
   }, []);
 
   useEffect(() => {
-    if (step === 6 || step === 7) {
+    if (step === 7 || step === 8) {
       void loadAdminUsers();
     }
   }, [step, loadAdminUsers]);
@@ -202,10 +204,15 @@ export function AiGatewayWizard() {
   }, [usageFilters]);
 
   useEffect(() => {
-    if (step === 7) {
+    if (step === 8) {
       void loadFilteredUsage();
     }
   }, [step, loadFilteredUsage]);
+
+  async function patchFeatureModel(featureKey: string, patch: { providerId?: string | null; model?: string | null }) {
+    const current = data?.config.featureModels?.[featureKey] ?? {};
+    await patchConfig({ featureModels: { [featureKey]: { providerId: patch.providerId !== undefined ? patch.providerId : (current.providerId ?? null), model: patch.model !== undefined ? patch.model : (current.model ?? null) } } });
+  }
 
   async function deleteGrant(userId: string) {
     setMessage(null);
@@ -479,7 +486,9 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 4 && (
+      {step === 4 && (<section className="uwe-v2-card uwe-v2-section"><h2>Modell pro Feature</h2><p className="uwe-muted">Optional Provider/Modell pro Feature.</p><table className="uwe-table"><thead><tr><th>Feature</th><th>Provider</th><th>Modell</th></tr></thead><tbody><tr key="general_chat"><td>Allgemeiner Chat</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['general_chat']?.providerId)??''} onChange={e=>void patchFeatureModel('general_chat',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['general_chat']?.model??''} onBlur={e=>void patchFeatureModel('general_chat',{model:e.target.value.trim()||null})} /></td></tr><tr key="dnd_world"><td>DnD Generator / Brain / Welt</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['dnd_world']?.providerId)??''} onChange={e=>void patchFeatureModel('dnd_world',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['dnd_world']?.model??''} onBlur={e=>void patchFeatureModel('dnd_world',{model:e.target.value.trim()||null})} /></td></tr><tr key="personal_brain"><td>Life Brain</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['personal_brain']?.providerId)??''} onChange={e=>void patchFeatureModel('personal_brain',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['personal_brain']?.model??''} onBlur={e=>void patchFeatureModel('personal_brain',{model:e.target.value.trim()||null})} /></td></tr><tr key="private_notes"><td>Zusammenfassungen</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['private_notes']?.providerId)??''} onChange={e=>void patchFeatureModel('private_notes',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['private_notes']?.model??''} onBlur={e=>void patchFeatureModel('private_notes',{model:e.target.value.trim()||null})} /></td></tr><tr key="admin_diagnostics"><td>Admin-Diagnose</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['admin_diagnostics']?.providerId)??''} onChange={e=>void patchFeatureModel('admin_diagnostics',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['admin_diagnostics']?.model??''} onBlur={e=>void patchFeatureModel('admin_diagnostics',{model:e.target.value.trim()||null})} /></td></tr><tr key="image_generation"><td>Image Studio</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['image_generation']?.providerId)??''} onChange={e=>void patchFeatureModel('image_generation',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['image_generation']?.model??''} onBlur={e=>void patchFeatureModel('image_generation',{model:e.target.value.trim()||null})} /></td></tr></tbody></table></section>)}
+
+      {step === 5 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Privacy-Regeln</h2>
           <p className="uwe-muted">
@@ -522,7 +531,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 5 && (
+      {step === 6 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Budgets</h2>
           <p>
@@ -570,7 +579,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 6 && (
+      {step === 7 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>User-Freigaben</h2>
           <p className="uwe-muted">
@@ -649,7 +658,7 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 7 && (
+      {step === 8 && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2>Routing-Simulation, Fallback-Test &amp; Usage Logs</h2>
 

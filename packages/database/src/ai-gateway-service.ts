@@ -88,10 +88,17 @@ export const DEFAULT_PRIVACY_RULES: Record<AiFeatureCategory, AiPrivacyLevel> = 
   image_generation: "CLOUD_ALLOWED",
 };
 
+/** Per-feature provider/model override. */
+export interface AiFeatureModelConfig { providerId?: string | null; model?: string | null; }
+export type AiFeatureModels = Partial<Record<AiFeatureCategory, AiFeatureModelConfig>>;
+export const AI_FEATURE_MODEL_KEYS: readonly AiFeatureCategory[] = ["general_chat","dnd_world","personal_brain","private_notes","admin_diagnostics","image_generation"] as const;
+export const AI_FEATURE_MODEL_LABELS: Record<AiFeatureCategory, string> = {
+  general_chat: "Allgemeiner Chat", dnd_world: "DnD Generator / Brain / Welt", personal_brain: "Life Brain (persönlich)",
+  private_notes: "Zusammenfassungen / Notizen", admin_diagnostics: "Admin-Diagnose", image_generation: "Image Studio",
+};
 export interface AiGatewayConfigRecord {
-  routingMode: AiRoutingMode;
-  cloudFallbackEnabled: boolean;
-  privacyRules: Record<AiFeatureCategory, AiPrivacyLevel>;
+  routingMode: AiRoutingMode; cloudFallbackEnabled: boolean;
+  privacyRules: Record<AiFeatureCategory, AiPrivacyLevel>; featureModels: AiFeatureModels;
   dailyBudgetUsd: number | null;
   monthlyBudgetUsd: number | null;
   perUserDailyBudgetUsd: number | null;
@@ -236,7 +243,31 @@ function parsePrivacyRules(value: unknown): Record<AiFeatureCategory, AiPrivacyL
   }
   return rules;
 }
-
+function parseFeatureModelEntry(value: unknown): AiFeatureModelConfig | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const providerId = typeof record.providerId === "string" && record.providerId.trim() ? record.providerId.trim() : null;
+  const model = typeof record.model === "string" && record.model.trim() ? record.model.trim() : null;
+  if (!providerId && !model) return null;
+  return { providerId, model };
+}
+function parseFeatureModels(value: unknown): AiFeatureModels {
+  const models: AiFeatureModels = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return models;
+  for (const key of AI_FEATURE_MODEL_KEYS) {
+    const entry = parseFeatureModelEntry((value as Record<string, unknown>)[key]);
+    if (entry) models[key] = entry;
+  }
+  return models;
+}
+export function resolveFeatureModelOverride(config: Pick<AiGatewayConfigRecord, "featureModels">, category: AiFeatureCategory): AiFeatureModelConfig | null {
+  const override = config.featureModels[category];
+  if (!override) return null;
+  const providerId = override.providerId?.trim() || null;
+  const model = override.model?.trim() || null;
+  if (!providerId && !model) return null;
+  return { providerId, model };
+}
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -322,8 +353,7 @@ export class AiGatewayService {
       return {
         routingMode: "LOCAL_THEN_CLOUD",
         cloudFallbackEnabled: false,
-        privacyRules: { ...DEFAULT_PRIVACY_RULES },
-        dailyBudgetUsd: null,
+        privacyRules: { ...DEFAULT_PRIVACY_RULES }, featureModels: {}, dailyBudgetUsd: null,
         monthlyBudgetUsd: null,
         perUserDailyBudgetUsd: null,
         updatedAt: new Date(),
@@ -332,8 +362,7 @@ export class AiGatewayService {
     return {
       routingMode: row.routingMode as AiRoutingMode,
       cloudFallbackEnabled: row.cloudFallbackEnabled,
-      privacyRules: parsePrivacyRules(row.privacyRules),
-      dailyBudgetUsd: row.dailyBudgetUsd,
+      privacyRules: parsePrivacyRules(row.privacyRules), featureModels: parseFeatureModels(row.featureModels), dailyBudgetUsd: row.dailyBudgetUsd,
       monthlyBudgetUsd: row.monthlyBudgetUsd,
       perUserDailyBudgetUsd: row.perUserDailyBudgetUsd,
       updatedAt: row.updatedAt,
@@ -345,8 +374,7 @@ export class AiGatewayService {
     const next = {
       routingMode: input.routingMode ?? current.routingMode,
       cloudFallbackEnabled: input.cloudFallbackEnabled ?? current.cloudFallbackEnabled,
-      privacyRules: input.privacyRules ?? current.privacyRules,
-      dailyBudgetUsd: input.dailyBudgetUsd !== undefined ? input.dailyBudgetUsd : current.dailyBudgetUsd,
+      privacyRules: input.privacyRules ?? current.privacyRules, featureModels: input.featureModels ?? current.featureModels, dailyBudgetUsd: input.dailyBudgetUsd !== undefined ? input.dailyBudgetUsd : current.dailyBudgetUsd,
       monthlyBudgetUsd:
         input.monthlyBudgetUsd !== undefined ? input.monthlyBudgetUsd : current.monthlyBudgetUsd,
       perUserDailyBudgetUsd:
@@ -361,8 +389,7 @@ export class AiGatewayService {
         id: "default",
         routingMode: next.routingMode,
         cloudFallbackEnabled: next.cloudFallbackEnabled,
-        privacyRules: next.privacyRules,
-        dailyBudgetUsd: next.dailyBudgetUsd,
+        privacyRules: next.privacyRules, featureModels: next.featureModels, dailyBudgetUsd: next.dailyBudgetUsd,
         monthlyBudgetUsd: next.monthlyBudgetUsd,
         perUserDailyBudgetUsd: next.perUserDailyBudgetUsd,
       },
@@ -370,6 +397,7 @@ export class AiGatewayService {
         routingMode: next.routingMode,
         cloudFallbackEnabled: next.cloudFallbackEnabled,
         privacyRules: next.privacyRules,
+        featureModels: next.featureModels,
         dailyBudgetUsd: next.dailyBudgetUsd,
         monthlyBudgetUsd: next.monthlyBudgetUsd,
         perUserDailyBudgetUsd: next.perUserDailyBudgetUsd,

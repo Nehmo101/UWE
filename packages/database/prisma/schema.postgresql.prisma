@@ -3014,6 +3014,7 @@ model AiGatewayConfig {
   routingMode          AiRoutingMode @default(LOCAL_THEN_CLOUD) @map("routing_mode")
   cloudFallbackEnabled Boolean       @default(false) @map("cloud_fallback_enabled")
   privacyRules         Json          @default("{}") @map("privacy_rules")
+  featureModels        Json          @default("{}") @map("feature_models")
   dailyBudgetUsd       Float?        @map("daily_budget_usd")
   monthlyBudgetUsd     Float?        @map("monthly_budget_usd")
   perUserDailyBudgetUsd Float?       @map("per_user_daily_budget_usd")

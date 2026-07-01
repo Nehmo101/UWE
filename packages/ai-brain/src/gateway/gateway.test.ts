@@ -38,8 +38,7 @@ describe("ai gateway routing", () => {
   const baseConfig: AiGatewayConfigRecord = {
     routingMode: "LOCAL_THEN_CLOUD",
     cloudFallbackEnabled: false,
-    privacyRules: { ...DEFAULT_PRIVACY_RULES },
-    dailyBudgetUsd: null,
+    privacyRules: { ...DEFAULT_PRIVACY_RULES }, featureModels: {}, dailyBudgetUsd: null,
     monthlyBudgetUsd: null,
     perUserDailyBudgetUsd: null,
     updatedAt: new Date(),

@@ -18,7 +18,7 @@ import {
   AI_FEATURE_PERMISSION_LABELS,
   MASTER_ADMIN_PERMISSIONS,
   resolveRequiredPermission,
-  isMasterAdminRole,
+  isMasterAdminRole, resolveFeatureModelOverride,
 } from "@uwe/database/server";
 import type { AiRouterRequest, AiRouterResult } from "../router/types";
 import { routeAiRequest, type AiRouterDeps } from "../router/aiRouter";
@@ -53,7 +53,7 @@ export {
   MASTER_ADMIN_PERMISSIONS,
   resolveFeatureCategory,
   resolveRequiredPermission,
-  isMasterAdminRole,
+  isMasterAdminRole, resolveFeatureModelOverride,
 };
 
 export interface AiGatewayUserContext {
@@ -185,7 +185,9 @@ export async function executeAiGatewayRequest(
 
   const routerRequest: AiRouterRequest = {
     ...request,
-    providerMode: effectiveProviderMode,
+    providerMode: applyFeatureProviderMode(effectiveProviderMode, resolveFeatureModelOverride(config, privacyCategory)?.providerId),
+    cloudProviderId: (() => { const o = resolveFeatureModelOverride(config, privacyCategory); return o?.providerId && o.providerId !== "local_rtx" ? o.providerId as AiRouterRequest["cloudProviderId"] : request.cloudProviderId; })(),
+    model: resolveFeatureModelOverride(config, privacyCategory)?.model ?? request.model,
     apiKeyStore,
     options: {
       ...request.options,
@@ -401,6 +403,7 @@ async function buildGatewayImageProviderConfig(
     ...envConfig,
     allowCloud: allowCloud && Boolean(cloudApiKey),
     cloudApiKey,
+    cloudModel: resolveFeatureModelOverride(config, "image_generation")?.model ?? envConfig.cloudModel,
   };
 }
 
@@ -549,6 +552,9 @@ export async function executeAiGatewayResearchJob<T>(
   }
 }
 
+function applyFeatureProviderMode(baseMode: AiProviderMode, providerId?: string | null): AiProviderMode {
+  return providerId === "local_rtx" ? "local_rtx" : baseMode;
+}
 function resolveEffectiveProviderMode(
   config: AiGatewayConfigRecord,
   requested: AiProviderMode,
