@@ -18,6 +18,7 @@ const PUBLIC_ALLOWLIST = new Set([
   "auth/two-factor/verify/route.ts",
   "health/route.ts",
   "health/public/route.ts",
+  "maintenance/status/route.ts",
   "spotify/callback/route.ts",
 ]);
 
