@@ -61,6 +61,7 @@ export function AppShell({
           <header className="flex h-14 items-center gap-3 border-b border-border px-4">
             <MobileNav groups={groups} brandLabel={brandLabel} />
             <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
+            <div id="uwe-topbar-end" className="flex shrink-0 items-center gap-2" />
             {commands.length > 0 ? <CommandHint /> : null}
           </header>
 
