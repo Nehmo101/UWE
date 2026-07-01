@@ -52,6 +52,7 @@ interface TagsResponse {
     totalTags: number;
     totalEntityTags: number;
   };
+  entityTypeLabels?: Record<string, string>;
   worlds: WorldOption[];
 }
 
@@ -210,9 +211,9 @@ export function TagAdminWorkspace() {
               <div className="uwe-today-card-list">
                 {data.coverage.types.map((entry) => (
                   <article key={entry.entityType} className="uwe-today-card">
-                    <h3>{entry.entityType}</h3>
+                    <h3>{data.entityTypeLabels?.[entry.entityType] ?? entry.entityType}</h3>
                     <p className="uwe-dashboard-muted">
-                      Json: {entry.jsonTagged}/{entry.totalEntities} · EntityTag:{" "}
+                      Quelle: {entry.jsonTagged}/{entry.totalEntities} · EntityTag:{" "}
                       {entry.entityTagTagged}/{entry.totalEntities}
                     </p>
                   </article>
@@ -224,7 +225,7 @@ export function TagAdminWorkspace() {
                 disabled={backfilling}
                 onClick={() => void handleBackfill()}
               >
-                {backfilling ? "Backfill läuft…" : "Json-Tags → EntityTag backfillen"}
+                {backfilling ? "Backfill läuft…" : "Legacy-Tags → EntityTag backfillen"}
               </button>
               {backfillStatus && <p className="uwe-hint">{backfillStatus}</p>}
             </section>

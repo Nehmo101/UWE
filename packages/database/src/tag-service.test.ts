@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { createLifeAdminService } from "./life-admin-service";
 import { createUweRepository } from "./repository";
 import { seedStressWorld } from "./stress-seed";
 import { PERF_SMOKE_SCALE } from "./perf-budgets";
@@ -127,5 +128,39 @@ describe("tag service", () => {
     assert.ok(inventory.some((entry) => entry.tag === "quest" || entry.tag === "hook"));
 
     await db.page.delete({ where: { id: page.id } });
+  });
+
+  it("backfills entity tags from capture metadata.tags", async () => {
+    const lifeAdmin = createLifeAdminService(db);
+    const capture = await lifeAdmin.createCapture({
+      title: "Metadata Tag Capture",
+      content: "Tagged via metadata",
+      metadata: { tags: ["inbox", "triage"] },
+      worldId,
+    });
+
+    const result = await backfillEntityTagsFromJson(db, { worldId });
+    assert.ok(result.entitiesProcessed >= 1);
+
+    const coverage = await getTagCoverageStats(db, { worldId });
+    const captureStats = coverage.types.find((entry) => entry.entityType === "capture");
+    assert.ok(captureStats);
+    assert.ok(captureStats!.jsonTagged >= 1);
+    assert.ok(captureStats!.entityTagTagged >= 1);
+
+    const mergeResult = await mergeTags(db, {
+      worldId,
+      fromTags: ["inbox"],
+      toTag: "eingang",
+    });
+    assert.ok(mergeResult.updatedEntities >= 1);
+
+    const updated = await lifeAdmin.getCapture(capture.id);
+    assert.ok(updated);
+    const metadata = updated!.metadata as { tags?: string[] };
+    assert.ok(metadata.tags?.includes("eingang"));
+    assert.ok(!metadata.tags?.includes("inbox"));
+
+    await lifeAdmin.deleteCapture(capture.id);
   });
 });

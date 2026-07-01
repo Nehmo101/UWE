@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#388, World Templates). Nächste offene Neubau-Themen: EntityTag backfill.
+#357–#389). EntityTag-Backfill deckt alle Domains ab (Wiki/Assets/Soundboard/Life Brain + Daily Admin `metadata.tags`).

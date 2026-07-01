@@ -1,14 +1,23 @@
 import type { PrismaClient } from "./client";
 import type { EntityTagEntityType } from "./generated/prisma/client";
 import { createEntityTagService } from "./entity-tag-service";
-import { parseStringArray, toPrismaJsonValue } from "./json-utils";
+import { asMetadataRecord, parseStringArray, parseTagsFromMetadata, toPrismaJsonValue } from "./json-utils";
 
-export type TagEntityType =
-  | "page"
-  | "asset"
-  | "soundboard_button"
-  | "personal_brain_document"
-  | "personal_brain_fact";
+export type TagEntityType = EntityTagEntityType;
+
+export const ENTITY_TAG_ENTITY_TYPE_LABELS: Record<EntityTagEntityType, string> = {
+  page: "Wiki-Seite",
+  asset: "Asset",
+  soundboard_button: "Soundboard",
+  personal_brain_document: "Life Brain Dokument",
+  personal_brain_fact: "Life Brain Fakt",
+  capture: "Capture",
+  project: "Projekt",
+  workshop: "Werkstatt",
+  contract: "Vertrag",
+  hardware: "Hardware",
+  dev_idea: "Dev-Idee",
+};
 
 export interface TagReference {
   entityType: TagEntityType;
@@ -67,15 +76,21 @@ export interface TagCoverageStats {
   totalEntityTags: number;
 }
 
-const JSON_TAG_ENTITY_TYPES = [
+const TAG_BACKFILL_ENTITY_TYPES = [
   "page",
   "asset",
   "soundboard_button",
   "personal_brain_document",
   "personal_brain_fact",
+  "capture",
+  "project",
+  "workshop",
+  "contract",
+  "hardware",
+  "dev_idea",
 ] as const satisfies readonly EntityTagEntityType[];
 
-type JsonTagEntityType = (typeof JSON_TAG_ENTITY_TYPES)[number];
+type TagBackfillEntityType = (typeof TAG_BACKFILL_ENTITY_TYPES)[number];
 
 interface JsonTagEntityRow {
   id: string;
@@ -88,7 +103,7 @@ interface JsonTagEntityRow {
 
 async function loadJsonTagEntities(
   db: PrismaClient,
-  entityType: JsonTagEntityType,
+  entityType: TagBackfillEntityType,
   worldId?: string,
 ): Promise<JsonTagEntityRow[]> {
   switch (entityType) {
@@ -128,6 +143,81 @@ async function loadJsonTagEntities(
       return db.personalBrainFact.findMany({
         select: { id: true, title: true, tags: true },
       });
+    case "capture":
+      return db.captureEntry
+        .findMany({
+          where: worldId ? { worldId } : undefined,
+          select: { id: true, title: true, metadata: true, worldId: true },
+        })
+        .then((rows) =>
+          rows.map((row) => ({
+            id: row.id,
+            title: row.title || "Capture",
+            tags: parseTagsFromMetadata(row.metadata),
+            worldId: row.worldId,
+          })),
+        );
+    case "project":
+      return db.personalProject
+        .findMany({
+          where: worldId ? { worldId } : undefined,
+          select: { id: true, name: true, metadata: true, worldId: true },
+        })
+        .then((rows) =>
+          rows.map((row) => ({
+            id: row.id,
+            title: row.name,
+            tags: parseTagsFromMetadata(row.metadata),
+            worldId: row.worldId,
+          })),
+        );
+    case "workshop":
+      return db.workshopProject
+        .findMany({
+          where: worldId ? { worldId } : undefined,
+          select: { id: true, title: true, metadata: true, worldId: true },
+        })
+        .then((rows) =>
+          rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            tags: parseTagsFromMetadata(row.metadata),
+            worldId: row.worldId,
+          })),
+        );
+    case "contract":
+      return db.contractExpense.findMany({
+        select: { id: true, name: true, metadata: true },
+      }).then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          title: row.name,
+          tags: parseTagsFromMetadata(row.metadata),
+          worldId: null,
+        })),
+      );
+    case "hardware":
+      return db.hardwareDevice.findMany({
+        select: { id: true, name: true, metadata: true },
+      }).then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          title: row.name,
+          tags: parseTagsFromMetadata(row.metadata),
+          worldId: null,
+        })),
+      );
+    case "dev_idea":
+      return db.devIdea.findMany({
+        select: { id: true, title: true, metadata: true },
+      }).then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          tags: parseTagsFromMetadata(row.metadata),
+          worldId: null,
+        })),
+      );
     default:
       return [];
   }
@@ -135,13 +225,144 @@ async function loadJsonTagEntities(
 
 async function syncEntityTagsForJsonEntity(
   db: PrismaClient,
-  entityType: JsonTagEntityType,
+  entityType: TagBackfillEntityType,
   entityId: string,
   tags: string[],
   worldId?: string | null,
 ): Promise<void> {
   const entityTags = createEntityTagService(db);
   await entityTags.replaceEntityTags(entityType, entityId, tags, { worldId });
+}
+
+async function mergeMetadataEntityTags(
+  db: PrismaClient,
+  entityType: Extract<
+    TagBackfillEntityType,
+    "capture" | "project" | "workshop" | "contract" | "hardware" | "dev_idea"
+  >,
+  options: {
+    worldId?: string;
+    fromKeys: Set<string>;
+    toTag: string;
+  },
+): Promise<number> {
+  let updatedEntities = 0;
+
+  if (entityType === "capture") {
+    const rows = await db.captureEntry.findMany({
+      where: options.worldId ? { worldId: options.worldId } : undefined,
+      select: { id: true, metadata: true, worldId: true },
+    });
+    for (const row of rows) {
+      const metadata = asMetadataRecord(row.metadata);
+      const tags = parseStringArray(metadata.tags);
+      const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+      if (!next) continue;
+      await db.captureEntry.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+      await syncEntityTagsForJsonEntity(db, "capture", row.id, next, row.worldId);
+      updatedEntities++;
+    }
+    return updatedEntities;
+  }
+
+  if (entityType === "project") {
+    const rows = await db.personalProject.findMany({
+      where: options.worldId ? { worldId: options.worldId } : undefined,
+      select: { id: true, metadata: true, worldId: true },
+    });
+    for (const row of rows) {
+      const metadata = asMetadataRecord(row.metadata);
+      const tags = parseStringArray(metadata.tags);
+      const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+      if (!next) continue;
+      await db.personalProject.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+      await syncEntityTagsForJsonEntity(db, "project", row.id, next, row.worldId);
+      updatedEntities++;
+    }
+    return updatedEntities;
+  }
+
+  if (entityType === "workshop") {
+    const rows = await db.workshopProject.findMany({
+      where: options.worldId ? { worldId: options.worldId } : undefined,
+      select: { id: true, metadata: true, worldId: true },
+    });
+    for (const row of rows) {
+      const metadata = asMetadataRecord(row.metadata);
+      const tags = parseStringArray(metadata.tags);
+      const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+      if (!next) continue;
+      await db.workshopProject.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+      await syncEntityTagsForJsonEntity(db, "workshop", row.id, next, row.worldId);
+      updatedEntities++;
+    }
+    return updatedEntities;
+  }
+
+  if (entityType === "contract") {
+    const rows = await db.contractExpense.findMany({
+      select: { id: true, metadata: true },
+    });
+    for (const row of rows) {
+      const metadata = asMetadataRecord(row.metadata);
+      const tags = parseStringArray(metadata.tags);
+      const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+      if (!next) continue;
+      await db.contractExpense.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+      await syncEntityTagsForJsonEntity(db, "contract", row.id, next, null);
+      updatedEntities++;
+    }
+    return updatedEntities;
+  }
+
+  if (entityType === "hardware") {
+    const rows = await db.hardwareDevice.findMany({
+      select: { id: true, metadata: true },
+    });
+    for (const row of rows) {
+      const metadata = asMetadataRecord(row.metadata);
+      const tags = parseStringArray(metadata.tags);
+      const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+      if (!next) continue;
+      await db.hardwareDevice.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+      await syncEntityTagsForJsonEntity(db, "hardware", row.id, next, null);
+      updatedEntities++;
+    }
+    return updatedEntities;
+  }
+
+  const rows = await db.devIdea.findMany({
+    select: { id: true, metadata: true },
+  });
+  for (const row of rows) {
+    const metadata = asMetadataRecord(row.metadata);
+    const tags = parseStringArray(metadata.tags);
+    const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
+    if (!next) continue;
+    await db.devIdea.update({
+      where: { id: row.id },
+      data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+    });
+    await syncEntityTagsForJsonEntity(db, "dev_idea", row.id, next, null);
+    updatedEntities++;
+  }
+
+  return updatedEntities;
 }
 
 async function collectEntityTagInventory(
@@ -157,7 +378,7 @@ async function collectEntityTagInventory(
   const map = new Map<string, TagInventoryEntry>();
   const entityMeta = new Map<string, JsonTagEntityRow>();
 
-  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
     for (const row of await loadJsonTagEntities(db, entityType, worldId)) {
       entityMeta.set(`${entityType}:${row.id}`, row);
     }
@@ -302,90 +523,19 @@ export async function collectTagInventory(
     }
   };
 
-  const pages = await db.page.findMany({
-    where: worldId ? { worldId } : undefined,
-    select: {
-      id: true,
-      title: true,
-      worldId: true,
-      publishStatus: true,
-      visibility: true,
-      tags: true,
-    },
-  });
-  for (const page of pages) {
-    for (const tag of parseStringArray(page.tags)) {
-      addRef(tag, {
-        entityType: "page",
-        entityId: page.id,
-        title: page.title,
-        worldId: page.worldId,
-        publishStatus: page.publishStatus,
-        visibility: page.visibility,
-      });
-    }
-  }
-
-  const assets = await db.asset.findMany({
-    where: worldId ? { worldId } : undefined,
-    select: {
-      id: true,
-      title: true,
-      worldId: true,
-      visibility: true,
-      tags: true,
-    },
-  });
-  for (const asset of assets) {
-    for (const tag of parseStringArray(asset.tags)) {
-      addRef(tag, {
-        entityType: "asset",
-        entityId: asset.id,
-        title: asset.title,
-        worldId: asset.worldId,
-        visibility: asset.visibility,
-      });
-    }
-  }
-
-  const buttons = await db.soundboardButton.findMany({
-    where: worldId ? { worldId } : undefined,
-    select: { id: true, title: true, worldId: true, tags: true },
-  });
-  for (const button of buttons) {
-    for (const tag of parseStringArray(button.tags)) {
-      addRef(tag, {
-        entityType: "soundboard_button",
-        entityId: button.id,
-        title: button.title,
-        worldId: button.worldId,
-      });
-    }
-  }
-
-  const brainDocs = await db.personalBrainDocument.findMany({
-    select: { id: true, title: true, tags: true },
-  });
-  for (const doc of brainDocs) {
-    for (const tag of parseStringArray(doc.tags)) {
-      addRef(tag, {
-        entityType: "personal_brain_document",
-        entityId: doc.id,
-        title: doc.title,
-      });
-    }
-  }
-
-  const brainFacts = await db.personalBrainFact.findMany({
-    select: { id: true, title: true, tags: true },
-  });
-  for (const fact of brainFacts) {
-    for (const tag of parseStringArray(fact.tags)) {
-      addRef(tag, {
-        entityType: "personal_brain_fact",
-        entityId: fact.id,
-        title: fact.title,
-      });
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
+    const rows = await loadJsonTagEntities(db, entityType, worldId);
+    for (const row of rows) {
+      for (const tag of parseStringArray(row.tags)) {
+        addRef(tag, {
+          entityType,
+          entityId: row.id,
+          title: row.title,
+          worldId: row.worldId,
+          publishStatus: row.publishStatus ?? null,
+          visibility: row.visibility ?? null,
+        });
+      }
     }
   }
 
@@ -568,6 +718,22 @@ export async function mergeTags(
     }
   }
 
+  const metadataEntityTypes = [
+    "capture",
+    "project",
+    "workshop",
+    "contract",
+    "hardware",
+    "dev_idea",
+  ] as const;
+  for (const entityType of metadataEntityTypes) {
+    updatedEntities += await mergeMetadataEntityTags(db, entityType, {
+      worldId: options.worldId,
+      fromKeys,
+      toTag,
+    });
+  }
+
   return {
     mergedFrom: options.fromTags.filter((tag) => shouldReplace(tag)),
     toTag,
@@ -587,7 +753,7 @@ export async function backfillEntityTagsFromJson(
     entitiesProcessed: 0,
   };
 
-  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
     const rows = await loadJsonTagEntities(db, entityType, options.worldId);
     for (const row of rows) {
       const tags = parseStringArray(row.tags);
@@ -628,7 +794,7 @@ export async function getTagCoverageStats(
 ): Promise<TagCoverageStats> {
   const types: TagCoverageTypeStats[] = [];
 
-  for (const entityType of JSON_TAG_ENTITY_TYPES) {
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
     const rows = await loadJsonTagEntities(db, entityType, options.worldId);
     const entityIds = rows.map((row) => row.id);
     const jsonTagged = rows.filter((row) => parseStringArray(row.tags).length > 0).length;

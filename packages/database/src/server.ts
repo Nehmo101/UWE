@@ -421,6 +421,7 @@ export {
   canonicalizeTag,
   collectTagInventory,
   createTagService,
+  ENTITY_TAG_ENTITY_TYPE_LABELS,
   findSimilarTagGroups,
   findUnusedTags,
   getTagCoverageStats,
