@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/tokens/colors.css">
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/tokens/base.css">
+<link rel="stylesheet" href="_ds/uwe-design-system-f43eab04-3413-4d67-afa2-7d61486c3cf1/styles.css">
+<style>
+  .atlas-app { --mono:"Space Mono",ui-monospace,monospace; --serif:"Newsreader",Georgia,serif; }
+  .atlas-app *, .atlas-app *::before, .atlas-app *::after { box-sizing:border-box; }
+  .atlas-app button { font-family:var(--mono); cursor:pointer; }
+  .atlas-app canvas { display:block; touch-action:none; image-rendering:pixelated; }
+  .atlas-app ::selection { background:rgba(194,98,43,0.22); }
+  .tool-btn { display:flex; align-items:center; gap:9px; width:100%; padding:8px 10px; border-radius:9px; border:1px solid transparent; background:transparent; color:var(--uwe-sidebar-fg,#e9dcc0); font-size:12.5px; text-align:left; transition:background .12s ease,border-color .12s ease; }
+  .tool-btn:hover { background:rgba(255,255,255,0.06); }
+  .tool-btn.active { background:var(--uwe-accent); color:#fff; border-color:rgba(0,0,0,0.25); }
+  .tool-btn .k { margin-left:auto; font-size:9.5px; opacity:.55; border:1px solid currentColor; border-radius:4px; padding:0 4px; }
+  .tool-btn .ico { width:18px; height:18px; flex:none; }
+  .tb-btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 11px; border-radius:9px; border:1.5px solid var(--uwe-border); background:var(--uwe-bg-elevated); color:var(--uwe-fg); font-size:12px; transition:border-color .12s ease,background .12s ease; }
+  .tb-btn:hover { border-color:var(--uwe-accent); background:var(--uwe-accent-muted); }
+  .tb-btn:active { transform:translateY(1px); }
+  .tb-btn.on { background:var(--uwe-fg); color:var(--uwe-on-accent); border-color:var(--uwe-fg); }
+  .seg { display:inline-flex; border:1.5px solid var(--uwe-border); border-radius:9px; overflow:hidden; background:var(--uwe-bg-elevated); }
+  .seg button { height:30px; padding:0 11px; border:0; background:transparent; color:var(--uwe-fg-muted); font-size:11.5px; }
+  .seg button.on { background:var(--uwe-accent); color:#fff; }
+  .swatch { width:26px; height:26px; border-radius:7px; border:2px solid transparent; cursor:pointer; }
+  .swatch.on { border-color:var(--uwe-fg); box-shadow:0 0 0 2px var(--uwe-accent); }
+  .grp-label { font-family:var(--mono); font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--uwe-sidebar-fg-muted,#b6a888); padding:2px 4px 6px; }
+</style>
+</helmet>
+<div class="atlas-app" style="display:flex; flex-direction:column; height:100vh; width:100%; background:var(--uwe-bg); color:var(--uwe-fg); font-family:var(--mono); overflow:hidden;">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header style="flex:none; display:flex; align-items:center; gap:12px; height:54px; padding:0 16px; background:var(--uwe-panel); border-bottom:2px solid var(--uwe-fg); z-index:5;">
+    <span style="font-size:15px; color:var(--uwe-accent);">◆</span>
+    <span style="font-weight:700; letter-spacing:-0.01em; font-size:13.5px;">UWE&nbsp;Atlas</span>
+    <span style="display:{{ viewBadgeDisplay }}; align-items:center; font-size:9.5px; padding:2px 8px; border-radius:999px; background:var(--uwe-player-visible); color:#fff; letter-spacing:0.08em; text-transform:uppercase;">Portal</span>
+    <span style="display:{{ bridgeBadgeDisplay }}; align-items:center; font-size:9.5px; padding:2px 8px; border-radius:999px; background:var(--uwe-accent); color:#fff; letter-spacing:0.08em; text-transform:uppercase;">Studio-Bridge</span>
+
+    <!-- Breadcrumb / Drill-down -->
+    <nav aria-label="Atlas-Hierarchie" style="display:flex; align-items:center; gap:6px; margin-left:6px; padding-left:12px; border-left:1px solid var(--uwe-border);">
+      <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="2">
+        <button onClick="{{ c.go }}" title="Zu dieser Ebene" style="background:none; border:0; padding:2px 4px; font-size:12px; color:{{ c.color }};">{{ c.label }}</button>
+        <span style="color:var(--uwe-fg-subtle); font-size:11px;">{{ c.sep }}</span>
+      </sc-for>
+      <span style="font-family:var(--serif); font-size:15px; font-weight:600;">{{ nodeTitle }}</span>
+      <span style="font-size:10px; color:var(--uwe-fg-subtle);">· {{ nodeLevelLabel }}</span>
+    </nav>
+
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <!-- Brush size (nur Editor) -->
+      <span style="display:{{ editorOnlyInline }}; font-size:10px; color:var(--uwe-fg-muted); letter-spacing:0.1em; text-transform:uppercase;">Pinsel</span>
+      <div class="seg" role="group" aria-label="Pinselgröße" style="display:{{ editorOnlyBlock }};">
+        <button class="{{ brushS }}" onClick="{{ setBrushSmall }}">S</button>
+        <button class="{{ brushM }}" onClick="{{ setBrushMed }}">M</button>
+        <button class="{{ brushL }}" onClick="{{ setBrushLarge }}">L</button>
+      </div>
+      <button class="tb-btn {{ gridOn }}" onClick="{{ toggleGrid }}" title="Gitter ein/aus">▦ Gitter</button>
+      <button class="tb-btn {{ visOn }}" onClick="{{ toggleVis }}" title="Portal-Sichtbarkeit dieser Ebene" style="display:{{ editorOnlyBlock }};">{{ visLabel }}</button>
+      <button class="tb-btn" onClick="{{ requestAiDraft }}" title="Prozeduralen KI-Entwurf vorschlagen — Proposal/Review, kein Auto-Apply" style="display:{{ editorOnlyBlock }};">✦ KI-Entwurf</button>
+      <button class="tb-btn" onClick="{{ requestHandout }}" title="Handout-Seite erzeugen (Studio-Bridge)" style="display:{{ editorOnlyBlock }};">↗ Handout</button>
+      <div style="width:1px; height:26px; background:var(--uwe-border); display:{{ editorOnlyBlock }};"></div>
+      <button class="tb-btn" onClick="{{ exportJson }}" title="Als Atlas-JSON exportieren" style="display:{{ editorOnlyBlock }};">↓ JSON</button>
+      <button class="tb-btn" onClick="{{ exportPng }}" title="Ausschnitt als PNG (opt. Gitter)">{{ pngLabel }}</button>
+      <button class="tb-btn" onClick="{{ clearCanvas }}" title="Karte leeren" style="border-color:var(--uwe-danger); color:var(--uwe-danger); display:{{ editorOnlyBlock }};">Leeren</button>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; min-height:0;">
+    <!-- ===================== LEFT SIDEBAR ===================== -->
+    <aside style="flex:none; width:212px; background:var(--uwe-sidebar-bg,#211d17); color:var(--uwe-sidebar-fg,#e9dcc0); display:flex; flex-direction:column; overflow-y:auto; padding:12px 10px; gap:4px; border-right:1px solid rgba(0,0,0,0.3);">
+      <div style="display:{{ editorOnlyBlock }}; flex-direction:column; gap:4px;">
+        <div class="grp-label">Werkzeuge</div>
+        <sc-for list="{{ primaryTools }}" as="t" hint-placeholder-count="4">
+          <button class="tool-btn {{ t.cls }}" onClick="{{ t.pick }}" title="{{ t.title }}">
+            <span class="ico" innerHTML="{{ t.icon }}"></span>
+            <span>{{ t.label }}</span>
+            <span class="k">{{ t.key }}</span>
+          </button>
+        </sc-for>
+
+        <div class="grp-label" style="margin-top:10px;">Terrain-Pinsel</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px;">
+          <sc-for list="{{ terrainSwatches }}" as="b" hint-placeholder-count="4">
+            <button onClick="{{ b.pick }}" title="{{ b.title }}" style="display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:8px; font-size:11px; border:1px solid {{ b.border }}; background:{{ b.bg }}; color:{{ b.fg }};">
+              <span style="width:12px; height:12px; border-radius:3px; background:{{ b.chip }}; border:1px solid rgba(0,0,0,0.25);"></span>{{ b.label }}
+            </button>
+          </sc-for>
+        </div>
+
+        <div class="grp-label" style="margin-top:10px;">Objekte &amp; Bauten</div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:0 2px;">
+          <sc-for list="{{ glyphChoices }}" as="g" hint-placeholder-count="8">
+            <button onClick="{{ g.pick }}" title="{{ g.name }}" style="aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid {{ g.border }}; background:{{ g.bg }};">
+              <span class="ico" style="width:22px; height:22px;" innerHTML="{{ g.icon }}"></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:{{ viewOnlyBlock }}; flex-direction:column; gap:6px;">
+        <div class="grp-label">Legende</div>
+        <sc-for list="{{ legendItems }}" as="lg" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:8px; font-size:11.5px; padding:3px 2px;">
+            <span style="width:18px; height:18px; flex:none;" innerHTML="{{ lg.icon }}"></span>{{ lg.label }}
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted,#b6a888); line-height:1.6; display:{{ editorOnlyBlock }};">
+        <div>Links = malen/platzieren</div>
+        <div>Rechts = löschen</div>
+        <div>Ziehen (Ø Werkzeug) = schwenken</div>
+        <div>Scroll = zoomen</div>
+      </div>
+      <div style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted,#b6a888); line-height:1.6; display:{{ viewOnlyBlock }};">
+        <div>Nur Ansicht — Spieler-Portal</div>
+        <div>Klick = Ebene wechseln / Wiki</div>
+        <div>Ziehen = schwenken · Scroll = zoomen</div>
+      </div>
+    </aside>
+
+    <!-- ===================== CANVAS STAGE ===================== -->
+    <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
+      <canvas ref="{{ canvasRef }}" style="width:100%; height:100%;"></canvas>
+
+      <!-- Contextual sub-bar (biome density / stamp randomize / measure hint) -->
+      <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); display:{{ subbarDisplay }}; align-items:center; gap:12px; padding:6px 12px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:10px; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:11.5px;">
+        <span innerHTML="{{ subbarHtml }}"></span>
+      </div>
+
+      <!-- Compass rose + scale (decorations, from preset) -->
+      <svg viewBox="0 0 80 80" width="60" height="60" style="position:absolute; top:14px; right:16px; opacity:.9; pointer-events:none;">
+        <circle cx="40" cy="40" r="36" fill="#f2e8c9" stroke="#1a1008" stroke-width="1.5"/>
+        <polygon points="40,8 35,36 40,30 45,36" fill="#1a1008"/>
+        <polygon points="40,72 35,44 40,50 45,44" fill="#8b1a10"/>
+        <text x="40" y="6" text-anchor="middle" font-size="9" font-family="serif" fill="#1a1008" font-weight="bold">N</text>
+      </svg>
+      <div style="position:absolute; bottom:52px; right:16px; pointer-events:none; text-align:center;">
+        <div style="width:80px; height:8px; border:1px solid #1a1008; background:repeating-linear-gradient(to right,#1a1008 0 10px,#f2e8c9 10px 20px);"></div>
+        <div style="font-family:var(--serif); font-size:10px; color:#1a1008; margin-top:2px;">0 — 100 leagues</div>
+      </div>
+
+      <!-- Selection context panel -->
+      <div style="position:absolute; top:14px; left:14px; display:{{ selDisplay }}; width:210px; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; backdrop-filter:blur(10px); box-shadow:0 4px 14px rgba(0,0,0,.2);">
+        <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · {{ selKind }}</div>
+        <div innerHTML="{{ selControls }}"></div>
+        <button onClick="{{ eraseSelected }}" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
+      </div>
+
+      <!-- KI-Entwurf-Review (Proposal/Review, kein Auto-Apply) -->
+      <div style="position:absolute; top:52px; left:50%; transform:translateX(-50%); display:{{ aiReviewDisplay }}; align-items:center; gap:10px; padding:9px 14px; background:var(--uwe-surface); border:1.5px solid var(--uwe-accent); border-radius:11px; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.22); font-size:12.5px;">
+        <span style="color:var(--uwe-accent);">✦</span>
+        <span>{{ aiReviewText }}</span>
+        <button class="tb-btn on" onClick="{{ acceptAiDraft }}">Übernehmen</button>
+        <button class="tb-btn" onClick="{{ discardAiDraft }}">Verwerfen</button>
+      </div>
+
+      <!-- Portal-Toast (Wiki-Verknüpfung geklickt) -->
+      <div style="position:absolute; bottom:44px; left:50%; transform:translateX(-50%); display:{{ toastDisplay }}; padding:8px 14px; background:var(--uwe-fg); color:var(--uwe-on-accent,#fbf6ea); border-radius:9px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.25);">{{ toastText }}</div>
+
+      <!-- Portal-Empty-State: Ebene nicht freigegeben -> keine Inhalte, kein dm_only-Leak -->
+      <div style="position:absolute; inset:0; display:{{ emptyDisplay }}; align-items:center; justify-content:center; flex-direction:column; gap:8px; background:var(--uwe-bg); text-align:center; padding:40px;">
+        <span style="font-size:17px; color:var(--uwe-accent);">◆</span>
+        <div style="font-family:var(--serif); font-size:20px; max-width:34ch; color:var(--uwe-fg);">Für deine Rolle sind derzeit keine Inhalte sichtbar.</div>
+        <div style="font-size:13px; color:var(--uwe-fg-muted);">Wende dich an deinen Spielleiter.</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== STATUS BAR ===================== -->
+  <footer style="flex:none; display:flex; align-items:center; gap:0; height:30px; padding:0 14px; background:var(--uwe-panel); border-top:1px solid var(--uwe-border); font-size:11px; color:var(--uwe-fg-muted);">
+    <span style="color:var(--uwe-accent); font-weight:700;">{{ activeToolLabel }}</span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Tile <b style="color:var(--uwe-fg);">{{ tileCoord }}</b></span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Welt <b style="color:var(--uwe-fg);">{{ worldCoord }}</b></span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Zoom <b style="color:var(--uwe-fg);">{{ zoomLabel }}</b></span>
+    <span style="margin-left:auto; color:{{ saveColor }};">{{ saveStatus }}</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;editor&quot;,&quot;tsType&quot;:&quot;'editor' | 'view'&quot;,&quot;options&quot;:[&quot;editor&quot;,&quot;view&quot;]}}">
+class Component extends DCLogic {
+  // =========================================================================
+  // UWE Atlas — Single-File Canvas Editor (Prototyp / Meilenstein M1)
+  // Port der @uwe/atlas-Engine + AtlasEditor.tsx auf eine Datei.
+  //  - Terrain-Tiles (32px) : CoK-Pinsel Gras/Wasser/Erde/Sand -> Biome-Kinds
+  //  - Objects              : Glyphen-Stempel (normiert), erweiterte Registry
+  //  - Features             : Region/Path/River/Road/Label/Pin (normiert 0-1)
+  //  - Hierarchie           : Globe->Continent->Landscape->City Drill-down
+  //  - Persistenz           : localStorage-Autosave (Crash-Puffer), 10s Intervall
+  //  - Export               : Atlas-JSON (schemaVersion 2) + PNG (opt. Gitter)
+  // =========================================================================
+
+  // ---- Konstanten ---------------------------------------------------------
+  static get TILE() { return 32; }
+  static get COLS() { return 64; }
+  static get ROWS() { return 40; }
+  get WORLD_W() { return Component.COLS * Component.TILE; } // 2048
+  get WORLD_H() { return Component.ROWS * Component.TILE; } // 1280
+
+  // Tolkien-Ink Preset — jetzt aus dem portierten Engine-Modul (style-presets.ts);
+  // Fallback nur falls das Modul (noch) nicht geladen ist.
+  get preset() {
+    if (this.engine) return this.engine.resolveStylePreset("tolkien-ink");
+    return {
+      colors: { parchment:"#f2e8c9", ink:"#1a1008", inkAccent:"#8b1a10",
+        water:"#a8c4d4", land:"#e8ddb5", forest:"#4a6741", mountain:"#7a6b52", road:"#6b4a2a" },
+      typography: { labelRegion:"Newsreader, Georgia, serif", labelCity:"Newsreader, Georgia, serif" },
+      scaleUnit: "leagues",
+    };
+  }
+
+  // Tile-Biome-Füllfarben (deckender als Feature-Biome, damit Malen lesbar ist)
+  get TILE_FILL() {
+    return { grassland:"#a9c47f", coast:"#9fc0d2", hills:"#c2a878", desert:"#dcc47c",
+      forest:"#7a9463", mountains:"#b4a487", swamp:"#8a9b78", snow:"#dde6f0" };
+  }
+  get BIOME_LABEL() {
+    return { grassland:"Grasland", coast:"Wasser", hills:"Erde", desert:"Sand",
+      forest:"Wald", mountains:"Gebirge", swamp:"Sumpf", snow:"Schnee" };
+  }
+  // Terrain-Pinsel-Reihenfolge in der Sidebar (CoK-Vokabular zuerst)
+  get TERRAIN_ORDER() { return ["grassland","coast","hills","desert","forest","mountains","swamp","snow"]; }
+
+  // Feature-Biome-Füllung (halbtransparent, für Polygon-Biome)
+  get BIOME_POLY_FILL() {
+    return { forest:"rgba(74,103,65,0.28)", mountains:"rgba(122,107,82,0.24)", hills:"rgba(154,136,96,0.20)",
+      grassland:"rgba(164,196,130,0.24)", desert:"rgba(220,196,130,0.30)", swamp:"rgba(94,120,80,0.32)",
+      coast:"rgba(168,196,212,0.38)", snow:"rgba(220,228,240,0.38)" };
+  }
+
+  // ---- Builtin-Glyphen — jetzt aus dem portierten Engine-Modul (glyphs.ts). ----
+  // Vorher: eine ~20-Zeilen-Kopie der Registry direkt im Editor. Jetzt: eine
+  // Quelle (atlas-engine.js), die Editor UND Portal-Ansicht importieren.
+  get GLYPHS() { return (this.engine && this.engine.BUILTIN_GLYPHS) || []; }
+  glyph(key) { return this.engine ? this.engine.getGlyphByKey(key) : undefined; }
+
+  // Werkzeug-Icons (kleine inline-SVG, currentColor)
+  toolIcon(name) {
+    const p = {
+      select: 'M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z',
+      terrain: 'M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20',
+      region: 'M4 6 L12 3 L20 7 L18 18 L7 20 Z',
+      path: 'M4 20 Q8 6 14 12 Q19 17 20 4',
+      road: 'M6 21 L10 3 M14 21 L18 3 M8 12 L16 12',
+      label: 'M5 6 L19 6 M12 6 L12 19 M9 19 L15 19',
+      pin: 'M12 21 C12 21 5 13 5 8 A7 7 0 0 1 19 8 C19 13 12 21 12 21 Z M12 8 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
+      eraser: 'M4 15 L12 7 L19 14 L14 19 L8 19 Z M8 19 L20 19',
+      measure: 'M3 8 L16 21 L21 16 L8 3 Z M8 8 L10 10 M11 11 L13 13 M14 14 L16 16',
+    };
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="'+(p[name]||'')+'"/></svg>';
+  }
+  glyphSvg(g, stroke) {
+    return '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="'+(stroke||g.color)+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="'+g.pathData+'"/></svg>';
+  }
+
+  // =========================================================================
+  // State
+  // =========================================================================
+  state = {
+    tool: "terrain",
+    brush: "grassland",           // aktiver Terrain-Biome
+    brushSize: 1,                 // 0=S,1=M,2=L -> Radius in Tiles
+    glyphKey: "tree",             // aktiver Objekt-Glyph
+    showGrid: true,
+    zoom: 1, panX: 0, panY: 0,
+    tileCoord: "—", worldCoord: "—",
+    selectedKey: null,
+    nodeId: null,
+    dirty: false,
+    saveStatus: "Bereit",
+    toast: null,
+    aiReview: null,
+    _rev: 0,                      // Force-Rerender-Zähler für Chrome
+  };
+
+  // Nicht-reaktive Kern-Daten (Karte). Rendering imperativ -> keine React-Loops.
+  doc = null;                     // vollständiges Atlas-Doc (v2)
+  drawingPoints = [];             // aktuell gezeichneter Polygon/Path
+  measurePoints = [];
+  _key = 0;
+  nextKey() { return "ck-" + (++this._key); }
+
+  // =========================================================================
+  // Lifecycle
+  // =========================================================================
+  componentDidMount() {
+    // Canvas + DPR
+    this._ro = new ResizeObserver(() => this.resize());
+    if (this.canvas) this._ro.observe(this.canvas);
+    // Autosave 10s (Crash-Puffer) — nur im Editor-Modus, Portal schreibt nie.
+    if (!this.isView()) {
+      this._autosave = setInterval(() => { if (this.state.dirty) this.persist("Autosave ✓"); }, 10000);
+    }
+    window.addEventListener("keydown", this._onKey = (e) => this.onKeyDown(e));
+    window.addEventListener("message", this._onMsg = (e) => this.onBridgeMessage(e));
+    this.boot();
+  }
+
+  // M0: Engine-Modul (atlas-engine.js) asynchron laden, dann erst Doc + Rendering.
+  // Schlägt der Import fehl, degradiert die Komponente auf lokale Fallbacks statt
+  // abzustürzen (robustes Error-Handling bei Parse/Migration, siehe unten).
+  async boot() {
+    try {
+      this.engine = await import("./atlas-engine.js");
+    } catch (e) {
+      console.error("Atlas: Engine-Modul (atlas-engine.js) konnte nicht geladen werden — Fallbacks aktiv.", e);
+      this.engine = null;
+    }
+    this.doc = this.loadDoc();
+    this.setState({ nodeId: this.doc.rootNodeId });
+    this.resize();
+    this.draw();
+    if (this.embedded) this.bridgePost({ type:"ready", mode:this.mode });
+  }
+  componentWillUnmount() {
+    if (this._ro) this._ro.disconnect();
+    if (this._autosave) clearInterval(this._autosave);
+    window.removeEventListener("keydown", this._onKey);
+    window.removeEventListener("message", this._onMsg);
+  }
+
+  get canvas() { return this._canvas; }
+
+  // =========================================================================
+  // Persistenz (localStorage-Crash-Puffer). DB-Sync würde via postMessage-Bridge
+  // an Studio-Server-Actions gehen (M3) — hier lokal simuliert.
+  // =========================================================================
+  get STORAGE_KEY() { return "uwe.atlas.singlefile.v2"; }
+
+  loadDoc() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (raw) return this.migrate(JSON.parse(raw));
+    } catch (e) { console.warn("Atlas: konnte gespeichertes Doc nicht lesen —", e); }
+    return this.migrate(this.demoSeed());
+  }
+
+  // Migration v1 (kein schemaVersion) -> v2 (+ tileLayer). Delegiert an das
+  // portierte Engine-Modul; robustes Error-Handling falls Parsen/Migrieren
+  // fehlschlägt (nie stiller Datenverlust — sichtbarer Fallback statt Crash).
+  migrate(doc) {
+    try {
+      const migrated = this.engine ? this.engine.migrateDoc(doc) : this.localMigrateFallback(doc);
+      migrated.features.forEach(f => { if (!f._key) f._key = this.nextKey(); });
+      migrated.objects.forEach(o => { if (!o._key) o._key = this.nextKey(); });
+      return migrated;
+    } catch (e) {
+      console.error("Atlas-Migration fehlgeschlagen, lade leere Welt —", e);
+      return this.emptyDoc();
+    }
+  }
+  // Fallback-Migration, nur falls atlas-engine.js nicht geladen werden konnte.
+  localMigrateFallback(doc) {
+    if (!doc || typeof doc !== "object") throw new Error("leeres Doc");
+    if (!doc.schemaVersion) doc.schemaVersion = 2;
+    doc.nodes = doc.nodes || []; doc.features = doc.features || []; doc.objects = doc.objects || []; doc.pageLinks = doc.pageLinks || {};
+    doc.tileLayer = doc.tileLayer || { cols: Component.COLS, rows: Component.ROWS, tile: Component.TILE, cells: {} };
+    doc.tileLayer.cells = doc.tileLayer.cells || {};
+    return doc;
+  }
+
+  emptyDoc() {
+    const rootId = "node-root";
+    return { schemaVersion:2, worldSlug:"terra", map:{ title:"Atlas", stylePreset:"tolkien-ink" },
+      rootNodeId: rootId, pageLinks:{},
+      nodes:[{ id:rootId, parentId:null, level:"continent", title:"Westland", parentFeatureId:null, visibility:"dm_only" }],
+      features:[], objects:[],
+      tileLayer:{ cols:Component.COLS, rows:Component.ROWS, tile:Component.TILE, cells:{} } };
+  }
+
+  // Demo-Seed „Terra" (kompatibel mit data.json; als v1 geladen -> migriert)
+  demoSeed() {
+    const root = "node-westland", city = "node-validori";
+    const cells = {};
+    // etwas Gras-Grundgelände + ein Wasserband, damit die Karte nicht leer ist
+    for (let c=6;c<40;c++) for (let r=6;r<30;r++) {
+      const n = (Math.sin(c*0.5)+Math.cos(r*0.6));
+      cells[c+","+r] = n>0.9 ? "forest" : (n<-1.1 ? "hills" : "grassland");
+    }
+    for (let r=8;r<32;r++){ const c = 44 + Math.round(Math.sin(r*0.4)*3); cells[c+","+r]="coast"; cells[(c+1)+","+r]="coast"; }
+    for (let c=46;c<62;c++) for (let r=6;r<34;r++) cells[c+","+r]=cells[c+","+r]||"coast";
+    return {
+      worldSlug:"terra", map:{ title:"Atlas", stylePreset:"tolkien-ink" }, rootNodeId: root,
+      pageLinks:{ "pg-validori":"../locations/validori/" },
+      nodes:[
+        { id:root, parentId:null, level:"continent", title:"Westland", parentFeatureId:null, visibility:"dm_only" },
+        { id:city, parentId:root, level:"city", title:"Validori", parentFeatureId:"feat-ostmark", visibility:"dm_only" },
+      ],
+      features:[
+        { id:"feat-wald", nodeId:root, kind:"biome", geometry:{ type:"Polygon", rings:[[[0.10,0.18],[0.40,0.14],[0.44,0.46],[0.16,0.56],[0.10,0.18]]] }, style:{ biomeKind:"forest", density:1.4 }, layer:10, visibility:"dm_only" },
+        { id:"feat-river", nodeId:root, kind:"river", geometry:{ type:"Path", coordinates:[[0.30,0.16],[0.36,0.34],[0.44,0.52],[0.50,0.70]] }, style:{ smooth:true }, layer:30, visibility:"dm_only" },
+        { id:"feat-road", nodeId:root, kind:"road", geometry:{ type:"Path", coordinates:[[0.18,0.44],[0.48,0.40],[0.66,0.56]] }, layer:40, visibility:"dm_only" },
+        { id:"feat-ostmark", nodeId:root, kind:"region", geometry:{ type:"Polygon", rings:[[[0.52,0.20],[0.82,0.24],[0.80,0.60],[0.50,0.56],[0.52,0.20]]] }, labelText:"Ostmark", labelColor:"black", childNodeId:city, layer:20, visibility:"dm_only" },
+        { id:"feat-label", nodeId:root, kind:"label", geometry:{ type:"LabelAnchor", coordinates:[0.26,0.30], text:"Grünwald", pathCoordinates:[[0.12,0.30],[0.24,0.24],[0.40,0.28]] }, labelText:"Grünwald", labelColor:"red", layer:60, visibility:"dm_only" },
+        { id:"feat-city", nodeId:city, kind:"biome", geometry:{ type:"Polygon", rings:[[[0.3,0.3],[0.7,0.3],[0.7,0.7],[0.3,0.7],[0.3,0.3]]] }, style:{ biomeKind:"grassland", density:1 }, layer:10, visibility:"dm_only" },
+      ],
+      objects:[
+        { id:"obj-1", nodeId:root, paletteItemId:"castle", x:0.64, y:0.40, scale:1.1, rotation:0, layer:50, visibility:"dm_only" },
+        { id:"obj-2", nodeId:root, paletteItemId:"city",   x:0.50, y:0.66, scale:1,   rotation:0, layer:50, linkedPageId:"pg-validori", visibility:"dm_only" },
+        { id:"obj-3", nodeId:root, paletteItemId:"tree",   x:0.22, y:0.30, scale:0.9, rotation:0, layer:50, visibility:"dm_only" },
+        { id:"obj-4", nodeId:root, paletteItemId:"mountain", x:0.30, y:0.48, scale:1, rotation:0, layer:50, visibility:"dm_only" },
+      ],
+    };
+  }
+
+  persist(msg) {
+    try {
+      const snapshot = this.serialize();
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(snapshot));
+      // Studio-Einbettung: zusätzlich an den Host melden (der schreibt in die DB).
+      if (this.embedded) this.bridgePost({ type:"save", doc: snapshot });
+      this.setState({ dirty:false, saveStatus: msg || "Gespeichert ✓" });
+      clearTimeout(this._msgT); this._msgT = setTimeout(() => this.setState({ saveStatus:"Bereit" }), 2200);
+    } catch (e) {
+      console.error("Atlas-Autosave fehlgeschlagen —", e);
+      this.setState({ saveStatus:"Speicherfehler" });
+    }
+  }
+  markDirty() { if (!this.state.dirty) this.setState({ dirty:true, saveStatus:"Ungespeichert" }); }
+
+  // ---- Studio-Bridge (M3) — postMessage an/vom Host (iframe/srcDoc) --------
+  // Editor -> Host: ready | save | visibility | ai-draft-request | handout-request
+  // Host  -> Editor: saved | ai-draft-result | load
+  // In der echten Studio-Einbettung ruft der Host damit die Server-Actions
+  // (saveAtlasFeaturesAction, setAtlasNodeVisibilityAction, …). KI-Ergebnisse
+  // kommen stets als Proposal zurück und werden erst nach Review übernommen.
+  bridgePost(msg) { try { window.parent.postMessage({ source:"uwe-atlas", ...msg }, "*"); } catch (_) {} }
+  onBridgeMessage(e) {
+    const d = e && e.data; if (!d || d.source !== "uwe-studio") return;
+    if (d.type === "saved") {
+      this.setState({ dirty:false, saveStatus:"In UWE-DB gespeichert ✓" });
+      clearTimeout(this._msgT); this._msgT = setTimeout(() => this.setState({ saveStatus:"Bereit" }), 2400);
+    } else if (d.type === "ai-draft-result") { this.receiveAiDraft(d.features || []); }
+    else if (d.type === "load" && d.doc) {
+      try { this.doc = this.migrate(d.doc); this.setState({ nodeId:this.doc.rootNodeId, selectedKey:null }); this.draw(); }
+      catch (err) { console.error("Atlas: Doc-Load vom Host fehlgeschlagen —", err); }
+    }
+  }
+  flash(msg) { this.setState({ toast: msg }); clearTimeout(this._toastT); this._toastT = setTimeout(() => this.setState({ toast:null }), 2400); }
+
+  // ---- KI-Entwurf: Proposal -> Review -> (manuell) übernehmen (kein Auto-Apply) ----
+  requestAiDraft() {
+    const seed = (Date.now() & 0x7fffffff) || 1;
+    if (this.embedded) { this.bridgePost({ type:"ai-draft-request", seed }); this.flash("KI-Entwurf über RTX-Host angefragt…"); return; }
+    if (!this.engine) { this.flash("Engine nicht geladen."); return; }
+    this.receiveAiDraft(this.engine.proceduralDraft(seed).features); // lokaler Fallback ohne Bridge
+  }
+  receiveAiDraft(features) {
+    this.aiDraftFeatures = (features || []).map(f => ({ ...f, _key: this.nextKey() }));
+    this.setState({ aiReview: { count: this.aiDraftFeatures.length } });
+    this.draw();
+  }
+  acceptAiDraft() {
+    if (this.aiDraftFeatures) {
+      for (const f of this.aiDraftFeatures) {
+        this.doc.features.push({ ...f, id:this.nextKey(), nodeId:this.state.nodeId, layer: f.kind==="biome"?10:30, visibility:"dm_only" });
+      }
+      this.markDirty();
+    }
+    this.aiDraftFeatures = null; this.setState({ aiReview:null }); this.draw();
+  }
+  discardAiDraft() { this.aiDraftFeatures = null; this.setState({ aiReview:null }); this.draw(); }
+  requestHandout() {
+    if (this.embedded) { this.bridgePost({ type:"handout-request", nodeId:this.node().id, title:(this.node().title||"Atlas")+" — Handout" }); this.flash("Handout-Erstellung angefragt…"); }
+    else this.flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
+  }
+
+  // Serialisierung -> Atlas-JSON (schemaVersion 2), client-keys entfernt.
+  // Delegiert an atlas-engine.js — dieselbe Funktion, die auch die zukünftige
+  // Portal-/Static-Export-Pipeline nutzen würde.
+  serialize() {
+    if (this.engine) return this.engine.serializeDoc(this.doc, { preset: this.preset });
+    const clean = (arr) => arr.map(({_key, ...rest}) => rest);
+    return {
+      schemaVersion: 2, worldSlug: this.doc.worldSlug, map: this.doc.map,
+      rootNodeId: this.doc.rootNodeId, preset: this.preset,
+      pageLinks: this.doc.pageLinks, nodes: this.doc.nodes,
+      features: clean(this.doc.features), objects: clean(this.doc.objects),
+      tileLayer: this.doc.tileLayer,
+    };
+  }
+
+  // =========================================================================
+  // Hierarchie / Node-Helfer
+  // =========================================================================
+  // Portal-Modus: Sichtbarkeitsfilter server-äquivalent im Client simuliert.
+  // In der echten Studio-Einbettung (M3) filtert die DB/Server-Action bereits
+  // vor Auslieferung — hier demonstriert derselbe Filter clientseitig, damit
+  // Editor und Portal-Ansicht sichtbar dieselbe Runtime + Regel teilen.
+  get mode() { return this.props.mode || (typeof location!=="undefined" && new URLSearchParams(location.search).get("mode")) || "editor"; }
+  // Bridge nur bei explizitem Opt-in (Studio-iframe ?embed=1) — nicht anhand
+  // window.parent raten (Preview-Harness ist selbst ein iframe -> false positive).
+  get embedded() { return this.mode!=="view" && (this.props.embed===true || (typeof location!=="undefined" && new URLSearchParams(location.search).get("embed")==="1")); }
+  isView() { return this.mode === "view"; }
+  node() { return this.doc.nodes.find(n => n.id === this.state.nodeId) || this.doc.nodes[0]; }
+  parentChain() {
+    const chain = []; let cur = this.node();
+    while (cur && cur.parentId) { const p = this.doc.nodes.find(n => n.id === cur.parentId); if (!p) break; chain.unshift(p); cur = p; }
+    return chain;
+  }
+  nodeFeatures() {
+    if (!this.doc) return [];
+    const list = this.doc.features.filter(f => f.nodeId === this.state.nodeId);
+    return this.isView() ? list.filter(f => f.visibility === "player_visible") : list;
+  }
+  nodeObjects() {
+    if (!this.doc) return [];
+    const list = this.doc.objects.filter(o => o.nodeId === this.state.nodeId);
+    return this.isView() ? list.filter(o => o.visibility === "player_visible") : list;
+  }
+  parentSilhouette() {
+    const n = this.node(); if (!n || !n.parentFeatureId) return null;
+    const f = this.doc.features.find(x => x.id === n.parentFeatureId);
+    return (f && f.geometry && f.geometry.type === "Polygon") ? f.geometry.rings : null;
+  }
+  levelLabel(lv) { return ({ globe:"Globus", continent:"Kontinent", landscape:"Landschaft", city:"Stadt" })[lv] || lv; }
+  navTo(id) { this.setState({ nodeId:id, selectedKey:null, panX:0, panY:0, zoom:1 }); this.drawingPoints=[]; requestAnimationFrame(()=>this.draw()); }
+
+  // =========================================================================
+  // Canvas-Setup & Koordinaten
+  // =========================================================================
+  resize() {
+    const c = this.canvas; if (!c) return;
+    const r = c.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
+    c.width = Math.max(320, r.width) * dpr; c.height = Math.max(240, r.height) * dpr;
+    this._dpr = dpr; this._cssW = r.width; this._cssH = r.height;
+    // Startzentrierung: Karte einpassen
+    if (!this._fitted && r.width > 0) {
+      const z = Math.min(r.width / this.WORLD_W, r.height / this.WORLD_H) * 0.92;
+      this.setState({ zoom:z, panX:(r.width - this.WORLD_W*z)/2, panY:(r.height - this.WORLD_H*z)/2 });
+      this._fitted = true;
+    }
+    this.draw();
+  }
+  // Weltpixel -> Canvas(CSS)px
+  w2c(wx, wy) { return [wx*this.state.zoom + this.state.panX, wy*this.state.zoom + this.state.panY]; }
+  c2w(cx, cy) { return [(cx-this.state.panX)/this.state.zoom, (cy-this.state.panY)/this.state.zoom]; }
+  // normiert 0-1 <-> weltpixel
+  n2w(nx, ny) { return [nx*this.WORLD_W, ny*this.WORLD_H]; }
+  w2n(wx, wy) { return [wx/this.WORLD_W, wy/this.WORLD_H]; }
+  n2c(nx, ny) { const [wx,wy]=this.n2w(nx,ny); return this.w2c(wx,wy); }
+  c2n(cx, cy) { const [wx,wy]=this.c2w(cx,cy); return [Math.max(0,Math.min(1,wx/this.WORLD_W)), Math.max(0,Math.min(1,wy/this.WORLD_H))]; }
+  tileAt(cx, cy) { const [wx,wy]=this.c2w(cx,cy); return [Math.floor(wx/Component.TILE), Math.floor(wy/Component.TILE)]; }
+
+  // =========================================================================
+  // Rendering
+  // =========================================================================
+  draw() {
+    const c = this.canvas; if (!c || !this.doc || !this.engine) return;
+    const ctx = c.getContext("2d"); if (!ctx) return;
+    const dpr = this._dpr || 1; const W = this._cssW, H = this._cssH;
+    const pr = this.preset;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.imageSmoothingEnabled = false;
+
+    // Pergament-Grund über gesamte Bühne
+    ctx.fillStyle = "#d8ccae"; ctx.fillRect(0,0,W,H);
+
+    // Karten-Rechteck (Welt) mit Pergament
+    const [x0,y0] = this.w2c(0,0); const [x1,y1] = this.w2c(this.WORLD_W, this.WORLD_H);
+    ctx.fillStyle = pr.colors.parchment; ctx.fillRect(x0,y0,x1-x0,y1-y0);
+
+    // Tile-Layer — fließende, abgerundete Verschmelzung statt harter Quadrate
+    // (Canvas-of-Kings-Stil, siehe paintTerrainBlobs in atlas-engine.js).
+    const tl = this.doc.tileLayer;
+    this.engine.paintTerrainBlobs(ctx, {
+      cols: Component.COLS, rows: Component.ROWS,
+      getCell: (cc, rr) => tl.cells[cc + "," + rr],
+      tileRect: (cc, rr) => { const [px,py] = this.w2c(cc*Component.TILE, rr*Component.TILE); const ts = Component.TILE*this.state.zoom; return { x:px, y:py, w:ts, h:ts }; },
+      fillFor: (b) => this.TILE_FILL[b] || "#ccc",
+      radiusRatio: 0.4,
+    });
+
+    // Radialer Vignetten-Schatten (wie im Original)
+    const g = ctx.createRadialGradient(W/2,H/2, W*0.3*this.state.zoom, W/2,H/2, W*0.75);
+    g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(80,50,20,0.16)");
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    // Eltern-Silhouette (gedämpfte Grenze)
+    const sil = this.parentSilhouette();
+    if (sil) { ctx.save(); ctx.beginPath();
+      for (const ring of sil){ if(!ring.length)continue; const [sx,sy]=this.n2c(ring[0][0],ring[0][1]); ctx.moveTo(sx,sy);
+        for(let i=1;i<ring.length;i++){const [px,py]=this.n2c(ring[i][0],ring[i][1]); ctx.lineTo(px,py);} ctx.closePath(); }
+      ctx.strokeStyle=pr.colors.ink; ctx.lineWidth=2.5*this.state.zoom; ctx.globalAlpha=0.15; ctx.setLineDash([8,5]); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha=0.06; ctx.fillStyle=pr.colors.ink; ctx.fill(); ctx.globalAlpha=1; ctx.restore();
+    }
+
+    // Grid
+    if (this.state.showGrid) this.drawGrid(ctx);
+
+    // Karten-Rahmen
+    ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2*this.state.zoom;
+    ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+
+    // Features (sortiert nach layer)
+    const feats = [...this.nodeFeatures()].sort((a,b)=>(a.layer||0)-(b.layer||0));
+    for (const f of feats) this.drawFeature(ctx, f);
+    // Objects
+    for (const o of this.nodeObjects()) this.drawObject(ctx, o);
+
+    // KI-Entwurf-Vorschau (Proposal — geistert, bis übernommen/verworfen)
+    if (this.aiDraftFeatures && this.aiDraftFeatures.length) {
+      ctx.save(); ctx.globalAlpha = 0.5;
+      for (const f of this.aiDraftFeatures) this.drawFeature(ctx, f);
+      ctx.restore();
+    }
+    // In-progress-Zeichnung
+    this.drawPending(ctx);
+    // Measure
+    this.drawMeasure(ctx);
+  }
+
+  drawGrid(ctx) {
+    const [x0,y0]=this.w2c(0,0); const ts=Component.TILE*this.state.zoom;
+    ctx.save(); ctx.strokeStyle="rgba(80,50,20,0.13)"; ctx.lineWidth=1;
+    ctx.beginPath();
+    for (let c=0;c<=Component.COLS;c++){ const x=Math.round(x0+c*ts); const [,yA]=this.w2c(0,0); const [,yB]=this.w2c(0,this.WORLD_H); ctx.moveTo(x,yA); ctx.lineTo(x,yB); }
+    for (let r=0;r<=Component.ROWS;r++){ const y=Math.round(y0+r*ts); const [xA]=this.w2c(0,0); const [xB]=this.w2c(this.WORLD_W,0); ctx.moveTo(xA,y); ctx.lineTo(xB,y); }
+    ctx.stroke(); ctx.restore();
+  }
+
+  drawFeature(ctx, f) {
+    const pr = this.preset, z = this.state.zoom, sel = f._key === this.state.selectedKey;
+    const geo = f.geometry; ctx.save();
+    if (geo.type === "Polygon") {
+      const rings = geo.rings || []; ctx.beginPath();
+      for (const ring of rings){ if(!ring.length)continue; const [sx,sy]=this.n2c(ring[0][0],ring[0][1]); ctx.moveTo(sx,sy);
+        for(let i=1;i<ring.length;i++){const [px,py]=this.n2c(ring[i][0],ring[i][1]); ctx.lineTo(px,py);} ctx.closePath(); }
+      if (f.kind === "biome") {
+        const bk = (f.style && f.style.biomeKind) || "forest";
+        ctx.fillStyle = this.BIOME_POLY_FILL[bk] || this.BIOME_POLY_FILL.forest; ctx.fill();
+        ctx.strokeStyle = sel ? "#c2622b" : "rgba(60,45,25,0.5)"; ctx.lineWidth=(sel?2.5:1.5)*z; ctx.stroke();
+        this.scatterInPolygon(ctx, rings, bk, (f.style&&f.style.density)||1, f._key);
+      } else {
+        ctx.fillStyle = f.labelColor==="red" ? "rgba(139,26,16,0.16)" : "rgba(26,16,8,0.10)"; ctx.fill();
+        ctx.strokeStyle = sel ? "#c2622b" : pr.colors.ink; ctx.lineWidth=(sel?2.5:1.5)*z; ctx.stroke();
+        // Regions-Label in der Mitte
+        if (f.labelText) { const ctd=this.engine.centroid(rings[0]); const [lx,ly]=this.n2c(ctd[0],ctd[1]);
+          ctx.font=`${Math.round(15*z)}px ${pr.typography.labelRegion}`; ctx.fillStyle=f.labelColor==="red"?pr.colors.inkAccent:pr.colors.ink;
+          ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(f.labelText.toUpperCase(), lx, ly); }
+        // Drill-down-Badge
+        if (f.childNodeId && rings[0]) { const ctd=this.engine.centroid(rings[0]); const [bx,by]=this.n2c(ctd[0],ctd[1]);
+          ctx.beginPath(); ctx.arc(bx,by+18*z,9*z,0,Math.PI*2); ctx.fillStyle="#c2622b"; ctx.fill();
+          ctx.fillStyle="#fff"; ctx.font=`bold ${Math.round(12*z)}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("↓",bx,by+18*z); }
+      }
+    } else if (geo.type === "Path") {
+      let coords = geo.coordinates || [];
+      if (f.style && f.style.smooth && coords.length>=3 && this.engine) coords = this.engine.smoothPath(coords, { segments:12, tension:0.5 });
+      if (coords.length>=2) {
+        if (f.kind === "road") {
+          ctx.beginPath(); const [sx,sy]=this.n2c(coords[0][0],coords[0][1]); ctx.moveTo(sx,sy);
+          for(let i=1;i<coords.length;i++){const [px,py]=this.n2c(coords[i][0],coords[i][1]); ctx.lineTo(px,py);}
+          ctx.strokeStyle=sel?"#c2622b":pr.colors.road; ctx.lineWidth=(sel?2.6:2)*z; ctx.setLineDash([8*z,4*z]); ctx.stroke(); ctx.setLineDash([]);
+        } else {
+          const maxW=(sel?2.8:2.2)*z, minW=(sel?1.2:0.8)*z;
+          ctx.strokeStyle=sel?"#c2622b":pr.colors.inkAccent;
+          for(let i=0;i<coords.length-1;i++){ const t=coords.length>2?i/(coords.length-2):0; const w=maxW*(1-t*0.65)+minW*(t*0.65);
+            const [sx,sy]=this.n2c(coords[i][0],coords[i][1]); const [ex,ey]=this.n2c(coords[i+1][0],coords[i+1][1]);
+            ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.lineWidth=w; ctx.stroke(); }
+        }
+      }
+    } else if (geo.type === "Point" || geo.type === "LabelAnchor") {
+      const coord = geo.coordinates; if (!coord){ctx.restore();return;}
+      const [px,py]=this.n2c(coord[0],coord[1]);
+      if (geo.type === "LabelAnchor") {
+        const text=(f.labelText||geo.text||"Label"), ink=f.labelColor==="red"?pr.colors.inkAccent:pr.colors.ink;
+        if (geo.pathCoordinates && geo.pathCoordinates.length>=2) {
+          ctx.font=`bold ${Math.round(14*z)}px ${pr.typography.labelRegion}`; ctx.fillStyle=ink; ctx.textAlign="center"; ctx.textBaseline="middle";
+          const pl=this.engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.012*(14/z), geo.pathReversed===true);
+          for (const p of pl){ const [cx,cy]=this.n2c(p.x,p.y); ctx.save(); ctx.translate(cx,cy); ctx.rotate(p.rotation); ctx.fillText(p.char,0,0); ctx.restore(); }
+          if (sel){ ctx.strokeStyle="#c2622b"; ctx.lineWidth=1.2*z; ctx.setLineDash([4,3]); ctx.beginPath();
+            const [fx,fy]=this.n2c(geo.pathCoordinates[0][0],geo.pathCoordinates[0][1]); ctx.moveTo(fx,fy);
+            for(let i=1;i<geo.pathCoordinates.length;i++){const [lx,ly]=this.n2c(geo.pathCoordinates[i][0],geo.pathCoordinates[i][1]); ctx.lineTo(lx,ly);} ctx.stroke(); ctx.setLineDash([]); }
+        } else {
+          ctx.font=`${Math.round(15*z)}px ${pr.typography.labelCity}`; ctx.fillStyle=ink; ctx.textAlign="center"; ctx.fillText(text,px,py);
+          if (sel){ const tw=ctx.measureText(text).width; ctx.strokeStyle="#c2622b"; ctx.lineWidth=1.5; ctx.strokeRect(px-tw/2-3,py-15*z,tw+6,18*z); }
+        }
+      } else {
+        ctx.beginPath(); ctx.arc(px,py,6*z,0,Math.PI*2); ctx.fillStyle=sel?"#c2622b":pr.colors.inkAccent; ctx.fill();
+        ctx.lineWidth=1.5; ctx.strokeStyle="#fff"; ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  drawObject(ctx, o) {
+    const g = this.glyph(o.paletteItemId); if (!g) return;
+    const z=this.state.zoom, sel=o._key===this.state.selectedKey;
+    const [ox,oy]=this.n2c(o.x,o.y); const size=26*z*o.scale;
+    ctx.save(); ctx.translate(ox,oy); ctx.rotate((o.rotation*Math.PI)/180);
+    if (sel){ ctx.strokeStyle="#c2622b"; ctx.lineWidth=2; ctx.strokeRect(-size/2-3,-size/2-3,size+6,size+6); }
+    const s=size/24; ctx.scale(s,s); ctx.translate(-12,-12);
+    ctx.strokeStyle=g.color||this.preset.colors.ink; ctx.lineWidth=1.5/s; ctx.lineJoin="round"; ctx.lineCap="round";
+    ctx.beginPath(); this.engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+  }
+
+  drawPending(ctx) {
+    if (!this.drawingPoints.length) return;
+    const z=this.state.zoom; ctx.save(); ctx.strokeStyle="#c2622b"; ctx.lineWidth=1.5*z;
+    ctx.setLineDash(this.state.tool==="road"?[8,4]:[4,4]); ctx.beginPath();
+    const [sx,sy]=this.n2c(this.drawingPoints[0][0],this.drawingPoints[0][1]); ctx.moveTo(sx,sy);
+    for(let i=1;i<this.drawingPoints.length;i++){const [px,py]=this.n2c(this.drawingPoints[i][0],this.drawingPoints[i][1]); ctx.lineTo(px,py);}
+    ctx.stroke(); ctx.setLineDash([]);
+    for (const [nx,ny] of this.drawingPoints){ const [px,py]=this.n2c(nx,ny); ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2); ctx.fillStyle="#c2622b"; ctx.fill(); }
+    if ((this.state.tool==="region"||this.state.tool==="biome") && this.drawingPoints.length>=3) {
+      const [fx,fy]=this.n2c(this.drawingPoints[0][0],this.drawingPoints[0][1]);
+      ctx.beginPath(); ctx.arc(fx,fy,8,0,Math.PI*2); ctx.strokeStyle="#2f6f63"; ctx.lineWidth=2; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawMeasure(ctx) {
+    if (!this.measurePoints.length) return; const z=this.state.zoom;
+    ctx.save(); ctx.strokeStyle="#c2622b"; ctx.fillStyle="#c2622b"; ctx.lineWidth=2*z;
+    for (const [nx,ny] of this.measurePoints){ const [mx,my]=this.n2c(nx,ny); ctx.beginPath(); ctx.arc(mx,my,5,0,Math.PI*2); ctx.fill(); }
+    if (this.measurePoints.length===2){
+      const [ax,ay]=this.n2c(this.measurePoints[0][0],this.measurePoints[0][1]);
+      const [bx,by]=this.n2c(this.measurePoints[1][0],this.measurePoints[1][1]);
+      ctx.setLineDash([6,3]); ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke(); ctx.setLineDash([]);
+      const dx=this.measurePoints[1][0]-this.measurePoints[0][0], dy=this.measurePoints[1][1]-this.measurePoints[0][1];
+      const dist=Math.sqrt(dx*dx+dy*dy)*100; const label=dist.toFixed(1)+" leagues";
+      const mx=(ax+bx)/2, my=(ay+by)/2; ctx.font="bold 13px "+this.preset.typography.labelCity;
+      ctx.textAlign="center"; const tw=ctx.measureText(label).width;
+      ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.fillRect(mx-tw/2-5,my-20,tw+10,18);
+      ctx.fillStyle="#8b1a10"; ctx.fillText(label,mx,my-7);
+    }
+    ctx.restore();
+  }
+
+  // ---- Geometrie/Streuung — jetzt vollständig im Engine-Modul (M0) ---------
+  // centroid/pointInPolygon/distToSegment/drawSvgPath/smoothPath/layoutCharactersOnPath
+  // leben in atlas-engine.js; hier nur noch der Canvas-Zeichenaufruf, der die
+  // vom Engine-Modul gelieferten Streupunkte auf den Kontext bringt.
+  scatterInPolygon(ctx, rings, bk, density, keySeed) {
+    if (!this.engine) return;
+    const points = this.engine.scatterGlyphsInPolygon(rings, bk, density * 0.6, keySeed);
+    const z = this.state.zoom;
+    ctx.save(); ctx.globalAlpha = 0.7; ctx.lineJoin = "round"; ctx.lineCap = "round";
+    for (const p of points) {
+      const g = this.glyph(p.glyphKey); if (!g) continue;
+      const [px, py] = this.n2c(p.x, p.y); const sz = 13 * z * p.scale;
+      ctx.save(); ctx.translate(px, py); ctx.rotate((p.rotation * Math.PI) / 180);
+      const s = sz / 24; ctx.scale(s, s); ctx.translate(-12, -12);
+      ctx.strokeStyle = g.color; ctx.lineWidth = 1.2 / s;
+      ctx.beginPath(); this.engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // Pointer / Interaktion
+  // =========================================================================
+  bindCanvas(el) {
+    if (!el || el === this._canvas) return; this._canvas = el;
+    el.addEventListener("pointerdown", e => this.onPointerDown(e));
+    el.addEventListener("pointermove", e => this.onPointerMove(e));
+    el.addEventListener("pointerup",   e => this.onPointerUp(e));
+    el.addEventListener("wheel",       e => this.onWheel(e), { passive:false });
+    el.addEventListener("dblclick",    e => this.onDblClick(e));
+    el.addEventListener("contextmenu", e => e.preventDefault());
+  }
+  posOf(e){ const r=this.canvas.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+
+  onPointerDown(e) {
+    const [cx,cy]=this.posOf(e); this.canvas.setPointerCapture(e.pointerId);
+    this._last={x:cx,y:cy}; this._clickStart={x:cx,y:cy,t:Date.now()};
+
+    // Portal-Ansicht: nur Schwenken/Zoomen/Klicken — kein Werkzeug, kein Schreiben.
+    if (this.isView()) { this._panning = true; return; }
+
+    const [nx,ny]=this.c2n(cx,cy); const tool=this.state.tool;
+    const rightOrMiddle = e.button===1 || e.button===2;
+
+    // Pan mit Mittel/Rechtsklick (immer), oder Rechtsklick=löschen bei Mal-Werkzeugen
+    if (e.button===1) { this._panning=true; return; }
+
+    // Terrain: links malen, rechts löschen (tile)
+    if (tool==="terrain") {
+      if (e.button===2) { this._erasingTiles=true; this.paintTiles(cx,cy,true); }
+      else { this._paintingTiles=true; this.paintTiles(cx,cy,false); }
+      return;
+    }
+    // Objekt-Stempel
+    if (tool==="stamp") {
+      if (e.button===2) { this.eraseAt(nx,ny); return; }
+      this.placeStamp(nx,ny); return;
+    }
+    if (tool==="select") {
+      const hit=this.hitTest(nx,ny);
+      if (hit && hit===this.state.selectedKey) this._moving=true;
+      else if (hit) this.setState({selectedKey:hit});
+      else { this.setState({selectedKey:null}); this._panning=true; }
+      return;
+    }
+    if (tool==="eraser") { const hit=this.hitTest(nx,ny); if(hit) this.eraseKey(hit); return; }
+    if (rightOrMiddle) { this._panning=true; return; } // Rechtsklick schwenkt bei Zeichentools
+
+    if (tool==="region"||tool==="biome") {
+      if (this.drawingPoints.length>=3) { const [fx,fy]=this.n2c(this.drawingPoints[0][0],this.drawingPoints[0][1]);
+        if (Math.hypot(cx-fx,cy-fy)<10){ this.finishPolygon(); return; } }
+      this.drawingPoints.push([nx,ny]); this.draw(); return;
+    }
+    if (tool==="path"||tool==="road") { this.drawingPoints.push([nx,ny]); this.draw(); return; }
+    if (tool==="label") { const t=prompt("Label-Text:"); if(t){ this.addLabel([nx,ny],t,null); } return; }
+    if (tool==="pin") { this.addPin([nx,ny]); return; }
+    if (tool==="measure") { this.measurePoints = this.measurePoints.length>=2?[[nx,ny]]:[...this.measurePoints,[nx,ny]]; this.draw(); return; }
+  }
+
+  onPointerMove(e) {
+    const [cx,cy]=this.posOf(e); const [nx,ny]=this.c2n(cx,cy); const [tc,tr]=this.tileAt(cx,cy);
+    // Statusanzeige (throttled via rAF)
+    this._pendingCoord = { tile:`${tc}, ${tr}`, world:`${nx.toFixed(3)}, ${ny.toFixed(3)}` };
+    if (!this._coordRaf) this._coordRaf = requestAnimationFrame(()=>{ this._coordRaf=null;
+      this.setState({ tileCoord:this._pendingCoord.tile, worldCoord:this._pendingCoord.world }); });
+
+    if (this._panning) { const dx=cx-this._last.x, dy=cy-this._last.y; this._last={x:cx,y:cy};
+      this.state.panX+=dx; this.state.panY+=dy; this.draw(); return; }
+    if (this._paintingTiles) { this.paintTiles(cx,cy,false); return; }
+    if (this._erasingTiles) { this.paintTiles(cx,cy,true); return; }
+    if (this._moving && this.state.selectedKey) { const dx=(cx-this._last.x)/(this.WORLD_W*this.state.zoom), dy=(cy-this._last.y)/(this.WORLD_H*this.state.zoom);
+      this._last={x:cx,y:cy}; this.moveSelected(dx,dy); return; }
+    this._last={x:cx,y:cy};
+  }
+
+  onPointerUp(e) {
+    try{ this.canvas.releasePointerCapture(e.pointerId); }catch(_){}
+    if (this.isView()) {
+      const [cx,cy] = this.posOf(e);
+      const moved = this._clickStart ? Math.hypot(cx-this._clickStart.x, cy-this._clickStart.y) : 99;
+      if (moved < 6 && Date.now()-(this._clickStart?this._clickStart.t:0) < 400) {
+        const [nx,ny] = this.c2n(cx,cy); const hit = this.hitTestEntity(nx,ny);
+        if (hit) this.handleViewClick(hit);
+      }
+      this._panning=false; return;
+    }
+    if (this._paintingTiles||this._erasingTiles) this.markDirty();
+    this._panning=this._moving=this._paintingTiles=this._erasingTiles=false;
+  }
+  /** Portal-Klick: Drill-down zu Kind-Ebene, oder Hinweis auf verknüpfte Wiki-Seite. */
+  handleViewClick(entity) {
+    if (entity.childNodeId) { this.navTo(entity.childNodeId); return; }
+    if (entity.linkedPageId) {
+      this.setState({ toast: "↗ Wiki-Verknüpfung: " + entity.linkedPageId });
+      clearTimeout(this._toastT); this._toastT = setTimeout(() => this.setState({ toast:null }), 2400);
+    }
+  }
+  onWheel(e){ e.preventDefault(); const [cx,cy]=this.posOf(e); const f=e.deltaY<0?1.1:0.9;
+    const nz=Math.max(0.25,Math.min(8,this.state.zoom*f));
+    const panX=cx-(cx-this.state.panX)*(nz/this.state.zoom); const panY=cy-(cy-this.state.panY)*(nz/this.state.zoom);
+    this.setState({zoom:nz,panX,panY}); requestAnimationFrame(()=>this.draw()); }
+  onDblClick(e){ if(this.state.tool==="region"||this.state.tool==="biome")this.finishPolygon();
+    else if(this.state.tool==="path"||this.state.tool==="road")this.finishPath(); }
+
+  // ---- Tile-Painting ------------------------------------------------------
+  paintTiles(cx,cy,erase){ const [tc,tr]=this.tileAt(cx,cy); const rad=[0,1,2][this.state.brushSize];
+    const cells=this.doc.tileLayer.cells; let changed=false;
+    for(let dc=-rad;dc<=rad;dc++)for(let dr=-rad;dr<=rad;dr++){ if(dc*dc+dr*dr>rad*rad+0.5)continue;
+      const c=tc+dc,r=tr+dr; if(c<0||r<0||c>=Component.COLS||r>=Component.ROWS)continue; const k=c+","+r;
+      if(erase){ if(cells[k]){delete cells[k];changed=true;} } else if(cells[k]!==this.state.brush){ cells[k]=this.state.brush; changed=true; } }
+    if(changed)this.draw();
+  }
+
+  // ---- Objekte / Features mutieren ----------------------------------------
+  placeStamp(nx,ny){ this.doc.objects.push({ id:this.nextKey(), _key:this.nextKey(), nodeId:this.state.nodeId,
+    paletteItemId:this.state.glyphKey, x:nx, y:ny, scale:1, rotation:0, layer:50, visibility:"dm_only" });
+    this.markDirty(); this.draw(); }
+  addPin(pt){ const f={ _key:this.nextKey(), id:this.nextKey(), nodeId:this.state.nodeId, kind:"pin",
+    geometry:{type:"Point",coordinates:pt}, layer:50, visibility:"dm_only" }; this.doc.features.push(f);
+    this.setState({selectedKey:f._key}); this.markDirty(); this.draw(); }
+  addLabel(pt,text,path){ const f={ _key:this.nextKey(), id:this.nextKey(), nodeId:this.state.nodeId, kind:"label",
+    geometry:{type:"LabelAnchor",coordinates:pt,text, pathCoordinates:path||undefined}, labelText:text,
+    labelColor:this._labelRed?"red":"black", layer:60, visibility:"dm_only" }; this.doc.features.push(f);
+    this.setState({selectedKey:f._key}); this.markDirty(); this.draw(); }
+  finishPolygon(){ if(this.drawingPoints.length<3){this.drawingPoints=[];this.draw();return;}
+    const isBiome=this.state.tool==="biome"; const f={ _key:this.nextKey(), id:this.nextKey(), nodeId:this.state.nodeId,
+      kind:isBiome?"biome":"region", geometry:{type:"Polygon",rings:[[...this.drawingPoints]]},
+      style:isBiome?{biomeKind:this.state.brush,density:1}:undefined, labelColor:"black", layer:isBiome?10:20, visibility:"dm_only" };
+    this.doc.features.push(f); this.drawingPoints=[]; this.setState({selectedKey:f._key}); this.markDirty(); this.draw(); }
+  finishPath(){ if(this.drawingPoints.length<2){this.drawingPoints=[];this.draw();return;}
+    const isRoad=this.state.tool==="road"; const f={ _key:this.nextKey(), id:this.nextKey(), nodeId:this.state.nodeId,
+      kind:isRoad?"road":"river", geometry:{type:"Path",coordinates:[...this.drawingPoints]}, style:isRoad?undefined:{smooth:true},
+      layer:isRoad?40:30, visibility:"dm_only" }; this.doc.features.push(f); this.drawingPoints=[];
+    this.setState({selectedKey:f._key}); this.markDirty(); this.draw(); }
+
+  moveSelected(dx,dy){ const k=this.state.selectedKey;
+    const o=this.doc.objects.find(o=>o._key===k); if(o){ o.x=Math.max(0,Math.min(1,o.x+dx)); o.y=Math.max(0,Math.min(1,o.y+dy)); this.markDirty(); this.draw(); return; }
+    const f=this.doc.features.find(f=>f._key===k); if(f){ f.geometry=this.translateGeo(f.geometry,dx,dy); this.markDirty(); this.draw(); } }
+  translateGeo(geo,dx,dy){ if(geo.type==="Point"||geo.type==="LabelAnchor"){ const c=geo.coordinates; const g={...geo,coordinates:[c[0]+dx,c[1]+dy]};
+      if(geo.pathCoordinates)g.pathCoordinates=geo.pathCoordinates.map(([a,b])=>[a+dx,b+dy]); return g; }
+    if(geo.type==="Path")return{...geo,coordinates:geo.coordinates.map(([a,b])=>[a+dx,b+dy])};
+    if(geo.type==="Polygon")return{...geo,rings:(geo.rings||[]).map(r=>r.map(([a,b])=>[a+dx,b+dy]))}; return geo; }
+
+  eraseKey(k){ this.doc.features=this.doc.features.filter(f=>f._key!==k); this.doc.objects=this.doc.objects.filter(o=>o._key!==k);
+    if(this.state.selectedKey===k)this.setState({selectedKey:null}); this.markDirty(); this.draw(); }
+  eraseAt(nx,ny){ const hit=this.hitTest(nx,ny); if(hit)this.eraseKey(hit); }
+
+  hitTest(wx,wy){ const objs=this.nodeObjects(), feats=this.nodeFeatures();
+    const thr=14/(this.state.zoom*Math.max(this.WORLD_W,this.WORLD_H));
+    for(let i=objs.length-1;i>=0;i--){ const o=objs[i]; if(Math.hypot(o.x-wx,o.y-wy)<thr*2)return o._key; }
+    for(let i=feats.length-1;i>=0;i--){ const f=feats[i],g=f.geometry; if(g.type==="Point"||g.type==="LabelAnchor"){ const c=g.coordinates; if(c&&Math.hypot(c[0]-wx,c[1]-wy)<thr*2.4)return f._key; } }
+    for(let i=feats.length-1;i>=0;i--){ const f=feats[i],g=f.geometry;
+      if(g.type==="Polygon"){ for(const ring of g.rings||[])if(this.engine.pointInPolygon([wx,wy],ring))return f._key; }
+      else if(g.type==="Path"){ const c=g.coordinates||[]; for(let k=0;k<c.length-1;k++)if(this.engine.distToSegment([wx,wy],c[k],c[k+1])<thr)return f._key; } }
+    return null; }
+  /** Wie hitTest, gibt aber das Feature/Objekt selbst zurück (für Portal-Klicks). */
+  hitTestEntity(wx,wy){ const key=this.hitTest(wx,wy); if(!key)return null;
+    return this.doc.objects.find(o=>o._key===key) || this.doc.features.find(f=>f._key===key) || null; }
+
+  // =========================================================================
+  // Keyboard
+  // =========================================================================
+  onKeyDown(e){ if(this.isView())return; if(e.target && (e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"))return;
+    const map={ s:"select", g:"terrain", p:"region", b:"biome", r:"path", d:"road", l:"label", i:"pin", t:"stamp", e:"eraser", m:"measure" };
+    if(e.key==="Escape"){ this.drawingPoints=[]; this.measurePoints=[]; this.setState({selectedKey:null}); this.draw(); return; }
+    if(e.key==="Delete"||e.key==="Backspace"){ if(this.state.selectedKey){e.preventDefault();this.eraseKey(this.state.selectedKey);} return; }
+    if(e.key==="Enter"){ if(this.state.tool==="path"||this.state.tool==="road")this.finishPath(); else if(this.state.tool==="region"||this.state.tool==="biome")this.finishPolygon(); return; }
+    if(map[e.key]){ this.pickTool(map[e.key]); } }
+
+  // =========================================================================
+  // Export
+  // =========================================================================
+  exportJSON(){ const blob=new Blob([JSON.stringify(this.serialize(),null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url;
+    a.download=`atlas-${(this.node().title||"karte").toLowerCase().replace(/\s+/g,"-")}.json`; a.click(); URL.revokeObjectURL(url); }
+  exportPNG(){ const c=this.canvas; const off=document.createElement("canvas"); off.width=c.width; off.height=c.height;
+    const octx=off.getContext("2d"); octx.drawImage(c,0,0);
+    off.toBlob(blob=>{ if(!blob)return; const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url;
+      a.download=`atlas-${(this.node().title||"karte").toLowerCase().replace(/\s+/g,"-")}.png`; a.click(); URL.revokeObjectURL(url); },"image/png"); }
+  clearAll(){ if(!confirm("Aktuelle Ebene leeren? Tiles, Features und Objekte dieser Ebene werden entfernt. (DB-Sync separat)"))return;
+    this.doc.features=this.doc.features.filter(f=>f.nodeId!==this.state.nodeId);
+    this.doc.objects=this.doc.objects.filter(o=>o.nodeId!==this.state.nodeId);
+    if(this.state.nodeId===this.doc.rootNodeId)this.doc.tileLayer.cells={};
+    this.drawingPoints=[]; this.setState({selectedKey:null}); this.markDirty(); this.draw(); }
+
+  // =========================================================================
+  // Tool-Auswahl + Chrome-Refresh
+  // =========================================================================
+  pickTool(t){ this.drawingPoints=[]; this.measurePoints=[]; this.setState({tool:t,selectedKey:null}); requestAnimationFrame(()=>this.draw()); }
+  pickTerrain(b){ this.setState({tool:"terrain",brush:b}); }
+  pickBiomePoly(b){ this.setState({tool:"biome",brush:b}); }
+  pickGlyph(k){ this.setState({tool:"stamp",glyphKey:k}); }
+  toggleNodeVis(){ const n=this.node(); n.visibility = n.visibility==="player_visible"?"dm_only":"player_visible"; this.markDirty(); if (this.embedded) this.bridgePost({ type:"visibility", scope:"node", nodeId:n.id, visibility:n.visibility }); this.setState({_rev:this.state._rev+1}); }
+
+  // =========================================================================
+  // renderVals -> Template
+  // =========================================================================
+  renderVals() {
+    const st = this.state;
+    const view = this.isView();
+    // Breadcrumb
+    const chain = this.doc ? this.parentChain() : [];
+    const crumbs = chain.map(item => ({ label: this.levelLabel(item.level)+": "+item.title, sep:"›", color:"var(--uwe-accent)",
+      go: () => this.navTo(item.id) }));
+    const node = this.doc ? this.node() : null;
+
+    // Primär-Werkzeuge (Sidebar)
+    const toolDefs = [
+      ["select","Auswahl","S","select","Auswählen & verschieben"],
+      ["terrain","Terrain-Pinsel","G","terrain","Tiles malen (Gras/Wasser/Erde/Sand)"],
+      ["stamp","Objekt/Bau","T","stamp","Glyph platzieren"],
+      ["region","Region","P","region","Polygon-Region zeichnen"],
+      ["biome","Biom-Fläche","B","terrain","Biom-Polygon (gestreute Glyphen)"],
+      ["path","Fluss","R","path","Fluss zeichnen"],
+      ["road","Straße","D","road","Straße zeichnen"],
+      ["label","Label","L","label","Textlabel setzen"],
+      ["pin","Pin","I","pin","Wiki-Pin setzen"],
+      ["measure","Messen","M","measure","Distanz messen"],
+      ["eraser","Löschen","E","eraser","Element löschen"],
+    ];
+    const primaryTools = toolDefs.map(([tool,label,key,icon,title]) => ({
+      label, key, title, cls: st.tool===tool?"active":"", icon: this.toolIcon(icon), pick: () => this.pickTool(tool) }));
+
+    // Terrain-Swatches
+    const terrainSwatches = this.TERRAIN_ORDER.map(b => {
+      const on = st.tool==="terrain" && st.brush===b;
+      return { label:this.BIOME_LABEL[b], title:this.BIOME_LABEL[b], chip:this.TILE_FILL[b],
+        bg: on?"rgba(194,98,43,0.85)":"rgba(255,255,255,0.05)", fg: on?"#fff":"var(--uwe-sidebar-fg,#e9dcc0)",
+        border: on?"rgba(0,0,0,0.3)":"rgba(255,255,255,0.12)", pick: () => this.pickTerrain(b) };
+    });
+
+    // Glyph-Auswahl
+    const glyphChoices = this.GLYPHS.map(g => {
+      const on = st.tool==="stamp" && st.glyphKey===g.key;
+      return { name:g.name, icon:this.glyphSvg(g, on?"#c2622b":g.color),
+        bg:on?"var(--uwe-accent-muted)":"rgba(255,255,255,0.05)", border:on?"var(--uwe-accent)":"rgba(255,255,255,0.12)",
+        pick: () => this.pickGlyph(g.key) };
+    });
+
+    // Sub-bar (context)
+    let subbarHtml="", subbarDisplay="none";
+    if (st.tool==="terrain"||st.tool==="biome") { subbarDisplay="flex";
+      subbarHtml = `<b style="color:var(--uwe-accent)">${st.tool==="biome"?"Biom-Fläche":"Terrain"}:</b> ${this.BIOME_LABEL[st.brush]} · Pinsel ${["klein","mittel","groß"][st.brushSize]}`; }
+    else if (st.tool==="stamp") { subbarDisplay="flex"; const g=this.glyph(st.glyphKey); subbarHtml=`<b style="color:var(--uwe-accent)">Objekt:</b> ${g?g.name:st.glyphKey} — Linksklick platzieren, Rechtsklick löschen`; }
+    else if (st.tool==="measure") { subbarDisplay="flex"; subbarHtml="Zwei Punkte klicken für Distanz (leagues)"; }
+    else if (st.tool==="region"||st.tool==="path"||st.tool==="road") { subbarDisplay="flex"; subbarHtml="Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool==="label") { subbarDisplay="flex"; subbarHtml="Klick auf die Karte für Label-Text"; }
+
+    // Selektion Kontext-Panel
+    let selDisplay="none", selKind="", selControls="";
+    const selO = this.doc && this.doc.objects.find(o=>o._key===st.selectedKey);
+    const selF = this.doc && this.doc.features.find(f=>f._key===st.selectedKey);
+    if (selO) { selDisplay="block"; const g=this.glyph(selO.paletteItemId); selKind="Objekt";
+      selControls = `<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">${g?g.name:selO.paletteItemId}</div>
+        <div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ${selO.scale.toFixed(2)} · ${Math.round(selO.rotation)}°</div>
+        <div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben</div>
+        ${selO.linkedPageId?'<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>':''}`; }
+    else if (selF) { selDisplay="block"; selKind=({region:"Region",biome:"Biom",river:"Fluss",road:"Straße",label:"Label",pin:"Pin"})[selF.kind]||selF.kind;
+      const vis = selF.visibility==="player_visible";
+      selControls = `<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">${selF.labelText||selKind}</div>
+        <div style="font-size:11px;color:${vis?'var(--uwe-player-visible)':'var(--uwe-dm-only)'};">${vis?'● Portal sichtbar':'● Nur GM'}</div>
+        ${selF.childNodeId?'<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>':''}`; }
+
+    // Portal-Legende: eindeutige Glyphen, die auf dieser (gefilterten) Ebene sichtbar sind.
+    const legendKeys = view ? [...new Set(this.nodeObjects().map(o=>o.paletteItemId))] : [];
+    const legendItems = legendKeys.map(k => { const g=this.glyph(k); return g ? { label:g.name, icon:this.glyphSvg(g) } : null; }).filter(Boolean);
+
+    // Empty-State: Portal zeigt bei nicht freigegebener Ebene nichts an (kein dm_only-Leak).
+    const nodeHidden = view && node && node.visibility !== "player_visible";
+
+    return {
+      // breadcrumb
+      crumbs, nodeTitle: node?node.title:"—", nodeLevelLabel: node?this.levelLabel(node.level):"",
+      // topbar toggles
+      brushS: st.brushSize===0?"on":"", brushM: st.brushSize===1?"on":"", brushL: st.brushSize===2?"on":"",
+      setBrushSmall:()=>this.setState({brushSize:0}), setBrushMed:()=>this.setState({brushSize:1}), setBrushLarge:()=>this.setState({brushSize:2}),
+      gridOn: st.showGrid?"on":"", toggleGrid:()=>{ this.setState({showGrid:!st.showGrid}); requestAnimationFrame(()=>this.draw()); },
+      visOn: node&&node.visibility==="player_visible"?"on":"", visLabel: node&&node.visibility==="player_visible"?"🌐 Ebene sichtbar":"🔒 Ebene privat",
+      toggleVis:()=>this.toggleNodeVis(),
+      exportJson:()=>this.exportJSON(), exportPng:()=>this.exportPNG(), clearCanvas:()=>this.clearAll(),
+      pngLabel: view ? "↓ Karte speichern" : "↓ PNG",
+      editorOnlyBlock: view?"none":"flex", editorOnlyInline: view?"none":"inline",
+      viewBadgeDisplay: view?"inline-flex":"none",
+      bridgeBadgeDisplay: this.embedded ? "inline-flex" : "none",
+      requestAiDraft:()=>this.requestAiDraft(), requestHandout:()=>this.requestHandout(),
+      aiReviewDisplay: st.aiReview?"flex":"none",
+      aiReviewText: st.aiReview ? ("KI-Vorschlag — "+st.aiReview.count+" Features zur Prüfung (kein Auto-Apply)") : "",
+      acceptAiDraft:()=>this.acceptAiDraft(), discardAiDraft:()=>this.discardAiDraft(),
+      // sidebar
+      primaryTools, terrainSwatches, glyphChoices, legendItems,
+      viewOnlyBlock: view?"flex":"none",
+      // canvas
+      canvasRef: (el)=>this.bindCanvas(el),
+      subbarHtml, subbarDisplay: view?"none":subbarDisplay,
+      selDisplay, selKind, selControls, eraseSelected:()=>{ if(st.selectedKey)this.eraseKey(st.selectedKey); },
+      toastDisplay: st.toast?"flex":"none", toastText: st.toast||"",
+      emptyDisplay: nodeHidden?"flex":"none",
+      // status
+      activeToolLabel: view ? "Ansicht" : (toolDefs.find(t=>t[0]===st.tool)||[,"—"])[1],
+      tileCoord: st.tileCoord, worldCoord: st.worldCoord, zoomLabel: Math.round(st.zoom*100)+"%",
+      saveStatus: view ? "Portal · schreibgeschützt" : st.saveStatus,
+      saveColor: view ? "var(--uwe-player-visible)" : (st.dirty?"var(--uwe-accent)":"var(--uwe-fg-muted)"),
+    };
+  }
+}
+</script>
+</body>
+</html>
