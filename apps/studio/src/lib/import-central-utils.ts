@@ -13,6 +13,7 @@ function sourceTypeToFormat(sourceType: ImportSourceType): "json" | "markdown" |
       return "json";
     case "markdown":
     case "obsidian":
+    case "pdf":
       return "markdown";
     default:
       return null;
@@ -24,7 +25,7 @@ export function isImportCentralComboSupported(
   targetType: ImportTargetType,
 ): boolean {
   if (sourceType === "pdf") {
-    return false;
+    return MARKDOWN_TARGET_TYPES.has(targetType);
   }
 
   if (sourceType === "knoteforge") {
@@ -38,8 +39,8 @@ export function isImportCentralComboSupported(
   return false;
 }
 
-export function isImportCentralSourceComingSoon(sourceType: ImportSourceType): boolean {
-  return sourceType === "pdf";
+export function isImportCentralSourceComingSoon(_sourceType: ImportSourceType): boolean {
+  return false;
 }
 
 export function isImportCentralTargetComingSoon(_targetType: ImportTargetType): boolean {
@@ -50,6 +51,10 @@ export function isImportCentralMarkdownTarget(targetType: ImportTargetType): boo
   return MARKDOWN_TARGET_TYPES.has(targetType);
 }
 
+export function isImportCentralPdfSource(sourceType: ImportSourceType): boolean {
+  return sourceType === "pdf";
+}
+
 export function importCentralSourceAccept(sourceType: ImportSourceType): string {
   switch (sourceType) {
     case "knoteforge":
@@ -58,6 +63,8 @@ export function importCentralSourceAccept(sourceType: ImportSourceType): string 
       return ".md,.markdown,.txt,text/markdown,text/plain";
     case "obsidian":
       return ".md,.markdown,.txt,text/markdown,text/plain";
+    case "pdf":
+      return ".pdf,application/pdf";
     default:
       return "";
   }

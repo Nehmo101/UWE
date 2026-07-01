@@ -134,7 +134,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
     >
       <PageHeader
         title="Inspektor"
-        summary="Prüft, was Spieler wirklich sehen — und wo deine Welt Widersprüche oder tote Links hat. Fix-Aktionen sind rückgängig machbar (siehe Activity Log)."
+        summary="Prüft Spieler-Leaks und Kanon-Konflikte — inkl. veralteter Portal-Inhalte, NPC-Tod vs. Sichtbarkeit und welt-spezifischer Regeln."
       />
       {fixApplied && (
         <p className="uwe-inspector-ok" role="status">✓ {fixApplied}</p>

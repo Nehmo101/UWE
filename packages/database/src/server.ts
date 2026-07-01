@@ -786,6 +786,19 @@ export type {
 } from "./world-inspector";
 
 export {
+  buildGenericCanonConflictFindings,
+  getExtendedCanonFindings,
+  mergeCanonFindings,
+  summarizeCanonSeverity,
+} from "./canon-conflict-service";
+
+export {
+  extractPdfText,
+  normalizePdfTextForImport,
+  PdfExtractError,
+} from "./pdf-text-extract";
+
+export {
   createGameSessionService,
   GameSessionService,
   GAME_SESSION_STATUS_LABELS,
@@ -888,6 +901,9 @@ export {
 } from "./label-workshop-service";
 
 export type { FilamentEntry, MaterialEntry } from "./label-workshop-service";
+
+export { PRINT_CENTER_TEMPLATE_SLUGS } from "./print-center-presets";
+export type { PrintCenterTemplateSlug } from "./print-center-presets";
 
 export {
   createPrintListService,
@@ -1851,6 +1867,8 @@ export type {
 export {
   executeMarkdownImport,
   previewMarkdownImport,
+  previewPdfImport,
+  executePdfImport,
   ImportCentralError,
   PDF_NOT_SUPPORTED_MESSAGE,
 } from "./import-central-service";

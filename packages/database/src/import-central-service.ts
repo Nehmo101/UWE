@@ -1,13 +1,14 @@
 import type { ImportSourceType, ImportTargetType, PageType } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { createLifeAdminService, type LifeAdminService } from "./life-admin-service";
+import { normalizePdfTextForImport, extractPdfText } from "./pdf-text-extract";
 import { slugifyPageTitle } from "./page-templates";
 import { createUweRepositoryFromClient, type UweRepository } from "./repository";
 import { pickUniqueSlug } from "./slug-utils";
 
 const MAX_CONTENT_BYTES = 10 * 1024 * 1024;
 const PDF_NOT_SUPPORTED_MESSAGE =
-  "PDF-Import ist noch nicht verfügbar. Bitte exportiere den Inhalt als Markdown oder Obsidian-Vault und importiere ihn erneut.";
+  "PDF-Import ist für dieses Ziel noch nicht verfügbar. Nutze Life Brain, Capture oder DnD-Seite als Ziel.";
 
 export class ImportCentralError extends Error {
   constructor(message: string) {
@@ -327,10 +328,7 @@ function assertContentSize(content: string): void {
 }
 
 function assertSourceSupported(sourceType: ImportSourceType): void {
-  if (sourceType === "pdf") {
-    throw new ImportCentralError(PDF_NOT_SUPPORTED_MESSAGE);
-  }
-  if (sourceType !== "markdown" && sourceType !== "obsidian") {
+  if (sourceType !== "markdown" && sourceType !== "obsidian" && sourceType !== "pdf") {
     throw new ImportCentralError("Diese Quelle wird hier nicht unterstützt.");
   }
 }
@@ -656,6 +654,44 @@ export async function executeMarkdownImport(
     default:
       throw new ImportCentralError("Unbekanntes Import-Ziel.");
   }
+}
+
+export async function previewPdfImport(
+  buffer: Buffer,
+  ctx: MarkdownImportContext,
+): Promise<MarkdownImportPreviewResult> {
+  assertSourceSupported(ctx.sourceType);
+  assertTargetSupported(ctx.targetType);
+
+  try {
+    const text = await extractPdfText(buffer);
+    const markdown = normalizePdfTextForImport(text, ctx.fileName);
+    return previewMarkdownImport(markdown, { ...ctx, sourceType: "markdown" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "PDF konnte nicht gelesen werden.";
+    return {
+      items: [],
+      totalDocuments: 0,
+      errors: [message],
+      canExecute: false,
+    };
+  }
+}
+
+export async function executePdfImport(
+  db: PrismaClient,
+  buffer: Buffer,
+  ctx: MarkdownImportContext,
+  options?: { itemIds?: string[] },
+): Promise<MarkdownImportExecuteResult> {
+  const text = await extractPdfText(buffer);
+  const markdown = normalizePdfTextForImport(text, ctx.fileName);
+  return executeMarkdownImport(
+    db,
+    markdown,
+    { ...ctx, sourceType: "markdown" },
+    options,
+  );
 }
 
 export { PDF_NOT_SUPPORTED_MESSAGE };
