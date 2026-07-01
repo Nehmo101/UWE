@@ -234,6 +234,31 @@ describe("route authorization — /api/ai/*", () => {
   }
 });
 
+describe("route authorization — /admin/command (NL command center)", () => {
+  it("includes command center page and admin command API routes", () => {
+    assert.ok(exists("apps/studio/app/command/page.tsx"));
+    assert.ok(exists("apps/studio/app/api/admin/command/parse/route.ts"));
+    assert.ok(exists("apps/studio/app/api/admin/command/execute/route.ts"));
+    assert.ok(exists("apps/studio/app/api/admin/command/audit/route.ts"));
+  });
+
+  for (const route of [
+    "apps/studio/app/api/admin/command/parse/route.ts",
+    "apps/studio/app/api/admin/command/execute/route.ts",
+    "apps/studio/app/api/admin/command/audit/route.ts",
+  ]) {
+    it(`${route} calls a studio auth guard`, () => {
+      assert.match(read(route), AUTH_GUARD);
+    });
+  }
+
+  it("blocks cross-site POST to /api/admin/command/execute", () => {
+    const result = requireStudioApiAuth(makeCrossSiteRequest("/api/admin/command/execute"));
+    assert.ok(result);
+    assert.equal(result.status, 403);
+  });
+});
+
 describe("route authorization — /api/search/* (command palette + search page)", () => {
   it("includes /search page and /api/command/search", () => {
     assert.ok(exists("apps/studio/app/search/page.tsx"));
