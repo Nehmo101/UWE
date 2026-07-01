@@ -118,10 +118,10 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 text-sm">
+      <div className="uwe-filter-bar">
         <Link
           href={`${worldBase}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}
-          className={`rounded-md px-3 py-1.5 ${!typeFilter ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+          className={!typeFilter ? "active" : undefined}
         >
           Alle Typen
         </Link>
@@ -132,7 +132,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
               ...(campaignSlug ? { campaign: campaignSlug } : {}),
               type: cat,
             }).toString()}`}
-            className={`rounded-md px-3 py-1.5 ${typeFilter === cat ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+            className={typeFilter === cat ? "active" : undefined}
           >
             {NAV_CATEGORY_LABELS[cat]}
           </Link>
