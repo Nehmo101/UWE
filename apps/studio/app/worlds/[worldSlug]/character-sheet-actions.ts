@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   ABILITY_KEYS,
+  buildLevelUpApplyPayload,
   createCharacterService,
   createCharacterSpellService,
   createPrismaClient,
@@ -13,12 +14,14 @@ import {
   getAppRepository,
   parseHomebrewSpellInput,
   resolveDndApiConfig,
+  type Prisma,
   type UpdateCharacterInput,
 } from "@uwe/database/server";
 import { searchOpen5eSpells } from "@uwe/dnd-api";
 import {
   parseFormDataOrThrow,
   studioCharacterSheetUpdateSchema,
+  studioCharacterLevelUpApplySchema,
   studioCharacterSpellAddSchema,
   studioCharacterSpellHomebrewAddSchema,
   studioCharacterSpellRemoveSchema,
@@ -105,6 +108,74 @@ export async function updateStudioCharacterSheetAction(formData: FormData) {
 
 function parsePreparedFlag(value: unknown): boolean {
   return value === true || value === "true" || value === "on" || value === "1";
+}
+
+function parseApplyFlag(value: unknown): boolean {
+  return parsePreparedFlag(value);
+}
+
+function buildLevelUpUpdateInput(
+  character: {
+    level: number;
+    classes: unknown;
+    abilities: unknown;
+    combat: unknown;
+  },
+  parsed: z.infer<typeof studioCharacterLevelUpApplySchema>,
+): UpdateCharacterInput {
+  const payload = buildLevelUpApplyPayload(
+    {
+      level: character.level,
+      classes: character.classes,
+      abilities: character.abilities,
+      combat: character.combat,
+    },
+    {
+      pickedClass: parsed.pickedClass,
+      hpIncrease: parsed.hpIncrease,
+      applyLevel: parseApplyFlag(parsed.applyLevel),
+      applyMaxHp: parseApplyFlag(parsed.applyMaxHp),
+      applyCurrentHp: parseApplyFlag(parsed.applyCurrentHp),
+      applyClasses: parseApplyFlag(parsed.applyClasses),
+    },
+  );
+
+  if (!payload) {
+    throw new Error("Keine Level-Up-Felder ausgewählt.");
+  }
+
+  return {
+    ...(payload.level !== undefined ? { level: payload.level } : {}),
+    ...(payload.classes
+      ? { classes: payload.classes as unknown as Prisma.InputJsonValue }
+      : {}),
+    ...(payload.combat ? { combat: payload.combat } : {}),
+  };
+}
+
+export async function applyStudioLevelUpAction(formData: FormData) {
+  const parsed = parseFormDataOrThrow(formData, studioCharacterLevelUpApplySchema);
+  const { worldSlug, pageId, pageSlug, category, characterId } = parsed;
+  const { db, characters, character } = await assertStudioCharacterAccess(
+    worldSlug,
+    pageId,
+    characterId,
+  );
+
+  try {
+    const updated = await characters.update(
+      characterId,
+      buildLevelUpUpdateInput(character, parsed),
+    );
+    if (!updated) {
+      throw new Error("Level-Up konnte nicht gespeichert werden.");
+    }
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(editPath(worldSlug, category, pageSlug));
+  redirect(`${editPath(worldSlug, category, pageSlug)}?levelUpSaved=1`);
 }
 
 async function assertStudioCharacterAccess(

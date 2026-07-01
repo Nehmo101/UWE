@@ -277,6 +277,11 @@ export {
 } from "./layout-editor";
 
 export {
+  CharacterLevelUpPanel,
+  type CharacterLevelUpPanelProps,
+} from "./CharacterLevelUpPanel";
+
+export {
   CharacterSpellSection,
   type CharacterSpellSectionProps,
   type SpellSearchResult,

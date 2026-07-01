@@ -133,6 +133,34 @@ export type {
 } from "./character-spell-service";
 
 export {
+  buildLevelUpApplyPayload,
+  buildLevelUpSuggestions,
+  getClassHitDie,
+  PICKABLE_CLASSES,
+} from "./character-level-up-service";
+
+export type {
+  ApplyLevelUpOptions,
+  LevelUpApplyPayload,
+  LevelUpCharacterInput,
+  LevelUpFieldKey,
+  LevelUpFieldSuggestion,
+  LevelUpSuggestions,
+  PickableClassName,
+} from "./character-level-up-service";
+
+export {
+  buildCharacterSheetMarkdown,
+  buildCharacterSheetPrintHtml,
+  buildCharacterSheetPrintStyles,
+} from "./character-sheet-export";
+
+export type {
+  CharacterInventoryItemView,
+  CharacterSheetExportInput,
+} from "./character-sheet-export";
+
+export {
   createPartyTreasuryService,
   DEFAULT_CURRENCIES,
   PartyTreasuryService,
