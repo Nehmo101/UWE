@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas — Claude Design Vorschau</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    body { margin: 0; padding: 1rem; }
+    h1 { font-size: 1.1rem; margin: 0 0 0.75rem; font-weight: 600; }
+    .hint { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1rem; }
+    canvas { max-width: 100%; border: 1px solid rgba(148,163,184,.25); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Atlas statischer Viewer (Claude Design Export)</h1>
+  <p class="hint">Lädt <code>data.json</code> + <code>atlas-viewer.js</code> aus diesem Ordner.</p>
+  <div data-atlas-viewer></div>
+  <script src="atlas-viewer.js" defer></script>
+</body>
+</html>
