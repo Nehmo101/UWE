@@ -1713,6 +1713,22 @@ export type {
 } from "./dev-idea-service";
 
 export {
+  parseFeatureMatrixOverviewTable,
+  parseFeatureMatrixUpsertCandidates,
+  rowToUpsertCandidate,
+  loadFeatureMatrixMarkdown,
+  syncFeatureMatrixToDevIdeas,
+  maturityToLifecycle,
+  FEATURE_MATRIX_ENRICHMENT,
+} from "./feature-matrix-sync-service";
+
+export type {
+  FeatureMatrixRow,
+  FeatureMatrixUpsertCandidate,
+  FeatureMatrixSyncResult,
+} from "./feature-matrix-sync-service";
+
+export {
   createBugReportService,
   BugReportService,
   BUG_REPORT_STATUS_LABELS,
@@ -1765,6 +1781,20 @@ export type {
   ImportSourceType,
   ImportTargetType,
 } from "./import-job-service";
+
+export {
+  executeMarkdownImport,
+  previewMarkdownImport,
+  ImportCentralError,
+  PDF_NOT_SUPPORTED_MESSAGE,
+} from "./import-central-service";
+
+export type {
+  MarkdownImportContext,
+  MarkdownImportPreviewItem,
+  MarkdownImportPreviewResult,
+  MarkdownImportExecuteResult,
+} from "./import-central-service";
 
 export {
   createDocumentTemplateService,

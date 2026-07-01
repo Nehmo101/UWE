@@ -1,0 +1,200 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { DevIdeaLifecycle, DevIdeaType } from "./generated/prisma/client";
+import type { PrismaClient } from "./client";
+import { createDevIdeaService } from "./dev-idea-service";
+
+const moduleDir = dirname(fileURLToPath(import.meta.url));
+
+export interface FeatureMatrixRow {
+  number: number;
+  title: string;
+  overallStatus: string;
+  usable: string;
+  productionReady: string;
+}
+
+export interface FeatureMatrixUpsertCandidate {
+  title: string;
+  ideaType: DevIdeaType;
+  module: string;
+  maturityLevel: string;
+  lifecycle: DevIdeaLifecycle;
+  body: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface FeatureMatrixSyncResult {
+  created: number;
+  updated: number;
+  total: number;
+  titles: string[];
+}
+
+/** Curated module + maturity for overview rows 1–15 (see docs/FEATURE_MATURITY_MATRIX.md). */
+export const FEATURE_MATRIX_ENRICHMENT: Record<
+  number,
+  { module: string; maturityLevel: string }
+> = {
+  1: { module: "media", maturityLevel: "lab" },
+  2: { module: "integrations", maturityLevel: "beta" },
+  3: { module: "dnd", maturityLevel: "stable" },
+  4: { module: "generators", maturityLevel: "beta" },
+  5: { module: "daily_admin", maturityLevel: "beta" },
+  6: { module: "studio", maturityLevel: "beta" },
+  7: { module: "auth", maturityLevel: "stable" },
+  8: { module: "dnd", maturityLevel: "beta" },
+  9: { module: "generators", maturityLevel: "beta" },
+  10: { module: "studio", maturityLevel: "stable" },
+  11: { module: "hosting", maturityLevel: "lab" },
+  12: { module: "media", maturityLevel: "stable" },
+  13: { module: "studio", maturityLevel: "beta" },
+  14: { module: "studio", maturityLevel: "stable" },
+  15: { module: "hosting", maturityLevel: "stable" },
+};
+
+export function maturityToLifecycle(maturityLevel: string): DevIdeaLifecycle {
+  if (maturityLevel === "stable") return "existing";
+  if (maturityLevel === "deprecated") return "deprecated";
+  return "planned";
+}
+
+/** Parse the „Übersicht“ table (features 1–15) from FEATURE_MATURITY_MATRIX.md. */
+export function parseFeatureMatrixOverviewTable(markdown: string): FeatureMatrixRow[] {
+  const lines = markdown.split(/\r?\n/);
+  const rows: FeatureMatrixRow[] = [];
+  let inOverview = false;
+
+  for (const line of lines) {
+    if (line.startsWith("## Übersicht")) {
+      inOverview = true;
+      continue;
+    }
+    if (inOverview && line.startsWith("## ") && !line.startsWith("## Übersicht")) {
+      break;
+    }
+    if (!inOverview) continue;
+
+    const match = line.match(
+      /^\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/,
+    );
+    if (!match) continue;
+
+    const number = Number(match[1]);
+    if (!Number.isInteger(number) || number < 1 || number > 15) continue;
+
+    rows.push({
+      number,
+      title: match[2]!.trim(),
+      overallStatus: match[3]!.trim(),
+      usable: match[4]!.trim(),
+      productionReady: match[5]!.trim(),
+    });
+  }
+
+  return rows.sort((a, b) => a.number - b.number);
+}
+
+export function rowToUpsertCandidate(row: FeatureMatrixRow): FeatureMatrixUpsertCandidate {
+  const enrichment = FEATURE_MATRIX_ENRICHMENT[row.number];
+  if (!enrichment) {
+    throw new Error(`Keine Enrichment-Daten für Feature #${row.number} (${row.title}).`);
+  }
+
+  const lifecycle = maturityToLifecycle(enrichment.maturityLevel);
+
+  return {
+    title: row.title,
+    ideaType: "feature",
+    module: enrichment.module,
+    maturityLevel: enrichment.maturityLevel,
+    lifecycle,
+    body: [
+      `Quelle: FEATURE_MATURITY_MATRIX.md (#${row.number}).`,
+      `Gesamtstatus: ${row.overallStatus}.`,
+      `Nutzbar: ${row.usable}.`,
+      `Production-ready: ${row.productionReady}.`,
+    ].join(" "),
+    metadata: {
+      source: "feature_maturity_matrix",
+      matrixNumber: row.number,
+      overallStatus: row.overallStatus,
+      usable: row.usable,
+      productionReady: row.productionReady,
+    },
+  };
+}
+
+export function parseFeatureMatrixUpsertCandidates(markdown: string): FeatureMatrixUpsertCandidate[] {
+  return parseFeatureMatrixOverviewTable(markdown).map(rowToUpsertCandidate);
+}
+
+export function resolveFeatureMatrixPath(customPath?: string): string {
+  if (customPath) return customPath;
+  const candidates = [
+    join(moduleDir, "..", "..", "..", "docs", "FEATURE_MATURITY_MATRIX.md"),
+    join(process.cwd(), "docs", "FEATURE_MATURITY_MATRIX.md"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      readFileSync(candidate, "utf8");
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+  return candidates[0]!;
+}
+
+export function loadFeatureMatrixMarkdown(matrixPath?: string): string {
+  const resolved = resolveFeatureMatrixPath(matrixPath);
+  return readFileSync(resolved, "utf8");
+}
+
+export async function syncFeatureMatrixToDevIdeas(
+  db: PrismaClient,
+  options: { matrixPath?: string; matrixMarkdown?: string } = {},
+): Promise<FeatureMatrixSyncResult> {
+  const markdown =
+    options.matrixMarkdown ??
+    loadFeatureMatrixMarkdown(options.matrixPath);
+  const candidates = parseFeatureMatrixUpsertCandidates(markdown);
+  const ideas = createDevIdeaService(db);
+
+  let created = 0;
+  let updated = 0;
+  const titles: string[] = [];
+
+  for (const candidate of candidates) {
+    titles.push(candidate.title);
+    const existing = await db.devIdea.findFirst({
+      where: { title: candidate.title, ideaType: "feature" },
+    });
+
+    if (existing) {
+      await ideas.updateIdea(existing.id, {
+        module: candidate.module,
+        maturityLevel: candidate.maturityLevel,
+        lifecycle: candidate.lifecycle,
+        ideaType: candidate.ideaType,
+        metadata: candidate.metadata,
+        ...(existing.body.trim() ? {} : { body: candidate.body }),
+      });
+      updated += 1;
+    } else {
+      await ideas.createIdea({
+        title: candidate.title,
+        body: candidate.body,
+        ideaType: candidate.ideaType,
+        lifecycle: candidate.lifecycle,
+        module: candidate.module,
+        maturityLevel: candidate.maturityLevel,
+        metadata: candidate.metadata,
+      });
+      created += 1;
+    }
+  }
+
+  return { created, updated, total: candidates.length, titles };
+}

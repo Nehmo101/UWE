@@ -12,12 +12,15 @@ import {
 import type { ImportFormat } from "@uwe/knoteforge-import";
 import {
   importCentralSourceAccept,
+  importCentralUsesWorldTarget,
   isImportCentralComboSupported,
+  isImportCentralMarkdownTarget,
   isImportCentralSourceComingSoon,
   isImportCentralTargetComingSoon,
 } from "@/src/lib/import-central-utils";
 import { createImportCentralJobAction, rollbackImportCentralJobAction } from "../import-central-actions";
 import { ImportWorkspace } from "../worlds/[worldSlug]/import/ImportWorkspace";
+import { MarkdownCentralImportPanel } from "./MarkdownCentralImportPanel";
 
 interface WorldOption {
   id: string;
@@ -68,6 +71,12 @@ function readPreviewSummary(previewPayload: unknown): string | null {
   if (!previewPayload || typeof previewPayload !== "object" || Array.isArray(previewPayload)) {
     return null;
   }
+
+  const markdownPreview = previewPayload as { totalDocuments?: unknown; items?: unknown[] };
+  if (typeof markdownPreview.totalDocuments === "number") {
+    return `${markdownPreview.totalDocuments} Dokument(e) in Vorschau`;
+  }
+
   const total = (previewPayload as { totalEntities?: unknown }).totalEntities;
   return typeof total === "number" ? `${total} Einträge in Vorschau` : null;
 }
@@ -112,10 +121,9 @@ export function ImportCentralWorkspace({
     [activeJobId, jobs],
   );
 
-  const needsWorld = targetType === "world" || targetType === "dnd_page";
+  const needsWorld = importCentralUsesWorldTarget(targetType);
   const comboSupported = isImportCentralComboSupported(sourceType, targetType);
-  const showComingSoon =
-    isImportCentralSourceComingSoon(sourceType) || isImportCentralTargetComingSoon(targetType);
+  const showComingSoon = isImportCentralSourceComingSoon(sourceType);
   const selectedWorld = worlds.find((world) => world.id === targetWorldId) ?? null;
   const embedWorldSlug = activeJob?.targetWorldSlug ?? selectedWorld?.slug ?? null;
 
@@ -164,14 +172,67 @@ export function ImportCentralWorkspace({
     [router],
   );
 
+  const handleImportComplete = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const renderActiveJobImport = () => {
+    if (!activeJob) return null;
+
+    if (
+      activeJob.targetType === "world" &&
+      activeJob.sourceType === "knoteforge" &&
+      activeJob.targetWorldSlug
+    ) {
+      return (
+        <p className="uwe-panel-intro">
+          Vollständiger Import:{" "}
+          <Link href={`/worlds/${activeJob.targetWorldSlug}/import`}>Welt-Import öffnen</Link>
+        </p>
+      );
+    }
+
+    if (
+      activeJob.targetType === "world" &&
+      embedWorldSlug &&
+      isImportCentralComboSupported(activeJob.sourceType, activeJob.targetType)
+    ) {
+      return (
+        <ImportWorkspace
+          worldSlug={embedWorldSlug}
+          supportedFormats={supportedFormats}
+          plannedFormats={plannedFormats}
+          jobId={activeJob.id}
+        />
+      );
+    }
+
+    if (isImportCentralMarkdownTarget(activeJob.targetType)) {
+      return (
+        <MarkdownCentralImportPanel
+          jobId={activeJob.id}
+          targetType={activeJob.targetType}
+          fileAccept={importCentralSourceAccept(activeJob.sourceType)}
+          onComplete={handleImportComplete}
+        />
+      );
+    }
+
+    return (
+      <p className="uwe-v2-empty">
+        Für diese Quelle/Ziel-Kombination ist noch kein direkter Import implementiert.
+      </p>
+    );
+  };
+
   return (
     <div className="uwe-import-workspace">
       <section className="uwe-panel">
         <h2>Neuer Import</h2>
         <p className="uwe-panel-intro">
-          Wähle Quelle und Ziel und lege einen Import-Job an. Für KnoteForge/Markdown → Welt steht
-          unten eine vereinfachte Upload-Oberfläche bereit; der vollständige Welt-Import bleibt über
-          den Link erreichbar.
+          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown und Obsidian können in Life
+          Brain, Capture, DnD-Seiten oder Welten importiert werden. KnoteForge-JSON importiert nur
+          in Welten.
         </p>
 
         <div className="uwe-form-grid">
@@ -231,8 +292,7 @@ export function ImportCentralWorkspace({
 
         {showComingSoon ? (
           <p className="uwe-flash uwe-flash-warning">
-            Diese Kombination ist in der Import-Zentrale noch nicht verfügbar — der Job wird
-            angelegt, Vorschau und Import folgen in einer späteren Phase.
+            PDF-Import ist noch nicht verfügbar. Bitte Markdown oder Obsidian verwenden.
           </p>
         ) : null}
 
@@ -252,7 +312,7 @@ export function ImportCentralWorkspace({
             type="button"
             className="uwe-v2-btn uwe-v2-btn-primary"
             onClick={handleCreateJob}
-            disabled={pending || (needsWorld && !targetWorldId)}
+            disabled={pending || (needsWorld && !targetWorldId) || !comboSupported}
           >
             {pending ? "Wird angelegt…" : "Import-Job starten"}
           </button>
@@ -274,28 +334,7 @@ export function ImportCentralWorkspace({
             </span>
           </div>
 
-          {activeJob.sourceType === "knoteforge" &&
-          activeJob.targetType === "world" &&
-          activeJob.targetWorldSlug ? (
-            <p className="uwe-panel-intro">
-              Vollständiger Import:{" "}
-              <Link href={`/worlds/${activeJob.targetWorldSlug}/import`}>
-                Welt-Import öffnen
-              </Link>
-            </p>
-          ) : null}
-
-          {comboSupported && embedWorldSlug ? (
-            <ImportWorkspace
-              worldSlug={embedWorldSlug}
-              supportedFormats={supportedFormats}
-              plannedFormats={plannedFormats}
-            />
-          ) : (
-            <p className="uwe-v2-empty">
-              Für diese Quelle/Ziel-Kombination ist noch kein direkter Import implementiert.
-            </p>
-          )}
+          {renderActiveJobImport()}
         </section>
       ) : null}
 

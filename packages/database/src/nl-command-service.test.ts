@@ -61,6 +61,46 @@ describe("NlCommandService", () => {
     }
   });
 
+  it("parses pending migrations intent", () => {
+    const result = parseCommandIntent("pending migrations");
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.intent.intent, "list_pending_migrations");
+      assert.equal(result.requiresConfirmation, false);
+    }
+  });
+
+  it("parses list open bugs intent", () => {
+    const result = parseCommandIntent("list open bugs");
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.intent.intent, "list_open_bugs");
+    }
+  });
+
+  it("parses secrets status intent", () => {
+    const result = parseCommandIntent("secrets status");
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.intent.intent, "get_secrets_status");
+    }
+  });
+
+  it("parses lock portal and studio intents", () => {
+    const portal = parseCommandIntent("lock portal");
+    assert.equal(portal.ok, true);
+    if (portal.ok && portal.intent.intent === "set_lock_portal") {
+      assert.equal(portal.intent.enabled, true);
+      assert.equal(portal.requiresConfirmation, true);
+    }
+
+    const studio = parseCommandIntent("unlock studio");
+    assert.equal(studio.ok, true);
+    if (studio.ok && studio.intent.intent === "set_lock_studio") {
+      assert.equal(studio.intent.enabled, false);
+    }
+  });
+
   it("parses maintenance enable/disable intents", () => {
     const enable = parseCommandIntent("Wartungsmodus aktivieren");
     assert.equal(enable.ok, true);
@@ -154,6 +194,72 @@ describe("NlCommandService", () => {
     const issuedAt = Date.now();
     const token = issueConfirmationToken(intent, owner.id, issuedAt);
     assert.equal(verifyConfirmationToken(intent, owner.id, token, issuedAt), true);
+
+    const service = createNlCommandService(db);
+    const result = await service.execute(intent, { actorUserId: owner.id }, {
+      confirmationToken: token,
+      confirmationIssuedAt: issuedAt,
+    });
+    assert.equal(result.ok, true);
+
+    await db.$disconnect();
+  });
+
+  it("executes read-only status intents without confirmation token", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const owner = await auth.createUser({
+      displayName: "NL Status",
+      email: "nl-status@example.com",
+      password: "test-password-123",
+      role: "owner",
+    });
+
+    const service = createNlCommandService(db);
+
+    const secrets = await service.execute(
+      { intent: "get_secrets_status" },
+      { actorUserId: owner.id },
+    );
+    assert.equal(secrets.ok, true);
+    if (secrets.ok) {
+      assert.equal(secrets.intent, "get_secrets_status");
+      assert.ok(secrets.data && typeof secrets.data === "object");
+    }
+
+    const pending = await service.execute(
+      { intent: "list_pending_migrations" },
+      { actorUserId: owner.id },
+    );
+    assert.equal(pending.ok, true);
+    if (pending.ok) {
+      assert.equal(pending.intent, "list_pending_migrations");
+      assert.ok(pending.data && typeof pending.data === "object");
+    }
+
+    const bugs = await service.execute({ intent: "list_open_bugs" }, { actorUserId: owner.id });
+    assert.equal(bugs.ok, true);
+    if (bugs.ok) {
+      assert.equal(bugs.intent, "list_open_bugs");
+      assert.ok(Array.isArray(bugs.data));
+    }
+
+    await db.$disconnect();
+  });
+
+  it("executes lock portal mutation with valid confirmation token", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const owner = await auth.createUser({
+      displayName: "NL Portal Lock",
+      email: "nl-portal-lock@example.com",
+      password: "test-password-123",
+      role: "owner",
+    });
+
+    const intent = { intent: "set_lock_portal" as const, enabled: true };
+    const issuedAt = Date.now();
+    const token = issueConfirmationToken(intent, owner.id, issuedAt);
 
     const service = createNlCommandService(db);
     const result = await service.execute(intent, { actorUserId: owner.id }, {
