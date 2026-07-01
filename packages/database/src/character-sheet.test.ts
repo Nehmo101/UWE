@@ -5,8 +5,11 @@ import { createUweRepository } from "./repository";
 import { createTestDatabaseUrl } from "./test-helpers";
 import {
   abilityModifier,
+  buildCharacterSheetSnapshot,
   createCharacterService,
   DEFAULT_ABILITY_SCORES,
+  parseAbilityScores,
+  parseCharacterCombat,
   proficiencyBonus,
 } from "./character-service";
 import {
@@ -119,5 +122,63 @@ describe("wave c0b character and inventory models", () => {
   it("computes basic 2024 modifiers", () => {
     assert.equal(abilityModifier(16), 3);
     assert.equal(proficiencyBonus(5), 3);
+  });
+
+  it("parses ability scores with defaults and clamps values", () => {
+    assert.deepEqual(parseAbilityScores(null), DEFAULT_ABILITY_SCORES);
+    assert.deepEqual(
+      parseAbilityScores({
+        strength: 18,
+        dexterity: 14,
+        constitution: 99,
+      }),
+      {
+        strength: 18,
+        dexterity: 14,
+        constitution: 30,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+    );
+  });
+
+  it("builds sheet snapshot with initiative from combat JSON", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const characters = createCharacterService(db);
+    const [character] = await characters.listForOwner(worldId, userId);
+    assert.ok(character);
+
+    await characters.update(character.id, {
+      level: 5,
+      abilities: {
+        strength: 12,
+        dexterity: 16,
+        constitution: 14,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 8,
+      },
+      combat: {
+        armorClass: 17,
+        initiativeBonus: 2,
+      },
+    });
+
+    const loaded = await characters.getById(character.id);
+    assert.ok(loaded);
+    const snapshot = buildCharacterSheetSnapshot(loaded);
+    assert.equal(snapshot.proficiencyBonus, 3);
+    assert.equal(snapshot.modifiers.dexterity, 3);
+    assert.equal(snapshot.armorClass, 17);
+    assert.equal(snapshot.initiative, 5);
+    assert.deepEqual(parseCharacterCombat({ armor_class: 15, initiative_bonus: 1 }), {
+      armorClass: 15,
+      initiativeBonus: 1,
+      maxHp: undefined,
+      currentHp: undefined,
+      speed: undefined,
+    });
+    await db.$disconnect();
   });
 });

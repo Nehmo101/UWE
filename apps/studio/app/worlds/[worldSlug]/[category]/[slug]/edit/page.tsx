@@ -42,6 +42,7 @@ import { CampaignSidebar } from "@/src/components/wiki";
 import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
 import { PageChroniclePanel } from "@/components/wiki/PageChroniclePanel";
 import { FactionStateEditPanel } from "@/components/wiki/FactionStateEditPanel";
+import { CharacterSheetEditPanel } from "@/components/wiki/CharacterSheetEditPanel";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -408,6 +409,27 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           />
         )}
 
+<<<<<<< HEAD
+=======
+        {page.type === PageTypeEnum.quest && (
+          <QuestStatusEditPanel
+            worldSlug={worldSlug}
+            pageId={page.id}
+            pageSlug={slug}
+            category={category}
+          />
+        )}
+
+        {page.type === PageTypeEnum.player_character && (
+          <CharacterSheetEditPanel
+            worldSlug={worldSlug}
+            pageId={page.id}
+            pageSlug={slug}
+            category={category}
+          />
+        )}
+
+>>>>>>> feb9335 (feat(c6): Charaktersheet P1 — structured sheet, auto-calc, Portal/Studio UI)
         {generatorPanel && (
           <ContextualGeneratorPanel
             worldSlug={worldSlug}

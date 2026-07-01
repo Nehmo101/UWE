@@ -94,6 +94,11 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "chronik",
           "ereignisse",
         ]),
+        worldItem("portal-world-characters", "Charaktere", `${base}/characters`, "user", [
+          "charaktere",
+          "charakterbogen",
+          "sheet",
+        ]),
         worldItem("portal-world-handouts", "Handouts", `${base}/assets`, "image", ["handouts", "karten", "assets"]),
         worldItem("portal-world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", ["notizen", "notes"]),
         worldItem("portal-world-soundboard", "Soundboard", `${base}/soundboard`, "music", ["soundboard", "audio"]),
