@@ -222,6 +222,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["backup", "restore", "sicherung"],
       },
       {
+        id: "system-migrations",
+        label: "Migrationen",
+        href: "/admin/migrations",
+        icon: "database",
+        group: "Betrieb",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["migration", "prisma", "schema", "deploy", "datenbank"],
+      },
+      {
         id: "system-version",
         label: "Version & Updates",
         href: "/system/version",
