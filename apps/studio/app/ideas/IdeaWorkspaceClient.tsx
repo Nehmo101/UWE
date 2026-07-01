@@ -13,6 +13,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import {
   createIdeaAction,
   deleteIdeaAction,
+  syncFeatureMatrixAction,
   updateIdeaAction,
   updateIdeaStatusAction,
 } from "../ideas-actions";
@@ -195,6 +196,14 @@ function IdeaListColumn({ ideas, selectedId, onSelect, view, lifecycleFilter, mo
       <div className="uwe-idea-workspace-filters">
         <label>Lifecycle<select value={lifecycleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: e.target.value || null, module: moduleFilter, idea: selectedId }); }} aria-label="Lifecycle filtern"><option value="">Alle</option>{DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}</select></label>
         {(view === "all" || view === "features") && (<label>Modul<select value={moduleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: lifecycleFilter, module: e.target.value || null, idea: selectedId }); }} aria-label="Modul filtern"><option value="">Alle</option>{DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}</select></label>)}
+        {view === "features" && (
+          <form action={syncFeatureMatrixAction} className="uwe-idea-matrix-sync-form">
+            <WorkspaceContextFields {...workspaceContext} />
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+              Aus Reifegrad-Matrix synchronisieren
+            </button>
+          </form>
+        )}
       </div>
       <form action={createIdeaAction} className="uwe-brain-create-form">
         <WorkspaceContextFields {...workspaceContext} />

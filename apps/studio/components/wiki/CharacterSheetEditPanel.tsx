@@ -1,11 +1,20 @@
-import { CollapsibleSection } from "@uwe/shared-ui";
+import { CharacterLevelUpPanel, CharacterSpellSection, CollapsibleSection } from "@uwe/shared-ui";
 import {
+  buildLevelUpSuggestions,
   createCharacterService,
   createPrismaClient,
   type PortalCharacterView,
   toPortalCharacterView,
 } from "@uwe/database/server";
-import { updateStudioCharacterSheetAction } from "@/app/worlds/[worldSlug]/character-sheet-actions";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  addHomebrewSpellAction,
+  addSpellAction,
+  applyStudioLevelUpAction,
+  removeSpellAction,
+  togglePreparedAction,
+  updateStudioCharacterSheetAction,
+} from "@/app/worlds/[worldSlug]/character-sheet-actions";
 
 interface Props {
   worldSlug: string;
@@ -46,12 +55,24 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
 
   const character: PortalCharacterView = toPortalCharacterView(characterRecord);
   const { sheet } = character;
+  const levelUpSuggestions = buildLevelUpSuggestions({
+    level: characterRecord.level,
+    classes: characterRecord.classes,
+    abilities: characterRecord.abilities,
+    combat: characterRecord.combat,
+  });
+  const printUrl = `/worlds/${worldSlug}/characters/print?characterId=${encodeURIComponent(character.id)}`;
 
   return (
     <CollapsibleSection title="Charakterbogen" defaultOpen>
       <p className="uwe-hint">
         Strukturierte D&amp;D-2024-Werte — Modifikatoren, Übungsbonus und Initiative werden
         automatisch berechnet.
+      </p>
+      <p>
+        <a href={printUrl} className="uwe-v2-btn uwe-v2-btn-small" target="_blank" rel="noreferrer">
+          Druck / Export
+        </a>
       </p>
 
       <dl className="auth-character-sheet-summary">
@@ -131,6 +152,39 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
           Charakterbogen speichern
         </button>
       </form>
+
+      <CharacterSpellSection
+        spells={character.spells}
+        spellSlots={character.spellSlots}
+        canEdit
+        hiddenFields={{
+          worldSlug,
+          pageId,
+          pageSlug,
+          category,
+          characterId: character.id,
+        }}
+        addSpellAction={addSpellAction}
+        removeSpellAction={removeSpellAction}
+        togglePreparedAction={togglePreparedAction}
+        addHomebrewSpellAction={addHomebrewSpellAction}
+        searchSpellsUrl={studioApiUrl("/api/dnd/spells/search")}
+      />
+
+      {levelUpSuggestions && (
+        <CharacterLevelUpPanel
+          suggestions={levelUpSuggestions}
+          canEdit
+          hiddenFields={{
+            worldSlug,
+            pageId,
+            pageSlug,
+            category,
+            characterId: character.id,
+          }}
+          applyLevelUpAction={applyStudioLevelUpAction}
+        />
+      )}
     </CollapsibleSection>
   );
 }

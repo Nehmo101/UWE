@@ -10,11 +10,16 @@
 
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import type { EditorFeature } from "./AtlasEditor";
+
+/** Minimal region shape the describe panel needs (decoupled from the editor). */
+export interface RegionDescribeTarget {
+  labelText?: string | null;
+  kind: string;
+}
 
 export interface RegionDescribePanelProps {
   worldSlug: string;
-  feature: EditorFeature;
+  feature: RegionDescribeTarget;
   onClose: () => void;
 }
 

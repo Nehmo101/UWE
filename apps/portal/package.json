@@ -26,6 +26,7 @@
     "@uwe/atlas": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/dnd-api": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",

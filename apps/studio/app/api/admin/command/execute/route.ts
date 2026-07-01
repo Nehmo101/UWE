@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   auditRequestFromHeaders,
   createNlCommandService,
+  isNlCommandIntentName,
   prisma,
   type NlCommandIntent,
 } from "@uwe/database/server";
@@ -12,13 +13,20 @@ function isNlCommandIntent(value: unknown): value is NlCommandIntent {
   if (!value || typeof value !== "object") {
     return false;
   }
-  const intent = (value as { intent?: unknown }).intent;
-  return (
-    intent === "set_maintenance_mode" ||
-    intent === "list_users" ||
-    intent === "list_worlds" ||
-    intent === "get_migration_status"
-  );
+  const record = value as Record<string, unknown>;
+  const intentName = record.intent;
+  if (typeof intentName !== "string" || !isNlCommandIntentName(intentName)) {
+    return false;
+  }
+
+  switch (intentName) {
+    case "set_maintenance_mode":
+    case "set_lock_portal":
+    case "set_lock_studio":
+      return typeof record.enabled === "boolean";
+    default:
+      return true;
+  }
 }
 
 export async function POST(request: Request) {

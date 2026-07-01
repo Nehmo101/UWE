@@ -57,10 +57,10 @@ export default async function ImportCentralPage() {
         <SidebarSection title="Hinweise">
           <ul className="uwe-import-context-list">
             <li>
-              Unterstützt aktuell: KnoteForge/Markdown → Welt (über{" "}
-              <code>@uwe/knoteforge-import</code>).
+              Unterstützt: KnoteForge JSON → Welt; Markdown/Obsidian → Life Brain, Capture,
+              DnD-Seite oder Welt.
             </li>
-            <li>Obsidian, PDF sowie Life Brain, Capture und DnD-Seite folgen demnächst.</li>
+            <li>PDF-Import folgt demnächst.</li>
             <li>
               Jeder Import wird als Job protokolliert — Status:{" "}
               {Object.values(IMPORT_JOB_STATUS_LABELS).join(", ")}.

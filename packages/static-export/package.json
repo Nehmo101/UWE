@@ -13,7 +13,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'",
-    "export": "tsx src/cli.ts"
+    "export": "tsx src/cli.ts",
+    "build:atlas-engine": "node scripts/build-atlas-engine.mjs"
   },
   "dependencies": {
     "@uwe/assets": "workspace:*",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^22.19.21",
     "@uwe/config": "workspace:*",
+    "esbuild": "0.28.0",
     "prisma": "^7.8.0",
     "tsx": "^4.22.4",
     "typescript": "^5.8.3"

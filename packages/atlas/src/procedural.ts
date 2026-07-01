@@ -17,6 +17,7 @@
 import type { Coordinate, Point, Path, Polygon } from "./geometry";
 import type { AtlasFeatureKind } from "./constants";
 import { BiomeKind } from "./constants";
+import { mulberry32, hashStringToSeed } from "./prng";
 
 // ---------------------------------------------------------------------------
 // Seeded PRNG (mulberry32 — same as terrain.ts for consistency)
@@ -455,5 +456,72 @@ export function rerollDraft(
     features: merged,
     promptHints: previous.promptHints,
     bounds: previous.bounds,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// proceduralDraft — minimal deterministic draft (AI-draft fallback + regression)
+// ---------------------------------------------------------------------------
+
+/** A single feature in a {@link SimpleProceduralDraft}. */
+export interface SimpleProceduralFeature {
+  kind: "biome" | "river";
+  geometry: Polygon | Path;
+  style: Record<string, unknown>;
+}
+
+/** The result of {@link proceduralDraft}: one biome polygon + one river path. */
+export interface SimpleProceduralDraft {
+  /** The seed used to generate this draft (number or string). */
+  seed: number | string;
+  features: SimpleProceduralFeature[];
+}
+
+/**
+ * A deliberately simple, fully deterministic draft — one jittered biome polygon
+ * and one river path. Used as the offline AI-draft fallback and as a stable
+ * regression anchor. For the richer Voronoi generator use {@link generateDraft}.
+ *
+ * Deterministic for a given seed: numeric seeds feed `mulberry32` directly,
+ * string seeds are folded via `hashStringToSeed` first.
+ */
+export function proceduralDraft(seed: number | string): SimpleProceduralDraft {
+  const rand = mulberry32(typeof seed === "number" ? seed : hashStringToSeed(seed));
+  const cx = 0.3 + rand() * 0.4;
+  const cy = 0.3 + rand() * 0.4;
+  const r = 0.12 + rand() * 0.1;
+  const ring: Coordinate[] = [];
+  const n = 9;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const jitter = 0.7 + rand() * 0.6;
+    ring.push([cx + Math.cos(a) * r * jitter, cy + Math.sin(a) * r * jitter]);
+  }
+  const biomes: BiomeKind[] = [
+    BiomeKind.forest,
+    BiomeKind.hills,
+    BiomeKind.grassland,
+    BiomeKind.swamp,
+  ];
+  const biomeKind = biomes[Math.floor(rand() * biomes.length)]!;
+  const river: Coordinate[] = [
+    [rand() * 0.3, 0.05],
+    [cx, cy],
+    [rand() * 0.3 + 0.6, 0.95],
+  ];
+  return {
+    seed,
+    features: [
+      {
+        kind: "biome",
+        geometry: { type: "Polygon", rings: [ring] },
+        style: { biomeKind, density: 1 + rand() },
+      },
+      {
+        kind: "river",
+        geometry: { type: "Path", coordinates: river },
+        style: { smooth: true },
+      },
+    ],
   };
 }

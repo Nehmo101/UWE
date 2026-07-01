@@ -24,6 +24,7 @@ describe("security leaks — visibility and portal filtering", () => {
     "packages/auth/src/permissions.test.ts",
     "apps/portal/src/lib/share-access.test.ts",
     "apps/portal/src/navigation/portal-nav.test.ts",
+    "packages/database/src/atlas-service.test.ts",
   ];
 
   for (const testFile of leakTests) {
@@ -54,6 +55,40 @@ describe("security leaks — player preview must not expose secrets", () => {
     const portalNav = read("apps/portal/src/navigation/portal-nav.ts");
     assert.doesNotMatch(portalNav, /Welten entdecken/);
     assert.doesNotMatch(portalNav, /href: "\/worlds"/);
+  });
+});
+
+describe("security leaks — atlas portal visibility (three-tier: map + node + feature/object)", () => {
+  it("enforces the three-tier dm_only filter server-side in the atlas service", () => {
+    const atlas = read("packages/database/src/atlas-service.ts");
+    // Predicate rejects dm_only and requires player-portal visibility …
+    assert.match(atlas, /isAtlasEntityAccessible/);
+    assert.match(atlas, /isDmOnlyVisibility/);
+    assert.match(atlas, /isPlayerPortalVisibility/);
+    // … and is applied across map, nodes, features and objects before serialization.
+    assert.match(atlas, /filterAtlasEntities/);
+    assert.match(atlas, /getAtlasForContext/);
+  });
+
+  it("serializes the static export atlas bundle through the portal filter", () => {
+    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
+    assert.match(exportAtlas, /getAtlasForContext/);
+    assert.match(exportAtlas, /["']portal["']/);
+  });
+
+  it("fetches portal atlas node data through the portal filter", () => {
+    const nodePage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
+    assert.match(nodePage, /getAtlasForContext/);
+    assert.match(nodePage, /["']portal["']/);
+  });
+
+  it("single-file runtime never renders local/demo data in view mode (only server-injected, filtered docs)", () => {
+    const runtime = read("packages/static-export/static/atlas.html");
+    // View mode must short-circuit to an empty world BEFORE any localStorage/demo read …
+    assert.match(runtime, /if \(isView\(\)\) return migrate\(emptyDoc\(\)\)/);
+    // … and only accept a server-provided (already-filtered) doc via injection.
+    assert.match(runtime, /readInjectedDoc/);
+    assert.match(runtime, /getElementById\("atlas-doc"\)/);
   });
 });
 

@@ -272,6 +272,110 @@ export const studioCharacterSheetUpdateSchema = characterSheetUpdateSchema.exten
   category: slugSchema,
 });
 
+const spellLevelField = z.coerce.number().int().min(0).max(9);
+
+export const characterSpellAddSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  spellLevel: spellLevelField.optional(),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  source: z.string().trim().max(50).optional(),
+  notes: z.string().trim().max(500).optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellRemoveSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellTogglePreparedSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  spellKey: z.string().trim().min(1).max(200),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const characterSpellHomebrewAddSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  name: z.string().trim().min(1).max(200),
+  spellLevel: spellLevelField.optional(),
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const studioCharacterSpellAddSchema = characterSpellAddSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const studioCharacterSpellRemoveSchema = characterSpellRemoveSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const studioCharacterSpellTogglePreparedSchema =
+  characterSpellTogglePreparedSchema.extend({
+    pageId: idSchema,
+    pageSlug: slugSchema,
+    category: slugSchema,
+  });
+
+export const studioCharacterSpellHomebrewAddSchema = characterSpellHomebrewAddSchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const dndSpellSearchQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+});
+
+const levelUpBooleanField = z
+  .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+  .optional();
+
+export const characterLevelUpApplySchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pickedClass: z.string().trim().min(1).max(100).optional(),
+  hpIncrease: z.coerce.number().int().min(0).max(50).optional(),
+  applyLevel: levelUpBooleanField,
+  applyMaxHp: levelUpBooleanField,
+  applyCurrentHp: levelUpBooleanField,
+  applyClasses: levelUpBooleanField,
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const studioCharacterLevelUpApplySchema = characterLevelUpApplySchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const characterSheetPrintQuerySchema = z.object({
+  characterId: idSchema,
+  format: z.enum(["html", "markdown"]).optional(),
+});
+
 export const assetFileQuerySchema = z.object({
   world: slugSchema,
 });

@@ -102,6 +102,19 @@ export {
   CharacterService,
 } from "./character-service";
 
+export {
+  buildHomebrewSpellKey,
+  computeSpellSlots,
+  createCharacterSpellService,
+  effectiveCasterLevel,
+  extractOpen5eSpellLevel,
+  formatSpellDisplayName,
+  parseCharacterClasses,
+  parseHomebrewSpellInput,
+  toCharacterSpellView,
+  CharacterSpellService,
+} from "./character-spell-service";
+
 export type {
   AbilityScores,
   CharacterCombat,
@@ -111,6 +124,41 @@ export type {
   UpdateCharacterInput,
   UpsertCharacterSpellInput,
 } from "./character-service";
+
+export type {
+  CharacterClassEntry,
+  CharacterSpellView,
+  ParsedHomebrewSpell,
+  SpellSlotSummary,
+} from "./character-spell-service";
+
+export {
+  buildLevelUpApplyPayload,
+  buildLevelUpSuggestions,
+  getClassHitDie,
+  PICKABLE_CLASSES,
+} from "./character-level-up-service";
+
+export type {
+  ApplyLevelUpOptions,
+  LevelUpApplyPayload,
+  LevelUpCharacterInput,
+  LevelUpFieldKey,
+  LevelUpFieldSuggestion,
+  LevelUpSuggestions,
+  PickableClassName,
+} from "./character-level-up-service";
+
+export {
+  buildCharacterSheetMarkdown,
+  buildCharacterSheetPrintHtml,
+  buildCharacterSheetPrintStyles,
+} from "./character-sheet-export";
+
+export type {
+  CharacterInventoryItemView,
+  CharacterSheetExportInput,
+} from "./character-sheet-export";
 
 export {
   createPartyTreasuryService,
@@ -1713,6 +1761,22 @@ export type {
 } from "./dev-idea-service";
 
 export {
+  parseFeatureMatrixOverviewTable,
+  parseFeatureMatrixUpsertCandidates,
+  rowToUpsertCandidate,
+  loadFeatureMatrixMarkdown,
+  syncFeatureMatrixToDevIdeas,
+  maturityToLifecycle,
+  FEATURE_MATRIX_ENRICHMENT,
+} from "./feature-matrix-sync-service";
+
+export type {
+  FeatureMatrixRow,
+  FeatureMatrixUpsertCandidate,
+  FeatureMatrixSyncResult,
+} from "./feature-matrix-sync-service";
+
+export {
   createBugReportService,
   BugReportService,
   BUG_REPORT_STATUS_LABELS,
@@ -1765,6 +1829,20 @@ export type {
   ImportSourceType,
   ImportTargetType,
 } from "./import-job-service";
+
+export {
+  executeMarkdownImport,
+  previewMarkdownImport,
+  ImportCentralError,
+  PDF_NOT_SUPPORTED_MESSAGE,
+} from "./import-central-service";
+
+export type {
+  MarkdownImportContext,
+  MarkdownImportPreviewItem,
+  MarkdownImportPreviewResult,
+  MarkdownImportExecuteResult,
+} from "./import-central-service";
 
 export {
   createDocumentTemplateService,

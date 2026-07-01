@@ -18,6 +18,19 @@ export type {
   AtlasFeatureGeometry,
 } from "./geometry";
 
+// Geometry helpers — coordinate transforms + point/polygon math
+export {
+  worldToCanvas,
+  canvasToWorld,
+  pointInPolygon,
+  distToSegment,
+  centroid,
+  translateGeometry,
+} from "./geometry";
+
+// Deterministic PRNG (mulberry32) + string-seed hashing
+export { mulberry32, hashStringToSeed } from "./prng";
+
 // Constants / enums (mirror Prisma schema enums)
 export {
   AtlasNodeLevel,
@@ -55,6 +68,7 @@ export {
   ATLAS_GLYPH_CATEGORIES,
   BUILTIN_GLYPHS,
   BUILTIN_GLYPH_KEYS,
+  BIOME_SCATTER_GLYPH,
   getGlyphByKey,
   listGlyphsByCategory,
   groupGlyphsByCategory,
@@ -88,7 +102,7 @@ export {
   buildReliefShading,
 } from "./terrain";
 
-// Serialization
+// Serialization (geometry-level)
 export {
   AtlasParseError,
   parseGeometry,
@@ -98,10 +112,35 @@ export {
   tryParseGeometry,
 } from "./serialization";
 
-// Procedural draft generator
+// Document envelope — versioning, migration, serialization (document-level)
+export {
+  SCHEMA_VERSION,
+  migrateDoc,
+  serializeDoc,
+} from "./doc";
+export type {
+  AtlasTileLayer,
+  AtlasDocFeature,
+  AtlasDocObject,
+  AtlasDocNode,
+  AtlasDoc,
+  AtlasDocV2,
+  SerializedAtlasDoc,
+} from "./doc";
+
+// Canvas 2D rendering helpers (browser-only)
+export {
+  roundedRectPath,
+  paintTerrainBlobs,
+  drawSvgPath,
+} from "./canvas-render";
+export type { PaintTerrainBlobsOptions } from "./canvas-render";
+
+// Procedural draft generators
 export {
   generateDraft,
   rerollDraft,
+  proceduralDraft,
 } from "./procedural";
 
 // AI stamp generation — P5
@@ -157,4 +196,6 @@ export type {
   ProceduralBounds,
   DraftFeature,
   AtlasDraft,
+  SimpleProceduralFeature,
+  SimpleProceduralDraft,
 } from "./procedural";

@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UWE Atlas</title>
+<!--
+  UWE Atlas — Single-File Canvas-Runtime (M1).
+  Eine Datei betreibt Studio-Editor (mode=editor) UND read-only Portal-Viewer
+  (mode=view). Engine = ./atlas-engine.js (aus @uwe/atlas gebündelt, kein CDN).
+  Chrome = echte --uwe-*-Tokens (Parchment OS); Karte = tolkien-ink-Pergament.
+-->
+<style>
+  :root {
+    /* --- Parchment OS chrome tokens (UWE Design System) --- */
+    --uwe-bg: #f1e8d4;
+    --uwe-bg-elevated: #fbf6ea;
+    --uwe-panel: #ece1c9;
+    --uwe-surface: rgba(251, 246, 234, 0.95);
+    --uwe-border: #e0d4ba;
+    --uwe-fg: #211d17;
+    --uwe-fg-muted: #574e40;
+    --uwe-fg-subtle: #665d4f;
+    --uwe-accent: #c2622b;
+    --uwe-accent-hover: #d47030;
+    --uwe-accent-muted: rgba(194, 98, 43, 0.12);
+    --uwe-on-accent: #fbf6ea;
+    --uwe-dm-only: #c2622b;
+    --uwe-player-visible: #2f6f63;
+    --uwe-danger: #b23b2e;
+    --uwe-sidebar-bg: #211d17;
+    --uwe-sidebar-fg: #e9dcc0;
+    --uwe-sidebar-fg-muted: #b6a888;
+    --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  }
+  html, body { margin: 0; height: 100%; }
+  .atlas-app { --_x: 0; }
+  .atlas-app *, .atlas-app *::before, .atlas-app *::after { box-sizing: border-box; }
+  .atlas-app button { font-family: var(--mono); cursor: pointer; }
+  .atlas-app canvas { display: block; touch-action: none; image-rendering: pixelated; }
+  .atlas-app ::selection { background: rgba(194, 98, 43, 0.22); }
+
+  .tool-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--uwe-sidebar-fg); font-size: 12.5px; text-align: left; transition: background .12s ease, border-color .12s ease; }
+  .tool-btn:hover { background: rgba(255, 255, 255, 0.06); }
+  .tool-btn.active { background: var(--uwe-accent); color: #fff; border-color: rgba(0, 0, 0, 0.25); }
+  .tool-btn .k { margin-left: auto; font-size: 9.5px; opacity: .55; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+  .tool-btn .ico { width: 18px; height: 18px; flex: none; }
+  .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 9px; border: 1.5px solid var(--uwe-border); background: var(--uwe-bg-elevated); color: var(--uwe-fg); font-size: 12px; transition: border-color .12s ease, background .12s ease; }
+  .tb-btn:hover { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
+  .tb-btn:active { transform: translateY(1px); }
+  .tb-btn.on { background: var(--uwe-fg); color: var(--uwe-on-accent); border-color: var(--uwe-fg); }
+  .seg { display: inline-flex; border: 1.5px solid var(--uwe-border); border-radius: 9px; overflow: hidden; background: var(--uwe-bg-elevated); }
+  .seg button { height: 30px; padding: 0 11px; border: 0; background: transparent; color: var(--uwe-fg-muted); font-size: 11.5px; }
+  .seg button.on { background: var(--uwe-accent); color: #fff; }
+  .swatch-btn { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; font-size: 11px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: var(--uwe-sidebar-fg); }
+  .swatch-btn.on { background: rgba(194, 98, 43, 0.85); color: #fff; border-color: rgba(0, 0, 0, 0.3); }
+  .swatch-btn .chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
+  .glyph-btn { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+  .glyph-btn.on { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
+  .glyph-btn .ico { width: 22px; height: 22px; }
+  .grp-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
+
+  /* Mode-driven visibility (server-filter is authoritative in production; this is UX). */
+  .atlas-app.is-view .editor-only { display: none !important; }
+  .atlas-app:not(.is-view) .view-only { display: none !important; }
+</style>
+</head>
+<body>
+<div class="atlas-app" id="atlas-root" style="display:flex; flex-direction:column; height:100vh; width:100%; background:var(--uwe-bg); color:var(--uwe-fg); font-family:var(--mono); overflow:hidden;">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header style="flex:none; display:flex; align-items:center; gap:12px; height:54px; padding:0 16px; background:var(--uwe-panel); border-bottom:2px solid var(--uwe-fg); z-index:5;">
+    <span style="font-size:15px; color:var(--uwe-accent);">◆</span>
+    <span style="font-weight:700; letter-spacing:-0.01em; font-size:13.5px;">UWE&nbsp;Atlas</span>
+    <span id="badge-view" style="display:none; align-items:center; font-size:9.5px; padding:2px 8px; border-radius:999px; background:var(--uwe-player-visible); color:#fff; letter-spacing:0.08em; text-transform:uppercase;">Portal</span>
+    <span id="badge-bridge" style="display:none; align-items:center; font-size:9.5px; padding:2px 8px; border-radius:999px; background:var(--uwe-accent); color:#fff; letter-spacing:0.08em; text-transform:uppercase;">Studio-Bridge</span>
+
+    <nav aria-label="Atlas-Hierarchie" id="breadcrumb" style="display:flex; align-items:center; gap:6px; margin-left:6px; padding-left:12px; border-left:1px solid var(--uwe-border);"></nav>
+
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <span class="editor-only" style="font-size:10px; color:var(--uwe-fg-muted); letter-spacing:0.1em; text-transform:uppercase;">Pinsel</span>
+      <div class="seg editor-only" role="group" aria-label="Pinselgröße">
+        <button id="brush-s">S</button>
+        <button id="brush-m" class="on">M</button>
+        <button id="brush-l">L</button>
+      </div>
+      <button id="btn-grid" class="tb-btn on" title="Gitter ein/aus">▦ Gitter</button>
+      <button id="btn-vis" class="tb-btn editor-only" title="Portal-Sichtbarkeit dieser Ebene">🔒 Ebene privat</button>
+      <button id="btn-ai" class="tb-btn editor-only" title="Prozeduralen KI-Entwurf vorschlagen — Proposal/Review, kein Auto-Apply">✦ KI-Entwurf</button>
+      <button id="btn-handout" class="tb-btn editor-only" title="Handout-Seite erzeugen (Studio-Bridge)">↗ Handout</button>
+      <div class="editor-only" style="width:1px; height:26px; background:var(--uwe-border);"></div>
+      <button id="btn-json" class="tb-btn editor-only" title="Als Atlas-JSON exportieren">↓ JSON</button>
+      <button id="btn-png" class="tb-btn" title="Ausschnitt als PNG">↓ PNG</button>
+      <button id="btn-clear" class="tb-btn editor-only" title="Karte leeren" style="border-color:var(--uwe-danger); color:var(--uwe-danger);">Leeren</button>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; min-height:0;">
+    <!-- ===================== LEFT SIDEBAR ===================== -->
+    <aside style="flex:none; width:212px; background:var(--uwe-sidebar-bg); color:var(--uwe-sidebar-fg); display:flex; flex-direction:column; overflow-y:auto; padding:12px 10px; gap:4px; border-right:1px solid rgba(0,0,0,0.3);">
+      <div class="editor-only" style="flex-direction:column; gap:4px; display:flex;">
+        <div class="grp-label">Werkzeuge</div>
+        <div id="tool-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+
+        <div class="grp-label" style="margin-top:10px;">Terrain-Pinsel</div>
+        <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px;"></div>
+
+        <div class="grp-label" style="margin-top:10px;">Objekte &amp; Bauten</div>
+        <div id="glyph-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:0 2px;"></div>
+      </div>
+
+      <div class="view-only" style="flex-direction:column; gap:6px; display:flex;">
+        <div class="grp-label">Legende</div>
+        <div id="legend-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+      </div>
+
+      <div class="editor-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+        <div>Links = malen/platzieren</div>
+        <div>Rechts = löschen</div>
+        <div>Ziehen (Ø Werkzeug) = schwenken</div>
+        <div>Scroll = zoomen</div>
+      </div>
+      <div class="view-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+        <div>Nur Ansicht — Spieler-Portal</div>
+        <div>Klick = Ebene wechseln / Wiki</div>
+        <div>Ziehen = schwenken · Scroll = zoomen</div>
+      </div>
+    </aside>
+
+    <!-- ===================== CANVAS STAGE ===================== -->
+    <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
+      <canvas id="atlas-canvas" style="width:100%; height:100%;"></canvas>
+
+      <div id="subbar" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:12px; padding:6px 12px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:10px; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:11.5px;">
+        <span id="subbar-content"></span>
+      </div>
+
+      <svg viewBox="0 0 80 80" width="60" height="60" style="position:absolute; top:14px; right:16px; opacity:.9; pointer-events:none;">
+        <circle cx="40" cy="40" r="36" fill="#f2e8c9" stroke="#1a1008" stroke-width="1.5" />
+        <polygon points="40,8 35,36 40,30 45,36" fill="#1a1008" />
+        <polygon points="40,72 35,44 40,50 45,44" fill="#8b1a10" />
+        <text x="40" y="6" text-anchor="middle" font-size="9" font-family="serif" fill="#1a1008" font-weight="bold">N</text>
+      </svg>
+      <div style="position:absolute; bottom:52px; right:16px; pointer-events:none; text-align:center;">
+        <div style="width:80px; height:8px; border:1px solid #1a1008; background:repeating-linear-gradient(to right,#1a1008 0 10px,#f2e8c9 10px 20px);"></div>
+        <div style="font-family:var(--serif); font-size:10px; color:#1a1008; margin-top:2px;">0 — 100 leagues</div>
+      </div>
+
+      <div id="sel-panel" style="position:absolute; top:14px; left:14px; display:none; width:210px; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; backdrop-filter:blur(10px); box-shadow:0 4px 14px rgba(0,0,0,.2);">
+        <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · <span id="sel-kind"></span></div>
+        <div id="sel-controls"></div>
+        <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
+      </div>
+
+      <div id="ai-review" style="position:absolute; top:52px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:10px; padding:9px 14px; background:var(--uwe-surface); border:1.5px solid var(--uwe-accent); border-radius:11px; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.22); font-size:12.5px;">
+        <span style="color:var(--uwe-accent);">✦</span>
+        <span id="ai-review-text"></span>
+        <button id="btn-ai-accept" class="tb-btn on">Übernehmen</button>
+        <button id="btn-ai-discard" class="tb-btn">Verwerfen</button>
+      </div>
+
+      <div id="toast" style="position:absolute; bottom:44px; left:50%; transform:translateX(-50%); display:none; padding:8px 14px; background:var(--uwe-fg); color:var(--uwe-on-accent); border-radius:9px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.25);"></div>
+
+      <div id="empty-state" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:8px; background:var(--uwe-bg); text-align:center; padding:40px;">
+        <span style="font-size:17px; color:var(--uwe-accent);">◆</span>
+        <div style="font-family:var(--serif); font-size:20px; max-width:34ch; color:var(--uwe-fg);">Für deine Rolle sind derzeit keine Inhalte sichtbar.</div>
+        <div style="font-size:13px; color:var(--uwe-fg-muted);">Wende dich an deinen Spielleiter.</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== STATUS BAR ===================== -->
+  <footer style="flex:none; display:flex; align-items:center; gap:0; height:30px; padding:0 14px; background:var(--uwe-panel); border-top:1px solid var(--uwe-border); font-size:11px; color:var(--uwe-fg-muted);">
+    <span id="status-tool" style="color:var(--uwe-accent); font-weight:700;">Terrain-Pinsel</span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Tile <b id="status-tile" style="color:var(--uwe-fg);">—</b></span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Welt <b id="status-world" style="color:var(--uwe-fg);">—</b></span>
+    <span style="margin:0 12px; opacity:.4;">|</span>
+    <span>Zoom <b id="status-zoom" style="color:var(--uwe-fg);">100%</b></span>
+    <span id="status-save" style="margin-left:auto; color:var(--uwe-fg-muted);">Bereit</span>
+  </footer>
+</div>
+
+<script type="module">
+import * as engine from "./atlas-engine.js";
+
+// ===========================================================================
+// Konstanten & Paletten
+// ===========================================================================
+const TILE = 32, COLS = 64, ROWS = 40;
+const WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+
+const TILE_FILL = { grassland: "#a9c47f", coast: "#9fc0d2", hills: "#c2a878", desert: "#dcc47c", forest: "#7a9463", mountains: "#b4a487", swamp: "#8a9b78", snow: "#dde6f0" };
+const BIOME_LABEL = { grassland: "Grasland", coast: "Wasser", hills: "Erde", desert: "Sand", forest: "Wald", mountains: "Gebirge", swamp: "Sumpf", snow: "Schnee" };
+const TERRAIN_ORDER = ["grassland", "coast", "hills", "desert", "forest", "mountains", "swamp", "snow"];
+const BIOME_POLY_FILL = { forest: "rgba(74,103,65,0.28)", mountains: "rgba(122,107,82,0.24)", hills: "rgba(154,136,96,0.20)", grassland: "rgba(164,196,130,0.24)", desert: "rgba(220,196,130,0.30)", swamp: "rgba(94,120,80,0.32)", coast: "rgba(168,196,212,0.38)", snow: "rgba(220,228,240,0.38)" };
+
+const preset = engine.resolveStylePreset("tolkien-ink");
+
+// Werkzeug-Definitionen (inkl. Curved Label als eigenes Tool, README §11).
+const TOOL_DEFS = [
+  ["select", "Auswahl", "S", "select", "Auswählen & verschieben"],
+  ["terrain", "Terrain-Pinsel", "G", "terrain", "Tiles malen (Gras/Wasser/Erde/Sand)"],
+  ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
+  ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
+  ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
+  ["path", "Fluss", "R", "path", "Fluss zeichnen"],
+  ["road", "Straße", "D", "road", "Straße zeichnen"],
+  ["label", "Label", "L", "label", "Gerades Textlabel setzen"],
+  ["curve", "Curved Label", "C", "curve", "Pfadgeführtes Label zeichnen"],
+  ["pin", "Pin", "I", "pin", "Wiki-Pin setzen"],
+  ["measure", "Messen", "M", "measure", "Distanz messen"],
+  ["eraser", "Löschen", "E", "eraser", "Element löschen"],
+];
+const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", r: "path", d: "road", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+
+function toolIcon(name) {
+  const p = {
+    select: "M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z",
+    terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
+    region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
+    path: "M4 20 Q8 6 14 12 Q19 17 20 4",
+    road: "M6 21 L10 3 M14 21 L18 3 M8 12 L16 12",
+    label: "M5 6 L19 6 M12 6 L12 19 M9 19 L15 19",
+    curve: "M3 15 Q9 4 21 9 M7 13 L7 16 M11 12 L11 15 M15 11 L15 14",
+    pin: "M12 21 C12 21 5 13 5 8 A7 7 0 0 1 19 8 C19 13 12 21 12 21 Z M12 8 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0",
+    eraser: "M4 15 L12 7 L19 14 L14 19 L8 19 Z M8 19 L20 19",
+    measure: "M3 8 L16 21 L21 16 L8 3 Z M8 8 L10 10 M11 11 L13 13 M14 14 L16 16",
+  };
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="' + (p[name] || "") + '"/></svg>';
+}
+function glyphSvg(g, stroke) {
+  return '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="' + (stroke || g.color) + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="' + g.pathData + '"/></svg>';
+}
+function levelLabel(lv) { return ({ globe: "Globus", continent: "Kontinent", landscape: "Landschaft", city: "Stadt" })[lv] || lv; }
+
+// ===========================================================================
+// Modus / Bridge-Opt-in
+// ===========================================================================
+const params = new URLSearchParams(location.search);
+const mode = params.get("mode") || "editor";
+const isView = () => mode === "view";
+const embedded = mode !== "view" && params.get("embed") === "1";
+
+// ===========================================================================
+// State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
+// ===========================================================================
+const state = {
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree",
+  showGrid: true, zoom: 1, panX: 0, panY: 0,
+  selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
+  toast: null, aiReview: null,
+};
+let doc = null;
+let drawingPoints = [];
+let measurePoints = [];
+let aiDraftFeatures = null;
+let labelRed = false;
+let keyCounter = 0;
+const nextKey = () => "ck-" + (++keyCounter);
+
+const el = (id) => document.getElementById(id);
+const root = el("atlas-root");
+const canvas = el("atlas-canvas");
+let dpr = 1, cssW = 0, cssH = 0, fitted = false;
+let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
+let last = { x: 0, y: 0 }, clickStart = null;
+let msgTimer = null, toastTimer = null, coordRaf = null, pendingCoord = null;
+
+function setState(patch) { Object.assign(state, patch); refreshChrome(); }
+
+// ===========================================================================
+// Persistenz (localStorage-Crash-Puffer) + Serialisierung
+// ===========================================================================
+const STORAGE_KEY = "uwe.atlas.singlefile.v2";
+
+// Portal/Studio liefern das Doc server-seitig gefiltert über ein separates
+// JSON-Script-Element mit id="atlas-doc". getAtlasForContext (packages/database)
+// hat dm_only zu diesem Zeitpunkt bereits entfernt.
+function readInjectedDoc() {
+  try {
+    const node = document.getElementById("atlas-doc");
+    const txt = node && node.textContent ? node.textContent.trim() : "";
+    if (txt) return JSON.parse(txt);
+  } catch (e) { console.warn("Atlas: injizierte Doc-Daten nicht lesbar —", e); }
+  return null;
+}
+function loadDoc() {
+  const injected = readInjectedDoc();
+  if (injected) return migrate(injected);
+  // View-Modus (Portal) darf NIE lokalen Editor-Puffer oder Demo-Inhalte zeigen —
+  // nur server-geliefertes, gefiltertes Doc. Ohne Injektion: leere Welt.
+  if (isView()) return migrate(emptyDoc());
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return migrate(JSON.parse(raw));
+  } catch (e) { console.warn("Atlas: gespeichertes Doc nicht lesbar —", e); }
+  return migrate(demoSeed());
+}
+function migrate(raw) {
+  try {
+    const d = engine.migrateDoc(raw);
+    d.features.forEach((f) => { if (!f._key) f._key = nextKey(); });
+    d.objects.forEach((o) => { if (!o._key) o._key = nextKey(); });
+    return d;
+  } catch (e) {
+    console.error("Atlas-Migration fehlgeschlagen, lade leere Welt —", e);
+    return emptyDoc();
+  }
+}
+function emptyDoc() {
+  const rootId = "node-root";
+  return {
+    schemaVersion: 2, worldSlug: "terra", map: { title: "Atlas", stylePreset: "tolkien-ink" },
+    rootNodeId: rootId, pageLinks: {},
+    nodes: [{ id: rootId, parentId: null, level: "continent", title: "Westland", parentFeatureId: null, visibility: "dm_only" }],
+    features: [], objects: [],
+    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells: {} },
+  };
+}
+function demoSeed() {
+  const rootId = "node-westland", cityId = "node-validori";
+  const cells = {};
+  for (let c = 6; c < 40; c++) for (let r = 6; r < 30; r++) {
+    const n = Math.sin(c * 0.5) + Math.cos(r * 0.6);
+    cells[c + "," + r] = n > 0.9 ? "forest" : (n < -1.1 ? "hills" : "grassland");
+  }
+  for (let r = 8; r < 32; r++) { const c = 44 + Math.round(Math.sin(r * 0.4) * 3); cells[c + "," + r] = "coast"; cells[(c + 1) + "," + r] = "coast"; }
+  for (let c = 46; c < 62; c++) for (let r = 6; r < 34; r++) cells[c + "," + r] = cells[c + "," + r] || "coast";
+  return {
+    worldSlug: "terra", map: { title: "Atlas", stylePreset: "tolkien-ink" }, rootNodeId: rootId,
+    pageLinks: { "pg-validori": "../locations/validori/" },
+    nodes: [
+      { id: rootId, parentId: null, level: "continent", title: "Westland", parentFeatureId: null, visibility: "dm_only" },
+      { id: cityId, parentId: rootId, level: "city", title: "Validori", parentFeatureId: "feat-ostmark", visibility: "dm_only" },
+    ],
+    features: [
+      { id: "feat-wald", nodeId: rootId, kind: "biome", geometry: { type: "Polygon", rings: [[[0.10, 0.18], [0.40, 0.14], [0.44, 0.46], [0.16, 0.56], [0.10, 0.18]]] }, style: { biomeKind: "forest", density: 1.4 }, layer: 10, visibility: "dm_only" },
+      { id: "feat-river", nodeId: rootId, kind: "river", geometry: { type: "Path", coordinates: [[0.30, 0.16], [0.36, 0.34], [0.44, 0.52], [0.50, 0.70]] }, style: { smooth: true }, layer: 30, visibility: "dm_only" },
+      { id: "feat-road", nodeId: rootId, kind: "road", geometry: { type: "Path", coordinates: [[0.18, 0.44], [0.48, 0.40], [0.66, 0.56]] }, layer: 40, visibility: "dm_only" },
+      { id: "feat-ostmark", nodeId: rootId, kind: "region", geometry: { type: "Polygon", rings: [[[0.52, 0.20], [0.82, 0.24], [0.80, 0.60], [0.50, 0.56], [0.52, 0.20]]] }, labelText: "Ostmark", labelColor: "black", childNodeId: cityId, layer: 20, visibility: "dm_only" },
+      { id: "feat-label", nodeId: rootId, kind: "label", geometry: { type: "LabelAnchor", coordinates: [0.26, 0.30], text: "Grünwald", pathCoordinates: [[0.12, 0.30], [0.24, 0.24], [0.40, 0.28]] }, labelText: "Grünwald", labelColor: "red", layer: 60, visibility: "dm_only" },
+      { id: "feat-city", nodeId: cityId, kind: "biome", geometry: { type: "Polygon", rings: [[[0.3, 0.3], [0.7, 0.3], [0.7, 0.7], [0.3, 0.7], [0.3, 0.3]]] }, style: { biomeKind: "grassland", density: 1 }, layer: 10, visibility: "dm_only" },
+    ],
+    objects: [
+      { id: "obj-1", nodeId: rootId, paletteItemId: "castle", x: 0.64, y: 0.40, scale: 1.1, rotation: 0, layer: 50, visibility: "dm_only" },
+      { id: "obj-2", nodeId: rootId, paletteItemId: "city", x: 0.50, y: 0.66, scale: 1, rotation: 0, layer: 50, linkedPageId: "pg-validori", visibility: "dm_only" },
+      { id: "obj-3", nodeId: rootId, paletteItemId: "tree", x: 0.22, y: 0.30, scale: 0.9, rotation: 0, layer: 50, visibility: "dm_only" },
+      { id: "obj-4", nodeId: rootId, paletteItemId: "mountain", x: 0.30, y: 0.48, scale: 1, rotation: 0, layer: 50, visibility: "dm_only" },
+    ],
+    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells },
+  };
+}
+function serialize() { return engine.serializeDoc(doc, { preset }); }
+function persist(msg) {
+  try {
+    const snapshot = serialize();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    if (embedded) bridgePost({ type: "save", doc: snapshot });
+    setState({ dirty: false, saveStatus: msg || "Gespeichert ✓" });
+    clearTimeout(msgTimer); msgTimer = setTimeout(() => setState({ saveStatus: "Bereit" }), 2200);
+  } catch (e) {
+    console.error("Atlas-Autosave fehlgeschlagen —", e);
+    setState({ saveStatus: "Speicherfehler" });
+  }
+}
+function markDirty() { if (!state.dirty) setState({ dirty: true, saveStatus: "Ungespeichert" }); }
+
+// ===========================================================================
+// Studio-Bridge (M3) — postMessage an/vom Host
+// ===========================================================================
+function bridgePost(msg) { try { window.parent.postMessage({ source: "uwe-atlas", ...msg }, "*"); } catch (_) {} }
+function onBridgeMessage(e) {
+  const d = e && e.data; if (!d || d.source !== "uwe-studio") return;
+  if (d.type === "saved") {
+    setState({ dirty: false, saveStatus: "In UWE-DB gespeichert ✓" });
+    clearTimeout(msgTimer); msgTimer = setTimeout(() => setState({ saveStatus: "Bereit" }), 2400);
+  } else if (d.type === "ai-draft-result") { receiveAiDraft(d.features || []); }
+  else if (d.type === "load" && d.doc) {
+    try { doc = migrate(d.doc); setState({ nodeId: doc.rootNodeId, selectedKey: null }); draw(); }
+    catch (err) { console.error("Atlas: Doc-Load vom Host fehlgeschlagen —", err); }
+  }
+}
+function flash(msg) { setState({ toast: msg }); clearTimeout(toastTimer); toastTimer = setTimeout(() => setState({ toast: null }), 2400); }
+
+// ---- KI-Entwurf: Proposal -> Review -> (manuell) übernehmen (kein Auto-Apply) ----
+function requestAiDraft() {
+  const seed = (Date.now() & 0x7fffffff) || 1;
+  if (embedded) { bridgePost({ type: "ai-draft-request", seed }); flash("KI-Entwurf über RTX-Host angefragt…"); return; }
+  receiveAiDraft(engine.proceduralDraft(seed).features);
+}
+function receiveAiDraft(features) {
+  aiDraftFeatures = (features || []).map((f) => ({ ...f, _key: nextKey() }));
+  setState({ aiReview: { count: aiDraftFeatures.length } });
+  draw();
+}
+function acceptAiDraft() {
+  if (aiDraftFeatures) {
+    for (const f of aiDraftFeatures) {
+      doc.features.push({ ...f, id: nextKey(), nodeId: state.nodeId, layer: f.kind === "biome" ? 10 : 30, visibility: "dm_only" });
+    }
+    markDirty();
+  }
+  aiDraftFeatures = null; setState({ aiReview: null }); draw();
+}
+function discardAiDraft() { aiDraftFeatures = null; setState({ aiReview: null }); draw(); }
+function requestHandout() {
+  if (embedded) { bridgePost({ type: "handout-request", nodeId: node().id, title: (node().title || "Atlas") + " — Handout" }); flash("Handout-Erstellung angefragt…"); }
+  else flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
+}
+
+// ===========================================================================
+// Hierarchie / Node-Helfer (Portal-Filter server-äquivalent im Client gespiegelt)
+// ===========================================================================
+function node() { return doc.nodes.find((n) => n.id === state.nodeId) || doc.nodes[0]; }
+function parentChain() {
+  const chain = []; let cur = node();
+  while (cur && cur.parentId) { const p = doc.nodes.find((n) => n.id === cur.parentId); if (!p) break; chain.unshift(p); cur = p; }
+  return chain;
+}
+function nodeFeatures() {
+  if (!doc) return [];
+  const list = doc.features.filter((f) => f.nodeId === state.nodeId);
+  return isView() ? list.filter((f) => f.visibility === "player_visible") : list;
+}
+function nodeObjects() {
+  if (!doc) return [];
+  const list = doc.objects.filter((o) => o.nodeId === state.nodeId);
+  return isView() ? list.filter((o) => o.visibility === "player_visible") : list;
+}
+function parentSilhouette() {
+  const n = node(); if (!n || !n.parentFeatureId) return null;
+  const f = doc.features.find((x) => x.id === n.parentFeatureId);
+  if (!f || !f.geometry || f.geometry.type !== "Polygon") return null;
+  // Visibility parity (README §9): the parent feature must itself be
+  // player_visible before a player may see its shape — never leak a dm_only
+  // region's silhouette in view mode (server-side filter is authoritative in M2).
+  if (isView() && f.visibility !== "player_visible") return null;
+  return f.geometry.rings;
+}
+function navTo(id) { setState({ nodeId: id, selectedKey: null, panX: 0, panY: 0, zoom: 1 }); drawingPoints = []; requestAnimationFrame(draw); }
+
+// ===========================================================================
+// Canvas-Setup & Koordinaten
+// ===========================================================================
+function resize() {
+  const c = canvas; if (!c) return;
+  const r = c.getBoundingClientRect(); dpr = window.devicePixelRatio || 1;
+  c.width = Math.max(320, r.width) * dpr; c.height = Math.max(240, r.height) * dpr;
+  cssW = r.width; cssH = r.height;
+  if (!fitted && r.width > 0) {
+    const z = Math.min(r.width / WORLD_W, r.height / WORLD_H) * 0.92;
+    state.zoom = z; state.panX = (r.width - WORLD_W * z) / 2; state.panY = (r.height - WORLD_H * z) / 2;
+    fitted = true; refreshChrome();
+  }
+  draw();
+}
+function w2c(wx, wy) { return [wx * state.zoom + state.panX, wy * state.zoom + state.panY]; }
+function c2w(cx, cy) { return [(cx - state.panX) / state.zoom, (cy - state.panY) / state.zoom]; }
+function n2w(nx, ny) { return [nx * WORLD_W, ny * WORLD_H]; }
+function n2c(nx, ny) { const [wx, wy] = n2w(nx, ny); return w2c(wx, wy); }
+function c2n(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.max(0, Math.min(1, wx / WORLD_W)), Math.max(0, Math.min(1, wy / WORLD_H))]; }
+function tileAt(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / TILE), Math.floor(wy / TILE)]; }
+
+// ===========================================================================
+// Rendering
+// ===========================================================================
+function draw() {
+  const c = canvas; if (!c || !doc) return;
+  const ctx = c.getContext("2d"); if (!ctx) return;
+  const W = cssW, H = cssH, pr = preset, z = state.zoom;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.fillStyle = "#d8ccae"; ctx.fillRect(0, 0, W, H);
+  const [x0, y0] = w2c(0, 0); const [x1, y1] = w2c(WORLD_W, WORLD_H);
+  ctx.fillStyle = pr.colors.parchment; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+
+  // Tile-Layer — fließende, abgerundete Verschmelzung (Canvas-of-Kings-Stil).
+  const tl = doc.tileLayer;
+  engine.paintTerrainBlobs(ctx, {
+    cols: COLS, rows: ROWS,
+    getCell: (cc, rr) => tl.cells[cc + "," + rr],
+    tileRect: (cc, rr) => { const [px, py] = w2c(cc * TILE, rr * TILE); const ts = TILE * z; return { x: px, y: py, w: ts, h: ts }; },
+    fillFor: (b) => TILE_FILL[b] || "#ccc",
+    radiusRatio: 0.4,
+  });
+
+  const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * z, W / 2, H / 2, W * 0.75);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(80,50,20,0.16)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  const sil = parentSilhouette();
+  if (sil) {
+    ctx.save(); ctx.beginPath();
+    for (const ring of sil) { if (!ring.length) continue; const [sx, sy] = n2c(ring[0][0], ring[0][1]); ctx.moveTo(sx, sy); for (let i = 1; i < ring.length; i++) { const [px, py] = n2c(ring[i][0], ring[i][1]); ctx.lineTo(px, py); } ctx.closePath(); }
+    ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2.5 * z; ctx.globalAlpha = 0.15; ctx.setLineDash([8, 5]); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 0.06; ctx.fillStyle = pr.colors.ink; ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
+  }
+
+  if (state.showGrid) drawGrid(ctx);
+
+  ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2 * z; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+
+  const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
+  for (const f of feats) drawFeature(ctx, f);
+  for (const o of nodeObjects()) drawObject(ctx, o);
+
+  if (aiDraftFeatures && aiDraftFeatures.length) {
+    ctx.save(); ctx.globalAlpha = 0.5;
+    for (const f of aiDraftFeatures) drawFeature(ctx, f);
+    ctx.restore();
+  }
+  drawPending(ctx);
+  drawMeasure(ctx);
+}
+
+function drawGrid(ctx) {
+  const [x0, y0] = w2c(0, 0); const ts = TILE * state.zoom;
+  ctx.save(); ctx.strokeStyle = "rgba(80,50,20,0.13)"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let c = 0; c <= COLS; c++) { const x = Math.round(x0 + c * ts); const [, yA] = w2c(0, 0); const [, yB] = w2c(0, WORLD_H); ctx.moveTo(x, yA); ctx.lineTo(x, yB); }
+  for (let r = 0; r <= ROWS; r++) { const y = Math.round(y0 + r * ts); const [xA] = w2c(0, 0); const [xB] = w2c(WORLD_W, 0); ctx.moveTo(xA, y); ctx.lineTo(xB, y); }
+  ctx.stroke(); ctx.restore();
+}
+
+function drawFeature(ctx, f) {
+  const pr = preset, z = state.zoom, sel = f._key === state.selectedKey, geo = f.geometry;
+  ctx.save();
+  if (geo.type === "Polygon") {
+    const rings = geo.rings || []; ctx.beginPath();
+    for (const ring of rings) { if (!ring.length) continue; const [sx, sy] = n2c(ring[0][0], ring[0][1]); ctx.moveTo(sx, sy); for (let i = 1; i < ring.length; i++) { const [px, py] = n2c(ring[i][0], ring[i][1]); ctx.lineTo(px, py); } ctx.closePath(); }
+    if (f.kind === "biome") {
+      const bk = (f.style && f.style.biomeKind) || "forest";
+      ctx.fillStyle = BIOME_POLY_FILL[bk] || BIOME_POLY_FILL.forest; ctx.fill();
+      ctx.strokeStyle = sel ? "#c2622b" : "rgba(60,45,25,0.5)"; ctx.lineWidth = (sel ? 2.5 : 1.5) * z; ctx.stroke();
+      scatterInPolygon(ctx, rings, bk, (f.style && f.style.density) || 1, f._key);
+    } else {
+      ctx.fillStyle = f.labelColor === "red" ? "rgba(139,26,16,0.16)" : "rgba(26,16,8,0.10)"; ctx.fill();
+      ctx.strokeStyle = sel ? "#c2622b" : pr.colors.ink; ctx.lineWidth = (sel ? 2.5 : 1.5) * z; ctx.stroke();
+      if (f.labelText && rings[0]) { const ctd = engine.centroid(rings[0]); const [lx, ly] = n2c(ctd[0], ctd[1]);
+        ctx.font = Math.round(15 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(f.labelText.toUpperCase(), lx, ly); }
+      if (f.childNodeId && rings[0]) { const ctd = engine.centroid(rings[0]); const [bx, by] = n2c(ctd[0], ctd[1]);
+        ctx.beginPath(); ctx.arc(bx, by + 18 * z, 9 * z, 0, Math.PI * 2); ctx.fillStyle = "#c2622b"; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "bold " + Math.round(12 * z) + "px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("↓", bx, by + 18 * z); }
+    }
+  } else if (geo.type === "Path") {
+    let coords = geo.coordinates || [];
+    if (f.style && f.style.smooth && coords.length >= 3) coords = engine.smoothPath(coords, { segments: 12 });
+    if (coords.length >= 2) {
+      if (f.kind === "road") {
+        ctx.beginPath(); const [sx, sy] = n2c(coords[0][0], coords[0][1]); ctx.moveTo(sx, sy);
+        for (let i = 1; i < coords.length; i++) { const [px, py] = n2c(coords[i][0], coords[i][1]); ctx.lineTo(px, py); }
+        ctx.strokeStyle = sel ? "#c2622b" : pr.colors.road; ctx.lineWidth = (sel ? 2.6 : 2) * z; ctx.setLineDash([8 * z, 4 * z]); ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        const maxW = (sel ? 2.8 : 2.2) * z, minW = (sel ? 1.2 : 0.8) * z;
+        ctx.strokeStyle = sel ? "#c2622b" : pr.colors.inkAccent;
+        for (let i = 0; i < coords.length - 1; i++) {
+          const t = coords.length > 2 ? i / (coords.length - 2) : 0; const w = maxW * (1 - t * 0.65) + minW * (t * 0.65);
+          const [sx, sy] = n2c(coords[i][0], coords[i][1]); const [ex, ey] = n2c(coords[i + 1][0], coords[i + 1][1]);
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineWidth = w; ctx.stroke();
+        }
+      }
+    }
+  } else if (geo.type === "Point" || geo.type === "LabelAnchor") {
+    const coord = geo.coordinates; if (!coord) { ctx.restore(); return; }
+    const [px, py] = n2c(coord[0], coord[1]);
+    if (geo.type === "LabelAnchor") {
+      const text = (f.labelText || geo.text || "Label"), ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+      if (geo.pathCoordinates && geo.pathCoordinates.length >= 2) {
+        ctx.font = "bold " + Math.round(14 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const pl = engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.012 * (14 / z), geo.pathReversed === true);
+        for (const p of pl) { const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation); ctx.fillText(p.char, 0, 0); ctx.restore(); }
+        if (sel) {
+          ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.2 * z; ctx.setLineDash([4, 3]); ctx.beginPath();
+          const [fx, fy] = n2c(geo.pathCoordinates[0][0], geo.pathCoordinates[0][1]); ctx.moveTo(fx, fy);
+          for (let i = 1; i < geo.pathCoordinates.length; i++) { const [lx, ly] = n2c(geo.pathCoordinates[i][0], geo.pathCoordinates[i][1]); ctx.lineTo(lx, ly); } ctx.stroke(); ctx.setLineDash([]);
+        }
+      } else {
+        ctx.font = Math.round(15 * z) + "px " + pr.typography.labelCity; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(text, px, py);
+        if (sel) { const tw = ctx.measureText(text).width; ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.5; ctx.strokeRect(px - tw / 2 - 3, py - 15 * z, tw + 6, 18 * z); }
+      }
+    } else {
+      ctx.beginPath(); ctx.arc(px, py, 6 * z, 0, Math.PI * 2); ctx.fillStyle = sel ? "#c2622b" : pr.colors.inkAccent; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = "#fff"; ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawObject(ctx, o) {
+  const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
+  const z = state.zoom, sel = o._key === state.selectedKey;
+  const [ox, oy] = n2c(o.x, o.y); const size = 26 * z * o.scale;
+  ctx.save(); ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
+  if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6); }
+  const s = size / 24; ctx.scale(s, s); ctx.translate(-12, -12);
+  ctx.strokeStyle = g.color || preset.colors.ink; ctx.lineWidth = 1.5 / s; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath(); engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+}
+
+function drawPending(ctx) {
+  if (!drawingPoints.length) return;
+  ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.5 * state.zoom;
+  ctx.setLineDash(state.tool === "road" ? [8, 4] : [4, 4]); ctx.beginPath();
+  const [sx, sy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); ctx.moveTo(sx, sy);
+  for (let i = 1; i < drawingPoints.length; i++) { const [px, py] = n2c(drawingPoints[i][0], drawingPoints[i][1]); ctx.lineTo(px, py); }
+  ctx.stroke(); ctx.setLineDash([]);
+  for (const [nx, ny] of drawingPoints) { const [px, py] = n2c(nx, ny); ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fillStyle = "#c2622b"; ctx.fill(); }
+  if ((state.tool === "region" || state.tool === "biome") && drawingPoints.length >= 3) {
+    const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]);
+    ctx.beginPath(); ctx.arc(fx, fy, 8, 0, Math.PI * 2); ctx.strokeStyle = "#2f6f63"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawMeasure(ctx) {
+  if (!measurePoints.length) return;
+  ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.fillStyle = "#c2622b"; ctx.lineWidth = 2 * state.zoom;
+  for (const [nx, ny] of measurePoints) { const [mx, my] = n2c(nx, ny); ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill(); }
+  if (measurePoints.length === 2) {
+    const [ax, ay] = n2c(measurePoints[0][0], measurePoints[0][1]);
+    const [bx, by] = n2c(measurePoints[1][0], measurePoints[1][1]);
+    ctx.setLineDash([6, 3]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+    const dx = measurePoints[1][0] - measurePoints[0][0], dy = measurePoints[1][1] - measurePoints[0][1];
+    const dist = Math.sqrt(dx * dx + dy * dy) * 100; const label = dist.toFixed(1) + " leagues";
+    const mx = (ax + bx) / 2, my = (ay + by) / 2; ctx.font = "bold 13px " + preset.typography.labelCity;
+    ctx.textAlign = "center"; const tw = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(mx - tw / 2 - 5, my - 20, tw + 10, 18);
+    ctx.fillStyle = "#8b1a10"; ctx.fillText(label, mx, my - 7);
+  }
+  ctx.restore();
+}
+
+// Streuung: reale @uwe/atlas-API erwartet ein Polygon-Objekt + numerischen Seed
+// (hashStringToSeed brückt den String-_key). Rückgabe trägt glyphKey.
+function scatterInPolygon(ctx, rings, bk, density, keySeed) {
+  const seed = typeof keySeed === "number" ? keySeed : engine.hashStringToSeed(String(keySeed));
+  const points = engine.scatterGlyphsInPolygon({ type: "Polygon", rings }, bk, density * 0.6, seed);
+  const z = state.zoom;
+  ctx.save(); ctx.globalAlpha = 0.7; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  for (const p of points) {
+    const g = engine.getGlyphByKey(p.glyphKey); if (!g) continue;
+    const [px, py] = n2c(p.x, p.y); const sz = 13 * z * p.scale;
+    ctx.save(); ctx.translate(px, py); ctx.rotate((p.rotation * Math.PI) / 180);
+    const s = sz / 24; ctx.scale(s, s); ctx.translate(-12, -12);
+    ctx.strokeStyle = g.color; ctx.lineWidth = 1.2 / s;
+    ctx.beginPath(); engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ===========================================================================
+// Pointer / Interaktion
+// ===========================================================================
+function posOf(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+
+function onPointerDown(e) {
+  const [cx, cy] = posOf(e); canvas.setPointerCapture(e.pointerId);
+  last = { x: cx, y: cy }; clickStart = { x: cx, y: cy, t: Date.now() };
+  if (isView()) { panning = true; return; }
+
+  const [nx, ny] = c2n(cx, cy); const tool = state.tool;
+  const rightOrMiddle = e.button === 1 || e.button === 2;
+  if (e.button === 1) { panning = true; return; }
+
+  if (tool === "terrain") {
+    if (e.button === 2) { erasingTiles = true; paintTiles(cx, cy, true); }
+    else { paintingTiles = true; paintTiles(cx, cy, false); }
+    return;
+  }
+  if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
+  if (tool === "select") {
+    const hit = hitTest(nx, ny);
+    if (hit && hit === state.selectedKey) moving = true;
+    else if (hit) setState({ selectedKey: hit });
+    else { setState({ selectedKey: null }); panning = true; }
+    return;
+  }
+  if (tool === "eraser") { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); return; }
+  if (rightOrMiddle) { panning = true; return; }
+
+  if (tool === "region" || tool === "biome") {
+    if (drawingPoints.length >= 3) { const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); if (Math.hypot(cx - fx, cy - fy) < 10) { finishPolygon(); return; } }
+    drawingPoints.push([nx, ny]); draw(); return;
+  }
+  if (tool === "path" || tool === "road" || tool === "curve") { drawingPoints.push([nx, ny]); draw(); return; }
+  if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel([nx, ny], t, null); return; }
+  if (tool === "pin") { addPin([nx, ny]); return; }
+  if (tool === "measure") { measurePoints = measurePoints.length >= 2 ? [[nx, ny]] : [...measurePoints, [nx, ny]]; draw(); return; }
+}
+
+function onPointerMove(e) {
+  const [cx, cy] = posOf(e); const [nx, ny] = c2n(cx, cy); const [tc, tr] = tileAt(cx, cy);
+  pendingCoord = { tile: tc + ", " + tr, world: nx.toFixed(3) + ", " + ny.toFixed(3) };
+  if (!coordRaf) coordRaf = requestAnimationFrame(() => { coordRaf = null; el("status-tile").textContent = pendingCoord.tile; el("status-world").textContent = pendingCoord.world; });
+
+  if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
+  if (paintingTiles) { paintTiles(cx, cy, false); return; }
+  if (erasingTiles) { paintTiles(cx, cy, true); return; }
+  if (moving && state.selectedKey) { const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return; }
+  last = { x: cx, y: cy };
+}
+
+function onPointerUp(e) {
+  try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  if (isView()) {
+    const [cx, cy] = posOf(e);
+    const movedDist = clickStart ? Math.hypot(cx - clickStart.x, cy - clickStart.y) : 99;
+    if (movedDist < 6 && Date.now() - (clickStart ? clickStart.t : 0) < 400) {
+      const [nx, ny] = c2n(cx, cy); const hit = hitTestEntity(nx, ny);
+      if (hit) handleViewClick(hit);
+    }
+    panning = false; return;
+  }
+  if (paintingTiles || erasingTiles) markDirty();
+  panning = moving = paintingTiles = erasingTiles = false;
+}
+function handleViewClick(entity) {
+  if (entity.childNodeId) { navTo(entity.childNodeId); return; }
+  if (entity.linkedPageId) { flash("↗ Wiki-Verknüpfung: " + entity.linkedPageId); }
+}
+function onWheel(e) {
+  e.preventDefault(); const [cx, cy] = posOf(e); const f = e.deltaY < 0 ? 1.1 : 0.9;
+  const nz = Math.max(0.25, Math.min(8, state.zoom * f));
+  const panX = cx - (cx - state.panX) * (nz / state.zoom); const panY = cy - (cy - state.panY) * (nz / state.zoom);
+  setState({ zoom: nz, panX, panY }); requestAnimationFrame(draw);
+}
+function onDblClick() {
+  if (state.tool === "region" || state.tool === "biome") finishPolygon();
+  else if (state.tool === "path" || state.tool === "road") finishPath();
+  else if (state.tool === "curve") finishCurve();
+}
+
+// ---- Tile-Painting ----
+function paintTiles(cx, cy, erase) {
+  const [tc, tr] = tileAt(cx, cy); const rad = [0, 1, 2][state.brushSize];
+  const cells = doc.tileLayer.cells; let changed = false;
+  for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
+    if (dc * dc + dr * dr > rad * rad + 0.5) continue;
+    const c = tc + dc, r = tr + dr; if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue; const k = c + "," + r;
+    if (erase) { if (cells[k]) { delete cells[k]; changed = true; } }
+    else if (cells[k] !== state.brush) { cells[k] = state.brush; changed = true; }
+  }
+  if (changed) draw();
+}
+
+// ---- Objekte / Features mutieren ----
+function placeStamp(nx, ny) {
+  doc.objects.push({ id: nextKey(), _key: nextKey(), nodeId: state.nodeId, paletteItemId: state.glyphKey, x: nx, y: ny, scale: 1, rotation: 0, layer: 50, visibility: "dm_only" });
+  markDirty(); draw();
+}
+function addPin(pt) {
+  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" };
+  doc.features.push(f); setState({ selectedKey: f._key }); markDirty(); draw();
+}
+function addLabel(pt, text, path) {
+  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" };
+  doc.features.push(f); setState({ selectedKey: f._key }); markDirty(); draw();
+}
+function finishPolygon() {
+  if (drawingPoints.length < 3) { drawingPoints = []; draw(); return; }
+  const isBiome = state.tool === "biome";
+  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isBiome ? "biome" : "region", geometry: { type: "Polygon", rings: [[...drawingPoints]] }, style: isBiome ? { biomeKind: state.brush, density: 1 } : undefined, labelColor: "black", layer: isBiome ? 10 : 20, visibility: "dm_only" };
+  doc.features.push(f); drawingPoints = []; setState({ selectedKey: f._key }); markDirty(); draw();
+}
+function finishPath() {
+  if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
+  const isRoad = state.tool === "road";
+  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style: isRoad ? undefined : { smooth: true }, layer: isRoad ? 40 : 30, visibility: "dm_only" };
+  doc.features.push(f); drawingPoints = []; setState({ selectedKey: f._key }); markDirty(); draw();
+}
+function finishCurve() {
+  if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
+  const path = [...drawingPoints];
+  const text = prompt("Curved-Label-Text:");
+  drawingPoints = [];
+  if (!text) { draw(); return; }
+  const mid = path[Math.floor(path.length / 2)];
+  addLabel(mid, text, path);
+}
+
+function moveSelected(dx, dy) {
+  const k = state.selectedKey;
+  const o = doc.objects.find((o) => o._key === k); if (o) { o.x = Math.max(0, Math.min(1, o.x + dx)); o.y = Math.max(0, Math.min(1, o.y + dy)); markDirty(); draw(); return; }
+  const f = doc.features.find((f) => f._key === k); if (f) { f.geometry = engine.translateGeometry(f.geometry, dx, dy); markDirty(); draw(); }
+}
+function eraseKey(k) {
+  doc.features = doc.features.filter((f) => f._key !== k); doc.objects = doc.objects.filter((o) => o._key !== k);
+  if (state.selectedKey === k) setState({ selectedKey: null }); markDirty(); draw();
+}
+function eraseAt(nx, ny) { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); }
+
+function hitTest(wx, wy) {
+  const objs = nodeObjects(), feats = nodeFeatures();
+  const thr = 14 / (state.zoom * Math.max(WORLD_W, WORLD_H));
+  for (let i = objs.length - 1; i >= 0; i--) { const o = objs[i]; if (Math.hypot(o.x - wx, o.y - wy) < thr * 2) return o._key; }
+  for (let i = feats.length - 1; i >= 0; i--) { const f = feats[i], g = f.geometry; if (g.type === "Point" || g.type === "LabelAnchor") { const c = g.coordinates; if (c && Math.hypot(c[0] - wx, c[1] - wy) < thr * 2.4) return f._key; } }
+  for (let i = feats.length - 1; i >= 0; i--) {
+    const f = feats[i], g = f.geometry;
+    if (g.type === "Polygon") { for (const ring of g.rings || []) if (engine.pointInPolygon([wx, wy], ring)) return f._key; }
+    else if (g.type === "Path") { const c = g.coordinates || []; for (let k = 0; k < c.length - 1; k++) if (engine.distToSegment([wx, wy], c[k], c[k + 1]) < thr) return f._key; }
+  }
+  return null;
+}
+function hitTestEntity(wx, wy) { const key = hitTest(wx, wy); if (!key) return null; return doc.objects.find((o) => o._key === key) || doc.features.find((f) => f._key === key) || null; }
+
+// ===========================================================================
+// Keyboard
+// ===========================================================================
+function onKeyDown(e) {
+  if (isView()) return;
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+  if (e.key === "Escape") { drawingPoints = []; measurePoints = []; setState({ selectedKey: null }); draw(); return; }
+  if (e.key === "Delete" || e.key === "Backspace") { if (state.selectedKey) { e.preventDefault(); eraseKey(state.selectedKey); } return; }
+  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road") finishPath(); else if (state.tool === "region" || state.tool === "biome") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
+  const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
+}
+
+// ===========================================================================
+// Export
+// ===========================================================================
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(serialize(), null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url;
+  a.download = "atlas-" + (node().title || "karte").toLowerCase().replace(/\s+/g, "-") + ".json"; a.click(); URL.revokeObjectURL(url);
+}
+function exportPNG() {
+  const c = canvas; const off = document.createElement("canvas"); off.width = c.width; off.height = c.height;
+  const octx = off.getContext("2d"); octx.drawImage(c, 0, 0);
+  off.toBlob((blob) => { if (!blob) return; const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "atlas-" + (node().title || "karte").toLowerCase().replace(/\s+/g, "-") + ".png"; a.click(); URL.revokeObjectURL(url); }, "image/png");
+}
+function clearAll() {
+  if (!confirm("Aktuelle Ebene leeren? Tiles, Features und Objekte dieser Ebene werden entfernt. (DB-Sync separat)")) return;
+  doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
+  doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
+  if (state.nodeId === doc.rootNodeId) doc.tileLayer.cells = {};
+  drawingPoints = []; setState({ selectedKey: null }); markDirty(); draw();
+}
+
+// ===========================================================================
+// Tool-Auswahl
+// ===========================================================================
+function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
+function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
+function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k }); }
+function toggleNodeVis() {
+  const n = node(); n.visibility = n.visibility === "player_visible" ? "dm_only" : "player_visible"; markDirty();
+  if (embedded) bridgePost({ type: "visibility", scope: "node", nodeId: n.id, visibility: n.visibility });
+  refreshChrome();
+}
+
+// ===========================================================================
+// Chrome (direkte DOM-Updates statt reaktivem Template)
+// ===========================================================================
+const toolButtons = new Map();   // tool -> button
+const swatchButtons = new Map(); // biome -> button
+const glyphButtons = new Map();  // glyphKey -> button
+
+function buildSidebar() {
+  const toolList = el("tool-list");
+  for (const [tool, label, key, icon, title] of TOOL_DEFS) {
+    const b = document.createElement("button");
+    b.className = "tool-btn"; b.title = title;
+    b.innerHTML = '<span class="ico">' + toolIcon(icon) + "</span><span>" + label + '</span><span class="k">' + key + "</span>";
+    b.addEventListener("click", () => pickTool(tool));
+    toolList.appendChild(b); toolButtons.set(tool, b);
+  }
+  const swatches = el("terrain-swatches");
+  for (const b of TERRAIN_ORDER) {
+    const btn = document.createElement("button");
+    btn.className = "swatch-btn"; btn.title = BIOME_LABEL[b];
+    btn.innerHTML = '<span class="chip" style="background:' + TILE_FILL[b] + '"></span>' + BIOME_LABEL[b];
+    btn.addEventListener("click", () => pickTerrain(b));
+    swatches.appendChild(btn); swatchButtons.set(b, btn);
+  }
+  const grid = el("glyph-grid");
+  for (const g of engine.BUILTIN_GLYPHS) {
+    const btn = document.createElement("button");
+    btn.className = "glyph-btn"; btn.title = g.name;
+    btn.innerHTML = '<span class="ico">' + glyphSvg(g) + "</span>";
+    btn.addEventListener("click", () => pickGlyph(g.key));
+    grid.appendChild(btn); glyphButtons.set(g.key, btn);
+  }
+}
+
+function refreshChrome() {
+  const st = state, view = isView(), n = doc ? node() : null;
+
+  // Breadcrumb
+  const bc = el("breadcrumb"); bc.innerHTML = "";
+  if (doc) {
+    for (const item of parentChain()) {
+      const btn = document.createElement("button");
+      btn.style.cssText = "background:none;border:0;padding:2px 4px;font-size:12px;color:var(--uwe-accent);";
+      btn.textContent = levelLabel(item.level) + ": " + item.title; btn.title = "Zu dieser Ebene";
+      btn.addEventListener("click", () => navTo(item.id)); bc.appendChild(btn);
+      const sep = document.createElement("span"); sep.style.cssText = "color:var(--uwe-fg-subtle);font-size:11px;"; sep.textContent = "›"; bc.appendChild(sep);
+    }
+    const title = document.createElement("span"); title.style.cssText = "font-family:var(--serif);font-size:15px;font-weight:600;"; title.textContent = n ? n.title : "—"; bc.appendChild(title);
+    const lv = document.createElement("span"); lv.style.cssText = "font-size:10px;color:var(--uwe-fg-subtle);"; lv.textContent = n ? "· " + levelLabel(n.level) : ""; bc.appendChild(lv);
+  }
+
+  // Brush size seg
+  el("brush-s").classList.toggle("on", st.brushSize === 0);
+  el("brush-m").classList.toggle("on", st.brushSize === 1);
+  el("brush-l").classList.toggle("on", st.brushSize === 2);
+  // Grid / visibility toggles
+  el("btn-grid").classList.toggle("on", st.showGrid);
+  const visBtn = el("btn-vis"), visOn = !!(n && n.visibility === "player_visible");
+  visBtn.classList.toggle("on", visOn); visBtn.textContent = visOn ? "🌐 Ebene sichtbar" : "🔒 Ebene privat";
+  el("btn-png").textContent = view ? "↓ Karte speichern" : "↓ PNG";
+
+  // Tool / swatch / glyph active state
+  for (const [tool, b] of toolButtons) b.classList.toggle("active", st.tool === tool);
+  for (const [biome, b] of swatchButtons) b.classList.toggle("on", st.tool === "terrain" && st.brush === biome);
+  for (const [key, b] of glyphButtons) b.classList.toggle("on", st.tool === "stamp" && st.glyphKey === key);
+
+  // Sub-bar
+  const sub = el("subbar"), subC = el("subbar-content");
+  let subHtml = "", subShow = false;
+  if (!view) {
+    if (st.tool === "terrain" || st.tool === "biome") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">' + (st.tool === "biome" ? "Biom-Fläche" : "Terrain") + ":</b> " + BIOME_LABEL[st.brush] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize]; }
+    else if (st.tool === "stamp") { subShow = true; const g = engine.getGlyphByKey(st.glyphKey); subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + (g ? g.name : st.glyphKey) + " — Linksklick platzieren, Rechtsklick löschen"; }
+    else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
+    else if (st.tool === "region" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "label") { subShow = true; subHtml = 'Klick auf die Karte für Label-Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
+    else if (st.tool === "curve") { subShow = true; subHtml = 'Pfad klicken · Doppelklick/Enter → Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
+  }
+  subC.innerHTML = subHtml; sub.style.display = subShow ? "flex" : "none";
+
+  // Selection panel
+  const selP = el("sel-panel");
+  const selO = doc && doc.objects.find((o) => o._key === st.selectedKey);
+  const selF = doc && doc.features.find((f) => f._key === st.selectedKey);
+  if (selO) {
+    const g = engine.getGlyphByKey(selO.paletteItemId);
+    el("sel-kind").textContent = "Objekt";
+    el("sel-controls").innerHTML =
+      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (g ? g.name : selO.paletteItemId) + "</div>" +
+      '<div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ' + selO.scale.toFixed(2) + " · " + Math.round(selO.rotation) + "°</div>" +
+      '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben</div>' +
+      (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
+    selP.style.display = "block";
+  } else if (selF) {
+    const kind = ({ region: "Region", biome: "Biom", river: "Fluss", road: "Straße", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
+    const vis = selF.visibility === "player_visible";
+    el("sel-kind").textContent = kind;
+    el("sel-controls").innerHTML =
+      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (selF.labelText || kind) + "</div>" +
+      '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
+      (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "");
+    selP.style.display = "block";
+  } else { selP.style.display = "none"; }
+
+  // AI review
+  const ai = el("ai-review");
+  if (st.aiReview) { el("ai-review-text").textContent = "KI-Vorschlag — " + st.aiReview.count + " Features zur Prüfung (kein Auto-Apply)"; ai.style.display = "flex"; }
+  else ai.style.display = "none";
+
+  // Toast
+  const toast = el("toast");
+  if (st.toast) { toast.textContent = st.toast; toast.style.display = "flex"; } else toast.style.display = "none";
+
+  // Portal legend + empty-state
+  if (view) {
+    const legend = el("legend-list"); legend.innerHTML = "";
+    const seen = new Set();
+    for (const o of nodeObjects()) {
+      if (seen.has(o.paletteItemId)) continue; seen.add(o.paletteItemId);
+      const g = engine.getGlyphByKey(o.paletteItemId); if (!g) continue;
+      const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 2px;";
+      row.innerHTML = '<span style="width:18px;height:18px;flex:none;">' + glyphSvg(g) + "</span>" + g.name; legend.appendChild(row);
+    }
+    el("empty-state").style.display = (n && n.visibility !== "player_visible") ? "flex" : "none";
+  }
+
+  // Status bar
+  el("status-tool").textContent = view ? "Ansicht" : (TOOL_DEFS.find((t) => t[0] === st.tool) || [, "—"])[1];
+  el("status-zoom").textContent = Math.round(st.zoom * 100) + "%";
+  const save = el("status-save");
+  save.textContent = view ? "Portal · schreibgeschützt" : st.saveStatus;
+  save.style.color = view ? "var(--uwe-player-visible)" : (st.dirty ? "var(--uwe-accent)" : "var(--uwe-fg-muted)");
+}
+
+// ===========================================================================
+// Wiring & Boot
+// ===========================================================================
+function wire() {
+  if (isView()) root.classList.add("is-view");
+  el("badge-view").style.display = isView() ? "inline-flex" : "none";
+  el("badge-bridge").style.display = embedded ? "inline-flex" : "none";
+
+  el("brush-s").addEventListener("click", () => setState({ brushSize: 0 }));
+  el("brush-m").addEventListener("click", () => setState({ brushSize: 1 }));
+  el("brush-l").addEventListener("click", () => setState({ brushSize: 2 }));
+  el("btn-grid").addEventListener("click", () => { setState({ showGrid: !state.showGrid }); requestAnimationFrame(draw); });
+  el("btn-vis").addEventListener("click", toggleNodeVis);
+  el("btn-ai").addEventListener("click", requestAiDraft);
+  el("btn-handout").addEventListener("click", requestHandout);
+  el("btn-json").addEventListener("click", exportJSON);
+  el("btn-png").addEventListener("click", exportPNG);
+  el("btn-clear").addEventListener("click", clearAll);
+  el("btn-erase-sel").addEventListener("click", () => { if (state.selectedKey) eraseKey(state.selectedKey); });
+  el("btn-ai-accept").addEventListener("click", acceptAiDraft);
+  el("btn-ai-discard").addEventListener("click", discardAiDraft);
+  el("subbar").addEventListener("click", (e) => { const t = e.target.closest("[data-act]"); if (t && t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); } });
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("wheel", onWheel, { passive: false });
+  canvas.addEventListener("dblclick", onDblClick);
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  window.addEventListener("keydown", onKeyDown);
+  // Bridge is opt-in only via ?embed=1 (README §6) — never listen in the plain
+  // portal/standalone runtime, so a host can't inject a doc/draft into view mode.
+  if (embedded) window.addEventListener("message", onBridgeMessage);
+
+  const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+  if (!isView()) setInterval(() => { if (state.dirty) persist("Autosave ✓"); }, 10000);
+}
+
+function boot() {
+  buildSidebar();
+  wire();
+  doc = loadDoc();
+  state.nodeId = doc.rootNodeId;
+  resize();
+  refreshChrome();
+  draw();
+  if (embedded) bridgePost({ type: "ready", mode });
+  // eslint-disable-next-line no-console
+  console.log("[uwe-atlas] runtime ready — mode=" + mode + (embedded ? " (bridge)" : ""));
+}
+
+boot();
+</script>
+</body>
+</html>

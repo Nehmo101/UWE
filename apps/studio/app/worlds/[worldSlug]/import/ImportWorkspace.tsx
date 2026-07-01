@@ -10,6 +10,12 @@ import type {
   ImportStatus,
 } from "@uwe/knoteforge-import";
 import { waitForJob } from "@/src/lib/poll-job";
+import {
+  completeImportCentralJobAction,
+  failImportCentralJobAction,
+  markImportCentralExecutingAction,
+  previewImportCentralJobAction,
+} from "@/app/import-central-actions";
 
 const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   new: "Neu",
@@ -33,6 +39,11 @@ interface Props {
   worldSlug: string;
   supportedFormats: ImportFormat[];
   plannedFormats: ImportFormat[];
+  jobId?: string;
+  onJobPreview?: (content: string) => Promise<void>;
+  onJobExecuting?: () => Promise<void>;
+  onJobComplete?: (resultSummary: Record<string, unknown>, undoToken?: string | null) => Promise<void>;
+  onJobFail?: (errorMessage: string) => Promise<void>;
 }
 
 function isSelectable(status: ImportStatus): boolean {
@@ -76,7 +87,16 @@ function combineImportFiles(files: Array<{ name: string; text: string }>): strin
     .join("\n\n---\n\n");
 }
 
-export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }: Props) {
+export function ImportWorkspace({
+  worldSlug,
+  supportedFormats,
+  plannedFormats,
+  jobId,
+  onJobPreview: _onJobPreview,
+  onJobExecuting,
+  onJobComplete,
+  onJobFail,
+}: Props) {
   const [format, setFormat] = useState<ImportFormat>(supportedFormats[0] ?? "json");
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -150,23 +170,35 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     setResult(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/import/preview"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format, content, worldSlug }),
-      });
+      let nextPreview: ImportPreviewResult;
 
-      const data = (await response.json()) as {
-        preview?: ImportPreviewResult;
-        error?: string;
-      };
+      if (jobId) {
+        const response = await previewImportCentralJobAction(jobId, content);
+        if (!("items" in response.preview) || !("totalEntities" in response.preview)) {
+          throw new Error("Ungültige Vorschau für Welt-Import.");
+        }
+        nextPreview = response.preview;
+      } else {
+        const response = await fetch(studioApiUrl("/api/import/preview"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ format, content, worldSlug }),
+        });
 
-      if (!response.ok || !data.preview) {
-        throw new Error(data.error ?? "Vorschau fehlgeschlagen.");
+        const data = (await response.json()) as {
+          preview?: ImportPreviewResult;
+          error?: string;
+        };
+
+        if (!response.ok || !data.preview) {
+          throw new Error(data.error ?? "Vorschau fehlgeschlagen.");
+        }
+
+        nextPreview = data.preview;
       }
 
-      setPreview(data.preview);
-      setSelectedIds(defaultSelectedIds(data.preview.items));
+      setPreview(nextPreview);
+      setSelectedIds(defaultSelectedIds(nextPreview.items));
     } catch (previewError) {
       setPreview(null);
       setSelectedIds(new Set());
@@ -176,7 +208,7 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     } finally {
       setLoading(false);
     }
-  }, [content, format, worldSlug]);
+  }, [content, format, jobId, worldSlug]);
 
   const handleExecute = useCallback(async () => {
     if (!preview || !content.trim()) {
@@ -193,6 +225,12 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     setError(null);
 
     try {
+      if (jobId) {
+        await markImportCentralExecutingAction(jobId);
+      } else if (onJobExecuting) {
+        await onJobExecuting();
+      }
+
       const response = await fetch(studioApiUrl("/api/import/execute"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -226,15 +264,64 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
           throw new Error("Import ohne Ergebnis abgeschlossen.");
         }
         setResult(importResult);
+        if (jobId) {
+          await completeImportCentralJobAction(
+            jobId,
+            {
+              created: importResult.created,
+              updated: importResult.updated,
+              failed: importResult.failed,
+              skipped: importResult.skipped,
+            },
+            null,
+          );
+        } else if (onJobComplete) {
+          await onJobComplete(
+            {
+              created: importResult.created,
+              updated: importResult.updated,
+              failed: importResult.failed,
+              skipped: importResult.skipped,
+            },
+            null,
+          );
+        }
       } else if (data.result) {
         setResult(data.result);
+        if (jobId) {
+          await completeImportCentralJobAction(
+            jobId,
+            {
+              created: data.result.created,
+              updated: data.result.updated,
+              failed: data.result.failed,
+              skipped: data.result.skipped,
+            },
+            null,
+          );
+        } else if (onJobComplete) {
+          await onJobComplete(
+            {
+              created: data.result.created,
+              updated: data.result.updated,
+              failed: data.result.failed,
+              skipped: data.result.skipped,
+            },
+            null,
+          );
+        }
       } else {
         throw new Error("Import fehlgeschlagen.");
       }
     } catch (executeError) {
-      setError(
-        executeError instanceof Error ? executeError.message : "Import fehlgeschlagen.",
-      );
+      const message =
+        executeError instanceof Error ? executeError.message : "Import fehlgeschlagen.";
+      if (jobId) {
+        await failImportCentralJobAction(jobId, message);
+      } else if (onJobFail) {
+        await onJobFail(message);
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -243,6 +330,10 @@ export function ImportWorkspace({ worldSlug, supportedFormats, plannedFormats }:
     autoResolveSlugConflicts,
     content,
     format,
+    jobId,
+    onJobComplete,
+    onJobExecuting,
+    onJobFail,
     preview,
     selectedCount,
     selectedIds,

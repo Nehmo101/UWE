@@ -10,6 +10,7 @@ import {
   type CreateAtlasNodeInput,
   type UpdateAtlasFeatureInput,
   type UpdateAtlasNodeInput,
+  type UpdateAtlasMapInput,
   type PageType,
 } from "@uwe/database/server";
 import type { AtlasNodeLevel, Visibility } from "@uwe/database/server";
@@ -178,6 +179,37 @@ export async function setAtlasMapVisibilityAction(formData: FormData): Promise<v
     revalidatePath(`/worlds/${worldSlug}/atlas/${nodeId}`);
   }
   revalidatePath(`/worlds/${worldSlug}/atlas`);
+}
+
+/**
+ * Persist the terrain tile layer ({ cols, rows, tile, cells }) onto AtlasMap.
+ * Used by the single-file editor's bridge save. Deliberately NO revalidatePath —
+ * this is a background autosave and remounting the editor iframe would reset it.
+ */
+export async function saveAtlasTileLayerAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  let tileLayer: unknown;
+  try {
+    tileLayer = JSON.parse(String(formData.get("tileLayer") || "null"));
+  } catch {
+    throw new Error("Ungültige TileLayer-JSON");
+  }
+  if (!tileLayer || typeof tileLayer !== "object") return;
+
+  const { db, atlas, repo } = getAtlasDeps();
+  try {
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) throw new Error("Welt nicht gefunden");
+    const map = await atlas.getOrCreateAtlasForWorld(world.id);
+    await atlas.updateAtlasMap(map.id, {
+      tileLayer: tileLayer as UpdateAtlasMapInput["tileLayer"],
+    });
+  } finally {
+    await db.$disconnect();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -461,7 +493,7 @@ export async function linkPinToPageAction(formData: FormData): Promise<void> {
 
 /**
  * Create a new wiki page (region or location type) and link the given pin feature to it.
- * Returns the new pageId so the client can store it in the EditorFeature.
+ * Returns the new pageId so the client can store it on the linked feature.
  */
 export async function createPinPageAction(
   formData: FormData,
