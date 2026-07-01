@@ -106,12 +106,12 @@ function parseMaintenanceIntent(text: string): NlCommandIntent | null {
   }
 
   const disablePatterns = [
-    /\b(deaktiv|disable|aus|off|beenden|stop|ende)\b/,
-    /\b(maintenance off|wartung aus|wartung beenden)\b/,
+    /\b(deaktivieren|deaktiv|disable|aus|off|beenden|stop|ende)\b/,
+    /\b(maintenance off|wartung aus|wartung beenden|wartungsmodus deaktivieren)\b/,
   ];
   const enablePatterns = [
-    /\b(aktiv|enable|an|on|start|einschalten)\b/,
-    /\b(maintenance on|wartung an|wartung aktivieren)\b/,
+    /\b(aktivieren|aktiv|enable|an|on|start|einschalten)\b/,
+    /\b(maintenance on|wartung an|wartung aktivieren|wartungsmodus aktivieren)\b/,
   ];
 
   const enabled = matchesAny(text, enablePatterns)
