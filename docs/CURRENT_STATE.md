@@ -4,7 +4,7 @@ Kurze, eindeutige Wahrheit über den aktiven Stand. Bei Widersprüchen in andere
 Dokumenten gilt diese Datei (Runtime/CI) bzw.
 [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) (Feature-Reifegrade).
 
-Stand: Juni 2026 (Doku-Sync 2026-06-29, Backlog #313 umgesetzt).
+Stand: 2026-07-01 (Doku-Sync nach PR #394; Backlog-Wellen A–D über PRs #357–#394 umgesetzt).
 
 ## Aktive Runtime
 
@@ -54,21 +54,53 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 - **Beta:** Calendar (inkl. CalDAV-Vollsync), DnD API, Daily Admin OS,
   Secrets/Reveal (Page + Block), Kanonprüfung, Prepare-for-next-session,
   Agent Jobs (Dispatch + Polling), Image Studio (Masken-Canvas), Import Undo,
-  Auto-Backup-Scheduler.
+  Auto-Backup-Scheduler; aus den Backlog-Wellen: Charaktersheet (Voll-5e-Kern),
+  Party-Treasury/Inventar, strukturierte Generatoren (NPC/Quest/Item, Review-pflichtig),
+  Statblock Studio + Exporte, Encounter-XP-Budget, „Was ist offen?“-View,
+  World-Clock/Chronik/Spieler-Timeline/Faction-Sim, Kanon-Lifecycle (#392),
+  Cross-Domain-Suche (#391), EntityTag-Primärquelle (#393), Unified Activity +
+  Owner Cockpit (#394), Bug Center, NL-Admin-Kommandos (Whitelist), Secrets-Status,
+  Admin-Checklist, Migration Inspector, Import-Zentrale (Multi-Quelle),
+  Miniaturen-Sammlung, `db:deploy:safe` (Auto-Backup vor Migration).
 - **Lab / nicht production-ready:** Performance-Budget / große Testwelt,
   Life-Brain Retrieval (fehlt).
 - **Deprecated/Removed:** Docker, Windows-One-Click-Installer, inbound RTX-Agent.
 
 ## Produkt-Backlog (bestätigt offen)
 
-Aktuell **keine** bestätigten offenen Produkt-Backlog-Punkte (Stand nach PR #313).
+Offene Rest-Punkte aus den Backlog-Wellen (Details:
+[FEATURE_BACKLOG_PLAN.md](FEATURE_BACKLOG_PLAN.md) §2–§5):
 
-Zuletzt umgesetzt: Image Studio Masken-Canvas, CalDAV PROPFIND/REPORT-Vollsync,
-Auto-Backup-Scheduler (`autoBackupEnabled` → Host-`schedule.json`), Import Undo.
+- **Charaktersheet:** SRD/Open5e-Zauberkatalog-Import; einzelne derived Stats
+  (z. B. passive Wahrnehmung) — Folge-PR in Arbeit.
+- **Party-Treasury:** player-safe Filtering der Portal-Sicht verifizieren.
+- **Generatoren:** dedizierte Quest-Builder- und Magic-Item-Builder-UIs
+  (strukturierte Felder).
+- **Statblock Studio:** visueller Feld-Editor (aktuell JSON-Textarea).
+- **NL-Kommandos:** User-/Welt-Management-Intents in PR #395 (offen);
+  `create_world` + globale Rollenänderung fehlen.
+- **Agent Jobs:** 1-Klick-Kampagnen-Presets.
+- **Import-Zentrale:** Obsidian-/PDF-Upload-UI.
+- **Dokumentengenerator:** Generier-Workflow (Modell + Route vorhanden).
+- **Feature Registry:** Filter-UI + Prompt-CRUD.
+- **Miniaturen:** Fotovergleich-Slider.
+- **Projekt-Dashboards:** pro-Domäne-Kacheln.
+- **Mobile Portal:** Bottom-Nav als Standard überall — Folge-PR in Arbeit.
+- **`nextSession`-Bug:** für Spieler praktisch immer `null`
+  (recapPublished-Filter) — Fix in Arbeit.
+- **Tags:** EntityTag-Backfill-Vollständigkeit verifizieren, dann Json-Dual-Write
+  abschalten.
+
+Zuletzt umgesetzt (Wellen A–D, PRs #357–#394): Charaktersheet-Kern, Party-Treasury,
+strukturierte Generatoren, Statblock-Exporte, World-Clock/Chronik/Faction-Sim,
+Bug Center, „Was ist offen?“-View, Unified Activity + Owner Cockpit (#394),
+Cross-Domain-Suche (#391), Kanon-Lifecycle (#392), EntityTag-Primärquelle (#393).
 
 **Nicht im Backlog** (bewusst nicht verfolgt): Asset-Level-Secrets, manuelle Browser-QA
 über 9 Theme-Presets, vollständiges Light-Theme-Refactoring, DB↔Client-Theme-Sync,
-`docs:check` für Skills-README, DnD-API-Cache-Aufräumen, Agent-Jobs-Completion-Callback.
+`docs:check` für Skills-README, DnD-API-Cache-Aufräumen, Agent-Jobs-Completion-Callback;
+per Beschluss (FEATURE_BACKLOG_PLAN.md §13): KI-Capture-Sortierung (LLM-Ausbau),
+voller Secret-Vault, semantische Suche (Embeddings).
 
 ## Weitere bekannte Lücken (ohne festen Backlog-Slot)
 
