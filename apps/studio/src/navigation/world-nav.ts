@@ -65,6 +65,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "spielabend",
           "recap",
         ]),
+        item("world-prepare-session", "Session vorbereiten", `${base}/prepare-session`, "clipboard-list", "Spiel", [
+          "session",
+          "prep",
+          "vorbereiten",
+          "nächste session",
+          "generator",
+        ]),
         item("world-open-items", "Was ist offen?", `${base}/open-items`, "list-checks", "Spiel", [
           "offen",
           "plots",
