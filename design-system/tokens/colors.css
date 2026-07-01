@@ -1,0 +1,259 @@
+/* ============================================================================
+ * UWE COLOR SYSTEM
+ * ----------------------------------------------------------------------------
+ * UWE is a token-driven, multi-theme system. Every surface, border, text and
+ * accent color is expressed as a --uwe-* custom property so the whole product
+ * re-skins when a theme is swapped. Nine named themes ship with the product;
+ * "Parchment OS" is the default for BOTH the Studio (DM) and Portal (player)
+ * apps, so it is the default painted on :root here.
+ *
+ * Swap the whole system to another theme by setting the attribute on <html>:
+ *   <html data-uwe-theme="uwe-default">      (slate + indigo, dark)
+ *   <html data-uwe-theme="uwe-dark-fantasy"> (navy + cyan)
+ *   <html data-uwe-theme="terra">            (earthy green campaign world)
+ *   <html data-uwe-theme="hells">            (infernal crimson) … etc.
+ *
+ * The player Portal additionally scopes with [data-app="portal"] on the
+ * default (indigo) theme. Under Parchment OS both apps share the palette.
+ * ==========================================================================*/
+
+/* ---- Parchment OS — the product default (warm paper + ink) ---------------- */
+:root,
+html[data-uwe-theme="uwe-parchment-os"] {
+  /* Core surfaces */
+  --uwe-bg: #f1e8d4;                       /* warm sand paper */
+  --uwe-bg-elevated: #fbf6ea;              /* raised paper */
+  --uwe-surface: rgba(251, 246, 234, 0.95);
+  --uwe-panel: #ece1c9;                    /* topbar / chrome */
+  --uwe-card-bg: #fbf6ea;
+  --uwe-input-bg: #fbf6ea;
+
+  /* Lines */
+  --uwe-border: #e0d4ba;
+  --uwe-border-muted: rgba(224, 212, 186, 0.7);
+
+  /* Text — ink on paper */
+  --uwe-fg: #211d17;                       /* near-black ink */
+  --uwe-fg-muted: #574e40;
+  --uwe-fg-subtle: #665d4f;
+
+  /* Accent — terracotta */
+  --uwe-accent: #c2622b;
+  --uwe-accent-hover: #d47030;
+  --uwe-accent-muted: rgba(194, 98, 43, 0.12);
+  --uwe-on-accent: #fbf6ea;
+
+  /* Links + wiki cross-links — muted teal */
+  --uwe-link: #1a5c4f;
+  --uwe-wiki-link: #2f6f63;
+  --uwe-wiki-link-hover: #3a8878;
+
+  /* Semantic */
+  --uwe-danger: #c2622b;
+  --uwe-warning: #e0b15a;
+  --uwe-success: #2f6f63;
+  --uwe-info: #2f6f63;
+
+  /* Domain: visibility signalling */
+  --uwe-dm-only: #c2622b;                  /* "Nur GM" — DM-only content */
+  --uwe-player-visible: #2f6f63;           /* "Portal sichtbar" — player-safe */
+
+  /* Dark ink sidebar (the Parchment OS signature) */
+  --uwe-sidebar-bg: #211d17;
+  --uwe-sidebar-fg: #f1e8d4;
+  --uwe-sidebar-fg-muted: #b6ab92;
+
+  /* Shell background wash (kept subtle on paper) */
+  --uwe-shell-gradient-start: rgba(194, 98, 43, 0.03);
+  --uwe-shell-gradient-mid: rgba(241, 232, 212, 0.05);
+  --uwe-shell-gradient-end: #f1e8d4;
+
+  color-scheme: light;
+}
+
+/* ---- Derived / bridge tokens (theme-agnostic) ---------------------------- */
+:root {
+  --uwe-muted: var(--uwe-fg-muted);
+  --uwe-card: var(--uwe-card-bg);
+  --uwe-focus-ring: color-mix(in srgb, var(--uwe-accent) 55%, transparent);
+  --uwe-focus-shadow: color-mix(in srgb, var(--uwe-accent) 22%, transparent);
+
+  /* v2 semantic "zone" tokens (chrome / heading / card) */
+  --uwe-zone-chrome-bg: var(--uwe-panel);
+  --uwe-zone-chrome-fg: var(--uwe-fg);
+  --uwe-zone-heading-fg: var(--uwe-fg);
+  --uwe-zone-heading-font: var(--uwe-font-family);
+  --uwe-zone-card-bg: var(--uwe-card-bg);
+  --uwe-zone-card-border: var(--uwe-border);
+}
+
+/* ============================================================================
+ * UWE Default — slate workspace + indigo. The original Studio baseline and the
+ * fallback palette shipped before Parchment OS became default.
+ * ==========================================================================*/
+html[data-uwe-theme="uwe-default"] {
+  --uwe-bg: #0b1220;
+  --uwe-bg-elevated: #0f172a;
+  --uwe-surface: rgba(15, 23, 42, 0.55);
+  --uwe-panel: rgba(8, 12, 22, 0.85);
+  --uwe-card-bg: rgba(15, 23, 42, 0.55);
+  --uwe-input-bg: #0f172a;
+  --uwe-border: rgba(148, 163, 184, 0.18);
+  --uwe-border-muted: rgba(148, 163, 184, 0.12);
+  --uwe-fg: #e2e8f0;
+  --uwe-fg-muted: #94a3b8;
+  --uwe-fg-subtle: #64748b;
+  --uwe-accent: #6366f1;
+  --uwe-accent-hover: #818cf8;
+  --uwe-accent-muted: rgba(99, 102, 241, 0.15);
+  --uwe-on-accent: #ffffff;
+  --uwe-link: #818cf8;
+  --uwe-wiki-link: #38bdf8;
+  --uwe-wiki-link-hover: #7dd3fc;
+  --uwe-danger: #f87171;
+  --uwe-warning: #fbbf24;
+  --uwe-success: #4ade80;
+  --uwe-info: #38bdf8;
+  --uwe-dm-only: #fbbf24;
+  --uwe-player-visible: #86efac;
+  --uwe-sidebar-bg: rgba(8, 12, 22, 0.85);
+  --uwe-sidebar-fg: #e2e8f0;
+  --uwe-sidebar-fg-muted: #94a3b8;
+  --uwe-shell-gradient-start: rgba(99, 102, 241, 0.18);
+  --uwe-shell-gradient-mid: rgba(56, 189, 248, 0.1);
+  --uwe-shell-gradient-end: #060a12;
+  color-scheme: dark;
+}
+
+/* Player Portal scope under the indigo default — deep violet. */
+html[data-uwe-theme="uwe-default"] [data-app="portal"],
+[data-app="portal"] {
+  --uwe-bg: #1e1b4b;
+  --uwe-fg: #f5f3ff;
+  --uwe-fg-muted: #a78bfa;
+  --uwe-panel: rgba(15, 10, 46, 0.55);
+  --uwe-card-bg: rgba(30, 27, 75, 0.55);
+  --uwe-border: rgba(167, 139, 250, 0.15);
+  --uwe-accent: #7c3aed;
+  --uwe-accent-hover: #8b5cf6;
+  --uwe-info: #c4b5fd;
+}
+
+/* ============================================================================
+ * Campaign & mood themes. Each is the world's own palette layer; documented
+ * in the theme picker. Only color tokens differ — layout tokens are shared.
+ * ==========================================================================*/
+html[data-uwe-theme="uwe-dark-fantasy"] {
+  --uwe-bg: #070d18; --uwe-bg-elevated: #0c1528;
+  --uwe-surface: rgba(12, 21, 40, 0.62); --uwe-panel: rgba(6, 10, 20, 0.88);
+  --uwe-card-bg: rgba(12, 21, 40, 0.62); --uwe-input-bg: #0c1528;
+  --uwe-border: rgba(100, 116, 139, 0.22); --uwe-border-muted: rgba(100, 116, 139, 0.14);
+  --uwe-fg: #dbeafe; --uwe-fg-muted: #93c5fd; --uwe-fg-subtle: #64748b;
+  --uwe-accent: #22d3ee; --uwe-accent-hover: #67e8f9; --uwe-accent-muted: rgba(34, 211, 238, 0.14);
+  --uwe-on-accent: #04222b;
+  --uwe-link: #67e8f9; --uwe-wiki-link: #67e8f9; --uwe-wiki-link-hover: #a5f3fc;
+  --uwe-danger: #fb7185; --uwe-warning: #fcd34d; --uwe-success: #6ee7b7; --uwe-info: #7dd3fc;
+  --uwe-dm-only: #f59e0b; --uwe-player-visible: #86efac;
+  --uwe-sidebar-bg: rgba(6, 10, 20, 0.88); --uwe-sidebar-fg: #dbeafe; --uwe-sidebar-fg-muted: #93c5fd;
+  --uwe-shell-gradient-start: rgba(34, 211, 238, 0.12); --uwe-shell-gradient-mid: rgba(99, 102, 241, 0.14); --uwe-shell-gradient-end: #030712;
+  color-scheme: dark;
+}
+
+html[data-uwe-theme="uwe-charcoal-desk"] {
+  --uwe-bg: #232830; --uwe-bg-elevated: #2c323c;
+  --uwe-surface: rgba(24, 28, 36, 0.74); --uwe-panel: rgba(16, 19, 26, 0.93);
+  --uwe-card-bg: rgba(24, 28, 36, 0.74); --uwe-input-bg: #2c323c;
+  --uwe-border: rgba(88, 118, 132, 0.42); --uwe-border-muted: rgba(88, 118, 132, 0.22);
+  --uwe-fg: #a8d4e6; --uwe-fg-muted: #7eb3c9; --uwe-fg-subtle: #5c7a88;
+  --uwe-accent: #d4737e; --uwe-accent-hover: #e2949c; --uwe-accent-muted: rgba(212, 115, 126, 0.15);
+  --uwe-on-accent: #201014;
+  --uwe-link: #6eb8d4; --uwe-wiki-link: #6eb8d4; --uwe-wiki-link-hover: #9ad0e4;
+  --uwe-danger: #d4737e; --uwe-warning: #ddb566; --uwe-success: #72b892; --uwe-info: #6eb8d4;
+  --uwe-dm-only: #ddb566; --uwe-player-visible: #72b892;
+  --uwe-sidebar-bg: rgba(16, 19, 26, 0.93); --uwe-sidebar-fg: #a8d4e6; --uwe-sidebar-fg-muted: #7eb3c9;
+  --uwe-shell-gradient-start: rgba(110, 184, 212, 0.09); --uwe-shell-gradient-mid: rgba(212, 115, 126, 0.07); --uwe-shell-gradient-end: #181c22;
+  --uwe-font-family: var(--uwe-font-space-mono);
+  color-scheme: dark;
+}
+
+html[data-uwe-theme="uwe-night-observatory"] {
+  --uwe-bg: #101620; --uwe-bg-elevated: #182030;
+  --uwe-surface: rgba(20, 28, 42, 0.8); --uwe-panel: rgba(14, 20, 32, 0.94);
+  --uwe-card-bg: rgba(20, 28, 42, 0.8); --uwe-input-bg: #182030;
+  --uwe-border: rgba(72, 88, 112, 0.5); --uwe-border-muted: rgba(72, 88, 112, 0.28);
+  --uwe-fg: #c5d0de; --uwe-fg-muted: #96a3b5; --uwe-fg-subtle: #6a7788;
+  --uwe-accent: #e85d4c; --uwe-accent-hover: #f08072; --uwe-accent-muted: rgba(232, 93, 76, 0.14);
+  --uwe-on-accent: #1a0906;
+  --uwe-link: #4d9de0; --uwe-wiki-link: #4d9de0; --uwe-wiki-link-hover: #76b8eb;
+  --uwe-danger: #e85d4c; --uwe-warning: #c9a227; --uwe-success: #3da866; --uwe-info: #4d9de0;
+  --uwe-dm-only: #c9a227; --uwe-player-visible: #3da866;
+  --uwe-sidebar-bg: rgba(14, 20, 32, 0.94); --uwe-sidebar-fg: #c5d0de; --uwe-sidebar-fg-muted: #96a3b5;
+  --uwe-shell-gradient-start: rgba(77, 157, 224, 0.09); --uwe-shell-gradient-mid: rgba(232, 93, 76, 0.05); --uwe-shell-gradient-end: #0a1018;
+  color-scheme: dark;
+}
+
+html[data-uwe-theme="uwe-parchment-study"] {
+  --uwe-bg: #f3efe6; --uwe-bg-elevated: #faf7f0;
+  --uwe-surface: rgba(252, 249, 242, 0.9); --uwe-panel: rgba(255, 253, 248, 0.97);
+  --uwe-card-bg: rgba(252, 249, 242, 0.9); --uwe-input-bg: #faf7f0;
+  --uwe-border: rgba(168, 158, 140, 0.5); --uwe-border-muted: rgba(168, 158, 140, 0.28);
+  --uwe-fg: #3d3832; --uwe-fg-muted: #574e40; --uwe-fg-subtle: #665d4f;
+  --uwe-accent: #a67c1a; --uwe-accent-hover: #bf9428; --uwe-accent-muted: rgba(166, 124, 26, 0.11);
+  --uwe-on-accent: #fffdf8;
+  --uwe-link: #155e8a; --uwe-wiki-link: #1d6fa8; --uwe-wiki-link-hover: #2a8cc4;
+  --uwe-danger: #a84818; --uwe-warning: #b8860b; --uwe-success: #1a7a42; --uwe-info: #1d6fa8;
+  --uwe-dm-only: #a84818; --uwe-player-visible: #1a7a42;
+  --uwe-sidebar-bg: rgba(255, 253, 248, 0.97); --uwe-sidebar-fg: #3d3832; --uwe-sidebar-fg-muted: #574e40;
+  --uwe-shell-gradient-start: rgba(166, 124, 26, 0.07); --uwe-shell-gradient-mid: rgba(255, 255, 255, 0.35); --uwe-shell-gradient-end: #e8e2d6;
+  --uwe-font-family: var(--uwe-font-newsreader);
+  color-scheme: light;
+}
+
+html[data-uwe-theme="uwe-phosphor-console"] {
+  --uwe-bg: #080a08; --uwe-bg-elevated: #101410;
+  --uwe-surface: rgba(12, 16, 12, 0.88); --uwe-panel: rgba(10, 12, 10, 0.96);
+  --uwe-card-bg: rgba(12, 16, 12, 0.88); --uwe-input-bg: #101410;
+  --uwe-border: rgba(36, 92, 52, 0.48); --uwe-border-muted: rgba(36, 92, 52, 0.24);
+  --uwe-fg: #2ee86a; --uwe-fg-muted: #24b856; --uwe-fg-subtle: #1a7a3e;
+  --uwe-accent: #2ee86a; --uwe-accent-hover: #5ef090; --uwe-accent-muted: rgba(46, 232, 106, 0.11);
+  --uwe-on-accent: #041006;
+  --uwe-link: #1ad4b8; --uwe-wiki-link: #1ad4b8; --uwe-wiki-link-hover: #52e6d0;
+  --uwe-danger: #f05252; --uwe-warning: #e6b422; --uwe-success: #2ee86a; --uwe-info: #1ad4b8;
+  --uwe-dm-only: #e6b422; --uwe-player-visible: #2ee86a;
+  --uwe-sidebar-bg: rgba(10, 12, 10, 0.96); --uwe-sidebar-fg: #2ee86a; --uwe-sidebar-fg-muted: #24b856;
+  --uwe-shell-gradient-start: rgba(46, 232, 106, 0.05); --uwe-shell-gradient-mid: rgba(0, 0, 0, 0.18); --uwe-shell-gradient-end: #040604;
+  --uwe-font-family: var(--uwe-font-space-mono);
+  color-scheme: dark;
+}
+
+html[data-uwe-theme="terra"] {
+  --uwe-bg: #0f1a14; --uwe-bg-elevated: #152820;
+  --uwe-surface: rgba(21, 40, 32, 0.68); --uwe-panel: rgba(12, 22, 17, 0.9);
+  --uwe-card-bg: rgba(21, 40, 32, 0.68); --uwe-input-bg: #152820;
+  --uwe-border: rgba(74, 124, 89, 0.35); --uwe-border-muted: rgba(74, 124, 89, 0.2);
+  --uwe-fg: #d8eadf; --uwe-fg-muted: #9bc4a8; --uwe-fg-subtle: #6b8f76;
+  --uwe-accent: #84cc16; --uwe-accent-hover: #a3e635; --uwe-accent-muted: rgba(132, 204, 22, 0.14);
+  --uwe-on-accent: #0c1a04;
+  --uwe-link: #86efac; --uwe-wiki-link: #86efac; --uwe-wiki-link-hover: #bbf7d0;
+  --uwe-danger: #ef4444; --uwe-warning: #eab308; --uwe-success: #22c55e; --uwe-info: #38bdf8;
+  --uwe-dm-only: #eab308; --uwe-player-visible: #4ade80;
+  --uwe-sidebar-bg: rgba(12, 22, 17, 0.9); --uwe-sidebar-fg: #d8eadf; --uwe-sidebar-fg-muted: #9bc4a8;
+  --uwe-shell-gradient-start: rgba(132, 204, 22, 0.12); --uwe-shell-gradient-mid: rgba(56, 189, 248, 0.06); --uwe-shell-gradient-end: #08120d;
+  color-scheme: dark;
+}
+
+html[data-uwe-theme="hells"] {
+  --uwe-bg: #140808; --uwe-bg-elevated: #1f0c0c;
+  --uwe-surface: rgba(40, 12, 12, 0.72); --uwe-panel: rgba(20, 6, 6, 0.92);
+  --uwe-card-bg: rgba(40, 12, 12, 0.72); --uwe-input-bg: #1f0c0c;
+  --uwe-border: rgba(185, 28, 28, 0.35); --uwe-border-muted: rgba(185, 28, 28, 0.2);
+  --uwe-fg: #fecaca; --uwe-fg-muted: #f87171; --uwe-fg-subtle: #b91c1c;
+  --uwe-accent: #ef4444; --uwe-accent-hover: #f87171; --uwe-accent-muted: rgba(239, 68, 68, 0.16);
+  --uwe-on-accent: #1a0303;
+  --uwe-link: #fca5a5; --uwe-wiki-link: #fca5a5; --uwe-wiki-link-hover: #fecaca;
+  --uwe-danger: #ff6b6b; --uwe-warning: #fb923c; --uwe-success: #86efac; --uwe-info: #fca5a5;
+  --uwe-dm-only: #fb923c; --uwe-player-visible: #86efac;
+  --uwe-sidebar-bg: rgba(20, 6, 6, 0.92); --uwe-sidebar-fg: #fecaca; --uwe-sidebar-fg-muted: #f87171;
+  --uwe-shell-gradient-start: rgba(239, 68, 68, 0.2); --uwe-shell-gradient-mid: rgba(251, 146, 60, 0.1); --uwe-shell-gradient-end: #0a0404;
+  color-scheme: dark;
+}

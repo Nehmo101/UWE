@@ -1,0 +1,54 @@
+<!-- @dsCard group="Components" viewport="700x360" name="Domain — visibility, RTX, secrets" subtitle="UWE's player-safety & local-AI signals" -->
+<!DOCTYPE html>
+<html lang="de" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { padding: 24px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .grp-label { font-size: var(--uwe-text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--uwe-fg-subtle); margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { VisibilityBadge, RtxStatusBadge, PageTypeBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
+  function Demo() {
+    return (
+      <div style={{ maxWidth: 640 }}>
+        <p className="grp-label">Sichtbarkeit (player-safety)</p>
+        <div className="row">
+          <VisibilityBadge visibility="private" />
+          <VisibilityBadge visibility="dm_only" />
+          <VisibilityBadge visibility="player_visible" />
+          <VisibilityBadge visibility="public" />
+        </div>
+        <p className="grp-label">Seitentyp</p>
+        <div className="row">
+          <PageTypeBadge type="npc" /><PageTypeBadge type="location" />
+          <PageTypeBadge type="faction" /><PageTypeBadge type="quest" /><PageTypeBadge type="session" />
+        </div>
+        <p className="grp-label">RTX Connector</p>
+        <div className="row">
+          <RtxStatusBadge state="online" />
+          <RtxStatusBadge state="starting" />
+          <RtxStatusBadge state="offline" />
+          <RtxStatusBadge state="disabled" />
+        </div>
+        <p className="grp-label">Geheimnis / Spoiler</p>
+        <SecretReveal label="GM-Geheimnis">
+          Der Bürgermeister von Validori ist ein verkappter Doppelgänger der Nepurga-Fraktion.
+        </SecretReveal>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Radius & elevation" subtitle="Radii sm→card + shadow sm/md/lg" -->
+<!DOCTYPE html>
+<html lang="en" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 20px; display: flex; gap: 22px; align-items: center; }
+  .item { text-align: center; font-family: var(--uwe-font-mono); font-size: 10.5px; color: var(--uwe-fg-muted); }
+  .sq { width: 60px; height: 60px; background: var(--uwe-card-bg); border: 1px solid var(--uwe-border); margin: 0 auto 6px; }
+  .item b { color: var(--uwe-fg); }
+</style>
+</head>
+<body>
+  <div class="item"><div class="sq" style="border-radius:var(--uwe-radius-sm)"></div><b>sm</b> 6px</div>
+  <div class="item"><div class="sq" style="border-radius:var(--uwe-radius-md)"></div><b>md</b> 8px</div>
+  <div class="item"><div class="sq" style="border-radius:var(--uwe-v2-radius-btn)"></div><b>btn</b> 9px</div>
+  <div class="item"><div class="sq" style="border-radius:var(--uwe-v2-radius-card)"></div><b>card</b> 14px</div>
+  <div class="item"><div class="sq" style="border-radius:12px;box-shadow:var(--uwe-shadow-sm)"></div><b>shadow</b> sm</div>
+  <div class="item"><div class="sq" style="border-radius:12px;box-shadow:var(--uwe-shadow-md)"></div><b>shadow</b> md</div>
+  <div class="item"><div class="sq" style="border-radius:12px;box-shadow:var(--uwe-shadow-lg)"></div><b>shadow</b> lg</div>
+</body>
+</html>

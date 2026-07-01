@@ -1,0 +1,115 @@
+<!-- @dsCard group="UWE Studio" viewport="1280x760" name="Studio — DM cockpit" subtitle="Daily Admin OS + campaign editor · click the sidebar" -->
+<!DOCTYPE html>
+<html lang="de" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UWE Studio</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; }
+  #app { height: 100vh; display: grid; grid-template-rows: var(--uwe-topbar-height) 1fr; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--uwe-panel);
+    border-bottom: 2px solid var(--uwe-fg); }
+  .topbar .spacer { flex: 1; }
+  .search { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9px;
+    border: 1px solid var(--uwe-border); background: var(--uwe-card-bg); color: var(--uwe-fg-muted); font-size: 13px;
+    font-family: var(--uwe-font-mono); min-width: 260px; }
+  .kbd { margin-left: auto; font-size: 11px; padding: 1px 6px; border: 1px solid var(--uwe-border); border-radius: 4px; }
+  .body { display: grid; grid-template-columns: var(--uwe-sidebar-width) 1fr; min-height: 0; }
+  .sidebar { overflow-y: auto; background: var(--uwe-sidebar-bg); }
+  .main { overflow-y: auto; padding: 24px 28px 48px; background: var(--uwe-bg); }
+  [data-lucide] { stroke: currentColor; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel">
+  const { Brand, SidebarNav, RtxStatusBadge, Button } = window.UWEDesignSystem_f43eab;
+
+  function App() {
+    const { TodayScreen, WorldScreen, WikiPageScreen, Icon } = window.UWEStudioScreens;
+    const [screen, setScreen] = React.useState("today");
+
+    const nav = [
+      { key: "today", label: "Heute", icon: "home" },
+      { key: "capture", label: "Capture", icon: "inbox", badge: 7 },
+      { key: "projects", label: "Projekte", icon: "folder-kanban" },
+    ];
+    const worldNav = [
+      { key: "world", label: "Übersicht", icon: "layout-dashboard" },
+      { key: "wiki", label: "Orte", icon: "map-pin", badge: 32 },
+      { key: "npcs", label: "NPCs", icon: "users", badge: 14 },
+      { key: "sessions", label: "Sessions", icon: "calendar" },
+      { key: "soundboard", label: "Soundboard", icon: "music" },
+    ];
+    const worldSlug = ["world", "wiki", "npcs", "sessions", "soundboard"];
+
+    const mkSection = (title, items) => ({
+      title,
+      items: items.map((it) => ({
+        label: it.label, badge: it.badge,
+        icon: <Icon n={it.icon} />,
+        href: "#",
+        active: screen === it.key || (it.key === "wiki" && screen === "wiki"),
+        onClick: undefined,
+      })),
+    });
+
+    // SidebarNav renders <a>; intercept clicks to switch screens.
+    const onNavClick = (e) => {
+      const a = e.target.closest("a"); if (!a) return;
+      e.preventDefault();
+      const label = a.textContent.trim();
+      const all = [...nav, ...worldNav];
+      const hit = all.find((n) => label.startsWith(n.label));
+      if (hit) setScreen(hit.key);
+    };
+
+    const screens = {
+      today: <TodayScreen />, capture: <TodayScreen />, projects: <TodayScreen />,
+      world: <WorldScreen />, npcs: <WorldScreen />, sessions: <WorldScreen />, soundboard: <WorldScreen />,
+      wiki: <WikiPageScreen />,
+    };
+
+    return (
+      <div id="app">
+        <header className="topbar">
+          <Brand appName="UWE" subtitle="Studio" />
+          <div className="spacer" />
+          <span className="search"><Icon n="search" s={14} />Seiten, Welten, Befehle…<span className="kbd">⌘K</span></span>
+          <RtxStatusBadge state="online" />
+          <Button variant="ghost" size="sm" icon={<Icon n="settings" s={16} />} aria-label="Einstellungen" />
+        </header>
+        <div className="body">
+          <div className="sidebar" onClick={onNavClick}>
+            <div style={{ padding: "14px 16px 6px" }}>
+              <div style={{ fontFamily: "var(--uwe-font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--uwe-sidebar-fg-muted)" }}>Admin OS</div>
+            </div>
+            <SidebarNav style={{ padding: "4px 12px 8px" }} sections={[mkSection(null, nav)]} />
+            <div style={{ height: 1, background: "color-mix(in srgb, var(--uwe-sidebar-fg) 12%, transparent)", margin: "4px 16px" }} />
+            <SidebarNav style={{ padding: "8px 12px" }} sections={[mkSection("Welt Terra", worldNav)]} />
+          </div>
+          <main className="main">
+            {screens[screen] ?? screens.today}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+  const draw = () => window.lucide && window.lucide.createIcons();
+  const obs = new MutationObserver(draw);
+  obs.observe(document.getElementById("app"), { childList: true, subtree: true });
+  setTimeout(draw, 300);
+</script>
+</body>
+</html>

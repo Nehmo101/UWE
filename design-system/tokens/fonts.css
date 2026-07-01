@@ -1,0 +1,12 @@
+/* UWE webfonts — pulled from Google Fonts.
+ * The product wires these via next/font as CSS variables:
+ *   --uwe-font-space-mono  (Space Mono)   — the Parchment OS default UI font
+ *   --uwe-font-newsreader  (Newsreader)   — serif, used for headings / reader
+ * The sans stack is the OS system font (no webfont).
+ */
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&display=swap");
+
+:root {
+  --uwe-font-space-mono: "Space Mono", ui-monospace, "Cascadia Code", "Fira Code", "SF Mono", Consolas, monospace;
+  --uwe-font-newsreader: "Newsreader", Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+}

@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Navigation — brand, sidebar, header" subtitle="Ink sidebar, serif header, breadcrumb" -->
+<!DOCTYPE html>
+<html lang="de" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style> body { padding: 24px; } </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { Brand, SidebarNav, PageHeader, Breadcrumb, Button, PageTypeBadge, VisibilityBadge } = window.UWEDesignSystem_f43eab;
+  const I = (n) => React.createElement("i", { "data-lucide": n, style: { width: 16, height: 16, display: "inline-flex" } });
+  function Demo() {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20, border: "1px solid var(--uwe-border)", borderRadius: 14, overflow: "hidden" }}>
+        <SidebarNav sections={[
+          { title: "Welt Terra", items: [
+            { label: "Übersicht", href: "#", icon: I("home"), active: true },
+            { label: "NPCs", href: "#", icon: I("users"), badge: 14 },
+            { label: "Orte", href: "#", icon: I("map-pin"), badge: 32 },
+            { label: "Sessions", href: "#", icon: I("calendar") },
+            { label: "Handouts", href: "#", icon: I("file-text") },
+          ]},
+        ]} />
+        <div style={{ padding: "20px 20px 24px 0" }}>
+          <div style={{ paddingLeft: 4 }}>
+            <Breadcrumb items={[{ label: "Terra", href: "#" }, { label: "Orte", href: "#" }, { label: "Validori" }]} />
+            <PageHeader
+              title="Hafenstadt Validori"
+              summary="Handelsknoten am Südmeer. Drei Fraktionen ringen um die Docks."
+              meta={<><PageTypeBadge type="location" /><VisibilityBadge visibility="player_visible" /></>}
+              actions={<Button variant="accent">Bearbeiten</Button>}
+            />
+            <Brand appName="UWE" subtitle="Studio" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>

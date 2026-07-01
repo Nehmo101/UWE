@@ -1,0 +1,25 @@
+<!-- @dsCard group="Brand" viewport="700x180" name="Wordmark & mark" subtitle="Boxed-U lockup, ◆ mark, and the app icon" -->
+<!DOCTYPE html>
+<html lang="en" data-uwe-theme="uwe-parchment-os">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 24px; display: flex; gap: 40px; align-items: center; }
+  .lockup { display: inline-flex; align-items: center; gap: 12px; }
+  .glyph { width: 52px; height: 52px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--uwe-accent), color-mix(in srgb, var(--uwe-accent) 70%, var(--uwe-bg-elevated)));
+    color: #fff; font-family: var(--uwe-font-mono); font-weight: 800; font-size: 26px; box-shadow: 0 4px 20px color-mix(in srgb, var(--uwe-accent) 35%, transparent); }
+  .word { font-family: var(--uwe-font-serif); font-weight: 700; font-size: 40px; letter-spacing: -0.02em; color: var(--uwe-fg); line-height: 1; }
+  .word small { display:block; font-family: var(--uwe-font-mono); font-size: 12px; font-weight: 400; letter-spacing: 0.04em; color: var(--uwe-fg-subtle); }
+  .mark { font-size: 40px; color: var(--uwe-accent); }
+  .cap { font-family: var(--uwe-font-mono); font-size: 10px; color: var(--uwe-fg-subtle); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; }
+  .stack { text-align: center; }
+</style>
+</head>
+<body>
+  <div class="stack"><div class="lockup"><span class="glyph">U</span><span class="word">UWE<small>Studio</small></span></div><div class="cap">Wordmark lockup</div></div>
+  <div class="stack"><span class="mark">◆</span><div class="cap">Nav mark</div></div>
+  <div class="stack"><img src="../assets/uwe-icon.svg" width="52" height="52" alt="UWE icon" /><div class="cap">App icon</div></div>
+</body>
+</html>
