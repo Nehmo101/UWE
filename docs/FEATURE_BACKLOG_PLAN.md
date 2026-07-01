@@ -193,7 +193,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 3 | Inbox / Raw Capture | ✅ | `CaptureEntry` (+Typen quick_note/dnd_idea/link/file_image/...), `/capture`, Upload-API | **Kein `voice_memo`**/Audio-Capture-Typ in der UI. Sonst Kern erfüllt. |
 | 4 | KI-Sortierung | 🔶 | `capture-triage-service.ts` (`buildCaptureAiProposal`, Ziele project/workshop/dnd/hardware/contract/life_brain) | **Nur Heuristik (`source: "heuristic"`), kein LLM**; keine Kategorien Musik/Haushalt. |
 | 5 | Globale Suche 2.0 | 🔶 | `search-service.ts`, `cross-domain-search-service.ts`, `/search` (Wiki + Daily Admin + Medien + EntityTag-Facetten) | Semantische Suche weiter offen (RTX-only, später). |
-| 6 | Tag-System | 🔶 | `tag-service.ts` (Inventar/Merge/Suggest), `/admin/tags`; Tags als **Json-Arrays pro Entität** (kein `Tag`-Modell) | Nicht über alle Domänen vereinheitlicht (keine Tags auf Capture/Project/Workshop/Contract/Hardware/Idea). |
+| 6 | Tag-System | 🔶 | `tag-service.ts` (EntityTag-Primärquelle + Json-Gap-Fallback), `/admin/tags`, Backfill/Merge Dual-Write | Json-Felder bleiben deprecated bis vollständiger Backfill. |
 | 7 | Projekt-Dashboards | 🔶 | `PersonalProject` (Kategorien uwe/hardware/dnd/art/printing/other), `/projects` (flache Liste), `/today`, Welt-Dashboard | Keine **pro-Domäne**-Dashboards (Musik/Haushalt fehlen als Kategorie); kein `/projects/[id]`-Detail. |
 | 8 | Dokumentengenerator | 🔶 | Seiten-Templates, DnD-Generator (`generate_handout`), Mail-Templates, Label-Templates | **Kein generischer** Dokumentengenerator (Verträge/Guides/Checklisten außerhalb DnD/Mail/Label). |
 | 9 | Prompt-Bibliothek | 🔶 | `DevIdea.generatedPrompt`/`/ideas`, `GeneratorPreset` (DnD), `admin/ai-prompt`→`/ai` | **Keine** In-App-CRUD-Bibliothek für Cursor/Orchestrator/Subagent-Prompts (liegen als Markdown in `docs/`/`.cursor/`). |
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#391). EntityTag-Backfill + cross-domain Suche; Kanon-Lifecycle-Filter (prepared/played/discarded) in Studio.
+#357–#392). EntityTag-Primärquelle in tag-service; cross-domain Suche; Kanon-Lifecycle-Filter.

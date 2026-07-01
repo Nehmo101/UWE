@@ -206,7 +206,8 @@ export function TagAdminWorkspace() {
               <h2 className="uwe-v2-section-title">EntityTag-Abdeckung</h2>
               <p className="uwe-dashboard-muted">
                 {data.coverage.totalTags} zentrale Tags · {data.coverage.totalEntityTags}{" "}
-                EntityTag-Verknüpfungen
+                EntityTag-Verknüpfungen. Inventar und Merge nutzen EntityTag als Primärquelle;
+                Legacy-Json nur für noch nicht backgefillte Entitäten.
               </p>
               <div className="uwe-today-card-list">
                 {data.coverage.types.map((entry) => (

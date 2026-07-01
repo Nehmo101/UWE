@@ -234,6 +234,127 @@ async function syncEntityTagsForJsonEntity(
   await entityTags.replaceEntityTags(entityType, entityId, tags, { worldId });
 }
 
+async function resolveEntityTagsForMerge(
+  db: PrismaClient,
+  entityType: TagBackfillEntityType,
+  entityId: string,
+  legacyTags: string[],
+): Promise<string[]> {
+  const linked = await createEntityTagService(db).listTagsForEntity(entityType, entityId);
+  if (linked.length > 0) {
+    return linked.map((tag) => tag.label);
+  }
+  return legacyTags;
+}
+
+async function loadEntityIdsWithEntityTags(
+  db: PrismaClient,
+  entityType: TagBackfillEntityType,
+  worldId?: string,
+): Promise<Set<string>> {
+  const rows = await db.entityTag.findMany({
+    where: {
+      entityType,
+      ...(worldId ? { worldId } : {}),
+    },
+    select: { entityId: true },
+    distinct: ["entityId"],
+  });
+  return new Set(rows.map((row) => row.entityId));
+}
+
+function mergeTagInventories(
+  primary: TagInventoryEntry[],
+  secondary: TagInventoryEntry[],
+): TagInventoryEntry[] {
+  const map = new Map<string, TagInventoryEntry>();
+
+  for (const entry of [...primary, ...secondary]) {
+    const existing = map.get(entry.tag);
+    if (!existing) {
+      map.set(entry.tag, {
+        ...entry,
+        references: [...entry.references],
+      });
+      continue;
+    }
+
+    for (const ref of entry.references) {
+      const duplicate = existing.references.some(
+        (candidate) => candidate.entityType === ref.entityType && candidate.entityId === ref.entityId,
+      );
+      if (duplicate) {
+        continue;
+      }
+      existing.references.push(ref);
+      existing.count++;
+      if (ref.publishStatus !== "draft") {
+        existing.onlyOnDrafts = false;
+      }
+      if (ref.visibility !== "dm_only") {
+        existing.onlyDmOnly = false;
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "de"));
+}
+
+async function collectJsonGapTagInventory(
+  db: PrismaClient,
+  options: { worldId?: string } = {},
+): Promise<TagInventoryEntry[]> {
+  const worldId = options.worldId;
+  const map = new Map<string, TagInventoryEntry>();
+
+  const addRef = (tag: string, ref: TagReference) => {
+    const normalizedKey = normalizeTagKey(tag);
+    let entry = map.get(tag);
+    if (!entry) {
+      entry = {
+        tag,
+        normalizedKey,
+        count: 0,
+        references: [],
+        onlyOnDrafts: true,
+        onlyDmOnly: true,
+      };
+      map.set(tag, entry);
+    }
+    entry.count++;
+    entry.references.push(ref);
+    if (ref.publishStatus !== "draft") {
+      entry.onlyOnDrafts = false;
+    }
+    if (ref.visibility !== "dm_only") {
+      entry.onlyDmOnly = false;
+    }
+  };
+
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
+    const taggedEntityIds = await loadEntityIdsWithEntityTags(db, entityType, worldId);
+    const rows = await loadJsonTagEntities(db, entityType, worldId);
+
+    for (const row of rows) {
+      if (taggedEntityIds.has(row.id)) {
+        continue;
+      }
+      for (const tag of parseStringArray(row.tags)) {
+        addRef(tag, {
+          entityType,
+          entityId: row.id,
+          title: row.title,
+          worldId: row.worldId,
+          publishStatus: row.publishStatus ?? null,
+          visibility: row.visibility ?? null,
+        });
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "de"));
+}
+
 async function mergeMetadataEntityTags(
   db: PrismaClient,
   entityType: Extract<
@@ -255,7 +376,12 @@ async function mergeMetadataEntityTags(
     });
     for (const row of rows) {
       const metadata = asMetadataRecord(row.metadata);
-      const tags = parseStringArray(metadata.tags);
+      const tags = await resolveEntityTagsForMerge(
+        db,
+        "capture",
+        row.id,
+        parseStringArray(metadata.tags),
+      );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       await db.captureEntry.update({
@@ -275,7 +401,12 @@ async function mergeMetadataEntityTags(
     });
     for (const row of rows) {
       const metadata = asMetadataRecord(row.metadata);
-      const tags = parseStringArray(metadata.tags);
+      const tags = await resolveEntityTagsForMerge(
+        db,
+        "project",
+        row.id,
+        parseStringArray(metadata.tags),
+      );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       await db.personalProject.update({
@@ -295,7 +426,12 @@ async function mergeMetadataEntityTags(
     });
     for (const row of rows) {
       const metadata = asMetadataRecord(row.metadata);
-      const tags = parseStringArray(metadata.tags);
+      const tags = await resolveEntityTagsForMerge(
+        db,
+        "workshop",
+        row.id,
+        parseStringArray(metadata.tags),
+      );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       await db.workshopProject.update({
@@ -314,7 +450,12 @@ async function mergeMetadataEntityTags(
     });
     for (const row of rows) {
       const metadata = asMetadataRecord(row.metadata);
-      const tags = parseStringArray(metadata.tags);
+      const tags = await resolveEntityTagsForMerge(
+        db,
+        "contract",
+        row.id,
+        parseStringArray(metadata.tags),
+      );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       await db.contractExpense.update({
@@ -333,7 +474,12 @@ async function mergeMetadataEntityTags(
     });
     for (const row of rows) {
       const metadata = asMetadataRecord(row.metadata);
-      const tags = parseStringArray(metadata.tags);
+      const tags = await resolveEntityTagsForMerge(
+        db,
+        "hardware",
+        row.id,
+        parseStringArray(metadata.tags),
+      );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       await db.hardwareDevice.update({
@@ -351,7 +497,12 @@ async function mergeMetadataEntityTags(
   });
   for (const row of rows) {
     const metadata = asMetadataRecord(row.metadata);
-    const tags = parseStringArray(metadata.tags);
+    const tags = await resolveEntityTagsForMerge(
+      db,
+      "dev_idea",
+      row.id,
+      parseStringArray(metadata.tags),
+    );
     const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
     if (!next) continue;
     await db.devIdea.update({
@@ -488,58 +639,11 @@ export async function collectTagInventory(
   db: PrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagInventoryEntry[]> {
-  const entityTagCount = await db.entityTag.count({
-    where: options.worldId ? { worldId: options.worldId } : undefined,
-  });
-  if (entityTagCount > 0) {
-    return collectEntityTagInventory(db, options);
-  }
-
-  const worldId = options.worldId;
-  const map = new Map<string, TagInventoryEntry>();
-
-  const addRef = (tag: string, ref: TagReference) => {
-    const normalizedKey = normalizeTagKey(tag);
-    const key = tag;
-    let entry = map.get(key);
-    if (!entry) {
-      entry = {
-        tag: key,
-        normalizedKey,
-        count: 0,
-        references: [],
-        onlyOnDrafts: true,
-        onlyDmOnly: true,
-      };
-      map.set(key, entry);
-    }
-    entry.count++;
-    entry.references.push(ref);
-    if (ref.publishStatus !== "draft") {
-      entry.onlyOnDrafts = false;
-    }
-    if (ref.visibility !== "dm_only") {
-      entry.onlyDmOnly = false;
-    }
-  };
-
-  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
-    const rows = await loadJsonTagEntities(db, entityType, worldId);
-    for (const row of rows) {
-      for (const tag of parseStringArray(row.tags)) {
-        addRef(tag, {
-          entityType,
-          entityId: row.id,
-          title: row.title,
-          worldId: row.worldId,
-          publishStatus: row.publishStatus ?? null,
-          visibility: row.visibility ?? null,
-        });
-      }
-    }
-  }
-
-  return [...map.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "de"));
+  const [entityInventory, jsonGapInventory] = await Promise.all([
+    collectEntityTagInventory(db, options),
+    collectJsonGapTagInventory(db, options),
+  ]);
+  return mergeTagInventories(entityInventory, jsonGapInventory);
 }
 
 export function findSimilarTagGroups(inventory: TagInventoryEntry[]): SimilarTagGroup[] {
@@ -650,7 +754,7 @@ export async function mergeTags(
     select: { id: true, tags: true, worldId: true },
   });
   for (const page of pages) {
-    const tags = parseStringArray(page.tags);
+    const tags = await resolveEntityTagsForMerge(db, "page", page.id, parseStringArray(page.tags));
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.page.update({ where: { id: page.id }, data: { tags: toPrismaJsonValue(next) } });
@@ -664,7 +768,7 @@ export async function mergeTags(
     select: { id: true, tags: true, worldId: true },
   });
   for (const asset of assets) {
-    const tags = parseStringArray(asset.tags);
+    const tags = await resolveEntityTagsForMerge(db, "asset", asset.id, parseStringArray(asset.tags));
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.asset.update({ where: { id: asset.id }, data: { tags: toPrismaJsonValue(next) } });
@@ -678,7 +782,12 @@ export async function mergeTags(
     select: { id: true, tags: true, worldId: true },
   });
   for (const button of buttons) {
-    const tags = parseStringArray(button.tags);
+    const tags = await resolveEntityTagsForMerge(
+      db,
+      "soundboard_button",
+      button.id,
+      parseStringArray(button.tags),
+    );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.soundboardButton.update({
@@ -692,7 +801,12 @@ export async function mergeTags(
 
   const brainDocs = await db.personalBrainDocument.findMany({ select: { id: true, tags: true } });
   for (const doc of brainDocs) {
-    const tags = parseStringArray(doc.tags);
+    const tags = await resolveEntityTagsForMerge(
+      db,
+      "personal_brain_document",
+      doc.id,
+      parseStringArray(doc.tags),
+    );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.personalBrainDocument.update({
@@ -706,7 +820,12 @@ export async function mergeTags(
 
   const brainFacts = await db.personalBrainFact.findMany({ select: { id: true, tags: true } });
   for (const fact of brainFacts) {
-    const tags = parseStringArray(fact.tags);
+    const tags = await resolveEntityTagsForMerge(
+      db,
+      "personal_brain_fact",
+      fact.id,
+      parseStringArray(fact.tags),
+    );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       await db.personalBrainFact.update({

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { createEntityTagService } from "./entity-tag-service";
 import { createLifeAdminService } from "./life-admin-service";
 import { createUweRepository } from "./repository";
 import { seedStressWorld } from "./stress-seed";
@@ -17,6 +18,7 @@ import {
   getTagCoverageStats,
 } from "./tag-service";
 import { createTestDatabaseUrl } from "./test-helpers";
+import { toPrismaJsonValue } from "./json-utils";
 
 describe("tag service", () => {
   let db: PrismaClient;
@@ -162,5 +164,46 @@ describe("tag service", () => {
     assert.ok(!metadata.tags?.includes("inbox"));
 
     await lifeAdmin.deleteCapture(capture.id);
+  });
+
+  it("uses EntityTag as primary inventory and merge source after backfill", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const entityTags = createEntityTagService(db);
+    const page = await repo.createPage({
+      worldId,
+      title: "EntityTag Primary Page",
+      slug: "entitytag-primary-page",
+      type: "note",
+      tags: ["entity-primary-tag"],
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    await backfillEntityTagsFromJson(db, { worldId });
+    await db.page.update({
+      where: { id: page.id },
+      data: { tags: toPrismaJsonValue([]) },
+    });
+
+    const inventory = await collectTagInventory(db, { worldId });
+    assert.ok(
+      inventory.some(
+        (entry) =>
+          entry.tag === "entity-primary-tag" ||
+          entry.references.some((ref) => ref.entityId === page.id),
+      ),
+    );
+
+    const mergeResult = await mergeTags(db, {
+      worldId,
+      fromTags: ["entity-primary-tag"],
+      toTag: "primary",
+    });
+    assert.ok(mergeResult.updatedEntities >= 1);
+
+    const linked = await entityTags.listTagsForEntity("page", page.id);
+    assert.ok(linked.some((tag) => tag.label === "primary"));
+
+    await db.page.delete({ where: { id: page.id } });
   });
 });
