@@ -50,6 +50,35 @@ export {
 } from "./world-creation-service";
 
 export type { CreateWorldRequest, CreatedWorldResult } from "./world-creation-service";
+
+export {
+  createWorldCalendarService,
+  DEFAULT_IN_GAME_DATE,
+  DEFAULT_WORLD_CALENDAR_MONTHS,
+  formatInGameDate,
+  WorldCalendarService,
+} from "./world-calendar-service";
+
+export type {
+  InGameDate,
+  UpsertWorldCalendarInput,
+  WorldCalendarMonth,
+} from "./world-calendar-service";
+
+export {
+  createWorldEventService,
+  WorldEventService,
+} from "./world-event-service";
+
+export type { CreateWorldEventInput } from "./world-event-service";
+
+export {
+  createFactionStateService,
+  FactionStateService,
+} from "./faction-state-service";
+
+export type { UpsertFactionStateInput } from "./faction-state-service";
+
 export {
   getWorldTemplate,
   listWorldTemplateOptions,

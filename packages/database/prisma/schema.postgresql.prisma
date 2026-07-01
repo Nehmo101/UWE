@@ -436,6 +436,20 @@ enum EntityTagEntityType {
   dev_idea
 }
 
+enum WorldEventSourceType {
+  manual
+  faction_sim
+  session
+  import
+}
+
+enum WorldEventEntityRole {
+  primary
+  involved
+  location
+  faction
+}
+
 enum ContractBillingInterval {
   monthly
   yearly
@@ -641,6 +655,9 @@ model World {
   dndBeyondReferences DndBeyondReference[]
   researchSessions    ResearchSession[]
   contentReviews      ContentReview[]
+  worldCalendar       WorldCalendar?
+  worldEvents         WorldEvent[]
+  factionStates       FactionState[]
 
   @@map("worlds")
 }
@@ -711,10 +728,92 @@ model Page {
   generatorOutputs       GeneratorOutput[]
   dndBeyondReferences    DndBeyondReference[]
   versions               PageVersion[]
+  worldEventLinks        WorldEventEntityLink[]
+  factionState           FactionState?
 
   @@unique([worldId, slug])
   @@index([parentPageId])
   @@map("pages")
+}
+
+model WorldCalendar {
+  id           String   @id @default(cuid())
+  worldId      String   @unique @map("world_id")
+  name         String   @default("Weltkalender")
+  months       Json
+  daysPerWeek  Int      @default(7) @map("days_per_week")
+  dayNames     Json?    @map("day_names")
+  currentDate  Json     @map("current_date")
+  epochLabel   String?  @map("epoch_label")
+  settings     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  world  World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  events WorldEvent[]
+
+  @@map("world_calendars")
+}
+
+model WorldEvent {
+  id                 String               @id @default(cuid())
+  worldId            String               @map("world_id")
+  calendarId         String?              @map("calendar_id")
+  inGameDate         Json                 @map("in_game_date")
+  title              String
+  summaryPlayer      String?              @map("summary_player")
+  summaryDm          String?              @map("summary_dm")
+  visibility         Visibility           @default(private)
+  secretLevel        SecretLevel          @default(none) @map("secret_level")
+  sourceType         WorldEventSourceType @default(manual) @map("source_type")
+  sourceAiProposalId String?              @map("source_ai_proposal_id")
+  gameSessionId      String?              @map("game_session_id")
+  sortOrder          Int                  @default(0) @map("sort_order")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+
+  world       World                  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  calendar    WorldCalendar?         @relation(fields: [calendarId], references: [id], onDelete: SetNull)
+  gameSession GameSession?           @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
+  entityLinks WorldEventEntityLink[]
+
+  @@index([worldId, sortOrder])
+  @@map("world_events")
+}
+
+model WorldEventEntityLink {
+  id        String               @id @default(cuid())
+  eventId   String               @map("event_id")
+  pageId    String               @map("page_id")
+  role      WorldEventEntityRole @default(involved)
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  event WorldEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  page  Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, pageId, role])
+  @@index([pageId])
+  @@map("world_event_entity_links")
+}
+
+model FactionState {
+  id            String   @id @default(cuid())
+  worldId       String   @map("world_id")
+  pageId        String   @unique @map("page_id")
+  goals         Json?
+  resources     Json?
+  relationships Json?
+  agenda        String   @default("")
+  powerLevel    Int?     @map("power_level")
+  notes         String   @default("")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("faction_states")
 }
 
 model GameSession {
@@ -743,6 +842,7 @@ model GameSession {
   brainFacts     BrainFact[]
   aiRuns         AiRun[]
   calendarEvents CalendarEvent[]
+  worldEvents    WorldEvent[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
