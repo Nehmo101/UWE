@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MiniaturePhotoUploadField } from "./MiniaturePhotoUploadField";
 
 interface Props {
   referenceImageAssetId?: string | null;
@@ -21,13 +22,12 @@ export function MiniaturePhotoCompare({
 }: Props) {
   const [referenceId, setReferenceId] = useState(referenceImageAssetId ?? "");
   const [compareIds, setCompareIds] = useState<string[]>(comparePhotoAssetIds);
-  const [draftCompareId, setDraftCompareId] = useState("");
 
-  function addComparePhoto() {
-    const next = draftCompareId.trim();
-    if (!next || compareIds.includes(next)) return;
-    setCompareIds((current) => [...current, next]);
-    setDraftCompareId("");
+  const latestCompareId = compareIds.at(-1) ?? null;
+
+  function addComparePhoto(assetId: string) {
+    if (!assetId || compareIds.includes(assetId)) return;
+    setCompareIds((current) => [...current, assetId]);
   }
 
   function removeComparePhoto(assetId: string) {
@@ -39,54 +39,42 @@ export function MiniaturePhotoCompare({
       <input type="hidden" name={referenceFieldName} value={referenceId} />
       <input type="hidden" name={compareFieldName} value={compareIds.join("\n")} />
 
+      {referenceId && latestCompareId ? (
+        <div className="uwe-miniature-photo-compare-side" aria-label="Referenz und Fortschritt">
+          <figure className="uwe-miniature-photo-compare-side-item">
+            <figcaption className="uwe-v2-section-title">Referenz</figcaption>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetPreviewUrl(referenceId)} alt="Referenzbild" />
+          </figure>
+          <figure className="uwe-miniature-photo-compare-side-item">
+            <figcaption className="uwe-v2-section-title">Fortschritt</figcaption>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetPreviewUrl(latestCompareId)} alt="Aktueller Fortschritt" />
+          </figure>
+        </div>
+      ) : null}
+
       <div className="uwe-miniature-photo-compare-grid">
         <section className="uwe-miniature-photo-compare-pane" aria-label="Referenzbild">
           <h3 className="uwe-v2-section-title">Referenz</h3>
-          <div className="uwe-miniature-photo-slot">
-            {referenceId ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetPreviewUrl(referenceId)} alt="" />
-                <p className="uwe-dashboard-muted">
-                  Asset: <code>{referenceId}</code>
-                </p>
-              </>
-            ) : (
-              <p className="uwe-dashboard-muted">Noch kein Referenz-Asset gesetzt.</p>
-            )}
-          </div>
-          <label>
-            Referenz-Asset-ID
-            <input
-              value={referenceId}
-              onChange={(event) => setReferenceId(event.target.value.trim())}
-              placeholder="Asset-ID einfügen"
-            />
-          </label>
-          {referenceId ? (
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-              onClick={() => setReferenceId("")}
-            >
-              Referenz entfernen
-            </button>
-          ) : null}
+          <MiniaturePhotoUploadField
+            label="Referenzfoto für Vergleich"
+            assetId={referenceId || null}
+            onAssetChange={(assetId) => setReferenceId(assetId ?? "")}
+            uploadTitle="Miniatur Referenz"
+          />
         </section>
 
-        <section className="uwe-miniature-photo-compare-pane" aria-label="Vergleichsfotos">
-          <h3 className="uwe-v2-section-title">Vergleichsfotos ({compareIds.length})</h3>
+        <section className="uwe-miniature-photo-compare-pane" aria-label="Fortschrittsfotos">
+          <h3 className="uwe-v2-section-title">Fortschritt ({compareIds.length})</h3>
           <div className="uwe-miniature-photo-compare-strip">
             {compareIds.length === 0 ? (
-              <p className="uwe-dashboard-muted">Noch keine Vergleichsfotos hinterlegt.</p>
+              <p className="uwe-dashboard-muted">Noch keine Fortschrittsfotos hinterlegt.</p>
             ) : (
               compareIds.map((assetId) => (
                 <article key={assetId} className="uwe-miniature-photo-slot">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={assetPreviewUrl(assetId)} alt="" />
-                  <p className="uwe-dashboard-muted">
-                    <code>{assetId}</code>
-                  </p>
                   <button
                     type="button"
                     className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
@@ -98,23 +86,14 @@ export function MiniaturePhotoCompare({
               ))
             )}
           </div>
-          <div className="uwe-inline-actions">
-            <label>
-              Vergleichs-Asset-ID
-              <input
-                value={draftCompareId}
-                onChange={(event) => setDraftCompareId(event.target.value)}
-                placeholder="Asset-ID hinzufügen"
-              />
-            </label>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
-              onClick={addComparePhoto}
-            >
-              Foto hinzufügen
-            </button>
-          </div>
+          <MiniaturePhotoUploadField
+            label="Fortschrittsfoto hinzufügen"
+            assetId={null}
+            onAssetChange={(assetId) => {
+              if (assetId) addComparePhoto(assetId);
+            }}
+            uploadTitle="Miniatur Fortschritt"
+          />
         </section>
       </div>
     </div>
