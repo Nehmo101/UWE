@@ -50,6 +50,18 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         keywords: ["werkstatt", "workshop", "recipes", "rental"],
       },
       {
+        id: "org-miniatures",
+        label: "Miniaturen",
+        href: "/miniatures",
+        icon: "layers",
+        group: "Arbeit & Projekte",
+        section: SECTION,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "organization",
+        keywords: ["miniaturen", "miniatures", "sammlung", "collection", "fotovergleich"],
+      },
+      {
         id: "org-ideas",
         label: "Ideen",
         href: "/ideas",
