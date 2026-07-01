@@ -29,7 +29,7 @@ export async function FactionStateEditPanel({ worldSlug, pageId, pageSlug, categ
     <CollapsibleSection title="Fraktions-State" defaultOpen={Boolean(state)}>
       <p className="uwe-hint">
         Strukturierter Zustand für Simulation und Kampagnen-Tracking — ergänzt die Wiki-Blöcke.
-        Nutze im KI-Generator darunter „Fraktion simulieren“ (RTX-only, Review vor Übernahme).
+        Nutze den Fraktions-Simulator darunter (RTX-only, Review vor Übernahme in die Chronik).
       </p>
 
       <form action={upsertFactionStateAction} className="uwe-v2-form">

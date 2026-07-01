@@ -394,7 +394,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | World-Clock | Beta | `WorldCalendar`, `/worlds/[slug]/calendar`, `advanceInGameDate` |
 | Welt-Chronik (Studio) | Beta | `/worlds/[slug]/chronicle`, `PageChroniclePanel` |
 | Spieler-Timeline | Beta | `/auth/worlds/[slug]/timeline`, `PortalPageChronicleSection` |
-| Fraktions-State | Beta | `FactionState`, `FactionStateEditPanel`, `simulate_faction` (Review) |
+| Fraktions-State | Beta | `FactionState`, `FactionStateEditPanel`, `FactionSimulatorPanel`, `simulate_faction` (Review) |
 
 ---
 

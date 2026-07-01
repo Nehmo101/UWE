@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import {
+  buildFactionSimulationPrompt,
   createLifeAdminService,
   createUweRepository,
+  createFactionStateService,
+  createWorldCalendarService,
   detectMissingContent,
+  formatInGameDate,
   listGeneratorActions,
+  parseInGameDate,
+  parseWorldCalendarMonths,
   prisma,
   resolveGeneratorContextFromPage,
   type GeneratorActionId,
@@ -78,7 +84,26 @@ export async function postGeneratorAction(body: {
   }
 
   const taskType = mapGeneratorActionToTaskType(body.actionId);
-  const userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, body.structuredInput);
+  let userPrompt: string;
+  if (body.actionId === "simulate_faction") {
+    const world = await repo.getWorldBySlug(body.worldSlug);
+    const calendars = createWorldCalendarService(prisma);
+    const factions = createFactionStateService(prisma);
+    const calendar = world ? await calendars.getByWorldId(world.id) : null;
+    const factionState = await factions.getByPageId(page.id);
+    const months = parseWorldCalendarMonths(calendar?.months);
+    const currentDate = parseInGameDate(calendar?.currentDate);
+    userPrompt = buildFactionSimulationPrompt({
+      pageTitle: page.title,
+      currentDateLabel: formatInGameDate(currentDate, months),
+      currentDate,
+      calendarName: calendar?.name ?? undefined,
+      factionState,
+      structuredInput: body.structuredInput,
+    });
+  } else {
+    userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, body.structuredInput);
+  }
   const inference = await getInferenceStatus({ useMock: body.useMock });
   const model =
     process.env.AI_INFERENCE_DEFAULT_MODEL?.trim() ||

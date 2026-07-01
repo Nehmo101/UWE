@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#383). Nächste offene Neubau-Themen: Faction-Sim (Ende C), Owner-Notfallmodus, World Templates.
+#357–#385, Faction-Simulator UI). Nächste offene Neubau-Themen: Owner-Notfallmodus, World Templates.
