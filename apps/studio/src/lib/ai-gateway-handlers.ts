@@ -99,8 +99,15 @@ export async function patchAiGatewayConfig(
   if (body.featureModels) {
     mergedFeatureModels = { ...current.featureModels };
     for (const [key, value] of Object.entries(body.featureModels)) {
-      if (value === null || (!value?.providerId?.trim() && !value?.model?.trim())) delete mergedFeatureModels[key];
-      else mergedFeatureModels[key] = { providerId: value.providerId?.trim() || null, model: value.model?.trim() || null };
+      const category = key as AiFeatureCategory;
+      if (value === null || (!value?.providerId?.trim() && !value?.model?.trim())) {
+        delete mergedFeatureModels[category];
+      } else {
+        mergedFeatureModels[category] = {
+          providerId: value.providerId?.trim() || null,
+          model: value.model?.trim() || null,
+        };
+      }
     }
   }
   const config = await service.updateConfig({

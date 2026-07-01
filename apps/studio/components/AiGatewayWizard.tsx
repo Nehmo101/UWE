@@ -86,6 +86,17 @@ const PRIVACY_CATEGORY_LABELS: Record<string, string> = {
   image_generation: "Bildfunktionen",
 };
 
+const FEATURE_MODEL_LABELS: Record<string, string> = {
+  general_chat: "Allgemeiner Chat",
+  dnd_world: "DnD Generator / Brain / Welt",
+  personal_brain: "Life Brain (persönlich)",
+  private_notes: "Zusammenfassungen / Notizen",
+  admin_diagnostics: "Admin-Diagnose",
+  image_generation: "Image Studio",
+};
+
+const FEATURE_MODEL_KEYS = Object.keys(FEATURE_MODEL_LABELS);
+
 const WIZARD_STEPS = [
   "RTX verbinden",
   "Routing-Modus",
@@ -486,7 +497,72 @@ export function AiGatewayWizard() {
         </section>
       )}
 
-      {step === 4 && (<section className="uwe-v2-card uwe-v2-section"><h2>Modell pro Feature</h2><p className="uwe-muted">Optional Provider/Modell pro Feature.</p><table className="uwe-table"><thead><tr><th>Feature</th><th>Provider</th><th>Modell</th></tr></thead><tbody><tr key="general_chat"><td>Allgemeiner Chat</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['general_chat']?.providerId)??''} onChange={e=>void patchFeatureModel('general_chat',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['general_chat']?.model??''} onBlur={e=>void patchFeatureModel('general_chat',{model:e.target.value.trim()||null})} /></td></tr><tr key="dnd_world"><td>DnD Generator / Brain / Welt</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['dnd_world']?.providerId)??''} onChange={e=>void patchFeatureModel('dnd_world',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['dnd_world']?.model??''} onBlur={e=>void patchFeatureModel('dnd_world',{model:e.target.value.trim()||null})} /></td></tr><tr key="personal_brain"><td>Life Brain</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['personal_brain']?.providerId)??''} onChange={e=>void patchFeatureModel('personal_brain',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['personal_brain']?.model??''} onBlur={e=>void patchFeatureModel('personal_brain',{model:e.target.value.trim()||null})} /></td></tr><tr key="private_notes"><td>Zusammenfassungen</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['private_notes']?.providerId)??''} onChange={e=>void patchFeatureModel('private_notes',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['private_notes']?.model??''} onBlur={e=>void patchFeatureModel('private_notes',{model:e.target.value.trim()||null})} /></td></tr><tr key="admin_diagnostics"><td>Admin-Diagnose</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['admin_diagnostics']?.providerId)??''} onChange={e=>void patchFeatureModel('admin_diagnostics',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['admin_diagnostics']?.model??''} onBlur={e=>void patchFeatureModel('admin_diagnostics',{model:e.target.value.trim()||null})} /></td></tr><tr key="image_generation"><td>Image Studio</td><td>{k==='personal_brain'?<span className="uwe-muted">RTX (fest)</span>:<select className="uwe-input" value={(data.config.featureModels?.['image_generation']?.providerId)??''} onChange={e=>void patchFeatureModel('image_generation',{providerId:e.target.value||null})}><option value="">Standard</option><option value="local_rtx">RTX</option>{data.providers.filter(p=>p.isEnabled).map(p=><option key={p.providerId} value={p.providerId}>{p.label}</option>)}</select>}</td><td><input className="uwe-input" defaultValue={data.config.featureModels?.['image_generation']?.model??''} onBlur={e=>void patchFeatureModel('image_generation',{model:e.target.value.trim()||null})} /></td></tr></tbody></table></section>)}
+      {step === 4 && (
+        <section className="uwe-v2-card uwe-v2-section">
+          <h2>Modell pro Feature</h2>
+          <p className="uwe-muted">
+            Optional: Provider und Modell pro Feature überschreiben. Leer = Gateway-Standard.
+          </p>
+          <table className="uwe-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Provider</th>
+                <th>Modell</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURE_MODEL_KEYS.map((featureKey) => {
+                const override = data.config.featureModels?.[featureKey] ?? {};
+                const isLocalOnly = featureKey === "personal_brain";
+                const selectedProvider = isLocalOnly ? "local_rtx" : (override.providerId ?? "");
+                return (
+                  <tr key={featureKey}>
+                    <td>{FEATURE_MODEL_LABELS[featureKey] ?? featureKey}</td>
+                    <td>
+                      {isLocalOnly ? (
+                        <span className="uwe-muted">RTX (fest)</span>
+                      ) : (
+                        <select
+                          className="uwe-input"
+                          value={selectedProvider}
+                          onChange={(e) =>
+                            void patchFeatureModel(featureKey, {
+                              providerId: e.target.value || null,
+                            })
+                          }
+                        >
+                          <option value="">— Standard —</option>
+                          <option value="local_rtx">RTX (lokal)</option>
+                          {data.providers
+                            .filter((p) => p.isEnabled)
+                            .map((p) => (
+                              <option key={p.providerId} value={p.providerId}>
+                                {p.label}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </td>
+                    <td>
+                      <input
+                        className="uwe-input"
+                        defaultValue={override.model ?? ""}
+                        onBlur={(e) => {
+                          const model = e.target.value.trim() || null;
+                          if (model !== (override.model ?? null)) {
+                            void patchFeatureModel(featureKey, { model });
+                          }
+                        }}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {step === 5 && (
         <section className="uwe-v2-card uwe-v2-section">

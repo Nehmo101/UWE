@@ -1,5 +1,6 @@
 import type { PrismaClient } from "./client";
 import { prisma } from "./client";
+import type { Prisma } from "./generated/prisma/client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
 function parseOptionalPositiveInt(value: string | undefined): number | null {
@@ -389,7 +390,9 @@ export class AiGatewayService {
         id: "default",
         routingMode: next.routingMode,
         cloudFallbackEnabled: next.cloudFallbackEnabled,
-        privacyRules: next.privacyRules, featureModels: next.featureModels, dailyBudgetUsd: next.dailyBudgetUsd,
+        privacyRules: next.privacyRules,
+        featureModels: next.featureModels as Prisma.InputJsonValue,
+        dailyBudgetUsd: next.dailyBudgetUsd,
         monthlyBudgetUsd: next.monthlyBudgetUsd,
         perUserDailyBudgetUsd: next.perUserDailyBudgetUsd,
       },
@@ -397,7 +400,7 @@ export class AiGatewayService {
         routingMode: next.routingMode,
         cloudFallbackEnabled: next.cloudFallbackEnabled,
         privacyRules: next.privacyRules,
-        featureModels: next.featureModels,
+        featureModels: next.featureModels as Prisma.InputJsonValue,
         dailyBudgetUsd: next.dailyBudgetUsd,
         monthlyBudgetUsd: next.monthlyBudgetUsd,
         perUserDailyBudgetUsd: next.perUserDailyBudgetUsd,
