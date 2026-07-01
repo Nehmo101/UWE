@@ -22,15 +22,6 @@ export function WorldCockpitCard({
   );
 }
 
-export interface WorldCockpitGridProps {
-  children: ReactNode;
-}
-
-/** Six-card cockpit overview grid (3×2 on desktop). */
-export function WorldCockpitGrid({ children }: WorldCockpitGridProps) {
-  return <div className="uwe-cockpit-grid">{children}</div>;
-}
-
 export interface WorldCockpitHeaderProps {
   title: string;
   summary?: string | null;

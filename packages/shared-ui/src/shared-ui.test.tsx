@@ -16,7 +16,6 @@ import {
   SidebarContextProvider,
   SidebarNav,
   StickyActionBar,
-  StudioShell,
   ThemePicker,
   ToolWindow,
 } from "./index";
@@ -211,18 +210,6 @@ describe("shared-ui components", () => {
     assert.match(html, /uwe-btn-primary/);
     assert.match(html, /uwe-btn-danger/);
     assert.match(html, /Speichern/);
-  });
-
-  it("renders StudioShell with icon rail flag", () => {
-    const html = renderToStaticMarkup(
-      <StudioShell
-        showRail
-        railActiveId="today"
-        main={<p>Arbeitsfläche</p>}
-      />,
-    );
-    assert.match(html, /data-has-rail="true"/);
-    assert.match(html, /Arbeitsfläche/);
   });
 
   it("renders closed ToolWindow as empty", () => {
