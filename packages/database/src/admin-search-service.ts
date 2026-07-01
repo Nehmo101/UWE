@@ -1,5 +1,6 @@
 import type { PrismaClient } from "./client";
 import { createLifeAdminService } from "./life-admin-service";
+import { parseTagsFromMetadata } from "./json-utils";
 
 export const ADMIN_SEARCH_ENTITY_TYPES = [
   "capture",
@@ -9,6 +10,7 @@ export const ADMIN_SEARCH_ENTITY_TYPES = [
   "hardware_device",
   "personal_brain_document",
   "personal_brain_fact",
+  "dev_idea",
 ] as const;
 
 export type AdminSearchEntityType = (typeof ADMIN_SEARCH_ENTITY_TYPES)[number];
@@ -21,6 +23,7 @@ export const ADMIN_SEARCH_ENTITY_LABELS: Record<AdminSearchEntityType, string> =
   hardware_device: "Hardware",
   personal_brain_document: "Life Brain",
   personal_brain_fact: "Life Brain Fakt",
+  dev_idea: "Dev-Idee",
 };
 
 export interface AdminSearchOptions {
@@ -84,6 +87,8 @@ function hrefFor(type: AdminSearchEntityType, id: string): string {
       return `/life-brain/documents/${id}`;
     case "personal_brain_fact":
       return `/life-brain/facts/${id}`;
+    case "dev_idea":
+      return `/ideas?idea=${id}`;
   }
 }
 
@@ -235,6 +240,38 @@ export async function searchAdminEntities(
         snippet: snippetFrom(device.notes || device.errorNotes, query),
         href: hrefFor("hardware_device", device.id),
         group: "Persönlich · Hardware",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "dev_idea") {
+    const ideas = await db.devIdea.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { body: { contains: query } },
+          { module: { contains: query } },
+          { generatedPrompt: { contains: query } },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const idea of ideas) {
+      const metadataTags = parseTagsFromMetadata(idea.metadata);
+      const score = bestScore(
+        [idea.title, idea.body, idea.module, idea.generatedPrompt, ...metadataTags],
+        query,
+      );
+      if (score <= 0) continue;
+      results.push({
+        id: idea.id,
+        entityType: "dev_idea",
+        title: idea.title,
+        snippet: snippetFrom(idea.body, query),
+        href: hrefFor("dev_idea", idea.id),
+        group: "Persönlich · Dev-Ideen",
         score,
       });
     }

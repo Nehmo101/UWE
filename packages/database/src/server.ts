@@ -1460,6 +1460,23 @@ export type {
 } from "./cross-domain-search-service";
 
 export {
+  searchEntitiesByTagQuery,
+  loadEntityTagsByEntityIds,
+} from "./entity-tag-search-service";
+
+export type {
+  EntityTagSearchOptions,
+  EntityTagSearchResult,
+} from "./entity-tag-search-service";
+
+export { searchStudioMedia } from "./studio-media-search-service";
+
+export type {
+  StudioMediaSearchOptions,
+  StudioMediaSearchResult,
+} from "./studio-media-search-service";
+
+export {
   resolveAdminEntityLinks,
   listResolvedAdminLinksForEntity,
   ADMIN_LINK_RELATION_LABELS,
