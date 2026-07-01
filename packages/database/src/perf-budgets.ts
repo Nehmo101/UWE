@@ -71,6 +71,8 @@ export const PERF_BUDGETS_MS = {
   personalBrainSearch: 500,
   /** Bulk page list for a world */
   listPages: 600,
+  /** Asset list for a world */
+  listAssets: 800,
 } as const;
 
 /**

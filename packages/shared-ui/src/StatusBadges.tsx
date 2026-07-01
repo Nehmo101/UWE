@@ -377,6 +377,79 @@ export interface ContentBlockViewModel {
   sortOrder: number;
   content: string;
   visibility: Visibility;
+  assetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+function readAssetIdsFromBlock(block: ContentBlockViewModel): string[] {
+  const ids: string[] = [];
+  if (block.assetId) {
+    ids.push(block.assetId);
+  }
+  const metadata = block.metadata;
+  if (metadata && Array.isArray(metadata.assetIds)) {
+    for (const entry of metadata.assetIds) {
+      if (typeof entry === "string" && entry.trim() && !ids.includes(entry)) {
+        ids.push(entry);
+      }
+    }
+  }
+  return ids;
+}
+
+function renderGalleryBlock(block: ContentBlockViewModel) {
+  const assetIds = readAssetIdsFromBlock(block);
+  if (assetIds.length > 0) {
+    return (
+      <div
+        className="uwe-gallery-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+          gap: "0.5rem",
+        }}
+      >
+        {assetIds.map((assetId) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={assetId}
+            src={`/api/assets/${assetId}/file`}
+            alt=""
+            style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const urls = block.content
+    .split(/\n|,/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.startsWith("http") || entry.startsWith("/"));
+  if (urls.length > 0) {
+    return (
+      <div
+        className="uwe-gallery-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+          gap: "0.5rem",
+        }}
+      >
+        {urls.map((url) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={url}
+            src={url}
+            alt=""
+            style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export function ContentBlockList({
@@ -427,31 +500,9 @@ function renderBlockBody(block: ContentBlockViewModel) {
   }
 
   if (block.type === "gallery") {
-    const urls = block.content
-      .split(/\n|,/)
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.startsWith("http") || entry.startsWith("/"));
-    if (urls.length > 0) {
-      return (
-        <div
-          className="uwe-gallery-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-            gap: "0.5rem",
-          }}
-        >
-          {urls.map((url) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={url}
-              src={url}
-              alt=""
-              style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
-            />
-          ))}
-        </div>
-      );
+    const gallery = renderGalleryBlock(block);
+    if (gallery) {
+      return gallery;
     }
   }
 

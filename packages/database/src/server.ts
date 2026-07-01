@@ -888,6 +888,18 @@ export {
   unlinkAssetFromTarget,
 } from "./asset-link-service";
 
+export {
+  AssetAlbumService,
+  createAssetAlbumService,
+} from "./asset-album-service";
+
+export {
+  proposeTagsForAsset,
+  proposeTagsForAssets,
+  storeAssetTagProposals,
+  type AssetTagProposal,
+} from "./asset-tag-proposal-service";
+
 export type { AssetLinkRecord, AssetLinkTargetType, LinkAssetInput } from "./asset-link-service";
 
 export {

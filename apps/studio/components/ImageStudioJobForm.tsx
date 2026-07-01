@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ImageStudioMaskCanvas } from "./ImageStudioMaskCanvas";
 
 interface WorldOption {
@@ -16,7 +16,11 @@ interface ImageStudioJobFormProps {
   defaultProviderMode: string;
   enabled: boolean;
   pageId?: string;
+  projectId?: string;
   linkTargetType?: string;
+  defaultPrompt?: string;
+  defaultTitle?: string;
+  sourceAssetUrl?: string | null;
 }
 
 const INPAINT_TASKS = new Set(["inpaint", "edit", "remove_background", "variant"]);
@@ -73,16 +77,52 @@ export function ImageStudioJobForm({
   defaultProviderMode,
   enabled,
   pageId,
+  projectId,
   linkTargetType = "page",
+  defaultPrompt = "",
+  defaultTitle = "",
+  sourceAssetUrl = null,
 }: ImageStudioJobFormProps) {
   const [task, setTask] = useState("generate");
   const [worldSlug, setWorldSlug] = useState(defaultWorldSlug || worlds[0]?.slug || "");
-  const [sourcePreview, setSourcePreview] = useState<string | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<string | null>(sourceAssetUrl);
   const [sourceBase64, setSourceBase64] = useState("");
   const [maskBase64, setMaskBase64] = useState("");
   const [layerMode, setLayerMode] = useState(false);
   const [layerStatus, setLayerStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+
+  useEffect(() => {
+    if (!sourceAssetUrl || sourceBase64) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(sourceAssetUrl);
+        if (!response.ok) {
+          return;
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (cancelled) return;
+          const result = typeof reader.result === "string" ? reader.result : "";
+          const base64 = result.includes(",") ? result.split(",")[1] ?? "" : result;
+          setSourceBase64(base64);
+          setSourcePreview(result);
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        // Prefill is best-effort only.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceAssetUrl, sourceBase64]);
 
   const showInpaintFields = INPAINT_TASKS.has(task);
   const showVariantCount = task === "variant";
@@ -135,6 +175,7 @@ export function ImageStudioJobForm({
   return (
     <form ref={formRef} action={action} className="uwe-form" onSubmit={handleSubmit}>
       {pageId && <input type="hidden" name="pageId" value={pageId} />}
+      {projectId && <input type="hidden" name="projectId" value={projectId} />}
       {pageId && <input type="hidden" name="linkTargetType" value={linkTargetType} />}
       <input type="hidden" name="sourceImageBase64" value={sourceBase64} />
       <input type="hidden" name="maskBase64" value={maskBase64} />
@@ -246,12 +287,18 @@ export function ImageStudioJobForm({
 
       <label>
         Titel (optional)
-        <input name="title" type="text" placeholder="NPC-Portrait Gandalf" />
+        <input name="title" type="text" placeholder="NPC-Portrait Gandalf" defaultValue={defaultTitle} />
       </label>
 
       <label>
         Prompt
-        <textarea name="prompt" required rows={4} placeholder="Episches DnD-Portrait …" />
+        <textarea
+          name="prompt"
+          required
+          rows={4}
+          placeholder="Episches DnD-Portrait …"
+          defaultValue={defaultPrompt}
+        />
       </label>
 
       <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={!enabled}>

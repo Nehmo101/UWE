@@ -9,6 +9,7 @@ import {
 } from "@uwe/shared-ui";
 import {
   getAppRepository,
+  createAssetAlbumService,
   createPrismaClient,
   createShareLinkService,
   parseStringArray,
@@ -18,13 +19,26 @@ import {
 import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
-import { linkAssetToPageAction, updateAssetAction } from "@/app/asset-actions";
+import {
+  createAssetAlbumAction,
+  linkAssetToPageAction,
+  openAssetInImageStudioAction,
+  updateAssetAction,
+} from "@/app/asset-actions";
+import { AssetBatchToolbar, AssetTagProposalPanel } from "@/components/assets/AssetBatchToolbar";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ type?: string; uploaded?: string; linked?: string; saved?: string }>;
+  searchParams: Promise<{
+    type?: string;
+    uploaded?: string;
+    linked?: string;
+    saved?: string;
+    tagged?: string;
+    album?: string;
+  }>;
 }
 
 function isPreviewable(mimeType: string | null): boolean {
@@ -34,18 +48,22 @@ function isPreviewable(mimeType: string | null): boolean {
 
 export default async function StudioAssetsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { type: typeFilter, uploaded, linked, saved } = await searchParams;
+  const { type: typeFilter, uploaded, linked, saved, tagged, album: albumFilter } =
+    await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const assets = await repo.listAssetsByWorld(worldSlug, {
-    type: typeFilter as AssetType | undefined,
-  });
-  const pages = await repo.listPagesByWorld(worldSlug);
-
   const db = createPrismaClient();
+  const albumService = createAssetAlbumService(db);
+  const albums = await albumService.listAlbumsByWorld(world.id);
+  const albumAssetIds = albumFilter ? await albumService.listAssetIdsInAlbum(albumFilter) : null;
+
+  const assets = (await repo.listAssetsByWorld(worldSlug, {
+    type: typeFilter as AssetType | undefined,
+  })).filter((asset) => !albumAssetIds || albumAssetIds.includes(asset.id));
+  const pages = await repo.listPagesByWorld(worldSlug);
   const shareService = createShareLinkService(db);
   const assetShareData = await Promise.all(
     assets.map(async (asset) => {
@@ -94,9 +112,56 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
         title="Asset-Bibliothek"
         summary="Bilder, Karten, Handouts und Medien zentral verwalten."
       />
-      {(uploaded || linked || saved) && (
+      {(uploaded || linked || saved || tagged) && (
         <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
       )}
+
+          <section className="uwe-panel">
+            <h2>Alben</h2>
+            <form action={createAssetAlbumAction} className="uwe-form-grid">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <label>
+                Neues Album
+                <input type="text" name="title" placeholder="Session 12 — Karten" required />
+              </label>
+              <label>
+                Beschreibung
+                <input type="text" name="description" placeholder="Optional" />
+              </label>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+                Album anlegen
+              </button>
+            </form>
+            {albums.length > 0 && (
+              <div className="uwe-filter-bar" style={{ marginTop: "1rem" }}>
+                <Link
+                  href={`/worlds/${worldSlug}/assets`}
+                  className={!albumFilter ? "active" : undefined}
+                >
+                  Alle Assets
+                </Link>
+                {albums.map((album) => (
+                  <Link
+                    key={album.id}
+                    href={`/worlds/${worldSlug}/assets?album=${album.id}`}
+                    className={albumFilter === album.id ? "active" : undefined}
+                  >
+                    {album.title} ({album._count.items})
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <AssetBatchToolbar
+            worldSlug={worldSlug}
+            albums={albums.map((album) => ({
+              id: album.id,
+              title: album.title,
+              count: album._count.items,
+            }))}
+            assetIds={assets.map((asset) => asset.id)}
+          />
 
           <section className="uwe-panel">
             <h2>Asset hochladen</h2>
@@ -229,12 +294,21 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                   </td>
                   <td>
                     {asset.mimeType?.startsWith("image/") ? (
-                      <a
-                        className="uwe-link"
-                        href={`/worlds/${worldSlug}/labels/new?sourceRef=asset:${asset.id}`}
-                      >
-                        Als Label
-                      </a>
+                      <div className="uwe-inline-actions">
+                        <a
+                          className="uwe-link"
+                          href={`/worlds/${worldSlug}/labels/new?sourceRef=asset:${asset.id}`}
+                        >
+                          Als Label
+                        </a>
+                        <form action={openAssetInImageStudioAction} style={{ display: "inline" }}>
+                          <input type="hidden" name="worldSlug" value={worldSlug} />
+                          <input type="hidden" name="assetId" value={asset.id} />
+                          <button type="submit" className="uwe-link-button">
+                            Image Studio
+                          </button>
+                        </form>
+                      </div>
                     ) : (
                       "—"
                     )}
@@ -251,7 +325,25 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
           {assets.length > 0 && (
             <section className="uwe-panel">
               <h2>Asset bearbeiten</h2>
-              {assets.map((asset) => (
+              {assets.map((asset) => {
+                const metadata =
+                  asset.metadata &&
+                  typeof asset.metadata === "object" &&
+                  !Array.isArray(asset.metadata)
+                    ? (asset.metadata as Record<string, unknown>)
+                    : {};
+                const proposal = metadata.aiTagProposal;
+                const proposedTags =
+                  proposal &&
+                  typeof proposal === "object" &&
+                  !Array.isArray(proposal) &&
+                  Array.isArray((proposal as Record<string, unknown>).tags)
+                    ? ((proposal as Record<string, unknown>).tags as unknown[]).filter(
+                        (entry): entry is string => typeof entry === "string",
+                      )
+                    : [];
+
+                return (
                 <details key={asset.id} className="share-asset-details">
                   <summary>{asset.title}</summary>
                   <form action={updateAssetAction} className="uwe-form-grid">
@@ -297,8 +389,14 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       Speichern
                     </button>
                   </form>
+                  <AssetTagProposalPanel
+                    worldSlug={worldSlug}
+                    assetId={asset.id}
+                    proposedTags={proposedTags}
+                  />
                 </details>
-              ))}
+                );
+              })}
             </section>
           )}
 

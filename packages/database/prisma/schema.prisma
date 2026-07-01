@@ -642,6 +642,7 @@ model World {
   campaigns        Campaign[]
   pages            Page[]
   assets           Asset[]
+  assetAlbums      AssetAlbum[]
   worldMemberships WorldMembership[]
   gameSessions     GameSession[]
   labelTemplates    LabelTemplate[]
@@ -1047,9 +1048,40 @@ model Asset {
   imageStudioVersions ImageStudioVersion[]
   atlasNodeBackgrounds AtlasNode[]        @relation("AtlasNodeBackground")
   atlasPaletteItems    AtlasPaletteItem[] @relation("AtlasPaletteAsset")
+  albumItems           AssetAlbumItem[]
 
   @@index([worldId, type])
   @@map("assets")
+}
+
+model AssetAlbum {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  items AssetAlbumItem[]
+
+  @@index([worldId])
+  @@map("asset_albums")
+}
+
+model AssetAlbumItem {
+  id        String   @id @default(cuid())
+  albumId   String   @map("album_id")
+  assetId   String   @map("asset_id")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  album AssetAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  asset Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, assetId])
+  @@index([albumId, sortOrder])
+  @@map("asset_album_items")
 }
 
 model AssetPageLink {

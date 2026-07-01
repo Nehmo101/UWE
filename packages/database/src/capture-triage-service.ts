@@ -449,17 +449,58 @@ export class CaptureTriageService {
     };
   }
 
+  private async resolveCaptureSourceAssetId(capture: CaptureEntry): Promise<string | null> {
+    if (!capture.worldId) {
+      return null;
+    }
+
+    const recentAssets = await this.db.asset.findMany({
+      where: { worldId: capture.worldId },
+      select: { id: true, metadata: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    for (const asset of recentAssets) {
+      if (!asset.metadata || typeof asset.metadata !== "object" || Array.isArray(asset.metadata)) {
+        continue;
+      }
+      const metadata = asset.metadata as Record<string, unknown>;
+      if (metadata.captureId === capture.id) {
+        return asset.id;
+      }
+    }
+
+    return null;
+  }
+
   private async promoteToImageStudio(capture: CaptureEntry): Promise<CaptureTriageResult> {
     const imageStudio = createImageStudioService(this.db);
+    const sourceAssetId = await this.resolveCaptureSourceAssetId(capture);
     const project = await imageStudio.createProject({
+      worldId: capture.worldId ?? null,
       title: capture.title || "Capture-Bild",
       prompt: capture.content || null,
       metadata: {
         sourceCaptureId: capture.id,
         storageKey: capture.storageKey,
         captureType: capture.captureType,
+        sourceAssetId,
       },
     });
+
+    if (sourceAssetId) {
+      await imageStudio.addVersion({
+        projectId: project.id,
+        operation: "edit",
+        prompt: capture.content || null,
+        assetId: sourceAssetId,
+        providerMode: "manual",
+        metadata: { source: "capture_promote" },
+      });
+    }
+
+    await imageStudio.linkProject(project.id, "capture", capture.id);
 
     await this.lifeAdmin.updateCapture(capture.id, {
       status: "linked",

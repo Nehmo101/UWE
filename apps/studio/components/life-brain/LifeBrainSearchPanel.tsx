@@ -13,6 +13,7 @@ interface SearchDocumentHit {
   content: string;
   category: string | null;
   score: number;
+  matchMode?: string;
 }
 
 interface SearchFactHit {
@@ -21,11 +22,23 @@ interface SearchFactHit {
   content: string;
   factType: string;
   score: number;
+  matchMode?: string;
+}
+
+interface SearchChunkHit {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  category: string | null;
+  content: string;
+  score: number;
 }
 
 interface SearchResponse {
+  matchMode?: "semantic" | "keyword" | "filter";
   documents: SearchDocumentHit[];
   facts: SearchFactHit[];
+  chunks?: SearchChunkHit[];
 }
 
 function truncate(text: string, maxLength = 140): string {
@@ -34,6 +47,10 @@ function truncate(text: string, maxLength = 140): string {
     return trimmed;
   }
   return `${trimmed.slice(0, maxLength - 1)}…`;
+}
+
+function formatScore(score: number): string {
+  return `${Math.round(score * 100)}%`;
 }
 
 export function LifeBrainSearchPanel() {
@@ -95,14 +112,17 @@ export function LifeBrainSearchPanel() {
     };
   }, [query, category]);
 
+  const chunkCount = results?.chunks?.length ?? 0;
   const hasHits =
-    results != null && (results.documents.length > 0 || results.facts.length > 0);
+    results != null &&
+    (results.documents.length > 0 || results.facts.length > 0 || chunkCount > 0);
   const showEmpty =
     results != null &&
     !loading &&
     query.trim().length >= 2 &&
     results.documents.length === 0 &&
-    results.facts.length === 0;
+    results.facts.length === 0 &&
+    chunkCount === 0;
 
   return (
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
@@ -131,6 +151,16 @@ export function LifeBrainSearchPanel() {
         </label>
       </div>
       {loading && <p className="uwe-dashboard-muted">Suche läuft…</p>}
+      {results?.matchMode && query.trim().length >= 2 && (
+        <p className="uwe-dashboard-muted">
+          Modus:{" "}
+          {results.matchMode === "semantic"
+            ? "Semantisch (RTX/Embeddings)"
+            : results.matchMode === "keyword"
+              ? "Stichwort-Fallback"
+              : "Filter"}
+        </p>
+      )}
       {error && (
         <p className="uwe-form-error" role="alert">
           {error}
@@ -139,6 +169,31 @@ export function LifeBrainSearchPanel() {
       {showEmpty && <p className="uwe-dashboard-muted">Keine Treffer für „{query.trim()}“.</p>}
       {hasHits && (
         <div className="uwe-v2-section">
+          {chunkCount > 0 && (
+            <>
+              <h3 className="uwe-section-subtitle">Chunks ({chunkCount})</h3>
+              <div className="uwe-today-card-list">
+                {results.chunks!.map((chunk) => (
+                  <article key={chunk.chunkId} className="uwe-today-card">
+                    <h4>
+                      <Link href={`/life-brain/documents/${chunk.documentId}`}>
+                        {chunk.documentTitle}
+                      </Link>{" "}
+                      <span className="uwe-badge">{formatScore(chunk.score)}</span>
+                    </h4>
+                    <p className="uwe-dashboard-muted">
+                      {chunk.category
+                        ? (PERSONAL_BRAIN_CATEGORY_LABELS[
+                            chunk.category as (typeof PERSONAL_BRAIN_CATEGORIES)[number]
+                          ] ?? chunk.category)
+                        : "Allgemein"}
+                    </p>
+                    {chunk.content && <p>{truncate(chunk.content)}</p>}
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
           {results.documents.length > 0 && (
             <>
               <h3 className="uwe-section-subtitle">Dokumente ({results.documents.length})</h3>
@@ -146,7 +201,10 @@ export function LifeBrainSearchPanel() {
                 {results.documents.map((document) => (
                   <article key={document.id} className="uwe-today-card">
                     <h4>
-                      <Link href={`/life-brain/documents/${document.id}`}>{document.title}</Link>
+                      <Link href={`/life-brain/documents/${document.id}`}>{document.title}</Link>{" "}
+                      {document.score > 0 ? (
+                        <span className="uwe-badge">{formatScore(document.score)}</span>
+                      ) : null}
                     </h4>
                     <p className="uwe-dashboard-muted">
                       {document.category
@@ -168,7 +226,10 @@ export function LifeBrainSearchPanel() {
                 {results.facts.map((fact) => (
                   <article key={fact.id} className="uwe-today-card">
                     <h4>
-                      <Link href={`/life-brain/facts/${fact.id}`}>{fact.title}</Link>
+                      <Link href={`/life-brain/facts/${fact.id}`}>{fact.title}</Link>{" "}
+                      {fact.score > 0 ? (
+                        <span className="uwe-badge">{formatScore(fact.score)}</span>
+                      ) : null}
                     </h4>
                     <p className="uwe-dashboard-muted">{fact.factType}</p>
                     {fact.content && <p>{truncate(fact.content)}</p>}

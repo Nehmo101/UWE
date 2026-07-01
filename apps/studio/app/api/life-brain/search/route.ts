@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { createLifeAdminService, prisma } from "@uwe/database/server";
+import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
+import {
+  createLifeAdminService,
+  createPersonalBrainService,
+  prisma,
+} from "@uwe/database/server";
 import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
@@ -23,28 +28,68 @@ export async function GET(request: Request) {
     limit,
   });
 
+  let chunks: Array<{
+    chunkId: string;
+    documentId: string;
+    documentTitle: string;
+    category: string | null;
+    content: string;
+    score: number;
+  }> = [];
+  let matchMode: "semantic" | "keyword" | "filter" = "filter";
+
+  if (query.length >= 2 && !factType && !tag) {
+    const personalBrain = createPersonalBrainService(prisma);
+    let documentIds: string[] | undefined;
+    if (category) {
+      const docs = await service.listPersonalBrainDocuments({ category, limit: 200 });
+      documentIds = docs.map((doc) => doc.id);
+    }
+
+    if (!category || (documentIds && documentIds.length > 0)) {
+      const semanticResults = await semanticSearchPersonalBrainChunks(personalBrain, {
+        query,
+        limit: Math.min(limit, 20),
+        documentIds,
+      });
+      chunks = semanticResults.map((entry) => ({
+        chunkId: entry.chunkId,
+        documentId: entry.documentId,
+        documentTitle: entry.documentTitle,
+        category: entry.category,
+        content: entry.content,
+        score: entry.score,
+      }));
+      matchMode = chunks.some((entry) => entry.score >= 0.35) ? "semantic" : "keyword";
+    }
+  } else if (query.length >= 2) {
+    matchMode = "keyword";
+  }
+
   return NextResponse.json({
     query,
     category: category ?? null,
     factType: factType ?? null,
     tag: tag ?? null,
-    documents: result.documents.map(({ item, score, matchMode }) => ({
+    matchMode,
+    documents: result.documents.map(({ item, score, matchMode: docMatchMode }) => ({
       id: item.id,
       title: item.title,
       content: item.content,
       category: item.category,
       score,
-      matchMode,
+      matchMode: docMatchMode,
       updatedAt: item.updatedAt?.toISOString() ?? null,
     })),
-    facts: result.facts.map(({ item, score, matchMode }) => ({
+    facts: result.facts.map(({ item, score, matchMode: factMatchMode }) => ({
       id: item.id,
       title: item.title,
       content: item.content,
       factType: item.factType,
       score,
-      matchMode,
+      matchMode: factMatchMode,
       updatedAt: item.updatedAt?.toISOString() ?? null,
     })),
+    chunks,
   });
 }

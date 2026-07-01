@@ -72,12 +72,22 @@ describe("performance smoke", () => {
     assertWithinBudget("todaySummary", ms, PERF_BUDGETS_MS.todaySummary);
   });
 
+  it("lists assets within budget", async () => {
+    const start = process.hrtime.bigint();
+    const repo = createUweRepository(databaseUrl);
+    const assets = await repo.listAssetsByWorld(worldSlug);
+    const ms = elapsed(start);
+    assert.ok(assets.length >= PERF_SMOKE_SCALE.assets);
+    assertWithinBudget("listAssets", ms, PERF_BUDGETS_MS.listAssets);
+  });
+
   it("scans tag inventory within budget", async () => {
     const tags = createTagService(db);
     const start = process.hrtime.bigint();
     const inventory = await tags.collectInventory();
     const ms = elapsed(start);
     assert.ok(inventory.length >= 10);
+    assert.ok(inventory.some((entry) => entry.references.some((ref) => ref.entityType === "asset")));
     assertWithinBudget("tagInventory", ms, PERF_BUDGETS_MS.tagInventory);
   });
 

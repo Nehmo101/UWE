@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   buildStorageKey,
   ensureUploadDirectory,
@@ -56,6 +57,7 @@ export async function createImageStudioJobAction(formData: FormData) {
   const sourceImageBase64 = String(formData.get("sourceImageBase64") ?? "") || undefined;
   const maskBase64 = String(formData.get("maskBase64") ?? "") || undefined;
   const pageId = String(formData.get("pageId") ?? "") || undefined;
+  const existingProjectId = String(formData.get("projectId") ?? "") || undefined;
   const linkTargetType = String(formData.get("linkTargetType") ?? "") || undefined;
   const linkTargetId = String(formData.get("linkTargetId") ?? "") || pageId || undefined;
   const contextMode = (String(formData.get("contextMode") ?? "prompt_only") ||
@@ -93,22 +95,35 @@ export async function createImageStudioJobAction(formData: FormData) {
   if (!world) throw new Error("Welt nicht gefunden.");
 
   const imageStudio = createImageStudioService(prisma);
-  const project = await imageStudio.createProject({
-    worldId: world.id,
-    title: title ?? `Image Studio — ${task}`,
-    prompt,
-    metadata: { contextMode, reviewStatus: "draft" },
-  });
+  let project;
+  if (existingProjectId) {
+    project = await imageStudio.getProject(existingProjectId);
+    if (!project) throw new Error("Projekt nicht gefunden.");
+    await imageStudio.saveDraft({
+      projectId: existingProjectId,
+      prompt,
+      title: title ?? project.title,
+    });
+    await imageStudio.updateProjectStatus(existingProjectId, "processing");
+  } else {
+    project = await imageStudio.createProject({
+      worldId: world.id,
+      title: title ?? `Image Studio — ${task}`,
+      prompt,
+      metadata: { contextMode, reviewStatus: "draft" },
+    });
+    await imageStudio.updateProjectStatus(project.id, "processing");
+  }
+
+  const projectId = project.id;
 
   const resolvedLinkType = (linkTargetType ?? (pageId ? "page" : undefined)) as
     | ImageStudioLinkTargetType
     | undefined;
 
   if (resolvedLinkType && linkTargetId) {
-    await imageStudio.linkProject(project.id, resolvedLinkType, linkTargetId);
+    await imageStudio.linkProject(projectId, resolvedLinkType, linkTargetId);
   }
-
-  await imageStudio.updateProjectStatus(project.id, "processing");
 
   const jobs = createJobService(prisma);
   for (let index = 0; index < variantCount; index += 1) {
@@ -119,7 +134,7 @@ export async function createImageStudioJobAction(formData: FormData) {
       worldId: world.id,
       worldSlug: world.slug,
       payload: {
-        projectId: project.id,
+        projectId,
         worldId: world.id,
         worldSlug: world.slug,
         task,
@@ -133,11 +148,60 @@ export async function createImageStudioJobAction(formData: FormData) {
         cloudContextApproved,
       },
       relatedType: "image_studio_project",
-      relatedId: project.id,
+      relatedId: projectId,
     });
     void dispatchJob(job.id);
   }
   revalidatePath("/image-studio");
+  if (existingProjectId) {
+    revalidatePath(`/image-studio/${existingProjectId}`);
+    redirect(`/image-studio/${existingProjectId}`);
+  }
+}
+
+export async function retryImageStudioProjectAction(formData: FormData) {
+  const settings = await getSystemSettings();
+  if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
+
+  assertStudioCanUseAI();
+
+  const projectId = String(formData.get("projectId") ?? "");
+  if (!projectId) throw new Error("projectId fehlt.");
+
+  const imageStudio = createImageStudioService(prisma);
+  const project = await imageStudio.getProject(projectId);
+  if (!project) throw new Error("Projekt nicht gefunden.");
+
+  const world = project.worldId
+    ? await prisma.world.findUnique({ where: { id: project.worldId }, select: { slug: true } })
+    : null;
+  if (world?.slug) {
+    await requireStudioWorldEdit(world.slug);
+  }
+
+  const jobs = createJobService(prisma);
+  const failedJob = await prisma.job.findFirst({
+    where: {
+      relatedType: "image_studio_project",
+      relatedId: projectId,
+      status: "failed",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!failedJob) {
+    throw new Error("Kein fehlgeschlagener Job für dieses Projekt gefunden.");
+  }
+
+  const retried = await jobs.retry(failedJob.id);
+  if (!retried) {
+    throw new Error("Job konnte nicht wiederholt werden.");
+  }
+
+  await imageStudio.updateProjectStatus(projectId, "processing");
+  void dispatchJob(retried.id);
+  revalidatePath("/image-studio");
+  revalidatePath(`/image-studio/${projectId}`);
 }
 
 export async function saveImageStudioDraftAction(formData: FormData) {

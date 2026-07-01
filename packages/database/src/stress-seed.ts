@@ -104,6 +104,13 @@ export async function seedStressWorld(
         "Synthetic world for performance smoke tests, tag cleanup, and scale validation.",
     }));
 
+  if (!world.isSandbox) {
+    await db.world.update({
+      where: { id: world.id },
+      data: { isSandbox: true },
+    });
+  }
+
   let campaign = await repo.getCampaignBySlug(world.slug, "perf-campaign");
   if (!campaign) {
     campaign = await repo.createCampaign({

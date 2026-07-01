@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { EmptyState } from "@uwe/shared-ui";
 import {
   createImageStudioService,
@@ -14,11 +15,14 @@ import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
 import { createImageStudioJobAction } from "../integration-actions";
 
 interface Props {
-  searchParams: Promise<{ pageId?: string }>;
+  searchParams: Promise<{ pageId?: string; project?: string }>;
 }
 
 export default async function ImageStudioPage({ searchParams }: Props) {
-  const { pageId } = await searchParams;
+  const { pageId, project } = await searchParams;
+  if (project?.trim()) {
+    redirect(`/image-studio/${project.trim()}`);
+  }
   const repo = getAppRepository();
   const settings = await repo.getSystemSettings();
   const config = settings.imageStudio;
