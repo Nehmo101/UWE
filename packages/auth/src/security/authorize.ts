@@ -1,4 +1,8 @@
-import { isPublicExposureConfigured, originMatchesTrustedHost } from "../runtime-config";
+import {
+  isCrossSiteBrowserRequest,
+  isSameOriginBrowserRequest,
+} from "../api-origin-guard";
+import { isPublicExposureConfigured } from "../runtime-config";
 import { classifyRoute, isApiRoute, type UweAppSurface } from "./route-policy";
 
 function timingSafeEqual(a: Buffer, b: Buffer): boolean {
@@ -47,33 +51,6 @@ function readPathname(input: AuthorizeInput): string {
     }
   }
   return "/";
-}
-
-function isCrossSiteBrowserRequest(request: Pick<Request, "headers">): boolean {
-  const secFetchSite = request.headers.get("sec-fetch-site");
-  if (secFetchSite === "cross-site") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-  if (!origin || origin === "null") {
-    return false;
-  }
-
-  return !originMatchesTrustedHost(origin, request.headers.get("host"));
-}
-
-function isSameOriginBrowserRequest(request: Pick<Request, "headers">): boolean {
-  if (request.headers.get("sec-fetch-site") === "same-origin") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-  if (origin && origin !== "null") {
-    return originMatchesTrustedHost(origin, request.headers.get("host"));
-  }
-
-  return false;
 }
 
 function hasValidBearerToken(request: Pick<Request, "headers">, requiredToken: string): boolean {
@@ -146,20 +123,24 @@ function authorizeStudio(
     return null;
   }
 
-  if (isCrossSiteBrowserRequest(request)) {
+  if (hasCloudflareAccessAuth(request, env)) {
+    return null;
+  }
+
+  if (isCrossSiteBrowserRequest(request, env)) {
     return {
       status: 403,
       error: "Cross-Origin-Anfragen an die Studio-API sind nicht erlaubt.",
     };
   }
 
-  if (hasCloudflareAccessAuth(request, env)) {
-    return null;
-  }
-
   const requiredToken = env.STUDIO_API_TOKEN;
   if (requiredToken) {
-    if (isSameOriginBrowserRequest(request) || hasValidBearerToken(request, requiredToken)) {
+    if (isSameOriginBrowserRequest(request, env) || hasValidBearerToken(request, requiredToken)) {
+      return null;
+    }
+    // Direct browser navigation (HTML) has no Origin header — session middleware handles pages.
+    if (scope === "studio-action" && !request.headers.get("origin")) {
       return null;
     }
     return {
@@ -175,11 +156,11 @@ function authorizeStudio(
     };
   }
 
-  if (scope === "studio-action" && isSameOriginBrowserRequest(request)) {
+  if (scope === "studio-action" && isSameOriginBrowserRequest(request, env)) {
     return null;
   }
 
-  if (scope === "studio-api" && isSameOriginBrowserRequest(request)) {
+  if (scope === "studio-api" && isSameOriginBrowserRequest(request, env)) {
     return null;
   }
 

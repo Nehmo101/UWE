@@ -47,14 +47,28 @@ describe("security boundary", () => {
     assert.equal(decision.action, "redirect-login");
   });
 
-  it("blocks protected studio routes without auth when publicly exposed", () => {
+  it("allows direct studio page navigation when STUDIO_API_TOKEN is set (session gate is separate)", () => {
     const decision = evaluateStudioMiddleware(makeMiddlewareRequest("/admin/status"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uweandragons.org",
       CLOUDFLARE_TUNNEL: "true",
       STUDIO_API_TOKEN: "test-token",
     });
+    assert.equal(decision.action, "allow");
+  });
+
+  it("still blocks protected studio APIs without bearer when STUDIO_API_TOKEN is set", () => {
+    const decision = evaluateStudioMiddleware(
+      makeMiddlewareRequest("/api/brain/run", { host: "127.0.0.1:3000" }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweandragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "test-token",
+      },
+    );
     assert.equal(decision.action, "block");
     assert.equal(decision.status, 401);
   });

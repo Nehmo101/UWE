@@ -128,6 +128,23 @@ describe("authorize", () => {
     assert.equal(denied, null);
   });
 
+  it("accepts Cloudflare Access before cross-site guard", () => {
+    process.env.STUDIO_ACCESS_ALLOWED_EMAILS = "lasset610@gmail.com";
+    process.env.STUDIO_API_TOKEN = "secret-token";
+
+    const denied = authorize({
+      scope: "studio-api",
+      request: makeRequest("/api/import/execute", {
+        host: "studio.uweandragons.org",
+        origin: "https://evil.example",
+        "sec-fetch-site": "cross-site",
+        "cf-access-authenticated-user-email": "lasset610@gmail.com",
+      }),
+      pathname: "/api/import/execute",
+    });
+    assert.equal(denied, null);
+  });
+
   it("requires portal session for auth routes", () => {
     const denied = authorize({
       scope: "portal-session",

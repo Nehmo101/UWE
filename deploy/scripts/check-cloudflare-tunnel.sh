@@ -73,6 +73,11 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   if grep -qiE 'ollama|rtx|11434|8787' "$TUNNEL_CONFIG"; then
     report fail "Tunnel-Konfiguration enthält RTX/Ollama-Referenzen"
   fi
+  if grep -q 'portal\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
+    report ok "Split-Hostname-Ingress: portal.uweanddragons.org konfiguriert"
+  elif [[ -n "$PORTAL_URL" && "$PORTAL_URL" == *"portal.uweanddragons.org"* ]]; then
+    report warn "NEXT_PUBLIC_PORTAL_URL=portal.uweanddragons.org — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
+  fi
   if grep -q 'studio\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: studio.uweanddragons.org konfiguriert"
   elif grep -q '/studio' "$TUNNEL_CONFIG" 2>/dev/null; then

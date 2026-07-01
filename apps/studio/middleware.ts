@@ -5,6 +5,7 @@ import {
   evaluateStudioMiddleware,
   fetchMaintenanceMiddlewareDecision,
   getUweRuntimeConfig,
+  hasCloudflareAccessAuth,
   isCrossSiteBrowserRequest,
   resolveLegacyPathRedirect,
   SESSION_COOKIE_NAME,
@@ -47,7 +48,11 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
     return null;
   }
 
-  if (!isCrossSiteBrowserRequest(request)) {
+  if (hasCloudflareAccessAuth(request, process.env)) {
+    return null;
+  }
+
+  if (!isCrossSiteBrowserRequest(request, process.env)) {
     return null;
   }
 

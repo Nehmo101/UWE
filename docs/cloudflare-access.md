@@ -38,7 +38,7 @@ Recommended production values:
 
 ```env
 PUBLIC_APP_URL=https://uweanddragons.org
-NEXT_PUBLIC_PORTAL_URL=https://uweanddragons.org
+NEXT_PUBLIC_PORTAL_URL=https://portal.uweanddragons.org
 NEXT_PUBLIC_STUDIO_URL=https://studio.uweanddragons.org
 TRUST_PROXY=true
 CLOUDFLARE_TUNNEL=true

@@ -103,10 +103,26 @@ in-app Turnstile widget above.
 - `/portal` never lands in Studio NotFound — Studio exposes a defensive redirect shim at `apps/studio/app/portal/page.tsx` that sends visitors to `NEXT_PUBLIC_PORTAL_URL` (split hostname) or the unified `PORTAL_PATH` mount.
 - **System → Cloudflare** shows tunnel/access/routing status (booleans only).
 
-## Verification status
+## Verification status (2026-06-30, host uwe-host)
 
-The in-app status page and this document describe the expected configuration as
-encoded in the app (`getProxyStatus`) and `.env.example`. Live verification of the
-actual Cloudflare Tunnel/Access objects (via the Cloudflare API/MCP) should be
-recorded here once run against the production account, including the concrete
-hostnames, tunnel id, and Access application/policy names.
+Live checks on this host:
+
+| Check | Status |
+|---|---|
+| `cloudflared.service` | active, QUIC healthy |
+| Tunnel ingress (remote) | `studio.uweanddragons.org` → `:3000`; `uweanddragons.org` (+ `/portal`, `/studio`) → Portal/Studio |
+| `portal.uweanddragons.org` | **pending** — DNS + Tunnel-Ingress via Dashboard oder `configure-cloudflare-tunnel.sh` |
+| UWE env | `NEXT_PUBLIC_STUDIO_URL=https://studio.uweanddragons.org`, `NEXT_PUBLIC_PORTAL_URL=https://portal.uweanddragons.org` |
+| Studio root | HTTP 200 (nach Service-Neustart mit aktuellem Build) |
+
+Apply tunnel ingress:
+
+```bash
+# Option A — API (empfohlen)
+CLOUDFLARE_API_TOKEN=... bash /opt/uwe/deploy/scripts/configure-cloudflare-tunnel.sh
+
+# Option B — Zero Trust Dashboard → Tunnels → Public Hostname:
+#   portal.uweanddragons.org → http://127.0.0.1:3001
+```
+
+Automated checks: `bash /opt/uwe/deploy/scripts/check-cloudflare-tunnel.sh`

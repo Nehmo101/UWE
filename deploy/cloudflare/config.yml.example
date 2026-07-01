@@ -1,18 +1,27 @@
-# Cloudflare Tunnel - UWE Subdomain deployment (recommended)
-# Portal: https://uweanddragons.org -> local Portal app (:3001)
+# Cloudflare Tunnel - UWE split-hostname deployment (recommended)
 # Studio: https://studio.uweanddragons.org -> local Studio app (:3000)
+# Portal: https://portal.uweanddragons.org -> local Portal app (:3001)
+# Legacy: https://uweanddragons.org (+ /portal, /studio paths) for bookmarks
 #
-# This setup avoids /studio path rewriting and does not require a local Caddy/nginx
-# reverse proxy just to split Studio and Portal traffic.
+# Remotely-managed tunnels: apply via Cloudflare Zero Trust dashboard or
+#   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh
 #
-# Docs: docs/cloudflare-access.md
+# Docs: docs/cloudflare-access.md, docs/cloudflare-current-setup.md
 
 tunnel: uwe-host
 credentials-file: /etc/cloudflared/uwe-host.json
 
 ingress:
-  - hostname: uweanddragons.org
-    service: http://127.0.0.1:3001
   - hostname: studio.uweanddragons.org
     service: http://127.0.0.1:3000
+  - hostname: portal.uweanddragons.org
+    service: http://127.0.0.1:3001
+  - hostname: uweanddragons.org
+    path: /studio
+    service: http://127.0.0.1:3000
+  - hostname: uweanddragons.org
+    path: /portal
+    service: http://127.0.0.1:3001
+  - hostname: uweandragons.org
+    service: http://127.0.0.1:3001
   - service: http_status:404

@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { originMatchesTrustedHost } from "./runtime-config";
+import { assessApiOrigin, isSameOriginBrowserRequest as isSameOriginBrowserRequestFromGuard } from "./api-origin-guard";
 
 /**
  * Shared Studio access evaluation for API routes, middleware, and server actions.
@@ -73,29 +73,28 @@ export function studioAccessErrorMessage(denial: StudioAccessDenialReason): stri
 }
 
 function isCrossSiteBrowserRequest(ctx: StudioAccessContext, env: NodeJS.ProcessEnv): boolean {
-  if (ctx.secFetchSite === "cross-site") {
-    return true;
-  }
-
-  const origin = ctx.origin;
-  if (!origin || origin === "null") {
-    return false;
-  }
-
-  return !originMatchesTrustedHost(origin, ctx.host, env);
+  return assessApiOrigin(studioAccessContextToRequest(ctx), env).blocked;
 }
 
 function isSameOriginBrowserRequest(ctx: StudioAccessContext, env: NodeJS.ProcessEnv): boolean {
-  if (ctx.secFetchSite === "same-origin") {
-    return true;
-  }
+  return isSameOriginBrowserRequestFromGuard(studioAccessContextToRequest(ctx), env);
+}
 
-  const origin = ctx.origin;
-  if (origin && origin !== "null") {
-    return originMatchesTrustedHost(origin, ctx.host, env);
+function studioAccessContextToRequest(ctx: StudioAccessContext): Request {
+  const headers = new Headers();
+  if (ctx.secFetchSite) {
+    headers.set("sec-fetch-site", ctx.secFetchSite);
   }
-
-  return false;
+  if (ctx.origin) {
+    headers.set("origin", ctx.origin);
+  }
+  if (ctx.host) {
+    headers.set("host", ctx.host);
+  }
+  if (ctx.authorization) {
+    headers.set("authorization", ctx.authorization);
+  }
+  return new Request("http://studio.local/api/backup", { headers });
 }
 
 function hasValidBearerToken(authorization: string | null, requiredToken: string): boolean {

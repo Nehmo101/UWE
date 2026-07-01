@@ -1,0 +1,10 @@
+[Unit]
+Description=UWE liveness check (restarts uwe.service on hang)
+Documentation=file:///opt/uwe/docs/cloudflare-current-setup.md
+After=uwe.service
+
+[Service]
+Type=oneshot
+Environment=UWE_ENV=/etc/uwe/uwe.env
+EnvironmentFile=-/etc/uwe/uwe.env
+ExecStart=/opt/uwe/deploy/scripts/uwe-healthcheck.sh

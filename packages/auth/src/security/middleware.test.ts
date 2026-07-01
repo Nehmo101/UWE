@@ -216,4 +216,19 @@ describe("middleware evaluation", () => {
     );
     assert.equal(decision.action, "allow");
   });
+
+  it("allows studio app navigation without bearer when STUDIO_API_TOKEN is configured", () => {
+    const decision = evaluateStudioMiddleware(
+      makeRequest("/", { headers: { host: "studio.uweandragons.org" } }),
+      {
+        ...process.env,
+        NODE_ENV: "production",
+        PUBLIC_APP_URL: "https://uweandragons.org",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        CLOUDFLARE_TUNNEL: "true",
+        STUDIO_API_TOKEN: "secret",
+      },
+    );
+    assert.equal(decision.action, "allow");
+  });
 });

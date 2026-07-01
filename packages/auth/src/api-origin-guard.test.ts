@@ -56,6 +56,22 @@ describe("API origin guard", () => {
     assert.equal(isSameOriginBrowserRequest(request, env), true);
   });
 
+  it("allows trusted split-hostname origins even when sec-fetch-site is cross-site", () => {
+    const env = {
+      PUBLIC_APP_URL: "https://uweandragons.org",
+      NEXT_PUBLIC_PORTAL_URL: "https://portal.uweandragons.org",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweandragons.org",
+    };
+    const request = makeRequest({
+      origin: "https://studio.uweandragons.org",
+      host: "uweandragons.org",
+      "sec-fetch-site": "cross-site",
+    });
+
+    assert.equal(isCrossSiteBrowserRequest(request, env), false);
+    assert.equal(assessApiOrigin(request, env).blocked, false);
+  });
+
   it("does not allow wildcard CORS origins by default", () => {
     const request = makeRequest({
       origin: "https://anyone.example",

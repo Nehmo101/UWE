@@ -1,0 +1,9 @@
+[Unit]
+Description=Nightly UWE restart (safety net against slow leaks/hangs)
+Documentation=file:///opt/uwe/docs/cloudflare-current-setup.md
+Requires=uwe.service
+After=uwe.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart uwe.service
