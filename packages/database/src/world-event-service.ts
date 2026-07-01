@@ -1,5 +1,33 @@
 import type { Prisma, PrismaClient, Visibility, SecretLevel, WorldEventSourceType, WorldEventEntityRole } from "./generated/prisma/client";
 import type { InGameDate } from "./world-calendar-service";
+import { parseInGameDate } from "./world-calendar-service";
+
+export const WORLD_EVENT_ENTITY_ROLE_LABELS: Record<WorldEventEntityRole, string> = {
+  primary: "Hauptakteur",
+  involved: "Beteiligt",
+  location: "Ort",
+  faction: "Fraktion",
+};
+
+export interface PortalWorldEventView {
+  id: string;
+  worldId: string;
+  title: string;
+  inGameDate: InGameDate;
+  summaryPlayer: string | null;
+  sortOrder: number;
+  linkedPages: Array<{ id: string; title: string; slug: string; type: string }>;
+}
+
+export type WorldEventWithLinks = Prisma.WorldEventGetPayload<{
+  include: {
+    entityLinks: {
+      include: {
+        page: { select: { id: true; title: true; slug: true; type: true; visibility: true; secretLevel: true; publishStatus: true; playerAccess: true } };
+      };
+    };
+  };
+}>;
 
 export interface CreateWorldEventInput {
   worldId: string;
@@ -26,7 +54,18 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: { select: { id: true, title: true, slug: true, type: true } },
+            page: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                type: true,
+                visibility: true,
+                secretLevel: true,
+                publishStatus: true,
+                playerAccess: true,
+              },
+            },
           },
         },
       },
@@ -40,14 +79,59 @@ export class WorldEventService {
       where: { entityLinks: { some: { pageId } } },
       include: {
         entityLinks: {
-          where: { pageId },
           include: {
-            page: { select: { id: true, title: true, slug: true, type: true } },
+            page: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                type: true,
+                visibility: true,
+                secretLevel: true,
+                publishStatus: true,
+                playerAccess: true,
+              },
+            },
           },
         },
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     });
+  }
+
+  async getByIdForWorld(worldId: string, eventId: string) {
+    return this.db.worldEvent.findFirst({
+      where: { id: eventId, worldId },
+      include: {
+        entityLinks: {
+          include: {
+            page: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                type: true,
+                visibility: true,
+                secretLevel: true,
+                publishStatus: true,
+                playerAccess: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async deleteById(worldId: string, eventId: string) {
+    const existing = await this.db.worldEvent.findFirst({
+      where: { id: eventId, worldId },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new Error("Chronik-Eintrag nicht gefunden.");
+    }
+    await this.db.worldEvent.delete({ where: { id: eventId } });
   }
 
   async create(input: CreateWorldEventInput) {
@@ -77,7 +161,18 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: { select: { id: true, title: true, slug: true, type: true } },
+            page: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                type: true,
+                visibility: true,
+                secretLevel: true,
+                publishStatus: true,
+                playerAccess: true,
+              },
+            },
           },
         },
       },
@@ -87,4 +182,27 @@ export class WorldEventService {
 
 export function createWorldEventService(db: PrismaClient): WorldEventService {
   return new WorldEventService(db);
+}
+
+export function compareInGameDates(a: InGameDate, b: InGameDate): number {
+  if (a.year !== b.year) return a.year - b.year;
+  if (a.month !== b.month) return a.month - b.month;
+  return a.day - b.day;
+}
+
+export function toPortalWorldEventView(event: WorldEventWithLinks): PortalWorldEventView {
+  return {
+    id: event.id,
+    worldId: event.worldId,
+    title: event.title,
+    inGameDate: parseInGameDate(event.inGameDate),
+    summaryPlayer: event.summaryPlayer,
+    sortOrder: event.sortOrder,
+    linkedPages: event.entityLinks.map((link) => ({
+      id: link.page.id,
+      title: link.page.title,
+      slug: link.page.slug,
+      type: link.page.type,
+    })),
+  };
 }
