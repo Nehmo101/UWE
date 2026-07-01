@@ -211,7 +211,7 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
     metadata: { format: payload.format, jobId: ctx.jobId },
   });
 
-  return { result };
+  return { result, undoEntryId: undoEntryId ?? null };
 }
 
 export interface ImportJobPayload {

@@ -25,6 +25,7 @@
     "db:generate": "prisma generate && prisma generate --schema=prisma/schema.postgresql.prisma",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:deploy:safe": "node scripts/db-deploy-safe.mjs",
     "db:deploy:postgres": "prisma migrate deploy --config prisma.postgres.config.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force"

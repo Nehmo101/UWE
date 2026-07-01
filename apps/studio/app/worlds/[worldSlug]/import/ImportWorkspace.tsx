@@ -87,6 +87,20 @@ function combineImportFiles(files: Array<{ name: string; text: string }>): strin
     .join("\n\n---\n\n");
 }
 
+function extractImportUndoToken(
+  payload: unknown,
+  responseUndoEntryId?: string | null,
+): string | null {
+  if (typeof responseUndoEntryId === "string" && responseUndoEntryId) {
+    return responseUndoEntryId;
+  }
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const record = payload as { undoEntryId?: string | null };
+  return typeof record.undoEntryId === "string" && record.undoEntryId ? record.undoEntryId : null;
+}
+
 export function ImportWorkspace({
   worldSlug,
   supportedFormats,
@@ -247,7 +261,8 @@ export function ImportWorkspace({
 
       const data = (await response.json()) as {
         result?: ImportExecuteResult;
-        job?: { id: string; result?: { result?: ImportExecuteResult } };
+        undoEntryId?: string | null;
+        job?: { id: string; result?: { result?: ImportExecuteResult; undoEntryId?: string | null } };
         error?: string;
       };
 
@@ -257,12 +272,18 @@ export function ImportWorkspace({
 
       if (response.status === 202 && data.job?.id) {
         const job = await waitForJob(data.job.id);
+        const jobPayload = job.result as
+          | { result?: ImportExecuteResult; undoEntryId?: string | null }
+          | ImportExecuteResult
+          | undefined;
         const importResult =
-          (job.result as { result?: ImportExecuteResult })?.result ??
-          (job.result as ImportExecuteResult | undefined);
+          jobPayload && "result" in jobPayload
+            ? jobPayload.result
+            : (jobPayload as ImportExecuteResult | undefined);
         if (!importResult) {
           throw new Error("Import ohne Ergebnis abgeschlossen.");
         }
+        const undoToken = extractImportUndoToken(jobPayload, data.undoEntryId);
         setResult(importResult);
         if (jobId) {
           await completeImportCentralJobAction(
@@ -273,7 +294,7 @@ export function ImportWorkspace({
               failed: importResult.failed,
               skipped: importResult.skipped,
             },
-            null,
+            undoToken,
           );
         } else if (onJobComplete) {
           await onJobComplete(
@@ -283,10 +304,11 @@ export function ImportWorkspace({
               failed: importResult.failed,
               skipped: importResult.skipped,
             },
-            null,
+            undoToken,
           );
         }
       } else if (data.result) {
+        const undoToken = extractImportUndoToken(data.result, data.undoEntryId);
         setResult(data.result);
         if (jobId) {
           await completeImportCentralJobAction(
@@ -297,7 +319,7 @@ export function ImportWorkspace({
               failed: data.result.failed,
               skipped: data.result.skipped,
             },
-            null,
+            undoToken,
           );
         } else if (onJobComplete) {
           await onJobComplete(
@@ -307,7 +329,7 @@ export function ImportWorkspace({
               failed: data.result.failed,
               skipped: data.result.skipped,
             },
-            null,
+            undoToken,
           );
         }
       } else {

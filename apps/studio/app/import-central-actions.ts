@@ -2,6 +2,7 @@
 
 import {
   createImportJobService,
+  createUndoService,
   createUweRepository,
   executeMarkdownImport,
   previewMarkdownImport,
@@ -286,6 +287,13 @@ export async function rollbackImportCentralJobAction(jobId: string): Promise<voi
   if (!job.undoToken) {
     throw new Error("Für diesen Import ist kein Undo-Token hinterlegt.");
   }
+
+  const undo = createUndoService(prisma);
+  const result = await undo.undo(job.undoToken);
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+
   await importJobs().markRolledBack(jobId);
   revalidateImportCentral();
 }
