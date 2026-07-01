@@ -6,6 +6,8 @@ import {
   createUweRepository,
   executeMarkdownImport,
   previewMarkdownImport,
+  previewPdfImport,
+  executePdfImport,
   prisma,
   type ImportSourceType,
   type ImportTargetType,
@@ -140,6 +142,10 @@ export async function previewImportCentralJobAction(
     throw new Error("Vorschau für diese Kombination ist noch nicht verfügbar.");
   }
 
+  if (job.sourceType === "pdf") {
+    throw new Error("PDF-Vorschau bitte über previewImportCentralPdfJobAction.");
+  }
+
   if (content.length > 10 * 1024 * 1024) {
     throw new Error("Import-Datei ist zu groß (max. 10 MB).");
   }
@@ -213,6 +219,10 @@ export async function executeImportCentralJobAction(
     throw new Error("Dieser Import-Job wird über den Welt-Import ausgeführt.");
   }
 
+  if (job.sourceType === "pdf") {
+    throw new Error("PDF-Import bitte über die PDF-Aktion ausführen.");
+  }
+
   if (content.length > 10 * 1024 * 1024) {
     throw new Error("Import-Datei ist zu groß (max. 10 MB).");
   }
@@ -259,6 +269,105 @@ export async function executeImportCentralJobAction(
     return { resultSummary, undoToken };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
+    await importJobs().markFailed(jobId, message);
+    revalidateImportCentral();
+    throw new Error(message);
+  }
+}
+
+export async function previewImportCentralPdfJobAction(
+  jobId: string,
+  contentBase64: string,
+): Promise<{ preview: MarkdownImportPreviewResult }> {
+  assertStudioTrusted();
+
+  const job = await requireImportJob(jobId);
+  if (job.sourceType !== "pdf" || !isImportCentralMarkdownTarget(job.targetType)) {
+    throw new Error("Vorschau für diese PDF-Kombination ist nicht verfügbar.");
+  }
+
+  const buffer = Buffer.from(contentBase64, "base64");
+  if (buffer.length > 10 * 1024 * 1024) {
+    throw new Error("PDF-Datei ist zu groß (max. 10 MB).");
+  }
+
+  const worldSlug = readWorldSlug(job.metadata);
+  const preview = await previewPdfImport(buffer, {
+    targetType: job.targetType,
+    sourceType: job.sourceType,
+    fileName: job.fileName,
+    worldId: job.targetWorldId,
+    worldSlug,
+  });
+
+  await importJobs().updateJob(jobId, {
+    status: "preview",
+    previewPayload: preview as unknown as Record<string, unknown>,
+  });
+
+  revalidateImportCentral();
+  return { preview };
+}
+
+export async function executeImportCentralPdfJobAction(
+  jobId: string,
+  contentBase64: string,
+  itemIds?: string[],
+): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
+  assertStudioTrusted();
+
+  const job = await requireImportJob(jobId);
+  if (job.sourceType !== "pdf" || !isImportCentralMarkdownTarget(job.targetType)) {
+    throw new Error("Import für diese PDF-Kombination ist nicht verfügbar.");
+  }
+
+  const buffer = Buffer.from(contentBase64, "base64");
+  if (buffer.length > 10 * 1024 * 1024) {
+    throw new Error("PDF-Datei ist zu groß (max. 10 MB).");
+  }
+
+  await importJobs().markExecuting(jobId);
+
+  try {
+    const worldSlug = readWorldSlug(job.metadata);
+    const result = await executePdfImport(
+      prisma,
+      buffer,
+      {
+        targetType: job.targetType,
+        sourceType: job.sourceType,
+        fileName: job.fileName,
+        worldId: job.targetWorldId,
+        worldSlug,
+      },
+      { itemIds },
+    );
+
+    const resultSummary = {
+      created: result.created,
+      updated: result.updated,
+      failed: result.failed,
+      skipped: result.skipped,
+      createdIds: result.createdIds,
+    };
+
+    const undo = createUndoService(prisma);
+    const undoEntry = await undo.captureImportCentralExecute({
+      targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
+      worldId: job.targetWorldId,
+      jobId,
+      createdPersonalBrainDocumentIds:
+        job.targetType === "personal_brain" ? result.createdIds : [],
+      createdCaptureIds: job.targetType === "capture" ? result.createdIds : [],
+      createdPageIds: job.targetType === "dnd_page" ? result.createdIds : [],
+    });
+
+    const undoToken = undoEntry?.id ?? null;
+    await importJobs().markCompleted(jobId, resultSummary, undoToken);
+    revalidateImportCentral();
+    return { resultSummary, undoToken };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "PDF-Import fehlgeschlagen.";
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);

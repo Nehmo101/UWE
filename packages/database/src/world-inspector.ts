@@ -18,6 +18,7 @@ import {
 } from "./permissions";
 import { SettingsService } from "./settings-service";
 import { isShareLinkActive } from "./share-link-service";
+import { getExtendedCanonFindings, mergeCanonFindings } from "./canon-conflict-service";
 
 /**
  * World Inspector: audits a world for two things —
@@ -44,7 +45,12 @@ export type InspectorFindingCode =
   | "visible_but_unpublished"
   | "published_but_dm_only"
   | "orphan_page"
-  | "uncategorized_page";
+  | "uncategorized_page"
+  | "deprecated_player_visible"
+  | "non_canon_portal_published"
+  | "npc_status_conflict"
+  | "brain_fact_death_conflict"
+  | "world_rule_terra_tower";
 
 /** Fix actions that can be applied directly from a finding (see inspector-fix-service). */
 export type InspectorFixAction =
@@ -592,7 +598,10 @@ export class WorldInspectorService {
         expiresAt: link.expiresAt,
       })),
       safetyFindings: buildSafetyFindings(worldSlug, pages, shareLinkInputs, portalOptions),
-      canonFindings: buildCanonFindings(worldSlug, pages, explicitLinks, { campaigns }),
+      canonFindings: mergeCanonFindings(
+        buildCanonFindings(worldSlug, pages, explicitLinks, { campaigns }),
+        await getExtendedCanonFindings(this.db, worldSlug, pages),
+      ),
     };
   }
 }

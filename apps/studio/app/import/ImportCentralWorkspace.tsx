@@ -15,12 +15,14 @@ import {
   importCentralUsesWorldTarget,
   isImportCentralComboSupported,
   isImportCentralMarkdownTarget,
+  isImportCentralPdfSource,
   isImportCentralSourceComingSoon,
   isImportCentralTargetComingSoon,
 } from "@/src/lib/import-central-utils";
 import { createImportCentralJobAction, rollbackImportCentralJobAction } from "../import-central-actions";
 import { ImportWorkspace } from "../worlds/[worldSlug]/import/ImportWorkspace";
 import { MarkdownCentralImportPanel } from "./MarkdownCentralImportPanel";
+import { PdfCentralImportPanel } from "./PdfCentralImportPanel";
 
 interface WorldOption {
   id: string;
@@ -207,6 +209,16 @@ export function ImportCentralWorkspace({
       );
     }
 
+    if (isImportCentralPdfSource(activeJob.sourceType) && isImportCentralMarkdownTarget(activeJob.targetType)) {
+      return (
+        <PdfCentralImportPanel
+          jobId={activeJob.id}
+          targetType={activeJob.targetType}
+          onComplete={handleImportComplete}
+        />
+      );
+    }
+
     if (isImportCentralMarkdownTarget(activeJob.targetType)) {
       return (
         <MarkdownCentralImportPanel
@@ -230,9 +242,9 @@ export function ImportCentralWorkspace({
       <section className="uwe-panel">
         <h2>Neuer Import</h2>
         <p className="uwe-panel-intro">
-          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown und Obsidian können in Life
-          Brain, Capture, DnD-Seiten oder Welten importiert werden. KnoteForge-JSON importiert nur
-          in Welten.
+          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian und PDF können in
+          Life Brain, Capture oder DnD-Seiten importiert werden. KnoteForge-JSON importiert nur in
+          Welten.
         </p>
 
         <div className="uwe-form-grid">
@@ -292,7 +304,7 @@ export function ImportCentralWorkspace({
 
         {showComingSoon ? (
           <p className="uwe-flash uwe-flash-warning">
-            PDF-Import ist noch nicht verfügbar. Bitte Markdown oder Obsidian verwenden.
+            Diese Quelle/Ziel-Kombination ist noch nicht verfügbar.
           </p>
         ) : null}
 

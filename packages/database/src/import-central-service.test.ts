@@ -4,8 +4,6 @@ import { createPrismaClient } from "./client";
 import { createLifeAdminService } from "./life-admin-service";
 import {
   executeMarkdownImport,
-  ImportCentralError,
-  PDF_NOT_SUPPORTED_MESSAGE,
   previewMarkdownImport,
 } from "./import-central-service";
 import { createWorld } from "./repository";
@@ -24,16 +22,15 @@ describe("import central service", () => {
     await db.$disconnect();
   });
 
-  it("rejects PDF imports with a helpful message", () => {
-    assert.throws(
-      () =>
-        previewMarkdownImport("# Test", {
-          sourceType: "pdf",
-          targetType: "personal_brain",
-        }),
-      (error: unknown) =>
-        error instanceof ImportCentralError && error.message === PDF_NOT_SUPPORTED_MESSAGE,
-    );
+  it("accepts pdf as import source for markdown pipeline", () => {
+    const preview = previewMarkdownImport("# PDF Text\n\nInhalt", {
+      sourceType: "pdf",
+      targetType: "personal_brain",
+      fileName: "notes.pdf",
+    });
+
+    assert.equal(preview.canExecute, true);
+    assert.equal(preview.totalDocuments, 1);
   });
 
   it("previews multiple markdown documents for Life Brain", () => {

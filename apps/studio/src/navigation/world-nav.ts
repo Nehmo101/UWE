@@ -115,6 +115,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "print",
           "druck",
         ]),
+        item("world-print-center", "Print Center", `${base}/print-center`, "printer", "Medien", [
+          "print center",
+          "handout",
+          "npc karte",
+          "item karte",
+        ]),
       ],
     },
     {

@@ -228,8 +228,14 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         </fieldset>
 
         <div className="uwe-form-actions">
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
-        </div>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
+              <Link
+                href={`/worlds/${worldSlug}/sessions/${sessionId}/live`}
+                className="uwe-v2-btn uwe-v2-btn-secondary"
+              >
+                Live-Modus
+              </Link>
+            </div>
       </form>
 
       <section style={{ marginTop: "2rem" }}>
