@@ -41,6 +41,7 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import { CampaignSidebar } from "@/src/components/wiki";
 import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
 import { PageChroniclePanel } from "@/components/wiki/PageChroniclePanel";
+import { FactionStateEditPanel } from "@/components/wiki/FactionStateEditPanel";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -397,6 +398,15 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           pageSlug={slug}
           category={category}
         />
+
+        {page.type === PageTypeEnum.faction && (
+          <FactionStateEditPanel
+            worldSlug={worldSlug}
+            pageId={page.id}
+            pageSlug={slug}
+            category={category}
+          />
+        )}
 
         {generatorPanel && (
           <ContextualGeneratorPanel

@@ -1,0 +1,84 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import {
+  createFactionStateService,
+  createPrismaClient,
+  getAppRepository,
+  type Prisma,
+} from "@uwe/database/server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireStudioContentEdit } from "@/src/lib/authz";
+
+function editPath(worldSlug: string, category: string, pageSlug: string) {
+  return `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
+}
+
+function parseOptionalJsonField(
+  raw: string,
+  label: string,
+): Prisma.InputJsonValue | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(trimmed) as Prisma.InputJsonValue;
+  } catch {
+    throw new Error(`${label} muss gültiges JSON sein.`);
+  }
+}
+
+export async function upsertFactionStateAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug"));
+  const pageId = String(formData.get("pageId"));
+  const pageSlug = String(formData.get("pageSlug"));
+  const category = String(formData.get("category"));
+  const agenda = String(formData.get("agenda") || "").trim();
+  const notes = String(formData.get("notes") || "").trim();
+  const powerLevelRaw = String(formData.get("powerLevel") || "").trim();
+  const powerLevel = powerLevelRaw ? Number(powerLevelRaw) : null;
+
+  if (powerLevel !== null && (!Number.isFinite(powerLevel) || powerLevel < 0 || powerLevel > 10)) {
+    throw new Error("Machtstufe muss zwischen 0 und 10 liegen.");
+  }
+
+  await requireStudioContentEdit(worldSlug, pageId);
+
+  const db = createPrismaClient();
+  try {
+    const repo = getAppRepository();
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) {
+      throw new Error("Welt nicht gefunden.");
+    }
+
+    const page = await repo.getPageById(pageId);
+    if (!page || page.type !== "faction") {
+      throw new Error("Fraktions-State ist nur für Fraktions-Seiten verfügbar.");
+    }
+
+    const factions = createFactionStateService(db);
+    await factions.upsert({
+      worldId: world.id,
+      pageId,
+      agenda,
+      notes,
+      powerLevel: powerLevel === null ? null : Math.floor(powerLevel),
+      goals: parseOptionalJsonField(String(formData.get("goalsJson") || ""), "Ziele"),
+      resources: parseOptionalJsonField(String(formData.get("resourcesJson") || ""), "Ressourcen"),
+      relationships: parseOptionalJsonField(
+        String(formData.get("relationshipsJson") || ""),
+        "Beziehungen",
+      ),
+    });
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(editPath(worldSlug, category, pageSlug));
+  redirect(`${editPath(worldSlug, category, pageSlug)}?saved=1`);
+}
