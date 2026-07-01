@@ -37,6 +37,10 @@ jobs:
     # Must cover a fully cold Turbo/Next cache (full gate incl. builds);
     # warm runs finish far faster.
     timeout-minutes: 50
+    env:
+      # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
+      # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
+      TURBO_CONCURRENCY: 4
     steps:
       - uses: actions/checkout@v4
 

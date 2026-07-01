@@ -16,12 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     # Must cover a fully cold Turbo cache (~30 min); warm runs finish far faster.
     timeout-minutes: 40
+    env:
+      # Default concurrency (10) OOM-kills parallel tsc/test tasks on the
+      # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
+      TURBO_CONCURRENCY: 4
     steps:
       - uses: actions/checkout@v4
 
       - uses: dorny/paths-filter@v3
         id: changes
         with:
+          # With the default `some` quantifier the bare '**' pattern matches
+          # every file, so the negations never take effect and docs-only PRs
+          # run the full gate. `every` = non-code files must fail a negation.
+          predicate-quantifier: every
           filters: |
             code:
               - '**'
