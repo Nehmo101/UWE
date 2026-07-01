@@ -4,6 +4,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { EncounterBudgetSummary } from "@/components/EncounterBudgetSummary";
 
 export interface DndApiSearchItem {
   provider: string;
@@ -24,6 +25,14 @@ interface EncounterMonster {
   slug: string;
 }
 
+function extractCrFromSummary(summary?: string): string | undefined {
+  if (!summary) {
+    return undefined;
+  }
+  const match = summary.match(/CR\s*([0-9/]+)/i);
+  return match?.[1];
+}
+
 export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPanelProps) {
   const router = useRouter();
   const open5eMonsters = useMemo(
@@ -32,6 +41,8 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
   );
   const [selected, setSelected] = useState<EncounterMonster[]>([]);
   const [encounterTitle, setEncounterTitle] = useState("Encounter");
+  const [partyLevel, setPartyLevel] = useState(5);
+  const [partySize, setPartySize] = useState(4);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -41,8 +52,21 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
       if (exists) {
         return current.filter((monster) => monster.slug !== item.id);
       }
-      return [...current, { name: item.name, slug: item.id }];
+      return [
+        ...current,
+        {
+          name: item.name,
+          slug: item.id,
+          cr: extractCrFromSummary(item.summary),
+        },
+      ];
     });
+  }
+
+  function updateMonsterCr(slug: string, cr: string) {
+    setSelected((current) =>
+      current.map((monster) => (monster.slug === slug ? { ...monster, cr } : monster)),
+    );
   }
 
   async function importStatblock(item: DndApiSearchItem) {
@@ -115,6 +139,30 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
   return (
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-form" style={{ marginBottom: "1.5rem" }}>
       <h2>Encounter Builder (Open5e)</h2>
+
+      <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "repeat(auto-fit, minmax(10rem, 1fr))" }}>
+        <label>
+          Party-Level
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={partyLevel}
+            onChange={(event) => setPartyLevel(Number(event.target.value))}
+          />
+        </label>
+        <label>
+          Gruppengröße
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={partySize}
+            onChange={(event) => setPartySize(Number(event.target.value))}
+          />
+        </label>
+      </div>
+
       {open5eMonsters.length > 0 && (
         <ul className="uwe-list-cards">
           {open5eMonsters.map((item) => {
@@ -155,16 +203,38 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
       </label>
 
       {selected.length > 0 && (
-        <p className="uwe-hint">
-          Ausgewählt: {selected.map((monster) => monster.name).join(", ")}
-        </p>
+        <div className="uwe-v2-section">
+          <h3 className="uwe-v2-section-title">Ausgewählte Monster</h3>
+          <ul className="uwe-list-cards">
+            {selected.map((monster) => (
+              <li key={monster.slug} className="uwe-list-card">
+                <strong>{monster.name}</strong>
+                <label>
+                  CR
+                  <input
+                    value={monster.cr ?? ""}
+                    placeholder="z. B. 1/2"
+                    onChange={(event) => updateMonsterCr(monster.slug, event.target.value)}
+                  />
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+
+      <EncounterBudgetSummary
+        partyLevel={partyLevel}
+        partySize={partySize}
+        monsters={selected.map((monster) => ({ cr: monster.cr, count: 1 }))}
+      />
 
       <button
         type="button"
         className="uwe-v2-btn uwe-v2-btn-primary"
         disabled={busy === "encounter" || selected.length === 0}
         onClick={() => void createEncounter()}
+        style={{ marginTop: "1rem" }}
       >
         {busy === "encounter" ? "Erstelle…" : "Encounter-Seite erstellen"}
       </button>

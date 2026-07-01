@@ -65,6 +65,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "spielabend",
           "recap",
         ]),
+        item("world-open-items", "Was ist offen?", `${base}/open-items`, "list-checks", "Spiel", [
+          "offen",
+          "plots",
+          "quests",
+          "open",
+        ]),
         item("world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", "Spiel", [
           "gruppenschatz",
           "treasury",
