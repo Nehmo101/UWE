@@ -1,16 +1,11 @@
 # UWE Feature-Backlog — Umsetzungsplan & Status-Audit
 
-Stand: 2026-06-30 · Eingabe: großer Ideen-Backlog (59 Ideen in 4 Bereichen)
+Stand: 2026-07-01 · Eingabe: großer Ideen-Backlog (59 Ideen in 4 Bereichen)
 
-> **Zweck dieses Dokuments.** Es ist ein **Planungs-Dokument**, kein Implementierungs-PR.
-> Es bildet jede der 59 Ideen auf den **realen Code-Stand** ab (vorhanden / teilweise / fehlt),
-> macht **Verbesserungsvorschläge**, **hinterfragt** zweifelhafte Punkte und schlägt eine
-> **priorisierte Roadmap** vor. Es wird bewusst **noch nichts umgesetzt**.
->
-> Verwandte Quellen der Wahrheit: [CURRENT_STATE.md](CURRENT_STATE.md) (Runtime/CI),
-> [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) (Reifegrade),
-> [ROADMAP.md](ROADMAP.md) (offene Bereiche). Dieses Dokument ergänzt sie und sollte bei
-> Beschluss in die ROADMAP überführt werden, statt eine Parallelstruktur zu bilden.
+> **Zweck dieses Dokuments.** Planungs- und Audit-Dokument: mappt Ideen auf den **realen
+> Code-Stand** (vorhanden / teilweise / fehlt) und priorisiert Wellen A→D. **Umsetzung läuft**
+> über Orchestrator-Batches (Waves A–D, Rest-Batches 1–5); bei Abweichungen gilt der Code +
+> [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) als Wahrheit.
 
 ---
 
@@ -71,7 +66,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 7 | Import-Zentrale | 🔶 | `packages/knoteforge-import` (json/markdown), `/worlds/[slug]/import`, Preview+Execute+Undo | Nur **welt-bezogener** Import, **kein** Ziel-Picker (Personal-Brain/DnD/Capture), **kein** Obsidian/PDF/Bulk-Bild. |
 | 8 | Admin Aufgabenliste | 🔶 | `/admin/setup` (Tabs system/access/cloudflare/mail/rtx/printer), `owner-setup-service.ts` (`nextSteps[]`), `/today` Homelab-Alerts | Keine **eine** Checkliste Mail+Backup+AI+Cloudflare+User+Worlds mit Fortschritt %. |
 | 9 | Health Checks | ✅ | `/api/health` (Studio+Portal), `/admin/status`, `homelab-cockpit.ts` (DB/Portal/Cloudflare/RTX/Ollama/Backup) | Klein: Cloudflare-Health ist Heuristik, keine Live-Tunnel-API. Kern erfüllt. |
-| 10 | Migration Inspector | 🔶 | `migration-status.ts` (pending/failed aus `_prisma_migrations`), in `/admin/status` & `/system/host-control`, CI `migration-check.mjs` | Keine **dedizierte Inspector-UI** mit Liste/Fehlerdetails/Repair. |
+| 10 | Migration Inspector | 🔶 | `migration-status.ts`, `/admin/migrations`, Checklist-Link | Dedizierte **read-only** Inspector-UI mit angewendeter Liste + Fehler-Metadaten (Batch 5). Kein In-App-Repair. |
 | 11 | User Management | ✅ | `/admin/users` + `UserManagementWorkspace`, `user-service.ts` (create/invite/disable/role/reset), `WorldMembership` | Invite-Mail hängt an Mail-Config. Kern erfüllt. |
 | 12 | World Templates | ⬜ | `world-creation-service.ts` (nur leere Welt), `PageTemplate` (nur **Seiten**-Templates) | **Echtes Neubau-Thema**: Welt-Archetypen (DnD/Wargame/Roman/Projektwiki) bei Welt-Erstellung. Empfehlung: Template = Satz Seed-Seiten/Templates + Default-Settings. |
 | 13 | Content Moderation / Freigabe | ✅ | `ContentReview` + `/admin/reviews`, `review-service.ts`, `AiProposal`/`ai-review-service.ts` (kein Auto-Apply) | Review-zentriert; nicht jeder KI-Pfad erzeugt zwingend Review. Kern erfüllt. |
@@ -109,14 +104,14 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 1 | Mobile-first Portal | 🔶 | `PortalShell` (Drawer/Sheet), responsive CSS, `portal-dashboard-service.ts`; `MobileBottomNav` & `portalAuthBottomNav` existieren, **aber nicht verdrahtet** | Keine Thumb-Zone-Bottom-Nav in Produktion. Nav-Item **„Wiki“ → `…/wiki` 404** (`portal-nav.ts:75`). „Link öffnen → sofort sehen“ erfordert Login+Welt-Wahl. |
 | 2 | Charaktersheet Designer | 🔶 | `PageType.player_character`, `PlayerCharacterEditPanel`, `player-character-permissions.ts`, Dashboard-Widget | **Kein `Character`-Modell**, kein 5e-Sheet (Werte/HP/Zauber/Inventar), kein `player_character`-Template. Aktuell freie Wiki-Blöcke. |
 | 3 | Session Recap | ✅ | `GameSession` (`summaryPlayer`/`openPlots`/`playerDecisions`/`recapPublished`), `SessionRecapFeed`, `publishRecap`, KI-Recap | Text/Markdown, kein „Story-Timeline“-Layout (minor). Kern erfüllt. |
-| 4 | Questlog | 🔶 | `PageType.quest` + Quest-Template, Dashboard `openQuests` | **Kein Quest-Lifecycle** (aktiv/erledigt/gescheitert), keine Questlog-Route, keine DM-Status-Toggles, kein `quests`-Suchfilter. |
+| 4 | Questlog | 🔶 | `PageType.quest`, `QuestLifecycleStatus`, `/auth/worlds/[slug]/quests`, `QuestStatusEditPanel` | **Global-Suche-Filter `quests`** fehlt noch in älteren Docs — **seit Batch 5 im Code**. Portal-Detail zeigt Quest-Status-Badge. |
 | 5 | Handout-Bereich | ✅ | `PageType.handout` + Template, `Asset`(image/map/handout/document), Portal `/assets`, `ShareLink`, `generate_handout` | Handouts auf Assets **und** Wiki-Seiten verteilt; kein typisierter Unterbereich (Rätsel/Briefe). Kern erfüllt. |
 | 6 | Spielernotizen | ✅ | `PlayerNote` (private/dm_only/party + status-Workflow), `/auth/.../notes`, DM-Review in Studio, Backup opt-in | Kein Realtime-Collab (Formular-CRUD). Kern erfüllt. |
 | 7 | NPC-Liste für Spieler | 🔶 | `PageType.npc`, `filterPagesForViewer`/`gm_note`-Schutz, `PagePlayerAccess`/`SessionUnlock`, Dashboard `knownNpcs`, Suchfilter `npcs` | **Keine dedizierte NPC-Listen-Route**; `player_character`+`monster` im selben Widget gemischt. |
 | 8 | Timeline (Spielersicht) | ⬜ | `ContentBlockType.timeline` (unstrukturiert), `GameSession.date`/`sessionNumber` | **Echtes Neubau-Thema**: chronologische, spoiler-freie Ereignis-Ansicht; kein Renderer, kein Event-Aggregat. |
-| 9 | Beziehungsnetz | 🔶 | `PageLink`, `graph-service.ts` (`buildWorldGraph(...,"portal")` respektiert Visibility), Portal-API `/api/worlds/[slug]/graph`, `GraphView` | **Keine Portal-Graph-Seite** (nur JSON-API); nicht in `portalWorldNav`. UI-Komponente existiert in Studio. |
+| 9 | Beziehungsnetz | ✅ | `graph-service.ts`, Portal `/auth/worlds/[slug]/graph`, `PortalGraphView`, `portal-nav` | Optional: Graph in Mobile-Bottom-Nav. Kern erfüllt (Welle A). |
 | 10 | Inventar / Gruppenbesitz | ⬜ | verwandt: `PageType.loot` (Dungeon), `PageType.item` (Handouts) | **Echtes Neubau-Thema**: kein Inventar/Party-Treasury-Modell (Geld/Items/Artefakte). |
-| 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service.ts` (`nextSession`/`lastRecap`/quests/...), Hub `(hub)`, `SessionUnlock` | **`nextSession` faktisch immer leer** (s. u.); kein „vor Session N lesen“-Prep-Paket. `PlayerDashboard.tsx` ungenutzt. |
+| 11 | Spieler-Dashboard vor Session | 🔶 | `portal-dashboard-service`, `playerVisibleSchedule`, Session-Edit-Checkbox | **`nextSession` sichtbar wenn DM Termin ankündigt** (opt-in). Batch 5: Studio-Hinweis wenn geplant aber nicht angekündigt. |
 
 ### Details & kritische Fragen — Spieler
 
@@ -624,5 +619,5 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Tag-Modell (4.6/F1) | Zentrales `Tag` + `EntityTag`, additive Migration + Backfill + Dual-Write. |
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
-**Status:** weiterhin **keine** Produktcode-Änderung. Nächster Schritt = Orchestrator-Lauf gemäß
-Prompt; pro Arbeitspaket kleiner, getesteter Draft-PR.
+**Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
+#357–#383). Nächste offene Neubau-Themen: World-Clock, Faction-Sim, Spieler-Timeline, Owner-Notfallmodus.

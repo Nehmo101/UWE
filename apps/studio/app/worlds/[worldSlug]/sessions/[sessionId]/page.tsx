@@ -144,6 +144,16 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
       {linked && <p className="uwe-flash uwe-flash-success">Seite verknüpft.</p>}
       {unlinked && <p className="uwe-flash uwe-flash-success">Verknüpfung entfernt.</p>}
 
+      {(session.status === "planned" || session.status === "prepared") &&
+        !session.playerVisibleSchedule &&
+        !session.recapPublished && (
+          <p className="uwe-notice uwe-notice-warn">
+            Diese Session ist für Spieler im Portal noch unsichtbar. Aktiviere unten
+            „Termin für Spieler im Portal ankündigen“, damit Datum und Titel im
+            Spieler-Dashboard erscheinen — ohne DM-Prep oder Recap preiszugeben.
+          </p>
+        )}
+
       <form action={updateGameSessionAction} className="uwe-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="sessionId" value={sessionId} />

@@ -108,6 +108,26 @@ describe("UWE global search", () => {
 
     await repo.createPage({
       worldId,
+      title: "Die verlorene Reliquie",
+      slug: "verlorene-reliquie",
+      type: "quest",
+      summary: "Die Gruppe muss das Artefakt finden.",
+      visibility: "player_visible",
+      publishStatus: "published",
+      questStatus: "open",
+      tags: ["quest", "artefakt"],
+      contentBlocks: [
+        {
+          type: "player_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: "Ein alter Magier sucht Helfer für eine gefährliche Mission.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId,
       title: "Spieler-NPC Elara",
       slug: "elara",
       type: "npc",
@@ -199,6 +219,15 @@ describe("UWE global search", () => {
       urlMode: "studio",
     });
     assert.ok(byNpcFilter.some((result) => result.slug === "elara"));
+
+    const byQuestFilter = await searchForWikiContext(db, "dm", {
+      query: "Reliquie",
+      worldSlug,
+      entityFilter: "quests",
+      urlMode: "studio",
+    });
+    assert.ok(byQuestFilter.some((result) => result.slug === "verlorene-reliquie"));
+    assert.equal(byQuestFilter[0]?.type, "quest");
 
     await db.$disconnect();
   });

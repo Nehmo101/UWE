@@ -258,12 +258,18 @@ export default async function AdminStatusPage() {
                 { label: "Umgebung", value: system.app.nodeEnv },
                 { label: "Production", value: system.app.production },
                 { label: "Version", value: system.version },
-                { label: "Migrationen", value: system.migrations.ok ? "OK" : "Ausstehend" },
+                {
+                  label: "Migrationen",
+                  value: system.migrations.ok ? "OK" : "Ausstehend",
+                },
               ]}
               nextSteps={
                 system.migrations.ok
                   ? []
-                  : ["Führe Datenbank-Migrationen aus (pnpm db:deploy)."]
+                  : [
+                      "Führe Datenbank-Migrationen aus (pnpm db:deploy).",
+                      "Details: /admin/migrations",
+                    ]
               }
             />
 

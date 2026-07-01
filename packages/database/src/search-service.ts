@@ -20,6 +20,7 @@ export const SEARCH_ENTITY_FILTERS = [
   "pages",
   "content_blocks",
   "npcs",
+  "quests",
   "locations",
   "factions",
   "sessions",
@@ -38,6 +39,7 @@ export const SEARCH_ENTITY_FILTER_LABELS: Record<SearchEntityFilter, string> = {
   pages: "Seiten",
   content_blocks: "Inhaltsblöcke",
   npcs: "NPCs",
+  quests: "Quests",
   locations: "Orte",
   factions: "Fraktionen",
   sessions: "Sessions",
@@ -166,6 +168,8 @@ function pageTypesForEntityFilter(filter: SearchEntityFilter): PageType[] | null
       return null;
     case "npcs":
       return ["npc", "player_character", "monster"];
+    case "quests":
+      return ["quest"];
     case "locations":
       return ["location", "region"];
     case "factions":

@@ -1,7 +1,7 @@
 # Feature Maturity Matrix
 
 Ehrlicher Reifegrad aller UWE-Features, die als Phase 1, Scaffolding, Roadmap oder „noch nicht reif“ gelten.
-Stand: Juni 2026 (Doku-Sync 2026-06-29) · Wave 4 abgeschlossen.
+Stand: Juli 2026 (Doku-Sync Batch 5) · Rest-Batches 1–5 + Waves A–D weitgehend umgesetzt.
 
 **Legende**
 
@@ -22,7 +22,7 @@ Stand: Juni 2026 (Doku-Sync 2026-06-29) · Wave 4 abgeschlossen.
 
 | # | Feature | Gesamtstatus | Nutzbar | Production-ready |
 |---|---------|--------------|---------|------------------|
-| 1 | Image Studio | Phase 2 (Inpaint-UI) | Ja (Generierung + Inpaint) | Nein |
+| 1 | Image Studio | Phase 2 (Projekt-Flow) | Ja (Generierung + Inpaint + Retry) | Teilweise |
 | 2 | Calendar / iOS / FamilyWall | Phase 2 | Ja (lokal + Feeds + Wochenansicht) | Teilweise |
 | 3 | DnD API / offene Quellen | Stable (Kern) | Ja (Suche + Statblock-Import) | Ja (Kern) |
 | 4 | Agent Jobs / Orchestrator | Phase 1 done | Ja (mit Limits) | Teilweise |
@@ -32,8 +32,8 @@ Stand: Juni 2026 (Doku-Sync 2026-06-29) · Wave 4 abgeschlossen.
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
 | 10 | Global Search 2.0 | Erweiterte Suche v1 | Ja | Ja (Kern) |
-| 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke) | Teilweise (Dev seed) | Nein |
-| 12 | Medienverwaltung | Kern fertig | Ja | Ja (Kern) |
+| 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke + sandbox) | Ja (perf-test sandbox) | Nein |
+| 12 | Medienverwaltung | Phase 2 (Alben) | Ja | Ja (Kern) |
 | 13 | Tag-/Taxonomie-Aufräumer | Service + Tests | Teilweise (API) | Nein |
 | 14 | Hard UI/UX Reset — Shells + Nav | Wave 3 (C4) | Ja (Studio/Portal/Connector) | Ja (Kern) |
 | 15 | Label-Druck via RTX + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
@@ -65,7 +65,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 - **Image Studio** — Cloud-Edit/Fehler-Handling teils unvollständig (Masken-Canvas vorhanden).
 - **Performance-Budget / große Testwelt** — CI-Smoke + Bundle-Budget; keine Browser-LCP-Gates.
-- **Life-Brain Retrieval** — RTX-Embeddings + Keyword-Suche (Studio-UI `/life-brain`, API); semantischer Kontext für lokale KI.
+- **Life-Brain Retrieval** — RTX-Embeddings + semantische Chunk-Suche in Studio-UI/API (`/life-brain`, Batch 4).
 
 ### ⛔ Deprecated / Removed
 
@@ -88,9 +88,9 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Nutzbar | **Ja** für `generate` / `variant` / `inpaint` (RTX + Maske) |
 | Production-ready | **Teilweise** — Masken-Canvas für Inpaint; Cloud nur generate/variant |
 
-**Was funktioniert:** Prompt → Job → RTX oder optional Cloud DALL-E → `dm_only` Asset + Version; Masken-Canvas für Inpaint + Varianten-Batch; Seiten-Link aus Editor.
+**Was funktioniert:** Prompt → Job → RTX/Cloud → Asset; Inpaint auf Projektseite; Capture→Studio; Retry bei Fehlern; Medienbibliothek-Shortcut.
 
-**Was nicht:** Drafts, Cloud-Edit, zuverlässiges `failed`-Handling in allen Pfaden.
+**Was nicht:** Vollständiger Canvas-Editor; Cloud-Edit-Policy in allen Pfaden dokumentiert.
 
 **Risiken**
 
@@ -339,7 +339,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Nutzbar | **Teilweise** — Dev-Stress-Welt (~500 Seiten), CI kleiner Smoke |
 | Production-ready | **Nein** — keine Browser-Performance-Gates |
 
-**Was existiert:** `stress-seed.ts`, `PERF_SMOKE_SCALE` / `PERF_STRESS_SCALE`, `docs/engineering/performance.md`, `migration-check.mjs` in `test:ci`.
+**Was existiert:** `stress-seed.ts` markiert `perf-test` als Sandbox; `listAssets`-Budget in `perf-smoke.test.ts`.
 
 **Nächste Schritte**
 
@@ -356,14 +356,34 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Vorhanden | Ja |
 | UI | `/worlds/[slug]/assets` |
 | API | Upload, signed file delivery |
-| DB | `Asset`, `AssetPageLink` |
-| Tests | Ja — Upload-Security, Asset-Tests |
+| DB | `Asset`, `AssetPageLink`, `AssetAlbum`, `AssetAlbumItem` |
+| Tests | Ja — Upload-Security, Asset-Album, Tag-Proposals |
 | Nutzbar | **Ja** |
 | Production-ready | **Ja** (Kern) |
 
-**Phase 2 offen:** `AssetTag`, `AssetAlbum`, Galerie-Blöcke, Batch-AI-Tags (Odysseus-Matrix).
+**Phase 2 (Batch 4):** `AssetAlbum`, Galerie-Blöcke v2 (`metadata.assetIds`), Batch-Tag-Vorschläge (heuristisch). Zentrales `EntityTag`-Backfill weiter offen.
 
-**Referenzen:** `packages/assets/`, `apps/studio/app/worlds/[worldSlug]/assets/`
+**Referenzen:** `packages/assets/`, `asset-album-service.ts`, `apps/studio/app/worlds/[worldSlug]/assets/`
+
+---
+
+## 12b. Portal — Graph, Questlog, Session-Ankündigung
+
+| Feature | Status | Pfade |
+|---------|--------|-------|
+| Beziehungsnetz | Beta | `/auth/worlds/[slug]/graph`, `PortalGraphView` |
+| Questlog + Lifecycle | Beta | `/auth/worlds/[slug]/quests`, `quest-lifecycle-service`, Suche `entityFilter=quests` |
+| Nächste Session | Beta | `playerVisibleSchedule`, `portal-dashboard-service` |
+
+---
+
+## 12c. Admin — Migration Inspector
+
+| Kriterium | Status |
+|-----------|--------|
+| UI | `/admin/migrations` — angewendet / ausstehend / fehlerhaft (read-only) |
+| Service | `migration-status.ts` (+ `appliedMigrations`, `failedDetails`) |
+| Nutzbar | **Ja** |
 
 ---
 

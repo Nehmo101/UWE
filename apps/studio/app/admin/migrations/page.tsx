@@ -4,6 +4,13 @@ import { getMigrationStatus, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard } from "@/src/components/AdminStatusDashboard";
 
+function formatMigrationTimestamp(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("de-DE");
+}
+
 export default async function AdminMigrationsPage() {
   const status = await getMigrationStatus(prisma);
 
@@ -26,7 +33,7 @@ export default async function AdminMigrationsPage() {
     >
       <PageHeader
         title="Migration-Inspector"
-        summary="Prüft, ob alle Prisma-Migrationen aus diesem Build auf der Datenbank angewendet wurden — ohne Schema- oder Secret-Details."
+        summary="Read-only Übersicht angewendeter, ausstehender und fehlerhafter Prisma-Migrationen — Reparatur erfolgt per CLI (`db:deploy`), nicht in der UI."
         actions={
           <HealthBadge
             status={status.ok ? "ok" : level === "error" ? "error" : "degraded"}
@@ -72,20 +79,40 @@ export default async function AdminMigrationsPage() {
         </section>
       )}
 
-      {status.failedMigrations.length > 0 && (
+      {status.failedDetails.length > 0 && (
         <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
           <h2 className="uwe-v2-section-title">Fehlerhafte Migrationen</h2>
           <ul className="uwe-dashboard-list">
-            {status.failedMigrations.map((name) => (
-              <li key={name}>
-                <code>{name}</code>
+            {status.failedDetails.map((entry) => (
+              <li key={entry.name}>
+                <code>{entry.name}</code>
                 <p className="uwe-dashboard-muted">
-                  Migration gestartet, aber nicht abgeschlossen — Datenbank kann inkonsistent sein.
+                  Gestartet: {formatMigrationTimestamp(entry.startedAt)} — Migration nicht
+                  abgeschlossen; Datenbank kann inkonsistent sein.
                 </p>
               </li>
             ))}
           </ul>
+          <p className="uwe-dashboard-muted">
+            Deploy-Befehl:{" "}
+            <code>pnpm --filter @uwe/database db:deploy</code>
+          </p>
         </section>
+      )}
+
+      {status.appliedMigrations.length > 0 && (
+        <details className="uwe-v2-card" style={{ marginTop: "1rem" }}>
+          <summary className="uwe-v2-section-title" style={{ cursor: "pointer" }}>
+            Angewendete Migrationen ({status.appliedMigrations.length})
+          </summary>
+          <ul className="uwe-dashboard-list" style={{ marginTop: "0.75rem" }}>
+            {status.appliedMigrations.map((name) => (
+              <li key={name}>
+                <code>{name}</code>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>

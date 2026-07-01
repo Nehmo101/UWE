@@ -17,9 +17,11 @@ import {
   createPrismaClient,
   getAppRepository,
   buildLevelUpSuggestions,
+  QUEST_LIFECYCLE_LABELS,
   type PageWithBlocks,
   type PortalCharacterView,
   type LevelUpSuggestions,
+  type QuestLifecycleStatus,
 } from "@uwe/database/server";
 
 interface Props {
@@ -124,6 +126,11 @@ export default async function AuthWorldPageDetail({ params }: Props) {
         <div className="auth-page-list-badges">
           <PageTypeBadge type={page.type} />
           <VisibilityBadge visibility={page.visibility} />
+          {page.type === "quest" && (
+            <span className="uwe-badge">
+              {QUEST_LIFECYCLE_LABELS[(page.questStatus ?? "open") as QuestLifecycleStatus]}
+            </span>
+          )}
         </div>
         {page.summary && <p className="auth-lead">{page.summary}</p>}
       </header>

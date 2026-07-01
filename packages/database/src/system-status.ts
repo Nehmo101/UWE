@@ -273,8 +273,10 @@ export async function getSystemStatus(
     : {
         ok: false,
         appliedCount: 0,
+        appliedMigrations: [],
         pendingMigrations: [],
         failedMigrations: [],
+        failedDetails: [],
         message: "Übersprungen — Datenbank nicht erreichbar.",
       };
 

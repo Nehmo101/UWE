@@ -12,13 +12,20 @@ import type { PrismaClient } from "./client";
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 
+export interface FailedMigrationDetail {
+  name: string;
+  startedAt: string | null;
+}
+
 export interface MigrationStatus {
   ok: boolean;
   appliedCount: number;
+  appliedMigrations: string[];
   /** Migrations on disk that have not been applied yet. */
   pendingMigrations: string[];
   /** Migrations that started but never finished (broken state). */
   failedMigrations: string[];
+  failedDetails: FailedMigrationDetail[];
   message: string;
 }
 
@@ -26,6 +33,7 @@ interface MigrationRow {
   migration_name: string;
   finished_at: string | null;
   rolled_back_at: string | null;
+  started_at: string | null;
 }
 
 export function listMigrationDirectories(): string[] | null {
@@ -48,14 +56,16 @@ export async function getMigrationStatus(db: PrismaClient): Promise<MigrationSta
   let rows: MigrationRow[];
   try {
     rows = await db.$queryRawUnsafe<MigrationRow[]>(
-      'SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY migration_name',
+      'SELECT migration_name, finished_at, rolled_back_at, started_at FROM "_prisma_migrations" ORDER BY migration_name',
     );
   } catch {
     return {
       ok: false,
       appliedCount: 0,
+      appliedMigrations: [],
       pendingMigrations: [],
       failedMigrations: [],
+      failedDetails: [],
       message:
         "Migrations-Tabelle nicht lesbar — wurde `prisma migrate deploy` ausgeführt?",
     };
@@ -65,6 +75,11 @@ export async function getMigrationStatus(db: PrismaClient): Promise<MigrationSta
   const failed = rows.filter(
     (row) => row.finished_at === null && row.rolled_back_at === null,
   );
+  const appliedMigrations = applied.map((row) => row.migration_name).sort();
+  const failedDetails = failed.map((row) => ({
+    name: row.migration_name,
+    startedAt: row.started_at,
+  }));
 
   const onDisk = listMigrationDirectories();
   const appliedNames = new Set(applied.map((row) => row.migration_name));
@@ -88,8 +103,10 @@ export async function getMigrationStatus(db: PrismaClient): Promise<MigrationSta
   return {
     ok,
     appliedCount: applied.length,
+    appliedMigrations,
     pendingMigrations: pending,
     failedMigrations: failed.map((row) => row.migration_name),
+    failedDetails,
     message,
   };
 }
