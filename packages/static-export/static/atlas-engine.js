@@ -428,6 +428,26 @@ function makePrng(seed) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
+function distToSegment2(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function inExclusion(x, y, exclusions) {
+  for (const ex of exclusions) {
+    const half = ex.width / 2;
+    if (half <= 0) continue;
+    const pts = ex.path;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i];
+      const [bx, by] = pts[i + 1];
+      if (distToSegment2(x, y, ax, ay, bx, by) < half) return true;
+    }
+  }
+  return false;
+}
 var BIOME_GLYPH = {
   forest: "tree",
   mountains: "mountain",
@@ -467,7 +487,7 @@ function ringArea(ring) {
   }
   return Math.abs(area / 2);
 }
-function scatterGlyphsInPolygon(polygon, biomeKind, density, seed = 1337) {
+function scatterGlyphsInPolygon(polygon, biomeKind, density, seed = 1337, exclusions) {
   const glyphKey = BIOME_GLYPH[biomeKind];
   if (!glyphKey || density <= 0) return [];
   const outerRing = polygon.rings[0];
@@ -489,6 +509,7 @@ function scatterGlyphsInPolygon(polygon, biomeKind, density, seed = 1337) {
       (hr) => pointInRing(x, y, hr)
     );
     if (inHole) continue;
+    if (exclusions && exclusions.length && inExclusion(x, y, exclusions)) continue;
     const scale = 0.55 + rng() * 0.6;
     const rotation = (rng() - 0.5) * 20;
     results.push({
@@ -789,6 +810,64 @@ function paintTerrainBlobs(ctx, opts) {
         ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
       }
     }
+  }
+}
+function drawCompassRose(ctx, opts) {
+  const { x, y, radius: r, ink, accent, parchment } = opts;
+  if (r <= 0) return;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = parchment;
+  ctx.fill();
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1, r * 0.045);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.62, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(0.5, r * 0.02);
+  ctx.stroke();
+  for (let i = 0; i < 8; i++) {
+    const cardinal = i % 2 === 0;
+    const len = cardinal ? r * 0.9 : r * 0.5;
+    const half = cardinal ? r * 0.14 : r * 0.09;
+    const a = -Math.PI / 2 + i * Math.PI / 4;
+    const tipX = x + Math.cos(a) * len;
+    const tipY = y + Math.sin(a) * len;
+    const lx = x + Math.cos(a - Math.PI / 2) * half;
+    const ly = y + Math.sin(a - Math.PI / 2) * half;
+    const rx = x + Math.cos(a + Math.PI / 2) * half;
+    const ry = y + Math.sin(a + Math.PI / 2) * half;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(lx, ly);
+    ctx.lineTo(rx, ry);
+    ctx.closePath();
+    ctx.fillStyle = i === 4 ? accent : ink;
+    ctx.fill();
+  }
+  ctx.fillStyle = ink;
+  ctx.font = `bold ${Math.max(8, Math.round(r * 0.3))}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("N", x, y - r * 0.98);
+}
+function drawScaleBar(ctx, opts) {
+  const { x, y, width, height, segments = 4, ink, parchment, label, font } = opts;
+  if (width <= 0 || height <= 0 || segments < 1) return;
+  const segW = width / segments;
+  for (let i = 0; i < segments; i++) {
+    ctx.fillStyle = i % 2 === 0 ? ink : parchment;
+    ctx.fillRect(x + i * segW, y, segW, height);
+  }
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = Math.max(1, height * 0.12);
+  ctx.strokeRect(x, y, width, height);
+  if (label) {
+    ctx.fillStyle = ink;
+    ctx.font = font ?? `${Math.max(8, Math.round(height * 1.4))}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(label, x + width / 2, y + height + Math.max(2, height * 0.4));
   }
 }
 function drawSvgPath(ctx, d) {
@@ -1473,6 +1552,8 @@ export {
   canvasToWorld,
   centroid,
   distToSegment,
+  drawCompassRose,
+  drawScaleBar,
   drawSvgPath,
   emptyDrawLayerMap,
   generateDraft,

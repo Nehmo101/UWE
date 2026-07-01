@@ -9,6 +9,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
+import { randomStampVariation, stampSeedFromKey } from "@uwe/atlas/stamp-variation";
 
 async function main() {
   const db = createPrismaClient();
@@ -109,6 +110,64 @@ async function main() {
         sortOrder: 3,
         visibility: "dm_only",
       });
+    }
+
+    // Terrain tile layer (CoK blob rendering) — only painted when still empty,
+    // so a hand-edited layer is never overwritten.
+    const freshMap = await atlas.getAtlasMap(map.id);
+    const existingTiles =
+      (freshMap?.tileLayer as { cells?: Record<string, string> } | null)?.cells ?? {};
+    if (Object.keys(existingTiles).length === 0) {
+      const cells: Record<string, string> = {};
+      for (let c = 8; c < 40; c++) {
+        for (let r = 6; r < 26; r++) {
+          const n = Math.sin(c * 0.45) + Math.cos(r * 0.55);
+          cells[`${c},${r}`] = n > 0.85 ? "forest" : n < -1.0 ? "hills" : "grassland";
+        }
+      }
+      for (let c = 46; c < 60; c++) {
+        for (let r = 8; r < 30; r++) cells[`${c},${r}`] = "coast";
+      }
+      await atlas.updateAtlasMap(map.id, {
+        tileLayer: { cols: 64, rows: 40, tile: 32, cells },
+      });
+    }
+
+    // Stamp objects with deterministic CoK-style scale/rotation variation
+    // (stamp-variation.ts) — exercised by editor, portal AND static export.
+    const existingObjects = await atlas.listObjectsForNode(node.id);
+    if (existingObjects.length === 0) {
+      const palette = await atlas.listPaletteItems(world.id);
+      const byGlyph = (key: string) =>
+        palette.find((p) => p.builtinGlyphKey === key && p.reviewStatus === "approved");
+      const placements: Array<[string, number, number]> = [
+        ["castle", 0.76, 0.5],
+        ["city", 0.7, 0.42],
+        ["village", 0.46, 0.7],
+        ["tree", 0.3, 0.3],
+        ["tree", 0.42, 0.4],
+        ["tower", 0.84, 0.62],
+      ];
+      for (const [glyphKey, x, y] of placements) {
+        const item = byGlyph(glyphKey);
+        if (!item) continue;
+        const v = randomStampVariation(stampSeedFromKey(`${node.id}-${glyphKey}-${x}`), {
+          scaleMin: 0.78,
+          scaleMax: 1.28,
+          rotateMin: -12,
+          rotateMax: 12,
+        });
+        await atlas.createObject({
+          nodeId: node.id,
+          paletteItemId: item.id,
+          x,
+          y,
+          scale: Math.round(v.scale * 100) / 100,
+          rotation: Math.round(v.rotation * 10) / 10,
+          layer: 50,
+          visibility: "dm_only",
+        });
+      }
     }
 
     console.log(`NODE_URL=/worlds/terra/atlas/${node.id}`);

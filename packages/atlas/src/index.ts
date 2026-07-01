@@ -101,6 +101,7 @@ export {
   scatterGlyphsAlongPath,
   buildReliefShading,
 } from "./terrain";
+export type { ScatterExclusion } from "./terrain";
 
 // Serialization (geometry-level)
 export {
@@ -133,8 +134,14 @@ export {
   roundedRectPath,
   paintTerrainBlobs,
   drawSvgPath,
+  drawCompassRose,
+  drawScaleBar,
 } from "./canvas-render";
-export type { PaintTerrainBlobsOptions } from "./canvas-render";
+export type {
+  PaintTerrainBlobsOptions,
+  CompassRoseOptions,
+  ScaleBarOptions,
+} from "./canvas-render";
 
 // Procedural draft generators
 export {

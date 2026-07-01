@@ -3,6 +3,18 @@
  * Loads atlas/data.json and renders a read-only canvas map with drill-down.
  */
 (() => {
+  // Solid tile-layer fills — same palette as the single-file editor runtime.
+  const TILE_FILL = {
+    grassland: "#a9c47f",
+    coast: "#9fc0d2",
+    hills: "#c2a878",
+    desert: "#dcc47c",
+    forest: "#7a9463",
+    mountains: "#b4a487",
+    swamp: "#8a9b78",
+    snow: "#dde6f0",
+  };
+
   const BIOME_FILL = {
     forest: "rgba(74,103,65,0.28)",
     mountains: "rgba(122,107,82,0.24)",
@@ -126,6 +138,42 @@
     });
   }
 
+  function roundedRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  // Flowing rounded tile blobs — mirrors @uwe/atlas paintTerrainBlobs so the
+  // static viewer shows the same terrain layer as the editor runtime.
+  function paintTerrainBlobs(ctx, opts) {
+    const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4 } = opts;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const biome = getCell(c, r);
+        if (!biome) continue;
+        const { x, y, w, h } = tileRect(c, r);
+        const radius = Math.min(w, h) * radiusRatio;
+        ctx.fillStyle = fillFor(biome);
+        roundedRectPath(ctx, x, y, w, h, radius);
+        ctx.fill();
+        const rightSame = getCell(c + 1, r) === biome;
+        const bottomSame = getCell(c, r + 1) === biome;
+        const diagSame = getCell(c + 1, r + 1) === biome;
+        if (rightSame) ctx.fillRect(x + w - radius, y, radius * 2, h);
+        if (bottomSame) ctx.fillRect(x, y + h - radius, w, radius * 2);
+        if (rightSame && bottomSame && diagSame) {
+          ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
+        }
+      }
+    }
+  }
+
   function drawSvgPath(ctx, d) {
     const cmds = d.match(/[MLHVZQCSA][^MLHVZQCSA]*/gi) || [];
     let x = 0;
@@ -167,6 +215,16 @@
       this.canvas = null;
       this.ctx = null;
       this.nodeId = data.rootNodeId || (data.nodes[0] && data.nodes[0].id);
+      this.paletteItems = data.paletteItems || {};
+      // Preload AI/upload image stamps (approved-only, inlined by the export).
+      this.stampImages = {};
+      for (const [id, item] of Object.entries(this.paletteItems)) {
+        if (!item || !item.imageData) continue;
+        const img = new Image();
+        img.onload = () => this.render();
+        img.src = `data:${item.mimeType || "image/png"};base64,${item.imageData}`;
+        this.stampImages[id] = img;
+      }
       this.buildDom();
       this.bindEvents();
       this.syncFromHash();
@@ -437,6 +495,26 @@
       ctx.fillStyle = preset.colors.parchment;
       ctx.fillRect(0, 0, W, H);
 
+      // Terrain tile layer (flowing blobs) — map-level, rendered on every node
+      // view exactly like the single-file editor runtime.
+      const tl = this.data.tileLayer;
+      if (tl && tl.cells) {
+        const cols = tl.cols || 64;
+        const rows = tl.rows || 40;
+        paintTerrainBlobs(ctx, {
+          cols,
+          rows,
+          getCell: (c, r) => tl.cells[`${c},${r}`],
+          tileRect: (c, r) => {
+            const [x, y] = w2c(c / cols, r / rows);
+            const [x1, y1] = w2c((c + 1) / cols, (r + 1) / rows);
+            return { x, y, w: x1 - x, h: y1 - y };
+          },
+          fillFor: (biome) => TILE_FILL[biome] || "#ccc",
+          radiusRatio: 0.4,
+        });
+      }
+
       const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
       grad.addColorStop(0, "rgba(0,0,0,0)");
       grad.addColorStop(1, "rgba(80,50,20,0.18)");
@@ -570,10 +648,12 @@
             ctx.fillStyle = inkColor;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
+            // Constant spacing in world units — font and spacing both scale
+            // with zoom, keeping the label compact at every zoom level.
             const placements = layoutCharactersOnPath(
               labelText,
               geo.pathCoordinates,
-              0.01 * (14 / zoom),
+              0.0085,
               geo.pathReversed === true,
             );
             for (const placement of placements) {
@@ -604,10 +684,26 @@
           ? this.data.builtinGlyphs
           : BUILTIN_GLYPHS;
       for (const obj of this.getNodeObjects()) {
-        const glyph = glyphs.find((g) => g.key === obj.paletteItemId);
-        if (!glyph) continue;
+        // Resolve via the exported palette map (DB ids → builtin glyph key or
+        // inline image stamp); fall back to a direct key match for hand-made
+        // data.json fixtures.
+        const paletteItem = this.paletteItems[obj.paletteItemId];
         const [ox, oy] = w2c(obj.x, obj.y);
         const size = 24 * zoom * obj.scale;
+
+        const stampImage = paletteItem && paletteItem.imageData ? this.stampImages[obj.paletteItemId] : null;
+        if (stampImage && stampImage.complete && stampImage.naturalWidth > 0) {
+          ctx.save();
+          ctx.translate(ox, oy);
+          ctx.rotate((obj.rotation * Math.PI) / 180);
+          ctx.drawImage(stampImage, -size / 2, -size / 2, size, size);
+          ctx.restore();
+          continue;
+        }
+
+        const glyphKey = paletteItem ? paletteItem.builtinGlyphKey : obj.paletteItemId;
+        const glyph = glyphs.find((g) => g.key === glyphKey);
+        if (!glyph) continue;
         ctx.save();
         ctx.translate(ox, oy);
         ctx.rotate((obj.rotation * Math.PI) / 180);

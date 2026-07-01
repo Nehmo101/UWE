@@ -15,7 +15,7 @@ import {
 } from "@uwe/database/server";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
-import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap } from "@/src/components/atlas/AtlasViewer";
+import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap, ViewerTileLayer } from "@/src/components/atlas/AtlasViewer";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
@@ -38,6 +38,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
   let parentChainItems: NodeAncestorItem[] = [];
   let parentSilhouette: [number, number][][] | undefined;
   let mapStylePreset: string | null = null;
+  let tileLayer: ViewerTileLayer | null = null;
   const pageLinkMap: PageLinkMap = {};
   const paletteItems: PaletteItemMap = {};
 
@@ -63,9 +64,29 @@ export default async function PortalAtlasNodePage({ params }: Props) {
     nodeTitle = nodeRecord.title;
     nodeLevel = nodeRecord.level;
 
-    // Get the atlas map style preset
+    // Get the atlas map style preset + terrain tile layer. The map itself is
+    // already portal-gated: getAtlasForContext returned non-null above, which
+    // requires the AtlasMap to be portal-visible.
     const map = await db.atlasMap.findUnique({ where: { id: nodeRecord.mapId } });
     mapStylePreset = map?.stylePreset ?? null;
+    const rawTileLayer = map?.tileLayer as {
+      cols?: number;
+      rows?: number;
+      cells?: Record<string, string>;
+    } | null;
+    if (
+      rawTileLayer &&
+      typeof rawTileLayer.cols === "number" &&
+      typeof rawTileLayer.rows === "number" &&
+      rawTileLayer.cells &&
+      typeof rawTileLayer.cells === "object"
+    ) {
+      tileLayer = {
+        cols: rawTileLayer.cols,
+        rows: rawTileLayer.rows,
+        cells: rawTileLayer.cells,
+      };
+    }
 
     // Get hierarchy for breadcrumb + parent silhouette
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
@@ -222,6 +243,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
           parentSilhouette={parentSilhouette}
           pageLinkMap={pageLinkMap}
           paletteItems={paletteItems}
+          tileLayer={tileLayer}
         />
       </section>
     </PortalShell>

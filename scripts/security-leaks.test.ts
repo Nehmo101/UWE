@@ -76,6 +76,22 @@ describe("security leaks — atlas portal visibility (three-tier: map + node + f
     assert.match(exportAtlas, /["']portal["']/);
   });
 
+  it("static export only ships approved palette items referenced by visible objects", () => {
+    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
+    // Palette stamps carry AI/upload image data — pending items must never
+    // reach the player-facing bundle, and only referenced ids may be resolved.
+    assert.match(exportAtlas, /reviewStatus:\s*["']approved["']/);
+    assert.match(exportAtlas, /id:\s*\{\s*in:/);
+  });
+
+  it("static export takes the tile layer from the portal-filtered map snapshot only", () => {
+    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
+    // tileLayer lives on AtlasMap; the snapshot is null when the map is not
+    // portal-visible, so reading it off snapshot.map keeps the gate intact.
+    assert.match(exportAtlas, /snapshot\.map\.tileLayer/);
+    assert.doesNotMatch(exportAtlas, /atlasMap\.findUnique/);
+  });
+
   it("fetches portal atlas node data through the portal filter", () => {
     const nodePage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
     assert.match(nodePage, /getAtlasForContext/);

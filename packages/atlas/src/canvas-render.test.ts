@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { drawSvgPath, paintTerrainBlobs, roundedRectPath } from "./canvas-render";
+import {
+  drawCompassRose,
+  drawScaleBar,
+  drawSvgPath,
+  paintTerrainBlobs,
+  roundedRectPath,
+} from "./canvas-render";
 
 /**
  * A minimal Canvas2D context recorder — records every method call as
@@ -100,5 +106,85 @@ describe("paintTerrainBlobs", () => {
     });
     assert.equal(count("fill"), 0);
     assert.equal(count("fillRect"), 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Decorations — compass rose & scale bar
+// ---------------------------------------------------------------------------
+
+/** Recording ctx variant with the extra methods the decoration renderers use. */
+function makeDecorationCtx() {
+  const calls: Array<[string, ...unknown[]]> = [];
+  const rec = (name: string) => (...args: unknown[]) => {
+    calls.push([name, ...args]);
+  };
+  const ctx = {
+    fillStyle: "",
+    strokeStyle: "",
+    lineWidth: 0,
+    font: "",
+    textAlign: "",
+    textBaseline: "",
+    beginPath: rec("beginPath"),
+    closePath: rec("closePath"),
+    moveTo: rec("moveTo"),
+    lineTo: rec("lineTo"),
+    arc: rec("arc"),
+    fill: rec("fill"),
+    stroke: rec("stroke"),
+    fillRect: rec("fillRect"),
+    strokeRect: rec("strokeRect"),
+    fillText: rec("fillText"),
+  };
+  return {
+    ctx: ctx as unknown as CanvasRenderingContext2D,
+    calls,
+    count: (n: string) => calls.filter((c) => c[0] === n).length,
+  };
+}
+
+describe("drawCompassRose", () => {
+  const OPTS = { x: 50, y: 50, radius: 30, ink: "#1a1008", accent: "#8b1a10", parchment: "#f2e8c9" };
+
+  it("draws disc + inner ring + eight points + N letter", () => {
+    const { ctx, calls, count } = makeDecorationCtx();
+    drawCompassRose(ctx, OPTS);
+    assert.equal(count("arc"), 2, "outer disc + inner ring");
+    assert.equal(count("closePath"), 8, "one closed triangle per point");
+    assert.equal(count("fill"), 9, "disc fill + 8 point fills");
+    const text = calls.find((c) => c[0] === "fillText");
+    assert.ok(text && text[1] === "N", "renders the north letter");
+  });
+
+  it("does nothing for a non-positive radius", () => {
+    const { ctx, calls } = makeDecorationCtx();
+    drawCompassRose(ctx, { ...OPTS, radius: 0 });
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("drawScaleBar", () => {
+  const OPTS = { x: 10, y: 90, width: 80, height: 8, ink: "#1a1008", parchment: "#f2e8c9" };
+
+  it("fills alternating segments and outlines the bar", () => {
+    const { ctx, count } = makeDecorationCtx();
+    drawScaleBar(ctx, { ...OPTS, segments: 4 });
+    assert.equal(count("fillRect"), 4);
+    assert.equal(count("strokeRect"), 1);
+    assert.equal(count("fillText"), 0, "no label requested");
+  });
+
+  it("renders the unit label below the bar when given", () => {
+    const { ctx, calls } = makeDecorationCtx();
+    drawScaleBar(ctx, { ...OPTS, label: "0 — 100 leagues" });
+    const text = calls.find((c) => c[0] === "fillText");
+    assert.ok(text && text[1] === "0 — 100 leagues");
+  });
+
+  it("does nothing for degenerate dimensions", () => {
+    const { ctx, calls } = makeDecorationCtx();
+    drawScaleBar(ctx, { ...OPTS, width: 0 });
+    assert.equal(calls.length, 0);
   });
 });
