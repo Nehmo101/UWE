@@ -28,7 +28,8 @@ export type GeneratorActionId =
   | "prepare_next_session"
   | "generate_encounter"
   | "generate_read_aloud"
-  | "remove_spoilers";
+  | "remove_spoilers"
+  | "simulate_faction";
 
 export interface GeneratorContext {
   contextType: GeneratorContextType;
@@ -112,6 +113,7 @@ const CONTEXT_ACTIONS: Partial<Record<GeneratorContextType, GeneratorActionId[]>
   dungeon: ["prepare_next_session", "fill_missing_fields"],
   npc: ["fill_missing_fields", "generate_dm_notes", "generate_player_text", "check_canon"],
   quest: ["fill_missing_fields", "generate_player_text", "check_canon"],
+  faction: ["simulate_faction", "fill_missing_fields", "generate_dm_notes", "check_canon"],
 };
 
 const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> = {
@@ -151,6 +153,14 @@ const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> =
     id: "remove_spoilers",
     label: "Spoiler entfernen",
     description: "Portal-sichere Version ohne DM-only Inhalte.",
+    requiresLocalRtx: true,
+    reviewRequired: true,
+  },
+  simulate_faction: {
+    id: "simulate_faction",
+    label: "Fraktion simulieren",
+    description:
+      "RTX-only: Schlägt datierte WorldEvents als Review-Vorschlag vor — nie automatisch übernehmen.",
     requiresLocalRtx: true,
     reviewRequired: true,
   },

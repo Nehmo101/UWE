@@ -27,7 +27,8 @@ export type AiTaskType =
   | "fill_dungeon_room"
   | "prepare_mail_draft"
   | "atlas_name_region"
-  | "atlas_describe_region";
+  | "atlas_describe_region"
+  | "simulate_faction";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

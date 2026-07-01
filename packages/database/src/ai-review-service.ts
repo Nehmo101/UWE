@@ -20,6 +20,9 @@ import { UweRepository } from "./repository";
 import { toPrismaJsonValue } from "./json-utils";
 import { createUndoService } from "./undo-service";
 import { syncAiProposalReview } from "./review-bridge";
+import { createWorldEventService } from "./world-event-service";
+import { parseInGameDate, type InGameDate } from "./world-calendar-service";
+import type { Visibility } from "./generated/prisma/client";
 
 const BRAIN_DOCUMENT_TYPES: BrainDocumentType[] = [
   "world_knowledge",
@@ -600,6 +603,19 @@ export class AiReviewService {
     const applyAction = edited ? "edit_apply" : "apply";
 
     try {
+      if (proposal.aiRun.taskType === "simulate_faction") {
+        return await this.applyFactionSimulationProposal(
+          proposalId,
+          proposal,
+          content,
+          world,
+          sourcePage,
+          input,
+          applyAction,
+          edited,
+        );
+      }
+
       if (input.mode === "idea") {
         const title =
           input.title?.trim() ||
@@ -761,6 +777,110 @@ export class AiReviewService {
     }
   }
 
+  private async applyFactionSimulationProposal(
+    proposalId: string,
+    proposal: {
+      id: string;
+      aiRunId: string;
+      worldId: string;
+      sessionId: string | null;
+      editedText: string | null;
+      aiRun: { taskType: string; world: { id: string; slug: string } | null };
+    },
+    content: string,
+    world: { id: string; slug: string },
+    sourcePage: { id: string; title: string; type: string; slug: string },
+    input: ApplyAiProposalInput,
+    applyAction: "apply" | "edit_apply",
+    edited: boolean,
+  ) {
+    const events = parseFactionSimulationEvents(content);
+    const worldEvents = createWorldEventService(this.db);
+    const createdIds: string[] = [];
+
+    for (const event of events) {
+      const created = await worldEvents.create({
+        worldId: world.id,
+        title: event.title,
+        inGameDate: event.inGameDate,
+        summaryPlayer: event.summaryPlayer ?? null,
+        summaryDm: event.summaryDm ?? null,
+        visibility: event.visibility ?? "private",
+        sourceType: "faction_sim",
+        sourceAiProposalId: proposalId,
+        linkedPages: [{ pageId: sourcePage.id, role: "faction" }],
+      });
+      createdIds.push(created.id);
+    }
+
+    const applySummary = `${createdIds.length} Chronik-Ereignis(se) aus Fraktions-Simulation übernommen.`;
+    const targetHref = `/worlds/${world.slug}/chronicle`;
+    const appliedTargetId = createdIds[0];
+    const now = new Date();
+
+    await this.db.aiProposal.update({
+      where: { id: proposalId },
+      data: {
+        status: "applied",
+        appliedAt: now,
+        editedText: input.editedText ?? proposal.editedText,
+        appliedTargetType: "content_block",
+        appliedTargetId,
+      },
+    });
+
+    await this.db.aiRun.update({
+      where: { id: proposal.aiRunId },
+      data: {
+        status: "applied",
+        appliedAt: now,
+        targetType: "content_block",
+        targetId: appliedTargetId,
+      },
+    });
+
+    await this.db.aiApplyLog.create({
+      data: {
+        proposalId,
+        aiRunId: proposal.aiRunId,
+        worldId: proposal.worldId,
+        action: applyAction,
+        summary: applySummary,
+        undoEntryId: null,
+        details: {
+          mode: input.mode,
+          edited,
+          createdEventIds: createdIds,
+        },
+      },
+    });
+
+    await this.activity.log({
+      worldId: world.id,
+      worldSlug: world.slug,
+      action: "ai_proposal_applied",
+      targetType: "ai_proposal",
+      targetId: proposalId,
+      targetLabel: proposal.aiRun.taskType,
+      targetHref,
+      summary: applySummary,
+      details: {
+        aiRunId: proposal.aiRunId,
+        mode: input.mode,
+        createdEventIds: createdIds,
+      },
+    });
+
+    const refreshed = await this.getProposal(proposalId);
+    return {
+      ok: true as const,
+      message: applySummary,
+      proposal: refreshed ?? undefined,
+      appliedTargetType: "content_block",
+      appliedTargetId,
+    };
+  }
+
   private toView(
     entry: {
       id: string;
@@ -802,6 +922,59 @@ export class AiReviewService {
       model: entry.aiRun.model,
     };
   }
+}
+
+interface ParsedFactionSimulationEvent {
+  title: string;
+  inGameDate: InGameDate;
+  summaryPlayer?: string | null;
+  summaryDm?: string | null;
+  visibility?: Visibility;
+}
+
+function parseFactionSimulationEvents(content: string): ParsedFactionSimulationEvent[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error("Fraktions-Simulation muss gültiges JSON liefern.");
+  }
+
+  const rawEvents = Array.isArray(parsed)
+    ? parsed
+    : typeof parsed === "object" &&
+        parsed !== null &&
+        Array.isArray((parsed as { events?: unknown[] }).events)
+      ? (parsed as { events: unknown[] }).events
+      : null;
+
+  if (!rawEvents || rawEvents.length === 0) {
+    throw new Error("JSON enthält keine events.");
+  }
+
+  return rawEvents.map((entry, index) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw new Error(`Event ${index + 1} ist ungültig.`);
+    }
+    const record = entry as Record<string, unknown>;
+    const title = typeof record.title === "string" ? record.title.trim() : "";
+    if (!title) {
+      throw new Error(`Event ${index + 1} braucht einen Titel.`);
+    }
+
+    const inGameDate = parseInGameDate(record.inGameDate);
+    const visibility =
+      typeof record.visibility === "string" ? (record.visibility as Visibility) : undefined;
+
+    return {
+      title,
+      inGameDate,
+      summaryPlayer:
+        typeof record.summaryPlayer === "string" ? record.summaryPlayer.trim() : null,
+      summaryDm: typeof record.summaryDm === "string" ? record.summaryDm.trim() : null,
+      visibility,
+    };
+  });
 }
 
 export function createAiReviewService(db: PrismaClient): AiReviewService {

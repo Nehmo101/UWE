@@ -31,6 +31,16 @@ describe("generator service", () => {
     assert.ok(actions.every((action) => action.reviewRequired));
   });
 
+  it("lists faction simulation for faction pages", () => {
+    const actions = listGeneratorActions({
+      contextType: "faction",
+      contextId: "f1",
+      worldSlug: "terra",
+    });
+
+    assert.ok(actions.some((action) => action.id === "simulate_faction"));
+  });
+
   it("detects missing NPC motivation", () => {
     const hints = detectMissingContent({
       pageType: "npc",

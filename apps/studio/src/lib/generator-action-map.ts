@@ -11,6 +11,7 @@ const GENERATOR_ACTION_TASK_MAP: Record<GeneratorActionId, AiTaskType> = {
   generate_encounter: "create_encounter",
   generate_read_aloud: "fill_dungeon_room",
   remove_spoilers: "generate_player_recap",
+  simulate_faction: "simulate_faction",
 };
 
 export function mapGeneratorActionToTaskType(actionId: GeneratorActionId): AiTaskType {
@@ -37,6 +38,8 @@ export function buildGeneratorUserPrompt(actionId: GeneratorActionId, pageTitle:
       return `Erzeuge einen Vorlesetext (read-aloud) für „${pageTitle}".`;
     case "remove_spoilers":
       return `Entferne Spoiler und DM-only Inhalte aus „${pageTitle}" für Portal-Nutzung.`;
+    case "simulate_faction":
+      return `Simuliere einen Zeitsprung für die Fraktion „${pageTitle}": strukturierte JSON-Events mit In-Game-Datum für die Chronik.`;
     default:
       return `KI-Aktion für „${pageTitle}".`;
   }
