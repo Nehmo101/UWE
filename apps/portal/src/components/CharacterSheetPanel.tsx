@@ -1,8 +1,9 @@
-import type { PortalCharacterView } from "@uwe/database/server";
-import { CharacterSpellSection } from "@uwe/shared-ui";
+import type { LevelUpSuggestions, PortalCharacterView } from "@uwe/database/server";
+import { CharacterLevelUpPanel, CharacterSpellSection } from "@uwe/shared-ui";
 import {
   addHomebrewSpellAction,
   addSpellAction,
+  applyPortalLevelUpAction,
   removeSpellAction,
   searchOpen5eSpellsAction,
   togglePreparedAction,
@@ -15,6 +16,7 @@ interface CharacterSheetPanelProps {
   character: PortalCharacterView;
   returnPath: string;
   canEdit: boolean;
+  levelUpSuggestions?: LevelUpSuggestions | null;
 }
 
 const ABILITY_LABELS: Record<string, string> = {
@@ -36,14 +38,29 @@ export function CharacterSheetPanel({
   character,
   returnPath,
   canEdit,
+  levelUpSuggestions,
 }: CharacterSheetPanelProps) {
   const { sheet } = character;
+  const printUrl = `/api/worlds/${worldSlug}/characters/print?characterId=${encodeURIComponent(character.id)}`;
 
   return (
     <section className="auth-block auth-character-sheet">
       <h2>Charakterbogen</h2>
       <p className="auth-muted">
         Strukturierte Werte (D&amp;D 2024) — Modifikatoren und Übungsbonus werden automatisch berechnet.
+      </p>
+      <p>
+        <a href={printUrl} className="auth-btn auth-btn-small" target="_blank" rel="noreferrer">
+          Druck / Export
+        </a>{" "}
+        <a
+          href={`${printUrl}&format=markdown`}
+          className="auth-btn auth-btn-small"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Markdown
+        </a>
       </p>
 
       <dl className="auth-character-sheet-summary">
@@ -174,6 +191,20 @@ export function CharacterSheetPanel({
         addHomebrewSpellAction={addHomebrewSpellAction}
         searchSpellsAction={searchOpen5eSpellsAction}
       />
+
+      {levelUpSuggestions && (
+        <CharacterLevelUpPanel
+          suggestions={levelUpSuggestions}
+          canEdit={canEdit}
+          hiddenFields={{
+            worldSlug,
+            characterId: character.id,
+            pageSlug,
+            returnPath,
+          }}
+          applyLevelUpAction={applyPortalLevelUpAction}
+        />
+      )}
     </section>
   );
 }

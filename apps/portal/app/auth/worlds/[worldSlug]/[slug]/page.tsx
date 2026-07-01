@@ -16,8 +16,10 @@ import {
   createCharacterService,
   createPrismaClient,
   getAppRepository,
+  buildLevelUpSuggestions,
   type PageWithBlocks,
   type PortalCharacterView,
+  type LevelUpSuggestions,
 } from "@uwe/database/server";
 
 interface Props {
@@ -43,6 +45,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let canEditCharacter = false;
   let characterSheet: PortalCharacterView | null = null;
   let canEditSheet = false;
+  let levelUpSuggestions: LevelUpSuggestions | null = null;
   let campaignId: string | null = null;
   let blockHtml: string[] = [];
 
@@ -92,6 +95,12 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             ctx.effectiveRole === "player" &&
             !ctx.previewAsUserId,
         );
+        levelUpSuggestions = buildLevelUpSuggestions({
+          level: linked.level,
+          classes: linked.classes,
+          abilities: linked.abilities,
+          combat: linked.combat,
+        });
       }
     }
   } finally {
@@ -142,6 +151,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           character={characterSheet}
           returnPath={returnPath}
           canEdit={canEditSheet}
+          levelUpSuggestions={levelUpSuggestions}
         />
       )}
 

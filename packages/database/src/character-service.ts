@@ -81,6 +81,7 @@ export interface UpdateCharacterInput {
   level?: number;
   abilities?: AbilityScores;
   combat?: CharacterCombat;
+  classes?: Prisma.InputJsonValue;
   notes?: string;
 }
 
@@ -334,6 +335,7 @@ export class CharacterService {
         level: input.level,
         abilities: abilities as unknown as Prisma.InputJsonValue,
         combat: combat as unknown as Prisma.InputJsonValue,
+        classes: input.classes,
         notes: input.notes,
       },
       include: {

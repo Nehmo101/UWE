@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   ABILITY_KEYS,
+  buildLevelUpApplyPayload,
   createAuthService,
   createCharacterService,
   createCharacterSpellService,
@@ -12,10 +13,12 @@ import {
   extractOpen5eSpellLevel,
   parseHomebrewSpellInput,
   resolveDndApiConfig,
+  type Prisma,
   type UpdateCharacterInput,
 } from "@uwe/database/server";
 import { searchOpen5eSpells, type DndApiSearchResult } from "@uwe/dnd-api";
 import {
+  characterLevelUpApplySchema,
   characterSheetUpdateSchema,
   characterSpellAddSchema,
   characterSpellHomebrewAddSchema,
@@ -60,6 +63,49 @@ function buildUpdateInput(parsed: CharacterSheetForm): UpdateCharacterInput {
 
 function parsePreparedFlag(value: unknown): boolean {
   return value === true || value === "true" || value === "on" || value === "1";
+}
+
+function parseApplyFlag(value: unknown): boolean {
+  return parsePreparedFlag(value);
+}
+
+function buildLevelUpUpdateInput(
+  character: {
+    level: number;
+    classes: unknown;
+    abilities: unknown;
+    combat: unknown;
+  },
+  parsed: z.infer<typeof characterLevelUpApplySchema>,
+): UpdateCharacterInput {
+  const payload = buildLevelUpApplyPayload(
+    {
+      level: character.level,
+      classes: character.classes,
+      abilities: character.abilities,
+      combat: character.combat,
+    },
+    {
+      pickedClass: parsed.pickedClass,
+      hpIncrease: parsed.hpIncrease,
+      applyLevel: parseApplyFlag(parsed.applyLevel),
+      applyMaxHp: parseApplyFlag(parsed.applyMaxHp),
+      applyCurrentHp: parseApplyFlag(parsed.applyCurrentHp),
+      applyClasses: parseApplyFlag(parsed.applyClasses),
+    },
+  );
+
+  if (!payload) {
+    throw new Error("Keine Level-Up-Felder ausgewählt.");
+  }
+
+  return {
+    ...(payload.level !== undefined ? { level: payload.level } : {}),
+    ...(payload.classes
+      ? { classes: payload.classes as unknown as Prisma.InputJsonValue }
+      : {}),
+    ...(payload.combat ? { combat: payload.combat } : {}),
+  };
 }
 
 function resolveReturnPath(parsed: { returnPath?: string; pageSlug?: string; worldSlug: string }) {
@@ -140,6 +186,34 @@ export async function updateCharacterSheetAction(formData: FormData) {
       parsed.worldSlug,
       parsed.characterId,
       buildUpdateInput(parsed),
+      ctx,
+    );
+    if (!updated) {
+      throw new Error("Keine Berechtigung");
+    }
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidateCharacterPaths(parsed.worldSlug, path);
+}
+
+export async function applyPortalLevelUpAction(formData: FormData) {
+  const parsed = parseFormDataOrThrow(formData, characterLevelUpApplySchema);
+  const path = resolveReturnPath(parsed);
+  const { db, auth, ctx } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+
+  try {
+    const characters = createCharacterService(db);
+    const record = await characters.getById(parsed.characterId);
+    if (!record) {
+      throw new Error("Charakter nicht gefunden");
+    }
+
+    const updated = await auth.updateCharacterForOwner(
+      parsed.worldSlug,
+      parsed.characterId,
+      buildLevelUpUpdateInput(record, parsed),
       ctx,
     );
     if (!updated) {

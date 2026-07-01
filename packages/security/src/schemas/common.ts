@@ -348,6 +348,34 @@ export const dndSpellSearchQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
 });
 
+const levelUpBooleanField = z
+  .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+  .optional();
+
+export const characterLevelUpApplySchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pickedClass: z.string().trim().min(1).max(100).optional(),
+  hpIncrease: z.coerce.number().int().min(0).max(50).optional(),
+  applyLevel: levelUpBooleanField,
+  applyMaxHp: levelUpBooleanField,
+  applyCurrentHp: levelUpBooleanField,
+  applyClasses: levelUpBooleanField,
+  pageSlug: slugSchema.optional(),
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+export const studioCharacterLevelUpApplySchema = characterLevelUpApplySchema.extend({
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+});
+
+export const characterSheetPrintQuerySchema = z.object({
+  characterId: idSchema,
+  format: z.enum(["html", "markdown"]).optional(),
+});
+
 export const assetFileQuerySchema = z.object({
   world: slugSchema,
 });
