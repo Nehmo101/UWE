@@ -1061,10 +1061,14 @@ export {
 
 export {
   evaluateMaintenanceGate,
+  isMaintenanceGateBypassPath,
+  isMaintenanceMiddlewareBypassPath,
   resolveMaintenanceGateContext,
 } from "./maintenance-gate";
 
 export type { MaintenanceGateContext, MaintenanceGateInput } from "./maintenance-gate";
+
+export { evaluateMaintenanceForRequest } from "./maintenance-request";
 
 export type { SystemSettingsSnapshot } from "./settings-service";
 

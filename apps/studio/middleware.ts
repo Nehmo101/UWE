@@ -3,11 +3,13 @@ import type { NextRequest } from "next/server";
 import {
   applySecurityHeaders,
   evaluateStudioMiddleware,
+  fetchMaintenanceMiddlewareDecision,
   getUweRuntimeConfig,
   isCrossSiteBrowserRequest,
   resolveLegacyPathRedirect,
   SESSION_COOKIE_NAME,
 } from "@uwe/auth";
+import { isMaintenanceMiddlewareBypassPath } from "@uwe/database/maintenance-gate";
 
 const PUBLIC_PATH_PREFIXES = [
   "/",
@@ -60,7 +62,7 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const legacyRedirect = resolveLegacyPathRedirect(request.nextUrl.pathname, "studio", process.env);
   if (legacyRedirect) {
     const url = request.nextUrl.clone();
@@ -93,6 +95,38 @@ export function middleware(request: NextRequest) {
       { allowYouTubeEmbeds: true },
       request,
     );
+  }
+
+  if (!isMaintenanceMiddlewareBypassPath(pathname)) {
+    const maintenance = await fetchMaintenanceMiddlewareDecision(
+      request.nextUrl.origin,
+      pathname,
+      "studio",
+      request.headers.get("cookie"),
+    );
+    if (maintenance) {
+      if (pathname.startsWith("/api/")) {
+        return applySecurityHeaders(
+          NextResponse.json(
+            { error: maintenance.message, maintenance: true },
+            { status: 503 },
+          ),
+          process.env,
+          { allowYouTubeEmbeds: true },
+          request,
+        );
+      }
+
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = maintenance.redirectPath ?? "/maintenance";
+      redirectUrl.search = "";
+      return applySecurityHeaders(
+        NextResponse.redirect(redirectUrl),
+        process.env,
+        { allowYouTubeEmbeds: true },
+        request,
+      );
+    }
   }
 
   const config = getUweRuntimeConfig();

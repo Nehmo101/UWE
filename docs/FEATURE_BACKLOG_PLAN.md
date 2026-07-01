@@ -71,7 +71,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 12 | World Templates | ⬜ | `world-creation-service.ts` (nur leere Welt), `PageTemplate` (nur **Seiten**-Templates) | **Echtes Neubau-Thema**: Welt-Archetypen (DnD/Wargame/Roman/Projektwiki) bei Welt-Erstellung. Empfehlung: Template = Satz Seed-Seiten/Templates + Default-Settings. |
 | 13 | Content Moderation / Freigabe | ✅ | `ContentReview` + `/admin/reviews`, `review-service.ts`, `AiProposal`/`ai-review-service.ts` (kein Auto-Apply) | Review-zentriert; nicht jeder KI-Pfad erzeugt zwingend Review. Kern erfüllt. |
 | 14 | System-Changelog | 🔶 | `/system/version` (Build-Info), `/system/uwe-knowhow` (durchsucht `CHANGELOG.md`/docs) | Kein **„Was ist neu“** nach Update (geparste Release-Notes/Modal). |
-| 15 | Owner Notfallmodus | ⬜ | verwandt: `settings.portal.portalEnabled`, `AUTH_REQUIRED`, Host-Script `stop_uwe_service_for_maintenance` | **Echtes Neubau-Thema**: `maintenanceMode`/`lockPortal`/`lockStudio` mit Owner-Bypass in `SystemSettings` + Middleware. |
+| 15 | Owner Notfallmodus | ✅ Beta | `maintenanceMode`/`lockPortal`/`lockStudio`, Middleware + Owner-Bypass, Settings-UI | Shipped: Gate in Middleware + Layout, `/api/maintenance/evaluate`, NL-Command. |
 | 16 | Kosten-Dashboard | 🔶 | `AiUsageLog` (Tokens/`estimatedCostUsd`/Feature/User), Budget+CSV im AI-Gateway-Wizard; `ContractExpense`/`/contracts` (Life-Admin) | Kein **vereinheitlichtes** Dashboard pro User/Welt/Feature. **Frage:** AI-Kosten wirklich „in Verträge“ mischen? |
 | 17 | AI Agent Queue | 🔶 | `Job`/`JobLog` + `/jobs` (ai_run/import/canon_check/embedding/research), `DevAgentJob` + `/admin/agent-jobs` | `DevAgentJob` = Repo-Automation, nicht „Terra analysieren / NPCs erzeugen“. Keine 1-Klick-Presets für lange Kampagnen-Jobs. |
 | 18 | Admin Command Center (NL) | 🔶 | `StudioCommandPalette` (statische Nav-Befehle), `/api/command/search` (Wiki-Suche) | **Keine** natürliche Sprache, keine Mutations-Befehle. **Sicherheits-kritisch** (siehe Fragen). |
@@ -620,4 +620,4 @@ den Orchestrator-Prompt: [prompts/feature-backlog-orchestrator.md](prompts/featu
 | Reihenfolge | Wellen A→B→C→D wie §7/§11.7 (keine Einwände). |
 
 **Status:** Beschlüsse in §13 gelten. Umsetzung über Orchestrator-Batches (siehe GitHub PRs
-#357–#385, Faction-Simulator UI). Nächste offene Neubau-Themen: Owner-Notfallmodus, World Templates.
+#357–#386, Faction-Simulator UI, Owner-Notfallmodus Middleware). Nächste offene Neubau-Themen: World Templates, Spieler-Timeline Polish.

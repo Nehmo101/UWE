@@ -19,6 +19,7 @@ const PUBLIC_ALLOWLIST = new Set([
   "health/route.ts",
   "health/public/route.ts",
   "maintenance/status/route.ts",
+  "maintenance/evaluate/route.ts",
   "spotify/callback/route.ts",
 ]);
 
