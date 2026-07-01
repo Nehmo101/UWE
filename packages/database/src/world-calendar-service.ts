@@ -85,3 +85,41 @@ export function formatInGameDate(date: InGameDate, months: WorldCalendarMonth[])
   const monthName = month?.name ?? `Monat ${date.month}`;
   return `${date.day}. ${monthName} ${date.year}`;
 }
+
+export function parseInGameDate(value: unknown): InGameDate {
+  if (typeof value !== "object" || value === null) {
+    return DEFAULT_IN_GAME_DATE;
+  }
+  const record = value as Record<string, unknown>;
+  const year = typeof record.year === "number" ? record.year : DEFAULT_IN_GAME_DATE.year;
+  const month = typeof record.month === "number" ? record.month : DEFAULT_IN_GAME_DATE.month;
+  const day = typeof record.day === "number" ? record.day : DEFAULT_IN_GAME_DATE.day;
+  return { year, month, day };
+}
+
+export function parseWorldCalendarMonths(value: unknown): WorldCalendarMonth[] {
+  if (!Array.isArray(value)) {
+    return DEFAULT_WORLD_CALENDAR_MONTHS;
+  }
+  const months = value
+    .map((entry) => {
+      if (typeof entry !== "object" || entry === null) return null;
+      const record = entry as Record<string, unknown>;
+      const key = typeof record.key === "string" ? record.key : "";
+      const name = typeof record.name === "string" ? record.name : "";
+      const daysInMonth =
+        typeof record.daysInMonth === "number" ? record.daysInMonth : 30;
+      if (!key || !name) return null;
+      return { key, name, daysInMonth };
+    })
+    .filter((entry): entry is WorldCalendarMonth => entry !== null);
+  return months.length > 0 ? months : DEFAULT_WORLD_CALENDAR_MONTHS;
+}
+
+export function parseDayNames(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const names = value.filter((entry): entry is string => typeof entry === "string");
+  return names.length > 0 ? names : null;
+}
