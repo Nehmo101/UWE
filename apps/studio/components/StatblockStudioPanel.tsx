@@ -6,7 +6,10 @@ import {
   exportStructuredStatblockHomebrewery,
   exportStructuredStatblockJson,
 } from "@uwe/dnd-api";
-import { upsertStatblockAction } from "@/app/worlds/[worldSlug]/statblock-studio-actions";
+import {
+  createStatblockLabelAction,
+  upsertStatblockAction,
+} from "@/app/worlds/[worldSlug]/statblock-studio-actions";
 
 interface Props {
   worldSlug: string;
@@ -67,6 +70,22 @@ export function StatblockStudioPanel({
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Speichern fehlgeschlagen.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createStatblockLabel() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      await createStatblockLabelAction({
+        worldSlug,
+        pageId,
+        pageSlug,
+        category,
+      });
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Label-Erstellung fehlgeschlagen.");
       setBusy(false);
     }
   }
@@ -135,6 +154,14 @@ export function StatblockStudioPanel({
               onClick={() => void copyExport("5e.tools JSON", exports.fiveTools)}
             >
               5e.tools JSON kopieren
+            </button>
+            <button
+              type="button"
+              className="uwe-v2-btn uwe-v2-btn-secondary"
+              disabled={busy}
+              onClick={() => void createStatblockLabel()}
+            >
+              {busy ? "Erstelle Label…" : "6×4-Label erstellen"}
             </button>
           </>
         )}

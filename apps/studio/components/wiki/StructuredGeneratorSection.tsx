@@ -54,14 +54,16 @@ export async function StructuredGeneratorSection({
   const schema = getStructuredGeneratorSchema(pageType);
 
   return (
-    <StructuredGeneratorPanel
-      worldSlug={worldSlug}
-      pageSlug={pageSlug}
-      pageTitle={pageTitle}
-      schema={schema}
-      action={action}
-      rtxReady={rtxReady}
-      rtxEnabled={rtxEnabled}
-    />
+    <div id={pageType === "item" ? "item-structured-generator" : undefined}>
+      <StructuredGeneratorPanel
+        worldSlug={worldSlug}
+        pageSlug={pageSlug}
+        pageTitle={pageTitle}
+        schema={schema}
+        action={action}
+        rtxReady={rtxReady}
+        rtxEnabled={rtxEnabled}
+      />
+    </div>
   );
 }
