@@ -276,7 +276,23 @@ function setState(patch) { Object.assign(state, patch); refreshChrome(); }
 // ===========================================================================
 const STORAGE_KEY = "uwe.atlas.singlefile.v2";
 
+// Portal/Studio liefern das Doc server-seitig gefiltert über ein separates
+// JSON-Script-Element mit id="atlas-doc". getAtlasForContext (packages/database)
+// hat dm_only zu diesem Zeitpunkt bereits entfernt.
+function readInjectedDoc() {
+  try {
+    const node = document.getElementById("atlas-doc");
+    const txt = node && node.textContent ? node.textContent.trim() : "";
+    if (txt) return JSON.parse(txt);
+  } catch (e) { console.warn("Atlas: injizierte Doc-Daten nicht lesbar —", e); }
+  return null;
+}
 function loadDoc() {
+  const injected = readInjectedDoc();
+  if (injected) return migrate(injected);
+  // View-Modus (Portal) darf NIE lokalen Editor-Puffer oder Demo-Inhalte zeigen —
+  // nur server-geliefertes, gefiltertes Doc. Ohne Injektion: leere Welt.
+  if (isView()) return migrate(emptyDoc());
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return migrate(JSON.parse(raw));
