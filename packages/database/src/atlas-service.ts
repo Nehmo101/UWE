@@ -50,6 +50,8 @@ export interface UpdateAtlasMapInput {
   stylePreset?: string;
   settings?: Prisma.InputJsonValue;
   visibility?: Visibility;
+  /** Terrain tile grid ({ cols, rows, tile, cells }); persisted as JSON. */
+  tileLayer?: Prisma.InputJsonValue;
 }
 
 export interface CreateAtlasNodeInput {
@@ -252,6 +254,7 @@ export function createAtlasService(db: PrismaClient) {
         stylePreset: input.stylePreset,
         settings: input.settings,
         visibility: input.visibility,
+        tileLayer: input.tileLayer,
       },
     });
   }

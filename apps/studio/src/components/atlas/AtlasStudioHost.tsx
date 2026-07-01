@@ -21,6 +21,7 @@ import {
   generateAtlasDraftAction,
   saveAtlasFeaturesAction,
   saveAtlasObjectsAction,
+  saveAtlasTileLayerAction,
   setAtlasMapVisibilityAction,
   setAtlasNodeVisibilityAction,
 } from "@/app/atlas-actions";
@@ -69,6 +70,14 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
           objectsFd.set("nodeId", nodeId);
           objectsFd.set("objects", JSON.stringify(payload.objects));
           await saveAtlasObjectsAction(objectsFd);
+        }
+        // Terrain tiles live on the map (not per node) — persist once.
+        const tileLayer = (d as { tileLayer?: unknown }).tileLayer;
+        if (tileLayer && typeof tileLayer === "object") {
+          const tileFd = new FormData();
+          tileFd.set("worldSlug", worldSlug);
+          tileFd.set("tileLayer", JSON.stringify(tileLayer));
+          await saveAtlasTileLayerAction(tileFd);
         }
         post({ type: "saved" });
       } catch (error) {
