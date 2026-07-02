@@ -161,6 +161,27 @@ export const PROJECT_STATUS_LABELS: Record<PersonalProjectStatus, string> = {
   archived: "Archiviert",
 };
 
+/** Display order for project domain dashboards (tiles on /projects, /today). */
+export const PROJECT_CATEGORY_ORDER = Object.keys(
+  PROJECT_CATEGORY_LABELS,
+) as PersonalProjectCategory[];
+
+/** Statuses counted as "aktiv" — shared between /projects domain tiles and /today. */
+export const PROJECT_ACTIVE_STATUSES: PersonalProjectStatus[] = [
+  "active",
+  "planned",
+  "blocked",
+];
+
+/** Statuses counted as "offen" (everything not done/archived). */
+export const PROJECT_OPEN_STATUSES: PersonalProjectStatus[] = [
+  "idea",
+  "planned",
+  "active",
+  "blocked",
+  "paused",
+];
+
 export const WORKSHOP_STATUS_LABELS: Record<WorkshopStatus, string> = {
   idea: "Idee",
   planned: "Geplant",
@@ -424,10 +445,32 @@ export interface PersonalProjectDetail {
   entityLinks: Awaited<ReturnType<LifeAdminService["listLinksForSource"]>>;
 }
 
+export interface PersonalProjectCategorySummary {
+  category: PersonalProjectCategory;
+  total: number;
+  /** Projects in PROJECT_ACTIVE_STATUSES. */
+  active: number;
+  done: number;
+  /** done / total, rounded percent (0 for empty categories). */
+  progressPercent: number;
+  recentProjects: Array<{
+    id: string;
+    name: string;
+    status: PersonalProjectStatus;
+    nextAction: string | null;
+    updatedAt: Date;
+  }>;
+}
+
 export interface PersonalProjectDashboardStats {
   total: number;
+  /** Projects in PROJECT_ACTIVE_STATUSES — same counting logic as /today. */
+  activeTotal: number;
+  /** Projects in PROJECT_OPEN_STATUSES (not done/archived). */
+  openTotal: number;
   byCategory: Record<PersonalProjectCategory, number>;
   byStatus: Record<PersonalProjectStatus, number>;
+  categories: PersonalProjectCategorySummary[];
 }
 
 export interface TodayAdminSummary {
@@ -678,7 +721,21 @@ export class LifeAdminService {
   }
 
   async getPersonalProject(id: string) {
-    return this.db.personalProject.findUnique({ where: { id } });
+    return this.db.personalProject.findUnique({
+      where: { id },
+      include: {
+        world: { select: { id: true, name: true, slug: true } },
+        page: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            type: true,
+            world: { select: { slug: true } },
+          },
+        },
+      },
+    });
   }
 
   async getPersonalProjectDetail(id: string): Promise<PersonalProjectDetail | null> {
@@ -728,16 +785,27 @@ export class LifeAdminService {
   }
 
   async getPersonalProjectDashboardStats(): Promise<PersonalProjectDashboardStats> {
-    const [categoryRows, statusRows, total] = await Promise.all([
+    const [rows, recentByCategory] = await Promise.all([
       this.db.personalProject.groupBy({
-        by: ["category"],
+        by: ["category", "status"],
         _count: { _all: true },
       }),
-      this.db.personalProject.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-      this.db.personalProject.count(),
+      Promise.all(
+        PROJECT_CATEGORY_ORDER.map((category) =>
+          this.db.personalProject.findMany({
+            where: { category },
+            orderBy: [{ updatedAt: "desc" }],
+            take: 3,
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              nextAction: true,
+              updatedAt: true,
+            },
+          }),
+        ),
+      ),
     ]);
 
     const byCategory: Record<PersonalProjectCategory, number> = {
@@ -749,10 +817,6 @@ export class LifeAdminService {
       other: 0,
     };
 
-    for (const row of categoryRows) {
-      byCategory[row.category] = row._count._all;
-    }
-
     const byStatus: Record<PersonalProjectStatus, number> = {
       idea: 0,
       planned: 0,
@@ -763,11 +827,44 @@ export class LifeAdminService {
       archived: 0,
     };
 
-    for (const row of statusRows) {
-      byStatus[row.status] = row._count._all;
+    let total = 0;
+    for (const row of rows) {
+      byCategory[row.category] += row._count._all;
+      byStatus[row.status] += row._count._all;
+      total += row._count._all;
     }
 
-    return { total, byCategory, byStatus };
+    const sumRows = (
+      predicate: (row: (typeof rows)[number]) => boolean,
+    ): number =>
+      rows.reduce((sum, row) => (predicate(row) ? sum + row._count._all : sum), 0);
+
+    const categories: PersonalProjectCategorySummary[] = PROJECT_CATEGORY_ORDER.map(
+      (category, index) => {
+        const categoryTotal = byCategory[category];
+        const active = sumRows(
+          (row) =>
+            row.category === category && PROJECT_ACTIVE_STATUSES.includes(row.status),
+        );
+        const done = sumRows(
+          (row) => row.category === category && row.status === "done",
+        );
+        return {
+          category,
+          total: categoryTotal,
+          active,
+          done,
+          progressPercent:
+            categoryTotal > 0 ? Math.round((done / categoryTotal) * 100) : 0,
+          recentProjects: recentByCategory[index] ?? [],
+        };
+      },
+    );
+
+    const activeTotal = sumRows((row) => PROJECT_ACTIVE_STATUSES.includes(row.status));
+    const openTotal = sumRows((row) => PROJECT_OPEN_STATUSES.includes(row.status));
+
+    return { total, activeTotal, openTotal, byCategory, byStatus, categories };
   }
 
   async listWorkshopProjects(options: {
@@ -1871,7 +1968,7 @@ export class LifeAdminService {
     ] = await Promise.all([
       this.db.captureEntry.count({ where: { status: "inbox" } }),
       this.db.personalProject.count({
-        where: { status: { in: ["active", "planned", "blocked"] } },
+        where: { status: { in: PROJECT_ACTIVE_STATUSES } },
       }),
       this.db.workshopProject.count({
         where: { status: { in: ["in_progress", "material_missing", "planned"] } },
@@ -1882,7 +1979,7 @@ export class LifeAdminService {
       }),
       this.listCaptures({ status: "inbox", limit: 5 }),
       this.listPersonalProjects({
-        status: ["active", "planned", "blocked"],
+        status: PROJECT_ACTIVE_STATUSES,
         limit: 5,
       }),
       this.listWorkshopProjects({
@@ -1891,7 +1988,7 @@ export class LifeAdminService {
       }),
       this.listWorkshopOpenTasks(8),
       this.listPersonalProjects({
-        status: ["active", "planned", "blocked"],
+        status: PROJECT_ACTIVE_STATUSES,
         limit: 8,
         dueBefore: endOfWeek(new Date()),
       }),

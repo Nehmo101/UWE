@@ -59,13 +59,37 @@ describe("life admin service", () => {
       category: "hardware_homelab",
       status: "planned",
     });
+    await service.createPersonalProject({
+      name: "UWE stats done",
+      category: "uwe",
+      status: "done",
+    });
 
     const stats = await service.getPersonalProjectDashboardStats();
-    assert.ok(stats.total >= 2);
-    assert.ok(stats.byCategory.uwe >= 1);
+    assert.ok(stats.total >= 3);
+    assert.ok(stats.byCategory.uwe >= 2);
     assert.ok(stats.byCategory.hardware_homelab >= 1);
     assert.ok(stats.byStatus.active >= 1);
     assert.ok(stats.byStatus.planned >= 1);
+    assert.ok(stats.activeTotal >= 2);
+    assert.ok(stats.openTotal >= 2);
+
+    assert.equal(stats.categories.length, 6);
+    const uweSummary = stats.categories.find((entry) => entry.category === "uwe");
+    assert.ok(uweSummary);
+    assert.ok(uweSummary.total >= 2);
+    assert.ok(uweSummary.active >= 1);
+    assert.ok(uweSummary.done >= 1);
+    assert.ok(uweSummary.progressPercent > 0 && uweSummary.progressPercent <= 100);
+    assert.ok(uweSummary.recentProjects.length >= 1);
+    assert.ok(uweSummary.recentProjects.length <= 3);
+    assert.ok(
+      uweSummary.recentProjects.some((project) => project.name === "UWE stats done"),
+    );
+
+    // Domain tiles and /today must share the same "aktiv" counting logic.
+    const summary = await service.getTodaySummary();
+    assert.equal(summary.activeProjectCount, stats.activeTotal);
   });
 
   it("loads personal project detail with linked captures", async () => {

@@ -12,6 +12,7 @@ import {
   createSettingsService,
   mergeHardwareRunbookMetadata,
   parseLinksFromForm,
+  PersonalProjectStatusEnum,
   prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -84,6 +85,20 @@ export async function updateProjectAction(formData: FormData) {
     links: parseLinksFromForm(String(formData.get("links") || "")),
     costCents: parseOptionalInt(formData.get("costCents")),
   });
+  revalidateAdminPaths();
+  revalidatePath(`/projects/${id}`);
+}
+
+export async function updateProjectStatusAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status")) as PersonalProjectStatus;
+  if (!id || !Object.values(PersonalProjectStatusEnum).includes(status)) {
+    return;
+  }
+
+  await lifeAdmin().updatePersonalProject(id, { status });
   revalidateAdminPaths();
   revalidatePath(`/projects/${id}`);
 }

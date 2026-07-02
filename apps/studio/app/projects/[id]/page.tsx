@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   asLinkList,
+  buildPageUrl,
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
   formatEuroFromCents,
@@ -17,6 +18,7 @@ import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell
 import {
   deleteProjectAction,
   updateProjectAction,
+  updateProjectStatusAction,
 } from "../../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -55,8 +57,44 @@ export default async function ProjectDetailPage({ params }: Props) {
         summary={`${PROJECT_CATEGORY_LABELS[project.category]} · ${PROJECT_STATUS_LABELS[project.status]}`}
       />
       <p className="uwe-dashboard-muted">
-        <Link href="/projects">← Alle Projekte</Link>
+        <Link href="/projects">← Alle Projekte</Link> ·{" "}
+        <Link href={`/projects?category=${project.category}`}>
+          {PROJECT_CATEGORY_LABELS[project.category]} filtern
+        </Link>
       </p>
+
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Status wechseln</h2>
+        <div className="uwe-today-quick-chips">
+          {Object.values(PersonalProjectStatusEnum).map((status) =>
+            status === project.status ? (
+              <span
+                key={status}
+                className="uwe-today-quick-chip"
+                data-severity="info"
+                aria-current="true"
+              >
+                {PROJECT_STATUS_LABELS[status]} (aktuell)
+              </span>
+            ) : (
+              <form
+                key={status}
+                action={updateProjectStatusAction}
+                style={{ display: "inline-flex" }}
+              >
+                <input type="hidden" name="id" value={project.id} />
+                <input type="hidden" name="status" value={status} />
+                <button
+                  type="submit"
+                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+                >
+                  {PROJECT_STATUS_LABELS[status]}
+                </button>
+              </form>
+            ),
+          )}
+        </div>
+      </section>
 
       {(project.nextAction || project.nextActionDate) && (
         <section className="uwe-v2-card uwe-v2-section">
@@ -77,7 +115,36 @@ export default async function ProjectDetailPage({ params }: Props) {
             <h3>Status & Kategorie</h3>
             <p>{PROJECT_STATUS_LABELS[project.status]}</p>
             <p className="uwe-dashboard-muted">{PROJECT_CATEGORY_LABELS[project.category]}</p>
+            <p className="uwe-dashboard-muted">
+              Angelegt {DATE_FORMAT.format(project.createdAt)} · Aktualisiert{" "}
+              {DATE_FORMAT.format(project.updatedAt)}
+            </p>
           </article>
+          {(project.world || project.page) && (
+            <article className="uwe-v2-card uwe-dashboard-card">
+              <h3>Welt & Seite</h3>
+              {project.world && (
+                <p>
+                  <Link href={`/worlds/${project.world.slug}/dashboard`}>
+                    {project.world.name}
+                  </Link>
+                </p>
+              )}
+              {project.page && (
+                <p>
+                  <Link
+                    href={buildPageUrl(
+                      project.page.world.slug,
+                      project.page.type,
+                      project.page.slug,
+                    )}
+                  >
+                    {project.page.title}
+                  </Link>
+                </p>
+              )}
+            </article>
+          )}
           <article className="uwe-v2-card uwe-dashboard-card">
             <h3>Kosten</h3>
             <p>{project.costCents != null ? formatEuroFromCents(project.costCents) : "—"}</p>

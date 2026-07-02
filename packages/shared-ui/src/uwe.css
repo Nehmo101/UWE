@@ -4208,6 +4208,23 @@ html[data-theme="light"] {
   font-size: 0.85rem;
 }
 
+/* Slim progress bar — Projekt-Domänen-Kacheln, Jobs, Admin-Checkliste. */
+.uwe-jobs-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
+  overflow: hidden;
+  margin: 0.35rem 0;
+}
+
+.uwe-jobs-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--uwe-accent);
+  transition: width 0.3s ease;
+}
+
 .uwe-hint {
   color: var(--uwe-muted);
   font-size: 0.875rem;
