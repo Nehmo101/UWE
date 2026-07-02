@@ -64,8 +64,6 @@ export interface SeedStatusSummary {
 
 export interface CloudflareStatusSummary {
   tunnelConfigured: boolean;
-  accessEnabled: boolean;
-  allowlistConfigured: boolean;
   portalUrlConfigured: boolean;
   studioUrlConfigured: boolean;
   portalUrlMatchesPublicBase: boolean;
@@ -81,8 +79,6 @@ export interface ProxyStatus {
   publicAppUrl: string | null;
   trustProxy: boolean;
   cloudflareTunnel: boolean;
-  cloudflareAccessEnabled: boolean;
-  cloudflareAccessAllowlistConfigured: boolean;
   studioPath: string;
   portalPath: string;
   studioUrl: string | null;
@@ -210,8 +206,6 @@ export function getAppRuntimeStatus(): AppRuntimeStatus {
 export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatus {
   const runtime = getUweRuntimeConfig(env);
   const urls = resolveUweAppUrls(env);
-  const allowlistRaw =
-    env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim() || "";
 
   const publicBase = runtime.publicAppUrl?.replace(/\/$/, "") ?? null;
   const portalBase = urls.portalUrl?.replace(/\/$/, "") ?? null;
@@ -222,8 +216,6 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
     publicAppUrl: runtime.publicAppUrl,
     trustProxy: runtime.trustProxy,
     cloudflareTunnel: runtime.cloudflareTunnel,
-    cloudflareAccessEnabled: runtime.cloudflareAccessEnabled,
-    cloudflareAccessAllowlistConfigured: Boolean(allowlistRaw),
     studioPath: urls.studioPath,
     portalPath: urls.portalPath,
     studioUrl: urls.studioUrl,
@@ -231,8 +223,6 @@ export function getProxyStatus(env: NodeJS.ProcessEnv = process.env): ProxyStatu
     deploymentModel: urls.deploymentModel,
     cloudflare: {
       tunnelConfigured: runtime.cloudflareTunnel && runtime.trustProxy,
-      accessEnabled: runtime.cloudflareAccessEnabled,
-      allowlistConfigured: Boolean(allowlistRaw),
       portalUrlConfigured: Boolean(urls.portalUrl),
       studioUrlConfigured: Boolean(urls.studioUrl),
       portalUrlMatchesPublicBase: Boolean(
@@ -349,7 +339,7 @@ export async function getSystemStatus(
       runDbSeedDisabled: !isRunDbSeedUnsafe(),
       publicPortalSharingEnabled,
       exposureHint:
-        "Studio erzwingt Session-Login wenn AUTH_REQUIRED=true — zusätzlich Reverse-Proxy-Auth, VPN oder Cloudflare Access als äußere Schutzschicht nutzen.",
+        "Studio erzwingt den UWE-Login (E-Mail) wenn AUTH_REQUIRED=true — optional Reverse-Proxy/VPN oder eine „Ich bin ein Mensch“-Prüfung (Cloudflare Turnstile/Managed Challenge) davor.",
     },
     proxy: getProxyStatus(env),
     mail: mailStatus,

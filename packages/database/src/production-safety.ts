@@ -166,7 +166,7 @@ export async function getProductionSafetyWarnings(
       severity: isPublicExposureConfigured() ? "critical" : "warning",
       title: "STUDIO_API_TOKEN nicht gesetzt",
       description: isPublicExposureConfigured()
-        ? "Öffentliche Erreichbarkeit (PUBLIC_APP_URL/CLOUDFLARE_TUNNEL) erkannt — setze STUDIO_API_TOKEN und schütze Studio zusätzlich mit Cloudflare Access oder Reverse-Proxy-Auth."
+        ? "Öffentliche Erreichbarkeit (PUBLIC_APP_URL/CLOUDFLARE_TUNNEL) erkannt — setze STUDIO_API_TOKEN und erzwinge den UWE-Login (AUTH_REQUIRED=true)."
         : "Empfohlen bei exponiertem Studio: Bearer-Token für sensible APIs (Backup, Restore, Settings, AI) setzen.",
       href: "/settings",
     });

@@ -65,31 +65,6 @@ function hasValidBearerToken(request: Pick<Request, "headers">, requiredToken: s
   return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
-function getAllowedAccessEmails(env: NodeJS.ProcessEnv = process.env): string[] {
-  const raw = env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim();
-  if (!raw) {
-    return [];
-  }
-
-  return raw
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-export function hasCloudflareAccessAuth(
-  request: Pick<Request, "headers">,
-  env: NodeJS.ProcessEnv = process.env,
-): boolean {
-  const email = request.headers.get("cf-access-authenticated-user-email")?.trim().toLowerCase();
-  if (!email) {
-    return false;
-  }
-
-  const allowed = getAllowedAccessEmails(env);
-  return allowed.includes(email);
-}
-
 /**
  * Server-side authorization guard. Returns null when allowed, otherwise a denial
  * payload suitable for API responses. Middleware/proxy checks are not sufficient
@@ -123,10 +98,6 @@ function authorizeStudio(
     return null;
   }
 
-  if (hasCloudflareAccessAuth(request, env)) {
-    return null;
-  }
-
   if (isCrossSiteBrowserRequest(request, env)) {
     return {
       status: 403,
@@ -152,7 +123,7 @@ function authorizeStudio(
   if (isPublicExposureConfigured(env)) {
     return {
       status: 401,
-      error: "Studio-Zugriff erfordert Authentifizierung (Cloudflare Access oder API-Token).",
+      error: "Studio-Zugriff erfordert Authentifizierung (UWE-Login oder API-Token).",
     };
   }
 

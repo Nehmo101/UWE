@@ -71,7 +71,7 @@ export interface SecurityDashboardStatus {
     message: string;
   };
   roleCounts: UserRoleCounts;
-  cloudflareAccess: {
+  networkProtection: {
     checklist: string[];
     note: string;
   };
@@ -483,17 +483,16 @@ export async function getSecurityDashboardStatus(
           : "Portal-Login ist optional — für öffentliches Portal AUTH_REQUIRED=true setzen.",
     },
     roleCounts,
-    cloudflareAccess: {
+    networkProtection: {
       checklist: [
-        "Cloudflare Access Policy vor Studio (UWE Admin) aktiv?",
-        "Cloudflare Access Policy vor Portal (falls öffentlich) aktiv?",
-        "Tunnel zeigt nur auf UWE — nicht auf Ollama/RTX?",
+        "AUTH_REQUIRED=true — Zugang zu Studio & Portal über den UWE-Login (E-Mail)?",
+        "Tunnel/Ingress zeigt nur auf UWE — nicht auf Ollama/RTX?",
         "TRUST_PROXY=true und CLOUDFLARE_TUNNEL=true gesetzt?",
         "STUDIO_API_TOKEN für sensible APIs gesetzt?",
-        "AUTH_REQUIRED=true für öffentliches Portal?",
+        "Optional: „Ich bin ein Mensch“-Prüfung (Cloudflare Managed Challenge/Turnstile) vor den Websites aktiv?",
       ],
       note:
-        "Cloudflare Access kann serverseitig nicht automatisch verifiziert werden — Checkliste manuell in Cloudflare prüfen.",
+        "Netzwerk-Schutz und die „Ich bin ein Mensch“-Prüfung liegen bei Cloudflare und sind serverseitig nicht automatisch verifizierbar — Checkliste manuell prüfen.",
     },
     env: {
       sessionSecret,

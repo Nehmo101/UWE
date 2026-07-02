@@ -48,8 +48,6 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
       publicAppUrl: null,
       trustProxy: false,
       cloudflareTunnel: false,
-      cloudflareAccessEnabled: false,
-      cloudflareAccessAllowlistConfigured: false,
       studioPath: "/studio",
       portalPath: "/portal",
       studioUrl: null,
@@ -57,8 +55,6 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
       deploymentModel: "local",
       cloudflare: {
         tunnelConfigured: false,
-        accessEnabled: false,
-        allowlistConfigured: false,
         portalUrlConfigured: false,
         studioUrlConfigured: false,
         portalUrlMatchesPublicBase: false,
@@ -89,7 +85,6 @@ const studioSecurity = {
   proxyIndicators: {
     trustProxy: false,
     cloudflareTunnel: false,
-    cloudflareAccessConfigured: false,
     networkProtectionLikely: false,
   },
   checks: {

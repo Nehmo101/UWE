@@ -8,15 +8,12 @@ export async function loginStudio(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/studio/);
 }
 
-/** Session cookie + Cloudflare Access header for exposed Studio routes in production E2E. */
+/** Establishes a Studio session cookie (UWE e-mail login) for shell/API tests. */
 export async function loginStudioForShellTests(page: Page): Promise<void> {
   const response = await page.request.post("/api/auth/login", {
     data: { email: "dm@uwe.local", password: "uwe-dev" },
   });
   expect(response.ok()).toBeTruthy();
-  await page.setExtraHTTPHeaders({
-    "cf-access-authenticated-user-email": "dm@uwe.local",
-  });
 }
 
 export async function loginPortalPlayer(page: Page): Promise<void> {

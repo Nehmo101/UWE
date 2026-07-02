@@ -8,12 +8,13 @@ import { isWeakAuthSecret } from "./production-safety";
 /**
  * Studio security assessment for the Admin Status Dashboard.
  *
- * Studio enforces session login (owner/admin/dm) when AUTH_REQUIRED=true.
- * Network-level protection (Cloudflare Access, reverse-proxy auth, VPN) is
- * strongly recommended as the outer gate when publicly reachable.
+ * Studio access is gated by the UWE session login (e-mail sign-in) enforced
+ * when AUTH_REQUIRED=true. A reverse proxy / Cloudflare Tunnel (with an optional
+ * "Verify you are human" Managed Challenge or Turnstile widget) can sit in front,
+ * but no separate Cloudflare Access sign-in is required.
  *
- * Cloudflare Access / reverse-proxy auth cannot be verified server-side;
- * TRUST_PROXY and CLOUDFLARE_TUNNEL are used as conservative heuristics.
+ * Reverse-proxy protection cannot be verified server-side; TRUST_PROXY and
+ * CLOUDFLARE_TUNNEL are used as conservative heuristics.
  */
 
 export type StudioSecurityLevel = "local_only" | "protected" | "unsafe" | "misconfigured";
@@ -31,8 +32,7 @@ export interface StudioSecurityAssessment {
   proxyIndicators: {
     trustProxy: boolean;
     cloudflareTunnel: boolean;
-    cloudflareAccessConfigured: boolean;
-    /** Heuristic — true when proxy/tunnel/access flags suggest network-level protection. */
+    /** Heuristic — true when proxy/tunnel flags suggest network-level protection. */
     networkProtectionLikely: boolean;
   };
   checks: {
@@ -137,11 +137,7 @@ export function assessStudioSecurity(
   const authSecretConfigured = Boolean(authSecret?.trim());
   const authSecretLooksWeak = isWeakAuthSecret(authSecret);
   const runDbSeedDisabled = (env.RUN_DB_SEED ?? "auto") === "false";
-  const cloudflareAccessConfigured =
-    runtime.cloudflareAccessEnabled ||
-    Boolean(env.STUDIO_ACCESS_ALLOWED_EMAILS?.trim() || env.STUDIO_ACCESS_EMAIL?.trim());
-  const networkProtectionLikely =
-    runtime.trustProxy || runtime.cloudflareTunnel || cloudflareAccessConfigured;
+  const networkProtectionLikely = runtime.trustProxy || runtime.cloudflareTunnel;
 
   const misconfigurations: string[] = [];
   const nextSteps: string[] = [];
@@ -178,7 +174,7 @@ export function assessStudioSecurity(
     level = "local_only";
     severity = "ok";
     message =
-      "Keine öffentliche URL konfiguriert — Studio ist nur lokal erreichbar. Für öffentliche Exposition AUTH_REQUIRED=true setzen und Reverse-Proxy-Auth oder Cloudflare Access nutzen.";
+      "Keine öffentliche URL konfiguriert — Studio ist nur lokal erreichbar. Für öffentliche Exposition AUTH_REQUIRED=true setzen — der UWE-Login (E-Mail) schützt den Zugang.";
     nextSteps.push(
       "Bei Cloudflare-Tunnel oder Reverse Proxy: PUBLIC_APP_URL, TRUST_PROXY=true und STUDIO_API_TOKEN setzen.",
     );
@@ -189,48 +185,34 @@ export function assessStudioSecurity(
       "Öffentliche Erreichbarkeit erkannt, aber die Konfiguration widerspricht sich oder ist unsicher.";
     nextSteps.push("Behebe die aufgelisteten Konfigurationsprobleme in .env.");
     nextSteps.push(
-      "Studio darf nicht ungeschützt öffentlich sein — Cloudflare Access, Reverse-Proxy-Auth oder VPN vor Studio.",
+      "Studio darf nicht ungeschützt öffentlich sein — AUTH_REQUIRED=true (UWE-Login) erzwingen, optional Reverse-Proxy/VPN davor.",
     );
   } else if (!networkProtectionLikely) {
     level = "unsafe";
     severity = "critical";
     message =
-      "Studio ist über Cloudflare/Proxy erreichbar, aber TRUST_PROXY/CLOUDFLARE_TUNNEL fehlen — Reverse-Proxy-Schutz ist serverseitig nicht erkennbar. AUTH_REQUIRED=true aktivieren und Cloudflare Access oder Reverse-Proxy-Auth einrichten.";
-    nextSteps.push("Schütze Studio mit Cloudflare Access, Reverse-Proxy-Auth oder VPN.");
+      "Studio ist öffentlich erreichbar, aber TRUST_PROXY/CLOUDFLARE_TUNNEL fehlen — Proxy-Schutz ist serverseitig nicht erkennbar. AUTH_REQUIRED=true (UWE-Login) aktivieren und Proxy-Header korrekt setzen.";
     nextSteps.push("Setze TRUST_PROXY=true und CLOUDFLARE_TUNNEL=true, wenn Cloudflare genutzt wird.");
     if (!studioApiTokenConfigured) {
       nextSteps.push("Setze STUDIO_API_TOKEN für sensible Studio-APIs.");
     }
   } else if (!studioApiTokenConfigured) {
-    level = cloudflareAccessConfigured ? "protected" : "unsafe";
-    severity = cloudflareAccessConfigured ? "warning" : "critical";
-    message = cloudflareAccessConfigured
-      ? "Cloudflare Access/Proxy erkannt — STUDIO_API_TOKEN fehlt noch für sensible Studio-APIs (Backup, Settings, AI)."
-      : "Proxy/Tunnel erkannt, aber STUDIO_API_TOKEN fehlt — sensible APIs (Backup, AI, Settings) sind ohne Bearer-Token erreichbar.";
+    level = "unsafe";
+    severity = "critical";
+    message =
+      "Proxy/Tunnel erkannt, aber STUDIO_API_TOKEN fehlt — sensible APIs (Backup, AI, Settings) sind ohne Bearer-Token nicht abgesichert.";
     nextSteps.push("Setze STUDIO_API_TOKEN in .env und nutze es für Skripte/API-Clients.");
-    if (cloudflareAccessConfigured) {
-      nextSteps.push(
-        "Cloudflare Access vor Studio ist konfiguriert — bestätige die Access-Policy manuell in Cloudflare.",
-      );
-    } else {
-      nextSteps.push(
-        "Bestätige, dass Cloudflare Access oder Reverse-Proxy-Auth die Studio-Oberfläche schützt (nicht serverseitig prüfbar).",
-      );
-    }
   } else if (!runtime.authRequired) {
     level = "protected";
     severity = "warning";
     message =
-      "Studio-APIs sind abgesichert (Token + Proxy-Indikatoren). Portal-Login ist optional (AUTH_REQUIRED=false) — für öffentliches Portal aktivieren.";
-    nextSteps.push("Setze AUTH_REQUIRED=true, wenn das Portal öffentlich erreichbar ist.");
-    nextSteps.push(
-      "Cloudflare Access vor Studio kann nicht serverseitig verifiziert werden — manuell in Cloudflare prüfen.",
-    );
+      "Studio-APIs sind abgesichert (Token + Proxy-Indikatoren). Der UWE-Login ist optional (AUTH_REQUIRED=false) — für öffentliches Studio/Portal aktivieren.";
+    nextSteps.push("Setze AUTH_REQUIRED=true, damit der UWE-Login (E-Mail) den Zugang schützt.");
   } else {
     level = "protected";
     severity = "ok";
     message =
-      "Proxy/Tunnel, STUDIO_API_TOKEN und Portal-Auth sind konfiguriert. Cloudflare Access vor Studio ist nicht serverseitig prüfbar — manuell bestätigen.";
+      "Proxy/Tunnel, STUDIO_API_TOKEN und UWE-Login (AUTH_REQUIRED) sind konfiguriert — der Zugang wird über den UWE-Login (E-Mail) geschützt.";
   }
 
   if (level === "misconfigured") {
@@ -248,7 +230,6 @@ export function assessStudioSecurity(
     proxyIndicators: {
       trustProxy: runtime.trustProxy,
       cloudflareTunnel: runtime.cloudflareTunnel,
-      cloudflareAccessConfigured,
       networkProtectionLikely,
     },
     checks: {

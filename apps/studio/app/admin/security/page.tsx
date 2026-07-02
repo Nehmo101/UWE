@@ -120,11 +120,11 @@ export default async function AdminSecurityPage() {
         />
 
         <StatusCard
-          title="Cloudflare Access"
+          title="Netzwerk-Schutz"
           level="degraded"
           statusLabel="Manuell prüfen"
-          message={status.cloudflareAccess.note}
-          details={status.cloudflareAccess.checklist.map((item, index) => ({
+          message={status.networkProtection.note}
+          details={status.networkProtection.checklist.map((item, index) => ({
             label: `Check ${index + 1}`,
             value: item,
           }))}

@@ -394,10 +394,6 @@ export default async function SystemHubPage({ searchParams }: Props) {
                 { label: "TRUST_PROXY", value: studioSecurity.proxyIndicators.trustProxy },
                 { label: "CLOUDFLARE_TUNNEL", value: studioSecurity.proxyIndicators.cloudflareTunnel },
                 {
-                  label: "Cloudflare Access (ENV)",
-                  value: studioSecurity.proxyIndicators.cloudflareAccessConfigured,
-                },
-                {
                   label: "Netzwerk-Schutz (Heuristik)",
                   value: studioSecurity.proxyIndicators.networkProtectionLikely,
                 },
@@ -440,14 +436,6 @@ export default async function SystemHubPage({ searchParams }: Props) {
                 { label: "TRUST_PROXY", value: system.proxy.trustProxy },
                 { label: "CLOUDFLARE_TUNNEL", value: system.proxy.cloudflareTunnel },
                 { label: "Tunnel konfiguriert", value: system.proxy.cloudflare.tunnelConfigured },
-                {
-                  label: "Cloudflare Access aktiv",
-                  value: system.proxy.cloudflare.accessEnabled,
-                },
-                {
-                  label: "Access-Allowlist",
-                  value: system.proxy.cloudflare.allowlistConfigured,
-                },
                 { label: "Portal-URL gesetzt", value: system.proxy.cloudflare.portalUrlConfigured },
                 { label: "Studio-URL gesetzt", value: system.proxy.cloudflare.studioUrlConfigured },
                 {

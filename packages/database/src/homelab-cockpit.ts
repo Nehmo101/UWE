@@ -364,7 +364,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
     {
       id: "check_cloudflare",
       title: "Cloudflare prüfen",
-      summary: "Tunnel und Access — RTX/Ollama nie im Tunnel.",
+      summary: "Tunnel und „Ich bin ein Mensch“-Prüfung — RTX/Ollama nie im Tunnel.",
       steps: [
         { order: 1, instruction: "Tunnel-Status", command: "cloudflared tunnel list" },
         {
@@ -373,7 +373,8 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 3,
-          instruction: "Cloudflare Access Policy für Studio aktiv?",
+          instruction:
+            "Zugang über UWE-Login (E-Mail) — keine zusätzliche Cloudflare-Access-Anmeldung. Optional: „Ich bin ein Mensch“-Prüfung (Managed Challenge/Turnstile) aktiv?",
         },
         {
           order: 4,
@@ -473,15 +474,15 @@ export function buildHomelabSecurityChecklist(input: {
       manual: false,
     },
     {
-      id: "cloudflare_access",
-      label: "Cloudflare Access vor öffentlichem Studio",
+      id: "studio_network_protection",
+      label: "Öffentliches Studio hinter Tunnel/Proxy",
       ok: !publicExposure || input.studioSecurity.proxyIndicators.networkProtectionLikely,
       severity: publicExposure ? (input.studioSecurity.proxyIndicators.networkProtectionLikely ? "ok" : "warn") : "ok",
       message: publicExposure
         ? input.studioSecurity.proxyIndicators.networkProtectionLikely
-          ? "Tunnel/TRUST_PROXY deuten auf Netzwerk-Schutz hin — Access Policy manuell prüfen"
+          ? "Tunnel/TRUST_PROXY deuten auf Netzwerk-Schutz hin — Zugang über UWE-Login (E-Mail)"
           : "Öffentliche Erreichbarkeit ohne erkennbaren Tunnel-Schutz"
-        : "Nur lokal — Cloudflare Access optional",
+        : "Nur lokal — Zugang über UWE-Login (E-Mail)",
       manual: true,
     },
     {
