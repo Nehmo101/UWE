@@ -25,13 +25,15 @@ const snapshot: DetectedCapabilities = {
 
 class FakeClient {
   heartbeats = 0;
+  heartbeatPayloads: Record<string, unknown>[] = [];
   completed: Array<{ id: string; result: Record<string, unknown> }> = [];
   failed: Array<{ id: string; reason: string }> = [];
   claimLanes: string[][] = [];
   queue: (ClaimedJob | null)[] = [];
 
-  async heartbeat() {
+  async heartbeat(payload?: Record<string, unknown>) {
     this.heartbeats += 1;
+    if (payload) this.heartbeatPayloads.push(payload);
     return {
       connector: { id: "c1", name: "Test", status: "online", queueEnabled: true },
       config: {
@@ -148,6 +150,37 @@ test("does not claim when queue is disabled locally", async () => {
   const claimed = await runner.pollOnce();
   assert.equal(claimed, null);
   assert.equal(client.claimLanes.length, 0);
+});
+
+test("periodic and shutdown heartbeats send the discovery snapshot verbatim (privacy filtering happens at discovery)", async () => {
+  const client = new FakeClient();
+  // A privacy-filtered snapshot as produced by detectCapabilities with
+  // UWE_CONNECTOR_PRIVACY_MODE=true — the runner must forward it unchanged.
+  const minimalSnapshot: DetectedCapabilities = {
+    capabilities: ["llm_local"],
+    models: [
+      { id: "ollama:llama3.2", provider: "ollama", name: "llama3.2", capabilities: ["chat"], enabledForUwe: true },
+    ],
+    printers: [{ id: "zebra-lp2844", name: "Zebra LP 2844" }],
+  };
+  const runner = new ConnectorRunner({
+    client: client as unknown as HostClient,
+    config: baseConfig,
+    version: "test",
+    discover: async () => minimalSnapshot,
+    executorBase: { requestTimeoutMs: 1000 },
+  });
+  await runner.refresh();
+
+  await runner.sendHeartbeat(); // periodic path
+  await runner.stop(100); // shutdown path sends the final heartbeat
+
+  assert.equal(client.heartbeatPayloads.length, 2);
+  for (const payload of client.heartbeatPayloads) {
+    assert.deepEqual(payload.models, minimalSnapshot.models);
+    assert.deepEqual(payload.printers, minimalSnapshot.printers);
+    assert.deepEqual(payload.capabilities, minimalSnapshot.capabilities);
+  }
 });
 
 test("graceful stop drains active jobs and sends a final heartbeat", async () => {

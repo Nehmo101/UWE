@@ -59,8 +59,14 @@ All probes are offline-safe and only read model metadata the local servers
 expose. Runner helpers live in `src/runner-admin.ts`.
 
 When the desktop client starts the connector with **Privacy Mode** enabled it
-sets `UWE_CONNECTOR_PRIVACY_MODE=true`, signalling the connector to report only
-minimal metadata to the host.
+sets `UWE_CONNECTOR_PRIVACY_MODE=true` (also settable in `.env`; default
+`false`). In privacy mode heartbeats carry only what the host needs to route
+jobs: model id/provider/name plus their chat/embeddings capabilities, and
+printer id/name. Richer host-facing telemetry — model display names,
+descriptions, `bestFor` hints, context length, live model status, printer
+descriptions and printer state — stays on the connector machine. WHICH
+capabilities (`llm_local`, `audio_local`, …) are advertised does not change;
+only the metadata richness does.
 
 ## Security
 

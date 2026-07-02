@@ -29,6 +29,7 @@ import {
   type LocalPrinterInfo,
 } from "@uwe/connector";
 
+import { Prisma } from "./generated/prisma/client";
 import type { Connector, ConnectorJob } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
@@ -114,12 +115,6 @@ export interface EnqueueConnectorJobInput {
 export interface ClaimJobInput {
   connectorId: string;
   availableLanes: readonly ConnectorLane[];
-}
-
-interface ConnectorCapabilityPolicyRow {
-  id: string;
-  reported_capabilities: unknown;
-  allowed_capabilities: unknown;
 }
 
 function parseCapabilities(value: unknown): ConnectorCapability[] {
@@ -262,8 +257,12 @@ export class ConnectorService {
 
   async listConnectors(now: Date = new Date()): Promise<ConnectorView[]> {
     const connectors = await this.db.connector.findMany({ orderBy: { createdAt: "asc" } });
-    const policies = await this.getCapabilityPolicyMap();
-    return connectors.map((connector) => applyCapabilityPolicy(toConnectorView(connector, now), policies.get(connector.id)));
+    return connectors.map((connector) =>
+      applyCapabilityPolicy(toConnectorView(connector, now), {
+        reportedCapabilities: parseCapabilities(connector.reportedCapabilities),
+        allowedCapabilities: parseAllowedCapabilities(connector.allowedCapabilities),
+      }),
+    );
   }
 
   async setDisabled(connectorId: string, disabled: boolean): Promise<void> {
@@ -275,27 +274,25 @@ export class ConnectorService {
     capabilities: readonly string[] | null,
   ): Promise<ConnectorView | null> {
     const allowed = capabilities == null ? null : normalizeCapabilities(capabilities);
-    await this.db.$executeRaw`
-      UPDATE connectors
-      SET allowed_capabilities = ${allowed == null ? null : JSON.stringify(allowed)}
-      WHERE id = ${connectorId}
-    `;
-
     const connector = await this.db.connector.findUnique({ where: { id: connectorId } });
     if (!connector) {
       return null;
     }
 
-    const policy = await this.getCapabilityPolicy(connectorId);
-    const reported = policy?.reportedCapabilities ?? parseCapabilities(connector.capabilities);
+    const reported = parseCapabilities(connector.reportedCapabilities);
     const effective = effectiveCapabilities(reported, allowed);
-    await this.db.connector.update({
+    const updated = await this.db.connector.update({
       where: { id: connectorId },
-      data: { capabilities: toPrismaJsonValue(effective) },
+      data: {
+        allowedCapabilities: allowed == null ? Prisma.DbNull : toPrismaJsonValue(allowed),
+        capabilities: toPrismaJsonValue(effective),
+      },
     });
 
-    const updated = await this.db.connector.findUnique({ where: { id: connectorId } });
-    return updated ? applyCapabilityPolicy(toConnectorView(updated), await this.getCapabilityPolicy(connectorId) ?? undefined) : null;
+    return applyCapabilityPolicy(toConnectorView(updated), {
+      reportedCapabilities: reported,
+      allowedCapabilities: allowed,
+    });
   }
 
   /**
@@ -331,7 +328,11 @@ export class ConnectorService {
   async heartbeat(connectorId: string, input: HeartbeatInput): Promise<ConnectorView> {
     const reportedCapabilities =
       input.capabilities != null ? normalizeCapabilities(input.capabilities) : undefined;
-    const allowedCapabilities = (await this.getCapabilityPolicy(connectorId))?.allowedCapabilities ?? null;
+    const existing = await this.db.connector.findUnique({
+      where: { id: connectorId },
+      select: { allowedCapabilities: true },
+    });
+    const allowedCapabilities = parseAllowedCapabilities(existing?.allowedCapabilities ?? null);
     const capabilities =
       reportedCapabilities != null
         ? effectiveCapabilities(reportedCapabilities, allowedCapabilities)
@@ -344,6 +345,9 @@ export class ConnectorService {
         lastHeartbeatAt: new Date(),
         status: lastError ? "degraded" : "online",
         ...(capabilities ? { capabilities: toPrismaJsonValue(capabilities) } : {}),
+        ...(reportedCapabilities !== undefined
+          ? { reportedCapabilities: toPrismaJsonValue(reportedCapabilities) }
+          : {}),
         ...(input.models !== undefined ? { models: toPrismaJsonValue(input.models) } : {}),
         ...(input.printers !== undefined ? { printers: toPrismaJsonValue(input.printers) } : {}),
         ...(input.version !== undefined ? { version: input.version } : {}),
@@ -352,14 +356,6 @@ export class ConnectorService {
         ...(lastError !== undefined ? { lastError } : {}),
       },
     });
-
-    if (reportedCapabilities !== undefined) {
-      await this.db.$executeRaw`
-        UPDATE connectors
-        SET reported_capabilities = ${JSON.stringify(reportedCapabilities)}
-        WHERE id = ${connectorId}
-      `;
-    }
 
     return applyCapabilityPolicy(toConnectorView(connector), {
       reportedCapabilities: reportedCapabilities ?? parseCapabilities(connector.capabilities),
@@ -597,47 +593,6 @@ export class ConnectorService {
       counts[row.lane] = row._count._all;
     }
     return counts;
-  }
-
-  private async getCapabilityPolicy(connectorId: string): Promise<{
-    reportedCapabilities: ConnectorCapability[];
-    allowedCapabilities: ConnectorCapability[] | null;
-  } | null> {
-    const rows = await this.db.$queryRaw<ConnectorCapabilityPolicyRow[]>`
-      SELECT id, reported_capabilities, allowed_capabilities
-      FROM connectors
-      WHERE id = ${connectorId}
-      LIMIT 1
-    `;
-    const row = rows[0];
-    if (!row) {
-      return null;
-    }
-    return {
-      reportedCapabilities: parseCapabilities(row.reported_capabilities),
-      allowedCapabilities: parseAllowedCapabilities(row.allowed_capabilities),
-    };
-  }
-
-  private async getCapabilityPolicyMap(): Promise<Map<string, {
-    reportedCapabilities: ConnectorCapability[];
-    allowedCapabilities: ConnectorCapability[] | null;
-  }>> {
-    const rows = await this.db.$queryRaw<ConnectorCapabilityPolicyRow[]>`
-      SELECT id, reported_capabilities, allowed_capabilities
-      FROM connectors
-    `;
-    const policies = new Map<string, {
-      reportedCapabilities: ConnectorCapability[];
-      allowedCapabilities: ConnectorCapability[] | null;
-    }>();
-    for (const row of rows) {
-      policies.set(row.id, {
-        reportedCapabilities: parseCapabilities(row.reported_capabilities),
-        allowedCapabilities: parseAllowedCapabilities(row.allowed_capabilities),
-      });
-    }
-    return policies;
   }
 }
 

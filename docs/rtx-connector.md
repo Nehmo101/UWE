@@ -54,6 +54,10 @@ pnpm connector:client:build
   image worker. The job payload is sent as JSON on stdin; JSON or text stdout is
   returned as the job result.
 - **Model refresh** through `connector_refresh_models`.
+- **Privacy mode** via `UWE_CONNECTOR_PRIVACY_MODE` (default off, toggled from the
+  desktop client's SecurityPanel): heartbeats send only minimal model metadata
+  (model ids, provider, capabilities) and omit display names, descriptions,
+  best-for hints, context length and local paths.
 - **Hugging Face file downloads** in the Windows desktop client. Downloaded files
   are stored under the connector client data directory and registered as local
   `huggingface` model profiles. Private/gated repos use `HF_TOKEN` or
@@ -75,6 +79,9 @@ pnpm connector:client:build
   in this phase. `sound_play` is the real local audio execution path.
 - `image_generate` has a generic local command executor, but no bundled image
   backend. Packaging a first-party image worker remains a follow-up.
+- `file_cache` exists only as a protocol capability constant. There is no
+  `file_cache` job type or executor behind it, so it should stay disabled until
+  an implementation lands.
 - Tauri Windows bundling is enabled for MSI/NSIS. The checked-in SVG is the source
   icon; generate `.ico`/PNG sizes in a local checkout if the active Tauri bundler
   requires platform-specific icon binaries.
@@ -104,7 +111,7 @@ Advertised today:
 | `llm_local` | A reachable Ollama model reports `chat`. |
 | `image_generation` | `UWE_CONNECTOR_IMAGE_CMD` is configured and image jobs are not disabled. |
 | `embedding_local` | A reachable Ollama model reports `embeddings`. |
-| `file_cache` | Explicitly enabled and backed by an implementation. |
+| `file_cache` | Never in practice — the name is protocol-reserved, but no `file_cache` job type or executor exists yet. Keep it disabled. |
 | `system_info` | Enabled by default for connector maintenance/model refresh. |
 
 `UWE_CONNECTOR_CAPABILITIES` can restrict/force requested entries, but the

@@ -9,6 +9,11 @@
  *   • Models sent on heartbeat are ONLY the profiles the user enabled for UWE
  *     (`enabledForUwe`), enriched with live discovery metadata (status, context
  *     length, capabilities) when a matching local model is found.
+ *   • Privacy mode (`UWE_CONNECTOR_PRIVACY_MODE=true`) additionally strips the
+ *     heartbeat down to what the host needs for job routing: model id/provider/
+ *     name plus chat/embeddings capabilities, printer id/name. Display metadata
+ *     (descriptions, bestFor, context length, live status) stays local. WHICH
+ *     capabilities are advertised never changes — only the metadata richness.
  *
  * No world/brain/personal data is involved — only model descriptors.
  */
@@ -38,6 +43,8 @@ export interface CapabilityEnv {
   fileCacheEnabled: boolean;
   printEnabled: boolean;
   printBackendConfigured: boolean;
+  /** Report only routing-minimal metadata on heartbeat (no display/telemetry fields). */
+  privacyModeEnabled: boolean;
 }
 
 export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): CapabilityEnv {
@@ -61,6 +68,7 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
     printBackendConfigured: printCommandConfigured || printPrintersConfigured,
     printEnabled: flag(env.UWE_CONNECTOR_PRINT, true) && (printCommandConfigured || printPrintersConfigured),
+    privacyModeEnabled: flag(env.UWE_CONNECTOR_PRIVACY_MODE, false),
   };
 }
 
@@ -98,7 +106,11 @@ export function detectCapabilities(
       ? normalizeCapabilities(forced).filter((capability) => executable.includes(capability))
       : executable;
 
-  return { capabilities, models: toEnabledModelInfos(llms, profiles), printers: discoverLocalPrinters() };
+  return {
+    capabilities,
+    models: toEnabledModelInfos(llms, profiles, env.privacyModeEnabled),
+    printers: sanitizePrintersForPrivacy(discoverLocalPrinters(), env.privacyModeEnabled),
+  };
 }
 
 function executableCapabilities(
@@ -140,10 +152,16 @@ function hasEnabledOllamaCapability(
 /**
  * Build the heartbeat model list: exactly the enabled profiles, each enriched
  * with live discovery metadata when a matching local model is found.
+ *
+ * In privacy mode only the routing essentials leave the machine: id, provider,
+ * name and the discovered chat/embeddings capabilities (the host queue needs
+ * those to match jobs). Display metadata, context length and live status stay
+ * local.
  */
 function toEnabledModelInfos(
   llms: LocalLlmSummary,
   profiles: readonly ConnectorModelProfile[],
+  privacyMode: boolean,
 ): ConnectorModelInfo[] {
   const discoveredByKey = new Map<string, DiscoveredModel>();
   for (const model of llms.models) {
@@ -158,16 +176,38 @@ function toEnabledModelInfos(
         id: profile.id,
         provider: profile.provider,
         name: profile.name,
-        modelType: profile.modelType,
         enabledForUwe: true,
       };
+      if (discovered?.capabilities?.length) info.capabilities = discovered.capabilities;
+      if (privacyMode) {
+        return info;
+      }
+      info.modelType = profile.modelType;
       if (discovered?.status) info.status = discovered.status;
       const contextLength = discovered?.contextLength ?? profile.contextLength ?? undefined;
       if (contextLength != null) info.contextLength = contextLength;
-      if (discovered?.capabilities?.length) info.capabilities = discovered.capabilities;
       if (profile.displayName) info.displayName = profile.displayName;
       if (profile.description) info.description = profile.description;
       if (profile.bestFor.length > 0) info.bestFor = profile.bestFor;
       return info;
     });
+}
+
+/**
+ * Reduce printers to routing essentials in privacy mode: the host only needs
+ * id + name (and the default flag) to offer a print target — CUPS descriptions
+ * and live printer state are host-facing telemetry and stay local.
+ */
+export function sanitizePrintersForPrivacy(
+  printers: readonly LocalPrinterInfo[],
+  privacyMode: boolean,
+): LocalPrinterInfo[] {
+  if (!privacyMode) {
+    return [...printers];
+  }
+  return printers.map((printer) => {
+    const minimal: LocalPrinterInfo = { id: printer.id, name: printer.name };
+    if (printer.isDefault != null) minimal.isDefault = printer.isDefault;
+    return minimal;
+  });
 }
