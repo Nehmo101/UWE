@@ -1,5 +1,7 @@
 import type { PrismaClient } from "./client";
 import { getAdminStatus } from "./admin-status";
+import { createAiUsageRollupService } from "./ai-usage-rollup-service";
+import { BUG_REPORT_SEVERITY_LABELS } from "./bug-report-service";
 import { getUserRoleCounts } from "./security-dashboard";
 import {
   listUnifiedActivity,
@@ -18,11 +20,33 @@ export interface OwnerCockpitWorldRow {
 
 export interface OwnerCockpitErrorItem {
   id: string;
-  source: "job" | "ai_run" | "mail";
+  source: "job" | "ai_run" | "mail" | "bug";
   title: string;
   detail: string;
   timestamp: string;
   href: string;
+}
+
+export const OWNER_COCKPIT_ERROR_SOURCE_LABELS: Record<
+  OwnerCockpitErrorItem["source"],
+  string
+> = {
+  job: "Job",
+  ai_run: "AI-Run",
+  mail: "Mail",
+  bug: "Bug",
+};
+
+export interface OwnerCockpitAiUsageSummary {
+  todayRequests: number;
+  todayCostUsd: number;
+  last7DaysRequests: number;
+  last7DaysCostUsd: number;
+  topFeature: {
+    feature: string;
+    requestCount: number;
+    estimatedCostUsd: number;
+  } | null;
 }
 
 export interface OwnerCockpitSnapshot {
@@ -35,8 +59,11 @@ export interface OwnerCockpitSnapshot {
     byRole: Awaited<ReturnType<typeof getUserRoleCounts>>;
   };
   errors: OwnerCockpitErrorItem[];
+  aiUsage: OwnerCockpitAiUsageSummary;
   recentActivity: UnifiedActivityEntry[];
 }
+
+const MS_PER_DAY = 86_400_000;
 
 export async function getOwnerCockpitSnapshot(
   db: PrismaClient,
@@ -44,25 +71,55 @@ export async function getOwnerCockpitSnapshot(
 ): Promise<OwnerCockpitSnapshot> {
   const activityLimit = Math.min(Math.max(options.activityLimit ?? 12, 1), 30);
 
-  const [worlds, pageCounts, membershipCounts, roleCounts, inactiveUsers, adminStatus, activity] =
-    await Promise.all([
-      db.world.findMany({
-        select: { id: true, name: true, slug: true, isSandbox: true },
-        orderBy: { name: "asc" },
-      }),
-      db.page.groupBy({
-        by: ["worldId"],
-        _count: { _all: true },
-      }),
-      db.worldMembership.groupBy({
-        by: ["worldId"],
-        _count: { _all: true },
-      }),
-      getUserRoleCounts(db),
-      db.user.count({ where: { status: "disabled" } }),
-      getAdminStatus(db),
-      listUnifiedActivity(db, { limit: activityLimit }),
-    ]);
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const sevenDaysStart = new Date(todayStart.getTime() - 6 * MS_PER_DAY);
+  const aiUsageRollups = createAiUsageRollupService(db);
+
+  const [
+    worlds,
+    pageCounts,
+    membershipCounts,
+    roleCounts,
+    inactiveUsers,
+    adminStatus,
+    activity,
+    openBugs,
+    aiUsageToday,
+    aiUsageLast7Days,
+  ] = await Promise.all([
+    db.world.findMany({
+      select: { id: true, name: true, slug: true, isSandbox: true },
+      orderBy: { name: "asc" },
+    }),
+    db.page.groupBy({
+      by: ["worldId"],
+      _count: { _all: true },
+    }),
+    db.worldMembership.groupBy({
+      by: ["worldId"],
+      _count: { _all: true },
+    }),
+    getUserRoleCounts(db),
+    db.user.count({ where: { status: "disabled" } }),
+    getAdminStatus(db),
+    listUnifiedActivity(db, { limit: activityLimit }),
+    db.bugReport.findMany({
+      where: { status: { in: ["open", "in_progress"] } },
+      select: {
+        id: true,
+        title: true,
+        severity: true,
+        module: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+    }),
+    aiUsageRollups.getRollupSummary({ since: todayStart, until: now }),
+    aiUsageRollups.getRollupSummary({ since: sevenDaysStart, until: now }),
+  ]);
 
   const pageCountByWorld = new Map(pageCounts.map((row) => [row.worldId, row._count._all]));
   const memberCountByWorld = new Map(
@@ -117,7 +174,36 @@ export async function getOwnerCockpitSnapshot(
     });
   }
 
+  for (const bug of openBugs) {
+    errors.push({
+      id: `bug:${bug.id}`,
+      source: "bug",
+      title: bug.title,
+      detail: `${BUG_REPORT_SEVERITY_LABELS[bug.severity]}${bug.module ? ` · ${bug.module}` : ""}`,
+      timestamp: bug.updatedAt.toISOString(),
+      href: "/bugs",
+    });
+  }
+
   errors.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+  const topFeature = aiUsageLast7Days.byFeature.reduce<
+    OwnerCockpitAiUsageSummary["topFeature"]
+  >((best, row) => {
+    if (
+      !best ||
+      row.estimatedCostUsd > best.estimatedCostUsd ||
+      (row.estimatedCostUsd === best.estimatedCostUsd &&
+        row.requestCount > best.requestCount)
+    ) {
+      return {
+        feature: row.feature,
+        requestCount: row.requestCount,
+        estimatedCostUsd: row.estimatedCostUsd,
+      };
+    }
+    return best;
+  }, null);
 
   const totalUsers =
     roleCounts.owner + roleCounts.admin + roleCounts.dm + roleCounts.player;
@@ -140,6 +226,13 @@ export async function getOwnerCockpitSnapshot(
       byRole: roleCounts,
     },
     errors: errors.slice(0, 10),
+    aiUsage: {
+      todayRequests: aiUsageToday.requestCount,
+      todayCostUsd: aiUsageToday.estimatedCostUsd,
+      last7DaysRequests: aiUsageLast7Days.requestCount,
+      last7DaysCostUsd: aiUsageLast7Days.estimatedCostUsd,
+      topFeature,
+    },
     recentActivity: activity.entries,
   };
 }
