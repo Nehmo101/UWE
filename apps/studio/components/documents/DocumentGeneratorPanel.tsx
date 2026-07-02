@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
+import { generateDocumentFromTemplateAction } from "@/app/document-actions";
 import {
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
   extractTemplateVariables,
@@ -21,10 +23,18 @@ interface DocumentGeneratorPanelProps {
   templates: DocumentTemplateDto[];
 }
 
+interface SavedDocument {
+  id: string;
+  title: string;
+}
+
 export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProps) {
   const [selectedId, setSelectedId] = useState(templates[0]?.id ?? "");
   const [values, setValues] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [savedDocument, setSavedDocument] = useState<SavedDocument | null>(null);
+  const [isSaving, startSaving] = useTransition();
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedId) ?? null,
@@ -40,6 +50,11 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
     return Array.from(new Set([...fromDb, ...fromBody])).sort();
   }, [selectedTemplate]);
 
+  const missingKeys = useMemo(
+    () => variableKeys.filter((key) => !(values[key] ?? "").trim()),
+    [values, variableKeys],
+  );
+
   const rendered = useMemo(() => {
     if (!selectedTemplate) {
       return "";
@@ -50,7 +65,9 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
   function handleTemplateChange(nextId: string) {
     setSelectedId(nextId);
     setValues({});
+    setTitle("");
     setStatus(null);
+    setSavedDocument(null);
   }
 
   function handleValueChange(key: string, value: string) {
@@ -70,6 +87,34 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
     }
   }
 
+  function saveDocument() {
+    if (!selectedTemplate) {
+      return;
+    }
+    if (missingKeys.length > 0) {
+      setStatus(
+        `Pflichtfelder fehlen: ${missingKeys.map((key) => `{{${key}}}`).join(", ")}`,
+      );
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await generateDocumentFromTemplateAction({
+        templateId: selectedTemplate.id,
+        title: title.trim() || undefined,
+        values,
+      });
+
+      if (result.ok) {
+        setSavedDocument({ id: result.documentId, title: result.title });
+        setStatus(`Dokument „${result.title}“ gespeichert.`);
+      } else {
+        setSavedDocument(null);
+        setStatus(result.error);
+      }
+    });
+  }
+
   if (templates.length === 0) {
     return (
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
@@ -85,7 +130,8 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
       <h2 className="uwe-v2-section-title">Dokument erzeugen</h2>
       <p className="uwe-dashboard-muted">
-        Vorlage wählen, Platzhalter ausfüllen, Vorschau prüfen und Ergebnis kopieren.
+        Vorlage wählen, Platzhalter ausfüllen, Vorschau prüfen — dann speichern
+        (Life Brain), drucken oder kopieren.
       </p>
 
       <label>
@@ -112,11 +158,12 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
         <div className="uwe-brain-create-form">
           {variableKeys.map((key) => (
             <label key={key}>
-              {key}
+              {key} *
               <input
                 value={values[key] ?? ""}
                 onChange={(event) => handleValueChange(key, event.target.value)}
                 placeholder={`{{${key}}}`}
+                required
               />
             </label>
           ))}
@@ -124,6 +171,24 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
       ) : (
         <p className="uwe-dashboard-muted">Diese Vorlage enthält keine Platzhalter.</p>
       )}
+
+      {missingKeys.length > 0 ? (
+        <p className="uwe-dashboard-muted">
+          Alle Platzhalter sind Pflichtfelder — noch offen:{" "}
+          {missingKeys.map((key) => `{{${key}}}`).join(", ")}
+        </p>
+      ) : null}
+
+      <label>
+        Titel des Dokuments (optional)
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder={
+            selectedTemplate ? `${selectedTemplate.name} — ${new Date().toISOString().slice(0, 10)}` : ""
+          }
+        />
+      </label>
 
       <label>
         Vorschau
@@ -134,6 +199,14 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
         <button
           type="button"
           className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
+          onClick={saveDocument}
+          disabled={isSaving || missingKeys.length > 0}
+        >
+          {isSaving ? "Speichert …" : "Dokument speichern"}
+        </button>
+        <button
+          type="button"
+          className="uwe-v2-btn uwe-v2-btn-sm"
           onClick={() => void copyRendered()}
         >
           In Zwischenablage kopieren
@@ -141,6 +214,22 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
       </div>
 
       {status ? <p className="uwe-dashboard-muted">{status}</p> : null}
+
+      {savedDocument ? (
+        <p>
+          <Link href={`/life-brain/documents/${savedDocument.id}`}>
+            Im Life Brain öffnen
+          </Link>{" "}
+          ·{" "}
+          <a
+            href={`/api/documents/print?documentId=${encodeURIComponent(savedDocument.id)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Druckansicht öffnen
+          </a>
+        </p>
+      ) : null}
     </section>
   );
 }

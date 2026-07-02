@@ -67,6 +67,10 @@ function isBlockedZipEntry(entryName: string): boolean {
 /**
  * Validate and extract allowed entries from a ZIP buffer.
  * Used for backup restore asset extraction with zip-slip and bomb protection.
+ *
+ * `entryFilter` skips non-matching entries silently (after the zip-slip check,
+ * before blocked-extension/content checks) — e.g. to pull only Markdown files
+ * out of an Obsidian vault export that also contains plugin scripts.
  */
 export function extractSafeZipEntries(
   zipInput: string | Buffer,
@@ -74,6 +78,7 @@ export function extractSafeZipEntries(
     policy?: ZipImportPolicy;
     allowedPrefix?: string;
     requirePrefix?: boolean;
+    entryFilter?: (entryName: string) => boolean;
   },
 ): SafeZipEntry[] {
   const policy = options?.policy ?? resolveZipImportPolicy();
@@ -101,6 +106,10 @@ export function extractSafeZipEntries(
 
   for (const entry of entries) {
     assertSafeZipEntryName(entry.entryName);
+
+    if (options?.entryFilter && !options.entryFilter(entry.entryName)) {
+      continue;
+    }
 
     if (options?.requirePrefix && options.allowedPrefix) {
       const prefix = options.allowedPrefix.endsWith("/")
