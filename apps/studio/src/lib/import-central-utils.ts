@@ -55,6 +55,10 @@ export function isImportCentralPdfSource(sourceType: ImportSourceType): boolean 
   return sourceType === "pdf";
 }
 
+export function isImportCentralObsidianSource(sourceType: ImportSourceType): boolean {
+  return sourceType === "obsidian";
+}
+
 export function importCentralSourceAccept(sourceType: ImportSourceType): string {
   switch (sourceType) {
     case "knoteforge":
@@ -62,7 +66,7 @@ export function importCentralSourceAccept(sourceType: ImportSourceType): string 
     case "markdown":
       return ".md,.markdown,.txt,text/markdown,text/plain";
     case "obsidian":
-      return ".md,.markdown,.txt,text/markdown,text/plain";
+      return ".md,.markdown,.txt,.zip,text/markdown,text/plain,application/zip";
     case "pdf":
       return ".pdf,application/pdf";
     default:
