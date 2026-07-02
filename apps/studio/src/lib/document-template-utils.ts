@@ -1,6 +1,11 @@
-/** Client-safe helpers mirroring DocumentTemplateService.renderTemplate(). */
+/**
+ * Client-safe helpers mirroring packages/database document-template-service
+ * (extractDocumentTemplateVariables / renderTemplate). Die autoritative
+ * Substitution mit Pflichtfeld-Validierung läuft server-seitig über
+ * fillDocumentTemplate; hier nur Live-Vorschau.
+ */
 
-const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g;
+const PLACEHOLDER_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
 export const DOCUMENT_TEMPLATE_CATEGORY_LABELS = {
   contract: "Vertrag",
@@ -22,6 +27,11 @@ export function extractTemplateVariables(body: string): string[] {
 export function renderDocumentTemplate(body: string, values: Record<string, string>): string {
   return body.replace(PLACEHOLDER_PATTERN, (_match, key: string) => values[key] ?? "");
 }
+
+/** Ergebnis von generateDocumentFromTemplateAction (Server Action). */
+export type GenerateDocumentActionResult =
+  | { ok: true; documentId: string; title: string }
+  | { ok: false; error: string };
 
 export function normalizeTemplateVariables(value: unknown): string[] {
   if (Array.isArray(value)) {
