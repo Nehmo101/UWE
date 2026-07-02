@@ -16,6 +16,10 @@ Windows-Installer-Pfad existiert nicht mehr — siehe
 | Welt-Mitgliedschaften & Spieler-Zugriffe | Ja (Stub-User ohne Passwort) | Ja |
 | Session-Unlocks / Page-Player-Access | Ja | Ja |
 | Custom Page-Templates (nicht System) | Ja (Full-Backup) | Ja |
+| Daily Admin OS: Capture-Einträge (inkl. Upload-Dateien) | Ja (Full-Backup) | Ja |
+| Daily Admin OS: Persönliche Projekte, Werkstatt (Projekte, Rezepte, Druckprofile, Vermietung) | Ja (Full-Backup) | Ja |
+| Daily Admin OS: Verträge/Ausgaben, Hardware-Geräte, Admin-Verknüpfungen | Ja (Full-Backup) | Ja |
+| Life Brain (Dokumente, Chunks inkl. Embeddings, Fakten) | Ja (Full-Backup) — bleibt lokal | Ja |
 | Benutzer-Passwörter | Nein | Nein — wiederhergestellte User müssen Passwort setzen |
 | Benutzer-Auth-Sessions | Nein | Nein |
 | ShareLinks (Token/Passwort) | Ja (ohne Token/Passwort) | Ja — neue Tokens; Passwörter neu setzen |

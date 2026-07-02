@@ -22,10 +22,18 @@ export function writeBackupZip(
 
   const copiedAssets: string[] = [];
 
-  for (const asset of bundle.data.assets) {
-    const zipEntry = assetZipPath(asset.storageKey);
+  const uploadStorageKeys = [
+    ...bundle.data.assets.map((asset) => asset.storageKey),
+    // Capture upload files live under the fixed `_capture` uploads namespace.
+    ...(bundle.data.dailyAdmin?.captureEntries ?? [])
+      .map((entry) => entry.storageKey)
+      .filter((storageKey): storageKey is string => Boolean(storageKey)),
+  ];
+
+  for (const storageKey of uploadStorageKeys) {
+    const zipEntry = assetZipPath(storageKey);
     try {
-      const sourcePath = resolveAssetFilePath(asset.storageKey, uploadsRoot);
+      const sourcePath = resolveAssetFilePath(storageKey, uploadsRoot);
       if (fs.existsSync(sourcePath)) {
         zip.addLocalFile(sourcePath, path.dirname(zipEntry), path.basename(zipEntry));
         copiedAssets.push(zipEntry);
@@ -104,6 +112,31 @@ export function extractBackupAssets(
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, data);
     copied.push(storageKey);
+  }
+
+  // Capture upload files use the fixed `_capture` namespace — no world-ID remapping needed.
+  for (const entry of bundle.data.dailyAdmin?.captureEntries ?? []) {
+    if (!entry.storageKey) continue;
+
+    const zipEntryPath = assetZipPath(entry.storageKey);
+    assertSafeZipEntryName(zipEntryPath);
+
+    const zipEntry = zip.getEntry(zipEntryPath);
+    if (!zipEntry) continue;
+
+    const data = zipEntry.getData();
+    totalUncompressed += data.length;
+    if (totalUncompressed > policy.maxUncompressedBytes) {
+      throw new ZipSecurityError(
+        `Entpackter Backup-Inhalt überschreitet ${policy.maxUncompressedBytes} Bytes.`,
+        "zip_bomb",
+      );
+    }
+
+    const targetPath = resolveAssetFilePath(entry.storageKey, targetUploadsRoot);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, data);
+    copied.push(entry.storageKey);
   }
 
   return copied;
