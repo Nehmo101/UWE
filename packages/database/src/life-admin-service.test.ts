@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { DEFAULT_GENERATOR_PRESETS } from "./generator-service";
 import { createLifeAdminService, getNextWorkshopStatus } from "./life-admin-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -269,6 +270,30 @@ describe("life admin service", () => {
     });
 
     assert.ok(history.some((entry) => entry.id === output.id));
+  });
+
+  it("seeds default generator presets and backfills missing system presets", async () => {
+    const seeded = await service.ensureDefaultGeneratorPresets();
+    assert.equal(seeded, DEFAULT_GENERATOR_PRESETS.length);
+
+    const itemPresets = await service.listGeneratorPresets({
+      worldId: null,
+      targetType: "item",
+    });
+    assert.ok(itemPresets.some((preset) => preset.name === "Magische Waffe"));
+
+    await db.generatorPreset.deleteMany({
+      where: { isSystem: true, name: "Magische Waffe" },
+    });
+
+    const reseeded = await service.ensureDefaultGeneratorPresets();
+    assert.equal(reseeded, DEFAULT_GENERATOR_PRESETS.length);
+
+    const restored = await service.listGeneratorPresets({
+      worldId: null,
+      targetType: "item",
+    });
+    assert.ok(restored.some((preset) => preset.name === "Magische Waffe"));
   });
 
   it("builds today summary aggregates", async () => {

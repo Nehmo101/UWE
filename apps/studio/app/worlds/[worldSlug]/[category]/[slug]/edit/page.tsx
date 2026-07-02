@@ -46,6 +46,8 @@ import { FactionSimulatorSection } from "@/components/wiki/FactionSimulatorSecti
 import { QuestStatusEditPanel } from "@/components/wiki/QuestStatusEditPanel";
 import { CharacterSheetEditPanel } from "@/components/wiki/CharacterSheetEditPanel";
 import { ItemBuilderSection } from "@/components/wiki/ItemBuilderSection";
+import { MagicItemBuilderSection } from "@/components/wiki/MagicItemBuilderSection";
+import { QuestBuilderSection } from "@/components/wiki/QuestBuilderSection";
 import { StructuredGeneratorSection } from "@/components/wiki/StructuredGeneratorSection";
 import { StatblockStudioSection } from "@/components/wiki/StatblockStudioSection";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -455,16 +457,40 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           />
         )}
 
-        <StructuredGeneratorSection
-          worldSlug={worldSlug}
-          pageSlug={slug}
-          pageTitle={page.title}
-          pageType={page.type}
-          pageId={page.id}
-          worldId={world.id}
-          rtxReady={generatorPanel?.rtxReady ?? false}
-          rtxEnabled={generatorPanel?.rtxEnabled ?? false}
-        />
+        {page.type === PageTypeEnum.quest ? (
+          <QuestBuilderSection
+            worldSlug={worldSlug}
+            pageSlug={slug}
+            pageTitle={page.title}
+            pageType={page.type}
+            pageId={page.id}
+            worldId={world.id}
+            rtxReady={generatorPanel?.rtxReady ?? false}
+            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+          />
+        ) : page.type === PageTypeEnum.item ? (
+          <MagicItemBuilderSection
+            worldSlug={worldSlug}
+            pageSlug={slug}
+            pageTitle={page.title}
+            pageType={page.type}
+            pageId={page.id}
+            worldId={world.id}
+            rtxReady={generatorPanel?.rtxReady ?? false}
+            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+          />
+        ) : (
+          <StructuredGeneratorSection
+            worldSlug={worldSlug}
+            pageSlug={slug}
+            pageTitle={page.title}
+            pageType={page.type}
+            pageId={page.id}
+            worldId={world.id}
+            rtxReady={generatorPanel?.rtxReady ?? false}
+            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+          />
+        )}
 
         <StatblockStudioSection
           worldSlug={worldSlug}

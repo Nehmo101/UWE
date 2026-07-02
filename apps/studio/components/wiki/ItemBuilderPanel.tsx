@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import {
+  EquipmentSearchBox,
+  equipmentKindLabel,
+  type EquipmentSearchResult,
+} from "@/components/wiki/EquipmentSearchBox";
 
-export interface EquipmentSearchResult {
-  id: string;
-  name: string;
-  url?: string;
-  provider: "open5e" | "dnd5e_srd";
-  kind?: "weapon" | "magicitem" | "equipment" | null;
-  summary?: string;
-}
+export type { EquipmentSearchResult } from "@/components/wiki/EquipmentSearchBox";
 
 interface Props {
   worldSlug: string;
@@ -24,19 +21,6 @@ interface Props {
   generatorSectionId?: string;
 }
 
-function kindLabel(kind: EquipmentSearchResult["kind"]): string | null {
-  switch (kind) {
-    case "weapon":
-      return "Waffe";
-    case "magicitem":
-      return "Magischer Gegenstand";
-    case "equipment":
-      return "SRD-Ausrüstung";
-    default:
-      return null;
-  }
-}
-
 export function ItemBuilderPanel({
   worldSlug,
   pageId,
@@ -48,49 +32,32 @@ export function ItemBuilderPanel({
   applyEquipmentAction,
   generatorSectionId = "item-structured-generator",
 }: Props) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<EquipmentSearchResult[]>([]);
-  const [searchBusy, setSearchBusy] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      setSearchError(null);
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      setSearchBusy(true);
-      setSearchError(null);
-      try {
-        const response = await fetch(`${searchEquipmentUrl}?q=${encodeURIComponent(trimmed)}`);
-        const data = (await response.json()) as {
-          results?: EquipmentSearchResult[];
-          error?: string;
-        };
-        if (!response.ok) {
-          throw new Error(data.error ?? "Ausrüstungssuche fehlgeschlagen.");
-        }
-        setResults(data.results ?? []);
-      } catch (error) {
-        setResults([]);
-        setSearchError(error instanceof Error ? error.message : "Ausrüstungssuche fehlgeschlagen.");
-      } finally {
-        setSearchBusy(false);
-      }
-    }, 300);
-
-    return () => window.clearTimeout(timer);
-  }, [query, searchEquipmentUrl]);
-
   const hiddenFields = {
     worldSlug,
     pageId,
     pageSlug,
     category,
   };
+
+  function renderResult(result: EquipmentSearchResult) {
+    const label = equipmentKindLabel(result.kind);
+    return (
+      <form action={applyEquipmentAction} className="auth-character-spell-search-form">
+        {Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
+        <input type="hidden" name="provider" value={result.provider} />
+        <input type="hidden" name="equipmentId" value={result.id} />
+        <input type="hidden" name="name" value={result.name} />
+        {result.url ? <input type="hidden" name="sourceUrl" value={result.url} /> : null}
+        <button type="submit" className="auth-btn auth-btn-small">
+          {result.name}
+          {label ? ` · ${label}` : null}
+          {result.summary ? ` — ${result.summary}` : null}
+        </button>
+      </form>
+    );
+  }
 
   return (
     <section className="uwe-v2-card uwe-v2-section">
@@ -105,47 +72,11 @@ export function ItemBuilderPanel({
         {pageSummary?.trim() ? <> — {pageSummary.trim()}</> : null}
       </p>
 
-      <div className="auth-character-spell-search">
-        <label>
-          SRD / Open5e Ausrüstung
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="z. B. Longsword, Oil of Sharpness"
-            autoComplete="off"
-          />
-        </label>
-        {searchBusy && <p className="auth-muted">Suche…</p>}
-        {searchError && <p className="auth-error">{searchError}</p>}
-        {results.length > 0 && (
-          <ul className="auth-character-spell-search-results">
-            {results.map((result) => {
-              const label = kindLabel(result.kind);
-              return (
-                <li key={`${result.provider}:${result.id}`}>
-                  <form action={applyEquipmentAction} className="auth-character-spell-search-form">
-                    {Object.entries(hiddenFields).map(([name, value]) => (
-                      <input key={name} type="hidden" name={name} value={value} />
-                    ))}
-                    <input type="hidden" name="provider" value={result.provider} />
-                    <input type="hidden" name="equipmentId" value={result.id} />
-                    <input type="hidden" name="name" value={result.name} />
-                    {result.url ? (
-                      <input type="hidden" name="sourceUrl" value={result.url} />
-                    ) : null}
-                    <button type="submit" className="auth-btn auth-btn-small">
-                      {result.name}
-                      {label ? ` · ${label}` : null}
-                      {result.summary ? ` — ${result.summary}` : null}
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      <EquipmentSearchBox
+        searchEquipmentUrl={searchEquipmentUrl}
+        label="SRD / Open5e Ausrüstung"
+        renderResult={renderResult}
+      />
 
       <p className="uwe-dashboard-muted">
         <Link href={`#${generatorSectionId}`}>Zum strukturierten Item-Generator ↓</Link>

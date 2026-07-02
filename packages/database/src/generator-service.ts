@@ -338,6 +338,39 @@ export const DEFAULT_GENERATOR_PRESETS: Array<{
     },
   },
   {
+    name: "Magische Waffe",
+    targetType: "item",
+    description: "Waffe auf SRD-Basis mit Seltenheit und Einstimmung",
+    template: {
+      structured: true,
+      fields: ["srdBase", "rarity", "attunement", "properties", "lore"],
+      defaults: { rarity: "selten" },
+    },
+  },
+  {
+    name: "Wundersamer Gegenstand",
+    targetType: "item",
+    description: "Wondrous Item mit Einstimmung, Wert und Lore",
+    template: {
+      structured: true,
+      fields: ["rarity", "attunement", "properties", "value", "lore"],
+      defaults: { rarity: "ungewöhnlich" },
+    },
+  },
+  {
+    name: "Verfluchtes Relikt",
+    targetType: "item",
+    description: "Relikt auf SRD-Basis mit Fluch und dunkler Herkunft",
+    template: {
+      structured: true,
+      fields: ["srdBase", "rarity", "attunement", "properties", "curse", "lore"],
+      defaults: {
+        rarity: "sehr selten",
+        curse: "Der Fluch zeigt sich erst nach der Einstimmung.",
+      },
+    },
+  },
+  {
     name: "Ort Schnell",
     targetType: "location",
     description: "Ort mit Geheimnis und Spielertext",

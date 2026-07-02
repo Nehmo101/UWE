@@ -1722,13 +1722,21 @@ export class LifeAdminService {
   }
 
   async ensureDefaultGeneratorPresets() {
-    const existing = await this.db.generatorPreset.count({ where: { isSystem: true } });
-    if (existing > 0) {
-      return existing;
+    const existing = await this.db.generatorPreset.findMany({
+      where: { isSystem: true },
+      select: { name: true },
+    });
+    const existingNames = new Set(existing.map((preset) => preset.name));
+    const missing = DEFAULT_GENERATOR_PRESETS.map((preset, index) => ({ preset, index })).filter(
+      ({ preset }) => !existingNames.has(preset.name),
+    );
+
+    if (missing.length === 0) {
+      return existing.length;
     }
 
     await this.db.generatorPreset.createMany({
-      data: DEFAULT_GENERATOR_PRESETS.map((preset, index) => ({
+      data: missing.map(({ preset, index }) => ({
         name: preset.name,
         description: preset.description,
         targetType: preset.targetType,
@@ -1738,7 +1746,7 @@ export class LifeAdminService {
       })),
     });
 
-    return DEFAULT_GENERATOR_PRESETS.length;
+    return existing.length + missing.length;
   }
 
   async createAdminLink(input: CreateAdminLinkInput) {
@@ -1776,6 +1784,10 @@ export class LifeAdminService {
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
+  }
+
+  async getGeneratorPreset(id: string) {
+    return this.db.generatorPreset.findUnique({ where: { id } });
   }
 
   async createGeneratorPreset(input: CreateGeneratorPresetInput) {

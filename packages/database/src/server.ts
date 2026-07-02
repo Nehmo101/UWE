@@ -235,16 +235,23 @@ export {
 export type { UpsertStructuredStatblockInput } from "./structured-statblock-service";
 
 export {
+  applyGeneratorPresetToSchema,
   buildStructuredGeneratorPrompt,
   formatStructuredGeneratorMarkdown,
   getStructuredGeneratorSchema,
   isStructuredGeneratorTarget,
+  parseGeneratorPresetTemplate,
   parseStructuredGeneratorOutput,
+  STRUCTURED_GENERATOR_FIELD_MAX_LENGTH,
   STRUCTURED_GENERATOR_SCHEMAS,
+  validateStructuredGeneratorInput,
 } from "./structured-generator-schemas";
 
 export type {
+  GeneratorPresetTemplateFields,
   StructuredGeneratorField,
+  StructuredGeneratorInputIssue,
+  StructuredGeneratorInputResult,
   StructuredGeneratorOutput,
   StructuredGeneratorSchema,
   StructuredGeneratorTarget,

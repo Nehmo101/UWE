@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  DEFAULT_GENERATOR_PRESETS,
   detectMissingContent,
   listGeneratorActions,
   resolveGeneratorContextFromPage,
 } from "./generator-service";
+import {
+  getStructuredGeneratorSchema,
+  isStructuredGeneratorTarget,
+  parseGeneratorPresetTemplate,
+} from "./structured-generator-schemas";
 
 describe("generator service", () => {
   it("resolves page context types", () => {
@@ -79,5 +85,50 @@ describe("generator service", () => {
     });
 
     assert.ok(actions.some((action) => action.id === "generate_quest"));
+  });
+
+  it("lists structured item generator for item pages as review-only", () => {
+    const actions = listGeneratorActions({
+      contextType: "item",
+      contextId: "i1",
+      worldSlug: "terra",
+    });
+
+    const action = actions.find((entry) => entry.id === "generate_item");
+    assert.ok(action);
+    assert.equal(action.reviewRequired, true);
+    assert.equal(action.requiresLocalRtx, true);
+  });
+
+  it("provides item builder default presets", () => {
+    const itemPresets = DEFAULT_GENERATOR_PRESETS.filter(
+      (preset) => preset.targetType === "item",
+    );
+
+    assert.ok(itemPresets.length >= 3);
+    assert.ok(itemPresets.some((preset) => preset.name === "Magische Waffe"));
+    assert.ok(itemPresets.some((preset) => preset.name === "Wundersamer Gegenstand"));
+  });
+
+  it("keeps structured default presets aligned with the structured schemas", () => {
+    for (const preset of DEFAULT_GENERATOR_PRESETS) {
+      if (!isStructuredGeneratorTarget(preset.targetType)) {
+        continue;
+      }
+
+      const template = parseGeneratorPresetTemplate(preset.template);
+      if (!template.structured) {
+        continue;
+      }
+
+      const schema = getStructuredGeneratorSchema(preset.targetType);
+      const knownIds = new Set(schema.fields.map((field) => field.id));
+      for (const fieldId of template.fieldIds) {
+        assert.ok(knownIds.has(fieldId), `${preset.name}: unbekanntes Feld ${fieldId}`);
+      }
+      for (const fieldId of Object.keys(template.defaults)) {
+        assert.ok(knownIds.has(fieldId), `${preset.name}: unbekanntes Default-Feld ${fieldId}`);
+      }
+    }
   });
 });
