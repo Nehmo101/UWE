@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
 import {
+  formatUsdAmount,
   getOwnerCockpitSnapshot,
+  OWNER_COCKPIT_ERROR_SOURCE_LABELS,
   prisma,
   UNIFIED_ACTIVITY_SOURCE_LABELS,
 } from "@uwe/database/server";
@@ -24,7 +26,7 @@ export default async function OwnerCockpitPage() {
     >
       <PageHeader
         title="Owner Cockpit"
-        summary="Aktive Welten, Nutzer, Fehler und letzte Änderungen — read-only, ohne Secrets."
+        summary="Aktive Welten, Nutzer, letzte Fehler, AI-Kosten und letzte Änderungen — read-only, ohne Secrets."
         actions={
           <HealthBadge
             status={snapshot.ok ? "ok" : "degraded"}
@@ -73,23 +75,61 @@ export default async function OwnerCockpitPage() {
         </div>
       </section>
 
-      {snapshot.errors.length > 0 && (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Fehler & Warnungen</h2>
-          <div className="uwe-today-card-list">
-            {snapshot.errors.map((item) => (
+      <section className="uwe-v2-section">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+          <h2 className="uwe-v2-section-title">Letzte Fehler</h2>
+          <Link className="uwe-v2-btn uwe-v2-btn-secondary" href="/bugs">
+            Bug Center
+          </Link>
+        </div>
+        <div className="uwe-today-card-list">
+          {snapshot.errors.length === 0 ? (
+            <article className="uwe-today-card">
+              <h3>Keine offenen Fehler</h3>
+              <p className="uwe-dashboard-muted">
+                Keine offenen Bugs, fehlgeschlagenen Jobs, AI-Runs oder Mails.
+              </p>
+            </article>
+          ) : (
+            snapshot.errors.map((item) => (
               <article key={item.id} className="uwe-today-card">
                 <h3>{item.title}</h3>
-                <p className="uwe-dashboard-muted">{item.detail}</p>
+                <p className="uwe-dashboard-muted">
+                  {OWNER_COCKPIT_ERROR_SOURCE_LABELS[item.source]} · {item.detail}
+                </p>
                 <p className="uwe-dashboard-muted">{formatStudioDateTime(item.timestamp)}</p>
                 <Link className="uwe-v2-btn uwe-v2-btn-sm uwe-v2-btn-secondary" href={item.href}>
                   Details
                 </Link>
               </article>
-            ))}
-          </div>
-        </section>
-      )}
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">AI-Kosten</h2>
+        <div className="uwe-today-card-list">
+          <article className="uwe-today-card">
+            <h3>
+              Heute {formatUsdAmount(snapshot.aiUsage.todayCostUsd)} · 7 Tage{" "}
+              {formatUsdAmount(snapshot.aiUsage.last7DaysCostUsd)}
+            </h3>
+            <p className="uwe-dashboard-muted">
+              {snapshot.aiUsage.todayRequests} Anfragen heute · {snapshot.aiUsage.last7DaysRequests}{" "}
+              in 7 Tagen
+            </p>
+            <p className="uwe-dashboard-muted">
+              {snapshot.aiUsage.topFeature
+                ? `Top-Feature (7 Tage): ${snapshot.aiUsage.topFeature.feature} — ${formatUsdAmount(snapshot.aiUsage.topFeature.estimatedCostUsd)} bei ${snapshot.aiUsage.topFeature.requestCount} Anfragen`
+                : "Keine AI-Nutzung in den letzten 7 Tagen."}
+            </p>
+            <Link className="uwe-v2-btn uwe-v2-btn-sm uwe-v2-btn-secondary" href="/contracts">
+              Details in Verträge & Ausgaben
+            </Link>
+          </article>
+        </div>
+      </section>
 
       <section className="uwe-v2-section">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>

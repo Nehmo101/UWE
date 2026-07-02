@@ -1182,9 +1182,11 @@ export type { ProductionSafetyWarning } from "./production-safety";
 
 export {
   getOwnerCockpitSnapshot,
+  OWNER_COCKPIT_ERROR_SOURCE_LABELS,
 } from "./owner-cockpit-service";
 
 export type {
+  OwnerCockpitAiUsageSummary,
   OwnerCockpitErrorItem,
   OwnerCockpitSnapshot,
   OwnerCockpitWorldRow,
