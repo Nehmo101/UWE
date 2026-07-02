@@ -39,8 +39,14 @@ const USER_ROLE_ALIASES: Record<string, UserRole> = {
   spieler: "player",
   spielerin: "player",
   dm: "dm",
+  spielleiter: "dm",
+  spielleiterin: "dm",
   admin: "admin",
+  administrator: "admin",
+  administratorin: "admin",
   owner: "owner",
+  besitzer: "owner",
+  besitzerin: "owner",
   readonly: "readonly",
   guest: "guest",
   gast: "guest",
@@ -52,7 +58,7 @@ export function parseWorldMemberRoleToken(token: string): WorldMemberRole | null
 }
 
 export function parseUserRoleToken(token: string): UserRole | null {
-  const normalized = token.trim().toLowerCase();
+  const normalized = token.trim().toLowerCase().replace(/[\s-]+/g, "");
   return USER_ROLE_ALIASES[normalized] ?? null;
 }
 
@@ -66,6 +72,27 @@ export function worldMemberRoleLabel(role: WorldMemberRole): string {
       return "Co-DM";
     case "owner":
       return "Welt-Besitzer";
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
+  }
+}
+
+export function userRoleLabel(role: UserRole): string {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "dm":
+      return "DM";
+    case "player":
+      return "Spieler";
+    case "readonly":
+      return "Nur-Lesen";
+    case "guest":
+      return "Gast";
     default: {
       const _exhaustive: never = role;
       return _exhaustive;

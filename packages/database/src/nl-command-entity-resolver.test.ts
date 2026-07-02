@@ -26,6 +26,11 @@ describe("nl-command-entity-resolver", () => {
   it("parses global user role aliases", () => {
     assert.equal(parseUserRoleToken("spieler"), "player");
     assert.equal(parseUserRoleToken("admin"), "admin");
+    assert.equal(parseUserRoleToken("Administrator"), "admin");
+    assert.equal(parseUserRoleToken("Spielleiterin"), "dm");
+    assert.equal(parseUserRoleToken("read-only"), "readonly");
+    assert.equal(parseUserRoleToken("besitzer"), "owner");
+    assert.equal(parseUserRoleToken("superheld"), null);
   });
 
   it("resolves users by email and display name", async () => {

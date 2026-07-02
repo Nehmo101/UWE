@@ -72,6 +72,8 @@ const EXAMPLE_COMMANDS = [
   "Zeige alle Benutzer",
   "list worlds",
   "Mach Carina zur Spielerin in Terra",
+  "Mach Carina zum Admin",
+  "Erstelle eine neue Welt Aventurien",
   "invite player@example.com as player in terra",
   "disable user carina",
   "list open bugs",
