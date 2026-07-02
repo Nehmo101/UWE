@@ -12,6 +12,14 @@ import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./to
 import { logAuditEvent } from "./audit-log-service";
 import { parseStringArray } from "./json-utils";
 
+function parseEventsJson(value: string): WebhookEvent[] {
+  try {
+    return parseStringArray(JSON.parse(value)) as WebhookEvent[];
+  } catch {
+    return [];
+  }
+}
+
 export const WEBHOOK_EVENTS = [
   "backup.created",
   "import.completed",
@@ -142,7 +150,7 @@ export class WebhookService {
     const payloadHash = createHash("sha256").update(body).digest("hex").slice(0, 32);
 
     for (const endpoint of endpoints) {
-      const events = parseStringArray(endpoint.eventsJson) as WebhookEvent[];
+      const events = parseEventsJson(endpoint.eventsJson);
       if (!events.includes(event) && event !== "webhook.test") {
         continue;
       }
@@ -242,7 +250,7 @@ export class WebhookService {
       name: endpoint.name,
       url: endpoint.url,
       secretPrefix: endpoint.secretPrefix,
-      events: parseStringArray(endpoint.eventsJson) as WebhookEvent[],
+      events: parseEventsJson(endpoint.eventsJson),
       isActive: endpoint.isActive,
       lastTriggeredAt: endpoint.lastTriggeredAt,
       createdAt: endpoint.createdAt,
