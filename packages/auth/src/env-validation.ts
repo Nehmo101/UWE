@@ -10,6 +10,9 @@ export interface EnvValidationIssue {
   envKey?: string;
 }
 
+/** Dev fallback used by packages/assets/src/signed-media.ts — never acceptable in production. */
+const DEV_MEDIA_SIGNING_SECRET = "uwe-dev-media-signing-secret";
+
 const WEAK_AUTH_SECRET_PATTERNS = [
   /^change[-_]?me$/i,
   /^changeme$/i,
@@ -75,7 +78,23 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
       id: "env:studio-api-token-recommended",
       severity: "warning",
       envKey: "STUDIO_API_TOKEN",
-      message: "STUDIO_API_TOKEN nicht gesetzt — empfohlen für Backup, Restore, Settings und AI-APIs.",
+      message: runtime.isProduction
+        ? "STUDIO_API_TOKEN nicht gesetzt — in Production dringend empfohlen für Backup, Restore, Settings und AI-APIs."
+        : "STUDIO_API_TOKEN nicht gesetzt — empfohlen für Backup, Restore, Settings und AI-APIs.",
+    });
+  }
+
+  const mediaSigningSecret = env.UWE_MEDIA_SIGNING_SECRET?.trim();
+  if (
+    runtime.isProduction &&
+    (!mediaSigningSecret || mediaSigningSecret === DEV_MEDIA_SIGNING_SECRET)
+  ) {
+    issues.push({
+      id: "env:media-signing-secret",
+      severity: "error",
+      envKey: "UWE_MEDIA_SIGNING_SECRET",
+      message:
+        "UWE_MEDIA_SIGNING_SECRET fehlt oder nutzt den Dev-Default — in Production ein starkes Zufallssecret setzen, sonst sind signierte Medien-URLs fälschbar.",
     });
   }
 

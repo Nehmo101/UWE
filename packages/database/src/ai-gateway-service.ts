@@ -242,6 +242,9 @@ function parsePrivacyRules(value: unknown): Record<AiFeatureCategory, AiPrivacyL
       rules[key as AiFeatureCategory] = level;
     }
   }
+  // Defense-in-depth: personal_brain is permanently local-only, even if the
+  // stored DB row was tampered with (PATCH already enforces this on write).
+  rules.personal_brain = "CLOUD_FORBIDDEN";
   return rules;
 }
 function parseFeatureModelEntry(value: unknown): AiFeatureModelConfig | null {
