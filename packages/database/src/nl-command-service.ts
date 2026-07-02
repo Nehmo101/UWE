@@ -1,4 +1,4 @@
-import type { WorldMemberRole } from "@uwe/auth";
+import type { UweRole, WorldMemberRole } from "@uwe/auth";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "./client";
 import { logAuditEvent, type AuditRequestContext } from "./audit-log-service";
@@ -10,11 +10,14 @@ import {
   parseWorldMemberRoleToken,
   resolveUserQuery,
   resolveWorldQuery,
+  userRoleLabel,
   worldMemberRoleLabel,
 } from "./nl-command-entity-resolver";
+import { slugifyPageTitle } from "./page-templates";
 import { getSecretsStatusSnapshot } from "./secrets-status-service";
 import { createSettingsService } from "./settings-service";
 import { createUserService } from "./user-service";
+import { createWorldCreationService } from "./world-creation-service";
 import type { UserRole } from "./generated/prisma/client";
 
 /** Whitelisted admin command intents — unknown commands are rejected. */
@@ -33,9 +36,30 @@ export const NL_COMMAND_INTENTS = [
   "disable_user",
   "enable_user",
   "invite_user",
+  "create_world",
+  "set_user_role",
 ] as const;
 
 export type NlCommandIntentName = (typeof NL_COMMAND_INTENTS)[number];
+
+/**
+ * Global roles assignable via NL command — whitelist derived from the auth role
+ * model. "owner" is deliberately excluded: owner promotion/demotion is never
+ * allowed through the command channel.
+ */
+export const NL_GLOBAL_ROLE_TARGETS = [
+  "admin",
+  "dm",
+  "player",
+  "readonly",
+  "guest",
+] as const satisfies readonly UweRole[];
+
+export type NlGlobalRoleTarget = (typeof NL_GLOBAL_ROLE_TARGETS)[number];
+
+function isAllowedGlobalRoleTarget(role: string): role is NlGlobalRoleTarget {
+  return (NL_GLOBAL_ROLE_TARGETS as readonly string[]).includes(role);
+}
 
 export type NlCommandIntent =
   | {
@@ -62,7 +86,9 @@ export type NlCommandIntent =
       role?: UserRole;
       worldQuery?: string;
       worldRole?: WorldMemberRole;
-    };
+    }
+  | { intent: "create_world"; name: string }
+  | { intent: "set_user_role"; userQuery: string; role: UserRole };
 
 export type ParseCommandResult =
   | { ok: true; intent: NlCommandIntent; requiresConfirmation: boolean }
@@ -134,6 +160,10 @@ function canonicalIntentPayload(intent: NlCommandIntent): string {
       return `enable_user:${intent.userQuery}`;
     case "invite_user":
       return `invite_user:${intent.email}:${intent.displayName ?? ""}:${intent.role ?? ""}:${intent.worldQuery ?? ""}:${intent.worldRole ?? ""}`;
+    case "create_world":
+      return `create_world:${intent.name}`;
+    case "set_user_role":
+      return `set_user_role:${intent.userQuery}:${intent.role}`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -154,7 +184,9 @@ export function isMutationIntent(intent: NlCommandIntent): boolean {
     intent.intent === "remove_world_membership" ||
     intent.intent === "disable_user" ||
     intent.intent === "enable_user" ||
-    intent.intent === "invite_user"
+    intent.intent === "invite_user" ||
+    intent.intent === "create_world" ||
+    intent.intent === "set_user_role"
   );
 }
 
@@ -319,6 +351,35 @@ function extractWorldQuery(text: string): string | null {
   return plain?.[1]?.trim() ?? null;
 }
 
+const USER_QUERY_STOPWORDS = new Set([
+  "die",
+  "der",
+  "das",
+  "den",
+  "dem",
+  "des",
+  "the",
+  "a",
+  "an",
+  "ein",
+  "eine",
+  "einen",
+  "einem",
+  "einer",
+  "user",
+  "benutzer",
+  "nutzer",
+  "account",
+  "globale",
+  "global",
+  "rolle",
+  "role",
+]);
+
+function isUserQueryStopword(token: string): boolean {
+  return USER_QUERY_STOPWORDS.has(token.toLowerCase());
+}
+
 function extractUserQuery(text: string): string | null {
   const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w+/);
   if (emailMatch?.[0]) {
@@ -330,11 +391,25 @@ function extractUserQuery(text: string): string | null {
     return userLabel[1].replace(/[.,;]+$/, "");
   }
 
-  const machUser = text.match(
-    /\b(?:mach|set|assign|weise)\s+([a-zäöüß0-9._-]+)/i,
+  const roleOfUser = text.match(
+    /\b(?:rolle\s+von|role\s+of)\s+([a-zäöüß0-9._-]+)/i,
   );
-  if (machUser?.[1]) {
+  if (roleOfUser?.[1] && !isUserQueryStopword(roleOfUser[1])) {
+    return roleOfUser[1];
+  }
+
+  const machUser = text.match(
+    /\b(?:mach|mache|make|setze|set|assign|weise)\s+([a-zäöüß0-9._-]+)/i,
+  );
+  if (machUser?.[1] && !isUserQueryStopword(machUser[1])) {
     return machUser[1];
+  }
+
+  const promoteUser = text.match(
+    /\b(?:promote|befördere|ernenne)\s+([a-zäöüß0-9._-]+)/i,
+  );
+  if (promoteUser?.[1] && !isUserQueryStopword(promoteUser[1])) {
+    return promoteUser[1];
   }
 
   const removeUser = text.match(
@@ -484,12 +559,110 @@ function parseInviteUserIntent(text: string): NlCommandIntent | null {
   };
 }
 
+/** Extract the new world name from the raw (case-preserving) command text. */
+function extractNewWorldName(rawText: string): string | null {
+  const quoted = rawText.match(/\b(?:welt|world)\s+(?:namens\s+|named\s+)?(["'])([^"']+)\1/i);
+  if (quoted?.[2]) {
+    return quoted[2].trim() || null;
+  }
+
+  const plain = rawText.match(/\b(?:welt|world)\s+(?:namens\s+|named\s+)?(.+)$/i);
+  if (!plain?.[1]) {
+    return null;
+  }
+  const name = plain[1]
+    .replace(/[.,;:!?]+$/, "")
+    .replace(/\s+(an|ab|anlegen|erstellen|erzeugen|create)$/i, "")
+    .trim();
+  return name || null;
+}
+
+function parseCreateWorldIntent(text: string, rawText: string): NlCommandIntent | null {
+  const patterns = [
+    /\b(erstelle|erstellen|erstell|lege|anlegen|create|neue?n?|new)\b.*\b(welt|world)\b/,
+    /\b(welt|world)\b.*\b(erstellen|anlegen|erzeugen|create)\b/,
+  ];
+  if (!matchesAny(text, patterns)) {
+    return null;
+  }
+
+  // Invite/role/membership commands may legitimately mention "Welt"/"world" —
+  // those belong to their own intents, never to world creation.
+  const conflicting = [
+    /\b(invite|einladen|einladung|lade)\b/,
+    /\b(rolle|role|weise|zuweisen|assign)\b/,
+    /\b(entferne|remove|mitglied|membership)\b/,
+    /[\w.+-]+@[\w.-]+\.\w+/,
+  ];
+  if (matchesAny(text, conflicting)) {
+    return null;
+  }
+
+  const name = extractNewWorldName(rawText);
+  if (!name) {
+    return null;
+  }
+
+  return { intent: "create_world", name };
+}
+
+const GLOBAL_ROLE_TOKENS =
+  "admin|administrator(?:in)?|dm|spielleiter(?:in)?|player|spieler(?:in)?|readonly|read[- ]only|guest|gast|owner|besitzer(?:in)?";
+
+function extractGlobalUserRole(text: string): UserRole | null {
+  const labeled = text.match(
+    new RegExp(
+      `\\b(?:zum|zur|zu|als|as|to|auf|rolle)\\s+(?:einem\\s+|einer\\s+|eine\\s+|ein\\s+)?(${GLOBAL_ROLE_TOKENS})\\b`,
+      "i",
+    ),
+  );
+  if (labeled?.[1]) {
+    return parseUserRoleToken(labeled[1]);
+  }
+
+  const make = text.match(
+    new RegExp(
+      `\\b(?:make|mach|mache)\\s+\\S+\\s+(?:an\\s+|a\\s+)?(${GLOBAL_ROLE_TOKENS})\\b`,
+      "i",
+    ),
+  );
+  if (make?.[1]) {
+    return parseUserRoleToken(make[1]);
+  }
+
+  return null;
+}
+
+function parseSetUserRoleIntent(text: string): NlCommandIntent | null {
+  const hasKeyword = matchesAny(text, [
+    /\b(mach|mache|make|setze|set|promote|befördere|ernenne|ändere|change)\b/,
+    /\b(globale?n?\s+rolle|global\s+role)\b/,
+  ]);
+  if (!hasKeyword) {
+    return null;
+  }
+
+  // World-scoped role changes belong to assign_world_role, not the global role.
+  if (extractWorldQuery(text)) {
+    return null;
+  }
+
+  const role = extractGlobalUserRole(text);
+  const userQuery = extractUserQuery(text);
+  if (!role || !userQuery) {
+    return null;
+  }
+
+  return { intent: "set_user_role", userQuery, role };
+}
+
 /**
  * Deterministic intent parser — regex/keyword whitelist only.
  * No LLM involvement; unknown input is rejected.
  */
 export function parseCommandIntent(text: string): ParseCommandResult {
   const normalized = normalizeText(text);
+  const rawText = text.trim().replace(/\s+/g, " ");
   if (!normalized) {
     return { ok: false, error: "Bitte einen Befehl eingeben.", code: "invalid" };
   }
@@ -538,11 +711,17 @@ export function parseCommandIntent(text: string): ParseCommandResult {
   const inviteUser = parseInviteUserIntent(normalized);
   if (inviteUser) candidates.push(inviteUser);
 
+  const createWorld = parseCreateWorldIntent(normalized, rawText);
+  if (createWorld) candidates.push(createWorld);
+
+  const setUserRole = parseSetUserRoleIntent(normalized);
+  if (setUserRole) candidates.push(setUserRole);
+
   if (candidates.length === 0) {
     return {
       ok: false,
       error:
-        "Unbekannter Befehl. Erlaubt: Wartungsmodus, Portal-/Studio-Sperre, Benutzerliste, Weltenliste, offene Bugs, Secrets-/Migrationsstatus, Weltrolle zuweisen, Benutzer einladen/deaktivieren/aktivieren, Mitgliedschaft entfernen.",
+        "Unbekannter Befehl. Erlaubt: Wartungsmodus, Portal-/Studio-Sperre, Benutzerliste, Weltenliste, offene Bugs, Secrets-/Migrationsstatus, Welt erstellen, Weltrolle zuweisen, globale Rolle setzen, Benutzer einladen/deaktivieren/aktivieren, Mitgliedschaft entfernen.",
       code: "unknown_command",
     };
   }
@@ -600,6 +779,10 @@ export function buildConfirmationMessage(intent: NlCommandIntent): string {
       return `Benutzer „${intent.userQuery}“ wieder aktivieren.`;
     case "invite_user":
       return `Einladung an ${intent.email} senden${intent.role ? ` (Rolle: ${intent.role})` : ""}${intent.worldQuery ? ` und Welt „${intent.worldQuery}“ zuweisen` : ""}.`;
+    case "create_world":
+      return `Neue Welt „${intent.name}“ anlegen (du wirst Welt-Besitzer, Standard-Seiten werden erstellt).`;
+    case "set_user_role":
+      return `Globale Rolle von „${intent.userQuery}“ auf ${userRoleLabel(intent.role)} setzen (systemweit — keine Welt-Rolle).`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -655,17 +838,27 @@ async function logNlCommandAudit(
     "disable_user",
     "enable_user",
     "invite_user",
+    "set_user_role",
   ]);
+  const worldIntents = new Set(["create_world"]);
   const targetType = userIntents.has(intent.intent)
     ? "user"
-    : isMutation
-      ? "settings"
-      : "system";
+    : worldIntents.has(intent.intent)
+      ? "world"
+      : isMutation
+        ? "settings"
+        : "system";
+  const targetId =
+    typeof extraMetadata?.userId === "string"
+      ? extraMetadata.userId
+      : worldIntents.has(intent.intent) && typeof extraMetadata?.worldId === "string"
+        ? extraMetadata.worldId
+        : undefined;
   await logAuditEvent(db, {
     actorUserId: ctx.actorUserId,
     action: "content_updated",
     targetType,
-    targetId: typeof extraMetadata?.userId === "string" ? extraMetadata.userId : undefined,
+    targetId,
     request: ctx.request,
     metadata: {
       source: "nl_command",
@@ -1113,6 +1306,144 @@ export class NlCommandService {
             user: invite.user,
             expiresAt: invite.expiresAt.toISOString(),
             worldAssignment,
+          },
+        };
+      }
+      case "create_world": {
+        const name = intent.name.trim();
+        if (!name) {
+          return {
+            ok: false,
+            error: "Bitte einen Namen für die neue Welt angeben.",
+            code: "invalid",
+          };
+        }
+        if (name.length > 120) {
+          return {
+            ok: false,
+            error: "Der Weltname ist zu lang (maximal 120 Zeichen).",
+            code: "invalid",
+          };
+        }
+
+        const slug = slugifyPageTitle(name).slice(0, 80) || "welt";
+        const existing = await this.db.world.findFirst({
+          where: { OR: [{ slug }, { name }] },
+          select: { id: true, name: true, slug: true },
+        });
+        if (existing) {
+          return {
+            ok: false,
+            error: `Eine Welt mit diesem Namen existiert bereits: „${existing.name}“ (Slug: ${existing.slug}). Bitte einen anderen Namen wählen.`,
+            code: "invalid",
+          };
+        }
+
+        const world = await createWorldCreationService(this.db).createWorldForUser(
+          ctx.actorUserId,
+          { name },
+        );
+        const summary = `Welt „${world.name}“ wurde erstellt (Slug: ${world.slug}).`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          worldId: world.id,
+          slug: world.slug,
+          templateId: world.templateId,
+          seededPageCount: world.seededPageCount,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: {
+            id: world.id,
+            name: world.name,
+            slug: world.slug,
+            templateId: world.templateId,
+            seededPageCount: world.seededPageCount,
+          },
+        };
+      }
+      case "set_user_role": {
+        if (!isAllowedGlobalRoleTarget(intent.role)) {
+          return {
+            ok: false,
+            error: `Rolle „${intent.role}“ kann nicht per NL-Befehl vergeben werden. Erlaubt: ${NL_GLOBAL_ROLE_TARGETS.join(", ")}.`,
+            code: "forbidden",
+          };
+        }
+
+        const userResult = await resolveUserQuery(this.db, intent.userQuery);
+        if (!userResult.ok) {
+          return {
+            ok: false,
+            error: formatEntityResolveError("Benutzer", userResult),
+            code: userResult.code === "ambiguous" ? "ambiguous" : "invalid",
+          };
+        }
+
+        if (userResult.entity.id === ctx.actorUserId) {
+          return {
+            ok: false,
+            error: "Du kannst deine eigene globale Rolle nicht per NL-Befehl ändern.",
+            code: "forbidden",
+          };
+        }
+
+        const userService = createUserService(this.db);
+        const target = await userService.getUserById(userResult.entity.id);
+        if (!target) {
+          return { ok: false, error: "Benutzer nicht gefunden.", code: "invalid" };
+        }
+        if (target.role === "owner") {
+          return {
+            ok: false,
+            error: "Die globale Rolle eines Owners kann nicht per NL-Befehl geändert werden.",
+            code: "forbidden",
+          };
+        }
+        if (target.role === intent.role) {
+          const summary = `${target.displayName} hat bereits die globale Rolle ${userRoleLabel(intent.role)}.`;
+          await logNlCommandAudit(this.db, ctx, intent, summary, {
+            userId: target.id,
+            role: target.role,
+            changed: false,
+          });
+          return {
+            ok: true,
+            intent: intent.intent,
+            summary,
+            data: { userId: target.id, displayName: target.displayName, role: target.role, changed: false },
+          };
+        }
+
+        try {
+          await userService.updateUser(target.id, { role: intent.role }, ctx.actorUserId);
+        } catch (error) {
+          if (error instanceof Error && error.message === "LAST_OWNER_ROLE") {
+            return {
+              ok: false,
+              error: "Der letzte aktive Owner kann seine Rolle nicht verlieren.",
+              code: "forbidden",
+            };
+          }
+          throw error;
+        }
+
+        const summary = `${target.displayName} hat jetzt die globale Rolle ${userRoleLabel(intent.role)} (systemweit).`;
+        await logNlCommandAudit(this.db, ctx, intent, summary, {
+          userId: target.id,
+          fromRole: target.role,
+          toRole: intent.role,
+        });
+        return {
+          ok: true,
+          intent: intent.intent,
+          summary,
+          data: {
+            userId: target.id,
+            displayName: target.displayName,
+            fromRole: target.role,
+            toRole: intent.role,
           },
         };
       }

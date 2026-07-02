@@ -37,6 +37,10 @@ function isNlCommandIntent(value: unknown): value is NlCommandIntent {
       return typeof record.userQuery === "string";
     case "invite_user":
       return typeof record.email === "string";
+    case "create_world":
+      return typeof record.name === "string";
+    case "set_user_role":
+      return typeof record.userQuery === "string" && typeof record.role === "string";
     default:
       return true;
   }
