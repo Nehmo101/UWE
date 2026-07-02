@@ -76,6 +76,28 @@ export interface TagCoverageStats {
   totalEntityTags: number;
 }
 
+export interface TagBackfillVerificationMiss {
+  entityId: string;
+  title: string;
+  worldId?: string | null;
+  missingTagKeys: string[];
+}
+
+export interface TagBackfillVerificationTypeResult {
+  entityType: EntityTagEntityType;
+  entitiesWithJsonTags: number;
+  entitiesFullyCovered: number;
+  missing: TagBackfillVerificationMiss[];
+}
+
+export interface TagBackfillVerificationResult {
+  ok: boolean;
+  totalEntitiesWithJsonTags: number;
+  totalEntitiesMissing: number;
+  totalMissingLinks: number;
+  types: TagBackfillVerificationTypeResult[];
+}
+
 const TAG_BACKFILL_ENTITY_TYPES = [
   "page",
   "asset",
@@ -223,6 +245,17 @@ async function loadJsonTagEntities(
   }
 }
 
+/**
+ * Dual-write note (Backlog F1/4.6): merge operations still write the merged
+ * tag list into BOTH the legacy Json columns/metadata AND EntityTag. The Json
+ * write must stay until (1) the entity save paths (repository/asset-repository/
+ * soundboard/life-admin-service) write EntityTag instead of only Json, and
+ * (2) the Json readers (search-service, entity read paths, portal) are moved
+ * to EntityTag. Until then Json is still the system of record on entity writes
+ * and `backfillEntityTagsFromJson` re-derives EntityTag from Json — dropping
+ * the Json write here would let a later backfill roll back merges.
+ * Completeness check: `verifyTagBackfill` / scripts/verify-tag-backfill.ts.
+ */
 async function syncEntityTagsForJsonEntity(
   db: PrismaClient,
   entityType: TagBackfillEntityType,
@@ -907,6 +940,87 @@ export async function backfillEntityTagsFromJson(
   return result;
 }
 
+/**
+ * Verify EntityTag backfill completeness against the legacy Json tag arrays.
+ *
+ * Compares every legacy Json tag (normalized via `normalizeTagKey`) with the
+ * EntityTag rows of the same entity and reports each entity whose Json tags
+ * are not fully represented in EntityTag. Direction is Json -> EntityTag only:
+ * additional EntityTag rows (e.g. created after merges) are fine.
+ *
+ * Matching is done per entityType + entityId (worldId intentionally not
+ * matched — completeness means "the link row exists").
+ */
+export async function verifyTagBackfill(
+  db: PrismaClient,
+  options: { worldId?: string } = {},
+): Promise<TagBackfillVerificationResult> {
+  const types: TagBackfillVerificationTypeResult[] = [];
+  let totalEntitiesWithJsonTags = 0;
+  let totalEntitiesMissing = 0;
+  let totalMissingLinks = 0;
+
+  for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
+    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    const links = await db.entityTag.findMany({
+      where: { entityType },
+      select: { entityId: true, tag: { select: { key: true } } },
+    });
+
+    const linkedKeysByEntity = new Map<string, Set<string>>();
+    for (const link of links) {
+      let keys = linkedKeysByEntity.get(link.entityId);
+      if (!keys) {
+        keys = new Set<string>();
+        linkedKeysByEntity.set(link.entityId, keys);
+      }
+      keys.add(link.tag.key);
+    }
+
+    const typeResult: TagBackfillVerificationTypeResult = {
+      entityType,
+      entitiesWithJsonTags: 0,
+      entitiesFullyCovered: 0,
+      missing: [],
+    };
+
+    for (const row of rows) {
+      const jsonKeys = [
+        ...new Set(parseStringArray(row.tags).map(normalizeTagKey).filter(Boolean)),
+      ];
+      if (jsonKeys.length === 0) continue;
+
+      typeResult.entitiesWithJsonTags++;
+      const linkedKeys = linkedKeysByEntity.get(row.id);
+      const missingTagKeys = jsonKeys.filter((key) => !linkedKeys?.has(key));
+      if (missingTagKeys.length === 0) {
+        typeResult.entitiesFullyCovered++;
+        continue;
+      }
+
+      typeResult.missing.push({
+        entityId: row.id,
+        title: row.title,
+        worldId: row.worldId ?? null,
+        missingTagKeys,
+      });
+      totalMissingLinks += missingTagKeys.length;
+    }
+
+    totalEntitiesWithJsonTags += typeResult.entitiesWithJsonTags;
+    totalEntitiesMissing += typeResult.missing.length;
+    types.push(typeResult);
+  }
+
+  return {
+    ok: totalMissingLinks === 0,
+    totalEntitiesWithJsonTags,
+    totalEntitiesMissing,
+    totalMissingLinks,
+    types,
+  };
+}
+
 export async function getTagCoverageStats(
   db: PrismaClient,
   options: { worldId?: string } = {},
@@ -959,6 +1073,7 @@ export function createTagService(db: PrismaClient) {
       mergeTags(db, options),
     backfillFromJson: (options?: { worldId?: string; dryRun?: boolean }) =>
       backfillEntityTagsFromJson(db, options),
+    verifyBackfill: (options?: { worldId?: string }) => verifyTagBackfill(db, options),
     getCoverageStats: (options?: { worldId?: string }) => getTagCoverageStats(db, options),
     normalizeKey: normalizeTagKey,
     canonicalize: canonicalizeTag,

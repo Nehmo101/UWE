@@ -16,6 +16,7 @@ import {
   suggestTagMerges,
   backfillEntityTagsFromJson,
   getTagCoverageStats,
+  verifyTagBackfill,
 } from "./tag-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { toPrismaJsonValue } from "./json-utils";
@@ -203,6 +204,77 @@ describe("tag service", () => {
 
     const linked = await entityTags.listTagsForEntity("page", page.id);
     assert.ok(linked.some((tag) => tag.label === "primary"));
+
+    await db.page.delete({ where: { id: page.id } });
+  });
+
+  it("verifies backfill completeness and reports missing EntityTag links", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const page = await repo.createPage({
+      worldId,
+      title: "Verify Gap Page",
+      slug: "verify-gap-page",
+      type: "note",
+      tags: ["Verify Gap Tag"],
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    const before = await verifyTagBackfill(db, { worldId });
+    assert.equal(before.ok, false);
+    const pageStats = before.types.find((entry) => entry.entityType === "page");
+    assert.ok(pageStats);
+    const miss = pageStats!.missing.find((entry) => entry.entityId === page.id);
+    assert.ok(miss, "page without EntityTag rows must be reported as missing");
+    assert.deepEqual(miss!.missingTagKeys, ["verify-gap-tag"]);
+    assert.ok(before.totalMissingLinks >= 1);
+
+    await backfillEntityTagsFromJson(db, { worldId });
+
+    const after = await verifyTagBackfill(db, { worldId });
+    assert.equal(after.ok, true);
+    assert.equal(after.totalEntitiesMissing, 0);
+    assert.equal(after.totalMissingLinks, 0);
+    const pageStatsAfter = after.types.find((entry) => entry.entityType === "page");
+    assert.ok(pageStatsAfter!.entitiesWithJsonTags >= 1);
+    assert.equal(pageStatsAfter!.entitiesWithJsonTags, pageStatsAfter!.entitiesFullyCovered);
+
+    await db.page.delete({ where: { id: page.id } });
+  });
+
+  it("keeps json and EntityTag in sync through merges (dual-write regression)", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const entityTags = createEntityTagService(db);
+    const page = await repo.createPage({
+      worldId,
+      title: "Dual Write Merge Page",
+      slug: "dual-write-merge-page",
+      type: "note",
+      tags: ["dualwrite-old"],
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+
+    await backfillEntityTagsFromJson(db, { worldId });
+
+    const result = await mergeTags(db, {
+      worldId,
+      fromTags: ["dualwrite-old"],
+      toTag: "dualwrite-new",
+    });
+    assert.ok(result.updatedEntities >= 1);
+
+    const updated = await db.page.findUnique({
+      where: { id: page.id },
+      select: { tags: true },
+    });
+    assert.deepEqual(updated!.tags, ["dualwrite-new"]);
+    const linked = await entityTags.listTagsForEntity("page", page.id);
+    assert.ok(linked.some((tag) => tag.label === "dualwrite-new"));
+    assert.ok(!linked.some((tag) => tag.label === "dualwrite-old"));
+
+    const verification = await verifyTagBackfill(db, { worldId });
+    assert.equal(verification.ok, true);
 
     await db.page.delete({ where: { id: page.id } });
   });
