@@ -161,6 +161,36 @@ jobs:
       - name: Enforce runtime budgets
         run: node scripts/perf-budget-check.mjs --require
 
+  e2e-auth-smoke:
+    # Auth regression smoke on every push to main — the full E2E suite
+    # stays on schedule/dispatch (see e2e job above).
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Auth E2E smoke tests
+        run: pnpm test:e2e e2e/studio-auth.spec.ts e2e/portal-auth.spec.ts
+        env:
+          CI: true
+
   postgres-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
