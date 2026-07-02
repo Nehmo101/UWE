@@ -60,6 +60,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["activity", "audit", "verlauf"],
       },
       {
+        id: "system-command-center",
+        label: "Command Center",
+        href: "/command",
+        icon: "terminal",
+        group: "Übersicht",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["command", "nl", "befehl", "intent", "admin"],
+      },
+      {
         id: "system-navigation",
         label: "Navigation",
         href: "/system/navigation",

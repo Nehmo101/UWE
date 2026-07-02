@@ -87,29 +87,17 @@ export {
 /** Package export path for design v2 CSS (import in app layouts). */
 export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
 
-/** @deprecated Legacy shared-ui shells — new product code uses app-local shells. */
+/** @deprecated Legacy shared-ui shell widgets — new product code uses app-local shells. */
 export {
-  StudioShell,
-  StudioNavSidebar,
-  PortalShell,
-  PortalNavSidebar,
-  AdminShell,
   AdminStatusCard,
   AdminStatusGrid,
-  StudioIconRail,
-  STUDIO_RAIL_ITEMS,
-  StudioCockpitTopBar,
   StudioStatusFooter,
   WorldCockpitTabs,
   WorldCockpitCard,
-  WorldCockpitGrid,
   WorldCockpitHeader,
   WorldCockpitTag,
   type CockpitStatusItem,
   type CockpitStatusLevel,
-  type StudioShellProps,
-  type PortalShellProps,
-  type AdminShellProps,
 } from "./shells";
 
 export {

@@ -297,7 +297,8 @@ No active navigation entry; no public „Welten entdecken“ flow. Route files k
 | Item | Notes |
 |---|---|
 | Physical printer E2E on RTX host | CI UI smoke in `e2e/studio-label-print.spec.ts`; physical flow skipped unless `UWE_E2E_LABEL_PRINT=1` — manual QA in `docs/rtx-connector.md` |
-| `packages/shared-ui/src/shells/*` (V1) | Still used by WorldCockpit widgets, AdminStatusCard, StudioStatusFooter — retire when ref=0 after settings/wiki migration |
+| `packages/shared-ui/src/shells/*` (V1) | **partially retired** — `StudioShell`, `PortalShell`, `AdminShell`, `StudioIconRail`/`STUDIO_RAIL_ITEMS`, `StudioCockpitTopBar`, `WorldCockpitGrid` deleted (ref=0); retained: `WorldCockpitCard/Header/Tag/Tabs`, `AdminStatusCard/Grid`, `StudioStatusFooter` (still imported by Studio pages) |
+| Studio `/command` (NL Admin Command Center) | **linked in nav** — `system-nav.ts` entry `system-command-center` (Übersicht, owner/admin) |
 
 ### Post-Wave 4 cleanup (shipped)
 
