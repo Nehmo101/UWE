@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GlobalSearchForm, PageTypeBadge, VisibilityBadge } from "@uwe/shared-ui";
+import {
+  GlobalSearchForm,
+  PageTypeBadge,
+  QuestStatusBadge,
+  VisibilityBadge,
+} from "@uwe/shared-ui";
 import {
   createAuthService,
   createPrismaClient,
@@ -38,16 +43,6 @@ function matchesStatusFilter(
     return isOpenQuest(questStatus);
   }
   return questStatus === filter;
-}
-
-function statusLabel(questStatus: QuestLifecycleStatus | null | undefined): string {
-  if (isOpenQuest(questStatus)) {
-    return "Offen";
-  }
-  if (questStatus) {
-    return QUEST_LIFECYCLE_LABELS[questStatus];
-  }
-  return "Offen";
 }
 
 export default async function AuthWorldQuestsPage({ params, searchParams }: Props) {
@@ -147,7 +142,7 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
               <span className="auth-page-list-badges">
                 <PageTypeBadge type={page.type} />
                 <VisibilityBadge visibility={page.visibility} />
-                <span className="auth-muted">{statusLabel(page.questStatus)}</span>
+                <QuestStatusBadge status={page.questStatus ?? null} />
               </span>
               {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
             </Link>

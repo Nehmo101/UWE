@@ -128,6 +128,26 @@ describe("UWE global search", () => {
 
     await repo.createPage({
       worldId,
+      title: "Der gefallene Turm",
+      slug: "gefallener-turm",
+      type: "quest",
+      summary: "Diese Quest wurde bereits abgeschlossen.",
+      visibility: "player_visible",
+      publishStatus: "published",
+      questStatus: "completed",
+      tags: ["quest"],
+      contentBlocks: [
+        {
+          type: "player_text",
+          sortOrder: 0,
+          visibility: "player_visible",
+          content: "Der Turm wurde befreit.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId,
       title: "Spieler-NPC Elara",
       slug: "elara",
       type: "npc",
@@ -228,6 +248,48 @@ describe("UWE global search", () => {
     });
     assert.ok(byQuestFilter.some((result) => result.slug === "verlorene-reliquie"));
     assert.equal(byQuestFilter[0]?.type, "quest");
+    assert.equal(byQuestFilter[0]?.questStatus, "open");
+
+    await db.$disconnect();
+  });
+
+  it("filters quests by lifecycle status", async () => {
+    const db = createPrismaClient(databaseUrl);
+
+    const completedOnly = await searchForWikiContext(db, "dm", {
+      query: "quest",
+      worldSlug,
+      entityFilter: "quests",
+      questStatusFilter: "completed",
+      urlMode: "studio",
+    });
+    assert.ok(completedOnly.some((result) => result.slug === "gefallener-turm"));
+    assert.equal(
+      completedOnly.some((result) => result.slug === "verlorene-reliquie"),
+      false,
+    );
+    assert.ok(completedOnly.every((result) => result.questStatus === "completed"));
+
+    const openOnly = await searchForWikiContext(db, "dm", {
+      query: "quest",
+      worldSlug,
+      entityFilter: "quests",
+      questStatusFilter: "open",
+      urlMode: "studio",
+    });
+    assert.ok(openOnly.some((result) => result.slug === "verlorene-reliquie"));
+    assert.equal(
+      openOnly.some((result) => result.slug === "gefallener-turm"),
+      false,
+    );
+
+    const nonQuests = await searchForWikiContext(db, "dm", {
+      query: "Marktplatz",
+      worldSlug,
+      questStatusFilter: "open",
+      urlMode: "studio",
+    });
+    assert.equal(nonQuests.length, 0);
 
     await db.$disconnect();
   });

@@ -1,8 +1,20 @@
 "use client";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CanonicalBadge, PageTypeBadge, PublishBadge, VisibilityBadge } from "@uwe/shared-ui";
-import type { CanonicalStatus, PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+import {
+  CanonicalBadge,
+  PageTypeBadge,
+  PublishBadge,
+  QuestStatusBadge,
+  VisibilityBadge,
+} from "@uwe/shared-ui";
+import type {
+  CanonicalStatus,
+  PageType,
+  PublishStatus,
+  QuestLifecycleStatus,
+  Visibility,
+} from "@uwe/database/enums";
 import { DataTable } from "../ui/data-table";
 
 export interface WikiPageRow {
@@ -13,6 +25,8 @@ export interface WikiPageRow {
   visibility: Visibility;
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
+  /** Quest lifecycle status for quest pages; `null` counts as open. */
+  questStatus?: QuestLifecycleStatus | null;
   tags: string[];
   updatedAt: string;
 }
@@ -37,7 +51,15 @@ const columns: ColumnDef<WikiPageRow>[] = [
     accessorKey: "type",
     header: "Typ",
     meta: { label: "Typ" },
-    cell: ({ row }) => <PageTypeBadge type={row.original.type} />,
+    cell: ({ row }) =>
+      row.original.type === "quest" ? (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <PageTypeBadge type={row.original.type} />
+          <QuestStatusBadge status={row.original.questStatus ?? null} />
+        </span>
+      ) : (
+        <PageTypeBadge type={row.original.type} />
+      ),
   },
   {
     accessorKey: "tags",

@@ -1,9 +1,5 @@
-import { CollapsibleSection } from "@uwe/shared-ui";
-import {
-  getAppRepository,
-  QUEST_LIFECYCLE_LABELS,
-  type QuestLifecycleStatus,
-} from "@uwe/database/server";
+import { CollapsibleSection, QuestStatusBadge } from "@uwe/shared-ui";
+import { getAppRepository, QUEST_LIFECYCLE_LABELS } from "@uwe/database/server";
 import { updateQuestStatusAction } from "@/app/worlds/[worldSlug]/quest-status-actions";
 
 interface Props {
@@ -14,7 +10,7 @@ interface Props {
 }
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Offen (Standard)" },
+  { value: "", label: "Offen (Standard, kein Status gesetzt)" },
   ...Object.entries(QUEST_LIFECYCLE_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
@@ -27,7 +23,12 @@ export async function QuestStatusEditPanel({ worldSlug, pageId, pageSlug, catego
     <CollapsibleSection title="Quest-Status" defaultOpen>
       <p className="uwe-hint">
         Steuert, ob die Quest im Portal-Questlog als offen, erledigt oder gescheitert erscheint.
-        Unbekannter Status zählt als offen.
+        Unbekannter Status zählt als offen. Statuswechsel sind jederzeit in beide Richtungen
+        möglich (z.&nbsp;B. gescheiterte Quest wieder öffnen).
+      </p>
+
+      <p className="uwe-hint">
+        Aktueller Status: <QuestStatusBadge status={currentStatus} />
       </p>
 
       <form action={updateQuestStatusAction} className="uwe-v2-form">
@@ -49,12 +50,6 @@ export async function QuestStatusEditPanel({ worldSlug, pageId, pageSlug, catego
             ))}
           </select>
         </label>
-
-        {currentStatus && (
-          <p className="uwe-hint">
-            Aktuell: {QUEST_LIFECYCLE_LABELS[currentStatus as QuestLifecycleStatus]}
-          </p>
-        )}
 
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Quest-Status speichern

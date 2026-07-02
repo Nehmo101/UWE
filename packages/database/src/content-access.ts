@@ -171,6 +171,7 @@ export interface SearchIndexPageInput extends ContentAccessFields {
   tags: unknown;
   aliases: unknown;
   canonicalStatus: Page["canonicalStatus"];
+  questStatus?: Page["questStatus"];
   contentBlocks: ContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;

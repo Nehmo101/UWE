@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./AppShell";
 import { MobileFilterSheet } from "./MobileComponents";
-import { PageTypeBadge, PUBLISH_LABELS, VisibilityBadge } from "./StatusBadges";
-import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+import { PageTypeBadge, PUBLISH_LABELS, QuestStatusBadge, VisibilityBadge } from "./StatusBadges";
+import type {
+  PageType,
+  PublishStatus,
+  QuestLifecycleStatus,
+  Visibility,
+} from "@uwe/database/enums";
 
 const MATCH_FIELD_LABELS: Record<string, string> = {
   title: "Titel",
@@ -23,6 +28,8 @@ export interface SearchResultViewModel {
   campaignName: string | null;
   visibility: Visibility;
   publishStatus?: PublishStatus;
+  /** Quest lifecycle status; `null` counts as open. Only rendered for quest results. */
+  questStatus?: QuestLifecycleStatus | null;
   href: string;
   matchedFields: string[];
   snippet: string | null;
@@ -77,6 +84,9 @@ export function SearchResultsList({
                 </h2>
                 <div className="uwe-search-result-badges">
                   <PageTypeBadge type={result.type} />
+                  {result.type === "quest" && result.questStatus !== undefined && (
+                    <QuestStatusBadge status={result.questStatus} />
+                  )}
                   {showVisibility && <VisibilityBadge visibility={result.visibility} />}
                 </div>
               </header>

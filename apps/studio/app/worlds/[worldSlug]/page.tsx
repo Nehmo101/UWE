@@ -105,6 +105,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     visibility: page.visibility,
     publishStatus: page.publishStatus,
     canonicalStatus: page.canonicalStatus,
+    questStatus: page.questStatus ?? null,
     tags: parseStringArray(page.tags),
     updatedAt: page.updatedAt.toISOString(),
   }));
