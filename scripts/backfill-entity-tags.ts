@@ -5,7 +5,9 @@
  * Usage:
  *   pnpm tsx scripts/backfill-entity-tags.ts [--dry-run] [--world-id=<id>]
  */
-import { createPrismaClient, backfillEntityTagsFromJson } from "@uwe/database/server";
+import "dotenv/config";
+import { createPrismaClient } from "../packages/database/src/client";
+import { backfillEntityTagsFromJson } from "../packages/database/src/tag-service";
 
 function parseArgs(argv: string[]) {
   let dryRun = false;
