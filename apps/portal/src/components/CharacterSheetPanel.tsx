@@ -1,4 +1,8 @@
-import type { LevelUpSuggestions, PortalCharacterView } from "@uwe/database/server";
+import type {
+  LevelUpSuggestions,
+  PlayerSafeInventoryItemView,
+  PortalCharacterView,
+} from "@uwe/database/server";
 import {
   CharacterDerivedStatsSection,
   CharacterLevelUpPanel,
@@ -14,6 +18,7 @@ import {
   togglePreparedAction,
   updateCharacterSheetAction,
 } from "../../app/character-sheet-actions";
+import { returnTreasuryItemFromCharacterAction } from "../../app/treasury-actions";
 
 interface CharacterSheetPanelProps {
   worldSlug: string;
@@ -22,6 +27,7 @@ interface CharacterSheetPanelProps {
   returnPath: string;
   canEdit: boolean;
   levelUpSuggestions?: LevelUpSuggestions | null;
+  inventoryItems?: PlayerSafeInventoryItemView[];
 }
 
 const ABILITY_LABELS: Record<string, string> = {
@@ -44,6 +50,7 @@ export function CharacterSheetPanel({
   returnPath,
   canEdit,
   levelUpSuggestions,
+  inventoryItems = [],
 }: CharacterSheetPanelProps) {
   const { sheet } = character;
   const printUrl = `/api/worlds/${worldSlug}/characters/print?characterId=${encodeURIComponent(character.id)}`;
@@ -183,6 +190,37 @@ export function CharacterSheetPanel({
       ) : (
         <p className="auth-muted">Nur der Charaktereigentümer kann die Werte bearbeiten.</p>
       )}
+
+      <section className="auth-block">
+        <h3>Inventar ({inventoryItems.length})</h3>
+        {inventoryItems.length === 0 ? (
+          <p className="auth-muted">Keine Gegenstände im Inventar.</p>
+        ) : (
+          <ul className="auth-notes-list">
+            {inventoryItems.map((item) => (
+              <li key={item.id} className="auth-note-item">
+                <header className="auth-note-header">
+                  <strong>
+                    {item.name}
+                    {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                  </strong>
+                </header>
+                {item.notes && <p className="auth-note-content">{item.notes}</p>}
+                {canEdit && (
+                  <form action={returnTreasuryItemFromCharacterAction}>
+                    <input type="hidden" name="worldSlug" value={worldSlug} />
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <input type="hidden" name="returnPath" value={returnPath} />
+                    <button type="submit" className="auth-btn auth-btn-small">
+                      Zurück in die Schatzkammer
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <CharacterSpellSection
         spells={character.spells}

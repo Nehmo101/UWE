@@ -8,7 +8,10 @@ import {
 import {
   buildLevelUpSuggestions,
   createCharacterService,
+  createPartyTreasuryService,
   createPrismaClient,
+  getInventoryItemDmNotes,
+  isInventoryItemDmOnly,
   type PortalCharacterView,
   toPortalCharacterView,
 } from "@uwe/database/server";
@@ -46,6 +49,9 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
   const db = createPrismaClient();
   const characters = createCharacterService(db);
   const characterRecord = await characters.getByPageId(pageId);
+  const inventoryItems = characterRecord
+    ? await createPartyTreasuryService(db).listItemsForCharacter(characterRecord.id)
+    : [];
   await db.$disconnect();
 
   if (!characterRecord) {
@@ -162,6 +168,31 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
           Charakterbogen speichern
         </button>
       </form>
+
+      <section style={{ marginTop: "1rem" }}>
+        <h4 style={{ marginBottom: "0.35rem" }}>Inventar ({inventoryItems.length})</h4>
+        {inventoryItems.length === 0 ? (
+          <p className="uwe-hint">Keine Gegenstände im Inventar.</p>
+        ) : (
+          <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+            {inventoryItems.map((item) => {
+              const dmNotes = getInventoryItemDmNotes(item);
+              return (
+                <li key={item.id}>
+                  {item.name}
+                  {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                  {isInventoryItemDmOnly(item) ? " (Nur DM)" : ""}
+                  {dmNotes ? ` — DM: ${dmNotes}` : ""}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="uwe-hint">
+          Items zuweisen/zurücklegen:{" "}
+          <a href={`/worlds/${worldSlug}/treasury`}>Gruppenschatz</a>
+        </p>
+      </section>
 
       <CharacterSpellSection
         spells={character.spells}

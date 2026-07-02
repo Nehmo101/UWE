@@ -15,11 +15,13 @@ import {
 import {
   createAuthService,
   createCharacterService,
+  createPartyTreasuryService,
   createPrismaClient,
   getAppRepository,
   buildLevelUpSuggestions,
   QUEST_LIFECYCLE_LABELS,
   type PageWithBlocks,
+  type PlayerSafeInventoryItemView,
   type PortalCharacterView,
   type LevelUpSuggestions,
   type QuestLifecycleStatus,
@@ -48,6 +50,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let canEditCharacter = false;
   let characterSheet: PortalCharacterView | null = null;
   let canEditSheet = false;
+  let characterInventory: PlayerSafeInventoryItemView[] = [];
   let levelUpSuggestions: LevelUpSuggestions | null = null;
   let campaignId: string | null = null;
   let blockHtml: string[] = [];
@@ -98,6 +101,11 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             ctx.effectiveRole === "player" &&
             !ctx.previewAsUserId,
         );
+        if (characterSheet) {
+          const treasury = createPartyTreasuryService(db);
+          characterInventory =
+            (await treasury.listItemsForCharacterForViewer(worldSlug, linked.id, ctx)) ?? [];
+        }
         levelUpSuggestions = buildLevelUpSuggestions({
           level: linked.level,
           classes: linked.classes,
@@ -162,6 +170,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           returnPath={returnPath}
           canEdit={canEditSheet}
           levelUpSuggestions={levelUpSuggestions}
+          inventoryItems={characterInventory}
         />
       )}
 
