@@ -9,8 +9,10 @@ narrow.
   set manually. Format: `uwec_…`.
 - The host stores **only the SHA-256 hash** (`Connector.tokenHash`), never the
   plaintext. The raw token is shown exactly once.
-- Every connector request carries `Authorization: Bearer uwec_…`. The host looks
-  the connector up by token hash; verification is timing-safe.
+- Every connector request carries `Authorization: Bearer uwec_…`. The host hashes
+  the presented token with SHA-256 and resolves the connector via a unique-index
+  lookup on that hash. A timing-safe compare helper exists for direct hash
+  comparisons; the request path itself relies on SHA-256 preimage resistance.
 - Rotating a token immediately invalidates the old one.
 
 ## Separation from user auth

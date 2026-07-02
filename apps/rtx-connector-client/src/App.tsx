@@ -472,7 +472,7 @@ export default function App() {
                 checked={config.autostartWindows}
                 onChange={(event) => updateConfig("autostartWindows", event.target.checked)}
               />
-              <span>Autostart bei Windows-Start (folgt)</span>
+              <span>Autostart bei Windows-Start</span>
             </label>
 
             <label className="connector-field connector-field-full">
