@@ -58,7 +58,7 @@ export default async function ImportCentralPage() {
           <ul className="uwe-import-context-list">
             <li>
               Unterstützt: KnoteForge JSON → Welt; Markdown/Obsidian/PDF → Life Brain, Capture oder
-              DnD-Seite.
+              DnD-Seite. Obsidian auch als Vault-ZIP oder Ordner-Upload.
             </li>
             <li>
               Jeder Import wird als Job protokolliert — Status:{" "}

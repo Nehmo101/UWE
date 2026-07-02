@@ -10,6 +10,13 @@ const standalone = getUweStandaloneNextConfig(appDir);
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,
+  experimental: {
+    // Import-Zentrale: PDF- und Obsidian-Vault-ZIP-Uploads laufen als Base64
+    // durch Server Actions (max. 10 MB Datei ≈ 13,4 MB Base64-Payload).
+    serverActions: {
+      bodySizeLimit: "15mb",
+    },
+  },
   transpilePackages: [
     "@uwe/shared-ui",
     "@uwe/ai-brain",
