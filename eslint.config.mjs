@@ -21,10 +21,11 @@ const config = [
     ignores: [
       "**/node_modules/**",
       "**/.next/**",
-      // Agent worktrees (Claude Code) live under .claude/worktrees/ and must
-      // never be linted by the parent checkout — root-relative ignores like
+      // Agent worktrees (Claude Code / Cursor) must never be linted by the
+      // parent checkout — root-relative ignores like
       // design-system/_ds_bundle.js don't match their copies.
       ".claude/**",
+      ".worktrees/**",
       "**/dist/**",
       "**/.turbo/**",
       "**/src-tauri/target/**",
