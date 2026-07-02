@@ -434,7 +434,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Charaktersheet (Voll 5e, Kern) | Beta — offen: SRD/Open5e-Zauberkatalog-Import, einzelne derived Stats (Folge-PR in Arbeit) | `Character`-Modell, `character-service.ts`, `character-level-up-service.ts`, `character-spell-service.ts`, Print-Route |
 | Party-Treasury / Inventar | Beta | `PartyTreasury`/`InventoryItem`, `party-treasury-service.ts`, `/worlds/[slug]/treasury` |
 | Strukturierte Generatoren | Beta — Quest-/Magic-Item-Builder-UI (strukturierte Felder) fehlen | `generator-service.ts` (`generate_npc`/`generate_quest`/`generate_item`, reviewRequired), `GeneratorPreset`/`GeneratorOutput`, `StructuredGeneratorSection` |
-| Statblock Studio (strukturiert) | Beta — visueller Feld-Editor fehlt (JSON-Textarea) | `StructuredStatblock`, `StatblockStudioPanel`, `statblock-structured-export.ts` (JSON/5e.tools/Homebrewery), `createStatblockLabelAction` |
+| Statblock Studio (strukturiert) | Stabil — visueller Feld-Editor mit JSON-Fallback | `StructuredStatblock`, `StatblockStudioPanel` (Formular + JSON), `statblock-structured-model.ts`, `statblock-structured-export.ts` (JSON/5e.tools/Homebrewery), `createStatblockLabelAction` |
 | Encounter-XP-Budget | Beta | `packages/dnd-api/src/encounter-xp-budget.ts` |
 | „Was ist offen?“-View | Beta | `/worlds/[slug]/open-items`, `world-open-items-service.ts` |
 | SRD-Equipment-Import | Beta | `ItemBuilderSection`, `/api/dnd/equipment/search`, `applySrdEquipmentToItemAction` |
