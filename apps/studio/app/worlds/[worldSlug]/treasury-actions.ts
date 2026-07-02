@@ -74,6 +74,8 @@ export async function addPartyInventoryItemAction(formData: FormData) {
   const quantity = Number.isFinite(quantityRaw) ? Math.max(1, Math.floor(quantityRaw)) : 1;
   const weight = parseOptionalNumber(formData, "weight");
   const valueGp = parseOptionalNumber(formData, "valueGp");
+  const dmOnly = formData.get("dmOnly") === "on";
+  const dmNotes = String(formData.get("dmNotes") || "").trim();
 
   if (!name) {
     throw new Error("Name ist erforderlich.");
@@ -91,6 +93,13 @@ export async function addPartyInventoryItemAction(formData: FormData) {
 
     const treasury = createPartyTreasuryService(db);
     const record = await treasury.getOrCreateForWorld(world.id);
+    const properties =
+      dmOnly || dmNotes
+        ? {
+            ...(dmOnly ? { dmOnly: true } : {}),
+            ...(dmNotes ? { dmNotes } : {}),
+          }
+        : undefined;
     await treasury.addItem({
       worldId: world.id,
       treasuryId: record.id,
@@ -98,6 +107,7 @@ export async function addPartyInventoryItemAction(formData: FormData) {
       quantity,
       weight,
       value: valueGp != null ? { gp: valueGp } : undefined,
+      properties,
       notes,
     });
   } finally {
@@ -106,6 +116,69 @@ export async function addPartyInventoryItemAction(formData: FormData) {
 
   revalidatePath(`/worlds/${worldSlug}/treasury`);
   redirect(`/worlds/${worldSlug}/treasury?added=1`);
+}
+
+/** DM: Treasury- oder Charakter-Item einem Charakter der Welt zuweisen. */
+export async function assignPartyItemToCharacterAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug"));
+  const itemId = String(formData.get("itemId") || "").trim();
+  const characterId = String(formData.get("characterId") || "").trim();
+
+  if (!itemId || !characterId) {
+    throw new Error("Item-ID und Charakter-ID sind erforderlich.");
+  }
+
+  await requireStudioWorldEdit(worldSlug);
+
+  const db = createPrismaClient();
+  try {
+    const repo = getAppRepository();
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) {
+      throw new Error("Welt nicht gefunden.");
+    }
+
+    const treasury = createPartyTreasuryService(db);
+    await treasury.moveItemToCharacter(world.id, itemId, characterId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/treasury`);
+  redirect(`/worlds/${worldSlug}/treasury?moved=1`);
+}
+
+/** DM: Item aus einem Charakter-Inventar zurück in die Schatzkammer. */
+export async function returnPartyItemToTreasuryAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug"));
+  const itemId = String(formData.get("itemId") || "").trim();
+
+  if (!itemId) {
+    throw new Error("Item-ID fehlt.");
+  }
+
+  await requireStudioWorldEdit(worldSlug);
+
+  const db = createPrismaClient();
+  try {
+    const repo = getAppRepository();
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) {
+      throw new Error("Welt nicht gefunden.");
+    }
+
+    const treasury = createPartyTreasuryService(db);
+    await treasury.moveItemToTreasury(world.id, itemId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/treasury`);
+  redirect(`/worlds/${worldSlug}/treasury?moved=1`);
 }
 
 export async function deletePartyInventoryItemAction(formData: FormData) {

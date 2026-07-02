@@ -211,12 +211,18 @@ export type {
 export {
   createPartyTreasuryService,
   DEFAULT_CURRENCIES,
+  getInventoryItemDmNotes,
+  isInventoryItemDmOnly,
   PartyTreasuryService,
+  toPlayerSafeInventoryItemView,
 } from "./party-treasury-service";
 
 export type {
   CreateInventoryItemInput,
   CurrencyLedger,
+  MovePartyItemForViewerInput,
+  PlayerSafeInventoryItemView,
+  PortalTreasuryView,
   UpsertPartyTreasuryInput,
 } from "./party-treasury-service";
 

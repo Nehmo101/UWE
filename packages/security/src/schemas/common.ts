@@ -444,6 +444,21 @@ export const characterSheetPrintQuerySchema = z.object({
   format: z.enum(["html", "markdown"]).optional(),
 });
 
+/** Portal: Treasury-Item einem eigenen Charakter zuweisen. */
+export const treasuryItemAssignSchema = z.object({
+  worldSlug: slugSchema,
+  itemId: idSchema,
+  characterId: idSchema,
+  returnPath: z.string().trim().max(500).optional(),
+});
+
+/** Portal: Item aus dem eigenen Charakter-Inventar zurück in die Schatzkammer. */
+export const treasuryItemReturnSchema = z.object({
+  worldSlug: slugSchema,
+  itemId: idSchema,
+  returnPath: z.string().trim().max(500).optional(),
+});
+
 export const assetFileQuerySchema = z.object({
   world: slugSchema,
 });

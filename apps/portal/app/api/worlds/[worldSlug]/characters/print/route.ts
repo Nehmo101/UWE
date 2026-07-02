@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { isWorldStaff } from "@uwe/auth";
 import {
   buildCharacterSheetMarkdown,
   buildCharacterSheetPrintHtml,
   createAuthService,
   createPartyTreasuryService,
   createPrismaClient,
+  isInventoryItemDmOnly,
 } from "@uwe/database/server";
 import { characterSheetPrintQuerySchema, parseQuery } from "@uwe/security";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -45,11 +47,13 @@ export async function GET(
     });
 
     const inventory = createPartyTreasuryService(db);
-    const inventoryItems = (await inventory.listItemsForCharacter(character.id)).map((item) => ({
-      name: item.name,
-      quantity: item.quantity,
-      notes: item.notes,
-    }));
+    const inventoryItems = (await inventory.listItemsForCharacter(character.id))
+      .filter((item) => isWorldStaff(ctx) || !isInventoryItemDmOnly(item))
+      .map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        notes: item.notes,
+      }));
 
     if (parsed.data.format === "markdown") {
       return new NextResponse(
