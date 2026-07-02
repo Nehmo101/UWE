@@ -11,6 +11,8 @@ Der Prod-Host wird davon **nicht angefasst**. Staging läuft nur, wenn der RTX-P
 
 > Warum der RTX-PC und nicht der Host: Der 4-GB-Host muss schon für **einen** Build die laufenden Apps stoppen (siehe [self-hosted-ci.md](self-hosted-ci.md) → Deploy-Runner). Ein zweites Dauer-System hätte dort keinen RAM. Der RTX-PC hat Reserven und ist ohnehin vorhanden (Ollama, RTX-Connector).
 
+Die einsatzfertigen Vorlagen (Skripte, `.env`, Tunnel-Config) liegen unter [`deploy/rtx-staging/`](../../deploy/rtx-staging/); dieses Dokument erklärt Aufbau und Betrieb.
+
 ---
 
 ## Architektur-Prinzip: erreichbar bleiben, ohne inbound-Port
@@ -51,6 +53,8 @@ Browser ──▶ Cloudflare Edge ──▶ (ausgehender Tunnel) ──▶ RTX-P
 
 Voraussetzungen: Windows, Node 22, `pnpm`, Git — auf dem RTX-PC bereits vorhanden (RTX-Connector-Setup).
 
+> **Einmalig zuerst:** Der `dev`-Branch muss auf `origin` existieren. Falls nicht, einmal von einem beliebigen Checkout aus anlegen: `git checkout -b dev main && git push -u origin dev`.
+
 ### 1. Eigenen Checkout anlegen
 
 ```powershell
@@ -72,7 +76,7 @@ cloudflared tunnel route dns uwe-test test.studio.uweanddragons.org
 cloudflared tunnel route dns uwe-test test.portal.uweanddragons.org
 ```
 
-Config unter `%USERPROFILE%\.cloudflared\config.yml`:
+Config unter `%USERPROFILE%\.cloudflared\config.yml` — Vorlage: [`deploy/rtx-staging/cloudflared-config.yml.example`](../../deploy/rtx-staging/cloudflared-config.yml.example):
 
 ```yaml
 tunnel: uwe-test
@@ -89,146 +93,24 @@ In Cloudflare für **beide** Test-Hostnames eine **Access-Policy** anlegen, die 
 
 ### 3. Test-`.env` anlegen
 
-`C:\uwe-test\.env` (Vorlage — Werte anpassen, Secrets neu erzeugen mit `openssl rand -base64 32`):
+Kopiere [`deploy/rtx-staging/uwe-test.env.example`](../../deploy/rtx-staging/uwe-test.env.example) nach `C:\uwe-test\.env` und passe die Werte an (Secrets neu erzeugen mit `openssl rand -base64 32`). Die wichtigen Punkte:
 
-```bash
-NODE_ENV=production
-UWE_RUNTIME_ROLE=host
-
-# Ports
-STUDIO_PORT=3002
-PORTAL_PORT=3003
-
-# Öffentliche URLs — NEXT_PUBLIC_* werden beim BUILD eingebacken!
-NEXT_PUBLIC_STUDIO_URL=https://test.studio.uweanddragons.org
-NEXT_PUBLIC_PORTAL_URL=https://test.portal.uweanddragons.org
-PUBLIC_BASE_URL=https://test.studio.uweanddragons.org
-TRUST_PROXY=true
-CLOUDFLARE_TUNNEL=true
-
-# Secrets — EIGENE, niemals die Prod-Werte
-SESSION_SECRET=<openssl rand -base64 32>
-UWE_MEDIA_SIGNING_SECRET=<openssl rand -base64 32>
-
-# Datenbank + Daten (Test) — absolute Pfade, Vorwärts-Slashes für Prisma
-DATABASE_URL=file:C:/uwe-test/data/uwe-test.db
-UWE_DATA_DIR=C:/uwe-test/data
-UPLOADS_DIR=C:/uwe-test/data/uploads
-BACKUPS_DIR=C:/uwe-test/data/backups
-EXPORTS_DIR=C:/uwe-test/data/exports
-
-# Seed-Verhalten
-RUN_DB_SEED=auto
-
-# Auth / Cookies (hinter HTTPS-Tunnel)
-AUTH_REQUIRED=true
-SESSION_COOKIE_SECURE=true
-SESSION_COOKIE_SAMESITE=lax
-
-# AI: lokales Ollama auf dem RTX-PC nutzen, Cloud aus
-AI_INFERENCE_ENABLED=true
-AI_INFERENCE_PROVIDER=ollama
-AI_INFERENCE_BASE_URL=http://localhost:11434
-CLOUD_AI_PROVIDER=
-```
-
-> `SESSION_SECRET` und `UWE_MEDIA_SIGNING_SECRET` sind im Produktions-Build **Pflicht** — fehlen sie, bricht der Start ab. Deshalb hier immer eigene Werte setzen.
+- Ports `3002`/`3003`, URLs auf `test.studio` / `test.portal.uweanddragons.org`.
+- **Eigene** `SESSION_SECRET` und `UWE_MEDIA_SIGNING_SECRET` — im Produktions-Build **Pflicht**, sonst bricht der Start ab.
+- `DATABASE_URL=file:C:/uwe-test/data/uwe-test.db` — getrennte Datei, Vorwärts-Slashes für Prisma.
+- `NEXT_PUBLIC_*` werden beim **Build** eingebacken; `uwe-test-up.ps1` lädt die `.env` daher vor `build:release` in die Prozess-Umgebung.
+- `AI_INFERENCE_BASE_URL=http://localhost:11434` (lokales Ollama), `CLOUD_AI_PROVIDER=` leer.
 
 ---
 
 ## On-Demand-Betrieb
 
-Kein Windows-Service, kein Autostart — zwei Skripte. Wenn der RTX-PC aus ist, sind die Test-Hostnames einfach offline (für ein Testsystem in Ordnung).
+Kein Windows-Service, kein Autostart — zwei Skripte unter [`deploy/rtx-staging/`](../../deploy/rtx-staging/). Wenn der RTX-PC aus ist, sind die Test-Hostnames einfach offline (für ein Testsystem in Ordnung).
 
-### `uwe-test-up.ps1`
+- [`uwe-test-up.ps1`](../../deploy/rtx-staging/uwe-test-up.ps1) — lädt die `.env`, pullt `dev`, migriert die Test-DB, baut prod-nah (`build:release`) und startet Studio (:3002), Portal (:3003) und den Tunnel.
+- [`uwe-test-down.ps1`](../../deploy/rtx-staging/uwe-test-down.ps1) — stoppt alles (per Listen-Port + `cloudflared`); `-Wipe` löscht zusätzlich die Test-DB.
 
-```powershell
-#requires -Version 5
-[CmdletBinding()]
-param(
-  [ValidateSet('build','dev')] [string]$Mode = 'build',
-  [string]$Restore,
-  [switch]$Fresh
-)
-$ErrorActionPreference = 'Stop'
-
-# --- Konfiguration (einmalig anpassen) ---
-$TestRoot = 'C:\uwe-test'
-$EnvFile  = Join-Path $TestRoot '.env'
-$TestDb   = 'C:\uwe-test\data\uwe-test.db'
-$Branch   = 'dev'
-
-Set-Location $TestRoot
-
-# .env in die Prozess-Umgebung laden (gilt für alle Child-Prozesse: prisma, next, cloudflared)
-Get-Content $EnvFile | Where-Object { $_ -match '^\s*[^#].*=' } | ForEach-Object {
-  $name, $value = $_ -split '=', 2
-  [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), 'Process')
-}
-
-# 1. Code auf dev aktualisieren
-git fetch origin $Branch
-git checkout $Branch
-git reset --hard "origin/$Branch"
-
-# 2. Dependencies
-pnpm install --frozen-lockfile
-
-# 3. Migrationen auf die Test-DB (der eigentliche Wert von Staging)
-if ($Fresh) {
-  Remove-Item $TestDb -ErrorAction SilentlyContinue   # frischer Start mit Demo-Daten
-  pnpm db:deploy
-  pnpm db:seed
-} else {
-  pnpm db:deploy
-}
-
-# 4. Optionaler Prod-Backup-Import (bewusster Debug-Modus, s.u.)
-if ($Restore) {
-  node --import tsx packages/backup/src/cli-restore.ts $Restore
-}
-
-# 5. Build (prod-nah) — nur im build-Modus
-if ($Mode -eq 'build') {
-  pnpm build:release
-}
-
-# 6. Prozesse starten: Studio 3002, Portal 3003, Tunnel
-$sub = if ($Mode -eq 'build') { 'start' } else { 'dev' }
-Start-Process pnpm -WorkingDirectory $TestRoot -ArgumentList @('--filter','@uwe/studio','exec','next',$sub,'--port','3002')
-Start-Process pnpm -WorkingDirectory $TestRoot -ArgumentList @('--filter','@uwe/portal','exec','next',$sub,'--port','3003')
-Start-Process cloudflared -ArgumentList @('tunnel','run','uwe-test')
-
-Write-Host ""
-Write-Host "Staging live:"
-Write-Host "  Studio -> https://test.studio.uweanddragons.org  (lokal :3002)"
-Write-Host "  Portal -> https://test.portal.uweanddragons.org  (lokal :3003)"
-```
-
-### `uwe-test-down.ps1`
-
-```powershell
-#requires -Version 5
-[CmdletBinding()]
-param([switch]$Wipe)
-
-$TestDb = 'C:\uwe-test\data\uwe-test.db'
-
-# Studio/Portal über ihre Listen-Ports beenden
-foreach ($port in 3002, 3003) {
-  Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-    Select-Object -ExpandProperty OwningProcess -Unique |
-    ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
-}
-
-# Tunnel beenden
-Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force
-
-if ($Wipe) {
-  Remove-Item $TestDb -ErrorAction SilentlyContinue
-  Write-Host "Test-DB geloescht — naechster 'up -Fresh' startet mit Demo-Seed."
-}
-```
+Den **Konfig-Block** am Kopf von `uwe-test-up.ps1` (Pfade, Branch, Tunnel-Name) einmalig anpassen.
 
 ### Aufrufe
 
@@ -240,6 +122,8 @@ if ($Wipe) {
 .\uwe-test-down.ps1                     # stoppen
 .\uwe-test-down.ps1 -Wipe               # stoppen und Test-DB löschen
 ```
+
+> Bei blockierter Ausführungsrichtlinie: `powershell -ExecutionPolicy Bypass -File .\uwe-test-up.ps1`.
 
 ---
 
@@ -288,6 +172,7 @@ Der eigentliche Nutzen ist nicht „UI angucken", sondern **Prisma-Migrationen g
 
 | Datei | Zweck |
 |-------|--------|
+| [`deploy/rtx-staging/`](../../deploy/rtx-staging/) | Up/Down-Skripte, `.env`- und Tunnel-Vorlage (Windows) |
 | [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | Prod-Deploy auf `main` (unberührt) |
 | [self-hosted-ci.md](self-hosted-ci.md) | Deploy-Runner, RAM-Grenzen des Hosts |
 | [rtx-connector.md](../rtx-connector.md) | Outbound-Prinzip des RTX-PCs |
@@ -300,4 +185,4 @@ Der eigentliche Nutzen ist nicht „UI angucken", sondern **Prisma-Migrationen g
 
 | Datum | Entscheidung |
 |-------|--------------|
-| 2026-07-02 | 2-Branch-Modell (`main`=Prod, `dev`=Staging). Staging **on-demand auf dem RTX-PC** statt auf dem 4-GB-Host — voll getrennt, eigene SQLite-DB, eigener outbound Cloudflare-Tunnel. Prod-Deploy-Pfad unverändert. |
+| 2026-07-02 | 2-Branch-Modell (`main`=Prod, `dev`=Staging). Staging **on-demand auf dem RTX-PC** statt auf dem 4-GB-Host — voll getrennt, eigene SQLite-DB, eigener outbound Cloudflare-Tunnel. Prod-Deploy-Pfad unverändert. Windows-Tooling unter `deploy/rtx-staging/`. |
