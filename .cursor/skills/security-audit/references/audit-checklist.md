@@ -31,7 +31,7 @@ Also review: `packages/database/src/visibility-security.test.ts`
 
 ## 3. Uploads & media
 
-- [ ] Magic-byte validation + MIME allowlist (`packages/assets/src/upload-validation.ts`)
+- [ ] Magic-byte validation + MIME allowlist (`packages/assets/src/upload-policy.ts`)
 - [ ] HTML, JS, SVG blocked
 - [ ] Size limits enforced
 - [ ] Asset delivery respects visibility on Portal
