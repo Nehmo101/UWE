@@ -1,0 +1,21 @@
+# cloudflared-Config fuer den UWE-Staging-Tunnel auf dem RTX-PC.
+# Ziel: %USERPROFILE%\.cloudflared\config.yml
+#
+# Einmalige Einrichtung:
+#   cloudflared tunnel login
+#   cloudflared tunnel create uwe-test
+#   cloudflared tunnel route dns uwe-test test.studio.uweanddragons.org
+#   cloudflared tunnel route dns uwe-test test.portal.uweanddragons.org
+#
+# Danach beide Hostnames in Cloudflare hinter eine Access-Policy (nur Owner-Mail) legen.
+# Der Tunnel waehlt sich AUSGEHEND ein — kein eingehender Port auf dem RTX-PC.
+
+tunnel: uwe-test
+credentials-file: C:\Users\<du>\.cloudflared\<uuid>.json
+
+ingress:
+  - hostname: test.studio.uweanddragons.org
+    service: http://localhost:3002
+  - hostname: test.portal.uweanddragons.org
+    service: http://localhost:3003
+  - service: http_status:404
