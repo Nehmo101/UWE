@@ -294,14 +294,6 @@ function buildCloudflareSection(system: SystemStatus): SetupSectionStatus {
       editable: false,
     },
     {
-      id: "cf-access",
-      label: "Cloudflare Access",
-      configured: proxy.cloudflareAccessEnabled,
-      displayValue: boolLabel(proxy.cloudflareAccessEnabled),
-      source: "env",
-      editable: false,
-    },
-    {
       id: "studio-api-token",
       label: "STUDIO_API_TOKEN",
       configured: system.trust.studioApiTokenConfigured,

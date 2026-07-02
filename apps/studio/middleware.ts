@@ -5,7 +5,6 @@ import {
   evaluateStudioMiddleware,
   fetchMaintenanceMiddlewareDecision,
   getUweRuntimeConfig,
-  hasCloudflareAccessAuth,
   isCrossSiteBrowserRequest,
   resolveLegacyPathRedirect,
   SESSION_COOKIE_NAME,
@@ -45,10 +44,6 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
     pathname.startsWith("/api/health/") ||
     pathname.startsWith("/api/auth/")
   ) {
-    return null;
-  }
-
-  if (hasCloudflareAccessAuth(request, process.env)) {
     return null;
   }
 

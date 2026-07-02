@@ -27,8 +27,6 @@ export default async function SystemCloudflarePage() {
 
   const cloudflare: { label: string; value: string }[] = [
     { label: "Tunnel konfiguriert", value: yesNo(cf.tunnelConfigured) },
-    { label: "Access aktiviert", value: yesNo(cf.accessEnabled) },
-    { label: "Access-Allowlist konfiguriert", value: yesNo(cf.allowlistConfigured) },
     { label: "Trust Proxy", value: yesNo(proxy.trustProxy) },
     { label: "Public Exposure konfiguriert", value: yesNo(proxy.publicExposureConfigured) },
   ];
@@ -52,8 +50,10 @@ export default async function SystemCloudflarePage() {
         <header className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Cloudflare</h1>
           <p className="text-sm text-muted-foreground">
-            Read-only Status von Routing, Cloudflare-Tunnel/Access und Sicherheits-Flags. Es werden
-            keine Secrets angezeigt. Details siehe <code>docs/cloudflare-current-setup.md</code>.
+            Read-only Status von Routing, Cloudflare-Tunnel, „Ich bin ein Mensch“-Prüfung und
+            Sicherheits-Flags. Der Zugang läuft über den UWE-Login (E-Mail) — keine separate
+            Cloudflare-Access-Anmeldung. Es werden keine Secrets angezeigt. Details siehe{" "}
+            <code>docs/cloudflare-current-setup.md</code>.
           </p>
         </header>
 

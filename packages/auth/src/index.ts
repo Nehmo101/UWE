@@ -250,7 +250,7 @@ export type {
   AuthorizeResult,
   AuthorizeScope,
 } from "./security/authorize";
-export { authorize, authorizeForSurface, hasCloudflareAccessAuth } from "./security/authorize";
+export { authorize, authorizeForSurface } from "./security/authorize";
 
 export type {
   RouteAccess,

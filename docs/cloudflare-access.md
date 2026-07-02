@@ -9,8 +9,14 @@ UWE uses split hostnames instead of path rewriting:
 | Area | Public URL | Local service | Login / protection |
 | --- | --- | --- | --- |
 | Portal | `https://uweanddragons.org` | Portal `127.0.0.1:3001` | UWE login required |
-| Studio | `https://studio.uweanddragons.org` | Studio `127.0.0.1:3000` | UWE/Studio auth, optional Cloudflare Access |
+| Studio | `https://studio.uweanddragons.org` | Studio `127.0.0.1:3000` | UWE login (e-mail) required |
 | Health | `/api/health/public` | Matching app | Public probe only |
+
+> **No separate Cloudflare Access sign-in.** Studio and Portal are gated by
+> UWE's own e-mail login. A Cloudflare Access policy would add a redundant second
+> login and is intentionally not used. For a "Verify you are human" gate in front
+> of the sites, use a Cloudflare Managed Challenge and/or the in-app Turnstile
+> widget (see `docs/cloudflare-current-setup.md`).
 
 Normal Portal content is not public anymore. World pages, player pages, share links, dashboard layout APIs, graph APIs and asset file APIs require a UWE session. The Owner manages allowed users and e-mail addresses inside UWE.
 
@@ -47,14 +53,17 @@ PLAYER_PREVIEW_PUBLIC=false
 STUDIO_API_TOKEN=<strong-random-token>
 ```
 
-If Cloudflare Access is used as an additional Studio layer, also set:
+Studio and Portal access is gated by the UWE login (e-mail sign-in) — there is no
+separate Cloudflare Access sign-in to configure. UWE users, roles and world
+memberships are the source of truth for who may log in.
 
-```env
-CLOUDFLARE_ACCESS_ENABLED=true
-STUDIO_ACCESS_ALLOWED_EMAILS=<owner-email@example.org>
-```
-
-Cloudflare Access is optional for the Portal. Do not use it as the primary Portal membership model; UWE users, roles and world memberships are the source of truth.
+For a "Verify you are human" check in front of the sites (the full-page
+"Verifying you are human…" interstitial), enable a Cloudflare **Managed
+Challenge** at the edge (Cloudflare → Security → WAF → custom rule matching the
+UWE hostnames, action *Managed Challenge*). Optionally also enable the in-app
+Turnstile widget on the login forms via `TURNSTILE_SITE_KEY` /
+`TURNSTILE_SECRET_KEY` (see `docs/cloudflare-current-setup.md`). Both are
+bot/human checks and do not replace the UWE login.
 
 ## Public routes
 

@@ -50,7 +50,7 @@ describe("studio security assessment", () => {
 
       assert.equal(assessment.level, "unsafe");
       assert.equal(assessment.severity, "critical");
-      assert.ok(assessment.nextSteps.some((step) => step.includes("Cloudflare Access")));
+      assert.ok(assessment.nextSteps.some((step) => step.includes("STUDIO_API_TOKEN")));
     } finally {
       await db.$disconnect();
     }

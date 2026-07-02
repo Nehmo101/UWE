@@ -170,14 +170,6 @@ export default async function AdminOverviewPage() {
                   <dd>{system.proxy.cloudflareTunnel ? "ja" : "nein"}</dd>
                 </div>
                 <div>
-                  <dt>Cloudflare Access (ENV)</dt>
-                  <dd>{system.proxy.cloudflareAccessEnabled ? "ja" : "nein"}</dd>
-                </div>
-                <div>
-                  <dt>Access-Allowlist</dt>
-                  <dd>{system.proxy.cloudflareAccessAllowlistConfigured ? "ja" : "nein"}</dd>
-                </div>
-                <div>
                   <dt>STUDIO_API_TOKEN</dt>
                   <dd>{system.trust.studioApiTokenConfigured ? "gesetzt" : "fehlt"}</dd>
                 </div>

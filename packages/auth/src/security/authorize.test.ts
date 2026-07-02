@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { authorize, hasCloudflareAccessAuth } from "./authorize";
+import { authorize } from "./authorize";
 
 function makeRequest(
   pathname: string,
@@ -12,7 +12,6 @@ function makeRequest(
 describe("authorize", () => {
   afterEach(() => {
     delete process.env.STUDIO_API_TOKEN;
-    delete process.env.STUDIO_ACCESS_ALLOWED_EMAILS;
   });
 
   it("allows public portal API routes without session", () => {
@@ -94,29 +93,10 @@ describe("authorize", () => {
     assert.equal(denied?.status, 403);
   });
 
-  it("rejects Cloudflare Access when allowlist env is unset", () => {
-    assert.equal(
-      hasCloudflareAccessAuth(
-        makeRequest("/", {
-          "cf-access-authenticated-user-email": "anyone@example.com",
-        }),
-      ),
-      false,
-    );
-  });
+  it("ignores the Cloudflare Access header — UWE login is the sole auth", () => {
+    process.env.STUDIO_API_TOKEN = "secret-token";
 
-  it("accepts Cloudflare Access authenticated user", () => {
-    process.env.STUDIO_ACCESS_ALLOWED_EMAILS = "lasset610@gmail.com";
-
-    assert.equal(
-      hasCloudflareAccessAuth(
-        makeRequest("/", {
-          "cf-access-authenticated-user-email": "lasset610@gmail.com",
-        }),
-      ),
-      true,
-    );
-
+    // A cf-access-authenticated-user-email header must no longer bypass auth.
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/import/execute", {
@@ -125,24 +105,25 @@ describe("authorize", () => {
       }),
       pathname: "/api/import/execute",
     });
-    assert.equal(denied, null);
+    assert.ok(denied);
+    assert.equal(denied?.status, 401);
   });
 
-  it("accepts Cloudflare Access before cross-site guard", () => {
-    process.env.STUDIO_ACCESS_ALLOWED_EMAILS = "lasset610@gmail.com";
+  it("does not let the Cloudflare Access header override the cross-site guard", () => {
     process.env.STUDIO_API_TOKEN = "secret-token";
 
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/import/execute", {
-        host: "studio.uweandragons.org",
+        host: "studio.uweanddragons.org",
         origin: "https://evil.example",
         "sec-fetch-site": "cross-site",
         "cf-access-authenticated-user-email": "lasset610@gmail.com",
       }),
       pathname: "/api/import/execute",
     });
-    assert.equal(denied, null);
+    assert.ok(denied);
+    assert.equal(denied?.status, 403);
   });
 
   it("requires portal session for auth routes", () => {

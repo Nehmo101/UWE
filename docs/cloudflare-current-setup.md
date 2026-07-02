@@ -19,12 +19,16 @@ but split hostnames are the stable, recommended layout because they avoid Studio
 catching Portal paths (and vice versa) — the root cause behind "/portal lands in
 Studio NotFound".
 
-## Cloudflare Tunnel & Access
+## Cloudflare Tunnel
 
 - A Cloudflare Tunnel fronts both apps (outbound from the host; no inbound ports).
-- Cloudflare Access policies:
-  - Studio: restrict to owner/admin email addresses.
-  - Portal: open to the Cloudflare edge; UWE's own login gates content.
+- **Access / login:** both Studio and Portal are gated by UWE's own login
+  (e-mail sign-in) when `AUTH_REQUIRED=true`. There is **no separate Cloudflare
+  Access sign-in** — a Cloudflare Access policy would add a redundant second
+  login and is intentionally not used.
+- **"Verify you are human":** an optional Cloudflare Managed Challenge at the
+  edge (and/or the in-app Turnstile widget, see below) can gate the sites; this
+  is a bot/human check, not a login.
 - The app trusts proxy headers (`TRUST_PROXY=true`) so client IPs and protocol
   are read from Cloudflare headers.
 

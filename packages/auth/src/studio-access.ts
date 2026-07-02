@@ -4,8 +4,8 @@ import { assessApiOrigin, isSameOriginBrowserRequest as isSameOriginBrowserReque
 /**
  * Shared Studio access evaluation for API routes, middleware, and server actions.
  *
- * Studio has no user login — network-level protection (Cloudflare Access, VPN)
- * is required when publicly reachable. This module adds CSRF protection and
+ * Studio access is gated by the UWE session login (e-mail sign-in) enforced via
+ * middleware when AUTH_REQUIRED=true. This module adds CSRF protection and
  * optional bearer-token auth for non-browser clients.
  */
 

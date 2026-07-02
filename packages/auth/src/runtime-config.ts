@@ -9,7 +9,6 @@ export interface UweRuntimeConfig {
   publicAppUrl: string | null;
   trustProxy: boolean;
   cloudflareTunnel: boolean;
-  cloudflareAccessEnabled: boolean;
   studioPath: string;
   portalPath: string;
   authRequired: boolean;
@@ -330,7 +329,6 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
 
   const trustProxy = parseBoolEnv(env.TRUST_PROXY, isProduction && Boolean(publicAppUrl));
   const cloudflareTunnel = parseBoolEnv(env.CLOUDFLARE_TUNNEL, trustProxy);
-  const cloudflareAccessEnabled = parseBoolEnv(env.CLOUDFLARE_ACCESS_ENABLED, false);
 
   const sessionCookieSecure = parseBoolEnv(
     env.SESSION_COOKIE_SECURE,
@@ -344,7 +342,6 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     publicAppUrl,
     trustProxy,
     cloudflareTunnel,
-    cloudflareAccessEnabled,
     studioPath: normalizeAppPath(env.STUDIO_PATH, "/studio"),
     portalPath: normalizeAppPath(env.PORTAL_PATH, "/portal", { allowRoot: true }),
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),
