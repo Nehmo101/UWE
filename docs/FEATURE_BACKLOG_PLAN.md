@@ -159,7 +159,7 @@ Vertiefende Design-Fragen stehen je Bereich unter „Details & kritische Fragen�
 | 15 | Faction Simulator | ✅ Beta | `FactionState` + `FactionStateEditPanel`, `FactionSimulatorPanel`, `simulate_faction` (KI-Proposal→Review, kein Auto-Kanon), datierte `WorldEvent`-Chronik | Shipped über den Review-Pfad (Beschluss §13). |
 | 16 | World Clock | ✅ | `WorldCalendar`, `/worlds/[slug]/calendar`, `advanceInGameDate`, Terra-Seed | Kern: konfigurierbarer Kalender + aktuelles Datum + Vorlauf-Buttons. Feiertage optional später. |
 | 17 | Print Center | 🔶 | `Label`/`LabelTemplate`/`PrintList`, `label-service.ts` (6×4"), `/worlds/[slug]/print-center`, PDF/HTML-Export, RTX/CUPS-Print, Session→Printliste | „Verträge“ in Daily-Admin (`/contracts`), nicht im Print-Center; keine benannten NPC-/Item-Karten-Templates. |
-| 18 | Statblock Studio | ✅ Beta | `StructuredStatblock`-Modell + Service, `StatblockStudioPanel` (JSON-Editor), Exporte JSON/5e.tools/Homebrewery (`statblock-structured-export.ts`), 1-Klick `createStatblockLabelAction` (Statblock→Label) | Visueller Feld-Editor fehlt (aktuell JSON-Textarea). |
+| 18 | Statblock Studio | ✅ | `StructuredStatblock`-Modell + Service, `StatblockStudioPanel` (visueller Feld-Editor + JSON-Fallback, `statblock-structured-model.ts`), Exporte JSON/5e.tools/Homebrewery (`statblock-structured-export.ts`), 1-Klick `createStatblockLabelAction` (Statblock→Label) | — |
 
 ### Details & kritische Fragen — DnD
 

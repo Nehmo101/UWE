@@ -237,3 +237,19 @@ export {
   exportStructuredStatblockHomebrewery,
   exportStructuredStatblockJson,
 } from "./statblock-structured-export";
+export {
+  abilityModifier,
+  createEmptyStatblockDraft,
+  formatAbilityModifier,
+  STATBLOCK_ABILITY_KEYS,
+  STATBLOCK_ENTRY_SECTIONS,
+  statblockDraftFromData,
+  statblockDraftToData,
+  validateStatblockDraft,
+  type StatblockAbilityKey,
+  type StatblockAbilityScores,
+  type StatblockEntryDraft,
+  type StatblockEntrySection,
+  type StructuredStatblockDraft,
+  type StructuredStatblockDraftResult,
+} from "./statblock-structured-model";
