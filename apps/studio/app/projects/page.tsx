@@ -15,8 +15,6 @@ import { createProjectAction } from "../life-admin-actions";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
-const ACTIVE_STATUSES = ["idea", "planned", "active", "blocked", "paused"] as const;
-
 function formatProjectBudget(cents: number | null | undefined): string {
   if (cents == null) return "—";
   return formatEuroFromCents(cents);
@@ -46,11 +44,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
     service.getPersonalProjectDashboardStats(),
   ]);
 
-  const activeCount = ACTIVE_STATUSES.reduce(
-    (sum, status) => sum + dashboard.byStatus[status],
-    0,
-  );
-
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Projekte" }]} />}>
       <PageHeader
@@ -59,35 +52,82 @@ export default async function ProjectsPage({ searchParams }: Props) {
       />
 
       <section className="uwe-v2-section" aria-label="Projekt-Dashboards">
-        <h2 className="uwe-v2-section-title">Nach Kategorie ({dashboard.total})</h2>
+        <h2 className="uwe-v2-section-title">
+          Nach Domäne ({dashboard.activeTotal} aktiv / {dashboard.total} gesamt)
+        </h2>
         <div className="uwe-dashboard-grid">
-          {Object.values(PersonalProjectCategoryEnum).map((category) => {
-            const count = dashboard.byCategory[category];
-            const active = categoryFilter === category;
+          {dashboard.categories.map((summary) => {
+            const filterActive = categoryFilter === summary.category;
             return (
-              <Link
-                key={category}
-                href={active ? "/projects" : `/projects?category=${category}`}
+              <article
+                key={summary.category}
                 className="uwe-v2-card uwe-dashboard-card"
-                aria-current={active ? "page" : undefined}
-                style={active ? { outline: "2px solid var(--uwe-accent, #6366f1)" } : undefined}
+                aria-current={filterActive ? "page" : undefined}
+                style={
+                  filterActive
+                    ? { outline: "2px solid var(--uwe-accent, #6366f1)" }
+                    : undefined
+                }
               >
-                <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem", marginBottom: "0.35rem" }}>
-                  {PROJECT_CATEGORY_LABELS[category]}
+                <h3
+                  className="uwe-v2-section-title"
+                  style={{ fontSize: "1rem", marginBottom: "0.35rem" }}
+                >
+                  <Link
+                    href={
+                      filterActive
+                        ? "/projects"
+                        : `/projects?category=${summary.category}`
+                    }
+                  >
+                    {PROJECT_CATEGORY_LABELS[summary.category]}
+                  </Link>
                 </h3>
-                <p style={{ fontSize: "1.75rem", fontWeight: 600, margin: "0 0 0.35rem" }}>{count}</p>
-                <p className="uwe-dashboard-muted">
-                  {count === 1 ? "Projekt" : "Projekte"}
-                  {active ? " · Filter aktiv" : ""}
+                <p style={{ fontSize: "1.75rem", fontWeight: 600, margin: "0 0 0.35rem" }}>
+                  {summary.active}
+                  <span className="uwe-dashboard-muted" style={{ fontWeight: 400 }}>
+                    {" "}
+                    aktiv / {summary.total} gesamt
+                  </span>
                 </p>
-              </Link>
+                <div
+                  className="uwe-jobs-progress"
+                  role="progressbar"
+                  aria-valuenow={summary.progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Fortschritt ${PROJECT_CATEGORY_LABELS[summary.category]}`}
+                >
+                  <div
+                    className="uwe-jobs-progress-bar"
+                    style={{ width: `${summary.progressPercent}%` }}
+                  />
+                </div>
+                <p className="uwe-dashboard-muted">
+                  {summary.done} von {summary.total} erledigt ({summary.progressPercent}%)
+                  {filterActive ? " · Filter aktiv" : ""}
+                </p>
+                {summary.recentProjects.length > 0 && (
+                  <ul className="uwe-dashboard-list" style={{ marginTop: "0.5rem" }}>
+                    {summary.recentProjects.map((project) => (
+                      <li key={project.id}>
+                        <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                        <p className="uwe-dashboard-muted">
+                          {PROJECT_STATUS_LABELS[project.status]} ·{" "}
+                          {DATE_FORMAT.format(project.updatedAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
             );
           })}
         </div>
       </section>
 
       <section className="uwe-v2-section" aria-label="Status-Übersicht">
-        <h2 className="uwe-v2-section-title">Status ({activeCount} offen)</h2>
+        <h2 className="uwe-v2-section-title">Status ({dashboard.openTotal} offen)</h2>
         <div className="uwe-today-quick-chips">
           {Object.values(PersonalProjectStatusEnum).map((status) => {
             const count = dashboard.byStatus[status];

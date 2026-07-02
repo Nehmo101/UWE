@@ -181,7 +181,7 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         return (
           <section className="uwe-v2-card uwe-dashboard-card">
             <h2 className="uwe-v2-section-title">Projekte</h2>
-            <p>{data.lifeAdmin.activeProjectCount} aktiv / geplant</p>
+            <p>{data.lifeAdmin.activeProjectCount} aktiv</p>
             <div className="uwe-today-card-list">
               {data.lifeAdmin.activeProjects.map((project) => (
                 <article key={project.id} className="uwe-today-card">
