@@ -43,8 +43,8 @@ const env = {
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
   STUDIO_API_TOKEN: `e2e-studio-api-${"z".repeat(20)}`,
   SESSION_COOKIE_SECURE: "false",
-  // Guest wiki (/worlds/*) stays public in production E2E; /auth/* still requires session.
-  AUTH_REQUIRED: "false",
+  // Studio session gate — matches production auth smoke (UWE login, no Cloudflare Access bypass).
+  AUTH_REQUIRED: "true",
   PLAYER_PREVIEW_PUBLIC: "true",
   RUN_DB_SEED: "false",
   NODE_ENV: "production",

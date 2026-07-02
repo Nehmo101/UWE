@@ -29,7 +29,7 @@ test.describe("Portal authenticated player flows", () => {
     await page.goto("/auth/worlds");
 
     await expect(page.getByRole("heading", { name: "Meine Welten" })).toBeVisible();
-    await expect(page.locator(".auth-world-list").getByRole("link", { name: /Terra/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Terra/ })).toBeVisible();
   });
 
   test("auth world detail dashboard loads", async ({ page }) => {
