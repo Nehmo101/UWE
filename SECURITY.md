@@ -60,20 +60,25 @@ Central policy: `packages/auth/src/security/route-policy.ts`. Middleware: `evalu
 
 ### Portal — public without login
 
-- `/`, `/worlds/*`, `/players/*`, `/share/*`, `/public-assets/*`
-- `/api/health`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/preview`, `/api/auth/forgot-password`, `/api/auth/reset-password`
-- `/api/share/*`, `/api/assets/*/file`, `/api/worlds/*/graph`
+Production is **login-first**: only auth entrypoints and health/maintenance probes stay public.
 
-When `AUTH_REQUIRED=true` (production default), guest wiki paths redirect to `/login`.
+- `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password`
+- `/api/health`, `/api/health/public`, `/api/maintenance/status`, `/api/maintenance/evaluate`
+- `/api/auth/login`, `/api/auth/logout`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/auth/two-factor/verify`
 
 ### Portal — session required
 
-- `/auth/*`, `/api/auth/change-password`
+All content routes redirect to `/login` without a session in production:
+
+- `/`, `/portal`, `/worlds/*`, `/players/*`, `/share/*`, `/auth/*`, `/public-assets/*`
+- `/api/auth/change-password`, `/api/auth/preview`, `/api/share/*`, `/api/assets/*/file`, `/api/worlds/*/graph`
 
 ### Studio — public
 
 - `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password`
-- `/api/health`, `/api/auth/*`, `/api/spotify/callback`
+- `/api/health`, `/api/health/public`, `/api/maintenance/status`, `/api/maintenance/evaluate`
+- `/api/auth/login|logout|setup|forgot-password|reset-password|two-factor/verify`
+- `/api/spotify/callback`, `/api/agent-jobs/callback`, `/api/connectors/*` (eigene Token-Auth im Handler)
 
 ### Studio — protected (session or bearer)
 

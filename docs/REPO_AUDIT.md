@@ -3,8 +3,11 @@
 Stand: 2026-06-18 (Version 0.1.x, Branch `main`).  
 Zweck: Orientierung für Featurebereiche und technische Schulden.
 
-> ⚠️ **Historischer Snapshot (teilweise veraltet).** Dieses Audit ist eine
-> Momentaufnahme vom 2026-06-18 und liegt an mehreren Stellen hinter dem Code.
+> ⚠️ **Historischer Snapshot (2026-06-18) — nicht mehr Source of Truth.**
+> Aktuelle Wahrheit: [CURRENT_STATE.md](./CURRENT_STATE.md) +
+> [FEATURE_MATURITY_MATRIX.md](./FEATURE_MATURITY_MATRIX.md).
+> Dieses Audit ist eine Momentaufnahme vom 2026-06-18 und liegt an mehreren
+> Stellen hinter dem Code.
 > Insbesondere der **Runtime-Pfad** (kein Docker, kein Windows-Installer mehr —
 > nur Linux Host + `systemd` + optionaler outbound RTX Host Connector) und der
 > **Feature-Reifegrad** (Image Studio, Kalender, DnD API existieren bereits)
@@ -54,8 +57,8 @@ uwe/                          # Root — pnpm workspace, Turbo, ESLint flat conf
 │   ├── soundboard/           # Spotify OAuth, Playback
 │   └── static-export/        # HTML-Export
 ├── tools/
-│   ├── uwe-rtx-connector/    # Outbound RTX Host Connector (aktiv)
-│   └── uwe-rtx-agent/        # Inbound RTX-Agent (deprecated, Kompatibilität)
+│   └── uwe-rtx-connector/    # Outbound RTX Host Connector (aktiv)
+│       # (uwe-rtx-agent/ entfernt — siehe docs/removed-legacy-runtime.md)
 ├── deploy/                   # systemd-Units + setup-uwe-host.sh (Linux Host)
 ├── docs/                     # Produkt- und Implementierungsdoku
 ├── scripts/                  # Release, Selfhost, Host-Scripts, Smoke-Tests
@@ -236,7 +239,7 @@ bleibt nur als **deprecated** Kompatibilität verdrahtet — siehe
 | Pfad | Rolle |
 |------|-------|
 | `tools/uwe-rtx-connector/**` | Outbound Connector (aktiv) |
-| `tools/uwe-rtx-agent/**` | Inbound Inferenz-Dienst (deprecated) |
+| `tools/uwe-rtx-agent/**` | Inbound Inferenz-Dienst — **entfernt**, siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md) |
 | `packages/ai-brain/src/rtx-agent-client.ts` | UWE → Agent (deprecated Pfad) |
 | `packages/ai-brain/src/providers/rtx-agent-provider.ts` | Provider-Integration (deprecated) |
 
@@ -638,7 +641,7 @@ Reihenfolge nach Abhängigkeiten, Risiko und vorhandener Basis:
 | Mail | `mail-service.test.ts`, `packages/mail/*.test.ts` |
 | Portal | `share-access.test.ts`, `rate-limit.test.ts` |
 | Integration | `scripts/integration-smoke.test.ts` |
-| RTX Agent | `tools/uwe-rtx-agent/src/*.test.ts` |
+| RTX Agent | entfernt (historisch `tools/uwe-rtx-agent/src/*.test.ts`) |
 
 Ausführen: `pnpm test` (inkl. Script-Tests).
 

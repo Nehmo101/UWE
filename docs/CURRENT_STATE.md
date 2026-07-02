@@ -54,7 +54,9 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 - **Beta:** Calendar (inkl. CalDAV-Vollsync), DnD API, Daily Admin OS,
   Secrets/Reveal (Page + Block), Kanonprüfung, Prepare-for-next-session,
   Agent Jobs (Dispatch + Polling), Image Studio (Masken-Canvas), Import Undo,
-  Auto-Backup-Scheduler; aus den Backlog-Wellen: Charaktersheet (Voll-5e-Kern),
+  Auto-Backup-Scheduler, Life-Brain Retrieval — implementiert
+  (RTX-Embeddings + Keyword-Fallback), Qualität RTX-abhängig;
+  aus den Backlog-Wellen: Charaktersheet (Voll-5e-Kern),
   Party-Treasury/Inventar, strukturierte Generatoren (NPC/Quest/Item, Review-pflichtig),
   Statblock Studio + Exporte, Encounter-XP-Budget, „Was ist offen?“-View,
   World-Clock/Chronik/Spieler-Timeline/Faction-Sim, Kanon-Lifecycle (#392),
@@ -62,8 +64,7 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
   Owner Cockpit (#394), Bug Center, NL-Admin-Kommandos (Whitelist), Secrets-Status,
   Admin-Checklist, Migration Inspector, Import-Zentrale (Multi-Quelle),
   Miniaturen-Sammlung, `db:deploy:safe` (Auto-Backup vor Migration).
-- **Lab / nicht production-ready:** Performance-Budget / große Testwelt,
-  Life-Brain Retrieval (fehlt).
+- **Lab / nicht production-ready:** Performance-Budget / große Testwelt.
 - **Deprecated/Removed:** Docker, Windows-One-Click-Installer, inbound RTX-Agent.
 
 ## Produkt-Backlog (bestätigt offen)
@@ -104,7 +105,9 @@ voller Secret-Vault, semantische Suche (Embeddings).
 
 ## Weitere bekannte Lücken (ohne festen Backlog-Slot)
 
-- **Life-Brain Retrieval** — RTX-Embeddings + Keyword-Suche (API + `/life-brain`-UI); kein Cloud-Fallback.
+- **Life-Brain Retrieval** — implementiert (Beta): RTX-Embeddings + Keyword-Fallback
+  (`/api/life-brain/search`, Such-/Index-Panels + Reindex auf `/life-brain`); kein
+  Cloud-Fallback, Qualität RTX-abhängig.
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
 - **Capture Bild-Upload** — implementiert (`/api/capture/upload`, Quick Capture); UI auf `/capture`.
 - **Agent Jobs** — Dispatch + Polling funktional; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](SECURITY_SETTINGS.md)).

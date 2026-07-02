@@ -24,8 +24,8 @@ Siehe `docs/FEATURE_MATURITY_MATRIX.md` und `docs/REPO_AUDIT.md`.
 | Domäne | Status | Hauptlücken |
 |--------|--------|-------------|
 | Today / Daily Admin OS | ✅ Basis | Kalender auf `/today`, `nextActionDate`, Ampel-Details |
-| Capture | ✅ Basis | `file_image` ohne Upload, keine Triage-Workflows |
-| Life Brain | 🔶 CRUD only | Kein Embedding/Retrieval (DnD Brain hat es) |
+| Capture | ✅ Basis | ~~`file_image` ohne Upload~~ (überholt — Upload implementiert: `/api/capture/upload` + `CaptureImageUpload`); keine Triage-Workflows |
+| Life Brain | ✅ CRUD + Retrieval | ~~Kein Embedding/Retrieval~~ (überholt — implementiert: RTX-Embeddings + Keyword-Fallback, `/api/life-brain/search`) |
 | Workshop | ✅ CRUD | Status-Workflow, Material-Tracking, DnD-Links |
 | Hardware/Homelab | ✅ Registry | Runbooks, Security-Cockpit erweitern |
 | DnD Studio + Portal | ✅ Kern | Session Experience, Co-DM, Review-UI |

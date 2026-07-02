@@ -27,7 +27,7 @@ Stand: 2026-07-01 (Doku-Sync nach PR #394) · Rest-Batches 1–5 + Backlog-Welle
 | 3 | DnD API / offene Quellen | Stable (Kern) | Ja (Suche + Statblock-Import) | Ja (Kern) |
 | 4 | Agent Jobs / Orchestrator | Phase 1 done | Ja (mit Limits) | Teilweise |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
-| 6 | Import Preview / Undo | Preview ja, Undo Beta | Ja | Preview ja |
+| 6 | Import Preview / Undo | Preview ja, Undo Beta | Ja (Preview + Undo) | Preview ja, Undo Beta |
 | 7 | Secrets-/Reveal-System | Stable (Page + Block) | Ja | Ja (Kern) |
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
 | 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
@@ -60,6 +60,8 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 - Secrets/Reveal (Page + Block — production-ready Kern)
 - Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
 - Agent Jobs (Dispatch + Polling — kein Auto-Merge by design)
+- Life-Brain Retrieval — implementiert (RTX-Embeddings + Keyword-Fallback,
+  `/life-brain`-UI + `/api/life-brain/search`), Qualität RTX-abhängig
 - Charaktersheet Voll-5e (Kern + Level-Up + Spell-Slots), Party-Treasury/Inventar (Studio + Portal)
 - Strukturierte Generatoren NPC/Quest/Item (Review-pflichtig), Statblock Studio (JSON-Editor + Exporte + Label)
 - Bug Center (`/bugs`), NL-Admin-Kommandos (Whitelist-Intents), Unified Activity + Owner Cockpit (#394)
@@ -70,7 +72,6 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 - **Image Studio** — Cloud-Edit/Fehler-Handling teils unvollständig (Masken-Canvas vorhanden).
 - **Performance-Budget / große Testwelt** — CI-Smoke + Bundle-Budget; keine Browser-LCP-Gates.
-- **Life-Brain Retrieval** — RTX-Embeddings + semantische Chunk-Suche in Studio-UI/API (`/life-brain`, Batch 4).
 
 ### ⛔ Deprecated / Removed
 
@@ -470,7 +471,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | DB | **`Tag` + `EntityTag`** — seit #393 Primärquelle; Json-Tags als Dual-Write-Übergang |
 | Tests | `tag-service.test.ts` |
 | Nutzbar | **Ja** — Admin-UI + Merge/Suggestions + Tag-Eingaben |
-| Production-ready | **Ja** — Admin-UI + Tag-Felder auf Asset & Life-Brain |
+| Production-ready | **Ja (Kern)** — Admin-UI + Tag-Felder auf Asset & Life-Brain; EntityTag-Backfill-Verifikation noch offen (siehe Übersicht) |
 
 **Was existiert:** Normalisierung, ähnliche Tags, Merge, unbenutzte Kandidaten, Vorschläge — `docs/engineering/tag-taxonomy.md`. Tag-Eingaben: Asset-Editor (`updateAssetAction`) und Life-Brain Document/Fact (`updateLifeBrainDocumentTagsAction`/`updateLifeBrainFactTagsAction`). Zentrales `Tag`/`EntityTag`-Modell mit Backfill (EntityTag-Primärquelle seit #393).
 
