@@ -13,6 +13,14 @@ export {
   type CursorAgentStatus,
   type CursorMappedStatus,
 } from "./cursor-status";
+export {
+  AGENT_JOB_PRESETS,
+  fillAgentJobPreset,
+  getAgentJobPreset,
+  listPresetPlaceholders,
+  type AgentJobPreset,
+  type AgentJobPresetField,
+} from "./presets";
 
 export type DevAgentJobProvider = "github_actions" | "cursor_cloud" | "cursor_cli_local";
 
