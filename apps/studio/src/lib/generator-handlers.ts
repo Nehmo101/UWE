@@ -7,11 +7,14 @@ import {
   createWorldCalendarService,
   detectMissingContent,
   formatInGameDate,
+  getStructuredGeneratorSchema,
   listGeneratorActions,
+  mapStructuredGeneratorAction,
   parseInGameDate,
   parseWorldCalendarMonths,
   prisma,
   resolveGeneratorContextFromPage,
+  validateStructuredGeneratorInput,
   type GeneratorActionId,
 } from "@uwe/database/server";
 import { getInferenceStatus } from "@uwe/ai-brain";
@@ -67,6 +70,7 @@ export async function postGeneratorAction(body: {
   worldSlug: string;
   pageSlug: string;
   structuredInput?: Record<string, string>;
+  presetId?: string;
   useMock?: boolean;
   sync?: boolean;
   workerUrl?: string;
@@ -81,6 +85,28 @@ export async function postGeneratorAction(body: {
   const page = await repo.getPageBySlug(body.worldSlug, body.pageSlug);
   if (!page) {
     return jsonError("Seite nicht gefunden.", 404);
+  }
+
+  const lifeAdmin = createLifeAdminService(prisma);
+
+  let structuredInput = body.structuredInput;
+  let presetId: string | undefined;
+  const structuredTarget = mapStructuredGeneratorAction(body.actionId);
+  if (structuredTarget) {
+    const schema = getStructuredGeneratorSchema(structuredTarget);
+    const validation = validateStructuredGeneratorInput(schema, body.structuredInput);
+    if (!validation.ok) {
+      return jsonError(validation.issues.map((issue) => issue.message).join(" "), 400);
+    }
+    structuredInput = validation.values;
+
+    if (body.presetId) {
+      const preset = await lifeAdmin.getGeneratorPreset(body.presetId);
+      if (!preset || preset.targetType !== structuredTarget) {
+        return jsonError("Generator-Preset nicht gefunden oder passt nicht zum Zieltyp.", 400);
+      }
+      presetId = preset.id;
+    }
   }
 
   const taskType = mapGeneratorActionToTaskType(body.actionId);
@@ -99,10 +125,10 @@ export async function postGeneratorAction(body: {
       currentDate,
       calendarName: calendar?.name ?? undefined,
       factionState,
-      structuredInput: body.structuredInput,
+      structuredInput,
     });
   } else {
-    userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, body.structuredInput);
+    userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, structuredInput);
   }
   const inference = await getInferenceStatus({ useMock: body.useMock });
   const model =
@@ -128,13 +154,12 @@ export async function postGeneratorAction(body: {
     run?: { id: string };
   };
 
-  const lifeAdmin = createLifeAdminService(prisma);
-
   if (response.status === 202) {
     if (payload.job?.id) {
       await lifeAdmin.createGeneratorOutput({
         worldId: page.worldId,
         pageId: page.id,
+        presetId,
         contextType: page.type,
         contextId: page.id,
         generatorAction: body.actionId,
@@ -152,6 +177,7 @@ export async function postGeneratorAction(body: {
   await lifeAdmin.createGeneratorOutput({
     worldId: page.worldId,
     pageId: page.id,
+    presetId,
     contextType: page.type,
     contextId: page.id,
     generatorAction: body.actionId,

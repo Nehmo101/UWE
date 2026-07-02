@@ -1,13 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import type {
   GeneratorActionDefinition,
-  StructuredGeneratorField,
   StructuredGeneratorSchema,
 } from "@uwe/database/generator-types";
+
+export interface QuestPatronOption {
+  title: string;
+  slug: string;
+}
 
 interface Props {
   worldSlug: string;
@@ -15,33 +19,42 @@ interface Props {
   pageTitle: string;
   schema: StructuredGeneratorSchema;
   action: GeneratorActionDefinition;
+  npcOptions: QuestPatronOption[];
   rtxReady: boolean;
   rtxEnabled: boolean;
 }
 
-export function StructuredGeneratorPanel({
+const CUSTOM_PATRON = "__custom__";
+
+export function QuestBuilderPanel({
   worldSlug,
   pageSlug,
   pageTitle,
   schema,
   action,
+  npcOptions,
   rtxReady,
   rtxEnabled,
 }: Props) {
-  const initialValues = useMemo(
-    () => Object.fromEntries(schema.fields.map((field) => [field.id, ""])),
-    [schema.fields],
+  const [patronChoice, setPatronChoice] = useState(
+    npcOptions.length > 0 ? "" : CUSTOM_PATRON,
   );
-  const [values, setValues] = useState<Record<string, string>>(initialValues);
+  const [patronCustom, setPatronCustom] = useState("");
+  const [values, setValues] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
 
-  function updateField(field: StructuredGeneratorField, value: string) {
-    setValues((current) => ({ ...current, [field.id]: value }));
-  }
+  const detailFields = schema.fields.filter((field) => field.id !== "patron");
+  const patron =
+    patronChoice === CUSTOM_PATRON ? patronCustom.trim() : patronChoice.trim();
 
-  async function runStructuredGenerator() {
+  async function runQuestGenerator() {
+    if (!patron) {
+      setStatus("Bitte einen Auftraggeber wählen oder eintragen.");
+      return;
+    }
+
     setBusy(true);
     setStatus(null);
     setJobId(null);
@@ -54,7 +67,7 @@ export function StructuredGeneratorPanel({
           actionId: action.id,
           worldSlug,
           pageSlug,
-          structuredInput: values,
+          structuredInput: { ...values, patron },
         }),
       });
 
@@ -68,22 +81,19 @@ export function StructuredGeneratorPanel({
       };
 
       if (!response.ok) {
-        setStatus(payload.error ?? "Generierung fehlgeschlagen.");
+        setStatus(payload.error ?? "Quest-Generierung fehlgeschlagen.");
         return;
       }
 
       if (response.status === 202 || payload.deferred) {
         const id = payload.jobId ?? payload.job?.id ?? null;
         setJobId(id);
-        setStatus(
-          payload.message ??
-            "RTX offline — Job vorgemerkt. Kein Cloud-Fallback.",
-        );
+        setStatus(payload.message ?? "RTX offline — Job vorgemerkt. Kein Cloud-Fallback.");
         return;
       }
 
       if (payload.runId) {
-        setStatus("Strukturierter Vorschlag erstellt — Review unter AI Runs.");
+        setStatus("Quest-Vorschlag erstellt — Review unter AI Runs (keine automatische Übernahme).");
         return;
       }
 
@@ -96,10 +106,11 @@ export function StructuredGeneratorPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">{schema.label}</h2>
+    <section className="uwe-v2-card uwe-v2-section" id="quest-builder">
+      <h2 className="uwe-v2-section-title">Quest-Builder</h2>
       <p className="uwe-dashboard-muted">
-        {schema.description} Für {pageTitle} — RTX-only, Review vor Übernahme.
+        Strukturierte Quest für {pageTitle}: Auftraggeber, Ziel, Twist und Konsequenz —
+        RTX-only, Ergebnis läuft als Review-Vorschlag (nie automatisch übernehmen).
       </p>
 
       {!rtxEnabled && (
@@ -109,17 +120,49 @@ export function StructuredGeneratorPanel({
       )}
 
       {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt.</p>
+        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).</p>
       )}
 
       <form
         className="uwe-v2-form"
         onSubmit={(event) => {
           event.preventDefault();
-          void runStructuredGenerator();
+          void runQuestGenerator();
         }}
       >
-        {schema.fields.map((field) => (
+        <label>
+          Auftraggeber (NPC der Welt) *
+          <select
+            value={patronChoice}
+            onChange={(event) => setPatronChoice(event.target.value)}
+            required
+          >
+            <option value="" disabled>
+              NPC wählen…
+            </option>
+            {npcOptions.map((npc) => (
+              <option key={npc.slug} value={npc.title}>
+                {npc.title}
+              </option>
+            ))}
+            <option value={CUSTOM_PATRON}>Eigener Auftraggeber (Freitext)…</option>
+          </select>
+        </label>
+
+        {patronChoice === CUSTOM_PATRON && (
+          <label>
+            Auftraggeber (Freitext) *
+            <input
+              type="text"
+              value={patronCustom}
+              onChange={(event) => setPatronCustom(event.target.value)}
+              placeholder="z. B. Die Bürgermeisterin von Phandalin"
+              required
+            />
+          </label>
+        )}
+
+        {detailFields.map((field) => (
           <label key={field.id}>
             {field.label}
             {field.required ? " *" : null}
@@ -129,7 +172,9 @@ export function StructuredGeneratorPanel({
                 value={values[field.id] ?? ""}
                 placeholder={field.placeholder}
                 required={field.required}
-                onChange={(event) => updateField(field, event.target.value)}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                }
               />
             ) : (
               <input
@@ -137,7 +182,9 @@ export function StructuredGeneratorPanel({
                 value={values[field.id] ?? ""}
                 placeholder={field.placeholder}
                 required={field.required}
-                onChange={(event) => updateField(field, event.target.value)}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                }
               />
             )}
           </label>

@@ -202,6 +202,7 @@ export const aiGeneratorBodySchema = z.object({
   worldSlug: slugSchema,
   pageSlug: slugSchema,
   structuredInput: z.record(z.string(), z.string()).optional(),
+  presetId: idSchema.optional(),
   useMock: z.boolean().optional(),
   sync: z.boolean().optional(),
 });

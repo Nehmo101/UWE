@@ -54,7 +54,19 @@ const ITEM_SCHEMA: StructuredGeneratorSchema = {
   label: "Item (strukturiert)",
   description: "Eigenschaften, Seltenheit und Lore als strukturiertes JSON.",
   fields: [
+    {
+      id: "srdBase",
+      label: "SRD-Basis (Open5e/SRD)",
+      kind: "textarea",
+      placeholder: "Basisgegenstand aus SRD/Open5e — Attribution beachten",
+    },
     { id: "rarity", label: "Seltenheit", kind: "text", placeholder: "z. B. ungewöhnlich" },
+    {
+      id: "attunement",
+      label: "Einstimmung (Attunement)",
+      kind: "text",
+      placeholder: "z. B. erfordert Einstimmung durch einen Zauberwirker",
+    },
     { id: "properties", label: "Eigenschaften / Mechanik", kind: "textarea", required: true },
     { id: "value", label: "Wert / Preis", kind: "text" },
     { id: "curse", label: "Fluch / Nachteil (optional)", kind: "textarea" },
@@ -78,6 +90,132 @@ export function isStructuredGeneratorTarget(
   value: string,
 ): value is StructuredGeneratorTarget {
   return value === "npc" || value === "quest" || value === "item";
+}
+
+export const STRUCTURED_GENERATOR_FIELD_MAX_LENGTH = 4000;
+
+export interface StructuredGeneratorInputIssue {
+  fieldId: string | null;
+  message: string;
+}
+
+export interface StructuredGeneratorInputResult {
+  ok: boolean;
+  /** Trimmed values for known, non-empty fields. */
+  values: Record<string, string>;
+  issues: StructuredGeneratorInputIssue[];
+}
+
+/**
+ * Validates structured generator input against a schema: unknown field ids,
+ * missing required fields and overlong values are rejected. Returns trimmed
+ * values for the known fields.
+ */
+export function validateStructuredGeneratorInput(
+  schema: StructuredGeneratorSchema,
+  input: Record<string, string> | undefined,
+): StructuredGeneratorInputResult {
+  const issues: StructuredGeneratorInputIssue[] = [];
+  const values: Record<string, string> = {};
+  const knownFields = new Map(schema.fields.map((field) => [field.id, field]));
+
+  for (const [key, raw] of Object.entries(input ?? {})) {
+    const field = knownFields.get(key);
+    if (!field) {
+      issues.push({
+        fieldId: key,
+        message: `Unbekanntes Feld „${key}" für ${schema.label}.`,
+      });
+      continue;
+    }
+    if (typeof raw !== "string") {
+      issues.push({ fieldId: key, message: `Feld „${field.label}" muss Text sein.` });
+      continue;
+    }
+    const trimmed = raw.trim();
+    if (trimmed.length > STRUCTURED_GENERATOR_FIELD_MAX_LENGTH) {
+      issues.push({
+        fieldId: key,
+        message: `Feld „${field.label}" ist zu lang (max. ${STRUCTURED_GENERATOR_FIELD_MAX_LENGTH} Zeichen).`,
+      });
+      continue;
+    }
+    if (trimmed) {
+      values[key] = trimmed;
+    }
+  }
+
+  for (const field of schema.fields) {
+    if (field.required && !values[field.id]) {
+      issues.push({ fieldId: field.id, message: `Feld „${field.label}" ist erforderlich.` });
+    }
+  }
+
+  return { ok: issues.length === 0, values, issues };
+}
+
+export interface GeneratorPresetTemplateFields {
+  structured: boolean;
+  fieldIds: string[];
+  defaults: Record<string, string>;
+}
+
+/**
+ * Parses a GeneratorPreset.template JSON value into its structured parts
+ * (`structured`, `fields`, `defaults`). Unknown shapes yield empty results.
+ */
+export function parseGeneratorPresetTemplate(template: unknown): GeneratorPresetTemplateFields {
+  if (typeof template !== "object" || template === null || Array.isArray(template)) {
+    return { structured: false, fieldIds: [], defaults: {} };
+  }
+
+  const record = template as Record<string, unknown>;
+  const fieldIds = Array.isArray(record.fields)
+    ? record.fields.filter(
+        (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
+      )
+    : [];
+
+  const defaults: Record<string, string> = {};
+  if (
+    typeof record.defaults === "object" &&
+    record.defaults !== null &&
+    !Array.isArray(record.defaults)
+  ) {
+    for (const [key, value] of Object.entries(record.defaults as Record<string, unknown>)) {
+      if (typeof value === "string" && value.trim()) {
+        defaults[key] = value.trim();
+      }
+    }
+  }
+
+  return { structured: record.structured === true, fieldIds, defaults };
+}
+
+/**
+ * Applies a GeneratorPreset template to a structured schema: keeps the fields
+ * requested by the preset plus all required fields. Falls back to the full
+ * schema when the template selects no known fields.
+ */
+export function applyGeneratorPresetToSchema(
+  schema: StructuredGeneratorSchema,
+  template: unknown,
+): StructuredGeneratorSchema {
+  const parsed = parseGeneratorPresetTemplate(template);
+  const requested = new Set(parsed.fieldIds);
+  if (requested.size === 0) {
+    return schema;
+  }
+
+  const hasKnownField = schema.fields.some((field) => requested.has(field.id));
+  if (!hasKnownField) {
+    return schema;
+  }
+
+  return {
+    ...schema,
+    fields: schema.fields.filter((field) => field.required || requested.has(field.id)),
+  };
 }
 
 export function buildStructuredGeneratorPrompt(

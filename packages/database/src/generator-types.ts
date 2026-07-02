@@ -6,6 +6,7 @@ export type {
 } from "./generator-service";
 
 export type {
+  GeneratorPresetTemplateFields,
   StructuredGeneratorField,
   StructuredGeneratorSchema,
   StructuredGeneratorTarget,
