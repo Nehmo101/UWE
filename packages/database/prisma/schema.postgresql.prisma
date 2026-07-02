@@ -536,6 +536,8 @@ model User {
   reviewComments         ReviewComment[]
   dashboardLayouts       DashboardLayout[]
   ownedCharacters        Character[]
+  bugReports             BugReport[]
+  importJobs             ImportJob[]
 
   @@map("users")
 }
@@ -668,6 +670,8 @@ model World {
   dndBeyondReferences DndBeyondReference[]
   researchSessions    ResearchSession[]
   contentReviews      ContentReview[]
+  atlasMap            AtlasMap?
+  atlasPaletteItems   AtlasPaletteItem[] @relation("AtlasPaletteWorld")
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
   factionStates       FactionState[]
@@ -675,6 +679,7 @@ model World {
   partyTreasury       PartyTreasury?
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
+  importJobs           ImportJob[]
 
   @@map("worlds")
 }
@@ -747,6 +752,9 @@ model Page {
   generatorOutputs       GeneratorOutput[]
   dndBeyondReferences    DndBeyondReference[]
   versions               PageVersion[]
+  atlasNodes             AtlasNode[]    @relation("AtlasNodePage")
+  atlasFeatures          AtlasFeature[] @relation("AtlasFeaturePage")
+  atlasObjects           AtlasObject[]  @relation("AtlasObjectPage")
   worldEventLinks        WorldEventEntityLink[]
   factionState           FactionState?
   character              Character?
@@ -1041,6 +1049,8 @@ model Asset {
   contentBlocks     ContentBlock[]
   soundboardButtons SoundboardButton[]
   imageStudioVersions ImageStudioVersion[]
+  atlasNodeBackgrounds AtlasNode[]        @relation("AtlasNodeBackground")
+  atlasPaletteItems    AtlasPaletteItem[] @relation("AtlasPaletteAsset")
   albumItems           AssetAlbumItem[]
 
   @@index([worldId, type])
@@ -1251,6 +1261,7 @@ model PlayerNote {
   @@map("player_notes")
 }
 
+// Unified review queue for AI proposals, Co-DM changes, player notes, and portal unlocks.
 model ContentReview {
   id               String                  @id @default(cuid())
   worldId          String                  @map("world_id")
@@ -2316,6 +2327,7 @@ model WorkshopProject {
   paintRecipes   WorkshopPaintRecipe[]
   printProfiles  WorkshopPrintProfile[]
   terrainRentals WorkshopTerrainRental[]
+  miniatureCollectionItems MiniatureCollectionItem[]
 
   @@index([status])
   @@index([projectType])
@@ -2753,20 +2765,172 @@ enum DevIdeaStatus {
   rejected
 }
 
+enum DevIdeaType {
+  feature
+  bug
+  prompt
+}
+
+enum DevIdeaLifecycle {
+  existing
+  planned
+  broken
+  deprecated
+}
+
+enum BugReportStatus {
+  open
+  in_progress
+  resolved
+  wont_fix
+}
+
+enum BugReportSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum MiniatureCollectionStatus {
+  purchased
+  built
+  primed
+  painted
+}
+
+enum ImportJobStatus {
+  pending
+  preview
+  executing
+  completed
+  failed
+  rolled_back
+}
+
+enum ImportSourceType {
+  knoteforge
+  obsidian
+  pdf
+  markdown
+  bulk_image
+}
+
+enum ImportTargetType {
+  world
+  personal_brain
+  capture
+  dnd_page
+}
+
+enum DocumentTemplateCategory {
+  contract
+  guide
+  checklist
+  other
+}
+
 model DevIdea {
-  id              String        @id @default(cuid())
+  id              String           @id @default(cuid())
   title           String
-  body            String        @default("")
-  status          DevIdeaStatus @default(in_planning)
-  chatTranscript  Json?         @map("chat_transcript")
-  generatedPrompt String?       @map("generated_prompt")
-  devAgentJobId   String?       @map("dev_agent_job_id")
+  body            String           @default("")
+  status          DevIdeaStatus    @default(in_planning)
+  ideaType        DevIdeaType      @default(feature) @map("idea_type")
+  lifecycle       DevIdeaLifecycle @default(planned)
+  module          String?
+  maturityLevel   String?          @map("maturity_level")
+  chatTranscript  Json?            @map("chat_transcript")
+  generatedPrompt String?          @map("generated_prompt")
+  devAgentJobId   String?          @map("dev_agent_job_id")
   metadata        Json?
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
   @@index([status, updatedAt])
+  @@index([ideaType, lifecycle])
   @@map("dev_ideas")
+}
+
+model BugReport {
+  id                String            @id @default(cuid())
+  title             String
+  description       String            @default("")
+  status            BugReportStatus   @default(open)
+  severity          BugReportSeverity @default(medium)
+  module            String?
+  screenshotAssetId String?           @map("screenshot_asset_id")
+  reporterUserId    String?           @map("reporter_user_id")
+  metadata          Json?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  reporter User? @relation(fields: [reporterUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@index([severity])
+  @@map("bug_reports")
+}
+
+model MiniatureCollectionItem {
+  id                   String                    @id @default(cuid())
+  name                 String
+  manufacturer         String?
+  gameSystem           String?                   @map("game_system")
+  faction              String?
+  quantity             Int                       @default(1)
+  status               MiniatureCollectionStatus @default(purchased)
+  notes                String                    @default("")
+  referenceImageAssetId String?                  @map("reference_image_asset_id")
+  comparePhotoAssetIds Json?                     @map("compare_photo_asset_ids")
+  workshopProjectId    String?                   @map("workshop_project_id")
+  metadata             Json?
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+
+  workshopProject WorkshopProject? @relation(fields: [workshopProjectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([manufacturer])
+  @@index([gameSystem])
+  @@map("miniature_collection_items")
+}
+
+model ImportJob {
+  id             String           @id @default(cuid())
+  sourceType     ImportSourceType @map("source_type")
+  targetType     ImportTargetType @map("target_type")
+  targetWorldId  String?          @map("target_world_id")
+  status         ImportJobStatus  @default(pending)
+  fileName       String?          @map("file_name")
+  previewPayload Json?            @map("preview_payload")
+  resultSummary  Json?            @map("result_summary")
+  undoToken      String?          @map("undo_token")
+  errorMessage   String?          @map("error_message")
+  createdByUserId String?         @map("created_by_user_id")
+  metadata       Json?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  targetWorld World? @relation(fields: [targetWorldId], references: [id], onDelete: SetNull)
+  createdBy   User?  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([targetType])
+  @@map("import_jobs")
+}
+
+model DocumentTemplate {
+  id        String                   @id @default(cuid())
+  name      String
+  category  DocumentTemplateCategory @default(other)
+  body      String                   @default("")
+  variables Json?
+  metadata  Json?
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("document_templates")
 }
 
 model DndBeyondReference {
@@ -3018,6 +3182,169 @@ model ResearchSource {
 
   @@index([sessionId])
   @@map("research_sources")
+}
+
+// --- Atlas World Builder ---
+
+enum AtlasNodeLevel {
+  globe
+  continent
+  landscape
+  city
+}
+
+enum AtlasFeatureKind {
+  region
+  river
+  road
+  biome
+  relief
+  label
+  pin
+}
+
+enum AtlasLabelColor {
+  black
+  red
+}
+
+enum AtlasPaletteSource {
+  builtin
+  ai
+  upload
+}
+
+enum AtlasPaletteReviewStatus {
+  pending
+  approved
+}
+
+/// One atlas per world — get-or-create via atlas service.
+model AtlasMap {
+  id            String     @id @default(cuid())
+  worldId       String     @map("world_id")
+  title         String     @default("Atlas")
+  stylePreset   String     @default("tolkien-ink") @map("style_preset")
+  settings      Json?
+  /// Atlas document schema version of the persisted map (v1 legacy → v2 tile-layer). Migrated to v2 on load.
+  schemaVersion Int        @default(1) @map("schema_version")
+  /// Terrain tile layer: { cols, rows, tile, cells:{ "c,r": biomeKind } }. Null until the map is painted.
+  tileLayer     Json?      @map("tile_layer")
+  visibility    Visibility @default(dm_only)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  world World       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  nodes AtlasNode[]
+
+  @@unique([worldId])
+  @@map("atlas_maps")
+}
+
+model AtlasNode {
+  id                String         @id @default(cuid())
+  mapId             String         @map("map_id")
+  parentId          String?        @map("parent_id")
+  parentFeatureId   String?        @map("parent_feature_id")
+  level             AtlasNodeLevel
+  title             String
+  slug              String?
+  extent            Json?
+  silhouette        Json?
+  seed              Int?
+  backgroundAssetId String?        @map("background_asset_id")
+  pageId            String?        @map("page_id")
+  visibility        Visibility     @default(dm_only)
+  sortOrder         Int            @default(0) @map("sort_order")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  map             AtlasMap       @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  parent          AtlasNode?     @relation("AtlasNodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        AtlasNode[]    @relation("AtlasNodeHierarchy")
+  /// The AtlasFeature (in a parent node) that drills into this node via its parentFeatureId.
+  parentFeature   AtlasFeature?  @relation("AtlasNodeParentFeature", fields: [parentFeatureId], references: [id], onDelete: SetNull)
+  backgroundAsset Asset?         @relation("AtlasNodeBackground", fields: [backgroundAssetId], references: [id], onDelete: SetNull)
+  linkedPage      Page?          @relation("AtlasNodePage", fields: [pageId], references: [id], onDelete: SetNull)
+  features        AtlasFeature[] @relation("AtlasNodeFeatures")
+  /// Features from other nodes that drill into this node for navigation.
+  drillSourceFeatures AtlasFeature[] @relation("AtlasFeatureChildNode")
+  objects         AtlasObject[]
+
+  @@index([mapId, sortOrder])
+  @@index([parentId])
+  @@map("atlas_nodes")
+}
+
+model AtlasFeature {
+  id            String           @id @default(cuid())
+  nodeId        String           @map("node_id")
+  kind          AtlasFeatureKind
+  geometry      Json
+  style         Json?
+  labelText     String?          @map("label_text")
+  labelColor    AtlasLabelColor? @map("label_color")
+  childNodeId   String?          @map("child_node_id")
+  linkedPageId  String?          @map("linked_page_id")
+  layer         Int              @default(0)
+  visibility    Visibility       @default(dm_only)
+  sortOrder     Int              @default(0) @map("sort_order")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  node        AtlasNode    @relation("AtlasNodeFeatures", fields: [nodeId], references: [id], onDelete: Cascade)
+  /// The child node this feature drills into (for nested map navigation).
+  childNode   AtlasNode?   @relation("AtlasFeatureChildNode", fields: [childNodeId], references: [id], onDelete: SetNull)
+  /// Nodes that reference this feature as their parentFeature.
+  childNodes  AtlasNode[]  @relation("AtlasNodeParentFeature")
+  linkedPage  Page?        @relation("AtlasFeaturePage", fields: [linkedPageId], references: [id], onDelete: SetNull)
+
+  @@index([nodeId, layer, sortOrder])
+  @@map("atlas_features")
+}
+
+model AtlasObject {
+  id            String             @id @default(cuid())
+  nodeId        String             @map("node_id")
+  paletteItemId String             @map("palette_item_id")
+  x             Float
+  y             Float
+  scale         Float              @default(1)
+  rotation      Float              @default(0)
+  layer         Int                @default(0)
+  linkedPageId  String?            @map("linked_page_id")
+  visibility    Visibility         @default(dm_only)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  node        AtlasNode        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  paletteItem AtlasPaletteItem @relation(fields: [paletteItemId], references: [id], onDelete: Restrict)
+  linkedPage  Page?            @relation("AtlasObjectPage", fields: [linkedPageId], references: [id], onDelete: SetNull)
+
+  @@index([nodeId, layer])
+  @@map("atlas_objects")
+}
+
+model AtlasPaletteItem {
+  id              String                   @id @default(cuid())
+  worldId         String?                  @map("world_id")
+  name            String
+  kind            String
+  source          AtlasPaletteSource       @default(builtin)
+  assetId         String?                  @map("asset_id")
+  builtinGlyphKey String?                  @map("builtin_glyph_key")
+  reviewStatus    AtlasPaletteReviewStatus @default(approved) @map("review_status")
+  styleTags       Json?                    @map("style_tags")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  world   World?        @relation("AtlasPaletteWorld", fields: [worldId], references: [id], onDelete: Cascade)
+  asset   Asset?        @relation("AtlasPaletteAsset", fields: [assetId], references: [id], onDelete: SetNull)
+  objects AtlasObject[]
+
+  @@index([worldId, kind])
+  @@index([reviewStatus])
+  @@map("atlas_palette_items")
 }
 
 // --- AI Gateway (RTX fallback, permissions, budgets, usage logs) ---
