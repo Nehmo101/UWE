@@ -15,10 +15,12 @@ import {
   getAppRepository,
   isCanonicalLifecycleFilterStatus,
   prisma,
+  QUEST_LIFECYCLE_LABELS,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   searchStudioCrossDomain,
   type AdminSearchEntityType,
+  type QuestLifecycleStatus,
   type SearchEntityFilter,
   type Visibility,
   type CanonicalStatus,
@@ -37,6 +39,7 @@ interface Props {
     visibility?: string;
     campaign?: string;
     canon?: string;
+    quest?: string;
   }>;
 }
 
@@ -57,8 +60,13 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     visibility,
     campaign: campaignSlug,
     canon: canonFilter,
+    quest: questParam,
   } = await searchParams;
   const scope = resolveScope(scopeParam);
+  const questStatusFilter =
+    entityFilter === "quests" && questParam && questParam in QUEST_LIFECYCLE_LABELS
+      ? (questParam as QuestLifecycleStatus)
+      : undefined;
   const canonicalStatus = isCanonicalLifecycleFilterStatus(canonFilter)
     ? (canonFilter as CanonicalStatus)
     : undefined;
@@ -92,6 +100,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           entityFilter: entityFilter as SearchEntityFilter | undefined,
           visibilityFilter: visibility ? [visibility as Visibility] : undefined,
           canonicalStatusFilter: canonicalStatus,
+          questStatusFilter,
           urlMode: "studio",
           limit: 100,
         },
@@ -199,6 +208,18 @@ export default async function StudioSearchPage({ searchParams }: Props) {
                     label: SEARCH_ENTITY_FILTER_LABELS[filter],
                   })),
                 },
+                ...(entityFilter === "quests"
+                  ? [
+                      {
+                        name: "quest",
+                        label: "Quest-Status",
+                        value: questParam,
+                        options: Object.entries(QUEST_LIFECYCLE_LABELS).map(
+                          ([value, label]) => ({ value, label }),
+                        ),
+                      },
+                    ]
+                  : []),
                 {
                   name: "visibility",
                   label: "Sichtbarkeit",

@@ -6,11 +6,13 @@ import type {
   CanonicalStatus,
   PageType,
   PublishStatus,
+  QuestLifecycleStatus,
   Visibility,
 } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
 import { loadEntityTagsByEntityIds } from "./entity-tag-search-service";
 import { buildPageUrl } from "./page-types";
+import { isOpenQuest } from "./quest-lifecycle-service";
 import {
   type AccessContext as WikiAccessContext,
   type PortalAccessOptions,
@@ -70,6 +72,11 @@ export interface SearchOptions {
   entityFilter?: SearchEntityFilter;
   visibilityFilter?: Visibility[];
   canonicalStatusFilter?: CanonicalStatus | CanonicalStatus[];
+  /**
+   * Restricts results to quest pages with the given lifecycle status.
+   * "open" also matches quests without an explicit status (unset counts as open).
+   */
+  questStatusFilter?: QuestLifecycleStatus;
   limit?: number;
   urlMode?: SearchUrlMode;
 }
@@ -85,6 +92,7 @@ export interface SearchResultItem {
   visibility: Visibility;
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
+  questStatus: QuestLifecycleStatus | null;
   href: string;
   matchedFields: SearchMatchField[];
   snippet: string | null;
@@ -102,6 +110,7 @@ export interface SearchIndexEntry {
   visibility: Visibility;
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
+  questStatus: QuestLifecycleStatus | null;
   worldSlug: string;
   worldName: string;
   campaignName: string | null;
@@ -119,6 +128,7 @@ type IndexedPage = {
   visibility: Visibility;
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
+  questStatus?: QuestLifecycleStatus | null;
   campaignId: string | null;
   contentBlocks: ContentBlock[];
   world: { slug: string; name: string };
@@ -223,6 +233,7 @@ export function buildSearchIndex(
       visibility: page.visibility,
       publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
+      questStatus: page.questStatus ?? null,
       worldSlug: page.world.slug,
       worldName: page.world.name,
       campaignName: page.campaign?.name ?? null,
@@ -347,6 +358,19 @@ export function searchIndex(
       }
     }
 
+    if (options.questStatusFilter) {
+      if (entry.type !== "quest") {
+        continue;
+      }
+      const statusMatches =
+        options.questStatusFilter === "open"
+          ? isOpenQuest(entry.questStatus)
+          : entry.questStatus === options.questStatusFilter;
+      if (!statusMatches) {
+        continue;
+      }
+    }
+
     const matchedFields = findMatches(entry, query, options.entityFilter);
     if (matchedFields.length === 0) {
       continue;
@@ -363,6 +387,7 @@ export function searchIndex(
       visibility: entry.visibility,
       publishStatus: entry.publishStatus,
       canonicalStatus: entry.canonicalStatus,
+      questStatus: entry.questStatus,
       href: buildResultHref(entry.worldSlug, entry.type, entry.slug, urlMode),
       matchedFields,
       snippet: pickSnippet(entry, matchedFields, query),

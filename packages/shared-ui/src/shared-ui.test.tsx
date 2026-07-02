@@ -22,6 +22,7 @@ import {
 import {
   PageTypeBadge,
   PublishBadge,
+  QuestStatusBadge,
   RtxStatusBadge,
   VisibilityBadge,
 } from "./StatusBadges";
@@ -97,6 +98,48 @@ describe("shared-ui components", () => {
     assert.match(html, /Veröffentlicht/);
     assert.match(html, /Lore/);
     assert.doesNotMatch(html, /dm_only/);
+  });
+
+  it("renders quest status badges and treats missing status as open", () => {
+    const html = renderToStaticMarkup(
+      <>
+        <QuestStatusBadge status="completed" />
+        <QuestStatusBadge status="failed" />
+        <QuestStatusBadge status={null} />
+      </>,
+    );
+    assert.match(html, /Erledigt/);
+    assert.match(html, /Gescheitert/);
+    assert.match(html, /Offen/);
+    assert.match(html, /uwe-badge-published/);
+    assert.match(html, /uwe-badge-danger/);
+    assert.match(html, /aria-label="Quest-Status:/);
+  });
+
+  it("shows the quest status badge for quest search results", () => {
+    const html = renderToStaticMarkup(
+      <SearchResultsList
+        query="turm"
+        results={[
+          {
+            pageId: "q1",
+            title: "Der gefallene Turm",
+            slug: "gefallener-turm",
+            type: "quest",
+            worldSlug: "terra",
+            worldName: "Terra",
+            campaignName: null,
+            visibility: "player_visible",
+            questStatus: "completed",
+            href: "/worlds/terra/quests/gefallener-turm",
+            matchedFields: ["title"],
+            snippet: null,
+          },
+        ]}
+      />,
+    );
+    assert.match(html, /Der gefallene Turm/);
+    assert.match(html, /Erledigt/);
   });
 
   it("does not expose dm_only labels in player-visible search results", () => {

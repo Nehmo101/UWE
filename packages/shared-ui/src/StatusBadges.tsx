@@ -6,6 +6,7 @@ import type {
   GameSessionStatus,
   PageType,
   PublishStatus,
+  QuestLifecycleStatus,
   RevealState,
   SecretLevel,
   Visibility,
@@ -119,6 +120,18 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   sound: "Sound",
   map: "Karte",
   note: "Notiz",
+};
+
+export const QUEST_STATUS_LABELS: Record<QuestLifecycleStatus, string> = {
+  open: "Offen",
+  completed: "Erledigt",
+  failed: "Gescheitert",
+};
+
+export const QUEST_STATUS_DESCRIPTIONS: Record<QuestLifecycleStatus, string> = {
+  open: "Quest ist offen — erscheint im Questlog unter „Offen“. Kein gesetzter Status zählt ebenfalls als offen.",
+  completed: "Quest wurde erfolgreich abgeschlossen.",
+  failed: "Quest ist gescheitert oder nicht mehr erfüllbar.",
 };
 
 export const DUNGEON_PREP_STATUS_LABELS: Record<DungeonPrepStatus, string> = {
@@ -354,6 +367,30 @@ export function PlayerNoteStatusBadge({ status }: { status: PlayerNoteStatus }) 
           : "uwe-badge uwe-badge-draft";
 
   return <span className={className}>{PLAYER_NOTE_STATUS_LABELS[status]}</span>;
+}
+
+/**
+ * Quest lifecycle badge. `null`/`undefined` counts as "open" (no explicit
+ * status set), mirroring the portal questlog semantics.
+ */
+export function QuestStatusBadge({ status }: { status: QuestLifecycleStatus | null | undefined }) {
+  const effective: QuestLifecycleStatus = status ?? "open";
+  const className =
+    effective === "completed"
+      ? "uwe-badge uwe-badge-published"
+      : effective === "failed"
+        ? "uwe-badge uwe-badge-danger"
+        : "uwe-badge uwe-badge-player";
+
+  return (
+    <span
+      className={className}
+      title={QUEST_STATUS_DESCRIPTIONS[effective]}
+      aria-label={`Quest-Status: ${QUEST_STATUS_LABELS[effective]}. ${QUEST_STATUS_DESCRIPTIONS[effective]}`}
+    >
+      {QUEST_STATUS_LABELS[effective]}
+    </span>
+  );
 }
 
 export function DungeonPrepStatusBadge({ status }: { status: DungeonPrepStatus | null }) {

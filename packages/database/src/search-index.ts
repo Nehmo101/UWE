@@ -29,6 +29,7 @@ function pageToSearchIndexEntry(
     visibility: page.visibility,
     publishStatus: page.publishStatus,
     canonicalStatus: page.canonicalStatus,
+    questStatus: page.questStatus ?? null,
     worldSlug: page.world.slug,
     worldName: page.world.name,
     campaignName: page.campaign?.name ?? null,
