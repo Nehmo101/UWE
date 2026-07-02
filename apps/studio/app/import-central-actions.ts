@@ -5,12 +5,14 @@ import {
   createUndoService,
   createUweRepository,
   executeMarkdownImport,
+  extractObsidianVaultMarkdown,
   previewMarkdownImport,
   previewPdfImport,
   executePdfImport,
   prisma,
   type ImportSourceType,
   type ImportTargetType,
+  type MarkdownImportExecuteResult,
   type MarkdownImportPreviewResult,
 } from "@uwe/database/server";
 import {
@@ -65,6 +67,53 @@ function readWorldSlug(metadata: unknown): string | null {
   }
   const slug = (metadata as Record<string, unknown>).worldSlug;
   return typeof slug === "string" && slug.trim() ? slug.trim() : null;
+}
+
+function markdownImportContext(job: {
+  sourceType: ImportSourceType;
+  targetType: ImportTargetType;
+  fileName: string | null;
+  targetWorldId: string | null;
+  metadata: unknown;
+}) {
+  return {
+    targetType: job.targetType,
+    sourceType: job.sourceType,
+    fileName: job.fileName,
+    worldId: job.targetWorldId,
+    worldSlug: readWorldSlug(job.metadata),
+  };
+}
+
+/** Capture undo, mark the job completed, and build the shared result summary. */
+async function finalizeImportCentralMarkdownExecute(
+  jobId: string,
+  job: { targetType: ImportTargetType; targetWorldId: string | null },
+  result: MarkdownImportExecuteResult,
+): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
+  const resultSummary = {
+    created: result.created,
+    updated: result.updated,
+    failed: result.failed,
+    skipped: result.skipped,
+    createdIds: result.createdIds,
+  };
+
+  const undo = createUndoService(prisma);
+  const undoEntry = await undo.captureImportCentralExecute({
+    targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
+    worldId: job.targetWorldId,
+    jobId,
+    createdPersonalBrainDocumentIds:
+      job.targetType === "personal_brain" ? result.createdIds : [],
+    createdCaptureIds: job.targetType === "capture" ? result.createdIds : [],
+    createdPageIds: job.targetType === "dnd_page" ? result.createdIds : [],
+  });
+
+  const undoToken = undoEntry?.id ?? null;
+  await importJobs().markCompleted(jobId, resultSummary, undoToken);
+  revalidateImportCentral();
+  return { resultSummary, undoToken };
 }
 
 async function resolveWorldContext(targetWorldId: string | null) {
@@ -151,14 +200,7 @@ export async function previewImportCentralJobAction(
   }
 
   if (isImportCentralMarkdownTarget(job.targetType)) {
-    const worldSlug = readWorldSlug(job.metadata);
-    const preview = previewMarkdownImport(content, {
-      targetType: job.targetType,
-      sourceType: job.sourceType,
-      fileName: job.fileName,
-      worldId: job.targetWorldId,
-      worldSlug,
-    });
+    const preview = previewMarkdownImport(content, markdownImportContext(job));
 
     await importJobs().updateJob(jobId, {
       status: "preview",
@@ -230,43 +272,10 @@ export async function executeImportCentralJobAction(
   await importJobs().markExecuting(jobId);
 
   try {
-    const worldSlug = readWorldSlug(job.metadata);
-    const result = await executeMarkdownImport(
-      prisma,
-      content,
-      {
-        targetType: job.targetType,
-        sourceType: job.sourceType,
-        fileName: job.fileName,
-        worldId: job.targetWorldId,
-        worldSlug,
-      },
-      { itemIds },
-    );
-
-    const resultSummary = {
-      created: result.created,
-      updated: result.updated,
-      failed: result.failed,
-      skipped: result.skipped,
-      createdIds: result.createdIds,
-    };
-
-    const undo = createUndoService(prisma);
-    const undoEntry = await undo.captureImportCentralExecute({
-      targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
-      worldId: job.targetWorldId,
-      jobId,
-      createdPersonalBrainDocumentIds:
-        job.targetType === "personal_brain" ? result.createdIds : [],
-      createdCaptureIds: job.targetType === "capture" ? result.createdIds : [],
-      createdPageIds: job.targetType === "dnd_page" ? result.createdIds : [],
+    const result = await executeMarkdownImport(prisma, content, markdownImportContext(job), {
+      itemIds,
     });
-
-    const undoToken = undoEntry?.id ?? null;
-    await importJobs().markCompleted(jobId, resultSummary, undoToken);
-    revalidateImportCentral();
-    return { resultSummary, undoToken };
+    return await finalizeImportCentralMarkdownExecute(jobId, job, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
     await importJobs().markFailed(jobId, message);
@@ -291,14 +300,7 @@ export async function previewImportCentralPdfJobAction(
     throw new Error("PDF-Datei ist zu groß (max. 10 MB).");
   }
 
-  const worldSlug = readWorldSlug(job.metadata);
-  const preview = await previewPdfImport(buffer, {
-    targetType: job.targetType,
-    sourceType: job.sourceType,
-    fileName: job.fileName,
-    worldId: job.targetWorldId,
-    worldSlug,
-  });
+  const preview = await previewPdfImport(buffer, markdownImportContext(job));
 
   await importJobs().updateJob(jobId, {
     status: "preview",
@@ -329,45 +331,76 @@ export async function executeImportCentralPdfJobAction(
   await importJobs().markExecuting(jobId);
 
   try {
-    const worldSlug = readWorldSlug(job.metadata);
-    const result = await executePdfImport(
-      prisma,
-      buffer,
-      {
-        targetType: job.targetType,
-        sourceType: job.sourceType,
-        fileName: job.fileName,
-        worldId: job.targetWorldId,
-        worldSlug,
-      },
-      { itemIds },
-    );
-
-    const resultSummary = {
-      created: result.created,
-      updated: result.updated,
-      failed: result.failed,
-      skipped: result.skipped,
-      createdIds: result.createdIds,
-    };
-
-    const undo = createUndoService(prisma);
-    const undoEntry = await undo.captureImportCentralExecute({
-      targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
-      worldId: job.targetWorldId,
-      jobId,
-      createdPersonalBrainDocumentIds:
-        job.targetType === "personal_brain" ? result.createdIds : [],
-      createdCaptureIds: job.targetType === "capture" ? result.createdIds : [],
-      createdPageIds: job.targetType === "dnd_page" ? result.createdIds : [],
+    const result = await executePdfImport(prisma, buffer, markdownImportContext(job), {
+      itemIds,
     });
-
-    const undoToken = undoEntry?.id ?? null;
-    await importJobs().markCompleted(jobId, resultSummary, undoToken);
-    revalidateImportCentral();
-    return { resultSummary, undoToken };
+    return await finalizeImportCentralMarkdownExecute(jobId, job, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "PDF-Import fehlgeschlagen.";
+    await importJobs().markFailed(jobId, message);
+    revalidateImportCentral();
+    throw new Error(message);
+  }
+}
+
+export interface ObsidianVaultPreviewResponse {
+  preview: MarkdownImportPreviewResult;
+  vaultFileCount: number;
+  vaultFiles: string[];
+}
+
+export async function previewImportCentralObsidianVaultAction(
+  jobId: string,
+  contentBase64: string,
+): Promise<ObsidianVaultPreviewResponse> {
+  assertStudioTrusted();
+
+  const job = await requireImportJob(jobId);
+  if (job.sourceType !== "obsidian" || !isImportCentralMarkdownTarget(job.targetType)) {
+    throw new Error(
+      "Vault-ZIP-Import ist nur für die Ziele Life Brain, Capture oder DnD-Seite verfügbar.",
+    );
+  }
+
+  const buffer = Buffer.from(contentBase64, "base64");
+  const vault = extractObsidianVaultMarkdown(buffer);
+  const preview = previewMarkdownImport(vault.markdown, markdownImportContext(job));
+
+  await importJobs().updateJob(jobId, {
+    status: "preview",
+    previewPayload: preview as unknown as Record<string, unknown>,
+  });
+
+  revalidateImportCentral();
+  return { preview, vaultFileCount: vault.fileCount, vaultFiles: vault.files };
+}
+
+export async function executeImportCentralObsidianVaultAction(
+  jobId: string,
+  contentBase64: string,
+  itemIds?: string[],
+): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
+  assertStudioTrusted();
+
+  const job = await requireImportJob(jobId);
+  if (job.sourceType !== "obsidian" || !isImportCentralMarkdownTarget(job.targetType)) {
+    throw new Error(
+      "Vault-ZIP-Import ist nur für die Ziele Life Brain, Capture oder DnD-Seite verfügbar.",
+    );
+  }
+
+  const buffer = Buffer.from(contentBase64, "base64");
+  const vault = extractObsidianVaultMarkdown(buffer);
+
+  await importJobs().markExecuting(jobId);
+
+  try {
+    const result = await executeMarkdownImport(prisma, vault.markdown, markdownImportContext(job), {
+      itemIds,
+    });
+    return await finalizeImportCentralMarkdownExecute(jobId, job, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Vault-Import fehlgeschlagen.";
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);

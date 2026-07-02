@@ -223,6 +223,7 @@ export function ImportCentralWorkspace({
       return (
         <MarkdownCentralImportPanel
           jobId={activeJob.id}
+          sourceType={activeJob.sourceType}
           targetType={activeJob.targetType}
           fileAccept={importCentralSourceAccept(activeJob.sourceType)}
           onComplete={handleImportComplete}
@@ -242,9 +243,10 @@ export function ImportCentralWorkspace({
       <section className="uwe-panel">
         <h2>Neuer Import</h2>
         <p className="uwe-panel-intro">
-          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian und PDF können in
-          Life Brain, Capture oder DnD-Seiten importiert werden. KnoteForge-JSON importiert nur in
-          Welten.
+          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian (einzelne Dateien,
+          Vault-Ordner oder Vault-ZIP) und PDF können in Life Brain, Capture oder DnD-Seiten
+          importiert werden. KnoteForge-JSON importiert nur in Welten. Jeder Import zeigt zuerst
+          eine Vorschau und kann nach der Ausführung über den Verlauf zurückgerollt werden.
         </p>
 
         <div className="uwe-form-grid">

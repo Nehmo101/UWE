@@ -1987,6 +1987,14 @@ export type {
 } from "./import-central-service";
 
 export {
+  extractObsidianVaultMarkdown,
+  isObsidianVaultMarkdownEntry,
+  ObsidianVaultImportError,
+} from "./obsidian-vault-import";
+
+export type { ObsidianVaultExtractResult } from "./obsidian-vault-import";
+
+export {
   createDocumentTemplateService,
   DocumentTemplateService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
