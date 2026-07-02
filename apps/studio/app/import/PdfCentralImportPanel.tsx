@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ImportTargetType, MarkdownImportPreviewResult } from "@uwe/database/import-constants";
+import { arrayBufferToBase64 } from "@/src/lib/file-base64";
 import {
   executeImportCentralPdfJobAction,
   previewImportCentralPdfJobAction,
@@ -19,6 +20,7 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
   const [preview, setPreview] = useState<MarkdownImportPreviewResult | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [resultSummary, setResultSummary] = useState<Record<string, unknown> | null>(null);
+  const [undoToken, setUndoToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,16 +33,12 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
 
     setError(null);
     setResultSummary(null);
+    setUndoToken(null);
     setPreview(null);
     setSelectedIds(new Set());
 
     const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-    setContentBase64(btoa(binary));
+    setContentBase64(arrayBufferToBase64(buffer));
     setFileName(file.name);
   }, []);
 
@@ -82,12 +80,13 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
     setError(null);
 
     try {
-      const { resultSummary: summary } = await executeImportCentralPdfJobAction(
+      const response = await executeImportCentralPdfJobAction(
         jobId,
         contentBase64,
         singleTarget ? undefined : [...selectedIds],
       );
-      setResultSummary(summary);
+      setResultSummary(response.resultSummary);
+      setUndoToken(response.undoToken);
       onComplete?.();
     } catch (executeError) {
       setError(executeError instanceof Error ? executeError.message : "Import fehlgeschlagen.");
@@ -150,7 +149,14 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
       </section>
 
       {error ? <p className="uwe-flash uwe-flash-error">{error}</p> : null}
-      {resultLabel ? <p className="uwe-flash uwe-flash-success">{resultLabel}</p> : null}
+      {resultLabel ? (
+        <p className="uwe-flash uwe-flash-success">
+          {resultLabel}
+          {undoToken
+            ? " — der Import kann im Import-Verlauf über „Zurückrollen“ rückgängig gemacht werden."
+            : ""}
+        </p>
+      ) : null}
 
       {preview ? (
         <section className="uwe-panel">
@@ -198,12 +204,17 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
             </tbody>
           </table>
 
+          <p className="uwe-table-sub">
+            Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf
+            über „Zurückrollen“ rückgängig machen.
+          </p>
+
           <div className="uwe-form-actions">
             <button
               type="button"
               className="uwe-v2-btn uwe-v2-btn-primary"
               onClick={handleExecute}
-              disabled={loading || (!singleTarget && selectedCount === 0)}
+              disabled={loading || !preview.canExecute || (!singleTarget && selectedCount === 0)}
             >
               Import ausführen
             </button>

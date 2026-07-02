@@ -318,4 +318,35 @@ describe("ZIP import security", () => {
     assert.equal(entries.length, 1);
     assert.equal(entries[0]?.entryName, "assets/world123/file.png");
   });
+
+  it("skips filtered entries instead of blocking the whole archive", () => {
+    const zip = new AdmZip();
+    zip.addFile("vault/notiz.md", Buffer.from("# Notiz", "utf8"));
+    zip.addFile("vault/.obsidian/plugins/main.js", Buffer.from("console.log(1);", "utf8"));
+    const buffer = zip.toBuffer();
+
+    assert.throws(() => extractSafeZipEntries(buffer), ZipSecurityError);
+
+    const entries = extractSafeZipEntries(buffer, {
+      entryFilter: (entryName) => entryName.endsWith(".md"),
+    });
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0]?.entryName, "vault/notiz.md");
+  });
+
+  it("still blocks zip slip for entries excluded by the filter", () => {
+    const maliciousZip = Buffer.from(
+      "UEsDBBQAAAAAAJ270FwaQb8VAwAAAAMAAAAOAAAALi4vLi4vZXZpbC5wbmdQTkdQSwECFAMUAAAAAACdu9BcGkG/FQMAAAADAAAADgAAAAAAAAAAAAAAgAEAAAAALi4vLi4vZXZpbC5wbmdQSwUGAAAAAAEAAQA8AAAALwAAAAAA",
+      "base64",
+    );
+
+    assert.throws(
+      () => extractSafeZipEntries(maliciousZip, { entryFilter: () => false }),
+      (error: unknown) => {
+        assert.ok(error instanceof ZipSecurityError);
+        assert.equal(error.code, "zip_slip");
+        return true;
+      },
+    );
+  });
 });

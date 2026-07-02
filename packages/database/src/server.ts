@@ -1992,10 +1992,23 @@ export type {
 } from "./import-central-service";
 
 export {
+  extractObsidianVaultMarkdown,
+  isObsidianVaultMarkdownEntry,
+  ObsidianVaultImportError,
+} from "./obsidian-vault-import";
+
+export type { ObsidianVaultExtractResult } from "./obsidian-vault-import";
+
+export {
   createDocumentTemplateService,
   DocumentTemplateService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
+  DOCUMENT_TEMPLATE_BRAIN_CATEGORY,
   DocumentTemplateCategoryEnum,
+  extractDocumentTemplateVariables,
+  normalizeDocumentTemplateVariables,
+  fillDocumentTemplate,
+  MissingTemplateVariablesError,
 } from "./document-template-service";
 
 export type {
@@ -2004,7 +2017,13 @@ export type {
   ListDocumentTemplatesOptions,
   DocumentTemplate,
   DocumentTemplateCategory,
+  FillDocumentTemplateInput,
+  FillDocumentTemplateOptions,
+  FilledDocumentTemplate,
 } from "./document-template-service";
+
+export { buildDocumentPrintHtml, buildDocumentPrintStyles } from "./document-print-export";
+export type { DocumentPrintInput } from "./document-print-export";
 
 export {
   ConnectorService,
