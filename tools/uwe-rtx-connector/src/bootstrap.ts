@@ -27,6 +27,7 @@ import { JobHistory, jobHistoryPath } from "./job-history";
 import {
   detectCapabilities,
   resolveCapabilityEnv,
+  sanitizePrintersForPrivacy,
 } from "./local-capabilities";
 import { loadSpotifySession } from "./spotify-local-store";
 import {
@@ -179,7 +180,12 @@ export function createConnectorRunner(
     const store = loadModelProfileStore(dataDir);
     const llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
     const detected = detectCapabilities(llms, capabilityEnv, { profiles: store.profiles, forced: config.forcedCapabilities });
-    return { ...detected, printers: await discoverLocalPrintersAsync() };
+    // Async printer discovery replaces the sync snapshot — apply the same privacy filter.
+    const printers = sanitizePrintersForPrivacy(
+      await discoverLocalPrintersAsync(),
+      capabilityEnv.privacyModeEnabled,
+    );
+    return { ...detected, printers };
   };
 
   const client = new HostClient(config.hostUrl, config.token);

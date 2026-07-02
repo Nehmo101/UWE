@@ -6,6 +6,7 @@ import { createModelProfile, type ConnectorModelProfile } from "@uwe/connector-m
 import {
   detectCapabilities,
   resolveCapabilityEnv,
+  sanitizePrintersForPrivacy,
   type CapabilityEnv,
 } from "./local-capabilities";
 import type { LocalLlmSummary } from "./llm-discovery";
@@ -30,6 +31,7 @@ function env(overrides: Partial<CapabilityEnv> = {}): CapabilityEnv {
     fileCacheEnabled: false,
     printEnabled: false,
     printBackendConfigured: false,
+    privacyModeEnabled: false,
     ...overrides,
   };
 }
@@ -165,6 +167,28 @@ describe("detectCapabilities — heartbeat model list", () => {
     assert.equal(model.contextLength, 8192);
   });
 
+  it("sends full metadata when privacy mode is off (default)", () => {
+    assert.equal(resolveCapabilityEnv({}).privacyModeEnabled, false);
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_PRIVACY_MODE: "false" }).privacyModeEnabled, false);
+
+    const detected = detectCapabilities(summary("ollama", ["chat"]), env(), {
+      profiles: [
+        enabledProfileFor("ollama", "ollama-model", {
+          displayName: "Llama (enabled)",
+          description: "Local chat model",
+          modelType: "chat",
+          contextLength: 8192,
+        }),
+      ],
+    });
+    const [model] = detected.models;
+    assert.equal(model.displayName, "Llama (enabled)");
+    assert.equal(model.description, "Local chat model");
+    assert.equal(model.contextLength, 8192);
+    assert.equal(model.status, "ready");
+    assert.equal(model.modelType, "chat");
+  });
+
   it("still advertises an enabled profile that is not currently discovered (offline model)", () => {
     const detected = detectCapabilities(emptyLlms, env(), {
       profiles: [
@@ -181,5 +205,84 @@ describe("detectCapabilities — heartbeat model list", () => {
     assert.equal(detected.models[0].name, "offline-model");
     assert.equal(detected.models[0].status, undefined);
     assert.equal(detected.models[0].contextLength, 4096);
+  });
+});
+
+describe("detectCapabilities — privacy mode (UWE_CONNECTOR_PRIVACY_MODE)", () => {
+  it("parses the env flag (default false)", () => {
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_PRIVACY_MODE: "true" }).privacyModeEnabled, true);
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_PRIVACY_MODE: " TRUE " }).privacyModeEnabled, true);
+    assert.equal(resolveCapabilityEnv({ UWE_CONNECTOR_PRIVACY_MODE: "" }).privacyModeEnabled, false);
+    assert.equal(resolveCapabilityEnv({}).privacyModeEnabled, false);
+  });
+
+  it("strips model metadata to routing essentials, keeping capabilities intact", () => {
+    const profiles = [
+      enabledProfileFor("ollama", "ollama-model", {
+        displayName: "Llama (enabled)",
+        description: "Local chat model",
+        bestFor: ["DnD generator"],
+        modelType: "chat",
+        contextLength: 8192,
+      }),
+    ];
+
+    const detected = detectCapabilities(summary("ollama", ["chat"]), env({ privacyModeEnabled: true }), {
+      profiles,
+    });
+
+    // WHICH capabilities are advertised must not change in privacy mode.
+    assert.deepEqual(detected.capabilities, ["llm_local", "system_info"]);
+
+    assert.equal(detected.models.length, 1);
+    const [model] = detected.models;
+    // Routing essentials survive …
+    assert.equal(model.id, profiles[0].id);
+    assert.equal(model.provider, "ollama");
+    assert.equal(model.name, "ollama-model");
+    assert.deepEqual(model.capabilities, ["chat"]);
+    assert.equal(model.enabledForUwe, true);
+    // … everything descriptive/telemetry is omitted.
+    assert.deepEqual(Object.keys(model).sort(), [
+      "capabilities",
+      "enabledForUwe",
+      "id",
+      "name",
+      "provider",
+    ]);
+    assert.equal(model.displayName, undefined);
+    assert.equal(model.description, undefined);
+    assert.equal(model.bestFor, undefined);
+    assert.equal(model.contextLength, undefined);
+    assert.equal(model.status, undefined);
+    assert.equal(model.modelType, undefined);
+  });
+
+  it("keeps embeddings routing information for enabled embedding models", () => {
+    const detected = detectCapabilities(
+      summary("ollama", ["embeddings"]),
+      env({ privacyModeEnabled: true }),
+      { profiles: [enabledProfileFor("ollama", "ollama-model", { modelType: "embedding" })] },
+    );
+    assert.deepEqual(detected.capabilities, ["embedding_local", "system_info"]);
+    assert.deepEqual(detected.models[0].capabilities, ["embeddings"]);
+  });
+});
+
+describe("sanitizePrintersForPrivacy", () => {
+  const printers = [
+    { id: "zebra-lp2844", name: "Zebra LP 2844", description: "Zebra on USB001", isDefault: true, state: "idle" },
+    { id: "hp-lj", name: "HP LaserJet", state: "printing" },
+  ];
+
+  it("returns printers unchanged when privacy mode is off", () => {
+    assert.deepEqual(sanitizePrintersForPrivacy(printers, false), printers);
+  });
+
+  it("drops description and live state in privacy mode, keeping id/name/default", () => {
+    assert.deepEqual(sanitizePrintersForPrivacy(printers, true), [
+      { id: "zebra-lp2844", name: "Zebra LP 2844", isDefault: true },
+      { id: "hp-lj", name: "HP LaserJet" },
+    ]);
   });
 });
