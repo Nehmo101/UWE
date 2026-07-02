@@ -25,6 +25,7 @@ import {
   syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
+import { fillAgentJobPreset, getAgentJobPreset } from "@uwe/agent-jobs";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 import { validateImageContextForProvider } from "@uwe/image-studio";
 import { dispatchJob } from "@/src/lib/job-executor";
@@ -319,20 +320,9 @@ export async function saveImageStudioCanvasAction(formData: FormData) {
   revalidatePath(`/image-studio/${projectId}/edit`);
 }
 
-export async function createAgentJobAction(formData: FormData) {
-  const config = resolveAgentJobsConfig();
-  if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
+type AgentJobProvider = "github_actions" | "cursor_cloud" | "cursor_cli_local";
 
-  assertStudioTrusted();
-  assertStudioCanUseAI();
-
-  const title = String(formData.get("title") ?? "");
-  const prompt = String(formData.get("prompt") ?? "");
-  const provider = String(formData.get("provider") ?? config.defaultProvider) as
-    | "github_actions"
-    | "cursor_cloud"
-    | "cursor_cli_local";
-
+async function enqueueAgentJob(title: string, prompt: string, provider: AgentJobProvider) {
   const agentJobs = createDevAgentJobService(prisma);
   const devJob = await agentJobs.createJob({ title, prompt, provider });
 
@@ -346,6 +336,43 @@ export async function createAgentJobAction(formData: FormData) {
   });
   void dispatchJob(queueJob.id);
   revalidatePath("/admin/agent-jobs");
+}
+
+export async function createAgentJobAction(formData: FormData) {
+  const config = resolveAgentJobsConfig();
+  if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
+
+  assertStudioTrusted();
+  assertStudioCanUseAI();
+
+  const title = String(formData.get("title") ?? "");
+  const prompt = String(formData.get("prompt") ?? "");
+  const provider = String(formData.get("provider") ?? config.defaultProvider) as AgentJobProvider;
+
+  await enqueueAgentJob(title, prompt, provider);
+}
+
+export async function createAgentJobFromPresetAction(formData: FormData) {
+  const config = resolveAgentJobsConfig();
+  if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
+
+  assertStudioTrusted();
+  assertStudioCanUseAI();
+
+  const presetId = String(formData.get("preset") ?? "");
+  const preset = getAgentJobPreset(presetId);
+  if (!preset) throw new Error(`Unbekanntes Agent-Job-Preset: ${presetId}`);
+
+  const values: Record<string, string> = {};
+  for (const field of preset.fields) {
+    values[field.key] = String(formData.get(`field:${field.key}`) ?? "");
+  }
+  const provider = String(formData.get("provider") ?? config.defaultProvider) as AgentJobProvider;
+
+  // Wirft bei leeren Pflichtfeldern/kaputten Templates — nichts Halbes queuen.
+  const { title, prompt } = fillAgentJobPreset(preset, values);
+
+  await enqueueAgentJob(title, prompt, provider);
 }
 
 export async function createCalendarEventAction(formData: FormData) {

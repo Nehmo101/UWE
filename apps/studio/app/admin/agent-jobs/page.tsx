@@ -9,9 +9,10 @@ import {
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
+import { AGENT_JOB_PRESETS } from "@uwe/agent-jobs";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { AgentJobRetryButton, AgentJobsPoller } from "@/components/AgentJobsPoller";
-import { createAgentJobAction } from "../../integration-actions";
+import { createAgentJobAction, createAgentJobFromPresetAction } from "../../integration-actions";
 
 export default async function AgentJobsPage() {
   const config = resolveAgentJobsConfig();
@@ -49,6 +50,61 @@ export default async function AgentJobsPage() {
           Setze AGENT_JOBS_ENABLED=true und AGENT_JOBS_GITHUB_REPO=owner/repo
         </p>
       )}
+
+      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
+        <h2>1-Klick-Presets</h2>
+        <p className="uwe-dashboard-muted">
+          Wiederkehrende Dev-Jobs mit fertigem Prompt-Template — Parameter ausfüllen, Job
+          startet über dieselbe Queue. Presets transportieren keine Weltdaten.
+        </p>
+        {AGENT_JOB_PRESETS.map((preset) => (
+          <details key={preset.id} style={{ marginTop: "0.75rem" }}>
+            <summary>
+              <strong>{preset.label}</strong>{" "}
+              <span className="uwe-dashboard-muted">— {preset.summary}</span>
+            </summary>
+            <form action={createAgentJobFromPresetAction} className="uwe-form">
+              <input type="hidden" name="preset" value={preset.id} />
+              {preset.fields.map((field) => (
+                <label key={field.key}>
+                  {field.label}
+                  {field.multiline ? (
+                    <textarea
+                      name={`field:${field.key}`}
+                      rows={4}
+                      required={field.required}
+                      placeholder={field.placeholder}
+                    />
+                  ) : (
+                    <input
+                      name={`field:${field.key}`}
+                      required={field.required}
+                      placeholder={field.placeholder}
+                    />
+                  )}
+                </label>
+              ))}
+              <label>
+                Provider
+                <select name="provider" defaultValue={config.defaultProvider}>
+                  {Object.entries(DEV_AGENT_JOB_PROVIDER_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="uwe-v2-btn uwe-v2-btn-primary"
+                disabled={!config.enabled}
+              >
+                Preset-Job starten
+              </button>
+            </form>
+          </details>
+        ))}
+      </section>
 
       <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
         <h2>Neuer Agent-Job</h2>
