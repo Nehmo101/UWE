@@ -136,12 +136,18 @@ export {
   drawSvgPath,
   drawCompassRose,
   drawScaleBar,
+  drawVine,
 } from "./canvas-render";
 export type {
   PaintTerrainBlobsOptions,
   CompassRoseOptions,
   ScaleBarOptions,
+  DrawVineOptions,
 } from "./canvas-render";
+
+// Vine / giant-root layout engine — deterministic pseudo-3D beanstalk
+export { buildVineLayout } from "./vine";
+export type { VineOptions, VineLayout, VineAura } from "./vine";
 
 // Procedural draft generators
 export {

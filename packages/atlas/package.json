@@ -24,7 +24,8 @@
     "./stamp-variation": "./src/stamp-variation.ts",
     "./path-smoothing": "./src/path-smoothing.ts",
     "./path-attachments": "./src/path-attachments.ts",
-    "./export-grid": "./src/export-grid.ts"
+    "./export-grid": "./src/export-grid.ts",
+    "./vine": "./src/vine.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

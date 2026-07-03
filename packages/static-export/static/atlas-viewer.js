@@ -608,7 +608,33 @@
         } else if (geo.type === "Path") {
           const coords = geo.coordinates || [];
           if (coords.length >= 2) {
-            if (feat.kind === "road") {
+            if (feat.kind === "vine") {
+              // Ranke/Weltenwurzel — kompakte lokale Annäherung an
+              // @uwe/atlas vine.ts (dieser Viewer bündelt die Engine nicht;
+              // volle Parität inkl. Coil/Tendrils/Wolken ist Backlog).
+              const vs = feat.style || {};
+              const t0 = vs.taperStart != null ? vs.taperStart : 0.9;
+              const t1 = vs.taperEnd != null ? vs.taperEnd : 0.15;
+              const hgt = vs.height != null ? vs.height : 0.7;
+              const off = 0.05 * hgt;
+              const strokeVine = (dx, dy, color, mul) => {
+                for (let i = 0; i < coords.length - 1; i++) {
+                  const t = coords.length > 2 ? i / (coords.length - 2) : 0;
+                  const w = (t0 * (1 - t) + t1 * t) * 9 * zoom * mul;
+                  const [sx, sy] = w2c(coords[i][0] + dx, coords[i][1] + dy);
+                  const [ex, ey] = w2c(coords[i + 1][0] + dx, coords[i + 1][1] + dy);
+                  ctx.beginPath();
+                  ctx.moveTo(sx, sy);
+                  ctx.lineTo(ex, ey);
+                  ctx.strokeStyle = color;
+                  ctx.lineWidth = Math.max(0.6, w);
+                  ctx.stroke();
+                }
+              };
+              ctx.lineCap = "round";
+              strokeVine(off, off, "rgba(26,16,8,0.18)", 0.75);
+              strokeVine(0, 0, "#5c4326", 1);
+            } else if (feat.kind === "road") {
               ctx.beginPath();
               const [sx, sy] = w2c(coords[0][0], coords[0][1]);
               ctx.moveTo(sx, sy);

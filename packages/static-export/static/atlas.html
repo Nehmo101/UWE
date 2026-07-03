@@ -259,13 +259,14 @@ const TOOL_DEFS = [
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
   ["path", "Fluss", "R", "path", "Fluss zeichnen"],
   ["road", "Straße", "D", "road", "Straße zeichnen"],
+  ["vine", "Ranke", "W", "vine", "Riesenwurzel/Bohnenranke zeichnen (Basis → Spitze)"],
   ["label", "Label", "L", "label", "Gerades Textlabel setzen"],
   ["curve", "Curved Label", "C", "curve", "Pfadgeführtes Label zeichnen"],
   ["pin", "Pin", "I", "pin", "Wiki-Pin setzen"],
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", r: "path", d: "road", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
@@ -274,6 +275,7 @@ function toolIcon(name) {
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
     road: "M6 21 L10 3 M14 21 L18 3 M8 12 L16 12",
+    vine: "M12 21 C8 17 16 13 12 9 C9 6 14 4 12 2 M12 13 Q15 12 16 14 M12 17 Q9 16 8 18",
     label: "M5 6 L19 6 M12 6 L12 19 M9 19 L15 19",
     curve: "M3 15 Q9 4 21 9 M7 13 L7 16 M11 12 L11 15 M15 11 L15 14",
     pin: "M12 21 C12 21 5 13 5 8 A7 7 0 0 1 19 8 C19 13 12 21 12 21 Z M12 8 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0",
@@ -668,6 +670,17 @@ function drawScene(ctx, W, H, chrome) {
 
   if (!chrome) return;
 
+  // Live-Deko (CoK): Kompassrose + Maßstab viewport-fix, wie im Export (exp.deco).
+  if (pr.decorations && pr.decorations.compassRose) {
+    const R = Math.max(22, Math.min(W, H) * 0.045);
+    engine.drawCompassRose(ctx, { x: W - R - 14, y: R * 1.45 + 14, radius: R, ink: pr.colors.ink, accent: pr.colors.inkAccent, parchment: pr.colors.parchment });
+  }
+  if (pr.decorations && pr.decorations.scaleBar) {
+    const bw = Math.max(90, Math.round(W * 0.14)), bh = 8;
+    const barLeagues = Math.max(1, Math.round((bw / (WORLD_W * z)) * 100));
+    engine.drawScaleBar(ctx, { x: 16, y: H - bh - 26, width: bw, height: bh, ink: pr.colors.ink, parchment: pr.colors.parchment, label: "0 — " + barLeagues + " " + (pr.decorations.scaleUnit || "leagues"), font: "12px " + pr.typography.labelCity });
+  }
+
   if (aiDraftFeatures && aiDraftFeatures.length) {
     ctx.save(); ctx.globalAlpha = 0.5;
     for (const f of aiDraftFeatures) drawFeature(ctx, f);
@@ -735,6 +748,7 @@ function drawFeature(ctx, f) {
         ctx.fillStyle = "#fff"; ctx.font = "bold " + Math.round(12 * z) + "px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("↓", bx, by + 18 * z); }
     }
   } else if (geo.type === "Path") {
+    if (f.kind === "vine") { drawVineFeature(ctx, f, sel); ctx.restore(); return; }
     let coords = geo.coordinates || [];
     if (f.style && f.style.smooth && coords.length >= 3) coords = engine.smoothPath(coords, { segments: 12 });
     if (coords.length >= 2) {
@@ -778,6 +792,31 @@ function drawFeature(ctx, f) {
     }
   }
   ctx.restore();
+}
+
+// Ranke/Weltenwurzel: geteiltes Pseudo-3D-Rendering aus @uwe/atlas (vine.ts) —
+// buildVineLayout smootht selbst, daher rohe Koordinaten übergeben.
+function drawVineFeature(ctx, f, sel) {
+  const s = f.style || {};
+  const layout = engine.buildVineLayout(f.geometry.coordinates || [], {
+    taperStart: s.taperStart, taperEnd: s.taperEnd, coil: s.coil,
+    tendrils: s.tendrils, height: s.height, seed: s.seed,
+  });
+  if (layout.spine.length < 2) return;
+  engine.drawVine(ctx, layout, {
+    project: (c) => n2c(c[0], c[1]), zoom: state.zoom,
+    trunk: sel ? "#c2622b" : "#5c4326", coil: "#4a6741",
+    shadow: "rgba(26,16,8,0.18)", selected: sel,
+  });
+  const cloud = engine.getGlyphByKey("cloud");
+  if (cloud) {
+    for (const pt of layout.aura.clouds) {
+      const [px, py] = n2c(pt[0], pt[1]); const size = 13 * state.zoom, sc = size / 24;
+      ctx.save(); ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-12, -12);
+      ctx.globalAlpha = 0.65; ctx.strokeStyle = cloud.color; ctx.lineWidth = 1.5 / sc; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath(); engine.drawSvgPath(ctx, cloud.pathData); ctx.stroke(); ctx.restore();
+    }
+  }
 }
 
 function drawObject(ctx, o) {
@@ -830,8 +869,8 @@ function drawMeasure(ctx) {
 // Streuung (ScatterExclusion in @uwe/atlas/terrain).
 function scatterExclusions() {
   return nodeFeatures()
-    .filter((f) => (f.kind === "road" || f.kind === "river") && f.geometry && f.geometry.type === "Path" && (f.geometry.coordinates || []).length >= 2)
-    .map((f) => ({ path: f.geometry.coordinates, width: f.kind === "road" ? 0.032 : 0.026 }));
+    .filter((f) => (f.kind === "road" || f.kind === "river" || f.kind === "vine") && f.geometry && f.geometry.type === "Path" && (f.geometry.coordinates || []).length >= 2)
+    .map((f) => ({ path: f.geometry.coordinates, width: f.kind === "road" ? 0.032 : f.kind === "vine" ? 0.034 : 0.026 }));
 }
 function scatterInPolygon(ctx, rings, bk, density, keySeed) {
   const seed = typeof keySeed === "number" ? keySeed : engine.hashStringToSeed(String(keySeed));
@@ -893,7 +932,7 @@ function onPointerDown(e) {
     if (drawingPoints.length >= 3) { const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); if (Math.hypot(cx - fx, cy - fy) < 10) { finishPolygon(); return; } }
     drawingPoints.push([nx, ny]); draw(); return;
   }
-  if (tool === "path" || tool === "road" || tool === "curve") { drawingPoints.push([nx, ny]); draw(); return; }
+  if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push([nx, ny]); draw(); return; }
   if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel([nx, ny], t, null); return; }
   if (tool === "pin") { addPin([nx, ny]); return; }
   if (tool === "measure") { measurePoints = measurePoints.length >= 2 ? [[nx, ny]] : [...measurePoints, [nx, ny]]; draw(); return; }
@@ -967,7 +1006,7 @@ function onWheel(e) {
 function onDblClick() {
   if (exp.picking) return;
   if (state.tool === "region" || state.tool === "biome") finishPolygon();
-  else if (state.tool === "path" || state.tool === "road") finishPath();
+  else if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath();
   else if (state.tool === "curve") finishCurve();
 }
 
@@ -1017,9 +1056,31 @@ function finishPolygon() {
 function finishPath() {
   if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
   pushUndo();
-  const isRoad = state.tool === "road";
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style: isRoad ? undefined : { smooth: true }, layer: isRoad ? 40 : 30, visibility: "dm_only" };
+  const isRoad = state.tool === "road", isVine = state.tool === "vine";
+  const k = nextKey();
+  // Ranke: Pseudo-3D-Parameter reiten im style-JSON (siehe @uwe/atlas vine.ts).
+  const style = isVine
+    ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, seed: engine.hashStringToSeed(k) }
+    : isRoad ? undefined : { smooth: true };
+  const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
   doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
+}
+
+// ---- Ranke/Weltenwurzel: Panel-Defaults + Slider-Markup ----
+const VINE_DEFAULTS = { taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7 };
+const VINE_SLIDERS = [
+  ["taperStart", "Basisbreite", 0.3, 1.5, 0.05],
+  ["taperEnd", "Spitzenbreite", 0.05, 0.6, 0.05],
+  ["coil", "Windung", 0, 1, 0.1],
+  ["tendrils", "Ausläufer", 0, 8, 1],
+  ["height", "Höhe", 0, 1, 0.1],
+];
+function vineSliderHtml(f, prop, label, min, max, step) {
+  const v = f.style && f.style[prop] != null ? f.style[prop] : VINE_DEFAULTS[prop];
+  return '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;">' +
+    '<span style="width:78px;flex:none;">' + label + "</span>" +
+    '<input type="range" data-vine-prop="' + prop + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" style="flex:1;min-width:0;">' +
+    '<span style="width:28px;text-align:right;">' + v + "</span></label>";
 }
 
 // ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
@@ -1104,7 +1165,7 @@ function onKeyDown(e) {
     drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
   }
   if (e.key === "Delete" || e.key === "Backspace") { if (selection.size) { e.preventDefault(); eraseSelection(); } return; }
-  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road") finishPath(); else if (state.tool === "region" || state.tool === "biome") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
+  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
   const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
 }
 
@@ -1341,17 +1402,26 @@ function refreshChrome() {
     selP.style.display = "block";
   } else if (selO) {
     const g = engine.getGlyphByKey(selO.paletteItemId);
+    const numInp = (id, label, min, max, step, val) =>
+      '<label style="flex:1;font-size:10px;color:var(--uwe-fg-muted);">' + label +
+      '<input id="' + id + '" type="number" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" style="width:100%;padding:4px 6px;border:1.5px solid var(--uwe-border);border-radius:6px;font-size:12px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);"></label>';
     el("sel-kind").textContent = "Objekt";
     el("sel-controls").innerHTML =
       '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (g ? g.name : selO.paletteItemId) + "</div>" +
-      '<div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ' + selO.scale.toFixed(2) + " · " + Math.round(selO.rotation) + "°</div>" +
+      (view
+        ? '<div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ' + selO.scale.toFixed(2) + " · " + Math.round(selO.rotation) + "°</div>"
+        : '<div style="display:flex;gap:6px;">' +
+          numInp("obj-scale", "Skala", 0.2, 3, 0.05, selO.scale) +
+          numInp("obj-rot", "Rotation°", -180, 180, 1, selO.rotation) +
+          "</div>" +
+          '<button class="tb-btn" data-obj="vari" style="width:100%;justify-content:center;margin-top:8px;" title="Skala/Rotation deterministisch neu würfeln">↻ Variieren</button>') +
       '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben · Shift+Klick erweitert Auswahl</div>' +
       (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
     selP.style.display = "block";
   } else if (selF) {
-    const kind = ({ region: "Region", biome: "Biom", river: "Fluss", road: "Straße", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
+    const kind = ({ region: "Region", biome: "Biom", river: "Fluss", road: "Straße", vine: "Ranke", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
     const vis = selF.visibility === "player_visible";
-    const isPathKind = selF.kind === "river" || selF.kind === "road";
+    const isPathKind = selF.kind === "river" || selF.kind === "road" || selF.kind === "vine";
     const opt = (list, cur) => list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
     el("sel-kind").textContent = kind;
     const labelVal = selF.labelText || "";
@@ -1362,6 +1432,16 @@ function refreshChrome() {
           '<input id="sel-label-input" type="text" value="' + labelVal.replace(/"/g, "&quot;") + '" style="width:100%;padding:6px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-family:var(--serif);font-size:14px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);" placeholder="' + kind + '-Name">') +
       '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';margin-top:6px;">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
       (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
+      (!view && selF.geometry && selF.geometry.type === "LabelAnchor" && (selF.geometry.pathCoordinates || []).length >= 2
+        ? '<button class="tb-btn" data-curve="flip" style="width:100%;justify-content:center;margin-top:8px;" title="Laufrichtung des Labels umdrehen">↔ Pfad umkehren</button>'
+        : "") +
+      (selF.kind === "vine" && !view
+        ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
+          '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Ranke</div>' +
+          VINE_SLIDERS.map(([p, l, mn, mx, st2]) => vineSliderHtml(selF, p, l, mn, mx, st2)).join("") +
+          '<button class="tb-btn" data-vine="roll" style="width:100%;justify-content:center;margin-top:8px;" title="Ausläufer neu würfeln">↻ Neu würfeln</button>' +
+          "</div>"
+        : "") +
       (isPathKind
         ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
           '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objekte säumen</div>' +
@@ -1450,6 +1530,39 @@ function wire() {
       if (f) generateAttachments(f, att.dataset.att === "roll");
       return;
     }
+    const vineBtn = e.target.closest("[data-vine]");
+    if (vineBtn) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.kind === "vine") {
+        pushUndo(); f.style = f.style || {};
+        // Deterministische Seed-Folge (LCG) — gleicher Klickpfad ⇒ gleiche Ranke.
+        f.style.seed = (((f.style.seed || 1) * 1103515245 + 12345) % 2147483647) >>> 0;
+        markDirty(); draw();
+      }
+      return;
+    }
+    const flipBtn = e.target.closest("[data-curve]");
+    if (flipBtn) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.geometry && f.geometry.type === "LabelAnchor") {
+        pushUndo();
+        f.geometry.pathReversed = f.geometry.pathReversed !== true;
+        markDirty(); draw();
+      }
+      return;
+    }
+    const objBtn = e.target.closest("[data-obj]");
+    if (objBtn) {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      if (o) {
+        pushUndo();
+        o._variRoll = (o._variRoll || 0) + 1;
+        const v = engine.randomStampVariation((engine.stampSeedFromKey(String(o._key)) + o._variRoll * 101) >>> 0, { scaleMin: 0.78, scaleMax: 1.28, rotateMin: -12, rotateMax: 12 });
+        o.scale = Math.round(v.scale * 100) / 100; o.rotation = Math.round(v.rotation * 10) / 10;
+        markDirty(); draw(); refreshChrome();
+      }
+      return;
+    }
     const batch = e.target.closest("[data-batch]");
     if (batch) setSelectionVisibility(batch.dataset.batch === "show" ? "player_visible" : "dm_only");
   });
@@ -1458,6 +1571,24 @@ function wire() {
     if (t.id === "att-kind") attachOpts.kind = t.value;
     else if (t.id === "att-side") attachOpts.side = t.value;
     else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
+    else if (t.id === "obj-scale" || t.id === "obj-rot") {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      const v = Number(t.value);
+      if (o && Number.isFinite(v)) {
+        pushUndo();
+        if (t.id === "obj-scale") o.scale = Math.min(3, Math.max(0.2, v));
+        else o.rotation = Math.min(180, Math.max(-180, v));
+        markDirty(); draw();
+      }
+    }
+    else if (t.dataset && t.dataset.vineProp) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.kind === "vine") {
+        pushUndo(); f.style = f.style || {};
+        f.style[t.dataset.vineProp] = Number(t.value);
+        markDirty(); draw(); refreshChrome();
+      }
+    }
   });
 
   // Export-Dialog

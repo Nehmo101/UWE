@@ -88,7 +88,8 @@ var AtlasFeatureKind = {
   biome: "biome",
   relief: "relief",
   label: "label",
-  pin: "pin"
+  pin: "pin",
+  vine: "vine"
 };
 var AtlasLabelColor = {
   black: "black",
@@ -232,6 +233,13 @@ var BUILTIN_GLYPHS = [
     pathData: "M4 20 Q5 12 11 12 Q13 9 16 12 Q20 13 20 20 Z M9 16 L11 13 M14 18 L16 14",
     color: "#7a6a52"
   },
+  {
+    key: "cloud",
+    name: "Wolke",
+    kind: "relief",
+    pathData: "M5 16 Q2 16 2 13 Q2 10 5 10 Q6 6 10 6 Q14 6 15 9 Q19 8 20 12 Q21 16 17 16 Z",
+    color: "#a8b8c4"
+  },
   // --- Biome — Vegetation & Gewässer ---------------------------------------
   {
     key: "tree",
@@ -274,6 +282,21 @@ var BUILTIN_GLYPHS = [
     kind: "biome",
     pathData: "M2 18 Q8 12 13 17 Q18 22 22 17 M2 21 Q5 19 9 20 M16 6 Q18.5 6 18.5 8.5 Q18.5 11 16 11 Q13.5 11 13.5 8.5 Q13.5 6 16 6",
     color: "#c8a85a"
+  },
+  // --- Biome — Mythische Vegetation (Vine-Feature) --------------------------
+  {
+    key: "beanstalk",
+    name: "Bohnenranke",
+    kind: "biome",
+    pathData: "M12 21 C8 17 16 13 12 9 C9 6 14 4 12 2 M12 13 Q15 12 16 14 Q14 16 12 13 M12 17 Q9 16 8 18 Q10 20 12 17",
+    color: "#4a6741"
+  },
+  {
+    key: "giant_root",
+    name: "Weltenwurzel",
+    kind: "biome",
+    pathData: "M12 3 L12 10 M12 10 C9 12 8 16 6 21 M12 10 C15 12 16 16 18 21 M12 10 C11 14 13 17 12 21 M6 21 L4 19 M18 21 L20 19",
+    color: "#6b4a2a"
   },
   // --- Pin — Orte & Bauwerke -----------------------------------------------
   {
@@ -360,6 +383,13 @@ var BUILTIN_GLYPHS = [
     kind: "pin",
     pathData: "M5 20 L5 10 Q5 5 12 5 Q19 5 19 10 L19 20 M9 20 L9 12 Q9 9 12 9 Q15 9 15 12 L15 20 M4 10 L20 10",
     color: "#4a4038"
+  },
+  {
+    key: "root_knot",
+    name: "Wurzelknoten",
+    kind: "pin",
+    pathData: "M9 21 L9 12 Q9 8 12 8 Q15 8 15 12 L15 21 M9 21 Q7 21 5 19 M15 21 Q17 21 19 19 M9 15 Q12 13 15 15 M6 21 L18 21",
+    color: "#5a4a32"
   }
 ];
 var BUILTIN_GLYPH_KEYS = BUILTIN_GLYPHS.map(
@@ -870,6 +900,56 @@ function drawScaleBar(ctx, opts) {
     ctx.fillText(label, x + width / 2, y + height + Math.max(2, height * 0.4));
   }
 }
+var VINE_TRUNK_BASE_PX = 9;
+function strokePolyline(ctx, pts) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+function drawVine(ctx, layout, opts) {
+  const { spine, widths, coil, tendrils, shadow, aura } = layout;
+  if (spine.length < 2) return;
+  const { project, zoom, selected } = opts;
+  const p = (pts) => pts.map(project);
+  const base = VINE_TRUNK_BASE_PX * zoom * (selected ? 1.15 : 1);
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const shadowPts = p(shadow);
+  ctx.strokeStyle = opts.shadow;
+  ctx.lineWidth = Math.max(1, base * 0.75);
+  strokePolyline(ctx, shadowPts);
+  const spinePts = p(spine);
+  ctx.strokeStyle = opts.trunk;
+  for (let i = 0; i < spinePts.length - 1; i++) {
+    ctx.lineWidth = Math.max(0.6, widths[i] * base);
+    ctx.beginPath();
+    ctx.moveTo(spinePts[i][0], spinePts[i][1]);
+    ctx.lineTo(spinePts[i + 1][0], spinePts[i + 1][1]);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = opts.coil;
+  ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
+  strokePolyline(ctx, p(coil));
+  for (const t of tendrils) strokePolyline(ctx, p(t));
+  const c = project(aura.center);
+  const edge = project([aura.center[0] + aura.radius, aura.center[1]]);
+  const pr = Math.hypot(edge[0] - c[0], edge[1] - c[1]);
+  if (pr > 1) {
+    ctx.strokeStyle = opts.coil;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = Math.max(0.6, 1 * zoom);
+    for (const f of [1, 0.66]) {
+      ctx.beginPath();
+      ctx.arc(c[0], c[1], pr * f, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
 function drawSvgPath(ctx, d) {
   const cmds = d.match(/[MLHVZQC][^MLHVZQC]*/gi) || [];
   let x = 0;
@@ -915,6 +995,178 @@ function drawSvgPath(ctx, d) {
   }
 }
 
+// ../atlas/src/path-smoothing.ts
+var DEFAULT_SEGMENTS = 8;
+var MIN_SEGMENTS = 1;
+var MAX_SEGMENTS = 64;
+var DEFAULT_TENSION = 0.5;
+function clamp(value, lo, hi) {
+  if (value < lo) return lo;
+  if (value > hi) return hi;
+  return value;
+}
+function controlPoint(points, index, closed) {
+  const n = points.length;
+  if (closed) {
+    return points[(index % n + n) % n];
+  }
+  if (index < 0) {
+    const p0 = points[0];
+    const p1 = points[1];
+    return [2 * p0[0] - p1[0], 2 * p0[1] - p1[1]];
+  }
+  if (index > n - 1) {
+    const pn = points[n - 1];
+    const pn1 = points[n - 2];
+    return [2 * pn[0] - pn1[0], 2 * pn[1] - pn1[1]];
+  }
+  return points[index];
+}
+function smoothPath(points, options = {}) {
+  if (points.length < 3) {
+    return points.map((p) => [p[0], p[1]]);
+  }
+  const segments = clamp(
+    Math.round(options.segments ?? DEFAULT_SEGMENTS),
+    MIN_SEGMENTS,
+    MAX_SEGMENTS
+  );
+  const tension = clamp(options.tension ?? DEFAULT_TENSION, 0, 1);
+  const closed = options.closed ?? false;
+  const n = points.length;
+  const segmentCount = closed ? n : n - 1;
+  const result = [];
+  for (let i = 0; i < segmentCount; i++) {
+    const p0 = controlPoint(points, i - 1, closed);
+    const p1 = controlPoint(points, i, closed);
+    const p2 = controlPoint(points, i + 1, closed);
+    const p3 = controlPoint(points, i + 2, closed);
+    const m1x = tension * (p2[0] - p0[0]);
+    const m1y = tension * (p2[1] - p0[1]);
+    const m2x = tension * (p3[0] - p1[0]);
+    const m2y = tension * (p3[1] - p1[1]);
+    const startJ = i === 0 ? 0 : 1;
+    for (let j = startJ; j <= segments; j++) {
+      const t = j / segments;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const h00 = 2 * t3 - 3 * t2 + 1;
+      const h10 = t3 - 2 * t2 + t;
+      const h01 = -2 * t3 + 3 * t2;
+      const h11 = t3 - t2;
+      const x = h00 * p1[0] + h10 * m1x + h01 * p2[0] + h11 * m2x;
+      const y = h00 * p1[1] + h10 * m1y + h01 * p2[1] + h11 * m2y;
+      result.push([x, y]);
+    }
+  }
+  return result;
+}
+function sampleTaperedWidths(points, startWidth, endWidth) {
+  const n = points.length;
+  if (n === 0) return [];
+  if (n === 1) return [startWidth];
+  const widths = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    widths[i] = startWidth + (endWidth - startWidth) * t;
+  }
+  return widths;
+}
+
+// ../atlas/src/vine.ts
+var COIL_AMP = 0.022;
+var COIL_TURNS = 6;
+var SHADOW_OFFSET = 0.05;
+var AURA_RADIUS = 0.09;
+var AURA_CLOUDS = 5;
+function clamp01(v) {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+function clampCoord(c) {
+  return [clamp01(c[0]), clamp01(c[1])];
+}
+function perpendicularAt(spine, i) {
+  const prev = spine[Math.max(0, i - 1)];
+  const next = spine[Math.min(spine.length - 1, i + 1)];
+  const tx = next[0] - prev[0];
+  const ty = next[1] - prev[1];
+  const len = Math.hypot(tx, ty) || 1;
+  return [-ty / len, tx / len];
+}
+function buildVineLayout(points, options = {}) {
+  if (!points || points.length < 2) {
+    return {
+      spine: [],
+      widths: [],
+      coil: [],
+      tendrils: [],
+      shadow: [],
+      aura: { center: [0, 0], radius: 0, clouds: [] }
+    };
+  }
+  const taperStart = options.taperStart ?? 0.9;
+  const taperEnd = options.taperEnd ?? 0.15;
+  const coil = clamp01(options.coil ?? 0.6);
+  const tendrilCount = Math.max(0, Math.round(options.tendrils ?? 3));
+  const height = clamp01(options.height ?? 0.7);
+  const seed = options.seed ?? 1;
+  const segments = options.smoothSegments ?? 16;
+  const spine = smoothPath(points, { segments, tension: 0.5 }).map(clampCoord);
+  const n = spine.length;
+  const widths = sampleTaperedWidths(spine, taperStart, taperEnd);
+  const coilLine = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const phase = i / Math.max(1, n - 1) * COIL_TURNS * Math.PI * 2;
+    const amp = widths[i] * coil * COIL_AMP;
+    const [px, py] = perpendicularAt(spine, i);
+    const s = Math.sin(phase) * amp;
+    coilLine[i] = clampCoord([spine[i][0] + px * s, spine[i][1] + py * s]);
+  }
+  const off = SHADOW_OFFSET * height;
+  const shadow = spine.map(
+    (c) => clampCoord([c[0] + off, c[1] + off])
+  );
+  const rng = mulberry32(seed);
+  const tendrils = [];
+  for (let k = 0; k < tendrilCount; k++) {
+    const t = (k + 1) / (tendrilCount + 1);
+    const idx = Math.min(n - 1, Math.max(0, Math.round(t * (n - 1))));
+    const [px, py] = perpendicularAt(spine, idx);
+    const side = rng() < 0.5 ? 1 : -1;
+    let step = widths[idx] * (0.02 + rng() * 0.02) + 8e-3;
+    let a = Math.atan2(py * side, px * side);
+    let cx = spine[idx][0];
+    let cy = spine[idx][1];
+    const curl = [clampCoord([cx, cy])];
+    for (let j = 0; j < 6; j++) {
+      a += side * 0.5;
+      cx += Math.cos(a) * step;
+      cy += Math.sin(a) * step;
+      step *= 0.8;
+      curl.push(clampCoord([cx, cy]));
+    }
+    tendrils.push(curl);
+  }
+  const tip = spine[n - 1];
+  const radius = AURA_RADIUS * (0.4 + height * 0.6);
+  const clouds = [];
+  for (let i = 0; i < AURA_CLOUDS; i++) {
+    const a = i / AURA_CLOUDS * Math.PI * 2;
+    const rr = radius * (0.7 + 0.3 * (i % 2 === 0 ? 1 : 0.6));
+    clouds.push(clampCoord([tip[0] + Math.cos(a) * rr, tip[1] + Math.sin(a) * rr]));
+  }
+  return {
+    spine,
+    widths,
+    coil: coilLine,
+    tendrils,
+    shadow,
+    aura: { center: clampCoord(tip), radius, clouds }
+  };
+}
+
 // ../atlas/src/procedural.ts
 function makePrng2(seed) {
   let s = seed | 0;
@@ -932,7 +1184,7 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 var DEFAULT_BOUNDS = { minX: 0.05, minY: 0.05, maxX: 0.95, maxY: 0.95 };
-function clamp(v, lo, hi) {
+function clamp2(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
 function inRange(rng, lo, hi) {
@@ -956,8 +1208,8 @@ function makeRiverPath(startX, startY, rng, bounds) {
   const dirX = (rng() - 0.5) * 0.1;
   const dirY = 0.06 + rng() * 0.06;
   for (let i = 0; i < steps; i++) {
-    x = clamp(x + dirX + (rng() - 0.5) * 0.06, bounds.minX, bounds.maxX);
-    y = clamp(y + dirY + (rng() - 0.5) * 0.03, bounds.minY, bounds.maxY);
+    x = clamp2(x + dirX + (rng() - 0.5) * 0.06, bounds.minX, bounds.maxX);
+    y = clamp2(y + dirY + (rng() - 0.5) * 0.03, bounds.minY, bounds.maxY);
     coords.push([x, y]);
   }
   return { type: "Path", coordinates: coords };
@@ -1025,9 +1277,9 @@ function generateDraft(seed, promptHints, bounds) {
   const bw = b.maxX - b.minX;
   const bh = b.maxY - b.minY;
   const rng = makePrng2(seed);
-  const regionCount = clamp(promptHints?.regionCount ?? 3 + randInt(rng, 3), 1, 8);
-  const riverCount = clamp(promptHints?.riverCount ?? 1 + randInt(rng, 3), 0, 5);
-  const cityCount = clamp(promptHints?.cityCount ?? 2 + randInt(rng, 4), 0, 8);
+  const regionCount = clamp2(promptHints?.regionCount ?? 3 + randInt(rng, 3), 1, 8);
+  const riverCount = clamp2(promptHints?.riverCount ?? 1 + randInt(rng, 3), 0, 5);
+  const cityCount = clamp2(promptHints?.cityCount ?? 2 + randInt(rng, 4), 0, 8);
   const features = [];
   let idx = 0;
   function nextId(kind) {
@@ -1076,8 +1328,8 @@ function generateDraft(seed, promptHints, bounds) {
     let x = sx;
     let y = sy;
     for (let s = 0; s < steps; s++) {
-      x = clamp(x + (rng() - 0.5) * 0.14, b.minX, b.maxX);
-      y = clamp(y + rng() * 0.1 + 0.02, b.minY, b.maxY);
+      x = clamp2(x + (rng() - 0.5) * 0.14, b.minX, b.maxX);
+      y = clamp2(y + rng() * 0.1 + 0.02, b.minY, b.maxY);
       coords.push([x, y]);
     }
     features.push({
@@ -1278,7 +1530,7 @@ var DEFAULT_SCALE_MAX = 1.3;
 var DEFAULT_ROTATE_MIN = -15;
 var DEFAULT_ROTATE_MAX = 15;
 var MIN_POSITIVE_SCALE = 1e-6;
-function clamp2(value, lo, hi) {
+function clamp3(value, lo, hi) {
   if (value < lo) return lo;
   if (value > hi) return hi;
   return value;
@@ -1300,9 +1552,9 @@ function randomStampVariation(seed, options) {
   const rawRotation = rotateMin + rng() * (rotateMax - rotateMin);
   const scale = Math.max(
     MIN_POSITIVE_SCALE,
-    clamp2(rawScale, scaleMin, scaleMax)
+    clamp3(rawScale, scaleMin, scaleMax)
   );
-  const rotation = clamp2(rawRotation, rotateMin, rotateMax);
+  const rotation = clamp3(rawRotation, rotateMin, rotateMax);
   return { scale, rotation };
 }
 function stampSeedFromKey(key) {
@@ -1312,84 +1564,6 @@ function stampSeedFromKey(key) {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
-}
-
-// ../atlas/src/path-smoothing.ts
-var DEFAULT_SEGMENTS = 8;
-var MIN_SEGMENTS = 1;
-var MAX_SEGMENTS = 64;
-var DEFAULT_TENSION = 0.5;
-function clamp3(value, lo, hi) {
-  if (value < lo) return lo;
-  if (value > hi) return hi;
-  return value;
-}
-function controlPoint(points, index, closed) {
-  const n = points.length;
-  if (closed) {
-    return points[(index % n + n) % n];
-  }
-  if (index < 0) {
-    const p0 = points[0];
-    const p1 = points[1];
-    return [2 * p0[0] - p1[0], 2 * p0[1] - p1[1]];
-  }
-  if (index > n - 1) {
-    const pn = points[n - 1];
-    const pn1 = points[n - 2];
-    return [2 * pn[0] - pn1[0], 2 * pn[1] - pn1[1]];
-  }
-  return points[index];
-}
-function smoothPath(points, options = {}) {
-  if (points.length < 3) {
-    return points.map((p) => [p[0], p[1]]);
-  }
-  const segments = clamp3(
-    Math.round(options.segments ?? DEFAULT_SEGMENTS),
-    MIN_SEGMENTS,
-    MAX_SEGMENTS
-  );
-  const tension = clamp3(options.tension ?? DEFAULT_TENSION, 0, 1);
-  const closed = options.closed ?? false;
-  const n = points.length;
-  const segmentCount = closed ? n : n - 1;
-  const result = [];
-  for (let i = 0; i < segmentCount; i++) {
-    const p0 = controlPoint(points, i - 1, closed);
-    const p1 = controlPoint(points, i, closed);
-    const p2 = controlPoint(points, i + 1, closed);
-    const p3 = controlPoint(points, i + 2, closed);
-    const m1x = tension * (p2[0] - p0[0]);
-    const m1y = tension * (p2[1] - p0[1]);
-    const m2x = tension * (p3[0] - p1[0]);
-    const m2y = tension * (p3[1] - p1[1]);
-    const startJ = i === 0 ? 0 : 1;
-    for (let j = startJ; j <= segments; j++) {
-      const t = j / segments;
-      const t2 = t * t;
-      const t3 = t2 * t;
-      const h00 = 2 * t3 - 3 * t2 + 1;
-      const h10 = t3 - 2 * t2 + t;
-      const h01 = -2 * t3 + 3 * t2;
-      const h11 = t3 - t2;
-      const x = h00 * p1[0] + h10 * m1x + h01 * p2[0] + h11 * m2x;
-      const y = h00 * p1[1] + h10 * m1y + h01 * p2[1] + h11 * m2y;
-      result.push([x, y]);
-    }
-  }
-  return result;
-}
-function sampleTaperedWidths(points, startWidth, endWidth) {
-  const n = points.length;
-  if (n === 0) return [];
-  if (n === 1) return [startWidth];
-  const widths = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    widths[i] = startWidth + (endWidth - startWidth) * t;
-  }
-  return widths;
 }
 
 // ../atlas/src/path-attachments.ts
@@ -1407,7 +1581,7 @@ var KIND_GLYPH = {
   houses: "village",
   towers: "castle"
 };
-function clamp01(v) {
+function clamp012(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
@@ -1447,8 +1621,8 @@ function generatePathAttachments(path, options) {
       for (const sign of signs) {
         const scale = 0.8 + rng() * 0.4;
         const rotation = (rng() - 0.5) * 2 * rotationRange;
-        const x = clamp01(cx + px * offset * sign);
-        const y = clamp01(cy + py * offset * sign);
+        const x = clamp012(cx + px * offset * sign);
+        const y = clamp012(cy + py * offset * sign);
         results.push({ glyphKey, x, y, scale, rotation });
       }
       d += spacing;
@@ -1549,12 +1723,14 @@ export {
   assembleStampPrompt,
   buildGridLines,
   buildReliefShading,
+  buildVineLayout,
   canvasToWorld,
   centroid,
   distToSegment,
   drawCompassRose,
   drawScaleBar,
   drawSvgPath,
+  drawVine,
   emptyDrawLayerMap,
   generateDraft,
   generatePathAttachments,

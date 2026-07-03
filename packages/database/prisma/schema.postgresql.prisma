@@ -3271,6 +3271,7 @@ enum AtlasFeatureKind {
   relief
   label
   pin
+  vine
 }
 
 enum AtlasLabelColor {
