@@ -6,7 +6,8 @@ export type CookbookAiContextMode =
   | "brain"
   | "current_object"
   | "current_object_plus_brain"
-  | "personal_brain";
+  | "personal_brain"
+  | "mail";
 
 export type CookbookAiTaskType =
   | "summarize_page"
@@ -31,15 +32,22 @@ export type CookbookAiTaskType =
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"
-  | "generate_structured_item";
+  | "generate_structured_item"
+  | "answer_life_question"
+  | "synthesize_research"
+  | "summarize_mail"
+  | "prioritize_mail"
+  | "generate_briefing";
 
 /**
  * Context modes that are permanently local-only in the cookbook routing layer.
- * Only personal_brain is hard-blocked; DnD/world modes (brain, current_object,
- * current_object_plus_brain) may go to cloud when admin gateway policy allows.
+ * personal_brain and mail are hard-blocked; DnD/world modes (brain,
+ * current_object, current_object_plus_brain) may go to cloud when admin
+ * gateway policy allows.
  */
 export const COOKBOOK_LOCAL_ONLY_CONTEXT_MODES: readonly CookbookAiContextMode[] = [
   "personal_brain",
+  "mail",
 ] as const;
 
 export interface CookbookInferenceProbe {

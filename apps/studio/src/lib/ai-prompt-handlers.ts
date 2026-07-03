@@ -49,7 +49,7 @@ function resolvePromptTaskType(contextMode: AiContextMode) {
     case "current_object_plus_brain":
       return "improve_lore_text" as const;
     case "personal_brain":
-      return "improve_lore_text" as const;
+      return "answer_life_question" as const;
     default:
       return "improve_lore_text" as const;
   }
@@ -195,9 +195,37 @@ export async function executeAiPrompt(
     provider: routed.result.provider,
     model: routed.result.model,
     routedVia: routed.route,
-    contextMode: routed.contextMode,
+    // The prompt panel only submits UI context modes; "mail" is API-only.
+    contextMode: routed.contextMode as AiContextMode,
     providerMode: routed.providerMode,
   };
+}
+
+/** Map AI/gateway errors to a consistent HTTP response (shared by prompt + chat routes). */
+export function aiPromptErrorResponse(error: unknown): NextResponse {
+  if (
+    error instanceof AiAccessDeniedError ||
+    error instanceof AiPolicyViolationError ||
+    error instanceof RtxBoundaryError ||
+    error instanceof AiGatewayAccessDeniedError ||
+    error instanceof AiGatewayBudgetExceededError ||
+    error instanceof AiGatewayDisabledError
+  ) {
+    return aiPolicyErrorResponse(error);
+  }
+  if (error instanceof AiPrivacyError || error instanceof AiRouterError) {
+    return jsonError(error.message, 403);
+  }
+  if (error instanceof InferenceUrlBlockedError) {
+    return jsonError(error.message, 403);
+  }
+  if (error instanceof AiProviderError) {
+    return jsonError(error.message, 502);
+  }
+  if (error instanceof Error) {
+    return jsonError(error.message, 400);
+  }
+  throw error;
 }
 
 export async function postAiPrompt(
@@ -227,28 +255,6 @@ export async function postAiPrompt(
       providerMode: result.providerMode,
     });
   } catch (error) {
-    if (
-      error instanceof AiAccessDeniedError ||
-      error instanceof AiPolicyViolationError ||
-      error instanceof RtxBoundaryError ||
-      error instanceof AiGatewayAccessDeniedError ||
-      error instanceof AiGatewayBudgetExceededError ||
-      error instanceof AiGatewayDisabledError
-    ) {
-      return aiPolicyErrorResponse(error);
-    }
-    if (error instanceof AiPrivacyError || error instanceof AiRouterError) {
-      return jsonError(error.message, 403);
-    }
-    if (error instanceof InferenceUrlBlockedError) {
-      return jsonError(error.message, 403);
-    }
-    if (error instanceof AiProviderError) {
-      return jsonError(error.message, 502);
-    }
-    if (error instanceof Error) {
-      return jsonError(error.message, 400);
-    }
-    throw error;
+    return aiPromptErrorResponse(error);
   }
 }

@@ -5,6 +5,7 @@
   "description": "UWE Studio — DM campaign editor and world management",
   "scripts": {
     "copy:atlas": "node scripts/copy-atlas-runtime.mjs",
+    "postinstall": "node scripts/copy-atlas-runtime.mjs",
     "predev": "node scripts/copy-atlas-runtime.mjs",
     "dev": "next dev --port 3000",
     "prebuild": "node scripts/copy-atlas-runtime.mjs",
@@ -39,6 +40,8 @@
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
+    "@uwe/player-hub": "workspace:*",
+    "@uwe/roll-tables": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/image-studio": "workspace:*",
     "@uwe/kitchen": "workspace:*",

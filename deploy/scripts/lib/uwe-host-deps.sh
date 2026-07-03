@@ -376,6 +376,51 @@ migration_status_has_pending() {
   echo "$output" | grep -qE '(Following migration[s]? have not yet been applied|Database schema is not up to date|not yet been applied)'
 }
 
+# Migration names Prisma names as failed in a P3009 `migrate deploy` error, e.g.
+#   The `20260703102143_briefing_job_type` migration started at ... failed
+# Only backtick-quoted timestamped names appear in that error, so it is safe to
+# pull every one of them.
+deploy_failed_migration_names() {
+  local output="$1"
+  echo "$output" | grep -oE '`[0-9]{14}_[A-Za-z0-9_]+`' | tr -d '`' | sort -u
+}
+
+# Apply migrations, self-healing a blocking failed migration.
+#
+# A migration aborted mid-apply (e.g. on a host whose squashed baseline diverged
+# from the granular migration chain) leaves a failed row in _prisma_migrations;
+# every later `migrate deploy` then refuses with P3009. SQLite applies each
+# migration in a transaction, so such a failure is fully rolled back and the
+# schema is unchanged — mark the migration rolled-back so the corrected SQL
+# re-applies, then deploy again.
+deploy_migrations() {
+  local output
+  if output="$(run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy" 2>&1)"; then
+    printf '%s\n' "$output"
+    return 0
+  fi
+  printf '%s\n' "$output"
+
+  if ! echo "$output" | grep -q 'P3009'; then
+    return 1
+  fi
+
+  local failed name
+  failed="$(deploy_failed_migration_names "$output")"
+  if [[ -z "$failed" ]]; then
+    return 1
+  fi
+
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    warn "Blockierende fehlgeschlagene Migration: $name — markiere als rolled-back und versuche db:deploy erneut."
+    run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' exec prisma migrate resolve --rolled-back '$name'"
+  done <<< "$failed"
+
+  log "db:deploy erneut anwenden nach Recovery …"
+  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy"
+}
+
 migration_status_is_current() {
   local output="$1"
   echo "$output" | grep -qiE '(Database schema is up to date|No pending migrations|All migrations have been applied)'
@@ -422,7 +467,7 @@ run_migrations() {
   fi
 
   log "Wende Datenbank-Migrationen an (pnpm --filter $DATABASE_WORKSPACE_FILTER db:deploy) …"
-  run_as_uwe "pnpm --filter '$DATABASE_WORKSPACE_FILTER' db:deploy"
+  deploy_migrations
   verify_migrations_applied
 }
 

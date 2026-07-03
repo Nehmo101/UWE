@@ -28,7 +28,7 @@ interface StudioLoginFormProps {
 
 function StudioLoginFormInner({
   title = "UWE Studio — Anmeldung",
-  lead = "Interne Schutzschicht für den Welten-Editor. Cloudflare Access bleibt die äußere Schutzschicht.",
+  lead = "Interne Schutzschicht für den Welten-Editor.",
   defaultRedirect = "/studio",
   forcePasswordRedirect = "/account/password",
   devDefaultEmail,

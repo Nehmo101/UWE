@@ -1,13 +1,19 @@
 :root {
-  color-scheme: dark;
-  font-family:
-    Inter,
+  /* Parchment OS is a light theme; the shared theme engine sets the token
+     values, this just keeps native form controls / scrollbars in light mode
+     and lets the parchment font stack drive the connector chrome. */
+  color-scheme: light;
+  font-family: var(
+    --uwe-font-family,
+    ui-monospace,
+    "Cascadia Code",
     "Segoe UI",
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Helvetica Neue",
-    sans-serif;
+    sans-serif
+  );
 }
 
 * {
@@ -48,6 +54,17 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  /* Parchment OS renders the sidebar as a dark ink panel, so remap the
+     foreground/border tokens to their light sidebar variants for every
+     descendant (brand, nav items, badges) — mirrors the shared .uwe-sidebar
+     reset. Without this, the dark-ink --uwe-fg text would sit on the dark-ink
+     surface and vanish. */
+  color: var(--uwe-sidebar-fg, var(--uwe-fg));
+  --uwe-fg: var(--uwe-sidebar-fg, var(--uwe-fg));
+  --uwe-fg-muted: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
+  --uwe-fg-subtle: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
+  --uwe-border: color-mix(in srgb, var(--uwe-sidebar-fg, #f1e8d4) 16%, transparent);
+  --uwe-border-muted: color-mix(in srgb, var(--uwe-sidebar-fg, #f1e8d4) 10%, transparent);
 }
 
 .connector-brand h1,
@@ -450,7 +467,7 @@ textarea {
 }
 
 .connector-panel {
-  background: color-mix(in srgb, var(--uwe-panel-bg) 90%, transparent);
+  background: color-mix(in srgb, var(--uwe-panel) 90%, transparent);
   border: 1px solid var(--uwe-border);
   border-radius: 0.75rem;
   padding: 1rem 1.25rem;

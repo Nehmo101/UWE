@@ -300,6 +300,8 @@ export function resolveFeatureCategory(input: {
   switch (input.contextMode) {
     case "personal_brain":
       return "personal_brain";
+    case "mail":
+      return "private_notes";
     case "brain":
     case "current_object":
     case "current_object_plus_brain":

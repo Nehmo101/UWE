@@ -119,4 +119,55 @@ describe("calendar-service", () => {
       false,
     );
   });
+
+  it("mirrors contract deadlines into the local feed and prunes stale ones", async () => {
+    const calendar = createCalendarService(db);
+    const now = new Date("2026-07-01T08:00:00Z");
+
+    const contract = await db.contractExpense.create({
+      data: {
+        name: "Streaming Abo",
+        status: "active",
+        billingInterval: "monthly",
+        cancelByDate: new Date("2026-07-15T00:00:00Z"),
+        nextPaymentDate: new Date("2026-07-20T00:00:00Z"),
+      },
+    });
+
+    const first = await calendar.syncContractDeadlinesToCalendar({ now });
+    assert.equal(first.synced, 2);
+
+    const local = await calendar.ensureLocalFeed();
+    const events = await calendar.listEvents({ feedId: local.id, limit: 200 });
+    const cancelEvent = events.find(
+      (event) => event.externalUid === `uwe-contract-${contract.id}-cancel`,
+    );
+    assert.ok(cancelEvent);
+    assert.equal(cancelEvent.allDay, true);
+    assert.ok(cancelEvent.title.includes("Kündigungsfrist"));
+
+    // Kündigungstermin entfällt → Event wird beim nächsten Sync entfernt.
+    await db.contractExpense.update({
+      where: { id: contract.id },
+      data: { cancelByDate: null },
+    });
+    await calendar.syncContractDeadlinesToCalendar({ now });
+
+    const after = await calendar.listEvents({ feedId: local.id, limit: 200 });
+    assert.equal(
+      after.some((event) => event.externalUid === `uwe-contract-${contract.id}-cancel`),
+      false,
+    );
+    assert.ok(
+      after.some((event) => event.externalUid === `uwe-contract-${contract.id}-payment`),
+    );
+
+    // Termine außerhalb des Horizonts werden nicht angelegt.
+    await db.contractExpense.update({
+      where: { id: contract.id },
+      data: { nextPaymentDate: new Date("2027-06-01T00:00:00Z") },
+    });
+    const farOut = await calendar.syncContractDeadlinesToCalendar({ now });
+    assert.equal(farOut.synced, 0);
+  });
 });

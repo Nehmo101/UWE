@@ -20,6 +20,10 @@ import {
   unlinkPageFromSessionAction,
   updateGameSessionAction,
 } from "../../../../session-actions";
+import {
+  AVAILABILITY_LABELS,
+  createSessionAvailabilityService,
+} from "@uwe/player-hub";
 import { AiContextPanel } from "@/components/AiContextPanel";
 import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { preparePrintListFromSessionAction } from "@/app/label-actions";
@@ -52,6 +56,10 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
   const session = isLikelyGameSessionId(sessionId)
     ? await auth.getGameSessionForDm(worldSlug, sessionId)
     : null;
+  const availability =
+    session && (session.status === "planned" || session.status === "prepared")
+      ? (await createSessionAvailabilityService(db).listForSessions([session.id])).get(session.id)
+      : undefined;
   await db.$disconnect();
 
   if (!session) {
@@ -153,6 +161,31 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             Spieler-Dashboard erscheinen — ohne DM-Prep oder Recap preiszugeben.
           </p>
         )}
+
+      {availability && (
+        <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "1rem" }}>
+          <h2 className="uwe-v2-section-title">Spieler-Verfügbarkeit</h2>
+          <p>
+            Zusagen: <strong>{availability.counts.yes}</strong> · Vielleicht:{" "}
+            <strong>{availability.counts.maybe}</strong> · Absagen:{" "}
+            <strong>{availability.counts.no}</strong>
+          </p>
+          {availability.votes.length > 0 ? (
+            <ul className="uwe-hint" style={{ paddingLeft: "1.25rem" }}>
+              {availability.votes.map((vote) => (
+                <li key={vote.userId}>
+                  {vote.displayName}: {AVAILABILITY_LABELS[vote.status]}
+                  {vote.note ? ` — ${vote.note}` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="uwe-dashboard-muted">
+              Noch keine Rückmeldungen — Spieler stimmen im Portal unter „Sessions“ ab.
+            </p>
+          )}
+        </section>
+      )}
 
       <form action={updateGameSessionAction} className="uwe-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />

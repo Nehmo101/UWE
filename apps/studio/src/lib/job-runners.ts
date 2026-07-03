@@ -47,6 +47,7 @@ import {
 import { resolveGatewayUserById } from "./ai-gateway-user";
 import {
   runAgentJob,
+  runBriefingJob,
   runCalendarSyncJob,
   runImageStudioJob,
   runMailSyncJob,
@@ -837,6 +838,8 @@ export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<s
       return runCalendarSyncJob(ctx);
     case "research":
       return runResearchJob(ctx);
+    case "briefing":
+      return runBriefingJob(ctx);
     default:
       throw new Error(`Unbekannter Job-Typ: ${ctx.job.type}`);
   }

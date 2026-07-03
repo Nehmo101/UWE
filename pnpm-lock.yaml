@@ -89,6 +89,9 @@ importers:
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@uwe/player-hub':
+        specifier: workspace:*
+        version: link:../../packages/player-hub
       '@uwe/security':
         specifier: workspace:*
         version: link:../../packages/security
@@ -307,6 +310,12 @@ importers:
       '@uwe/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@uwe/player-hub':
+        specifier: workspace:*
+        version: link:../../packages/player-hub
+      '@uwe/roll-tables':
+        specifier: workspace:*
+        version: link:../../packages/roll-tables
       '@uwe/scan-inbox':
         specifier: workspace:*
         version: link:../../packages/scan-inbox
@@ -816,6 +825,44 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.24
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/player-hub:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/roll-tables:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
       '@uwe/config':
         specifier: workspace:*
         version: link:../config

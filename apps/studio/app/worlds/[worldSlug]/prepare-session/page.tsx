@@ -73,7 +73,11 @@ export default async function PrepareSessionPage({ params }: Props) {
       lastSessionTitle: referenceSession.title,
       summaryDm: referenceSession.summaryDm,
       openPlots: referenceSession.openPlots,
-      linkedPageTitles: referenceSession.linkedPages.map((page) => page.title),
+      playerDecisions: referenceSession.playerDecisions,
+      linkedPages: referenceSession.linkedPages.map((page) => ({
+        title: page.title,
+        type: page.type,
+      })),
     });
   const outlineText = outline ? serializePrepareNextSessionOutline(outline) : null;
 

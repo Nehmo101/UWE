@@ -464,6 +464,68 @@ export class CalendarService {
     }
     return { worldId, synced };
   }
+
+  /**
+   * Mirrors upcoming contract deadlines (cancel-by, next payment/renewal) into
+   * the local calendar feed so they show up in calendar views and .ics export.
+   * Stale contract events (cancelled contracts, moved dates) are pruned.
+   */
+  async syncContractDeadlinesToCalendar(options: { now?: Date; horizonDays?: number } = {}) {
+    const now = options.now ?? new Date();
+    const horizonMs = (options.horizonDays ?? 90) * 86_400_000;
+
+    const contracts = await this.db.contractExpense.findMany({
+      where: { status: { in: ["active", "review"] } },
+    });
+    const localFeed = await this.ensureLocalFeed();
+    const activeUids: string[] = [];
+    let synced = 0;
+
+    for (const contract of contracts) {
+      const deadlines = [
+        {
+          suffix: "cancel",
+          date: contract.cancelByDate,
+          title: `Kündigungsfrist: ${contract.name}`,
+        },
+        {
+          suffix: "payment",
+          date: contract.nextPaymentDate ?? contract.renewalDate,
+          title: `Zahlung fällig: ${contract.name}`,
+        },
+      ];
+
+      for (const deadline of deadlines) {
+        if (!deadline.date) continue;
+        const delta = deadline.date.getTime() - now.getTime();
+        if (delta < 0 || delta > horizonMs) continue;
+
+        const uid = `uwe-contract-${contract.id}-${deadline.suffix}`;
+        activeUids.push(uid);
+        await this.upsertExternalEvent(localFeed.id, uid, {
+          title: deadline.title,
+          startAt: deadline.date,
+          allDay: true,
+          kind: "personal",
+          metadata: {
+            source: "contract",
+            contractId: contract.id,
+            deadline: deadline.suffix,
+          },
+        });
+        synced += 1;
+      }
+    }
+
+    const pruned = await this.db.calendarEvent.deleteMany({
+      where: {
+        feedId: localFeed.id,
+        externalUid: { startsWith: "uwe-contract-", notIn: activeUids },
+      },
+    });
+
+    return { synced, pruned: pruned.count };
+  }
 }
 
 export function createCalendarService(db: PrismaClient): CalendarService {

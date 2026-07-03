@@ -182,6 +182,7 @@ export {
   resolvePortalLoginHref,
   resolveStudioPublicBaseUrl,
   resolveStudioSessionHref,
+  STUDIO_SESSION_ENTRY_PATH,
 } from "./runtime-config";
 
 export type { UweAppUrls, UweDeploymentModel } from "./runtime-config";

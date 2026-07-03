@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
 import {
   HealthBadge,
 } from "@uwe/shared-ui";
@@ -107,7 +108,7 @@ export default async function AdminStatusPage() {
     <SystemShell
       breadcrumb={
         <BreadcrumbTrail
-          items={[{ label: "Dashboard", href: "/studio" }, { label: "Systemstatus" }]}
+          items={[{ label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH }, { label: "Systemstatus" }]}
         />
       }
     >

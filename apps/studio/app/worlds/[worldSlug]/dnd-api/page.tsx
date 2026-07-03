@@ -63,18 +63,19 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
         </form>
       </section>
 
+      <DndApiEncounterPanel
+        worldSlug={worldSlug}
+        results={results.map((item) => ({
+          provider: item.provider,
+          id: item.id,
+          name: item.name,
+          url: item.url,
+          summary: item.summary,
+        }))}
+      />
+
       {q && (
         <>
-          <DndApiEncounterPanel
-            worldSlug={worldSlug}
-            results={results.map((item) => ({
-              provider: item.provider,
-              id: item.id,
-              name: item.name,
-              url: item.url,
-              summary: item.summary,
-            }))}
-          />
           <section style={{ marginBottom: "1.5rem" }}>
             <h2 className="uwe-v2-section-title">{`Alle Ergebnisse für „${q}“`}</h2>
             {results.length === 0 ? (

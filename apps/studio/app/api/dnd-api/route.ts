@@ -8,10 +8,15 @@ import {
   buildPageUrl,
 } from "@uwe/database/server";
 import {
+  analyzeEncounterXp,
   buildEncounterMarkdown,
   formatOpen5eMonsterAsMarkdown,
   getOpen5eMonster,
+  listOpen5eMonstersByChallengeRating,
   searchAllDndApis,
+  suggestCandidateChallengeRatings,
+  suggestEncounterComposition,
+  type EncounterCandidate,
 } from "@uwe/dnd-api";
 import {
   guardStudioMutation,
@@ -54,22 +59,35 @@ const createEncounterSchema = z.object({
   action: z.literal("create_encounter"),
   worldSlug: slugSchema,
   title: optionalString,
+  partyLevel: z.number().int().min(1).max(20).optional(),
+  partySize: z.number().int().min(1).max(10).optional(),
   monsters: z
     .array(
       z.object({
         name: nonEmptyString.max(200),
         cr: optionalString,
         slug: slugSchema,
+        count: z.number().int().min(1).max(24).optional(),
       }),
     )
     .min(1)
     .max(24),
 });
 
+const generateEncounterSchema = z.object({
+  action: z.literal("generate_encounter"),
+  worldSlug: slugSchema,
+  partyLevel: z.number().int().min(1).max(20),
+  partySize: z.number().int().min(1).max(10),
+  difficulty: z.enum(["easy", "medium", "hard", "deadly"]),
+  style: z.enum(["boss", "horde", "mixed"]).optional(),
+});
+
 const dndApiPostSchema = z.discriminatedUnion("action", [
   dndBeyondReferenceSchema,
   importStatblockSchema,
   createEncounterSchema,
+  generateEncounterSchema,
 ]);
 
 async function resolveUniquePageSlug(worldSlug: string, title: string, suffix?: string) {
@@ -214,8 +232,73 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.action === "generate_encounter") {
+    const config = resolveDndApiConfig();
+    if (!config.open5eEnabled) {
+      return NextResponse.json(
+        { error: "Open5e ist deaktiviert — Generator nicht verfügbar." },
+        { status: 400 },
+      );
+    }
+
+    const { partyLevel, partySize, difficulty, style } = parsed.data;
+    const crBuckets = suggestCandidateChallengeRatings(partyLevel, partySize, difficulty);
+    const dndApi = createDndApiService(prisma);
+
+    const candidates: EncounterCandidate[] = (
+      await Promise.all(
+        crBuckets.map(async (cr) => {
+          const cacheKey = `monsters-cr:${cr}`;
+          const cached = await dndApi.getCached("open5e", cacheKey);
+          if (Array.isArray(cached)) {
+            return cached as unknown as EncounterCandidate[];
+          }
+          const monsters = await listOpen5eMonstersByChallengeRating(cr, {
+            open5eEnabled: config.open5eEnabled,
+          });
+          await dndApi.setCached("open5e", cacheKey, monsters, config.cacheTtlSeconds);
+          return monsters;
+        }),
+      )
+    ).flat();
+
+    const composition = suggestEncounterComposition({
+      partyLevel,
+      partySize,
+      difficulty,
+      style,
+      candidates,
+    });
+
+    return NextResponse.json({
+      composition: {
+        style: composition.style,
+        targetXp: composition.targetXp,
+        capXp: composition.capXp,
+        analysis: composition.analysis,
+        monsters: composition.entries.map((entry) => ({
+          name: entry.monster.name,
+          slug: entry.monster.slug,
+          cr: entry.monster.cr,
+          count: entry.count,
+        })),
+      },
+    });
+  }
+
   const title = parsed.data.title?.trim() || "Encounter";
-  const markdown = buildEncounterMarkdown(parsed.data.monsters);
+  const analysis =
+    parsed.data.partyLevel && parsed.data.partySize
+      ? analyzeEncounterXp({
+          partyLevel: parsed.data.partyLevel,
+          partySize: parsed.data.partySize,
+          monsters: parsed.data.monsters.map((monster) => ({
+            cr: monster.cr,
+            count: monster.count ?? 1,
+          })),
+        })
+      : undefined;
+  const markdown = buildEncounterMarkdown(parsed.data.monsters, analysis);
   const pageSlug = await resolveUniquePageSlug(world.slug, title, "encounter");
 
   const page = await repo.createPage({
@@ -225,7 +308,7 @@ export async function POST(request: Request) {
     type: "encounter",
     visibility: "dm_only",
     publishStatus: "draft",
-    summary: `${parsed.data.monsters.length} Monster`,
+    summary: `${parsed.data.monsters.reduce((sum, monster) => sum + (monster.count ?? 1), 0)} Monster`,
     contentBlocks: [
       {
         type: "rich_text",
