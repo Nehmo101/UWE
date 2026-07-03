@@ -6,6 +6,13 @@ Stand: 2026-07-03 · Teil von [feature-roadmap-2026-07.md](feature-roadmap-2026-
 Einkaufslisten, kennt Vorräte — und merkt sich, was funktioniert hat (Kind mochte es,
 Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Brain.
 
+> **Umsetzungsstand 2026-07-03:** Phase K1 gebaut. Package `@uwe/kitchen`
+> (`Recipe`/`RecipeIngredient`-Modelle + Migration, `units.ts` pure Normalisierung/
+> Formatierung, `recipe-service.ts` mit transaktionaler Zutaten-Ersetzung + Tag-
+> Integration, 26 Tests) + Studio-Routen `/kitchen`, `/kitchen/recipes`,
+> `/kitchen/recipes/[id]` + Nav-Eintrag „Küche". **Offen:** Bild-Upload im Editor
+> (TODO); K2 (Wochenplan + Einkaufsliste), K3 (Vorrat + KI), K4 (Scanner-Brücke).
+
 ---
 
 ## 1. Package & Naming

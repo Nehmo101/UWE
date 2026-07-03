@@ -8,6 +8,15 @@ Schnellsuche, Initiative-Leiste, Loot/Quest-Änderungen vormerken — und nach d
 „Review & Kanon übernehmen". Philosophie unverändert: **Live wird nur vorgemerkt,
 nichts wird direkt Kanon** — Proposal → Review → Apply.
 
+> **Umsetzungsstand 2026-07-03:** Phase A + B (Kern) gebaut. `SessionLiveEntry`-Modell
+> + Migration, `session-live-service.ts` (append/list/delete + pures
+> `buildSessionReviewDraft`/`buildRecapDraft`, 7 Tests), Live-Cockpit mit
+> strukturiertem Ereignis-Log (Notiz/Beute/Quest/NPC/Initiative/Lesezeichen +
+> Seiten-Referenz), und neue Review-Seite `/sessions/[id]/review` (gruppierte
+> Vormerkungen mit Deep-Links + Recap-Entwurf → `summaryDm`). **Offen (Folge-Iteration):**
+> direktes Apply von Quest-Status/Loot aus der Review-Seite (aktuell Deep-Link zur
+> betroffenen Seite), Schnellsuche-Integration im Panel, Soundboard-Leiste.
+
 ---
 
 ## 1. Ist-Stand (wiederverwenden)
