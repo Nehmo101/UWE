@@ -23,8 +23,11 @@ versehentlich falsch werden.
 > `dnd_session_note`/`dnd_handout` legen eine **Draft-Seite** (`canonicalStatus`/
 > `publishStatus: draft`, kein Auto-Kanon) in der Welt an — Sessionnotiz/Dungeon
 > als `gm_note` (DM-only), Handout als `player_text` (player_visible). Ablage ohne
-> zugeordnete Welt wird abgelehnt. **Offen:** Bild-Downscale vor Enqueue
-> (Payload-Optimierung); Recap via `AiProposal`/Review-UI (aktuell Draft-Seite statt
+> zugeordnete Welt wird abgelehnt.
+> **Bild-Downscale gebaut:** `downscaleImageForVision` (`@uwe/assets`) verkleinert
+> Scans vor dem Vision-Enqueue auf ≤1600px JPEG (q80), damit die Base64-Payload
+> klein bleibt; ohne sharp/bei Dekodier-Fehler bleibt das Original erhalten.
+> **Offen:** Recap via `AiProposal`/Review-UI (aktuell Draft-Seite statt
 > AiProposal-Patch); S3 (volle Rezept-Extraktion mit strukturierten Zutaten).
 
 ---

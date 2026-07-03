@@ -54,9 +54,11 @@ export {
 export { buildAssetDownloadHeaders } from "./download-headers";
 
 export {
+  downscaleImageForVision,
   processUploadedImage,
   shouldGenerateThumbnails,
   shouldStripExif,
+  type DownscaledImage,
   type ProcessedImageResult,
 } from "./image-processing";
 

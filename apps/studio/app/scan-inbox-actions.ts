@@ -6,6 +6,7 @@ import {
   extractPdfText,
   prisma,
 } from "@uwe/database/server";
+import { downscaleImageForVision } from "@uwe/assets";
 import {
   createScanInboxService,
   SCAN_FILING_TARGET_LABELS,
@@ -83,10 +84,11 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
     return;
   }
 
-  // TODO(scan-inbox): Bild vor dem Enqueue serverseitig downscalen (<=1600px JPEG)
-  // und das vision_extract-Ergebnis in einer Folge-Iteration via
-  // waitForConnectorJob zurueckschreiben (applyAnalysis mit ocrEngine "vision_llm").
-  const base64 = buffer.toString("base64");
+  // Bild vor dem Enqueue serverseitig downscalen (<=1600px JPEG), damit die
+  // Base64-Payload klein bleibt, die als JSON durch die Connector-Queue reist.
+  // Das Ergebnis wird poll-on-demand via finalizeScanAction zurueckgeschrieben.
+  const vision = await downscaleImageForVision({ buffer, mimeType: scan.mimeType });
+  const base64 = vision.buffer.toString("base64");
   const job = await createConnectorService(prisma).enqueueJob({
     type: "vision_extract",
     payload: { prompt: VISION_PROMPT, images: [base64] },
