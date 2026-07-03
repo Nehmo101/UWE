@@ -61,6 +61,10 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 
 ## 3. Welle 3 — Sichtbarer Mehrwert, mittlerer Aufwand
 
+> **Umsetzungsstand 2026-07-03:** Kampagnen-Radar gebaut (`campaign-radar-service.ts`,
+> read-only Aggregation, Seite `/worlds/[slug]/radar`, 7 Tests). Essensplaner K2
+> (Wochenplan + Einkaufsliste) gebaut — siehe `meal-planner-plan.md`.
+
 - **Kampagnen-Radar** („Was passiert gerade in der Welt?"): fast reine Lese-Aggregation
   über `FactionState`, offene Quests (`quest-lifecycle-service.ts`), `WorldCalendar`,
   `WorldEvent`, letzte Session, NPC-Zustände, Kanon-Konflikte
