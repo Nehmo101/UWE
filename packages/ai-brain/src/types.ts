@@ -31,7 +31,8 @@ export type AiTaskType =
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"
-  | "generate_structured_item";
+  | "generate_structured_item"
+  | "answer_life_question";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

@@ -110,12 +110,39 @@ export const aiContextBodySchema = z.object({
   sessionId: idSchema.optional(),
 });
 
+export const aiProviderModeSchema = z.enum(["auto", "local_rtx", "cloud"]);
+
+export const aiContextModeSchema = z.enum([
+  "general_chat",
+  "brain",
+  "current_object",
+  "current_object_plus_brain",
+  "personal_brain",
+]);
+
 export const aiPromptBodySchema = z.object({
   prompt: nonEmptyString.max(32_000),
-  providerMode: z.enum(["local", "cloud", "auto"]),
-  contextMode: z.enum(["none", "page", "world"]),
+  providerMode: aiProviderModeSchema,
+  contextMode: aiContextModeSchema,
   worldSlug: slugSchema.optional(),
   pageSlug: slugSchema.optional(),
+  useMock: z.boolean().optional(),
+  model: z.string().trim().min(1).max(200).optional(),
+  maxTokens: z.number().int().positive().max(32_768).optional(),
+});
+
+export const lifeBrainChatBodySchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().trim().min(1).max(16_000),
+      }),
+    )
+    .min(1)
+    .max(40),
+  /** personal_brain ist lokal-only — Cloud wird serverseitig hart abgelehnt. */
+  providerMode: z.enum(["auto", "local_rtx"]).optional().default("auto"),
   useMock: z.boolean().optional(),
 });
 

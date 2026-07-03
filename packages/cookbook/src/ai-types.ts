@@ -31,7 +31,8 @@ export type CookbookAiTaskType =
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"
-  | "generate_structured_item";
+  | "generate_structured_item"
+  | "answer_life_question";
 
 /**
  * Context modes that are permanently local-only in the cookbook routing layer.

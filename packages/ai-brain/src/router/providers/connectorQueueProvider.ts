@@ -162,6 +162,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   generate_structured_npc: "dnd",
   generate_structured_quest: "dnd",
   generate_structured_item: "dnd",
+  answer_life_question: "chat",
 };
 
 export function workflowSlotForTask(taskType: AiTaskType): ConnectorWorkflowSlot {

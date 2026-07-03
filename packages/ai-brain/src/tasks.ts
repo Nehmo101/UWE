@@ -24,6 +24,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   generate_structured_npc: "NPC strukturiert generieren",
   generate_structured_quest: "Quest strukturiert generieren",
   generate_structured_item: "Item strukturiert generieren",
+  answer_life_question: "Life-Brain Frage beantworten",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -73,15 +74,23 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Generiere strukturierte Quest-Inhalte. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: patron, objective, twist, failure, reward.",
   generate_structured_item:
     "Generiere strukturierte Item-Inhalte. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: rarity, properties, value, curse, lore.",
+  answer_life_question:
+    "Beantworte die Frage aus dem persönlichen Life-Brain-Kontext. Stütze dich nur auf den bereitgestellten Kontext und allgemeines Wissen. Wenn der Kontext die Antwort nicht hergibt, sage das klar, statt etwas zu erfinden.",
 };
+
+/** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */
+const LIFE_BRAIN_TASKS: AiTaskType[] = ["answer_life_question"];
 
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {
   const instruction = TASK_INSTRUCTIONS[taskType];
+  const contextHeading = LIFE_BRAIN_TASKS.includes(taskType)
+    ? "Life-Brain-Kontext:"
+    : "Kampagnen-Kontext:";
   const parts = [
     `Aufgabe: ${AI_TASK_LABELS[taskType]}`,
     instruction,
     "",
-    "Kampagnen-Kontext:",
+    contextHeading,
     context.promptContext,
     "",
     "Quellen:",
@@ -98,12 +107,18 @@ export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPr
   }
 
   if (userPrompt?.trim()) {
-    parts.push("", "Zusätzliche Anweisung:", userPrompt.trim());
+    parts.push(
+      "",
+      LIFE_BRAIN_TASKS.includes(taskType) ? "Frage:" : "Zusätzliche Anweisung:",
+      userPrompt.trim(),
+    );
   }
 
   parts.push(
     "",
-    "Wichtig: Erfinde keine Fakten ohne Kennzeichnung. Markiere Vorschläge klar als Idee, nicht als Kanon.",
+    LIFE_BRAIN_TASKS.includes(taskType)
+      ? "Wichtig: Erfinde keine Fakten. Wenn der Kontext keine Antwort hergibt, sage das klar."
+      : "Wichtig: Erfinde keine Fakten ohne Kennzeichnung. Markiere Vorschläge klar als Idee, nicht als Kanon.",
   );
 
   return parts.join("\n");
@@ -118,6 +133,15 @@ export function buildTaskSystemPrompt(taskType: AiTaskType): string {
   const extra = playerSafe
     ? " Enthülle niemals GM-Geheimnisse, DM-only-Inhalte oder versteckte Plot-Twists."
     : "";
+
+  if (LIFE_BRAIN_TASKS.includes(taskType)) {
+    return [
+      "Du bist der lokale AI-Assistent für das persönliche Life-Brain in UWE.",
+      `Aktuelle Aufgabe: ${AI_TASK_LABELS[taskType]}.`,
+      "Antworte auf Deutsch, klar und hilfreich.",
+      "Der Kontext ist privates Wissen des Nutzers — er verlässt niemals das lokale System.",
+    ].join(" ");
+  }
 
   return [
     "Du bist der AI-Assistent des Universellen Welten-Editors (UWE) für Pen-&-Paper-Kampagnen.",

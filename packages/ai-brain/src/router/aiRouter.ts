@@ -232,7 +232,7 @@ function buildRouterPrompts(
   if (contextMode === "personal_brain") {
     return {
       systemPrompt: buildTaskSystemPrompt(request.taskType),
-      userPrompt: buildTaskPrompt(request.taskType, safeContext),
+      userPrompt: buildTaskPrompt(request.taskType, safeContext, request.userPrompt),
     };
   }
 
