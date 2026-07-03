@@ -41,6 +41,7 @@
     "@uwe/dnd-api": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/image-studio": "workspace:*",
+    "@uwe/kitchen": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
     "@uwe/mail": "workspace:*",
     "@uwe/security": "workspace:*",

@@ -200,6 +200,18 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["templates", "vorlagen"],
       },
       {
+        id: "tools-kitchen",
+        label: "Küche",
+        href: "/kitchen",
+        icon: "utensils",
+        group: TOOLS,
+        section: TOOLS,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "studio",
+        keywords: ["küche", "kitchen", "rezepte", "essen", "kochen", "essensplaner"],
+      },
+      {
         id: "tools-image-studio",
         label: "Image Studio",
         href: "/image-studio",
