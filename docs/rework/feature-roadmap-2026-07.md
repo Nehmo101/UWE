@@ -102,8 +102,9 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > (`finance-overview-service`, `/finance`, 6 Tests), Prompt-/Agenten-Bibliothek
 > (`prompt-library-service`, `/prompts`, Variablen + Kopieren, 3 Tests),
 > Haushalts-Cockpit (`maintenance-service`, `/household`, wiederkehrende
-> Aufgaben + Fälligkeits-Alerts, 10 Tests). **Offen:** One-Shot-Generator aus
-> Kanon, Wissensassistent mit Quellenpflicht (beide KI-integrationslastig).
+> Aufgaben + Fälligkeits-Alerts, 10 Tests). Wissensassistent mit Quellenpflicht
+> (`knowledge-assistant-service`, `/knowledge`, Retrieval + Konfidenz + Quellen,
+> 5 Tests). **Offen:** nur noch One-Shot-Generator aus Kanon (KI-generierungslastig).
 
 - **Prompt-/Agenten-Bibliothek in UWE**: Fundament `packages/agent-jobs/src/presets.ts`
   (Platzhalter-Felder existieren); ausbauen zu `PromptTemplate`-CRUD + Kategorien +
