@@ -75,4 +75,4 @@ From `docs/AGENT_JOBS.md`:
 
 - `docs/PR_REVIEW_LOG.md` — past security orchestrator merges
 - `docs/security-testing.md` — security test suites
-- `SECURITY_REVIEW.md` — security baseline
+- `docs/security/SECURITY_REVIEW.md` — security baseline

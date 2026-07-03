@@ -772,7 +772,7 @@ Backups enthalten Welten, Seiten, PageTemplates, Uploads und Settings (sanitized
 | KI/RTX Datenschutz | [SECURITY_NOTES.md](SECURITY_NOTES.md) |
 | Auth, API-Tokens, Rate Limits | [docs/auth-api-security.md](docs/auth-api-security.md) |
 | Production Deployment | [docs/PRODUCTION.md](docs/PRODUCTION.md) |
-| Cloudflare Tunnel + Access | [DEPLOYMENT_SECURITY.md](DEPLOYMENT_SECURITY.md) · [docs/cloudflare-access.md](docs/cloudflare-access.md) |
+| Cloudflare Tunnel + Access | [docs/security/DEPLOYMENT_SECURITY.md](docs/security/DEPLOYMENT_SECURITY.md) · [docs/cloudflare-access.md](docs/cloudflare-access.md) |
 | Linux Host Hardening | [docs/deployment-hardening.md](docs/deployment-hardening.md) |
 
 **Studio** has session login (`/login`) for `owner`/`admin`/`dm`, but still grants DM-level access after login — never expose it to the public internet without **Cloudflare Access, VPN, or reverse-proxy auth** in addition. Set `STUDIO_API_TOKEN` when APIs may be reachable from untrusted networks.
