@@ -111,6 +111,36 @@ async function main() {
         visibility: "dm_only",
       });
     }
+    // Giant beanstalk/world-root (pseudo-3D vine feature) with non-default
+    // style values so the editor sliders visibly differ from their defaults.
+    if (!feats.some((f) => f.kind === "vine")) {
+      await atlas.createFeature({
+        nodeId: node.id,
+        kind: "vine",
+        geometry: {
+          type: "Path",
+          coordinates: [
+            [0.52, 0.88],
+            [0.5, 0.66],
+            [0.55, 0.45],
+            [0.5, 0.26],
+            [0.53, 0.1],
+          ],
+        },
+        style: {
+          smooth: true,
+          taperStart: 1.1,
+          taperEnd: 0.12,
+          coil: 0.8,
+          tendrils: 5,
+          height: 0.9,
+          seed: 20260703,
+        },
+        layer: 45,
+        sortOrder: 4,
+        visibility: "dm_only",
+      });
+    }
 
     // Terrain tile layer (CoK blob rendering) — only painted when still empty,
     // so a hand-edited layer is never overwritten.
