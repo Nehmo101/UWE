@@ -658,6 +658,32 @@ export type {
 } from "./inspector-fix-service";
 
 export {
+  autoLinkWikitext,
+  buildWikitextLinkTerms,
+  convertWikitext,
+  structureWikitext,
+} from "./wikitext-convert";
+
+export type {
+  WikitextAddedLink,
+  WikitextConversionOptions,
+  WikitextConversionResult,
+  WikitextLinkTerm,
+} from "./wikitext-convert";
+
+export {
+  createWikitextConvertService,
+  WikitextConvertService,
+} from "./wikitext-convert-service";
+
+export type {
+  WikitextConvertApplyResult,
+  WikitextConvertBlockPreview,
+  WikitextConvertOptions,
+  WikitextConvertPreview,
+} from "./wikitext-convert-service";
+
+export {
   isSeedApplied,
   listSeedHistory,
   runSeedOnce,

@@ -37,6 +37,8 @@ export default defineConfig({
     command: "node scripts/e2e-servers.mjs",
     url: `${studioBaseURL}/login`,
     reuseExistingServer: !process.env.CI,
-    timeout: 300_000,
+    // e2e-servers.mjs runs migrate + seed + zwei next-Builds vor dem Start;
+    // auf GitHub-Runnern dauert das inzwischen >5 Minuten (CI-Job-Budget: 20).
+    timeout: 900_000,
   },
 });

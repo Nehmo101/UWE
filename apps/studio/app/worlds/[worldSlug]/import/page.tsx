@@ -7,6 +7,7 @@ import { importSourceRegistry } from "@uwe/knoteforge-import";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { ImportWorkspace } from "./ImportWorkspace";
+import { WikitextConvertPanel } from "./WikitextConvertPanel";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -40,19 +41,24 @@ export default async function StudioImportPage({ params }: Props) {
             <li>JSON: strukturierter KnoteForge-Export.</li>
             <li>Markdown/TXT: mehrere Texte, getrennt durch <code>---</code> oder Mehrfachauswahl.</li>
             <li>HTML-Import folgt in einer späteren Phase.</li>
+            <li>
+              „Alle Wikitexte konvertieren“ verlinkt bestehende Texte und ist über das
+              Aktivitätsprotokoll rückgängig machbar.
+            </li>
           </ul>
         </SidebarSection>
       }
     >
       <PageHeader
-        title="Import"
-        summary="KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import."
+        title="Import & Konvertierung"
+        summary="KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import. Bestehende Wikitexte lassen sich gesammelt verlinken und strukturieren."
       />
       <ImportWorkspace
         worldSlug={worldSlug}
         supportedFormats={supportedFormats}
         plannedFormats={plannedFormats}
       />
+      <WikitextConvertPanel worldSlug={worldSlug} />
     </WorldShell>
   );
 }
