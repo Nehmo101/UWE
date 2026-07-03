@@ -1,3 +1,5 @@
+import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
+
 export interface BreadcrumbItem {
   label: string;
   href?: string;
@@ -5,7 +7,7 @@ export interface BreadcrumbItem {
 
 /** Root breadcrumb segment — always links back to DM dashboard. */
 export function studioDashboardBreadcrumb(): BreadcrumbItem {
-  return { label: "Dashboard", href: "/studio" };
+  return { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH };
 }
 
 /** Breadcrumb: Dashboard > Welten */

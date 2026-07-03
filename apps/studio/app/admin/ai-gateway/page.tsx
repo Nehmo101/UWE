@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
 import { AiGatewayWizard } from "@/components/AiGatewayWizard";
 import { requireOwner } from "@/src/lib/auth";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
@@ -11,7 +12,7 @@ export default async function AiGatewayAdminPage() {
       breadcrumb={
         <BreadcrumbTrail
           items={[
-            { label: "Dashboard", href: "/studio" },
+            { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH },
             { label: "RTX Connector", href: "/system/rtx-connector" },
             { label: "KI & RTX Fallback" },
           ]}
