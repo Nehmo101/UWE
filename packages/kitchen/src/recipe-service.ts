@@ -106,6 +106,7 @@ export class KitchenService {
         variants: toPrismaJsonValue(input.variants ?? undefined),
         imageStorageKey: input.imageStorageKey ?? null,
         sourceUrl: input.sourceUrl ?? null,
+        sourceScanId: input.sourceScanId ?? null,
         notes: input.notes ?? "",
         ingredients: {
           create: (input.ingredients ?? []).map(toIngredientData),

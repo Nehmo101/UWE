@@ -186,6 +186,8 @@ export interface RecipeInput {
   sourceUrl?: string | null;
   notes?: string;
   ingredients?: RecipeIngredientInput[];
+  /** Herkunfts-Scan (Scan-Inbox-Brücke), wenn das Rezept aus einem Scan entsteht. */
+  sourceScanId?: string | null;
   /** Tag-Keys (werden über EntityTag mit entityType `recipe` verknüpft). */
   tags?: string[];
 }

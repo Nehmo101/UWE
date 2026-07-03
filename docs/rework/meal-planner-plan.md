@@ -26,8 +26,10 @@ Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Bra
 > (Studio-API-Auth, Mime aus Dateiendung, 404 wenn Bild fehlt) + Resolver
 > `recipe-image-file.ts`; die Rezeptseite zeigt das Bild jetzt inline statt nur
 > des Storage-Keys.
-> **Offen:** K4 (volle Rezept-Extraktion aus Scans — das Scan→Recipe-Draft-Ziel
-> existiert bereits).
+> **K4/S3 (Scan→Rezept-Brücke) gebaut:** `RecipeInput.sourceScanId` +
+> `createRecipe`-Unterstützung; `@uwe/scan-inbox` hängt jetzt von `@uwe/kitchen`
+> ab und legt Scans mit strukturierten Zutaten als Rezept-Entwurf an (Parser in
+> scan-inbox `parse-recipe.ts`). Keine offenen Kitchen-Punkte mehr.
 
 ---
 

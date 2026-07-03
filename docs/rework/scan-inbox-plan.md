@@ -27,8 +27,13 @@ versehentlich falsch werden.
 > **Bild-Downscale gebaut:** `downscaleImageForVision` (`@uwe/assets`) verkleinert
 > Scans vor dem Vision-Enqueue auf ≤1600px JPEG (q80), damit die Base64-Payload
 > klein bleibt; ohne sharp/bei Dekodier-Fehler bleibt das Original erhalten.
+> **S3 (Rezept-Extraktion) gebaut:** reiner Parser `parse-recipe.ts` erkennt
+> deutsche Abschnittsmarker (Zutaten/Zubereitung), zerlegt Zutaten (Listen-Komma
+> vs. Dezimalkomma, Zeilen) via `parseIngredientLines` und Schritte; die
+> Rezept-Ablage geht jetzt über `@uwe/kitchen` `createRecipe` (strukturierte
+> `RecipeIngredient`-Zeilen mit `normalizedName`, `sourceScanId`) statt Roh-Notiz.
 > **Offen:** Recap via `AiProposal`/Review-UI (aktuell Draft-Seite statt
-> AiProposal-Patch); S3 (volle Rezept-Extraktion mit strukturierten Zutaten).
+> AiProposal-Patch).
 
 ---
 

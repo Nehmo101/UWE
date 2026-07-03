@@ -13,7 +13,8 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/database": "workspace:*"
+    "@uwe/database": "workspace:*",
+    "@uwe/kitchen": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

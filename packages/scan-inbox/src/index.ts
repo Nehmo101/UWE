@@ -10,4 +10,5 @@ export * from "./field-extraction";
 export * from "./kind-detection";
 export * from "./proposal-builder";
 export * from "./analyze";
+export * from "./parse-recipe";
 export * from "./scan-service";

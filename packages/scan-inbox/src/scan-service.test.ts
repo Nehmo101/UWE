@@ -109,12 +109,18 @@ describe("scan inbox service (integration)", () => {
     assert.ok(await db.calendarEvent.findUnique({ where: { id: calFiled.targetId! } }));
 
     const recipeScan = await service.create({ storageKey: "_scan/b3", mimeType: "image/jpeg" });
-    await service.applyAnalysis(recipeScan.id, { ocrText: "Zutaten: Mehl, Wasser. Zubereitung: backen.", ocrEngine: "manual" });
+    await service.applyAnalysis(recipeScan.id, { ocrText: "Zutaten: 400 g Mehl, Wasser. Zubereitung: backen.", ocrEngine: "manual" });
     const recipeFiled = await service.file(recipeScan.id, "recipe");
     assert.equal(recipeFiled.targetType, "recipe");
-    const recipe = await db.recipe.findUnique({ where: { id: recipeFiled.targetId! } });
+    const recipe = await db.recipe.findUnique({
+      where: { id: recipeFiled.targetId! },
+      include: { ingredients: true },
+    });
     assert.equal(recipe?.status, "draft");
     assert.equal(recipe?.sourceScanId, recipeScan.id);
+    // S3: strukturierte Zutaten aus dem OCR-Text extrahiert.
+    assert.ok(recipe?.ingredients.some((i) => i.name === "Mehl" && i.amount === 400));
+    assert.ok(recipe?.ingredients.some((i) => i.name === "Wasser"));
   });
 
   it("files DnD scans as draft world pages (S2)", async () => {

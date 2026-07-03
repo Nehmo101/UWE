@@ -10,7 +10,9 @@ import {
   toPrismaJsonValue,
   type PrismaClient,
 } from "@uwe/database/server";
+import { createKitchenService } from "@uwe/kitchen";
 import { analyzeScanText } from "./analyze";
+import { parseRecipeText } from "./parse-recipe";
 import type {
   ExtractedFields,
   ScanDocumentKind,
@@ -315,15 +317,17 @@ export class ScanInboxService {
       targetType = "calendar_event";
       targetId = event.id;
     } else if (target === "recipe") {
-      // Rezept-Entwurf aus dem OCR-Text; strukturierte Zutaten folgen in S3.
-      const recipe = await this.db.recipe.create({
-        data: {
-          title: scan.proposal?.title || scan.title || "Aus Scan",
-          status: "draft",
-          steps: toPrismaJsonValue([]),
-          notes: scan.ocrText,
-          sourceScanId: id,
-        },
+      // Rezept-Entwurf aus dem OCR-Text mit strukturierten Zutaten + Schritten
+      // (S3). Der Parser ist best-effort — ohne erkennbare Abschnitte bleibt der
+      // volle OCR-Text als Notiz erhalten. Rezept-Writes gehören zu @uwe/kitchen.
+      const parsed = parseRecipeText(scan.ocrText);
+      const recipe = await createKitchenService(this.db).createRecipe({
+        title: scan.proposal?.title || scan.title || "Aus Scan",
+        status: "draft",
+        steps: parsed.steps,
+        ingredients: parsed.ingredients,
+        notes: scan.ocrText,
+        sourceScanId: id,
       });
       targetType = "recipe";
       targetId = recipe.id;
