@@ -92,6 +92,7 @@ export function BackupWorkspace({
   const [format, setFormat] = useState<"zip" | "json">("zip");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [preview, setPreview] = useState<RestorePreview | null>(null);
   const [result, setResult] = useState<RestoreResult | null>(null);
   const [selectedBackupId, setSelectedBackupId] = useState<string>("");
@@ -166,6 +167,7 @@ export function BackupWorkspace({
   async function createBackup() {
     setBusy("create");
     setError(null);
+    setCreateSuccess(null);
     setResult(null);
 
     try {
@@ -185,7 +187,17 @@ export function BackupWorkspace({
       }
 
       if (response.status === 202 && data.job?.id) {
-        await waitForJob(data.job.id);
+        const job = await waitForJob(data.job.id);
+        const filename =
+          (job.result as { filename?: string } | undefined)?.filename ??
+          data.job?.title ??
+          "Backup";
+        setCreateSuccess(`Backup „${filename}" wurde erstellt.`);
+      } else {
+        const filename = (data.backup as { filename?: string } | undefined)?.filename;
+        setCreateSuccess(
+          filename ? `Backup „${filename}" wurde erstellt.` : "Backup wurde erstellt.",
+        );
       }
 
       await refreshBackups();
@@ -376,6 +388,11 @@ export function BackupWorkspace({
         >
           {busy === "create" ? "Erstelle…" : "Backup erstellen"}
         </button>
+        {createSuccess && (
+          <p style={{ marginTop: "0.75rem", color: "var(--uwe-success, green)" }} role="status">
+            {createSuccess}
+          </p>
+        )}
       </section>
       )}
 

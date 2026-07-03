@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { resolveBackupsDirFromEnv } from "@uwe/assets";
+
+const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 
 export const BACKUP_MANIFEST_FILE = "manifest.json";
 export const BACKUP_DATA_FILE = "data.json";
@@ -39,13 +42,25 @@ export function resolveBackupsDirectory(options?: {
   return ensureBackupsDir(options?.baseDir);
 }
 
-export function resolveSchemaVersion(): string {
-  const migrationsDir = path.resolve(
-    import.meta.dirname,
-    "../../database/prisma/migrations",
-  );
+function resolveMigrationsDir(): string | null {
+  const candidates = [
+    path.resolve(packageRoot, "../../database/prisma/migrations"),
+    path.resolve(process.cwd(), "packages/database/prisma/migrations"),
+    path.resolve(process.cwd(), "prisma/migrations"),
+  ];
 
-  if (!fs.existsSync(migrationsDir)) {
+  for (const migrationsDir of candidates) {
+    if (fs.existsSync(migrationsDir)) {
+      return migrationsDir;
+    }
+  }
+
+  return null;
+}
+
+export function resolveSchemaVersion(): string {
+  const migrationsDir = resolveMigrationsDir();
+  if (!migrationsDir) {
     return "unknown";
   }
 
