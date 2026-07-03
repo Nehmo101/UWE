@@ -25,6 +25,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   generate_structured_quest: "Quest strukturiert generieren",
   generate_structured_item: "Item strukturiert generieren",
   answer_life_question: "Life-Brain Frage beantworten",
+  synthesize_research: "Research-Report erstellen",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -76,16 +77,25 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Generiere strukturierte Item-Inhalte. Antworte NUR als JSON {\"fields\":{...},\"summary\":\"optional\",\"playerText\":\"optional\"}. Felder: rarity, properties, value, curse, lore.",
   answer_life_question:
     "Beantworte die Frage aus dem persönlichen Life-Brain-Kontext. Stütze dich nur auf den bereitgestellten Kontext und allgemeines Wissen. Wenn der Kontext die Antwort nicht hergibt, sage das klar, statt etwas zu erfinden.",
+  synthesize_research:
+    "Fasse die mitgelieferten Web-Quellen zu einem strukturierten Recherche-Report zusammen: Kurzantwort, Erkenntnisse mit Quellenverweisen [n], offene Fragen. Erfinde keine Fakten und keine Quellen.",
 };
 
 /** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */
 const LIFE_BRAIN_TASKS: AiTaskType[] = ["answer_life_question"];
 
+/** Tasks that run on either brain — neutral framing instead of campaign wording. */
+const CONTEXT_NEUTRAL_TASKS: AiTaskType[] = ["synthesize_research"];
+
+function resolveContextHeading(taskType: AiTaskType): string {
+  if (LIFE_BRAIN_TASKS.includes(taskType)) return "Life-Brain-Kontext:";
+  if (CONTEXT_NEUTRAL_TASKS.includes(taskType)) return "Kontext:";
+  return "Kampagnen-Kontext:";
+}
+
 export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPrompt?: string): string {
   const instruction = TASK_INSTRUCTIONS[taskType];
-  const contextHeading = LIFE_BRAIN_TASKS.includes(taskType)
-    ? "Life-Brain-Kontext:"
-    : "Kampagnen-Kontext:";
+  const contextHeading = resolveContextHeading(taskType);
   const parts = [
     `Aufgabe: ${AI_TASK_LABELS[taskType]}`,
     instruction,
@@ -116,7 +126,7 @@ export function buildTaskPrompt(taskType: AiTaskType, context: AiContext, userPr
 
   parts.push(
     "",
-    LIFE_BRAIN_TASKS.includes(taskType)
+    LIFE_BRAIN_TASKS.includes(taskType) || CONTEXT_NEUTRAL_TASKS.includes(taskType)
       ? "Wichtig: Erfinde keine Fakten. Wenn der Kontext keine Antwort hergibt, sage das klar."
       : "Wichtig: Erfinde keine Fakten ohne Kennzeichnung. Markiere Vorschläge klar als Idee, nicht als Kanon.",
   );
@@ -140,6 +150,15 @@ export function buildTaskSystemPrompt(taskType: AiTaskType): string {
       `Aktuelle Aufgabe: ${AI_TASK_LABELS[taskType]}.`,
       "Antworte auf Deutsch, klar und hilfreich.",
       "Der Kontext ist privates Wissen des Nutzers — er verlässt niemals das lokale System.",
+    ].join(" ");
+  }
+
+  if (CONTEXT_NEUTRAL_TASKS.includes(taskType)) {
+    return [
+      "Du bist der Recherche-Assistent von UWE.",
+      `Aktuelle Aufgabe: ${AI_TASK_LABELS[taskType]}.`,
+      "Antworte auf Deutsch als sauber strukturiertes Markdown.",
+      "Belege Aussagen mit den nummerierten Quellenverweisen [n] und erfinde keine Quellen.",
     ].join(" ");
   }
 

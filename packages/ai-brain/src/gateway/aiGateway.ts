@@ -502,7 +502,9 @@ export async function executeAiGatewayImageRequest(
 }
 
 /**
- * Research jobs — gateway permission, privacy, budget, usage log (web search, no LLM).
+ * Research jobs — gateway permission, privacy, budget, usage log for the
+ * web-search step. The LLM synthesis inside `run` goes through
+ * executeAiGatewayRequest and is logged separately.
  */
 export async function executeAiGatewayResearchJob<T>(
   context: AiGatewayResearchContext,
