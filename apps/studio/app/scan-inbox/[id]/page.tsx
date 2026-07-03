@@ -19,6 +19,7 @@ import {
   fileScanAction,
   finalizeScanAction,
   rejectScanAction,
+  setScanDndWorldAction,
 } from "../../scan-inbox-actions";
 
 const FIELD_LABELS: Record<keyof ExtractedFields, string> = {
@@ -74,6 +75,11 @@ export default async function ScanDetailPage({ params }: Props) {
 
   const scan = await createScanInboxService(prisma).get(id);
   if (!scan) notFound();
+
+  const worlds = await prisma.world.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   const isImage = scan.mimeType.startsWith("image/");
   const isPdf = scan.mimeType === "application/pdf";
@@ -185,6 +191,34 @@ export default async function ScanDetailPage({ params }: Props) {
           </ul>
         </section>
       )}
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">DnD-Modus</h2>
+        {scan.privacyLevel === "dnd" && scan.worldId ? (
+          <p className="uwe-hint">
+            DnD-Modus aktiv — Welt zugeordnet. DnD-Ziele (Sessionnotiz / Handout) legen
+            eine Draft-Seite in der Welt an (kein Auto-Kanon).
+          </p>
+        ) : (
+          <form action={setScanDndWorldAction} className="uwe-brain-create-form">
+            <input type="hidden" name="id" value={scan.id} />
+            <label className="uwe-capture-field">
+              Welt zuordnen (für DnD-Ablage)
+              <select name="worldId" defaultValue="">
+                <option value="">— Welt wählen —</option>
+                {worlds.map((world) => (
+                  <option key={world.id} value={world.id}>
+                    {world.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+              DnD-Modus aktivieren
+            </button>
+          </form>
+        )}
+      </section>
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Aktionen</h2>

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { createConnectorService, createPrismaClient } from "@uwe/database/server";
+import {
+  createConnectorService,
+  createPrismaClient,
+  createUweRepositoryFromClient,
+} from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { createScanInboxService } from "./scan-service";
 
@@ -111,5 +115,47 @@ describe("scan inbox service (integration)", () => {
     const recipe = await db.recipe.findUnique({ where: { id: recipeFiled.targetId! } });
     assert.equal(recipe?.status, "draft");
     assert.equal(recipe?.sourceScanId, recipeScan.id);
+  });
+
+  it("files DnD scans as draft world pages (S2)", async () => {
+    const service = createScanInboxService(db);
+    const world = await createUweRepositoryFromClient(db).createWorld({ name: "Terra", slug: "scan-dnd" });
+
+    // Session note → gm_note draft page.
+    const sessScan = await service.create({ storageKey: "_scan/s1", mimeType: "image/jpeg" });
+    await service.setDndWorld(sessScan.id, world.id);
+    await service.applyAnalysis(sessScan.id, {
+      ocrText: "Session-Notizen: die Gruppe traf den NPC und nahm die Quest an. Würfel fielen gut.",
+      ocrEngine: "manual",
+    });
+    const sessFiled = await service.file(sessScan.id, "dnd_session_note");
+    assert.equal(sessFiled.targetType, "page");
+    const sessPage = await db.page.findUnique({
+      where: { id: sessFiled.targetId! },
+      include: { contentBlocks: true },
+    });
+    assert.equal(sessPage?.type, "session");
+    assert.equal(sessPage?.canonicalStatus, "draft");
+    assert.equal(sessPage?.contentBlocks[0]?.type, "gm_note");
+
+    // Handout → player-visible draft page.
+    const handoutScan = await service.create({ storageKey: "_scan/h1", mimeType: "image/jpeg" });
+    await service.setDndWorld(handoutScan.id, world.id);
+    await service.applyAnalysis(handoutScan.id, { ocrText: "Ein alter Brief an die Abenteurer.", ocrEngine: "manual" });
+    const handoutFiled = await service.file(handoutScan.id, "dnd_handout");
+    const handoutPage = await db.page.findUnique({
+      where: { id: handoutFiled.targetId! },
+      include: { contentBlocks: true },
+    });
+    assert.equal(handoutPage?.type, "handout");
+    assert.equal(handoutPage?.contentBlocks[0]?.type, "player_text");
+    assert.equal(handoutPage?.contentBlocks[0]?.visibility, "player_visible");
+  });
+
+  it("refuses DnD filing without an assigned world", async () => {
+    const service = createScanInboxService(db);
+    const scan = await service.create({ storageKey: "_scan/nw", mimeType: "image/jpeg" });
+    await service.applyAnalysis(scan.id, { ocrText: "Session-Notiz", ocrEngine: "manual" });
+    await assert.rejects(() => service.file(scan.id, "dnd_session_note"), /Welt/);
   });
 });

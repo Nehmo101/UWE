@@ -17,8 +17,15 @@ versehentlich falsch werden.
 > Bestätigen/Ablehnen/Archivieren), Upload-/Serving-API, Nav.
 > **Vision-Ergebnis-Rückschreiben gebaut** (`applyConnectorJobResult`,
 > Poll-on-demand + „Ergebnis abholen"-Button) sowie Ablage-Ziele life_brain,
-> calendar_event und recipe (Draft). **Offen:** Bild-Downscale vor Enqueue
-> (Payload-Optimierung); S2 (DnD-Modi); S3 (volle Rezept-Extraktion).
+> calendar_event und recipe (Draft).
+> **S2 (DnD-Modi) gebaut:** `setDndWorld` markiert den Scan als `privacyLevel=dnd`
+> und ordnet eine Welt zu (Welt-Picker im Detail-UI). Ablage-Ziele
+> `dnd_session_note`/`dnd_handout` legen eine **Draft-Seite** (`canonicalStatus`/
+> `publishStatus: draft`, kein Auto-Kanon) in der Welt an — Sessionnotiz/Dungeon
+> als `gm_note` (DM-only), Handout als `player_text` (player_visible). Ablage ohne
+> zugeordnete Welt wird abgelehnt. **Offen:** Bild-Downscale vor Enqueue
+> (Payload-Optimierung); Recap via `AiProposal`/Review-UI (aktuell Draft-Seite statt
+> AiProposal-Patch); S3 (volle Rezept-Extraktion mit strukturierten Zutaten).
 
 ---
 
@@ -221,7 +228,7 @@ Jede Datei < 300 Zeilen:
 |-------|--------|--------------|
 | S0 | Vision-Capability/Job-Typ/Executor + Scope-Docs | Connector-Tests grün, Capability im Connector-Admin sichtbar |
 | S1 | Schema + Upload + Pipeline private Kinds + Ablage (Vertrag/Capture/Life-Brain/Todo/Termin) + `/scan-inbox`-UI + Fristen-Erkennung | manuell: Foto → Vorschlag → Bestätigen → Vertrag mit `cancelByDate` erscheint auf `/today` |
-| S2 | DnD-Modi (Welt-Picker, Recap via AiProposal, Dungeon-Zettel, Handout-Split) | Recap erscheint in AI-Review-UI, Apply/Undo funktioniert |
+| S2 | DnD-Modi (Welt-Picker, Sessionnotiz/Handout-Split als Draft-Seite) — **gebaut** | Draft-Seite mit gm_note bzw. player_text erscheint in der Welt, kein Auto-Kanon |
 | S3 | Rezept-Brücke → `@uwe/kitchen`-Drafts (braucht Kitchen K1) | gescannte Kochbuchseite wird editierbarer Rezept-Entwurf |
 
 Verifikation: Feld-Validator-Tests mit deutschen Fixture-Transkripten (Rechnungen/Briefe

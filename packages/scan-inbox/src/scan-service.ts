@@ -5,6 +5,8 @@
  */
 import {
   createLifeAdminService,
+  createUweRepositoryFromClient,
+  slugifyPageTitle,
   toPrismaJsonValue,
   type PrismaClient,
 } from "@uwe/database/server";
@@ -40,6 +42,7 @@ export interface ScanDocumentRecord {
   extractedFields: ExtractedFields | null;
   proposal: ScanFilingProposal | null;
   uncertainties: string[];
+  worldId: string | null;
   filedTargetType: string | null;
   filedTargetId: string | null;
   createdAt: Date;
@@ -58,6 +61,7 @@ function toRecord(row: {
   extractedFields: unknown;
   proposal: unknown;
   uncertainties: unknown;
+  worldId: string | null;
   filedTargetType: string | null;
   filedTargetId: string | null;
   createdAt: Date;
@@ -75,6 +79,7 @@ function toRecord(row: {
     extractedFields: (row.extractedFields as ExtractedFields | null) ?? null,
     proposal: (row.proposal as ScanFilingProposal | null) ?? null,
     uncertainties: Array.isArray(row.uncertainties) ? (row.uncertainties as string[]) : [],
+    worldId: row.worldId,
     filedTargetType: row.filedTargetType,
     filedTargetId: row.filedTargetId,
     createdAt: row.createdAt,
@@ -210,6 +215,45 @@ export class ScanInboxService {
     await this.db.scanDocument.update({ where: { id }, data: { status: "archived" } });
   }
 
+  /** Markiert einen Scan als DnD-Modus und ordnet ihn einer Welt zu. */
+  async setDndWorld(id: string, worldId: string): Promise<ScanDocumentRecord | null> {
+    await this.db.scanDocument.update({
+      where: { id },
+      data: { privacyLevel: "dnd", worldId },
+    });
+    return this.get(id);
+  }
+
+  /**
+   * Legt einen DnD-Scan als Draft-Seite in der Welt ab (nie Auto-Kanon). Handouts
+   * bekommen einen player_text-Block (spielersicher), Sessionnotizen/Dungeon-Zettel
+   * einen gm_note-Block (nur DM). Der DM überführt sie danach bewusst in den Kanon.
+   */
+  private async fileDndDraft(
+    scan: ScanDocumentRecord,
+    worldId: string,
+    kind: "dnd_session_note" | "dnd_dungeon_note" | "dnd_handout",
+  ): Promise<{ targetType: string; targetId: string | null }> {
+    const pageType = kind === "dnd_handout" ? "handout" : kind === "dnd_dungeon_note" ? "dungeon" : "session";
+    const title = scan.proposal?.title || scan.title || "Aus Scan";
+    const blocks =
+      kind === "dnd_handout"
+        ? [{ type: "player_text" as const, sortOrder: 0, content: scan.ocrText, visibility: "player_visible" as const }]
+        : [{ type: "gm_note" as const, sortOrder: 0, content: scan.ocrText, visibility: "dm_only" as const }];
+
+    const page = await createUweRepositoryFromClient(this.db).createPage({
+      worldId,
+      title,
+      slug: slugifyPageTitle(`${title}-${scan.id.slice(0, 6)}`),
+      type: pageType,
+      summary: scan.proposal?.rationale ?? "",
+      canonicalStatus: "draft",
+      publishStatus: "draft",
+      contentBlocks: blocks,
+    });
+    return { targetType: "page", targetId: page.id };
+  }
+
   /**
    * Legt das Dokument beim bestätigten Ziel ab. Nur explizit aufgerufen — nie
    * automatisch. Rückgabe: Typ/Id des angelegten Ziels.
@@ -283,6 +327,25 @@ export class ScanInboxService {
       });
       targetType = "recipe";
       targetId = recipe.id;
+    } else if (
+      target === "dnd_session_note" ||
+      target === "dnd_handout"
+    ) {
+      const scanRow = await this.db.scanDocument.findUnique({
+        where: { id },
+        select: { worldId: true, detectedKind: true },
+      });
+      if (!scanRow?.worldId) {
+        throw new Error("DnD-Ablage benötigt eine zugeordnete Welt (DnD-Modus setzen).");
+      }
+      const kind = target === "dnd_handout"
+        ? "dnd_handout"
+        : scanRow.detectedKind === "dnd_dungeon_note"
+          ? "dnd_dungeon_note"
+          : "dnd_session_note";
+      const result = await this.fileDndDraft(scan, scanRow.worldId, kind);
+      targetType = result.targetType;
+      targetId = result.targetId;
     }
 
     await this.db.scanDocument.update({

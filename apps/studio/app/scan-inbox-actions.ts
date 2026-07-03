@@ -106,6 +106,16 @@ export async function finalizeScanAction(formData: FormData): Promise<void> {
   revalidate(id);
 }
 
+/** Markiert den Scan als DnD-Modus und ordnet ihn einer Welt zu (für DnD-Ablage). */
+export async function setScanDndWorldAction(formData: FormData): Promise<void> {
+  assertStudioTrusted();
+  const id = String(formData.get("id"));
+  const worldId = String(formData.get("worldId") || "").trim();
+  if (!worldId) throw new Error("Keine Welt gewählt.");
+  await service().setDndWorld(id, worldId);
+  revalidate(id);
+}
+
 /** Legt den Scan beim bestätigten Ziel ab — nur auf explizite Owner-Aktion. */
 export async function fileScanAction(formData: FormData): Promise<void> {
   assertStudioTrusted();
