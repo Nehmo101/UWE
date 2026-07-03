@@ -48,6 +48,11 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > aggregiert Changelog seit zuletzt bestätigter Version, Env-Warnungen
 > (`validateUweEnvironment`), Migrationsstatus, Backup-Alter und offene Aufgaben;
 > „Als gelesen markieren" speichert die Version in den Settings. 5 Unit-Tests.
+> Portal-Hub-Ausbau gebaut — „Fragen an den DM" (`PlayerQuestion` +
+> `player-question-service`, Portal-Formular + Studio-Antwortseite, 4 Tests);
+> Gruppeninventar/offene Quests waren bereits im Portal vorhanden.
+> Scan Inbox **S0** (Vision-Enabler) gebaut — Connector-Capability `vision_local`
+> + Job `vision_extract` + RTX-Executor (Ollama `images`); S1 (Doku-Pipeline) folgt.
 
 - **Scan Inbox S2 — DnD-Scan-Modi**: Sessionnotiz → Recap-Proposal (über bestehenden
   AiProposal-Review, kein Auto-Kanon), Dungeon-Zettel → Draft-Page, Handout →
