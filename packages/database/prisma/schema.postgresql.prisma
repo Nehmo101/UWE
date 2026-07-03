@@ -681,6 +681,7 @@ model World {
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
   importJobs           ImportJob[]
+  rollTables           RollTable[]
 
   @@map("worlds")
 }
@@ -3153,6 +3154,23 @@ enum ResearchContextMode {
   dnd_brain
   life_brain
   open_web
+}
+
+model RollTable {
+  id        String   @id @default(cuid())
+  worldId   String   @map("world_id")
+  name      String
+  category  String   @default("custom")
+  dice      String?
+  entries   Json
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, category])
+  @@map("roll_tables")
 }
 
 model ResearchSession {

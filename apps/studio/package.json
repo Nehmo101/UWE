@@ -39,6 +39,7 @@
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
+    "@uwe/roll-tables": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/image-studio": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
