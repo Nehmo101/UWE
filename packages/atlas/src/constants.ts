@@ -42,6 +42,7 @@ export type AtlasNodeLevel = (typeof AtlasNodeLevel)[keyof typeof AtlasNodeLevel
  *   relief  — elevation / mountain range
  *   label   — text annotation
  *   pin     — point-of-interest marker
+ *   vine    — giant vine/root growing skyward (open path, pseudo-3D render)
  */
 export const AtlasFeatureKind = {
   region: "region",
@@ -51,6 +52,7 @@ export const AtlasFeatureKind = {
   relief: "relief",
   label: "label",
   pin: "pin",
+  vine: "vine",
 } as const;
 
 export type AtlasFeatureKind = (typeof AtlasFeatureKind)[keyof typeof AtlasFeatureKind];
