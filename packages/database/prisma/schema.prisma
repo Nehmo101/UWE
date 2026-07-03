@@ -681,6 +681,7 @@ model World {
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
   structuredItems      StructuredItem[]
+  playerQuestions      PlayerQuestion[]
   importJobs           ImportJob[]
 
   @@map("worlds")
@@ -1857,6 +1858,7 @@ enum ConnectorJobType {
   llm_generate
   image_generate
   embedding_generate
+  vision_extract
   connector_refresh_models
   label_print
   printer_discover
@@ -3680,4 +3682,28 @@ model StructuredItem {
 
   @@index([worldId])
   @@map("structured_items")
+}
+
+enum PlayerQuestionStatus {
+  open
+  answered
+  archived
+}
+
+model PlayerQuestion {
+  id           String               @id @default(cuid())
+  worldId      String               @map("world_id")
+  campaignId   String?              @map("campaign_id")
+  authorUserId String?              @map("author_user_id")
+  authorName   String               @map("author_name")
+  question     String
+  answer       String?
+  status       PlayerQuestionStatus @default(open)
+  createdAt    DateTime             @default(now()) @map("created_at")
+  answeredAt   DateTime?            @map("answered_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, status])
+  @@map("player_questions")
 }
