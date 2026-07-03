@@ -13,7 +13,11 @@ Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Bra
 > `/kitchen/recipes/[id]` + Nav-Eintrag „Küche". **Offen:** Bild-Upload im Editor
 > (TODO); **K2 gebaut** (Wochenplan `/kitchen/plan` + konsolidierte Einkaufsliste
 > `/kitchen/shopping`, pure Merge-Logik `ingredient-merge.ts`, ISO-Wochen, 26 Tests).
-> Offen: K3 (Vorrat + KI), K4 (Scanner-Brücke).
+> **K3 gebaut** (`pantry-service.ts` Vorratskammer + „Koche mit…", `ai-suggest.ts`
+> RTX-lokale Wochenvorschläge mit graceful degradation, Seite `/kitchen/pantry`,
+> Rezept-Bild-Upload; 57 Tests gesamt). **Offen:** K4 (volle Rezept-Extraktion aus
+> Scans — das Scan→Recipe-Draft-Ziel existiert bereits), Rezept-Bild-Serving-Route,
+> KI-Vorschlag-UI-Trigger.
 
 ---
 

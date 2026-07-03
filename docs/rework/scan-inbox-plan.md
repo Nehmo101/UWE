@@ -14,9 +14,11 @@ versehentlich falsch werden.
 > (create/applyAnalysis/file → Vertrag/Capture, waiting_for_rtx), 19 Tests inkl.
 > End-to-End Rechnung→Vertrag. Studio-UI gebaut: `/scan-inbox` (Status-Spalten +
 > Upload), `/scan-inbox/[id]` (OCR-Text-Analyse manuell/auto, Felder, Vorschlag,
-> Bestätigen/Ablehnen/Archivieren), Upload-/Serving-API, Nav. **Offen:**
-> Vision-Job-Ergebnis via `waitForConnectorJob` zurückschreiben + Bild-Downscale;
-> S2 (DnD-Modi); S3 (Rezept-Brücke).
+> Bestätigen/Ablehnen/Archivieren), Upload-/Serving-API, Nav.
+> **Vision-Ergebnis-Rückschreiben gebaut** (`applyConnectorJobResult`,
+> Poll-on-demand + „Ergebnis abholen"-Button) sowie Ablage-Ziele life_brain,
+> calendar_event und recipe (Draft). **Offen:** Bild-Downscale vor Enqueue
+> (Payload-Optimierung); S2 (DnD-Modi); S3 (volle Rezept-Extraktion).
 
 ---
 
