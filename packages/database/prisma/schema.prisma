@@ -3556,7 +3556,8 @@ model Recipe {
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  ingredients RecipeIngredient[]
+  ingredients    RecipeIngredient[]
+  mealPlanEntries MealPlanEntry[]
 
   @@index([status])
   @@map("recipes")
@@ -3579,4 +3580,87 @@ model RecipeIngredient {
   @@index([recipeId])
   @@index([normalizedName])
   @@map("recipe_ingredients")
+}
+
+// ── Küche: Wochenplan + Einkaufsliste (K2) ────────────────────────
+enum MealSlot {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum MealEntryType {
+  recipe
+  leftovers
+  eating_out
+  routine
+  note
+}
+
+model MealPlanWeek {
+  id              String   @id @default(cuid())
+  isoYear         Int      @map("iso_year")
+  isoWeek         Int      @map("iso_week")
+  householdFactor Float    @default(2.5) @map("household_factor")
+  goals           Json?
+  notes           String   @default("")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  entries MealPlanEntry[]
+
+  @@unique([isoYear, isoWeek])
+  @@map("meal_plan_weeks")
+}
+
+model MealPlanEntry {
+  id        String        @id @default(cuid())
+  weekId    String        @map("week_id")
+  date      DateTime
+  slot      MealSlot
+  entryType MealEntryType @default(recipe) @map("entry_type")
+  recipeId  String?       @map("recipe_id")
+  servings  Float?
+  note      String        @default("")
+  cooked    Boolean       @default(false)
+  sortIndex Int           @default(0) @map("sort_index")
+
+  week   MealPlanWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  recipe Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([weekId, date])
+  @@map("meal_plan_entries")
+}
+
+model ShoppingList {
+  id        String   @id @default(cuid())
+  weekId    String?  @map("week_id")
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items ShoppingListItem[]
+
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id              String           @id @default(cuid())
+  listId          String           @map("list_id")
+  name            String
+  normalizedName  String           @map("normalized_name")
+  amount          Float?
+  unit            IngredientUnit   @default(freeform)
+  unitLabel       String?          @map("unit_label")
+  category        ShoppingCategory @default(other)
+  checked         Boolean          @default(false)
+  recurring       Boolean          @default(false)
+  sourceRecipeIds Json?            @map("source_recipe_ids")
+  sortIndex       Int              @default(0) @map("sort_index")
+
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId, category])
+  @@map("shopping_list_items")
 }
