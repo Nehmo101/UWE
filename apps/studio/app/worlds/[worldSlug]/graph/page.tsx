@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GraphRelationList, VISIBILITY_LABELS } from "@uwe/shared-ui";
+import { GraphRelationList, GraphView, VISIBILITY_LABELS } from "@uwe/shared-ui";
 import {
   buildWorldGraph,
   getAppRepository,
@@ -14,7 +14,6 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import {
   CampaignSidebar,
   ConnectionMatrix,
-  WikiFlowGraph,
 } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -225,7 +224,9 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
           </button>
         </form>
 
-        <WikiFlowGraph nodes={graph.nodes} edges={graph.edges} className="mb-6 rounded-lg border border-border" />
+        <div className="mb-6">
+          <GraphView nodes={graph.nodes} edges={graph.edges} height={600} />
+        </div>
         <ConnectionMatrix
           edges={graph.edges}
           nodeTitles={nodeTitles}

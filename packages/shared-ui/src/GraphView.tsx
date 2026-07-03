@@ -233,10 +233,10 @@ export function GraphView({
         ))}
       </ul>
 
-      {!compact && (
+      {!compact && worldName && (
         <div className="uwe-fdgraph-title">
           <div className="uwe-fdgraph-eyebrow">Beziehungsnetz</div>
-          {worldName && <div className="uwe-fdgraph-worldname">{worldName}</div>}
+          <div className="uwe-fdgraph-worldname">{worldName}</div>
           <div className="uwe-fdgraph-stats">
             {nodes.length} Knoten · {edges.length} Kanten · Ziehen · scrollen zum Zoomen · Knoten
             antippen
