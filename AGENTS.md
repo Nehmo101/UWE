@@ -62,16 +62,33 @@ Always run `db:generate` before typecheck when touching `packages/database`. The
 
 After adding dependencies: `pnpm install` and commit `pnpm-lock.yaml`. CI uses `--frozen-lockfile`.
 
+### 5. File size budget exceeded (test) — anti-monolith gate
+
+`scripts/file-size-budget-check.mjs` fails `pnpm test` / `test:ci` when a
+production file (apps/, packages/, tools/) outgrows its budget:
+
+- **New files: max 700 lines.** Split into colocated modules or a feature package.
+- Legacy files in `scripts/file-size-baseline.json` are **frozen** (+10% headroom;
+  `packages/database/src/server.ts` only +3%). When touching them, extract code
+  instead of growing the file.
+- **Never raise a baseline value or add a new entry to silence the failure.**
+  `node scripts/file-size-budget-check.mjs --ratchet` only lowers/removes entries
+  after files shrink — run it when you split a baseline file.
+- New domain services go into a feature package (`packages/<domain>`), **not**
+  into `packages/database`. Export new symbols via subpath exports, not by
+  growing the `server.ts` barrel.
+
 ## Scope discipline
 
 - Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).
-- Prefer extending existing services over duplicating logic.
+- Prefer extending existing services over duplicating logic — but when a file
+  hits its size budget, split it instead of growing it (see failure #5).
 - Do not edit unrelated files or drive-by refactor.
 
 ## Agent token efficiency
 
 - **Search/index exclusions:** `.cursorignore` / `.cursorindexingignore` exclude generated Prisma (~560k lines), lockfile, and build artifacts.
-- **Service index:** `docs/engineering/database-service-map.md` — find `@uwe/database` services without opening the 1540-line barrel.
+- **Service index:** `docs/engineering/database-service-map.md` — find `@uwe/database` services without opening the 2100+-line barrel.
 - **Skills:** `.cursor/skills/manifest.json` — load one skill by trigger, not the whole catalog.
 
 ## Further reading

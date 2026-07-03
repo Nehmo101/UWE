@@ -19,6 +19,12 @@ alwaysApply: false
 - Reuse `packages/shared-ui` for cross-app UI patterns.
 - Match surrounding naming, import style, and error handling conventions.
 
+## File and module size (anti-monolith)
+
+- New production files: **max 700 lines** (enforced by `scripts/file-size-budget-check.mjs` in `pnpm test`); aim for < 300.
+- Files in `scripts/file-size-baseline.json` are frozen legacy monoliths — extract code when touching them; **never raise baseline values or add entries**.
+- New domain services belong in a feature package (`packages/<domain>`), not in `packages/database`; export new symbols via subpath exports instead of growing the `server.ts` barrel.
+
 ## Imports and dead code
 
 - ESLint enforces `@typescript-eslint/no-unused-vars` with zero warnings.

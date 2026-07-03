@@ -53,7 +53,17 @@ Kernregeln: keine Secrets in Source; `dm_only` nie ins Portal; Filtering in `pac
 - Strict Typing, kein `any` außer bei untyped Externals.
 - Server Actions für Studio-Formulare; API Routes für Uploads, Health, externe Callbacks.
 - Keine Server-only Module in Client Components; keine Cross-App Imports.
-- **`@uwe/database/server`** ist der kanonische Import-Pfad (~1540 Zeilen Barrel, ~344 Importer). Service-Index: [docs/engineering/database-service-map.md](docs/engineering/database-service-map.md).
+- **`@uwe/database/server`** ist der etablierte Import-Pfad für Bestandscode (~2180 Zeilen Barrel, ~440 Importer — **eingefroren**, siehe Modul-Disziplin). Service-Index: [docs/engineering/database-service-map.md](docs/engineering/database-service-map.md).
+
+## Modul-Disziplin (Anti-Monolith)
+
+Enforced durch `scripts/file-size-budget-check.mjs` (läuft in `pnpm test` / `test:ci`):
+
+- **Neue Dateien: max. 700 Zeilen**, Ziel < 300. Beim Überschreiten in Module oder ein Feature-Package aufteilen — **nicht** die Baseline anpassen.
+- **Bestands-Monolithen** (`scripts/file-size-baseline.json`) sind eingefroren (+10 % Toleranz). Wer sie ändert, zieht Code heraus statt anzubauen. Baseline-Werte **niemals erhöhen**, keine neuen Einträge hinzufügen; `--ratchet` senkt nur.
+- **Neue Domänen-Services gehören NICHT in `packages/database`**, sondern in ein bestehendes oder neues Feature-Package (`packages/<domain>`). `@uwe/database` bleibt Data-Access + bestehende Kern-Services.
+- **`server.ts`-Barrel nicht weiter vergrößern** (Budget nur +3 %): neue Symbole über Subpath-Exports (siehe `packages/database/package.json` → `exports`) oder das Feature-Package exportieren. Bestehende Importe bleiben gültig.
+- Beim Aufteilen: Verhalten unverändert lassen; Re-Exports für Abwärtskompatibilität sind erlaubt.
 
 ## Dev-Mode CSP
 
