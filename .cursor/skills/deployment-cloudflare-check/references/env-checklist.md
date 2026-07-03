@@ -2,7 +2,7 @@
 
 ## Required production ENV
 
-From `.env.example`, `.env.production.example`, `DEPLOYMENT_SECURITY.md`:
+From `.env.example`, `.env.production.example`, `docs/security/DEPLOYMENT_SECURITY.md`:
 
 ```bash
 NODE_ENV=production
@@ -127,5 +127,5 @@ See `docs/backup-restore.md`.
 
 - `docs/deployment-hardening.md` — Linux laptop + systemd
 - `docs/PRODUCTION.md` — release checklist
-- `DEPLOYMENT_SECURITY.md` — architecture overview
+- `docs/security/DEPLOYMENT_SECURITY.md` — architecture overview
 - `docs/cloudflare-access.md` — Access policies for uweandragons.org

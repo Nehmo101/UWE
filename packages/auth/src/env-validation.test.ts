@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BlockingEnvError,
+  enforceEnvSafetyAtBoot,
   hasBlockingEnvIssues,
   isWeakAuthSecretValue,
   validateUweEnvironment,
@@ -97,5 +99,82 @@ describe("env validation", () => {
     const tokenIssue = issues.find((issue) => issue.id === "env:studio-api-token-recommended");
     assert.ok(tokenIssue);
     assert.equal(tokenIssue.severity, "warning");
+  });
+});
+
+describe("enforceEnvSafetyAtBoot", () => {
+  function collectingLogger() {
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    return {
+      warnings,
+      errors,
+      logger: {
+        warn: (message: string) => warnings.push(message),
+        error: (message: string) => errors.push(message),
+      },
+    };
+  }
+
+  const saneProductionEnv = {
+    NODE_ENV: "production",
+    AUTH_SECRET: "a-strong-random-secret-value-here",
+    RUN_DB_SEED: "false",
+    STUDIO_API_TOKEN: "studio-token-value-here",
+    UWE_MEDIA_SIGNING_SECRET: "a-strong-random-media-secret",
+  };
+
+  it("throws BlockingEnvError in production for error-severity issues, naming the env var", () => {
+    const { logger, errors } = collectingLogger();
+    assert.throws(
+      () =>
+        enforceEnvSafetyAtBoot(
+          { NODE_ENV: "production", AUTH_SECRET: "change-me" },
+          logger,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof BlockingEnvError);
+        assert.match(error.message, /AUTH_SECRET/);
+        assert.ok(error.issues.every((issue) => issue.severity === "error"));
+        return true;
+      },
+    );
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /AUTH_SECRET/);
+  });
+
+  it("does not throw in production with a sane config", () => {
+    const { logger, warnings, errors } = collectingLogger();
+    const issues = enforceEnvSafetyAtBoot({ ...saneProductionEnv }, logger);
+    assert.equal(hasBlockingEnvIssues(issues), false);
+    assert.equal(warnings.length, 0);
+    assert.equal(errors.length, 0);
+  });
+
+  it("only warns outside production", () => {
+    const { logger, warnings } = collectingLogger();
+    const issues = enforceEnvSafetyAtBoot(
+      { NODE_ENV: "development", AUTH_SECRET: "change-me" },
+      logger,
+    );
+    assert.equal(hasBlockingEnvIssues(issues), true);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /AUTH_SECRET/);
+  });
+
+  it("only warns in production when UWE_ALLOW_INSECURE_ENV=1 is set (test opt-out)", () => {
+    const { logger, warnings, errors } = collectingLogger();
+    const issues = enforceEnvSafetyAtBoot(
+      {
+        NODE_ENV: "production",
+        AUTH_SECRET: "change-me",
+        UWE_ALLOW_INSECURE_ENV: "1",
+      },
+      logger,
+    );
+    assert.equal(hasBlockingEnvIssues(issues), true);
+    assert.equal(errors.length, 0);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /UWE_ALLOW_INSECURE_ENV/);
   });
 });

@@ -205,4 +205,4 @@ Use this before exposing a new deployment:
 | Low | Setup GET leaks availability | Acceptable if `UWE_SETUP_TOKEN` is secret |
 | Low | Multi-instance rate limit bypass | Use reverse-proxy rate limits or `setRateLimitStore()` |
 
-See also: [SECURITY.md](../SECURITY.md), [DEPLOYMENT_SECURITY.md](../DEPLOYMENT_SECURITY.md), [docs/security-testing.md](./security-testing.md).
+See also: [SECURITY.md](../SECURITY.md), [DEPLOYMENT_SECURITY.md](./security/DEPLOYMENT_SECURITY.md), [docs/security-testing.md](./security-testing.md).

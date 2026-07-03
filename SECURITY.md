@@ -2,6 +2,15 @@
 
 **Source of truth** for UWE self-hosting security. Operational details: [docs/auth-api-security.md](docs/auth-api-security.md), [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md), [SECURITY_NOTES.md](SECURITY_NOTES.md).
 
+## Further Security Docs
+
+Detailed security documents live in [docs/security/](docs/security/):
+
+- [docs/security/DEPLOYMENT_SECURITY.md](docs/security/DEPLOYMENT_SECURITY.md) — Cloudflare Tunnel/Access deployment guide
+- [docs/security/SECURITY_REVIEW.md](docs/security/SECURITY_REVIEW.md) — historical security review (2026-06-16)
+- [docs/security/dependency-notes.md](docs/security/dependency-notes.md) — dependency overrides and build-script allowlist
+- [SECURITY_NOTES.md](SECURITY_NOTES.md) — AI privacy, RTX agent, cloud rules (stays in root; required by `scripts/integration-smoke.test.ts`)
+
 ## Supported Versions
 
 | Version | Supported          |
@@ -245,7 +254,7 @@ Before exposing UWE to the internet:
 - [ ] Multi-instance: rate limiting at reverse proxy or `setRateLimitStore()` (Redis/Upstash)
 - [ ] Post-deploy: `pnpm test:security`, Public Leak Scanner at `/admin/status`
 
-Deployment guides: [DEPLOYMENT_SECURITY.md](DEPLOYMENT_SECURITY.md), [docs/deployment-hardening.md](docs/deployment-hardening.md), [docs/PRODUCTION.md](docs/PRODUCTION.md).
+Deployment guides: [docs/security/DEPLOYMENT_SECURITY.md](docs/security/DEPLOYMENT_SECURITY.md), [docs/deployment-hardening.md](docs/deployment-hardening.md), [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
 The Studio dashboard and `GET /api/health` surface warnings for common misconfigurations (weak/missing `AUTH_SECRET`, `RUN_DB_SEED` not `false`, missing `STUDIO_API_TOKEN`, active public sharing).
 

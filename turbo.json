@@ -9,11 +9,14 @@
       "cache": false,
       "persistent": true
     },
+    "topo": {
+      "dependsOn": ["^topo"]
+    },
     "typecheck": {
-      "dependsOn": []
+      "dependsOn": ["topo"]
     },
     "test": {
-      "dependsOn": []
+      "dependsOn": ["topo"]
     }
   }
 }

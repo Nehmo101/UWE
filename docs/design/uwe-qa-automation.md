@@ -206,7 +206,7 @@ Nach Merge der Phase-1–6-PRs:
 | Portal filtert `dm_only` serverseitig | `pnpm test:security`, `permissions.ts` |
 | Cloud-KI ohne Brain/Welt/Life-Kontext | `privacyGuard.ts` |
 | KI-Output = Proposal/Draft | AI Runs / Generator |
-| RTX nur LAN | `DEPLOYMENT_SECURITY.md`, System-Hub |
+| RTX nur LAN | `docs/security/DEPLOYMENT_SECURITY.md`, System-Hub |
 | Daily Admin nur Studio | Routen + Security-Tests |
 
 ### 3.4 Final QA (qa-engineer) — Abnahme Orchestrator-Welle

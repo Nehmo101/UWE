@@ -1,6 +1,6 @@
 # UWE Security Review — Final Pass (2026-06-16)
 
-> **Historisches Dokument.** Viele Punkte wurden behoben (Studio-Session-Login, Route-Policy, geschützte APIs). **Aktuelle Source of Truth:** [SECURITY.md](SECURITY.md), [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
+> **Historisches Dokument.** Viele Punkte wurden behoben (Studio-Session-Login, Route-Policy, geschützte APIs). **Aktuelle Source of Truth:** [SECURITY.md](../../SECURITY.md), [docs/SECURITY_QA_MATRIX.md](../SECURITY_QA_MATRIX.md).
 
 Security review before public exposure via Cloudflare. Scope: Studio, Portal, shared packages, backups, uploads, AI, secrets, headers.
 
@@ -192,7 +192,7 @@ Vor Go-Live auf `uweandragons.org` (oder ähnlich):
 
 ## 7. Referenzen
 
-- [SECURITY.md](./SECURITY.md) — Security Policy
-- [docs/SECURITY_SETTINGS.md](./docs/SECURITY_SETTINGS.md) — Einstellungen
-- [docs/PRODUCTION.md](./docs/PRODUCTION.md) — Production Deployment
+- [SECURITY.md](../../SECURITY.md) — Security Policy
+- [docs/SECURITY_SETTINGS.md](../SECURITY_SETTINGS.md) — Einstellungen
+- [docs/PRODUCTION.md](../PRODUCTION.md) — Production Deployment
 - Admin-Dashboard: `/admin/status` — Live-Security-Assessment

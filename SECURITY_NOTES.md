@@ -1,6 +1,6 @@
 # Sicherheitsnotizen — KI-System (Brain, RTX Connector, Cloud)
 
-> **Ergänzung zu [SECURITY.md](SECURITY.md)** — nicht die alleinige Source of Truth. Für Auth/API/Uploads siehe SECURITY.md; für QA-Matrix siehe [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md). Historischer Review: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+> **Ergänzung zu [SECURITY.md](SECURITY.md)** — nicht die alleinige Source of Truth. Für Auth/API/Uploads siehe SECURITY.md; für QA-Matrix siehe [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md). Historischer Review: [docs/security/SECURITY_REVIEW.md](docs/security/SECURITY_REVIEW.md).
 
 Gilt für UWE Studio, Brain, RTX Host Connector / lokale RTX Worker und Cloud-KI.
 

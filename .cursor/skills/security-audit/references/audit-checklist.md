@@ -1,6 +1,6 @@
 # UWE Security Audit Checklist
 
-Based on `SECURITY_REVIEW.md`, `docs/security-testing.md`, and `packages/database/src/studio-security.ts`.
+Based on `docs/security/SECURITY_REVIEW.md`, `docs/security-testing.md`, and `packages/database/src/studio-security.ts`.
 
 ## 1. Authentication & authorization
 
@@ -85,7 +85,7 @@ When adding Studio API routes:
 
 ## Related files
 
-- `DEPLOYMENT_SECURITY.md`
+- `docs/security/DEPLOYMENT_SECURITY.md`
 - `docs/deployment-hardening.md`
 - `packages/database/src/production-safety.ts`
 - `packages/database/src/security-dashboard.ts`

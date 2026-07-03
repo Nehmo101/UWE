@@ -194,4 +194,4 @@ location / {
 | Physical host compromise | OS hardening, disk encryption | Operator |
 | Supply chain (npm) | `pnpm audit`, pinned lockfile | Maintainer |
 
-See [SECURITY.md](./SECURITY.md) for the full risk matrix and built-in protections.
+See [SECURITY.md](../../SECURITY.md) for the full risk matrix and built-in protections.
