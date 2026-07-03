@@ -107,9 +107,13 @@ PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
 
 -- RedefineIndex
-DROP INDEX "sessions_token_idx";
-CREATE INDEX "sessions_token_hash_idx" ON "sessions"("token_hash");
+-- Idempotent: on fresh DBs the pre-rename index name "sessions_token_idx" exists
+-- (from 20260611215658_auth_and_memberships, kept across the token->token_hash
+-- column rename in 20260618220000). On baselined hosts the sessions indexes were
+-- already created under their final names, so guard both sides.
+DROP INDEX IF EXISTS "sessions_token_idx";
+CREATE INDEX IF NOT EXISTS "sessions_token_hash_idx" ON "sessions"("token_hash");
 
 -- RedefineIndex
-DROP INDEX "sessions_token_key";
-CREATE UNIQUE INDEX "sessions_token_hash_key" ON "sessions"("token_hash");
+DROP INDEX IF EXISTS "sessions_token_key";
+CREATE UNIQUE INDEX IF NOT EXISTS "sessions_token_hash_key" ON "sessions"("token_hash");
