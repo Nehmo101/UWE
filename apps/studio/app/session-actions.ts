@@ -3,8 +3,10 @@
 import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
+  createCalendarService,
   createGameSessionService,
   getAppRepository,
+  prisma,
   type GameSessionStatus,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -81,6 +83,9 @@ export async function createGameSessionAction(formData: FormData) {
     playerDecisions: String(formData.get("playerDecisions") || "") || null,
   });
 
+  // Terminierte Sessions automatisch als Kalender-Event spiegeln.
+  await createCalendarService(prisma).syncSessionToCalendar(session.id);
+
   revalidatePath(`/worlds/${worldSlug}/sessions`);
   redirect(`/worlds/${worldSlug}/sessions/${session.id}`);
 }
@@ -114,6 +119,9 @@ export async function updateGameSessionAction(formData: FormData) {
     playerVisibleSchedule: formData.get("playerVisibleSchedule") === "on",
     linkedPageIds,
   });
+
+  // Kalender-Event nachziehen (legt an, verschiebt oder entfernt bei leerem Datum).
+  await createCalendarService(prisma).syncSessionToCalendar(sessionId);
 
   revalidatePath(`/worlds/${worldSlug}/sessions`);
   revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);

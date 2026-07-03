@@ -479,9 +479,18 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
       sessionsSynced = sessionResult.synced;
     }
 
+    const contractSync = await calendar.syncContractDeadlinesToCalendar();
+
     await calendar.markFeedSynced(feed.id, null);
     await db.$disconnect();
-    return { feedId: feed.id, imported, pushed, sessionsSynced, pruned };
+    return {
+      feedId: feed.id,
+      imported,
+      pushed,
+      sessionsSynced,
+      contractDeadlinesSynced: contractSync.synced,
+      pruned,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await calendar.markFeedSynced(feed.id, message);
