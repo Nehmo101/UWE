@@ -1,5 +1,14 @@
 # UWE Daily Admin OS — Cursor Prompts
 
+> **⚠️ Scope-Revision 2026-07-03 (Owner-Entscheidung):** Die unten (historisch) mehrfach
+> wiederholte Grenze „Kein Meal Planner / Kein Haushalts-/Vorratsplaner / Kein großer
+> Dokumenten-Tresor" ist **aufgehoben**. Essensplaner (`docs/rework/meal-planner-plan.md`)
+> und Scan Inbox/Dokumentenscanner (`docs/rework/scan-inbox-plan.md`) sind jetzt offizielle
+> Module; Roadmap: `docs/rework/feature-roadmap-2026-07.md`. Die restlichen
+> Nicht-bauen-Punkte (Familien-/Kind-/Katzen-Modul, Entscheidungs-Log, Wochenreview,
+> Käufe/Garantien-Modul) gelten weiter. Die historischen Prompts unten bleiben unverändert
+> dokumentiert — maßgeblich ist `.cursor/skills/daily-admin-os/SKILL.md`.
+
 Diese Datei enthält copy-paste-fertige Prompts für Cursor/Fable/Codex-artige Agenten.
 
 Ziel: UWE soll für Lasse nicht nur ein DnD-Tool sein, sondern ein tägliches privates Admin-Cockpit für DnD, Projekte, Technik/Homelab, Kunstwerke/Miniaturen/Terrain, Verträge/Monatsausgaben und persönliches Wissen.

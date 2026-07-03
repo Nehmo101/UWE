@@ -435,6 +435,8 @@ enum EntityTagEntityType {
   contract
   hardware
   dev_idea
+  recipe
+  scan_document
 }
 
 enum WorldEventSourceType {
@@ -486,6 +488,7 @@ enum AdminLinkSourceType {
   hardware_device
   personal_brain_document
   personal_brain_fact
+  scan_document
 }
 
 enum AdminLinkTargetType {
@@ -499,6 +502,7 @@ enum AdminLinkTargetType {
   world
   page
   asset
+  scan_document
 }
 
 model User {
@@ -714,6 +718,9 @@ model World {
   partyTreasury       PartyTreasury?
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
+  structuredItems      StructuredItem[]
+  playerQuestions      PlayerQuestion[]
+  scanDocuments        ScanDocument[]
   importJobs           ImportJob[]
   rollTables           RollTable[]
 
@@ -797,6 +804,7 @@ model Page {
   character              Character?
   inventoryItems         InventoryItem[]
   structuredStatblock    StructuredStatblock?
+  structuredItem         StructuredItem?
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -1023,6 +1031,7 @@ model GameSession {
   calendarEvents CalendarEvent[]
   availabilities SessionAvailability[]
   worldEvents    WorldEvent[]
+  liveEntries    SessionLiveEntry[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
@@ -1891,6 +1900,7 @@ enum ConnectorJobType {
   llm_generate
   image_generate
   embedding_generate
+  vision_extract
   connector_refresh_models
   label_print
   printer_discover
@@ -3530,4 +3540,368 @@ model EntityTag {
   @@index([entityType, entityId])
   @@index([worldId])
   @@map("entity_tags")
+}
+
+// ── Session Live Mode (Spieltisch-Cockpit) ────────────────────────
+// Structured live entries captured during a session. Nothing here is
+// canon: entries are reviewed after the session (Proposal → Apply).
+enum SessionLiveEntryKind {
+  note
+  loot
+  quest_update
+  npc_update
+  initiative
+  bookmark
+}
+
+model SessionLiveEntry {
+  id            String               @id @default(cuid())
+  gameSessionId String               @map("game_session_id")
+  kind          SessionLiveEntryKind @default(note)
+  content       String               @default("")
+  refPageId     String?              @map("ref_page_id")
+  payload       Json?
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+
+  @@index([gameSessionId, createdAt])
+  @@map("session_live_entries")
+}
+
+// ── Küche / Essensplaner ──────────────────────────────────────────
+enum RecipeStatus {
+  draft
+  active
+  archived
+}
+
+enum IngredientUnit {
+  gram
+  milliliter
+  piece
+  tbsp
+  tsp
+  pinch
+  bunch
+  pack
+  freeform
+}
+
+enum ShoppingCategory {
+  produce
+  chilled
+  frozen
+  dry
+  drugstore
+  household
+  other
+}
+
+model Recipe {
+  id              String       @id @default(cuid())
+  title           String
+  status          RecipeStatus @default(active)
+  description     String       @default("")
+  servingsBase    Float        @default(2) @map("servings_base")
+  durationMinutes Int?         @map("duration_minutes")
+  effortRating    Int?         @map("effort_rating")
+  tasteRating     Int?         @map("taste_rating")
+  kidRating       Int?         @map("kid_rating")
+  partnerRating   Int?         @map("partner_rating")
+  steps           Json
+  variants        Json?
+  imageStorageKey String?      @map("image_storage_key")
+  sourceUrl       String?      @map("source_url")
+  sourceScanId    String?      @map("source_scan_id")
+  notes           String       @default("")
+  metadata        Json?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  ingredients    RecipeIngredient[]
+  mealPlanEntries MealPlanEntry[]
+
+  @@index([status])
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id             String           @id @default(cuid())
+  recipeId       String           @map("recipe_id")
+  name           String
+  normalizedName String           @map("normalized_name")
+  amount         Float?
+  unit           IngredientUnit   @default(freeform)
+  unitLabel      String?          @map("unit_label")
+  category       ShoppingCategory @default(other)
+  optional       Boolean          @default(false)
+  sortIndex      Int              @default(0) @map("sort_index")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([normalizedName])
+  @@map("recipe_ingredients")
+}
+
+// ── Küche: Wochenplan + Einkaufsliste (K2) ────────────────────────
+enum MealSlot {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum MealEntryType {
+  recipe
+  leftovers
+  eating_out
+  routine
+  note
+}
+
+model MealPlanWeek {
+  id              String   @id @default(cuid())
+  isoYear         Int      @map("iso_year")
+  isoWeek         Int      @map("iso_week")
+  householdFactor Float    @default(2.5) @map("household_factor")
+  goals           Json?
+  aiDraft         Json?    @map("ai_draft")
+  notes           String   @default("")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  entries MealPlanEntry[]
+
+  @@unique([isoYear, isoWeek])
+  @@map("meal_plan_weeks")
+}
+
+model MealPlanEntry {
+  id        String        @id @default(cuid())
+  weekId    String        @map("week_id")
+  date      DateTime
+  slot      MealSlot
+  entryType MealEntryType @default(recipe) @map("entry_type")
+  recipeId  String?       @map("recipe_id")
+  servings  Float?
+  note      String        @default("")
+  cooked    Boolean       @default(false)
+  sortIndex Int           @default(0) @map("sort_index")
+
+  week   MealPlanWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  recipe Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([weekId, date])
+  @@map("meal_plan_entries")
+}
+
+model ShoppingList {
+  id        String   @id @default(cuid())
+  weekId    String?  @map("week_id")
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items ShoppingListItem[]
+
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id              String           @id @default(cuid())
+  listId          String           @map("list_id")
+  name            String
+  normalizedName  String           @map("normalized_name")
+  amount          Float?
+  unit            IngredientUnit   @default(freeform)
+  unitLabel       String?          @map("unit_label")
+  category        ShoppingCategory @default(other)
+  checked         Boolean          @default(false)
+  recurring       Boolean          @default(false)
+  sourceRecipeIds Json?            @map("source_recipe_ids")
+  sortIndex       Int              @default(0) @map("sort_index")
+
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId, category])
+  @@map("shopping_list_items")
+}
+
+model StructuredItem {
+  id           String   @id @default(cuid())
+  worldId      String   @map("world_id")
+  pageId       String   @unique @map("page_id")
+  data         Json
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("structured_items")
+}
+
+enum PlayerQuestionStatus {
+  open
+  answered
+  archived
+}
+
+model PlayerQuestion {
+  id           String               @id @default(cuid())
+  worldId      String               @map("world_id")
+  campaignId   String?              @map("campaign_id")
+  authorUserId String?              @map("author_user_id")
+  authorName   String               @map("author_name")
+  question     String
+  answer       String?
+  status       PlayerQuestionStatus @default(open)
+  createdAt    DateTime             @default(now()) @map("created_at")
+  answeredAt   DateTime?            @map("answered_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, status])
+  @@map("player_questions")
+}
+
+enum ScanDocumentStatus {
+  unanalyzed
+  analyzing
+  waiting_for_rtx
+  proposal_ready
+  uncertain
+  filed
+  rejected
+  archived
+}
+
+enum ScanDocumentKind {
+  letter
+  invoice
+  contract_doc
+  warranty
+  receipt
+  handwritten_note
+  recipe
+  dnd_session_note
+  dnd_dungeon_note
+  dnd_handout
+  unknown
+}
+
+enum ScanPrivacyLevel {
+  private
+  dnd
+}
+
+model ScanDocument {
+  id                  String             @id @default(cuid())
+  title               String             @default("")
+  status              ScanDocumentStatus @default(unanalyzed)
+  privacyLevel        ScanPrivacyLevel   @default(private)
+  storageKey          String             @map("storage_key")
+  mimeType            String             @map("mime_type")
+  fileSize            Int                @default(0) @map("file_size")
+  pageCount           Int?               @map("page_count")
+  ocrText             String             @default("") @map("ocr_text")
+  ocrEngine           String?            @map("ocr_engine")
+  detectedKind        ScanDocumentKind   @default(unknown) @map("detected_kind")
+  detectionConfidence String?            @map("detection_confidence")
+  extractedFields     Json?              @map("extracted_fields")
+  proposal            Json?
+  uncertainties       Json?
+  connectorJobId      String?            @map("connector_job_id")
+  errorMessage        String?            @map("error_message")
+  worldId             String?            @map("world_id")
+  filedTargetType     String?            @map("filed_target_type")
+  filedTargetId       String?            @map("filed_target_id")
+  filedAt             DateTime?          @map("filed_at")
+  rejectedAt          DateTime?          @map("rejected_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([detectedKind])
+  @@index([worldId])
+  @@map("scan_documents")
+}
+
+enum PromptTemplateCategory {
+  repo_audit
+  ui_fix
+  dnd_generator
+  import
+  refactor
+  other
+}
+
+model PromptTemplate {
+  id          String                  @id @default(cuid())
+  title       String
+  category    PromptTemplateCategory  @default(other)
+  description String                  @default("")
+  body        String
+  variables   Json?
+  tags        Json?
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("prompt_templates")
+}
+
+enum MaintenanceInterval {
+  once
+  weekly
+  biweekly
+  monthly
+  quarterly
+  yearly
+}
+
+model MaintenanceTask {
+  id         String              @id @default(cuid())
+  title      String
+  category   String              @default("")
+  interval   MaintenanceInterval @default(yearly)
+  lastDoneAt DateTime?           @map("last_done_at")
+  nextDueAt  DateTime?           @map("next_due_at")
+  notes      String              @default("")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@index([nextDueAt])
+  @@map("maintenance_tasks")
+}
+
+enum PantryLocation {
+  pantry
+  fridge
+  freezer
+  spices
+}
+
+model PantryItem {
+  id             String         @id @default(cuid())
+  name           String
+  normalizedName String         @map("normalized_name")
+  location       PantryLocation @default(pantry)
+  amount         Float?
+  unit           IngredientUnit @default(freeform)
+  unitLabel      String?        @map("unit_label")
+  expiresAt      DateTime?      @map("expires_at")
+  lowStock       Boolean        @default(false) @map("low_stock")
+  notes          String         @default("")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@index([location])
+  @@index([expiresAt])
+  @@map("pantry_items")
 }

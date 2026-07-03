@@ -1,0 +1,25 @@
+{
+  "name": "@uwe/scan-inbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE Scan Inbox — OCR-Pipeline, Feld-Extraktion, Ablage-Vorschläge",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/database": "workspace:*",
+    "@uwe/kitchen": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

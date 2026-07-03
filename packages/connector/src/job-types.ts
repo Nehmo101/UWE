@@ -43,6 +43,7 @@ export const CONNECTOR_JOB_TYPES = [
   "llm_generate",
   "image_generate",
   "embedding_generate",
+  "vision_extract",
   "connector_refresh_models",
   "label_print",
   "printer_discover",
@@ -74,6 +75,7 @@ export const CONNECTOR_JOB_DESCRIPTORS: Record<ConnectorJobType, ConnectorJobDes
   },
   llm_generate: { lane: "gpu", priority: 50, capability: "llm_local", latencySensitive: false },
   image_generate: { lane: "gpu", priority: 30, capability: "image_generation", latencySensitive: false },
+  vision_extract: { lane: "gpu", priority: 40, capability: "vision_local", latencySensitive: false },
   embedding_generate: {
     lane: "gpu",
     priority: 20,

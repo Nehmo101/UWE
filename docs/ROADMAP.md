@@ -4,6 +4,11 @@ Stand: 2026-06-29 · ergänzt durch Security-/Orchestrator-Audit.
 
 Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktionsreife Bereiche. Implementierter Code mit Phase-1-Scaffolding verweist hierher.
 
+> **Neue Feature-Wellen (2026-07):** Die aktuelle Priorisierung neuer Features
+> (Scan Inbox, Küche/Essensplaner, Session-Live-Ausbau, Wiki-Aufräumzentrale,
+> Startklar-Wizard, Kampagnen-Radar u. a.) inkl. Detailplänen liegt in
+> [rework/feature-roadmap-2026-07.md](rework/feature-roadmap-2026-07.md).
+
 ---
 
 ## Auth & Security

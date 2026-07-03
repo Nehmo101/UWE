@@ -18,6 +18,7 @@ export const ADMIN_LINK_SOURCE_LABELS: Record<AdminLinkSourceType, string> = {
   hardware_device: "Hardware",
   personal_brain_document: "Life Brain Dokument",
   personal_brain_fact: "Life Brain Fakt",
+  scan_document: "Scan",
 };
 
 export const ADMIN_LINK_TARGET_LABELS: Record<AdminLinkTargetType, string> = {
@@ -31,6 +32,7 @@ export const ADMIN_LINK_TARGET_LABELS: Record<AdminLinkTargetType, string> = {
   world: "Welt",
   page: "Wiki-Seite",
   asset: "Asset",
+  scan_document: "Scan",
 };
 
 export interface ResolvedAdminEntityLink {

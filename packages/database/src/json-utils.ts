@@ -1,4 +1,10 @@
-import type { Prisma } from "./generated/prisma/client";
+import { Prisma } from "./generated/prisma/client";
+
+/**
+ * Sentinel zum expliziten Nullen einer nullable Json-Spalte in einem Prisma-
+ * Update (`toPrismaJsonValue(null)` liefert `undefined` = „nicht ändern").
+ */
+export const jsonDbNull: typeof Prisma.DbNull = Prisma.DbNull;
 
 export function parseStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {

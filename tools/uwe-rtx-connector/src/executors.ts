@@ -79,6 +79,44 @@ async function runOllamaChat(
   return { text: data.message?.content ?? "", model: data.model ?? model, provider: "ollama" };
 }
 
+async function runOllamaVision(
+  ollamaUrl: string,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<JobResult> {
+  const prompt = asString(payload.prompt);
+  if (!prompt) {
+    throw new Error("vision_extract: 'prompt' fehlt im Payload.");
+  }
+  const images = Array.isArray(payload.images)
+    ? payload.images.filter((image): image is string => typeof image === "string" && image.length > 0)
+    : [];
+  if (images.length === 0) {
+    throw new Error("vision_extract: 'images' (Base64) fehlt im Payload.");
+  }
+  // Vision-fähiges Ollama-Modell (llava, minicpm-v, qwen2.5-vl …); Default über Slot.
+  const model = asString(payload.model, "llava");
+  const maxTokens = asNumber(payload.maxTokens);
+  const messages = [{ role: "user", content: prompt, images }];
+
+  const body: Record<string, unknown> = { model, messages, stream: false };
+  if (maxTokens != null) {
+    body.options = { num_predict: maxTokens };
+  }
+
+  const response = await fetch(`${ollamaUrl.replace(/\/+$/, "")}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new Error(`Ollama vision HTTP ${response.status}`);
+  }
+  const data = (await response.json()) as { model?: string; message?: { content?: string } };
+  return { text: data.message?.content ?? "", model: data.model ?? model, provider: "ollama" };
+}
+
 async function runOllamaEmbedding(
   ollamaUrl: string,
   payload: Record<string, unknown>,
@@ -279,6 +317,10 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
     case "embedding_generate": {
       if (!ctx.ollamaUrl) throw new Error("Kein lokaler Embedding-Provider konfiguriert.");
       return runOllamaEmbedding(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+    }
+    case "vision_extract": {
+      if (!ctx.ollamaUrl) throw new Error("Kein lokaler Vision-Provider (Ollama) konfiguriert.");
+      return runOllamaVision(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
     }
     case "connector_refresh_models": {
       const count = await ctx.refreshModels();

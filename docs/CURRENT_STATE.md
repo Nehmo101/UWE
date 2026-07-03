@@ -87,8 +87,9 @@ Offene Rest-Punkte aus den Backlog-Wellen (Details:
 - **Miniaturen:** Fotovergleich-Slider.
 - **Projekt-Dashboards:** pro-Domäne-Kacheln.
 - **Mobile Portal:** Bottom-Nav als Standard überall — Folge-PR in Arbeit.
-- **`nextSession`-Bug:** für Spieler praktisch immer `null`
-  (recapPublished-Filter) — Fix in Arbeit.
+- **`nextSession`-Bug:** behoben (Code-Audit 2026-07-03): `getPortalDashboard` nutzt
+  `listVisibleToPlayersForPortal` + `playerVisibleSchedule`-Flag statt des
+  recapPublished-Filters; E2E-Nachweis im Portal bei nächster Gelegenheit mitprüfen.
 - **Tags:** EntityTag-Backfill-Vollständigkeit verifizieren, dann Json-Dual-Write
   abschalten.
 

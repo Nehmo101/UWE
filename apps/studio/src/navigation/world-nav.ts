@@ -31,6 +31,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "dashboard",
           "cockpit",
         ]),
+        item("world-radar", "Kampagnen-Radar", `${base}/radar`, "radar", "Übersicht", [
+          "radar",
+          "kampagne",
+          "fraktionen",
+          "was passiert",
+          "world clock",
+        ]),
       ],
     },
     {
@@ -54,6 +61,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "map",
           "weltkarte",
         ]),
+        item("world-magic-items", "Magic-Item-Werkbank", `${base}/magic-items`, "gem", "Wiki", [
+          "item",
+          "magic item",
+          "werkbank",
+          "homebrewery",
+          "seltenheit",
+        ]),
       ],
     },
     {
@@ -71,6 +85,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "vorbereiten",
           "nächste session",
           "generator",
+        ]),
+        item("world-one-shot", "One-Shot-Generator", `${base}/one-shot`, "wand-sparkles", "Spiel", [
+          "one-shot",
+          "abenteuer",
+          "generator",
+          "kanon",
+          "ton",
         ]),
         item("world-open-items", "Was ist offen?", `${base}/open-items`, "list-checks", "Spiel", [
           "offen",
@@ -95,6 +116,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
         item("world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", "Spiel", [
           "notizen",
           "notes",
+        ]),
+        item("world-questions", "Spielerfragen", `${base}/questions`, "message-circle", "Spiel", [
+          "fragen",
+          "spielerfragen",
+          "questions",
+          "dm",
         ]),
         item("world-dungeons", "Dungeons", `${base}/dungeons`, "castle", "Spiel", [
           "dungeons",
@@ -164,6 +191,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "kanon",
           "leaks",
           "portal",
+        ]),
+        item("world-quality", "Wiki-Pflege", `${base}/quality`, "sparkles", "Freigabe & Betrieb", [
+          "pflege",
+          "qualität",
+          "aufräumen",
+          "unverlinkt",
+          "wiki",
         ]),
         item("world-backup", "Backup", `${base}/backup`, "database-backup", "Freigabe & Betrieb", [
           "backup",

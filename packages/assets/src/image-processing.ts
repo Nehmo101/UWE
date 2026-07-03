@@ -38,6 +38,43 @@ async function loadSharp(): Promise<SharpModule | null> {
   }
 }
 
+export interface DownscaledImage {
+  buffer: Buffer;
+  mimeType: string;
+  /** false, wenn das Original unverändert zurückkommt (kein sharp / Fehler). */
+  downscaled: boolean;
+}
+
+/**
+ * Verkleinert ein Rasterbild für den Vision-/OCR-Connector: Kantenlänge auf
+ * `maxDimension` begrenzt (Default 1600px), als JPEG (Default q80) rekomprimiert.
+ * Hält die Base64-Payload klein, die als JSON durch die Connector-Queue reist.
+ * Ohne sharp (oder bei einem Dekodier-Fehler) bleibt das Original unverändert;
+ * der Aufrufer schickt es dann roh.
+ */
+export async function downscaleImageForVision(input: {
+  buffer: Buffer;
+  mimeType: string;
+  maxDimension?: number;
+  quality?: number;
+}): Promise<DownscaledImage> {
+  const sharp = await loadSharp();
+  if (!sharp) {
+    return { buffer: input.buffer, mimeType: input.mimeType, downscaled: false };
+  }
+  const maxDimension = input.maxDimension ?? 1600;
+  try {
+    const buffer = await sharp(input.buffer, { failOn: "error" })
+      .rotate() // auto-orient + strip orientation EXIF
+      .resize(maxDimension, maxDimension, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: input.quality ?? 80 })
+      .toBuffer();
+    return { buffer, mimeType: "image/jpeg", downscaled: true };
+  } catch {
+    return { buffer: input.buffer, mimeType: input.mimeType, downscaled: false };
+  }
+}
+
 /**
  * Optionally strip EXIF metadata and generate a WebP thumbnail for raster images.
  * Falls back to the original buffer when sharp is unavailable.

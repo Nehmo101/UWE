@@ -6,6 +6,12 @@ Stand: 2026-07-01 · Eingabe: großer Ideen-Backlog (59 Ideen in 4 Bereichen)
 > Code-Stand** (vorhanden / teilweise / fehlt) und priorisiert Wellen A→D. **Umsetzung läuft**
 > über Orchestrator-Batches (Waves A–D, Rest-Batches 1–5); bei Abweichungen gilt der Code +
 > [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) als Wahrheit.
+>
+> **Nachfolger (2026-07):** Die nächste Ideen-Runde (Scan Inbox, Essensplaner,
+> Session-Live-Ausbau, Wiki-Aufräumzentrale, …) ist in
+> [rework/feature-roadmap-2026-07.md](rework/feature-roadmap-2026-07.md) priorisiert —
+> einige hier als offen geführte Punkte (z. B. `nextSession`-Bug, Quest-Builder-UI,
+> Session-Live-Modus) sind laut Code-Audit dort bereits als erledigt markiert.
 
 ---
 

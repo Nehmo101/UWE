@@ -379,7 +379,7 @@ export {
   type NavCategory,
 } from "./page-types";
 
-export { parseStringArray, toJsonArray, toPrismaJsonValue, withParsedArrays } from "./json-utils";
+export { jsonDbNull, parseStringArray, toJsonArray, toPrismaJsonValue, withParsedArrays } from "./json-utils";
 
 export {
   buildPageView,
@@ -881,6 +881,22 @@ export type {
 } from "./world-inspector";
 
 export {
+  buildWikiQualityFindings,
+  countWikiQualityFindings,
+  createWikiQualityService,
+  sortWikiQualityFindings,
+  WikiQualityService,
+} from "./wiki-quality-service";
+
+export type {
+  WikiQualityFinding,
+  WikiQualityFindingCode,
+  WikiQualityOptions,
+  WikiQualityPageInput,
+  WikiQualityReport,
+} from "./wiki-quality-service";
+
+export {
   buildGenericCanonConflictFindings,
   getExtendedCanonFindings,
   mergeCanonFindings,
@@ -910,6 +926,21 @@ export type {
   GameSessionWithLinks,
   GameSessionStatus,
 } from "./game-session";
+
+export {
+  buildRecapDraft,
+  buildSessionReviewDraft,
+  createSessionLiveService,
+  sessionLiveKindLabel,
+  SessionLiveService,
+} from "./session-live-service";
+
+export type {
+  AppendSessionLiveEntryInput,
+  SessionLiveEntryKind,
+  SessionLiveEntryRecord,
+  SessionReviewDraft,
+} from "./session-live-service";
 
 export {
   createDungeonCockpitService,

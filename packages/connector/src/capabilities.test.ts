@@ -15,6 +15,14 @@ test("label_printing is a known connector capability", () => {
   assert.equal(isConnectorCapability("label_printing"), true);
 });
 
+test("vision_local capability and vision_extract job run on the gpu lane", () => {
+  assert.ok(CONNECTOR_CAPABILITIES.includes("vision_local"));
+  assert.equal(isConnectorCapability("vision_local"), true);
+  assert.equal(CONNECTOR_JOB_DESCRIPTORS.vision_extract.lane, "gpu");
+  assert.equal(CONNECTOR_JOB_DESCRIPTORS.vision_extract.capability, "vision_local");
+  assert.equal(CONNECTOR_JOB_DESCRIPTORS.vision_extract.latencySensitive, false);
+});
+
 test("label print jobs use the printing lane with concurrency 1", () => {
   assert.ok(CONNECTOR_LANES.includes("printing"));
   assert.equal(LANE_CONCURRENCY.printing, 1);

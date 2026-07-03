@@ -111,6 +111,12 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
         ]),
         worldItem("portal-world-gallery", "Galerie", `${base}/assets`, "image", ["galerie", "karten", "assets"]),
         worldItem("portal-world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", ["notizen", "notes"]),
+        worldItem("portal-world-questions", "Fragen an den DM", `${base}/questions`, "help-circle", [
+          "fragen",
+          "dm",
+          "spielleiter",
+          "questions",
+        ]),
         worldItem("portal-world-soundboard", "Soundboard", `${base}/soundboard`, "music", ["soundboard", "audio"]),
         worldItem("portal-world-atlas", "Atlas", `${base}/atlas`, "map", ["atlas", "karte", "weltkarte"]),
       ],
