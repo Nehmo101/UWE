@@ -28,7 +28,7 @@
 | Cloud-KI ohne Brain/World/Life-Kontext | `privacyGuard.ts` — **Konflikt-Datei** |
 | KI = Proposal/Draft, kein Auto-Apply | AI Runs, Generator |
 | Portal serverseitige Sichtbarkeit | `permissions.ts`, `pnpm test:security` |
-| RTX nur LAN | `DEPLOYMENT_SECURITY.md` |
+| RTX nur LAN | `docs/security/DEPLOYMENT_SECURITY.md` |
 | Daily Admin nur Studio | Keine Portal-Routen für Capture/Life Brain |
 | Kleine PRs, 1 Domäne/Branch | `cursor/*-adcf` |
 

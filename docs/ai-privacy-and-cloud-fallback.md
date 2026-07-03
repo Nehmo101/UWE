@@ -67,4 +67,4 @@ DM/Owner/Admin: Cloud-Fallback für erlaubte Kategorien ohne extra Grant.
 
 ## Deployment
 
-RTX-Agent **nie** hinter Cloudflare Tunnel — siehe `DEPLOYMENT_SECURITY.md`.
+RTX-Agent **nie** hinter Cloudflare Tunnel — siehe `docs/security/DEPLOYMENT_SECURITY.md`.
