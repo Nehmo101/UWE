@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { createPrismaClient } from "@uwe/database/server";
+import { createConnectorService, createPrismaClient } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { createScanInboxService } from "./scan-service";
 
@@ -63,5 +63,53 @@ describe("scan inbox service (integration)", () => {
     await service.reject(scan.id);
     const rejected = await service.list("rejected");
     assert.ok(rejected.some((s) => s.id === scan.id));
+  });
+
+  it("writes back a completed vision job result and analyzes it", async () => {
+    const service = createScanInboxService(db);
+    const scan = await service.create({ storageKey: "_scan/v.jpg", mimeType: "image/jpeg" });
+
+    const job = await createConnectorService(db).enqueueJob({
+      type: "vision_extract",
+      payload: { prompt: "x", images: ["=="] },
+    });
+    await service.setConnectorJob(scan.id, job.id);
+    // Still running → stays analyzing.
+    const pending = await service.applyConnectorJobResult(scan.id);
+    assert.equal(pending?.status, "analyzing");
+
+    // Simulate the connector finishing with transcribed text.
+    await db.connectorJob.update({
+      where: { id: job.id },
+      data: { status: "completed", result: { text: "Vertrag mit Kündigungsfrist, Betrag 12,00 €" } },
+    });
+    const done = await service.applyConnectorJobResult(scan.id);
+    assert.equal(done?.status, "proposal_ready");
+    assert.equal(done?.ocrEngine, "vision_llm");
+    assert.equal(done?.detectedKind, "contract_doc");
+  });
+
+  it("files to life-brain, calendar and recipe drafts", async () => {
+    const service = createScanInboxService(db);
+
+    const brainScan = await service.create({ storageKey: "_scan/b1", mimeType: "image/jpeg" });
+    await service.applyAnalysis(brainScan.id, { ocrText: "Garantie bis 03.07.2028 für Gerät X", ocrEngine: "manual" });
+    const brainFiled = await service.file(brainScan.id, "life_brain");
+    assert.equal(brainFiled.targetType, "personal_brain_document");
+    assert.ok(await db.personalBrainDocument.findUnique({ where: { id: brainFiled.targetId! } }));
+
+    const calScan = await service.create({ storageKey: "_scan/b2", mimeType: "image/jpeg" });
+    await service.applyAnalysis(calScan.id, { ocrText: "Rechnung zahlbar bis 15.07.2026 84,99 €", ocrEngine: "manual" });
+    const calFiled = await service.file(calScan.id, "calendar_event");
+    assert.equal(calFiled.targetType, "calendar_event");
+    assert.ok(await db.calendarEvent.findUnique({ where: { id: calFiled.targetId! } }));
+
+    const recipeScan = await service.create({ storageKey: "_scan/b3", mimeType: "image/jpeg" });
+    await service.applyAnalysis(recipeScan.id, { ocrText: "Zutaten: Mehl, Wasser. Zubereitung: backen.", ocrEngine: "manual" });
+    const recipeFiled = await service.file(recipeScan.id, "recipe");
+    assert.equal(recipeFiled.targetType, "recipe");
+    const recipe = await db.recipe.findUnique({ where: { id: recipeFiled.targetId! } });
+    assert.equal(recipe?.status, "draft");
+    assert.equal(recipe?.sourceScanId, recipeScan.id);
   });
 });

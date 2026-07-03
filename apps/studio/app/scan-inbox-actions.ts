@@ -95,6 +95,17 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
   revalidate(id);
 }
 
+/**
+ * Holt das Ergebnis eines laufenden Vision-Jobs ab (Poll-on-demand) und schreibt
+ * den erkannten Text via Analyse zurück. Läuft der Job noch, bleibt `analyzing`.
+ */
+export async function finalizeScanAction(formData: FormData): Promise<void> {
+  assertStudioTrusted();
+  const id = String(formData.get("id"));
+  await service().applyConnectorJobResult(id);
+  revalidate(id);
+}
+
 /** Legt den Scan beim bestätigten Ziel ab — nur auf explizite Owner-Aktion. */
 export async function fileScanAction(formData: FormData): Promise<void> {
   assertStudioTrusted();

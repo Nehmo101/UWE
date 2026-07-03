@@ -34,6 +34,7 @@ export interface ScanDocumentRecord {
   privacyLevel: ScanPrivacyLevel;
   mimeType: string;
   ocrText: string;
+  ocrEngine: string | null;
   detectedKind: ScanDocumentKind;
   detectionConfidence: string | null;
   extractedFields: ExtractedFields | null;
@@ -51,6 +52,7 @@ function toRecord(row: {
   privacyLevel: string;
   mimeType: string;
   ocrText: string;
+  ocrEngine: string | null;
   detectedKind: string;
   detectionConfidence: string | null;
   extractedFields: unknown;
@@ -67,6 +69,7 @@ function toRecord(row: {
     privacyLevel: row.privacyLevel as ScanPrivacyLevel,
     mimeType: row.mimeType,
     ocrText: row.ocrText,
+    ocrEngine: row.ocrEngine,
     detectedKind: row.detectedKind as ScanDocumentKind,
     detectionConfidence: row.detectionConfidence,
     extractedFields: (row.extractedFields as ExtractedFields | null) ?? null,
@@ -145,6 +148,57 @@ export class ScanInboxService {
     });
   }
 
+  /**
+   * Holt das Ergebnis eines fertigen `vision_extract`-Connector-Jobs ab und
+   * schreibt es via Analyse zurück. Poll-on-demand (kein blockierendes Warten):
+   * läuft der Job noch, bleibt der Scan auf `analyzing`.
+   */
+  async applyConnectorJobResult(id: string): Promise<ScanDocumentRecord | null> {
+    const scan = await this.db.scanDocument.findUnique({
+      where: { id },
+      select: { connectorJobId: true },
+    });
+    if (!scan?.connectorJobId) return this.get(id);
+
+    const job = await this.db.connectorJob.findUnique({
+      where: { id: scan.connectorJobId },
+      select: { status: true, result: true, failedReason: true },
+    });
+    if (!job) {
+      await this.db.scanDocument.update({
+        where: { id },
+        data: { status: "uncertain", errorMessage: "Connector-Job nicht gefunden." },
+      });
+      return this.get(id);
+    }
+
+    if (job.status === "completed") {
+      const text =
+        job.result && typeof job.result === "object"
+          ? String((job.result as Record<string, unknown>).text ?? "")
+          : "";
+      if (text.trim()) {
+        return this.applyAnalysis(id, { ocrText: text, ocrEngine: "vision_llm" });
+      }
+      await this.db.scanDocument.update({
+        where: { id },
+        data: { status: "uncertain", errorMessage: "Vision-Job lieferte keinen Text." },
+      });
+      return this.get(id);
+    }
+
+    if (job.status === "failed" || job.status === "expired") {
+      await this.db.scanDocument.update({
+        where: { id },
+        data: { status: "uncertain", errorMessage: job.failedReason ?? `Vision-Job ${job.status}.` },
+      });
+      return this.get(id);
+    }
+
+    // Noch in Bearbeitung — Status bleibt analyzing.
+    return this.get(id);
+  }
+
   async reject(id: string): Promise<void> {
     await this.db.scanDocument.update({
       where: { id },
@@ -193,6 +247,42 @@ export class ScanInboxService {
       });
       targetType = "capture";
       targetId = capture.id;
+    } else if (target === "life_brain") {
+      const doc = await this.db.personalBrainDocument.create({
+        data: {
+          title: scan.proposal?.title || scan.title || "Aus Scan",
+          content: scan.ocrText,
+          category: "scan",
+        },
+      });
+      targetType = "personal_brain_document";
+      targetId = doc.id;
+    } else if (target === "calendar_event") {
+      const reminder = scan.proposal?.reminder;
+      const startAt = reminder?.date ? new Date(reminder.date) : new Date();
+      const event = await this.db.calendarEvent.create({
+        data: {
+          title: `${reminder?.label ? `${reminder.label}: ` : ""}${scan.proposal?.title || scan.title || "Aus Scan"}`,
+          startAt,
+          allDay: true,
+          kind: "personal",
+        },
+      });
+      targetType = "calendar_event";
+      targetId = event.id;
+    } else if (target === "recipe") {
+      // Rezept-Entwurf aus dem OCR-Text; strukturierte Zutaten folgen in S3.
+      const recipe = await this.db.recipe.create({
+        data: {
+          title: scan.proposal?.title || scan.title || "Aus Scan",
+          status: "draft",
+          steps: toPrismaJsonValue([]),
+          notes: scan.ocrText,
+          sourceScanId: id,
+        },
+      });
+      targetType = "recipe";
+      targetId = recipe.id;
     }
 
     await this.db.scanDocument.update({

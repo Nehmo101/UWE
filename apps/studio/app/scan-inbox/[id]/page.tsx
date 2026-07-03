@@ -17,6 +17,7 @@ import {
   archiveScanAction,
   autoAnalyzeAction,
   fileScanAction,
+  finalizeScanAction,
   rejectScanAction,
 } from "../../scan-inbox-actions";
 
@@ -135,6 +136,14 @@ export default async function ScanDetailPage({ params }: Props) {
           Auto-OCR nutzt den PDF-Textlayer oder einen lokalen RTX-Vision-Connector. Ohne Connector
           wird der Scan auf „Wartet auf RTX“ gesetzt.
         </p>
+        {scan.status === "analyzing" ? (
+          <form action={finalizeScanAction} className="uwe-inline-actions" style={{ marginTop: "0.5rem" }}>
+            <input type="hidden" name="id" value={scan.id} />
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+              Vision-Ergebnis abholen
+            </button>
+          </form>
+        ) : null}
       </section>
 
       {entries.length > 0 && (
