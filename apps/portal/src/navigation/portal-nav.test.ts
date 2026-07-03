@@ -64,7 +64,8 @@ describe("portal navigation (login-first)", () => {
     assert.equal(items.find((item) => item.id === "portal-world-npcs")?.href, "/auth/worlds/terra/npcs");
     assert.equal(items.find((item) => item.id === "portal-world-graph")?.href, "/auth/worlds/terra/graph");
     assert.equal(items.find((item) => item.id === "portal-world-sessions")?.href, "/auth/worlds/terra/sessions");
-    assert.equal(items.find((item) => item.id === "portal-world-handouts")?.href, "/auth/worlds/terra/assets");
+    assert.equal(items.find((item) => item.id === "portal-world-handouts")?.href, "/auth/worlds/terra/handouts");
+    assert.equal(items.find((item) => item.id === "portal-world-gallery")?.href, "/auth/worlds/terra/assets");
     assert.equal(items.find((item) => item.id === "portal-world-soundboard")?.href, "/auth/worlds/terra/soundboard");
     assert.equal(items.find((item) => item.id === "portal-world-atlas")?.href, "/auth/worlds/terra/atlas");
   });
@@ -80,6 +81,13 @@ describe("portal navigation (login-first)", () => {
     const assetsSidebar = portalSidebar("/auth/worlds/terra/assets", "terra");
     assert.ok(
       assetsSidebar
+        .flatMap((group) => group.items)
+        .some((item) => item.id === "portal-world-gallery" && item.active),
+    );
+
+    const handoutsSidebar = portalSidebar("/auth/worlds/terra/handouts", "terra");
+    assert.ok(
+      handoutsSidebar
         .flatMap((group) => group.items)
         .some((item) => item.id === "portal-world-handouts" && item.active),
     );
