@@ -59,8 +59,8 @@ uwe_host_run_systemctl start
 uwe_host_info "UWE gestartet."
 
 LAN_IP="$(uwe_host_get_lan_ip)"
-STUDIO_PORT="${STUDIO_PORT:-3000}"
-PORTAL_PORT="${PORTAL_PORT:-3001}"
+STUDIO_PORT="${STUDIO_PORT:-${UWE_DEFAULT_STUDIO_PORT}}"
+PORTAL_PORT="${PORTAL_PORT:-${UWE_DEFAULT_PORTAL_PORT}}"
 echo ""
 echo "Studio:  http://127.0.0.1:${STUDIO_PORT}/"
 echo "Portal:  http://127.0.0.1:${PORTAL_PORT}/"

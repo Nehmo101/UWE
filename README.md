@@ -150,8 +150,6 @@ Optional: UFW — falls aktiv, öffnet das Script Port `3000/tcp` für Studio im
 cd /opt/uwe
 git pull   # falls noch nicht geklont
 sudo bash ./deploy/scripts/setup-uwe-host.sh
-# oder:
-sudo bash ./deploy/scripts/uwe-host-setup.sh
 ```
 
 Danach ist UWE lokal und im LAN erreichbar, z. B.:

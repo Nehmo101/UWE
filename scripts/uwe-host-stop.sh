@@ -8,8 +8,8 @@ source "$SCRIPT_DIR/uwe-host-lib.sh"
 
 cd "$UWE_HOME"
 uwe_host_load_env 2>/dev/null || true
-STUDIO_PORT="${STUDIO_PORT:-3000}"
-PORTAL_PORT="${PORTAL_PORT:-3001}"
+STUDIO_PORT="${STUDIO_PORT:-${UWE_DEFAULT_STUDIO_PORT}}"
+PORTAL_PORT="${PORTAL_PORT:-${UWE_DEFAULT_PORTAL_PORT}}"
 
 stopped=0
 

@@ -7,17 +7,21 @@ set -euo pipefail
 _uwe_host_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UWE_HOME="${UWE_HOME:-$(cd "$_uwe_host_lib_dir/.." && pwd)}"
 
-# Official production paths
-UWE_ENV_FILE="${UWE_ENV_FILE:-/etc/uwe/uwe.env}"
-UWE_DATA_DIR="${UWE_DATA_DIR:-/var/lib/uwe}"
-UWE_LOG_DIR="${UWE_LOG_DIR:-/var/log/uwe}"
-UWE_BACKUP_DIR="${UWE_BACKUP_DIR:-/var/backups/uwe}"
+# Shared defaults for paths/ports/unit names — single source of truth.
+# shellcheck source=../deploy/scripts/lib/uwe-host-constants.sh
+source "$UWE_HOME/deploy/scripts/lib/uwe-host-constants.sh"
+
+# Official production paths (overridable via environment)
+UWE_ENV_FILE="${UWE_ENV_FILE:-${UWE_DEFAULT_ENV_FILE}}"
+UWE_DATA_DIR="${UWE_DATA_DIR:-${UWE_DEFAULT_DATA_DIR}}"
+UWE_LOG_DIR="${UWE_LOG_DIR:-${UWE_DEFAULT_LOG_DIR}}"
+UWE_BACKUP_DIR="${UWE_BACKUP_DIR:-${UWE_DEFAULT_BACKUP_DIR}}"
 SETUP_SCRIPT="${SETUP_SCRIPT:-$UWE_HOME/deploy/scripts/setup-uwe-host.sh}"
 
-STUDIO_PORT="${STUDIO_PORT:-3000}"
-PORTAL_PORT="${PORTAL_PORT:-3001}"
-SYSTEMD_UNIT="${SYSTEMD_UNIT:-uwe.service}"
-LEGACY_SYSTEMD_UNIT="${LEGACY_SYSTEMD_UNIT:-uwe-host.service}"
+STUDIO_PORT="${STUDIO_PORT:-${UWE_DEFAULT_STUDIO_PORT}}"
+PORTAL_PORT="${PORTAL_PORT:-${UWE_DEFAULT_PORTAL_PORT}}"
+SYSTEMD_UNIT="${SYSTEMD_UNIT:-${UWE_DEFAULT_SYSTEMD_UNIT}}"
+LEGACY_SYSTEMD_UNIT="${LEGACY_SYSTEMD_UNIT:-${UWE_DEFAULT_LEGACY_SYSTEMD_UNIT}}"
 
 uwe_host_info() {
   echo "==> $*"
@@ -48,8 +52,8 @@ uwe_host_load_env() {
     source "$UWE_ENV_FILE"
     set +a
     export UWE_HOME
-    STUDIO_PORT="${STUDIO_PORT:-3000}"
-    PORTAL_PORT="${PORTAL_PORT:-3001}"
+    STUDIO_PORT="${STUDIO_PORT:-${UWE_DEFAULT_STUDIO_PORT}}"
+    PORTAL_PORT="${PORTAL_PORT:-${UWE_DEFAULT_PORTAL_PORT}}"
     return 0
   fi
   return 1

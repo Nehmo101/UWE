@@ -14,7 +14,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
-    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/uwe-host-setup.sh")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-constants.sh")));
     // Legacy uwe-host.service unit is archived as docs only — production uses uwe.service
     assert.ok(fs.existsSync(path.join(root, "docs/archive/legacy-uwe-host-service.md")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
@@ -132,8 +132,13 @@ describe("self-hosting setup", () => {
   });
 
   it("host scripts target uwe.service not uwe-host.service", () => {
+    const constants = fs.readFileSync(
+      path.join(root, "deploy/scripts/lib/uwe-host-constants.sh"),
+      "utf8",
+    );
+    assert.match(constants, /UWE_DEFAULT_SYSTEMD_UNIT="uwe\.service"/);
     const lib = fs.readFileSync(path.join(root, "scripts/uwe-host-lib.sh"), "utf8");
-    assert.match(lib, /SYSTEMD_UNIT="\$\{SYSTEMD_UNIT:-uwe\.service\}"/);
+    assert.match(lib, /SYSTEMD_UNIT="\$\{SYSTEMD_UNIT:-\$\{UWE_DEFAULT_SYSTEMD_UNIT\}\}"/);
     const start = fs.readFileSync(path.join(root, "scripts/uwe-host-start.sh"), "utf8");
     assert.doesNotMatch(start, /nohup.*uwe-host-run/);
   });
@@ -172,7 +177,7 @@ describe("self-hosting setup", () => {
     }
 
     execSync(
-      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/uwe-host-setup.sh deploy/scripts/start-uwe.sh deploy/scripts/uwe-host-update.sh deploy/scripts/uwe-host-update-trigger.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh deploy/scripts/lib/uwe-host-update-install.sh",
+      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/start-uwe.sh deploy/scripts/uwe-host-update.sh deploy/scripts/uwe-host-update-trigger.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh deploy/scripts/lib/uwe-host-update-install.sh",
       { cwd: root, stdio: "pipe" },
     );
   });
