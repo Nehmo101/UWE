@@ -22,8 +22,12 @@ Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Bra
 > Owner übernimmt Tage einzeln (`applyDraftEntryAction`, mit Rezept-ID-Validierung
 > gegen Halluzination) oder verwirft; RTX-offline/Parse-Fehler als Query-Banner.
 > Reiner Wochentag→Datum-Resolver `resolveDraftDate` (getestet); 61 Tests gesamt.
+> **Rezept-Bild-Serving-Route gebaut:** `/api/kitchen/recipes/[id]/image`
+> (Studio-API-Auth, Mime aus Dateiendung, 404 wenn Bild fehlt) + Resolver
+> `recipe-image-file.ts`; die Rezeptseite zeigt das Bild jetzt inline statt nur
+> des Storage-Keys.
 > **Offen:** K4 (volle Rezept-Extraktion aus Scans — das Scan→Recipe-Draft-Ziel
-> existiert bereits), Rezept-Bild-Serving-Route.
+> existiert bereits).
 
 ---
 

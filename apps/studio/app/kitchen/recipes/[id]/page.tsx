@@ -12,6 +12,7 @@ import {
 import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import {
   archiveRecipeAction,
   updateRecipeAction,
@@ -119,13 +120,15 @@ export default async function RecipeDetailPage({ params }: Props) {
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Rezept-Bild</h2>
         {recipe.imageStorageKey ? (
-          <p className="uwe-dashboard-muted">
-            Bild hinterlegt (Schlüssel <code>{recipe.imageStorageKey}</code>).
-          </p>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={studioApiUrl(`/api/kitchen/recipes/${recipe.id}/image`)}
+            alt={recipe.title}
+            style={{ maxWidth: "100%", height: "auto", borderRadius: "0.5rem" }}
+          />
         ) : (
           <p className="uwe-dashboard-muted">Noch kein Bild hinterlegt.</p>
         )}
-        {/* TODO(K3): Bild-Anzeige über eine Serving-Route ergänzen; hier nur Upload + storageKey. */}
         <form action={uploadRecipeImageAction} className="uwe-brain-create-form">
           <input type="hidden" name="id" value={recipe.id} />
           <label>
