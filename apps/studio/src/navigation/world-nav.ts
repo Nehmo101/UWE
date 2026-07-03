@@ -102,6 +102,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "notizen",
           "notes",
         ]),
+        item("world-questions", "Spielerfragen", `${base}/questions`, "message-circle", "Spiel", [
+          "fragen",
+          "spielerfragen",
+          "questions",
+          "dm",
+        ]),
         item("world-dungeons", "Dungeons", `${base}/dungeons`, "castle", "Spiel", [
           "dungeons",
           "räume",
