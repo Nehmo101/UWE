@@ -3,19 +3,23 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034  # constants are consumed by scripts that source this file
 
+_uwe_host_common_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=uwe-host-constants.sh
+source "$_uwe_host_common_dir/uwe-host-constants.sh"
+
 readonly SERVICE_USER="uwe"
 readonly SERVICE_GROUP="uwe"
-readonly UWE_ENV_DIR="/etc/uwe"
-readonly UWE_ENV_FILE="/etc/uwe/uwe.env"
-readonly UWE_DATA_DIR="/var/lib/uwe"
-readonly UWE_LOG_DIR="/var/log/uwe"
-readonly UWE_BACKUP_DIR="/var/backups/uwe"
-readonly UWE_DIAG_DIR="/var/log/uwe/diagnostics"
+readonly UWE_ENV_DIR="$UWE_DEFAULT_ENV_DIR"
+readonly UWE_ENV_FILE="$UWE_DEFAULT_ENV_FILE"
+readonly UWE_DATA_DIR="$UWE_DEFAULT_DATA_DIR"
+readonly UWE_LOG_DIR="$UWE_DEFAULT_LOG_DIR"
+readonly UWE_BACKUP_DIR="$UWE_DEFAULT_BACKUP_DIR"
+readonly UWE_DIAG_DIR="$UWE_DEFAULT_LOG_DIR/diagnostics"
 readonly DEFAULT_UWE_HOME="/opt/uwe"
-readonly STUDIO_PORT="3000"
-readonly PORTAL_PORT="3001"
-readonly SYSTEMD_UNIT="uwe.service"
-readonly LEGACY_SYSTEMD_UNIT="uwe-host.service"
+readonly STUDIO_PORT="$UWE_DEFAULT_STUDIO_PORT"
+readonly PORTAL_PORT="$UWE_DEFAULT_PORTAL_PORT"
+readonly SYSTEMD_UNIT="$UWE_DEFAULT_SYSTEMD_UNIT"
+readonly LEGACY_SYSTEMD_UNIT="$UWE_DEFAULT_LEGACY_SYSTEMD_UNIT"
 readonly DATABASE_WORKSPACE_FILTER="@uwe/database"
 readonly NODE_MAJOR="22"
 readonly DEFAULT_PNPM_VERSION="10.12.1"
