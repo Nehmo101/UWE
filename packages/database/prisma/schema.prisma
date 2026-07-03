@@ -3775,3 +3775,51 @@ model ScanDocument {
   @@index([worldId])
   @@map("scan_documents")
 }
+
+enum PromptTemplateCategory {
+  repo_audit
+  ui_fix
+  dnd_generator
+  import
+  refactor
+  other
+}
+
+model PromptTemplate {
+  id          String                  @id @default(cuid())
+  title       String
+  category    PromptTemplateCategory  @default(other)
+  description String                  @default("")
+  body        String
+  variables   Json?
+  tags        Json?
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("prompt_templates")
+}
+
+enum MaintenanceInterval {
+  once
+  weekly
+  biweekly
+  monthly
+  quarterly
+  yearly
+}
+
+model MaintenanceTask {
+  id         String              @id @default(cuid())
+  title      String
+  category   String              @default("")
+  interval   MaintenanceInterval @default(yearly)
+  lastDoneAt DateTime?           @map("last_done_at")
+  nextDueAt  DateTime?           @map("next_due_at")
+  notes      String              @default("")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@index([nextDueAt])
+  @@map("maintenance_tasks")
+}
