@@ -7,9 +7,15 @@ description: Implement Daily Admin OS modules in UWE Studio — Today dashboard,
 
 ## Product boundaries
 
-**In scope:** Today, Capture, Projects, Workshop, Contracts, Hardware, Life Brain (UI shell).
+**In scope:** Today, Capture, Projects, Workshop, Contracts, Hardware, Life Brain (UI shell), Scan Inbox (Dokumentenscanner), Küche/Essensplaner (recipes, meal plan, shopping list, pantry).
 
-**Out of scope (never build):** Family/kids module, cats, meal planner, household inventory, document vault, decision log, weekly review mode, purchases/warranty tracker.
+**Out of scope (never build):** Family/kids module, cats, decision log, weekly review mode, purchases/warranty tracker.
+
+> **Scope revision 2026-07-03 (owner decision):** meal planner, household inventory (pantry)
+> and document vault (as Scan Inbox with review-based filing) moved from never-build to
+> in-scope. Plans: `docs/rework/scan-inbox-plan.md`, `docs/rework/meal-planner-plan.md`,
+> roadmap `docs/rework/feature-roadmap-2026-07.md`. Older prompt docs still contain the
+> pre-revision boundary — this file wins.
 
 Source: `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`, `docs/daily-admin-os.md`.
 
