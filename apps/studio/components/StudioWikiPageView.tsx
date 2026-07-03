@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Collapsible,
+  GraphView,
   MetaPanel,
   SidebarSection,
   VisibilityBadge,
@@ -25,7 +26,7 @@ import {
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
-import { WikiContextPanel, WikiFlowGraph, WikiTiptapViewer } from "@/src/components/wiki";
+import { WikiContextPanel, WikiTiptapViewer } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 export interface StudioWikiPageViewProps {
@@ -248,11 +249,12 @@ export async function StudioWikiPageView({
                 Im großen Graph öffnen →
               </Link>
             </div>
-            <WikiFlowGraph
+            <GraphView
               nodes={pageGraph.nodes}
               edges={pageGraph.edges}
+              compact
+              focusPageId={rawPage.id}
               height={320}
-              className="rounded-lg border border-border"
             />
           </section>
         </div>
