@@ -1,7 +1,8 @@
 "use client";
 
+import { sanitizeHtml } from "@/src/lib/sanitize-html";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface RecipientOption {
   email: string;
@@ -39,6 +40,10 @@ export function MailSendForm({
   const [confirmDmOnly, setConfirmDmOnly] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const previewHtml = useMemo(
+    () => (initialBodyHtml ? sanitizeHtml(initialBodyHtml) : ""),
+    [initialBodyHtml],
+  );
 
   function toggleRecipient(email: string) {
     setSelected((current) => {
@@ -116,12 +121,12 @@ export function MailSendForm({
         />
       </label>
 
-      {initialBodyHtml && (
+      {previewHtml && (
         <details className="uwe-fieldset">
           <summary>HTML-Vorschau</summary>
           <div
             className="uwe-mail-preview"
-            dangerouslySetInnerHTML={{ __html: initialBodyHtml }}
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         </details>
       )}

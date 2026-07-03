@@ -42,7 +42,11 @@ const env = {
   SESSION_SECRET: `e2e-${"x".repeat(28)}`,
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
   STUDIO_API_TOKEN: `e2e-studio-api-${"z".repeat(20)}`,
+  UWE_MEDIA_SIGNING_SECRET: `e2e-media-${"m".repeat(24)}`,
   SESSION_COOKIE_SECURE: "false",
+  // E2E runs the production build over plain HTTP (SESSION_COOKIE_SECURE=false),
+  // which enforceEnvSafetyAtBoot() would otherwise abort. Test-only opt-out.
+  UWE_ALLOW_INSECURE_ENV: "1",
   // Studio session gate — matches production auth smoke (UWE login, no Cloudflare Access bypass).
   AUTH_REQUIRED: "true",
   PLAYER_PREVIEW_PUBLIC: "true",

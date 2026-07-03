@@ -187,7 +187,12 @@ export {
 export type { UweAppUrls, UweDeploymentModel } from "./runtime-config";
 
 export type { EnvValidationIssue, EnvValidationSeverity } from "./env-validation";
-export { hasBlockingEnvIssues, validateUweEnvironment } from "./env-validation";
+export {
+  BlockingEnvError,
+  enforceEnvSafetyAtBoot,
+  hasBlockingEnvIssues,
+  validateUweEnvironment,
+} from "./env-validation";
 
 export type { ApiOriginGuardResult } from "./api-origin-guard";
 export {

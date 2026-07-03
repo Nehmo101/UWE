@@ -161,3 +161,74 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
 export function hasBlockingEnvIssues(issues: EnvValidationIssue[]): boolean {
   return issues.some((issue) => issue.severity === "error");
 }
+
+/** Thrown at boot when production env has blocking (error-severity) issues. */
+export class BlockingEnvError extends Error {
+  readonly issues: EnvValidationIssue[];
+
+  constructor(issues: EnvValidationIssue[]) {
+    super(formatBlockingEnvMessage(issues));
+    this.name = "BlockingEnvError";
+    this.issues = issues;
+  }
+}
+
+function formatBlockingEnvMessage(issues: EnvValidationIssue[]): string {
+  const lines = issues.map(
+    (issue) => `- ${issue.envKey ?? issue.id}: ${issue.message}`,
+  );
+  return `Blockierende Env-Konfigurationsfehler (${issues.length}):\n${lines.join("\n")}`;
+}
+
+/**
+ * Escape hatch for controlled test setups (e.g. Playwright E2E runs a
+ * production build over plain HTTP with SESSION_COOKIE_SECURE=false).
+ * Never set this on a real deployment.
+ */
+export const ALLOW_INSECURE_ENV_VAR = "UWE_ALLOW_INSECURE_ENV";
+
+function isInsecureEnvAllowed(env: NodeJS.ProcessEnv): boolean {
+  return env[ALLOW_INSECURE_ENV_VAR]?.trim() === "1";
+}
+
+/**
+ * Boot-time enforcement of {@link validateUweEnvironment}:
+ *
+ * - NODE_ENV=production + error-severity issues → throws {@link BlockingEnvError}
+ *   (hard startup abort) naming the offending env variables.
+ * - dev/test, or production with UWE_ALLOW_INSECURE_ENV=1 → logs a warning only.
+ *
+ * Call from apps' instrumentation.ts (Node runtime) so `next start` refuses to
+ * boot with an unsafe production configuration.
+ */
+export function enforceEnvSafetyAtBoot(
+  env: NodeJS.ProcessEnv = process.env,
+  logger: Pick<Console, "warn" | "error"> = console,
+): EnvValidationIssue[] {
+  const issues = validateUweEnvironment(env);
+  const blocking = issues.filter((issue) => issue.severity === "error");
+
+  if (blocking.length === 0) {
+    return issues;
+  }
+
+  const message = formatBlockingEnvMessage(blocking);
+  const isProduction = env.NODE_ENV?.trim() === "production";
+
+  if (isProduction && !isInsecureEnvAllowed(env)) {
+    logger.error(
+      `[uwe][env] Start abgebrochen — ${message}\nBehebe die genannten Variablen oder setze (nur für Tests!) ${ALLOW_INSECURE_ENV_VAR}=1.`,
+    );
+    throw new BlockingEnvError(blocking);
+  }
+
+  if (isProduction) {
+    logger.warn(
+      `[uwe][env] WARNUNG: ${ALLOW_INSECURE_ENV_VAR}=1 gesetzt — blockierende Env-Fehler werden ignoriert. Nur für Test-Setups zulässig!\n${message}`,
+    );
+  } else {
+    logger.warn(`[uwe][env] ${message}\n(Nur Warnung — harter Abbruch erfolgt erst mit NODE_ENV=production.)`);
+  }
+
+  return issues;
+}
