@@ -315,6 +315,7 @@ enum JobType {
   agent_job
   calendar_sync
   research
+  briefing
 }
 
 enum JobStatus {

@@ -28,6 +28,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   synthesize_research: "Research-Report erstellen",
   summarize_mail: "Mail zusammenfassen",
   prioritize_mail: "Mail priorisieren",
+  generate_briefing: "Morning Briefing erstellen",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -85,10 +86,12 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Fasse die E-Mail in 2–3 Sätzen auf Deutsch zusammen. Keine erfundenen Details.",
   prioritize_mail:
     "Bewerte die E-Mail nach Priorität und Kategorie. Antworte NUR als JSON.",
+  generate_briefing:
+    "Erstelle ein kompaktes Morning Briefing auf Deutsch (Markdown): 1. Das Wichtigste heute (2–3 Sätze), 2. Termine & Fristen, 3. Offene Aufgaben & Warnungen, 4. Nachrichtenlage in 3–4 Stichpunkten. Nutze nur die mitgelieferten Fakten und News-Schlagzeilen — erfinde nichts.",
 };
 
 /** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */
-const LIFE_BRAIN_TASKS: AiTaskType[] = ["answer_life_question"];
+const LIFE_BRAIN_TASKS: AiTaskType[] = ["answer_life_question", "generate_briefing"];
 
 /** Tasks that run on either brain — neutral framing instead of campaign wording. */
 const CONTEXT_NEUTRAL_TASKS: AiTaskType[] = ["synthesize_research"];

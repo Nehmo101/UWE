@@ -342,6 +342,33 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
   }
 }
 
+export async function runBriefingJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    throw new AiGatewayAccessDeniedError(
+      "Authentifizierung erforderlich für das Morning Briefing (job.userId fehlt).",
+    );
+  }
+
+  const db = createPrismaClient();
+  try {
+    await ctx.jobs.updateProgress(ctx.jobId, 20, "Fakten & News sammeln");
+    await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+    const { generateMorningBriefing } = await import("./morning-briefing");
+    await ctx.jobs.updateProgress(ctx.jobId, 50, "Briefing erstellen");
+    const result = await generateMorningBriefing(db, gatewayUser);
+
+    return {
+      documentId: result.documentId,
+      title: result.title,
+      newsCount: result.newsCount,
+    };
+  } finally {
+    await db.$disconnect();
+  }
+}
+
 export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
   const payload = (ctx.job.payload ?? {}) as { feedId?: string; worldId?: string };
   if (!payload.feedId) {

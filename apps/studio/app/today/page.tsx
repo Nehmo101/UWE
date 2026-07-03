@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { formatEuroFromCents, prisma } from "@uwe/database/server";
+import { createLifeAdminService, formatEuroFromCents, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader } from "@/src/components/shell";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
+import { generateMorningBriefingAction } from "../briefing-actions";
 import { TodayDashboardClient } from "./TodayDashboardClient";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -10,14 +11,48 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
 });
 
+async function getLatestBriefing() {
+  const docs = await createLifeAdminService(prisma).listPersonalBrainDocuments({ limit: 50 });
+  return docs.find((doc) => doc.title.startsWith("Morning Briefing")) ?? null;
+}
+
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
-  const data = await getTodayDashboardData(prisma, { useMockInference });
+  const [data, briefing] = await Promise.all([
+    getTodayDashboardData(prisma, { useMockInference }),
+    getLatestBriefing(),
+  ]);
 
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
       <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
       <TodayDashboardClient data={data} />
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Morning Briefing</h2>
+        {briefing ? (
+          <>
+            <p className="uwe-dashboard-muted">
+              {briefing.title} · aktualisiert {DATE_FORMAT.format(briefing.updatedAt)}
+            </p>
+            <p style={{ whiteSpace: "pre-wrap" }}>{briefing.content}</p>
+          </>
+        ) : (
+          <p className="uwe-dashboard-muted">
+            Noch kein Briefing erstellt. Fasst Termine, Fristen, Aufgaben und die Nachrichtenlage
+            lokal per KI zusammen.
+          </p>
+        )}
+        <form action={generateMorningBriefingAction}>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+            {briefing ? "Briefing neu erstellen" : "Briefing jetzt erstellen"}
+          </button>
+        </form>
+        <p className="uwe-dashboard-muted">
+          Läuft als Job auf der lokalen RTX — Fortschritt unter{" "}
+          <Link href="/jobs">Jobs</Link>.
+        </p>
+      </section>
 
       <div className="uwe-v2-stat-grid">
         <section className="uwe-v2-card uwe-v2-card-padded">
