@@ -7,6 +7,14 @@ Zielvorschlag → **Bestätigung durch den Owner** → Einsortierung. Niemals Au
 OCR irrt, Handschrift ist unsicher, Dokumente sind sensibel, Kanon darf nicht
 versehentlich falsch werden.
 
+> **Umsetzungsstand 2026-07-03:** S0 (Vision-Enabler) + S1-Kern gebaut.
+> S0: Connector-Capability `vision_local` + Job `vision_extract` + RTX-Executor.
+> S1-Package `@uwe/scan-inbox`: `ScanDocument`-Modell + pure Analyse
+> (`field-extraction`, `kind-detection`, `proposal-builder`, `analyze`) + Service
+> (create/applyAnalysis/file → Vertrag/Capture, waiting_for_rtx), 19 Tests inkl.
+> End-to-End Rechnung→Vertrag. **Offen:** Studio-UI (Upload, Inbox, Detail) +
+> OCR-Text-Rückschreiben aus der Connector-Queue; S2 (DnD-Modi); S3 (Rezept-Brücke).
+
 ---
 
 ## 1. Am Code verifizierte Design-Grundlagen
