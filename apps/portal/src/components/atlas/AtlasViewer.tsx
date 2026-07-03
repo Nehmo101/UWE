@@ -20,7 +20,8 @@ import {
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
-import { paintTerrainBlobs } from "@uwe/atlas/canvas-render";
+import { paintTerrainBlobs, drawVine } from "@uwe/atlas/canvas-render";
+import { buildVineLayout } from "@uwe/atlas/vine";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -37,7 +38,7 @@ export interface ViewerFeatureGeometry {
 
 export interface ViewerFeature {
   id?: string;
-  kind: "region" | "river" | "road" | "biome" | "relief" | "label" | "pin";
+  kind: "region" | "river" | "road" | "biome" | "relief" | "label" | "pin" | "vine";
   geometry: ViewerFeatureGeometry;
   style?: Record<string, unknown>;
   labelText?: string | null;
@@ -442,6 +443,20 @@ export function AtlasViewer({
     const sortedFeatures = [...features].sort((a, b) => (a.layer ?? 0) - (b.layer ?? 0));
     const hoveredKey = hovered?.key ?? null;
 
+    // Path corridors (roads/rivers/vines) kept clear of biome glyph scatter —
+    // same rule as the editor runtime (atlas.html scatterExclusions()).
+    const scatterExclusionList = features
+      .filter(
+        (f) =>
+          (f.kind === "road" || f.kind === "river" || f.kind === "vine") &&
+          f.geometry.type === "Path" &&
+          ((f.geometry.coordinates as [number, number][]) ?? []).length >= 2,
+      )
+      .map((f) => ({
+        path: f.geometry.coordinates as [number, number][],
+        width: f.kind === "road" ? 0.032 : f.kind === "vine" ? 0.034 : 0.026,
+      }));
+
     for (const feat of sortedFeatures) {
       const isHovered = feat._key === hoveredKey;
       ctx.save();
@@ -502,7 +517,7 @@ export function AtlasViewer({
             const density = bs?.density ?? 1.0;
             const seed = bs?.seed ?? hashKey(feat._key);
             const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
-            const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed);
+            const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed, scatterExclusionList);
             for (const sg of glyphs) {
               const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
               if (!glyph) continue;
@@ -592,7 +607,48 @@ export function AtlasViewer({
             ? (smoothPath(rawCoords, { segments: 12, tension: 0.5 }) as [number, number][])
             : rawCoords;
         if (coords.length >= 2) {
-          if (feat.kind === "road") {
+          if (feat.kind === "vine") {
+            // Ranke/Weltenwurzel: geteiltes Pseudo-3D-Rendering aus @uwe/atlas.
+            // buildVineLayout glättet selbst, daher rohe Koordinaten übergeben.
+            const vs = (feat.style ?? {}) as {
+              taperStart?: number; taperEnd?: number; coil?: number;
+              tendrils?: number; height?: number; seed?: number;
+            };
+            const layout = buildVineLayout(rawCoords, {
+              taperStart: vs.taperStart, taperEnd: vs.taperEnd, coil: vs.coil,
+              tendrils: vs.tendrils, height: vs.height, seed: vs.seed,
+            });
+            if (layout.spine.length >= 2) {
+              drawVine(ctx, layout, {
+                project: (c) => w2c(c[0], c[1]),
+                zoom,
+                trunk: isHovered ? "#2563eb" : "#5c4326",
+                coil: "#4a6741",
+                shadow: "rgba(26,16,8,0.18)",
+                selected: isHovered,
+              });
+              const cloud = BUILTIN_GLYPHS.find((g) => g.key === "cloud");
+              if (cloud) {
+                for (const pt of layout.aura.clouds) {
+                  const [gx, gy] = w2c(pt[0], pt[1]);
+                  const s = (13 * zoom) / 24;
+                  ctx.save();
+                  ctx.translate(gx, gy);
+                  ctx.scale(s, s);
+                  ctx.translate(-12, -12);
+                  ctx.globalAlpha = 0.65;
+                  ctx.strokeStyle = cloud.color;
+                  ctx.lineWidth = 1.5 / s;
+                  ctx.lineJoin = "round";
+                  ctx.lineCap = "round";
+                  ctx.beginPath();
+                  drawSvgPath(ctx, cloud.pathData);
+                  ctx.stroke();
+                  ctx.restore();
+                }
+              }
+            }
+          } else if (feat.kind === "road") {
             ctx.beginPath();
             const [sx, sy] = w2c(coords[0]![0], coords[0]![1]);
             ctx.moveTo(sx, sy);
