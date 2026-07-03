@@ -10,9 +10,11 @@ import {
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { runBulkAutoLinkAction } from "../quality-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ linked?: string }>;
 }
 
 interface CheckGroup {
@@ -73,8 +75,10 @@ function FindingList({ findings, emptyText }: { findings: WikiQualityFinding[]; 
   );
 }
 
-export default async function WorldQualityPage({ params }: Props) {
+export default async function WorldQualityPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { linked } = await searchParams;
+  const linkedCount = linked !== undefined ? Number.parseInt(linked, 10) : null;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -128,6 +132,14 @@ export default async function WorldQualityPage({ params }: Props) {
         summary="Pflege-Cockpit: findet unverlinkte Begriffe, dünne Seiten, NPCs ohne Fraktion/Ort, Orte ohne Karte, Quests ohne Status und mehrdeutige Aliase. Alles read-only — die Fundstellen verlinken direkt auf die betroffene Seite."
       />
 
+      {linkedCount !== null && !Number.isNaN(linkedCount) ? (
+        <p className="uwe-inspector-ok" role="status">
+          {linkedCount > 0
+            ? `✓ ${linkedCount} Verlinkung(en) ergänzt — rückgängig machbar über die Auto-Verlinkung.`
+            : "✓ Keine unverlinkten Begriffe gefunden — nichts zu tun."}
+        </p>
+      ) : null}
+
       <StatGrid
         stats={[
           { label: "Offene Punkte", value: openTotal },
@@ -145,6 +157,21 @@ export default async function WorldQualityPage({ params }: Props) {
           <FindingList findings={byCode.get(group.code) ?? []} emptyText={group.emptyText} />
         </section>
       ))}
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Bulk-Auto-Link</h2>
+        <p className="uwe-dashboard-muted">
+          Verlinkt alle unverlinkten Begriffe der Welt in einem Durchgang (nur
+          Auto-Verlinkung, keine Struktur-Änderung). Der Vorgang wird protokolliert
+          und ist über die Auto-Verlinkung rückgängig machbar.
+        </p>
+        <form action={runBulkAutoLinkAction} className="uwe-form-actions">
+          <input type="hidden" name="worldSlug" value={worldSlug} />
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+            Alle unverlinkten Begriffe automatisch verlinken
+          </button>
+        </form>
+      </section>
 
       <section className="uwe-v2-section">
         <p className="uwe-dashboard-muted">

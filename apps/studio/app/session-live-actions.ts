@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createGameSessionService,
+  createQuestLifecycleService,
   createSessionLiveService,
   GameSessionStatusEnum,
   prisma,
@@ -115,6 +116,28 @@ export async function appendSessionLiveNoteAction(input: {
   revalidatePath(`/worlds/${input.worldSlug}/sessions/${input.sessionId}/live`);
 
   return { notes };
+}
+
+export async function applyQuestStatusFromReviewAction(
+  formData: FormData,
+): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug") || "");
+  const sessionId = String(formData.get("sessionId") || "");
+  const pageId = String(formData.get("pageId") || "");
+  const status = String(formData.get("status") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  if (!pageId) {
+    throw new Error("Quest-Seite fehlt.");
+  }
+  if (status !== "completed" && status !== "failed") {
+    throw new Error("Ungültiger Quest-Status.");
+  }
+
+  await createQuestLifecycleService(prisma).updateQuestStatus(pageId, status);
+  revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}/review`);
+  redirect(`/worlds/${worldSlug}/sessions/${sessionId}/review?applied=1`);
 }
 
 export async function endSessionLiveModeAction(formData: FormData): Promise<void> {

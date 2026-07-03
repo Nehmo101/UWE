@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GameSessionStatusBadge } from "@uwe/shared-ui";
@@ -15,25 +16,63 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
-import { saveSessionRecapDraftAction } from "@/app/session-live-actions";
+import {
+  applyQuestStatusFromReviewAction,
+  saveSessionRecapDraftAction,
+} from "@/app/session-live-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; applied?: string }>;
 }
 
 const TIME_FORMAT = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" });
+
+function QuestStatusButtons({
+  worldSlug,
+  sessionId,
+  pageId,
+}: {
+  worldSlug: string;
+  sessionId: string;
+  pageId: string;
+}) {
+  return (
+    <span className="uwe-inline-forms">
+      <form action={applyQuestStatusFromReviewAction} className="uwe-inline-form">
+        <input type="hidden" name="worldSlug" value={worldSlug} />
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="pageId" value={pageId} />
+        <input type="hidden" name="status" value="completed" />
+        <button type="submit" className="uwe-v2-btn">
+          Als erledigt markieren
+        </button>
+      </form>
+      <form action={applyQuestStatusFromReviewAction} className="uwe-inline-form">
+        <input type="hidden" name="worldSlug" value={worldSlug} />
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="pageId" value={pageId} />
+        <input type="hidden" name="status" value="failed" />
+        <button type="submit" className="uwe-v2-btn">
+          Als gescheitert markieren
+        </button>
+      </form>
+    </span>
+  );
+}
 
 function ActionableList({
   title,
   entries,
   hrefFor,
   hint,
+  renderActions,
 }: {
   title: string;
   entries: SessionLiveEntryRecord[];
   hrefFor: (entry: SessionLiveEntryRecord) => string | null;
   hint: string;
+  renderActions?: (entry: SessionLiveEntryRecord) => ReactNode;
 }) {
   if (entries.length === 0) return null;
   return (
@@ -55,6 +94,7 @@ function ActionableList({
                   <Link href={href}>betroffene Seite öffnen →</Link>
                 </>
               ) : null}
+              {renderActions ? renderActions(entry) : null}
             </li>
           );
         })}
@@ -65,7 +105,7 @@ function ActionableList({
 
 export default async function SessionReviewPage({ params, searchParams }: Props) {
   const { worldSlug, sessionId } = await params;
-  const { saved } = await searchParams;
+  const { saved, applied } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -85,6 +125,11 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
     if (!entry.refPageId) return null;
     const page = pageById.get(entry.refPageId);
     return page ? buildPageUrl(worldSlug, page.type, page.slug) : null;
+  };
+  const questPageIdFor = (entry: SessionLiveEntryRecord): string | null => {
+    if (!entry.refPageId) return null;
+    const page = pageById.get(entry.refPageId);
+    return page && page.type === "quest" ? page.id : null;
   };
 
   const recapSuggestion = session.summaryDm?.trim() || buildRecapDraft(entries);
@@ -125,6 +170,12 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
         </p>
       ) : null}
 
+      {applied ? (
+        <p className="uwe-inspector-ok" role="status">
+          ✓ Quest-Status auf der referenzierten Seite gesetzt.
+        </p>
+      ) : null}
+
       {draft.total === 0 ? (
         <p className="uwe-dashboard-muted">
           Für diese Session wurden keine Live-Einträge vorgemerkt.
@@ -135,7 +186,18 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
         title="Quest-Änderungen"
         entries={draft.questUpdates}
         hrefFor={hrefFor}
-        hint="Setze den Quest-Status auf der jeweiligen Quest-Seite."
+        hint="Setze den Quest-Status auf der jeweiligen Quest-Seite — direkt hier oder auf der Seite selbst."
+        renderActions={(entry) => {
+          const questPageId = questPageIdFor(entry);
+          if (!questPageId) return null;
+          return (
+            <QuestStatusButtons
+              worldSlug={worldSlug}
+              sessionId={sessionId}
+              pageId={questPageId}
+            />
+          );
+        }}
       />
       <ActionableList
         title="Beute"
