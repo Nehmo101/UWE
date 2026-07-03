@@ -64,6 +64,28 @@ export async function searchOpen5eMonsters(
   }));
 }
 
+export interface Open5eMonsterByCr {
+  name: string;
+  slug: string;
+  cr: string;
+}
+
+/** Lists Open5e monsters of one challenge rating (for the encounter composer). */
+export async function listOpen5eMonstersByChallengeRating(
+  cr: string,
+  options: DndApiClientOptions = {},
+): Promise<Open5eMonsterByCr[]> {
+  if (options.open5eEnabled === false) return [];
+  const timeout = options.timeoutMs ?? 10000;
+  const url = `${OPEN5E_BASE}/monsters/?challenge_rating=${encodeURIComponent(cr)}&limit=50`;
+  const data = await fetchJson<Open5eListResponse>(url, timeout);
+  return data.results.slice(0, 50).map((item) => ({
+    name: item.name,
+    slug: item.slug,
+    cr,
+  }));
+}
+
 export async function searchOpen5eSpells(
   query: string,
   options: DndApiClientOptions = {},
@@ -221,6 +243,18 @@ export {
 } from "./equipment-format";
 export { formatOpen5eMonsterAsMarkdown } from "./statblock-format";
 export { buildEncounterMarkdown, type EncounterMonsterInput } from "./encounter-builder";
+export {
+  challengeRatingForXp,
+  ORDERED_CHALLENGE_RATINGS,
+  suggestCandidateChallengeRatings,
+  suggestEncounterComposition,
+  type EncounterCandidate,
+  type EncounterComposition,
+  type EncounterCompositionEntry,
+  type EncounterCompositionInput,
+  type EncounterStyle,
+  type EncounterTargetDifficulty,
+} from "./encounter-composer";
 export {
   analyzeEncounterXp,
   ENCOUNTER_DIFFICULTY_LABELS,

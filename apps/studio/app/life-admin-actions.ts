@@ -8,6 +8,7 @@ import type {
   PersonalProjectStatus,
 } from "@uwe/database/server";
 import {
+  createCalendarService,
   createLifeAdminService,
   createSettingsService,
   mergeHardwareRunbookMetadata,
@@ -137,6 +138,7 @@ export async function createContractAction(formData: FormData) {
     portalUrl: String(formData.get("portalUrl") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
   });
+  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
   redirect("/contracts");
 }
@@ -158,6 +160,7 @@ export async function updateContractAction(formData: FormData) {
     portalUrl: String(formData.get("portalUrl") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
   });
+  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
 }
 
@@ -165,6 +168,7 @@ export async function deleteContractAction(formData: FormData) {
   assertStudioTrusted();
 
   await lifeAdmin().deleteContractExpense(String(formData.get("id")));
+  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
 }
 

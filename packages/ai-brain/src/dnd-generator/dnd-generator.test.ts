@@ -130,7 +130,29 @@ describe("DnD Generator — prepare next session", () => {
     const text = serializePrepareNextSessionOutline(outline);
     assert.ok(text.includes("Offene Plots"));
     assert.ok(text.includes("Kanon-Warnungen"));
-    assert.ok(outline.canonWarnings.some((w) => w.includes("Terra")));
+    assert.ok(outline.canonWarnings.length > 0);
+    // Title fallback still finds NPCs/locations without page types.
+    assert.ok(outline.relevantNpcs.includes("Magister NPC"));
+    assert.ok(outline.relevantLocations.includes("Nepurga Turm"));
+  });
+
+  it("prefers page types over title guessing and derives encounters from plots", () => {
+    const outline = buildPrepareNextSessionOutline({
+      worldSlug: "terra",
+      openPlots: "Angriff der Kultisten droht\nVerhandlung mit dem Rat",
+      playerDecisions: "Gruppe hat den Magister verschont",
+      linkedPages: [
+        { title: "Grima", type: "npc" },
+        { title: "Silbermine", type: "location" },
+        { title: "Alter Vertrag", type: "handout" },
+      ],
+    });
+
+    assert.deepEqual(outline.relevantNpcs, ["Grima"]);
+    assert.deepEqual(outline.relevantLocations, ["Silbermine"]);
+    assert.ok(outline.encounterSuggestions.some((entry) => entry.includes("Kampf-Encounter")));
+    assert.ok(outline.encounterSuggestions.some((entry) => entry.includes("Soziale Szene")));
+    assert.ok(outline.playerKnowledge.some((entry) => entry.includes("Magister verschont")));
   });
 });
 

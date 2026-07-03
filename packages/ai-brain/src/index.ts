@@ -52,6 +52,11 @@ export {
   extractDmOnlyPhrases,
 } from "./privacy";
 export { AI_TASK_LABELS, buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
+export {
+  appendResearchSources,
+  buildResearchSynthesisPrompt,
+  type ResearchSourceInput,
+} from "./research-synthesis";
 export { createProvider, MockAiProvider, runAiTask } from "./providers/registry";
 export * from "./embeddings";
 export {

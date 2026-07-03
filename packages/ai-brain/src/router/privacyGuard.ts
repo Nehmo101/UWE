@@ -14,6 +14,7 @@ const CONTEXT_MODE_LABELS: Record<AiContextMode, string> = {
   current_object: "Aktuelles Objekt",
   current_object_plus_brain: "Objekt + Brain",
   personal_brain: "Persönliches Life-Brain",
+  mail: "Private E-Mail",
 };
 
 const PROVIDER_MODE_LABELS: Record<AiProviderMode, string> = {
@@ -42,7 +43,7 @@ export function validateProviderContextCombination(
 ): void {
   if (providerMode === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
     throw new AiPrivacyError(
-      `Cloud-KI darf das persönliche Life-Brain niemals erhalten. „${CONTEXT_MODE_LABELS[contextMode]}" ist lokal-exklusiv — kein Cloud-Routing erlaubt. Nutze lokale RTX.`,
+      `Cloud-KI darf private Inhalte niemals erhalten. „${CONTEXT_MODE_LABELS[contextMode]}" ist lokal-exklusiv — kein Cloud-Routing erlaubt. Nutze lokale RTX.`,
     );
   }
 }
@@ -57,7 +58,7 @@ export function validateResolvedRouteForContext(
 ): void {
   if (route === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
     throw new AiPrivacyError(
-      `Interner Datenschutzfehler: Cloud-Route für „${CONTEXT_MODE_LABELS[contextMode]}" blockiert. Persönlicher Life-Brain-Kontext darf nicht an Cloud-Provider gesendet werden.`,
+      `Interner Datenschutzfehler: Cloud-Route für „${CONTEXT_MODE_LABELS[contextMode]}" blockiert. Lokal-exklusiver Kontext darf nicht an Cloud-Provider gesendet werden.`,
     );
   }
 }
@@ -78,7 +79,8 @@ export function validateContextModeRequirements(
 
 /**
  * Enforces RTX requirement based on provider mode and context mode.
- * - personal_brain in auto mode: always requires RTX (no cloud fallback, privacy law).
+ * - Local-only modes (personal_brain, mail) in auto mode: always require RTX
+ *   (no cloud fallback, privacy law).
  * - explicit local_rtx: requires RTX regardless of context.
  * - DnD/world modes (brain, current_object, …) in auto mode: RTX preferred,
  *   cloud fallback allowed when RTX is offline (handled by gateway policy).
@@ -90,7 +92,7 @@ export function validateLocalRtxRequired(
 ): void {
   const needsRtx =
     providerMode === "local_rtx" ||
-    (providerMode === "auto" && contextMode === "personal_brain");
+    (providerMode === "auto" && LOCAL_ONLY_CONTEXT_MODES.includes(contextMode));
 
   if (needsRtx && !rtxOnline) {
     const contextLabel = CONTEXT_MODE_LABELS[contextMode];

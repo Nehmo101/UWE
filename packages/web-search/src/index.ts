@@ -9,6 +9,10 @@ export interface SearxngSearchOptions {
   query: string;
   limit?: number;
   timeoutMs?: number;
+  /** SearXNG category filter, e.g. "news". */
+  categories?: string;
+  /** SearXNG time range filter, e.g. "day" for today's results. */
+  timeRange?: "day" | "week" | "month" | "year";
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -30,6 +34,12 @@ export async function searchSearxng(options: SearxngSearchOptions): Promise<WebS
     url.searchParams.set("q", options.query);
     url.searchParams.set("format", "json");
     url.searchParams.set("language", "de-DE");
+    if (options.categories) {
+      url.searchParams.set("categories", options.categories);
+    }
+    if (options.timeRange) {
+      url.searchParams.set("time_range", options.timeRange);
+    }
 
     const response = await fetch(url, {
       signal: controller.signal,

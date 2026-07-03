@@ -83,7 +83,7 @@ import type {
 
 } from "./types";
 
-import { AiRouterError } from "./types";
+import { AiRouterError, LOCAL_ONLY_CONTEXT_MODES } from "./types";
 
 import {
   getCookbookRoutingContext,
@@ -131,6 +131,9 @@ export interface AiRouterDeps {
 const GENERAL_CHAT_SYSTEM =
 
   "Du bist ein hilfreicher Assistent für Dungeon Master. Antworte auf Deutsch, klar und prägnant.";
+
+const MAIL_SYSTEM =
+  "Du bist der lokale Mail-Assistent von UWE. Die E-Mail-Inhalte sind privat und verlassen niemals das lokale System. Antworte auf Deutsch, präzise und ohne erfundene Fakten.";
 
 
 
@@ -232,7 +235,18 @@ function buildRouterPrompts(
   if (contextMode === "personal_brain") {
     return {
       systemPrompt: buildTaskSystemPrompt(request.taskType),
-      userPrompt: buildTaskPrompt(request.taskType, safeContext),
+      userPrompt: buildTaskPrompt(request.taskType, safeContext, request.userPrompt),
+    };
+  }
+
+  if (contextMode === "mail") {
+    const userText = request.userPrompt?.trim();
+    if (!userText) {
+      throw new AiRouterError("Mail-Kontext erfordert eine Nutzer-Nachricht mit dem Mail-Inhalt.");
+    }
+    return {
+      systemPrompt: MAIL_SYSTEM,
+      userPrompt: userText,
     };
   }
 
@@ -610,10 +624,11 @@ export async function routeAiRequest(
 
 
 
-  // personal_brain is already blocked upstream; DnD modes may go to cloud when policy allows.
+  // Local-only modes (personal_brain, mail) are already blocked upstream;
+  // DnD modes may go to cloud when policy allows.
   validateProviderForContext(resolution.providerId, context, {
     ...settings,
-    allowLocalContextOnCloud: request.contextMode !== "personal_brain",
+    allowLocalContextOnCloud: !LOCAL_ONLY_CONTEXT_MODES.includes(request.contextMode),
   });
 
 

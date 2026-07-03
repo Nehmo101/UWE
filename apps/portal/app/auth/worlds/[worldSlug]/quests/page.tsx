@@ -13,7 +13,15 @@ import {
   QUEST_LIFECYCLE_LABELS,
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
+import {
+  createQuestFlagService,
+  QUEST_PRIORITIES,
+  QUEST_PRIORITY_LABELS,
+  type QuestFlagView,
+  type QuestPriority,
+} from "@uwe/player-hub";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { setQuestPriorityAction } from "@/app/player-hub-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -56,16 +64,28 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
 
   const statusFilter = parseStatusFilter(statusParam);
 
+  const viewerId = ctx.previewAsUserId ?? ctx.user?.id ?? null;
+  const canFlag = Boolean(ctx.user) && !ctx.previewAsUserId;
+
   const db = createPrismaClient();
   const auth = createAuthService(db);
 
   let quests;
+  let flags: Map<string, QuestFlagView> = new Map();
   try {
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     quests = pages.filter((page) => page.type === "quest");
+    if (viewerId && quests.length > 0) {
+      flags = await createQuestFlagService(db).listForUser(
+        viewerId,
+        quests.map((page) => page.id),
+      );
+    }
   } finally {
     await db.$disconnect();
   }
+
+  const priorityRank: Record<QuestPriority, number> = { high: 0, normal: 1, low: 2 };
 
   const query = q?.trim().toLocaleLowerCase("de") ?? "";
   const filtered = quests
@@ -78,6 +98,11 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
         .join(" ")
         .toLocaleLowerCase("de");
       return haystack.includes(query);
+    })
+    .sort((a, b) => {
+      const aRank = priorityRank[flags.get(a.id)?.priority ?? "normal"];
+      const bRank = priorityRank[flags.get(b.id)?.priority ?? "normal"];
+      return aRank - bRank;
     });
 
   const basePath = `/auth/worlds/${worldSlug}/quests`;
@@ -135,19 +160,45 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
       />
 
       <ul className="auth-page-list">
-        {filtered.map((page) => (
-          <li key={page.id}>
-            <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
-              <strong>{page.title}</strong>
-              <span className="auth-page-list-badges">
-                <PageTypeBadge type={page.type} />
-                <VisibilityBadge visibility={page.visibility} />
-                <QuestStatusBadge status={page.questStatus ?? null} />
-              </span>
-              {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
-            </Link>
-          </li>
-        ))}
+        {filtered.map((page) => {
+          const flag = flags.get(page.id);
+          const priority = flag?.priority ?? "normal";
+          return (
+            <li key={page.id}>
+              <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
+                <strong>
+                  {priority === "high" && <span aria-label="Wichtig">⭐ </span>}
+                  {page.title}
+                </strong>
+                <span className="auth-page-list-badges">
+                  <PageTypeBadge type={page.type} />
+                  <VisibilityBadge visibility={page.visibility} />
+                  <QuestStatusBadge status={page.questStatus ?? null} />
+                </span>
+                {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
+              </Link>
+              {canFlag && (
+                <form action={setQuestPriorityAction} className="auth-inline-form">
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="pageId" value={page.id} />
+                  <label className="auth-muted">
+                    Meine Priorität:{" "}
+                    <select name="priority" defaultValue={priority}>
+                      {QUEST_PRIORITIES.map((value) => (
+                        <option key={value} value={value}>
+                          {QUEST_PRIORITY_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>{" "}
+                  <button type="submit" className="auth-inline-button">
+                    Speichern
+                  </button>
+                </form>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {filtered.length === 0 && (

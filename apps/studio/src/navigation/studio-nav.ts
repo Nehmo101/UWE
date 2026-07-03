@@ -121,6 +121,18 @@ export const KNOWLEDGE_NAV: NavGroup[] = [
         source: "studio",
         keywords: ["life", "brain", "personal", "rtx"],
       },
+      {
+        id: "knowledge-life-brain-chat",
+        label: "Life-Brain Chat",
+        href: "/life-brain/chat",
+        icon: "message-circle",
+        group: KNOWLEDGE,
+        section: KNOWLEDGE,
+        permission: ["owner"],
+        status: "active",
+        source: "studio",
+        keywords: ["life", "brain", "chat", "frage", "lokal", "rtx"],
+      },
     ],
   },
 ];

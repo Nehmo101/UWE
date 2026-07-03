@@ -315,6 +315,7 @@ enum JobType {
   agent_job
   calendar_sync
   research
+  briefing
 }
 
 enum JobStatus {
@@ -521,6 +522,8 @@ model User {
   worldMemberships    WorldMembership[]
   pageAccess          PagePlayerAccess[]
   sessionUnlocks      SessionUnlock[]
+  playerQuestFlags      PlayerQuestFlag[]
+  sessionAvailabilities SessionAvailability[]
   playerNotes         PlayerNote[]
   aiRuns              AiRun[]
   mailRecipients      MailRecipient[]
@@ -614,6 +617,38 @@ model PagePlayerAccess {
   @@map("page_player_access")
 }
 
+model PlayerQuestFlag {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  userId    String   @map("user_id")
+  priority  String   @default("normal")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@map("player_quest_flags")
+}
+
+model SessionAvailability {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  userId    String   @map("user_id")
+  status    String   @default("maybe")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("session_availabilities")
+}
+
 model SessionUnlock {
   id           String   @id @default(cuid())
   pageId       String   @map("page_id")
@@ -680,6 +715,7 @@ model World {
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
   importJobs           ImportJob[]
+  rollTables           RollTable[]
 
   @@map("worlds")
 }
@@ -739,6 +775,7 @@ model Page {
   incomingLinks    PageLink[]         @relation("TargetPage")
   playerAccess       PagePlayerAccess[]
   sessionUnlocks     SessionUnlock[]
+  playerQuestFlags    PlayerQuestFlag[]
   gameSessionLinks       GameSessionPageLink[]
   soundboardButtonLinks  SoundboardButtonPageLink[]
   assetPageLinks         AssetPageLink[]
@@ -984,6 +1021,7 @@ model GameSession {
   brainFacts     BrainFact[]
   aiRuns         AiRun[]
   calendarEvents CalendarEvent[]
+  availabilities SessionAvailability[]
   worldEvents    WorldEvent[]
 
   @@index([worldId, sessionNumber])
@@ -3152,6 +3190,23 @@ enum ResearchContextMode {
   dnd_brain
   life_brain
   open_web
+}
+
+model RollTable {
+  id        String   @id @default(cuid())
+  worldId   String   @map("world_id")
+  name      String
+  category  String   @default("custom")
+  dice      String?
+  entries   Json
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId, category])
+  @@map("roll_tables")
 }
 
 model ResearchSession {

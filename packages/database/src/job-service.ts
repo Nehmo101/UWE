@@ -23,6 +23,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   agent_job: "Agent-Job",
   calendar_sync: "Kalender-Sync",
   research: "Deep Research",
+  briefing: "Morning Briefing",
 };
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -47,6 +48,7 @@ export const RETRYABLE_JOB_TYPES = new Set<JobType>([
   "agent_job",
   "calendar_sync",
   "research",
+  "briefing",
 ]);
 
 export interface EnqueueJobInput {

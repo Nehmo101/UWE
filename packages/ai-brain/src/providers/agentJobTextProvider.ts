@@ -1,16 +1,21 @@
 /**
- * Pluggable async text provider via GitHub Agent Jobs.
+ * Async text provider via the UWE job queue.
  *
- * **Scope note:** `agent_job` in UWE targets repo/dev automation (`dev_agent_job`),
- * not in-app campaign lore. Atlas lore text uses `runBrainAction` / RTX / Cloud LLM.
- * This module documents the future hook if a dedicated async lore worker is added.
+ * **Scope note:** `agent_job` / `dev_agent_job` targets repo/dev automation,
+ * not in-app campaign lore. Async lore drafts run through the regular
+ * `ai_run` queue (deferredAiPrompt) instead: the job waits for the local RTX
+ * and surfaces its result as an AI run — never auto-applied to canon.
  */
+
+import { createJobService, prisma, type PrismaClient } from "@uwe/database/server";
 
 export interface AgentJobTextRequest {
   prompt: string;
   taskType: string;
   worldSlug?: string;
   pageSlug?: string;
+  /** Required for gateway permission/budget checks when the job runs. */
+  userId?: string | null;
 }
 
 export interface AgentJobTextEnqueueResult {
@@ -18,13 +23,33 @@ export interface AgentJobTextEnqueueResult {
 }
 
 /**
- * Enqueue lore/text generation through the agent_job pipeline.
- * Returns a job id; completed jobs should surface as AiRun proposals (never auto-apply).
+ * Enqueue async lore/text generation through the ai_run job pipeline.
+ * Returns a job id; the completed job surfaces as an AI result for review
+ * (never auto-apply).
  */
 export async function enqueueAgentJobTextDraft(
-  _request: AgentJobTextRequest,
+  request: AgentJobTextRequest,
+  db: PrismaClient = prisma,
 ): Promise<AgentJobTextEnqueueResult> {
-  throw new Error(
-    "Agent-Job Text-Provider ist noch nicht angebunden. Siehe docs/engineering/atlas-follow-ups.md",
-  );
+  if (!request.prompt.trim()) {
+    throw new Error("Async-Text-Entwurf erfordert einen Prompt.");
+  }
+
+  const jobs = createJobService(db);
+  const job = await jobs.enqueue({
+    type: "ai_run",
+    title: `Async-Text-Entwurf (${request.taskType})`,
+    worldSlug: request.worldSlug ?? null,
+    userId: request.userId ?? null,
+    payload: {
+      deferredAiPrompt: true,
+      prompt: request.prompt,
+      providerMode: "auto",
+      contextMode: request.worldSlug ? "brain" : "general_chat",
+      worldSlug: request.worldSlug,
+      pageSlug: request.pageSlug,
+    },
+  });
+
+  return { jobId: job.id };
 }

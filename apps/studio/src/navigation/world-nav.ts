@@ -84,6 +84,14 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "inventar",
           "währung",
         ]),
+        item("world-roll-tables", "Zufallstabellen", `${base}/roll-tables`, "dices", "Spiel", [
+          "zufallstabellen",
+          "loot",
+          "würfeln",
+          "roll",
+          "tables",
+          "namen",
+        ]),
         item("world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", "Spiel", [
           "notizen",
           "notes",

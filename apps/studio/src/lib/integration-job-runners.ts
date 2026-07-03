@@ -26,9 +26,11 @@ import {
 } from "@uwe/ai-brain";
 import type { ImageStudioTask } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
+import { appendResearchSources } from "@uwe/ai-brain";
 import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
 import type { JobRunnerContext } from "./job-runners";
 import { resolveGatewayUserById } from "./ai-gateway-user";
+import { synthesizeResearchReportViaGateway } from "./research-synthesis";
 
 async function assertNotCancelled(jobs: JobService, jobId: string): Promise<void> {
   if (await jobs.isCancelled(jobId)) {
@@ -283,8 +285,35 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
           limit: 8,
         });
 
-        await ctx.jobs.updateProgress(ctx.jobId, 70, "Report erstellen");
-        const reportMd = buildResearchReport(session.query, results);
+        await ctx.jobs.updateProgress(ctx.jobId, 55, "KI-Synthese erstellen");
+        await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+        // LLM synthesis with brain context; on failure (RTX offline, permission,
+        // budget) the plain source list stays available as fallback report.
+        let reportMd: string;
+        let synthesized = false;
+        try {
+          const synthesis = await synthesizeResearchReportViaGateway(db, {
+            user: gatewayUser,
+            query: session.query,
+            results,
+            contextMode: session.contextMode as "dnd_brain" | "life_brain" | "open_web",
+            worldId: session.worldId,
+            useMock: process.env.AI_USE_MOCK === "true",
+          });
+          reportMd = appendResearchSources(synthesis, results);
+          synthesized = true;
+        } catch (synthesisError) {
+          const reason =
+            synthesisError instanceof Error ? synthesisError.message : String(synthesisError);
+          reportMd = [
+            buildResearchReport(session.query, results),
+            "",
+            `> KI-Synthese nicht verfügbar: ${reason}`,
+          ].join("\n");
+        }
+
+        await ctx.jobs.updateProgress(ctx.jobId, 85, "Report speichern");
         await research.complete(
           session.id,
           reportMd,
@@ -295,17 +324,48 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
           })),
         );
 
-        return { sourceCount: results.length };
+        return { sourceCount: results.length, synthesized };
       },
     );
 
     await db.$disconnect();
-    return { sessionId: session.id, sourceCount: researchResult.sourceCount };
+    return {
+      sessionId: session.id,
+      sourceCount: researchResult.sourceCount,
+      synthesized: researchResult.synthesized,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await research.fail(session.id, message);
     await db.$disconnect();
     throw error;
+  }
+}
+
+export async function runBriefingJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
+  if (!gatewayUser) {
+    throw new AiGatewayAccessDeniedError(
+      "Authentifizierung erforderlich für das Morning Briefing (job.userId fehlt).",
+    );
+  }
+
+  const db = createPrismaClient();
+  try {
+    await ctx.jobs.updateProgress(ctx.jobId, 20, "Fakten & News sammeln");
+    await assertNotCancelled(ctx.jobs, ctx.jobId);
+
+    const { generateMorningBriefing } = await import("./morning-briefing");
+    await ctx.jobs.updateProgress(ctx.jobId, 50, "Briefing erstellen");
+    const result = await generateMorningBriefing(db, gatewayUser);
+
+    return {
+      documentId: result.documentId,
+      title: result.title,
+      newsCount: result.newsCount,
+    };
+  } finally {
+    await db.$disconnect();
   }
 }
 
@@ -419,9 +479,18 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
       sessionsSynced = sessionResult.synced;
     }
 
+    const contractSync = await calendar.syncContractDeadlinesToCalendar();
+
     await calendar.markFeedSynced(feed.id, null);
     await db.$disconnect();
-    return { feedId: feed.id, imported, pushed, sessionsSynced, pruned };
+    return {
+      feedId: feed.id,
+      imported,
+      pushed,
+      sessionsSynced,
+      contractDeadlinesSynced: contractSync.synced,
+      pruned,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await calendar.markFeedSynced(feed.id, message);

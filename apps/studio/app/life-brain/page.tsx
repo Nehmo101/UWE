@@ -39,6 +39,11 @@ export default async function LifeBrainPage() {
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
+      <p>
+        <Link href="/life-brain/chat" className="uwe-v2-btn uwe-v2-btn-secondary">
+          Life-Brain Chat öffnen →
+        </Link>
+      </p>
 
       <LifeBrainIndexPanel />
       <LifeBrainSearchPanel />
