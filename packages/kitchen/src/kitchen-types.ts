@@ -120,6 +120,18 @@ export interface RecipeIngredientInput {
   sortIndex?: number;
 }
 
+/** Lagerort eines Vorrats-Items — spiegelt exakt das Prisma-Enum `PantryLocation`. */
+export type PantryLocation = "pantry" | "fridge" | "freezer" | "spices";
+
+export const PANTRY_LOCATIONS: PantryLocation[] = ["pantry", "fridge", "freezer", "spices"];
+
+export const PANTRY_LOCATION_LABELS: Record<PantryLocation, string> = {
+  pantry: "Vorratskammer",
+  fridge: "Kühlschrank",
+  freezer: "Tiefkühl",
+  spices: "Gewürze",
+};
+
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
 export type MealEntryType = "recipe" | "leftovers" | "eating_out" | "routine" | "note";

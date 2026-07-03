@@ -15,3 +15,5 @@ export * from "./ingredient-merge";
 export * from "./recipe-service";
 export * from "./meal-plan-service";
 export * from "./shopping-service";
+export * from "./pantry-service";
+export * from "./ai-suggest";

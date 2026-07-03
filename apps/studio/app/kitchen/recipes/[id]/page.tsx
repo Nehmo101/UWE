@@ -12,7 +12,11 @@ import {
 import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
-import { archiveRecipeAction, updateRecipeAction } from "../../../kitchen-actions";
+import {
+  archiveRecipeAction,
+  updateRecipeAction,
+  uploadRecipeImageAction,
+} from "../../../kitchen-actions";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -113,8 +117,29 @@ export default async function RecipeDetailPage({ params }: Props) {
       )}
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Rezept-Bild</h2>
+        {recipe.imageStorageKey ? (
+          <p className="uwe-dashboard-muted">
+            Bild hinterlegt (Schlüssel <code>{recipe.imageStorageKey}</code>).
+          </p>
+        ) : (
+          <p className="uwe-dashboard-muted">Noch kein Bild hinterlegt.</p>
+        )}
+        {/* TODO(K3): Bild-Anzeige über eine Serving-Route ergänzen; hier nur Upload + storageKey. */}
+        <form action={uploadRecipeImageAction} className="uwe-brain-create-form">
+          <input type="hidden" name="id" value={recipe.id} />
+          <label>
+            Bild hochladen (PNG, JPEG, GIF, WebP)
+            <input name="image" type="file" accept="image/*" required />
+          </label>
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+            Bild speichern
+          </button>
+        </form>
+      </section>
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Rezept bearbeiten</h2>
-        {/* TODO(K1): Bild-Upload über @uwe/assets ergänzen (imageStorageKey). */}
         <form action={updateRecipeAction} className="uwe-brain-create-form">
           <input type="hidden" name="id" value={recipe.id} />
           <label>

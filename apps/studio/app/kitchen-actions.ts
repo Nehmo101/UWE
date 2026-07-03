@@ -3,14 +3,22 @@
 import {
   createKitchenService,
   createMealPlanService,
+  createPantryService,
   createShoppingService,
   parseIngredientLines,
+  type IngredientUnit,
   type MealEntryType,
   type MealSlot,
+  type PantryLocation,
   type RecipeInput,
   type RecipeStatus,
 } from "@uwe/kitchen";
-import { prisma } from "@uwe/database/server";
+import {
+  getSystemSettings,
+  prisma,
+  resolveEffectiveUploadsPath,
+  saveCaptureUploadFile,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -25,6 +33,10 @@ function mealPlan() {
 
 function shopping() {
   return createShoppingService(prisma);
+}
+
+function pantry() {
+  return createPantryService(prisma);
 }
 
 /** Standard-Grundausstattung, die beim Listen-Erzeugen mitkommt. */
@@ -52,6 +64,13 @@ function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!raw) return null;
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function parseLines(value: FormDataEntryValue | null): string[] {
@@ -198,4 +217,76 @@ export async function removeShoppingItemAction(formData: FormData) {
   await shopping().removeItem(String(formData.get("itemId")));
   revalidatePath("/kitchen/shopping");
   redirect(`/kitchen/shopping?list=${listId}`);
+}
+
+// ── Vorratskammer (K3) ────────────────────────────────────────────
+
+export async function createPantryItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await pantry().create({
+    name: String(formData.get("name") || "").trim(),
+    location: String(formData.get("location") || "pantry") as PantryLocation,
+    amount: parseOptionalFloat(formData.get("amount")),
+    unit: String(formData.get("unit") || "freeform") as IngredientUnit,
+    unitLabel: String(formData.get("unitLabel") || "").trim() || null,
+    expiresAt: parseOptionalDate(formData.get("expiresAt")),
+    notes: String(formData.get("notes") || ""),
+  });
+  revalidatePath("/kitchen/pantry");
+}
+
+export async function updatePantryItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await pantry().update(String(formData.get("id")), {
+    name: String(formData.get("name") || "").trim(),
+    location: String(formData.get("location") || "pantry") as PantryLocation,
+    amount: parseOptionalFloat(formData.get("amount")),
+    unit: String(formData.get("unit") || "freeform") as IngredientUnit,
+    unitLabel: String(formData.get("unitLabel") || "").trim() || null,
+    expiresAt: parseOptionalDate(formData.get("expiresAt")),
+    notes: String(formData.get("notes") || ""),
+  });
+  revalidatePath("/kitchen/pantry");
+}
+
+export async function removePantryItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await pantry().remove(String(formData.get("id")));
+  revalidatePath("/kitchen/pantry");
+}
+
+export async function markPantryLowStockAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const lowStock = String(formData.get("lowStock") || "") === "1";
+  await pantry().update(String(formData.get("id")), { lowStock });
+  revalidatePath("/kitchen/pantry");
+}
+
+// ── Rezept-Bild-Upload (K3) ───────────────────────────────────────
+
+export async function uploadRecipeImageAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const id = String(formData.get("id"));
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    return;
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const settings = await getSystemSettings();
+  const uploadsRoot = resolveEffectiveUploadsPath(settings);
+  const validated = saveCaptureUploadFile(buffer, {
+    originalFilename: file.name,
+    declaredMimeType: file.type,
+    uploadsRoot,
+    imagesOnly: true,
+  });
+
+  await kitchen().updateRecipe(id, { imageStorageKey: validated.storageKey });
+  revalidatePath(`/kitchen/recipes/${id}`);
 }
