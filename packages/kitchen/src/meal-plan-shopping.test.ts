@@ -99,4 +99,21 @@ describe("meal plan + shopping (integration)", () => {
     const toggled = await shopping.toggleItem(item.id);
     assert.equal(toggled.checked, true);
   });
+
+  it("persists and clears the AI week draft", async () => {
+    const meals = createMealPlanService(db);
+    const week = await meals.getOrCreateWeek(2026, 29, 3);
+
+    const stored = await meals.setAiDraft(week.id, {
+      summary: "Leichte Woche",
+      days: [{ day: "Montag", slot: "dinner", title: "Tomatensauce", recipeId }],
+    });
+    assert.deepEqual((stored.aiDraft as { summary: string }).summary, "Leichte Woche");
+
+    const reloaded = await meals.getWeek(2026, 29);
+    assert.equal((reloaded?.aiDraft as { days: unknown[] }).days.length, 1);
+
+    const cleared = await meals.setAiDraft(week.id, null);
+    assert.equal(cleared.aiDraft, null);
+  });
 });

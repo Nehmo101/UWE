@@ -15,9 +15,15 @@ Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Bra
 > `/kitchen/shopping`, pure Merge-Logik `ingredient-merge.ts`, ISO-Wochen, 26 Tests).
 > **K3 gebaut** (`pantry-service.ts` Vorratskammer + „Koche mit…", `ai-suggest.ts`
 > RTX-lokale Wochenvorschläge mit graceful degradation, Seite `/kitchen/pantry`,
-> Rezept-Bild-Upload; 57 Tests gesamt). **Offen:** K4 (volle Rezept-Extraktion aus
-> Scans — das Scan→Recipe-Draft-Ziel existiert bereits), Rezept-Bild-Serving-Route,
-> KI-Vorschlag-UI-Trigger.
+> Rezept-Bild-Upload; 57 Tests gesamt).
+> **KI-Vorschlag-UI-Trigger gebaut:** `MealPlanWeek.aiDraft`-Spalte (Migration
+> dual), `MealPlanService.setAiDraft`, „KI-Wochenvorschlag"-Button auf
+> `/kitchen/plan` → `suggestWeek` (Connector-Queue) → persistierter Draft →
+> Owner übernimmt Tage einzeln (`applyDraftEntryAction`, mit Rezept-ID-Validierung
+> gegen Halluzination) oder verwirft; RTX-offline/Parse-Fehler als Query-Banner.
+> Reiner Wochentag→Datum-Resolver `resolveDraftDate` (getestet); 61 Tests gesamt.
+> **Offen:** K4 (volle Rezept-Extraktion aus Scans — das Scan→Recipe-Draft-Ziel
+> existiert bereits), Rezept-Bild-Serving-Route.
 
 ---
 

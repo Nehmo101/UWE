@@ -379,7 +379,7 @@ export {
   type NavCategory,
 } from "./page-types";
 
-export { parseStringArray, toJsonArray, toPrismaJsonValue, withParsedArrays } from "./json-utils";
+export { jsonDbNull, parseStringArray, toJsonArray, toPrismaJsonValue, withParsedArrays } from "./json-utils";
 
 export {
   buildPageView,

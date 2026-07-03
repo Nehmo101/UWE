@@ -6,8 +6,12 @@ import {
   createPantryService,
   createShoppingService,
   parseIngredientLines,
+  suggestWeek,
   type IngredientUnit,
+  type KitchenAiPantryItem,
+  type KitchenAiRecipe,
   type MealEntryType,
+  type MealPlanGoals,
   type MealSlot,
   type PantryLocation,
   type RecipeInput,
@@ -173,6 +177,94 @@ export async function toggleMealCookedAction(formData: FormData) {
   assertStudioTrusted();
 
   await mealPlan().toggleCooked(String(formData.get("entryId")));
+  revalidatePath("/kitchen/plan");
+  redirect(planRedirect(formData));
+}
+
+// ── KI-Wochenvorschlag (K3, RTX-lokal) ────────────────────────────
+
+/**
+ * Fordert über die Connector-Queue (lokale RTX-Inferenz) einen KI-Wochen-
+ * vorschlag an und legt ihn als Entwurf auf der Woche ab. Nie Auto-Apply —
+ * der Owner übernimmt Einträge einzeln. Ist kein RTX-Connector online oder die
+ * Antwort unlesbar, wird der Grund als Query-Flag zurückgereicht.
+ */
+export async function suggestWeekAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
+  const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
+  const week = await mealPlan().getOrCreateWeek(isoYear, isoWeek);
+
+  const [recipes, pantryItems] = await Promise.all([
+    kitchen().listRecipes({ status: "active" }),
+    pantry().list(),
+  ]);
+
+  const aiRecipes: KitchenAiRecipe[] = recipes.map((recipe) => ({
+    id: recipe.id,
+    title: recipe.title,
+    tasteRating: recipe.tasteRating,
+    effortRating: recipe.effortRating,
+    durationMinutes: recipe.durationMinutes,
+  }));
+  const aiPantry: KitchenAiPantryItem[] = pantryItems.map((item) => ({
+    name: item.name,
+    location: item.location,
+    lowStock: item.lowStock,
+  }));
+
+  const result = await suggestWeek(prisma, {
+    recipes: aiRecipes,
+    pantry: aiPantry,
+    goals: (week.goals ?? undefined) as MealPlanGoals | undefined,
+  });
+
+  const base = planRedirect(formData);
+  const sep = base.includes("?") ? "&" : "?";
+  if (result.status !== "ok") {
+    redirect(`${base}${sep}ai=${result.status}`);
+  }
+  await mealPlan().setAiDraft(week.id, result.draft);
+  revalidatePath("/kitchen/plan");
+  redirect(`${base}${sep}ai=ok`);
+}
+
+/** Übernimmt einen einzelnen Tag des KI-Entwurfs als echten Wochenplan-Eintrag. */
+export async function applyDraftEntryAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
+  const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
+  const rawRecipeId = String(formData.get("recipeId") || "").trim() || null;
+  const date = parseOptionalDate(formData.get("date"));
+  if (!date) redirect(planRedirect(formData));
+
+  // Die KI kann eine nicht existierende Rezept-ID vorschlagen — validieren,
+  // sonst als reine Notiz übernehmen (kein FK-Verstoß).
+  const recipeId = rawRecipeId && (await kitchen().getRecipe(rawRecipeId)) ? rawRecipeId : null;
+
+  const week = await mealPlan().getOrCreateWeek(isoYear, isoWeek);
+  await mealPlan().setEntry({
+    weekId: week.id,
+    date,
+    slot: String(formData.get("slot") || "dinner") as MealSlot,
+    entryType: recipeId ? "recipe" : "note",
+    recipeId,
+    note: recipeId ? "" : String(formData.get("title") || ""),
+  });
+  revalidatePath("/kitchen/plan");
+  redirect(planRedirect(formData));
+}
+
+/** Verwirft den KI-Entwurf einer Woche. */
+export async function dismissWeekDraftAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
+  const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
+  const week = await mealPlan().getWeek(isoYear, isoWeek);
+  if (week) await mealPlan().setAiDraft(week.id, null);
   revalidatePath("/kitchen/plan");
   redirect(planRedirect(formData));
 }

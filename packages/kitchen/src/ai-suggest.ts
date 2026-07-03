@@ -66,6 +66,31 @@ export type WeekSuggestionResult =
   | { status: "parse_error"; error: string }
   | { status: "rtx_offline"; error: string };
 
+const WEEKDAY_INDEX: Record<string, number> = {
+  montag: 0,
+  dienstag: 1,
+  mittwoch: 2,
+  donnerstag: 3,
+  freitag: 4,
+  samstag: 5,
+  sonntag: 6,
+};
+
+/**
+ * Ordnet ein Freitext-Wochentags-Label („Montag", „Fr", „mittwoch") einem
+ * konkreten Datum der ISO-Woche zu. Reiner Helfer für die Draft-Übernahme.
+ * Nicht auflösbare Labels fallen auf den ersten Wochentag (Montag) zurück.
+ */
+export function resolveDraftDate(dayLabel: string, weekDates: readonly Date[]): Date {
+  const key = dayLabel.trim().toLowerCase();
+  for (const [name, index] of Object.entries(WEEKDAY_INDEX)) {
+    if (key === name || key === name.slice(0, 2)) {
+      return weekDates[index] ?? weekDates[0];
+    }
+  }
+  return weekDates[0];
+}
+
 // ── Reine Helfer (getestet) ───────────────────────────────────────────
 
 function goalsToLines(goals: MealPlanGoals): string[] {

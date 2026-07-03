@@ -3612,6 +3612,7 @@ model MealPlanWeek {
   isoWeek         Int      @map("iso_week")
   householdFactor Float    @default(2.5) @map("household_factor")
   goals           Json?
+  aiDraft         Json?    @map("ai_draft")
   notes           String   @default("")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import {
   buildKitchenAiContext,
   parseWeekSuggestion,
+  resolveDraftDate,
   type KitchenAiPantryItem,
   type KitchenAiRecipe,
 } from "./ai-suggest";
+import { datesOfIsoWeek } from "./meal-plan-service";
 
 const RECIPES: KitchenAiRecipe[] = [
   { id: "r1", title: "Tomatensauce", tags: ["schnell", "vegan"], tasteRating: 5, effortRating: 2 },
@@ -87,5 +89,25 @@ describe("parseWeekSuggestion (pure)", () => {
     assert.equal(parseWeekSuggestion("{}").status, "parse_error");
     assert.equal(parseWeekSuggestion("").status, "parse_error");
     assert.equal(parseWeekSuggestion("no json here").status, "parse_error");
+  });
+});
+
+describe("resolveDraftDate (pure)", () => {
+  // KW 27/2026: Montag 2026-06-29 … Sonntag 2026-07-05.
+  const week = datesOfIsoWeek(2026, 27);
+
+  it("maps German weekday names to the matching ISO-week date", () => {
+    assert.equal(resolveDraftDate("Montag", week).toISOString().slice(0, 10), "2026-06-29");
+    assert.equal(resolveDraftDate("freitag", week).toISOString().slice(0, 10), "2026-07-03");
+    assert.equal(resolveDraftDate("Sonntag", week).toISOString().slice(0, 10), "2026-07-05");
+  });
+
+  it("accepts two-letter abbreviations", () => {
+    assert.equal(resolveDraftDate("Di", week).toISOString().slice(0, 10), "2026-06-30");
+  });
+
+  it("falls back to Monday for unresolvable labels", () => {
+    assert.equal(resolveDraftDate("", week).toISOString().slice(0, 10), "2026-06-29");
+    assert.equal(resolveDraftDate("irgendwann", week).toISOString().slice(0, 10), "2026-06-29");
   });
 });

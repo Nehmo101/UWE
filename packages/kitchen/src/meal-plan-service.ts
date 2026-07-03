@@ -3,7 +3,8 @@
  * DB); der Service kapselt die Persistenz. Business-Logik lebt hier, nicht in der
  * Route (CLAUDE.md „Goldene Regel").
  */
-import { toPrismaJsonValue, type PrismaClient } from "@uwe/database/server";
+import { jsonDbNull, toPrismaJsonValue, type PrismaClient } from "@uwe/database/server";
+import type { WeekSuggestionDraft } from "./ai-suggest";
 import type { MealEntryType, MealPlanGoals, MealSlot } from "./kitchen-types";
 
 /** ISO-8601-Woche eines Datums (Montag = Wochenstart, Woche 1 enthält den 4. Januar). */
@@ -114,6 +115,19 @@ export class MealPlanService {
 
   async removeEntry(entryId: string) {
     await this.db.mealPlanEntry.delete({ where: { id: entryId } });
+  }
+
+  /**
+   * Persistiert (oder verwirft mit `null`) den KI-Wochenvorschlag-Entwurf für
+   * eine Woche. Der Entwurf wird nie automatisch übernommen — der Owner
+   * bestätigt einzelne Einträge über {@link setEntry}.
+   */
+  async setAiDraft(weekId: string, draft: WeekSuggestionDraft | null) {
+    return this.db.mealPlanWeek.update({
+      where: { id: weekId },
+      data: { aiDraft: draft === null ? jsonDbNull : toPrismaJsonValue(draft) },
+      include: WEEK_INCLUDE,
+    });
   }
 
   async toggleCooked(entryId: string) {

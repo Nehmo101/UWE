@@ -4,23 +4,34 @@ import {
   createMealPlanService,
   datesOfIsoWeek,
   isoWeekOf,
+  resolveDraftDate,
   MEAL_ENTRY_TYPE_LABELS,
   MEAL_SLOT_LABELS,
   MEAL_SLOTS,
+  type WeekSuggestionDraft,
 } from "@uwe/kitchen";
 import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import {
   addMealEntryAction,
+  applyDraftEntryAction,
+  dismissWeekDraftAction,
   generateShoppingListAction,
   removeMealEntryAction,
+  suggestWeekAction,
   toggleMealCookedAction,
 } from "@/app/kitchen-actions";
 
 interface Props {
-  searchParams: Promise<{ y?: string; w?: string }>;
+  searchParams: Promise<{ y?: string; w?: string; ai?: string }>;
 }
+
+const AI_STATUS_MESSAGES: Record<string, string> = {
+  rtx_offline: "Kein lokaler KI-Connector (RTX) online — Wochenvorschlag nicht verfügbar.",
+  parse_error: "Die KI-Antwort war unlesbar. Bitte erneut versuchen.",
+  ok: "KI-Wochenvorschlag erstellt — Einträge unten einzeln übernehmen.",
+};
 
 const DAY_FORMAT = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
 
@@ -32,7 +43,7 @@ function shiftWeek(isoYear: number, isoWeek: number, delta: number) {
 
 export default async function KitchenPlanPage({ searchParams }: Props) {
   await requireStudioAccess();
-  const { y, w } = await searchParams;
+  const { y, w, ai } = await searchParams;
 
   const now = isoWeekOf(new Date());
   const isoYear = Number.parseInt(y || "", 10) || now.isoYear;
@@ -58,6 +69,9 @@ export default async function KitchenPlanPage({ searchParams }: Props) {
   const next = shiftWeek(isoYear, isoWeek, 1);
   const hasEntries = (week?.entries.length ?? 0) > 0;
 
+  const aiDraft = (week?.aiDraft as WeekSuggestionDraft | null) ?? null;
+  const aiMessage = ai ? AI_STATUS_MESSAGES[ai] : undefined;
+
   return (
     <StudioShell
       breadcrumb={
@@ -70,16 +84,74 @@ export default async function KitchenPlanPage({ searchParams }: Props) {
         title={`Wochenplan · KW ${isoWeek}/${isoYear}`}
         summary="Plane Mahlzeiten pro Tag und erzeuge daraus eine konsolidierte Einkaufsliste."
         actions={
-          hasEntries ? (
-            <form action={generateShoppingListAction}>
-              <input type="hidden" name="weekId" value={week!.id} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Einkaufsliste erzeugen
+          <div className="uwe-inline-actions">
+            <form action={suggestWeekAction}>
+              <input type="hidden" name="isoYear" value={isoYear} />
+              <input type="hidden" name="isoWeek" value={isoWeek} />
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+                KI-Wochenvorschlag
               </button>
             </form>
-          ) : null
+            {hasEntries ? (
+              <form action={generateShoppingListAction}>
+                <input type="hidden" name="weekId" value={week!.id} />
+                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+                  Einkaufsliste erzeugen
+                </button>
+              </form>
+            ) : null}
+          </div>
         }
       />
+
+      {aiMessage ? (
+        <p className={ai === "ok" ? "uwe-hint" : "uwe-notice-warn"}>{aiMessage}</p>
+      ) : null}
+
+      {aiDraft && aiDraft.days.length > 0 ? (
+        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
+            <h2 className="uwe-v2-section-title">KI-Vorschlag (Entwurf)</h2>
+            <form action={dismissWeekDraftAction}>
+              <input type="hidden" name="isoYear" value={isoYear} />
+              <input type="hidden" name="isoWeek" value={isoWeek} />
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
+                Entwurf verwerfen
+              </button>
+            </form>
+          </div>
+          {aiDraft.summary ? <p className="uwe-dashboard-muted">{aiDraft.summary}</p> : null}
+          <p className="uwe-hint">
+            Nichts wird automatisch übernommen — bestätige einzelne Tage.
+          </p>
+          <ul className="uwe-linked-list">
+            {aiDraft.days.map((day, index) => {
+              const resolved = resolveDraftDate(day.day, days);
+              return (
+                <li key={index} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
+                  <span className="uwe-badge">{DAY_FORMAT.format(resolved)}</span>
+                  <span className="uwe-badge">{MEAL_SLOT_LABELS[day.slot]}</span>
+                  <span style={{ flex: 1 }}>
+                    {day.title}
+                    {day.note ? ` — ${day.note}` : ""}
+                  </span>
+                  <form action={applyDraftEntryAction} style={{ display: "inline" }}>
+                    <input type="hidden" name="isoYear" value={isoYear} />
+                    <input type="hidden" name="isoWeek" value={isoWeek} />
+                    <input type="hidden" name="date" value={resolved.toISOString()} />
+                    <input type="hidden" name="slot" value={day.slot} />
+                    {day.recipeId ? <input type="hidden" name="recipeId" value={day.recipeId} /> : null}
+                    <input type="hidden" name="title" value={day.title} />
+                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
+                      + übernehmen
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="uwe-form-actions">
         <Link href={`/kitchen/plan?y=${prev.isoYear}&w=${prev.isoWeek}`} className="uwe-v2-btn">
