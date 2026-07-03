@@ -434,6 +434,7 @@ enum EntityTagEntityType {
   contract
   hardware
   dev_idea
+  recipe
 }
 
 enum WorldEventSourceType {
@@ -985,6 +986,7 @@ model GameSession {
   aiRuns         AiRun[]
   calendarEvents CalendarEvent[]
   worldEvents    WorldEvent[]
+  liveEntries    SessionLiveEntry[]
 
   @@index([worldId, sessionNumber])
   @@map("game_sessions")
@@ -3475,4 +3477,106 @@ model EntityTag {
   @@index([entityType, entityId])
   @@index([worldId])
   @@map("entity_tags")
+}
+
+// ── Session Live Mode (Spieltisch-Cockpit) ────────────────────────
+// Structured live entries captured during a session. Nothing here is
+// canon: entries are reviewed after the session (Proposal → Apply).
+enum SessionLiveEntryKind {
+  note
+  loot
+  quest_update
+  npc_update
+  initiative
+  bookmark
+}
+
+model SessionLiveEntry {
+  id            String               @id @default(cuid())
+  gameSessionId String               @map("game_session_id")
+  kind          SessionLiveEntryKind @default(note)
+  content       String               @default("")
+  refPageId     String?              @map("ref_page_id")
+  payload       Json?
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+
+  @@index([gameSessionId, createdAt])
+  @@map("session_live_entries")
+}
+
+// ── Küche / Essensplaner ──────────────────────────────────────────
+enum RecipeStatus {
+  draft
+  active
+  archived
+}
+
+enum IngredientUnit {
+  gram
+  milliliter
+  piece
+  tbsp
+  tsp
+  pinch
+  bunch
+  pack
+  freeform
+}
+
+enum ShoppingCategory {
+  produce
+  chilled
+  frozen
+  dry
+  drugstore
+  household
+  other
+}
+
+model Recipe {
+  id              String       @id @default(cuid())
+  title           String
+  status          RecipeStatus @default(active)
+  description     String       @default("")
+  servingsBase    Float        @default(2) @map("servings_base")
+  durationMinutes Int?         @map("duration_minutes")
+  effortRating    Int?         @map("effort_rating")
+  tasteRating     Int?         @map("taste_rating")
+  kidRating       Int?         @map("kid_rating")
+  partnerRating   Int?         @map("partner_rating")
+  steps           Json
+  variants        Json?
+  imageStorageKey String?      @map("image_storage_key")
+  sourceUrl       String?      @map("source_url")
+  sourceScanId    String?      @map("source_scan_id")
+  notes           String       @default("")
+  metadata        Json?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  ingredients RecipeIngredient[]
+
+  @@index([status])
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id             String           @id @default(cuid())
+  recipeId       String           @map("recipe_id")
+  name           String
+  normalizedName String           @map("normalized_name")
+  amount         Float?
+  unit           IngredientUnit   @default(freeform)
+  unitLabel      String?          @map("unit_label")
+  category       ShoppingCategory @default(other)
+  optional       Boolean          @default(false)
+  sortIndex      Int              @default(0) @map("sort_index")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([normalizedName])
+  @@map("recipe_ingredients")
 }
