@@ -12,8 +12,11 @@ versehentlich falsch werden.
 > S1-Package `@uwe/scan-inbox`: `ScanDocument`-Modell + pure Analyse
 > (`field-extraction`, `kind-detection`, `proposal-builder`, `analyze`) + Service
 > (create/applyAnalysis/file → Vertrag/Capture, waiting_for_rtx), 19 Tests inkl.
-> End-to-End Rechnung→Vertrag. **Offen:** Studio-UI (Upload, Inbox, Detail) +
-> OCR-Text-Rückschreiben aus der Connector-Queue; S2 (DnD-Modi); S3 (Rezept-Brücke).
+> End-to-End Rechnung→Vertrag. Studio-UI gebaut: `/scan-inbox` (Status-Spalten +
+> Upload), `/scan-inbox/[id]` (OCR-Text-Analyse manuell/auto, Felder, Vorschlag,
+> Bestätigen/Ablehnen/Archivieren), Upload-/Serving-API, Nav. **Offen:**
+> Vision-Job-Ergebnis via `waitForConnectorJob` zurückschreiben + Bild-Downscale;
+> S2 (DnD-Modi); S3 (Rezept-Brücke).
 
 ---
 
