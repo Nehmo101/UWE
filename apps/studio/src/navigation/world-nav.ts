@@ -86,6 +86,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "nächste session",
           "generator",
         ]),
+        item("world-one-shot", "One-Shot-Generator", `${base}/one-shot`, "wand-sparkles", "Spiel", [
+          "one-shot",
+          "abenteuer",
+          "generator",
+          "kanon",
+          "ton",
+        ]),
         item("world-open-items", "Was ist offen?", `${base}/open-items`, "list-checks", "Spiel", [
           "offen",
           "plots",

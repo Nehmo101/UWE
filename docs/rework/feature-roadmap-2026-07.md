@@ -104,7 +104,9 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > Haushalts-Cockpit (`maintenance-service`, `/household`, wiederkehrende
 > Aufgaben + Fälligkeits-Alerts, 10 Tests). Wissensassistent mit Quellenpflicht
 > (`knowledge-assistant-service`, `/knowledge`, Retrieval + Konfidenz + Quellen,
-> 5 Tests). **Offen:** nur noch One-Shot-Generator aus Kanon (KI-generierungslastig).
+> 5 Tests). One-Shot-Generator aus Kanon (`one-shot.ts` in @uwe/ai-brain,
+> `/worlds/[slug]/one-shot`, tonabhängiges Gerüst mit Spieler/DM-Trennung,
+> als Quest-Draft speicherbar, 8 Tests). **Welle 4 abgeschlossen — Roadmap komplett.**
 
 - **Prompt-/Agenten-Bibliothek in UWE**: Fundament `packages/agent-jobs/src/presets.ts`
   (Platzhalter-Felder existieren); ausbauen zu `PromptTemplate`-CRUD + Kategorien +
