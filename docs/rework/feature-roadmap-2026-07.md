@@ -97,6 +97,12 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 
 ## 4. Welle 4 — Später / opportunistisch
 
+> **Umsetzungsstand 2026-07-03:** „Mach weiter"-Zentrale gebaut
+> (`continue-work-service`, Seite `/continue`, 3 Tests) und Finanz-/Abo-Übersicht
+> (`finance-overview-service`, Seite `/finance`, 6 Tests) — beide read-only.
+> Offen: Prompt-/Agenten-Bibliothek, One-Shot-Generator, Haushalts-Cockpit,
+> Wissensassistent mit Quellenpflicht.
+
 - **Prompt-/Agenten-Bibliothek in UWE**: Fundament `packages/agent-jobs/src/presets.ts`
   (Platzhalter-Felder existieren); ausbauen zu `PromptTemplate`-CRUD + Kategorien +
   „Als Cursor/Claude-Prompt kopieren" + „Als Agent Job starten" + Ergebnis-Verknüpfung.
