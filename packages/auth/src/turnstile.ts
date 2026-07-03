@@ -20,6 +20,8 @@
  *   secret key always fails       : 2x0000000000000000000000000000000AA
  */
 
+import { withRuntimeEnvOverrides } from "./runtime-env-overrides";
+
 /** Origin that serves the Turnstile widget script and challenge iframe (for CSP). */
 export const TURNSTILE_SCRIPT_ORIGIN = "https://challenges.cloudflare.com";
 
@@ -89,6 +91,7 @@ function parseBoolFlag(value: string | undefined): boolean | null {
  * a site and secret key the check cannot run, so it stays disabled.
  */
 export function getTurnstileConfig(env: NodeJS.ProcessEnv = process.env): TurnstileConfig {
+  env = withRuntimeEnvOverrides(env);
   const siteKey = env.TURNSTILE_SITE_KEY?.trim() || null;
   const secretConfigured = Boolean(env.TURNSTILE_SECRET_KEY?.trim());
   const explicit = parseBoolFlag(env.TURNSTILE_ENABLED);
@@ -115,7 +118,7 @@ export async function verifyTurnstileToken(
   token: string | null | undefined,
   options: VerifyTurnstileOptions = {},
 ): Promise<TurnstileVerifyResult> {
-  const env = options.env ?? process.env;
+  const env = withRuntimeEnvOverrides(options.env ?? process.env);
   const config = getTurnstileConfig(env);
 
   if (!config.enabled) {

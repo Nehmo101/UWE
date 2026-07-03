@@ -16,6 +16,13 @@ import {
   resolveTokenEncryptionSecret,
 } from "./token-crypto";
 import {
+  DEFAULT_DEPLOYMENT_SETTINGS,
+  applyDeploymentRuntimeOverrides,
+  normalizeDeploymentSettings,
+  sanitizeDeploymentSettingsForClient,
+  type DeploymentSettings,
+} from "./deployment-settings";
+import {
   mapClientBackgroundToServer,
   normalizeAppThemePreferences,
   type AppThemePreferences,
@@ -139,6 +146,8 @@ export interface UweSystemSettings {
   privacy: PrivacySettings;
   auth: AuthSettings;
   maintenance: MaintenanceSettings;
+  /** Owner-editable deployment / routing / security overrides (env stays the fallback). */
+  deployment: DeploymentSettings;
 }
 
 export interface MailSmtpStatus {
@@ -206,6 +215,7 @@ export type UweSystemSettingsUpdate = {
   privacy?: Partial<PrivacySettings>;
   auth?: Partial<AuthSettings>;
   maintenance?: Partial<MaintenanceSettings>;
+  deployment?: Partial<DeploymentSettings>;
 };
 
 const SETTINGS_ID = "default";
@@ -471,6 +481,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     lockStudio: false,
     message: "",
   },
+  deployment: DEFAULT_DEPLOYMENT_SETTINGS,
 };
 
 function buildProviderKeyPlaceholders(
@@ -602,6 +613,9 @@ function mergeSettings(
       ...base.maintenance,
       ...(isRecord(stored.maintenance) ? (stored.maintenance as unknown as MaintenanceSettings) : {}),
     },
+    deployment: normalizeDeploymentSettings(
+      isRecord(stored.deployment) ? { ...base.deployment, ...stored.deployment } : base.deployment,
+    ),
   };
 
   return normalizeSettings(merged);
@@ -647,6 +661,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       ...settings.maintenance,
       message: typeof settings.maintenance?.message === "string" ? settings.maintenance.message : "",
     },
+    deployment: normalizeDeploymentSettings(settings.deployment),
   };
 }
 
@@ -700,6 +715,7 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
       ...normalized.ai,
       cloudApiKeys: undefined,
     },
+    deployment: sanitizeDeploymentSettingsForClient(normalized.deployment),
   };
 }
 
@@ -910,6 +926,7 @@ export class SettingsService {
       privacy: { ...current.privacy, ...update.privacy },
       auth: { ...current.auth, ...update.auth },
       maintenance: { ...current.maintenance, ...update.maintenance },
+      deployment: { ...current.deployment, ...update.deployment },
     });
 
     await this.db.systemSettings.upsert({
@@ -922,6 +939,12 @@ export class SettingsService {
         settings: next as unknown as Prisma.InputJsonValue,
       },
     });
+
+    // Keep the shared runtime-config overlay fresh in this process on every deployment
+    // change (env stays the fallback). Other processes pick it up at their next boot.
+    if (update.deployment) {
+      applyDeploymentRuntimeOverrides(next.deployment);
+    }
 
     return next;
   }
@@ -942,6 +965,21 @@ export async function getSystemSettings(db?: PrismaClient): Promise<UweSystemSet
 
 export async function getSystemSettingsForClient(db?: PrismaClient): Promise<UweSystemSettings> {
   return createSettingsService(db).getSettingsForClient();
+}
+
+/**
+ * Loads the stored deployment overrides and installs them into the shared `@uwe/auth`
+ * runtime-config layer. Call once at Node server boot so DB-configured routing/security
+ * values are effective from the first request. Never throws — on any failure the app
+ * simply keeps reading `process.env`.
+ */
+export async function refreshDeploymentRuntimeOverrides(db?: PrismaClient): Promise<void> {
+  try {
+    const settings = await createSettingsService(db).getSettings();
+    applyDeploymentRuntimeOverrides(settings.deployment);
+  } catch {
+    // Boot-time DB not ready or unreadable — env fallback remains in effect.
+  }
 }
 
 export interface SystemSettingsSnapshot {

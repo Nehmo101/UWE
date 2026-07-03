@@ -187,6 +187,12 @@ export {
 
 export type { UweAppUrls, UweDeploymentModel } from "./runtime-config";
 
+export {
+  getRuntimeEnvOverrides,
+  setRuntimeEnvOverrides,
+  withRuntimeEnvOverrides,
+} from "./runtime-env-overrides";
+
 export type { EnvValidationIssue, EnvValidationSeverity } from "./env-validation";
 export {
   BlockingEnvError,
