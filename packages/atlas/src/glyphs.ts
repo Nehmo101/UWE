@@ -139,6 +139,13 @@ export const BUILTIN_GLYPHS: readonly BuiltinGlyph[] = [
     pathData: "M4 20 Q5 12 11 12 Q13 9 16 12 Q20 13 20 20 Z M9 16 L11 13 M14 18 L16 14",
     color: "#7a6a52",
   },
+  {
+    key: "cloud",
+    name: "Wolke",
+    kind: "relief",
+    pathData: "M5 16 Q2 16 2 13 Q2 10 5 10 Q6 6 10 6 Q14 6 15 9 Q19 8 20 12 Q21 16 17 16 Z",
+    color: "#a8b8c4",
+  },
 
   // --- Biome — Vegetation & Gewässer ---------------------------------------
   {
@@ -182,6 +189,21 @@ export const BUILTIN_GLYPHS: readonly BuiltinGlyph[] = [
     kind: "biome",
     pathData: "M2 18 Q8 12 13 17 Q18 22 22 17 M2 21 Q5 19 9 20 M16 6 Q18.5 6 18.5 8.5 Q18.5 11 16 11 Q13.5 11 13.5 8.5 Q13.5 6 16 6",
     color: "#c8a85a",
+  },
+  // --- Biome — Mythische Vegetation (Vine-Feature) --------------------------
+  {
+    key: "beanstalk",
+    name: "Bohnenranke",
+    kind: "biome",
+    pathData: "M12 21 C8 17 16 13 12 9 C9 6 14 4 12 2 M12 13 Q15 12 16 14 Q14 16 12 13 M12 17 Q9 16 8 18 Q10 20 12 17",
+    color: "#4a6741",
+  },
+  {
+    key: "giant_root",
+    name: "Weltenwurzel",
+    kind: "biome",
+    pathData: "M12 3 L12 10 M12 10 C9 12 8 16 6 21 M12 10 C15 12 16 16 18 21 M12 10 C11 14 13 17 12 21 M6 21 L4 19 M18 21 L20 19",
+    color: "#6b4a2a",
   },
 
   // --- Pin — Orte & Bauwerke -----------------------------------------------
@@ -269,6 +291,13 @@ export const BUILTIN_GLYPHS: readonly BuiltinGlyph[] = [
     kind: "pin",
     pathData: "M5 20 L5 10 Q5 5 12 5 Q19 5 19 10 L19 20 M9 20 L9 12 Q9 9 12 9 Q15 9 15 12 L15 20 M4 10 L20 10",
     color: "#4a4038",
+  },
+  {
+    key: "root_knot",
+    name: "Wurzelknoten",
+    kind: "pin",
+    pathData: "M9 21 L9 12 Q9 8 12 8 Q15 8 15 12 L15 21 M9 21 Q7 21 5 19 M15 21 Q17 21 19 19 M9 15 Q12 13 15 15 M6 21 L18 21",
+    color: "#5a4a32",
   },
 ] as const;
 

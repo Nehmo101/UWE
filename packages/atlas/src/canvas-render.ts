@@ -7,6 +7,9 @@
  * browser (and the M1 `atlas.html` runtime), not in the Node test suite.
  */
 
+import type { Coordinate } from "./geometry";
+import type { VineLayout } from "./vine";
+
 /**
  * Trace a rounded rectangle sub-path (compatible with browsers lacking
  * `ctx.roundRect`). The caller is responsible for `fill`/`stroke`.
@@ -195,6 +198,98 @@ export function drawScaleBar(ctx: CanvasRenderingContext2D, opts: ScaleBarOption
     ctx.textBaseline = "top";
     ctx.fillText(label, x + width / 2, y + height + Math.max(2, height * 0.4));
   }
+}
+
+/** Options for {@link drawVine}. */
+export interface DrawVineOptions {
+  /** Project a normalised [0,1] coordinate to canvas pixels (caller's pan/zoom). */
+  project: (c: Coordinate) => Coordinate;
+  /** Current zoom — scales trunk width to pixels. */
+  zoom: number;
+  /** Trunk stroke colour (bark ink). */
+  trunk: string;
+  /** Coil + tendril stroke colour (lighter green). */
+  coil: string;
+  /** Cast-shadow colour (semi-transparent ink, e.g. "rgba(26,16,8,0.18)"). */
+  shadow: string;
+  /** Draw a heavier trunk + highlight when selected. */
+  selected?: boolean;
+}
+
+/** Base trunk width in pixels at relative width 1.0 (before zoom). */
+const VINE_TRUNK_BASE_PX = 9;
+
+/** Stroke a polyline of already-projected canvas points. */
+function strokePolyline(ctx: CanvasRenderingContext2D, pts: Coordinate[]): void {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0]![0], pts[0]![1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
+  ctx.stroke();
+}
+
+/**
+ * Draw a giant vine/root ({@link VineLayout}) as static pseudo-3D: cast shadow,
+ * tapered coiling trunk (variable per-segment width, thick base → thin tip),
+ * side tendrils, and faint tip-aura rings. The tip cloud glyphs in
+ * `layout.aura.clouds` are drawn by the caller via the glyph pipeline so every
+ * renderer shares one glyph path. Pure Canvas 2D — no DOM beyond `ctx`.
+ */
+export function drawVine(
+  ctx: CanvasRenderingContext2D,
+  layout: VineLayout,
+  opts: DrawVineOptions,
+): void {
+  const { spine, widths, coil, tendrils, shadow, aura } = layout;
+  if (spine.length < 2) return;
+  const { project, zoom, selected } = opts;
+  const p = (pts: Coordinate[]): Coordinate[] => pts.map(project);
+  const base = VINE_TRUNK_BASE_PX * zoom * (selected ? 1.15 : 1);
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // 1) Cast shadow — one soft stroke roughly trunk-width.
+  const shadowPts = p(shadow);
+  ctx.strokeStyle = opts.shadow;
+  ctx.lineWidth = Math.max(1, base * 0.75);
+  strokePolyline(ctx, shadowPts);
+
+  // 2) Trunk — per-segment taper (thick base → thin tip), like the river taper.
+  const spinePts = p(spine);
+  ctx.strokeStyle = opts.trunk;
+  for (let i = 0; i < spinePts.length - 1; i++) {
+    ctx.lineWidth = Math.max(0.6, widths[i]! * base);
+    ctx.beginPath();
+    ctx.moveTo(spinePts[i]![0], spinePts[i]![1]);
+    ctx.lineTo(spinePts[i + 1]![0], spinePts[i + 1]![1]);
+    ctx.stroke();
+  }
+
+  // 3) Coil helix + 4) tendrils — thin accent strokes.
+  ctx.strokeStyle = opts.coil;
+  ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
+  strokePolyline(ctx, p(coil));
+  for (const t of tendrils) strokePolyline(ctx, p(t));
+
+  // 5) Tip aura — a couple of faint concentric rings.
+  const c = project(aura.center);
+  const edge = project([aura.center[0] + aura.radius, aura.center[1]]);
+  const pr = Math.hypot(edge[0] - c[0], edge[1] - c[1]);
+  if (pr > 1) {
+    ctx.strokeStyle = opts.coil;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = Math.max(0.6, 1 * zoom);
+    for (const f of [1, 0.66]) {
+      ctx.beginPath();
+      ctx.arc(c[0], c[1], pr * f, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
 }
 
 /**
