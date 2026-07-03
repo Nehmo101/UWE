@@ -44,6 +44,11 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 
 ## 2. Welle 2 — Direkt anschließend
 
+> **Umsetzungsstand 2026-07-03:** Startklar-Wizard gebaut — `/system/startklar`
+> aggregiert Changelog seit zuletzt bestätigter Version, Env-Warnungen
+> (`validateUweEnvironment`), Migrationsstatus, Backup-Alter und offene Aufgaben;
+> „Als gelesen markieren" speichert die Version in den Settings. 5 Unit-Tests.
+
 - **Scan Inbox S2 — DnD-Scan-Modi**: Sessionnotiz → Recap-Proposal (über bestehenden
   AiProposal-Review, kein Auto-Kanon), Dungeon-Zettel → Draft-Page, Handout →
   Draft-Page mit SecretLevel-Blöcken. Charakterbögen bewusst nicht.

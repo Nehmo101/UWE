@@ -56,6 +56,8 @@ export interface AppSettings {
   favoriteWorldSlug?: string | null;
   /** Last actively opened world slug (optional UX hint). */
   lastActiveWorldSlug?: string | null;
+  /** UWE_VERSION the owner last acknowledged on the Startklar page. */
+  startklarSeenVersion?: string | null;
 }
 
 export interface WorldSettings {
@@ -405,6 +407,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     motionEnabled: true,
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
+    startklarSeenVersion: null,
     themePreferences: {
       studio: {
         themeId: "uwe-parchment-os",

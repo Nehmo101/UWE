@@ -294,6 +294,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["changelog", "release", "neu", "update", "was ist neu"],
       },
       {
+        id: "system-startklar",
+        label: "Startklar",
+        href: "/system/startklar",
+        icon: "rocket",
+        group: "Betrieb",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["startklar", "update", "env", "migration", "backup", "nach update"],
+      },
+      {
         id: "system-knowhow",
         label: "UWE KnowHow",
         href: "/system/uwe-knowhow",
