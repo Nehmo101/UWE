@@ -157,6 +157,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "leaks",
           "portal",
         ]),
+        item("world-quality", "Wiki-Pflege", `${base}/quality`, "sparkles", "Freigabe & Betrieb", [
+          "pflege",
+          "qualität",
+          "aufräumen",
+          "unverlinkt",
+          "wiki",
+        ]),
         item("world-backup", "Backup", `${base}/backup`, "database-backup", "Freigabe & Betrieb", [
           "backup",
           "sicherung",

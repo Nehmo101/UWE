@@ -881,6 +881,22 @@ export type {
 } from "./world-inspector";
 
 export {
+  buildWikiQualityFindings,
+  countWikiQualityFindings,
+  createWikiQualityService,
+  sortWikiQualityFindings,
+  WikiQualityService,
+} from "./wiki-quality-service";
+
+export type {
+  WikiQualityFinding,
+  WikiQualityFindingCode,
+  WikiQualityOptions,
+  WikiQualityPageInput,
+  WikiQualityReport,
+} from "./wiki-quality-service";
+
+export {
   buildGenericCanonConflictFindings,
   getExtendedCanonFindings,
   mergeCanonFindings,

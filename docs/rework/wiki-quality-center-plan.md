@@ -2,6 +2,14 @@
 
 Stand: 2026-07-03 · Teil von [feature-roadmap-2026-07.md](feature-roadmap-2026-07.md) (Welle 1).
 
+> **Umsetzungsstand 2026-07-03:** Erste Scheibe gebaut — `wiki-quality-service.ts`
+> (6 Checks: `unlinked_term`, `thin_page`, `npc_missing_relations`,
+> `location_missing_map`, `quest_missing_status`, `duplicate_alias`) + UI-Seite
+> `/worlds/[worldSlug]/quality` + Nav-Eintrag „Wiki-Pflege" + 13 Unit-Tests.
+> Fundstellen sind aktuell navigierend (Link zur Seite); der Bulk-Auto-Link-Fix für
+> `unlinked_term` verweist zunächst auf die bestehende Auto-Verlinkung unter `/import`
+> (dedizierter Bulk-Button auf der Quality-Seite folgt).
+
 **Ziel:** Nach der Bulk-Konvertierung mit Auto-Verlinkung (PR #430) der nächste
 logische Schritt: ein Pflege-Cockpit `/worlds/[worldSlug]/quality`, das alle
 Qualitäts-Checks bündelt — unverlinkte Begriffe, dünne Seiten, NPC ohne
