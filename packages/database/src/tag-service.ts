@@ -17,6 +17,7 @@ export const ENTITY_TAG_ENTITY_TYPE_LABELS: Record<EntityTagEntityType, string> 
   contract: "Vertrag",
   hardware: "Hardware",
   dev_idea: "Dev-Idee",
+  recipe: "Rezept",
 };
 
 export interface TagReference {

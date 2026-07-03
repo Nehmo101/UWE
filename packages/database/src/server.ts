@@ -928,6 +928,21 @@ export type {
 } from "./game-session";
 
 export {
+  buildRecapDraft,
+  buildSessionReviewDraft,
+  createSessionLiveService,
+  sessionLiveKindLabel,
+  SessionLiveService,
+} from "./session-live-service";
+
+export type {
+  AppendSessionLiveEntryInput,
+  SessionLiveEntryKind,
+  SessionLiveEntryRecord,
+  SessionReviewDraft,
+} from "./session-live-service";
+
+export {
   createDungeonCockpitService,
   DungeonCockpitService,
   DUNGEON_PREP_STATUS_LABELS,
