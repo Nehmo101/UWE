@@ -306,6 +306,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["startklar", "update", "env", "migration", "backup", "nach update"],
       },
       {
+        id: "system-health",
+        label: "Health-Ampel",
+        href: "/system/health",
+        icon: "activity",
+        group: "Betrieb",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["health", "performance", "langsam", "db-größe", "ampel", "tabellen"],
+      },
+      {
         id: "system-knowhow",
         label: "UWE KnowHow",
         href: "/system/uwe-knowhow",

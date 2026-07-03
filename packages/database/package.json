@@ -11,6 +11,7 @@
     "./graph-types": "./src/graph-types.ts",
     "./server": "./src/server.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
+    "./health-metrics": "./src/health-metrics-service.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",

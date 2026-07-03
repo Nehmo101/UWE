@@ -69,6 +69,9 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > **Umsetzungsstand 2026-07-03:** Kampagnen-Radar gebaut (`campaign-radar-service.ts`,
 > read-only Aggregation, Seite `/worlds/[slug]/radar`, 7 Tests). Essensplaner K2
 > (Wochenplan + Einkaufsliste) gebaut — siehe `meal-planner-plan.md`.
+> Health-Ampel gebaut (`health-metrics-service.ts`: DB-Größe, größte Tabellen,
+> Upload-Volumen, Connector-Erreichbarkeit + Ampel-Logik; Seite `/system/health`,
+> 7 Tests).
 
 - **Kampagnen-Radar** („Was passiert gerade in der Welt?"): fast reine Lese-Aggregation
   über `FactionState`, offene Quests (`quest-lifecycle-service.ts`), `WorldCalendar`,
