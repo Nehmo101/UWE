@@ -9,7 +9,8 @@ import {
   type Prisma,
 } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
-import { requireStudioContentEdit } from "@/src/lib/authz";
+import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
+import { postGeneratorAction } from "@/src/lib/generator-handlers";
 
 function editPath(worldSlug: string, category: string, pageSlug: string) {
   return `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
@@ -81,4 +82,44 @@ export async function upsertFactionStateAction(formData: FormData) {
 
   revalidatePath(editPath(worldSlug, category, pageSlug));
   redirect(`${editPath(worldSlug, category, pageSlug)}?saved=1`);
+}
+
+/**
+ * Zwischen-Session-Tick: startet simulate_faction für alle Fraktions-Seiten
+ * der Welt. Ergebnisse landen als Review-pflichtige Vorschläge unter AI Runs
+ * und werden erst nach Freigabe als WorldEvents in die Chronik übernommen.
+ */
+export async function simulateAllFactionsAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const repo = getAppRepository();
+  const pages = await repo.listPagesByWorld(worldSlug);
+  const factionPages = pages.filter((page) => page.type === "faction");
+
+  const useMock = process.env.AI_USE_MOCK === "true";
+  let started = 0;
+
+  for (const page of factionPages) {
+    try {
+      const response = await postGeneratorAction({
+        actionId: "simulate_faction",
+        worldSlug,
+        pageSlug: page.slug,
+        useMock,
+      });
+      if (response.ok || response.status === 202) {
+        started += 1;
+      }
+    } catch {
+      // Einzelne Fraktion überspringen — die restlichen weiter simulieren.
+    }
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/chronicle`);
+  redirect(
+    `/worlds/${worldSlug}/chronicle?factionTick=${started}&factionTotal=${factionPages.length}`,
+  );
 }

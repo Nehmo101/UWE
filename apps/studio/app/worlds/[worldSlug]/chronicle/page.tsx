@@ -6,6 +6,7 @@ import {
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
+  buildPageUrl,
   createPrismaClient,
   createWorldCalendarService,
   createWorldEventService,
@@ -20,17 +21,23 @@ import {
   createWorldEventAction,
   deleteWorldEventAction,
 } from "@/app/worlds/[worldSlug]/world-event-actions";
+import { simulateAllFactionsAction } from "@/app/worlds/[worldSlug]/faction-state-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    deleted?: string;
+    factionTick?: string;
+    factionTotal?: string;
+  }>;
 }
 
 export default async function WorldChroniclePage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { saved, deleted } = await searchParams;
+  const { saved, deleted, factionTick, factionTotal } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {
@@ -40,11 +47,14 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
   const db = createPrismaClient();
   const events = createWorldEventService(db);
   const calendars = createWorldCalendarService(db);
-  const [worldEvents, calendar] = await Promise.all([
+  const [worldEvents, calendar, allPages] = await Promise.all([
     events.listForWorld(world.id),
     calendars.getByWorldId(world.id),
+    repo.listPagesByWorld(worldSlug),
   ]);
   await db.$disconnect();
+
+  const factionPages = allPages.filter((page) => page.type === "faction");
 
   const months = parseWorldCalendarMonths(calendar?.months);
   const currentDate = calendar ? parseInGameDate(calendar.currentDate) : { year: 1, month: 1, day: 1 };
@@ -105,6 +115,49 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
           Chronik-Eintrag gelöscht.
         </p>
       )}
+      {factionTick !== undefined && (
+        <p className="uwe-banner uwe-banner-success" role="status">
+          Fraktions-Tick gestartet: {factionTick} von {factionTotal ?? factionTick} Simulationen
+          laufen. Vorschläge erscheinen unter{" "}
+          <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs</Link> zur Review.
+        </p>
+      )}
+
+      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginTop: 0 }}>Fraktions-Simulation (Zwischen-Session-Tick)</h2>
+        {factionPages.length === 0 ? (
+          <p className="uwe-hint">
+            Keine Fraktions-Seiten in dieser Welt — lege Seiten vom Typ „Fraktion“ an, um die
+            Simulation zu nutzen.
+          </p>
+        ) : (
+          <>
+            <p className="uwe-dashboard-muted">
+              Simuliert für alle {factionPages.length} Fraktion(en), was seit der letzten Session
+              passiert ist (Weltuhr:{" "}
+              {calendar
+                ? formatInGameDate(parseInGameDate(calendar.currentDate), months)
+                : "nicht gesetzt"}
+              ). Ergebnisse werden als Vorschläge erzeugt und erst nach Review in die Chronik
+              übernommen.
+            </p>
+            <p className="uwe-dashboard-muted">
+              {factionPages.map((page, index) => (
+                <span key={page.id}>
+                  {index > 0 && " · "}
+                  <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
+                </span>
+              ))}
+            </p>
+            <form action={simulateAllFactionsAction}>
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+                Alle Fraktionen simulieren
+              </button>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ marginTop: 0 }}>Neues Ereignis</h2>
