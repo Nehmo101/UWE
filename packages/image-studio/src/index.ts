@@ -199,6 +199,90 @@ async function callRtxImageAgent(
   };
 }
 
+function extractCloudImage(data: { data?: Array<{ b64_json?: string }> }): string | null {
+  return data.data?.[0]?.b64_json ?? null;
+}
+
+/**
+ * Model for the OpenAI edits endpoint: dall-e-3 does not support edits, so
+ * fall back to gpt-image-1 unless an edit-capable model is configured.
+ */
+export function resolveCloudEditModel(
+  cloudModel: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const explicit = env.IMAGE_STUDIO_CLOUD_EDIT_MODEL?.trim();
+  if (explicit) return explicit;
+  if (cloudModel === "dall-e-2" || cloudModel === "gpt-image-1") return cloudModel;
+  return "gpt-image-1";
+}
+
+async function callCloudImageEdit(
+  config: ImageStudioProviderConfig,
+  request: ImageStudioRequest,
+): Promise<ImageStudioResult> {
+  if (!request.sourceImageBase64) {
+    return {
+      success: false,
+      providerUsed: "cloud",
+      error: `'${request.task}' erfordert ein Ausgangsbild.`,
+    };
+  }
+
+  const model = resolveCloudEditModel(config.cloudModel);
+  const form = new FormData();
+  form.set("model", model);
+  form.set("n", "1");
+  form.set(
+    "prompt",
+    request.task === "remove_background"
+      ? `Entferne den Hintergrund vollständig, Motiv freistellen. ${request.prompt}`.trim()
+      : request.prompt,
+  );
+  form.set(
+    "image",
+    new Blob([Buffer.from(request.sourceImageBase64, "base64")], { type: "image/png" }),
+    "image.png",
+  );
+  if (request.maskBase64 && request.task === "inpaint") {
+    form.set(
+      "mask",
+      new Blob([Buffer.from(request.maskBase64, "base64")], { type: "image/png" }),
+      "mask.png",
+    );
+  }
+  if (request.task === "remove_background" && model === "gpt-image-1") {
+    form.set("background", "transparent");
+  }
+  // gpt-image-1 liefert immer b64 und lehnt response_format ab; dall-e-2 braucht es.
+  if (model.startsWith("dall-e")) {
+    form.set("response_format", "b64_json");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.cloudApiKey}` },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    return {
+      success: false,
+      providerUsed: "cloud",
+      error: `Cloud-Bildbearbeitung fehlgeschlagen (${response.status}): ${text.slice(0, 200)}`,
+    };
+  }
+
+  const b64 = extractCloudImage(
+    (await response.json()) as { data?: Array<{ b64_json?: string }> },
+  );
+  if (!b64) {
+    return { success: false, providerUsed: "cloud", error: "Kein Bild von Cloud-API erhalten." };
+  }
+  return { success: true, providerUsed: "cloud", imageBase64: b64, mimeType: "image/png" };
+}
+
 async function callCloudImageApi(
   config: ImageStudioProviderConfig,
   request: ImageStudioRequest,
@@ -233,18 +317,15 @@ async function callCloudImageApi(
     }
 
     const data = (await response.json()) as { data?: Array<{ b64_json?: string }> };
-    const b64 = data.data?.[0]?.b64_json;
+    const b64 = extractCloudImage(data);
     if (!b64) {
       return { success: false, providerUsed: "cloud", error: "Kein Bild von Cloud-API erhalten." };
     }
     return { success: true, providerUsed: "cloud", imageBase64: b64, mimeType: "image/png" };
   }
 
-  return {
-    success: false,
-    providerUsed: "cloud",
-    error: `Cloud-Provider unterstützt '${request.task}' noch nicht. Bitte lokalen RTX Agent nutzen.`,
-  };
+  // edit / inpaint / remove_background über die OpenAI-Edits-API.
+  return callCloudImageEdit(config, request);
 }
 
 export async function runImageStudioTask(

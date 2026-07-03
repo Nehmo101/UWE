@@ -13,11 +13,11 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ### Cursor / Agent-Job als Text-Provider
 
-`agent_job` / `dev_agent_job` ist für **Repository-Entwicklung** (GitHub Actions, Cursor Cloud Agents), nicht für In-App-Lore.
+`agent_job` / `dev_agent_job` bleibt für **Repository-Entwicklung** (GitHub Actions, Cursor Cloud Agents), nicht für In-App-Lore.
 
-Stub: `packages/ai-brain/src/providers/agentJobTextProvider.ts` — wirft bewusst, bis ein dedizierter Async-Lore-Worker existiert.
+`packages/ai-brain/src/providers/agentJobTextProvider.ts` ist inzwischen an die reguläre Job-Queue angebunden: `enqueueAgentJobTextDraft` reiht einen `ai_run`-Job (deferredAiPrompt) ein, der auf die lokale RTX wartet und sein Ergebnis als KI-Resultat zur Review liefert — nie Auto-Apply in den Kanon.
 
-Atlas-Lore nutzt: `runBrainAction`, prozeduraler Entwurf, RTX/Cloud über AI Gateway.
+Atlas-Lore nutzt weiterhin primär: `runBrainAction`, prozeduraler Entwurf, RTX/Cloud über AI Gateway.
 
 ### Fog of War
 
