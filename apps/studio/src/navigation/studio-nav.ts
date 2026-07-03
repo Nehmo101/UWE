@@ -121,6 +121,18 @@ export const KNOWLEDGE_NAV: NavGroup[] = [
         source: "studio",
         keywords: ["life", "brain", "personal", "rtx"],
       },
+      {
+        id: "knowledge-assistant",
+        label: "Wissensassistent",
+        href: "/knowledge",
+        icon: "search",
+        group: KNOWLEDGE,
+        section: KNOWLEDGE,
+        permission: ["owner"],
+        status: "active",
+        source: "studio",
+        keywords: ["frage", "wissen", "assistent", "quelle", "life brain"],
+      },
     ],
   },
 ];

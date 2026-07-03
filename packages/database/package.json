@@ -16,6 +16,7 @@
     "./magic-item": "./src/magic-item-model.ts",
     "./magic-item-service": "./src/magic-item-service.ts",
     "./prompt-library": "./src/prompt-library-service.ts",
+    "./knowledge-assistant": "./src/knowledge-assistant-service.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",
