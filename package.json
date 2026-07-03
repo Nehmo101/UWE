@@ -24,6 +24,7 @@
     "typecheck": "turbo run typecheck",
     "typecheck:affected": "turbo run typecheck --filter=\"...[origin/main]\"",
     "test": "pnpm --filter @uwe/database db:generate && turbo run test && node --import tsx --test scripts/selfhost.test.ts scripts/release.test.ts scripts/integration-smoke.test.ts scripts/client-server-boundary.test.ts scripts/file-size-budget.test.ts scripts/bundle-budget.test.ts scripts/perf-budget.test.ts scripts/stress-scale.test.ts",
+    "test:coverage": "node scripts/coverage.mjs",
     "test:security": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/security-tests test && node --import tsx --test scripts/studio-route-auth.test.ts scripts/security-leaks.test.ts",
     "test:auth": "pnpm --filter @uwe/auth test && pnpm --filter @uwe/database db:generate && node --import tsx --test packages/database/src/password-security.test.ts packages/database/src/auth-setup.test.ts",
     "test:authz": "pnpm --filter @uwe/security-tests test:authz && node --import tsx --test scripts/studio-route-auth.test.ts",

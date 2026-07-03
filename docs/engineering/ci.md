@@ -162,6 +162,35 @@ pnpm quality:quiet
 
 **Note:** Use `pnpm ci:check` when you also want a local release build. Use `pnpm ci:light` to mirror the PR workflow exactly.
 
+## Test coverage (on-demand)
+
+Coverage is **not** part of any CI gate — it is a local analysis tool with zero extra dependencies, built on Node 22's `node --test --experimental-test-coverage` (V8 coverage; tsx source maps are resolved, so the report shows `.ts` files with correct line numbers).
+
+```bash
+node scripts/coverage.mjs                          # default: packages/database
+node scripts/coverage.mjs packages/calendar        # one package
+node scripts/coverage.mjs packages/shared-utils apps/rtx-connector-client   # several
+```
+
+The script collects `*.test.ts(x)` files per package (under `src/`, or the package root for packages without `src/` such as `packages/config`), runs them with coverage, prints Node's per-file table, and exits non-zero if any package's tests fail.
+
+**Caveats:**
+
+- V8 only instruments **loaded** modules: a file that no test imports does not appear in the report at all. "all files 100%" therefore does not mean the whole package is covered — check that the files you care about are listed.
+- Imported **workspace dependencies** (source exports) also show up in the report (as `../..` paths) and are counted in the "all files" summary — read the per-file rows for the package you are measuring.
+- Branch coverage on tsx-transformed code can be slightly stricter than the source suggests (helper branches injected by the transform); line and function coverage are reliable.
+- `packages/database` runs its full test suite under coverage — expect it to be slow.
+
+## Turbo task graph (typecheck/test)
+
+Workspace packages consume each other **directly from TypeScript source** (`"main"`/`"exports"` point at `./src/index.ts`); there is no `dist/` build step between packages. Two consequences for `turbo.json`:
+
+- **No `^build` needed for `typecheck`/`test`** — there is nothing to build first.
+- **But dependency sources must be part of the task hash.** Turbo does *not* automatically include an internal dependency's files in a task's cache hash; without a topological edge, editing `packages/shared-utils/src/*` would produce a **stale cache hit** for dependents' `test`/`typecheck`. This was verified empirically with `turbo run test --dry=json` (task hash unchanged after editing a dependency) on Turbo 2.9.
+- Therefore `turbo.json` uses the standard synthetic **`topo` pattern**: `"topo": { "dependsOn": ["^topo"] }` plus `"typecheck"/"test": { "dependsOn": ["topo"] }`. `topo` matches no real script (it is a free no-op) and only propagates dependency file hashes into the cache key.
+
+**Prisma:** `turbo run test` does **not** model the Prisma client generation. The generated client (`packages/database/src/generated/prisma*`) is gitignored and thus not hashed, but it is deterministic from `prisma/schema*.prisma`, which *is* hashed. All root scripts (`test`, `test:ci`, `ci:*`, `quality`) run `pnpm --filter @uwe/database db:generate` **before** `turbo run test` — keep that ordering when adding new root scripts; a bare `turbo run test` on a fresh checkout fails until `db:generate` has run once.
+
 ## Debugging common failures
 
 ### Lint: unused imports
