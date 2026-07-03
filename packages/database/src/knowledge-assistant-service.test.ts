@@ -4,8 +4,10 @@ import {
   assessConfidence,
   buildCitations,
   buildKnowledgeAnswer,
+  buildSynthesisPrompt,
   createKnowledgeAssistantService,
   sourceAgeNote,
+  synthesizeKnowledgeAnswer,
 } from "./knowledge-assistant-service";
 import type { PersonalBrainSearchResult } from "./personal-brain-search";
 import { createPrismaClient } from "./client";
@@ -54,6 +56,36 @@ describe("knowledge assistant (pure)", () => {
     assert.equal(answer.confidence, "none");
     assert.match(answer.note, /weiß ich nicht sicher/);
     assert.equal(answer.citations.length, 0);
+  });
+
+  it("builds a grounded synthesis prompt with numbered sources", () => {
+    const answer = buildKnowledgeAnswer("Gare?", result([0.9]), NOW);
+    const prompt = buildSynthesisPrompt(answer.query, answer.citations);
+    assert.match(prompt, /FRAGE: Gare\?/);
+    assert.match(prompt, /\[1\] Doc 0/);
+  });
+});
+
+describe("knowledge synthesis (graceful degradation)", () => {
+  let db: ReturnType<typeof createPrismaClient>;
+
+  before(() => {
+    db = createPrismaClient(createTestDatabaseUrl());
+  });
+
+  after(async () => {
+    await db.$disconnect();
+  });
+
+  it("returns no_sources without citations and rtx_offline without a local connector", async () => {
+    const empty = buildKnowledgeAnswer("x", result([]), NOW);
+    const noSources = await synthesizeKnowledgeAnswer(db, empty);
+    assert.equal(noSources.status, "no_sources");
+
+    const withSources = buildKnowledgeAnswer("x", result([0.9]), NOW);
+    const offline = await synthesizeKnowledgeAnswer(db, withSources);
+    // No llm_local connector registered in the test DB → clean offline state.
+    assert.equal(offline.status, "rtx_offline");
   });
 });
 

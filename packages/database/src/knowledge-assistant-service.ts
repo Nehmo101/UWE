@@ -136,3 +136,9 @@ export class KnowledgeAssistantService {
 export function createKnowledgeAssistantService(db: PrismaClient): KnowledgeAssistantService {
   return new KnowledgeAssistantService(db);
 }
+
+export {
+  buildSynthesisPrompt,
+  synthesizeKnowledgeAnswer,
+  type KnowledgeSynthesisResult,
+} from "./knowledge-synthesis";

@@ -2,13 +2,15 @@ import Link from "next/link";
 import { prisma } from "@uwe/database/server";
 import {
   createKnowledgeAssistantService,
+  synthesizeKnowledgeAnswer,
   type ConfidenceLevel,
+  type KnowledgeSynthesisResult,
 } from "@uwe/database/knowledge-assistant";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 
 interface Props {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; synth?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -29,9 +31,11 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 
 export default async function KnowledgePage({ searchParams }: Props) {
   await requireStudioAccess();
-  const { q } = await searchParams;
+  const { q, synth } = await searchParams;
   const query = (q ?? "").trim();
   const answer = query ? await createKnowledgeAssistantService(prisma).ask(query) : null;
+  const synthesis: KnowledgeSynthesisResult | null =
+    answer && synth === "1" ? await synthesizeKnowledgeAnswer(prisma, answer) : null;
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Wissensassistent" }]} />}>
@@ -63,6 +67,31 @@ export default async function KnowledgePage({ searchParams }: Props) {
             </p>
             <p>{answer.note}</p>
           </section>
+
+          {answer.citations.length > 0 ? (
+            <section className="uwe-v2-section">
+              <h2 className="uwe-v2-section-title">KI-Antwort (lokal, geerdet)</h2>
+              {synthesis?.status === "ok" ? (
+                <>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{synthesis.text}</p>
+                  <p className="uwe-hint">
+                    Lokal formuliert (RTX), erdet auf den Quellen unten — die Quellen
+                    bleiben maßgeblich.
+                  </p>
+                </>
+              ) : synthesis ? (
+                <p className="uwe-notice-warn">{synthesis.error}</p>
+              ) : (
+                <form method="get" className="uwe-inline-actions">
+                  <input type="hidden" name="q" value={query} />
+                  <input type="hidden" name="synth" value="1" />
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+                    KI-Antwort formulieren (RTX-lokal)
+                  </button>
+                </form>
+              )}
+            </section>
+          ) : null}
 
           <section className="uwe-v2-section">
             <h2 className="uwe-v2-section-title">Quellen</h2>

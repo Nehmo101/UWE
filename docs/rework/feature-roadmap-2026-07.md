@@ -103,8 +103,10 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > (`prompt-library-service`, `/prompts`, Variablen + Kopieren, 3 Tests),
 > Haushalts-Cockpit (`maintenance-service`, `/household`, wiederkehrende
 > Aufgaben + Fälligkeits-Alerts, 10 Tests). Wissensassistent mit Quellenpflicht
-> (`knowledge-assistant-service`, `/knowledge`, Retrieval + Konfidenz + Quellen,
-> 5 Tests). One-Shot-Generator aus Kanon (`one-shot.ts` in @uwe/ai-brain,
+> (`knowledge-assistant-service`, `/knowledge`, Retrieval + Konfidenz + Quellen;
+> **optionale RTX-lokale LLM-Synthese** `knowledge-synthesis.ts` erdet strikt
+> auf den Quellen, degradiert offline sauber und ersetzt die Quellen nie,
+> 8 Tests). One-Shot-Generator aus Kanon (`one-shot.ts` in @uwe/ai-brain,
 > `/worlds/[slug]/one-shot`, tonabhängiges Gerüst mit Spieler/DM-Trennung,
 > als Quest-Draft speicherbar, 8 Tests). **Welle 4 abgeschlossen — Roadmap komplett.**
 
