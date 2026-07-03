@@ -23,7 +23,24 @@ interface EncounterMonster {
   name: string;
   cr?: string;
   slug: string;
+  count?: number;
 }
+
+type GeneratorDifficulty = "easy" | "medium" | "hard" | "deadly";
+type GeneratorStyle = "boss" | "horde" | "mixed";
+
+const DIFFICULTY_LABELS: Record<GeneratorDifficulty, string> = {
+  easy: "Leicht",
+  medium: "Mittel",
+  hard: "Schwer",
+  deadly: "Tödlich",
+};
+
+const STYLE_LABELS: Record<GeneratorStyle, string> = {
+  mixed: "Gemischt (Anführer + Begleiter)",
+  boss: "Boss (+ wenige Begleiter)",
+  horde: "Horde (viele gleiche Gegner)",
+};
 
 function extractCrFromSummary(summary?: string): string | undefined {
   if (!summary) {
@@ -43,6 +60,8 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
   const [encounterTitle, setEncounterTitle] = useState("Encounter");
   const [partyLevel, setPartyLevel] = useState(5);
   const [partySize, setPartySize] = useState(4);
+  const [difficulty, setDifficulty] = useState<GeneratorDifficulty>("medium");
+  const [style, setStyle] = useState<GeneratorStyle>("mixed");
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -58,6 +77,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
           name: item.name,
           slug: item.id,
           cr: extractCrFromSummary(item.summary),
+          count: 1,
         },
       ];
     });
@@ -66,6 +86,16 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
   function updateMonsterCr(slug: string, cr: string) {
     setSelected((current) =>
       current.map((monster) => (monster.slug === slug ? { ...monster, cr } : monster)),
+    );
+  }
+
+  function updateMonsterCount(slug: string, count: number) {
+    setSelected((current) =>
+      current.map((monster) =>
+        monster.slug === slug
+          ? { ...monster, count: Math.min(24, Math.max(1, Math.round(count) || 1)) }
+          : monster,
+      ),
     );
   }
 
@@ -98,6 +128,47 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
     }
   }
 
+  async function generateEncounter() {
+    setBusy("generate");
+    setMessage(null);
+    try {
+      const response = await fetch(studioApiUrl("/api/dnd-api"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "generate_encounter",
+          worldSlug,
+          partyLevel,
+          partySize,
+          difficulty,
+          style,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        composition?: {
+          monsters: Array<{ name: string; slug: string; cr: string; count: number }>;
+        };
+      };
+      if (!response.ok) throw new Error(data.error ?? "Generierung fehlgeschlagen.");
+
+      const monsters = data.composition?.monsters ?? [];
+      if (monsters.length === 0) {
+        setMessage("Kein passendes Encounter gefunden — Parameter anpassen.");
+        return;
+      }
+      setSelected(monsters);
+      setEncounterTitle(
+        `${DIFFICULTY_LABELS[difficulty]}es Encounter (Level ${partyLevel})`,
+      );
+      setMessage("Vorschlag übernommen — Auswahl unten anpassen oder direkt speichern.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Generierung fehlgeschlagen.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function createEncounter() {
     if (selected.length === 0) {
       setMessage("Mindestens ein Monster auswählen.");
@@ -113,6 +184,8 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
           action: "create_encounter",
           worldSlug,
           title: encounterTitle,
+          partyLevel,
+          partySize,
           monsters: selected,
         }),
       });
@@ -130,10 +203,6 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
     } finally {
       setBusy(null);
     }
-  }
-
-  if (open5eMonsters.length === 0 && selected.length === 0) {
-    return null;
   }
 
   return (
@@ -161,7 +230,42 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
             onChange={(event) => setPartySize(Number(event.target.value))}
           />
         </label>
+        <label>
+          Schwierigkeit
+          <select
+            value={difficulty}
+            onChange={(event) => setDifficulty(event.target.value as GeneratorDifficulty)}
+          >
+            {(Object.keys(DIFFICULTY_LABELS) as GeneratorDifficulty[]).map((key) => (
+              <option key={key} value={key}>
+                {DIFFICULTY_LABELS[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Stil
+          <select
+            value={style}
+            onChange={(event) => setStyle(event.target.value as GeneratorStyle)}
+          >
+            {(Object.keys(STYLE_LABELS) as GeneratorStyle[]).map((key) => (
+              <option key={key} value={key}>
+                {STYLE_LABELS[key]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+
+      <button
+        type="button"
+        className="uwe-v2-btn uwe-v2-btn-secondary"
+        disabled={busy === "generate"}
+        onClick={() => void generateEncounter()}
+      >
+        {busy === "generate" ? "Würfle Encounter…" : "Encounter generieren (XP-Budget)"}
+      </button>
 
       {open5eMonsters.length > 0 && (
         <ul className="uwe-list-cards">
@@ -209,14 +313,28 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
             {selected.map((monster) => (
               <li key={monster.slug} className="uwe-list-card">
                 <strong>{monster.name}</strong>
-                <label>
-                  CR
-                  <input
-                    value={monster.cr ?? ""}
-                    placeholder="z. B. 1/2"
-                    onChange={(event) => updateMonsterCr(monster.slug, event.target.value)}
-                  />
-                </label>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <label>
+                    CR
+                    <input
+                      value={monster.cr ?? ""}
+                      placeholder="z. B. 1/2"
+                      onChange={(event) => updateMonsterCr(monster.slug, event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Anzahl
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={monster.count ?? 1}
+                      onChange={(event) =>
+                        updateMonsterCount(monster.slug, Number(event.target.value))
+                      }
+                    />
+                  </label>
+                </div>
               </li>
             ))}
           </ul>
@@ -226,7 +344,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
       <EncounterBudgetSummary
         partyLevel={partyLevel}
         partySize={partySize}
-        monsters={selected.map((monster) => ({ cr: monster.cr, count: 1 }))}
+        monsters={selected.map((monster) => ({ cr: monster.cr, count: monster.count ?? 1 }))}
       />
 
       <button
