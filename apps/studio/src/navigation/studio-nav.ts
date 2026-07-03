@@ -188,6 +188,18 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["capture", "inbox"],
       },
       {
+        id: "tools-scan-inbox",
+        label: "Scan Inbox",
+        href: "/scan-inbox",
+        icon: "scan-line",
+        group: TOOLS,
+        section: TOOLS,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "studio",
+        keywords: ["scan", "ocr", "dokument", "inbox", "vertrag", "rechnung", "beleg"],
+      },
+      {
         id: "tools-templates",
         label: "Templates",
         href: "/templates",
