@@ -435,6 +435,7 @@ enum EntityTagEntityType {
   hardware
   dev_idea
   recipe
+  scan_document
 }
 
 enum WorldEventSourceType {
@@ -486,6 +487,7 @@ enum AdminLinkSourceType {
   hardware_device
   personal_brain_document
   personal_brain_fact
+  scan_document
 }
 
 enum AdminLinkTargetType {
@@ -499,6 +501,7 @@ enum AdminLinkTargetType {
   world
   page
   asset
+  scan_document
 }
 
 model User {
@@ -682,6 +685,7 @@ model World {
   structuredStatblocks StructuredStatblock[]
   structuredItems      StructuredItem[]
   playerQuestions      PlayerQuestion[]
+  scanDocuments        ScanDocument[]
   importJobs           ImportJob[]
 
   @@map("worlds")
@@ -3706,4 +3710,68 @@ model PlayerQuestion {
 
   @@index([worldId, status])
   @@map("player_questions")
+}
+
+enum ScanDocumentStatus {
+  unanalyzed
+  analyzing
+  waiting_for_rtx
+  proposal_ready
+  uncertain
+  filed
+  rejected
+  archived
+}
+
+enum ScanDocumentKind {
+  letter
+  invoice
+  contract_doc
+  warranty
+  receipt
+  handwritten_note
+  recipe
+  dnd_session_note
+  dnd_dungeon_note
+  dnd_handout
+  unknown
+}
+
+enum ScanPrivacyLevel {
+  private
+  dnd
+}
+
+model ScanDocument {
+  id                  String             @id @default(cuid())
+  title               String             @default("")
+  status              ScanDocumentStatus @default(unanalyzed)
+  privacyLevel        ScanPrivacyLevel   @default(private)
+  storageKey          String             @map("storage_key")
+  mimeType            String             @map("mime_type")
+  fileSize            Int                @default(0) @map("file_size")
+  pageCount           Int?               @map("page_count")
+  ocrText             String             @default("") @map("ocr_text")
+  ocrEngine           String?            @map("ocr_engine")
+  detectedKind        ScanDocumentKind   @default(unknown) @map("detected_kind")
+  detectionConfidence String?            @map("detection_confidence")
+  extractedFields     Json?              @map("extracted_fields")
+  proposal            Json?
+  uncertainties       Json?
+  connectorJobId      String?            @map("connector_job_id")
+  errorMessage        String?            @map("error_message")
+  worldId             String?            @map("world_id")
+  filedTargetType     String?            @map("filed_target_type")
+  filedTargetId       String?            @map("filed_target_id")
+  filedAt             DateTime?          @map("filed_at")
+  rejectedAt          DateTime?          @map("rejected_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([detectedKind])
+  @@index([worldId])
+  @@map("scan_documents")
 }
