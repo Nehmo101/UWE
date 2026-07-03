@@ -12,6 +12,8 @@
     "./server": "./src/server.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
     "./health-metrics": "./src/health-metrics-service.ts",
+    "./magic-item": "./src/magic-item-model.ts",
+    "./magic-item-service": "./src/magic-item-service.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",

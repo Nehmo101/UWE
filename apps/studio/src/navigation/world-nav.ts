@@ -61,6 +61,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "map",
           "weltkarte",
         ]),
+        item("world-magic-items", "Magic-Item-Werkbank", `${base}/magic-items`, "gem", "Wiki", [
+          "item",
+          "magic item",
+          "werkbank",
+          "homebrewery",
+          "seltenheit",
+        ]),
       ],
     },
     {

@@ -680,6 +680,7 @@ model World {
   partyTreasury       PartyTreasury?
   inventoryItems      InventoryItem[]
   structuredStatblocks StructuredStatblock[]
+  structuredItems      StructuredItem[]
   importJobs           ImportJob[]
 
   @@map("worlds")
@@ -761,6 +762,7 @@ model Page {
   character              Character?
   inventoryItems         InventoryItem[]
   structuredStatblock    StructuredStatblock?
+  structuredItem         StructuredItem?
 
   @@unique([worldId, slug])
   @@index([parentPageId])
@@ -3663,4 +3665,19 @@ model ShoppingListItem {
 
   @@index([listId, category])
   @@map("shopping_list_items")
+}
+
+model StructuredItem {
+  id           String   @id @default(cuid())
+  worldId      String   @map("world_id")
+  pageId       String   @unique @map("page_id")
+  data         Json
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("structured_items")
 }

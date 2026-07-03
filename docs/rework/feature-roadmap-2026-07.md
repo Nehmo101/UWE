@@ -71,7 +71,9 @@ Scan Inbox und Küche/Essensplaner sind jetzt offizielle Module (siehe
 > (Wochenplan + Einkaufsliste) gebaut — siehe `meal-planner-plan.md`.
 > Health-Ampel gebaut (`health-metrics-service.ts`: DB-Größe, größte Tabellen,
 > Upload-Volumen, Connector-Erreichbarkeit + Ampel-Logik; Seite `/system/health`,
-> 7 Tests).
+> 7 Tests). Magic-Item-Werkbank gebaut (`StructuredItem`-Modell + `magic-item-model.ts`
+> pure Export Homebrewery/5e.tools/Spieler-Handout mit DM-Geheimnis-Trennung,
+> Werkbank-Seiten `/worlds/[slug]/magic-items`, 14 Tests).
 
 - **Kampagnen-Radar** („Was passiert gerade in der Welt?"): fast reine Lese-Aggregation
   über `FactionState`, offene Quests (`quest-lifecycle-service.ts`), `WorldCalendar`,
