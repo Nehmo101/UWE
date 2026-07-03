@@ -1,0 +1,13 @@
+/**
+ * `@uwe/scan-inbox` — Dokumentenscanner / Scan Inbox.
+ *
+ * Pipeline: Upload → OCR (PDF-Layer oder RTX-Vision) → Feld-Extraktion →
+ * Ablage-Vorschlag → Owner bestätigt → Ablage. Nie automatisch. Private Scans
+ * laufen RTX-lokal (Connector-Queue), nie über Cloud.
+ */
+export * from "./scan-types";
+export * from "./field-extraction";
+export * from "./kind-detection";
+export * from "./proposal-builder";
+export * from "./analyze";
+export * from "./scan-service";
