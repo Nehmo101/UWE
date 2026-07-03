@@ -23,6 +23,8 @@
     "./label-elements": "./src/label-elements.ts",
     "./generator-types": "./src/generator-types.ts",
     "./contract-expense-utils": "./src/contract-expense-utils.ts",
+    "./finance-overview": "./src/finance-overview-service.ts",
+    "./continue-work": "./src/continue-work-service.ts",
     "./theme-preferences": "./src/theme-preferences.ts",
     "./integrations-ui": "./src/integrations-ui.ts",
     "./personal-brain-constants": "./src/personal-brain-constants.ts",
