@@ -3823,3 +3823,29 @@ model MaintenanceTask {
   @@index([nextDueAt])
   @@map("maintenance_tasks")
 }
+
+enum PantryLocation {
+  pantry
+  fridge
+  freezer
+  spices
+}
+
+model PantryItem {
+  id             String         @id @default(cuid())
+  name           String
+  normalizedName String         @map("normalized_name")
+  location       PantryLocation @default(pantry)
+  amount         Float?
+  unit           IngredientUnit @default(freeform)
+  unitLabel      String?        @map("unit_label")
+  expiresAt      DateTime?      @map("expires_at")
+  lowStock       Boolean        @default(false) @map("low_stock")
+  notes          String         @default("")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@index([location])
+  @@index([expiresAt])
+  @@map("pantry_items")
+}
