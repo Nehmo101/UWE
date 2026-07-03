@@ -164,6 +164,8 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   generate_structured_item: "dnd",
   answer_life_question: "chat",
   synthesize_research: "analysis",
+  summarize_mail: "analysis",
+  prioritize_mail: "analysis",
 };
 
 export function workflowSlotForTask(taskType: AiTaskType): ConnectorWorkflowSlot {

@@ -133,6 +133,23 @@ function applyContextMode(context: AiContext, mode: AiContextMode): AiContext {
         allowDmOnly: true,
       };
 
+    // Mail content travels in the user prompt; no wiki/brain context is loaded.
+    case "mail":
+      return {
+        taskType: context.taskType,
+        worldId: "",
+        primaryPageId: "",
+        pages: [],
+        brainEntries: [],
+        session: undefined,
+        campaign: undefined,
+        sources: [],
+        promptContext: "",
+        truncated: false,
+        datenschutzMode: true,
+        allowDmOnly: false,
+      };
+
     default:
       return context;
   }
@@ -162,7 +179,7 @@ export async function buildRouterContext(
 
   let fullContext: AiContext;
 
-  if (input.contextMode === "personal_brain") {
+  if (input.contextMode === "personal_brain" || input.contextMode === "mail") {
     return applyContextMode(
       {
         taskType: input.taskType,
@@ -170,10 +187,13 @@ export async function buildRouterContext(
         primaryPageId: "",
         pages: [],
         sources: [],
-        promptContext: input.personalBrainPromptContext?.trim() ?? "",
+        promptContext:
+          input.contextMode === "personal_brain"
+            ? (input.personalBrainPromptContext?.trim() ?? "")
+            : "",
         truncated: false,
         datenschutzMode: input.options?.datenschutzMode ?? true,
-        allowDmOnly: true,
+        allowDmOnly: input.contextMode === "personal_brain",
       },
       input.contextMode,
     );

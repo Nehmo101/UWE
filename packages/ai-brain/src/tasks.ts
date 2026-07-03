@@ -26,6 +26,8 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   generate_structured_item: "Item strukturiert generieren",
   answer_life_question: "Life-Brain Frage beantworten",
   synthesize_research: "Research-Report erstellen",
+  summarize_mail: "Mail zusammenfassen",
+  prioritize_mail: "Mail priorisieren",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -79,6 +81,10 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Beantworte die Frage aus dem persönlichen Life-Brain-Kontext. Stütze dich nur auf den bereitgestellten Kontext und allgemeines Wissen. Wenn der Kontext die Antwort nicht hergibt, sage das klar, statt etwas zu erfinden.",
   synthesize_research:
     "Fasse die mitgelieferten Web-Quellen zu einem strukturierten Recherche-Report zusammen: Kurzantwort, Erkenntnisse mit Quellenverweisen [n], offene Fragen. Erfinde keine Fakten und keine Quellen.",
+  summarize_mail:
+    "Fasse die E-Mail in 2–3 Sätzen auf Deutsch zusammen. Keine erfundenen Details.",
+  prioritize_mail:
+    "Bewerte die E-Mail nach Priorität und Kategorie. Antworte NUR als JSON.",
 };
 
 /** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */

@@ -195,7 +195,8 @@ export async function executeAiPrompt(
     provider: routed.result.provider,
     model: routed.result.model,
     routedVia: routed.route,
-    contextMode: routed.contextMode,
+    // The prompt panel only submits UI context modes; "mail" is API-only.
+    contextMode: routed.contextMode as AiContextMode,
     providerMode: routed.providerMode,
   };
 }

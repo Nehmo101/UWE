@@ -33,7 +33,9 @@ export type AiTaskType =
   | "generate_structured_quest"
   | "generate_structured_item"
   | "answer_life_question"
-  | "synthesize_research";
+  | "synthesize_research"
+  | "summarize_mail"
+  | "prioritize_mail";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

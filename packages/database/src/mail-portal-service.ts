@@ -255,21 +255,41 @@ export class MailPortalService {
     };
   }
 
-  async prioritizeMessage(messageId: string, actorUserId?: string | null, vipSenders?: string[]) {
+  async prioritizeMessage(
+    messageId: string,
+    actorUserId?: string | null,
+    vipSenders?: string[],
+    aiScore?: {
+      priority: number;
+      category: MailPriorityCategory;
+      confidence: number;
+      explanation: string;
+      extractedActions: Array<{ type: string; label: string; value?: string }>;
+      modelProvider: string;
+      modelName: string;
+    },
+  ) {
     const message = await this.db.mailInboxMessage.findUnique({
       where: { id: messageId },
       include: { attachments: true },
     });
     if (!message) throw new Error("Nachricht nicht gefunden.");
 
-    const scored = scoreMailPriority({
-      subject: message.subject,
-      fromAddress: message.fromAddress,
-      bodyText: message.bodyText,
-      bodyHtml: message.bodyHtml,
-      hasAttachments: message.hasAttachments || message.attachments.length > 0,
-      vipSenders,
-    });
+    // AI score (local LLM) wins when provided; the rule engine stays the fallback.
+    const scored = aiScore
+      ? { ...aiScore, ruleSignals: ["llm"] }
+      : {
+          ...scoreMailPriority({
+            subject: message.subject,
+            fromAddress: message.fromAddress,
+            bodyText: message.bodyText,
+            bodyHtml: message.bodyHtml,
+            hasAttachments: message.hasAttachments || message.attachments.length > 0,
+            vipSenders,
+          }),
+          modelProvider: "rules",
+          modelName: "uwe-mail-rules-v1",
+        };
 
     const saved = await this.db.mailPriorityScore.upsert({
       where: { messageId },
@@ -281,8 +301,8 @@ export class MailPortalService {
         explanation: scored.explanation,
         ruleSignals: scored.ruleSignals,
         extractedActions: scored.extractedActions,
-        modelProvider: "rules",
-        modelName: "uwe-mail-rules-v1",
+        modelProvider: scored.modelProvider,
+        modelName: scored.modelName,
       },
       update: {
         priority: scored.priority,
@@ -292,8 +312,8 @@ export class MailPortalService {
         ruleSignals: scored.ruleSignals,
         extractedActions: scored.extractedActions,
         scoredAt: new Date(),
-        modelProvider: "rules",
-        modelName: "uwe-mail-rules-v1",
+        modelProvider: scored.modelProvider,
+        modelName: scored.modelName,
       },
     });
 
@@ -302,8 +322,8 @@ export class MailPortalService {
         messageId,
         kind: "prioritize",
         outputText: scored.explanation,
-        modelProvider: "rules",
-        modelName: "uwe-mail-rules-v1",
+        modelProvider: scored.modelProvider,
+        modelName: scored.modelName,
       },
     });
 
