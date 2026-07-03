@@ -161,7 +161,7 @@ main() {
   log_line "Repository: $UWE_HOME"
 
   set +e
-  {
+  (
     log_line "Synchronisiere Repository mit origin/main ..."
     sync_repository_to_origin_main
     sync_code="$?"
@@ -172,7 +172,7 @@ main() {
     log_line "setup-uwe-host.sh --quick …"
     bash "$UWE_HOME/deploy/scripts/setup-uwe-host.sh" --quick 2>&1 | tee -a "$LOG_FILE"
     exit "${PIPESTATUS[0]}"
-  }
+  )
   exit_code=$?
   set -e
 
