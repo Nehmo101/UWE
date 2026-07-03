@@ -2,12 +2,80 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createGameSessionService, GameSessionStatusEnum } from "@uwe/database/server";
+import {
+  createGameSessionService,
+  createSessionLiveService,
+  GameSessionStatusEnum,
+  prisma,
+  type SessionLiveEntryKind,
+} from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 function sessions() {
   return createGameSessionService();
+}
+
+function liveEntries() {
+  return createSessionLiveService(prisma);
+}
+
+const LIVE_ENTRY_KINDS: SessionLiveEntryKind[] = [
+  "note",
+  "loot",
+  "quest_update",
+  "npc_update",
+  "initiative",
+  "bookmark",
+];
+
+export async function appendSessionLiveEntryAction(input: {
+  worldSlug: string;
+  sessionId: string;
+  kind: SessionLiveEntryKind;
+  content: string;
+  refPageId?: string | null;
+}): Promise<void> {
+  await requireStudioActionAuth();
+  await requireStudioWorldEdit(input.worldSlug);
+
+  const kind = LIVE_ENTRY_KINDS.includes(input.kind) ? input.kind : "note";
+  const content = input.content.trim();
+  if (!content) {
+    throw new Error("Eintrag darf nicht leer sein.");
+  }
+
+  await liveEntries().appendEntry({
+    gameSessionId: input.sessionId,
+    kind,
+    content,
+    refPageId: input.refPageId ?? null,
+  });
+  revalidatePath(`/worlds/${input.worldSlug}/sessions/${input.sessionId}/live`);
+}
+
+export async function deleteSessionLiveEntryAction(input: {
+  worldSlug: string;
+  sessionId: string;
+  entryId: string;
+}): Promise<void> {
+  await requireStudioActionAuth();
+  await requireStudioWorldEdit(input.worldSlug);
+
+  await liveEntries().deleteEntry(input.entryId);
+  revalidatePath(`/worlds/${input.worldSlug}/sessions/${input.sessionId}/live`);
+}
+
+export async function saveSessionRecapDraftAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug") || "");
+  const sessionId = String(formData.get("sessionId") || "");
+  const summaryDm = String(formData.get("summaryDm") || "");
+  await requireStudioWorldEdit(worldSlug);
+
+  await sessions().update(sessionId, { summaryDm });
+  revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
+  redirect(`/worlds/${worldSlug}/sessions/${sessionId}/review?saved=1`);
 }
 
 export async function updateSessionLiveNotesAction(input: {
@@ -57,5 +125,5 @@ export async function endSessionLiveModeAction(formData: FormData): Promise<void
 
   await sessions().update(sessionId, { status: GameSessionStatusEnum.played });
   revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
-  redirect(`/worlds/${worldSlug}/sessions/${sessionId}?saved=1`);
+  redirect(`/worlds/${worldSlug}/sessions/${sessionId}/review`);
 }

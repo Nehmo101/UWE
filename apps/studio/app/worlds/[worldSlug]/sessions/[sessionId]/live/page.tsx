@@ -5,7 +5,9 @@ import {
   buildPageUrl,
   createAuthService,
   createPrismaClient,
+  createSessionLiveService,
   getAppRepository,
+  sessionLiveKindLabel,
 } from "@uwe/database/server";
 import { SessionLivePanel } from "@/components/SessionLivePanel";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
@@ -29,6 +31,9 @@ export default async function SessionLivePage({ params }: Props) {
   const db = createPrismaClient();
   const auth = createAuthService(db);
   const session = await auth.getGameSessionForDm(worldSlug, sessionId);
+  const liveEntries = session
+    ? await createSessionLiveService(db).listEntries(sessionId)
+    : [];
   await db.$disconnect();
 
   if (!session) notFound();
@@ -38,6 +43,21 @@ export default async function SessionLivePage({ params }: Props) {
     title: page.title,
     href: buildPageUrl(worldSlug, page.type, page.slug),
   }));
+
+  const linkedById = new Map(linkedPages.map((page) => [page.id, page]));
+  const timeFormat = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const entryViews = liveEntries.map((entry) => {
+    const ref = entry.refPageId ? linkedById.get(entry.refPageId) : undefined;
+    return {
+      id: entry.id,
+      kind: entry.kind,
+      kindLabel: sessionLiveKindLabel(entry.kind),
+      content: entry.content,
+      time: timeFormat.format(entry.createdAt),
+      refHref: ref?.href ?? null,
+      refTitle: ref?.title ?? null,
+    };
+  });
 
   return (
     <WorldShell
@@ -74,6 +94,7 @@ export default async function SessionLivePage({ params }: Props) {
         sessionTitle={session.title}
         initialNotes={session.notes ?? ""}
         linkedPages={linkedPages}
+        entries={entryViews}
       />
     </WorldShell>
   );
