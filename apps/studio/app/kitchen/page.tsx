@@ -51,6 +51,12 @@ export default async function KitchenDashboardPage() {
           <Link href="/kitchen/recipes" className="uwe-v2-btn uwe-v2-btn-primary">
             Alle Rezepte
           </Link>
+          <Link href="/kitchen/plan" className="uwe-v2-btn uwe-v2-btn-secondary">
+            Wochenplan
+          </Link>
+          <Link href="/kitchen/shopping" className="uwe-v2-btn uwe-v2-btn-secondary">
+            Einkaufslisten
+          </Link>
           <Link href="/kitchen/recipes?new=1" className="uwe-v2-btn uwe-v2-btn-secondary">
             Neues Rezept
           </Link>

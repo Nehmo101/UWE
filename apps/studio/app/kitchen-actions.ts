@@ -2,7 +2,11 @@
 
 import {
   createKitchenService,
+  createMealPlanService,
+  createShoppingService,
   parseIngredientLines,
+  type MealEntryType,
+  type MealSlot,
   type RecipeInput,
   type RecipeStatus,
 } from "@uwe/kitchen";
@@ -13,6 +17,27 @@ import { assertStudioTrusted } from "@/src/lib/authz";
 
 function kitchen() {
   return createKitchenService(prisma);
+}
+
+function mealPlan() {
+  return createMealPlanService(prisma);
+}
+
+function shopping() {
+  return createShoppingService(prisma);
+}
+
+/** Standard-Grundausstattung, die beim Listen-Erzeugen mitkommt. */
+const RECURRING_BASICS = [
+  { name: "Hafermilch", category: "chilled" as const },
+  { name: "Nudeln", category: "dry" as const },
+  { name: "Brotmehl", category: "dry" as const },
+];
+
+function planRedirect(formData: FormData): string {
+  const y = String(formData.get("isoYear") || "");
+  const w = String(formData.get("isoWeek") || "");
+  return y && w ? `/kitchen/plan?y=${y}&w=${w}` : "/kitchen/plan";
 }
 
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {
@@ -91,4 +116,86 @@ export async function archiveRecipeAction(formData: FormData) {
   await kitchen().archiveRecipe(String(formData.get("id")));
   revalidateKitchenPaths();
   redirect("/kitchen/recipes");
+}
+
+// ── Wochenplan ────────────────────────────────────────────────────
+
+export async function addMealEntryAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
+  const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
+  const recipeId = String(formData.get("recipeId") || "").trim() || null;
+  const entryType = String(formData.get("entryType") || "recipe") as MealEntryType;
+
+  const week = await mealPlan().getOrCreateWeek(isoYear, isoWeek);
+  await mealPlan().setEntry({
+    weekId: week.id,
+    date: new Date(String(formData.get("date"))),
+    slot: String(formData.get("slot") || "dinner") as MealSlot,
+    entryType,
+    recipeId: entryType === "recipe" ? recipeId : null,
+    servings: parseOptionalFloat(formData.get("servings")),
+    note: String(formData.get("note") || ""),
+  });
+  revalidatePath("/kitchen/plan");
+  redirect(planRedirect(formData));
+}
+
+export async function removeMealEntryAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await mealPlan().removeEntry(String(formData.get("entryId")));
+  revalidatePath("/kitchen/plan");
+  redirect(planRedirect(formData));
+}
+
+export async function toggleMealCookedAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await mealPlan().toggleCooked(String(formData.get("entryId")));
+  revalidatePath("/kitchen/plan");
+  redirect(planRedirect(formData));
+}
+
+// ── Einkaufsliste ─────────────────────────────────────────────────
+
+export async function generateShoppingListAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const list = await shopping().generateFromWeek(String(formData.get("weekId")), {
+    recurringBasics: [...RECURRING_BASICS],
+  });
+  revalidatePath("/kitchen/shopping");
+  redirect(`/kitchen/shopping?list=${list.id}`);
+}
+
+export async function toggleShoppingItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  await shopping().toggleItem(String(formData.get("itemId")));
+  revalidatePath("/kitchen/shopping");
+  redirect(`/kitchen/shopping?list=${String(formData.get("listId"))}`);
+}
+
+export async function addShoppingItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const listId = String(formData.get("listId"));
+  await shopping().addItem({
+    listId,
+    name: String(formData.get("name") || "").trim(),
+    recurring: false,
+  });
+  revalidatePath("/kitchen/shopping");
+  redirect(`/kitchen/shopping?list=${listId}`);
+}
+
+export async function removeShoppingItemAction(formData: FormData) {
+  assertStudioTrusted();
+
+  const listId = String(formData.get("listId"));
+  await shopping().removeItem(String(formData.get("itemId")));
+  revalidatePath("/kitchen/shopping");
+  redirect(`/kitchen/shopping?list=${listId}`);
 }

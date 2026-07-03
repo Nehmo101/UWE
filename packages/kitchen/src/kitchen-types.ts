@@ -120,6 +120,43 @@ export interface RecipeIngredientInput {
   sortIndex?: number;
 }
 
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+
+export type MealEntryType = "recipe" | "leftovers" | "eating_out" | "routine" | "note";
+
+export const MEAL_SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
+
+export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
+  breakfast: "Frühstück",
+  lunch: "Mittag",
+  dinner: "Abend",
+  snack: "Snack",
+};
+
+export const MEAL_ENTRY_TYPES: MealEntryType[] = [
+  "recipe",
+  "leftovers",
+  "eating_out",
+  "routine",
+  "note",
+];
+
+export const MEAL_ENTRY_TYPE_LABELS: Record<MealEntryType, string> = {
+  recipe: "Rezept",
+  leftovers: "Reste",
+  eating_out: "Auswärts",
+  routine: "Routine",
+  note: "Notiz",
+};
+
+/** Wochenziele (frei, als Json gespeichert). */
+export interface MealPlanGoals {
+  lowEffort?: boolean;
+  cheap?: boolean;
+  mealPrepCount?: number;
+  dinnersOnly?: boolean;
+}
+
 /** Rezept-Eingabe aus dem Editor — client-safe. */
 export interface RecipeInput {
   title: string;
