@@ -39,6 +39,7 @@
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
+    "@uwe/player-hub": "workspace:*",
     "@uwe/roll-tables": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/image-studio": "workspace:*",
