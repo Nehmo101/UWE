@@ -31,6 +31,13 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "dashboard",
           "cockpit",
         ]),
+        item("world-radar", "Kampagnen-Radar", `${base}/radar`, "radar", "Übersicht", [
+          "radar",
+          "kampagne",
+          "fraktionen",
+          "was passiert",
+          "world clock",
+        ]),
       ],
     },
     {

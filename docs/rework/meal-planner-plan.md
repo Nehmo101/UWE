@@ -11,7 +11,9 @@ Aufwand, Saison). Kein Kalorien-/Diät-Tool, kein Banking: ein privates Koch-Bra
 > Formatierung, `recipe-service.ts` mit transaktionaler Zutaten-Ersetzung + Tag-
 > Integration, 26 Tests) + Studio-Routen `/kitchen`, `/kitchen/recipes`,
 > `/kitchen/recipes/[id]` + Nav-Eintrag „Küche". **Offen:** Bild-Upload im Editor
-> (TODO); K2 (Wochenplan + Einkaufsliste), K3 (Vorrat + KI), K4 (Scanner-Brücke).
+> (TODO); **K2 gebaut** (Wochenplan `/kitchen/plan` + konsolidierte Einkaufsliste
+> `/kitchen/shopping`, pure Merge-Logik `ingredient-merge.ts`, ISO-Wochen, 26 Tests).
+> Offen: K3 (Vorrat + KI), K4 (Scanner-Brücke).
 
 ---
 
