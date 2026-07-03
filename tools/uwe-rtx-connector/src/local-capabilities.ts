@@ -123,6 +123,7 @@ function executableCapabilities(
   if (env.spotifyEnabled) detected.push("spotify_connect");
   if (hasEnabledOllamaCapability(llms, enabledKeys, "chat")) detected.push("llm_local");
   if (hasEnabledOllamaCapability(llms, enabledKeys, "embeddings")) detected.push("embedding_local");
+  if (hasEnabledVisionModel(llms, enabledKeys)) detected.push("vision_local");
   if (env.imageEnabled) detected.push("image_generation");
   if (env.fileCacheEnabled) detected.push("file_cache");
   if (env.printEnabled) detected.push("label_printing");
@@ -147,6 +148,26 @@ function hasEnabledOllamaCapability(
       model.capabilities?.includes(capability) &&
       enabledKeys.has(discoveredKey(model)),
   );
+}
+
+/** Bekannte vision-fähige Ollama-Modellfamilien (Name-Heuristik als Fallback). */
+const VISION_MODEL_PATTERNS = [/llava/i, /minicpm-?v/i, /qwen2\.?5?-?vl/i, /moondream/i, /bakllava/i, /llama3\.2-vision/i];
+
+/**
+ * `vision_local` wird nur gemeldet, wenn ein aktiviertes Ollama-Modell entweder
+ * die Vision-Capability trägt ODER zu einer bekannten Vision-Familie gehört.
+ */
+function hasEnabledVisionModel(
+  llms: LocalLlmSummary,
+  enabledKeys: ReadonlySet<string>,
+): boolean {
+  return llms.models.some((model) => {
+    if (model.provider !== "ollama" || model.status !== "ready") return false;
+    if (!enabledKeys.has(discoveredKey(model))) return false;
+    if (model.capabilities?.includes("vision")) return true;
+    const name = model.name ?? "";
+    return VISION_MODEL_PATTERNS.some((pattern) => pattern.test(name));
+  });
 }
 
 /**
