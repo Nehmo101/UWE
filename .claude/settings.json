@@ -1,17 +1,40 @@
 {
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh",
+            "timeout": 600,
+            "statusMessage": "Preparing UWE workspace (deps, Prisma client, dev DB)…"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(pnpm install --frozen-lockfile)",
       "Bash(pnpm quality)",
+      "Bash(pnpm quality:quiet)",
       "Bash(pnpm ci:check)",
+      "Bash(pnpm ci:light)",
+      "Bash(pnpm ci:light:pr)",
+      "Bash(pnpm ci:light:pr:gate)",
       "Bash(pnpm lint)",
       "Bash(pnpm typecheck)",
+      "Bash(pnpm typecheck:affected)",
       "Bash(pnpm test)",
       "Bash(pnpm test:ci)",
+      "Bash(pnpm test:ci:affected)",
       "Bash(pnpm test:security)",
       "Bash(pnpm test:e2e)",
+      "Bash(pnpm test:*)",
       "Bash(pnpm build:release)",
       "Bash(pnpm build:*)",
+      "Bash(pnpm --filter @uwe/studio build)",
+      "Bash(pnpm --filter @uwe/portal build)",
       "Bash(pnpm dev)",
       "Bash(pnpm dev:studio)",
       "Bash(pnpm dev:portal)",
@@ -22,6 +45,8 @@
       "Bash(pnpm --filter @uwe/database db:generate)",
       "Bash(pnpm --filter @uwe/database db:deploy)",
       "Bash(pnpm --filter @uwe/database db:seed)",
+      "Bash(cp -n .env.example .env)",
+      "Bash(node scripts/*)",
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
@@ -36,6 +61,9 @@
       "Bash(git merge*)",
       "Bash(git rebase*)",
       "Bash(ls*)",
+      "Bash(rg*)",
+      "Bash(grep*)",
+      "Bash(find*)",
       "Bash(cat /home/user/UWE/**)"
     ]
   }
