@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { createLifeAdminService, formatEuroFromCents, prisma } from "@uwe/database/server";
+import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader } from "@/src/components/shell";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
 import { TodayDashboardClient } from "./TodayDashboardClient";
+import { TodayQuickCapture } from "./TodayQuickCapture";
+import { LifeBrainChatPanel } from "@/components/life-brain/LifeBrainChatPanel";
+import { resolveAiKnowledgeAccess } from "@/src/lib/ai-gateway-access";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -18,14 +22,17 @@ async function getLatestBriefing() {
 
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
-  const [data, briefing] = await Promise.all([
+  const [data, briefing, currentUser] = await Promise.all([
     getTodayDashboardData(prisma, { useMockInference }),
     getLatestBriefing(),
+    getCurrentAuthUser(),
   ]);
+  const chatAccess = await resolveAiKnowledgeAccess(currentUser);
 
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
       <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
+      <TodayQuickCapture />
       <TodayDashboardClient data={data} />
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
@@ -54,50 +61,16 @@ export default async function TodayPage() {
         </p>
       </section>
 
-      <div className="uwe-v2-stat-grid">
-        <section className="uwe-v2-card uwe-v2-card-padded">
-          <h2 className="uwe-v2-section-title">Kalender — Heute</h2>
-          {data.calendarToday.length > 0 ? (
-            <div className="uwe-today-card-list">
-              {data.calendarToday.map((item) => (
-                <article key={item.id} className="uwe-today-card">
-                  <h3>{item.title}</h3>
-                  <p>
-                    {item.moduleLabel}
-                    {item.allDay ? "" : ` · ${DATE_FORMAT.format(item.startAt)}`}
-                    {item.urgency === "overdue" ? " · überfällig" : ""}
-                  </p>
-                  {item.href && (
-                    <p>
-                      <Link href={item.href}>Details →</Link>
-                    </p>
-                  )}
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="uwe-dashboard-muted">Keine Termine oder Fristen für heute.</p>
-          )}
-          {data.calendarThisWeek.length > 0 && (
-            <>
-              <h3 className="uwe-section-subtitle">Diese Woche</h3>
-              <div className="uwe-today-card-list">
-                {data.calendarThisWeek.slice(0, 5).map((item) => (
-                  <article key={item.id} className="uwe-today-card">
-                    <h3>{item.title}</h3>
-                    <p>
-                      {item.moduleLabel} · {DATE_FORMAT.format(item.startAt)}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-          <p>
-            <Link href="/calendar">Kalender öffnen →</Link>
-          </p>
-        </section>
+      {chatAccess.allowed && (
+        <details className="uwe-v2-section">
+          <summary className="uwe-v2-section-title">
+            💬 Nachfragen zum Briefing (Life-Brain)
+          </summary>
+          <LifeBrainChatPanel useMock={useMockInference} pollIntervalMs={30_000} />
+        </details>
+      )}
 
+      <div className="uwe-v2-stat-grid">
         <section className="uwe-v2-card uwe-v2-card-padded">
           <h2 className="uwe-v2-section-title">Mail Center</h2>
           {data.mailSummary.recentFailed > 0 ? (
@@ -162,34 +135,6 @@ export default async function TodayPage() {
           )}
           <p>
             <Link href="/workshop">Werkstatt öffnen →</Link>
-          </p>
-        </section>
-
-        <section className="uwe-v2-card uwe-v2-card-padded">
-          <h2 className="uwe-v2-section-title">Verträge & Ausgaben</h2>
-          <p>
-            {data.lifeAdmin.contractsNeedingReview > 0
-              ? `${data.lifeAdmin.contractsNeedingReview} zur Prüfung`
-              : "Keine offenen Prüfungen"}
-          </p>
-          {data.lifeAdmin.contractCosts.activeCount > 0 && (
-            <p className="uwe-dashboard-muted">
-              ~{formatEuroFromCents(data.lifeAdmin.contractCosts.monthlyTotalCents)}/Monat ·{" "}
-              {formatEuroFromCents(data.lifeAdmin.contractCosts.yearlyTotalCents)}/Jahr (
-              {data.lifeAdmin.contractCosts.activeCount} aktiv)
-            </p>
-          )}
-          {data.lifeAdmin.contractAlerts.length > 0 && (
-            <ul className="uwe-today-card-list">
-              {data.lifeAdmin.contractAlerts.slice(0, 3).map((alert) => (
-                <li key={alert.contractId} className="uwe-today-card">
-                  {alert.message}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p>
-            <Link href="/contracts">Verträge verwalten →</Link>
           </p>
         </section>
       </div>

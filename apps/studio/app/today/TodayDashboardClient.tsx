@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   EmptyState,
@@ -9,8 +10,9 @@ import {
   useDashboardLayout,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
+import { markMaintenanceDoneAction } from "@/app/household-actions";
 import { formatEuroFromCents } from "@uwe/database/contract-expense-utils";
-import { STUDIO_TODAY_PAGE_KEY } from "@uwe/database/dashboard-layout";
+import { STUDIO_TODAY_PAGE_KEY, mergeMissingDefaultWidgets } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { TodayDashboardData } from "@/src/lib/today-dashboard";
 
@@ -18,6 +20,14 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+const DATE_ONLY_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+
+const MAIL_CATEGORY_LABELS: Record<string, string> = {
+  urgent: "Dringend",
+  reply_needed: "Antwort nötig",
+  today: "Heute",
+};
 
 function statusDot(ok: boolean, warn = false): "ok" | "warn" | "error" {
   if (ok) return "ok";
@@ -37,6 +47,10 @@ interface TodayDashboardClientProps {
 
 export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
   const layout = useDashboardLayout({ pageKey: STUDIO_TODAY_PAGE_KEY });
+  const widgets = useMemo(
+    () => mergeMissingDefaultWidgets(STUDIO_TODAY_PAGE_KEY, layout.widgets),
+    [layout.widgets],
+  );
 
   const renderWidget = (widget: DashboardWidgetConfig) => {
     switch (widget.widgetType) {
@@ -260,6 +274,194 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
             </p>
           </section>
         );
+      case "agenda":
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Was steht heute an</h2>
+            {data.calendarToday.length > 0 ? (
+              <div className="uwe-today-card-list">
+                {data.calendarToday.map((item) => (
+                  <article key={item.id} className="uwe-today-card">
+                    <h3>{item.href ? <Link href={item.href}>{item.title}</Link> : item.title}</h3>
+                    <p>
+                      {item.moduleLabel}
+                      {item.allDay ? "" : ` · ${DATE_FORMAT.format(item.startAt)}`}
+                      {item.urgency === "overdue" ? " · überfällig" : ""}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="uwe-dashboard-muted">Nichts Dringendes für heute. 🎉</p>
+            )}
+            {data.calendarThisWeek.length > 0 && (
+              <>
+                <h3 className="uwe-section-subtitle">Diese Woche</h3>
+                <div className="uwe-today-card-list">
+                  {data.calendarThisWeek.slice(0, 5).map((item) => (
+                    <article key={item.id} className="uwe-today-card">
+                      <h3>{item.title}</h3>
+                      <p>
+                        {item.moduleLabel} · {DATE_FORMAT.format(item.startAt)}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+            <p>
+              <Link href="/calendar">Kalender öffnen →</Link>
+            </p>
+          </section>
+        );
+      case "prioritized-mail": {
+        const mail = data.prioritizedMail;
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Wichtige Mails</h2>
+            {mail.actionableCount > 0 ? (
+              <p>
+                {mail.urgentCount > 0 ? (
+                  <strong className="uwe-form-error">{mail.urgentCount} dringend</strong>
+                ) : null}
+                {mail.urgentCount > 0 && (mail.replyNeededCount > 0 || mail.todayCount > 0)
+                  ? " · "
+                  : ""}
+                {mail.replyNeededCount > 0 ? `${mail.replyNeededCount} Antwort nötig` : ""}
+                {mail.replyNeededCount > 0 && mail.todayCount > 0 ? " · " : ""}
+                {mail.todayCount > 0 ? `${mail.todayCount} heute` : ""}
+              </p>
+            ) : (
+              <p className="uwe-dashboard-muted">
+                {mail.unreadTotal > 0
+                  ? `${mail.unreadTotal} ungelesen, nichts Dringendes.`
+                  : "Keine wichtigen Mails."}
+              </p>
+            )}
+            {mail.topMessages.length > 0 && (
+              <div className="uwe-today-card-list">
+                {mail.topMessages.map((message) => (
+                  <article key={message.id} className="uwe-today-card">
+                    <h3>{message.subject || "(ohne Betreff)"}</h3>
+                    <p>
+                      {message.category
+                        ? `${MAIL_CATEGORY_LABELS[message.category] ?? message.category} · `
+                        : ""}
+                      {message.fromAddress}
+                    </p>
+                    {message.extractedActions.length > 0 && (
+                      <p className="uwe-dashboard-muted">
+                        {message.extractedActions.map((action) => action.label).join(" · ")}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+            <p>
+              <Link href="/mail">Mail Center →</Link>
+            </p>
+          </section>
+        );
+      }
+      case "household": {
+        const household = data.household;
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Haushalt & Vorräte</h2>
+            <p>
+              {household.overdueCount > 0 ? (
+                <strong className="uwe-form-error">{household.overdueCount} überfällig</strong>
+              ) : null}
+              {household.overdueCount > 0 && household.soonCount > 0 ? " · " : ""}
+              {household.soonCount > 0 ? `${household.soonCount} bald fällig` : ""}
+              {household.overdueCount === 0 && household.soonCount === 0
+                ? "Keine fälligen Aufgaben"
+                : ""}
+            </p>
+            {household.upcoming.length > 0 && (
+              <div className="uwe-today-card-list">
+                {household.upcoming.slice(0, 4).map((task) => (
+                  <article key={task.id} className="uwe-today-card">
+                    <h3>
+                      <Link href="/household">{task.title}</Link>
+                    </h3>
+                    <p>
+                      {task.category || "Haushalt"}
+                      {task.nextDueAt ? ` · ${DATE_ONLY_FORMAT.format(task.nextDueAt)}` : ""}
+                      {task.overdue ? " · überfällig" : ""}
+                    </p>
+                    <form action={markMaintenanceDoneAction}>
+                      <input type="hidden" name="id" value={task.id} />
+                      <button
+                        type="submit"
+                        className="uwe-v2-btn uwe-v2-btn-secondary"
+                        aria-label={`${task.title} als erledigt markieren`}
+                      >
+                        ✓ Erledigt
+                      </button>
+                    </form>
+                  </article>
+                ))}
+              </div>
+            )}
+            {household.expiringPantry.length > 0 && (
+              <p
+                className={
+                  household.expiredPantryCount > 0 ? "uwe-form-error" : "uwe-dashboard-muted"
+                }
+              >
+                {household.expiredPantryCount > 0
+                  ? `${household.expiredPantryCount} Vorrat abgelaufen · `
+                  : ""}
+                {household.expiringPantry.length} Vorräte laufen bald ab
+              </p>
+            )}
+            <p>
+              <Link href="/household">Haushalt öffnen →</Link>
+            </p>
+          </section>
+        );
+      }
+      case "jobs-queue": {
+        const jobs = data.jobs;
+        const activeCount = jobs.pendingCount + jobs.runningCount;
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Automatisierung</h2>
+            {jobs.queueImplemented ? (
+              <>
+                <p>
+                  {jobs.runningCount > 0 ? `${jobs.runningCount} laufen` : ""}
+                  {jobs.runningCount > 0 && jobs.pendingCount > 0 ? " · " : ""}
+                  {jobs.pendingCount > 0 ? `${jobs.pendingCount} in Warteschlange` : ""}
+                  {activeCount === 0 ? "Keine aktiven Jobs" : ""}
+                </p>
+                {jobs.failedCount > 0 && (
+                  <p className="uwe-form-error">{jobs.failedCount} fehlgeschlagen</p>
+                )}
+                {jobs.recentFailures.length > 0 && (
+                  <div className="uwe-today-card-list">
+                    {jobs.recentFailures.slice(0, 3).map((failure) => (
+                      <article key={failure.id} className="uwe-today-card">
+                        <h3>{failure.title || failure.type}</h3>
+                        {failure.errorMessage && (
+                          <p className="uwe-dashboard-muted">{failure.errorMessage}</p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="uwe-dashboard-muted">{jobs.message}</p>
+            )}
+            <p>
+              <Link href="/jobs">Jobs öffnen →</Link>
+            </p>
+          </section>
+        );
+      }
       default:
         return null;
     }
@@ -270,10 +472,10 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
   }
 
   return (
-    <LayoutEditorProvider initialWidgets={layout.widgets}>
+    <LayoutEditorProvider initialWidgets={widgets}>
       <LayoutEditToolbar
-        onApply={async (widgets) => {
-          await layout.save(widgets);
+        onApply={async (nextWidgets) => {
+          await layout.save(nextWidgets);
         }}
         saving={layout.saving}
         error={layout.error}

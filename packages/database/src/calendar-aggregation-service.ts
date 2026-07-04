@@ -14,7 +14,8 @@ export type CalendarItemSource =
   | "workshop"
   | "hardware"
   | "backup"
-  | "personal_project";
+  | "personal_project"
+  | "maintenance_task";
 
 export type CalendarItemUrgency = "today" | "upcoming" | "overdue";
 
@@ -41,6 +42,12 @@ export interface CalendarAggregationInput {
   workshops: Array<{ id: string; title: string; metadata: unknown; nextActionDate?: Date | null }>;
   hardware: Array<{ id: string; name: string; metadata: unknown }>;
   personalProjects: Array<{ id: string; name: string; metadata: unknown; nextActionDate?: Date | null }>;
+  maintenanceTasks?: Array<{
+    id: string;
+    title: string;
+    nextDueAt: Date | null;
+    category?: string | null;
+  }>;
   sessions: Array<{
     id: string;
     title: string;
@@ -311,6 +318,26 @@ export function aggregateCalendarItems(
     });
   }
 
+  for (const task of input.maintenanceTasks ?? []) {
+    if (!task.nextDueAt || !isWithinHorizon(task.nextDueAt, now, horizonDays)) {
+      continue;
+    }
+
+    const category = task.category?.trim();
+    items.push({
+      id: `maintenance:${task.id}`,
+      title: task.title,
+      startAt: task.nextDueAt,
+      endAt: null,
+      allDay: true,
+      source: "maintenance_task",
+      kind: "maintenance",
+      moduleLabel: category ? `Haushalt · ${category}` : "Haushalt",
+      href: "/household",
+      urgency: classifyUrgency(task.nextDueAt, now),
+    });
+  }
+
   const needsBackupCheck =
     !input.lastBackupAt ||
     now.getTime() - input.lastBackupAt.getTime() > BACKUP_CHECK_INTERVAL_DAYS * MS_PER_DAY;
@@ -387,6 +414,7 @@ export class CalendarAggregationService {
       personalProjects,
       sessions,
       lastBackup,
+      maintenanceTasks,
     ] = await Promise.all([
       calendar.listEventsForAggregation({
         worldId: options.worldId,
@@ -430,6 +458,10 @@ export class CalendarAggregationService {
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
+      this.db.maintenanceTask.findMany({
+        where: { nextDueAt: { not: null, lte: to } },
+        select: { id: true, title: true, nextDueAt: true, category: true },
+      }),
     ]);
 
     return aggregateCalendarItems({
@@ -447,6 +479,7 @@ export class CalendarAggregationService {
         worldSlug: session.world?.slug ?? options.worldSlug ?? null,
       })),
       lastBackupAt: lastBackup?.createdAt ?? null,
+      maintenanceTasks,
       now,
       horizonDays,
     });

@@ -19,6 +19,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
 import { syncBackupScheduleFromSettings } from "@/src/lib/backup-schedule-sync";
+import { syncBriefingScheduleFromSettings } from "@/src/lib/briefing-schedule-sync";
 
 function repo() {
   return getAppRepository();
@@ -178,6 +179,12 @@ export async function updateSettingsAction(formData: FormData) {
         })(),
       };
       break;
+    case "briefing":
+      update.briefing = {
+        autoBriefingEnabled: parseBoolean(formData.get("autoBriefingEnabled")),
+        time: String(formData.get("briefingTime") || "07:00"),
+      };
+      break;
     case "image-studio":
       update.imageStudio = {
         enabled: parseBoolean(formData.get("imageStudioEnabled")),
@@ -205,6 +212,11 @@ export async function updateSettingsAction(formData: FormData) {
   if (update.backup) {
     const settings = await repo().getSystemSettings();
     syncBackupScheduleFromSettings(settings.backup);
+  }
+
+  if (update.briefing) {
+    const settings = await repo().getSystemSettings();
+    syncBriefingScheduleFromSettings(settings.briefing);
   }
 
   revalidatePath("/settings");

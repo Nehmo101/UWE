@@ -79,6 +79,23 @@ export async function collectMorningBriefingFacts(
       alerts: data.lifeAdmin.contractAlerts.slice(0, 6).map((alert) => alert.message),
       needingReview: data.lifeAdmin.contractsNeedingReview,
     },
+    prioritizedMail: {
+      urgentCount: data.prioritizedMail.urgentCount,
+      replyNeededCount: data.prioritizedMail.replyNeededCount,
+      todayCount: data.prioritizedMail.todayCount,
+      topSubjects: data.prioritizedMail.topMessages
+        .map((message) => message.subject || "(ohne Betreff)")
+        .slice(0, 5),
+    },
+    household: {
+      overdueCount: data.household.overdueCount,
+      soonCount: data.household.soonCount,
+      overdueTitles: data.household.upcoming
+        .filter((task) => task.overdue)
+        .map((task) => task.title)
+        .slice(0, 6),
+      expiringPantryCount: data.household.expiringPantry.length,
+    },
     inboxCaptureCount: data.lifeAdmin.inboxCaptureCount,
     workshopOpenTasks: data.lifeAdmin.workshopOpenTasks
       .slice(0, 6)

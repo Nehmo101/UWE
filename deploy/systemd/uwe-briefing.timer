@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the UWE Morning Briefing schedule (runs once/day at the time configured in UWE)
+Documentation=file:///opt/uwe/docs/deployment-hardening.md
+
+[Timer]
+# Häufiger Tick; das Skript gated auf enabled + Uhrzeit aus der gesyncten schedule.json.
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

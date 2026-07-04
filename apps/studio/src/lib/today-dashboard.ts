@@ -3,11 +3,14 @@ import {
   createCalendarAggregationService,
   createLifeAdminService,
   createMailLogService,
+  createMailPortalService,
   createWorldOverviewService,
   getAppRepository,
   getSystemSettings,
   type AggregatedCalendarItem,
 } from "@uwe/database/server";
+import { createMaintenanceService } from "@uwe/database/maintenance";
+import { createPantryService } from "@uwe/kitchen";
 import { getAdminDashboardStatus } from "./admin-dashboard-status";
 import { getHomelabCockpitData } from "./homelab-dashboard";
 
@@ -35,6 +38,17 @@ export interface TodayDashboardData {
   mailSummary: TodayMailSummary;
   lifeAdmin: Awaited<ReturnType<ReturnType<typeof createLifeAdminService>["getTodaySummary"]>>;
   homelab: Awaited<ReturnType<typeof getHomelabCockpitData>>;
+  jobs: Awaited<ReturnType<typeof getAdminDashboardStatus>>["jobs"];
+  household: {
+    overdueCount: number;
+    soonCount: number;
+    upcoming: Awaited<ReturnType<ReturnType<typeof createMaintenanceService>["getUpcoming"]>>;
+    expiringPantry: Awaited<ReturnType<ReturnType<typeof createPantryService>["getExpiring"]>>;
+    expiredPantryCount: number;
+  };
+  prioritizedMail: Awaited<
+    ReturnType<ReturnType<typeof createMailPortalService>["getInboxPrioritySummary"]>
+  >;
   systemOk: boolean;
   systemLabel: string;
   rtxReady: boolean;
@@ -84,6 +98,9 @@ export async function getTodayDashboardData(
   const lifeAdmin = createLifeAdminService(db);
   const calendarAggregation = createCalendarAggregationService(db);
   const mailLog = createMailLogService(db);
+  const mailPortal = createMailPortalService(db);
+  const maintenance = createMaintenanceService(db);
+  const pantry = createPantryService(db);
 
   const [worlds, settings] = await Promise.all([repo.listWorlds(), getSystemSettings(db)]);
   const preferredSlug = resolvePreferredWorldSlug(worlds, {
@@ -107,18 +124,30 @@ export async function getTodayDashboardData(
     }
   }
 
-  const [lifeSummary, adminStatus, homelab, calendarSummary, failedLogs, pendingLogs] =
-    await Promise.all([
-      lifeAdmin.getTodaySummary(),
-      getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
-      getHomelabCockpitData(db, { useMockInference: options.useMockInference }),
-      calendarAggregation.getTodaySummary({
-        worldId: preferredWorld?.id,
-        worldSlug: preferredSlug ?? undefined,
-      }),
-      mailLog.list({ status: "failed", limit: 5 }),
-      mailLog.list({ status: "pending", limit: 5 }),
-    ]);
+  const [
+    lifeSummary,
+    adminStatus,
+    homelab,
+    calendarSummary,
+    failedLogs,
+    pendingLogs,
+    upcomingMaintenance,
+    expiringPantry,
+    prioritizedMail,
+  ] = await Promise.all([
+    lifeAdmin.getTodaySummary(),
+    getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
+    getHomelabCockpitData(db, { useMockInference: options.useMockInference }),
+    calendarAggregation.getTodaySummary({
+      worldId: preferredWorld?.id,
+      worldSlug: preferredSlug ?? undefined,
+    }),
+    mailLog.list({ status: "failed", limit: 5 }),
+    mailLog.list({ status: "pending", limit: 5 }),
+    maintenance.getUpcoming(),
+    pantry.getExpiring(30),
+    mailPortal.getInboxPrioritySummary({ limit: 5 }),
+  ]);
 
   const systemLabel = adminStatus.ok
     ? "System OK"
@@ -129,6 +158,13 @@ export async function getTodayDashboardData(
   const dbStatus = homelab.serviceStatuses.find((status) => status.id === "database");
   const backupStatus = homelab.serviceStatuses.find((status) => status.id === "backup");
   const tunnelStatus = homelab.serviceStatuses.find((status) => status.id === "cloudflare_tunnel");
+
+  const overdueCount = upcomingMaintenance.filter((task) => task.overdue).length;
+  const soonCount = upcomingMaintenance.filter((task) => task.dueClass === "soon").length;
+  const nowMs = Date.now();
+  const expiredPantryCount = expiringPantry.filter(
+    (item) => item.expiresAt != null && item.expiresAt.getTime() < nowMs,
+  ).length;
 
   return {
     preferredWorld: preferredWorld
@@ -153,5 +189,14 @@ export async function getTodayDashboardData(
     dbOk: dbStatus?.ok ?? false,
     backupOk: backupStatus?.ok ?? false,
     cloudflareOk: tunnelStatus?.ok ?? true,
+    jobs: adminStatus.jobs,
+    household: {
+      overdueCount,
+      soonCount,
+      upcoming: upcomingMaintenance,
+      expiringPantry,
+      expiredPantryCount,
+    },
+    prioritizedMail,
   };
 }

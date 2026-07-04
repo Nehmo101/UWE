@@ -5,6 +5,18 @@ export interface MorningBriefingFacts {
   nextSession: { title: string; date?: string | null } | null;
   mail: { recentFailed: number; pendingCount: number };
   contracts: { alerts: string[]; needingReview: number };
+  prioritizedMail: {
+    urgentCount: number;
+    replyNeededCount: number;
+    todayCount: number;
+    topSubjects: string[];
+  };
+  household: {
+    overdueCount: number;
+    soonCount: number;
+    overdueTitles: string[];
+    expiringPantryCount: number;
+  };
   inboxCaptureCount: number;
   workshopOpenTasks: string[];
   hardwareIssues: number;
@@ -21,7 +33,12 @@ function section(title: string, lines: string[]): string[] {
 
 /** Serialize dashboard facts + news headlines into the briefing prompt. */
 export function buildMorningBriefingPrompt(facts: MorningBriefingFacts): string {
-  const parts: string[] = [`Datum: ${facts.dateLabel}`, ""];
+  const parts: string[] = [
+    "Erstelle daraus eine kurze, priorisierte Heute-Agenda: zuerst die 3–5 wichtigsten Punkte (dringende Mails, überfällige oder heute fällige Aufgaben, anstehende Termine), danach ein knapper Lagebericht. Konkret und handlungsorientiert.",
+    "",
+    `Datum: ${facts.dateLabel}`,
+    "",
+  ];
 
   parts.push(
     ...section(
@@ -48,6 +65,10 @@ export function buildMorningBriefingPrompt(facts: MorningBriefingFacts): string 
     ...section("Vertrags-Warnungen", facts.contracts.alerts),
     `Verträge zur Prüfung: ${facts.contracts.needingReview}`,
     `Unbearbeitete Captures in der Inbox: ${facts.inboxCaptureCount}`,
+    `Wichtige Mails: ${facts.prioritizedMail.urgentCount} dringend, ${facts.prioritizedMail.replyNeededCount} Antwort nötig, ${facts.prioritizedMail.todayCount} heute`,
+    ...section("Top-Mails", facts.prioritizedMail.topSubjects),
+    `Haushalt: ${facts.household.overdueCount} überfällig, ${facts.household.soonCount} bald fällig, ${facts.household.expiringPantryCount} Vorräte laufen ab`,
+    ...section("Überfällige Haushaltsaufgaben", facts.household.overdueTitles),
     ...section("Offene Werkstatt-Aufgaben", facts.workshopOpenTasks),
     `Hardware mit Problemen: ${facts.hardwareIssues}`,
     `Fehlgeschlagene Mails: ${facts.mail.recentFailed}, ausstehend: ${facts.mail.pendingCount}`,
