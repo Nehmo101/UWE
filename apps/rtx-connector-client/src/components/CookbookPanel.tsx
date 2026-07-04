@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
@@ -57,12 +57,42 @@ function fitLabel(level: CookbookFitLevel): string {
   }
 }
 
+type CatalogSort = "fit" | "strength" | "vram";
+
+const SORT_LABELS: Record<CatalogSort, string> = {
+  fit: "Fit",
+  strength: "Stärke",
+  vram: "VRAM",
+};
+
+/** Filled/empty blocks for the 1–5 strength tier. */
+function strengthBar(tier: number): string {
+  const filled = Math.max(0, Math.min(5, tier));
+  return "●".repeat(filled) + "○".repeat(5 - filled);
+}
+
+/**
+ * Short reason a model got its fit score — the estimator's notes, or a sensible
+ * default derived from the fit flags when it emitted none.
+ */
+function fitReason(model: CookbookModelView): string {
+  if (model.fit.notes.length > 0) {
+    return model.fit.notes.join(" ");
+  }
+  if (!model.fit.fitsGpu) {
+    return "Überschreitet das verfügbare VRAM — nur mit CPU-Offload oder kleinerer Quantisierung.";
+  }
+  return "Passt in das VRAM-Budget der erkannten Hardware.";
+}
+
 export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: Props) {
   const [dashboard, setDashboard] = useState<CookbookDashboardView | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<CatalogSort>("fit");
+  const [onlyGoodFits, setOnlyGoodFits] = useState(true);
   const { progress: pullProgress, reset: resetPullProgress } = useOllamaPullProgress();
 
   const loadDashboard = useCallback(async () => {
@@ -114,6 +144,28 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
 
   const hardware = dashboard?.hardware;
 
+  // The catalog defaults to "good fits" (≥85%) so the strong-hardware picks stay
+  // visible without a wall of unsupported large models; the toggle shows all.
+  const FIT_THRESHOLD = 85;
+  const visibleModels = useMemo(() => {
+    const all = dashboard?.models ?? [];
+    const filtered = onlyGoodFits ? all.filter((m) => m.fit.score >= FIT_THRESHOLD) : all;
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "strength":
+          return b.strengthTier - a.strengthTier || b.paramsB - a.paramsB || b.fit.score - a.fit.score;
+        case "vram":
+          return b.fit.estimatedVramGb - a.fit.estimatedVramGb || b.fit.score - a.fit.score;
+        case "fit":
+        default:
+          return b.fit.score - a.fit.score || b.paramsB - a.paramsB;
+      }
+    });
+    return sorted;
+  }, [dashboard?.models, onlyGoodFits, sortBy]);
+
+  const totalModels = dashboard?.models.length ?? 0;
+
   return (
     <div className="connector-stack">
       <CardV2
@@ -130,13 +182,21 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
           <div className="connector-stack">
             <div className="connector-stats-row">
               <div className="connector-stat-pill">Backend: {hardware.backend}</div>
-              <div className="connector-stat-pill">
-                GPU: {hardware.gpuName ?? "keine erkannt"}
-              </div>
-              <div className="connector-stat-pill">VRAM: {hardware.gpuVramGb} GB</div>
+              <div className="connector-stat-pill">VRAM gesamt: {hardware.gpuVramGb} GB</div>
               <div className="connector-stat-pill">RAM: {hardware.ramGb} GB</div>
               <div className="connector-stat-pill">CPU-Kerne: {hardware.cpuCores}</div>
             </div>
+            {hardware.gpus.length > 0 ? (
+              <div className="connector-stats-row">
+                {hardware.gpus.map((gpu) => (
+                  <div key={gpu.index} className="connector-stat-pill">
+                    GPU {gpu.index}: {gpu.name} · {gpu.vramGb} GB
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="connector-stat-pill">Keine GPU erkannt</div>
+            )}
             <p className="connector-muted">{hardware.probeMessage}</p>
           </div>
         ) : (
@@ -212,63 +272,111 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
       </CardV2>
 
       <CardV2 title="Modell-Katalog mit Fit-Scores">
-        {dashboard && dashboard.models.length > 0 ? (
-          <div className="connector-table-wrap">
-            <table className="connector-table">
-              <thead>
-                <tr>
-                  <th>Modell</th>
-                  <th>Größe</th>
-                  <th>Fit</th>
-                  <th>VRAM (geschätzt)</th>
-                  <th>Status</th>
-                  <th>Aktionen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.models.map((model: CookbookModelView) => (
-                  <tr key={model.id}>
-                    <td>
-                      <div className="connector-table-primary">{model.label}</div>
-                      <div className="connector-table-secondary">{model.id}</div>
-                    </td>
-                    <td>{model.paramsB} B</td>
-                    <td>
-                      <HealthBadge
-                        status={fitBadgeStatus(model.fit.level)}
-                        label={`${fitLabel(model.fit.level)} · ${model.fit.score}`}
-                      />
-                    </td>
-                    <td>{model.fit.estimatedVramGb} GB</td>
-                    <td>{model.installed ? "Installiert" : "Nicht installiert"}</td>
-                    <td>
-                      <div className="connector-actions">
-                        <ButtonV2
-                          variant="ghost"
-                          onClick={() => runPull(model.id)}
-                          disabled={activeModel !== null}
-                        >
-                          Pull
-                        </ButtonV2>
-                        <ButtonV2
-                          variant="secondary"
-                          onClick={() => runEnable(model.id)}
-                          disabled={activeModel !== null}
-                        >
-                          Für UWE
-                        </ButtonV2>
-                      </div>
-                    </td>
+        <div className="connector-stack">
+          <div className="connector-catalog-controls">
+            <div className="connector-sort-group">
+              <span className="connector-muted">Sortieren:</span>
+              {(Object.keys(SORT_LABELS) as CatalogSort[]).map((key) => (
+                <ButtonV2
+                  key={key}
+                  variant={sortBy === key ? "primary" : "ghost"}
+                  onClick={() => setSortBy(key)}
+                >
+                  {SORT_LABELS[key]}
+                </ButtonV2>
+              ))}
+            </div>
+            <label className="connector-checkbox">
+              <input
+                type="checkbox"
+                checked={onlyGoodFits}
+                onChange={(event) => setOnlyGoodFits(event.target.checked)}
+              />
+              <span>Nur gute Fits (≥ {FIT_THRESHOLD} %)</span>
+            </label>
+          </div>
+
+          <p className="connector-muted">
+            Stärke = grobe Leistungsklasse nach Parametern (unabhängig von deiner Hardware). Fit =
+            wie gut das Modell auf die erkannte Hardware passt. {visibleModels.length} von{" "}
+            {totalModels} Modellen angezeigt.
+          </p>
+
+          {dashboard && visibleModels.length > 0 ? (
+            <div className="connector-table-wrap">
+              <table className="connector-table">
+                <thead>
+                  <tr>
+                    <th>Modell</th>
+                    <th>Stärke</th>
+                    <th>Größe</th>
+                    <th>Fit</th>
+                    <th>VRAM</th>
+                    <th>Status</th>
+                    <th>Aktionen</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="connector-empty-state">
-            {busy ? "Katalog wird geladen …" : "Kein Modell-Katalog verfügbar."}
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {visibleModels.map((model: CookbookModelView) => (
+                    <tr key={model.id}>
+                      <td>
+                        <div className="connector-table-primary">
+                          {model.label}
+                          {model.isMoe ? " · MoE" : ""}
+                          {model.isMultimodal ? " · Vision" : ""}
+                        </div>
+                        <div className="connector-table-secondary">{model.id}</div>
+                        <div className="connector-table-summary">{model.summary}</div>
+                      </td>
+                      <td>
+                        <span className="connector-strength" title={model.strengthLabel}>
+                          {strengthBar(model.strengthTier)}
+                        </span>
+                        <div className="connector-table-secondary">{model.strengthLabel}</div>
+                      </td>
+                      <td>{model.paramsB} B</td>
+                      <td>
+                        <HealthBadge
+                          status={fitBadgeStatus(model.fit.level)}
+                          label={`${fitLabel(model.fit.level)} · ${model.fit.score}`}
+                        />
+                        <div className="connector-table-summary">{fitReason(model)}</div>
+                      </td>
+                      <td>{model.fit.estimatedVramGb} GB</td>
+                      <td>{model.installed ? "Installiert" : "Nicht installiert"}</td>
+                      <td>
+                        <div className="connector-actions">
+                          <ButtonV2
+                            variant="ghost"
+                            onClick={() => runPull(model.id)}
+                            disabled={activeModel !== null}
+                          >
+                            Pull
+                          </ButtonV2>
+                          <ButtonV2
+                            variant="secondary"
+                            onClick={() => runEnable(model.id)}
+                            disabled={activeModel !== null}
+                          >
+                            Für UWE
+                          </ButtonV2>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="connector-empty-state">
+              {busy
+                ? "Katalog wird geladen …"
+                : totalModels > 0
+                  ? "Keine Modelle über der Fit-Schwelle. Deaktiviere den Filter, um alle zu sehen."
+                  : "Kein Modell-Katalog verfügbar."}
+            </div>
+          )}
+        </div>
       </CardV2>
     </div>
   );

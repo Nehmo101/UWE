@@ -67,6 +67,8 @@ export interface CookbookModelEntry {
   recommendedQuant: QuantFormat;
   engines: CookbookEngineId[];
   useCases: CookbookUseCaseId[];
+  /** Short German one-liner: what this model is good for. Shown in the catalog. */
+  summary: string;
 }
 
 export interface CookbookEngineDefinition {

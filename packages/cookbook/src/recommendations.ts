@@ -43,13 +43,16 @@ export function buildCookbookRecommendations(
     const meta = USE_CASE_LABELS[useCase];
     const candidates = registry.filter((m) => m.useCases.includes(useCase));
 
-    const installedCandidate = candidates.find((model) =>
+    // Prefer already-installed models (no fresh download), but among several
+    // installed ones pick the best-fitting/most-capable — not just the first in
+    // registry order. Only when nothing is installed do we rank the full set.
+    const installedCandidates = candidates.filter((model) =>
       installedModels.some((id) => matchInstalledModel(id, model)),
     );
 
     const ranked = rankModelsForHardware(hardware, {
       useCase,
-      models: installedCandidate ? [installedCandidate] : candidates,
+      models: installedCandidates.length > 0 ? installedCandidates : candidates,
       limit: 1,
     });
 

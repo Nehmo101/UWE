@@ -551,6 +551,7 @@ export default function App() {
           store={modelStore}
           onLoadStore={loadModelStore}
           onPullModel={runOllamaPull}
+          onDeleteModel={runDeleteModel}
         />
         <ModelLibraryPanel
           loaded={modelStoreLoaded}

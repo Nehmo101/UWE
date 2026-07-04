@@ -16,6 +16,7 @@ type Props = {
   store: ConnectorModelProfileStore;
   onLoadStore: () => Promise<ConnectorModelProfileStore>;
   onPullModel: (name: string) => Promise<PullOllamaModelResult>;
+  onDeleteModel: (name: string) => Promise<ConnectorModelProfileStore>;
 };
 
 function toMessage(error: unknown): string {
@@ -107,12 +108,14 @@ async function pullHuggingFaceModel(
   );
 }
 
-export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Props) {
+export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDeleteModel }: Props) {
   const [modelName, setModelName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<PullOllamaModelResult | null>(null);
+  const [deletingName, setDeletingName] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState("");
   const [hfFilename, setHfFilename] = useState("");
   const [hfRevision, setHfRevision] = useState("main");
@@ -207,6 +210,25 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Prop
       setHfError(toMessage(nextError));
     } finally {
       setHfBusy(false);
+    }
+  }
+
+  async function deleteModel(name: string) {
+    const confirmed = window.confirm(
+      `„${name}“ wirklich löschen? Das Modell wird über Ollama entfernt und der Speicherplatz freigegeben.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingName(name);
+    setDeleteError(null);
+    try {
+      await onDeleteModel(name);
+    } catch (nextError) {
+      setDeleteError(toMessage(nextError));
+    } finally {
+      setDeletingName(null);
     }
   }
 
@@ -361,10 +383,26 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Prop
                       label={profile.enabledForUwe ? "Freigegeben" : "Nur lokal"}
                     />
                   </div>
+
+                  {profile.provider === "ollama" ? (
+                    <div className="connector-actions">
+                      <ButtonV2
+                        variant="ghost"
+                        onClick={() => void deleteModel(profile.name)}
+                        disabled={deletingName !== null}
+                      >
+                        {deletingName === profile.name ? "Löscht …" : "Löschen"}
+                      </ButtonV2>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
           )}
+
+          {deleteError ? (
+            <div className="connector-banner connector-banner-error">{deleteError}</div>
+          ) : null}
         </div>
       </CardV2>
     </div>

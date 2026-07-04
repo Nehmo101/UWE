@@ -91,6 +91,12 @@ export interface StartOllamaResult {
   triedPaths: string[];
 }
 
+export interface CookbookGpuSummary {
+  index: number;
+  name: string;
+  vramGb: number;
+}
+
 export interface CookbookHardwareSummary {
   platform: string;
   arch: string;
@@ -100,6 +106,7 @@ export interface CookbookHardwareSummary {
   gpuName: string | null;
   gpuVramGb: number;
   gpuCount: number;
+  gpus: CookbookGpuSummary[];
   probeMessage: string;
 }
 
@@ -137,11 +144,17 @@ export interface CookbookModelView {
   label: string;
   family: string;
   paramsB: number;
+  contextLength: number;
+  isMoe: boolean;
+  isMultimodal: boolean;
   tags: string[];
   useCases: string[];
   engines: string[];
   recommendedQuant: string;
   minVramGbQ4: number;
+  summary: string;
+  strengthTier: number;
+  strengthLabel: string;
   installed: boolean;
   fit: CookbookModelFit;
 }
@@ -489,6 +502,19 @@ function parseFit(raw: unknown): CookbookModelFit {
   };
 }
 
+function parseGpu(raw: unknown): CookbookGpuSummary {
+  const value = asRecord(raw);
+  return {
+    index: asNumber(value.index),
+    name: asString(value.name, "GPU"),
+    vramGb: asNumber(value.vramGb),
+  };
+}
+
+function parseGpus(raw: unknown): CookbookGpuSummary[] {
+  return Array.isArray(raw) ? raw.map(parseGpu) : [];
+}
+
 function parseHardware(raw: unknown): CookbookHardwareSummary {
   const value = asRecord(raw);
   return {
@@ -500,6 +526,7 @@ function parseHardware(raw: unknown): CookbookHardwareSummary {
     gpuName: typeof value.gpuName === "string" ? value.gpuName : null,
     gpuVramGb: asNumber(value.gpuVramGb),
     gpuCount: asNumber(value.gpuCount),
+    gpus: parseGpus(value.gpus),
     probeMessage: asString(value.probeMessage),
   };
 }
@@ -525,11 +552,17 @@ function parseCookbookModel(raw: unknown): CookbookModelView {
     label: asString(value.label),
     family: asString(value.family),
     paramsB: asNumber(value.paramsB),
+    contextLength: asNumber(value.contextLength),
+    isMoe: asBool(value.isMoe),
+    isMultimodal: asBool(value.isMultimodal),
     tags: asStringArray(value.tags),
     useCases: asStringArray(value.useCases),
     engines: asStringArray(value.engines),
     recommendedQuant: asString(value.recommendedQuant),
     minVramGbQ4: asNumber(value.minVramGbQ4),
+    summary: asString(value.summary),
+    strengthTier: asNumber(value.strengthTier),
+    strengthLabel: asString(value.strengthLabel),
     installed: asBool(value.installed),
     fit: parseFit(value.fit),
   };
@@ -631,6 +664,7 @@ function buildMockCookbookDashboard(): CookbookDashboardView {
       gpuName: null,
       gpuVramGb: 0,
       gpuCount: 0,
+      gpus: [],
       probeMessage: "Browser-Vorschau — echte Hardware-Erkennung nur in der Tauri-App.",
     },
     installedModels: [],
@@ -652,11 +686,17 @@ function buildMockCookbookDashboard(): CookbookDashboardView {
         label: "Llama 3.1 8B",
         family: "llama",
         paramsB: 8,
+        contextLength: 131072,
+        isMoe: false,
+        isMultimodal: false,
         tags: ["balanced", "general"],
         useCases: ["dnd_generator", "session_prep"],
         engines: ["ollama", "lm_studio"],
         recommendedQuant: "Q4_K_M",
         minVramGbQ4: 5.5,
+        summary: "Solider Allrounder für Generierung und Vorbereitung.",
+        strengthTier: 2,
+        strengthLabel: "Solide",
         installed: false,
         fit: mockFit("llama3.1:8b", 72, "good"),
       },

@@ -47,10 +47,8 @@ export function computeModelFit(
 ): ModelFitResult {
   const useCase = options?.useCase;
   const quant = options?.quant ?? model.recommendedQuant;
-  const contextLength = Math.min(
-    options?.contextLength ?? (useCase ? USE_CASE_CONTEXT[useCase] : 4096),
-    model.contextLength,
-  );
+  const requestedContext = options?.contextLength ?? (useCase ? USE_CASE_CONTEXT[useCase] : 4096);
+  const contextLength = Math.min(requestedContext, model.contextLength);
 
   const estimatedVramGb = estimateModelVramGb(model, quant, contextLength);
   const estimatedRamGb = estimateModelRamGb(model, quant);
@@ -86,7 +84,25 @@ export function computeModelFit(
     notes.push("RAM könnte für CPU-Offload knapp werden.");
   }
 
-  if (contextLength >= model.contextLength * 0.5) {
+  // Capability/utilization bonus: on hardware with real VRAM headroom, a larger
+  // model that still fits is a better use of the GPU than a tiny one. Credited
+  // only when the model fits the GPU, so a small-VRAM machine still prefers the
+  // small models that actually fit, while a big rig (e.g. an added 24GB card)
+  // leans into the more capable ones instead of always defaulting to 3B/7B.
+  if (fitsGpu) {
+    const capability = Math.min(model.paramsB, 32) / 32; // 0..1 over the useful range
+    const capabilityBonus = Math.round(capability * 25);
+    score += capabilityBonus;
+    if (capabilityBonus >= 8) {
+      notes.push("Nutzt das verfügbare VRAM-Budget für ein leistungsfähigeres Modell.");
+    }
+  }
+
+  // Reward models that can actually serve the requested context window. (A model
+  // with a large max context must not be penalised just because a given use case
+  // asks for less — the previous "used ≥ half the max" check did exactly that,
+  // pushing high-context models like Qwen 14B below smaller ones.)
+  if (model.contextLength >= requestedContext) {
     score += 10;
   }
 
@@ -132,12 +148,16 @@ export function rankModelsForHardware(
   const minScore = options?.minScore ?? (options?.useCase ? USE_CASE_MIN_SCORE[options.useCase] : 40);
 
   return models
-    .map((model) =>
-      computeModelFit(hardware, model, { useCase: options?.useCase }),
-    )
-    .filter((fit) => fit.score >= minScore)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, options?.limit ?? 20);
+    .map((model) => ({
+      model,
+      fit: computeModelFit(hardware, model, { useCase: options?.useCase }),
+    }))
+    .filter(({ fit }) => fit.score >= minScore)
+    // Highest fit first; on a score tie prefer the larger (more capable) model
+    // so a machine with VRAM headroom leans into stronger models.
+    .sort((a, b) => b.fit.score - a.fit.score || b.model.paramsB - a.model.paramsB)
+    .slice(0, options?.limit ?? 20)
+    .map(({ fit }) => fit);
 }
 
 export function resolveModelFitById(

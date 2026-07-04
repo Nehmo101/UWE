@@ -31,6 +31,7 @@ import {
   detectHardwareProfile,
   listCookbookModels,
   matchInstalledModel,
+  modelStrengthTier,
 } from "@uwe/cookbook";
 
 import { loadClientRuntimeConfig, type ClientRuntimeConfig } from "./client-config-store";
@@ -284,19 +285,28 @@ async function cmdCookbookDashboard(): Promise<void> {
 
   const recommendations = buildCookbookRecommendations(hardware, installedNames);
 
-  const models = listCookbookModels().map((model) => ({
-    id: model.id,
-    label: model.label,
-    family: model.family,
-    paramsB: model.paramsB,
-    tags: model.tags,
-    useCases: model.useCases,
-    engines: model.engines,
-    recommendedQuant: model.recommendedQuant,
-    minVramGbQ4: model.minVramGbQ4,
-    installed: installedNames.some((name) => matchInstalledModel(name, model)),
-    fit: computeModelFit(hardware, model),
-  }));
+  const models = listCookbookModels().map((model) => {
+    const strength = modelStrengthTier(model.paramsB);
+    return {
+      id: model.id,
+      label: model.label,
+      family: model.family,
+      paramsB: model.paramsB,
+      contextLength: model.contextLength,
+      isMoe: model.isMoe,
+      isMultimodal: model.isMultimodal,
+      tags: model.tags,
+      useCases: model.useCases,
+      engines: model.engines,
+      recommendedQuant: model.recommendedQuant,
+      minVramGbQ4: model.minVramGbQ4,
+      summary: model.summary,
+      strengthTier: strength.tier,
+      strengthLabel: strength.label,
+      installed: installedNames.some((name) => matchInstalledModel(name, model)),
+      fit: computeModelFit(hardware, model),
+    };
+  });
 
   const dashboard = {
     hardware,

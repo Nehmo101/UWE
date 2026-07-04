@@ -61,4 +61,40 @@ describe("model-fit", () => {
     assert.ok(small && medium);
     assert.ok(estimateModelVramGb(medium) > estimateModelVramGb(small));
   });
+
+  it("prefers larger models when they fit on a high-VRAM rig", () => {
+    // 32GB rig: an added strong GPU means the bigger model that still fits
+    // should out-score a tiny one for the same use case (capability bonus).
+    const bigRig: CookbookHardwareProfile = {
+      ...RTX_4060_PROFILE,
+      gpuName: "NVIDIA GeForce RTX 3090",
+      gpuVramGb: 32,
+      gpuCount: 2,
+      gpus: [
+        { index: 0, name: "NVIDIA GeForce RTX 4060", vramGb: 8 },
+        { index: 1, name: "NVIDIA GeForce RTX 3090", vramGb: 24 },
+      ],
+      homogeneousGpus: false,
+    };
+
+    const small = getCookbookModel("llama3.2"); // 3B
+    const large = getCookbookModel("qwen2.5:14b"); // 14B
+    assert.ok(small && large);
+
+    const smallFit = computeModelFit(bigRig, small, { useCase: "canon_check" });
+    const largeFit = computeModelFit(bigRig, large, { useCase: "canon_check" });
+
+    assert.equal(smallFit.fitsGpu, true);
+    assert.equal(largeFit.fitsGpu, true);
+    assert.ok(
+      largeFit.score > smallFit.score,
+      `expected 14B (${largeFit.score}) to out-score 3B (${smallFit.score}) on a 32GB rig`,
+    );
+
+    // The 14B must not fit on the 8GB laptop, so small still wins there.
+    const smallOn8 = computeModelFit(RTX_4060_PROFILE, small, { useCase: "canon_check" });
+    const largeOn8 = computeModelFit(RTX_4060_PROFILE, large, { useCase: "canon_check" });
+    assert.equal(largeOn8.fitsGpu, false);
+    assert.ok(smallOn8.score > largeOn8.score);
+  });
 });
