@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@uwe/shared-ui";
+import { Button } from "@/src/components/ui/button";
 
 interface ImageStudioCanvasEditorProps {
   sourceImageUrl: string;
@@ -108,7 +108,7 @@ export function ImageStudioCanvasEditor({
         <Button type="button" variant="secondary" onClick={rotateRight} disabled={!loaded}>
           ↻ 90°
         </Button>
-        <Button type="button" variant="primary" onClick={() => void handleSave()} disabled={!loaded || saving}>
+        <Button type="button" variant="default" onClick={() => void handleSave()} disabled={!loaded || saving}>
           {saving ? "Speichern…" : "Als Version speichern"}
         </Button>
       </div>

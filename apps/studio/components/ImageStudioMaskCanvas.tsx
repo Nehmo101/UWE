@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@uwe/shared-ui";
+import { Button } from "@/src/components/ui/button";
 import {
   computeCanvasDimensions,
   exportInpaintMaskBase64,

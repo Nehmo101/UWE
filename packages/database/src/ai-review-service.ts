@@ -1,3 +1,4 @@
+import { slugifyDe } from "@uwe/shared-utils";
 import type { PrismaClient } from "./client";
 import { createActivityLogService } from "./activity-log-service";
 import type {
@@ -639,11 +640,7 @@ export class AiReviewService {
         const title =
           input.title?.trim() ||
           `KI-Idee: ${sourcePage.title}`;
-        const slugBase = title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .slice(0, 40);
+        const slugBase = slugifyDe(title, { maxLength: 40 });
         const slug = `idee-${slugBase}-${Date.now().toString(36)}`;
 
         const idea = await repo.createIdeaPage({

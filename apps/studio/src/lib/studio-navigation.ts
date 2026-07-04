@@ -1,174 +1,10 @@
 import { isLikelyGameSessionId } from "./session-route";
-
-export type StudioNavSectionId = "today" | "worlds" | "create" | "media-ai" | "system";
-
-export interface StudioNavItem {
-  label: string;
-  href: string;
-  active?: boolean;
-  badge?: string;
-}
-
-export interface StudioNavSection {
-  id: StudioNavSectionId;
-  title: string;
-  items: StudioNavItem[];
-}
-
-export const TARGET_STUDIO_NAV: {
-  id: StudioNavSectionId;
-  title: string;
-  items: { label: string; href: string }[];
-}[] = [
-  {
-    id: "today",
-    title: "Heute",
-    items: [
-      { label: "Heute", href: "/today" },
-      { label: "Capture schnell", href: "/capture?quick=1" },
-    ],
-  },
-  {
-    id: "worlds",
-    title: "Welten",
-    items: [
-      { label: "Alle Welten", href: "/worlds" },
-      { label: "Suche", href: "/search" },
-    ],
-  },
-  {
-    id: "create",
-    title: "Erstellen",
-    items: [
-      { label: "Capture", href: "/capture" },
-      { label: "Templates", href: "/templates" },
-      { label: "Import-Zentrale", href: "/import" },
-      { label: "Werkstatt", href: "/workshop" },
-      { label: "Projekte", href: "/projects" },
-      { label: "Verträge", href: "/contracts" },
-    ],
-  },
-  {
-    id: "media-ai",
-    title: "Medien & KI",
-    items: [
-      { label: "KI", href: "/ai" },
-      { label: "Image Studio", href: "/image-studio" },
-      { label: "Mail", href: "/mail" },
-      { label: "Kalender", href: "/calendar" },
-      { label: "Brain Store", href: "/brain" },
-      { label: "Life Brain", href: "/life-brain" },
-      { label: "Reviews", href: "/admin/reviews" },
-      { label: "Agent Jobs", href: "/admin/agent-jobs" },
-      { label: "RTX Connector", href: "/system/rtx-connector" },
-    ],
-  },
-  {
-    id: "system",
-    title: "System",
-    items: [
-      { label: "System-Hub", href: "/system" },
-      { label: "Homelab", href: "/system?tab=homelab" },
-      { label: "Diagnose", href: "/system?tab=diagnose" },
-      { label: "Admin Übersicht", href: "/admin" },
-      { label: "Einrichtung", href: "/admin/setup" },
-      { label: "Benutzer", href: "/admin/users" },
-      { label: "Security", href: "/admin/security" },
-      { label: "Secrets-Status", href: "/admin/secrets" },
-      { label: "Audit Log", href: "/admin/audit-log" },
-      { label: "Jobs", href: "/jobs" },
-      { label: "Backup", href: "/backup" },
-      { label: "Einstellungen", href: "/settings" },
-      { label: "Hardware", href: "/hardware" },
-    ],
-  },
-];
-
-/** Sectioned Studio sidebar — canonical IA structure. */
-export function studioSidebarSections(activePath: string): StudioNavSection[] {
-  return TARGET_STUDIO_NAV.map((section) => ({
-    id: section.id,
-    title: section.title,
-    items: section.items.map((item) => ({
-      ...item,
-      active: isStudioNavItemActive(activePath, item.href),
-    })),
-  }));
-}
-
-/**
- * Unified Studio sidebar. Portal is intentionally not a sixth Studio section;
- * app switching belongs in landing/topbar chrome, while this stays product IA.
- */
-export function studioUnifiedSidebarSections(
-  activePath: string,
-  options: { portalUrl?: string } = {},
-): StudioNavSection[] {
-  void options;
-  return studioSidebarSections(activePath);
-}
+import { studioCommands } from "../navigation/studio-nav";
 
 /** Horizontal cockpit tabs for world overview (reduced to cockpit-level areas). */
 export function worldCockpitTabItems(worldSlug: string, active?: WorldNavKey) {
   const tabKeys: WorldNavKey[] = ["overview", "pages", "sessions", "dungeons", "assets"];
   return worldNavItems(worldSlug, active).filter((item) => tabKeys.includes(item.key));
-}
-
-/** Flat nav list for compatibility with older shell adapters. */
-export function studioFlatNav(activePath: string): StudioNavItem[] {
-  return studioSidebarSections(activePath).flatMap((section) => section.items);
-}
-
-/** Compact dashboard sidebar — one entry per primary Studio area. */
-export function studioDashboardNav(activePath: string): StudioNavItem[] {
-  const keys = ["/today", "/worlds", "/capture", "/ai", "/system"];
-  const all = studioFlatNav(activePath);
-  return keys
-    .map((href) => all.find((item) => item.href === href))
-    .filter((item): item is StudioNavItem => Boolean(item));
-}
-
-function isStudioNavItemActive(activePath: string, href: string): boolean {
-  const normalizedActive = normalizeStudioPath(activePath);
-  const normalizedHref = normalizeStudioPath(href);
-
-  if (normalizedActive === normalizedHref) return true;
-
-  if (normalizedHref.startsWith("/settings?tab=")) {
-    const tab = normalizedHref.split("tab=")[1];
-    return normalizedActive === `/settings?tab=${tab}`;
-  }
-
-  if (normalizedHref.startsWith("/system?tab=")) {
-    const tab = normalizedHref.split("tab=")[1];
-    return normalizedActive === `/system?tab=${tab}`;
-  }
-
-  if (normalizedHref === "/system" && normalizedActive.startsWith("/system")) {
-    return !normalizedActive.startsWith("/system/rtx-connector");
-  }
-
-  if (normalizedHref === "/system") {
-    if (normalizedActive === "/admin/status" || normalizedActive.startsWith("/admin/status/")) {
-      return true;
-    }
-  }
-
-  if (
-    normalizedHref !== "/admin" &&
-    !normalizedHref.includes("?") &&
-    normalizedActive.startsWith(`${normalizedHref}/`)
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function normalizeStudioPath(path: string): string {
-  const [pathname, query] = path.split("?");
-  const trimmed = pathname.replace(/\/$/, "") || "/";
-  return query ? `${trimmed}?${query}` : trimmed;
 }
 
 export type WorldNavKey =
@@ -515,16 +351,14 @@ export function studioCommandPaletteCommands(options: {
     }
   }
 
-  for (const section of TARGET_STUDIO_NAV) {
-    for (const item of section.items) {
-      list.push({
-        id: `studio-${item.href.replace(/[^a-z0-9]+/gi, "-")}`,
-        label: `${item.label} öffnen`,
-        href: item.href,
-        group: section.title,
-        keywords: [section.title.toLocaleLowerCase("de")],
-      });
-    }
+  for (const command of studioCommands()) {
+    list.push({
+      id: command.id,
+      label: `${command.label} öffnen`,
+      href: command.href,
+      group: command.group,
+      keywords: command.keywords,
+    });
   }
 
   for (const world of worlds) {

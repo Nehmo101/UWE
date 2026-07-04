@@ -31,6 +31,9 @@
   --color-accent-foreground: var(--uwe-on-accent);
   --color-destructive: var(--uwe-danger);
   --color-destructive-foreground: var(--uwe-danger-fg, var(--uwe-on-accent));
+  --color-success: var(--uwe-success);
+  --color-warning: var(--uwe-warning);
+  --color-info: var(--uwe-info);
   --color-sidebar: var(--uwe-sidebar-bg);
   --color-sidebar-foreground: var(--uwe-sidebar-fg);
   --radius: var(--uwe-radius-md, 0.625rem);
