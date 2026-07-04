@@ -116,6 +116,13 @@ Full matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 - Password reset invalidates **all** sessions for the affected user
 - `AUTH_SECRET` encrypts Spotify OAuth tokens per world and other at-rest secrets — keep stable after Spotify connect
 
+### Inactivity auto-logout
+
+- `Session.lastActiveAt` (`packages/database/prisma/schema.prisma`) tracks the last request that touched the session, independent of the absolute `expiresAt` TTL (14 days).
+- `getSessionByToken()` (`packages/database/src/auth.ts`) deletes the session server-side once `now - lastActiveAt` exceeds the configured inactivity timeout — a real sliding-window idle logout, not just a fixed cookie `maxAge`. Active sessions are "touched" on each request, throttled to at most once per minute (`SESSION_ACTIVITY_TOUCH_THROTTLE_MS`).
+- `SessionIdleGuard` (`packages/shared-ui/src/auth/SessionIdleGuard.tsx`) mirrors this client-side: it watches for user interaction (mouse/keyboard/scroll/touch/tab visibility), redirects to `/login?reason=idle` via `/api/auth/logout` when the browser goes idle, and periodically pings `/api/auth/session/touch` to keep the session alive while the user is active. Mounted in both Studio and Portal shells.
+- **Configurable:** Studio → **Settings → Privacy** (`/settings?tab=privacy`, "Session & Abmeldung") sets `settings.auth.sessionInactivityTimeoutMinutes` (default 30, `0` = disabled, max 1440). Falls back to the `SESSION_INACTIVITY_TIMEOUT_MINUTES` env var only when the DB setting is `0`.
+
 ---
 
 ## Password Reset
