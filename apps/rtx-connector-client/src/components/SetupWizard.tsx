@@ -164,7 +164,6 @@ export function SetupWizard({
     modelStore.profiles,
     scanAttempted,
     step.id,
-    testResult?.ok,
   ]);
 
   function updateConfig<K extends keyof ConnectorClientConfig>(
