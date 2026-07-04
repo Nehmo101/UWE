@@ -105,7 +105,15 @@ export function GraphView({
       compact,
       dotGrid: true,
       mini: withMinimap ? miniElRef.current : null,
-      onSelect: (node) => setSelected(node),
+      onSelect: (node) => {
+        // Kompakt-Widget: Klick springt direkt zur Wiki-Seite statt ein
+        // Detail-Panel zu öffnen (das im Kompakt-Modus gar nicht gerendert wird).
+        if (compact) {
+          if (node?.href) window.location.assign(node.href);
+          return;
+        }
+        setSelected(node);
+      },
     });
     engine.applyPositions(posCacheRef.current);
     engine.setHiddenCats(hiddenRef.current);
