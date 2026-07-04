@@ -110,6 +110,28 @@ const SIDEBAR_GROUPS_KEY = "uwe:studio-sidebar-groups-v1";
 /** Groups open on first visit regardless of the active route (small, high-traffic areas). */
 const DEFAULT_OPEN_GROUP_IDS = ["start", "worlds"];
 
+/**
+ * Representative Lucide icon per top-level nav group, so each section header
+ * carries a glyph. Falls back to the group's first item icon, then a folder.
+ */
+const GROUP_ICONS: Record<string, string> = {
+  start: "sun",
+  worlds: "globe",
+  knowledge: "brain",
+  ai: "sparkles",
+  "tools-daily": "inbox",
+  "tools-content": "image",
+  "tools-automation": "workflow",
+  "org-work": "briefcase",
+  "org-infra": "server",
+  "org-comms": "mail",
+  "system-overview": "layout-dashboard",
+  "system-setup-host": "server-cog",
+  "system-access": "shield",
+  "system-operations": "activity",
+  "system-settings": "sliders-horizontal",
+};
+
 function readStoredGroups(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
@@ -205,6 +227,8 @@ function SidebarNavGroup({
   onToggle: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const bodyId = `sidebar-group-${group.id}`;
+  const active = items.some((item) => item.active);
+  const icon = GROUP_ICONS[group.id] ?? items[0]?.icon ?? "folder";
   return (
     <div className="flex flex-col">
       <button
@@ -212,11 +236,20 @@ function SidebarNavGroup({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className={cn(
+          "flex appearance-none items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors hover:bg-sidebar-foreground/10",
+          active ? "text-sidebar-foreground" : "text-sidebar-foreground/55 hover:text-sidebar-foreground",
+        )}
       >
+        <NavIcon
+          name={icon}
+          width={15}
+          height={15}
+          className={cn("shrink-0", active ? "text-primary" : "text-sidebar-foreground/45")}
+        />
         <span className="flex-1 truncate text-left">{group.title}</span>
         <ChevronRight
-          className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-90")}
+          className={cn("h-3.5 w-3.5 shrink-0 opacity-60 transition-transform", open && "rotate-90")}
           aria-hidden
         />
       </button>

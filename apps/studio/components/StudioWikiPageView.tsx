@@ -5,6 +5,7 @@ import {
   GraphView,
   MetaPanel,
   SidebarSection,
+  TagChip,
   VisibilityBadge,
   WikiContent,
 } from "@uwe/shared-ui";
@@ -191,17 +192,11 @@ export async function StudioWikiPageView({
               <>
                 <VisibilityBadge visibility={dmPage.visibility} />
                 {view.page.tags.map((tag) => (
-                  <span key={tag} className="uwe-tag">
-                    {tag}
-                  </span>
+                  <TagChip key={tag} tag={tag} />
                 ))}
               </>
             ) : (
-              view.page.tags.map((tag) => (
-                <span key={tag} className="uwe-tag">
-                  {tag}
-                </span>
-              ))
+              view.page.tags.map((tag) => <TagChip key={tag} tag={tag} />)
             )
           }
           actions={

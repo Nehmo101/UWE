@@ -160,7 +160,19 @@ export function MailPortalAccountsPanel({ accounts }: MailPortalAccountsPanelPro
         <ul className="uwe-list-cards">
           {accounts.map((account) => (
             <li key={account.id} className="uwe-v2-card">
-              <strong>{account.label}</strong>
+              <strong style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+                <span
+                  className={`uwe-dot ${
+                    account.imapSyncError
+                      ? "uwe-dot-danger"
+                      : account.lastImapSyncAt
+                        ? "uwe-dot-success"
+                        : ""
+                  }`}
+                  aria-hidden
+                />
+                {account.label}
+              </strong>
               <span className="uwe-dashboard-muted">{account.username}</span>
               <span className="uwe-dashboard-muted">
                 Sync:{" "}

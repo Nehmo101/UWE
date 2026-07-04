@@ -177,6 +177,7 @@ export {
   RevealStateBadge,
   RtxStatusBadge,
   SecretLevelBadge,
+  TagChip,
   VisibilityBadge,
   type ContentBlockViewModel,
   type RtxConnectorState,
