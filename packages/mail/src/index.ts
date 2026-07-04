@@ -39,6 +39,7 @@ export {
 
 export {
   fetchImapInboxMessages,
+  describeImapError,
   type ImapCredentials,
   type FetchedInboxMessage,
 } from "./imap-sync";

@@ -28,6 +28,7 @@ import type { ImageStudioTask } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 import { appendResearchSources } from "@uwe/ai-brain";
 import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
+import { describeImapError } from "@uwe/mail";
 import type { JobRunnerContext } from "./job-runners";
 import { resolveGatewayUserById } from "./ai-gateway-user";
 import { synthesizeResearchReportViaGateway } from "./research-synthesis";
@@ -231,8 +232,7 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
     await db.$disconnect();
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await mail.markImapSyncError(payload.accountId, message);
+    await mail.markImapSyncError(payload.accountId, describeImapError(error));
     await db.$disconnect();
     throw error;
   }

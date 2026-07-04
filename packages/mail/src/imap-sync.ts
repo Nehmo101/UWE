@@ -45,6 +45,22 @@ function truncateSnippet(value: string | null | undefined, max = 240): string | 
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
 }
 
+/**
+ * imapflow throws a fixed "Command failed" Error on any NO/BAD server response;
+ * the server's actual rejection reason lives in error.responseText, not error.message.
+ */
+export function describeImapError(error: unknown): string {
+  if (error instanceof Error) {
+    const responseText = (error as { responseText?: unknown }).responseText;
+    if (typeof responseText === "string" && responseText.trim()) {
+      const status = (error as { responseStatus?: unknown }).responseStatus;
+      return typeof status === "string" ? `${status}: ${responseText.trim()}` : responseText.trim();
+    }
+    return error.message;
+  }
+  return String(error);
+}
+
 export async function fetchImapInboxMessages(
   credentials: ImapCredentials,
   options?: { limit?: number; mailbox?: string },
