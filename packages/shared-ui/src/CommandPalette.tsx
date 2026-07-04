@@ -13,10 +13,13 @@ import { useFocusTrap } from "./useFocusTrap";
 export interface CommandPaletteCommand {
   id: string;
   label: string;
-  href: string;
+  /** Zielseite bei Navigations-Befehlen. Entfällt bei Aktions-Befehlen (`run`). */
+  href?: string;
   group: string;
   /** Extra match terms beyond the label (e.g. synonyms, slugs). */
   keywords?: string[];
+  /** Aktions-Befehl: statt zu navigieren wird diese Funktion ausgeführt. */
+  run?: () => void | Promise<void>;
 }
 
 export interface CommandPaletteSearchResult {
@@ -47,20 +50,27 @@ export interface CommandPaletteProps {
   /** GET endpoint receiving `?q=`; must return `{ results: CommandPaletteSearchResult[] }`. */
   searchEndpoint?: string;
   placeholder?: string;
+  /** Aktiviert eine "Query ausführen"-Zeile am Ende; erhält den rohen Suchtext. */
+  onSubmitQuery?: (query: string) => void;
+  /** Label der "Query ausführen"-Zeile. */
+  submitQueryLabel?: string;
 }
 
 interface PaletteEntry {
   id: string;
   label: string;
-  href: string;
+  href?: string;
   group: string;
   hint?: string;
+  run?: () => void | Promise<void>;
 }
 
 export function CommandPalette({
   commands,
   searchEndpoint,
   placeholder = "Befehl oder Seite suchen…",
+  onSubmitQuery,
+  submitQueryLabel = "Als Befehl ausführen",
 }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -144,6 +154,7 @@ export function CommandPalette({
       label: command.label,
       href: command.href,
       group: command.group,
+      run: command.run,
     }));
 
     const commandHrefs = new Set(commandEntries.map((entry) => entry.href));
@@ -157,8 +168,21 @@ export function CommandPalette({
         hint: result.hint,
       }));
 
-    return [...commandEntries, ...resultEntries];
-  }, [filteredCommands, searchResults]);
+    const trimmedQuery = query.trim();
+    const submitEntry: PaletteEntry[] =
+      onSubmitQuery && trimmedQuery
+        ? [
+            {
+              id: "submit-query",
+              label: `${submitQueryLabel}: „${trimmedQuery}“`,
+              group: "Befehl",
+              run: () => onSubmitQuery(trimmedQuery),
+            },
+          ]
+        : [];
+
+    return [...commandEntries, ...resultEntries, ...submitEntry];
+  }, [filteredCommands, searchResults, query, onSubmitQuery, submitQueryLabel]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -168,7 +192,13 @@ export function CommandPalette({
     (entry: PaletteEntry | undefined) => {
       if (!entry) return;
       close();
-      window.location.assign(entry.href);
+      if (entry.run) {
+        void entry.run();
+        return;
+      }
+      if (entry.href) {
+        window.location.assign(entry.href);
+      }
     },
     [close],
   );
