@@ -28,6 +28,7 @@ import { UweReleasePanel } from "./components/UweReleasePanel";
 import { ConnectorShell } from "./components/shell/ConnectorShell";
 import { connectorSidebar } from "./navigation/connector-nav";
 import {
+  deleteOllamaModel,
   getConnectorStatus,
   getCookbookDashboard,
   getModelStore,
@@ -201,6 +202,13 @@ export default function App() {
     setModelStore(result.store);
     setModelStoreLoaded(true);
     return result;
+  }, []);
+
+  const runDeleteModel = useCallback(async (name: string) => {
+    const store = await deleteOllamaModel(name);
+    setModelStore(store);
+    setModelStoreLoaded(true);
+    return store;
   }, []);
 
   const loadPrinterStore = useCallback(async () => {
@@ -463,6 +471,13 @@ export default function App() {
               <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
                 Einstellungen speichern
               </ButtonV2>
+              <ButtonV2
+                variant="ghost"
+                onClick={() => setShowWizard(true)}
+                disabled={busyAction !== null}
+              >
+                Setup-Wizard erneut öffnen
+              </ButtonV2>
             </div>
           }
         >
@@ -543,6 +558,7 @@ export default function App() {
           onLoadStore={loadModelStore}
           onSaveStore={persistModelStore}
           onScanModels={runModelScan}
+          onDeleteModel={runDeleteModel}
         />
         <UweReleasePanel
           loaded={modelStoreLoaded}
@@ -616,7 +632,7 @@ export default function App() {
             busy={busyAction !== null}
             onChange={updateConfig}
             onSave={persistConfig}
-            onTest={testPrint}
+            onTest={() => testPrint(config.defaultPrinterId)}
           />
         );
       case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;
@@ -660,7 +676,10 @@ export default function App() {
         void refreshFromBackend();
         setNotice("Erststart-Wizard abgeschlossen.");
       }}
-      onDismiss={() => setShowWizard(false)}
+      onDismiss={(saved) => {
+        setConfig(saved);
+        setShowWizard(false);
+      }}
     />
   ) : null;
 

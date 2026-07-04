@@ -62,9 +62,16 @@ export interface ConnectorClientConfig {
   /**
    * Local label-print command. Passed to the connector as
    * `UWE_CONNECTOR_PRINT_CMD`; called with `--printer <id> --file <path>` when
-   * a `label_print` job arrives. Empty lets the connector fall back to CUPS `lp`.
+   * a `label_print` job arrives. Empty lets the connector fall back to a
+   * native OS print (Windows: ShellExecute "print to"; else CUPS `lp`).
    */
   printCommand: string;
+  /**
+   * Id of the printer picked as the default target for local test prints in
+   * the RTX Client's printer picker. Purely a local UX convenience — real
+   * `label_print` jobs always carry their own explicit printer id from Studio.
+   */
+  defaultPrinterId: string;
 }
 
 /** Default Spotify OAuth redirect URI for the connector-local loopback flow. */

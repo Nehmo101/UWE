@@ -186,9 +186,9 @@ export function PrintersPanel({
             <ButtonV2
               variant="secondary"
               onClick={handleTestPrintCommand}
-              disabled={printCmdDisabled || !config.printCommand}
+              disabled={printCmdDisabled || (!config.printCommand && !config.defaultPrinterId)}
             >
-              Befehl testen
+              Testdruck senden
             </ButtonV2>
           </div>
         }
@@ -196,8 +196,9 @@ export function PrintersPanel({
         <div className="connector-stack">
           <p className="connector-muted">
             Optionaler Druckbefehl für <code>label_print</code>-Jobs. Der Connector ruft ihn mit{" "}
-            <code>--printer &lt;id&gt; --file &lt;pfad&gt;</code> auf. Leer lassen um CUPS{" "}
-            <code>lp</code> als Fallback zu nutzen. Aktiviert die Capability{" "}
+            <code>--printer &lt;id&gt; --file &lt;pfad&gt;</code> auf. Leer lassen, um ohne
+            zusätzliche Software direkt über den ausgewählten Windows-Drucker zu drucken (bzw.
+            CUPS <code>lp</code> auf Linux/macOS). Aktiviert die Capability{" "}
             <code>label_printing</code>.
           </p>
 
@@ -207,6 +208,23 @@ export function PrintersPanel({
           {printCmdNotice ? (
             <div className="connector-banner connector-banner-success">{printCmdNotice}</div>
           ) : null}
+
+          <label className="connector-field connector-field-full">
+            <span>Standarddrucker (für Testdruck)</span>
+            <select
+              className="connector-select"
+              value={config.defaultPrinterId}
+              onChange={(event) => onChange("defaultPrinterId", event.target.value)}
+            >
+              <option value="">— Kein Drucker ausgewählt —</option>
+              {sortedPrinters.map((printer) => (
+                <option key={printer.id} value={printer.id}>
+                  {printer.name}
+                  {printer.isDefault ? " · Standard" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <label className="connector-field connector-field-full">
             <span>Print-Kommando (optional)</span>

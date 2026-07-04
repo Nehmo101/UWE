@@ -9,6 +9,7 @@ type Props = {
   onLoadStore: () => Promise<ConnectorModelProfileStore>;
   onSaveStore: (store: ConnectorModelProfileStore) => Promise<ConnectorModelProfileStore>;
   onScanModels: () => Promise<ConnectorModelProfileStore>;
+  onDeleteModel: (name: string) => Promise<ConnectorModelProfileStore>;
 };
 
 function toMessage(error: unknown): string {
@@ -37,9 +38,11 @@ export function ModelLibraryPanel({
   onLoadStore,
   onSaveStore,
   onScanModels,
+  onDeleteModel,
 }: Props) {
   const [draft, setDraft] = useState(store);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -143,6 +146,29 @@ export function ModelLibraryPanel({
       setError(toMessage(nextError));
     } finally {
       setBusyAction(null);
+    }
+  }
+
+  async function deleteProfile(name: string, displayName: string) {
+    const confirmed = window.confirm(
+      `„${displayName || name}“ wirklich löschen? Das Modell wird über Ollama entfernt und der Speicherplatz freigegeben.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingId(name);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const saved = await onDeleteModel(name);
+      setDraft(saved);
+      setNotice(`„${displayName || name}“ gelöscht.`);
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -277,6 +303,18 @@ export function ModelLibraryPanel({
                       <dd>{profile.displayName || "—"}</dd>
                     </div>
                   </dl>
+
+                  {profile.provider === "ollama" ? (
+                    <div className="connector-actions">
+                      <ButtonV2
+                        variant="ghost"
+                        onClick={() => void deleteProfile(profile.name, profile.displayName)}
+                        disabled={deletingId !== null}
+                      >
+                        {deletingId === profile.name ? "Löscht …" : "Löschen"}
+                      </ButtonV2>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

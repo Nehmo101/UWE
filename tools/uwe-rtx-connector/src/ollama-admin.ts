@@ -73,6 +73,29 @@ export class OllamaAdmin {
   }
 
   /**
+   * Delete a model from the local Ollama store, freeing its disk space.
+   * Rejects on transport/HTTP errors.
+   */
+  async deleteModel(name: string, timeoutMs = 30_000): Promise<void> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new Error("deleteModel: Modellname fehlt.");
+    }
+
+    const response = await this.fetchImpl(`${trimSlash(this.baseUrl)}/api/delete`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmedName }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Ollama delete HTTP ${response.status}: ${body.slice(0, 200)}`);
+    }
+  }
+
+  /**
    * Pull a model, streaming progress. Resolves when the pull completes and
    * rejects on transport/HTTP errors or an error event in the stream.
    */

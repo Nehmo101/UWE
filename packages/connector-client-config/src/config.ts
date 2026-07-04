@@ -29,6 +29,7 @@ const connectorClientConfigSchema = z.object({
   audioCommand: z.string(),
   imageCommand: z.string(),
   printCommand: z.string(),
+  defaultPrinterId: z.string(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -62,6 +63,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     audioCommand: "",
     imageCommand: "",
     printCommand: "",
+    defaultPrinterId: "",
   };
 }
 
@@ -128,6 +130,10 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.imageCommand === "string" ? input.imageCommand.trim() : defaults.imageCommand,
     printCommand:
       typeof input.printCommand === "string" ? input.printCommand.trim() : defaults.printCommand,
+    defaultPrinterId:
+      typeof input.defaultPrinterId === "string"
+        ? input.defaultPrinterId.trim()
+        : defaults.defaultPrinterId,
   };
 }
 

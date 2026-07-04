@@ -74,7 +74,7 @@ type Props = {
   saveModelStore: (store: ConnectorModelProfileStore) => Promise<ConnectorModelProfileStore>;
   scanModels: () => Promise<ConnectorModelProfileStore>;
   onCompleted: (config: ConnectorClientConfig) => void;
-  onDismiss: () => void;
+  onDismiss: (config: ConnectorClientConfig) => void;
 };
 
 function toMessage(error: unknown): string {
@@ -246,9 +246,22 @@ export function SetupWizard({
     setStepIndex((value) => value + 1);
   }
 
+  /**
+   * "Später" means "don't ask again", not "ask again on every restart" — it
+   * persists wizardCompleted so the overlay stops reappearing on launch. A
+   * manual "Setup-Wizard erneut öffnen" entry point (in the host settings)
+   * covers the case where the user does want to come back to it. Best-effort:
+   * an invalid partial config still closes the overlay, just without persisting.
+   */
   async function handleDismiss() {
-    await saveDraftQuietly();
-    onDismiss();
+    try {
+      const saved = await writeConfig(
+        parseConnectorClientConfig({ ...config, wizardCompleted: true }),
+      );
+      onDismiss(saved);
+    } catch {
+      onDismiss(config);
+    }
   }
 
   async function runModelScan() {

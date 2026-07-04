@@ -134,6 +134,24 @@ export async function discoverLocalPrintersAsync(env: NodeJS.ProcessEnv = proces
   return enumerateHostPrinters();
 }
 export async function runPrinterDiscover() { return { printers: await discoverLocalPrintersAsync() }; }
+
+/**
+ * Print a file to a named Windows printer with no extra software: uses the
+ * OS-registered "print to" ShellExecute verb (`Start-Process -Verb PrintTo`),
+ * which hands the file to whatever app Windows already associates with its
+ * extension (Edge for PDF, the default browser for HTML). `file` and
+ * `printerName` are passed as separate PowerShell parameters bound via
+ * `param(...)`, not interpolated into the script string, so neither can break
+ * out of the command.
+ */
+export async function printFileWindows(filePath: string, printerName: string): Promise<void> {
+  const script = "param($file,$printer); Start-Process -FilePath $file -Verb PrintTo -ArgumentList $printer -Wait";
+  await execFileAsync(
+    "powershell",
+    ["-NoProfile", "-NonInteractive", "-Command", script, filePath, printerName],
+    { timeout: 60_000, windowsHide: true },
+  );
+}
 export async function runLabelPrintJob(payload: Record<string, unknown>, ctx: { hostUrl: string; connectorToken: string; printCommand?: string; requestTimeoutMs: number; jobId: string }) {
   const parsed = parseLabelPrintJobPayload(payload);
   if (!parsed) throw new Error("label_print: invalid payload");
@@ -150,6 +168,10 @@ export async function runLabelPrintJob(payload: Record<string, unknown>, ctx: { 
       const [cmd, ...args] = parts;
       await execFileAsync(cmd, [...args, "--printer", parsed.printerId, "--file", filePath], { timeout: 120_000 });
       return { printed: true, via: "custom", printerId: parsed.printerId };
+    }
+    if (process.platform === "win32") {
+      await printFileWindows(filePath, parsed.printerId);
+      return { printed: true, via: "windows", printerId: parsed.printerId };
     }
     await execFileAsync("lp", ["-d", parsed.printerId, filePath], { timeout: 60_000 });
     return { printed: true, via: "cups", printerId: parsed.printerId };
