@@ -434,6 +434,35 @@ textarea {
   margin-top: 0.2rem;
 }
 
+.connector-table-summary {
+  color: var(--uwe-fg-muted);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+  max-width: 26rem;
+  line-height: 1.35;
+}
+
+.connector-strength {
+  letter-spacing: 0.12em;
+  color: var(--uwe-accent);
+  font-size: 0.95rem;
+}
+
+.connector-catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.connector-sort-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .connector-log-output {
   margin: 0;
   padding: 1rem;

@@ -144,11 +144,17 @@ export interface CookbookModelView {
   label: string;
   family: string;
   paramsB: number;
+  contextLength: number;
+  isMoe: boolean;
+  isMultimodal: boolean;
   tags: string[];
   useCases: string[];
   engines: string[];
   recommendedQuant: string;
   minVramGbQ4: number;
+  summary: string;
+  strengthTier: number;
+  strengthLabel: string;
   installed: boolean;
   fit: CookbookModelFit;
 }
@@ -546,11 +552,17 @@ function parseCookbookModel(raw: unknown): CookbookModelView {
     label: asString(value.label),
     family: asString(value.family),
     paramsB: asNumber(value.paramsB),
+    contextLength: asNumber(value.contextLength),
+    isMoe: asBool(value.isMoe),
+    isMultimodal: asBool(value.isMultimodal),
     tags: asStringArray(value.tags),
     useCases: asStringArray(value.useCases),
     engines: asStringArray(value.engines),
     recommendedQuant: asString(value.recommendedQuant),
     minVramGbQ4: asNumber(value.minVramGbQ4),
+    summary: asString(value.summary),
+    strengthTier: asNumber(value.strengthTier),
+    strengthLabel: asString(value.strengthLabel),
     installed: asBool(value.installed),
     fit: parseFit(value.fit),
   };
@@ -674,11 +686,17 @@ function buildMockCookbookDashboard(): CookbookDashboardView {
         label: "Llama 3.1 8B",
         family: "llama",
         paramsB: 8,
+        contextLength: 131072,
+        isMoe: false,
+        isMultimodal: false,
         tags: ["balanced", "general"],
         useCases: ["dnd_generator", "session_prep"],
         engines: ["ollama", "lm_studio"],
         recommendedQuant: "Q4_K_M",
         minVramGbQ4: 5.5,
+        summary: "Solider Allrounder für Generierung und Vorbereitung.",
+        strengthTier: 2,
+        strengthLabel: "Solide",
         installed: false,
         fit: mockFit("llama3.1:8b", 72, "good"),
       },

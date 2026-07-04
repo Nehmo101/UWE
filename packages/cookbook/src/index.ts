@@ -48,6 +48,7 @@ export {
   getCookbookModel,
   listCookbookModels,
   matchInstalledModel,
+  modelStrengthTier,
   estimateModelVramGb,
   estimateModelRamGb,
 } from "./model-registry";
