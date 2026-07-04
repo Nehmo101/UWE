@@ -364,6 +364,30 @@ Backups regelmäßig **off-site** kopieren (USB, NAS, rsync). Siehe [backup-rest
 
 ---
 
+## 10a. Morning Briefing (systemd timer, optional)
+
+Erzeugt das Morning Briefing täglich um 07:00 lokal per RTX. Der Timer stößt
+einen internen Endpoint an (Guard: `STUDIO_API_TOKEN` per Bearer), der den
+Briefing-Job im **laufenden** Server dispatcht:
+
+```bash
+sudo cp /opt/uwe/deploy/systemd/uwe-briefing.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now uwe-briefing.timer
+systemctl list-timers | grep uwe-briefing
+```
+
+Voraussetzung: `STUDIO_API_TOKEN` in `/etc/uwe/uwe.env`. Optional
+`UWE_BRIEFING_USER_ID` (sonst erster aktiver Owner/Admin) und
+`UWE_INTERNAL_BASE_URL` (Default `http://127.0.0.1:3000`). Manuell testen:
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $STUDIO_API_TOKEN" \
+  http://127.0.0.1:3000/api/internal/briefing
+```
+
+---
+
 ## 11. Optional: fail2ban für SSH
 
 Nur sinnvoll, wenn SSH aus dem LAN erlaubt ist und Brute-Force-Schutz gewünscht wird:
@@ -431,6 +455,7 @@ curl -sf http://127.0.0.1:3000/api/health/public
 | [`.env.production.example`](../.env.production.example) | Production-ENV-Vorlage |
 | [`deploy/systemd/uwe.service`](../deploy/systemd/uwe.service) | systemd Unit für UWE |
 | [`deploy/systemd/uwe-backup.timer`](../deploy/systemd/uwe-backup.timer) | Tägliches Backup |
+| [`deploy/systemd/uwe-briefing.timer`](../deploy/systemd/uwe-briefing.timer) | Tägliches Morning Briefing (07:00) |
 | [`deploy/scripts/start-uwe.sh`](../deploy/scripts/start-uwe.sh) | Start Studio + Portal |
 | [`SECURITY.md`](../SECURITY.md) | Security Policy |
 

@@ -11,6 +11,18 @@ describe("buildMorningBriefingPrompt", () => {
       nextSession: { title: "Session 12", date: "05.07.2026" },
       mail: { recentFailed: 1, pendingCount: 2 },
       contracts: { alerts: ["Vertrag X kündbar bis 15.07."], needingReview: 1 },
+      prioritizedMail: {
+        urgentCount: 2,
+        replyNeededCount: 1,
+        todayCount: 0,
+        topSubjects: ["Rechnung fällig"],
+      },
+      household: {
+        overdueCount: 1,
+        soonCount: 2,
+        overdueTitles: ["Rauchmelder testen"],
+        expiringPantryCount: 3,
+      },
       inboxCaptureCount: 3,
       workshopOpenTasks: ["Mini grundieren"],
       hardwareIssues: 0,
@@ -24,6 +36,9 @@ describe("buildMorningBriefingPrompt", () => {
     assert.ok(prompt.includes("Vertrag X kündbar bis 15.07."));
     assert.ok(prompt.includes("Schlagzeile A — Kurztext"));
     assert.ok(prompt.includes("Unbearbeitete Captures in der Inbox: 3"));
+    assert.ok(prompt.includes("Wichtige Mails: 2 dringend, 1 Antwort nötig, 0 heute"));
+    assert.ok(prompt.includes("Rauchmelder testen"));
+    assert.ok(prompt.includes("priorisierte Heute-Agenda"));
   });
 
   it("marks empty sections instead of omitting them", () => {
@@ -34,6 +49,8 @@ describe("buildMorningBriefingPrompt", () => {
       nextSession: null,
       mail: { recentFailed: 0, pendingCount: 0 },
       contracts: { alerts: [], needingReview: 0 },
+      prioritizedMail: { urgentCount: 0, replyNeededCount: 0, todayCount: 0, topSubjects: [] },
+      household: { overdueCount: 0, soonCount: 0, overdueTitles: [], expiringPantryCount: 0 },
       inboxCaptureCount: 0,
       workshopOpenTasks: [],
       hardwareIssues: 0,
@@ -43,6 +60,8 @@ describe("buildMorningBriefingPrompt", () => {
 
     assert.ok(prompt.includes("Termine heute: keine"));
     assert.ok(prompt.includes("News-Schlagzeilen: keine"));
+    assert.ok(prompt.includes("Top-Mails: keine"));
+    assert.ok(prompt.includes("Überfällige Haushaltsaufgaben: keine"));
     assert.ok(!prompt.includes("Nächste DnD-Session"));
   });
 });

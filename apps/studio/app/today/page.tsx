@@ -6,6 +6,9 @@ import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
 import { TodayDashboardClient } from "./TodayDashboardClient";
 import { TodayQuickCapture } from "./TodayQuickCapture";
+import { LifeBrainChatPanel } from "@/components/life-brain/LifeBrainChatPanel";
+import { resolveAiKnowledgeAccess } from "@/src/lib/ai-gateway-access";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -19,10 +22,12 @@ async function getLatestBriefing() {
 
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
-  const [data, briefing] = await Promise.all([
+  const [data, briefing, currentUser] = await Promise.all([
     getTodayDashboardData(prisma, { useMockInference }),
     getLatestBriefing(),
+    getCurrentAuthUser(),
   ]);
+  const chatAccess = await resolveAiKnowledgeAccess(currentUser);
 
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
@@ -55,6 +60,15 @@ export default async function TodayPage() {
           <Link href="/jobs">Jobs</Link>.
         </p>
       </section>
+
+      {chatAccess.allowed && (
+        <details className="uwe-v2-section">
+          <summary className="uwe-v2-section-title">
+            💬 Nachfragen zum Briefing (Life-Brain)
+          </summary>
+          <LifeBrainChatPanel useMock={useMockInference} pollIntervalMs={30_000} />
+        </details>
+      )}
 
       <div className="uwe-v2-stat-grid">
         <section className="uwe-v2-card uwe-v2-card-padded">
