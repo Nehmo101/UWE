@@ -901,6 +901,7 @@ function drawScaleBar(ctx, opts) {
   }
 }
 var VINE_TRUNK_BASE_PX = 9;
+var VINE_OUTLINE_PX = 2.6;
 function strokePolyline(ctx, pts) {
   if (pts.length < 2) return;
   ctx.beginPath();
@@ -908,12 +909,21 @@ function strokePolyline(ctx, pts) {
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.stroke();
 }
+function strokeTaperedTrunk(ctx, pts, widths, base, extraPx) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    ctx.lineWidth = Math.max(0.6, widths[i] * base) + extraPx;
+    ctx.beginPath();
+    ctx.moveTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(pts[i + 1][0], pts[i + 1][1]);
+    ctx.stroke();
+  }
+}
 function drawVine(ctx, layout, opts) {
   const { spine, widths, coil, tendrils, shadow, aura } = layout;
   if (spine.length < 2) return;
   const { project, zoom, selected } = opts;
   const p = (pts) => pts.map(project);
-  const base = VINE_TRUNK_BASE_PX * zoom * (selected ? 1.15 : 1);
+  const base = VINE_TRUNK_BASE_PX * (opts.thickness ?? 1) * zoom * (selected ? 1.15 : 1);
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -922,14 +932,16 @@ function drawVine(ctx, layout, opts) {
   ctx.lineWidth = Math.max(1, base * 0.75);
   strokePolyline(ctx, shadowPts);
   const spinePts = p(spine);
-  ctx.strokeStyle = opts.trunk;
-  for (let i = 0; i < spinePts.length - 1; i++) {
-    ctx.lineWidth = Math.max(0.6, widths[i] * base);
-    ctx.beginPath();
-    ctx.moveTo(spinePts[i][0], spinePts[i][1]);
-    ctx.lineTo(spinePts[i + 1][0], spinePts[i + 1][1]);
-    ctx.stroke();
+  if (opts.outline) {
+    const outlinePx = VINE_OUTLINE_PX * zoom;
+    ctx.strokeStyle = opts.outline;
+    strokeTaperedTrunk(ctx, spinePts, widths, base, outlinePx);
+    ctx.lineWidth = Math.max(0.8, 1.4 * zoom) + outlinePx;
+    strokePolyline(ctx, p(coil));
+    for (const t of tendrils) strokePolyline(ctx, p(t));
   }
+  ctx.strokeStyle = opts.trunk;
+  strokeTaperedTrunk(ctx, spinePts, widths, base, 0);
   ctx.strokeStyle = opts.coil;
   ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
   strokePolyline(ctx, p(coil));
