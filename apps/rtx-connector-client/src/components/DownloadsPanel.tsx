@@ -9,7 +9,7 @@ import {
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
 import type { OllamaPullEvent, PullOllamaModelResult } from "../lib/tauri";
-import { useOllamaPullProgress } from "../lib/useOllamaPullProgress";
+import { useOllamaMultiPullProgress } from "../lib/useOllamaMultiPullProgress";
 
 type Props = {
   loaded: boolean;
@@ -38,6 +38,26 @@ function toMessage(error: unknown): string {
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
+
+/**
+ * Split the free-text model field into a clean, de-duplicated list. Users may
+ * separate names by newlines, commas or whitespace so several models can be
+ * pulled at once (e.g. pasting a block of names).
+ */
+function parseModelNames(raw: string): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const token of raw.split(/[\n,]+/)) {
+    const name = token.trim();
+    if (name && !seen.has(name)) {
+      seen.add(name);
+      names.push(name);
+    }
+  }
+  return names;
+}
+
+type OllamaPullOutcome = { status: "running" | "done" | "error"; message?: string };
 
 function describePull(result: PullOllamaModelResult | null): string | null {
   if (!result || result.events.length === 0) {
@@ -114,6 +134,7 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<PullOllamaModelResult | null>(null);
+  const [pullOutcomes, setPullOutcomes] = useState<Record<string, OllamaPullOutcome>>({});
   const [deletingName, setDeletingName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState("");
@@ -123,7 +144,7 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
   const [hfError, setHfError] = useState<string | null>(null);
   const [hfNotice, setHfNotice] = useState<string | null>(null);
   const [lastHfResult, setLastHfResult] = useState<PullOllamaModelResult | null>(null);
-  const { progress: pullProgress, reset: resetPullProgress } = useOllamaPullProgress();
+  const { entries: pullProgress, reset: resetPullProgress } = useOllamaMultiPullProgress();
 
   useEffect(() => {
     if (!loaded) {
@@ -148,21 +169,67 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
   );
 
   async function runPull() {
+    const names = parseModelNames(modelName);
+    if (names.length === 0) {
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setNotice(null);
-    resetPullProgress();
+    resetPullProgress(names);
+    setPullOutcomes(Object.fromEntries(names.map((name) => [name, { status: "running" }])));
 
-    try {
-      const result = await onPullModel(modelName);
-      setLastResult(result);
-      setNotice(`Model-Store aktualisiert: ${result.store.profiles.length} Profile verfügbar.`);
-      setModelName("");
-    } catch (nextError) {
-      setError(toMessage(nextError));
-    } finally {
-      setBusy(false);
+    // Kick every pull off at once — each is its own connector-CLI process, and
+    // the Rust side tags progress events per model so they don't collide.
+    const results = await Promise.all(
+      names.map(async (name) => {
+        try {
+          const result = await onPullModel(name);
+          setPullOutcomes((prev) => ({ ...prev, [name]: { status: "done" } }));
+          return { name, ok: true as const, result };
+        } catch (nextError) {
+          const message = toMessage(nextError);
+          setPullOutcomes((prev) => ({ ...prev, [name]: { status: "error", message } }));
+          return { name, ok: false as const, message };
+        }
+      }),
+    );
+
+    const succeeded = results.filter((entry) => entry.ok);
+    const failed = results.filter((entry) => !entry.ok);
+
+    // Refresh the store from disk once, rather than trusting whichever parallel
+    // pull's returned store happened to land last.
+    let profileCount: number | null = null;
+    if (succeeded.length > 0) {
+      const lastOk = succeeded[succeeded.length - 1];
+      if (lastOk.ok) {
+        setLastResult(lastOk.result);
+      }
+      try {
+        const refreshed = await onLoadStore();
+        profileCount = refreshed.profiles.length;
+      } catch {
+        profileCount = null;
+      }
     }
+
+    if (failed.length > 0) {
+      setError(
+        `${failed.length} von ${names.length} Downloads fehlgeschlagen: ` +
+          failed.map((entry) => entry.name).join(", "),
+      );
+    }
+    if (succeeded.length > 0) {
+      const storeNote = profileCount !== null ? ` — ${profileCount} Profile verfügbar.` : ".";
+      setNotice(`${succeeded.length} von ${names.length} Modellen geladen${storeNote}`);
+      if (failed.length === 0) {
+        setModelName("");
+      }
+    }
+
+    setBusy(false);
   }
 
   async function runHuggingFacePull() {
@@ -234,6 +301,12 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
 
   const progressMessage = describePull(lastResult);
   const hfProgressMessage = describePull(lastHfResult);
+  const parsedModelNames = parseModelNames(modelName);
+  const pullRows = Object.keys(pullOutcomes).map((name) => ({
+    name,
+    outcome: pullOutcomes[name],
+    progress: pullProgress[name],
+  }));
 
   return (
     <div className="connector-grid connector-grid-2">
@@ -244,44 +317,72 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
             <ButtonV2
               variant="primary"
               onClick={runPull}
-              disabled={busy || modelName.trim().length === 0}
+              disabled={busy || parsedModelNames.length === 0}
             >
-              Modell laden
+              {busy
+                ? "Lädt …"
+                : parsedModelNames.length > 1
+                  ? `${parsedModelNames.length} Modelle laden`
+                  : "Modell laden"}
             </ButtonV2>
           </div>
         }
       >
         <div className="connector-stack">
           <p className="connector-muted">
-            Zieht ein Modell direkt über den lokalen Ollama-Daemon. Der UWE Host sieht nur die freigegebenen Metadaten.
+            Zieht Modelle direkt über den lokalen Ollama-Daemon. Mehrere Namen (pro Zeile oder
+            per Komma getrennt) werden gleichzeitig geladen. Der UWE Host sieht nur die
+            freigegebenen Metadaten.
           </p>
 
           <label className="connector-field connector-field-full">
-            <span>Ollama-Modellname</span>
-            <input
+            <span>Ollama-Modellnamen</span>
+            <textarea
               className="connector-input"
+              rows={3}
               value={modelName}
               onChange={(event) => setModelName(event.target.value)}
-              placeholder="llama3.1:8b"
+              placeholder={"llama3.1:8b\nqwen2.5:14b\nmistral:7b"}
             />
           </label>
 
           {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
           {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
 
-          {busy && pullProgress ? (
+          {pullRows.length > 0 ? (
             <div className="connector-stack">
-              <progress
-                className="connector-progress"
-                value={pullProgress.fraction ?? undefined}
-                max={1}
-              />
-              <p className="connector-muted">
-                {pullProgress.status || "Lädt …"}
-                {typeof pullProgress.fraction === "number"
-                  ? ` (${Math.round(pullProgress.fraction * 100)} %)`
-                  : ""}
-              </p>
+              {pullRows.map((row) => {
+                const fraction = row.progress?.fraction;
+                const isError = row.outcome.status === "error";
+                const isDone = row.outcome.status === "done";
+                const statusText = isError
+                  ? row.outcome.message || "Fehlgeschlagen"
+                  : isDone
+                    ? "Fertig"
+                    : row.progress?.status || "Lädt …";
+                const percent =
+                  typeof fraction === "number" ? ` (${Math.round(fraction * 100)} %)` : "";
+                return (
+                  <div key={row.name} className="connector-stack">
+                    <div className="connector-inline-card-header">
+                      <p className="connector-lead">{row.name}</p>
+                      <HealthBadge
+                        status={isError ? "error" : isDone ? "ok" : "degraded"}
+                        label={isError ? "Fehler" : isDone ? "Fertig" : "Lädt …"}
+                      />
+                    </div>
+                    <progress
+                      className="connector-progress"
+                      value={isDone ? 1 : fraction ?? undefined}
+                      max={1}
+                    />
+                    <p className={isError ? "connector-banner connector-banner-error" : "connector-muted"}>
+                      {statusText}
+                      {isError ? "" : percent}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           ) : progressMessage ? (
             <HealthBadge status="ok" label={progressMessage} />
