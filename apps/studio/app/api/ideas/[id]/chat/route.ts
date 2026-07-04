@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createDevIdeaService, parseDevIdeaTranscript, prisma } from "@uwe/database/server";
+import {
+  createDevIdeaService,
+  parseDevIdeaTranscript,
+  parseIdeaAttachments,
+  prisma,
+} from "@uwe/database/server";
 import type { DevIdeaChatMessage } from "@uwe/database/server";
 import {
   guardStudioMutation,
@@ -52,6 +57,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     idea.body,
     transcript,
     userMessage.content,
+    {
+      attachments: parseIdeaAttachments(idea.attachments),
+      baseUrl: new URL(request.url).origin,
+    },
   );
 
   try {

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { createDevIdeaService, parseDevIdeaTranscript } from "./dev-idea-service";
+import {
+  createDevIdeaService,
+  parseDevIdeaTranscript,
+  parseIdeaAttachments,
+} from "./dev-idea-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 describe("DevIdeaService", () => {
@@ -73,6 +77,31 @@ describe("DevIdeaService", () => {
     await service.deleteIdea(idea.id);
   });
 
+  it("persists and reloads image attachments", async () => {
+    const service = createDevIdeaService(db);
+    const idea = await service.createIdea({ title: "Attachment idea" });
+
+    assert.deepEqual(await service.getAttachments(idea.id), []);
+
+    const set = await service.setAttachments(idea.id, [
+      { assetId: "asset-1", title: "Mockup", mimeType: "image/png" },
+      { assetId: "asset-2" },
+    ]);
+    assert.equal(parseIdeaAttachments(set.attachments).length, 2);
+
+    const reloaded = await service.getAttachments(idea.id);
+    assert.equal(reloaded.length, 2);
+    assert.equal(reloaded[0]?.assetId, "asset-1");
+    assert.equal(reloaded[0]?.title, "Mockup");
+    assert.equal(reloaded[1]?.assetId, "asset-2");
+    assert.equal(reloaded[1]?.title, undefined);
+
+    const cleared = await service.setAttachments(idea.id, []);
+    assert.deepEqual(parseIdeaAttachments(cleared.attachments), []);
+
+    await service.deleteIdea(idea.id);
+  });
+
   it("lists ideas filtered by status, newest first", async () => {
     const service = createDevIdeaService(db);
     const a = await service.createIdea({ title: "A", status: "rejected" });
@@ -107,5 +136,26 @@ describe("parseDevIdeaTranscript", () => {
     assert.equal(parsed.length, 2);
     assert.equal(parsed[0]?.content, "hi");
     assert.equal(parsed[1]?.via, "local_rtx");
+  });
+});
+
+describe("parseIdeaAttachments", () => {
+  it("returns [] for non-array / malformed input", () => {
+    assert.deepEqual(parseIdeaAttachments(null), []);
+    assert.deepEqual(parseIdeaAttachments("nope"), []);
+    assert.deepEqual(parseIdeaAttachments([{ title: "no asset id" }]), []);
+    assert.deepEqual(parseIdeaAttachments([{ assetId: "" }]), []);
+  });
+
+  it("keeps valid attachments and their optional fields", () => {
+    const parsed = parseIdeaAttachments([
+      { assetId: "a1", title: "Mockup", mimeType: "image/png" },
+      { assetId: "a2" },
+      { assetId: 42 },
+    ]);
+    assert.equal(parsed.length, 2);
+    assert.equal(parsed[0]?.title, "Mockup");
+    assert.equal(parsed[0]?.mimeType, "image/png");
+    assert.equal(parsed[1]?.title, undefined);
   });
 });

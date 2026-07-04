@@ -4,11 +4,13 @@ import {
   createDevAgentJobService,
   createDevIdeaService,
   createJobService,
+  parseIdeaAttachments,
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
 import { guardStudioMutation, idSchema, parseBody, parseParams } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
+import { renderAttachmentsBlock } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
 
 const ideaIdParamSchema = z.object({ id: idSchema });
@@ -82,10 +84,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     await ideas.setGeneratedPrompt(idea.id, overridePrompt);
   }
 
+  // Attachments are referenced as served asset URLs so the coding agent can
+  // fetch them; the stored prompt stays clean (block is appended only here).
+  const attachmentsBlock = renderAttachmentsBlock(
+    parseIdeaAttachments(idea.attachments),
+    new URL(request.url).origin,
+  );
+  const dispatchPrompt = attachmentsBlock ? `${prompt}\n\n${attachmentsBlock}` : prompt;
+
   const agentJobs = createDevAgentJobService(prisma);
   const devJob = await agentJobs.createJob({
     title: idea.title,
-    prompt,
+    prompt: dispatchPrompt,
     provider,
   });
 

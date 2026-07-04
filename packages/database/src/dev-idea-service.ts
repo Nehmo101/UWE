@@ -43,6 +43,17 @@ export interface DevIdeaChatMessage {
   via?: string;
 }
 
+/**
+ * A single image attachment linked to a dev idea. Only the asset reference is
+ * persisted; the binary lives in the asset store and is served via the studio
+ * `/api/assets/:id/file` route.
+ */
+export interface DevIdeaAttachment {
+  assetId: string;
+  title?: string;
+  mimeType?: string;
+}
+
 export interface CreateDevIdeaInput {
   title: string;
   body?: string;
@@ -64,6 +75,7 @@ export interface UpdateDevIdeaInput {
   maturityLevel?: string | null;
   generatedPrompt?: string | null;
   devAgentJobId?: string | null;
+  attachments?: DevIdeaAttachment[] | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -100,6 +112,31 @@ export function parseDevIdeaTranscript(value: unknown): DevIdeaChatMessage[] {
             ? candidate.createdAt
             : new Date().toISOString(),
         ...(typeof candidate.via === "string" ? { via: candidate.via } : {}),
+      },
+    ];
+  });
+}
+
+/** Parse a persisted `attachments` JSON column into typed image attachments. */
+export function parseIdeaAttachments(value: unknown): DevIdeaAttachment[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry): DevIdeaAttachment[] => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+    const candidate = entry as Record<string, unknown>;
+    const assetId = candidate.assetId;
+    if (typeof assetId !== "string" || !assetId) {
+      return [];
+    }
+    return [
+      {
+        assetId,
+        ...(typeof candidate.title === "string" ? { title: candidate.title } : {}),
+        ...(typeof candidate.mimeType === "string" ? { mimeType: candidate.mimeType } : {}),
       },
     ];
   });
@@ -161,6 +198,9 @@ export class DevIdeaService {
         ...(input.devAgentJobId !== undefined
           ? { devAgentJobId: input.devAgentJobId }
           : {}),
+        ...(input.attachments !== undefined
+          ? { attachments: toPrismaJsonValue(input.attachments) }
+          : {}),
         ...(input.metadata !== undefined
           ? { metadata: toPrismaJsonValue(input.metadata) }
           : {}),
@@ -178,6 +218,22 @@ export class DevIdeaService {
 
   async linkAgentJob(id: string, devAgentJobId: string | null): Promise<DevIdea> {
     return this.db.devIdea.update({ where: { id }, data: { devAgentJobId } });
+  }
+
+  async getAttachments(id: string): Promise<DevIdeaAttachment[]> {
+    const idea = await this.getIdea(id);
+    if (!idea) {
+      throw new Error("Idee nicht gefunden.");
+    }
+    return parseIdeaAttachments(idea.attachments);
+  }
+
+  /** Replace the idea's image attachments with the given list (order preserved). */
+  async setAttachments(id: string, attachments: DevIdeaAttachment[]): Promise<DevIdea> {
+    return this.db.devIdea.update({
+      where: { id },
+      data: { attachments: toPrismaJsonValue(attachments) },
+    });
   }
 
   async getTranscript(id: string): Promise<DevIdeaChatMessage[]> {

@@ -10,6 +10,8 @@ import {
   type DevIdeaLifecycleId, type DevIdeaMaturityLevelId, type DevIdeaModuleId, type DevIdeaTypeId, type IdeaWorkspaceView,
 } from "@uwe/database/dev-idea-constants";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { IdeaAttachments, type IdeaAttachment } from "./IdeaAttachments";
+import { IdeaClaudeHandover } from "./IdeaClaudeHandover";
 import {
   createIdeaAction,
   deleteIdeaAction,
@@ -38,6 +40,7 @@ export interface IdeaDto {
   module: string | null;
   maturityLevel: string | null;
   transcript: IdeaChatMessage[];
+  attachments: IdeaAttachment[];
   generatedPrompt: string | null;
   devAgentJobId: string | null;
   updatedAt: string;
@@ -163,7 +166,7 @@ export function IdeaWorkspaceClient({
   return (
     <div className="uwe-v2-dashboard-grid" data-columns="3">
       <IdeaListColumn ideas={filteredIdeas} selectedId={selected?.id ?? null} onSelect={setSelectedId} view={view} lifecycleFilter={lifecycleFilter} moduleFilter={moduleFilter} workspaceContext={workspaceContext} />
-      <ChatColumn key={`chat-${selected?.id ?? "none"}`} idea={selected} workspaceContext={workspaceContext} onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })} />
+      <ChatColumn key={`chat-${selected?.id ?? "none"}`} idea={selected} workspaceContext={workspaceContext} onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })} onAttachments={(attachments) => selected && patchIdea(selected.id, { attachments })} />
       <PromptColumn key={`prompt-${selected?.id ?? "none"}`} idea={selected} highlightPrompt={view === "prompts"} job={selected?.devAgentJobId ? (jobs[selected.devAgentJobId] ?? null) : null} agentJobs={agentJobs} onPrompt={(p) => selected && patchIdea(selected.id, { generatedPrompt: p })} onDispatched={(job) => { if (!selected) return; patchIdea(selected.id, { devAgentJobId: job.id }); setJobs((c) => ({ ...c, [job.id]: job })); }} onJobUpdate={(job) => setJobs((c) => ({ ...c, [job.id]: job }))} onRefresh={() => router.refresh()} />
     </div>
   );
@@ -239,10 +242,12 @@ function ChatColumn({
   idea,
   workspaceContext,
   onTranscript,
+  onAttachments,
 }: {
   idea: IdeaDto | null;
   workspaceContext: WorkspaceContext;
   onTranscript: (transcript: IdeaChatMessage[]) => void;
+  onAttachments: (attachments: IdeaAttachment[]) => void;
 }) {
   const [message, setMessage] = useState("");
   const [providerMode, setProviderMode] = useState<ProviderMode>("auto");
@@ -336,6 +341,11 @@ function ChatColumn({
             {idea.body ? <p className="uwe-idea-detail-body">{idea.body}</p> : null}
           </>
         )}
+      </div>
+
+      <div className="uwe-idea-attachments-section">
+        <h3 className="uwe-v2-section-title">Anhänge (Bilder)</h3>
+        <IdeaAttachments ideaId={idea.id} attachments={idea.attachments} onChange={onAttachments} />
       </div>
 
       <div className="uwe-idea-chat-log" aria-label="Chatverlauf">
@@ -649,6 +659,13 @@ function PromptColumn({
           {dispatchBusy ? "Übergebe…" : "An Cursor übergeben"}
         </button>
       </div>
+
+      <IdeaClaudeHandover
+        title={idea.title}
+        body={idea.body}
+        prompt={draft}
+        attachments={idea.attachments}
+      />
 
       {!agentJobs.enabled && (
         <p className="uwe-dashboard-muted">

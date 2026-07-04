@@ -2895,6 +2895,7 @@ model DevIdea {
   chatTranscript  Json?            @map("chat_transcript")
   generatedPrompt String?          @map("generated_prompt")
   devAgentJobId   String?          @map("dev_agent_job_id")
+  attachments     Json?
   metadata        Json?
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")

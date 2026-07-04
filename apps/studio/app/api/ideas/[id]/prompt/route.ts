@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createDevIdeaService, parseDevIdeaTranscript, prisma } from "@uwe/database/server";
+import {
+  createDevIdeaService,
+  parseDevIdeaTranscript,
+  parseIdeaAttachments,
+  prisma,
+} from "@uwe/database/server";
 import { guardStudioMutation, idSchema, parseBody, parseParams } from "@uwe/security";
 import { executeAiPrompt } from "@/src/lib/ai-prompt-handlers";
 import { composeIdeaPromptGeneration } from "@/src/lib/idea-prompt";
@@ -40,7 +45,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     );
   }
 
-  const generationPrompt = composeIdeaPromptGeneration(idea.title, idea.body, transcript);
+  const generationPrompt = composeIdeaPromptGeneration(idea.title, idea.body, transcript, {
+    attachments: parseIdeaAttachments(idea.attachments),
+    baseUrl: new URL(request.url).origin,
+  });
 
   try {
     const result = await executeAiPrompt(

@@ -1941,6 +1941,7 @@ export {
   createDevIdeaService,
   DevIdeaService,
   parseDevIdeaTranscript,
+  parseIdeaAttachments,
   DEV_IDEA_STATUS_LABELS,
   DEV_IDEA_STATUSES,
   DEV_IDEA_TYPE_LABELS,
@@ -1960,6 +1961,7 @@ export type {
   DevIdeaLifecycle,
   DevIdeaChatMessage,
   DevIdeaChatRole,
+  DevIdeaAttachment,
 } from "./dev-idea-service";
 
 export {

@@ -3,6 +3,7 @@ import {
   createDevAgentJobService,
   createDevIdeaService,
   parseDevIdeaTranscript,
+  parseIdeaAttachments,
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
@@ -60,6 +61,7 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
     id: row.id, title: row.title, body: row.body, status: row.status,
     ideaType: row.ideaType, lifecycle: row.lifecycle, module: row.module, maturityLevel: row.maturityLevel,
     transcript: parseDevIdeaTranscript(row.chatTranscript), generatedPrompt: row.generatedPrompt,
+    attachments: parseIdeaAttachments(row.attachments),
     devAgentJobId: row.devAgentJobId, updatedAt: row.updatedAt.toISOString(),
   }));
   const config = resolveAgentJobsConfig();
