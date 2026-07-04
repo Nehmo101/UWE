@@ -27,13 +27,16 @@ export default async function MailCenterPage() {
   const portal = createMailPortalService(prisma);
   const accountService = createMailAccountService(prisma);
   const mailService = createMailService(prisma);
+  const repo = getAppRepository();
+
+  const systemSettings = await repo.getSystemSettings();
 
   const [portalAccounts, portalMessages, drafts, logs, worlds, config, connector] = await Promise.all([
     portal.listAccounts(),
-    portal.searchMessages({ limit: 60 }),
+    portal.searchMessages({ limit: systemSettings.mail.inboxLimit }),
     accountService.listDrafts(),
     createMailLogService(prisma).list({ limit: 10 }),
-    getAppRepository().listWorlds(),
+    repo.listWorlds(),
     mailService.getConfigStatus(),
     createConnectorService(prisma).summarize().catch(() => null),
   ]);

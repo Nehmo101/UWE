@@ -15,6 +15,7 @@ import {
   type ThemeAppearance,
   type AiProviderStoredKey,
 } from "@uwe/database/server";
+import { normalizeMailInboxLimit } from "@uwe/database/settings-service";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -164,6 +165,7 @@ export async function updateSettingsAction(formData: FormData) {
         enabled: parseBoolean(formData.get("mailEnabled")),
         fromDisplayName: String(formData.get("fromDisplayName") || ""),
         logBody: parseBoolean(formData.get("mailLogBody")),
+        inboxLimit: normalizeMailInboxLimit(formData.get("inboxLimit")),
         smtpCredentials,
       };
       break;

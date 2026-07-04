@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { MailPortalAccountForm, MailPortalAccountsPanel } from "@/components/mail-portal/MailPortalAccounts";
 import { MailPortalInbox } from "@/components/mail-portal/MailPortalInbox";
-import { createMailPortalService, prisma } from "@uwe/database/server";
+import { createMailPortalService, getSystemSettings, prisma } from "@uwe/database/server";
 
 interface Props {
   searchParams: Promise<{ message?: string; q?: string }>;
@@ -11,10 +11,11 @@ interface Props {
 export default async function AdminMailPortalPage({ searchParams }: Props) {
   const { message: messageId, q } = await searchParams;
   const service = createMailPortalService(prisma);
+  const settings = await getSystemSettings(prisma);
 
   const [accounts, messages, audit] = await Promise.all([
     service.listAccounts(),
-    service.searchMessages({ q, limit: 100 }),
+    service.searchMessages({ q, limit: settings.mail.inboxLimit }),
     service.listAuditLog(20),
   ]);
 
