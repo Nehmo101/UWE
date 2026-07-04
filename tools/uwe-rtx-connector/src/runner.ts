@@ -53,6 +53,8 @@ export class ConnectorRunner {
   private accepting = true;
   private stopped = false;
   private ticking = false;
+  private pollErrorStreak = 0;
+  private pollBackoffUntil = 0;
 
   constructor(private readonly options: RunnerOptions) {
     this.client = options.client;
@@ -122,6 +124,13 @@ export class ConnectorRunner {
 
   /** One poll iteration: claim at most one job per available lane batch. */
   async pollOnce(): Promise<ClaimedJob | null> {
+    // Back off after host errors so a rejecting host (e.g. HTTP 429 rate limit)
+    // isn't hammered every pollIntervalMs — that only sustains the throttling and
+    // can crowd out heartbeats. Exponential, capped, reset on the first success.
+    if (Date.now() < this.pollBackoffUntil) {
+      return null;
+    }
+
     const lanes = this.availableLanes();
     if (lanes.length === 0) {
       return null;
@@ -130,7 +139,12 @@ export class ConnectorRunner {
     let job: ClaimedJob | null;
     try {
       job = await this.client.claimJob(lanes);
+      this.pollErrorStreak = 0;
+      this.pollBackoffUntil = 0;
     } catch (error) {
+      this.pollErrorStreak += 1;
+      const backoff = Math.min(60_000, this.config.pollIntervalMs * 2 ** this.pollErrorStreak);
+      this.pollBackoffUntil = Date.now() + backoff;
       this.handleHostError(error, "Claim");
       return null;
     }
