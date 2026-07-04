@@ -610,6 +610,17 @@ export default async function SettingsPage({ searchParams }: Props) {
                   <input type="checkbox" name="mailLogBody" defaultChecked={settings.mail.logBody} />
                   Mail-Body in Logs speichern (nur für Diagnose — in Production eher aus)
                 </label>
+                <label>
+                  Max. Anzahl E-Mails im Posteingang
+                  <input
+                    name="inboxLimit"
+                    type="number"
+                    min={10}
+                    max={500}
+                    step={10}
+                    defaultValue={settings.mail.inboxLimit}
+                  />
+                </label>
               </SettingsCollapsiblePanel>
 
               <SettingsCollapsiblePanel

@@ -188,8 +188,25 @@ export interface MailSettings {
   enabled: boolean;
   fromDisplayName: string;
   logBody: boolean;
+  /** Max. Anzahl Nachrichten, die im Posteingang (Mail Center) angezeigt werden. */
+  inboxLimit: number;
   smtp: MailSmtpStatus;
   smtpCredentials?: MailSmtpStoredCredentials | null;
+}
+
+export const MAIL_INBOX_LIMIT_MIN = 10;
+export const MAIL_INBOX_LIMIT_MAX = 500;
+export const MAIL_INBOX_LIMIT_DEFAULT = 100;
+
+export function normalizeMailInboxLimit(value: unknown): number {
+  const limit = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(limit)) {
+    return MAIL_INBOX_LIMIT_DEFAULT;
+  }
+  const rounded = Math.round(limit);
+  if (rounded < MAIL_INBOX_LIMIT_MIN) return MAIL_INBOX_LIMIT_MIN;
+  if (rounded > MAIL_INBOX_LIMIT_MAX) return MAIL_INBOX_LIMIT_MAX;
+  return rounded;
 }
 
 export interface ImageStudioPortalSettings {
@@ -216,7 +233,9 @@ export type UweSystemSettingsUpdate = {
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
   ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys">>;
-  mail?: Partial<Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "smtpCredentials">>;
+  mail?: Partial<
+    Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "inboxLimit" | "smtpCredentials">
+  >;
   imageStudio?: Partial<ImageStudioPortalSettings>;
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
@@ -233,6 +252,7 @@ interface MailSettingsInput {
   enabled?: boolean;
   fromDisplayName?: string;
   logBody?: boolean;
+  inboxLimit?: number;
   smtpCredentials?: MailSmtpStoredCredentials | null;
 }
 
@@ -281,6 +301,7 @@ function readMailSettingsInput(stored: unknown): MailSettingsInput | undefined {
     enabled: typeof mail.enabled === "boolean" ? mail.enabled : undefined,
     fromDisplayName: typeof mail.fromDisplayName === "string" ? mail.fromDisplayName : undefined,
     logBody: typeof mail.logBody === "boolean" ? mail.logBody : undefined,
+    inboxLimit: typeof mail.inboxLimit === "number" ? mail.inboxLimit : undefined,
     smtpCredentials:
       smtpCredentials === null
         ? null
@@ -332,6 +353,7 @@ function buildMailSettings(stored?: MailSettingsInput): MailSettings {
     enabled: enabled ?? envStatus.enabled,
     fromDisplayName: stored?.fromDisplayName?.trim() ?? "",
     logBody: logBody ?? envStatus.logBody,
+    inboxLimit: normalizeMailInboxLimit(stored?.inboxLimit),
     smtp: status,
     smtpCredentials: stored?.smtpCredentials ?? null,
   };
@@ -654,6 +676,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       enabled: settings.mail.enabled,
       fromDisplayName: settings.mail.fromDisplayName,
       logBody: settings.mail.logBody,
+      inboxLimit: settings.mail.inboxLimit,
       smtpCredentials: settings.mail.smtpCredentials,
     }),
     imageStudio: buildImageStudioSettings({
@@ -924,6 +947,7 @@ export class SettingsService {
         enabled: update.mail?.enabled ?? current.mail.enabled,
         fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,
         logBody: update.mail?.logBody ?? current.mail.logBody,
+        inboxLimit: update.mail?.inboxLimit ?? current.mail.inboxLimit,
         smtpCredentials:
           update.mail?.smtpCredentials !== undefined
             ? update.mail.smtpCredentials

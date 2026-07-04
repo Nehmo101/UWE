@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createMailPortalService, prisma } from "@uwe/database/server";
+import { createMailPortalService, getSystemSettings, prisma } from "@uwe/database/server";
 import type { MailPriorityCategory } from "@uwe/mail/portal-types";
 import { requireAdminMailApi } from "@/src/lib/admin-mail-api";
 
@@ -11,7 +11,9 @@ export async function GET(request: Request) {
   const accountId = searchParams.get("accountId") ?? undefined;
   const q = searchParams.get("q") ?? undefined;
   const category = searchParams.get("category") as MailPriorityCategory | null;
-  const limit = Number(searchParams.get("limit") ?? "50");
+  const settings = await getSystemSettings(prisma);
+  const requestedLimit = searchParams.get("limit");
+  const limit = requestedLimit !== null ? Number(requestedLimit) : settings.mail.inboxLimit;
 
   const service = createMailPortalService(prisma);
   const messages = await service.searchMessages(
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
       accountId,
       q,
       category: category ?? undefined,
-      limit: Number.isFinite(limit) ? limit : 50,
+      limit: Number.isFinite(limit) ? limit : settings.mail.inboxLimit,
     },
     auth.user?.id,
   );
