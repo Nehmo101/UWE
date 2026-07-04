@@ -198,6 +198,7 @@ Key assertions:
 | `RESTORE_OWNER_TOKEN` | Extra guard for backup restore |
 | `UWE_SETUP_TOKEN` | One-time owner bootstrap via `/setup` |
 | `PUBLIC_BASE_URL` | Public exposure detection |
+| `SESSION_INACTIVITY_TIMEOUT_MINUTES` | Idle auto-logout fallback (minutes); only used when `settings.auth.sessionInactivityTimeoutMinutes` is `0` — see `SECURITY.md` § Inactivity auto-logout |
 
 ## Migration
 
