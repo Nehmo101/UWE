@@ -1002,6 +1002,10 @@ export async function pullOllamaModel(name: string): Promise<PullOllamaModelResu
   return parsePullResult(await invokeCommand<unknown>("pull_ollama_model", { name }));
 }
 
+export async function deleteOllamaModel(name: string): Promise<ConnectorModelProfileStore> {
+  return parseModelProfileStore(await invokeCommand<unknown>("delete_ollama_model", { name }));
+}
+
 export async function listConnectorJobs(): Promise<ConnectorJobHistoryEntry[]> {
   return parseJobs(await invokeCommand<unknown>("list_connector_jobs"));
 }
@@ -1058,6 +1062,6 @@ export async function testImage(prompt?: string): Promise<CommandTestResult> {
   return parseCommandTest(await invokeCommand<unknown>("test_image", { prompt }));
 }
 
-export async function testPrint(): Promise<CommandTestResult> {
-  return parseCommandTest(await invokeCommand<unknown>("test_print"));
+export async function testPrint(printerId?: string): Promise<CommandTestResult> {
+  return parseCommandTest(await invokeCommand<unknown>("test_print", { printerId }));
 }

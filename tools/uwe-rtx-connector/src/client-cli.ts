@@ -14,6 +14,9 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   createModelProfile,
@@ -42,7 +45,7 @@ import {
 } from "./spotify-local-store";
 import { discoverLocalLlms, resolveDiscoveryConfig } from "./llm-discovery";
 import { scanFilesystemModels } from "./filesystem-models";
-import { listInstalledPrinters } from "./label-printing";
+import { listInstalledPrinters, printFileWindows } from "./label-printing";
 import {
   loadPrinterStore,
   mergeDiscoveredPrinters,
@@ -75,6 +78,7 @@ function usage(): never {
   client-cli printer-store-save < store.json
   client-cli scan-printers
   client-cli pull-ollama <modelName>
+  client-cli delete-model <modelName>
   client-cli jobs
   client-cli logs [category]
   client-cli cookbook-dashboard
@@ -89,7 +93,7 @@ function usage(): never {
   client-cli spotify-disconnect
   client-cli test-audio [source]
   client-cli test-image [prompt]
-  client-cli test-print
+  client-cli test-print [printerId]
 `);
   process.exit(1);
 }
@@ -217,6 +221,31 @@ async function cmdPullOllama(modelName: string): Promise<void> {
 
   process.stdout.write(`${JSON.stringify({ type: "done", name: modelName })}\n`);
   await cmdScan();
+}
+
+/**
+ * Delete a model from Ollama and drop its matching profile(s) from the local
+ * model store, mirroring `cmdScan`'s output shape so the Rust side's existing
+ * store parser handles it unchanged.
+ */
+async function cmdDeleteModel(modelName: string): Promise<void> {
+  const config = resolveDiscoveryConfig();
+  const baseUrl = config.ollamaUrl ?? "http://127.0.0.1:11434";
+  const admin = new OllamaAdmin(baseUrl);
+
+  await admin.deleteModel(modelName);
+
+  const dir = dataDir();
+  const store = loadModelProfileStore(dir);
+  const next: ConnectorModelProfileStore = {
+    ...store,
+    profiles: store.profiles.filter(
+      (profile) =>
+        !(profile.provider === "ollama" && (profile.name === modelName || profile.displayName === modelName)),
+    ),
+  };
+  saveModelProfileStore(dir, next);
+  process.stdout.write(`${JSON.stringify(next)}\n`);
 }
 
 function cmdJobs(): void {
@@ -409,41 +438,83 @@ function cmdTestAudio(source?: string): void {
  * Run the configured image command with a small JSON test payload on stdin and
  * capture its output, mirroring how the connector executes `image_generate`.
  */
-function cmdTestPrint(): void {
+/**
+ * Test printing. Prefers the custom `printCommand` if configured (checked via
+ * `--help`, unchanged). Otherwise, on Windows, sends a real one-page test
+ * document straight to the chosen OS printer via `printFileWindows` — no
+ * `printCommand` needed, mirroring how the default (no-config) print path
+ * works for real `label_print` jobs.
+ */
+async function cmdTestPrint(printerId?: string): Promise<void> {
   const printCommand = clientConfig().printCommand;
-  if (!printCommand) {
-    process.stdout.write(
-      `${JSON.stringify({
-        ok: false,
-        message: "Kein Print-Kommando konfiguriert (Drucker-Panel im RTX-Client).",
-      })}\n`,
-    );
+
+  if (printCommand) {
+    const [cmd, ...baseArgs] = splitCommand(printCommand);
+
+    try {
+      const child = spawn(cmd, [...baseArgs, "--help"], { stdio: "ignore", detached: false });
+      child.on("error", (error) => {
+        process.stdout.write(
+          `${JSON.stringify({ ok: false, via: cmd, message: error.message })}\n`,
+        );
+      });
+      child.on("close", () => {
+        process.stdout.write(
+          `${JSON.stringify({ ok: true, via: cmd, message: "Print-Kommando gefunden und ausführbar." })}\n`,
+        );
+      });
+    } catch (error) {
+      process.stdout.write(
+        `${JSON.stringify({
+          ok: false,
+          via: cmd,
+          message: error instanceof Error ? error.message : String(error),
+        })}\n`,
+      );
+    }
     return;
   }
 
-  const [cmd, ...baseArgs] = splitCommand(printCommand);
+  if (process.platform === "win32") {
+    const trimmed = printerId?.trim();
+    if (!trimmed) {
+      process.stdout.write(
+        `${JSON.stringify({
+          ok: false,
+          message: "Kein Drucker ausgewählt (Drucker-Panel im RTX-Client).",
+        })}\n`,
+      );
+      return;
+    }
 
-  try {
-    const child = spawn(cmd, [...baseArgs, "--help"], { stdio: "ignore", detached: false });
-    child.on("error", (error) => {
+    const dir = await mkdtemp(join(tmpdir(), "uwe-print-test-"));
+    const filePath = join(dir, "uwe-testdruck.html");
+    try {
+      await writeFile(filePath, "<html><body><h1>UWE RTX Connector — Testdruck</h1></body></html>", "utf8");
+      await printFileWindows(filePath, trimmed);
       process.stdout.write(
-        `${JSON.stringify({ ok: false, via: cmd, message: error.message })}\n`,
+        `${JSON.stringify({ ok: true, via: "windows", message: `Testdruck an "${trimmed}" gesendet.` })}\n`,
       );
-    });
-    child.on("close", () => {
+    } catch (error) {
       process.stdout.write(
-        `${JSON.stringify({ ok: true, via: cmd, message: "Print-Kommando gefunden und ausführbar." })}\n`,
+        `${JSON.stringify({
+          ok: false,
+          via: "windows",
+          message: error instanceof Error ? error.message : String(error),
+        })}\n`,
       );
-    });
-  } catch (error) {
-    process.stdout.write(
-      `${JSON.stringify({
-        ok: false,
-        via: cmd,
-        message: error instanceof Error ? error.message : String(error),
-      })}\n`,
-    );
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    }
+    return;
   }
+
+  process.stdout.write(
+    `${JSON.stringify({
+      ok: false,
+      message: "Kein Print-Kommando konfiguriert (Drucker-Panel im RTX-Client).",
+    })}\n`,
+  );
 }
 
 async function cmdTestImage(prompt?: string): Promise<void> {
@@ -540,6 +611,15 @@ async function main(): Promise<void> {
       await cmdPullOllama(name);
       return;
     }
+    case "delete-model": {
+      const name = args[0]?.trim();
+      if (!name) {
+        console.error("delete-model: Modellname fehlt.");
+        process.exit(1);
+      }
+      await cmdDeleteModel(name);
+      return;
+    }
     case "jobs":
       cmdJobs();
       return;
@@ -583,7 +663,7 @@ async function main(): Promise<void> {
       await cmdTestImage(args[0]);
       return;
     case "test-print":
-      cmdTestPrint();
+      await cmdTestPrint(args[0]);
       return;
     default:
       console.error(`Unbekannter Befehl: ${command}`);
