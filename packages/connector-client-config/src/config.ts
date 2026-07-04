@@ -28,6 +28,7 @@ const connectorClientConfigSchema = z.object({
   spotifyRedirectUri: z.string(),
   audioCommand: z.string(),
   imageCommand: z.string(),
+  printCommand: z.string(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -60,6 +61,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     spotifyRedirectUri: DEFAULT_SPOTIFY_REDIRECT_URI,
     audioCommand: "",
     imageCommand: "",
+    printCommand: "",
   };
 }
 
@@ -124,6 +126,8 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.audioCommand === "string" ? input.audioCommand.trim() : defaults.audioCommand,
     imageCommand:
       typeof input.imageCommand === "string" ? input.imageCommand.trim() : defaults.imageCommand,
+    printCommand:
+      typeof input.printCommand === "string" ? input.printCommand.trim() : defaults.printCommand,
   };
 }
 

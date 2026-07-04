@@ -59,6 +59,12 @@ export interface ConnectorClientConfig {
    * Empty disables local image generation.
    */
   imageCommand: string;
+  /**
+   * Local label-print command. Passed to the connector as
+   * `UWE_CONNECTOR_PRINT_CMD`; called with `--printer <id> --file <path>` when
+   * a `label_print` job arrives. Empty lets the connector fall back to CUPS `lp`.
+   */
+  printCommand: string;
 }
 
 /** Default Spotify OAuth redirect URI for the connector-local loopback flow. */

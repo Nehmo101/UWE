@@ -75,6 +75,8 @@ struct ConnectorClientConfig {
     audio_command: String,
     #[serde(default)]
     image_command: String,
+    #[serde(default)]
+    print_command: String,
 }
 
 fn default_spotify_redirect_uri() -> String {
@@ -99,6 +101,7 @@ impl Default for ConnectorClientConfig {
             spotify_redirect_uri: default_spotify_redirect_uri(),
             audio_command: String::new(),
             image_command: String::new(),
+            print_command: String::new(),
         }
     }
 }
@@ -495,6 +498,7 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     }
     config.audio_command = config.audio_command.trim().to_string();
     config.image_command = config.image_command.trim().to_string();
+    config.print_command = config.print_command.trim().to_string();
 
     Ok(config)
 }
@@ -792,6 +796,12 @@ fn test_image(prompt: Option<String>) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
+fn test_print() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["test-print"])?;
+    parse_client_cli_json(&raw, "Print-Test")
+}
+
+#[tauri::command]
 fn read_config() -> Result<ConnectorClientConfig, String> {
     read_config_from_disk()
 }
@@ -863,6 +873,30 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
     }
 
     let root = resolve_monorepo_root();
+
+    // Validate before spawning — an invalid current_dir surfaces from
+    // Command::spawn() as the cryptic "os error 267" on Windows instead of an
+    // actionable message.
+    if !root.is_dir() {
+        runtime.running = false;
+        runtime.last_heartbeat_at = None;
+        runtime.message = Some(format!(
+            "Arbeitsverzeichnis für den Connector nicht gefunden: {}. Setze UWE_MONOREPO_ROOT auf den UWE-Projektordner.",
+            root.display()
+        ));
+        return Ok(status_snapshot(&runtime, &config));
+    }
+    let launcher_path = root.join(CONNECTOR_LAUNCHER_REL);
+    if !launcher_path.exists() {
+        runtime.running = false;
+        runtime.last_heartbeat_at = None;
+        runtime.message = Some(format!(
+            "Connector-Skript nicht gefunden: {}. Ist das UWE-Monorepo ausgecheckt und `pnpm install` gelaufen? Ggf. UWE_MONOREPO_ROOT setzen.",
+            launcher_path.display()
+        ));
+        return Ok(status_snapshot(&runtime, &config));
+    }
+
     let data_dir = connector_app_data_dir()?;
     let mut command = std::process::Command::new("node");
     configure_hidden_process(&mut command);
@@ -893,6 +927,9 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
     }
     if !config.image_command.is_empty() {
         command.env("UWE_CONNECTOR_IMAGE_CMD", &config.image_command);
+    }
+    if !config.print_command.is_empty() {
+        command.env("UWE_CONNECTOR_PRINT_CMD", &config.print_command);
     }
     if !config.spotify_client_id.is_empty() {
         command.env("SPOTIFY_CLIENT_ID", &config.spotify_client_id);
@@ -1135,7 +1172,8 @@ pub fn run() {
             spotify_test,
             spotify_disconnect,
             test_audio,
-            test_image
+            test_image,
+            test_print
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

@@ -89,6 +89,7 @@ function usage(): never {
   client-cli spotify-disconnect
   client-cli test-audio [source]
   client-cli test-image [prompt]
+  client-cli test-print
 `);
   process.exit(1);
 }
@@ -408,6 +409,43 @@ function cmdTestAudio(source?: string): void {
  * Run the configured image command with a small JSON test payload on stdin and
  * capture its output, mirroring how the connector executes `image_generate`.
  */
+function cmdTestPrint(): void {
+  const printCommand = clientConfig().printCommand;
+  if (!printCommand) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        message: "Kein Print-Kommando konfiguriert (Drucker-Panel im RTX-Client).",
+      })}\n`,
+    );
+    return;
+  }
+
+  const [cmd, ...baseArgs] = splitCommand(printCommand);
+
+  try {
+    const child = spawn(cmd, [...baseArgs, "--help"], { stdio: "ignore", detached: false });
+    child.on("error", (error) => {
+      process.stdout.write(
+        `${JSON.stringify({ ok: false, via: cmd, message: error.message })}\n`,
+      );
+    });
+    child.on("close", () => {
+      process.stdout.write(
+        `${JSON.stringify({ ok: true, via: cmd, message: "Print-Kommando gefunden und ausführbar." })}\n`,
+      );
+    });
+  } catch (error) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        via: cmd,
+        message: error instanceof Error ? error.message : String(error),
+      })}\n`,
+    );
+  }
+}
+
 async function cmdTestImage(prompt?: string): Promise<void> {
   const imageCommand = clientConfig().imageCommand;
   if (!imageCommand) {
@@ -543,6 +581,9 @@ async function main(): Promise<void> {
       return;
     case "test-image":
       await cmdTestImage(args[0]);
+      return;
+    case "test-print":
+      cmdTestPrint();
       return;
     default:
       console.error(`Unbekannter Befehl: ${command}`);

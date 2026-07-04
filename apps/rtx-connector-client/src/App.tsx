@@ -53,6 +53,7 @@ import {
   testAudio,
   testHostConnection,
   testImage,
+  testPrint,
   testRunner,
   writeConfig,
   type ConnectorPrinterStore,
@@ -611,6 +612,11 @@ export default function App() {
             onLoadStore={loadPrinterStore}
             onSaveStore={persistPrinterStore}
             onScanPrinters={runPrinterScan}
+            config={config}
+            busy={busyAction !== null}
+            onChange={updateConfig}
+            onSave={persistConfig}
+            onTest={testPrint}
           />
         );
       case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;

@@ -929,6 +929,15 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
           : "Kein Image-Kommando konfiguriert.",
       } as T;
     }
+    case "test_print": {
+      const config = readMockConfig();
+      return {
+        ok: false,
+        message: config.printCommand
+          ? "Browser-Vorschau: Print-Test läuft nur in der Tauri-App auf dem RTX-PC."
+          : "Kein Print-Kommando konfiguriert.",
+      } as T;
+    }
     default:
       throw new Error(`Unbekannter Mock-Befehl: ${command}`);
   }
@@ -1047,4 +1056,8 @@ export async function testAudio(source?: string): Promise<CommandTestResult> {
 
 export async function testImage(prompt?: string): Promise<CommandTestResult> {
   return parseCommandTest(await invokeCommand<unknown>("test_image", { prompt }));
+}
+
+export async function testPrint(): Promise<CommandTestResult> {
+  return parseCommandTest(await invokeCommand<unknown>("test_print"));
 }

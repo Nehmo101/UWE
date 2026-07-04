@@ -120,6 +120,7 @@ export function applyClientRuntimeEnv(dataDir: string): void {
   const config = loadClientRuntimeConfig(dataDir);
   setIfUnset("UWE_CONNECTOR_AUDIO_CMD", config.audioCommand);
   setIfUnset("UWE_CONNECTOR_IMAGE_CMD", config.imageCommand);
+  setIfUnset("UWE_CONNECTOR_PRINT_CMD", config.printCommand);
   setIfUnset("SPOTIFY_CLIENT_ID", config.spotifyClientId);
 
   const session = loadSpotifySession(dataDir);

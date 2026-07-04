@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import type { ConnectorClientConfig } from "@uwe/connector-client-config";
 
-import type { ConnectorPrinterStore } from "../lib/tauri";
+import type { CommandTestResult, ConnectorPrinterStore } from "../lib/tauri";
 
 type Props = {
   loaded: boolean;
@@ -10,6 +11,11 @@ type Props = {
   onLoadStore: () => Promise<ConnectorPrinterStore>;
   onSaveStore: (store: ConnectorPrinterStore) => Promise<ConnectorPrinterStore>;
   onScanPrinters: () => Promise<ConnectorPrinterStore>;
+  config: ConnectorClientConfig;
+  busy: boolean;
+  onChange: <K extends keyof ConnectorClientConfig>(key: K, value: ConnectorClientConfig[K]) => void;
+  onSave: () => Promise<void>;
+  onTest: () => Promise<CommandTestResult>;
 };
 
 function toMessage(error: unknown): string {
@@ -33,12 +39,31 @@ function toMessage(error: unknown): string {
  * RTX host and let the user choose which ones UWE may print to. The selection is
  * persisted in the local printer store and advertised to the host on the next
  * heartbeat. Static `.env` configuration remains available for headless setups.
+ * The "Lokaler Druckbefehl" card additionally lets the user configure the
+ * command the connector invokes for `label_print` jobs (falling back to CUPS
+ * `lp` when empty) and test that it resolves before saving.
  */
-export function PrintersPanel({ loaded, store, onLoadStore, onSaveStore, onScanPrinters }: Props) {
+export function PrintersPanel({
+  loaded,
+  store,
+  onLoadStore,
+  onSaveStore,
+  onScanPrinters,
+  config,
+  busy,
+  onChange,
+  onSave,
+  onTest,
+}: Props) {
   const [draft, setDraft] = useState(store);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const [printCmdAction, setPrintCmdAction] = useState<string | null>(null);
+  const [printCmdError, setPrintCmdError] = useState<string | null>(null);
+  const [printCmdNotice, setPrintCmdNotice] = useState<string | null>(null);
+  const printCmdDisabled = busy || printCmdAction !== null;
 
   useEffect(() => {
     setDraft(store);
@@ -114,12 +139,87 @@ export function PrintersPanel({ loaded, store, onLoadStore, onSaveStore, onScanP
     }
   }
 
+  async function runPrintCmdAction(action: string, fn: () => Promise<void>) {
+    setPrintCmdAction(action);
+    setPrintCmdError(null);
+    setPrintCmdNotice(null);
+    try {
+      await fn();
+    } catch (nextError) {
+      setPrintCmdError(toMessage(nextError));
+    } finally {
+      setPrintCmdAction(null);
+    }
+  }
+
+  async function handleSavePrintCommand() {
+    await runPrintCmdAction("save", async () => {
+      await onSave();
+      setPrintCmdNotice("Druckbefehl gespeichert.");
+    });
+  }
+
+  async function handleTestPrintCommand() {
+    await runPrintCmdAction("test", async () => {
+      const result = await onTest();
+      if (!result.ok) {
+        setPrintCmdError(result.message);
+        return;
+      }
+      setPrintCmdNotice(result.message);
+    });
+  }
+
   const sortedPrinters = [...draft.printers].sort((left, right) =>
     left.name.localeCompare(right.name, "de"),
   );
 
   return (
     <div className="connector-stack">
+      <CardV2
+        title="Lokaler Druckbefehl"
+        footer={
+          <div className="connector-actions">
+            <ButtonV2 variant="primary" onClick={handleSavePrintCommand} disabled={printCmdDisabled}>
+              Speichern
+            </ButtonV2>
+            <ButtonV2
+              variant="secondary"
+              onClick={handleTestPrintCommand}
+              disabled={printCmdDisabled || !config.printCommand}
+            >
+              Befehl testen
+            </ButtonV2>
+          </div>
+        }
+      >
+        <div className="connector-stack">
+          <p className="connector-muted">
+            Optionaler Druckbefehl für <code>label_print</code>-Jobs. Der Connector ruft ihn mit{" "}
+            <code>--printer &lt;id&gt; --file &lt;pfad&gt;</code> auf. Leer lassen um CUPS{" "}
+            <code>lp</code> als Fallback zu nutzen. Aktiviert die Capability{" "}
+            <code>label_printing</code>.
+          </p>
+
+          {printCmdError ? (
+            <div className="connector-banner connector-banner-error">{printCmdError}</div>
+          ) : null}
+          {printCmdNotice ? (
+            <div className="connector-banner connector-banner-success">{printCmdNotice}</div>
+          ) : null}
+
+          <label className="connector-field connector-field-full">
+            <span>Print-Kommando (optional)</span>
+            <input
+              className="connector-input"
+              value={config.printCommand}
+              onChange={(event) => onChange("printCommand", event.target.value)}
+              placeholder="lp  oder  /usr/local/bin/zebra-print"
+            />
+          </label>
+        </div>
+      </CardV2>
+
       <CardV2
         title="Drucker für UWE"
         footer={
@@ -203,9 +303,6 @@ UWE_CONNECTOR_PRINTERS=[{"id":"zebra-lp2844","name":"Zebra LP 2844 Label"}]
 
 # Mehrere Drucker:
 # UWE_CONNECTOR_PRINTERS=[{"id":"zebra-lp2844","name":"Zebra LP 2844"},{"id":"hp-lj","name":"HP LaserJet"}]
-
-# Eigener Druckbefehl (optional, Standard: CUPS lp -d <id> <file>):
-# UWE_CONNECTOR_PRINT_CMD=lpr -P
 
 # Label-Druck komplett deaktivieren:
 # UWE_CONNECTOR_PRINT=false`}</pre>
