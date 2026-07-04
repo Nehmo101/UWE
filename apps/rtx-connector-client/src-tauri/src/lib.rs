@@ -727,18 +727,27 @@ fn scan_printers() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-fn pull_ollama_model(name: String, app: tauri::AppHandle) -> Result<PullOllamaResult, String> {
-    let trimmed = name.trim();
+async fn pull_ollama_model(name: String, app: tauri::AppHandle) -> Result<PullOllamaResult, String> {
+    let trimmed = name.trim().to_string();
     if trimmed.is_empty() {
         return Err("Ollama-Modellname darf nicht leer sein.".to_string());
     }
 
-    let raw = run_client_cli_streaming(
-        &app,
-        "ollama-pull-progress",
-        &["pull-ollama", trimmed],
-        Some(("pullName", trimmed)),
-    )?;
+    // A pull streams for minutes. As a synchronous command it would block Tauri's
+    // main thread and freeze the whole UI — worse when several run at once. Make
+    // the command async and push the blocking child-process I/O onto the blocking
+    // thread pool so concurrent pulls stay responsive.
+    let raw = tauri::async_runtime::spawn_blocking(move || {
+        run_client_cli_streaming(
+            &app,
+            "ollama-pull-progress",
+            &["pull-ollama", &trimmed],
+            Some(("pullName", &trimmed)),
+        )
+    })
+    .await
+    .map_err(|error| format!("Ollama-Pull-Task fehlgeschlagen: {error}"))??;
+
     parse_model_download_output(&raw, "Ollama-Pull")
 }
 
