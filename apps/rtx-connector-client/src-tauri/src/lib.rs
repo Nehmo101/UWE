@@ -266,10 +266,16 @@ fn run_client_cli(args: &[&str]) -> Result<String, String> {
 /// frontend can render live progress instead of waiting for the whole
 /// process to exit. Stderr is drained on a background thread so a chatty
 /// child can't deadlock the stdout reader by filling its pipe buffer.
+///
+/// An optional `(key, value)` `tag` is injected into every emitted event:
+/// concurrent pulls all share the single `event_name` channel, so tagging each
+/// event with its model name lets the frontend attribute live progress to the
+/// right download when several run at once.
 fn run_client_cli_streaming(
     app: &tauri::AppHandle,
     event_name: &str,
     args: &[&str],
+    tag: Option<(&str, &str)>,
 ) -> Result<String, String> {
     let mut command = build_client_cli_command(args)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -296,7 +302,12 @@ fn run_client_cli_streaming(
     let mut collected = String::new();
     for line in BufReader::new(stdout).lines() {
         let line = line.map_err(|error| format!("client-cli-Ausgabe konnte nicht gelesen werden: {error}"))?;
-        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+        if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&line) {
+            if let Some((key, tag_value)) = tag {
+                if let Some(object) = value.as_object_mut() {
+                    object.insert(key.to_string(), serde_json::Value::String(tag_value.to_string()));
+                }
+            }
             let _ = app.emit(event_name, &value);
         }
         collected.push_str(&line);
@@ -722,7 +733,12 @@ fn pull_ollama_model(name: String, app: tauri::AppHandle) -> Result<PullOllamaRe
         return Err("Ollama-Modellname darf nicht leer sein.".to_string());
     }
 
-    let raw = run_client_cli_streaming(&app, "ollama-pull-progress", &["pull-ollama", trimmed])?;
+    let raw = run_client_cli_streaming(
+        &app,
+        "ollama-pull-progress",
+        &["pull-ollama", trimmed],
+        Some(("pullName", trimmed)),
+    )?;
     parse_model_download_output(&raw, "Ollama-Pull")
 }
 
