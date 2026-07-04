@@ -9,6 +9,7 @@ import { CommandPalette } from "../ui/command-palette";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "../ui/cn";
+import { ChevronRight } from "lucide-react";
 
 export interface AppShellProps {
   /** Resolved navigation groups (with active flags) for the sidebar. */
@@ -105,39 +106,151 @@ function SidebarBrand({ label, href }: { label: string; href: string }) {
   );
 }
 
+const SIDEBAR_GROUPS_KEY = "uwe:studio-sidebar-groups-v1";
+/** Groups open on first visit regardless of the active route (small, high-traffic areas). */
+const DEFAULT_OPEN_GROUP_IDS = ["start", "worlds"];
+
+function readStoredGroups(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SIDEBAR_GROUPS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredGroups(value: Record<string, boolean>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify(value));
+  } catch {
+    // ignore quota / private-mode failures
+  }
+}
+
+/**
+ * Collapsible, grouped sidebar navigation. Open/closed state per group persists
+ * in localStorage; the group holding the active route is always expanded so the
+ * current location is never hidden.
+ */
 function SidebarNav({ groups }: { groups: ResolvedNavGroup[] }) {
+  const activeGroupId = React.useMemo(
+    () => groups.find((group) => group.items.some((item) => item.active))?.id,
+    [groups],
+  );
+
+  const computeDefaults = React.useCallback(() => {
+    const stored = readStoredGroups();
+    const next: Record<string, boolean> = {};
+    for (const group of groups) {
+      next[group.id] =
+        group.id === activeGroupId
+          ? true
+          : (stored[group.id] ?? DEFAULT_OPEN_GROUP_IDS.includes(group.id));
+    }
+    return next;
+  }, [groups, activeGroupId]);
+
+  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>(computeDefaults);
+
+  React.useEffect(() => {
+    setOpenMap(computeDefaults());
+  }, [computeDefaults]);
+
+  const setGroupOpen = React.useCallback((id: string, open: boolean) => {
+    setOpenMap((current) => {
+      const next = { ...current, [id]: open };
+      writeStoredGroups(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <nav className="flex flex-col gap-4 p-3">
-      {groups.map((group) => (
-        <div key={group.id} className="flex flex-col gap-1">
-          <div className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {group.title}
-          </div>
-          {group.items
-            .filter((item) => item.status !== "hidden")
-            .map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                  item.active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-muted",
-                  item.status === "planned" && "opacity-60",
-                )}
-              >
-                <NavIcon name={item.icon} width={16} height={16} />
-                <span className="truncate">{item.label}</span>
-                {item.status === "planned" ? (
-                  <span className="ml-auto text-[10px] uppercase text-muted-foreground">bald</span>
-                ) : null}
-              </Link>
-            ))}
-        </div>
-      ))}
+    <nav className="flex flex-col gap-1 p-3">
+      {groups.map((group) => {
+        const items = group.items.filter((item) => item.status !== "hidden");
+        if (items.length === 0) return null;
+        const open = openMap[group.id] ?? false;
+        return (
+          <SidebarNavGroup
+            key={group.id}
+            group={group}
+            items={items}
+            open={open}
+            onToggle={(event) => {
+              // Stop the click from bubbling to the mobile drawer's SheetClose.
+              event.stopPropagation();
+              setGroupOpen(group.id, !open);
+            }}
+          />
+        );
+      })}
     </nav>
+  );
+}
+
+function SidebarNavGroup({
+  group,
+  items,
+  open,
+  onToggle,
+}: {
+  group: ResolvedNavGroup;
+  items: ResolvedNavGroup["items"];
+  open: boolean;
+  onToggle: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}) {
+  const bodyId = `sidebar-group-${group.id}`;
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={bodyId}
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <span className="flex-1 truncate text-left">{group.title}</span>
+        <ChevronRight
+          className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-90")}
+          aria-hidden
+        />
+      </button>
+      <div
+        id={bodyId}
+        className={cn("mt-0.5 flex-col gap-0.5 pb-1", open ? "flex" : "hidden")}
+      >
+        {items.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            aria-current={item.active ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm transition-colors",
+              item.active
+                ? "border-primary bg-accent font-medium text-foreground"
+                : "border-transparent text-sidebar-foreground hover:bg-muted hover:text-foreground",
+              item.status === "planned" && "opacity-60",
+            )}
+          >
+            <NavIcon
+              name={item.icon}
+              width={16}
+              height={16}
+              className={cn("shrink-0", item.active && "text-primary")}
+            />
+            <span className="truncate">{item.label}</span>
+            {item.status === "planned" ? (
+              <span className="ml-auto text-[10px] uppercase text-muted-foreground">bald</span>
+            ) : null}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
