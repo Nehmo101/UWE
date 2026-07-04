@@ -44,6 +44,16 @@ export {
 } from "./imap-sync";
 
 export {
+  parseListUnsubscribeHeader,
+  parseMailtoTarget,
+  supportsOneClickUnsubscribe,
+  executeHttpOneClickUnsubscribe,
+  type ParsedUnsubscribeTargets,
+  type ParsedMailtoTarget,
+  type HttpUnsubscribeResult,
+} from "./unsubscribe";
+
+export {
   MAIL_PROVIDER_PRESETS,
   MAIL_PRIORITY_CATEGORIES,
   MAIL_PRIORITY_LABELS,

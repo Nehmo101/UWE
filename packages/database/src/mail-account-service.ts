@@ -152,6 +152,9 @@ export class MailAccountService {
           bodyText: message.bodyText,
           receivedAt: message.receivedAt,
           isRead: message.isRead,
+          listUnsubscribeHttpUrl: message.listUnsubscribeHttpUrl,
+          listUnsubscribeMailto: message.listUnsubscribeMailto,
+          listUnsubscribePostSupported: message.listUnsubscribePostSupported,
         },
         update: {
           messageId: message.messageId,
@@ -163,6 +166,9 @@ export class MailAccountService {
           receivedAt: message.receivedAt,
           isRead: message.isRead,
           syncedAt: new Date(),
+          listUnsubscribeHttpUrl: message.listUnsubscribeHttpUrl,
+          listUnsubscribeMailto: message.listUnsubscribeMailto,
+          listUnsubscribePostSupported: message.listUnsubscribePostSupported,
         },
       });
       imported += 1;

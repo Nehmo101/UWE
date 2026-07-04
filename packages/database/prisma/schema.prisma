@@ -2118,6 +2118,7 @@ model MailAccount {
   inboxMessages MailInboxMessage[]
   folders       MailFolder[]
   auditLogs     MailAuditLog[]
+  unsubscribeRequests MailUnsubscribeRequest[]
 
   @@map("mail_accounts")
 }
@@ -2157,11 +2158,16 @@ model MailInboxMessage {
   isRead      Boolean  @default(false) @map("is_read")
   syncedAt    DateTime @default(now()) @map("synced_at")
 
+  listUnsubscribeHttpUrl       String?  @map("list_unsubscribe_http_url")
+  listUnsubscribeMailto        String?  @map("list_unsubscribe_mailto")
+  listUnsubscribePostSupported Boolean  @default(false) @map("list_unsubscribe_post_supported")
+
   account     MailAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   folder      MailFolder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
   attachments MailAttachment[]
   priority    MailPriorityScore?
   aiActions   MailAiAction[]
+  unsubscribeRequests MailUnsubscribeRequest[]
 
   @@unique([accountId, imapUid])
   @@index([accountId, receivedAt])
@@ -2252,6 +2258,39 @@ enum MailAuditAction {
   prioritize
   ai_summarize
   ai_reply_draft
+  unsubscribe
+  cleanup
+}
+
+enum MailUnsubscribeMethod {
+  http_one_click
+  mailto
+}
+
+enum MailUnsubscribeStatus {
+  sent
+  failed
+}
+
+model MailUnsubscribeRequest {
+  id             String                 @id @default(cuid())
+  accountId      String                 @map("account_id")
+  messageId      String?                @map("message_id")
+  senderAddress  String                 @map("sender_address")
+  method         MailUnsubscribeMethod
+  targetUrl      String?                @map("target_url")
+  targetMailto   String?                @map("target_mailto")
+  status         MailUnsubscribeStatus
+  errorMessage   String?                @map("error_message")
+  requestedByUserId String?             @map("requested_by_user_id")
+  requestedAt    DateTime               @default(now()) @map("requested_at")
+
+  account MailAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  message MailInboxMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, senderAddress])
+  @@index([status])
+  @@map("mail_unsubscribe_requests")
 }
 
 model MailAuditLog {
