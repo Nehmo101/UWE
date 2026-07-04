@@ -118,6 +118,8 @@ export interface BackupSettings {
 /** Auto-Morning-Briefing — der systemd-Timer liest die gesyncte schedule.json. */
 export interface BriefingSettings {
   autoBriefingEnabled: boolean;
+  /** Tägliche Uhrzeit "HH:MM" (lokale Serverzeit), zu der das Briefing läuft. */
+  time: string;
 }
 
 export interface PrivacySettings {
@@ -477,6 +479,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   },
   briefing: {
     autoBriefingEnabled: false,
+    time: "07:00",
   },
   privacy: {
     maskSecretsInUi: true,

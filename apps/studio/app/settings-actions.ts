@@ -182,6 +182,7 @@ export async function updateSettingsAction(formData: FormData) {
     case "briefing":
       update.briefing = {
         autoBriefingEnabled: parseBoolean(formData.get("autoBriefingEnabled")),
+        time: String(formData.get("briefingTime") || "07:00"),
       };
       break;
     case "image-studio":
@@ -215,7 +216,7 @@ export async function updateSettingsAction(formData: FormData) {
 
   if (update.briefing) {
     const settings = await repo().getSystemSettings();
-    syncBriefingScheduleFromSettings(settings.briefing.autoBriefingEnabled);
+    syncBriefingScheduleFromSettings(settings.briefing);
   }
 
   revalidatePath("/settings");

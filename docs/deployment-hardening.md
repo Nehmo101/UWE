@@ -366,15 +366,24 @@ Backups regelmäßig **off-site** kopieren (USB, NAS, rsync). Siehe [backup-rest
 
 ## 10a. Morning Briefing (systemd timer, optional)
 
-Erzeugt das Morning Briefing täglich um 07:00 lokal per RTX. Der Timer stößt
-einen internen Endpoint an (Guard: `STUDIO_API_TOKEN` per Bearer), der den
-Briefing-Job im **laufenden** Server dispatcht:
+Erzeugt täglich lokal per RTX ein Morning Briefing. **An/Aus und Uhrzeit werden in
+UWE gesetzt** (Einstellungen → Briefing) und zur host-lesbaren
+`data/briefings/schedule.json` gesynct. Der Timer tickt alle 15 min; das Skript
+triggert einmal täglich zur konfigurierten Zeit einen internen Endpoint (Guard:
+`STUDIO_API_TOKEN`), der den Briefing-Job im **laufenden** Server dispatcht.
+
+Installation (einmalig) — am einfachsten über das Sammel-Skript, das **alle**
+UWE-Units installiert und die Timer aktiviert:
+
+```bash
+sudo /opt/uwe/deploy/scripts/install-systemd-units.sh
+```
+
+Oder nur das Briefing:
 
 ```bash
 sudo cp /opt/uwe/deploy/systemd/uwe-briefing.{service,timer} /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now uwe-briefing.timer
-systemctl list-timers | grep uwe-briefing
+sudo systemctl daemon-reload && sudo systemctl enable --now uwe-briefing.timer
 ```
 
 Voraussetzung: `STUDIO_API_TOKEN` in `/etc/uwe/uwe.env`. Optional
@@ -455,7 +464,8 @@ curl -sf http://127.0.0.1:3000/api/health/public
 | [`.env.production.example`](../.env.production.example) | Production-ENV-Vorlage |
 | [`deploy/systemd/uwe.service`](../deploy/systemd/uwe.service) | systemd Unit für UWE |
 | [`deploy/systemd/uwe-backup.timer`](../deploy/systemd/uwe-backup.timer) | Tägliches Backup |
-| [`deploy/systemd/uwe-briefing.timer`](../deploy/systemd/uwe-briefing.timer) | Tägliches Morning Briefing (07:00) |
+| [`deploy/systemd/uwe-briefing.timer`](../deploy/systemd/uwe-briefing.timer) | Morning Briefing (Zeit in UWE konfigurierbar) |
+| [`deploy/scripts/install-systemd-units.sh`](../deploy/scripts/install-systemd-units.sh) | Einmal-Bootstrap: alle Units installieren + Timer aktivieren |
 | [`deploy/scripts/start-uwe.sh`](../deploy/scripts/start-uwe.sh) | Start Studio + Portal |
 | [`SECURITY.md`](../SECURITY.md) | Security Policy |
 

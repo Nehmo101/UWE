@@ -64,7 +64,8 @@ const IMAGE_STUDIO_KEYS = new Set([
 ]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
-const BRIEFING_KEYS = new Set(["autoBriefingEnabled"]);
+const BRIEFING_KEYS = new Set(["autoBriefingEnabled", "time"]);
+const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
 const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
@@ -510,6 +511,11 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
         if (key === "autoBriefingEnabled") {
           requireBoolean(value, "settings.briefing.autoBriefingEnabled", sectionErrors);
         }
+        if (key === "time") {
+          if (typeof value !== "string" || !TIME_HHMM.test(value)) {
+            sectionErrors.push("settings.briefing.time muss im Format HH:MM (00:00–23:59) sein.");
+          }
+        }
       },
     );
     errors.push(...sectionErrors);
@@ -517,6 +523,9 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       const briefing: NonNullable<UweSystemSettingsUpdate["briefing"]> = {};
       if (body.briefing.autoBriefingEnabled !== undefined) {
         briefing.autoBriefingEnabled = body.briefing.autoBriefingEnabled as boolean;
+      }
+      if (body.briefing.time !== undefined) {
+        briefing.time = body.briefing.time as string;
       }
       if (Object.keys(briefing).length > 0) {
         update.briefing = briefing;

@@ -1295,6 +1295,7 @@ export type {
   AiProviderKeyPlaceholder,
   StorageSettings,
   BackupSettings,
+  BriefingSettings,
   PrivacySettings,
   MaintenanceSettings,
   MailSettings,

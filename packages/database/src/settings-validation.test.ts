@@ -150,13 +150,14 @@ describe("validateSettingsUpdate", () => {
 
   it("accepts a briefing auto-toggle update", () => {
     const result = validateSettingsUpdate({
-      briefing: { autoBriefingEnabled: true },
+      briefing: { autoBriefingEnabled: true, time: "06:30" },
     });
 
     assert.equal(result.ok, true);
     if (!result.ok) return;
 
     assert.equal(result.value.briefing?.autoBriefingEnabled, true);
+    assert.equal(result.value.briefing?.time, "06:30");
   });
 
   it("rejects non-boolean autoBriefingEnabled", () => {
@@ -170,5 +171,16 @@ describe("validateSettingsUpdate", () => {
     assert.ok(
       result.errors.some((error) => error.includes("settings.briefing.autoBriefingEnabled")),
     );
+  });
+
+  it("rejects an invalid briefing time", () => {
+    const result = validateSettingsUpdate({
+      briefing: { time: "25:99" },
+    });
+
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+
+    assert.ok(result.errors.some((error) => error.includes("settings.briefing.time")));
   });
 });

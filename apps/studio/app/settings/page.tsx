@@ -854,7 +854,11 @@ export default async function SettingsPage({ searchParams }: Props) {
                   name="autoBriefingEnabled"
                   defaultChecked={settings.briefing.autoBriefingEnabled}
                 />
-                Automatisches Morning Briefing (07:00, systemd-Timer / schedule.json)
+                Automatisches Morning Briefing (systemd-Timer / schedule.json)
+              </label>
+              <label>
+                Uhrzeit (lokale Serverzeit)
+                <input type="time" name="briefingTime" defaultValue={settings.briefing.time} />
               </label>
               <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern
