@@ -8,5 +8,9 @@ export async function register() {
     enforceEnvSafetyAtBoot();
     const { bootstrapRateLimitStore } = await import("@uwe/security");
     bootstrapRateLimitStore();
+    // Load owner-configured deployment/routing/security overrides from the DB so they
+    // are effective from the first request (env stays the fallback). Never throws.
+    const { refreshDeploymentRuntimeOverrides } = await import("@uwe/database/deployment");
+    await refreshDeploymentRuntimeOverrides();
   }
 }

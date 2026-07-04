@@ -1,6 +1,7 @@
 // Re-export session cookie names so internal imports from this module stay valid.
 // Agents often colocate these with getSessionCookieOptions / getUweRuntimeConfig.
 export { PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "./session";
+import { withRuntimeEnvOverrides } from "./runtime-env-overrides";
 
 export type SessionCookieSameSite = "lax" | "strict" | "none";
 
@@ -136,6 +137,7 @@ function parsePublicUrlHost(value: string | undefined): string | null {
 
 /** True when Portal and Studio are configured on different public hostnames. */
 export function isSplitHostnameDeployment(env: NodeJS.ProcessEnv = process.env): boolean {
+  env = withRuntimeEnvOverrides(env);
   const explicitStudio = env.NEXT_PUBLIC_STUDIO_URL?.trim();
   const explicitPortal = env.NEXT_PUBLIC_PORTAL_URL?.trim();
   if (explicitStudio && explicitPortal) {
@@ -155,6 +157,7 @@ export function isSplitHostnameDeployment(env: NodeJS.ProcessEnv = process.env):
 }
 
 export function getUweDeploymentModel(env: NodeJS.ProcessEnv = process.env): UweDeploymentModel {
+  env = withRuntimeEnvOverrides(env);
   if (isSplitHostnameDeployment(env)) {
     return "split-hostname";
   }
@@ -274,6 +277,7 @@ export function resolveStudioSessionHref(
 }
 
 export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppUrls {
+  env = withRuntimeEnvOverrides(env);
   const runtime = getUweRuntimeConfig(env);
   const pathInfo = resolveEffectiveAppPaths(env, runtime);
 
@@ -321,6 +325,7 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
 }
 
 export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRuntimeConfig {
+  env = withRuntimeEnvOverrides(env);
   const isProduction = isProductionEnv(env);
   const publicAppUrl = normalizePublicAppUrl(
     env.PUBLIC_BASE_URL ?? env.PUBLIC_APP_URL,

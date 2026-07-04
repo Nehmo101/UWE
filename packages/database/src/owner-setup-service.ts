@@ -183,9 +183,11 @@ function buildAccessSection(
       label: "Login erforderlich",
       configured: system.proxy.authRequired,
       displayValue: boolLabel(system.proxy.authRequired),
-      source: "env",
-      editable: false,
-      description: "AUTH_REQUIRED — nur über Host-Umgebung änderbar.",
+      source: deploymentOverrideSource(settings.deployment.authRequired),
+      editable: true,
+      description:
+        "AUTH_REQUIRED — hier setzbar. Das Login-Gate der Edge-Middleware liest weiterhin die .env (Neustart nötig).",
+      href: "/system/cloudflare",
     },
     {
       id: "session-timeout",
@@ -249,49 +251,79 @@ function buildAccessSection(
   };
 }
 
-function buildCloudflareSection(system: SystemStatus): SetupSectionStatus {
+function deploymentStringSource(value: string): SetupSettingSource {
+  return value.trim() ? "db" : "env";
+}
+
+function deploymentOverrideSource(value: "env" | "on" | "off"): SetupSettingSource {
+  return value === "env" ? "env" : "db";
+}
+
+function buildCloudflareSection(
+  system: SystemStatus,
+  settings: Awaited<ReturnType<SettingsService["getSettings"]>>,
+): SetupSectionStatus {
   const proxy = system.proxy;
+  const d = settings.deployment;
+  const editorHref = "/system/cloudflare";
   const settingsItems: SetupSettingItem[] = [
     {
       id: "public-url",
       label: "Öffentliche Basis-URL",
       configured: Boolean(proxy.publicAppUrl),
       displayValue: proxy.publicAppUrl ?? "nicht gesetzt",
-      source: "env",
-      editable: false,
+      source: deploymentStringSource(d.publicAppUrl),
+      editable: true,
       description: "PUBLIC_APP_URL / PUBLIC_BASE_URL",
+      href: editorHref,
     },
     {
       id: "studio-url",
       label: "Studio-URL",
       configured: Boolean(proxy.studioUrl),
       displayValue: proxy.studioUrl ?? "nicht gesetzt",
-      source: "env",
-      editable: false,
+      source: deploymentStringSource(d.studioUrl),
+      editable: true,
+      href: editorHref,
     },
     {
       id: "portal-url",
       label: "Portal-URL",
       configured: Boolean(proxy.portalUrl),
       displayValue: proxy.portalUrl ?? "nicht gesetzt",
-      source: "env",
-      editable: false,
+      source: deploymentStringSource(d.portalUrl),
+      editable: true,
+      href: editorHref,
     },
     {
       id: "trust-proxy",
       label: "TRUST_PROXY",
       configured: proxy.trustProxy,
       displayValue: boolLabel(proxy.trustProxy),
-      source: "env",
-      editable: false,
+      source: deploymentOverrideSource(d.trustProxy),
+      editable: true,
+      href: editorHref,
     },
     {
       id: "cf-tunnel",
       label: "Cloudflare Tunnel",
       configured: proxy.cloudflareTunnel,
       displayValue: boolLabel(proxy.cloudflareTunnel),
-      source: "env",
-      editable: false,
+      source: deploymentOverrideSource(d.cloudflareTunnel),
+      editable: true,
+      href: editorHref,
+    },
+    {
+      id: "human-check",
+      label: "„Mensch“-Prüfung (Turnstile)",
+      configured: proxy.cloudflare.humanVerificationEnabled,
+      displayValue: boolLabel(proxy.cloudflare.humanVerificationEnabled, "aktiv", "inaktiv"),
+      source:
+        d.turnstileEnabled !== "env" || d.turnstileSecretConfigured || d.turnstileSiteKey.trim()
+          ? "db"
+          : "env",
+      editable: true,
+      href: editorHref,
     },
     {
       id: "studio-api-token",
@@ -307,19 +339,17 @@ function buildCloudflareSection(system: SystemStatus): SetupSectionStatus {
 
   const nextSteps: string[] = [];
   if (proxy.publicExposureConfigured && !proxy.trustProxy) {
-    nextSteps.push("TRUST_PROXY=true setzen, wenn hinter Cloudflare/Reverse-Proxy.");
+    nextSteps.push("Trust-Proxy aktivieren (System → Cloudflare), wenn hinter Cloudflare/Reverse-Proxy.");
   }
   if (proxy.publicExposureConfigured && !system.trust.studioApiTokenConfigured) {
     nextSteps.push("STUDIO_API_TOKEN setzen — öffentliches Studio ohne Token ist blockiert.");
   }
   if (!proxy.publicAppUrl) {
-    nextSteps.push("Für Remote-Zugriff PUBLIC_APP_URL auf dem Host konfigurieren.");
+    nextSteps.push("Für Remote-Zugriff die öffentliche Basis-URL setzen (System → Cloudflare).");
   } else if (!proxy.cloudflareTunnel) {
     nextSteps.push("Cloudflare Tunnel optional — nur Studio/Portal exponieren, nie RTX.");
   }
-  if (nextSteps.length === 0) {
-    nextSteps.push("URLs unter Diagnose testen (Studio- und Portal-Health).");
-  }
+  nextSteps.push("Routing, Proxy, Turnstile und Sicherheits-Flags bearbeiten: System → Cloudflare.");
 
   const level: SetupSectionLevel =
     proxy.publicExposureConfigured &&
@@ -706,7 +736,7 @@ export async function getOwnerSetupSnapshot(
   const sections = await Promise.all([
     Promise.resolve(buildSystemSection(system, settings)),
     Promise.resolve(buildAccessSection(system, settings, userCount)),
-    Promise.resolve(buildCloudflareSection(system)),
+    Promise.resolve(buildCloudflareSection(system, settings)),
     Promise.resolve(buildMailSection(system, settings)),
     buildRtxSection(db, admin, settings, env),
     buildPrinterSection(db),
