@@ -200,6 +200,25 @@ function hasEnabledVisionModel(
  * those to match jobs). Display metadata, context length and live status stay
  * local.
  */
+/**
+ * A model's kind (chat / embeddings / vision) is intrinsic to the model, not to
+ * whether the local runner answered the last discovery probe. Deriving it from
+ * the profile lets the advertised model keep its capabilities even when live
+ * discovery briefly misses it, so the host's model picker doesn't lose it.
+ */
+function capabilitiesForModelType(modelType: ConnectorModelProfile["modelType"]): string[] {
+  switch (modelType) {
+    case "embedding":
+      return ["embeddings"];
+    case "vision":
+      return ["chat", "vision"];
+    case "chat":
+      return ["chat"];
+    default:
+      return [];
+  }
+}
+
 function toEnabledModelInfos(
   llms: LocalLlmSummary,
   profiles: readonly ConnectorModelProfile[],
@@ -220,7 +239,10 @@ function toEnabledModelInfos(
         name: profile.name,
         enabledForUwe: true,
       };
-      if (discovered?.capabilities?.length) info.capabilities = discovered.capabilities;
+      const capabilities = discovered?.capabilities?.length
+        ? discovered.capabilities
+        : capabilitiesForModelType(profile.modelType);
+      if (capabilities.length > 0) info.capabilities = capabilities;
       if (privacyMode) {
         return info;
       }
