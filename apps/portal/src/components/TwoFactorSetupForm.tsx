@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
@@ -137,9 +138,12 @@ export function TwoFactorSetupForm({ backHref = "/" }: TwoFactorSetupFormProps) 
       ) : pendingSetup ? (
         <>
           <p className="text-sm text-muted-foreground">
-            Scanne den Schlüssel in deiner Authenticator-App (Google Authenticator, Authy,
-            1Password …) oder trage ihn manuell ein.
+            Scanne den Barcode mit deiner Authenticator-App (Google Authenticator, Authy,
+            1Password …) oder trage den Schlüssel manuell ein.
           </p>
+          <div className="inline-block rounded-lg border bg-white p-3">
+            <QRCodeSVG value={pendingSetup.otpauthUri} size={200} />
+          </div>
           <p className="text-sm">
             <strong>Geheimschlüssel:</strong>{" "}
             <code className="break-all">{pendingSetup.secret}</code>

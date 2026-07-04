@@ -338,6 +338,26 @@ textarea {
   background: color-mix(in srgb, var(--uwe-card-bg) 88%, transparent);
 }
 
+.connector-progress {
+  width: 100%;
+  height: 0.6rem;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  accent-color: var(--uwe-accent);
+  background: color-mix(in srgb, var(--uwe-border) 60%, transparent);
+}
+
+.connector-progress::-webkit-progress-bar {
+  background: color-mix(in srgb, var(--uwe-border) 60%, transparent);
+  border-radius: 999px;
+}
+
+.connector-progress::-webkit-progress-value {
+  background: var(--uwe-accent);
+  border-radius: 999px;
+}
+
 .connector-inline-card {
   border: 1px solid var(--uwe-border-muted);
   border-radius: 1rem;

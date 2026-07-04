@@ -8,6 +8,7 @@ import type {
   CookbookModelView,
   PullOllamaModelResult,
 } from "../lib/tauri";
+import { useOllamaPullProgress } from "../lib/useOllamaPullProgress";
 
 type Props = {
   onLoadDashboard: () => Promise<CookbookDashboardView>;
@@ -62,6 +63,7 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { progress: pullProgress, reset: resetPullProgress } = useOllamaPullProgress();
 
   const loadDashboard = useCallback(async () => {
     setBusy(true);
@@ -83,6 +85,7 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
     setActiveModel(name);
     setError(null);
     setNotice(null);
+    resetPullProgress();
     try {
       await onPullModel(name);
       setNotice(`Modell „${name}“ wird über Ollama geladen.`);
@@ -145,6 +148,18 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
 
       {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
       {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
+
+      {activeModel && pullProgress ? (
+        <div className="connector-stack">
+          <p className="connector-muted">
+            Lädt „{activeModel}“ — {pullProgress.status || "…"}
+            {typeof pullProgress.fraction === "number"
+              ? ` (${Math.round(pullProgress.fraction * 100)} %)`
+              : ""}
+          </p>
+          <progress className="connector-progress" value={pullProgress.fraction ?? undefined} max={1} />
+        </div>
+      ) : null}
 
       <CardV2 title="Empfehlungen nach Anwendungsfall">
         <div className="connector-stack">

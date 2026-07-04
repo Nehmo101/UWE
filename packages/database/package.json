@@ -19,6 +19,7 @@
     "./prompt-library": "./src/prompt-library-service.ts",
     "./knowledge-assistant": "./src/knowledge-assistant-service.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
+    "./settings-service": "./src/settings-service.ts",
     "./deployment": "./src/deployment.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",

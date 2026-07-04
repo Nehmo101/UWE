@@ -1,6 +1,10 @@
 import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
 import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
-import { BACKGROUND_PATTERN_VALUES } from "./settings-service";
+import {
+  BACKGROUND_PATTERN_VALUES,
+  MAIL_INBOX_LIMIT_MAX,
+  MAIL_INBOX_LIMIT_MIN,
+} from "./settings-service";
 
 const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
 const BACKGROUND_PATTERN_SET = new Set<BackgroundPattern>(BACKGROUND_PATTERN_VALUES);
@@ -55,7 +59,7 @@ const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
-const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody"]);
+const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody", "inboxLimit"]);
 const IMAGE_STUDIO_KEYS = new Set([
   "enabled",
   "defaultProviderMode",
@@ -379,6 +383,19 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
           sectionErrors.push("settings.mail.fromDisplayName ist zu lang (max. 120 Zeichen).");
         }
       }
+      if (key === "inboxLimit") {
+        const limit = typeof value === "number" ? value : Number(value);
+        if (!Number.isFinite(limit)) {
+          sectionErrors.push("settings.mail.inboxLimit muss eine Zahl sein.");
+          return;
+        }
+        const rounded = Math.round(limit);
+        if (rounded < MAIL_INBOX_LIMIT_MIN || rounded > MAIL_INBOX_LIMIT_MAX) {
+          sectionErrors.push(
+            `settings.mail.inboxLimit muss zwischen ${MAIL_INBOX_LIMIT_MIN} und ${MAIL_INBOX_LIMIT_MAX} liegen.`,
+          );
+        }
+      }
     });
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.mail)) {
@@ -391,6 +408,9 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (body.mail.logBody !== undefined) {
         mail.logBody = body.mail.logBody as boolean;
+      }
+      if (body.mail.inboxLimit !== undefined) {
+        mail.inboxLimit = Math.round(body.mail.inboxLimit as number);
       }
       if (Object.keys(mail).length > 0) {
         update.mail = mail;

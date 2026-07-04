@@ -39,6 +39,7 @@ export {
 
 export {
   fetchImapInboxMessages,
+  describeImapError,
   type ImapCredentials,
   type FetchedInboxMessage,
 } from "./imap-sync";
@@ -52,6 +53,12 @@ export {
   type ParsedMailtoTarget,
   type HttpUnsubscribeResult,
 } from "./unsubscribe";
+
+export {
+  parseRawMailSource,
+  type ParsedMailAttachment,
+  type ParsedMailMessage,
+} from "./mime-decode";
 
 export {
   MAIL_PROVIDER_PRESETS,

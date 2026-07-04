@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::Write,
+    io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Output, Stdio},
     sync::Mutex,
@@ -15,7 +15,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, RunEvent, State, WindowEvent,
+    Emitter, Manager, RunEvent, State, WindowEvent,
 };
 use url::Url;
 
@@ -77,6 +77,8 @@ struct ConnectorClientConfig {
     image_command: String,
     #[serde(default)]
     print_command: String,
+    #[serde(default)]
+    default_printer_id: String,
 }
 
 fn default_spotify_redirect_uri() -> String {
@@ -102,6 +104,7 @@ impl Default for ConnectorClientConfig {
             audio_command: String::new(),
             image_command: String::new(),
             print_command: String::new(),
+            default_printer_id: String::new(),
         }
     }
 }
@@ -256,6 +259,67 @@ fn run_client_cli(args: &[&str]) -> Result<String, String> {
         .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
 
     client_cli_output_to_string(&args.join(" "), output)
+}
+
+/// Like `run_client_cli`, but streams stdout line-by-line as the child runs,
+/// emitting each parsed JSON line as a Tauri event (`event_name`) so the
+/// frontend can render live progress instead of waiting for the whole
+/// process to exit. Stderr is drained on a background thread so a chatty
+/// child can't deadlock the stdout reader by filling its pipe buffer.
+fn run_client_cli_streaming(
+    app: &tauri::AppHandle,
+    event_name: &str,
+    args: &[&str],
+) -> Result<String, String> {
+    let mut command = build_client_cli_command(args)?;
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "client-cli lieferte keinen stdout-Stream.".to_string())?;
+    let mut stderr_pipe = child
+        .stderr
+        .take()
+        .ok_or_else(|| "client-cli lieferte keinen stderr-Stream.".to_string())?;
+
+    let stderr_handle = std::thread::spawn(move || -> String {
+        let mut buf = String::new();
+        let _ = stderr_pipe.read_to_string(&mut buf);
+        buf
+    });
+
+    let mut collected = String::new();
+    for line in BufReader::new(stdout).lines() {
+        let line = line.map_err(|error| format!("client-cli-Ausgabe konnte nicht gelesen werden: {error}"))?;
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+            let _ = app.emit(event_name, &value);
+        }
+        collected.push_str(&line);
+        collected.push('\n');
+    }
+
+    let status = child
+        .wait()
+        .map_err(|error| format!("client-cli konnte nicht abgeschlossen werden: {error}"))?;
+    let stderr_text = stderr_handle.join().unwrap_or_default();
+
+    if !status.success() {
+        let detail = if !stderr_text.trim().is_empty() {
+            stderr_text.trim().to_string()
+        } else if !collected.trim().is_empty() {
+            collected.trim().to_string()
+        } else {
+            "Kein Fehlertext ausgegeben.".to_string()
+        };
+        return Err(format!("client-cli {} fehlgeschlagen: {}", args.join(" "), detail));
+    }
+
+    Ok(collected.trim().to_string())
 }
 
 fn run_node_script(script_rel: &str, args: &[&str]) -> Result<String, String> {
@@ -499,6 +563,7 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     config.audio_command = config.audio_command.trim().to_string();
     config.image_command = config.image_command.trim().to_string();
     config.print_command = config.print_command.trim().to_string();
+    config.default_printer_id = config.default_printer_id.trim().to_string();
 
     Ok(config)
 }
@@ -651,14 +716,25 @@ fn scan_printers() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-fn pull_ollama_model(name: String) -> Result<PullOllamaResult, String> {
+fn pull_ollama_model(name: String, app: tauri::AppHandle) -> Result<PullOllamaResult, String> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
         return Err("Ollama-Modellname darf nicht leer sein.".to_string());
     }
 
-    let raw = run_client_cli(&["pull-ollama", trimmed])?;
+    let raw = run_client_cli_streaming(&app, "ollama-pull-progress", &["pull-ollama", trimmed])?;
     parse_model_download_output(&raw, "Ollama-Pull")
+}
+
+#[tauri::command]
+fn delete_ollama_model(name: String) -> Result<serde_json::Value, String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Ollama-Modellname darf nicht leer sein.".to_string());
+    }
+
+    let raw = run_client_cli(&["delete-model", trimmed])?;
+    parse_client_cli_json(&raw, "Modell-Löschen")
 }
 
 #[tauri::command]
@@ -796,8 +872,11 @@ fn test_image(prompt: Option<String>) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-fn test_print() -> Result<serde_json::Value, String> {
-    let raw = run_client_cli(&["test-print"])?;
+fn test_print(printer_id: Option<String>) -> Result<serde_json::Value, String> {
+    let raw = match printer_id.as_deref().map(str::trim) {
+        Some(id) if !id.is_empty() => run_client_cli(&["test-print", id])?,
+        _ => run_client_cli(&["test-print"])?,
+    };
     parse_client_cli_json(&raw, "Print-Test")
 }
 
@@ -1158,6 +1237,7 @@ pub fn run() {
             save_printer_store,
             scan_printers,
             pull_ollama_model,
+            delete_ollama_model,
             pull_huggingface_model,
             list_connector_jobs,
             list_connector_logs,

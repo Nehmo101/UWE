@@ -5,7 +5,7 @@ Compact index for agents — **import from `@uwe/database/server`** (canonical b
 | Domain | Key exports / files |
 |--------|---------------------|
 | **Core** | `repository.ts`, `app-repository.ts`, `client.ts`, `permissions.ts`, `content-access.ts` |
-| **Auth & users** | `auth.ts`, `user-service.ts`, `two-factor-service.ts`, `api-token-service.ts`, `login-audit.ts`, `owner-setup-service.ts` |
+| **Auth & users** | `auth.ts` (sessions incl. sliding-window inactivity auto-logout via `lastActiveAt`), `user-service.ts`, `two-factor-service.ts`, `api-token-service.ts`, `login-audit.ts`, `owner-setup-service.ts` |
 | **Wiki / pages** | `page-service.ts`, `page-template-service.ts`, `page-templates.ts`, `tag-service.ts`, `search-service.ts`, `graph-service.ts` |
 | **Worlds & campaigns** | `world-creation-service.ts`, `world-inspector.ts`, `world-overview.ts`, `game-session.ts`, `dungeon-cockpit.ts` |
 | **Characters (DnD)** | `character-service.ts` (Sheet + Derived Stats 2024), `character-spell-service.ts` (Slots, Open5e/Homebrew-Zauber), `character-level-up-service.ts`, `character-sheet-export.ts` |

@@ -1,5 +1,7 @@
 import { ImapFlow } from "imapflow";
 import { parseListUnsubscribeHeader, supportsOneClickUnsubscribe } from "./unsubscribe";
+import { parseRawMailSource, type ParsedMailAttachment } from "./mime-decode";
+import { sanitizeMailHtml } from "./mail-portal-types";
 
 export interface ImapCredentials {
   host: string;
@@ -17,6 +19,8 @@ export interface FetchedInboxMessage {
   toAddresses: string[];
   snippet: string | null;
   bodyText: string | null;
+  bodyHtml: string | null;
+  attachments: ParsedMailAttachment[];
   receivedAt: Date;
   isRead: boolean;
   listUnsubscribeHttpUrl: string | null;
@@ -70,6 +74,22 @@ function truncateSnippet(value: string | null | undefined, max = 240): string | 
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
 }
 
+/**
+ * imapflow throws a fixed "Command failed" Error on any NO/BAD server response;
+ * the server's actual rejection reason lives in error.responseText, not error.message.
+ */
+export function describeImapError(error: unknown): string {
+  if (error instanceof Error) {
+    const responseText = (error as { responseText?: unknown }).responseText;
+    if (typeof responseText === "string" && responseText.trim()) {
+      const status = (error as { responseStatus?: unknown }).responseStatus;
+      return typeof status === "string" ? `${status}: ${responseText.trim()}` : responseText.trim();
+    }
+    return error.message;
+  }
+  return String(error);
+}
+
 export async function fetchImapInboxMessages(
   credentials: ImapCredentials,
   options?: { limit?: number; mailbox?: string },
@@ -113,19 +133,23 @@ export async function fetchImapInboxMessages(
         if (!message || message.uid == null) continue;
 
         let bodyText: string | null = null;
+        let bodyHtml: string | null = null;
+        let attachments: ParsedMailAttachment[] = [];
         let listUnsubscribeHttpUrl: string | null = null;
         let listUnsubscribeMailto: string | null = null;
         let listUnsubscribePostSupported = false;
         if (message.source) {
-          const raw = message.source.toString("utf8");
-          const plainMatch = raw.match(/Content-Type: text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|\r?\n\.\r?\n|$)/i);
-          bodyText = plainMatch?.[1]?.trim() ?? null;
-          if (!bodyText) {
-            const stripped = raw.replace(/^[\s\S]*?\r?\n\r?\n/, "").trim();
-            bodyText = stripped.length > 0 ? stripped.slice(0, 8000) : null;
+          try {
+            const parsed = await parseRawMailSource(message.source);
+            bodyText = parsed.bodyText;
+            bodyHtml = parsed.bodyHtml;
+            attachments = parsed.attachments;
+          } catch {
+            // Fall back to raw source truncation if MIME parsing fails outright.
+            bodyText = message.source.toString("utf8").slice(0, 8000);
           }
 
-          const headers = parseRawHeaders(raw);
+          const headers = parseRawHeaders(message.source.toString("utf8"));
           const unsubscribeTargets = parseListUnsubscribeHeader(headers.get("list-unsubscribe"));
           listUnsubscribeHttpUrl = unsubscribeTargets.httpUrl;
           listUnsubscribeMailto = unsubscribeTargets.mailto;
@@ -139,8 +163,10 @@ export async function fetchImapInboxMessages(
           subject: envelope?.subject ?? "",
           fromAddress: extractAddress(envelope?.from?.[0]),
           toAddresses: (envelope?.to ?? []).map((entry) => extractAddress(entry)).filter(Boolean),
-          snippet: truncateSnippet(bodyText ?? envelope?.subject ?? ""),
+          snippet: truncateSnippet(bodyText ?? (bodyHtml ? sanitizeMailHtml(bodyHtml) : null) ?? envelope?.subject ?? ""),
           bodyText,
+          bodyHtml,
+          attachments,
           receivedAt:
             message.internalDate instanceof Date
               ? message.internalDate

@@ -17,6 +17,7 @@ import { createMailAccountService, type CreateMailAccountInput } from "./mail-ac
 import { scoreMailPriority } from "./mail-priority-service";
 import { createMailLogService } from "./mail-log-service";
 import { createMailUnsubscribeService, type UnsubscribeOutcome } from "./mail-unsubscribe-service";
+import { describeImapError } from "@uwe/mail";
 
 export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
   providerPreset?: MailProviderPreset;
@@ -205,7 +206,7 @@ export class MailPortalService {
       await this.accountService().syncInbox(accountId, { limit: 1 });
       return { ok: true, message: "Verbindung und Sync erfolgreich." };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Verbindung fehlgeschlagen.";
+      const message = describeImapError(error);
       await this.accountService().markImapSyncError(accountId, message);
       return { ok: false, message };
     }
@@ -362,6 +363,11 @@ export class MailPortalService {
       ...this.toMessageSummary(row),
       bodyText: row.bodyText,
       bodyHtml: row.bodyHtml ? sanitizeMailHtml(row.bodyHtml) : null,
+      // Raw (unsanitized) HTML, kept separate from `bodyHtml` above so callers that
+      // need to render markup safely can run their own display-sanitizer over it
+      // (e.g. the Studio API route uses DOMPurify + tracking-pixel blocking) without
+      // changing the tag-stripped `bodyHtml` contract other consumers already rely on.
+      bodyHtmlRaw: row.bodyHtml,
       toAddresses: row.toAddresses,
       ccAddresses: row.ccAddresses,
       attachments: row.attachments.map((a) => ({

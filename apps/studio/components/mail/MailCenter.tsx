@@ -32,6 +32,7 @@ interface RawDetail {
   hasUnsubscribeTarget: boolean;
   bodyText: string | null;
   bodyHtml: string | null;
+  bodySafeHtml: string | null;
   toAddresses?: string[] | null;
   ccAddresses?: string[] | null;
   priority: MailPriorityVM | null;
@@ -55,6 +56,7 @@ function toDetail(raw: RawDetail): MailMessageDetailVM {
     priority: raw.priority,
     bodyText: raw.bodyText,
     bodyHtml: raw.bodyHtml,
+    bodySafeHtml: raw.bodySafeHtml,
     toAddresses: raw.toAddresses ?? [],
     ccAddresses: raw.ccAddresses ?? [],
     attachments: (raw.attachments ?? []).map((a) => ({

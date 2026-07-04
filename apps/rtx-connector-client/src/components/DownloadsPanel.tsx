@@ -9,6 +9,7 @@ import {
 import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
 
 import type { OllamaPullEvent, PullOllamaModelResult } from "../lib/tauri";
+import { useOllamaPullProgress } from "../lib/useOllamaPullProgress";
 
 type Props = {
   loaded: boolean;
@@ -119,6 +120,7 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Prop
   const [hfError, setHfError] = useState<string | null>(null);
   const [hfNotice, setHfNotice] = useState<string | null>(null);
   const [lastHfResult, setLastHfResult] = useState<PullOllamaModelResult | null>(null);
+  const { progress: pullProgress, reset: resetPullProgress } = useOllamaPullProgress();
 
   useEffect(() => {
     if (!loaded) {
@@ -146,6 +148,7 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Prop
     setBusy(true);
     setError(null);
     setNotice(null);
+    resetPullProgress();
 
     try {
       const result = await onPullModel(modelName);
@@ -244,7 +247,21 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel }: Prop
           {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
           {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
 
-          {progressMessage ? (
+          {busy && pullProgress ? (
+            <div className="connector-stack">
+              <progress
+                className="connector-progress"
+                value={pullProgress.fraction ?? undefined}
+                max={1}
+              />
+              <p className="connector-muted">
+                {pullProgress.status || "Lädt …"}
+                {typeof pullProgress.fraction === "number"
+                  ? ` (${Math.round(pullProgress.fraction * 100)} %)`
+                  : ""}
+              </p>
+            </div>
+          ) : progressMessage ? (
             <HealthBadge status="ok" label={progressMessage} />
           ) : (
             <div className="connector-empty-state">Noch kein Pull ausgeführt.</div>
