@@ -30,6 +30,50 @@ export interface MailSearchQuery {
   limit?: number;
 }
 
+export interface MailExtractedAction {
+  type: string;
+  label: string;
+  value?: string;
+}
+
+export interface MailPrioritySummaryMessage {
+  id: string;
+  subject: string;
+  fromAddress: string;
+  accountLabel?: string;
+  receivedAt: Date;
+  category: MailPriorityCategory | null;
+  priority: number;
+  extractedActions: MailExtractedAction[];
+}
+
+/** Verdichtete Prioritäts-Sicht der Inbox fürs „Heute"-Cockpit. */
+export interface MailInboxPrioritySummary {
+  urgentCount: number;
+  replyNeededCount: number;
+  todayCount: number;
+  /** Summe der handlungsrelevanten Kategorien (urgent + reply_needed + today). */
+  actionableCount: number;
+  unreadTotal: number;
+  topMessages: MailPrioritySummaryMessage[];
+}
+
+/** `extractedActions` ist untypisiertes JSON — defensiv in eine feste Form bringen. */
+function normalizeExtractedMailActions(raw: unknown): MailExtractedAction[] {
+  if (!Array.isArray(raw)) return [];
+  const actions: MailExtractedAction[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    const label = typeof record.label === "string" ? record.label : null;
+    if (!label) continue;
+    const type = typeof record.type === "string" ? record.type : "action";
+    const value = typeof record.value === "string" ? record.value : undefined;
+    actions.push(value ? { type, label, value } : { type, label });
+  }
+  return actions;
+}
+
 export class MailPortalService {
   constructor(
     private readonly db: PrismaClient,
@@ -208,6 +252,52 @@ export class MailPortalService {
     });
 
     return rows.map((row) => this.toMessageSummary(row));
+  }
+
+  /**
+   * Prioritäts-Zusammenfassung ungelesener Inbox-Mails fürs „Heute"-Cockpit:
+   * Zähler je handlungsrelevanter Kategorie plus die Top-N Nachrichten nach
+   * Prioritäts-Score. Nur gescorte Mails zählen — ohne Mail-Setup sind alle 0.
+   */
+  async getInboxPrioritySummary(
+    options: { limit?: number } = {},
+  ): Promise<MailInboxPrioritySummary> {
+    const limit = options.limit ?? 5;
+    const [urgentCount, replyNeededCount, todayCount, unreadTotal, rows] = await Promise.all([
+      this.db.mailInboxMessage.count({ where: { isRead: false, priority: { category: "urgent" } } }),
+      this.db.mailInboxMessage.count({
+        where: { isRead: false, priority: { category: "reply_needed" } },
+      }),
+      this.db.mailInboxMessage.count({ where: { isRead: false, priority: { category: "today" } } }),
+      this.db.mailInboxMessage.count({ where: { isRead: false } }),
+      this.db.mailInboxMessage.findMany({
+        where: {
+          isRead: false,
+          priority: { category: { in: ["urgent", "reply_needed", "today"] } },
+        },
+        orderBy: [{ priority: { priority: "desc" } }, { receivedAt: "desc" }],
+        take: limit,
+        include: { account: { select: { id: true, label: true } }, priority: true },
+      }),
+    ]);
+
+    return {
+      urgentCount,
+      replyNeededCount,
+      todayCount,
+      actionableCount: urgentCount + replyNeededCount + todayCount,
+      unreadTotal,
+      topMessages: rows.map((row) => ({
+        id: row.id,
+        subject: row.subject,
+        fromAddress: row.fromAddress,
+        accountLabel: row.account?.label,
+        receivedAt: row.receivedAt,
+        category: row.priority?.category ?? null,
+        priority: row.priority?.priority ?? 0,
+        extractedActions: normalizeExtractedMailActions(row.priority?.extractedActions),
+      })),
+    };
   }
 
   async getMessageContent(id: string) {
