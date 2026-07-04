@@ -5,7 +5,7 @@ import {
   AiRouterError,
   contextModeRequiresLocalContext,
   InferenceUrlBlockedError,
-  isRtxReady,
+  isRtxReadinessReady,
   resolveAiBrainSettings,
   executeAiGatewayRequest,
   AiGatewayAccessDeniedError,
@@ -125,7 +125,7 @@ export async function executeAiPrompt(
     (body.providerMode === "auto" && contextModeRequiresLocalContext(body.contextMode));
 
   if (needsLocalRtx && contextModeRequiresLocalContext(body.contextMode)) {
-    const rtxReady = await isRtxReady({ useMock: body.useMock });
+    const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
     if (!rtxReady) {
       const jobs = createJobService(prisma);
       const job = await jobs.enqueue({

@@ -58,7 +58,14 @@ interface GatewayDashboard {
     userDailyLimitUsd: number | null;
     withinBudget: boolean;
   };
-  rtxHealth: { ready: boolean; message?: string };
+  rtxHealth: {
+    ready: boolean;
+    message?: string;
+    source?: "agent" | "inference" | "connector";
+    connectorReady?: boolean;
+    connectorOnlineCount?: number;
+    connectorDegraded?: boolean;
+  };
   userGrants: Array<{
     id: string;
     userId: string;
@@ -378,6 +385,26 @@ export function AiGatewayWizard() {
             <strong>{data.rtxHealth.ready ? "Erreichbar" : "Nicht erreichbar"}</strong>
           </p>
           <p className="uwe-muted">{data.rtxHealth.message}</p>
+          {data.rtxHealth.source === "connector" && (
+            <p className="uwe-muted">
+              Quelle: <strong>RTX Host Connector</strong>
+              {typeof data.rtxHealth.connectorOnlineCount === "number"
+                ? ` · ${data.rtxHealth.connectorOnlineCount} Connector live`
+                : ""}
+              {data.rtxHealth.connectorDegraded ? " · meldet Fehler (degraded)" : ""}
+            </p>
+          )}
+          {data.rtxHealth.source === "inference" && (
+            <p className="uwe-muted">
+              Quelle: <strong>Direkte Inference</strong> (<code>AI_INFERENCE_BASE_URL</code>)
+            </p>
+          )}
+          {!data.rtxHealth.ready && data.rtxHealth.connectorOnlineCount === 0 && (
+            <p className="uwe-muted">
+              Kein live Connector — unter <a href="/system/rtx-connector">RTX Connector</a> Token
+              anlegen und Worker auf dem RTX-PC starten.
+            </p>
+          )}
           <ul>
             <li>
               Aktiv: outbound <strong>RTX Host Connector</strong> starten
