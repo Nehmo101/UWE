@@ -10,6 +10,7 @@ import type {
   Visibility,
 } from "./generated/prisma/client";
 import { BUILTIN_GLYPHS, type BuiltinGlyph } from "@uwe/atlas/glyphs";
+import { collectSubtreeNodeIds } from "./atlas-node-subtree";
 import type { PrismaClient } from "./client";
 import {
   isDmOnlyVisibility,
@@ -309,6 +310,43 @@ export function createAtlasService(db: PrismaClient) {
 
   async function deleteNode(nodeId: string) {
     return db.atlasNode.delete({ where: { id: nodeId } });
+  }
+
+  /**
+   * Delete a node together with its entire descendant subtree (child nodes,
+   * grandchildren, …). Each removed node's own features and objects cascade
+   * away via the schema FK actions; child nodes must be collected and deleted
+   * explicitly because the `AtlasNodeHierarchy` self-relation uses
+   * `onDelete: SetNull` — deleting only the root would otherwise orphan its
+   * children to the map root instead of removing them.
+   *
+   * Returns the number of nodes removed (including the root itself); 0 if the
+   * node does not exist.
+   */
+  async function deleteNodeSubtree(nodeId: string): Promise<{ deletedCount: number }> {
+    const root = await db.atlasNode.findUnique({
+      where: { id: nodeId },
+      select: { id: true, mapId: true },
+    });
+    if (!root) return { deletedCount: 0 };
+
+    // Load the map's node graph once and walk it in memory (maps are small).
+    const nodes = await db.atlasNode.findMany({
+      where: { mapId: root.mapId },
+      select: { id: true, parentId: true },
+    });
+    const ordered = collectSubtreeNodeIds(root.id, nodes);
+
+    // Delete leaf-first (reverse BFS) in one transaction so the subtree — and
+    // each node's cascading features/objects — is removed atomically.
+    await db.$transaction(
+      ordered
+        .slice()
+        .reverse()
+        .map((id) => db.atlasNode.delete({ where: { id } })),
+    );
+
+    return { deletedCount: ordered.length };
   }
 
   async function listNodesForMap(mapId: string) {
@@ -626,6 +664,7 @@ export function createAtlasService(db: PrismaClient) {
     getNode,
     updateNode,
     deleteNode,
+    deleteNodeSubtree,
     listNodesForMap,
     createFeature,
     getFeature,

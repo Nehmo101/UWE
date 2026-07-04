@@ -199,6 +199,64 @@ describe("AtlasService — node CRUD", () => {
     const after = await service.getNode(node.id);
     assert.equal(after, null);
   });
+
+  it("deletes a node and its whole descendant subtree", async () => {
+    const service = createAtlasService(db);
+
+    const continent = await service.createNode({ mapId, level: "continent", title: "Doomed Continent" });
+    const landscape = await service.createNode({
+      mapId,
+      parentId: continent.id,
+      level: "landscape",
+      title: "Doomed Landscape",
+    });
+    const city = await service.createNode({
+      mapId,
+      parentId: landscape.id,
+      level: "city",
+      title: "Doomed City",
+    });
+    // A feature on a descendant node must cascade away with it.
+    const feature = await service.createFeature({
+      nodeId: landscape.id,
+      kind: "region",
+      geometry: { type: "Polygon", coordinates: [] },
+    });
+
+    const result = await service.deleteNodeSubtree(continent.id);
+    assert.equal(result.deletedCount, 3);
+
+    assert.equal(await service.getNode(continent.id), null);
+    assert.equal(await service.getNode(landscape.id), null);
+    assert.equal(await service.getNode(city.id), null);
+    assert.equal(await service.getFeature(feature.id), null);
+  });
+
+  it("does not touch sibling subtrees or return a count for a missing node", async () => {
+    const service = createAtlasService(db);
+
+    const keep = await service.createNode({ mapId, level: "continent", title: "Survivor" });
+    const keepChild = await service.createNode({
+      mapId,
+      parentId: keep.id,
+      level: "landscape",
+      title: "Survivor Child",
+    });
+    const remove = await service.createNode({ mapId, level: "continent", title: "Removed" });
+
+    const result = await service.deleteNodeSubtree(remove.id);
+    assert.equal(result.deletedCount, 1);
+
+    // Sibling subtree remains intact.
+    assert.ok(await service.getNode(keep.id));
+    const survivor = await service.getNode(keepChild.id);
+    assert.ok(survivor);
+    assert.equal(survivor.parentId, keep.id);
+
+    // Deleting an already-removed node is a no-op that removes nothing.
+    const again = await service.deleteNodeSubtree(remove.id);
+    assert.equal(again.deletedCount, 0);
+  });
 });
 
 // ---------------------------------------------------------------------------

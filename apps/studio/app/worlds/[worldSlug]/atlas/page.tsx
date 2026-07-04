@@ -7,6 +7,7 @@ import {
 import type { DbAtlasNode } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { DeleteAtlasNodeButton } from "@/src/components/atlas/DeleteAtlasNodeButton";
 import {
   ensureAtlasAction,
   createAtlasNodeAction,
@@ -72,6 +73,15 @@ function buildTree(nodes: DbAtlasNode[]): NodeTreeItem[] {
   return roots;
 }
 
+/** Count all nested nodes below an item (excluding the item itself). */
+function countDescendants(item: NodeTreeItem): number {
+  let total = item.children.length;
+  for (const child of item.children) {
+    total += countDescendants(child);
+  }
+  return total;
+}
+
 function NodeTreeRow({
   item,
   worldSlug,
@@ -89,11 +99,12 @@ function NodeTreeRow({
     <>
       <li
         className="uwe-atlas-node-item"
-        style={{ paddingLeft: depth * 20 }}
+        style={{ paddingLeft: depth * 20, display: "flex", alignItems: "center", gap: "0.5rem" }}
       >
         <a
           href={`/worlds/${worldSlug}/atlas/${node.id}`}
           className="uwe-atlas-node-link"
+          style={{ flex: 1, minWidth: 0 }}
         >
           <span className="uwe-atlas-node-icon">{icon}</span>
           <span className="uwe-atlas-node-title">{node.title}</span>
@@ -110,6 +121,12 @@ function NodeTreeRow({
             </span>
           )}
         </a>
+        <DeleteAtlasNodeButton
+          worldSlug={worldSlug}
+          nodeId={node.id}
+          title={node.title}
+          descendantCount={countDescendants(item)}
+        />
       </li>
       {children.map((child) => (
         <NodeTreeRow
