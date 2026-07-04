@@ -42,6 +42,7 @@ const TABS = [
   { id: "image-studio", label: "Image Studio" },
   { id: "mail", label: "Mail" },
   { id: "backup", label: "Backup" },
+  { id: "briefing", label: "Briefing" },
   { id: "maintenance", label: "Notfallmodus" },
   { id: "status", label: "Systemstatus" },
 ] as const;
@@ -830,6 +831,30 @@ export default async function SettingsPage({ searchParams }: Props) {
                   <option value="14">14</option>
                   <option value="30">30</option>
                 </select>
+              </label>
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+                Speichern
+              </button>
+            </form>
+          )}
+
+          {activeTab === "briefing" && (
+            <form action={updateSettingsAction} className="uwe-form">
+              <input type="hidden" name="tab" value="briefing" />
+              <h2>Morning Briefing</h2>
+              <p className="uwe-hint">
+                Erzeugt täglich lokal per RTX ein Morning Briefing. Der Schalter wird zum Host
+                gesynct (<code>data/briefings/schedule.json</code>) — der systemd-Timer läuft nur,
+                wenn aktiv. Einmalige Voraussetzung: installierter <code>uwe-briefing.timer</code>{" "}
+                (siehe deployment-hardening.md).
+              </p>
+              <label className="uwe-checkbox">
+                <input
+                  type="checkbox"
+                  name="autoBriefingEnabled"
+                  defaultChecked={settings.briefing.autoBriefingEnabled}
+                />
+                Automatisches Morning Briefing (07:00, systemd-Timer / schedule.json)
               </label>
               <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
                 Speichern

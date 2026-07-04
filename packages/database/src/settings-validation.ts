@@ -37,6 +37,7 @@ const TOP_LEVEL_KEYS = new Set([
   "imageStudio",
   "storage",
   "backup",
+  "briefing",
   "privacy",
   "auth",
   "maintenance",
@@ -63,6 +64,7 @@ const IMAGE_STUDIO_KEYS = new Set([
 ]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
+const BRIEFING_KEYS = new Set(["autoBriefingEnabled"]);
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
 const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
@@ -495,6 +497,29 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (Object.keys(backup).length > 0) {
         update.backup = backup;
+      }
+    }
+  }
+
+  if ("briefing" in body) {
+    const sectionErrors = validateSection(
+      body.briefing,
+      BRIEFING_KEYS,
+      "settings.briefing",
+      (key, value, sectionErrors) => {
+        if (key === "autoBriefingEnabled") {
+          requireBoolean(value, "settings.briefing.autoBriefingEnabled", sectionErrors);
+        }
+      },
+    );
+    errors.push(...sectionErrors);
+    if (sectionErrors.length === 0 && isRecord(body.briefing)) {
+      const briefing: NonNullable<UweSystemSettingsUpdate["briefing"]> = {};
+      if (body.briefing.autoBriefingEnabled !== undefined) {
+        briefing.autoBriefingEnabled = body.briefing.autoBriefingEnabled as boolean;
+      }
+      if (Object.keys(briefing).length > 0) {
+        update.briefing = briefing;
       }
     }
   }

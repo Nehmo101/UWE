@@ -115,6 +115,11 @@ export interface BackupSettings {
   retentionCount: number;
 }
 
+/** Auto-Morning-Briefing — der systemd-Timer liest die gesyncte schedule.json. */
+export interface BriefingSettings {
+  autoBriefingEnabled: boolean;
+}
+
 export interface PrivacySettings {
   maskSecretsInUi: boolean;
   restrictPublicExport: boolean;
@@ -143,6 +148,7 @@ export interface UweSystemSettings {
   imageStudio: ImageStudioSettings;
   storage: StorageSettings;
   backup: BackupSettings;
+  briefing: BriefingSettings;
   privacy: PrivacySettings;
   auth: AuthSettings;
   maintenance: MaintenanceSettings;
@@ -212,6 +218,7 @@ export type UweSystemSettingsUpdate = {
   imageStudio?: Partial<ImageStudioPortalSettings>;
   storage?: Partial<StorageSettings>;
   backup?: Partial<BackupSettings>;
+  briefing?: Partial<BriefingSettings>;
   privacy?: Partial<PrivacySettings>;
   auth?: Partial<AuthSettings>;
   maintenance?: Partial<MaintenanceSettings>;
@@ -468,6 +475,9 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     autoBackupEnabled: false,
     retentionCount: 14,
   },
+  briefing: {
+    autoBriefingEnabled: false,
+  },
   privacy: {
     maskSecretsInUi: true,
     restrictPublicExport: false,
@@ -600,6 +610,10 @@ function mergeSettings(
     backup: {
       ...base.backup,
       ...(isRecord(stored.backup) ? (stored.backup as unknown as BackupSettings) : {}),
+    },
+    briefing: {
+      ...base.briefing,
+      ...(isRecord(stored.briefing) ? (stored.briefing as unknown as BriefingSettings) : {}),
     },
     privacy: {
       ...base.privacy,
@@ -923,6 +937,7 @@ export class SettingsService {
       }),
       storage: { ...current.storage, ...update.storage },
       backup: { ...current.backup, ...update.backup },
+      briefing: { ...current.briefing, ...update.briefing },
       privacy: { ...current.privacy, ...update.privacy },
       auth: { ...current.auth, ...update.auth },
       maintenance: { ...current.maintenance, ...update.maintenance },

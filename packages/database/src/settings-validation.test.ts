@@ -147,4 +147,28 @@ describe("validateSettingsUpdate", () => {
       result.errors.some((error) => error.includes("settings.ai.providerKeyPlaceholders")),
     );
   });
+
+  it("accepts a briefing auto-toggle update", () => {
+    const result = validateSettingsUpdate({
+      briefing: { autoBriefingEnabled: true },
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.equal(result.value.briefing?.autoBriefingEnabled, true);
+  });
+
+  it("rejects non-boolean autoBriefingEnabled", () => {
+    const result = validateSettingsUpdate({
+      briefing: { autoBriefingEnabled: "on" },
+    });
+
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+
+    assert.ok(
+      result.errors.some((error) => error.includes("settings.briefing.autoBriefingEnabled")),
+    );
+  });
 });

@@ -86,6 +86,18 @@ pnpm --filter @uwe/database db:seed
 - **CI/Agenten**: nur GitHub Cloud.
 - **Kein** Docker, **kein** Windows-One-Click-Installer, **kein** inbound RTX-Agent als aktiver Pfad.
 
+## Self-Service-Betrieb (kein manuelles Host-Setup)
+
+**Leitprinzip:** Jede Einrichtung/Konfiguration (Backups, Auto-Briefing, Scheduling, Integrationen …) muss **in UWE selbst** einstellbar sein und automatisch zum Host **zurückgesynct** werden. Ziel: so wenig wie möglich — idealerweise nichts — manuell auf dem UWE-Host konfigurieren.
+
+**Etabliertes Muster (DB-Setting → host-lesbare Datei → systemd liest):**
+1. Setting in `packages/database/src/settings-service.ts` (Gruppe + Default) + Validierung in `settings-validation.ts`.
+2. UI-Toggle in den Studio-Settings; Speichern über `updateSettingsAction` (`apps/studio/app/settings-actions.ts`).
+3. Nach dem Speichern schreibt ein Sync-Wrapper (`apps/studio/src/lib/*-schedule-sync.ts`) eine **host-lesbare** JSON-Datei (Writer im Feature-Package, z. B. `writeBackupScheduleConfig` in `@uwe/backup`).
+4. Das systemd-Skript (`deploy/scripts/*.sh`) **liest** diese JSON und gated enabled/Parameter — der Timer bleibt statisch.
+
+**Regel:** Kein neuer *laufender* Host-Schritt. Wer einen Timer/Cron/Env-Wert braucht, macht ihn über dieses Muster aus UWE steuerbar. Nur die **einmalige** Unit-Installation (`cp` + `systemctl enable`) darf manuell bleiben. Referenz: [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md).
+
 ## Scope-Disziplin
 
 Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services erweitern statt duplizieren.
@@ -95,4 +107,5 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [AGENTS.md](AGENTS.md) — Agent-Gate & Cloud-Setup
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architektur
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
+- [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)
