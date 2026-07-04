@@ -16,6 +16,7 @@ import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import { createMailAccountService, type CreateMailAccountInput } from "./mail-account-service";
 import { scoreMailPriority } from "./mail-priority-service";
 import { createMailLogService } from "./mail-log-service";
+import { describeImapError } from "@uwe/mail";
 
 export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
   providerPreset?: MailProviderPreset;
@@ -200,7 +201,7 @@ export class MailPortalService {
       await this.accountService().syncInbox(accountId, { limit: 1 });
       return { ok: true, message: "Verbindung und Sync erfolgreich." };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Verbindung fehlgeschlagen.";
+      const message = describeImapError(error);
       await this.accountService().markImapSyncError(accountId, message);
       return { ok: false, message };
     }
