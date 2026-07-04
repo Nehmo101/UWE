@@ -42,6 +42,13 @@ import {
 } from "./spotify-local-store";
 import { discoverLocalLlms, resolveDiscoveryConfig } from "./llm-discovery";
 import { scanFilesystemModels } from "./filesystem-models";
+import { listInstalledPrinters } from "./label-printing";
+import {
+  loadPrinterStore,
+  mergeDiscoveredPrinters,
+  parsePrinterStore,
+  savePrinterStore,
+} from "./printer-store";
 import { jobHistoryPath, JobHistory } from "./job-history";
 import { connectorLogPath, readConnectorLogRing } from "./logging";
 import { OllamaAdmin } from "./ollama-admin";
@@ -64,6 +71,9 @@ function usage(): never {
   client-cli model-store-get
   client-cli model-store-save < store.json
   client-cli scan
+  client-cli printer-store-get
+  client-cli printer-store-save < store.json
+  client-cli scan-printers
   client-cli pull-ollama <modelName>
   client-cli jobs
   client-cli logs [category]
@@ -167,6 +177,31 @@ async function cmdScan(): Promise<void> {
 
   const merged = mergeDiscoveredProfiles(store, discovered);
   saveModelProfileStore(dir, merged);
+  process.stdout.write(`${JSON.stringify(merged)}\n`);
+}
+
+function cmdPrinterStoreGet(): void {
+  const store = loadPrinterStore(dataDir());
+  process.stdout.write(`${JSON.stringify(store)}\n`);
+}
+
+function cmdPrinterStoreSave(raw: string): void {
+  const parsed = parsePrinterStore(JSON.parse(raw));
+  savePrinterStore(dataDir(), parsed);
+  process.stdout.write(`${JSON.stringify(parsed)}\n`);
+}
+
+/**
+ * Enumerate the printers installed on the RTX host, merge them into the printer
+ * store (new printers stay disabled until the user opts them in), persist, and
+ * emit the updated store — mirroring `scan` for models.
+ */
+async function cmdScanPrinters(): Promise<void> {
+  const dir = dataDir();
+  const store = loadPrinterStore(dir);
+  const discovered = await listInstalledPrinters();
+  const merged = mergeDiscoveredPrinters(store, discovered);
+  savePrinterStore(dir, merged);
   process.stdout.write(`${JSON.stringify(merged)}\n`);
 }
 
@@ -448,6 +483,15 @@ async function main(): Promise<void> {
     }
     case "scan":
       await cmdScan();
+      return;
+    case "printer-store-get":
+      cmdPrinterStoreGet();
+      return;
+    case "printer-store-save":
+      cmdPrinterStoreSave(readStdin());
+      return;
+    case "scan-printers":
+      await cmdScanPrinters();
       return;
     case "pull-ollama": {
       const name = args[0]?.trim();

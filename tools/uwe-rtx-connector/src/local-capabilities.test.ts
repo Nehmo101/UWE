@@ -29,6 +29,7 @@ function env(overrides: Partial<CapabilityEnv> = {}): CapabilityEnv {
     imageExecutorConfigured: false,
     systemInfoEnabled: true,
     fileCacheEnabled: false,
+    printAllowed: true,
     printEnabled: false,
     printBackendConfigured: false,
     privacyModeEnabled: false,
@@ -266,6 +267,42 @@ describe("detectCapabilities — privacy mode (UWE_CONNECTOR_PRIVACY_MODE)", () 
     );
     assert.deepEqual(detected.capabilities, ["embedding_local", "system_info"]);
     assert.deepEqual(detected.models[0].capabilities, ["embeddings"]);
+  });
+});
+
+describe("detectCapabilities — label_printing gating", () => {
+  const printer = { id: "zebra-lp2844", name: "Zebra LP 2844" };
+
+  it("advertises label_printing for an env-configured print backend", () => {
+    const detected = detectCapabilities(emptyLlms, env({ printEnabled: true, printBackendConfigured: true }));
+    assert.ok(detected.capabilities.includes("label_printing"));
+  });
+
+  it("advertises label_printing when the user selected printers (no env backend)", () => {
+    const detected = detectCapabilities(emptyLlms, env(), {
+      printers: [printer],
+      printersSelected: true,
+    });
+    assert.ok(detected.capabilities.includes("label_printing"));
+    assert.deepEqual(detected.printers, [printer]);
+  });
+
+  it("does NOT advertise label_printing for auto-detected printers that were not selected", () => {
+    const detected = detectCapabilities(emptyLlms, env(), {
+      printers: [printer],
+      printersSelected: false,
+    });
+    assert.ok(!detected.capabilities.includes("label_printing"));
+    // …but the printers are still forwarded on heartbeat.
+    assert.deepEqual(detected.printers, [printer]);
+  });
+
+  it("respects UWE_CONNECTOR_PRINT=false even with selected printers", () => {
+    const detected = detectCapabilities(emptyLlms, env({ printAllowed: false }), {
+      printers: [printer],
+      printersSelected: true,
+    });
+    assert.ok(!detected.capabilities.includes("label_printing"));
   });
 });
 

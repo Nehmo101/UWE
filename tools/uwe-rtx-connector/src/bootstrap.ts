@@ -27,7 +27,6 @@ import { JobHistory, jobHistoryPath } from "./job-history";
 import {
   detectCapabilities,
   resolveCapabilityEnv,
-  sanitizePrintersForPrivacy,
 } from "./local-capabilities";
 import { loadSpotifySession } from "./spotify-local-store";
 import {
@@ -41,6 +40,11 @@ import {
   resolveConnectorDataDir,
 } from "./model-profile-store";
 import { discoverLocalPrintersAsync } from "./label-printing";
+import {
+  enabledPrinters,
+  loadPrinterStore,
+  toLocalPrinterInfo,
+} from "./printer-store";
 import { ConnectorRunner } from "./runner";
 
 export const CONNECTOR_VERSION = "1.0.0";
@@ -179,13 +183,22 @@ export function createConnectorRunner(
   const discover = async () => {
     const store = loadModelProfileStore(dataDir);
     const llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
-    const detected = detectCapabilities(llms, capabilityEnv, { profiles: store.profiles, forced: config.forcedCapabilities });
-    // Async printer discovery replaces the sync snapshot — apply the same privacy filter.
-    const printers = sanitizePrintersForPrivacy(
-      await discoverLocalPrintersAsync(),
-      capabilityEnv.privacyModeEnabled,
-    );
-    return { ...detected, printers };
+
+    // Advertise the user's enabled printer selection when present; otherwise fall
+    // back to auto-detection (env `UWE_CONNECTOR_PRINTERS` or the host spooler).
+    // The store is reloaded every cycle so toggling a printer in the client takes
+    // effect on the next heartbeat without restarting the connector.
+    const printerStore = loadPrinterStore(dataDir);
+    const selected = enabledPrinters(printerStore).map(toLocalPrinterInfo);
+    const printersSelected = selected.length > 0;
+    const printers = printersSelected ? selected : await discoverLocalPrintersAsync();
+
+    return detectCapabilities(llms, capabilityEnv, {
+      profiles: store.profiles,
+      forced: config.forcedCapabilities,
+      printers,
+      printersSelected,
+    });
   };
 
   const client = new HostClient(config.hostUrl, config.token);
