@@ -128,6 +128,30 @@ export async function updateAtlasNodeAction(formData: FormData) {
 }
 
 /**
+ * Delete an atlas node together with its entire descendant subtree. Features
+ * and objects attached to each removed node cascade away via the schema; child
+ * nodes are removed too (see AtlasService.deleteNodeSubtree) rather than
+ * orphaned to the map root.
+ */
+export async function deleteAtlasNodeAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+
+  const { db, atlas } = getAtlasDeps();
+
+  try {
+    await atlas.deleteNodeSubtree(nodeId);
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/atlas`);
+}
+
+/**
  * Set the Portal visibility of an atlas node (dm_only ↔ player_visible).
  * A node must be player_visible (along with its map and the individual
  * features/objects) for players to see its content in the Portal.
