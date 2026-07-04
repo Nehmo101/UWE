@@ -32,7 +32,9 @@ import { loadSpotifySession } from "./spotify-local-store";
 import {
   discoverLocalLlms,
   resolveDiscoveryConfig,
+  type DiscoveredModel,
   type DiscoveryConfig,
+  type LocalLlmSummary,
 } from "./llm-discovery";
 import { configureConnectorLogFile, connectorLogPath } from "./logging";
 import {
@@ -179,11 +181,36 @@ export function createConnectorRunner(
   configureConnectorLogFile(connectorLogPath(dataDir));
   const history = new JobHistory({ persistPath: jobHistoryPath(dataDir) });
 
+  // Ollama's /api/tags probe can blip transiently — a busy daemon loading a
+  // large model, a slow response past the timeout, a brief restart. Without
+  // hysteresis every such blip drops the enabled model to "not ready", which
+  // flaps `llm_local` and the model in/out of the host each heartbeat (the host
+  // shows the model list from the last heartbeat, so it "keeps losing" the
+  // model). Reuse the last-good Ollama result for a grace window; a sustained
+  // outage still propagates once the window elapses.
+  const OLLAMA_HYSTERESIS_MS = 5 * 60_000;
+  let lastGoodOllama: { models: DiscoveredModel[]; at: number } | null = null;
+
   // The store is reloaded on every discovery so toggling a model in the client
   // takes effect on the next heartbeat without restarting the connector.
   const discover = async () => {
     const store = loadModelProfileStore(dataDir);
-    const llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
+    let llms = await discoverLocalLlms(discoveryConfig, store.scanPaths);
+
+    const ollama = llms.providers.find((provider) => provider.provider === "ollama");
+    if (ollama?.status === "ready") {
+      lastGoodOllama = { models: ollama.models, at: Date.now() };
+    } else if (ollama && lastGoodOllama && Date.now() - lastGoodOllama.at < OLLAMA_HYSTERESIS_MS) {
+      const others = llms.models.filter((model) => model.provider !== "ollama");
+      const merged = [...others, ...lastGoodOllama.models];
+      llms = {
+        ...llms,
+        models: merged,
+        hasChat: merged.some((model) => model.capabilities?.includes("chat")),
+        hasEmbeddings: merged.some((model) => model.capabilities?.includes("embeddings")),
+        hasVision: merged.some((model) => model.capabilities?.includes("vision")),
+      } satisfies LocalLlmSummary;
+    }
 
     // Advertise the user's enabled printer selection when present; otherwise fall
     // back to auto-detection (env `UWE_CONNECTOR_PRINTERS` or the host spooler).
