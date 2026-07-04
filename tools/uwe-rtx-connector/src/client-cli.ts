@@ -29,9 +29,11 @@ import {
   buildCookbookRecommendations,
   computeModelFit,
   detectHardwareProfile,
+  getCookbookModel,
   listCookbookModels,
   matchInstalledModel,
   modelStrengthTier,
+  USE_CASE_LABELS,
 } from "@uwe/cookbook";
 
 import { loadClientRuntimeConfig, type ClientRuntimeConfig } from "./client-config-store";
@@ -118,6 +120,28 @@ function cmdModelStoreSave(raw: string): void {
   process.stdout.write(`${JSON.stringify(parsed)}\n`);
 }
 
+/**
+ * Pre-fill the UWE-release fields (`displayName`, `description`, `bestFor`) for a
+ * discovered model from the cookbook catalog, so a freshly downloaded model shows
+ * up in the UWE-Freigaben with sensible defaults instead of blank fields. Returns
+ * an empty object for models the catalog doesn't know about.
+ */
+function cookbookReleaseDefaults(modelName: string): {
+  displayName?: string;
+  description?: string;
+  bestFor?: string[];
+} {
+  const model = getCookbookModel(modelName);
+  if (!model) {
+    return {};
+  }
+  return {
+    displayName: model.label,
+    description: model.summary,
+    bestFor: model.useCases.map((useCase) => USE_CASE_LABELS[useCase]?.label ?? useCase),
+  };
+}
+
 function mergeDiscoveredProfiles(
   store: ConnectorModelProfileStore,
   discovered: Array<{
@@ -129,17 +153,37 @@ function mergeDiscoveredProfiles(
   }>,
 ): ConnectorModelProfileStore {
   const byId = new Map(store.profiles.map((profile) => [profile.id, profile]));
-  const nextProfiles: ConnectorModelProfile[] = [...store.profiles];
+  const nextProfiles: ConnectorModelProfile[] = [];
+
+  for (const profile of store.profiles) {
+    // Back-fill catalog defaults for profiles that predate this feature — but
+    // only into empty fields, so we never clobber the user's own edits.
+    const defaults = cookbookReleaseDefaults(profile.name);
+    const needsDescription = profile.description.trim().length === 0 && !!defaults.description;
+    const needsBestFor = profile.bestFor.length === 0 && !!defaults.bestFor;
+    nextProfiles.push(
+      needsDescription || needsBestFor
+        ? {
+            ...profile,
+            description: needsDescription ? defaults.description! : profile.description,
+            bestFor: needsBestFor ? defaults.bestFor! : profile.bestFor,
+          }
+        : profile,
+    );
+  }
 
   for (const item of discovered) {
     const id = modelProfileKey(item.provider, item.name, item.path ?? undefined);
     if (byId.has(id)) continue;
 
+    const defaults = cookbookReleaseDefaults(item.name);
     const profile = createModelProfile({
       provider: item.provider,
       source: item.path ? "filesystem" : "discovery",
       name: item.name,
-      displayName: item.name,
+      displayName: defaults.displayName ?? item.name,
+      description: defaults.description,
+      bestFor: defaults.bestFor,
       modelType: item.modelType ?? "chat",
       path: item.path ?? null,
       sizeBytes: item.sizeBytes ?? null,
