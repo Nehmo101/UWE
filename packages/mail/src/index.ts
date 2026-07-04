@@ -44,6 +44,12 @@ export {
 } from "./imap-sync";
 
 export {
+  parseRawMailSource,
+  type ParsedMailAttachment,
+  type ParsedMailMessage,
+} from "./mime-decode";
+
+export {
   MAIL_PROVIDER_PRESETS,
   MAIL_PRIORITY_CATEGORIES,
   MAIL_PRIORITY_LABELS,

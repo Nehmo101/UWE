@@ -40,6 +40,23 @@ export function MailReader({
   onArchive,
   onDelete,
 }: MailReaderProps) {
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const [imagesRevealed, setImagesRevealed] = React.useState(false);
+
+  // Reset the reveal state whenever a different message is opened — "images
+  // loaded" for one email must never silently carry over to the next.
+  React.useEffect(() => {
+    setImagesRevealed(false);
+  }, [message?.id]);
+
+  const revealBlockedImages = React.useCallback(() => {
+    bodyRef.current?.querySelectorAll<HTMLImageElement>("img[data-uwe-remote-src]").forEach((img) => {
+      const src = img.getAttribute("data-uwe-remote-src");
+      if (src) img.setAttribute("src", src);
+    });
+    setImagesRevealed(true);
+  }, []);
+
   if (!message) {
     return (
       <div
@@ -72,6 +89,7 @@ export function MailReader({
     ? summary.split(/\n+/).map((line) => line.replace(/^[-•·]\s*/, "").trim()).filter(Boolean)
     : [];
   const recipient = message.toAddresses[0] ?? null;
+  const hasBlockedImages = Boolean(message.bodySafeHtml?.includes("data-uwe-remote-src"));
 
   return (
     <div
@@ -228,18 +246,61 @@ export function MailReader({
           </div>
         </div>
 
-        <div
-          style={{
-            fontFamily: "var(--mail-reader-font, var(--uwe-font-serif))",
-            fontSize: 15,
-            lineHeight: 1.75,
-            color: "var(--uwe-fg)",
-            maxWidth: 600,
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {message.bodyText?.trim() || message.bodyHtml?.trim() || "Kein Inhalt synchronisiert."}
-        </div>
+        {message.bodySafeHtml?.trim() ? (
+          <>
+            {hasBlockedImages && !imagesRevealed ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontSize: 12.5,
+                  color: "var(--uwe-fg-muted)",
+                  background: "var(--uwe-card-bg)",
+                  border: "1px solid var(--uwe-border)",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  marginBottom: 12,
+                  maxWidth: 600,
+                }}
+              >
+                <NavIcon name="image-off" width={15} height={15} style={{ color: "var(--uwe-fg-subtle)" }} />
+                <span style={{ flex: 1 }}>
+                  Externe Bilder wurden aus Datenschutzgründen blockiert (Tracking-Pixel-Schutz).
+                </span>
+                <MailButton variant="subtle" size="sm" onClick={revealBlockedImages}>
+                  Bilder laden
+                </MailButton>
+              </div>
+            ) : null}
+            <div
+              ref={bodyRef}
+              style={{
+                fontFamily: "var(--mail-reader-font, var(--uwe-font-serif))",
+                fontSize: 15,
+                lineHeight: 1.75,
+                color: "var(--uwe-fg)",
+                maxWidth: 600,
+              }}
+              // Safe: message.bodySafeHtml is DOMPurify-sanitized server-side (sanitizeMailBodyHtml)
+              // before it ever reaches the client — see the mail messages/[id] API route.
+              dangerouslySetInnerHTML={{ __html: message.bodySafeHtml }}
+            />
+          </>
+        ) : (
+          <div
+            style={{
+              fontFamily: "var(--mail-reader-font, var(--uwe-font-serif))",
+              fontSize: 15,
+              lineHeight: 1.75,
+              color: "var(--uwe-fg)",
+              maxWidth: 600,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {message.bodyText?.trim() || "Kein Inhalt synchronisiert."}
+          </div>
+        )}
 
         {message.attachments.length > 0 ? (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>

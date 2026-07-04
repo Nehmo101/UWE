@@ -58,6 +58,8 @@ export interface MailAiActionVM {
 export interface MailMessageDetailVM extends MailMessageVM {
   bodyText: string | null;
   bodyHtml: string | null;
+  /** DOMPurify-sanitized HTML body, safe for `dangerouslySetInnerHTML` (see MailReader). */
+  bodySafeHtml: string | null;
   toAddresses: string[];
   ccAddresses: string[];
   attachments: MailAttachmentVM[];

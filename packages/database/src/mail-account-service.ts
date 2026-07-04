@@ -1,7 +1,7 @@
 import type { MailDraftStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
-import { fetchImapInboxMessages } from "@uwe/mail";
+import { fetchImapInboxMessages, type FetchedInboxMessage } from "@uwe/mail";
 
 export interface CreateMailAccountInput {
   label: string;
@@ -134,37 +134,7 @@ export class MailAccountService {
 
     let imported = 0;
     for (const message of fetched) {
-      await this.db.mailInboxMessage.upsert({
-        where: {
-          accountId_imapUid: {
-            accountId,
-            imapUid: message.imapUid,
-          },
-        },
-        create: {
-          accountId,
-          imapUid: message.imapUid,
-          messageId: message.messageId,
-          subject: message.subject,
-          fromAddress: message.fromAddress,
-          toAddresses: message.toAddresses,
-          snippet: message.snippet,
-          bodyText: message.bodyText,
-          receivedAt: message.receivedAt,
-          isRead: message.isRead,
-        },
-        update: {
-          messageId: message.messageId,
-          subject: message.subject,
-          fromAddress: message.fromAddress,
-          toAddresses: message.toAddresses,
-          snippet: message.snippet,
-          bodyText: message.bodyText,
-          receivedAt: message.receivedAt,
-          isRead: message.isRead,
-          syncedAt: new Date(),
-        },
-      });
+      await this.persistFetchedMessage(accountId, message);
       imported += 1;
     }
 
@@ -177,6 +147,62 @@ export class MailAccountService {
     });
 
     return { accountId, imported };
+  }
+
+  /** Upserts one IMAP-fetched message and rebuilds its attachment metadata rows. */
+  async persistFetchedMessage(accountId: string, message: FetchedInboxMessage) {
+    const hasAttachments = message.attachments.length > 0;
+    const saved = await this.db.mailInboxMessage.upsert({
+      where: {
+        accountId_imapUid: {
+          accountId,
+          imapUid: message.imapUid,
+        },
+      },
+      create: {
+        accountId,
+        imapUid: message.imapUid,
+        messageId: message.messageId,
+        subject: message.subject,
+        fromAddress: message.fromAddress,
+        toAddresses: message.toAddresses,
+        snippet: message.snippet,
+        bodyText: message.bodyText,
+        bodyHtml: message.bodyHtml,
+        hasAttachments,
+        receivedAt: message.receivedAt,
+        isRead: message.isRead,
+      },
+      update: {
+        messageId: message.messageId,
+        subject: message.subject,
+        fromAddress: message.fromAddress,
+        toAddresses: message.toAddresses,
+        snippet: message.snippet,
+        bodyText: message.bodyText,
+        bodyHtml: message.bodyHtml,
+        hasAttachments,
+        receivedAt: message.receivedAt,
+        isRead: message.isRead,
+        syncedAt: new Date(),
+      },
+    });
+
+    // Re-synced messages get their attachment metadata rows rebuilt from scratch.
+    await this.db.mailAttachment.deleteMany({ where: { messageId: saved.id } });
+    if (hasAttachments) {
+      await this.db.mailAttachment.createMany({
+        data: message.attachments.map((attachment) => ({
+          messageId: saved.id,
+          filename: attachment.filename ?? "Anhang",
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          contentId: attachment.contentId,
+        })),
+      });
+    }
+
+    return saved;
   }
 
   async markImapSyncError(accountId: string, error: string) {
