@@ -4,7 +4,7 @@ import { createActivityLogService } from "./activity-log-service";
 import { createUndoService } from "./undo-service";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
-import { detectPageTypeFromContent } from "./page-type-detect";
+import { detectPageType } from "./page-type-detect";
 import {
   buildWikitextLinkTerms,
   convertWikitext,
@@ -12,11 +12,13 @@ import {
 } from "./wikitext-convert";
 
 /**
- * Bulk wikitext conversion for a whole world ("Alle Wikitexte konvertieren").
+ * Bulk wikitext conversion for a world, or a selection of its pages
+ * ("Alle Wikitexte konvertieren" / Massenaktion "Konvertieren").
  *
- * Walks every text block of every page, normalizes the markdown structure and
- * auto-links mentions of other pages. Apply is fully undoable: every changed
- * block gets an UndoEntry, and the run is recorded in the activity log.
+ * Walks every text block of every (or every selected) page, normalizes the
+ * markdown structure and auto-links mentions of other pages. Apply is fully
+ * undoable: every changed block gets an UndoEntry, and the run is recorded in
+ * the activity log.
  */
 
 /** Only prose blocks are converted — statblocks, images etc. stay untouched. */
@@ -25,6 +27,15 @@ const CONVERTIBLE_BLOCK_TYPES: ContentBlockType[] = [
   "gm_note",
   "player_text",
 ];
+
+/**
+ * Sammelbecken-Typen für importierten Inhalt ohne eigene KnoteForge-
+ * Feinkategorie (siehe `KNOTEFORGE_TYPE_MAP`). Nur bei ihnen ersetzt ein
+ * erkannter Marker den bestehenden Seitentyp — ein bereits gezielt gesetzter
+ * Typ (z. B. „item") wird nicht durch eine beiläufige Text-/Titel-/Tag-
+ * Erwähnung überschrieben.
+ */
+const RECLASSIFIABLE_TYPES: PageType[] = ["lore", "note"];
 
 export interface WikitextConvertBlockPreview {
   pageId: string;
@@ -71,8 +82,10 @@ export interface WikitextConvertOptions {
   structure?: boolean;
   /** Erwähnungen anderer Seiten automatisch verlinken (Standard: true). */
   autoLink?: boolean;
-  /** Seitentyp aus einem „Kategorie:/Typ:"-Marker im Inhalt ableiten (Standard: false). */
+  /** Seitentyp aus Titel/Inhalt/Tags ableiten (Standard: false). */
   detectType?: boolean;
+  /** Nur diese Seiten konvertieren, statt der ganzen Welt (z. B. Mehrfachauswahl in der Seitentabelle). */
+  pageIds?: string[];
 }
 
 export class WikitextConvertService {
@@ -86,7 +99,10 @@ export class WikitextConvertService {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return null;
 
-    const pages = await this.db.page.findMany({
+    // Der Link-Index braucht immer ALLE Seiten der Welt, auch wenn nur eine
+    // Auswahl konvertiert wird — sonst können Erwähnungen nicht ausgewählter
+    // Seiten nicht verlinkt werden.
+    const allPages = await this.db.page.findMany({
       where: { worldId: world.id },
       orderBy: { title: "asc" },
       include: {
@@ -94,11 +110,15 @@ export class WikitextConvertService {
       },
     });
 
-    const linkIndex = pages.map((page) => ({
+    const linkIndex = allPages.map((page) => ({
       id: page.id,
       title: page.title,
       aliases: parseStringArray(page.aliases),
     }));
+
+    const pages = options?.pageIds
+      ? allPages.filter((page) => options.pageIds!.includes(page.id))
+      : allPages;
 
     const changedBlocks: WikitextConvertBlockPreview[] = [];
     const typeChanges: WikitextConvertTypeChange[] = [];
@@ -129,13 +149,18 @@ export class WikitextConvertService {
         });
       }
 
-      // Seitentyp aus einem Inhalts-Marker („Kategorie:/Typ:") ableiten.
-      if (options?.detectType) {
+      // Seitentyp aus Titel, Inhalt und Tags ableiten — nur für Sammelbecken-
+      // Typen, damit ein bereits gezielt gesetzter Typ nicht überschrieben wird.
+      if (options?.detectType && RECLASSIFIABLE_TYPES.includes(page.type)) {
         const combined = page.contentBlocks
           .filter((block) => CONVERTIBLE_BLOCK_TYPES.includes(block.type))
           .map((block) => block.content)
           .join("\n");
-        const detected = detectPageTypeFromContent(combined);
+        const detected = detectPageType({
+          content: combined,
+          title: page.title,
+          tags: parseStringArray(page.tags),
+        });
         if (detected && detected !== page.type) {
           typeChanges.push({
             pageId: page.id,

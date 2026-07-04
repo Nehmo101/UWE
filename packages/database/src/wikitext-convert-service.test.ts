@@ -143,6 +143,105 @@ describe("wikitext convert service", () => {
     assert.match(second.message, /keine Änderungen/);
   });
 
+  it("pageIds scopes preview and apply to the selected pages only", async () => {
+    const scopedSlug = "scope-test";
+    const world = await repo.createWorld({ name: "Scope Test", slug: scopedSlug });
+    const pageA = await repo.createPage({
+      worldId: world.id,
+      title: "Seite A",
+      slug: "seite-a",
+      type: "location",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      contentBlocks: [
+        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite B." },
+      ],
+    });
+    await repo.createPage({
+      worldId: world.id,
+      title: "Seite B",
+      slug: "seite-b",
+      type: "location",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      contentBlocks: [
+        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite A." },
+      ],
+    });
+
+    const scoped = await service.previewWorldConversion(scopedSlug, { pageIds: [pageA.id] });
+    assert.ok(scoped);
+    assert.equal(scoped.totalPages, 1);
+    assert.ok(scoped.changedBlocks.every((block) => block.pageTitle === "Seite A"));
+
+    const applied = await service.applyWorldConversion(scopedSlug, { pageIds: [pageA.id] });
+    assert.equal(applied.ok, true);
+    assert.equal(applied.changedPageCount, 1);
+
+    const pageBAfter = await repo.getPageBySlug(scopedSlug, "seite-b");
+    assert.equal(pageBAfter!.contentBlocks[0]!.content, "Erwähnt Seite A.");
+  });
+
+  it("detectType only reclassifies generic import fallback types (lore/note)", async () => {
+    const guardSlug = "reclassify-guard-test";
+    const world = await repo.createWorld({ name: "Reclassify Guard", slug: guardSlug });
+    // Already specifically typed — a stray marker mention must not override it.
+    await repo.createPage({
+      worldId: world.id,
+      title: "Handelsposten",
+      slug: "handelsposten",
+      type: "location",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "dm_only",
+          content: "Hier trifft man den Händler. Kategorie: NPC ist dort oft zu Gast.",
+        },
+      ],
+    });
+
+    const preview = await service.previewWorldConversion(guardSlug, { detectType: true });
+    assert.ok(preview);
+    assert.equal(preview.typeChanges.length, 0);
+  });
+
+  it("detectType considers the page title and tags as additional context", async () => {
+    const contextSlug = "context-test";
+    const world = await repo.createWorld({ name: "Context Test", slug: contextSlug });
+    await repo.createPage({
+      worldId: world.id,
+      title: "Kategorie: Fraktion — Rote Hand",
+      slug: "rote-hand",
+      type: "note",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      contentBlocks: [
+        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Eine Gilde von Dieben." },
+      ],
+    });
+    await repo.createPage({
+      worldId: world.id,
+      title: "Namenloser Krieger",
+      slug: "namenloser-krieger",
+      type: "note",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      tags: ["npc"],
+      contentBlocks: [
+        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Kämpft an der Grenze." },
+      ],
+    });
+
+    const preview = await service.previewWorldConversion(contextSlug, { detectType: true });
+    assert.ok(preview);
+    const byPage = new Map(preview.typeChanges.map((change) => [change.pageTitle, change.toType]));
+    assert.equal(byPage.get("Kategorie: Fraktion — Rote Hand"), "faction");
+    assert.equal(byPage.get("Namenloser Krieger"), "npc");
+  });
+
   it("returns an error for unknown worlds", async () => {
     const result = await service.applyWorldConversion("gibt-es-nicht");
     assert.equal(result.ok, false);

@@ -6,8 +6,11 @@ import { PAGE_TYPE_LABELS, PUBLISH_LABELS } from "@uwe/shared-ui";
 import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import type { PageBulkOperation } from "@uwe/database/page-bulk";
 import { bulkUpdatePagesAction } from "@/app/page-bulk-actions";
+import { PageBatchConvertPanel } from "./PageBatchConvertPanel";
 
-type OpKind = PageBulkOperation["kind"];
+/** "convert" ist keine deklarative Feldänderung (PageBulkOperation), sondern
+ * eine eigene Vorschau/Anwenden-Aktion — siehe PageBatchConvertPanel. */
+type OpKind = PageBulkOperation["kind"] | "convert";
 
 const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "visibility", label: "Sichtbarkeit setzen" },
@@ -16,6 +19,7 @@ const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "addTags", label: "Tags hinzufügen" },
   { value: "removeTags", label: "Tags entfernen" },
   { value: "campaign", label: "Kampagne zuweisen" },
+  { value: "convert", label: "Konvertieren" },
   { value: "delete", label: "Löschen" },
 ];
 
@@ -121,107 +125,121 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
       : "inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60";
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2">
-      <span className="font-medium">{selectedIds.length} ausgewählt</span>
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <span className="font-medium">{selectedIds.length} ausgewählt</span>
 
-      <select
-        className={SELECT_CLASS}
-        value={kind}
-        onChange={(event) => setKind(event.target.value as OpKind)}
-        aria-label="Massenaktion"
-      >
-        {OP_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-
-      {kind === "visibility" && (
         <select
           className={SELECT_CLASS}
-          value={visibility}
-          onChange={(event) => setVisibility(event.target.value as Visibility)}
-          aria-label="Sichtbarkeit"
+          value={kind}
+          onChange={(event) => setKind(event.target.value as OpKind)}
+          aria-label="Massenaktion"
         >
-          {VISIBILITY_OPTIONS.map((option) => (
+          {OP_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
-      )}
 
-      {kind === "publishStatus" && (
-        <select
-          className={SELECT_CLASS}
-          value={publishStatus}
-          onChange={(event) => setPublishStatus(event.target.value as PublishStatus)}
-          aria-label="Status"
+        {kind === "visibility" && (
+          <select
+            className={SELECT_CLASS}
+            value={visibility}
+            onChange={(event) => setVisibility(event.target.value as Visibility)}
+            aria-label="Sichtbarkeit"
+          >
+            {VISIBILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {kind === "publishStatus" && (
+          <select
+            className={SELECT_CLASS}
+            value={publishStatus}
+            onChange={(event) => setPublishStatus(event.target.value as PublishStatus)}
+            aria-label="Status"
+          >
+            {PUBLISH_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {kind === "type" && (
+          <select
+            className={SELECT_CLASS}
+            value={pageType}
+            onChange={(event) => setPageType(event.target.value as PageType)}
+            aria-label="Seitentyp"
+          >
+            {TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {(kind === "addTags" || kind === "removeTags") && (
+          <input
+            className={SELECT_CLASS}
+            value={tags}
+            onChange={(event) => setTags(event.target.value)}
+            placeholder="tag1, tag2"
+            aria-label="Tags (kommagetrennt)"
+          />
+        )}
+
+        {kind === "campaign" && (
+          <select
+            className={SELECT_CLASS}
+            value={campaignId}
+            onChange={(event) => setCampaignId(event.target.value)}
+            aria-label="Kampagne"
+          >
+            <option value="">Keine Kampagne</option>
+            {campaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {kind !== "convert" && (
+          <button type="button" className={applyClass} onClick={handleApply} disabled={loading}>
+            {loading ? "Wird angewendet…" : "Anwenden"}
+          </button>
+        )}
+        <button
+          type="button"
+          className="inline-flex h-8 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
+          onClick={clearSelection}
+          disabled={loading}
         >
-          {PUBLISH_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      )}
+          Auswahl aufheben
+        </button>
 
-      {kind === "type" && (
-        <select
-          className={SELECT_CLASS}
-          value={pageType}
-          onChange={(event) => setPageType(event.target.value as PageType)}
-          aria-label="Seitentyp"
-        >
-          {TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      )}
+        {kind !== "convert" && error && <span className="text-sm text-destructive">{error}</span>}
+        {kind !== "convert" && message && !error && (
+          <span className="text-sm text-muted-foreground">✓ {message}</span>
+        )}
+      </div>
 
-      {(kind === "addTags" || kind === "removeTags") && (
-        <input
-          className={SELECT_CLASS}
-          value={tags}
-          onChange={(event) => setTags(event.target.value)}
-          placeholder="tag1, tag2"
-          aria-label="Tags (kommagetrennt)"
+      {kind === "convert" && (
+        <PageBatchConvertPanel
+          worldSlug={worldSlug}
+          selectedIds={selectedIds}
+          clearSelection={clearSelection}
         />
       )}
-
-      {kind === "campaign" && (
-        <select
-          className={SELECT_CLASS}
-          value={campaignId}
-          onChange={(event) => setCampaignId(event.target.value)}
-          aria-label="Kampagne"
-        >
-          <option value="">Keine Kampagne</option>
-          {campaigns.map((campaign) => (
-            <option key={campaign.id} value={campaign.id}>
-              {campaign.name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <button type="button" className={applyClass} onClick={handleApply} disabled={loading}>
-        {loading ? "Wird angewendet…" : "Anwenden"}
-      </button>
-      <button
-        type="button"
-        className="inline-flex h-8 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
-        onClick={clearSelection}
-        disabled={loading}
-      >
-        Auswahl aufheben
-      </button>
-
-      {error && <span className="text-sm text-destructive">{error}</span>}
-      {message && !error && <span className="text-sm text-muted-foreground">✓ {message}</span>}
     </div>
   );
 }
