@@ -24,6 +24,13 @@ function statusDot(ok: boolean, warn = false): "ok" | "warn" | "error" {
   return warn ? "warn" : "error";
 }
 
+/** Maps an Ampel status to the shared colored-dot classes (the Parchment "Pünktchen"). */
+const AMPEL_DOT: Record<"ok" | "warn" | "error", string> = {
+  ok: "uwe-dot uwe-dot-success",
+  warn: "uwe-dot uwe-dot-warning",
+  error: "uwe-dot uwe-dot-danger",
+};
+
 interface TodayDashboardClientProps {
   data: TodayDashboardData;
 }
@@ -38,62 +45,42 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
           <section className="uwe-v2-section">
             <h2 className="uwe-v2-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">
-              <Link
-                href="/admin/status"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.systemOk)}
-              >
-                UWE {data.systemLabel}
-              </Link>
-              <Link
-                href="/hardware"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.dbOk)}
-              >
-                DB {data.dbOk ? "OK" : "Fehler"}
-              </Link>
-              <Link
-                href="/hardware"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.backupOk, true)}
-              >
-                Backup {data.backupOk ? "OK" : "prüfen"}
-              </Link>
-              <Link
-                href="/system/rtx-connector"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.rtxReady, true)}
-              >
-                RTX {data.rtxReady ? "bereit" : "offline"}
-              </Link>
-              <Link
-                href="/life-brain"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.brainEnabled, !data.brainEnabled)}
-              >
-                Brain {data.brainEnabled ? "aktiv" : "aus"}
-              </Link>
-              <Link
-                href="/mail"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.mailOk, true)}
-              >
-                Mail {data.mailOk ? "OK" : "prüfen"}
-              </Link>
-              <Link
-                href="/settings"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.portalAuthRequired, !data.portalAuthRequired)}
-              >
-                Portal {data.portalAuthRequired ? "Auth" : "offen"}
-              </Link>
-              <Link
-                href="/hardware"
-                className="uwe-system-ampel-item"
-                data-status={statusDot(data.cloudflareOk, !data.cloudflareOk)}
-              >
-                CF {data.cloudflareOk ? "OK" : "Tunnel"}
-              </Link>
+              {[
+                { href: "/admin/status", status: statusDot(data.systemOk), label: `UWE ${data.systemLabel}` },
+                { href: "/hardware", status: statusDot(data.dbOk), label: `DB ${data.dbOk ? "OK" : "Fehler"}` },
+                { href: "/hardware", status: statusDot(data.backupOk, true), label: `Backup ${data.backupOk ? "OK" : "prüfen"}` },
+                {
+                  href: "/system/rtx-connector",
+                  status: statusDot(data.rtxReady, true),
+                  label: `RTX ${data.rtxReady ? "bereit" : "offline"}`,
+                },
+                {
+                  href: "/life-brain",
+                  status: statusDot(data.brainEnabled, !data.brainEnabled),
+                  label: `Brain ${data.brainEnabled ? "aktiv" : "aus"}`,
+                },
+                { href: "/mail", status: statusDot(data.mailOk, true), label: `Mail ${data.mailOk ? "OK" : "prüfen"}` },
+                {
+                  href: "/settings",
+                  status: statusDot(data.portalAuthRequired, !data.portalAuthRequired),
+                  label: `Portal ${data.portalAuthRequired ? "Auth" : "offen"}`,
+                },
+                {
+                  href: "/hardware",
+                  status: statusDot(data.cloudflareOk, !data.cloudflareOk),
+                  label: `CF ${data.cloudflareOk ? "OK" : "Tunnel"}`,
+                },
+              ].map((item, index) => (
+                <Link
+                  key={index}
+                  href={item.href}
+                  className="uwe-system-ampel-item"
+                  data-status={item.status}
+                >
+                  <span className={AMPEL_DOT[item.status]} aria-hidden />
+                  {item.label}
+                </Link>
+              ))}
             </div>
             {data.homelab.alerts.criticalCount > 0 && (
               <div className="uwe-form-error uwe-v2-section" role="alert">

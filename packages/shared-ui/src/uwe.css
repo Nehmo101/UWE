@@ -1304,6 +1304,37 @@ html[data-theme="light"] {
   border-color: transparent;
 }
 
+/* ── Status / label dots — the Parchment-OS "bunte Pünktchen" ──────────────
+   A reusable colored marker used in status chips, account/label lists, nav
+   counts and badges. Round by default; add .uwe-dot-square for label swatches.
+   Colors map to the semantic tokens so they re-skin with every theme. */
+.uwe-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex: none;
+  background: var(--uwe-fg-subtle);
+}
+.uwe-dot-square {
+  border-radius: 2px;
+}
+.uwe-dot-success {
+  background: var(--uwe-success);
+}
+.uwe-dot-warning {
+  background: var(--uwe-warning);
+}
+.uwe-dot-danger {
+  background: var(--uwe-danger);
+}
+.uwe-dot-info {
+  background: var(--uwe-info);
+}
+.uwe-dot-accent {
+  background: var(--uwe-accent);
+}
+
 .uwe-form {
   display: grid;
   gap: 1rem;
