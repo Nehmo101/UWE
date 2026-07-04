@@ -52,6 +52,7 @@ export class ConnectorRunner {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private accepting = true;
   private stopped = false;
+  private ticking = false;
 
   constructor(private readonly options: RunnerOptions) {
     this.client = options.client;
@@ -90,6 +91,28 @@ export class ConnectorRunner {
       this.lastError = null;
     } catch (error) {
       this.handleHostError(error, "Heartbeat");
+    }
+  }
+
+  /** Refresh the snapshot (best-effort), then heartbeat. Skips if a tick is
+   * already in flight so a slow discovery can't stack overlapping runs. */
+  private async tick(): Promise<void> {
+    if (this.ticking) {
+      return;
+    }
+    this.ticking = true;
+    try {
+      try {
+        await this.refresh();
+      } catch (error) {
+        // A discovery hiccup (e.g. Ollama briefly unreachable) must not stop
+        // heartbeats — keep reporting the last known snapshot.
+        const message = error instanceof Error ? error.message : String(error);
+        log.warn("Fähigkeits-Refresh fehlgeschlagen — nutze letzten Stand.", { error: message });
+      }
+      await this.sendHeartbeat();
+    } finally {
+      this.ticking = false;
     }
   }
 
@@ -194,8 +217,12 @@ export class ConnectorRunner {
     });
     await this.sendHeartbeat();
 
+    // Re-run discovery before each heartbeat so changes made after startup —
+    // e.g. a model freshly enabled for UWE, a new pull, or Ollama coming online —
+    // reach the host without a manual connector restart. Without this the very
+    // first snapshot would be advertised forever.
     this.heartbeatTimer = setInterval(() => {
-      void this.sendHeartbeat();
+      void this.tick();
     }, this.config.heartbeatIntervalMs);
 
     this.pollTimer = setInterval(() => {
