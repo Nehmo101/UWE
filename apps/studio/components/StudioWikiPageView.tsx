@@ -6,6 +6,7 @@ import {
   MetaPanel,
   SidebarSection,
   VisibilityBadge,
+  WikiContent,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
@@ -26,7 +27,7 @@ import {
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
-import { WikiContextPanel, WikiTiptapViewer } from "@/src/components/wiki";
+import { WikiContextPanel } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 export interface StudioWikiPageViewProps {
@@ -237,7 +238,7 @@ export async function StudioWikiPageView({
         />
 
         <div className="uwe-v2-reader uwe-v2-wiki">
-          <WikiTiptapViewer html={view.html} />
+          <WikiContent html={view.html} />
 
           <section className="wiki-graph-section uwe-v2-wiki-aside mt-8">
             <div className="wiki-graph-head mb-3 flex flex-wrap items-center justify-between gap-2">

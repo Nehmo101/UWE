@@ -226,33 +226,100 @@ export function resolveLinksInContent(
   });
 }
 
-export function renderContentHtml(content: string, links: PageViewLink[]): string {
-  const parsed = parseWikiLinks(content);
-
-  if (parsed.length === 0) {
-    return escapeHtml(content);
+function renderWikiLinkHtml(link: PageViewLink): string {
+  if (link.status === "resolved" && link.href) {
+    return `<a href="${escapeAttr(link.href)}" class="wiki-link">${escapeHtml(link.displayText)}</a>`;
   }
+  if (link.status === "hidden") {
+    return `<span class="wiki-link-hidden" title="Inhalt nicht verfügbar">${escapeHtml(link.displayText)}</span>`;
+  }
+  return `<span class="wiki-link-broken" title="Seite nicht gefunden">${escapeHtml(link.displayText)}</span>`;
+}
 
-  let result = "";
-  let cursor = 0;
+/**
+ * Rendert Wikitext-Inhalt zu sicherem HTML: escapt allen Klartext, ersetzt
+ * [[Wikilinks]] durch klickbare Anker und übersetzt die Markdown-Grundstruktur
+ * (Überschriften, Aufzählungen, Absätze mit weichen Zeilenumbrüchen) in Blöcke —
+ * damit konvertierte Seiten nicht mehr als ein einziger Fließtext erscheinen.
+ */
+export function renderContentHtml(content: string, links: PageViewLink[]): string {
+  if (!content) return "";
 
-  parsed.forEach((raw, index) => {
-    const link = links[index];
-    result += escapeHtml(content.slice(cursor, raw.start));
+  const wikilinks = parseWikiLinks(content);
 
-    if (link.status === "resolved" && link.href) {
-      result += `<a href="${escapeAttr(link.href)}" class="wiki-link">${escapeHtml(link.displayText)}</a>`;
-    } else if (link.status === "hidden") {
-      result += `<span class="wiki-link-hidden" title="Inhalt nicht verfügbar">${escapeHtml(link.displayText)}</span>`;
-    } else {
-      result += `<span class="wiki-link-broken" title="Seite nicht gefunden">${escapeHtml(link.displayText)}</span>`;
+  // Wikilinks werden zeilenübergreifend in Dokumentreihenfolge konsumiert; die
+  // `links`-Einträge sind identisch sortiert wie `parseWikiLinks(content)`.
+  let lineStart = 0;
+  let linkIdx = 0;
+  const renderInline = (line: string): string => {
+    const lineEnd = lineStart + line.length;
+    let out = "";
+    let cursor = lineStart;
+    while (linkIdx < wikilinks.length && wikilinks[linkIdx].start < lineEnd) {
+      const raw = wikilinks[linkIdx];
+      if (raw.start < cursor) {
+        linkIdx += 1;
+        continue;
+      }
+      out += escapeHtml(content.slice(cursor, raw.start));
+      out += renderWikiLinkHtml(links[linkIdx]);
+      cursor = raw.end;
+      linkIdx += 1;
+    }
+    if (cursor < lineEnd) out += escapeHtml(content.slice(cursor, lineEnd));
+    return out;
+  };
+
+  const blocks: string[] = [];
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length > 0) {
+      blocks.push(`<p>${paragraph.join("<br />")}</p>`);
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (listItems.length > 0) {
+      blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+      listItems = [];
+    }
+  };
+
+  for (const line of content.split("\n")) {
+    const rendered = renderInline(line);
+    lineStart += line.length + 1; // +1 für das entfernte "\n"
+
+    if (line.trim() === "") {
+      flushParagraph();
+      flushList();
+      continue;
     }
 
-    cursor = raw.end;
-  });
+    const heading = /^(#{1,6})\s+/.exec(line);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = heading[1].length;
+      blocks.push(`<h${level} class="wiki-heading">${rendered.replace(/^#{1,6}\s+/, "")}</h${level}>`);
+      continue;
+    }
 
-  result += escapeHtml(content.slice(cursor));
-  return result;
+    if (/^\s*[-*+]\s+/.test(line)) {
+      flushParagraph();
+      listItems.push(rendered.replace(/^\s*[-*+]\s+/, ""));
+      continue;
+    }
+
+    flushList();
+    paragraph.push(rendered);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return blocks.join("");
 }
 
 function escapeHtml(text: string): string {

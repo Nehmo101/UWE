@@ -1,14 +1,14 @@
 import type { PrismaClient } from "./client";
-import type { ContentBlockType } from "./generated/prisma/client";
+import type { ContentBlockType, PageType } from "./generated/prisma/client";
 import { createActivityLogService } from "./activity-log-service";
 import { createUndoService } from "./undo-service";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
+import { detectPageTypeFromContent } from "./page-type-detect";
 import {
   buildWikitextLinkTerms,
   convertWikitext,
   type WikitextAddedLink,
-  type WikitextConversionOptions,
 } from "./wikitext-convert";
 
 /**
@@ -38,10 +38,20 @@ export interface WikitextConvertBlockPreview {
   nextContent: string;
 }
 
+/** Ein aus dem Inhalt abgeleiteter Seitentyp-Wechsel (z. B. „Kategorie: NPC"). */
+export interface WikitextConvertTypeChange {
+  pageId: string;
+  pageTitle: string;
+  pageHref: string;
+  fromType: PageType;
+  toType: PageType;
+}
+
 export interface WikitextConvertPreview {
   totalPages: number;
   totalBlocks: number;
   changedBlocks: WikitextConvertBlockPreview[];
+  typeChanges: WikitextConvertTypeChange[];
   addedLinkCount: number;
   structuredBlockCount: number;
 }
@@ -52,13 +62,18 @@ export interface WikitextConvertApplyResult {
   changedBlockCount: number;
   changedPageCount: number;
   addedLinkCount: number;
+  typeChangeCount: number;
   undoEntryIds: string[];
 }
 
-export type WikitextConvertOptions = Pick<
-  WikitextConversionOptions,
-  "structure" | "autoLink"
->;
+export interface WikitextConvertOptions {
+  /** Markdown-Struktur normalisieren (Standard: true). */
+  structure?: boolean;
+  /** Erwähnungen anderer Seiten automatisch verlinken (Standard: true). */
+  autoLink?: boolean;
+  /** Seitentyp aus einem „Kategorie:/Typ:"-Marker im Inhalt ableiten (Standard: false). */
+  detectType?: boolean;
+}
 
 export class WikitextConvertService {
   constructor(private readonly db: PrismaClient) {}
@@ -86,6 +101,7 @@ export class WikitextConvertService {
     }));
 
     const changedBlocks: WikitextConvertBlockPreview[] = [];
+    const typeChanges: WikitextConvertTypeChange[] = [];
     let totalBlocks = 0;
 
     for (const page of pages) {
@@ -112,12 +128,31 @@ export class WikitextConvertService {
           nextContent: result.content,
         });
       }
+
+      // Seitentyp aus einem Inhalts-Marker („Kategorie:/Typ:") ableiten.
+      if (options?.detectType) {
+        const combined = page.contentBlocks
+          .filter((block) => CONVERTIBLE_BLOCK_TYPES.includes(block.type))
+          .map((block) => block.content)
+          .join("\n");
+        const detected = detectPageTypeFromContent(combined);
+        if (detected && detected !== page.type) {
+          typeChanges.push({
+            pageId: page.id,
+            pageTitle: page.title,
+            pageHref,
+            fromType: page.type,
+            toType: detected,
+          });
+        }
+      }
     }
 
     return {
       totalPages: pages.length,
       totalBlocks,
       changedBlocks,
+      typeChanges,
       addedLinkCount: changedBlocks.reduce(
         (sum, block) => sum + block.addedLinks.length,
         0,
@@ -139,18 +174,20 @@ export class WikitextConvertService {
         changedBlockCount: 0,
         changedPageCount: 0,
         addedLinkCount: 0,
+        typeChangeCount: 0,
         undoEntryIds: [],
       };
     }
 
     const preview = await this.previewWorldConversion(worldSlug, options);
-    if (!preview || preview.changedBlocks.length === 0) {
+    if (!preview || (preview.changedBlocks.length === 0 && preview.typeChanges.length === 0)) {
       return {
         ok: true,
         message: "Alle Wikitexte sind bereits konvertiert — keine Änderungen nötig.",
         changedBlockCount: 0,
         changedPageCount: 0,
         addedLinkCount: 0,
+        typeChangeCount: 0,
         undoEntryIds: [],
       };
     }
@@ -160,6 +197,7 @@ export class WikitextConvertService {
     const undoEntryIds: string[] = [];
     const changedPageIds = new Set<string>();
 
+    let changedBlockCount = 0;
     for (const change of preview.changedBlocks) {
       // Re-check against the current content so a stale preview never
       // overwrites edits that happened in between.
@@ -176,6 +214,26 @@ export class WikitextConvertService {
         data: { content: change.nextContent },
       });
       changedPageIds.add(change.pageId);
+      changedBlockCount += 1;
+    }
+
+    // Seitentyp-Wechsel anwenden (rückgängig machbar). Nur wenn der aktuelle Typ
+    // noch dem Vorschau-Ausgangstyp entspricht — so wird keine zwischenzeitliche
+    // manuelle Änderung überschrieben.
+    let typeChangeCount = 0;
+    for (const change of preview.typeChanges) {
+      const page = await this.db.page.findUnique({ where: { id: change.pageId } });
+      if (!page || page.type !== change.fromType) continue;
+
+      const undoEntry = await undo.capturePageUpdate(change.pageId, "page.update");
+      undoEntryIds.push(undoEntry.id);
+
+      await this.db.page.update({
+        where: { id: change.pageId },
+        data: { type: change.toType },
+      });
+      changedPageIds.add(change.pageId);
+      typeChangeCount += 1;
     }
 
     const changedPages = preview.changedBlocks.filter((change) =>
@@ -186,7 +244,14 @@ export class WikitextConvertService {
       0,
     );
 
-    const message = `Wikitext-Konvertierung: ${undoEntryIds.length} Block/Blöcke auf ${changedPageIds.size} Seite(n) konvertiert, ${addedLinkCount} Verbindung(en) neu verlinkt.`;
+    const messageParts = [
+      `${changedBlockCount} Block/Blöcke auf ${changedPageIds.size} Seite(n) konvertiert`,
+      `${addedLinkCount} Verbindung(en) neu verlinkt`,
+    ];
+    if (typeChangeCount > 0) {
+      messageParts.push(`${typeChangeCount} Seitentyp(en) gesetzt`);
+    }
+    const message = `Wikitext-Konvertierung: ${messageParts.join(", ")}.`;
 
     await activity.log({
       worldId: world.id,
@@ -198,9 +263,10 @@ export class WikitextConvertService {
       summary: message,
       details: {
         feature: "wikitext_convert_all",
-        changedBlockCount: undoEntryIds.length,
+        changedBlockCount,
         changedPageCount: changedPageIds.size,
         addedLinkCount,
+        typeChangeCount,
         undoEntryIds,
       },
       undoEntryId: undoEntryIds[0],
@@ -209,9 +275,10 @@ export class WikitextConvertService {
     return {
       ok: true,
       message,
-      changedBlockCount: undoEntryIds.length,
+      changedBlockCount,
       changedPageCount: changedPageIds.size,
       addedLinkCount,
+      typeChangeCount,
       undoEntryIds,
     };
   }

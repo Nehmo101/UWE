@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowSelectionState,
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
@@ -36,6 +37,15 @@ export interface DataTableProps<TData, TValue> {
   enableColumnVisibility?: boolean;
   /** Persist column visibility in `localStorage` when set. */
   columnVisibilityStorageKey?: string;
+  /** Add a leading checkbox column and enable multi-row selection. */
+  enableRowSelection?: boolean;
+  /** Stable row id used as the selection key (e.g. the entity id). */
+  getRowId?: (row: TData) => string;
+  /** Render a batch-action bar shown while rows are selected. */
+  renderBatchActions?: (args: {
+    selectedIds: string[];
+    clearSelection: () => void;
+  }) => React.ReactNode;
 }
 
 function readStoredColumnVisibility(key: string): VisibilityState {
@@ -68,9 +78,13 @@ export function DataTable<TData, TValue>({
   className,
   enableColumnVisibility = false,
   columnVisibilityStorageKey,
+  enableRowSelection = false,
+  getRowId,
+  renderBatchActions,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() =>
     columnVisibilityStorageKey ? readStoredColumnVisibility(columnVisibilityStorageKey) : {},
   );
@@ -80,13 +94,54 @@ export function DataTable<TData, TValue>({
     window.localStorage.setItem(columnVisibilityStorageKey, JSON.stringify(columnVisibility));
   }, [columnVisibility, columnVisibilityStorageKey]);
 
+  const selectionColumn = React.useMemo<ColumnDef<TData, TValue>>(
+    () => ({
+      id: "__select",
+      enableSorting: false,
+      enableHiding: false,
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          aria-label="Alle auswählen"
+          className="h-4 w-4 cursor-pointer"
+          checked={table.getIsAllPageRowsSelected()}
+          ref={(el) => {
+            if (el) {
+              el.indeterminate =
+                table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected();
+            }
+          }}
+          onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          aria-label="Zeile auswählen"
+          className="h-4 w-4 cursor-pointer"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      ),
+    }),
+    [],
+  );
+
+  const tableColumns = React.useMemo(
+    () => (enableRowSelection ? [selectionColumn, ...columns] : columns),
+    [enableRowSelection, selectionColumn, columns],
+  );
+
   const table = useReactTable({
     data,
-    columns,
-    state: { sorting, globalFilter, columnVisibility },
+    columns: tableColumns,
+    state: { sorting, globalFilter, columnVisibility, rowSelection },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection,
+    getRowId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -96,6 +151,19 @@ export function DataTable<TData, TValue>({
 
   const hideableColumns = table.getAllColumns().filter((column) => column.getCanHide());
   const visibleColumnCount = table.getVisibleLeafColumns().length;
+
+  const clearSelection = React.useCallback(() => setRowSelection({}), []);
+  const selectedIds = React.useMemo(
+    () =>
+      enableRowSelection
+        ? table
+            .getSelectedRowModel()
+            .rows.map((row) => (getRowId ? getRowId(row.original) : row.id))
+        : [],
+    // rowSelection drives the selected set; table is a stable instance ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enableRowSelection, getRowId, rowSelection, table],
+  );
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -134,6 +202,12 @@ export function DataTable<TData, TValue>({
         </div>
       ) : null}
 
+      {enableRowSelection && renderBatchActions && selectedIds.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border bg-muted/40 px-3 py-2 text-sm">
+          {renderBatchActions({ selectedIds, clearSelection })}
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-[var(--radius)] border border-border">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -142,18 +216,17 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) =>
                   header.column.getIsVisible() ? (
                     <th key={header.id} className="px-3 py-2 text-left font-medium">
-                      {header.isPlaceholder ? null : (
+                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
-                          className={cn(
-                            "inline-flex items-center gap-1",
-                            header.column.getCanSort() && "cursor-pointer select-none",
-                          )}
+                          className="inline-flex items-center gap-1 cursor-pointer select-none"
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {{ asc: " ↑", desc: " ↓" }[header.column.getIsSorted() as string] ?? null}
                         </button>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
                       )}
                     </th>
                   ) : null,

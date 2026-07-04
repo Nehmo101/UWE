@@ -16,6 +16,7 @@ import type {
   Visibility,
 } from "@uwe/database/enums";
 import { DataTable } from "../ui/data-table";
+import { PageBatchToolbar } from "./PageBatchToolbar";
 
 export interface WikiPageRow {
   id: string;
@@ -100,7 +101,15 @@ const columns: ColumnDef<WikiPageRow>[] = [
   },
 ];
 
-export function WikiPageTable({ rows, className }: { rows: WikiPageRow[]; className?: string }) {
+export interface WikiPageTableProps {
+  rows: WikiPageRow[];
+  className?: string;
+  /** Enables the multi-select batch toolbar when provided. */
+  worldSlug?: string;
+  campaigns?: { id: string; name: string }[];
+}
+
+export function WikiPageTable({ rows, className, worldSlug, campaigns = [] }: WikiPageTableProps) {
   return (
     <DataTable
       columns={columns}
@@ -110,6 +119,20 @@ export function WikiPageTable({ rows, className }: { rows: WikiPageRow[]; classN
       className={className}
       enableColumnVisibility
       columnVisibilityStorageKey={WIKI_TABLE_COLUMN_VISIBILITY_KEY}
+      enableRowSelection={Boolean(worldSlug)}
+      getRowId={(row) => row.id}
+      renderBatchActions={
+        worldSlug
+          ? ({ selectedIds, clearSelection }) => (
+              <PageBatchToolbar
+                worldSlug={worldSlug}
+                campaigns={campaigns}
+                selectedIds={selectedIds}
+                clearSelection={clearSelection}
+              />
+            )
+          : undefined
+      }
     />
   );
 }
