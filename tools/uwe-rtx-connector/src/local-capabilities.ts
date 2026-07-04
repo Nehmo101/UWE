@@ -41,6 +41,8 @@ export interface CapabilityEnv {
   imageExecutorConfigured: boolean;
   systemInfoEnabled: boolean;
   fileCacheEnabled: boolean;
+  /** Print master switch (`UWE_CONNECTOR_PRINT`, default on) — independent of a backend. */
+  printAllowed: boolean;
   printEnabled: boolean;
   printBackendConfigured: boolean;
   /** Report only routing-minimal metadata on heartbeat (no display/telemetry fields). */
@@ -56,6 +58,7 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
   const imageExecutorConfigured = Boolean(env.UWE_CONNECTOR_IMAGE_CMD?.trim());
   const printCommandConfigured = Boolean(env.UWE_CONNECTOR_PRINT_CMD?.trim());
   const printPrintersConfigured = Boolean(env.UWE_CONNECTOR_PRINTERS?.trim());
+  const printAllowed = flag(env.UWE_CONNECTOR_PRINT, true);
 
   return {
     audioCommandConfigured,
@@ -66,8 +69,9 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
     imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, true) && imageExecutorConfigured,
     systemInfoEnabled: flag(env.UWE_CONNECTOR_SYSTEM_INFO, true),
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
+    printAllowed,
     printBackendConfigured: printCommandConfigured || printPrintersConfigured,
-    printEnabled: flag(env.UWE_CONNECTOR_PRINT, true) && (printCommandConfigured || printPrintersConfigured),
+    printEnabled: printAllowed && (printCommandConfigured || printPrintersConfigured),
     privacyModeEnabled: flag(env.UWE_CONNECTOR_PRIVACY_MODE, false),
   };
 }
@@ -83,6 +87,17 @@ export interface DetectCapabilitiesOptions {
   profiles?: readonly ConnectorModelProfile[];
   /** Capability requests from env; still filtered against executable backends. */
   forced?: readonly ConnectorCapability[];
+  /**
+   * Printers to advertise on heartbeat, already resolved by the caller (the
+   * user's enabled selection, or the auto-detected fallback). When omitted the
+   * sync `UWE_CONNECTOR_PRINTERS` snapshot is used, preserving prior behavior.
+   */
+  printers?: readonly LocalPrinterInfo[];
+  /**
+   * True when `printers` come from an explicit user selection — this alone
+   * enables `label_printing` even without an env-configured print backend.
+   */
+  printersSelected?: boolean;
 }
 
 function discoveredKey(model: DiscoveredModel): string {
@@ -99,7 +114,10 @@ export function detectCapabilities(
     profiles.filter((profile) => profile.enabledForUwe).map((profile) => profile.id),
   );
 
-  const executable = executableCapabilities(llms, env, enabledKeys);
+  const printers = options.printers ? [...options.printers] : discoverLocalPrinters();
+  const printersSelected = options.printersSelected ?? false;
+
+  const executable = executableCapabilities(llms, env, enabledKeys, printers.length > 0 && printersSelected);
   const forced = options.forced ?? [];
   const capabilities =
     forced.length > 0
@@ -109,7 +127,7 @@ export function detectCapabilities(
   return {
     capabilities,
     models: toEnabledModelInfos(llms, profiles, env.privacyModeEnabled),
-    printers: sanitizePrintersForPrivacy(discoverLocalPrinters(), env.privacyModeEnabled),
+    printers: sanitizePrintersForPrivacy(printers, env.privacyModeEnabled),
   };
 }
 
@@ -117,6 +135,7 @@ function executableCapabilities(
   llms: LocalLlmSummary,
   env: CapabilityEnv,
   enabledKeys: ReadonlySet<string>,
+  hasSelectedPrinters: boolean,
 ): ConnectorCapability[] {
   const detected: ConnectorCapability[] = [];
   if (env.audioEnabled) detected.push("audio_local");
@@ -126,7 +145,9 @@ function executableCapabilities(
   if (hasEnabledVisionModel(llms, enabledKeys)) detected.push("vision_local");
   if (env.imageEnabled) detected.push("image_generation");
   if (env.fileCacheEnabled) detected.push("file_cache");
-  if (env.printEnabled) detected.push("label_printing");
+  // Label printing is advertised when an env backend is configured (existing
+  // behavior) OR the user has explicitly selected printers in the client.
+  if (env.printEnabled || (env.printAllowed && hasSelectedPrinters)) detected.push("label_printing");
   if (env.systemInfoEnabled) detected.push("system_info");
 
   return normalizeCapabilities(detected);

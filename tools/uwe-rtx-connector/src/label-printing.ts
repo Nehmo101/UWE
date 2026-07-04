@@ -11,18 +11,127 @@ export function discoverLocalPrinters(env: NodeJS.ProcessEnv = process.env): Loc
   if (!raw) return [];
   try { return normalizeLocalPrinters(JSON.parse(raw)); } catch { log.warn("UWE_CONNECTOR_PRINTERS invalid"); return []; }
 }
+
+/** Win32_Printer.PrinterStatus enum → short, host-facing state label. */
+function windowsPrinterState(status: unknown): string | undefined {
+  switch (typeof status === "number" ? status : Number(status)) {
+    case 3: return "idle";
+    case 4: return "printing";
+    case 5: return "warmup";
+    case 6: return "stopped";
+    case 7: return "offline";
+    default: return undefined;
+  }
+}
+
+/**
+ * Enumerate printers installed in the Windows print spooler via WMI
+ * (`Win32_Printer`). Offline-safe: any failure (no PowerShell, not Windows,
+ * spooler error) yields an empty list rather than throwing.
+ */
+async function enumerateWindowsPrinters(): Promise<LocalPrinterInfo[]> {
+  try {
+    const script =
+      "Get-CimInstance -ClassName Win32_Printer | " +
+      "Select-Object Name,Default,PrinterStatus,Comment | ConvertTo-Json -Compress";
+    const { stdout } = await execFileAsync(
+      "powershell",
+      ["-NoProfile", "-NonInteractive", "-Command", script],
+      { timeout: 8_000, windowsHide: true },
+    );
+    const trimmed = stdout.trim();
+    if (!trimmed) return [];
+    const parsed = JSON.parse(trimmed) as unknown;
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    const printers: LocalPrinterInfo[] = [];
+    for (const row of rows) {
+      if (typeof row !== "object" || row === null) continue;
+      const raw = row as Record<string, unknown>;
+      const name = typeof raw.Name === "string" ? raw.Name.trim() : "";
+      if (!name) continue;
+      const printer: LocalPrinterInfo = { id: name, name };
+      const comment = typeof raw.Comment === "string" ? raw.Comment.trim() : "";
+      if (comment) printer.description = comment;
+      if (raw.Default === true) printer.isDefault = true;
+      const state = windowsPrinterState(raw.PrinterStatus);
+      if (state) printer.state = state;
+      printers.push(printer);
+    }
+    return normalizeLocalPrinters(printers);
+  } catch {
+    return [];
+  }
+}
+
+function cupsPrinterState(line: string): string | undefined {
+  if (/\bnow printing\b|\bis printing\b/i.test(line)) return "printing";
+  if (/\bdisabled\b/i.test(line)) return "disabled";
+  if (/\bis idle\b/i.test(line)) return "idle";
+  return undefined;
+}
+
+/**
+ * Enumerate printers configured in CUPS via `lpstat` (Linux / macOS). The
+ * default destination (`lpstat -d`) is folded in as `isDefault`. Offline-safe.
+ */
+async function enumerateCupsPrinters(): Promise<LocalPrinterInfo[]> {
+  let stdout = "";
+  try {
+    ({ stdout } = await execFileAsync("lpstat", ["-p"], { timeout: 5_000 }));
+  } catch {
+    return [];
+  }
+
+  let defaultId = "";
+  try {
+    const { stdout: defaultOut } = await execFileAsync("lpstat", ["-d"], { timeout: 5_000 });
+    defaultId = /:\s*(\S+)\s*$/m.exec(defaultOut.trim())?.[1] ?? "";
+  } catch {
+    // No default destination configured — fine.
+  }
+
+  const printers: LocalPrinterInfo[] = [];
+  for (const line of stdout.split(/\r?\n/)) {
+    const match = /^printer\s+(\S+)\s/is.exec(line);
+    if (!match?.[1]) continue;
+    const id = match[1];
+    const printer: LocalPrinterInfo = { id, name: id };
+    const state = cupsPrinterState(line);
+    if (state) printer.state = state;
+    if (id === defaultId) printer.isDefault = true;
+    printers.push(printer);
+  }
+  return normalizeLocalPrinters(printers);
+}
+
+/**
+ * Enumerate printers actually installed on the host OS (Windows spooler on
+ * `win32`, otherwise CUPS). Does not consult `UWE_CONNECTOR_PRINTERS`.
+ */
+export async function enumerateHostPrinters(
+  platform: NodeJS.Platform = process.platform,
+): Promise<LocalPrinterInfo[]> {
+  return platform === "win32" ? enumerateWindowsPrinters() : enumerateCupsPrinters();
+}
+
+/**
+ * List every printer available on the RTX host for the desktop client's printer
+ * picker: statically configured printers (`UWE_CONNECTOR_PRINTERS`) merged with
+ * the ones enumerated from the OS. Configured entries win on id collisions.
+ */
+export async function listInstalledPrinters(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): Promise<LocalPrinterInfo[]> {
+  const configured = discoverLocalPrinters(env);
+  const detected = await enumerateHostPrinters(platform);
+  return normalizeLocalPrinters([...configured, ...detected]);
+}
+
 export async function discoverLocalPrintersAsync(env: NodeJS.ProcessEnv = process.env): Promise<LocalPrinterInfo[]> {
   const staticPrinters = discoverLocalPrinters(env);
   if (staticPrinters.length > 0) return staticPrinters;
-  try {
-    const { stdout } = await execFileAsync("lpstat", ["-p"], { timeout: 5_000 });
-    const printers: LocalPrinterInfo[] = [];
-    for (const line of stdout.split(/\r?\n/)) {
-      const match = /^printer\s+(\S+)\s/is.exec(line);
-      if (match?.[1]) printers.push({ id: match[1], name: match[1] });
-    }
-    return normalizeLocalPrinters(printers);
-  } catch { return []; }
+  return enumerateHostPrinters();
 }
 export async function runPrinterDiscover() { return { printers: await discoverLocalPrintersAsync() }; }
 export async function runLabelPrintJob(payload: Record<string, unknown>, ctx: { hostUrl: string; connectorToken: string; printCommand?: string; requestTimeoutMs: number; jobId: string }) {

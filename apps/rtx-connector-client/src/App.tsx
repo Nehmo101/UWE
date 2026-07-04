@@ -31,13 +31,16 @@ import {
   getConnectorStatus,
   getCookbookDashboard,
   getModelStore,
+  getPrinterStore,
   listConnectorJobs,
   listConnectorLogs,
   probeRunners,
   pullOllamaModel,
   readConfig,
   saveModelStore,
+  savePrinterStore,
   scanModels,
+  scanPrinters,
   spotifyAuthUrl,
   spotifyDevices,
   spotifyDisconnect,
@@ -52,6 +55,7 @@ import {
   testImage,
   testRunner,
   writeConfig,
+  type ConnectorPrinterStore,
   type ConnectorRuntimeStatus,
   type HostConnectionTestResult,
   type RunnerId,
@@ -141,6 +145,8 @@ export default function App() {
   const [config, setConfig] = useState<ConnectorClientConfig>(defaultConnectorClientConfig());
   const [modelStore, setModelStore] = useState<ConnectorModelProfileStore>(defaultModelProfileStore());
   const [modelStoreLoaded, setModelStoreLoaded] = useState(false);
+  const [printerStore, setPrinterStore] = useState<ConnectorPrinterStore>({ version: 1, printers: [] });
+  const [printerStoreLoaded, setPrinterStoreLoaded] = useState(false);
   const [runtimeStatus, setRuntimeStatus] = useState<ConnectorRuntimeStatus>(INITIAL_RUNTIME_STATUS);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -194,6 +200,27 @@ export default function App() {
     setModelStore(result.store);
     setModelStoreLoaded(true);
     return result;
+  }, []);
+
+  const loadPrinterStore = useCallback(async () => {
+    const nextStore = await getPrinterStore();
+    setPrinterStore(nextStore);
+    setPrinterStoreLoaded(true);
+    return nextStore;
+  }, []);
+
+  const persistPrinterStore = useCallback(async (nextStore: ConnectorPrinterStore) => {
+    const saved = await savePrinterStore(nextStore);
+    setPrinterStore(saved);
+    setPrinterStoreLoaded(true);
+    return saved;
+  }, []);
+
+  const runPrinterScan = useCallback(async () => {
+    const scanned = await scanPrinters();
+    setPrinterStore(scanned);
+    setPrinterStoreLoaded(true);
+    return scanned;
   }, []);
 
   const loadConnectorJobs = useCallback(async () => listConnectorJobs(), []);
@@ -576,7 +603,16 @@ export default function App() {
           />
         );
       case "/models": return renderModels();
-      case "/printers": return <PrintersPanel />;
+      case "/printers":
+        return (
+          <PrintersPanel
+            loaded={printerStoreLoaded}
+            store={printerStore}
+            onLoadStore={loadPrinterStore}
+            onSaveStore={persistPrinterStore}
+            onScanPrinters={runPrinterScan}
+          />
+        );
       case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;
       case "/logs": return <LogsPanel onLoadLogs={loadConnectorLogs} />;
       case "/diagnostics": return renderDiagnostics();

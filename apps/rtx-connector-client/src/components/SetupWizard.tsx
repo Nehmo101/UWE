@@ -146,7 +146,10 @@ export function SetupWizard({
       case 3:
         return config.name.trim().length > 0;
       case 4:
-        return testResult?.ok === true;
+        // The connection test is recommended but must not trap the user during
+        // first-run (the host may not be reachable yet). Entered values are
+        // persisted regardless, so the wizard can always be completed.
+        return true;
       case 6:
         return scanAttempted || modelStore.profiles.length > 0;
       case 7:
@@ -186,6 +189,9 @@ export function SetupWizard({
       if (!result.ok) {
         setError(result.message);
       }
+      // Persist the tested host/token/name so they survive even if the user
+      // closes the app right after testing.
+      await saveDraftQuietly();
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -217,6 +223,33 @@ export function SetupWizard({
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * Persist the entered values to disk without completing the wizard. Best-effort:
+   * an invalid partial config (e.g. host not yet valid) is simply skipped, so this
+   * never interrupts the flow. This is what guarantees the host/token/name survive
+   * even if the app is closed mid-wizard or the connection test can't be run yet.
+   */
+  async function saveDraftQuietly() {
+    try {
+      await writeConfig(parseConnectorClientConfig({ ...config, wizardCompleted: false }));
+    } catch {
+      // Partial/invalid drafts are fine to skip — the final "Fertig" step validates.
+    }
+  }
+
+  async function goNext() {
+    // Save progress as the user moves through the credential steps.
+    if (step.id >= 1 && step.id <= 4) {
+      await saveDraftQuietly();
+    }
+    setStepIndex((value) => value + 1);
+  }
+
+  async function handleDismiss() {
+    await saveDraftQuietly();
+    onDismiss();
   }
 
   async function runModelScan() {
@@ -319,6 +352,12 @@ export function SetupWizard({
               />
             ) : null}
             {testResult ? <p className="connector-muted">{testResult.message}</p> : null}
+            {testResult?.ok ? null : (
+              <p className="connector-muted">
+                Der Test ist empfohlen, aber optional — du kannst auch ohne erfolgreichen Test
+                fortfahren. Deine Angaben werden gespeichert.
+              </p>
+            )}
           </div>
         );
       case 5:
@@ -423,7 +462,7 @@ export function SetupWizard({
         className="connector-wizard-card"
         footer={
           <div className="connector-actions">
-            <ButtonV2 variant="ghost" onClick={onDismiss} disabled={busy}>
+            <ButtonV2 variant="ghost" onClick={() => void handleDismiss()} disabled={busy}>
               Später
             </ButtonV2>
             {stepIndex > 0 ? (
@@ -438,7 +477,7 @@ export function SetupWizard({
             ) : (
               <ButtonV2
                 variant="primary"
-                onClick={() => setStepIndex((value) => value + 1)}
+                onClick={() => void goNext()}
                 disabled={busy || !canAdvance}
               >
                 Weiter

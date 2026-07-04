@@ -154,8 +154,14 @@ fn now_timestamp() -> String {
 fn resolve_monorepo_root() -> PathBuf {
     if let Ok(root) = std::env::var("UWE_MONOREPO_ROOT") {
         let trimmed = root.trim();
+        // Only honor the override when it points at a real directory — a stale or
+        // mistyped value must not become the process working directory (that
+        // triggers a cryptic "os error 267" on Windows when spawning Node).
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed);
+            let path = PathBuf::from(trimmed);
+            if path.is_dir() {
+                return path;
+            }
         }
     }
 
@@ -178,6 +184,25 @@ fn resolve_monorepo_root() -> PathBuf {
 
 fn build_node_script_command(script_rel: &str, args: &[&str]) -> Result<Command, String> {
     let root = resolve_monorepo_root();
+
+    // Validate the working directory and script up-front so a missing monorepo
+    // surfaces as an actionable message instead of a cryptic spawn failure
+    // (Windows returns "os error 267 — directory name invalid" for an invalid
+    // current_dir).
+    if !root.is_dir() {
+        return Err(format!(
+            "Arbeitsverzeichnis für den Connector nicht gefunden: {}. Setze UWE_MONOREPO_ROOT auf den UWE-Projektordner.",
+            root.display()
+        ));
+    }
+    let script_path = root.join(script_rel);
+    if !script_path.exists() {
+        return Err(format!(
+            "Connector-Skript nicht gefunden: {}. Ist das UWE-Monorepo ausgecheckt und `pnpm install` gelaufen? Ggf. UWE_MONOREPO_ROOT setzen.",
+            script_path.display()
+        ));
+    }
+
     let data_dir = connector_app_data_dir()?;
 
     let mut command = Command::new("node");
@@ -216,10 +241,16 @@ fn client_cli_output_to_string(action: &str, output: Output) -> Result<String, S
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// Node not being on PATH is by far the most common spawn failure — append a
+/// hint so the desktop user knows what to install.
+fn describe_spawn_error(error: &std::io::Error) -> String {
+    format!("{error}. Ist Node.js installiert und im PATH?")
+}
+
 fn run_client_cli(args: &[&str]) -> Result<String, String> {
     let output = build_client_cli_command(args)?
         .output()
-        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {error}"))?;
+        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
 
     client_cli_output_to_string(&args.join(" "), output)
 }
@@ -227,7 +258,7 @@ fn run_client_cli(args: &[&str]) -> Result<String, String> {
 fn run_node_script(script_rel: &str, args: &[&str]) -> Result<String, String> {
     let output = build_node_script_command(script_rel, args)?
         .output()
-        .map_err(|error| format!("{script_rel} konnte nicht gestartet werden: {error}"))?;
+        .map_err(|error| format!("{script_rel} konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
 
     client_cli_output_to_string(&format!("{script_rel} {}", args.join(" ")), output)
 }
@@ -238,7 +269,7 @@ fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<Strin
 
     let mut child = command
         .spawn()
-        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {error}"))?;
+        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
 
     if let Some(mut stdin) = child.stdin.take() {
         stdin
@@ -593,6 +624,26 @@ fn save_model_store(store: serde_json::Value) -> Result<serde_json::Value, Strin
 fn scan_models() -> Result<serde_json::Value, String> {
     let raw = run_client_cli(&["scan"])?;
     parse_client_cli_json(&raw, "Scan-Ergebnis")
+}
+
+#[tauri::command]
+fn get_printer_store() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["printer-store-get"])?;
+    parse_client_cli_json(&raw, "Drucker-Store")
+}
+
+#[tauri::command]
+fn save_printer_store(store: serde_json::Value) -> Result<serde_json::Value, String> {
+    let payload = serde_json::to_string(&store)
+        .map_err(|error| format!("Drucker-Store konnte nicht serialisiert werden: {error}"))?;
+    let raw = run_client_cli_with_stdin(&["printer-store-save"], &payload)?;
+    parse_client_cli_json(&raw, "Drucker-Store")
+}
+
+#[tauri::command]
+fn scan_printers() -> Result<serde_json::Value, String> {
+    let raw = run_client_cli(&["scan-printers"])?;
+    parse_client_cli_json(&raw, "Drucker-Scan")
 }
 
 #[tauri::command]
@@ -1066,6 +1117,9 @@ pub fn run() {
             get_model_store,
             save_model_store,
             scan_models,
+            get_printer_store,
+            save_printer_store,
+            scan_printers,
             pull_ollama_model,
             pull_huggingface_model,
             list_connector_jobs,

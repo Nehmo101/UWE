@@ -186,9 +186,25 @@ export interface CommandTestResult {
   output?: string;
 }
 
+/** One printer installed on the RTX host, plus the user's enable flag. */
+export interface ConnectorPrinterProfile {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+  state?: string;
+  enabledForUwe: boolean;
+}
+
+export interface ConnectorPrinterStore {
+  version: number;
+  printers: ConnectorPrinterProfile[];
+}
+
 const MOCK_CONFIG_KEY = "uwe-rtx-connector-client:mock-config";
 const MOCK_RUNNING_KEY = "uwe-rtx-connector-client:mock-running";
 const MOCK_MODEL_STORE_KEY = "uwe-rtx-connector-client:mock-model-store";
+const MOCK_PRINTER_STORE_KEY = "uwe-rtx-connector-client:mock-printer-store";
 const MOCK_LOGS_KEY = "uwe-rtx-connector-client:mock-logs";
 
 function isTauriRuntime(): boolean {
@@ -244,6 +260,51 @@ function readMockModelStore(): ConnectorModelProfileStore {
 function writeMockModelStore(store: ConnectorModelProfileStore): ConnectorModelProfileStore {
   const parsed = parseModelProfileStore(store);
   localStorage.setItem(MOCK_MODEL_STORE_KEY, JSON.stringify(parsed));
+  return parsed;
+}
+
+function parsePrinterProfile(raw: unknown): ConnectorPrinterProfile | null {
+  const value = asRecord(raw);
+  const id = asString(value.id).trim();
+  const name = asString(value.name).trim();
+  if (!id || !name) {
+    return null;
+  }
+  const printer: ConnectorPrinterProfile = { id, name, enabledForUwe: asBool(value.enabledForUwe) };
+  if (typeof value.description === "string" && value.description.trim()) {
+    printer.description = value.description;
+  }
+  if (typeof value.isDefault === "boolean") printer.isDefault = value.isDefault;
+  if (typeof value.state === "string" && value.state.trim()) printer.state = value.state;
+  return printer;
+}
+
+function parsePrinterStore(raw: unknown): ConnectorPrinterStore {
+  const value = asRecord(raw);
+  const printers = Array.isArray(value.printers)
+    ? value.printers.map(parsePrinterProfile).filter((p): p is ConnectorPrinterProfile => p !== null)
+    : [];
+  return {
+    version: typeof value.version === "number" ? value.version : 1,
+    printers,
+  };
+}
+
+function readMockPrinterStore(): ConnectorPrinterStore {
+  const raw = localStorage.getItem(MOCK_PRINTER_STORE_KEY);
+  if (!raw) {
+    return { version: 1, printers: [] };
+  }
+  try {
+    return parsePrinterStore(JSON.parse(raw));
+  } catch {
+    return { version: 1, printers: [] };
+  }
+}
+
+function writeMockPrinterStore(store: ConnectorPrinterStore): ConnectorPrinterStore {
+  const parsed = parsePrinterStore(store);
+  localStorage.setItem(MOCK_PRINTER_STORE_KEY, JSON.stringify(parsed));
   return parsed;
 }
 
@@ -723,6 +784,26 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
       appendMockLog(`[models] Scan ausgeführt (${store.profiles.length} Profile).`);
       return store as T;
     }
+    case "get_printer_store":
+      return readMockPrinterStore() as T;
+    case "save_printer_store": {
+      const store = writeMockPrinterStore(args?.store as ConnectorPrinterStore);
+      appendMockLog(`[printers] Drucker-Store gespeichert (${store.printers.length} Drucker).`);
+      return store as T;
+    }
+    case "scan_printers": {
+      const current = readMockPrinterStore();
+      const printers =
+        current.printers.length > 0
+          ? current.printers
+          : [
+              { id: "zebra-lp2844", name: "Zebra LP 2844 Label", state: "idle", enabledForUwe: false },
+              { id: "hp-laserjet", name: "HP LaserJet", isDefault: true, state: "idle", enabledForUwe: false },
+            ];
+      const store = writeMockPrinterStore({ ...current, printers });
+      appendMockLog(`[printers] Drucker-Scan simuliert (${store.printers.length} Drucker).`);
+      return store as T;
+    }
     case "pull_ollama_model": {
       const current = readMockModelStore();
       const name = typeof args?.name === "string" ? args.name.trim() : "";
@@ -892,6 +973,20 @@ export async function saveModelStore(
 
 export async function scanModels(): Promise<ConnectorModelProfileStore> {
   return parseModelProfileStore(await invokeCommand<unknown>("scan_models"));
+}
+
+export async function getPrinterStore(): Promise<ConnectorPrinterStore> {
+  return parsePrinterStore(await invokeCommand<unknown>("get_printer_store"));
+}
+
+export async function savePrinterStore(
+  store: ConnectorPrinterStore,
+): Promise<ConnectorPrinterStore> {
+  return parsePrinterStore(await invokeCommand<unknown>("save_printer_store", { store }));
+}
+
+export async function scanPrinters(): Promise<ConnectorPrinterStore> {
+  return parsePrinterStore(await invokeCommand<unknown>("scan_printers"));
 }
 
 export async function pullOllamaModel(name: string): Promise<PullOllamaModelResult> {
