@@ -227,7 +227,11 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
           }
         />
       ) : (
-        <WikiPageTable rows={tableRows} />
+        <WikiPageTable
+          rows={tableRows}
+          worldSlug={worldSlug}
+          campaigns={campaigns.map((campaign) => ({ id: campaign.id, name: campaign.name }))}
+        />
       )}
     </WorldShell>
   );

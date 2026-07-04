@@ -172,6 +172,16 @@ export function GraphView({
     engineRef.current?.select(id);
   }, []);
 
+  // Detail-Panel per Escape schließen (Klick ins Leere schließt bewusst nicht).
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closePanel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, closePanel]);
+
   const presentCategories = useMemo(() => {
     const present = new Set(nodes.map((node) => node.category));
     return CATEGORY_ORDER.filter((cat) => present.has(cat));

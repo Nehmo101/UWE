@@ -149,4 +149,53 @@ describe("wikitext convert service", () => {
     const preview = await service.previewWorldConversion("gibt-es-nicht");
     assert.equal(preview, null);
   });
+
+  it("detectType derives the page type from a content marker (undoable)", async () => {
+    const tdSlug = "type-detect-test";
+    const world = await repo.createWorld({ name: "Type Detect", slug: tdSlug });
+    await repo.createPage({
+      worldId: world.id,
+      title: "Thalindor Golsa",
+      slug: "thalindor-golsa",
+      type: "note",
+      visibility: "dm_only",
+      publishStatus: "draft",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "dm_only",
+          content: "Kategorie: NPC — ein Händler der verborgenen Rebellion.",
+        },
+      ],
+    });
+
+    // Ohne detectType wird kein Typwechsel vorgeschlagen.
+    const plain = await service.previewWorldConversion(tdSlug);
+    assert.ok(plain);
+    assert.equal(plain.typeChanges.length, 0);
+
+    // Mit detectType: note -> npc.
+    const preview = await service.previewWorldConversion(tdSlug, { detectType: true });
+    assert.ok(preview);
+    assert.equal(preview.typeChanges.length, 1);
+    assert.equal(preview.typeChanges[0]!.fromType, "note");
+    assert.equal(preview.typeChanges[0]!.toType, "npc");
+
+    const applied = await service.applyWorldConversion(tdSlug, { detectType: true });
+    assert.equal(applied.ok, true);
+    assert.equal(applied.typeChangeCount, 1);
+
+    const page = await repo.getPageBySlug(tdSlug, "thalindor-golsa");
+    assert.equal(page!.type, "npc");
+
+    // Undo stellt den ursprünglichen Typ wieder her.
+    const undo = createUndoService(db);
+    for (const undoEntryId of applied.undoEntryIds) {
+      const undoResult = await undo.undo(undoEntryId);
+      assert.equal(undoResult.ok, true, undoResult.message);
+    }
+    const restored = await repo.getPageBySlug(tdSlug, "thalindor-golsa");
+    assert.equal(restored!.type, "note");
+  });
 });
