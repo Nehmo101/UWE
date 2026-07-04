@@ -11,6 +11,7 @@ import {
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
 import { markMaintenanceDoneAction } from "@/app/household-actions";
+import { updateCaptureStatusAction } from "@/app/capture-actions";
 import { formatEuroFromCents } from "@uwe/database/contract-expense-utils";
 import { STUDIO_TODAY_PAGE_KEY, mergeMissingDefaultWidgets } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
@@ -160,9 +161,20 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
                       {CAPTURE_TYPE_LABELS[capture.captureType]} ·{" "}
                       {DATE_FORMAT.format(capture.capturedAt)}
                     </p>
-                    <p>
+                    <div className="uwe-today-card-actions">
                       <Link href={`/capture/${capture.id}`}>Triage →</Link>
-                    </p>
+                      <form action={updateCaptureStatusAction}>
+                        <input type="hidden" name="id" value={capture.id} />
+                        <input type="hidden" name="status" value="archived" />
+                        <button
+                          type="submit"
+                          className="uwe-v2-btn uwe-v2-btn-secondary"
+                          aria-label={`${capture.title || "Eintrag"} archivieren`}
+                        >
+                          Archivieren
+                        </button>
+                      </form>
+                    </div>
                   </article>
                 ))}
               </div>

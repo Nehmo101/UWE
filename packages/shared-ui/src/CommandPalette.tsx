@@ -13,10 +13,13 @@ import { useFocusTrap } from "./useFocusTrap";
 export interface CommandPaletteCommand {
   id: string;
   label: string;
-  href: string;
+  /** Zielseite bei Navigations-Befehlen. Entfällt bei Aktions-Befehlen (`run`). */
+  href?: string;
   group: string;
   /** Extra match terms beyond the label (e.g. synonyms, slugs). */
   keywords?: string[];
+  /** Aktions-Befehl: statt zu navigieren wird diese Funktion ausgeführt. */
+  run?: () => void | Promise<void>;
 }
 
 export interface CommandPaletteSearchResult {
@@ -52,9 +55,10 @@ export interface CommandPaletteProps {
 interface PaletteEntry {
   id: string;
   label: string;
-  href: string;
+  href?: string;
   group: string;
   hint?: string;
+  run?: () => void | Promise<void>;
 }
 
 export function CommandPalette({
@@ -144,6 +148,7 @@ export function CommandPalette({
       label: command.label,
       href: command.href,
       group: command.group,
+      run: command.run,
     }));
 
     const commandHrefs = new Set(commandEntries.map((entry) => entry.href));
@@ -168,7 +173,13 @@ export function CommandPalette({
     (entry: PaletteEntry | undefined) => {
       if (!entry) return;
       close();
-      window.location.assign(entry.href);
+      if (entry.run) {
+        void entry.run();
+        return;
+      }
+      if (entry.href) {
+        window.location.assign(entry.href);
+      }
     },
     [close],
   );
