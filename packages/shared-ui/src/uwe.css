@@ -1042,6 +1042,9 @@ html[data-theme="light"] {
 
 .uwe-tag,
 .wiki-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.72rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;

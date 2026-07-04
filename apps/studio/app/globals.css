@@ -586,6 +586,28 @@ body {
 .uwe-homelab-service-card h3 {
   margin: 0 0 0.35rem;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Colored status dot before the card title (the Parchment "Pünktchen"). */
+.uwe-homelab-service-card[data-status] h3::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex: none;
+  background: var(--uwe-fg-subtle);
+}
+.uwe-homelab-service-card[data-status="ok"] h3::before {
+  background: var(--uwe-success);
+}
+.uwe-homelab-service-card[data-status="warn"] h3::before {
+  background: var(--uwe-warning);
+}
+.uwe-homelab-service-card[data-status="error"] h3::before {
+  background: var(--uwe-danger);
 }
 
 .uwe-homelab-service-card p {
@@ -627,16 +649,36 @@ body {
   margin-top: 0.15rem;
 }
 
+.uwe-homelab-checklist li[data-status]::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  margin-right: 0.45rem;
+  vertical-align: middle;
+  background: var(--uwe-fg-subtle);
+}
+
 .uwe-homelab-checklist li[data-status="ok"] {
   border-color: color-mix(in srgb, var(--uwe-success) 35%, transparent);
+}
+.uwe-homelab-checklist li[data-status="ok"]::before {
+  background: var(--uwe-success);
 }
 
 .uwe-homelab-checklist li[data-status="warn"] {
   border-color: color-mix(in srgb, var(--uwe-warning) 35%, transparent);
 }
+.uwe-homelab-checklist li[data-status="warn"]::before {
+  background: var(--uwe-warning);
+}
 
 .uwe-homelab-checklist li[data-status="error"] {
   border-color: color-mix(in srgb, var(--uwe-danger) 35%, transparent);
+}
+.uwe-homelab-checklist li[data-status="error"]::before {
+  background: var(--uwe-danger);
 }
 
 .uwe-homelab-runbook-list {
@@ -687,22 +729,43 @@ body {
 }
 
 .uwe-hw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.72rem;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
   white-space: nowrap;
 }
 
+.uwe-hw-badge::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  flex: none;
+  background: var(--uwe-fg-subtle);
+}
+
 .uwe-hw-badge-active {
   border: 1px solid color-mix(in srgb, var(--uwe-success) 35%, transparent);
+}
+.uwe-hw-badge-active::before {
+  background: var(--uwe-success);
 }
 
 .uwe-hw-badge-error {
   border: 1px solid color-mix(in srgb, var(--uwe-danger) 35%, transparent);
 }
+.uwe-hw-badge-error::before {
+  background: var(--uwe-danger);
+}
 
 .uwe-hw-badge-planned {
   border: 1px solid color-mix(in srgb, var(--uwe-warning) 35%, transparent);
+}
+.uwe-hw-badge-planned::before {
+  background: var(--uwe-warning);
 }
 
 .uwe-hw-badge-neutral {

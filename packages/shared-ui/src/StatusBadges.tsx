@@ -13,6 +13,31 @@ import type {
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
 
+/**
+ * Freeform wiki tags carry no color in the data model, so give each a stable,
+ * deterministic swatch color from the semantic palette — the Parchment-OS
+ * "bunte Pünktchen" applied to tags.
+ */
+const TAG_SWATCHES = ["uwe-dot-success", "uwe-dot-warning", "uwe-dot-accent"] as const;
+
+function tagSwatchClass(tag: string): string {
+  let hash = 0;
+  for (let index = 0; index < tag.length; index += 1) {
+    hash = (hash * 31 + tag.charCodeAt(index)) >>> 0;
+  }
+  return TAG_SWATCHES[hash % TAG_SWATCHES.length];
+}
+
+/** A wiki tag/label chip with a colored square swatch. */
+export function TagChip({ tag }: { tag: string }) {
+  return (
+    <span className="uwe-tag">
+      <span className={`uwe-dot uwe-dot-square ${tagSwatchClass(tag)}`} aria-hidden />
+      {tag}
+    </span>
+  );
+}
+
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
   private: "Privat",
   dm_only: "Nur GM",
@@ -601,7 +626,7 @@ export function MetaPanel({
             <dt>Tags</dt>
             <dd className="uwe-tag-list">
               {tags.map((tag) => (
-                <span key={tag} className="uwe-tag">{tag}</span>
+                <TagChip key={tag} tag={tag} />
               ))}
             </dd>
           </div>

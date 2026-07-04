@@ -38,8 +38,26 @@ export default async function SystemHealthPage() {
             Was macht UWE langsam? Datenbankgröße, größte Tabellen, Upload-Volumen und
             Connector-Erreichbarkeit auf einen Blick — praktisch auf dem eigenen Host.
           </p>
-          <p style={{ color: LIGHT_COLOR[metrics.light], fontWeight: 600 }}>
-            ● {LIGHT_LABEL[metrics.light]}
+          <p
+            style={{
+              color: LIGHT_COLOR[metrics.light],
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+            }}
+          >
+            <span
+              className={`uwe-dot ${
+                metrics.light === "green"
+                  ? "uwe-dot-success"
+                  : metrics.light === "yellow"
+                    ? "uwe-dot-warning"
+                    : "uwe-dot-danger"
+              }`}
+              aria-hidden
+            />
+            {LIGHT_LABEL[metrics.light]}
           </p>
         </header>
 
