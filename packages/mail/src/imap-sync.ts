@@ -1,4 +1,6 @@
 import { ImapFlow } from "imapflow";
+import { parseRawMailSource, type ParsedMailAttachment } from "./mime-decode";
+import { sanitizeMailHtml } from "./mail-portal-types";
 
 export interface ImapCredentials {
   host: string;
@@ -16,6 +18,8 @@ export interface FetchedInboxMessage {
   toAddresses: string[];
   snippet: string | null;
   bodyText: string | null;
+  bodyHtml: string | null;
+  attachments: ParsedMailAttachment[];
   receivedAt: Date;
   isRead: boolean;
 }
@@ -84,13 +88,17 @@ export async function fetchImapInboxMessages(
         if (!message || message.uid == null) continue;
 
         let bodyText: string | null = null;
+        let bodyHtml: string | null = null;
+        let attachments: ParsedMailAttachment[] = [];
         if (message.source) {
-          const raw = message.source.toString("utf8");
-          const plainMatch = raw.match(/Content-Type: text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|\r?\n\.\r?\n|$)/i);
-          bodyText = plainMatch?.[1]?.trim() ?? null;
-          if (!bodyText) {
-            const stripped = raw.replace(/^[\s\S]*?\r?\n\r?\n/, "").trim();
-            bodyText = stripped.length > 0 ? stripped.slice(0, 8000) : null;
+          try {
+            const parsed = await parseRawMailSource(message.source);
+            bodyText = parsed.bodyText;
+            bodyHtml = parsed.bodyHtml;
+            attachments = parsed.attachments;
+          } catch {
+            // Fall back to raw source truncation if MIME parsing fails outright.
+            bodyText = message.source.toString("utf8").slice(0, 8000);
           }
         }
 
@@ -101,8 +109,10 @@ export async function fetchImapInboxMessages(
           subject: envelope?.subject ?? "",
           fromAddress: extractAddress(envelope?.from?.[0]),
           toAddresses: (envelope?.to ?? []).map((entry) => extractAddress(entry)).filter(Boolean),
-          snippet: truncateSnippet(bodyText ?? envelope?.subject ?? ""),
+          snippet: truncateSnippet(bodyText ?? (bodyHtml ? sanitizeMailHtml(bodyHtml) : null) ?? envelope?.subject ?? ""),
           bodyText,
+          bodyHtml,
+          attachments,
           receivedAt:
             message.internalDate instanceof Date
               ? message.internalDate

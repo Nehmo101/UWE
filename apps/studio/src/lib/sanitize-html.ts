@@ -21,3 +21,64 @@ export function sanitizeHtml(html: string): string {
     FORBID_ATTR: ["style"],
   });
 }
+
+const REMOTE_URL_PATTERN = /^https?:\/\//i;
+const REMOTE_CSS_URL_PATTERN = /url\(\s*['"]?https?:\/\//i;
+
+/**
+ * Sanitizes an inbound HTML mail body for display in the mail reader.
+ *
+ * Unlike {@link sanitizeHtml} (used for outbound DM-composed mail previews),
+ * this keeps the `style` attribute — marketing/newsletter HTML relies almost
+ * entirely on inline styles for layout — but forbids the `<style>` element so
+ * a message can't inject page-wide CSS into the surrounding Studio UI, and
+ * strips `class`/`id` so a message can't collide with host-page selectors.
+ *
+ * Remote (`http(s)://`) image loads are blocked by default (classic
+ * tracking-pixel privacy leak) and moved into a `data-uwe-remote-src`
+ * attribute; the reader can reveal them per-message on explicit user action.
+ * `data:`/`cid:`-embedded images (mailparser already inlines `cid:` refs as
+ * `data:` URIs) are left untouched since they never hit the network.
+ */
+export function sanitizeMailBodyHtml(html: string): string {
+  if (!html) {
+    return "";
+  }
+
+  const blockRemoteImages = (node: Element) => {
+    if (!node.tagName) return;
+    const tag = node.tagName;
+
+    if (tag === "IMG") {
+      const src = node.getAttribute("src") ?? "";
+      if (REMOTE_URL_PATTERN.test(src)) {
+        node.removeAttribute("src");
+        node.setAttribute("data-uwe-remote-src", src);
+      }
+      if (node.hasAttribute("srcset")) node.removeAttribute("srcset");
+    } else if (tag === "SOURCE" && node.hasAttribute("srcset")) {
+      node.removeAttribute("srcset");
+    }
+
+    if (node.hasAttribute("background")) {
+      node.removeAttribute("background");
+    }
+
+    const style = node.getAttribute("style");
+    if (style && REMOTE_CSS_URL_PATTERN.test(style)) {
+      node.removeAttribute("style");
+    }
+  };
+
+  DOMPurify.addHook("afterSanitizeAttributes", blockRemoteImages);
+  try {
+    return DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form"],
+      FORBID_ATTR: ["class", "id"],
+      ADD_ATTR: ["data-uwe-remote-src"],
+    });
+  } finally {
+    DOMPurify.removeHook("afterSanitizeAttributes");
+  }
+}

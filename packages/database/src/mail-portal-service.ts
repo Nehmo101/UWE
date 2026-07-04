@@ -332,6 +332,11 @@ export class MailPortalService {
       ...this.toMessageSummary(row),
       bodyText: row.bodyText,
       bodyHtml: row.bodyHtml ? sanitizeMailHtml(row.bodyHtml) : null,
+      // Raw (unsanitized) HTML, kept separate from `bodyHtml` above so callers that
+      // need to render markup safely can run their own display-sanitizer over it
+      // (e.g. the Studio API route uses DOMPurify + tracking-pixel blocking) without
+      // changing the tag-stripped `bodyHtml` contract other consumers already rely on.
+      bodyHtmlRaw: row.bodyHtml,
       toAddresses: row.toAddresses,
       ccAddresses: row.ccAddresses,
       attachments: row.attachments.map((a) => ({
