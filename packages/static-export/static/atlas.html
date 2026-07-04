@@ -795,7 +795,7 @@ function drawFeature(ctx, f) {
 }
 
 // Ranke/Weltenwurzel: geteiltes Pseudo-3D-Rendering aus @uwe/atlas (vine.ts) —
-// buildVineLayout smootht selbst, daher rohe Koordinaten übergeben.
+// buildVineLayout glättet selbst, daher rohe Koordinaten übergeben.
 function drawVineFeature(ctx, f, sel) {
   const s = f.style || {};
   const layout = engine.buildVineLayout(f.geometry.coordinates || [], {
@@ -1536,7 +1536,9 @@ function wire() {
       if (f && f.kind === "vine") {
         pushUndo(); f.style = f.style || {};
         // Deterministische Seed-Folge (LCG) — gleicher Klickpfad ⇒ gleiche Ranke.
-        f.style.seed = (((f.style.seed || 1) * 1103515245 + 12345) % 2147483647) >>> 0;
+        // seed via ?? (nicht ||), damit ein gültiger Seed 0 nicht zu 1 kollabiert
+        // — konsistent mit buildVineLayout (vine.ts), das 0 ebenfalls akzeptiert.
+        f.style.seed = ((((f.style.seed ?? 1) * 1103515245 + 12345) % 2147483647) >>> 0);
         markDirty(); draw();
       }
       return;

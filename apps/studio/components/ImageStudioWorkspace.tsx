@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Button, Card, ToolWindow } from "@uwe/shared-ui";
+import { Card, ToolWindow } from "@uwe/shared-ui";
+import { Button } from "@/src/components/ui/button";
 
 interface ImageStudioWorkspaceProps {
   inlineForm: ReactNode;
@@ -24,7 +25,7 @@ export function ImageStudioWorkspace({
         <div className="uwe-image-studio-launcher-actions">
           <Button
             type="button"
-            variant="primary"
+            variant="default"
             disabled={disabled}
             onClick={() => setOpen(true)}
           >

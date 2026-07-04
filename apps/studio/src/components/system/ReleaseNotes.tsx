@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Badge } from "@uwe/shared-ui";
 import type { ChangelogRelease } from "@/src/lib/changelog";
+import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
 import { cn } from "@/src/components/ui/cn";

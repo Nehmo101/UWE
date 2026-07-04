@@ -34,6 +34,19 @@ export interface HuggingFaceDownloadResult {
 const HUGGINGFACE_BASE_URL = "https://huggingface.co";
 const DEFAULT_REVISION = "main";
 const PROVIDER = "huggingface";
+const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
+
+/**
+ * Idle timeout between received chunks. A full-download timeout would be wrong
+ * for large models, so we abort only when the connection stalls (no data for
+ * this many ms). Configurable via `UWE_HF_DOWNLOAD_IDLE_TIMEOUT_MS`.
+ */
+function resolveIdleTimeoutMs(env: NodeJS.ProcessEnv): number {
+  const raw = env.UWE_HF_DOWNLOAD_IDLE_TIMEOUT_MS?.trim();
+  if (!raw) return DEFAULT_IDLE_TIMEOUT_MS;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_IDLE_TIMEOUT_MS;
+}
 
 function normalizeRepoId(value: string): string {
   const repoId = value.trim();
@@ -97,6 +110,7 @@ async function writeResponseBody(
   response: Response,
   targetPath: string,
   onProgress?: (progress: HuggingFaceDownloadProgress) => void,
+  onChunk?: () => void,
 ): Promise<number> {
   if (!response.body) {
     throw new Error("Hugging-Face-Download lieferte keinen Datenstrom.");
@@ -112,16 +126,34 @@ async function writeResponseBody(
   const reader = response.body.getReader();
   let completed = 0;
 
+  // Capture asynchronous write-stream errors (disk full, permissions, I/O).
+  // Without this listener Node would emit an unhandled 'error' event and crash
+  // the whole connector process instead of failing just this download.
+  let writerError: Error | null = null;
+  const captureWriterError = (error: Error) => {
+    writerError = error;
+  };
+  writer.on("error", captureWriterError);
+
+  const throwIfWriterFailed = () => {
+    if (writerError) {
+      throw writerError;
+    }
+  };
+
   try {
     onProgress?.({ status: "Download gestartet", total, completed, fraction: total ? 0 : undefined });
 
     for (;;) {
+      throwIfWriterFailed();
       const { value, done } = await reader.read();
       if (done) break;
       if (!value) continue;
+      onChunk?.();
 
       const chunk = Buffer.from(value);
       completed += chunk.byteLength;
+      throwIfWriterFailed();
       if (!writer.write(chunk)) {
         await once(writer, "drain");
       }
@@ -133,18 +165,24 @@ async function writeResponseBody(
         fraction: total && total > 0 ? Math.max(0, Math.min(1, completed / total)) : undefined,
       });
     }
+
+    throwIfWriterFailed();
+    writer.end();
+    await once(writer, "finish");
+    throwIfWriterFailed();
+    renameSync(tempPath, targetPath);
+    return statSync(targetPath).size;
   } catch (error) {
     writer.destroy();
+    // Wait for the stream to fully close before removing the temp file so a
+    // pending async open/write cannot race the rm (and emit a stray ENOENT).
+    await once(writer, "close").catch(() => {});
     rmSync(tempPath, { force: true });
     throw error;
   } finally {
     reader.releaseLock();
+    writer.off("error", captureWriterError);
   }
-
-  writer.end();
-  await once(writer, "finish");
-  renameSync(tempPath, targetPath);
-  return statSync(targetPath).size;
 }
 
 function upsertProfile(
@@ -167,19 +205,39 @@ export async function downloadHuggingFaceModel(
   const url = buildResolveUrl(repoId, filename, revision);
   const targetPath = resolveTargetPath(dataDir, repoId, filename, revision);
 
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "application/octet-stream",
-      ...authHeaders(process.env),
-    },
-  });
+  const idleTimeoutMs = resolveIdleTimeoutMs(process.env);
+  const controller = new AbortController();
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const armIdleTimeout = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      controller.abort(
+        new Error(`Hugging-Face-Download abgebrochen: seit ${idleTimeoutMs} ms keine Daten empfangen.`),
+      );
+    }, idleTimeoutMs);
+  };
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Hugging-Face-Download HTTP ${response.status}: ${body.slice(0, 240)}`);
+  let sizeBytes: number;
+  try {
+    armIdleTimeout();
+    const response = await fetchImpl(url, {
+      headers: {
+        Accept: "application/octet-stream",
+        ...authHeaders(process.env),
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Hugging-Face-Download HTTP ${response.status}: ${body.slice(0, 240)}`);
+    }
+
+    sizeBytes = await writeResponseBody(response, targetPath, onProgress, armIdleTimeout);
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer);
   }
 
-  const sizeBytes = await writeResponseBody(response, targetPath, onProgress);
   const store = loadModelProfileStore(dataDir);
   const displayName = basename(filename);
   const profile = createModelProfile({

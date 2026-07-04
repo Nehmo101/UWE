@@ -25,6 +25,9 @@ const WORLDS = "Welten";
 const KNOWLEDGE = "Knowledge & Brain";
 const AI = "AI & Generatoren";
 const TOOLS = "Werkzeuge";
+const TOOLS_DAILY = "Erfassen & Alltag";
+const TOOLS_CONTENT = "Inhalte & Medien";
+const TOOLS_AUTOMATION = "Automatisierung";
 
 export const START_NAV: NavGroup[] = [
   {
@@ -194,17 +197,23 @@ export const AI_NAV: NavGroup[] = [
   },
 ];
 
+/**
+ * „Werkzeuge" ist eine kanonische Sektion, aber mit 13 heterogenen Einträgen zu
+ * überladen. Sie wird daher — wie „Organisation"/„System" — in mehrere NavGroups
+ * mit eigenen Sidebar-Sub-Headern aufgeteilt. Alle Einträge behalten
+ * `section: TOOLS`, sodass die 7-Sektionen-IA und die Nav-Tests unverändert bleiben.
+ */
 export const TOOLS_NAV: NavGroup[] = [
   {
-    id: "tools",
-    title: TOOLS,
+    id: "tools-daily",
+    title: TOOLS_DAILY,
     items: [
       {
         id: "tools-capture",
         label: "Capture / Inbox",
         href: "/capture",
         icon: "inbox",
-        group: TOOLS,
+        group: TOOLS_DAILY,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -216,7 +225,7 @@ export const TOOLS_NAV: NavGroup[] = [
         label: "Scan Inbox",
         href: "/scan-inbox",
         icon: "scan-line",
-        group: TOOLS,
+        group: TOOLS_DAILY,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -228,7 +237,7 @@ export const TOOLS_NAV: NavGroup[] = [
         label: "Mach weiter",
         href: "/continue",
         icon: "play",
-        group: TOOLS,
+        group: TOOLS_DAILY,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -240,7 +249,7 @@ export const TOOLS_NAV: NavGroup[] = [
         label: "Finanzen / Abos",
         href: "/finance",
         icon: "wallet",
-        group: TOOLS,
+        group: TOOLS_DAILY,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -248,23 +257,11 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["finanzen", "abos", "kosten", "verträge", "kündigung"],
       },
       {
-        id: "tools-prompts",
-        label: "Prompt-Bibliothek",
-        href: "/prompts",
-        icon: "square-terminal",
-        group: TOOLS,
-        section: TOOLS,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "studio",
-        keywords: ["prompt", "bibliothek", "vorlage", "agent", "cursor", "claude"],
-      },
-      {
         id: "tools-household",
         label: "Haushalt",
         href: "/household",
         icon: "house",
-        group: TOOLS,
+        group: TOOLS_DAILY,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -272,11 +269,29 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["haushalt", "wartung", "müll", "termine", "rauchmelder", "erinnerung"],
       },
       {
+        id: "tools-kitchen",
+        label: "Küche",
+        href: "/kitchen",
+        icon: "utensils",
+        group: TOOLS_DAILY,
+        section: TOOLS,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "studio",
+        keywords: ["küche", "kitchen", "rezepte", "essen", "kochen", "essensplaner"],
+      },
+    ],
+  },
+  {
+    id: "tools-content",
+    title: TOOLS_CONTENT,
+    items: [
+      {
         id: "tools-templates",
         label: "Templates",
         href: "/templates",
         icon: "layout-template",
-        group: TOOLS,
+        group: TOOLS_CONTENT,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -284,23 +299,23 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["templates", "vorlagen"],
       },
       {
-        id: "tools-kitchen",
-        label: "Küche",
-        href: "/kitchen",
-        icon: "utensils",
-        group: TOOLS,
+        id: "tools-prompts",
+        label: "Prompt-Bibliothek",
+        href: "/prompts",
+        icon: "square-terminal",
+        group: TOOLS_CONTENT,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
         source: "studio",
-        keywords: ["küche", "kitchen", "rezepte", "essen", "kochen", "essensplaner"],
+        keywords: ["prompt", "bibliothek", "vorlage", "agent", "cursor", "claude"],
       },
       {
         id: "tools-image-studio",
         label: "Image Studio",
         href: "/image-studio",
         icon: "image",
-        group: TOOLS,
+        group: TOOLS_CONTENT,
         section: TOOLS,
         permission: ["owner", "admin", "dm"],
         status: "active",
@@ -308,11 +323,29 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["image", "bild", "medien"],
       },
       {
+        id: "tools-import-central",
+        label: "Import-Zentrale",
+        href: "/import",
+        icon: "file-input",
+        group: TOOLS_CONTENT,
+        section: TOOLS,
+        permission: ["owner", "admin", "dm"],
+        status: "active",
+        source: "studio",
+        keywords: ["import", "knoteforge", "markdown", "obsidian", "pdf", "zentrale"],
+      },
+    ],
+  },
+  {
+    id: "tools-automation",
+    title: TOOLS_AUTOMATION,
+    items: [
+      {
         id: "tools-reviews",
         label: "Reviews",
         href: "/admin/reviews",
         icon: "check-check",
-        group: TOOLS,
+        group: TOOLS_AUTOMATION,
         section: TOOLS,
         permission: ["owner", "admin"],
         status: "active",
@@ -324,7 +357,7 @@ export const TOOLS_NAV: NavGroup[] = [
         label: "Agent Jobs",
         href: "/admin/agent-jobs",
         icon: "bot",
-        group: TOOLS,
+        group: TOOLS_AUTOMATION,
         section: TOOLS,
         permission: ["owner", "admin"],
         status: "active",
@@ -332,23 +365,11 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["agent", "jobs"],
       },
       {
-        id: "tools-import-central",
-        label: "Import-Zentrale",
-        href: "/import",
-        icon: "file-input",
-        group: TOOLS,
-        section: TOOLS,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "studio",
-        keywords: ["import", "knoteforge", "markdown", "obsidian", "pdf", "zentrale"],
-      },
-      {
         id: "tools-jobs",
         label: "Jobs",
         href: "/jobs",
         icon: "list-checks",
-        group: TOOLS,
+        group: TOOLS_AUTOMATION,
         section: TOOLS,
         permission: ["owner", "admin"],
         status: "active",

@@ -1,3 +1,4 @@
+import { slugifyPageTitle } from "@uwe/database/server";
 import type { UweRepository } from "@uwe/database/server";
 import type { AiContext, AiContextSource, AiProviderId, AiTaskType } from "./types";
 import { extractDmOnlyPhrases, validatePlayerRecapContent } from "./privacy";
@@ -43,11 +44,7 @@ export async function saveAiResultAsIdea(
     model?: string;
   },
 ) {
-  const slugBase = input.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
+  const slugBase = slugifyPageTitle(input.title).slice(0, 40);
   const slug = `idee-${slugBase}-${Date.now().toString(36)}`;
 
   return repo.createIdeaPage({

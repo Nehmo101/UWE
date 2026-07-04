@@ -281,6 +281,7 @@ export class GraphEngine {
     if (this.ro) this.ro.disconnect();
     const c = this.canvas;
     c.onpointerdown = c.onpointermove = c.onpointerup = c.onpointerleave = null;
+    c.onpointercancel = null;
     c.onwheel = null;
   }
 
@@ -303,8 +304,20 @@ export class GraphEngine {
     this.wake();
   }
   select(id: string | null): void {
+    // Den zuvor fixierten Auswahl-Knoten wieder freigeben …
+    if (this.selectedId && this.selectedId !== id) {
+      const prev = this.map.get(this.selectedId);
+      if (prev && !this.locked) prev.fixed = false;
+    }
     this.selectedId = id;
-    const nd = id ? this.nodes.find((n) => n.id === id) ?? null : null;
+    const nd = id ? this.map.get(id) ?? null : null;
+    // … und den neu gewählten Knoten fixieren, damit er nicht wegdriftet,
+    // während der Cursor zum Detail-Panel ("Seite öffnen") wandert.
+    if (nd) {
+      nd.fixed = true;
+      nd.vx = 0;
+      nd.vy = 0;
+    }
     this.onSelect(nd);
     this.wake();
   }
@@ -781,12 +794,16 @@ export class GraphEngine {
     };
     const end = (e: PointerEvent) => {
       if (down && this.drag) {
-        if (!this.locked) this.drag.fixed = false;
+        // Gezogenen Knoten wieder freigeben — außer er ist die aktuelle Auswahl
+        // (die bleibt fixiert) oder das Layout ist global gesperrt.
+        if (!this.locked && this.drag.id !== this.selectedId) this.drag.fixed = false;
       }
-      if (down && moved < 5) {
-        if (down.hit) this.select(down.hit.id);
-        else this.select(null);
+      if (down && moved < 5 && down.hit) {
+        this.select(down.hit.id);
       }
+      // Ein Klick ins Leere hebt die Auswahl bewusst NICHT auf: das Detail-Panel
+      // bleibt offen, bis es über × / Escape geschlossen oder ein anderer Knoten
+      // gewählt wird — so verschwindet es nicht, während man zu "Seite öffnen" zieht.
       this.drag = null;
       down = null;
       this.wake();
@@ -797,6 +814,9 @@ export class GraphEngine {
       }
     };
     c.onpointerup = end;
+    // Pointer-Cancel (z. B. abgebrochene Geste) setzt den Zieh-/Klick-Zustand
+    // sauber zurück, damit keine „hängende" Interaktion die Auswahl kippt.
+    c.onpointercancel = end;
     c.onpointerleave = (e) => {
       if (this.hoverId) {
         this.hoverId = null;

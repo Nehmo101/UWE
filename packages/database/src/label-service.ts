@@ -8,6 +8,7 @@ import type {
   Page,
   Prisma,
 } from "./generated/prisma/client";
+import { slugifyDe } from "@uwe/shared-utils";
 import { createPrismaClient, prisma, type PrismaClient } from "./client";
 import {
   defaultElementsForMode,
@@ -574,11 +575,7 @@ export class LabelService {
     if (!label) throw new Error("Label not found");
 
     const parsed = normalizeLabel(label);
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 48) || `template-${Date.now()}`;
+    const slug = slugifyDe(name, { maxLength: 48 }) || `template-${Date.now()}`;
 
     const layoutSettings: LabelLayoutSettings = {
       mode: parsed.layoutSettings.mode,
@@ -609,13 +606,7 @@ export class LabelService {
   }
 
   async createWorldTemplate(input: CreateLabelTemplateInput): Promise<LabelTemplate> {
-    const slug =
-      input.slug ??
-      input.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 48);
+    const slug = input.slug ?? slugifyDe(input.name, { maxLength: 48 });
 
     const layoutSettings: LabelLayoutSettings = {
       ...input.layoutSettings,
