@@ -47,6 +47,31 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
     [draft.profiles],
   );
 
+  function applyProfileField(
+    profiles: ConnectorModelProfileStore["profiles"],
+    profileId: string,
+    field: "displayName" | "description" | "bestFor" | "enabledForUwe",
+    value: boolean | string,
+  ): ConnectorModelProfileStore["profiles"] {
+    return profiles.map((profile) => {
+      if (profile.id !== profileId) {
+        return profile;
+      }
+
+      if (field === "bestFor" && typeof value === "string") {
+        return {
+          ...profile,
+          bestFor: value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+        };
+      }
+
+      return { ...profile, [field]: value };
+    });
+  }
+
   function updateProfile(
     profileId: string,
     field: "displayName" | "description" | "bestFor" | "enabledForUwe",
@@ -54,40 +79,42 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
   ) {
     setDraft((current) => ({
       ...current,
-      profiles: current.profiles.map((profile) => {
-        if (profile.id !== profileId) {
-          return profile;
-        }
-
-        if (field === "bestFor" && typeof value === "string") {
-          return {
-            ...profile,
-            bestFor: value
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean),
-          };
-        }
-
-        return { ...profile, [field]: value };
-      }),
+      profiles: applyProfileField(current.profiles, profileId, field, value),
     }));
   }
 
-  async function saveReleaseConfig() {
+  async function persistDraft(nextDraft: ConnectorModelProfileStore) {
     setBusy(true);
     setError(null);
     setNotice(null);
 
     try {
-      const saved = await onSaveStore(draft);
+      const saved = await onSaveStore(nextDraft);
       setDraft(saved);
-      setNotice(`${saved.profiles.filter((profile) => profile.enabledForUwe).length} Modelle für UWE freigegeben.`);
+      setNotice(
+        `${saved.profiles.filter((profile) => profile.enabledForUwe).length} Modelle für UWE freigegeben.`,
+      );
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
       setBusy(false);
     }
+  }
+
+  // The freigeben-toggle is the one control users expect to take effect at once,
+  // so persist it immediately instead of waiting for the separate save button —
+  // and surface any save failure right away instead of silently losing the flag.
+  function toggleEnabledForUwe(profileId: string, checked: boolean) {
+    const nextDraft: ConnectorModelProfileStore = {
+      ...draft,
+      profiles: applyProfileField(draft.profiles, profileId, "enabledForUwe", checked),
+    };
+    setDraft(nextDraft);
+    void persistDraft(nextDraft);
+  }
+
+  async function saveReleaseConfig() {
+    await persistDraft(draft);
   }
 
   const sortedProfiles = [...draft.profiles].sort((left, right) =>
@@ -112,7 +139,9 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
         </div>
 
         <p className="connector-muted">
-          Nur Modelle mit „Für UWE freigeben“ werden per Heartbeat an den Host gemeldet.
+          Nur Modelle mit „Für UWE freigeben“ werden per Heartbeat an den Host gemeldet. Der
+          Schalter speichert sofort; „Freigaben speichern“ sichert zusätzlich Änderungen an
+          Anzeigename, Best for und Beschreibung.
         </p>
 
         {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
@@ -180,8 +209,9 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
                   <input
                     type="checkbox"
                     checked={profile.enabledForUwe}
+                    disabled={busy}
                     onChange={(event) =>
-                      updateProfile(profile.id, "enabledForUwe", event.target.checked)
+                      toggleEnabledForUwe(profile.id, event.target.checked)
                     }
                   />
                   <span>Für UWE freigeben</span>
