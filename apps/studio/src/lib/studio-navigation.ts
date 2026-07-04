@@ -273,6 +273,14 @@ export function studioCommandPaletteCommands(options: {
   const { worlds, worldSlug, pathname = "" } = options;
   const list: StudioPaletteCommand[] = [];
 
+  list.push({
+    id: "quick-capture",
+    label: "Schnell erfassen",
+    href: "/capture?quick=1",
+    group: "Aktionen",
+    keywords: ["capture", "notiz", "erfassen", "todo", "idee", "inbox", "quick"],
+  });
+
   if (worldSlug) {
     const base = `/worlds/${worldSlug}`;
     const world = worlds.find((entry) => entry.slug === worldSlug);

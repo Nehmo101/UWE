@@ -10,6 +10,7 @@ import {
   useDashboardLayout,
 } from "@uwe/shared-ui";
 import { CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
+import { markMaintenanceDoneAction } from "@/app/household-actions";
 import { formatEuroFromCents } from "@uwe/database/contract-expense-utils";
 import { STUDIO_TODAY_PAGE_KEY, mergeMissingDefaultWidgets } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
@@ -403,6 +404,16 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
                       {task.nextDueAt ? ` · ${DATE_ONLY_FORMAT.format(task.nextDueAt)}` : ""}
                       {task.overdue ? " · überfällig" : ""}
                     </p>
+                    <form action={markMaintenanceDoneAction}>
+                      <input type="hidden" name="id" value={task.id} />
+                      <button
+                        type="submit"
+                        className="uwe-v2-btn uwe-v2-btn-secondary"
+                        aria-label={`${task.title} als erledigt markieren`}
+                      >
+                        ✓ Erledigt
+                      </button>
+                    </form>
                   </article>
                 ))}
               </div>

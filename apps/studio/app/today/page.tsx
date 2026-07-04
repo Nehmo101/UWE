@@ -5,6 +5,7 @@ import { StudioShell, PageHeader } from "@/src/components/shell";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
 import { TodayDashboardClient } from "./TodayDashboardClient";
+import { TodayQuickCapture } from "./TodayQuickCapture";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -26,6 +27,7 @@ export default async function TodayPage() {
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
       <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
+      <TodayQuickCapture />
       <TodayDashboardClient data={data} />
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">

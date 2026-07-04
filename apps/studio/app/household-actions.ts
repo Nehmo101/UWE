@@ -51,6 +51,7 @@ export async function markMaintenanceDoneAction(formData: FormData) {
     await household().markDone(id, new Date());
   }
   revalidatePath("/household");
+  revalidatePath("/today");
 }
 
 export async function deleteMaintenanceTaskAction(formData: FormData) {
