@@ -612,7 +612,7 @@ export function AtlasViewer({
             // buildVineLayout glättet selbst, daher rohe Koordinaten übergeben.
             const vs = (feat.style ?? {}) as {
               taperStart?: number; taperEnd?: number; coil?: number;
-              tendrils?: number; height?: number; seed?: number;
+              tendrils?: number; height?: number; seed?: number; thickness?: number;
             };
             const layout = buildVineLayout(rawCoords, {
               taperStart: vs.taperStart, taperEnd: vs.taperEnd, coil: vs.coil,
@@ -622,8 +622,10 @@ export function AtlasViewer({
               drawVine(ctx, layout, {
                 project: (c) => w2c(c[0], c[1]),
                 zoom,
-                trunk: isHovered ? "#2563eb" : "#5c4326",
-                coil: "#4a6741",
+                trunk: isHovered ? "#2563eb" : "#ffffff",
+                coil: isHovered ? "#2563eb" : "#ffffff",
+                outline: "#241a10",
+                thickness: vs.thickness ?? 1,
                 shadow: "rgba(26,16,8,0.18)",
                 selected: isHovered,
               });

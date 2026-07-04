@@ -616,24 +616,26 @@
               const t0 = vs.taperStart != null ? vs.taperStart : 0.9;
               const t1 = vs.taperEnd != null ? vs.taperEnd : 0.15;
               const hgt = vs.height != null ? vs.height : 0.7;
+              const thick = vs.thickness != null ? vs.thickness : 1;
               const off = 0.05 * hgt;
-              const strokeVine = (dx, dy, color, mul) => {
+              const strokeVine = (dx, dy, color, mul, extraPx) => {
                 for (let i = 0; i < coords.length - 1; i++) {
                   const t = coords.length > 2 ? i / (coords.length - 2) : 0;
-                  const w = (t0 * (1 - t) + t1 * t) * 9 * zoom * mul;
+                  const w = (t0 * (1 - t) + t1 * t) * 9 * thick * zoom * mul;
                   const [sx, sy] = w2c(coords[i][0] + dx, coords[i][1] + dy);
                   const [ex, ey] = w2c(coords[i + 1][0] + dx, coords[i + 1][1] + dy);
                   ctx.beginPath();
                   ctx.moveTo(sx, sy);
                   ctx.lineTo(ex, ey);
                   ctx.strokeStyle = color;
-                  ctx.lineWidth = Math.max(0.6, w);
+                  ctx.lineWidth = Math.max(0.6, w) + (extraPx || 0);
                   ctx.stroke();
                 }
               };
               ctx.lineCap = "round";
-              strokeVine(off, off, "rgba(26,16,8,0.18)", 0.75);
-              strokeVine(0, 0, "#5c4326", 1);
+              strokeVine(off, off, "rgba(26,16,8,0.18)", 0.75, 0);
+              strokeVine(0, 0, "#241a10", 1, 2.6 * zoom);
+              strokeVine(0, 0, "#ffffff", 1, 0);
             } else if (feat.kind === "road") {
               ctx.beginPath();
               const [sx, sy] = w2c(coords[0][0], coords[0][1]);

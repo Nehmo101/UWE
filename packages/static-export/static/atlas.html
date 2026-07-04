@@ -100,6 +100,8 @@
       <button id="btn-undo" class="tb-btn editor-only" title="Rückgängig (Strg+Z)" disabled>↶</button>
       <button id="btn-redo" class="tb-btn editor-only" title="Wiederholen (Strg+Y / Strg+Umschalt+Z)" disabled>↷</button>
       <button id="btn-grid" class="tb-btn on" title="Gitter ein/aus">▦ Gitter</button>
+      <input type="range" id="grid-size" min="12" max="72" step="4" value="32" title="Rastergröße" style="width:70px; accent-color:var(--uwe-accent);" />
+      <span id="grid-size-val" style="font-family:var(--mono); font-size:10px; color:var(--uwe-fg-muted); min-width:28px;">32px</span>
       <button id="btn-vis" class="tb-btn editor-only" title="Portal-Sichtbarkeit dieser Ebene">🔒 Ebene privat</button>
       <button id="btn-ai" class="tb-btn editor-only" title="Prozeduralen KI-Entwurf vorschlagen — Proposal/Review, kein Auto-Apply">✦ KI-Entwurf</button>
       <button id="btn-handout" class="tb-btn editor-only" title="Handout-Seite erzeugen (Studio-Bridge)">↗ Handout</button>
@@ -302,7 +304,7 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // ===========================================================================
 const state = {
   tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree",
-  showGrid: true, zoom: 1, panX: 0, panY: 0,
+  showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
   toast: null, aiReview: null, stampVariation: true,
 };
@@ -708,10 +710,14 @@ function drawSelectionRects(ctx) {
 }
 
 function drawGrid(ctx) {
-  const [x0, y0] = w2c(0, 0); const ts = TILE * state.zoom;
+  // Rein visuelles Overlay — von der Terrain-Kachelgröße (TILE) entkoppelt,
+  // damit ein DM das Raster unabhängig von den gepinselten Terrain-Zellen skalieren kann.
+  const cell = state.gridCell || TILE;
+  const cols = Math.ceil(WORLD_W / cell); const rows = Math.ceil(WORLD_H / cell);
+  const [x0, y0] = w2c(0, 0); const ts = cell * state.zoom;
   ctx.save(); ctx.strokeStyle = "rgba(80,50,20,0.13)"; ctx.lineWidth = 1; ctx.beginPath();
-  for (let c = 0; c <= COLS; c++) { const x = Math.round(x0 + c * ts); const [, yA] = w2c(0, 0); const [, yB] = w2c(0, WORLD_H); ctx.moveTo(x, yA); ctx.lineTo(x, yB); }
-  for (let r = 0; r <= ROWS; r++) { const y = Math.round(y0 + r * ts); const [xA] = w2c(0, 0); const [xB] = w2c(WORLD_W, 0); ctx.moveTo(xA, y); ctx.lineTo(xB, y); }
+  for (let c = 0; c <= cols; c++) { const x = Math.round(x0 + c * ts); const [, yA] = w2c(0, 0); const [, yB] = w2c(0, WORLD_H); ctx.moveTo(x, yA); ctx.lineTo(x, yB); }
+  for (let r = 0; r <= rows; r++) { const y = Math.round(y0 + r * ts); const [xA] = w2c(0, 0); const [xB] = w2c(WORLD_W, 0); ctx.moveTo(xA, y); ctx.lineTo(xB, y); }
   ctx.stroke(); ctx.restore();
 }
 
@@ -805,7 +811,8 @@ function drawVineFeature(ctx, f, sel) {
   if (layout.spine.length < 2) return;
   engine.drawVine(ctx, layout, {
     project: (c) => n2c(c[0], c[1]), zoom: state.zoom,
-    trunk: sel ? "#c2622b" : "#5c4326", coil: "#4a6741",
+    trunk: sel ? "#c2622b" : "#ffffff", coil: sel ? "#c2622b" : "#ffffff",
+    outline: "#241a10", thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
     shadow: "rgba(26,16,8,0.18)", selected: sel,
   });
   const cloud = engine.getGlyphByKey("cloud");
@@ -1060,20 +1067,21 @@ function finishPath() {
   const k = nextKey();
   // Ranke: Pseudo-3D-Parameter reiten im style-JSON (siehe @uwe/atlas vine.ts).
   const style = isVine
-    ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, seed: engine.hashStringToSeed(k) }
+    ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
   doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
 }
 
 // ---- Ranke/Weltenwurzel: Panel-Defaults + Slider-Markup ----
-const VINE_DEFAULTS = { taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7 };
+const VINE_DEFAULTS = { taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1 };
 const VINE_SLIDERS = [
   ["taperStart", "Basisbreite", 0.3, 1.5, 0.05],
   ["taperEnd", "Spitzenbreite", 0.05, 0.6, 0.05],
   ["coil", "Windung", 0, 1, 0.1],
   ["tendrils", "Ausläufer", 0, 8, 1],
   ["height", "Höhe", 0, 1, 0.1],
+  ["thickness", "Dicke", 0.5, 2.2, 0.1],
 ];
 function vineSliderHtml(f, prop, label, min, max, step) {
   const v = f.style && f.style[prop] != null ? f.style[prop] : VINE_DEFAULTS[prop];
@@ -1363,6 +1371,8 @@ function refreshChrome() {
   el("btn-redo").disabled = !redoStack.length;
   // Grid / visibility toggles
   el("btn-grid").classList.toggle("on", st.showGrid);
+  el("grid-size").value = st.gridCell;
+  el("grid-size-val").textContent = st.gridCell + "px";
   const visBtn = el("btn-vis"), visOn = !!(n && n.visibility === "player_visible");
   visBtn.classList.toggle("on", visOn); visBtn.textContent = visOn ? "🌐 Ebene sichtbar" : "🔒 Ebene privat";
   el("btn-png").textContent = view ? "↓ Karte speichern" : "↓ PNG";
@@ -1505,6 +1515,7 @@ function wire() {
   el("brush-m").addEventListener("click", () => setState({ brushSize: 1 }));
   el("brush-l").addEventListener("click", () => setState({ brushSize: 2 }));
   el("btn-grid").addEventListener("click", () => { setState({ showGrid: !state.showGrid }); requestAnimationFrame(draw); });
+  el("grid-size").addEventListener("input", (e) => { setState({ gridCell: Number(e.target.value) }); requestAnimationFrame(draw); });
   el("btn-vis").addEventListener("click", toggleNodeVis);
   el("btn-ai").addEventListener("click", requestAiDraft);
   el("btn-handout").addEventListener("click", requestHandout);

@@ -212,12 +212,22 @@ export interface DrawVineOptions {
   coil: string;
   /** Cast-shadow colour (semi-transparent ink, e.g. "rgba(26,16,8,0.18)"). */
   shadow: string;
+  /**
+   * Outline stroked beneath trunk/coil/tendrils, in a wider width — keeps a
+   * light trunk colour (e.g. white) legible over parchment and biome fills.
+   * Omitted for no outline.
+   */
+  outline?: string;
+  /** Relative multiplier applied to the base trunk width. Default 1. */
+  thickness?: number;
   /** Draw a heavier trunk + highlight when selected. */
   selected?: boolean;
 }
 
-/** Base trunk width in pixels at relative width 1.0 (before zoom). */
+/** Base trunk width in pixels at relative width 1.0 (before zoom, before thickness). */
 const VINE_TRUNK_BASE_PX = 9;
+/** Extra pixels added to the outline pass width, before zoom. */
+const VINE_OUTLINE_PX = 2.6;
 
 /** Stroke a polyline of already-projected canvas points. */
 function strokePolyline(ctx: CanvasRenderingContext2D, pts: Coordinate[]): void {
@@ -226,6 +236,23 @@ function strokePolyline(ctx: CanvasRenderingContext2D, pts: Coordinate[]): void 
   ctx.moveTo(pts[0]![0], pts[0]![1]);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
   ctx.stroke();
+}
+
+/** Stroke each spine segment with its own tapered width (+ optional extra px). */
+function strokeTaperedTrunk(
+  ctx: CanvasRenderingContext2D,
+  pts: Coordinate[],
+  widths: number[],
+  base: number,
+  extraPx: number,
+): void {
+  for (let i = 0; i < pts.length - 1; i++) {
+    ctx.lineWidth = Math.max(0.6, widths[i]! * base) + extraPx;
+    ctx.beginPath();
+    ctx.moveTo(pts[i]![0], pts[i]![1]);
+    ctx.lineTo(pts[i + 1]![0], pts[i + 1]![1]);
+    ctx.stroke();
+  }
 }
 
 /**
@@ -244,7 +271,7 @@ export function drawVine(
   if (spine.length < 2) return;
   const { project, zoom, selected } = opts;
   const p = (pts: Coordinate[]): Coordinate[] => pts.map(project);
-  const base = VINE_TRUNK_BASE_PX * zoom * (selected ? 1.15 : 1);
+  const base = VINE_TRUNK_BASE_PX * (opts.thickness ?? 1) * zoom * (selected ? 1.15 : 1);
 
   ctx.save();
   ctx.lineCap = "round";
@@ -256,18 +283,24 @@ export function drawVine(
   ctx.lineWidth = Math.max(1, base * 0.75);
   strokePolyline(ctx, shadowPts);
 
-  // 2) Trunk — per-segment taper (thick base → thin tip), like the river taper.
   const spinePts = p(spine);
-  ctx.strokeStyle = opts.trunk;
-  for (let i = 0; i < spinePts.length - 1; i++) {
-    ctx.lineWidth = Math.max(0.6, widths[i]! * base);
-    ctx.beginPath();
-    ctx.moveTo(spinePts[i]![0], spinePts[i]![1]);
-    ctx.lineTo(spinePts[i + 1]![0], spinePts[i + 1]![1]);
-    ctx.stroke();
+
+  // 2) Optional outline pass — wider stroke beneath trunk/coil/tendrils, keeps
+  // a light trunk colour (e.g. white) legible over parchment and biome fills.
+  if (opts.outline) {
+    const outlinePx = VINE_OUTLINE_PX * zoom;
+    ctx.strokeStyle = opts.outline;
+    strokeTaperedTrunk(ctx, spinePts, widths, base, outlinePx);
+    ctx.lineWidth = Math.max(0.8, 1.4 * zoom) + outlinePx;
+    strokePolyline(ctx, p(coil));
+    for (const t of tendrils) strokePolyline(ctx, p(t));
   }
 
-  // 3) Coil helix + 4) tendrils — thin accent strokes.
+  // 3) Trunk — per-segment taper (thick base → thin tip), like the river taper.
+  ctx.strokeStyle = opts.trunk;
+  strokeTaperedTrunk(ctx, spinePts, widths, base, 0);
+
+  // 4) Coil helix + tendrils — thin accent strokes.
   ctx.strokeStyle = opts.coil;
   ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
   strokePolyline(ctx, p(coil));
