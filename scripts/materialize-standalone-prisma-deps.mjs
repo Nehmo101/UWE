@@ -84,6 +84,23 @@ function materializeStaticAssets(app, standaloneDir) {
   copyPath(staticSrc, staticDest, { dereference: true });
 }
 
+function materializePublicAssets(app, standaloneDir) {
+  // Next.js standalone output never includes `public/` on its own (documented
+  // upstream requirement) — without this copy, every public asset (icons,
+  // manifest, the embedded Atlas single-file editor under public/atlas/)
+  // 404s in production, which for the Atlas iframe surfaces as the app's
+  // own not-found page rendered inside the embed.
+  const publicSrc = path.join(ROOT, "apps", app, "public");
+  const publicDest = path.join(standaloneDir, "apps", app, "public");
+
+  if (!fs.existsSync(publicSrc)) {
+    console.warn(`[materialize] Skipping ${app} public assets: ${publicSrc} not found`);
+    return;
+  }
+
+  copyPath(publicSrc, publicDest, { dereference: true });
+}
+
 function materializeApp(app) {
   const standaloneDir = path.join(ROOT, "apps", app, ".next", "standalone");
   if (!fs.existsSync(standaloneDir)) {
@@ -100,6 +117,7 @@ function materializeApp(app) {
   }
 
   materializeStaticAssets(app, standaloneDir);
+  materializePublicAssets(app, standaloneDir);
 
   console.log(`[materialize] Updated standalone runtime deps for ${app}`);
   return true;

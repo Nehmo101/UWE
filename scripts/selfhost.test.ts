@@ -95,10 +95,12 @@ describe("self-hosting setup", () => {
     );
     assert.match(materialize, /adapter-libsql/);
     assert.match(materialize, /materializeStaticAssets/);
+    assert.match(materialize, /materializePublicAssets/);
 
     const check = fs.readFileSync(path.join(root, "scripts/check-standalone-prisma-deps.mjs"), "utf8");
     assert.match(check, /requireFromStandalone\(moduleName\)/);
     assert.match(check, /static assets/);
+    assert.match(check, /public assets/);
 
     const studioNext = fs.readFileSync(path.join(root, "apps/studio/next.config.ts"), "utf8");
     assert.match(studioNext, /getUweStandaloneNextConfig/);

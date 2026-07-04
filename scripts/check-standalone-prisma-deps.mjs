@@ -62,6 +62,7 @@ for (const moduleName of REQUIRED_MODULES) {
 }
 
 const staticDir = path.join(standaloneDir, "apps", app, ".next", "static");
+const publicDir = path.join(standaloneDir, "apps", app, "public");
 const generatedClient = path.join(
   standaloneDir,
   "packages",
@@ -76,6 +77,13 @@ if (!fs.existsSync(staticDir)) {
   console.error(`  FAIL static assets missing: ${staticDir}`);
 } else {
   console.log(`  OK  static assets -> ${staticDir}`);
+}
+
+if (!fs.existsSync(publicDir)) {
+  failed = true;
+  console.error(`  FAIL public assets missing: ${publicDir}`);
+} else {
+  console.log(`  OK  public assets -> ${publicDir}`);
 }
 
 if (!fs.existsSync(generatedClient)) {
