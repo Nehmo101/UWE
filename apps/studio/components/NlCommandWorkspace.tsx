@@ -83,8 +83,8 @@ const EXAMPLE_COMMANDS = [
   "lock portal",
 ];
 
-export function NlCommandWorkspace() {
-  const [text, setText] = useState("");
+export function NlCommandWorkspace({ initialText }: { initialText?: string } = {}) {
+  const [text, setText] = useState(initialText ?? "");
   const [parsing, setParsing] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,8 +113,10 @@ export function NlCommandWorkspace() {
     void loadAudit();
   }, [loadAudit]);
 
-  async function handleParse(event: React.FormEvent) {
-    event.preventDefault();
+  const runParse = useCallback(async (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
     setParsing(true);
     setError(null);
     setParsed(null);
@@ -124,7 +126,7 @@ export function NlCommandWorkspace() {
       const response = await fetch(studioApiUrl("/api/admin/command/parse"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: trimmed }),
       });
       const data = (await response.json()) as ParseSuccessResponse | ParseErrorResponse;
       if (!response.ok || !data.ok) {
@@ -137,7 +139,20 @@ export function NlCommandWorkspace() {
     } finally {
       setParsing(false);
     }
+  }, []);
+
+  function handleParse(event: React.FormEvent) {
+    event.preventDefault();
+    void runParse(text);
   }
+
+  // Aus der Command-Palette vorbefüllt (?q=): direkt parsen. Ausführung bleibt
+  // ein bewusster zweiter Klick — Bestätigungs-/HMAC-Flow unverändert.
+  useEffect(() => {
+    if (initialText?.trim()) {
+      void runParse(initialText);
+    }
+  }, [initialText, runParse]);
 
   async function handleExecute() {
     if (!parsed) return;

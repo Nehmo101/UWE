@@ -29,7 +29,7 @@ import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
-import { enforceStudioPageAuth } from "@/src/lib/auth";
+import { enforceStudioPageAuth, getCurrentAuthUser } from "@/src/lib/auth";
 import { enforceStudioMaintenance } from "@/src/lib/maintenance";
 import "@uwe/shared-ui/uwe.css";
 import "@uwe/shared-ui/wiki-base.css";
@@ -87,6 +87,14 @@ export default async function RootLayout({
     // still works with static commands.
   }
 
+  let canRunAdminCommands = false;
+  try {
+    const currentUser = await getCurrentAuthUser();
+    canRunAdminCommands = currentUser?.role === "owner" || currentUser?.role === "admin";
+  } catch {
+    // Auth/DB not ready — palette works without the admin-command entry.
+  }
+
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
       <body>
@@ -102,7 +110,7 @@ export default async function RootLayout({
           <ThemeDocumentSync theme={serverTheme} />
           {children}
           <GlobalCaptureFab />
-          <StudioCommandPalette worlds={worlds} />
+          <StudioCommandPalette worlds={worlds} canRunAdminCommands={canRunAdminCommands} />
           <TopBarSessionMount>
             <StudioSessionChrome />
           </TopBarSessionMount>

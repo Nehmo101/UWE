@@ -50,6 +50,10 @@ export interface CommandPaletteProps {
   /** GET endpoint receiving `?q=`; must return `{ results: CommandPaletteSearchResult[] }`. */
   searchEndpoint?: string;
   placeholder?: string;
+  /** Aktiviert eine "Query ausführen"-Zeile am Ende; erhält den rohen Suchtext. */
+  onSubmitQuery?: (query: string) => void;
+  /** Label der "Query ausführen"-Zeile. */
+  submitQueryLabel?: string;
 }
 
 interface PaletteEntry {
@@ -65,6 +69,8 @@ export function CommandPalette({
   commands,
   searchEndpoint,
   placeholder = "Befehl oder Seite suchen…",
+  onSubmitQuery,
+  submitQueryLabel = "Als Befehl ausführen",
 }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -162,8 +168,21 @@ export function CommandPalette({
         hint: result.hint,
       }));
 
-    return [...commandEntries, ...resultEntries];
-  }, [filteredCommands, searchResults]);
+    const trimmedQuery = query.trim();
+    const submitEntry: PaletteEntry[] =
+      onSubmitQuery && trimmedQuery
+        ? [
+            {
+              id: "submit-query",
+              label: `${submitQueryLabel}: „${trimmedQuery}“`,
+              group: "Befehl",
+              run: () => onSubmitQuery(trimmedQuery),
+            },
+          ]
+        : [];
+
+    return [...commandEntries, ...resultEntries, ...submitEntry];
+  }, [filteredCommands, searchResults, query, onSubmitQuery, submitQueryLabel]);
 
   useEffect(() => {
     setSelectedIndex(0);

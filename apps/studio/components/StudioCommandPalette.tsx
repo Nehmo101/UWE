@@ -8,6 +8,8 @@ import { generateMorningBriefingAction } from "@/app/briefing-actions";
 
 interface StudioCommandPaletteProps {
   worlds: { name: string; slug: string }[];
+  /** Nur Owner/Admin: aktiviert die "Als Admin-Befehl ausführen"-Zeile. */
+  canRunAdminCommands?: boolean;
 }
 
 /** Aktions-Befehle (führen etwas aus statt zu navigieren) — überall per Cmd/⌘+K. */
@@ -37,7 +39,10 @@ function worldSlugFromPathname(pathname: string): string | null {
   return RESERVED_TOP_LEVEL.has(slug) ? null : slug;
 }
 
-export function StudioCommandPalette({ worlds }: StudioCommandPaletteProps) {
+export function StudioCommandPalette({
+  worlds,
+  canRunAdminCommands = false,
+}: StudioCommandPaletteProps) {
   const pathname = usePathname();
   const worldSlug = worldSlugFromPathname(pathname ?? "");
 
@@ -58,6 +63,12 @@ export function StudioCommandPalette({ worlds }: StudioCommandPaletteProps) {
       commands={commands}
       searchEndpoint="/api/command/search"
       placeholder="Befehl eingeben oder Seite suchen… (Strg/⌘ + K)"
+      onSubmitQuery={
+        canRunAdminCommands
+          ? (query) => window.location.assign(`/command?q=${encodeURIComponent(query)}`)
+          : undefined
+      }
+      submitQueryLabel="Als Admin-Befehl ausführen"
     />
   );
 }
