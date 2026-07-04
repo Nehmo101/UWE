@@ -40,11 +40,13 @@ export interface WikitextConvertPreviewView {
 }
 
 export interface WikitextConvertActionOptions {
-  /** Seitentyp aus einem „Kategorie:/Typ:"-Marker im Inhalt ableiten. */
+  /** Seitentyp aus Titel/Inhalt/Tags ableiten. */
   detectType?: boolean;
+  /** Nur diese Seiten konvertieren (Massenaktion aus der Seitentabelle), statt der ganzen Welt. */
+  pageIds?: string[];
 }
 
-/** Dry run for "Alle Wikitexte konvertieren" — computes changes, writes nothing. */
+/** Dry run for "Alle Wikitexte konvertieren" / die Massenaktion — computes changes, writes nothing. */
 export async function previewWikitextConversionAction(
   worldSlug: string,
   options?: WikitextConvertActionOptions,
@@ -54,7 +56,7 @@ export async function previewWikitextConversionAction(
 
   const preview = await createWikitextConvertService(prisma).previewWorldConversion(
     worldSlug,
-    { detectType: options?.detectType ?? false },
+    { detectType: options?.detectType ?? false, pageIds: options?.pageIds },
   );
   if (!preview) {
     throw new Error("Welt nicht gefunden.");
@@ -94,7 +96,7 @@ export async function previewWikitextConversionAction(
   };
 }
 
-/** Applies the conversion for all wiki texts of the world (undoable). */
+/** Applies the conversion for all (or selected) wiki texts of the world (undoable). */
 export async function applyWikitextConversionAction(
   worldSlug: string,
   options?: WikitextConvertActionOptions,
@@ -104,7 +106,7 @@ export async function applyWikitextConversionAction(
 
   const result = await createWikitextConvertService(prisma).applyWorldConversion(
     worldSlug,
-    { detectType: options?.detectType ?? false },
+    { detectType: options?.detectType ?? false, pageIds: options?.pageIds },
   );
 
   if (result.ok && result.changedBlockCount > 0) {

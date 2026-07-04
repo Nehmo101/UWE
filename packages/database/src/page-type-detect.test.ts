@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectPageTypeFromContent } from "./page-type-detect";
+import { detectPageType, detectPageTypeFromContent } from "./page-type-detect";
 
 test("detects an inline 'Kategorie: NPC' marker", () => {
   const content =
@@ -41,4 +41,38 @@ test("returns null when no marker or unknown type", () => {
 
 test("is case-insensitive", () => {
   assert.equal(detectPageTypeFromContent("KATEGORIE: npc"), "npc");
+});
+
+test("strips markdown emphasis around marker and value", () => {
+  assert.equal(detectPageTypeFromContent("**Kategorie:** NPC"), "npc");
+  assert.equal(detectPageTypeFromContent("Ein Text. *Typ*: _Ort_ im Norden."), "location");
+});
+
+test("accepts '=' as a separator", () => {
+  assert.equal(detectPageTypeFromContent("Typ = Fraktion"), "faction");
+});
+
+test("matches multi-word labels with space or hyphen interchangeably", () => {
+  assert.equal(detectPageTypeFromContent("Typ: Dungeon Ebene"), "dungeon_level");
+  assert.equal(detectPageTypeFromContent("Typ: Dungeon-Ebene"), "dungeon_level");
+});
+
+test("recognizes markers wrapped in parentheses or a blockquote", () => {
+  assert.equal(detectPageTypeFromContent("Die Ruine (Kategorie: Ort) im Wald."), "location");
+  assert.equal(detectPageTypeFromContent("> Typ: Monster\nGefährlich."), "monster");
+});
+
+test("detectPageType prefers a title marker over content", () => {
+  assert.equal(
+    detectPageType({ title: "Kategorie: NPC — Thalindor", content: "Kategorie: Ort" }),
+    "npc",
+  );
+});
+
+test("detectPageType falls back to an exact tag match", () => {
+  assert.equal(detectPageType({ content: "Ein Text ganz ohne Marker.", tags: ["npc"] }), "npc");
+  assert.equal(
+    detectPageType({ content: "Ein Text.", tags: ["kf-import:eingang-208"] }),
+    null,
+  );
 });
