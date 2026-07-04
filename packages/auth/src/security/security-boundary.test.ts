@@ -206,7 +206,8 @@ describe("security boundary", () => {
       }
       const needsAlternateGuard =
         normalizedFile.endsWith("/health/private/route.ts") ||
-        normalizedFile.endsWith("/agent-jobs/callback/route.ts");
+        normalizedFile.endsWith("/agent-jobs/callback/route.ts") ||
+        normalizedFile.endsWith("/internal/briefing/route.ts");
       if (needsAlternateGuard) {
         assert.match(
           content,
