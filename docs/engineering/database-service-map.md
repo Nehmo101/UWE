@@ -12,7 +12,7 @@ Compact index for agents — **import from `@uwe/database/server`** (canonical b
 | **Brain (DnD)** | `brain-store-service.ts`, `generator-service.ts`, `research-service.ts` |
 | **Life Brain / admin** | `life-admin-service.ts`, `personal-brain-service.ts`, `personal-brain-context.ts`, `personal-brain-search.ts`, `capture-triage-service.ts` |
 | **AI gateway** | `ai-gateway-service.ts`, `ai-run-service.ts`, `ai-review-service.ts`, `inference-endpoint-service.ts` |
-| **Mail** | `mail-service.ts`, `mail-compose-service.ts`, `mail-portal-service.ts`, `mail-account-service.ts`, `mail-template-service.ts` |
+| **Mail** | `mail-service.ts`, `mail-compose-service.ts`, `mail-portal-service.ts`, `mail-account-service.ts`, `mail-template-service.ts`, `mail-unsubscribe-service.ts` |
 | **Calendar** | `calendar-service.ts`, `calendar-aggregation-service.ts` |
 | **Labels / print** | `label-service.ts`, `label-print-queue-service.ts`, `label-workshop-service.ts`, `label-export.ts` |
 | **Portal / player** | `portal-access-service.ts`, `portal-dashboard-service.ts`, `player-note-service.ts`, `share-link-service.ts` |

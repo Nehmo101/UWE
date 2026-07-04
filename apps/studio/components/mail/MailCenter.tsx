@@ -29,6 +29,7 @@ interface RawDetail {
   receivedAt: string;
   isRead: boolean;
   hasAttachments: boolean;
+  hasUnsubscribeTarget: boolean;
   bodyText: string | null;
   bodyHtml: string | null;
   bodySafeHtml: string | null;
@@ -51,6 +52,7 @@ function toDetail(raw: RawDetail): MailMessageDetailVM {
     receivedAt: raw.receivedAt,
     isRead: raw.isRead,
     hasAttachments: raw.hasAttachments,
+    hasUnsubscribeTarget: raw.hasUnsubscribeTarget,
     priority: raw.priority,
     bodyText: raw.bodyText,
     bodyHtml: raw.bodyHtml,
@@ -170,6 +172,26 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     }
   }
 
+  async function unsubscribe(id: string) {
+    setBusy(true);
+    const response = await fetch(studioApiUrl("/api/admin/mail/unsubscribe"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: id }),
+    });
+    setBusy(false);
+    const payload = (await response.json().catch(() => ({}))) as {
+      outcome?: { cleanedUpCount: number };
+      error?: string;
+    };
+    if (!response.ok || !payload.outcome) {
+      flash(payload.error ?? "Abmeldung fehlgeschlagen.");
+      return;
+    }
+    flash(`Abmeldung gesendet — ${payload.outcome.cleanedUpCount} Nachricht(en) aufgeräumt.`);
+    router.refresh();
+  }
+
   function replyTo(message: MailMessageDetailVM) {
     setCompose({
       messageId: message.id,
@@ -204,6 +226,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           onReplyDraft={(id) => selectMessage(id)}
           onTask={() => flash("Als Aufgabe vorgemerkt.")}
           onCapture={() => flash("In Capture übernommen.")}
+          onUnsubscribe={(id) => void unsubscribe(id)}
         />
       );
     }

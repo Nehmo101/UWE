@@ -38,6 +38,7 @@ export interface MailMessageVM {
   receivedAt: string;
   isRead: boolean;
   hasAttachments: boolean;
+  hasUnsubscribeTarget: boolean;
   priority: MailPriorityVM | null;
 }
 

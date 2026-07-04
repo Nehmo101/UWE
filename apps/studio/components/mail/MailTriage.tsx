@@ -13,9 +13,10 @@ interface MailTriageProps {
   onReplyDraft: (id: string) => void;
   onTask: (id: string) => void;
   onCapture: (id: string) => void;
+  onUnsubscribe: (id: string) => void;
 }
 
-export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, onCapture }: MailTriageProps) {
+export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, onCapture, onUnsubscribe }: MailTriageProps) {
   const items = messages.filter((message) => message.priority);
   const degraded = rtxState !== "online";
 
@@ -132,8 +133,23 @@ export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, o
                     <span>{message.priority!.explanation || message.snippet || "Von RTX priorisiert."}</span>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11 }}>
-                    <ActionChip icon="sparkles" label="Antwort entwerfen" primary onClick={() => onReplyDraft(message.id)} />
-                    <ActionChip icon="list-todo" label="Als Aufgabe" onClick={() => onTask(message.id)} />
+                    {message.priority!.category === "newsletter" ? (
+                      message.hasUnsubscribeTarget ? (
+                        <ActionChip
+                          icon="mail-x"
+                          label="Newsletter abmelden"
+                          primary
+                          onClick={() => onUnsubscribe(message.id)}
+                        />
+                      ) : (
+                        <ActionChip icon="list-todo" label="Als Aufgabe" onClick={() => onTask(message.id)} />
+                      )
+                    ) : (
+                      <>
+                        <ActionChip icon="sparkles" label="Antwort entwerfen" primary onClick={() => onReplyDraft(message.id)} />
+                        <ActionChip icon="list-todo" label="Als Aufgabe" onClick={() => onTask(message.id)} />
+                      </>
+                    )}
                     <ActionChip icon="inbox" label="In Capture" onClick={() => onCapture(message.id)} />
                   </div>
                 </div>

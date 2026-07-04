@@ -16,6 +16,7 @@ import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import { createMailAccountService, type CreateMailAccountInput } from "./mail-account-service";
 import { scoreMailPriority } from "./mail-priority-service";
 import { createMailLogService } from "./mail-log-service";
+import { createMailUnsubscribeService, type UnsubscribeOutcome } from "./mail-unsubscribe-service";
 import { describeImapError } from "@uwe/mail";
 
 export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
@@ -83,6 +84,10 @@ export class MailPortalService {
 
   private accountService() {
     return createMailAccountService(this.db);
+  }
+
+  private unsubscribeService() {
+    return createMailUnsubscribeService(this.db);
   }
 
   async logAudit(input: {
@@ -253,6 +258,31 @@ export class MailPortalService {
     });
 
     return rows.map((row) => this.toMessageSummary(row));
+  }
+
+  /**
+   * Meldet den Absender einer Nachricht per RFC-8058-One-Click oder mailto-Fallback ab
+   * und markiert im selben Zug bereits vorhandene Nachrichten dieses Absenders als gelesen
+   * ("Postfach aufräumen"). Erfordert eine explizite Nutzeraktion — läuft nicht automatisch.
+   */
+  async unsubscribeFromMessage(
+    messageId: string,
+    actorUserId?: string | null,
+  ): Promise<UnsubscribeOutcome> {
+    try {
+      const outcome = await this.unsubscribeService().unsubscribeFromMessage(messageId, actorUserId);
+      await this.logAudit({
+        action: "unsubscribe",
+        messageId,
+        userId: actorUserId,
+        detail: `${outcome.method} · ${outcome.senderAddress} · ${outcome.cleanedUpCount} Nachrichten aufgeräumt`,
+      });
+      return outcome;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Abmeldung fehlgeschlagen.";
+      await this.logAudit({ action: "unsubscribe", messageId, userId: actorUserId, detail });
+      throw error;
+    }
   }
 
   /**
@@ -615,6 +645,8 @@ export class MailPortalService {
     receivedAt: Date;
     isRead: boolean;
     hasAttachments: boolean;
+    listUnsubscribeHttpUrl?: string | null;
+    listUnsubscribeMailto?: string | null;
     account?: { id: string; label: string };
     priority?: {
       priority: number;
@@ -633,6 +665,7 @@ export class MailPortalService {
       receivedAt: row.receivedAt,
       isRead: row.isRead,
       hasAttachments: row.hasAttachments,
+      hasUnsubscribeTarget: Boolean(row.listUnsubscribeHttpUrl || row.listUnsubscribeMailto),
       priority: row.priority
         ? {
             priority: row.priority.priority,

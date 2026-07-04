@@ -66,6 +66,7 @@ export default async function MailCenterPage() {
     receivedAt: message.receivedAt.toISOString(),
     isRead: message.isRead,
     hasAttachments: message.hasAttachments,
+    hasUnsubscribeTarget: message.hasUnsubscribeTarget,
     priority: message.priority
       ? {
           category: message.priority.category,

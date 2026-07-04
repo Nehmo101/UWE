@@ -45,6 +45,16 @@ export {
 } from "./imap-sync";
 
 export {
+  parseListUnsubscribeHeader,
+  parseMailtoTarget,
+  supportsOneClickUnsubscribe,
+  executeHttpOneClickUnsubscribe,
+  type ParsedUnsubscribeTargets,
+  type ParsedMailtoTarget,
+  type HttpUnsubscribeResult,
+} from "./unsubscribe";
+
+export {
   parseRawMailSource,
   type ParsedMailAttachment,
   type ParsedMailMessage,

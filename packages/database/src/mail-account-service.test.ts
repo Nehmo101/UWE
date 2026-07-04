@@ -57,6 +57,9 @@ describe("mail-account-service", () => {
       ],
       receivedAt: new Date("2026-07-01T09:00:00Z"),
       isRead: false,
+      listUnsubscribeHttpUrl: null,
+      listUnsubscribeMailto: null,
+      listUnsubscribePostSupported: false,
     };
 
     const saved = await service.persistFetchedMessage(account.id, fetchedMessage);

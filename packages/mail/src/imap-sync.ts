@@ -1,4 +1,5 @@
 import { ImapFlow } from "imapflow";
+import { parseListUnsubscribeHeader, supportsOneClickUnsubscribe } from "./unsubscribe";
 import { parseRawMailSource, type ParsedMailAttachment } from "./mime-decode";
 import { sanitizeMailHtml } from "./mail-portal-types";
 
@@ -22,6 +23,34 @@ export interface FetchedInboxMessage {
   attachments: ParsedMailAttachment[];
   receivedAt: Date;
   isRead: boolean;
+  listUnsubscribeHttpUrl: string | null;
+  listUnsubscribeMailto: string | null;
+  listUnsubscribePostSupported: boolean;
+}
+
+/** Unfolds RFC 5322 header continuation lines into one logical line per header. */
+function parseRawHeaders(raw: string): Map<string, string> {
+  const headerEnd = raw.search(/\r?\n\r?\n/);
+  const headerBlock = headerEnd === -1 ? raw : raw.slice(0, headerEnd);
+  const logicalLines: string[] = [];
+  for (const line of headerBlock.split(/\r?\n/)) {
+    if (/^[ \t]/.test(line) && logicalLines.length > 0) {
+      logicalLines[logicalLines.length - 1] += ` ${line.trim()}`;
+    } else if (line.trim().length > 0) {
+      logicalLines.push(line);
+    }
+  }
+
+  const headers = new Map<string, string>();
+  for (const line of logicalLines) {
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex === -1) continue;
+    const name = line.slice(0, separatorIndex).trim().toLowerCase();
+    if (!headers.has(name)) {
+      headers.set(name, line.slice(separatorIndex + 1).trim());
+    }
+  }
+  return headers;
 }
 
 function extractAddress(value: unknown): string {
@@ -106,6 +135,9 @@ export async function fetchImapInboxMessages(
         let bodyText: string | null = null;
         let bodyHtml: string | null = null;
         let attachments: ParsedMailAttachment[] = [];
+        let listUnsubscribeHttpUrl: string | null = null;
+        let listUnsubscribeMailto: string | null = null;
+        let listUnsubscribePostSupported = false;
         if (message.source) {
           try {
             const parsed = await parseRawMailSource(message.source);
@@ -116,6 +148,12 @@ export async function fetchImapInboxMessages(
             // Fall back to raw source truncation if MIME parsing fails outright.
             bodyText = message.source.toString("utf8").slice(0, 8000);
           }
+
+          const headers = parseRawHeaders(message.source.toString("utf8"));
+          const unsubscribeTargets = parseListUnsubscribeHeader(headers.get("list-unsubscribe"));
+          listUnsubscribeHttpUrl = unsubscribeTargets.httpUrl;
+          listUnsubscribeMailto = unsubscribeTargets.mailto;
+          listUnsubscribePostSupported = supportsOneClickUnsubscribe(headers.get("list-unsubscribe-post"));
         }
 
         const envelope = message.envelope;
@@ -134,6 +172,9 @@ export async function fetchImapInboxMessages(
               ? message.internalDate
               : new Date(message.internalDate ?? Date.now()),
           isRead: Boolean(message.flags?.has("\\Seen")),
+          listUnsubscribeHttpUrl,
+          listUnsubscribeMailto,
+          listUnsubscribePostSupported,
         });
       }
     } finally {
