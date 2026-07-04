@@ -1,0 +1,318 @@
+"use client";
+
+import * as React from "react";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { NavIcon } from "@/src/components/ui/icon";
+import { MAIL_REPLY_TONES, MAIL_REPLY_TONE_LABELS, type MailReplyTone } from "@uwe/mail/portal-types";
+import { MailButton, IconButton } from "./mail-ui";
+import type { MailAccountVM } from "./mail-types";
+
+export interface ComposeContext {
+  messageId: string | null;
+  to: string;
+  subject: string;
+  body: string;
+}
+
+interface MailComposeModalProps {
+  context: ComposeContext;
+  accounts: MailAccountVM[];
+  onClose: () => void;
+  onSent: () => void;
+}
+
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+
+export function MailComposeModal({ context, accounts, onClose, onSent }: MailComposeModalProps) {
+  const [to, setTo] = React.useState(context.to);
+  const [subject, setSubject] = React.useState(context.subject);
+  const [body, setBody] = React.useState(context.body);
+  const [accountId, setAccountId] = React.useState(accounts[0]?.id ?? "");
+  const [tone, setTone] = React.useState<MailReplyTone>("friendly");
+  const [busy, setBusy] = React.useState(false);
+  const [status, setStatus] = React.useState<string | null>(null);
+
+  const fromEmail = accounts.find((account) => account.id === accountId)?.email ?? "—";
+
+  async function regenerate(nextTone: MailReplyTone) {
+    setTone(nextTone);
+    if (!context.messageId) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      const response = await fetch(studioApiUrl("/api/admin/mail/ai/reply-draft"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: context.messageId, tone: nextTone }),
+      });
+      const payload = (await response.json()) as { draft?: { bodyText: string | null; subject: string }; error?: string };
+      if (!response.ok || !payload.draft) {
+        setStatus(payload.error ?? "Entwurf fehlgeschlagen.");
+        return;
+      }
+      if (payload.draft.bodyText) setBody(payload.draft.bodyText);
+      if (payload.draft.subject) setSubject(payload.draft.subject);
+    } catch {
+      setStatus("Netzwerkfehler beim Entwurf.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function send() {
+    const recipients = (to.match(EMAIL_RE) ?? []).map((email) => ({ email }));
+    if (recipients.length === 0) {
+      setStatus("Gültige Empfängeradresse erforderlich.");
+      return;
+    }
+    if (!subject.trim()) {
+      setStatus("Betreff erforderlich.");
+      return;
+    }
+    if (!body.trim()) {
+      setStatus("Nachrichtentext erforderlich.");
+      return;
+    }
+    setBusy(true);
+    setStatus(null);
+    try {
+      const response = await fetch(studioApiUrl("/api/mail/send"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: recipients, subject: subject.trim(), bodyText: body }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) {
+        setStatus(payload.error ?? "Versand fehlgeschlagen.");
+        return;
+      }
+      onSent();
+    } catch {
+      setStatus("Netzwerkfehler beim Versand.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Neue Nachricht"
+      style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <button
+        type="button"
+        aria-label="Schließen"
+        onClick={onClose}
+        style={{ position: "absolute", inset: 0, background: "rgba(18,13,7,.44)", border: "none", cursor: "default" }}
+      />
+      <div
+        style={{
+          position: "relative",
+          width: 730,
+          maxWidth: "92%",
+          maxHeight: "90vh",
+          background: "var(--uwe-bg-elevated)",
+          border: "1px solid var(--uwe-border)",
+          borderRadius: 14,
+          boxShadow: "0 34px 80px rgba(0,0,0,.55)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 16px",
+            background: "var(--uwe-panel)",
+            borderBottom: "1px solid var(--uwe-border)",
+          }}
+        >
+          <NavIcon name="pen-line" width={15} height={15} style={{ color: "var(--uwe-accent)" }} />
+          <span style={{ fontFamily: "var(--uwe-font-serif)", fontSize: 15, color: "var(--uwe-fg)" }}>
+            {context.messageId ? "Antwort verfassen" : "Neue Nachricht"}
+          </span>
+          <span style={{ flex: 1 }} />
+          <IconButton icon="minus" size={15} title="Minimieren" onClick={onClose} />
+          <IconButton icon="x" size={16} title="Schließen" onClick={onClose} />
+        </div>
+
+        <div style={{ padding: "2px 16px" }}>
+          <ComposeField label="An">
+            <input
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+              placeholder="name@example.com"
+              style={composeInputStyle}
+            />
+            <span style={{ fontSize: 12, color: "var(--uwe-fg-subtle)" }}>Cc · Bcc</span>
+          </ComposeField>
+          <ComposeField label="Betreff">
+            <input
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+              placeholder="Betreff"
+              style={composeInputStyle}
+            />
+          </ComposeField>
+          <ComposeField label="Von" noBorder>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                fontSize: 12.5,
+                color: "var(--uwe-fg)",
+                border: "1px solid var(--uwe-border)",
+                borderRadius: 8,
+                padding: "4px 9px",
+                background: "var(--uwe-card-bg)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--uwe-accent)" }} />
+              {accounts.length > 1 ? (
+                <select
+                  value={accountId}
+                  onChange={(event) => setAccountId(event.target.value)}
+                  style={{ border: "none", background: "transparent", color: "var(--uwe-fg)", font: "inherit", fontSize: 12.5 }}
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.email}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>{fromEmail}</>
+              )}
+            </span>
+          </ComposeField>
+        </div>
+
+        <div
+          style={{
+            margin: "6px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            flexWrap: "wrap",
+            padding: "9px 12px",
+            border: "1px solid color-mix(in srgb, var(--uwe-accent) 28%, var(--uwe-border))",
+            background: "color-mix(in srgb, var(--uwe-accent) 7%, transparent)",
+            borderRadius: 10,
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--uwe-fg)" }}>
+            <NavIcon name="sparkles" width={14} height={14} style={{ color: "var(--uwe-accent)" }} />
+            KI-Antwort
+          </span>
+          {MAIL_REPLY_TONES.map((toneKey) => {
+            const active = tone === toneKey;
+            return (
+              <button
+                key={toneKey}
+                type="button"
+                disabled={busy || !context.messageId}
+                onClick={() => void regenerate(toneKey)}
+                title={context.messageId ? undefined : "Nur bei Antworten verfügbar"}
+                style={{
+                  fontSize: 11.5,
+                  color: active ? "var(--uwe-fg)" : "var(--uwe-fg-muted)",
+                  border: active
+                    ? "1px solid var(--uwe-border)"
+                    : "1px solid var(--uwe-border-muted)",
+                  borderRadius: 999,
+                  padding: "3px 10px",
+                  background: active ? "var(--uwe-card-bg)" : "transparent",
+                  cursor: context.messageId ? "pointer" : "not-allowed",
+                  opacity: context.messageId ? 1 : 0.55,
+                }}
+              >
+                {MAIL_REPLY_TONE_LABELS[toneKey]}
+              </button>
+            );
+          })}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)" }}>Lokal · RTX</span>
+        </div>
+
+        <textarea
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder="Nachricht schreiben…"
+          style={{
+            margin: "2px 4px",
+            padding: "8px 14px 6px",
+            fontFamily: "var(--mail-reader-font, var(--uwe-font-serif))",
+            fontSize: 14.5,
+            lineHeight: 1.65,
+            color: "var(--uwe-fg)",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            resize: "none",
+            minHeight: 150,
+            flex: 1,
+          }}
+        />
+
+        {status ? (
+          <div style={{ padding: "0 16px 8px", fontSize: 12, color: "var(--uwe-danger)" }}>{status}</div>
+        ) : null}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 16px",
+            borderTop: "1px solid var(--uwe-border)",
+            background: "var(--uwe-panel)",
+          }}
+        >
+          <MailButton variant="accent" icon="send" onClick={() => void send()} disabled={busy}>
+            {busy ? "…" : "Senden"}
+          </MailButton>
+          <IconButton icon="paperclip" size={16} bordered title="Anhang" />
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)", display: "flex", alignItems: "center", gap: 6 }}>
+            <NavIcon name="shield-check" width={13} height={13} />
+            Lokal entworfen · Cloud sieht nichts
+          </span>
+          <IconButton icon="trash-2" size={16} bordered tone="danger" title="Verwerfen" onClick={onClose} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const composeInputStyle: React.CSSProperties = {
+  flex: 1,
+  fontSize: 13.5,
+  color: "var(--uwe-fg)",
+  background: "transparent",
+  border: "none",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+function ComposeField({ label, children, noBorder }: { label: string; children: React.ReactNode; noBorder?: boolean }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "9px 2px",
+        borderBottom: noBorder ? "none" : "1px solid var(--uwe-border-muted)",
+      }}
+    >
+      <span style={{ width: 58, fontSize: 12, color: "var(--uwe-fg-subtle)" }}>{label}</span>
+      {children}
+    </div>
+  );
+}
