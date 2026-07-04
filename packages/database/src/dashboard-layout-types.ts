@@ -24,6 +24,10 @@ export const STUDIO_TODAY_WIDGET_TYPES = [
   "projects",
   "contracts",
   "homelab",
+  "agenda",
+  "prioritized-mail",
+  "household",
+  "jobs-queue",
 ] as const;
 
 export type StudioTodayWidgetType = (typeof STUDIO_TODAY_WIDGET_TYPES)[number];
@@ -83,11 +87,15 @@ function widget(
 
 export const DEFAULT_STUDIO_TODAY_LAYOUT: DashboardWidgetConfig[] = [
   widget("system-ampel", "system-ampel", 0, 1),
+  widget("agenda", "agenda", 1, 1),
+  widget("contracts", "contracts", 2, 1),
   widget("dnd-favorite", "dnd-favorite", 0, 2),
+  widget("prioritized-mail", "prioritized-mail", 1, 2),
+  widget("projects", "projects", 2, 2),
   widget("capture-inbox", "capture-inbox", 0, 3),
-  widget("projects", "projects", 1, 2),
-  widget("contracts", "contracts", 1, 1),
-  widget("homelab", "homelab", 1, 3),
+  widget("household", "household", 1, 3),
+  widget("jobs-queue", "jobs-queue", 2, 3),
+  widget("homelab", "homelab", 3, 3),
 ];
 
 export const DEFAULT_STUDIO_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
@@ -137,6 +145,34 @@ export function getDefaultDashboardLayout(pageKey: string): DashboardWidgetConfi
   }
 
   return [];
+}
+
+/**
+ * Neue Default-Widgets in ein gespeichertes Layout einmischen: Default-Widgets,
+ * deren `widgetType` im Layout noch gar nicht vorkommt, werden angehängt. So
+ * sehen Bestandsnutzer nach einem Update neue Widgets, ohne dass ihre Anordnung
+ * verworfen wird. Absichtlich ausgeblendete Widgets bleiben ausgeblendet (ihr
+ * Typ ist ja weiterhin vorhanden). Nicht-destruktiv — persistiert nichts.
+ */
+export function mergeMissingDefaultWidgets(
+  pageKey: string,
+  widgets: DashboardWidgetConfig[],
+): DashboardWidgetConfig[] {
+  const defaults = getDefaultDashboardLayout(pageKey);
+  const presentTypes = new Set(widgets.map((entry) => entry.widgetType));
+  const presentIds = new Set(widgets.map((entry) => entry.id));
+  const merged = [...widgets];
+
+  for (const addition of defaults) {
+    if (presentTypes.has(addition.widgetType)) {
+      continue;
+    }
+    const id = presentIds.has(addition.id) ? `${addition.id}-${addition.widgetType}` : addition.id;
+    presentIds.add(id);
+    merged.push({ ...addition, id });
+  }
+
+  return normalizeDashboardWidgets(merged);
 }
 
 function isWidgetColumn(value: unknown): value is DashboardWidgetColumn {
