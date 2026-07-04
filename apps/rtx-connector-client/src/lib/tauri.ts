@@ -91,6 +91,12 @@ export interface StartOllamaResult {
   triedPaths: string[];
 }
 
+export interface CookbookGpuSummary {
+  index: number;
+  name: string;
+  vramGb: number;
+}
+
 export interface CookbookHardwareSummary {
   platform: string;
   arch: string;
@@ -100,6 +106,7 @@ export interface CookbookHardwareSummary {
   gpuName: string | null;
   gpuVramGb: number;
   gpuCount: number;
+  gpus: CookbookGpuSummary[];
   probeMessage: string;
 }
 
@@ -489,6 +496,19 @@ function parseFit(raw: unknown): CookbookModelFit {
   };
 }
 
+function parseGpu(raw: unknown): CookbookGpuSummary {
+  const value = asRecord(raw);
+  return {
+    index: asNumber(value.index),
+    name: asString(value.name, "GPU"),
+    vramGb: asNumber(value.vramGb),
+  };
+}
+
+function parseGpus(raw: unknown): CookbookGpuSummary[] {
+  return Array.isArray(raw) ? raw.map(parseGpu) : [];
+}
+
 function parseHardware(raw: unknown): CookbookHardwareSummary {
   const value = asRecord(raw);
   return {
@@ -500,6 +520,7 @@ function parseHardware(raw: unknown): CookbookHardwareSummary {
     gpuName: typeof value.gpuName === "string" ? value.gpuName : null,
     gpuVramGb: asNumber(value.gpuVramGb),
     gpuCount: asNumber(value.gpuCount),
+    gpus: parseGpus(value.gpus),
     probeMessage: asString(value.probeMessage),
   };
 }
@@ -631,6 +652,7 @@ function buildMockCookbookDashboard(): CookbookDashboardView {
       gpuName: null,
       gpuVramGb: 0,
       gpuCount: 0,
+      gpus: [],
       probeMessage: "Browser-Vorschau — echte Hardware-Erkennung nur in der Tauri-App.",
     },
     installedModels: [],

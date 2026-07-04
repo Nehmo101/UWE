@@ -130,13 +130,21 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
           <div className="connector-stack">
             <div className="connector-stats-row">
               <div className="connector-stat-pill">Backend: {hardware.backend}</div>
-              <div className="connector-stat-pill">
-                GPU: {hardware.gpuName ?? "keine erkannt"}
-              </div>
-              <div className="connector-stat-pill">VRAM: {hardware.gpuVramGb} GB</div>
+              <div className="connector-stat-pill">VRAM gesamt: {hardware.gpuVramGb} GB</div>
               <div className="connector-stat-pill">RAM: {hardware.ramGb} GB</div>
               <div className="connector-stat-pill">CPU-Kerne: {hardware.cpuCores}</div>
             </div>
+            {hardware.gpus.length > 0 ? (
+              <div className="connector-stats-row">
+                {hardware.gpus.map((gpu) => (
+                  <div key={gpu.index} className="connector-stat-pill">
+                    GPU {gpu.index}: {gpu.name} · {gpu.vramGb} GB
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="connector-stat-pill">Keine GPU erkannt</div>
+            )}
             <p className="connector-muted">{hardware.probeMessage}</p>
           </div>
         ) : (
