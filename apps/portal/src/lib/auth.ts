@@ -1,10 +1,9 @@
 import { cookies } from "next/headers";
 import {
   createAuthService,
-  createPrismaClient,
   createUweRepository,
 } from "@uwe/database/server";
-import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import type { AccessContext } from "@uwe/auth";
 import type { SafeUser } from "@uwe/auth";
 import {
@@ -15,7 +14,7 @@ import {
 } from "@uwe/auth";
 
 function getDb() {
-  return createPrismaClient();
+  return getSharedPrismaClient();
 }
 
 export async function getSessionToken(): Promise<string | null> {

@@ -7,12 +7,12 @@ import {
 } from "./client";
 
 describe("createPrismaClient", () => {
-  it("reuses the shared SQLite client for the default database URL", () => {
+  it("returns a dedicated SQLite client for the default database URL", () => {
     const shared = getSharedPrismaClient();
     const created = createPrismaClient();
 
-    assert.equal(created, shared);
-    assert.equal(isSharedPrismaClient(created), true);
+    assert.notEqual(created, shared);
+    assert.equal(isSharedPrismaClient(created), false);
   });
 
   it("creates a dedicated client when a custom database URL is provided", () => {
@@ -21,5 +21,11 @@ describe("createPrismaClient", () => {
 
     assert.notEqual(dedicated, shared);
     assert.equal(isSharedPrismaClient(dedicated), false);
+  });
+
+  it("marks only getSharedPrismaClient as shared", () => {
+    const shared = getSharedPrismaClient();
+    assert.equal(isSharedPrismaClient(shared), true);
+    assert.equal(isSharedPrismaClient(createPrismaClient()), false);
   });
 });
