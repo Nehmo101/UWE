@@ -36,6 +36,8 @@ Zwei dokumentierte Leitplanken werden bewusst gelockert — gehört **vor** die 
 
 ---
 
+> **Asset-Vorrat:** die zu bauende Gouache-Asset-Bibliothek (fliegende Inseln, Schluchten, Weide-/Getreidefelder, Sumpf, Flugschiffe & Schiffe, Pferdekarren, Marktstand-Varianten, Riesenschildkröte mit Schloss, Ruinen, Pyramide, fliegende Zugstrecke u. v. m.) ist in [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md) katalogisiert — mit Umsetzungs-Tag pro Asset.
+
 ## 2 · Feature-Bausteine (akzeptierte Features → reale Ziele)
 
 | Feature | Aufwand | Reale Umsetzung |
