@@ -22,6 +22,7 @@ import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawVine } from "@uwe/atlas/canvas-render";
 import { buildVineLayout } from "@uwe/atlas/vine";
+import { drawGouacheAsset, isGouacheAsset } from "@uwe/atlas/assets";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -58,6 +59,7 @@ export interface ViewerObject {
   rotation: number;
   layer?: number;
   linkedPageId?: string | null;
+  style?: { gouache?: string | null; lineWidth?: number; blur?: number } | null;
   _key: string;
 }
 
@@ -91,6 +93,8 @@ export interface ViewerTileLayer {
   cols: number;
   rows: number;
   cells: Record<string, string>;
+  /** Per-biome colour intensity factor (1 = unchanged). */
+  intensity?: Record<string, number> | null;
 }
 
 export interface AtlasViewerProps {
@@ -394,6 +398,7 @@ export function AtlasViewer({
           return { x, y, w: x1 - x, h: y1 - y };
         },
         fillFor: (biome) => TILE_FILL[biome] ?? "#ccc",
+        intensityFor: (biome) => tileLayer?.intensity?.[biome] ?? 1,
         radiusRatio: 0.4,
       });
     }
@@ -764,6 +769,24 @@ export function AtlasViewer({
 
     // Draw stamp objects
     for (const obj of objects) {
+      const st = obj.style as { gouache?: string; lineWidth?: number; blur?: number } | null | undefined;
+      // Gouache style override: painted filled asset in canvas-pixel space,
+      // rendered instead of (and before) the glyph/image stamp path.
+      if (st?.gouache && isGouacheAsset(st.gouache)) {
+        const [gx, gy] = w2c(obj.x, obj.y);
+        drawGouacheAsset(ctx, st.gouache, {
+          x: gx,
+          y: gy,
+          size: 30 * zoom,
+          scale: obj.scale,
+          rotation: (obj.rotation * Math.PI) / 180,
+          lineWidth: (st.lineWidth ?? 1.4) * zoom,
+          blur: (st.blur ?? 0) * zoom,
+          seed: hashKey(obj._key),
+        });
+        continue;
+      }
+
       const paletteItem = paletteItems[obj.paletteItemId];
       if (!paletteItem) continue;
 
@@ -786,13 +809,15 @@ export function AtlasViewer({
           const scale = size / 24;
           ctx.scale(scale, scale);
           ctx.translate(-12, -12);
+          ctx.filter = st?.blur ? `blur(${st.blur * zoom}px)` : "none";
           ctx.strokeStyle = glyph.color ?? preset.colors.ink;
-          ctx.lineWidth = 1.5 / scale;
+          ctx.lineWidth = (st?.lineWidth ?? 1.5) / scale;
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
           ctx.beginPath();
           drawSvgPath(ctx, glyph.pathData);
           ctx.stroke();
+          ctx.filter = "none";
         }
       } else if (paletteItem.imageData) {
         const preloaded = stampImagesRef.current.get(obj.paletteItemId);

@@ -159,7 +159,9 @@ async function main() {
         for (let r = 8; r < 30; r++) cells[`${c},${r}`] = "coast";
       }
       await atlas.updateAtlasMap(map.id, {
-        tileLayer: { cols: 64, rows: 40, tile: 32, cells },
+        // `intensity` drives the per-biome "Untergrund-Intensität" control:
+        // satter Wald, blasseres Grasland.
+        tileLayer: { cols: 64, rows: 40, tile: 32, cells, intensity: { forest: 1.3, grassland: 0.85 } },
       });
     }
 
@@ -197,6 +199,32 @@ async function main() {
           layer: 50,
           visibility: "dm_only",
         });
+      }
+      // Gouache-Assets (Canvas-of-Kings-Optik) — `paletteItemId` bleibt ein
+      // gültiger Builtin-Glyph als FK-Träger; `style.gouache` trägt das gemalte
+      // Asset, das der Renderer bevorzugt. Zeigt Liniendicke + Unschärfe.
+      const carrier = byGlyph("tree");
+      if (carrier) {
+        const gouachePlacements: Array<[string, number, number, Record<string, unknown>]> = [
+          ["g_keep", 0.6, 0.55, { gouache: "g_keep" }],
+          ["g_church", 0.52, 0.5, { gouache: "g_church", lineWidth: 1.8 }],
+          ["g_oak", 0.24, 0.62, { gouache: "g_oak" }],
+          ["g_floating_island", 0.82, 0.24, { gouache: "g_floating_island", blur: 0.6 }],
+          ["g_ship", 0.5, 0.86, { gouache: "g_ship" }],
+        ];
+        for (const [, x, y, style] of gouachePlacements) {
+          await atlas.createObject({
+            nodeId: node.id,
+            paletteItemId: carrier.id,
+            x,
+            y,
+            scale: 1,
+            rotation: 0,
+            style: style as Parameters<typeof atlas.createObject>[0]["style"],
+            layer: 50,
+            visibility: "dm_only",
+          });
+        }
       }
     }
 

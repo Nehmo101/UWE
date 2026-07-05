@@ -60,6 +60,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       cols?: number;
       rows?: number;
       cells?: Record<string, string>;
+      intensity?: Record<string, number>;
     } | null;
     if (
       rawTileLayer &&
@@ -72,6 +73,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
         cols: rawTileLayer.cols,
         rows: rawTileLayer.rows,
         cells: rawTileLayer.cells,
+        intensity: rawTileLayer.intensity ?? null,
       };
     }
 
@@ -126,6 +128,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       rotation: o.rotation,
       layer: o.layer,
       linkedPageId: o.linkedPageId ?? null,
+      style: o.style as ViewerObject["style"],
       _key: nextKey(),
     }));
 

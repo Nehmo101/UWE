@@ -120,6 +120,7 @@ export interface CreateAtlasObjectInput {
   y: number;
   scale?: number;
   rotation?: number;
+  style?: Prisma.InputJsonValue;
   layer?: number;
   linkedPageId?: string | null;
   visibility?: Visibility;
@@ -131,6 +132,7 @@ export interface UpdateAtlasObjectInput {
   y?: number;
   scale?: number;
   rotation?: number;
+  style?: Prisma.InputJsonValue;
   layer?: number;
   linkedPageId?: string | null;
   visibility?: Visibility;
@@ -424,6 +426,7 @@ export function createAtlasService(db: PrismaClient) {
         y: input.y,
         scale: input.scale ?? 1,
         rotation: input.rotation ?? 0,
+        style: input.style,
         layer: input.layer ?? 0,
         linkedPageId: input.linkedPageId ?? null,
         visibility: input.visibility ?? "dm_only",
@@ -444,6 +447,7 @@ export function createAtlasService(db: PrismaClient) {
         y: input.y,
         scale: input.scale,
         rotation: input.rotation,
+        style: input.style,
         layer: input.layer,
         linkedPageId: input.linkedPageId,
         visibility: input.visibility,

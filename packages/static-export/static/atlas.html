@@ -303,7 +303,7 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
 // ===========================================================================
 const state = {
-  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree",
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
   toast: null, aiReview: null, stampVariation: true,
@@ -648,6 +648,7 @@ function drawScene(ctx, W, H, chrome) {
     tileRect: (cc, rr) => { const [px, py] = w2c(cc * TILE, rr * TILE); const ts = TILE * z; return { x: px, y: py, w: ts, h: ts }; },
     fillFor: (b) => TILE_FILL[b] || "#ccc",
     radiusRatio: 0.4,
+    intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
   });
 
   const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * z, W / 2, H / 2, W * 0.75);
@@ -827,13 +828,24 @@ function drawVineFeature(ctx, f, sel) {
 }
 
 function drawObject(ctx, o) {
-  const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
   const z = state.zoom, sel = selection.has(o._key);
-  const [ox, oy] = n2c(o.x, o.y); const size = 26 * z * o.scale;
-  ctx.save(); ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
+  const [ox, oy] = n2c(o.x, o.y);
+  const st = o.style || {};
+  const lw = (st.lineWidth != null ? st.lineWidth : 1.5), blur = st.blur || 0;
+  // Gemaltes Gouache-Asset (Canvas-of-Kings-Optik) — base-centre am Objektpunkt.
+  if (st.gouache && engine.isGouacheAsset && engine.isGouacheAsset(st.gouache)) {
+    engine.drawGouacheAsset(ctx, st.gouache, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
+    if (sel) { const hs = 30 * z * o.scale; ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15); ctx.setLineDash([]); ctx.restore(); }
+    return;
+  }
+  const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
+  const size = 26 * z * o.scale;
+  ctx.save();
+  if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
+  ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
   if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6); }
   const s = size / 24; ctx.scale(s, s); ctx.translate(-12, -12);
-  ctx.strokeStyle = g.color || preset.colors.ink; ctx.lineWidth = 1.5 / s; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.strokeStyle = g.color || preset.colors.ink; ctx.lineWidth = Math.max(0.3, lw) / s; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath(); engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
 }
 
@@ -1040,7 +1052,12 @@ function placeStamp(nx, ny) {
     const v = engine.randomStampVariation(engine.stampSeedFromKey(k), { scaleMin: 0.78, scaleMax: 1.28, rotateMin: -12, rotateMax: 12 });
     scale = Math.round(v.scale * 100) / 100; rotation = Math.round(v.rotation * 10) / 10;
   }
-  doc.objects.push({ id: nextKey(), _key: k, nodeId: state.nodeId, paletteItemId: state.glyphKey, x: nx, y: ny, scale, rotation, layer: 50, visibility: "dm_only" });
+  const carrierGlyph = state.gouacheKey ? (state.glyphKey || "tree") : state.glyphKey;
+  const o = { id: nextKey(), _key: k, nodeId: state.nodeId, paletteItemId: carrierGlyph, x: nx, y: ny, scale, rotation, layer: 50, visibility: "dm_only" };
+  // Gouache-Objekt: gemaltes Asset in style.gouache; paletteItemId bleibt ein
+  // gültiger Builtin-Glyph als FK-Träger (der Renderer bevorzugt style.gouache).
+  if (state.gouacheKey) o.style = { gouache: state.gouacheKey };
+  doc.objects.push(o);
   markDirty(); draw();
 }
 function addPin(pt) {
@@ -1297,7 +1314,8 @@ function clearAll() {
 // ===========================================================================
 function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
-function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k }); }
+function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null }); }
+function pickGouache(k) { setState({ tool: "stamp", gouacheKey: k, glyphKey: state.glyphKey || "tree" }); }
 function toggleNodeVis() {
   pushUndo();
   const n = node(); n.visibility = n.visibility === "player_visible" ? "dm_only" : "player_visible"; markDirty();
@@ -1337,6 +1355,29 @@ function buildSidebar() {
     btn.addEventListener("click", () => pickGlyph(g.key));
     grid.appendChild(btn); glyphButtons.set(g.key, btn);
   }
+  // Gemalte Gouache-Assets (Canvas-of-Kings-Optik) — Vorschau per Mini-Canvas.
+  if (engine.GOUACHE_ASSETS) {
+    for (const a of engine.GOUACHE_ASSETS) {
+      const btn = document.createElement("button");
+      btn.className = "glyph-btn"; btn.title = a.name + " · Gouache";
+      const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
+      try { engine.drawGouacheAsset(cv.getContext("2d"), a.key, { x: 22, y: 36, size: 24, lineWidth: 1.1 }); } catch (_) {}
+      btn.appendChild(cv);
+      btn.addEventListener("click", () => pickGouache(a.key));
+      grid.appendChild(btn); glyphButtons.set("g:" + a.key, btn);
+    }
+  }
+  // Untergrund-Intensität (pro Biom des aktiven Pinsels).
+  const gi = document.createElement("div");
+  gi.style.cssText = "padding:8px 2px 2px;";
+  gi.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Untergrund-Intensität</div><input id="ground-intensity" type="range" min="0" max="1.6" step="0.05" value="1" style="width:100%;accent-color:var(--uwe-accent);">';
+  swatches.parentElement.appendChild(gi);
+  gi.querySelector("input").addEventListener("input", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    doc.tileLayer.intensity = doc.tileLayer.intensity || {};
+    doc.tileLayer.intensity[state.brush] = Number(e.target.value);
+    markDirty(); draw();
+  });
 }
 
 function refreshChrome() {
@@ -1380,14 +1421,29 @@ function refreshChrome() {
   // Tool / swatch / glyph active state
   for (const [tool, b] of toolButtons) b.classList.toggle("active", st.tool === tool);
   for (const [biome, b] of swatchButtons) b.classList.toggle("on", st.tool === "terrain" && st.brush === biome);
-  for (const [key, b] of glyphButtons) b.classList.toggle("on", st.tool === "stamp" && st.glyphKey === key);
+  for (const [key, b] of glyphButtons) {
+    const gouacheActive = st.gouacheKey && key === "g:" + st.gouacheKey;
+    const glyphActive = !st.gouacheKey && st.glyphKey === key;
+    b.classList.toggle("on", st.tool === "stamp" && (gouacheActive || glyphActive));
+  }
 
   // Sub-bar
   const sub = el("subbar"), subC = el("subbar-content");
   let subHtml = "", subShow = false;
   if (!view) {
     if (st.tool === "terrain" || st.tool === "biome") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">' + (st.tool === "biome" ? "Biom-Fläche" : "Terrain") + ":</b> " + BIOME_LABEL[st.brush] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize]; }
-    else if (st.tool === "stamp") { subShow = true; const g = engine.getGlyphByKey(st.glyphKey); subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + (g ? g.name : st.glyphKey) + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>'; }
+    else if (st.tool === "stamp") {
+      subShow = true;
+      let stampName;
+      if (st.gouacheKey && engine.getGouacheAsset) {
+        const a = engine.getGouacheAsset(st.gouacheKey);
+        stampName = a ? a.name + " (Gouache)" : st.gouacheKey;
+      } else {
+        const g = engine.getGlyphByKey(st.glyphKey);
+        stampName = g ? g.name : st.glyphKey;
+      }
+      subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + stampName + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>';
+    }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "region" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
@@ -1424,6 +1480,11 @@ function refreshChrome() {
           numInp("obj-scale", "Skala", 0.2, 3, 0.05, selO.scale) +
           numInp("obj-rot", "Rotation°", -180, 180, 1, selO.rotation) +
           "</div>" +
+          '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          numInp("obj-lw", "Linie px", 0.3, 6, 0.1, (selO.style && selO.style.lineWidth != null) ? selO.style.lineWidth : 1.5) +
+          numInp("obj-blur", "Unschärfe", 0, 8, 0.5, (selO.style && selO.style.blur) || 0) +
+          "</div>" +
+          (selO.style && selO.style.gouache ? '<div style="font-size:10px;color:var(--uwe-accent);margin-top:4px;">🎨 Gouache: ' + (engine.getGouacheAsset(selO.style.gouache) ? engine.getGouacheAsset(selO.style.gouache).name : selO.style.gouache) + "</div>" : "") +
           '<button class="tb-btn" data-obj="vari" style="width:100%;justify-content:center;margin-top:8px;" title="Skala/Rotation deterministisch neu würfeln">↻ Variieren</button>') +
       '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben · Shift+Klick erweitert Auswahl</div>' +
       (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
@@ -1591,6 +1652,16 @@ function wire() {
         pushUndo();
         if (t.id === "obj-scale") o.scale = Math.min(3, Math.max(0.2, v));
         else o.rotation = Math.min(180, Math.max(-180, v));
+        markDirty(); draw();
+      }
+    }
+    else if (t.id === "obj-lw" || t.id === "obj-blur") {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      const v = Number(t.value);
+      if (o && Number.isFinite(v)) {
+        pushUndo(); o.style = o.style || {};
+        if (t.id === "obj-lw") o.style.lineWidth = Math.min(6, Math.max(0.3, v));
+        else o.style.blur = Math.min(8, Math.max(0, v));
         markDirty(); draw();
       }
     }

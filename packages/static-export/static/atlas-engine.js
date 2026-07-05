@@ -89,7 +89,8 @@ var AtlasFeatureKind = {
   relief: "relief",
   label: "label",
   pin: "pin",
-  vine: "vine"
+  vine: "vine",
+  plot: "plot"
 };
 var AtlasLabelColor = {
   black: "black",
@@ -820,15 +821,44 @@ function roundedRectPath(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
 }
+function applyColorIntensity(color, factor) {
+  if (factor === 1 || !/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  const n = parseInt(color.slice(1), 16);
+  const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  const s2 = Math.max(0, Math.min(1, s * factor));
+  const l2 = Math.max(0, Math.min(1, l - (factor - 1) * 0.06));
+  const hue2rgb = (p2, q2, t) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p2 + (q2 - p2) * 6 * t;
+    if (t < 1 / 2) return q2;
+    if (t < 2 / 3) return p2 + (q2 - p2) * (2 / 3 - t) * 6;
+    return p2;
+  };
+  const q = l2 < 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
+  const p = 2 * l2 - q;
+  const to = (t) => Math.round(hue2rgb(p, q, t) * 255);
+  return `rgb(${to(h + 1 / 3)},${to(h)},${to(h - 1 / 3)})`;
+}
 function paintTerrainBlobs(ctx, opts) {
-  const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4 } = opts;
+  const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const biome = getCell(c, r);
       if (!biome) continue;
       const { x, y, w, h } = tileRect(c, r);
       const radius = Math.min(w, h) * radiusRatio;
-      ctx.fillStyle = fillFor(biome);
+      ctx.fillStyle = intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
       roundedRectPath(ctx, x, y, w, h, radius);
       ctx.fill();
       const rightSame = getCell(c + 1, r) === biome;
@@ -919,7 +949,7 @@ function strokeTaperedTrunk(ctx, pts, widths, base, extraPx) {
   }
 }
 function drawVine(ctx, layout, opts) {
-  const { spine, widths, coil, tendrils, shadow, aura } = layout;
+  const { spine, widths, coil, tendrils, shadow: shadow2, aura } = layout;
   if (spine.length < 2) return;
   const { project, zoom, selected } = opts;
   const p = (pts) => pts.map(project);
@@ -927,7 +957,7 @@ function drawVine(ctx, layout, opts) {
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const shadowPts = p(shadow);
+  const shadowPts = p(shadow2);
   ctx.strokeStyle = opts.shadow;
   ctx.lineWidth = Math.max(1, base * 0.75);
   strokePolyline(ctx, shadowPts);
@@ -1137,7 +1167,7 @@ function buildVineLayout(points, options = {}) {
     coilLine[i] = clampCoord([spine[i][0] + px * s, spine[i][1] + py * s]);
   }
   const off = SHADOW_OFFSET * height;
-  const shadow = spine.map(
+  const shadow2 = spine.map(
     (c) => clampCoord([c[0] + off, c[1] + off])
   );
   const rng = mulberry32(seed);
@@ -1174,9 +1204,402 @@ function buildVineLayout(points, options = {}) {
     widths,
     coil: coilLine,
     tendrils,
-    shadow,
+    shadow: shadow2,
     aura: { center: clampCoord(tip), radius, clouds }
   };
+}
+
+// ../atlas/src/assets.ts
+var GOUACHE_CATEGORY_LABELS = {
+  flora: "Flora",
+  structure: "Bauwerke",
+  landmark: "Landmarken",
+  vehicle: "Fahrzeuge",
+  market: "Markt",
+  prop: "Deko"
+};
+var GOUACHE_ASSETS = [
+  { key: "g_oak", name: "Eiche", category: "flora" },
+  { key: "g_pine", name: "Nadelbaum", category: "flora" },
+  { key: "g_bush", name: "Busch", category: "flora" },
+  { key: "g_mushroom", name: "Riesenpilz", category: "flora" },
+  { key: "g_house", name: "Haus", category: "structure" },
+  { key: "g_tower", name: "Turm", category: "structure" },
+  { key: "g_keep", name: "Bergfried", category: "structure" },
+  { key: "g_church", name: "Kirche", category: "structure" },
+  { key: "g_windmill", name: "Windmühle", category: "structure" },
+  { key: "g_tent", name: "Zelt", category: "structure" },
+  { key: "g_ruin", name: "Ruine", category: "structure" },
+  { key: "g_pyramid", name: "Pyramide", category: "landmark" },
+  { key: "g_obelisk", name: "Obelisk", category: "landmark" },
+  { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
+  { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
+  { key: "g_ship", name: "Schiff", category: "vehicle" },
+  { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
+  { key: "g_airship", name: "Flugschiff", category: "vehicle" },
+  { key: "g_stall", name: "Marktstand", category: "market" },
+  { key: "g_well", name: "Brunnen", category: "prop" }
+];
+var GOUACHE_ASSET_KEYS = GOUACHE_ASSETS.map(
+  (a) => a.key
+);
+var ASSETS_BY_KEY = new Map(GOUACHE_ASSETS.map((a) => [a.key, a]));
+function getGouacheAsset(key) {
+  return key ? ASSETS_BY_KEY.get(key) : void 0;
+}
+function listGouacheAssetsByCategory(cat) {
+  return GOUACHE_ASSETS.filter((a) => a.category === cat);
+}
+function hexRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+function darken(h, f) {
+  const [r, g, b] = hexRgb(h);
+  return `rgb(${Math.round(r * (1 - f))},${Math.round(g * (1 - f))},${Math.round(b * (1 - f))})`;
+}
+function shadow(ctx, x, y, rx) {
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = "#2a1e0c";
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, rx * 0.34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+function rectFn(x, y, w, h) {
+  return (c) => {
+    c.beginPath();
+    c.rect(x, y, w, h);
+  };
+}
+function polyFn(pts) {
+  return (c) => {
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+  };
+}
+function blobFn(pts) {
+  return (c) => {
+    const n = pts.length;
+    c.beginPath();
+    c.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const cur = pts[i];
+      const nx = pts[(i + 1) % n];
+      c.quadraticCurveTo(cur[0], cur[1], (cur[0] + nx[0]) / 2, (cur[1] + nx[1]) / 2);
+    }
+    c.closePath();
+  };
+}
+function iblob(cx, cy, rx, ry, rng, jag = 0.24, n = 12) {
+  const p = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2;
+    const k = 1 + (rng() - 0.5) * 2 * jag;
+    p.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  return p;
+}
+function paint(ctx, pf, fill, lw, edgeColor) {
+  ctx.save();
+  ctx.fillStyle = fill;
+  pf(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = edgeColor ?? darken(fill, 0.42);
+  ctx.lineWidth = Math.max(0.5, lw);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  pf(ctx);
+  ctx.stroke();
+  ctx.restore();
+}
+function tree(ctx, s, rng, lw, base, dark, hi) {
+  const cy = -s * 0.55;
+  shadow(ctx, 0, s * 0.02, s * 0.5);
+  paint(ctx, rectFn(-s * 0.07, -s * 0.3, s * 0.14, s * 0.34), "#7a5230", lw * 0.8, "#4a3320");
+  const blob = iblob(0, cy, s * 0.5, s * 0.46, rng, 0.26, 12);
+  const P = blobFn(blob);
+  ctx.save();
+  ctx.fillStyle = base;
+  P(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = dark;
+  ctx.globalAlpha = 0.5;
+  blobFn(blob.map((p) => [p[0] + s * 0.08, p[1] + s * 0.12]))(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = hi;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.13, cy - s * 0.15, s * 0.2, s * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = darken(base, 0.5);
+  ctx.lineWidth = Math.max(0.6, lw);
+  ctx.lineJoin = "round";
+  P(ctx);
+  ctx.stroke();
+  ctx.restore();
+}
+var RECIPES = {
+  g_oak: (ctx, s, rng, lw) => tree(ctx, s, rng, lw, "#5f9a4a", "#33613a", "#aacf7a"),
+  g_bush: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.4);
+    const b = iblob(0, -s * 0.24, s * 0.42, s * 0.3, rng, 0.3, 10);
+    paint(ctx, blobFn(b), "#5c8f43", lw);
+  },
+  g_pine: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    paint(ctx, rectFn(-s * 0.06, -s * 0.28, s * 0.12, s * 0.3), "#6a4a2a", lw * 0.8);
+    for (let i = 0; i < 3; i++) {
+      const y = -s * (0.25 + i * 0.22), w = s * (0.42 - i * 0.1);
+      paint(ctx, polyFn([[-w, y], [0, y - s * 0.34], [w, y]]), i === 0 ? "#3f6d39" : "#478043", lw);
+    }
+  },
+  g_mushroom: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    paint(ctx, rectFn(-s * 0.13, -s * 0.5, s * 0.26, s * 0.52), "#e6dcc4", lw);
+    paint(ctx, blobFn(iblob(0, -s * 0.5, s * 0.5, s * 0.26, () => 0.5, 0.05, 10)), "#b4402f", lw);
+    ctx.save();
+    ctx.fillStyle = "#f0e6cf";
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.arc(i * s * 0.24, -s * 0.56, s * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_house: (ctx, s, _rng, lw) => {
+    const w = s * 0.95, h = s * 0.62;
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#dcc79c", lw);
+    paint(ctx, polyFn([[-w * 0.62, -h + 2], [0, -h * 1.7], [w * 0.62, -h + 2]]), "#a8432e", lw);
+    ctx.save();
+    ctx.fillStyle = "#5a4026";
+    ctx.fillRect(-s * 0.08, -h * 0.55, s * 0.16, h * 0.55);
+    ctx.restore();
+  },
+  g_tower: (ctx, s, _rng, lw) => {
+    const w = s * 0.5, h = s * 0.95;
+    shadow(ctx, 0, s * 0.03, s * 0.42);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#cbb98e", lw);
+    paint(ctx, polyFn([[-w * 0.72, -h + 1], [0, -h * 1.5], [w * 0.72, -h + 1]]), "#8a3526", lw);
+  },
+  g_keep: (ctx, s, _rng, lw) => {
+    const w = s * 1.1, h = s * 1.1;
+    shadow(ctx, 0, s * 0.05, s * 0.8);
+    for (const sx of [-1, 1]) {
+      paint(ctx, rectFn(sx * w * 0.42 - s * 0.13, -h * 1.15, s * 0.26, h * 1.15), "#bcac80", lw);
+      paint(ctx, polyFn([[sx * w * 0.42 - s * 0.2, -h * 1.15], [sx * w * 0.42, -h * 1.45], [sx * w * 0.42 + s * 0.2, -h * 1.15]]), "#7f3222", lw);
+    }
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#c6b487", lw);
+    for (let i = 0; i < 3; i++) paint(ctx, rectFn(-w / 2 + w * (i / 2) - s * 0.12, -h - s * 0.16, s * 0.24, s * 0.18), "#c6b487", lw * 0.8);
+    ctx.save();
+    ctx.fillStyle = "#4a3722";
+    ctx.fillRect(-s * 0.14, -h * 0.5, s * 0.28, h * 0.5);
+    ctx.restore();
+  },
+  g_church: (ctx, s, _rng, lw) => {
+    const w = s * 0.85, h = s * 0.6;
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#d7cba6", lw);
+    paint(ctx, polyFn([[-w * 0.6, -h], [0, -h * 1.5], [w * 0.6, -h]]), "#7a4a2a", lw);
+    const tx = -w * 0.34, tw = s * 0.34, th = s * 1.15;
+    paint(ctx, rectFn(tx - tw / 2, -th, tw, th), "#cdbd95", lw);
+    paint(ctx, polyFn([[tx - tw * 0.62, -th], [tx, -th - s * 0.5], [tx + tw * 0.62, -th]]), "#5f6f78", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a4030";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(tx, -th - s * 0.5);
+    ctx.lineTo(tx, -th - s * 0.74);
+    ctx.moveTo(tx - s * 0.08, -th - s * 0.66);
+    ctx.lineTo(tx + s * 0.08, -th - s * 0.66);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_windmill: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.44);
+    paint(ctx, polyFn([[-s * 0.3, 0], [-s * 0.22, -s], [s * 0.22, -s], [s * 0.3, 0]]), "#cdbd95", lw);
+    paint(ctx, polyFn([[-s * 0.28, -s], [0, -s * 1.28], [s * 0.28, -s]]), "#7a4a2a", lw);
+    ctx.save();
+    ctx.translate(0, -s * 0.75);
+    ctx.strokeStyle = "#4a3722";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.fillStyle = "#e0d3ad";
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2 + 0.5);
+      ctx.fillRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
+      ctx.strokeRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
+    }
+    ctx.restore();
+  },
+  g_tent: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.5);
+    paint(ctx, polyFn([[-s * 0.5, 0], [0, -s * 0.9], [s * 0.5, 0]]), "#c99a5a", lw);
+    ctx.save();
+    ctx.strokeStyle = "#6a4a2a";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.9);
+    ctx.lineTo(0, -s * 0.05);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_ruin: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.55);
+    paint(ctx, rectFn(-s * 0.45, -s * 0.5, s * 0.22, s * 0.5), "#b7a880", lw);
+    paint(ctx, rectFn(s * 0.05, -s * 0.75, s * 0.2, s * 0.75), "#b0a179", lw);
+    paint(ctx, rectFn(-s * 0.1, -s * 0.32, s * 0.12, s * 0.32), "#a99a72", lw);
+    ctx.save();
+    ctx.strokeStyle = "#6f5c3c";
+    ctx.lineWidth = Math.max(0.8, lw * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45, -s * 0.5);
+    ctx.lineTo(-s * 0.34, -s * 0.62);
+    ctx.lineTo(-s * 0.23, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_pyramid: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.7);
+    paint(ctx, polyFn([[-s * 0.7, 0], [0, -s], [s * 0.05, -s], [s * 0.05, 0]]), "#c8a75a", lw);
+    paint(ctx, polyFn([[s * 0.05, 0], [s * 0.05, -s], [s * 0.7, 0]]), "#a98640", lw);
+  },
+  g_obelisk: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.28);
+    paint(ctx, polyFn([[-s * 0.12, 0], [-s * 0.08, -s], [0, -s * 1.15], [s * 0.08, -s], [s * 0.12, 0]]), "#9a9488", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a4636";
+    ctx.lineWidth = Math.max(0.6, lw * 0.6);
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.06, -s * 0.2 * i);
+      ctx.lineTo(s * 0.06, -s * 0.2 * i);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_floating_island: (ctx, s, rng, lw) => {
+    shadow(ctx, s * 0.1, s * 0.5, s * 0.55);
+    paint(ctx, polyFn([[-s * 0.55, -s * 0.5], [s * 0.55, -s * 0.5], [s * 0.3, -s * 0.05], [0, s * 0.2], [-s * 0.3, -s * 0.05]]), "#7a5a38", lw);
+    paint(ctx, blobFn(iblob(0, -s * 0.55, s * 0.55, s * 0.16, rng, 0.18, 10)), "#5f9a4a", lw);
+    for (const dx of [-0.28, 0.05, 0.3]) {
+      ctx.save();
+      ctx.translate(dx * s, -s * 0.5);
+      tree(ctx, s * 0.34, () => 0.5, lw * 0.8, "#5f9a4a", "#33613a", "#aacf7a");
+      ctx.restore();
+    }
+  },
+  g_turtle_castle: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.05, s * 0.7);
+    paint(ctx, blobFn(iblob(0, -s * 0.2, s * 0.6, s * 0.32, () => 0.5, 0.05, 12)), "#5c7a4a", lw);
+    for (const dx of [-0.7, -0.35, 0.35, 0.7]) paint(ctx, polyFn([[dx * s - s * 0.06, 0], [dx * s, -s * 0.18], [dx * s + s * 0.06, 0]]), "#4a6640", lw);
+    paint(ctx, polyFn([[s * 0.6, -s * 0.15], [s * 0.78, -s * 0.32], [s * 0.72, -s * 0.05]]), "#4a6640", lw);
+    paint(ctx, rectFn(-s * 0.24, -s * 0.7, s * 0.48, s * 0.42), "#c6b487", lw);
+    for (const sx of [-1, 1]) paint(ctx, rectFn(sx * s * 0.28 - s * 0.08, -s * 0.78, s * 0.16, s * 0.5), "#bcac80", lw);
+  },
+  g_ship: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.5);
+    paint(ctx, polyFn([[-s * 0.55, -s * 0.1], [s * 0.55, -s * 0.1], [s * 0.38, s * 0.16], [-s * 0.38, s * 0.16]]), "#7a4f2c", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.1);
+    ctx.lineTo(0, -s * 0.95);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, polyFn([[0, -s * 0.9], [s * 0.4, -s * 0.32], [0, -s * 0.32]]), "#efe4c6", lw);
+  },
+  g_airship: (ctx, s, _rng, lw) => {
+    shadow(ctx, s * 0.1, s * 0.75, s * 0.4);
+    paint(ctx, blobFn(iblob(0, -s * 0.7, s * 0.6, s * 0.34, () => 0.5, 0.04, 12)), "#b0563f", lw);
+    ctx.save();
+    ctx.fillStyle = "#e8ddc0";
+    for (let i = -2; i <= 2; i++) ctx.fillRect(i * s * 0.2 - s * 0.02, -s * 1.04, s * 0.04, s * 0.68);
+    ctx.restore();
+    paint(ctx, polyFn([[-s * 0.28, -s * 0.32], [s * 0.28, -s * 0.32], [s * 0.2, -s * 0.1], [-s * 0.2, -s * 0.1]]), "#7a4f2c", lw);
+  },
+  g_stall: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    ctx.save();
+    ctx.strokeStyle = "#6a4a2a";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.35, 0);
+    ctx.lineTo(-s * 0.35, -s * 0.5);
+    ctx.moveTo(s * 0.35, 0);
+    ctx.lineTo(s * 0.35, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.42, -s * 0.64, s * 0.84, s * 0.17), "#c24a3a", lw * 0.7, "#8a2f22");
+    ctx.save();
+    ctx.fillStyle = "#e8ddc0";
+    for (let i = 0; i < 3; i++) ctx.fillRect(-s * 0.42 + i * s * 0.28 + s * 0.07, -s * 0.64, s * 0.14, s * 0.17);
+    ctx.restore();
+  },
+  g_cart: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.05, s * 0.5);
+    paint(ctx, rectFn(-s * 0.4, -s * 0.45, s * 0.8, s * 0.3), "#8a5e34", lw);
+    ctx.save();
+    ctx.fillStyle = "#3a2a18";
+    ctx.strokeStyle = "#2a1e10";
+    ctx.lineWidth = Math.max(1, lw);
+    for (const dx of [-0.24, 0.24]) {
+      ctx.beginPath();
+      ctx.arc(dx * s, -s * 0.05, s * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_well: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.3);
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.ellipse(0, -s * 0.1, s * 0.22, s * 0.14, 0, 0, Math.PI * 2);
+    }, "#b6a680", lw);
+    ctx.save();
+    ctx.strokeStyle = "#5a4026";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.22, -s * 0.1);
+    ctx.lineTo(-s * 0.26, -s * 0.5);
+    ctx.moveTo(s * 0.22, -s * 0.1);
+    ctx.lineTo(s * 0.26, -s * 0.5);
+    ctx.moveTo(-s * 0.3, -s * 0.5);
+    ctx.lineTo(s * 0.3, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+function drawGouacheAsset(ctx, key, opts) {
+  const recipe = RECIPES[key];
+  if (!recipe) return;
+  const size = (opts.size ?? 30) * (opts.scale ?? 1);
+  const lw = opts.lineWidth ?? 1.4;
+  const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
+  ctx.save();
+  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
+  ctx.translate(opts.x, opts.y);
+  if (opts.rotation) ctx.rotate(opts.rotation);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  recipe(ctx, size, rng, lw);
+  ctx.restore();
+}
+function isGouacheAsset(key) {
+  return !!key && key in RECIPES;
 }
 
 // ../atlas/src/procedural.ts
@@ -1728,10 +2151,14 @@ export {
   BUILTIN_GLYPH_KEYS,
   BiomeKind,
   DRAW_LAYERS,
+  GOUACHE_ASSETS,
+  GOUACHE_ASSET_KEYS,
+  GOUACHE_CATEGORY_LABELS,
   LAYER_Z,
   SCHEMA_VERSION,
   STYLE_PRESETS,
   TOLKIEN_INK,
+  applyColorIntensity,
   assembleStampPrompt,
   buildGridLines,
   buildReliefShading,
@@ -1740,6 +2167,7 @@ export {
   centroid,
   distToSegment,
   drawCompassRose,
+  drawGouacheAsset,
   drawScaleBar,
   drawSvgPath,
   drawVine,
@@ -1747,10 +2175,13 @@ export {
   generateDraft,
   generatePathAttachments,
   getGlyphByKey,
+  getGouacheAsset,
   groupGlyphsByCategory,
   hashStringToSeed,
+  isGouacheAsset,
   layoutCharactersOnPath,
   listGlyphsByCategory,
+  listGouacheAssetsByCategory,
   migrateDoc,
   mulberry32,
   paintTerrainBlobs,

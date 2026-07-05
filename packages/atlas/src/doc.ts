@@ -30,6 +30,11 @@ export interface AtlasTileLayer {
   tile: number;
   /** Sparse map of painted tiles, keyed `"col,row"` → biome kind string. */
   cells: Record<string, string>;
+  /**
+   * Optional per-biome colour intensity (saturation/depth) factor; `1` =
+   * unchanged, `<1` paler, `>1` more saturated. Missing = all `1`.
+   */
+  intensity?: Record<string, number>;
 }
 
 /**

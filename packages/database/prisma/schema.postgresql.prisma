@@ -3273,6 +3273,7 @@ enum AtlasFeatureKind {
   label
   pin
   vine
+  plot
 }
 
 enum AtlasLabelColor {
@@ -3383,6 +3384,7 @@ model AtlasObject {
   y             Float
   scale         Float              @default(1)
   rotation      Float              @default(0)
+  style         Json?
   layer         Int                @default(0)
   linkedPageId  String?            @map("linked_page_id")
   visibility    Visibility         @default(dm_only)

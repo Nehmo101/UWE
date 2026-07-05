@@ -133,6 +133,7 @@ export type {
 export {
   roundedRectPath,
   paintTerrainBlobs,
+  applyColorIntensity,
   drawSvgPath,
   drawCompassRose,
   drawScaleBar,
@@ -148,6 +149,22 @@ export type {
 // Vine / giant-root layout engine — deterministic pseudo-3D beanstalk
 export { buildVineLayout } from "./vine";
 export type { VineOptions, VineLayout, VineAura } from "./vine";
+
+// Gouache painted-asset engine (Canvas-of-Kings style)
+export {
+  GOUACHE_ASSETS,
+  GOUACHE_ASSET_KEYS,
+  GOUACHE_CATEGORY_LABELS,
+  getGouacheAsset,
+  listGouacheAssetsByCategory,
+  drawGouacheAsset,
+  isGouacheAsset,
+} from "./assets";
+export type {
+  GouacheAsset,
+  GouacheCategory,
+  DrawGouacheAssetOptions,
+} from "./assets";
 
 // Procedural draft generators
 export {

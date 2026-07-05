@@ -25,7 +25,8 @@
     "./path-smoothing": "./src/path-smoothing.ts",
     "./path-attachments": "./src/path-attachments.ts",
     "./export-grid": "./src/export-grid.ts",
-    "./vine": "./src/vine.ts"
+    "./vine": "./src/vine.ts",
+    "./assets": "./src/assets.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
