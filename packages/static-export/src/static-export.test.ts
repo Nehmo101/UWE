@@ -8,10 +8,17 @@ import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { exportWorldStatic } from "./export-world";
 import { portalUrlToStaticHref, relativeHref } from "./paths";
 
+const CUSTOM_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+const AI_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/lH9u7wAAAABJRU5ErkJggg==";
+const PENDING_AI_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
 describe("static export", () => {
   let databaseUrl: string;
   let outputDir: string;
   let worldSlug: string;
+  let uploadPaletteId: string;
+  let aiPaletteId: string;
+  let pendingAiPaletteId: string;
 
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
@@ -112,6 +119,33 @@ describe("static export", () => {
     const treePalette = await db.atlasPaletteItem.findFirstOrThrow({
       where: { worldId: null, builtinGlyphKey: "tree" },
     });
+    const uploadPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "Custom Banner",
+      kind: "landmark",
+      source: "upload",
+      reviewStatus: "approved",
+      styleTags: { imageData: CUSTOM_STAMP_PNG, mimeType: "image/png" },
+    });
+    uploadPaletteId = uploadPalette.id;
+    const aiPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "AI Crystal Obelisk",
+      kind: "landmark",
+      source: "ai",
+      reviewStatus: "approved",
+      styleTags: { imageData: AI_STAMP_PNG, mimeType: "image/png", prompt: "crystal obelisk" },
+    });
+    aiPaletteId = aiPalette.id;
+    const pendingAiPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "Pending AI Secret Gate",
+      kind: "landmark",
+      source: "ai",
+      reviewStatus: "pending",
+      styleTags: { imageData: PENDING_AI_STAMP_PNG, mimeType: "image/png", prompt: "secret gate" },
+    });
+    pendingAiPaletteId = pendingAiPalette.id;
     await atlas.createObject({
       nodeId: westland.id,
       paletteItemId: treePalette.id,
@@ -121,6 +155,36 @@ describe("static export", () => {
       rotation: 8,
       style: { gouache: "g_keep", lineWidth: 1.8, blur: 0.4 },
       layer: 50,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: uploadPalette.id,
+      x: 0.55,
+      y: 0.45,
+      scale: 0.9,
+      rotation: -6,
+      layer: 55,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: aiPalette.id,
+      x: 0.65,
+      y: 0.42,
+      scale: 1.2,
+      rotation: 3,
+      layer: 56,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: pendingAiPalette.id,
+      x: 0.75,
+      y: 0.4,
+      scale: 1,
+      rotation: 0,
+      layer: 57,
       visibility: "player_visible",
     });
     await db.$disconnect();
@@ -231,7 +295,14 @@ describe("static export", () => {
       tileLayer: { intensity?: Record<string, number>; blendWidth?: number } | null;
       preset: { colors: { parchment: string } };
       builtinGlyphs: { key: string; pathData: string }[];
-      objects: { style: { gouache?: string; lineWidth?: number; blur?: number } | null }[];
+      paletteItems: Record<
+        string,
+        { source: string; builtinGlyphKey: string | null; imageData?: string; mimeType?: string }
+      >;
+      objects: {
+        paletteItemId: string;
+        style: { gouache?: string; lineWidth?: number; blur?: number } | null;
+      }[];
     };
     assert.equal(atlasJson.nodes.length, 1);
     assert.equal(atlasJson.nodes[0]?.title, "Westland");
@@ -240,6 +311,24 @@ describe("static export", () => {
     assert.equal(atlasJson.objects[0]?.style?.gouache, "g_keep");
     assert.equal(atlasJson.objects[0]?.style?.lineWidth, 1.8);
     assert.equal(atlasJson.objects[0]?.style?.blur, 0.4);
+    assert.deepEqual(atlasJson.paletteItems[uploadPaletteId], {
+      source: "upload",
+      builtinGlyphKey: null,
+      imageData: CUSTOM_STAMP_PNG,
+      mimeType: "image/png",
+    });
+    assert.deepEqual(atlasJson.paletteItems[aiPaletteId], {
+      source: "ai",
+      builtinGlyphKey: null,
+      imageData: AI_STAMP_PNG,
+      mimeType: "image/png",
+    });
+    assert.equal(atlasJson.paletteItems[pendingAiPaletteId], undefined);
+    assert.equal(
+      atlasJson.objects.some((object) => object.paletteItemId === pendingAiPaletteId),
+      false,
+    );
+    assert.ok(!JSON.stringify(atlasJson).includes(PENDING_AI_STAMP_PNG));
     assert.ok(atlasJson.preset.colors.parchment);
 
     // Canonical pictogram registry is injected so the static viewer needs no copy.

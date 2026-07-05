@@ -82,6 +82,8 @@ describe("security leaks — atlas portal visibility (three-tier: map + node + f
     // reach the player-facing bundle, and only referenced ids may be resolved.
     assert.match(exportAtlas, /reviewStatus:\s*["']approved["']/);
     assert.match(exportAtlas, /id:\s*\{\s*in:/);
+    assert.match(exportAtlas, /approvedPaletteIds/);
+    assert.match(exportAtlas, /exportableObjects/);
   });
 
   it("static export takes the tile layer from the portal-filtered map snapshot only", () => {

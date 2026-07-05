@@ -148,6 +148,10 @@ export async function writeAtlasStaticBundle(
       };
     }
   }
+  const approvedPaletteIds = new Set(Object.keys(paletteItems));
+  const exportableObjects = snapshot.objects.filter((object) =>
+    approvedPaletteIds.has(object.paletteItemId),
+  );
 
   const payload: AtlasStaticExportPayload = {
     worldSlug,
@@ -195,7 +199,7 @@ export async function writeAtlasStaticBundle(
       linkedPageId: feature.linkedPageId,
       layer: feature.layer,
     })),
-    objects: snapshot.objects.map((object) => ({
+    objects: exportableObjects.map((object) => ({
       id: object.id,
       nodeId: object.nodeId,
       paletteItemId: object.paletteItemId,
