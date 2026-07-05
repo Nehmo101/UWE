@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { getCurrentUser, getSessionToken } from "@/src/lib/auth";
-import { getSystemSettingsSnapshot, resolveSessionInactivityTimeoutMs } from "@uwe/database/server";
+import { getSystemSettingsSnapshotSafe, resolveSessionInactivityTimeoutMs } from "@uwe/database/settings-service";
 import { SessionIdleGuard } from "@uwe/shared-ui";
 
 const PUBLIC_PREFIXES = ["/login", "/forgot-password", "/reset-password", "/logout"] as const;
@@ -23,7 +23,7 @@ export async function PortalSessionChrome() {
     return null;
   }
 
-  const { settings } = await getSystemSettingsSnapshot();
+  const { settings } = await getSystemSettingsSnapshotSafe();
   const inactivityTimeoutMs = resolveSessionInactivityTimeoutMs(settings);
 
   if (inactivityTimeoutMs <= 0) {

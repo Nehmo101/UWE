@@ -2,9 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   createAuthService,
-  createPrismaClient,
 } from "@uwe/database/server";
-import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import type { AuthUser, UweRole } from "@uwe/auth";
 import {
   ADMIN_ACCESS_ROLES,
@@ -21,7 +20,7 @@ import {
 } from "@uwe/auth";
 
 function getDb() {
-  return createPrismaClient();
+  return getSharedPrismaClient();
 }
 
 export async function getSessionToken(): Promise<string | null> {

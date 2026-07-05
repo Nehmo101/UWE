@@ -68,13 +68,6 @@ export async function disconnectPrismaClientIfOwned(client: PrismaClient): Promi
 }
 
 export function createPrismaClient(databaseUrl?: string): PrismaClient {
-  if (!databaseUrl) {
-    const url = resolveDatabaseUrl();
-    if (!isPostgresDatabaseUrl(url)) {
-      return getSharedPrismaClient();
-    }
-  }
-
   const url = resolveDatabaseUrl(databaseUrl);
 
   if (isPostgresDatabaseUrl(url)) {
