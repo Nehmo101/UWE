@@ -28,6 +28,12 @@ import { UweReleasePanel } from "./components/UweReleasePanel";
 import { ConnectorShell } from "./components/shell/ConnectorShell";
 import { connectorSidebar } from "./navigation/connector-nav";
 import {
+  humanizeConnectionStatus,
+  humanizeProcessStatus,
+  toHealthBadgeStatus,
+  toMessage,
+} from "./lib/connector-runtime-labels";
+import {
   deleteOllamaModel,
   getConnectorStatus,
   getCookbookDashboard,
@@ -71,76 +77,6 @@ const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
   connectionStatus: "not_configured",
   lastHeartbeatAt: null,
 };
-
-function toMessage(error: unknown): string {
-  if (typeof error === "string") {
-    return error.trim() || "Unbekannter Fehler";
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (error && typeof error === "object" && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string" && message.trim()) {
-      return message;
-    }
-  }
-
-  return "Unbekannter Fehler";
-}
-
-function toHealthBadgeStatus(
-  runtimeStatus: ConnectorRuntimeStatus,
-): "ok" | "degraded" | "error" {
-  if (runtimeStatus.status === "error" || runtimeStatus.connectionStatus === "error") {
-    return "error";
-  }
-
-  if (runtimeStatus.status === "running" && runtimeStatus.connectionStatus === "connected") {
-    return "ok";
-  }
-
-  return "degraded";
-}
-
-function humanizeConnectionStatus(status: ConnectorRuntimeStatus["connectionStatus"]): string {
-  switch (status) {
-    case "connected":
-      return "Verbunden";
-    case "connecting":
-      return "Verbindet";
-    case "ready":
-      return "Bereit";
-    case "degraded":
-      return "Eingeschränkt";
-    case "disconnected":
-      return "Getrennt";
-    case "error":
-      return "Fehler";
-    case "not_configured":
-      return "Nicht eingerichtet";
-    default:
-      return status;
-  }
-}
-
-function humanizeProcessStatus(status: ConnectorRuntimeStatus["status"]): string {
-  switch (status) {
-    case "running":
-      return "Läuft";
-    case "starting":
-      return "Startet";
-    case "stopping":
-      return "Stoppt";
-    case "error":
-      return "Fehler";
-    case "stopped":
-    default:
-      return "Gestoppt";
-  }
-}
 
 export default function App() {
   const [activePath, setActivePath] = useState<ConnectorPath>("/");
@@ -250,7 +186,7 @@ export default function App() {
 
     const next: ConnectorModelProfileStore = {
       ...store,
-      profiles: store.profiles.map((profile) =>
+      profiles: store.profiles.map((profile: ConnectorModelProfileStore["profiles"][number]) =>
         matches(profile) ? { ...profile, enabledForUwe: true } : profile,
       ),
     };
