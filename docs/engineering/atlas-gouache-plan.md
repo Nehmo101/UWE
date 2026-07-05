@@ -4,7 +4,7 @@
 > Liniendicke + Unschärfe, Untergrund-Intensität, Terrain-Blend-Defaults/-Regler,
 > Editor- & Portal-Rendering).
 > Offen: KI/RTX-`plot`-Proposal-Flow, Settlement-Generator,
-> Static-Viewer-Legenden-Feinschliff, größere Asset-Bibliothek, RTX-Asset-Studio in UWE — siehe
+> Custom-/AI-Stempel-Goldens im Static Viewer, größere Asset-Bibliothek, RTX-Asset-Studio in UWE — siehe
 > [atlas-follow-ups.md](atlas-follow-ups.md).
 > Ursprünglicher Umfang: Umsetzungsplan.
 > Kontext: Annäherung des Atlas-Editors an [Canvas of Kings](https://store.steampowered.com/app/2498570/Canvas_of_Kings/) — gemalte Assets, selbstfüllende Flächen, direkte Objektgriffe.

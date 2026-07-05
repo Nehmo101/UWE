@@ -342,8 +342,11 @@ describe("static export", () => {
     assert.match(viewerJs, /drawVine/);
     assert.match(viewerJs, /smoothPath/);
     assert.match(viewerJs, /blendWidth/);
+    assert.match(viewerJs, /data-atlas-legend/);
 
     const indexHtml = fs.readFileSync(path.join(exportRoot, "index.html"), "utf8");
     assert.match(indexHtml, /Atlas \/ Karte öffnen/);
+    const atlasHtml = fs.readFileSync(path.join(exportRoot, "atlas/index.html"), "utf8");
+    assert.match(atlasHtml, /\.atlas-static-legend/);
   });
 });

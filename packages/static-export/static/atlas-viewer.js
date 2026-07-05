@@ -26,6 +26,19 @@
     snow: "#dde6f0",
   };
 
+  const BIOME_LABEL = {
+    grassland: "Grasland",
+    coast: "Wasser",
+    hills: "Erde",
+    desert: "Sand",
+    forest: "Wald",
+    mountains: "Gebirge",
+    swamp: "Sumpf",
+    snow: "Schnee",
+  };
+
+  const TERRAIN_ORDER = ["grassland", "coast", "hills", "desert", "forest", "mountains", "swamp", "snow"];
+
   const BIOME_FILL = {
     forest: "rgba(74,103,65,0.28)",
     mountains: "rgba(122,107,82,0.24)",
@@ -66,6 +79,16 @@
     continent: "Kontinent",
     landscape: "Landschaft",
     city: "Stadt",
+  };
+
+  const FEATURE_KIND_LABELS = {
+    region: "Regionen",
+    river: "Flüsse",
+    road: "Straßen",
+    plot: "Objektflächen",
+    vine: "Ranken",
+    pin: "Pins",
+    relief: "Relief",
   };
 
   function worldToCanvas(nx, ny, panX, panY, zoom, w, h) {
@@ -296,6 +319,22 @@
       .replace(/"/g, "&quot;");
   }
 
+  function escapeAttr(text) {
+    return escapeHtml(text);
+  }
+
+  function glyphIconHtml(glyph) {
+    if (!glyph || !glyph.pathData) return '<span class="atlas-static-legend-mark"></span>';
+    const color = escapeAttr(glyph.color || "#e2e8f0");
+    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${escapeAttr(glyph.pathData)}"/></svg>`;
+  }
+
+  function addCount(map, key, item) {
+    const current = map.get(key);
+    if (current) current.count += 1;
+    else map.set(key, { ...item, count: 1 });
+  }
+
   class AtlasStaticViewer {
     constructor(rootEl, data, atlasEngine) {
       this.rootEl = rootEl;
@@ -341,9 +380,12 @@
             <button type="button" data-atlas-zoom-in title="Vergrößern">+</button>
             <span class="atlas-static-hint">Ziehen = Schwenken · Klick = Zoomen / Wiki</span>
           </div>
-          <div class="atlas-static-canvas-wrap">
-            <canvas data-atlas-canvas aria-label="Atlas-Karte"></canvas>
-            <div class="atlas-static-decor" data-atlas-decor></div>
+          <div class="atlas-static-body">
+            <div class="atlas-static-canvas-wrap">
+              <canvas data-atlas-canvas aria-label="Atlas-Karte"></canvas>
+              <div class="atlas-static-decor" data-atlas-decor></div>
+            </div>
+            <aside class="atlas-static-legend" data-atlas-legend aria-label="Kartenlegende" hidden></aside>
           </div>
           <p class="atlas-static-tooltip" data-atlas-tooltip hidden></p>
         </div>
@@ -354,6 +396,7 @@
       this.titleEl = this.rootEl.querySelector("[data-atlas-title]");
       this.tooltipEl = this.rootEl.querySelector("[data-atlas-tooltip]");
       this.decorEl = this.rootEl.querySelector("[data-atlas-decor]");
+      this.legendEl = this.rootEl.querySelector("[data-atlas-legend]");
     }
 
     bindEvents() {
@@ -422,6 +465,100 @@
       return this.data.objects.filter((o) => o.nodeId === this.nodeId);
     }
 
+    resolveGlyphs() {
+      return this.data.builtinGlyphs && this.data.builtinGlyphs.length
+        ? this.data.builtinGlyphs
+        : BUILTIN_GLYPHS;
+    }
+
+    buildLegendSections() {
+      const sections = [];
+      const terrain = new Set();
+      const tl = this.data.tileLayer;
+      if (tl && tl.cells) {
+        for (const biome of Object.values(tl.cells)) {
+          if (biome && TILE_FILL[biome]) terrain.add(biome);
+        }
+      }
+
+      const featureCounts = new Map();
+      for (const feature of this.getNodeFeatures()) {
+        if (feature.kind === "biome") {
+          const biome = feature.style && feature.style.biomeKind;
+          if (biome && TILE_FILL[biome]) terrain.add(biome);
+          continue;
+        }
+        const label = FEATURE_KIND_LABELS[feature.kind];
+        if (!label) continue;
+        addCount(featureCounts, feature.kind, {
+          label,
+          icon: '<span class="atlas-static-legend-mark"></span>',
+        });
+      }
+
+      const terrainItems = TERRAIN_ORDER
+        .filter((biome) => terrain.has(biome))
+        .map((biome) => ({
+          label: BIOME_LABEL[biome] || biome,
+          count: 1,
+          icon: `<span class="atlas-static-legend-swatch" style="background:${escapeAttr(TILE_FILL[biome])}"></span>`,
+        }));
+      if (terrainItems.length) sections.push({ title: "Untergrund", items: terrainItems });
+      if (featureCounts.size) sections.push({ title: "Kartenzeichen", items: [...featureCounts.values()] });
+
+      const glyphs = this.resolveGlyphs();
+      const objectCounts = new Map();
+      for (const obj of this.getNodeObjects()) {
+        const style = obj.style || {};
+        if (style.gouache && this.atlasEngine && this.atlasEngine.getGouacheAsset) {
+          const asset = this.atlasEngine.getGouacheAsset(style.gouache);
+          addCount(objectCounts, `g:${style.gouache}`, {
+            label: asset ? asset.name : String(style.gouache),
+            icon: '<span class="atlas-static-legend-mark"></span>',
+          });
+          continue;
+        }
+        const paletteItem = this.paletteItems[obj.paletteItemId];
+        if (paletteItem && paletteItem.imageData) {
+          addCount(objectCounts, `img:${obj.paletteItemId}`, {
+            label: "Custom-Stempel",
+            icon: '<span class="atlas-static-legend-mark"></span>',
+          });
+          continue;
+        }
+        const glyphKey = paletteItem ? paletteItem.builtinGlyphKey : obj.paletteItemId;
+        const glyph = glyphs.find((g) => g.key === glyphKey);
+        addCount(objectCounts, `glyph:${glyphKey || obj.paletteItemId}`, {
+          label: glyph ? glyph.name : "Stempel",
+          icon: glyphIconHtml(glyph),
+        });
+      }
+      if (objectCounts.size) sections.push({ title: "Objekte", items: [...objectCounts.values()] });
+      return sections;
+    }
+
+    updateLegend() {
+      if (!this.legendEl) return;
+      const sections = this.buildLegendSections();
+      if (sections.length === 0) {
+        this.legendEl.hidden = true;
+        this.legendEl.innerHTML = "";
+        return;
+      }
+      this.legendEl.hidden = false;
+      this.legendEl.innerHTML = `<h2>Kartenlegende</h2>${sections
+        .map(
+          (section) =>
+            `<section class="atlas-static-legend-section"><h3>${escapeHtml(section.title)}</h3><div class="atlas-static-legend-list">${section.items
+              .map(
+                (item) =>
+                  `<div class="atlas-static-legend-row"><span class="atlas-static-legend-icon">${item.icon}</span><span>${escapeHtml(item.label)}</span>${item.count > 1 ? `<span class="atlas-static-legend-count">${item.count}</span>` : "<span></span>"}</div>`,
+              )
+              .join("")}</div></section>`,
+        )
+        .join("")}`;
+    }
+
     updateChrome() {
       const node = this.getNode();
       if (!node) return;
@@ -444,6 +581,7 @@
           ${this.preset.decorations.scaleBar ? `<div class="atlas-static-scale"><span>0 — 100 ${escapeHtml(this.preset.decorations.scaleUnit || "km")}</span></div>` : ""}
         `;
       }
+      this.updateLegend();
     }
 
     resize() {
@@ -651,10 +789,7 @@
       const [bx1, by1] = w2c(1, 1);
       ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
 
-      const glyphs =
-        this.data.builtinGlyphs && this.data.builtinGlyphs.length
-          ? this.data.builtinGlyphs
-          : BUILTIN_GLYPHS;
+      const glyphs = this.resolveGlyphs();
       const features = [...this.getNodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
 
       for (const feat of features) {

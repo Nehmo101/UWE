@@ -80,6 +80,13 @@ export function bundleAtlasViewerStyles(): string {
   color: #64748b;
 }
 
+.atlas-static-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
 .atlas-static-canvas-wrap {
   position: relative;
   flex: 1;
@@ -101,6 +108,75 @@ export function bundleAtlasViewerStyles(): string {
   cursor: grabbing;
 }
 
+.atlas-static-legend {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.5rem;
+  background: rgba(15, 23, 42, 0.58);
+  color: #cbd5e1;
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.atlas-static-legend h2 {
+  margin: 0 0 0.65rem;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.atlas-static-legend-section + .atlas-static-legend-section {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.atlas-static-legend-section h3 {
+  margin: 0 0 0.4rem;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-static-legend-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.atlas-static-legend-row {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 1.5rem;
+  font-size: 0.78rem;
+}
+
+.atlas-static-legend-icon {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.atlas-static-legend-swatch,
+.atlas-static-legend-mark {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 0.2rem;
+  border: 1px solid rgba(226, 232, 240, 0.42);
+}
+
+.atlas-static-legend-mark {
+  background: linear-gradient(135deg, #b0895b, #f0d19a);
+}
+
+.atlas-static-legend-count {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
 .atlas-static-decor {
   position: absolute;
   right: 0.75rem;
@@ -120,6 +196,12 @@ export function bundleAtlasViewerStyles(): string {
 .atlas-static-empty {
   color: #94a3b8;
   padding: 1rem 0;
+}
+
+@media (max-width: 900px) {
+  .atlas-static-body {
+    grid-template-columns: 1fr;
+  }
 }
 `;
 }
