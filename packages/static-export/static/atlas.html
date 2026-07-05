@@ -244,6 +244,7 @@ import * as engine from "./atlas-engine.js";
 // ===========================================================================
 const TILE = 32, COLS = 64, ROWS = 40;
 const WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+const DEFAULT_TERRAIN_BLEND_WIDTH = engine.DEFAULT_TERRAIN_BLEND_WIDTH ?? 6;
 
 const TILE_FILL = { grassland: "#a9c47f", coast: "#9fc0d2", hills: "#c2a878", desert: "#dcc47c", forest: "#7a9463", mountains: "#b4a487", swamp: "#8a9b78", snow: "#dde6f0" };
 const BIOME_LABEL = { grassland: "Grasland", coast: "Wasser", hills: "Erde", desert: "Sand", forest: "Wald", mountains: "Gebirge", swamp: "Sumpf", snow: "Schnee" };
@@ -387,7 +388,7 @@ function emptyDoc() {
     rootNodeId: rootId, pageLinks: {},
     nodes: [{ id: rootId, parentId: null, level: "continent", title: "Westland", parentFeatureId: null, visibility: "dm_only" }],
     features: [], objects: [],
-    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells: {} },
+    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells: {}, blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH },
   };
 }
 function demoSeed() {
@@ -420,7 +421,7 @@ function demoSeed() {
       { id: "obj-3", nodeId: rootId, paletteItemId: "tree", x: 0.22, y: 0.30, scale: 0.9, rotation: 0, layer: 50, visibility: "dm_only" },
       { id: "obj-4", nodeId: rootId, paletteItemId: "mountain", x: 0.30, y: 0.48, scale: 1, rotation: 0, layer: 50, visibility: "dm_only" },
     ],
-    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells },
+    tileLayer: { cols: COLS, rows: ROWS, tile: TILE, cells, blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH },
   };
 }
 function serialize() { return engine.serializeDoc(doc, { preset }); }
@@ -651,7 +652,7 @@ function drawScene(ctx, W, H, chrome) {
     fillFor: (b) => TILE_FILL[b] || "#ccc",
     radiusRatio: 0.4,
     intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
-    blendWidth: (tl.blendWidth || 0) * z,
+    blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * z,
   });
 
   const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * z, W / 2, H / 2, W * 0.75);
@@ -1439,7 +1440,18 @@ function buildSidebar() {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.intensity = doc.tileLayer.intensity || {};
     doc.tileLayer.intensity[state.brush] = Number(e.target.value);
-    markDirty(); draw();
+    markDirty(); refreshChrome(); draw();
+  });
+
+  // Weiche Terrain-Ubergange (global fur den tileLayer).
+  const gb = document.createElement("div");
+  gb.style.cssText = "padding:8px 2px 2px;";
+  gb.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Terrain-Blend <span id="terrain-blend-value" style="float:right;color:var(--uwe-fg-subtle);">' + DEFAULT_TERRAIN_BLEND_WIDTH + 'px</span></div><input id="terrain-blend-width" type="range" min="0" max="18" step="1" value="' + DEFAULT_TERRAIN_BLEND_WIDTH + '" style="width:100%;accent-color:var(--uwe-accent);">';
+  swatches.parentElement.appendChild(gb);
+  gb.querySelector("input").addEventListener("input", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    doc.tileLayer.blendWidth = Math.max(0, Number(e.target.value) || 0);
+    markDirty(); refreshChrome(); draw();
   });
 }
 
@@ -1489,12 +1501,21 @@ function refreshChrome() {
     const glyphActive = !st.gouacheKey && st.glyphKey === key;
     b.classList.toggle("on", st.tool === "stamp" && (gouacheActive || glyphActive));
   }
+  const intensityInput = el("ground-intensity");
+  if (intensityInput && doc && doc.tileLayer) {
+    intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
+  }
+  const terrainBlend = doc && doc.tileLayer ? (doc.tileLayer.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) : DEFAULT_TERRAIN_BLEND_WIDTH;
+  const blendInput = el("terrain-blend-width");
+  const blendValue = el("terrain-blend-value");
+  if (blendInput) blendInput.value = terrainBlend;
+  if (blendValue) blendValue.textContent = terrainBlend + "px";
 
   // Sub-bar
   const sub = el("subbar"), subC = el("subbar-content");
   let subHtml = "", subShow = false;
   if (!view) {
-    if (st.tool === "terrain" || st.tool === "biome") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">' + (st.tool === "biome" ? "Biom-Fläche" : "Terrain") + ":</b> " + BIOME_LABEL[st.brush] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize]; }
+    if (st.tool === "terrain" || st.tool === "biome") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">' + (st.tool === "biome" ? "Biom-Fläche" : "Terrain") + ":</b> " + BIOME_LABEL[st.brush] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Blend " + terrainBlend + "px"; }
     else if (st.tool === "stamp") {
       subShow = true;
       let stampName;

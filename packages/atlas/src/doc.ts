@@ -20,6 +20,9 @@ import { AtlasParseError } from "./serialization";
 /** Current Atlas document schema version. */
 export const SCHEMA_VERSION = 2 as const;
 
+/** Default soft biome-border blend width in world pixels at zoom 1. */
+export const DEFAULT_TERRAIN_BLEND_WIDTH = 6 as const;
+
 /**
  * Terrain tile grid. `cells` is keyed by `"c,r"` (column,row) → biome kind.
  * Defaults describe the world grid: 64×40 tiles at 32px (2048×1280 world px).
@@ -90,7 +93,12 @@ export interface AtlasDocV2 extends AtlasDoc {
 export type SerializedAtlasDoc = AtlasDocV2 & Record<string, unknown>;
 
 function emptyTileLayer(): AtlasTileLayer {
-  return { cols: 64, rows: 40, tile: 32, cells: {} };
+  return { cols: 64, rows: 40, tile: 32, cells: {}, blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH };
+}
+
+function normalizeTerrainBlendWidth(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_TERRAIN_BLEND_WIDTH;
+  return Math.max(0, value);
 }
 
 /**
@@ -119,6 +127,7 @@ export function migrateDoc(doc: unknown): AtlasDocV2 {
   d.pageLinks = d.pageLinks ?? {};
   d.tileLayer = d.tileLayer ?? emptyTileLayer();
   d.tileLayer.cells = d.tileLayer.cells ?? {};
+  d.tileLayer.blendWidth = normalizeTerrainBlendWidth(d.tileLayer.blendWidth);
   return d as AtlasDocV2;
 }
 

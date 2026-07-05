@@ -8,7 +8,7 @@
  */
 
 import type { AtlasGeometry } from "@uwe/atlas";
-import type { AtlasDocV2, AtlasTileLayer } from "@uwe/atlas/doc";
+import { DEFAULT_TERRAIN_BLEND_WIDTH, type AtlasDocV2, type AtlasTileLayer } from "@uwe/atlas/doc";
 
 export interface StudioAtlasNodeInput {
   id: string;
@@ -57,7 +57,13 @@ export interface BuildStudioAtlasDocInput {
   mapVisibility?: string;
 }
 
-const EMPTY_TILE_LAYER: AtlasTileLayer = { cols: 64, rows: 40, tile: 32, cells: {} };
+const EMPTY_TILE_LAYER: AtlasTileLayer = {
+  cols: 64,
+  rows: 40,
+  tile: 32,
+  cells: {},
+  blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+};
 
 /**
  * Build a full v2 atlas doc for the current node (rootNodeId = node.id), with the
@@ -134,7 +140,11 @@ export function buildStudioAtlasDoc(input: BuildStudioAtlasDocInput): AtlasDocV2
       _key: o._key,
     })),
     // Fresh cells object per doc — never share the constant's mutable cells reference.
-    tileLayer: tileLayer ?? { ...EMPTY_TILE_LAYER, cells: {} },
+    tileLayer: {
+      ...(tileLayer ?? EMPTY_TILE_LAYER),
+      cells: { ...((tileLayer ?? EMPTY_TILE_LAYER).cells ?? {}) },
+      blendWidth: (tileLayer ?? EMPTY_TILE_LAYER).blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH,
+    },
   };
 }
 

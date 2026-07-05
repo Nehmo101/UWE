@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { SCHEMA_VERSION, migrateDoc, serializeDoc } from "./doc";
+import { DEFAULT_TERRAIN_BLEND_WIDTH, SCHEMA_VERSION, migrateDoc, serializeDoc } from "./doc";
 import { AtlasParseError } from "./serialization";
 
 // A representative v1 document (no schemaVersion, no tileLayer), shaped like the
@@ -50,7 +50,13 @@ describe("migrateDoc — v1 → v2", () => {
   it("adds schemaVersion=2 and an empty tileLayer", () => {
     const migrated = migrateDoc(terraV1Doc());
     assert.equal(migrated.schemaVersion, 2);
-    assert.deepEqual(migrated.tileLayer, { cols: 64, rows: 40, tile: 32, cells: {} });
+    assert.deepEqual(migrated.tileLayer, {
+      cols: 64,
+      rows: 40,
+      tile: 32,
+      cells: {},
+      blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+    });
   });
 
   it("leaves features / nodes / objects untouched", () => {
@@ -67,7 +73,13 @@ describe("migrateDoc — v1 → v2", () => {
     assert.deepEqual(migrated.features, []);
     assert.deepEqual(migrated.objects, []);
     assert.deepEqual(migrated.pageLinks, {});
-    assert.deepEqual(migrated.tileLayer, { cols: 64, rows: 40, tile: 32, cells: {} });
+    assert.deepEqual(migrated.tileLayer, {
+      cols: 64,
+      rows: 40,
+      tile: 32,
+      cells: {},
+      blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+    });
   });
 
   it("preserves an existing tileLayer's cells", () => {
@@ -76,6 +88,26 @@ describe("migrateDoc — v1 → v2", () => {
       tileLayer: { cols: 64, rows: 40, tile: 32, cells: { "1,2": "forest" } },
     });
     assert.deepEqual(migrated.tileLayer.cells, { "1,2": "forest" });
+  });
+
+  it("defaults blendWidth but preserves explicit hard edges", () => {
+    const defaulted = migrateDoc({
+      schemaVersion: 2,
+      tileLayer: { cols: 64, rows: 40, tile: 32, cells: {} },
+    });
+    assert.equal(defaulted.tileLayer.blendWidth, DEFAULT_TERRAIN_BLEND_WIDTH);
+
+    const hardEdges = migrateDoc({
+      schemaVersion: 2,
+      tileLayer: { cols: 64, rows: 40, tile: 32, cells: {}, blendWidth: 0 },
+    });
+    assert.equal(hardEdges.tileLayer.blendWidth, 0);
+
+    const clamped = migrateDoc({
+      schemaVersion: 2,
+      tileLayer: { cols: 64, rows: 40, tile: 32, cells: {}, blendWidth: -4 },
+    });
+    assert.equal(clamped.tileLayer.blendWidth, 0);
   });
 
   it("is idempotent", () => {
@@ -146,7 +178,13 @@ describe("serializeDoc", () => {
       objects: [
         { paletteItemId: "pi_city", x: 0.5, y: 0.4, scale: 1, rotation: 0, layer: 50, visibility: "player_visible" },
       ],
-      tileLayer: { cols: 64, rows: 40, tile: 32, cells: {} },
+      tileLayer: {
+        cols: 64,
+        rows: 40,
+        tile: 32,
+        cells: {},
+        blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+      },
     });
   });
 });

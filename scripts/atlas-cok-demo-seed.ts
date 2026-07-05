@@ -9,6 +9,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
+import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
 import { randomStampVariation, stampSeedFromKey } from "@uwe/atlas/stamp-variation";
 
 async function main() {
@@ -161,7 +162,14 @@ async function main() {
       await atlas.updateAtlasMap(map.id, {
         // `intensity` drives the per-biome "Untergrund-Intensität" control:
         // satter Wald, blasseres Grasland.
-        tileLayer: { cols: 64, rows: 40, tile: 32, cells, intensity: { forest: 1.3, grassland: 0.85 } },
+        tileLayer: {
+          cols: 64,
+          rows: 40,
+          tile: 32,
+          cells,
+          intensity: { forest: 1.3, grassland: 0.85 },
+          blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+        },
       });
     }
 

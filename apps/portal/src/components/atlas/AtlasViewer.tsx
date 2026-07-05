@@ -23,6 +23,7 @@ import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawVine } from "@uwe/atlas/canvas-render";
 import { buildVineLayout } from "@uwe/atlas/vine";
 import { drawGouacheAsset, isGouacheAsset } from "@uwe/atlas/assets";
+import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -401,7 +402,7 @@ export function AtlasViewer({
         },
         fillFor: (biome) => TILE_FILL[biome] ?? "#ccc",
         intensityFor: (biome) => tileLayer?.intensity?.[biome] ?? 1,
-        blendWidth: (tileLayer.blendWidth ?? 0) * zoom,
+        blendWidth: (tileLayer.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
         radiusRatio: 0.4,
       });
     }

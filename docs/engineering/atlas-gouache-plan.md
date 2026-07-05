@@ -1,7 +1,8 @@
 # Atlas — Gouache-Redesign & CoK-Feature-Plan
 
 > Status: **Phase 1 umgesetzt** (Gouache-Asset-Engine, per-Objekt `style` mit
-> Liniendicke + Unschärfe, Untergrund-Intensität, Editor- & Portal-Rendering).
+> Liniendicke + Unschärfe, Untergrund-Intensität, Terrain-Blend-Defaults/-Regler,
+> Editor- & Portal-Rendering).
 > Offen: KI/RTX-`plot`-Proposal-Flow, Settlement-Generator,
 > Static-Viewer-Legenden-Feinschliff, größere Asset-Bibliothek, RTX-Asset-Studio in UWE — siehe
 > [atlas-follow-ups.md](atlas-follow-ups.md).
@@ -57,7 +58,7 @@ Drei dokumentierte Leitplanken werden bewusst gelockert — gehört **vor** die 
 | **Objektbereich füllen (Plot)** | M | Neuer `AtlasFeatureKind` `plot` (Pattern wie `vine`: `constants.ts` + beide Prisma-Enums + PG `ALTER TYPE`). Preset-Modus: `fillPlotWithGouacheAssets` platziert Gouache-Assets als reguläre `AtlasObject`s (Shortcut **F**, Refill/Reroll über Seed im `plot.style`). KI-Modus bleibt offen: neue ai-brain-Action `atlas_fill_area` (Proposal → Ghost → Übernehmen, **nie** Auto-Apply). |
 | **RTX-Asset-Studio in UWE** | M–L | In-App-Workflow: DM beschreibt ein Asset, lokale RTX erzeugt anhand von `docs/prompts/atlas-pictogram-styleguide.md` + `asset-catalog.md` einen Gouache-Asset-Vorschlag. Output ist ein validierbares JSON-Rezept oder PNG-Fallback, **kein** frei ausgeführter TS-Code. UWE zeigt Preview + Diff/Metadaten; Übernehmen legt ein Custom-Asset/PaletteItem an, Promotion zu Builtin-Rezepten bleibt ein PR-Schritt. |
 | **Großstadt/Schloss-Generator** | M–L | Neues Engine-Modul `packages/atlas/src/settlement.ts` (pur, deterministisch): `generateSettlement(polygon, opts) → { features: [Mauer-Pfad, Straßen], objects: [Türme, Häuser, Kirche, Marktstände, Brunnen, Bergfried, Werft] }`. Wasser-Erkennung: Nachbarschaft zu `river`/`coast`-Features → Werft. Output als **Proposal** (Ghost-Overlay); Übernahme persistiert Features + Objects. Golden-Tests wie `path-attachments`. |
-| **Weiche Terrain-Übergänge** | M | `paintTerrainBlobs` besitzt `blendWidth`; `AtlasTileLayer.blendWidth` wird migrationsfrei in Editor, Portal und Static Viewer gerendert. Offen: UI-Regler, Defaults und Feintuning der Wasserfarben-Bleed-Optik. |
+| **Weiche Terrain-Übergänge** | M | `paintTerrainBlobs` besitzt `blendWidth`; `AtlasTileLayer.blendWidth` wird migrationsfrei in Editor, Portal und Static Viewer gerendert. Editor-Regler und Default/Fallback `6px` sind umgesetzt; offen bleibt nur visuelles Feintuning/Golden-Screenshots der Wasserfarben-Bleed-Optik. |
 
 ---
 
@@ -84,7 +85,7 @@ Plot-Fill (Preset umgesetzt; KI-Proposal offen) · Ausbau der Gouache-Asset-Bibl
 → Hier entsteht das „das ist CoK"-Gefühl.
 
 ### Phase 3 — Generatoren & Feinschliff
-Settlement-Generator (`settlement.ts`) · Terrain-Blend-UI/Feinschliff · optional Editor-Layout-Umbau Richtung „Werkstatt".
+Settlement-Generator (`settlement.ts`) · optionales Terrain-Blend-Feintuning/Goldens · optional Editor-Layout-Umbau Richtung „Werkstatt".
 → Security-relevant (Payload) ⇒ zusätzlich `pnpm test:security`.
 
 ---

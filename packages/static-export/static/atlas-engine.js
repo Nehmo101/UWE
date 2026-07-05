@@ -892,8 +892,13 @@ function tryParseGeometry(raw) {
 
 // ../atlas/src/doc.ts
 var SCHEMA_VERSION = 2;
+var DEFAULT_TERRAIN_BLEND_WIDTH = 6;
 function emptyTileLayer() {
-  return { cols: 64, rows: 40, tile: 32, cells: {} };
+  return { cols: 64, rows: 40, tile: 32, cells: {}, blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH };
+}
+function normalizeTerrainBlendWidth(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_TERRAIN_BLEND_WIDTH;
+  return Math.max(0, value);
 }
 function migrateDoc(doc) {
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
@@ -907,6 +912,7 @@ function migrateDoc(doc) {
   d.pageLinks = d.pageLinks ?? {};
   d.tileLayer = d.tileLayer ?? emptyTileLayer();
   d.tileLayer.cells = d.tileLayer.cells ?? {};
+  d.tileLayer.blendWidth = normalizeTerrainBlendWidth(d.tileLayer.blendWidth);
   return d;
 }
 function serializeDoc(doc, extra) {
@@ -2300,6 +2306,7 @@ export {
   BUILTIN_GLYPHS,
   BUILTIN_GLYPH_KEYS,
   BiomeKind,
+  DEFAULT_TERRAIN_BLEND_WIDTH,
   DRAW_LAYERS,
   GOUACHE_ASSETS,
   GOUACHE_ASSET_KEYS,

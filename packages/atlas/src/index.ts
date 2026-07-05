@@ -123,6 +123,7 @@ export {
 
 // Document envelope — versioning, migration, serialization (document-level)
 export {
+  DEFAULT_TERRAIN_BLEND_WIDTH,
   SCHEMA_VERSION,
   migrateDoc,
   serializeDoc,

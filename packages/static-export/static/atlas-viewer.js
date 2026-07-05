@@ -4,6 +4,7 @@
  */
 (() => {
   const ATLAS_ENGINE_SRC = "./atlas-engine.js";
+  const DEFAULT_TERRAIN_BLEND_WIDTH = 6;
   let atlasEnginePromise = null;
 
   function loadAtlasEngine() {
@@ -606,7 +607,7 @@
           },
           fillFor: (biome) => TILE_FILL[biome] || "#ccc",
           intensityFor: (biome) => (tl.intensity && tl.intensity[biome]) || 1,
-          blendWidth: (tl.blendWidth || 0) * zoom,
+          blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
           radiusRatio: 0.4,
         });
       }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { buildPaletteIdMap, buildStudioAtlasDoc } from "./atlas-doc-adapter";
+import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
 import type { StudioAtlasFeatureInput, StudioAtlasObjectInput } from "./atlas-doc-adapter";
 
 const feature: StudioAtlasFeatureInput = {
@@ -73,12 +74,18 @@ describe("buildStudioAtlasDoc", () => {
       features: [],
       objects: [],
     });
-    assert.deepEqual(doc.tileLayer, { cols: 64, rows: 40, tile: 32, cells: {} });
+    assert.deepEqual(doc.tileLayer, {
+      cols: 64,
+      rows: 40,
+      tile: 32,
+      cells: {},
+      blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH,
+    });
     assert.equal(doc.nodes.length, 1);
   });
 
   it("preserves an existing tile layer", () => {
-    const tileLayer = { cols: 64, rows: 40, tile: 32, cells: { "3,4": "coast" } };
+    const tileLayer = { cols: 64, rows: 40, tile: 32, cells: { "3,4": "coast" }, blendWidth: 0 };
     const doc = buildStudioAtlasDoc({
       worldSlug: "terra",
       node: { id: "n1", title: "N", level: "continent" },
@@ -88,6 +95,7 @@ describe("buildStudioAtlasDoc", () => {
       tileLayer,
     });
     assert.deepEqual(doc.tileLayer.cells, { "3,4": "coast" });
+    assert.equal(doc.tileLayer.blendWidth, 0);
   });
 });
 
