@@ -9,7 +9,8 @@ Browser öffnen und die Regler/Buttons ausprobieren.
 |---|---|
 | [`atlas-ui-proposals.html`](atlas-ui-proposals.html) | Redesign-Vorschläge: Malstile (Aquarell / **Gouache = gewählt** / Aquarell+Tusche), zwei Editor-Layouts, und alle Muss-Features als interaktive Demos — Skalier-Griff, Liniendicke, Objektbereich-Füllen (Preset + KI), Großstadt-/Schloss-Generator (Kirche, Markt, Werft, Straßen), weiche Wasserfarben-Übergänge, Untergrund-Intensität. |
 | [`atlas-editor-showcase.html`](atlas-editor-showcase.html) | Übersicht des **heutigen** Editor-Funktionsumfangs inkl. Ranke/Weltenwurzel — Werkzeuge, Live-Demos, Tastatur. |
-| [`asset-catalog.md`](asset-catalog.md) | Backlog der zu bauenden Gouache-Assets (Fantasy + Mittelalter) mit Umsetzungs-Tag pro Asset. |
+| [`asset-catalog.md`](asset-catalog.md) | Backlog der zu bauenden Gouache-Assets (Fantasy + Mittelalter, 16 Kategorien) mit Umsetzungs-Tag pro Asset. |
+| [`improvement-ideas.md`](improvement-ideas.md) | Strategischer Ideen-Vorrat, wie man Atlas insgesamt stark verbessern kann (Rendering, UX, KI, Weltensimulation, Portal, Export …). |
 
 **Umsetzungsplan:** [`docs/engineering/atlas-gouache-plan.md`](../../engineering/atlas-gouache-plan.md)
 

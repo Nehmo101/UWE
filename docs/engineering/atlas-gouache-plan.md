@@ -10,6 +10,8 @@ Alle Grafiken sind live in Canvas 2D gerechnet (kein Bild). Im Browser öffnen:
 
 - **[atlas-ui-proposals.html](../design/atlas-redesign/atlas-ui-proposals.html)** — die Redesign-Vorschläge (Malstile, Editor-Layouts, alle Muss-Features als interaktive Demos).
 - **[atlas-editor-showcase.html](../design/atlas-redesign/atlas-editor-showcase.html)** — Übersicht des **heutigen** Editor-Funktionsumfangs (inkl. Ranke/Weltenwurzel).
+- **[asset-catalog.md](../design/atlas-redesign/asset-catalog.md)** — Gouache-Asset-Backlog (16 Kategorien, Fantasy + Mittelalter).
+- **[improvement-ideas.md](../design/atlas-redesign/improvement-ideas.md)** — strategischer Ideen-Vorrat für Atlas-Verbesserungen.
 
 Gehostete Artefakt-Fassungen (default-privat, nur Owner): UI-Vorschläge `claude.ai/code/artifact/f81003cd-79ca-4384-adae-5727f7cd458f`, Editor-Showcase `claude.ai/code/artifact/2872df01-b7cd-4dd1-b26c-4ce58beb1a7a`.
 

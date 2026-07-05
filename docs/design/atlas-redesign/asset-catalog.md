@@ -117,6 +117,95 @@ nach und nach entstehen.
 
 ---
 
+## 8 · Kreaturen & Tierwelt (`Stamp` / `Landmark`)
+
+- Drache (fliegend) `Landmark` — mit Bodenschatten; kreisend über einem Horst.
+- Greif / Wyvern / Riesenadler `Stamp` — Luft-Marker mit Schatten.
+- Seeschlange / Kraken / Leviathan `Stamp` (Wasser) — Tentakel/Rücken aus den Wellen.
+- Wal / Fischschwarm-Untiefe `Stamp` (Wasser).
+- Mammut / Rieseneber / Wollnashorn `Stamp` — eiszeitliche Marker.
+- Hirsch, Bär, Wolfsrudel, Wildpferde `Stamp`/`Plot` — Wildtier-Streuung in Wäldern.
+- Schaf-/Rinderherde `Plot` — Weidetiere für Weideland.
+- Bienenstöcke / Imkerei `Stamp` — kleine Wirtschaftsmarker.
+- Riesenspinnen-Nest, Basilisken-Grube, Trollhöhle `Stamp` — Gefahren-Marker.
+- Elefanten/Kamele einer Karawane `Stamp` — s. Fahrzeuge.
+
+## 9 · Krieg & Militär (`Stamp` / `Plot` / `Gen`)
+
+- Schlachtfeld `Plot` — Speere, Banner, Schilde, gefallene Rüstungen gestreut.
+- Heerlager / Belagerungslager `Gen` — Zeltreihen, Lagerfeuer, Wall.
+- Katapult / Trebuchet / Rammbock `Stamp` — Belagerungsgerät.
+- Grenzfestung / Bollwerk `Gen` — schwere Wehranlage.
+- Signalfeuer-Kette / Wartturm-Linie `Path` — Feuerkette entlang eines Pfads.
+- Barrikade / Palisade / Schützengraben `Path`/`Stamp`.
+- Galeere/Kriegsschiff-Flotte `Stamp` (Wasser).
+- Schlachtbanner / Feldzeichen `Stamp` — Fraktionsmarker.
+
+## 10 · Wirtschaft & Industrie (`Stamp` / `Gen`)
+
+- Schmelzhütte, Sägewerk, Ziegelei, Salzsiederei `Stamp` — Produktionsstätten.
+- Hafenkräne, Lagerhäuser, Zollstation `Gen` — Hafenviertel.
+- Handelsposten / Karawanserei `Stamp`/`Gen` — Rasthaus an der Route.
+- Fischreusen / Fischerdorf `Stamp` (Wasser).
+- Leuchtturm, Fähranleger, Trockendock `Stamp` (Küste).
+- Weingut / Kelterei, Brauerei, Gerberei `Stamp`.
+- Köhlerei / Meiler im Wald `Stamp`.
+
+## 11 · Arkanes & Religion (`Stamp` / `Path` / `Landmark`)
+
+- Zauberturm / Sternwarte `Stamp`/`Landmark` — mit Lichtkuppel.
+- Hexenhütte / Eremitage / Klause `Stamp`.
+- Opferaltar, Heiligenschrein, Götzenstatue `Stamp`.
+- Beinhaus / Nekropole / Katakomben-Eingang `Stamp`.
+- Manabrunnen / Wunschbrunnen / Quelle der Macht `Stamp`.
+- Ley-Linien `Path` — leuchtende Energieadern im Boden.
+- Kristallmine / Manakristall-Feld `Plot`.
+- Steinkreis / Menhire / Dolmen `Stamp` — s. Fantasy-Landmarken.
+
+## 12 · Untergrund & Dungeon (`Stamp` / `Gen`, für ein späteres Site/Interior-Level)
+
+- Höhlenkammer, Kerker, Schatzkammer, Fallenraum `Gen`.
+- Katakomben / Krypta-Gänge `Path`.
+- Unterirdischer See / Lavaröhre / Kristallgrotte `Stamp`.
+- Zwergenhalle / Minengang mit Loren `Gen`.
+- Pilzhöhle (Leuchtpilze) `Plot`.
+
+## 13 · Kartografische Ornamente & Deko (`Stamp`, Karten-Chrome)
+
+- Kompassrose-Varianten (schlicht → verziert) — erweitert die vorhandene `drawCompassRose`.
+- Maßstabsleisten-Stile, Meilensteine.
+- „Hic sunt dracones" — Seeungeheuer-Illustration auf leerer See.
+- Windgesichter / Putten, die in die Karte blasen.
+- Kartuschen / Titelrahmen / Namensbanner (verziert).
+- Wappen, Banner, Fraktions-Siegel, Wachssiegel.
+- Rand-Bordüren, Vignetten, Faltkanten & Pergament-Alterung.
+- Sternbilder / Himmelsrose für Rand-Deko.
+
+## 14 · Wetter & Atmosphäre (`Stamp` / `Plot`, statisch)
+
+- Wolkenbänke, Nebelfeld, Sturmfront (statische Props, kein Partikel-System).
+- Regenbogen, Nordlicht-Band, Blitz über Bergen.
+- Schneeverwehung, Sandsturm-Wand, Vulkanasche-Wolke.
+- Mahlstrom / Whirlpool `Stamp` (Wasser).
+
+## 15 · Regionale Baustile (Set-Varianten des Generators)
+
+Ein Parameter am Stadt-/Schloss-Generator wählt den **Baustil-Satz**:
+nordisch/Wikinger (Langhäuser, Drachenköpfe) · wüstenländisch (Lehmkuppeln,
+Windtürme) · fernöstlich (Pagoden, geschwungene Dächer) · elbisch (organische
+Türme) · zwergisch (Steinbögen im Berg) · orkisch (Palisaden, Schädel) ·
+römisch/antik (Säulen, Foren) · sumpf-/Stelzenbau (Pfahlbauten).
+
+## 16 · Saisonale & Zustands-Varianten
+
+Dieselben Assets in Varianten (Parameter, kein neues Rezept): verschneit /
+herbstlich / blühend / verdorrt; Felder bestellt ↔ abgeerntet ↔ überflutet;
+Dorf belebt ↔ verlassen ↔ niedergebrannt; Ruine intakt ↔ verfallen. Koppelbar
+an einen Karten-Jahreszeit-/Zustands-Schalter (siehe
+[improvement-ideas.md](improvement-ideas.md)).
+
+---
+
 ## Engine-Einordnung (Zusammenfassung)
 
 - **Neue `Plot`-Presets** (Biome/Felder) hängen an „Objektbereich füllen" (Phase 2) — kein neues Schema, nur Rezepte + Scatter-Parameter.
