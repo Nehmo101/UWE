@@ -8,7 +8,7 @@ import {
   type UweRepository,
 } from "@uwe/database/server";
 import { staticExportCategoryForPageType, staticPageHref } from "./paths";
-import { copyAtlasViewerScript, renderAtlasViewerPage } from "./atlas-viewer-html";
+import { copyAtlasViewerScripts, renderAtlasViewerPage } from "./atlas-viewer-html";
 
 export interface AtlasStaticExportPayload {
   worldSlug: string;
@@ -218,8 +218,9 @@ export async function writeAtlasStaticBundle(
   fs.writeFileSync(dataFile, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   files.push(path.relative(outputDir, dataFile));
 
-  const viewerScript = copyAtlasViewerScript(atlasDir);
-  files.push(path.relative(outputDir, path.join(atlasDir, viewerScript)));
+  for (const script of copyAtlasViewerScripts(atlasDir)) {
+    files.push(path.relative(outputDir, path.join(atlasDir, script)));
+  }
 
   const indexHtml = renderAtlasViewerPage({
     worldName,

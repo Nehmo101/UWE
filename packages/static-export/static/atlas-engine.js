@@ -651,6 +651,121 @@ function buildReliefShading(polygon, biomeKind) {
   };
 }
 
+// ../atlas/src/plot-fill.ts
+var BASE_PLOT_DENSITY = 42;
+function ringBbox2(ring) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of ring) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return [minX, minY, maxX, maxY];
+}
+function ringArea2(ring) {
+  let area = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    area += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+  }
+  return Math.abs(area / 2);
+}
+function pointInRing2(px, py, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+function distToSegment3(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function inExclusion2(x, y, exclusions) {
+  for (const ex of exclusions) {
+    const half = ex.width / 2;
+    if (half <= 0) continue;
+    for (let i = 0; i < ex.path.length - 1; i++) {
+      const [ax, ay] = ex.path[i];
+      const [bx, by] = ex.path[i + 1];
+      if (distToSegment3(x, y, ax, ay, bx, by) < half) return true;
+    }
+  }
+  return false;
+}
+function pickAsset(assets, roll) {
+  const weights = assets.map((asset) => Math.max(0, asset.weight ?? 1));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (total <= 0) return assets[0];
+  let cursor = roll * total;
+  for (let i = 0; i < assets.length; i++) {
+    cursor -= weights[i];
+    if (cursor <= 0) return assets[i];
+  }
+  return assets[assets.length - 1];
+}
+function polygonArea(rings) {
+  const outer = rings[0];
+  if (!outer) return 0;
+  const holes = rings.slice(1).reduce((sum, ring) => sum + ringArea2(ring), 0);
+  return Math.max(0, ringArea2(outer) - holes);
+}
+function fillPlotWithGouacheAssets(polygon, options) {
+  const assets = options.assets.filter((asset) => asset.gouacheKey && (asset.weight ?? 1) > 0);
+  const density = options.density ?? 1;
+  if (assets.length === 0 || density <= 0) return [];
+  const outer = polygon.rings[0];
+  if (!outer || outer.length < 3) return [];
+  const holes = polygon.rings.slice(1);
+  const area = polygonArea(polygon.rings);
+  if (area <= 0) return [];
+  const seed = options.seed ?? 1337;
+  const rng = mulberry32(seed);
+  const [minX, minY, maxX, maxY] = ringBbox2(outer);
+  const targetCount = Math.max(1, Math.round(BASE_PLOT_DENSITY * density * area));
+  const maxAttempts = targetCount * 10;
+  const results = [];
+  let attempts = 0;
+  while (results.length < targetCount && attempts < maxAttempts) {
+    attempts++;
+    const x = minX + rng() * (maxX - minX);
+    const y = minY + rng() * (maxY - minY);
+    if (!pointInRing2(x, y, outer)) continue;
+    if (holes.some((ring) => pointInRing2(x, y, ring))) continue;
+    if (options.exclusions?.length && inExclusion2(x, y, options.exclusions)) continue;
+    const asset = pickAsset(assets, rng());
+    const scaleMin = asset.scaleMin ?? 0.78;
+    const scaleMax = asset.scaleMax ?? 1.22;
+    const rotateMin = asset.rotateMin ?? -12;
+    const rotateMax = asset.rotateMax ?? 12;
+    const style = { gouache: asset.gouacheKey };
+    if (asset.lineWidth != null) style.lineWidth = asset.lineWidth;
+    if (asset.blur != null) style.blur = asset.blur;
+    results.push({
+      id: `${options.idPrefix ?? `plot-${seed}`}-${results.length}`,
+      paletteItemId: options.paletteItemId,
+      x,
+      y,
+      scale: scaleMin + rng() * (scaleMax - scaleMin),
+      rotation: rotateMin + rng() * (rotateMax - rotateMin),
+      layer: options.layer ?? 50,
+      visibility: options.visibility ?? "dm_only",
+      style
+    });
+  }
+  return results;
+}
+
 // ../atlas/src/serialization.ts
 var AtlasParseError = class extends Error {
   constructor(message) {
@@ -852,13 +967,15 @@ function applyColorIntensity(color, factor) {
 }
 function paintTerrainBlobs(ctx, opts) {
   const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
+  const blendWidth = typeof opts.blendWidth === "number" && Number.isFinite(opts.blendWidth) ? Math.max(0, opts.blendWidth) : 0;
+  const fillForBiome = (biome) => intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const biome = getCell(c, r);
       if (!biome) continue;
       const { x, y, w, h } = tileRect(c, r);
       const radius = Math.min(w, h) * radiusRatio;
-      ctx.fillStyle = intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
+      ctx.fillStyle = fillForBiome(biome);
       roundedRectPath(ctx, x, y, w, h, radius);
       ctx.fill();
       const rightSame = getCell(c + 1, r) === biome;
@@ -868,6 +985,39 @@ function paintTerrainBlobs(ctx, opts) {
       if (bottomSame) ctx.fillRect(x, y + h - radius, w, radius * 2);
       if (rightSame && bottomSame && diagSame) {
         ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
+      }
+    }
+  }
+  if (blendWidth <= 0) return;
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const biome = getCell(c, r);
+      if (!biome) continue;
+      const { x, y, w, h } = tileRect(c, r);
+      const from = fillForBiome(biome);
+      const rightBiome = getCell(c + 1, r);
+      if (rightBiome && rightBiome !== biome) {
+        const edgeWidth = Math.min(blendWidth, w);
+        if (edgeWidth > 0) {
+          const half = edgeWidth / 2;
+          const gradient = ctx.createLinearGradient(x + w - half, y, x + w + half, y);
+          gradient.addColorStop(0, from);
+          gradient.addColorStop(1, fillForBiome(rightBiome));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x + w - half, y, edgeWidth, h);
+        }
+      }
+      const bottomBiome = getCell(c, r + 1);
+      if (bottomBiome && bottomBiome !== biome) {
+        const edgeHeight = Math.min(blendWidth, h);
+        if (edgeHeight > 0) {
+          const half = edgeHeight / 2;
+          const gradient = ctx.createLinearGradient(x, y + h - half, x, y + h + half);
+          gradient.addColorStop(0, from);
+          gradient.addColorStop(1, fillForBiome(bottomBiome));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, y + h - half, w, edgeHeight);
+        }
       }
     }
   }
@@ -2172,6 +2322,7 @@ export {
   drawSvgPath,
   drawVine,
   emptyDrawLayerMap,
+  fillPlotWithGouacheAssets,
   generateDraft,
   generatePathAttachments,
   getGlyphByKey,

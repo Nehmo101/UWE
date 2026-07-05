@@ -1,19 +1,30 @@
-# Atlas — Piktogramm-Styleguide
+# Atlas — Asset-Styleguide (Piktogramme & Gouache)
 
-Verbindlicher Styleguide für die **Karten-Piktogramme** (eingebaute Glyphen/Stempel)
+Verbindlicher Styleguide für die **Karten-Piktogramme** und **Gouache-Assets**
 des Atlas World Builders. Er ergänzt die übergeordnete Stil-Referenz
 [atlas-style-reference.md](atlas-style-reference.md) (handgezeichnete Tinten-Kartografie)
-um konkrete Regeln und einen Katalog für die Punkt-Symbole, die in der Palette,
-im Portal-Viewer und im statischen Export erscheinen.
+um konkrete Regeln und einen Katalog für die Punkt-Symbole und gemalten Assets,
+die in Palette, Editor, Portal-Viewer und später im RTX-Asset-Studio erscheinen.
 
-> Ziel: einheitliche, sofort wiedererkennbare Symbole im Tinten-Stil — und ein
-> Prozess, bei dem ein **einziger Eintrag** ein neues Piktogramm überall verfügbar macht.
+> Ziel: einheitliche, sofort wiedererkennbare Karten-Assets — alte Ink-Glyphen
+> bleiben stabil, neue Gouache-Assets folgen einer gemeinsamen Form-, Farb- und
+> Review-Sprache.
+>
+> Für RTX-gestützte Asset-Erzeugung in UWE ist dieses Dokument die verbindliche
+> Prompt- und Review-Quelle. RTX-Ausgaben sind Vorschläge, nie Auto-Apply.
 
 ---
 
 ## Single Source of Truth
 
-Alle eingebauten Piktogramme leben an genau **einer** Stelle:
+UWE hat zwei kanonische Asset-Spuren:
+
+| Spur | Registry | Persistenz | Nutzung |
+|---|---|---|---|
+| Ink-Piktogramme | `packages/atlas/src/glyphs.ts` → `BUILTIN_GLYPHS` | `AtlasPaletteItem.builtinGlyphKey` / `AtlasObject.paletteItemId` | Bestehende Kontur-Symbole, rückwärtskompatibel |
+| Gouache-Assets | `packages/atlas/src/assets.ts` → `GOUACHE_ASSETS` | `AtlasObject.style.gouache` plus gültiger Glyph-Träger | Gefüllte, gemalte Canvas-of-Kings-Assets |
+
+Alle eingebauten Ink-Piktogramme leben an genau **einer** Stelle:
 
 ```
 packages/atlas/src/glyphs.ts   →   BUILTIN_GLYPHS
@@ -29,13 +40,22 @@ parallelen, von Hand gepflegten Kopien mehr:
 | DB-Seed (`atlas-service.ts`) | `@uwe/atlas/glyphs` | `BUILTIN_ATLAS_GLYPHS` → globale `AtlasPaletteItem`-Zeilen |
 | Statischer Export (`export-atlas.ts`) | `@uwe/atlas/glyphs` | spielt die Liste als `data.builtinGlyphs` in `atlas/data.json` ein; der Viewer liest sie von dort |
 
-**Folge:** Wird ein Piktogramm in `glyphs.ts` ergänzt, ist es automatisch in
+**Folge:** Wird ein Ink-Piktogramm in `glyphs.ts` ergänzt, ist es automatisch in
 Editor-Palette, Portal, Export **und** als seedbare Palette verfügbar — „wenn
 weitere Piktogramme hinzukommen, kann direkt darauf zugegriffen werden".
 
 Hilfsfunktionen aus `@uwe/atlas/glyphs`:
 `getGlyphByKey`, `listGlyphsByCategory`, `groupGlyphsByCategory`,
 `ATLAS_GLYPH_CATEGORIES`, `BUILTIN_GLYPH_KEYS`.
+
+Gouache-Hilfsfunktionen aus `@uwe/atlas/assets`:
+`GOUACHE_ASSETS`, `GOUACHE_ASSET_KEYS`, `GOUACHE_CATEGORY_LABELS`,
+`getGouacheAsset`, `listGouacheAssetsByCategory`, `drawGouacheAsset`,
+`isGouacheAsset`.
+
+**RTX-Regel:** Das RTX-Asset-Studio darf diese Registries und den
+Asset-Katalog lesen, aber es schreibt nicht direkt TypeScript. Es erzeugt
+validierte Asset-Vorschläge, die UWE als Preview/Review zeigt.
 
 ---
 
@@ -45,10 +65,14 @@ Hilfsfunktionen aus `@uwe/atlas/glyphs`:
 
 > Der Katalog (`atlas-pictograms.svg`) wird aus der kanonischen Registry erzeugt
 > und ist damit immer aktuell. Mit „NEU" markierte Symbole wurden zuletzt ergänzt.
+>
+> Der Gouache-Backlog lebt in
+> [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md).
+> Starter-Rezepte stehen in `packages/atlas/src/assets.ts`.
 
 ---
 
-## Kategorien
+## Ink-Kategorien
 
 Piktogramme gehören zu genau einer von drei Kategorien (Feld `kind`). Die Palette
 gruppiert nach genau dieser Reihenfolge:
@@ -61,7 +85,7 @@ gruppiert nach genau dieser Reihenfolge:
 
 ---
 
-## Design-Regeln
+## Design-Regeln: Ink-Piktogramme
 
 Jedes Piktogramm folgt denselben Regeln, damit das Set homogen wirkt:
 
@@ -81,6 +105,36 @@ Jedes Piktogramm folgt denselben Regeln, damit das Set homogen wirkt:
 7. **Stabile `key`s.** Der `key` wird als `builtinGlyphKey` persistiert und in
    gespeicherten Karten referenziert — **niemals umbenennen oder entfernen**
    (sonst verlieren bestehende Objekte ihr Symbol). Nur additiv erweitern.
+
+---
+
+## Design-Regeln: Gouache-Assets
+
+Gouache ist die neue CoK-nahe Asset-Spur. Sie ist **gefüllt**, malerisch und
+deckend, aber weiterhin deterministisch, schnell und kartografisch lesbar.
+
+1. **Gefüllte Formen statt reiner Kontur.** Jedes Asset hat Körperfläche,
+   dunkleren Pigmentrand, Schatten und mindestens ein Highlight.
+2. **Base-centre-Anker.** Der Objektpunkt sitzt am unteren Mittelpunkt; das
+   Asset wächst primär nach oben (`drawGouacheAsset` übersetzt nach `x/y` und
+   rotiert/skaliert dann).
+3. **Gedämpfte Kartenpalette.** Erdige Rot-, Ocker-, Grün-, Grau- und Blautöne;
+   keine grellen UI-Farben, keine fotorealistischen Texturen.
+4. **Deterministische Variation.** Organische Formen nutzen `mulberry32` /
+   `hashStringToSeed`, damit dieselbe Welt reproduzierbar bleibt.
+5. **Keine fremden CoK-Assets kopieren.** Canvas of Kings ist Stilreferenz, keine
+   Asset-Quelle. Rezepte sind eigene Formen.
+6. **Kein Runtime-Code aus RTX.** RTX darf JSON/Parameter/Skizzen vorschlagen,
+   aber UWE führt keine generierte TypeScript- oder JavaScript-Quelle direkt aus.
+7. **Stabile `g_`-Keys.** Builtin-Gouache-Assets verwenden `g_<name>` und werden
+   nach Veröffentlichung nicht umbenannt. Custom-Assets bekommen eigene stabile
+   IDs/PaletteItems.
+8. **Review vor Kanon.** Jedes RTX-Asset landet zuerst als Preview/Proposal; erst
+   nach Übernahme wird es in einer Welt oder Palette sichtbar.
+
+Gouache-Kategorien in `assets.ts`: `flora`, `structure`, `landmark`, `vehicle`,
+`market`, `prop`. Der größere Backlog nutzt zusätzlich Umsetzungs-Tags wie
+`Plot`, `Path`, `Landmark`, `Gen` und `Terrain`.
 
 ---
 
@@ -154,6 +208,65 @@ Tabelle listet bewusst nur die stabilen Identifikatoren.
 
 ---
 
+## Neues Gouache-Asset hinzufügen
+
+1. **Asset wählen** aus
+   [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md)
+   oder als bewusst kleine Ergänzung definieren.
+
+2. **Metadata ergänzen** in `packages/atlas/src/assets.ts`:
+
+   ```ts
+   { key: "g_lighthouse", name: "Leuchtturm", category: "structure" }
+   ```
+
+3. **Rezept ergänzen** in derselben Datei: Basisform(en), Schatten,
+   Highlight, Pigmentrand. Gebäude sind meist Polygone/Rechtecke; Flora nutzt
+   organische Blob-Formen; schwebende Assets bekommen langen Bodenschatten.
+
+4. **Renderer-Vertrag einhalten:** `drawGouacheAsset(ctx, key, opts)` zeichnet
+   um den Base-centre-Anker, respektiert `scale`, `rotation`, `lineWidth`,
+   optional `blur`, und no-oped bei unbekanntem Key.
+
+5. **Tests laufen lassen:** `pnpm --filter @uwe/atlas test`. Bei neuen
+   Persistenzfeldern zusätzlich Datenbank-/Security-Gates aus dem
+   [Gouache-Plan](../engineering/atlas-gouache-plan.md).
+
+6. **Static Engine aktualisieren**, wenn die Engine geändert wurde:
+   `pnpm --filter @uwe/static-export build:atlas-engine`.
+
+---
+
+## RTX-Asset-Erzeugung in UWE
+
+Der RTX-Workflow erstellt Assets direkt in UWE, aber bleibt ein Review-Flow:
+
+1. UWE gibt RTX diesen Styleguide, den Asset-Katalog und die bestehende
+   `GOUACHE_ASSETS`-Registry als Kontext.
+2. Der DM beschreibt das gewünschte Asset, z. B. „verwunschener Leuchtturm auf
+   Klippe, Gouache, Landmarke".
+3. RTX liefert einen **Asset-Vorschlag**: Name, Kategorie, Tags, Palette,
+   Formbeschreibung/JSON-Rezept oder PNG-Fallback, kurze Begründung gegen diesen
+   Styleguide.
+4. UWE rendert eine Preview und zeigt Validierungsfehler statt Auto-Apply.
+5. Übernahme erzeugt ein Custom-Asset/PaletteItem. Builtin-Promotion bleibt ein
+   normaler PR-Schritt mit Code-Review und Tests.
+
+RTX darf:
+
+- bestehende Kategorien, Farben, Schatten-/Highlight-Regeln und Backlog-Tags
+  benutzen;
+- Varianten für Marktstände, Baustile, Jahreszeiten und Zustände vorschlagen;
+- Vorschläge für `Plot`-, `Landmark`-, `Gen`- oder `Terrain`-Einsatz liefern.
+
+RTX darf nicht:
+
+- fremde Canvas-of-Kings-Grafiken kopieren oder nachbauen;
+- TypeScript/JavaScript erzeugen, das UWE ungeprüft zur Laufzeit ausführt;
+- Assets ohne Preview, Review und Übernahme in den Kanon schreiben.
+
+---
+
 ## Rendering-Details
 
 Sowohl der Editor (`GlyphSvg`) als auch die Canvas-Renderer interpretieren
@@ -164,10 +277,13 @@ Sowohl der Editor (`GlyphSvg`) als auch die Canvas-Renderer interpretieren
   `0 0 24 24`-viewBox.
 - **Canvas (`drawSvgPath`):** ein minimaler Parser für `M L H V Q C Z`
   (absolut, ein Segment pro Befehl). Deshalb gelten die Pfad-Regeln oben strikt.
+- **Gouache (`drawGouacheAsset`):** Canvas-2D-Rezepte in
+  `packages/atlas/src/assets.ts`; Objekte aktivieren sie über
+  `AtlasObject.style.gouache`. `paletteItemId` bleibt ein gültiger Builtin-Glyph
+  als FK-Träger.
 
 Größe/Drehung pro platziertem Objekt kommen aus `AtlasObject.scale` / `rotation`;
-die Strichstärke wird gegen die Skalierung kompensiert, sodass Linien überall
-gleich dünn wirken.
+bei Gouache kommen zusätzlich `style.lineWidth` und `style.blur` hinzu.
 
 ---
 
@@ -175,5 +291,8 @@ gleich dünn wirken.
 
 - [atlas-style-reference.md](atlas-style-reference.md) — Gesamt-Stil (Tinte/Pergament)
 - [atlas-orchestrator.md](atlas-orchestrator.md) — Feature-Phasen & Plan
+- [../engineering/atlas-gouache-plan.md](../engineering/atlas-gouache-plan.md) — Gouache-/RTX-Roadmap
+- [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md) — Gouache-Asset-Backlog
 - `packages/atlas/src/glyphs.ts` — kanonische Registry
+- `packages/atlas/src/assets.ts` — kanonische Gouache-Registry
 - `.cursor/skills/uwe-image-studio-assets/SKILL.md` — KI-Stempel (Quelle `ai`)

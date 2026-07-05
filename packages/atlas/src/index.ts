@@ -103,6 +103,14 @@ export {
 } from "./terrain";
 export type { ScatterExclusion } from "./terrain";
 
+// Plot fill — deterministic object scatter for `plot` features
+export { fillPlotWithGouacheAssets } from "./plot-fill";
+export type {
+  PlotFillAssetChoice,
+  PlotFillOptions,
+  PlotFillObject,
+} from "./plot-fill";
+
 // Serialization (geometry-level)
 export {
   AtlasParseError,

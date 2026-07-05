@@ -259,6 +259,7 @@ const TOOL_DEFS = [
   ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
   ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
+  ["plot", "Objektfläche", "F", "plot", "Gouache-Objekte in ein Polygon streuen"],
   ["path", "Fluss", "R", "path", "Fluss zeichnen"],
   ["road", "Straße", "D", "road", "Straße zeichnen"],
   ["vine", "Ranke", "W", "vine", "Riesenwurzel/Bohnenranke zeichnen (Basis → Spitze)"],
@@ -268,13 +269,14 @@ const TOOL_DEFS = [
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
     select: "M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z",
     terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
+    plot: "M4 7 L12 3 L20 7 L18 18 L7 20 Z M9 10 L9 10 M13 9 L13 9 M16 13 L16 13 M11 16 L11 16",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
     road: "M6 21 L10 3 M14 21 L18 3 M8 12 L16 12",
     vine: "M12 21 C8 17 16 13 12 9 C9 6 14 4 12 2 M12 13 Q15 12 16 14 M12 17 Q9 16 8 18",
@@ -649,6 +651,7 @@ function drawScene(ctx, W, H, chrome) {
     fillFor: (b) => TILE_FILL[b] || "#ccc",
     radiusRatio: 0.4,
     intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
+    blendWidth: (tl.blendWidth || 0) * z,
   });
 
   const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * z, W / 2, H / 2, W * 0.75);
@@ -947,7 +950,7 @@ function onPointerDown(e) {
   if (tool === "eraser") { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); return; }
   if (rightOrMiddle) { panning = true; return; }
 
-  if (tool === "region" || tool === "biome") {
+  if (tool === "region" || tool === "biome" || tool === "plot") {
     if (drawingPoints.length >= 3) { const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); if (Math.hypot(cx - fx, cy - fy) < 10) { finishPolygon(); return; } }
     drawingPoints.push([nx, ny]); draw(); return;
   }
@@ -1024,7 +1027,7 @@ function onWheel(e) {
 }
 function onDblClick() {
   if (exp.picking) return;
-  if (state.tool === "region" || state.tool === "biome") finishPolygon();
+  if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon();
   else if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath();
   else if (state.tool === "curve") finishCurve();
 }
@@ -1070,12 +1073,72 @@ function addLabel(pt, text, path) {
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" };
   doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
+const PLOT_GOUACHE_BY_BIOME = {
+  grassland: "g_bush",
+  coast: "g_ship",
+  hills: "g_obelisk",
+  desert: "g_pyramid",
+  forest: "g_oak",
+  mountains: "g_obelisk",
+  swamp: "g_mushroom",
+  snow: "g_pine",
+};
+function defaultPlotGouacheForBrush(brush) {
+  return PLOT_GOUACHE_BY_BIOME[brush] || "g_oak";
+}
+function fillPlotObjects(feature, reroll) {
+  if (!feature || feature.kind !== "plot" || !feature.geometry || feature.geometry.type !== "Polygon") return;
+  feature.style = feature.style || {};
+  if (reroll) feature.style.seed = ((feature.style.seed || engine.hashStringToSeed(feature._key)) + 101) >>> 0;
+  const seed = feature.style.seed || engine.hashStringToSeed(feature._key);
+  const gouache = feature.style.gouache || defaultPlotGouacheForBrush(feature.style.biomeKind || state.brush);
+  feature.style.seed = seed;
+  feature.style.gouache = gouache;
+  feature.style.density = feature.style.density || 1;
+  doc.objects = doc.objects.filter((o) => !(o.style && o.style.plotKey === feature._key));
+  const objects = engine.fillPlotWithGouacheAssets(feature.geometry, {
+    seed,
+    density: feature.style.density,
+    paletteItemId: state.glyphKey || "tree",
+    assets: [{ gouacheKey: gouache }],
+    exclusions: scatterExclusions(),
+    idPrefix: feature._key,
+    layer: 50,
+    visibility: feature.visibility || "dm_only",
+  });
+  for (const obj of objects) {
+    doc.objects.push({
+      ...obj,
+      _key: obj.id,
+      nodeId: state.nodeId,
+      style: { ...obj.style, plotKey: feature._key },
+    });
+  }
+}
 function finishPolygon() {
   if (drawingPoints.length < 3) { drawingPoints = []; draw(); return; }
   pushUndo();
   const isBiome = state.tool === "biome";
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: isBiome ? "biome" : "region", geometry: { type: "Polygon", rings: [[...drawingPoints]] }, style: isBiome ? { biomeKind: state.brush, density: 1 } : undefined, labelColor: "black", layer: isBiome ? 10 : 20, visibility: "dm_only" };
-  doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
+  const isPlot = state.tool === "plot";
+  const k = nextKey();
+  const rings = [[...drawingPoints]];
+  const seed = engine.hashStringToSeed(k);
+  const f = {
+    _key: k,
+    id: nextKey(),
+    nodeId: state.nodeId,
+    kind: isPlot ? "plot" : isBiome ? "biome" : "region",
+    geometry: { type: "Polygon", rings },
+    style: isPlot
+      ? { plotPreset: "gouache_scatter", biomeKind: state.brush, density: 1, seed, gouache: state.gouacheKey || defaultPlotGouacheForBrush(state.brush) }
+      : isBiome ? { biomeKind: state.brush, density: 1 } : undefined,
+    labelColor: "black",
+    layer: isBiome ? 10 : isPlot ? 18 : 20,
+    visibility: "dm_only",
+  };
+  doc.features.push(f);
+  if (isPlot) fillPlotObjects(f, false);
+  drawingPoints = []; selectOnly(f._key); markDirty(); draw();
 }
 function finishPath() {
   if (drawingPoints.length < 2) { drawingPoints = []; draw(); return; }
@@ -1190,7 +1253,7 @@ function onKeyDown(e) {
     drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
   }
   if (e.key === "Delete" || e.key === "Backspace") { if (selection.size) { e.preventDefault(); eraseSelection(); } return; }
-  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
+  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
   const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
 }
 
@@ -1446,7 +1509,7 @@ function refreshChrome() {
     }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
-    else if (st.tool === "region" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "region" || st.tool === "plot" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
     else if (st.tool === "label") { subShow = true; subHtml = 'Klick auf die Karte für Label-Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
     else if (st.tool === "curve") { subShow = true; subHtml = 'Pfad klicken · Doppelklick/Enter → Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
   }
@@ -1490,7 +1553,7 @@ function refreshChrome() {
       (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
     selP.style.display = "block";
   } else if (selF) {
-    const kind = ({ region: "Region", biome: "Biom", river: "Fluss", road: "Straße", vine: "Ranke", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
+    const kind = ({ region: "Region", biome: "Biom", plot: "Objektfläche", river: "Fluss", road: "Straße", vine: "Ranke", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
     const vis = selF.visibility === "player_visible";
     const isPathKind = selF.kind === "river" || selF.kind === "road" || selF.kind === "vine";
     const opt = (list, cur) => list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
@@ -1512,6 +1575,15 @@ function refreshChrome() {
           VINE_SLIDERS.map(([p, l, mn, mx, st2]) => vineSliderHtml(selF, p, l, mn, mx, st2)).join("") +
           '<button class="tb-btn" data-vine="roll" style="width:100%;justify-content:center;margin-top:8px;" title="Ausläufer neu würfeln">↻ Neu würfeln</button>' +
           "</div>"
+        : "") +
+      (selF.kind === "plot" && !view
+        ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
+          '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objektfläche</div>' +
+          '<div style="font-size:10.5px;color:var(--uwe-fg-muted);margin-top:4px;">' + (selF.style && selF.style.gouache ? "Asset: " + selF.style.gouache : "Gouache-Scatter") + "</div>" +
+          '<div style="display:flex;gap:6px;margin-top:8px;">' +
+          '<button class="tb-btn" data-plot="fill" style="flex:1;justify-content:center;">✦ Füllen</button>' +
+          '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
+          "</div></div>"
         : "") +
       (isPathKind
         ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
@@ -1596,6 +1668,16 @@ function wire() {
 
   // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
   el("sel-panel").addEventListener("click", (e) => {
+    const plotBtn = e.target.closest("[data-plot]");
+    if (plotBtn) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.kind === "plot") {
+        pushUndo();
+        fillPlotObjects(f, plotBtn.dataset.plot === "roll");
+        markDirty(); draw(); refreshChrome();
+      }
+      return;
+    }
     const att = e.target.closest("[data-att]");
     if (att) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);

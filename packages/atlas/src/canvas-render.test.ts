@@ -15,8 +15,8 @@ import {
  * renderers' control flow.
  */
 function makeRecordingCtx() {
-  const calls: Array<[string, ...number[]]> = [];
-  const rec = (name: string) => (...args: number[]) => {
+  const calls: Array<[string, ...unknown[]]> = [];
+  const rec = (name: string) => (...args: unknown[]) => {
     calls.push([name, ...args]);
   };
   const ctx = {
@@ -30,8 +30,20 @@ function makeRecordingCtx() {
     bezierCurveTo: rec("bezierCurveTo"),
     fill: rec("fill"),
     fillRect: rec("fillRect"),
+    createLinearGradient: (...args: number[]) => {
+      calls.push(["createLinearGradient", ...args]);
+      return {
+        addColorStop: (offset: number, color: string) => {
+          calls.push(["addColorStop", offset, color]);
+        },
+      };
+    },
   };
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, calls, count: (n: string) => calls.filter((c) => c[0] === n).length };
+  return {
+    ctx: ctx as unknown as CanvasRenderingContext2D,
+    calls,
+    count: (n: string) => calls.filter((c) => c[0] === n).length,
+  };
 }
 
 describe("roundedRectPath", () => {
@@ -106,6 +118,62 @@ describe("paintTerrainBlobs", () => {
     });
     assert.equal(count("fill"), 0);
     assert.equal(count("fillRect"), 0);
+  });
+
+  it("adds a deterministic blend strip between side-by-side biomes", () => {
+    const { ctx, calls, count } = makeRecordingCtx();
+    const fills: Record<string, string> = { grass: "#0f0", sand: "#fc0" };
+    paintTerrainBlobs(ctx, {
+      cols: 2,
+      rows: 1,
+      getCell: (c, r) => {
+        if (r !== 0) return undefined;
+        if (c === 0) return "grass";
+        if (c === 1) return "sand";
+        return undefined;
+      },
+      tileRect: (c, r) => ({ x: c * 10, y: r * 10, w: 10, h: 10 }),
+      fillFor: (biome) => fills[biome] ?? "#000",
+      blendWidth: 4,
+    });
+
+    assert.equal(count("fill"), 2);
+    assert.deepEqual(calls.filter((c) => c[0] === "createLinearGradient"), [
+      ["createLinearGradient", 8, 0, 12, 0],
+    ]);
+    assert.deepEqual(calls.filter((c) => c[0] === "addColorStop"), [
+      ["addColorStop", 0, "#0f0"],
+      ["addColorStop", 1, "#fc0"],
+    ]);
+    assert.deepEqual(calls.filter((c) => c[0] === "fillRect"), [["fillRect", 8, 0, 4, 10]]);
+  });
+
+  it("adds a deterministic blend strip between stacked biomes", () => {
+    const { ctx, calls, count } = makeRecordingCtx();
+    const fills: Record<string, string> = { grass: "#0f0", water: "#06c" };
+    paintTerrainBlobs(ctx, {
+      cols: 1,
+      rows: 2,
+      getCell: (c, r) => {
+        if (c !== 0) return undefined;
+        if (r === 0) return "grass";
+        if (r === 1) return "water";
+        return undefined;
+      },
+      tileRect: (c, r) => ({ x: c * 10, y: r * 10, w: 10, h: 10 }),
+      fillFor: (biome) => fills[biome] ?? "#000",
+      blendWidth: 4,
+    });
+
+    assert.equal(count("fill"), 2);
+    assert.deepEqual(calls.filter((c) => c[0] === "createLinearGradient"), [
+      ["createLinearGradient", 0, 8, 0, 12],
+    ]);
+    assert.deepEqual(calls.filter((c) => c[0] === "addColorStop"), [
+      ["addColorStop", 0, "#0f0"],
+      ["addColorStop", 1, "#06c"],
+    ]);
+    assert.deepEqual(calls.filter((c) => c[0] === "fillRect"), [["fillRect", 0, 8, 10, 4]]);
   });
 });
 

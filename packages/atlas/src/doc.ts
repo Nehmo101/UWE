@@ -35,6 +35,8 @@ export interface AtlasTileLayer {
    * unchanged, `<1` paler, `>1` more saturated. Missing = all `1`.
    */
   intensity?: Record<string, number>;
+  /** Optional soft biome-border blend width at zoom 1; renderers scale it. */
+  blendWidth?: number;
 }
 
 /**

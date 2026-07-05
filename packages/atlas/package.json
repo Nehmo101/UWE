@@ -24,6 +24,7 @@
     "./stamp-variation": "./src/stamp-variation.ts",
     "./path-smoothing": "./src/path-smoothing.ts",
     "./path-attachments": "./src/path-attachments.ts",
+    "./plot-fill": "./src/plot-fill.ts",
     "./export-grid": "./src/export-grid.ts",
     "./vine": "./src/vine.ts",
     "./assets": "./src/assets.ts"

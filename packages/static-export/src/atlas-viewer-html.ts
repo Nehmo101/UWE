@@ -161,11 +161,14 @@ export function renderAtlasViewerPage(input: {
 </html>`;
 }
 
-export function copyAtlasViewerScript(atlasDir: string): string {
-  const source = path.resolve(packageRoot, "../static/atlas-viewer.js");
-  const target = path.join(atlasDir, "atlas-viewer.js");
-  fs.copyFileSync(source, target);
-  return path.basename(target);
+export function copyAtlasViewerScripts(atlasDir: string): string[] {
+  const files = ["atlas-viewer.js", "atlas-engine.js"];
+  for (const file of files) {
+    const source = path.resolve(packageRoot, "../static", file);
+    const target = path.join(atlasDir, file);
+    fs.copyFileSync(source, target);
+  }
+  return files;
 }
 
 function escapeHtml(text: string): string {

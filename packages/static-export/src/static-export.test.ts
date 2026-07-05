@@ -86,8 +86,18 @@ describe("static export", () => {
     const db = createPrismaClient(databaseUrl);
     const atlas = createAtlasService(db);
     const map = await atlas.getOrCreateAtlasForWorld(world.id);
-    await atlas.updateAtlasMap(map.id, { visibility: "player_visible" });
-    await atlas.createNode({
+    await atlas.updateAtlasMap(map.id, {
+      visibility: "player_visible",
+      tileLayer: {
+        cols: 2,
+        rows: 2,
+        tile: 32,
+        cells: { "0,0": "forest", "1,0": "grassland" },
+        intensity: { forest: 1.35, grassland: 0.8 },
+        blendWidth: 6,
+      },
+    });
+    const westland = await atlas.createNode({
       mapId: map.id,
       level: "continent",
       title: "Westland",
@@ -98,6 +108,20 @@ describe("static export", () => {
       level: "continent",
       title: "Geheimland",
       visibility: "dm_only",
+    });
+    const treePalette = await db.atlasPaletteItem.findFirstOrThrow({
+      where: { worldId: null, builtinGlyphKey: "tree" },
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: treePalette.id,
+      x: 0.35,
+      y: 0.45,
+      scale: 1.1,
+      rotation: 8,
+      style: { gouache: "g_keep", lineWidth: 1.8, blur: 0.4 },
+      layer: 50,
+      visibility: "player_visible",
     });
     await db.$disconnect();
   });
@@ -193,25 +217,42 @@ describe("static export", () => {
       outputDir: exportRoot,
       databaseUrl,
     });
+    const files = result.files.map((file) => file.replace(/\\/g, "/"));
 
-    assert.ok(result.files.includes("atlas/data.json"));
-    assert.ok(result.files.includes("atlas/index.html"));
-    assert.ok(result.files.includes("atlas/atlas-viewer.js"));
+    assert.ok(files.includes("atlas/data.json"));
+    assert.ok(files.includes("atlas/index.html"));
+    assert.ok(files.includes("atlas/atlas-viewer.js"));
+    assert.ok(files.includes("atlas/atlas-engine.js"));
 
     const atlasJson = JSON.parse(
       fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
     ) as {
       nodes: { title: string }[];
+      tileLayer: { intensity?: Record<string, number>; blendWidth?: number } | null;
       preset: { colors: { parchment: string } };
       builtinGlyphs: { key: string; pathData: string }[];
+      objects: { style: { gouache?: string; lineWidth?: number; blur?: number } | null }[];
     };
     assert.equal(atlasJson.nodes.length, 1);
     assert.equal(atlasJson.nodes[0]?.title, "Westland");
+    assert.equal(atlasJson.tileLayer?.intensity?.forest, 1.35);
+    assert.equal(atlasJson.tileLayer?.blendWidth, 6);
+    assert.equal(atlasJson.objects[0]?.style?.gouache, "g_keep");
+    assert.equal(atlasJson.objects[0]?.style?.lineWidth, 1.8);
+    assert.equal(atlasJson.objects[0]?.style?.blur, 0.4);
     assert.ok(atlasJson.preset.colors.parchment);
 
     // Canonical pictogram registry is injected so the static viewer needs no copy.
     assert.ok(atlasJson.builtinGlyphs.length >= 20);
     assert.ok(atlasJson.builtinGlyphs.every((g) => g.key && g.pathData));
+
+    const viewerJs = fs.readFileSync(path.join(exportRoot, "atlas/atlas-viewer.js"), "utf8");
+    assert.match(viewerJs, /atlas-engine\.js/);
+    assert.match(viewerJs, /drawGouacheAsset/);
+    assert.match(viewerJs, /buildVineLayout/);
+    assert.match(viewerJs, /drawVine/);
+    assert.match(viewerJs, /smoothPath/);
+    assert.match(viewerJs, /blendWidth/);
 
     const indexHtml = fs.readFileSync(path.join(exportRoot, "index.html"), "utf8");
     assert.match(indexHtml, /Atlas \/ Karte öffnen/);

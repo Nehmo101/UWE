@@ -3,6 +3,16 @@
  * Loads atlas/data.json and renders a read-only canvas map with drill-down.
  */
 (() => {
+  const ATLAS_ENGINE_SRC = "./atlas-engine.js";
+  let atlasEnginePromise = null;
+
+  function loadAtlasEngine() {
+    if (!atlasEnginePromise) {
+      atlasEnginePromise = import(ATLAS_ENGINE_SRC).catch(() => null);
+    }
+    return atlasEnginePromise;
+  }
+
   // Solid tile-layer fills — same palette as the single-file editor runtime.
   const TILE_FILL = {
     grassland: "#a9c47f",
@@ -149,17 +159,64 @@
     ctx.closePath();
   }
 
+  function applyColorIntensity(color, factor) {
+    if (factor === 1 || !/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+    const n = parseInt(color.slice(1), 16);
+    const r = ((n >> 16) & 255) / 255;
+    const g = ((n >> 8) & 255) / 255;
+    const b = (n & 255) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0;
+    let s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h /= 6;
+    }
+    const s2 = Math.max(0, Math.min(1, s * factor));
+    const l2 = Math.max(0, Math.min(1, l - (factor - 1) * 0.06));
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l2 < 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
+    const p = 2 * l2 - q;
+    const to = (t) => Math.round(hue2rgb(p, q, t) * 255);
+    return `rgb(${to(h + 1 / 3)},${to(h)},${to(h - 1 / 3)})`;
+  }
+
+  function hashStringToSeed(value) {
+    let h = 2166136261;
+    const s = String(value);
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
   // Flowing rounded tile blobs — mirrors @uwe/atlas paintTerrainBlobs so the
   // static viewer shows the same terrain layer as the editor runtime.
   function paintTerrainBlobs(ctx, opts) {
-    const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4 } = opts;
+    const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
+    const blendWidth = typeof opts.blendWidth === "number" && Number.isFinite(opts.blendWidth) ? Math.max(0, opts.blendWidth) : 0;
+    const fillForBiome = (biome) => applyColorIntensity(fillFor(biome), intensityFor ? intensityFor(biome) : 1);
     for (let c = 0; c < cols; c++) {
       for (let r = 0; r < rows; r++) {
         const biome = getCell(c, r);
         if (!biome) continue;
         const { x, y, w, h } = tileRect(c, r);
         const radius = Math.min(w, h) * radiusRatio;
-        ctx.fillStyle = fillFor(biome);
+        ctx.fillStyle = fillForBiome(biome);
         roundedRectPath(ctx, x, y, w, h, radius);
         ctx.fill();
         const rightSame = getCell(c + 1, r) === biome;
@@ -172,8 +229,44 @@
         }
       }
     }
-  }
 
+    if (blendWidth <= 0) return;
+
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const biome = getCell(c, r);
+        if (!biome) continue;
+        const { x, y, w, h } = tileRect(c, r);
+        const from = fillForBiome(biome);
+
+        const rightBiome = getCell(c + 1, r);
+        if (rightBiome && rightBiome !== biome) {
+          const edgeWidth = Math.min(blendWidth, w);
+          if (edgeWidth > 0) {
+            const half = edgeWidth / 2;
+            const gradient = ctx.createLinearGradient(x + w - half, y, x + w + half, y);
+            gradient.addColorStop(0, from);
+            gradient.addColorStop(1, fillForBiome(rightBiome));
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x + w - half, y, edgeWidth, h);
+          }
+        }
+
+        const bottomBiome = getCell(c, r + 1);
+        if (bottomBiome && bottomBiome !== biome) {
+          const edgeHeight = Math.min(blendWidth, h);
+          if (edgeHeight > 0) {
+            const half = edgeHeight / 2;
+            const gradient = ctx.createLinearGradient(x, y + h - half, x, y + h + half);
+            gradient.addColorStop(0, from);
+            gradient.addColorStop(1, fillForBiome(bottomBiome));
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, y + h - half, w, edgeHeight);
+          }
+        }
+      }
+    }
+  }
   function drawSvgPath(ctx, d) {
     const cmds = d.match(/[MLHVZQCSA][^MLHVZQCSA]*/gi) || [];
     let x = 0;
@@ -203,9 +296,10 @@
   }
 
   class AtlasStaticViewer {
-    constructor(rootEl, data) {
+    constructor(rootEl, data, atlasEngine) {
       this.rootEl = rootEl;
       this.data = data;
+      this.atlasEngine = atlasEngine;
       this.preset = data.preset;
       this.pageLinks = data.pageLinks || {};
       this.viewport = { panX: 0, panY: 0, zoom: 1 };
@@ -511,6 +605,8 @@
             return { x, y, w: x1 - x, h: y1 - y };
           },
           fillFor: (biome) => TILE_FILL[biome] || "#ccc",
+          intensityFor: (biome) => (tl.intensity && tl.intensity[biome]) || 1,
+          blendWidth: (tl.blendWidth || 0) * zoom,
           radiusRatio: 0.4,
         });
       }
@@ -554,6 +650,10 @@
       const [bx1, by1] = w2c(1, 1);
       ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
 
+      const glyphs =
+        this.data.builtinGlyphs && this.data.builtinGlyphs.length
+          ? this.data.builtinGlyphs
+          : BUILTIN_GLYPHS;
       const features = [...this.getNodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
 
       for (const feat of features) {
@@ -606,36 +706,84 @@
             }
           }
         } else if (geo.type === "Path") {
-          const coords = geo.coordinates || [];
+          const rawCoords = geo.coordinates || [];
+          const pathStyle = feat.style || {};
+          const widthMul = pathStyle.width != null ? pathStyle.width : 1;
+          const coords =
+            pathStyle.smooth &&
+            rawCoords.length >= 3 &&
+            this.atlasEngine &&
+            this.atlasEngine.smoothPath
+              ? this.atlasEngine.smoothPath(rawCoords, { segments: 12, tension: 0.5 })
+              : rawCoords;
           if (coords.length >= 2) {
             if (feat.kind === "vine") {
-              // Ranke/Weltenwurzel — kompakte lokale Annäherung an
-              // @uwe/atlas vine.ts (dieser Viewer bündelt die Engine nicht;
-              // volle Parität inkl. Coil/Tendrils/Wolken ist Backlog).
               const vs = feat.style || {};
-              const t0 = vs.taperStart != null ? vs.taperStart : 0.9;
-              const t1 = vs.taperEnd != null ? vs.taperEnd : 0.15;
-              const hgt = vs.height != null ? vs.height : 0.7;
-              const thick = vs.thickness != null ? vs.thickness : 1;
-              const off = 0.05 * hgt;
-              const strokeVine = (dx, dy, color, mul, extraPx) => {
-                for (let i = 0; i < coords.length - 1; i++) {
-                  const t = coords.length > 2 ? i / (coords.length - 2) : 0;
-                  const w = (t0 * (1 - t) + t1 * t) * 9 * thick * zoom * mul;
-                  const [sx, sy] = w2c(coords[i][0] + dx, coords[i][1] + dy);
-                  const [ex, ey] = w2c(coords[i + 1][0] + dx, coords[i + 1][1] + dy);
-                  ctx.beginPath();
-                  ctx.moveTo(sx, sy);
-                  ctx.lineTo(ex, ey);
-                  ctx.strokeStyle = color;
-                  ctx.lineWidth = Math.max(0.6, w) + (extraPx || 0);
-                  ctx.stroke();
+              if (this.atlasEngine && this.atlasEngine.buildVineLayout && this.atlasEngine.drawVine) {
+                const layout = this.atlasEngine.buildVineLayout(rawCoords, {
+                  taperStart: vs.taperStart,
+                  taperEnd: vs.taperEnd,
+                  coil: vs.coil,
+                  tendrils: vs.tendrils,
+                  height: vs.height,
+                  seed: vs.seed,
+                });
+                if (layout.spine.length >= 2) {
+                  this.atlasEngine.drawVine(ctx, layout, {
+                    project: (c) => w2c(c[0], c[1]),
+                    zoom,
+                    trunk: "#ffffff",
+                    coil: "#ffffff",
+                    outline: "#241a10",
+                    thickness: vs.thickness != null ? vs.thickness : 1,
+                    shadow: "rgba(26,16,8,0.18)",
+                  });
+                  const cloud = glyphs.find((g) => g.key === "cloud");
+                  if (cloud) {
+                    for (const pt of layout.aura.clouds) {
+                      const [gx, gy] = w2c(pt[0], pt[1]);
+                      const scale = (13 * zoom) / 24;
+                      ctx.save();
+                      ctx.translate(gx, gy);
+                      ctx.scale(scale, scale);
+                      ctx.translate(-12, -12);
+                      ctx.globalAlpha = 0.65;
+                      ctx.strokeStyle = cloud.color;
+                      ctx.lineWidth = 1.5 / scale;
+                      ctx.lineJoin = "round";
+                      ctx.lineCap = "round";
+                      ctx.beginPath();
+                      drawSvgPath(ctx, cloud.pathData);
+                      ctx.stroke();
+                      ctx.restore();
+                    }
+                  }
                 }
-              };
-              ctx.lineCap = "round";
-              strokeVine(off, off, "rgba(26,16,8,0.18)", 0.75, 0);
-              strokeVine(0, 0, "#241a10", 1, 2.6 * zoom);
-              strokeVine(0, 0, "#ffffff", 1, 0);
+              } else {
+                const t0 = vs.taperStart != null ? vs.taperStart : 0.9;
+                const t1 = vs.taperEnd != null ? vs.taperEnd : 0.15;
+                const hgt = vs.height != null ? vs.height : 0.7;
+                const thick = vs.thickness != null ? vs.thickness : 1;
+                const off = 0.05 * hgt;
+                const strokeVine = (dx, dy, color, mul, extraPx) => {
+                  for (let i = 0; i < coords.length - 1; i++) {
+                    const t = coords.length > 2 ? i / (coords.length - 2) : 0;
+                    const w = (t0 * (1 - t) + t1 * t) * 9 * thick * zoom * mul;
+                    const [sx, sy] = w2c(coords[i][0] + dx, coords[i][1] + dy);
+                    const [ex, ey] = w2c(coords[i + 1][0] + dx, coords[i + 1][1] + dy);
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy);
+                    ctx.lineTo(ex, ey);
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = Math.max(0.6, w) + (extraPx || 0);
+                    ctx.stroke();
+                  }
+                };
+                ctx.lineCap = "round";
+                strokeVine(off, off, "rgba(26,16,8,0.18)", 0.75, 0);
+                strokeVine(0, 0, "#241a10", 1, 2.6 * zoom);
+                strokeVine(0, 0, "#ffffff", 1, 0);
+              }
             } else if (feat.kind === "road") {
               ctx.beginPath();
               const [sx, sy] = w2c(coords[0][0], coords[0][1]);
@@ -645,7 +793,7 @@
                 ctx.lineTo(px, py);
               }
               ctx.strokeStyle = preset.colors.road;
-              ctx.lineWidth = 2 * zoom;
+              ctx.lineWidth = 2 * zoom * widthMul;
               ctx.setLineDash([8 * zoom, 4 * zoom]);
               ctx.stroke();
               ctx.setLineDash([]);
@@ -659,7 +807,7 @@
                 ctx.moveTo(sx, sy);
                 ctx.lineTo(ex, ey);
                 ctx.strokeStyle = preset.colors.inkAccent;
-                ctx.lineWidth = w;
+                ctx.lineWidth = w * widthMul;
                 ctx.stroke();
               }
             }
@@ -676,8 +824,6 @@
             ctx.fillStyle = inkColor;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            // Constant spacing in world units — font and spacing both scale
-            // with zoom, keeping the label compact at every zoom level.
             const placements = layoutCharactersOnPath(
               labelText,
               geo.pathCoordinates,
@@ -707,21 +853,39 @@
         ctx.restore();
       }
 
-      const glyphs =
-        this.data.builtinGlyphs && this.data.builtinGlyphs.length
-          ? this.data.builtinGlyphs
-          : BUILTIN_GLYPHS;
       for (const obj of this.getNodeObjects()) {
-        // Resolve via the exported palette map (DB ids → builtin glyph key or
-        // inline image stamp); fall back to a direct key match for hand-made
-        // data.json fixtures.
         const paletteItem = this.paletteItems[obj.paletteItemId];
         const [ox, oy] = w2c(obj.x, obj.y);
-        const size = 24 * zoom * obj.scale;
+        const style = obj.style || {};
 
+        if (
+          style.gouache &&
+          this.atlasEngine &&
+          this.atlasEngine.isGouacheAsset &&
+          this.atlasEngine.drawGouacheAsset &&
+          this.atlasEngine.isGouacheAsset(style.gouache)
+        ) {
+          this.atlasEngine.drawGouacheAsset(ctx, style.gouache, {
+            x: ox,
+            y: oy,
+            size: 30 * zoom,
+            scale: obj.scale,
+            rotation: (obj.rotation * Math.PI) / 180,
+            lineWidth: (style.lineWidth != null ? style.lineWidth : 1.4) * zoom,
+            blur: (style.blur || 0) * zoom,
+            seed: this.atlasEngine.hashStringToSeed
+              ? this.atlasEngine.hashStringToSeed(String(obj.id || obj.paletteItemId))
+              : hashStringToSeed(String(obj.id || obj.paletteItemId)),
+          });
+          continue;
+        }
+
+        const size = 24 * zoom * obj.scale;
+        const blur = style.blur || 0;
         const stampImage = paletteItem && paletteItem.imageData ? this.stampImages[obj.paletteItemId] : null;
         if (stampImage && stampImage.complete && stampImage.naturalWidth > 0) {
           ctx.save();
+          if (blur > 0) ctx.filter = `blur(${blur * zoom}px)`;
           ctx.translate(ox, oy);
           ctx.rotate((obj.rotation * Math.PI) / 180);
           ctx.drawImage(stampImage, -size / 2, -size / 2, size, size);
@@ -733,13 +897,14 @@
         const glyph = glyphs.find((g) => g.key === glyphKey);
         if (!glyph) continue;
         ctx.save();
+        if (blur > 0) ctx.filter = `blur(${blur * zoom}px)`;
         ctx.translate(ox, oy);
         ctx.rotate((obj.rotation * Math.PI) / 180);
         const scale = size / 24;
         ctx.scale(scale, scale);
         ctx.translate(-12, -12);
         ctx.strokeStyle = glyph.color || preset.colors.ink;
-        ctx.lineWidth = 1.5 / scale;
+        ctx.lineWidth = (style.lineWidth != null ? style.lineWidth : 1.5) / scale;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -751,7 +916,6 @@
       ctx.restore();
     }
   }
-
   function init() {
     const mount = document.querySelector("[data-atlas-viewer]");
     if (!mount) return;
@@ -760,12 +924,13 @@
         if (!r.ok) throw new Error("Atlas data not found");
         return r.json();
       })
-      .then((data) => {
+      .then(async (data) => {
         if (!data.nodes || data.nodes.length === 0) {
           mount.innerHTML = "<p class=\"atlas-static-empty\">Keine Atlas-Daten verfügbar.</p>";
           return;
         }
-        new AtlasStaticViewer(mount, data);
+        const atlasEngine = await loadAtlasEngine();
+        new AtlasStaticViewer(mount, data, atlasEngine);
       })
       .catch(() => {
         mount.innerHTML = "<p class=\"atlas-static-empty\">Atlas konnte nicht geladen werden.</p>";

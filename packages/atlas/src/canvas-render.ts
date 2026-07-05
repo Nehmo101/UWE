@@ -87,6 +87,8 @@ export interface PaintTerrainBlobsOptions {
   fillFor: (biome: string) => string;
   /** Corner radius relative to the tile edge (0..0.5, default 0.4). */
   radiusRatio?: number;
+  /** Canvas-space width of soft biome-border blends. Default 0 keeps hard borders. */
+  blendWidth?: number;
   /** Optional per-biome intensity factor (1 = unchanged). */
   intensityFor?: (biome: string) => number;
 }
@@ -102,15 +104,20 @@ export function paintTerrainBlobs(
   opts: PaintTerrainBlobsOptions,
 ): void {
   const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
+  const blendWidth =
+    typeof opts.blendWidth === "number" && Number.isFinite(opts.blendWidth)
+      ? Math.max(0, opts.blendWidth)
+      : 0;
+  const fillForBiome = (biome: string): string =>
+    intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
+
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const biome = getCell(c, r);
       if (!biome) continue;
       const { x, y, w, h } = tileRect(c, r);
       const radius = Math.min(w, h) * radiusRatio;
-      ctx.fillStyle = intensityFor
-        ? applyColorIntensity(fillFor(biome), intensityFor(biome))
-        : fillFor(biome);
+      ctx.fillStyle = fillForBiome(biome);
 
       roundedRectPath(ctx, x, y, w, h, radius);
       ctx.fill();
@@ -126,6 +133,43 @@ export function paintTerrainBlobs(
       // what makes borders between different biomes read as flowing, not blocky.
       if (rightSame && bottomSame && diagSame) {
         ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
+      }
+    }
+  }
+
+  if (blendWidth <= 0) return;
+
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const biome = getCell(c, r);
+      if (!biome) continue;
+      const { x, y, w, h } = tileRect(c, r);
+      const from = fillForBiome(biome);
+
+      const rightBiome = getCell(c + 1, r);
+      if (rightBiome && rightBiome !== biome) {
+        const edgeWidth = Math.min(blendWidth, w);
+        if (edgeWidth > 0) {
+          const half = edgeWidth / 2;
+          const gradient = ctx.createLinearGradient(x + w - half, y, x + w + half, y);
+          gradient.addColorStop(0, from);
+          gradient.addColorStop(1, fillForBiome(rightBiome));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x + w - half, y, edgeWidth, h);
+        }
+      }
+
+      const bottomBiome = getCell(c, r + 1);
+      if (bottomBiome && bottomBiome !== biome) {
+        const edgeHeight = Math.min(blendWidth, h);
+        if (edgeHeight > 0) {
+          const half = edgeHeight / 2;
+          const gradient = ctx.createLinearGradient(x, y + h - half, x, y + h + half);
+          gradient.addColorStop(0, from);
+          gradient.addColorStop(1, fillForBiome(bottomBiome));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, y + h - half, w, edgeHeight);
+        }
       }
     }
   }

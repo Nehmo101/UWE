@@ -95,6 +95,8 @@ export interface ViewerTileLayer {
   cells: Record<string, string>;
   /** Per-biome colour intensity factor (1 = unchanged). */
   intensity?: Record<string, number> | null;
+  /** Soft biome-border blend width at zoom 1; renderers scale it. */
+  blendWidth?: number | null;
 }
 
 export interface AtlasViewerProps {
@@ -399,6 +401,7 @@ export function AtlasViewer({
         },
         fillFor: (biome) => TILE_FILL[biome] ?? "#ccc",
         intensityFor: (biome) => tileLayer?.intensity?.[biome] ?? 1,
+        blendWidth: (tileLayer.blendWidth ?? 0) * zoom,
         radiusRatio: 0.4,
       });
     }
