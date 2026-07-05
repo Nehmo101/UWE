@@ -100,6 +100,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     y: o.y,
     scale: o.scale,
     rotation: o.rotation,
+    style: (o.style as Record<string, unknown> | null) ?? undefined,
     layer: o.layer,
     visibility: o.visibility,
     _key: nextKey(),

@@ -39,6 +39,7 @@ export interface StudioAtlasObjectInput {
   y: number;
   scale: number;
   rotation: number;
+  style?: Record<string, unknown>;
   layer?: number;
   visibility?: string;
   _key: string;
@@ -127,6 +128,7 @@ export function buildStudioAtlasDoc(input: BuildStudioAtlasDocInput): AtlasDocV2
       y: o.y,
       scale: o.scale,
       rotation: o.rotation,
+      style: o.style,
       layer: o.layer,
       visibility: o.visibility,
       _key: o._key,

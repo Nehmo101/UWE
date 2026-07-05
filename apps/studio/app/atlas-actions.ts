@@ -7,8 +7,10 @@ import {
   createPrismaClient,
   getAppRepository,
   type CreateAtlasFeatureInput,
+  type CreateAtlasObjectInput,
   type CreateAtlasNodeInput,
   type UpdateAtlasFeatureInput,
+  type UpdateAtlasObjectInput,
   type UpdateAtlasNodeInput,
   type UpdateAtlasMapInput,
   type PageType,
@@ -705,7 +707,7 @@ export async function saveAtlasObjectsAction(
           y: obj.y,
           scale: obj.scale,
           rotation: obj.rotation,
-          style: obj.style as CreateAtlasFeatureInput["style"],
+          style: obj.style as UpdateAtlasObjectInput["style"],
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as UpdateAtlasNodeInput["visibility"],
         });
@@ -718,7 +720,7 @@ export async function saveAtlasObjectsAction(
           y: obj.y,
           scale: obj.scale,
           rotation: obj.rotation,
-          style: obj.style as CreateAtlasFeatureInput["style"],
+          style: obj.style as CreateAtlasObjectInput["style"],
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as CreateAtlasFeatureInput["visibility"],
         });

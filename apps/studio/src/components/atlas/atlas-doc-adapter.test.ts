@@ -23,6 +23,7 @@ const object: StudioAtlasObjectInput = {
   y: 0.5,
   scale: 1,
   rotation: 0,
+  style: { gouache: "castle", lineWidth: 1.2, blur: 0.5 },
   layer: 50,
   visibility: "dm_only",
   _key: "ck-2",
@@ -57,6 +58,11 @@ describe("buildStudioAtlasDoc", () => {
     assert.equal((doc.features[0] as { _key: unknown })._key, "ck-1");
     assert.equal((doc.objects[0] as { nodeId: unknown }).nodeId, "n-city");
     assert.equal((doc.objects[0] as { paletteItemId: unknown }).paletteItemId, "pi_castle");
+    assert.deepEqual((doc.objects[0] as { style: unknown }).style, {
+      gouache: "castle",
+      lineWidth: 1.2,
+      blur: 0.5,
+    });
   });
 
   it("defaults to an empty tile layer when none is provided", () => {
