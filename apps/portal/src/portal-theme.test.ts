@@ -13,7 +13,7 @@ describe("portal theme sync layout", () => {
   it("reads server theme from settings and applies ThemeDocumentSync", () => {
     const layout = readFileSync(portalLayoutPath, "utf8");
 
-    assert.match(layout, /getSystemSettingsSnapshot\(\)/);
+    assert.match(layout, /getSystemSettingsSnapshotSafe\(\)/);
     assert.match(layout, /resolveThemePreferencesForScope\(settings\.app, "portal"\)/);
     assert.match(layout, /buildVisualThemeHtmlAttributes\(settings\.app/);
     assert.match(layout, /ThemeBootstrapScript[\s\S]*scope="portal"/);
