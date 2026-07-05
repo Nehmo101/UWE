@@ -13,14 +13,15 @@ const claimSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const auth = await authenticateConnector(request);
-  if (!auth.ok) return auth.response;
-
   // Host-wide kill switch — connectors stop receiving work when the host
-  // queue is disabled, even if the connector itself is enabled.
+  // queue is disabled, even if the connector itself is enabled. Keep this
+  // before authentication so an emergency pause does not touch the database.
   if (!resolveHostConnectorConfig().queueEnabled) {
     return NextResponse.json({ job: null, reason: "host_queue_disabled" });
   }
+
+  const auth = await authenticateConnector(request);
+  if (!auth.ok) return auth.response;
 
   const parsed = await parseBody(request, claimSchema);
   if (!parsed.success) return parsed.response;
