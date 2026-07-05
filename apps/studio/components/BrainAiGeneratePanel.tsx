@@ -9,12 +9,17 @@ interface Props {
 
 export function BrainAiGeneratePanel({ worldSlug, campaignId: _campaignId }: Props) {
   return (
-    <section className="uwe-brain-ai-panel" style={{ marginBottom: "1.5rem" }}>
-      <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>KI-Wissensgenerierung</h2>
+    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section uwe-brain-ai-panel">
+      <h2 className="uwe-v2-section-title">KI-Wissensgenerierung</h2>
       <p className="uwe-hint" style={{ marginTop: 0 }}>
-        Brain-Aktionen für diese Welt — Ergebnisse immer als Review-Proposal übernehmen.
+        Brain-Aktionen für diese Welt — Ergebnisse immer als Review-Proposal übernehmen. Läuft über
+        den RTX Connector (lokal), nicht über veraltete Ollama-Direktauswahl.
       </p>
-      <AiBrainSidebar worldSlug={worldSlug} defaultActionId="expand_knowledge" />
+      <AiBrainSidebar
+        worldSlug={worldSlug}
+        defaultActionId="expand_knowledge"
+        variant="store"
+      />
     </section>
   );
 }

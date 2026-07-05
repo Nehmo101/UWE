@@ -363,3 +363,17 @@ export function resolveProviderSelection(
   const fallback = state.providerOptions.find((o) => !o.disabled);
   return fallback?.id ?? "auto";
 }
+
+/** Map low-level provider errors to user-facing German hints. */
+export function sanitizeAiErrorMessage(message: string): string {
+  if (/Ollama chat HTTP 404/i.test(message)) {
+    return "Lokales Modell nicht erreichbar — Ollama/LM Studio auf dem RTX-Rechner starten und das Modell laden.";
+  }
+  if (/Ollama .+ HTTP/i.test(message)) {
+    return "Lokale KI (RTX) antwortet nicht — RTX Connector und Ollama auf dem RTX-Rechner prüfen.";
+  }
+  if (/Kein lokaler LLM-Provider/i.test(message)) {
+    return "RTX Connector meldet keinen lokalen LLM-Provider — Ollama-URL in der Connector-Konfiguration prüfen.";
+  }
+  return message;
+}

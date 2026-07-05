@@ -175,9 +175,14 @@ export async function StudioWikiPageView({
                     pageSlug={slug}
                     pageTitle={view.page.title}
                     useMock={useMockAi}
+                    variant="page"
                   />
-                  <hr className="mobile-ai-brain-divider" aria-hidden="true" />
-                  <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} />
+                </Collapsible>
+                <Collapsible variant="sidebar" title="Brain-Aktionen" defaultOpen={false}>
+                  <p className="uwe-hint" style={{ marginTop: 0 }}>
+                    Strukturierte Brain-Aktionen mit Review-Proposal — läuft über RTX Connector.
+                  </p>
+                  <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} variant="store" />
                 </Collapsible>
               </>
             )}

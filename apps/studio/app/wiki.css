@@ -30,6 +30,15 @@
   border-left: none;
 }
 
+.ai-brain-panel-store {
+  padding: 0;
+  border-top: none;
+}
+
+.uwe-brain-ai-panel .ai-brain-panel-store {
+  margin-top: 0.5rem;
+}
+
 .ai-brain-panel {
   padding: 1.5rem 1rem;
   border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
@@ -301,6 +310,29 @@
 
 .uwe-context .mobile-ai-prompt {
   max-width: 100%;
+}
+
+.mobile-ai-prompt-page {
+  gap: 0.75rem;
+}
+
+.mobile-ai-page-summary {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--uwe-muted);
+}
+
+.mobile-ai-page-brain-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--uwe-fg);
+}
+
+.mobile-ai-prompt-page .mobile-ai-send-desktop {
+  display: block;
 }
 
 .mobile-ai-page-hint {

@@ -72,7 +72,8 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           />
           <SidebarSection title="Kontext">
             <p className="uwe-hint" style={{ margin: 0 }}>
-              Brain-Wissen wird dauerhaft in UWE gespeichert (alter Laptop).
+              Brain-Wissen wird dauerhaft in UWE gespeichert — getrennt vom privaten Life-Brain.
+              KI-Generierung läuft über den RTX Connector (lokal, kein Cloud-Fallback für Weltwissen).
             </p>
           </SidebarSection>
         </>
@@ -88,91 +89,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           {summary.chunkCount} Chunks · {summary.linkCount} Links
         </p>
       )}
-
-      <BrainAiGeneratePanel
-        worldSlug={worldSlug}
-        campaignId={selectedCampaign?.id}
-      />
-
-      <section className="uwe-brain-create-grid">
-        <form action={createBrainDocumentAction} className="uwe-brain-create-form">
-          <h2>Neues Dokument</h2>
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          {selectedCampaign && (
-            <input type="hidden" name="campaignId" value={selectedCampaign.id} />
-          )}
-          <label>
-            Titel
-            <input name="title" required className="uwe-input" placeholder="Dokumenttitel" />
-          </label>
-          <label>
-            Inhalt
-            <textarea name="content" className="uwe-input" rows={3} placeholder="Wissenstext…" />
-          </label>
-          <label>
-            Typ
-            <select name="documentType" className="uwe-input">
-              {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Sichtbarkeit
-            <select name="visibility" className="uwe-input" defaultValue="dm_only">
-              {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Dokument anlegen
-          </button>
-        </form>
-
-        <form action={createBrainFactAction} className="uwe-brain-create-form">
-          <h2>Neuer Fakt</h2>
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          {selectedCampaign && (
-            <input type="hidden" name="campaignId" value={selectedCampaign.id} />
-          )}
-          <label>
-            Titel
-            <input name="title" required className="uwe-input" placeholder="Fakt-Titel" />
-          </label>
-          <label>
-            Inhalt
-            <textarea name="content" className="uwe-input" rows={3} placeholder="Fakt-Inhalt…" />
-          </label>
-          <label>
-            Typ
-            <select name="factType" className="uwe-input">
-              {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Sichtbarkeit
-            <select name="visibility" className="uwe-input" defaultValue="dm_only">
-              {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Fakt anlegen
-          </button>
-        </form>
-      </section>
 
       <section className="uwe-brain-section">
         <h2>Dokumente</h2>
@@ -241,6 +157,91 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           </table>
         )}
       </section>
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Manuell anlegen</h2>
+        <div className="uwe-brain-create-grid">
+          <form action={createBrainDocumentAction} className="uwe-brain-create-form">
+            <h3>Neues Dokument</h3>
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            {selectedCampaign && (
+              <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+            )}
+            <label>
+              Titel
+              <input name="title" required className="uwe-input" placeholder="Dokumenttitel" />
+            </label>
+            <label>
+              Inhalt
+              <textarea name="content" className="uwe-input" rows={3} placeholder="Wissenstext…" />
+            </label>
+            <label>
+              Typ
+              <select name="documentType" className="uwe-input">
+                {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Sichtbarkeit
+              <select name="visibility" className="uwe-input" defaultValue="dm_only">
+                {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+              Dokument anlegen
+            </button>
+          </form>
+
+          <form action={createBrainFactAction} className="uwe-brain-create-form">
+            <h3>Neuer Fakt</h3>
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            {selectedCampaign && (
+              <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+            )}
+            <label>
+              Titel
+              <input name="title" required className="uwe-input" placeholder="Fakt-Titel" />
+            </label>
+            <label>
+              Inhalt
+              <textarea name="content" className="uwe-input" rows={3} placeholder="Fakt-Inhalt…" />
+            </label>
+            <label>
+              Typ
+              <select name="factType" className="uwe-input">
+                {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Sichtbarkeit
+              <select name="visibility" className="uwe-input" defaultValue="dm_only">
+                {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+              Fakt anlegen
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <BrainAiGeneratePanel worldSlug={worldSlug} campaignId={selectedCampaign?.id} />
     </WorldShell>
   );
 }

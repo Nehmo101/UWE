@@ -24,6 +24,11 @@ describe("AiPromptControls — mobile UI structure", () => {
     assert.match(controlsSource, /deriveStatusChips/);
   });
 
+  it("supports compact page variant without segment groups", () => {
+    assert.match(controlsSource, /variant === "page"/);
+    assert.match(controlsSource, /mobile-ai-page-summary/);
+  });
+
   it("shows privacy hints from computePromptUiState", () => {
     assert.match(controlsSource, /mobile-ai-hints/);
     assert.match(controlsSource, /computePromptUiState/);
@@ -46,7 +51,13 @@ describe("MobileAiPromptPanel — security and layout", () => {
     assert.match(mobilePanelSource, /StickyActionBar/);
     assert.match(mobilePanelSource, /mobile-ai-prompt-input/);
     assert.match(mobilePanelSource, /mobile-ai-send-btn/);
-    assert.match(mobilePanelSource, /rows=\{6\}/);
+    assert.match(mobilePanelSource, /rows=\{isPageVariant \? 4 : 6\}/);
+  });
+
+  it("supports compact page variant for wiki sidebar", () => {
+    assert.match(mobilePanelSource, /variant=\{isPageVariant \? "page" : "full"\}/);
+    assert.match(mobilePanelSource, /sanitizeAiErrorMessage/);
+    assert.match(mobilePanelSource, /DnD-Brain-Wissen einbeziehen/);
   });
 });
 

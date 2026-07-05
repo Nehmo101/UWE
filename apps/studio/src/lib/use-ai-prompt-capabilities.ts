@@ -139,8 +139,12 @@ export function useAiPromptCapabilities(
   const [error, setError] = useState<string | null>(null);
   const [statusKind, setStatusKind] = useState<AiStatusKind>("none");
   const [unavailableHint, setUnavailableHint] = useState<string | null>(null);
-  const [providerMode, setProviderModeState] = useState<AiProviderMode>("auto");
-  const [contextMode, setContextModeState] = useState<AiContextMode>("general_chat");
+  const [providerMode, setProviderModeState] = useState<AiProviderMode>(
+    pageSlug ? "local_rtx" : "auto",
+  );
+  const [contextMode, setContextModeState] = useState<AiContextMode>(
+    pageSlug ? "current_object" : "general_chat",
+  );
 
   const loadStatus = useCallback(async () => {
     try {

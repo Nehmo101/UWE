@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
+import { useAiPromptCapabilities } from "@/src/lib/use-ai-prompt-capabilities";
+import { HINT_LOCAL_NOT_READY } from "@/src/lib/ai-prompt-ui";
 import type { AiBrainSettings, AiContext, AiProviderId, DndGeneratorAction } from "@uwe/ai-brain";
 import type { BrainActionDefinition, BrainActionId } from "@uwe/ai-brain";
 import {
@@ -21,6 +23,8 @@ interface Props {
   defaultSessionId?: string;
   defaultActionId?: BrainActionId;
   generatorActions?: DndGeneratorAction[];
+  /** Sidebar = wiki context panel; store = Brain Knowledge Store page. */
+  variant?: "sidebar" | "store";
 }
 
 interface SessionOption {
@@ -55,7 +59,19 @@ export function AiBrainSidebar({
   defaultSessionId,
   defaultActionId = "expand_knowledge",
   generatorActions,
+  variant = "sidebar",
 }: Props) {
+  const isStoreVariant = variant === "store";
+  const {
+    caps,
+    loading: statusLoading,
+    statusKind,
+    unavailableHint,
+  } = useAiPromptCapabilities({
+    worldSlug,
+    pageSlug,
+    pollIntervalMs: isStoreVariant ? 15_000 : 0,
+  });
   const [settings, setSettings] = useState<AiBrainSettings | null>(null);
   const [actions, setActions] = useState<BrainActionDefinition[]>([]);
   const [actionId, setActionId] = useState<BrainActionId>(defaultActionId);
@@ -75,6 +91,15 @@ export function AiBrainSidebar({
   const [allowDmOnly, setAllowDmOnly] = useState(false);
   const [connectorModels, setConnectorModels] = useState<ConnectorPickerModelView[]>([]);
   const [connectorSelection, setConnectorSelection] = useState<ConnectorModelSelection | null>(null);
+
+  const showLegacyProviderControls = !isStoreVariant;
+  const showConnectorPicker = connectorModels.length > 0;
+  const showLocalModelPicker = !showConnectorPicker || !isStoreVariant;
+  const rtxReady = caps.localAiReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
+  const canRunAction =
+    !loading &&
+    Boolean(model) &&
+    (!isStoreVariant || rtxReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true");
 
   const selectedAction = useMemo(
     () => actions.find((action) => action.id === actionId),
@@ -352,10 +377,28 @@ export function AiBrainSidebar({
   }
 
   return (
-    <section className="ai-brain-panel">
-      <h3>UWE Brain</h3>
+    <section className={`ai-brain-panel${isStoreVariant ? " ai-brain-panel-store" : ""}`}>
+      {!isStoreVariant && <h3>UWE Brain</h3>}
 
-      {settings && (
+      {isStoreVariant && !statusLoading && statusKind === "unavailable" && unavailableHint && (
+        <p className="uwe-dashboard-muted" role="note">
+          {unavailableHint}
+        </p>
+      )}
+
+      {isStoreVariant && !statusLoading && !rtxReady && statusKind !== "unavailable" && (
+        <p className="uwe-form-error" role="note">
+          {HINT_LOCAL_NOT_READY}
+        </p>
+      )}
+
+      {isStoreVariant && rtxReady && (
+        <p className="ai-brain-meta">
+          Lokale RTX bereit — Weltwissen wird nicht an Cloud-KI gesendet.
+        </p>
+      )}
+
+      {!isStoreVariant && settings && (
         <p className="ai-brain-meta">
           {settings.datenschutzMode ? "Datenschutzmodus aktiv" : "Cloud optional"}
           {settings.localOnly ? " · Nur lokal" : ""}
@@ -408,32 +451,52 @@ export function AiBrainSidebar({
         </label>
       )}
 
-      <label className="ai-brain-field">
-        <span>Provider</span>
-        <select
-          value={providerId}
-          onChange={(event) => setProviderId(event.target.value as AiProviderId)}
-        >
-          {availableProviders.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {showLegacyProviderControls && (
+        <label className="ai-brain-field">
+          <span>Provider</span>
+          <select
+            value={providerId}
+            onChange={(event) => setProviderId(event.target.value as AiProviderId)}
+          >
+            {availableProviders.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
-      <label className="ai-brain-field">
-        <span>Modell</span>
-        <select value={model} onChange={(event) => setModel(event.target.value)}>
-          {models.map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {showLocalModelPicker && (
+        <label className="ai-brain-field">
+          <span>Modell</span>
+          <select value={model} onChange={(event) => setModel(event.target.value)}>
+            {models.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
-      {connectorModels.length > 0 && (
+      {showConnectorPicker && isStoreVariant && (
+        <>
+          <p className="ai-brain-meta">
+            Modell vom RTX Connector — Ausführung über die lokale RTX-Queue. Standards auf der{" "}
+            <Link href="/system/rtx-connector">RTX-Connector-Seite</Link>.
+          </p>
+          <ConnectorModelPicker
+            label="Modell"
+            models={connectorModels}
+            value={connectorSelection}
+            onChange={handleConnectorSelection}
+            noneLabel="— Standardmodell (lokale Inference)"
+          />
+        </>
+      )}
+
+      {showConnectorPicker && !isStoreVariant && (
         <details className="ai-brain-context">
           <summary>Connector-Modelle ({connectorModels.length})</summary>
           <p className="ai-brain-meta">
@@ -477,7 +540,7 @@ export function AiBrainSidebar({
       </label>
 
       <div className="ai-brain-actions">
-        <button type="button" onClick={() => void handleRunAction()} disabled={loading || !model}>
+        <button type="button" onClick={() => void handleRunAction()} disabled={!canRunAction}>
           Aktion ausführen
         </button>
       </div>

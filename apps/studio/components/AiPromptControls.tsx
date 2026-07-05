@@ -74,6 +74,8 @@ export interface AiPromptControlsProps {
   pageTitle?: string;
   /** Used to evaluate send rules in hints (empty string when only showing controls). */
   promptPreview?: string;
+  /** full = mobile/global panel; page = wiki sidebar (compact). */
+  variant?: "full" | "page";
 }
 
 export function AiPromptControls({
@@ -85,10 +87,47 @@ export function AiPromptControls({
   statusLoading = false,
   pageTitle,
   promptPreview = "x",
+  variant = "full",
 }: AiPromptControlsProps) {
+  const isPageVariant = variant === "page";
   const ui = computePromptUiState(providerMode, contextMode, caps, promptPreview);
   const chips = deriveStatusChips(caps);
   const active = formatActiveModes(providerMode, contextMode);
+  const rtxChip = chips.find((chip) => chip.id === "rtx");
+
+  if (isPageVariant) {
+    return (
+      <>
+        {statusLoading ? (
+          <LoadingSpinner label="Status wird geladen…" size="sm" />
+        ) : (
+          <p className="mobile-ai-page-summary" aria-live="polite">
+            {pageTitle ? (
+              <>
+                Seite: <strong>{pageTitle}</strong>
+                {" · "}
+              </>
+            ) : null}
+            {rtxChip ? (
+              <>
+                RTX {rtxChip.value}
+                {" · "}
+              </>
+            ) : null}
+            Lokale KI — Weltwissen bleibt auf dem RTX-Rechner.
+          </p>
+        )}
+
+        {ui.hints.length > 0 && (
+          <ul className="mobile-ai-hints" aria-live="polite">
+            {ui.hints.map((hint) => (
+              <li key={hint}>{hint}</li>
+            ))}
+          </ul>
+        )}
+      </>
+    );
+  }
 
   return (
     <>

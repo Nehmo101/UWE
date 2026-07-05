@@ -1,10 +1,11 @@
 "use client";
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmptyState, ErrorAlert, LoadingSpinner, StickyActionBar } from "@uwe/shared-ui";
 import { AiPromptControls, computePromptUiState } from "@/components/AiPromptControls";
 import { useAiPromptCapabilities } from "@/src/lib/use-ai-prompt-capabilities";
+import { sanitizeAiErrorMessage } from "@/src/lib/ai-prompt-ui";
 
 export interface MobileAiPromptPanelProps {
   worldSlug?: string;
@@ -14,6 +15,8 @@ export interface MobileAiPromptPanelProps {
   useMock?: boolean;
   /** Disable status polling (e.g. in tests). */
   pollIntervalMs?: number;
+  /** full = /ai page; page = wiki sidebar on a single page. */
+  variant?: "full" | "page";
 }
 
 export function MobileAiPromptPanel({
@@ -22,7 +25,9 @@ export function MobileAiPromptPanel({
   pageTitle,
   useMock = false,
   pollIntervalMs,
+  variant = "full",
 }: MobileAiPromptPanelProps) {
+  const isPageVariant = variant === "page" && Boolean(pageSlug);
   const {
     caps,
     loading: statusLoading,
@@ -35,10 +40,27 @@ export function MobileAiPromptPanel({
     setContextMode,
   } = useAiPromptCapabilities({ worldSlug, pageSlug, pollIntervalMs });
 
+  const [includeBrain, setIncludeBrain] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isPageVariant) {
+      return;
+    }
+    setContextMode(includeBrain ? "current_object_plus_brain" : "current_object");
+  }, [includeBrain, isPageVariant, setContextMode]);
+
+  useEffect(() => {
+    if (!isPageVariant) {
+      return;
+    }
+    if (caps.localAiReady) {
+      setProviderMode("local_rtx");
+    }
+  }, [caps.localAiReady, isPageVariant, setProviderMode]);
 
   const ui = useMemo(
     () => computePromptUiState(providerMode, contextMode, caps, prompt),
@@ -74,20 +96,20 @@ export function MobileAiPromptPanel({
 
       setResponse(data.text ?? "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Anfrage fehlgeschlagen.");
+      const message = err instanceof Error ? err.message : "Anfrage fehlgeschlagen.";
+      setError(sanitizeAiErrorMessage(message));
     } finally {
       setLoading(false);
     }
   }
 
-  // Only genuine failures (send error, or a real status error) get the red
-  // alert. "AI unavailable/offline/mock" is shown as a calm muted hint below.
   const aiUnavailable = statusKind === "unavailable";
-  const displayError = error ?? (statusKind === "error" ? statusError : null);
+  const rawDisplayError = error ?? (statusKind === "error" ? statusError : null);
+  const displayError = rawDisplayError ? sanitizeAiErrorMessage(rawDisplayError) : null;
   const sendDisabled = !ui.canSend || loading || aiUnavailable;
 
   return (
-    <div className="mobile-ai-prompt uwe-has-sticky-actions">
+    <div className={`mobile-ai-prompt uwe-has-sticky-actions${isPageVariant ? " mobile-ai-prompt-page" : ""}`}>
       <AiPromptControls
         caps={caps}
         providerMode={providerMode}
@@ -97,7 +119,20 @@ export function MobileAiPromptPanel({
         statusLoading={statusLoading}
         pageTitle={pageTitle}
         promptPreview={prompt}
+        variant={isPageVariant ? "page" : "full"}
       />
+
+      {isPageVariant && (
+        <label className="mobile-ai-page-brain-toggle">
+          <input
+            type="checkbox"
+            checked={includeBrain}
+            onChange={(event) => setIncludeBrain(event.target.checked)}
+            disabled={loading || !caps.brainLocal}
+          />
+          DnD-Brain-Wissen einbeziehen
+        </label>
+      )}
 
       <label className="mobile-ai-prompt-field">
         <span className="mobile-ai-prompt-label">Nachricht</span>
@@ -105,8 +140,12 @@ export function MobileAiPromptPanel({
           className="mobile-ai-prompt-input"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Frage stellen oder Anweisung eingeben…"
-          rows={6}
+          placeholder={
+            isPageVariant
+              ? "Seite verbessern, formatieren oder zusammenfassen…"
+              : "Frage stellen oder Anweisung eingeben…"
+          }
+          rows={isPageVariant ? 4 : 6}
           disabled={loading}
           aria-describedby={displayError ? "mobile-ai-error" : undefined}
         />
@@ -152,17 +191,19 @@ export function MobileAiPromptPanel({
         </button>
       </div>
 
-      <StickyActionBar>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
-          disabled={sendDisabled}
-          title={ui.sendBlockedReason}
-          onClick={() => void handleSend()}
-        >
-          {loading ? "Senden…" : "Senden"}
-        </button>
-      </StickyActionBar>
+      {!isPageVariant && (
+        <StickyActionBar>
+          <button
+            type="button"
+            className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
+            disabled={sendDisabled}
+            title={ui.sendBlockedReason}
+            onClick={() => void handleSend()}
+          >
+            {loading ? "Senden…" : "Senden"}
+          </button>
+        </StickyActionBar>
+      )}
     </div>
   );
 }

@@ -4,14 +4,14 @@ import type { AiBrainSettings, AiProviderId, AiProviderSettings, ApiKeyStore } f
 const PROVIDER_DEFINITIONS: Omit<AiProviderSettings, "enabled" | "hasApiKey">[] = [
   {
     id: "ollama",
-    label: "Ollama (lokal)",
+    label: "Lokale KI (RTX)",
     isLocal: true,
     baseUrl: "http://localhost:11434",
     defaultModel: "llama3.2",
   },
   {
     id: "openai_compatible",
-    label: "OpenAI-kompatibel (lokal)",
+    label: "Lokale KI (OpenAI-kompatibel)",
     isLocal: true,
     baseUrl: "http://localhost:8080/v1",
     defaultModel: "local-model",

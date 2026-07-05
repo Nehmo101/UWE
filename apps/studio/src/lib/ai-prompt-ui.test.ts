@@ -8,6 +8,7 @@ import {
   HINT_LOCAL_NOT_READY,
   requiresLocalContext,
   resolveContextSelection,
+  sanitizeAiErrorMessage,
   type AiPromptCapabilities,
 } from "./ai-prompt-ui";
 
@@ -128,5 +129,12 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(rtx?.value, "offline");
     assert.equal(rtx?.level, "error");
     assert.equal(cloud?.value, "nicht konfiguriert");
+  });
+
+  it("sanitizeAiErrorMessage maps Ollama HTTP errors to user hints", () => {
+    assert.match(
+      sanitizeAiErrorMessage("Ollama chat HTTP 404"),
+      /Ollama\/LM Studio/i,
+    );
   });
 });
