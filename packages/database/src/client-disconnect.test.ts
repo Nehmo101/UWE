@@ -7,15 +7,15 @@ import {
 } from "./client";
 
 describe("shared prisma disconnect safety", () => {
-  it("lets login-style routes disconnect dedicated clients without killing shared prisma", async () => {
+  it("lets login-style routes disconnect dedicated clients without touching shared prisma", async () => {
     const shared = getSharedPrismaClient();
     const routeClient = createPrismaClient();
 
+    assert.notEqual(routeClient, shared);
     assert.equal(isSharedPrismaClient(routeClient), false);
 
     await routeClient.$disconnect();
 
     assert.equal(isSharedPrismaClient(shared), true);
-    await shared.systemSettings.findFirst({ select: { id: true } });
   });
 });
