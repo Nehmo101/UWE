@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
-import { getSystemSettingsSnapshot, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import {
   ThemeBootstrapScript,
   ThemeDocumentSync,
@@ -59,9 +60,13 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const pathname = headersList.get("x-uwe-pathname") ?? "/";
-  await enforcePortalMaintenance(pathname);
+  try {
+    await enforcePortalMaintenance(pathname);
+  } catch {
+    // Cold-start DB/auth races must not take down the root layout.
+  }
 
-  const { settings, updatedAt } = await getSystemSettingsSnapshot();
+  const { settings, updatedAt } = await getSystemSettingsSnapshotSafe();
   const portalEnabled = isPortalGloballyEnabled(settings);
   const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {
     appVariant: "portal",

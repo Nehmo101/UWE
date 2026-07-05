@@ -1048,6 +1048,20 @@ export async function getSystemSettingsSnapshot(
   };
 }
 
+/** Like {@link getSystemSettingsSnapshot} but never throws — for root layouts on cold start. */
+export async function getSystemSettingsSnapshotSafe(
+  db?: PrismaClient,
+): Promise<SystemSettingsSnapshot> {
+  try {
+    return await getSystemSettingsSnapshot(db);
+  } catch {
+    return {
+      settings: normalizeSettings(DEFAULT_SYSTEM_SETTINGS),
+      updatedAt: null,
+    };
+  }
+}
+
 export function buildAppSettingsFromThemePreferences(
   current: AppSettings,
   scope: ThemePreferencesScope,

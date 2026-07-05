@@ -4,6 +4,7 @@ import {
   createAuthService,
   createPrismaClient,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
 import type { AuthUser, UweRole } from "@uwe/auth";
 import {
   ADMIN_ACCESS_ROLES,
@@ -40,7 +41,7 @@ export async function getCurrentUser() {
     const session = await auth.getSessionByToken(token);
     return session?.user ?? null;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }
 
@@ -55,7 +56,7 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
   try {
     return auth.toAuthUser(user);
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }
 
@@ -142,7 +143,7 @@ export async function enforceStudioPageAuth(pathname: string): Promise<void> {
         return;
       }
     } finally {
-      await db.$disconnect();
+      await disconnectPrismaClientIfOwned(db);
     }
     redirect("/login");
   }

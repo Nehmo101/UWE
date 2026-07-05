@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import {
   evaluateMaintenanceGate,
-  getSystemSettingsSnapshot,
   resolveMaintenanceGateContext,
-} from "@uwe/database/server";
+} from "@uwe/database/maintenance-gate";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import { getCurrentUser } from "./auth";
 
 export async function enforcePortalMaintenance(pathname: string): Promise<void> {
@@ -11,13 +11,20 @@ export async function enforcePortalMaintenance(pathname: string): Promise<void> 
     return;
   }
 
-  const [{ settings }, user] = await Promise.all([
-    getSystemSettingsSnapshot(),
-    getCurrentUser(),
-  ]);
+  let settingsSnapshot: Awaited<ReturnType<typeof getSystemSettingsSnapshotSafe>>;
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+
+  try {
+    [settingsSnapshot, user] = await Promise.all([
+      getSystemSettingsSnapshotSafe(),
+      getCurrentUser(),
+    ]);
+  } catch {
+    return;
+  }
 
   const decision = evaluateMaintenanceGate({
-    settings,
+    settings: settingsSnapshot.settings,
     surface: "portal",
     pathname,
     context: resolveMaintenanceGateContext({ userRole: user?.role ?? null }),

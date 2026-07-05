@@ -9,6 +9,7 @@ import {
   buildMailSmtpCredentialsUpdate,
   createSettingsService,
   getPersistentPathConfiguration,
+  getSystemSettingsSnapshotSafe,
   isGuestPortalAccessAllowed,
   resolveEffectiveExportsPath,
   resolveLocalOnlyMode,
@@ -335,5 +336,18 @@ describe("SettingsService", () => {
       ),
       45 * 60 * 1000,
     );
+  });
+
+  it("returns defaults from getSystemSettingsSnapshotSafe when the database read fails", async () => {
+    const snapshot = await getSystemSettingsSnapshotSafe({
+      systemSettings: {
+        findUnique: async () => {
+          throw new Error("database unavailable");
+        },
+      },
+    } as unknown as ReturnType<typeof createPrismaClient>);
+
+    assert.equal(snapshot.updatedAt, null);
+    assert.equal(snapshot.settings.app.theme, DEFAULT_SYSTEM_SETTINGS.app.theme);
   });
 });
