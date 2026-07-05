@@ -28,6 +28,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   synthesize_research: "Research-Report erstellen",
   summarize_mail: "Mail zusammenfassen",
   prioritize_mail: "Mail priorisieren",
+  answer_mail_question: "Mail-Assistent",
   generate_briefing: "Morning Briefing erstellen",
 };
 
@@ -86,6 +87,8 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Fasse die E-Mail in 2–3 Sätzen auf Deutsch zusammen. Keine erfundenen Details.",
   prioritize_mail:
     "Bewerte die E-Mail nach Priorität und Kategorie. Antworte NUR als JSON.",
+  answer_mail_question:
+    "Beantworte Fragen zur E-Mail und schlage verwaltbare Aktionen vor (löschen, abmelden, archivieren). Führe nichts automatisch aus.",
   generate_briefing:
     "Erstelle ein kompaktes Morning Briefing auf Deutsch (Markdown): 1. Das Wichtigste heute (2–3 Sätze), 2. Termine & Fristen, 3. Offene Aufgaben & Warnungen, 4. Nachrichtenlage in 3–4 Stichpunkten. Nutze nur die mitgelieferten Fakten und News-Schlagzeilen — erfinde nichts.",
 };

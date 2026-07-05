@@ -38,7 +38,13 @@ export function sanitizeHtml(html: string): string {
 }
 
 const REMOTE_URL_PATTERN = /^https?:\/\//i;
+const PROTOCOL_RELATIVE_URL_PATTERN = /^\/\//;
 const REMOTE_CSS_URL_PATTERN = /url\(\s*['"]?https?:\/\//i;
+
+export function buildMailImageProxyUrl(messageId: string, remoteUrl: string): string {
+  const encoded = encodeURIComponent(remoteUrl);
+  return `/api/admin/mail/messages/${messageId}/images/proxy?url=${encoded}`;
+}
 
 /**
  * Sanitizes an inbound HTML mail body for display in the mail reader.
@@ -55,10 +61,13 @@ const REMOTE_CSS_URL_PATTERN = /url\(\s*['"]?https?:\/\//i;
  * `data:`/`cid:`-embedded images (mailparser already inlines `cid:` refs as
  * `data:` URIs) are left untouched since they never hit the network.
  */
-export function sanitizeMailBodyHtml(html: string): string {
+export function sanitizeMailBodyHtml(html: string, options?: { messageId?: string; revealRemoteImages?: boolean }): string {
   if (!html) {
     return "";
   }
+
+  const messageId = options?.messageId;
+  const revealRemoteImages = options?.revealRemoteImages ?? false;
 
   const blockRemoteImages = (node: Element) => {
     if (!node.tagName) return;
@@ -66,9 +75,15 @@ export function sanitizeMailBodyHtml(html: string): string {
 
     if (tag === "IMG") {
       const src = node.getAttribute("src") ?? "";
-      if (REMOTE_URL_PATTERN.test(src)) {
-        node.removeAttribute("src");
-        node.setAttribute("data-uwe-remote-src", src);
+      const isRemote = REMOTE_URL_PATTERN.test(src) || PROTOCOL_RELATIVE_URL_PATTERN.test(src);
+      if (isRemote) {
+        const absolute = PROTOCOL_RELATIVE_URL_PATTERN.test(src) ? `https:${src}` : src;
+        if (revealRemoteImages && messageId) {
+          node.setAttribute("src", buildMailImageProxyUrl(messageId, absolute));
+        } else {
+          node.removeAttribute("src");
+          node.setAttribute("data-uwe-remote-src", absolute);
+        }
       }
       if (node.hasAttribute("srcset")) node.removeAttribute("srcset");
     } else if (tag === "SOURCE" && node.hasAttribute("srcset")) {

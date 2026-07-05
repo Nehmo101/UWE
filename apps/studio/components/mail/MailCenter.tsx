@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { waitForJob } from "@/src/lib/poll-job";
 import { MailRail } from "./MailRail";
 import { MailMessageList, type MailListFilter } from "./MailMessageList";
 import { MailReader } from "./MailReader";
@@ -10,9 +11,12 @@ import { MailTriage } from "./MailTriage";
 import { MailEmptyInbox } from "./MailEmptyInbox";
 import { MailSettings } from "./MailSettings";
 import { MailComposeModal, type ComposeContext } from "./MailComposeModal";
+import { MailChatPanel } from "./MailChatPanel";
+import { MailDraftsList } from "./MailDraftsList";
 import {
   senderNameFromAddress,
   type MailCenterData,
+  type MailFolderKey,
   type MailMessageDetailVM,
   type MailPriorityVM,
   type MailView,
@@ -74,17 +78,38 @@ function toDetail(raw: RawDetail): MailMessageDetailVM {
   };
 }
 
+function folderTitle(folder: MailFolderKey): string {
+  const titles: Record<MailFolderKey, string> = {
+    inbox: "Posteingang",
+    marked: "Markiert",
+    drafts: "Entwürfe",
+    sent: "Gesendet",
+    archive: "Archiv",
+    trash: "Papierkorb",
+  };
+  return titles[folder];
+}
+
 export function MailCenter({ data }: { data: MailCenterData }) {
   const router = useRouter();
-  const [view, setView] = React.useState<MailView>("inbox");
+  const searchParams = useSearchParams();
+  const [view, setView] = React.useState<MailView>(
+    data.activeFolder === "drafts" ? "drafts" : data.activeFolder === "sent" ? "sent" : "inbox",
+  );
   const [filter, setFilter] = React.useState<MailListFilter>("alle");
   const [activeCategory, setActiveCategory] = React.useState<MailPriorityCategory | null>(data.activeCategory);
+  const [activeFolder, setActiveFolder] = React.useState<MailFolderKey>(data.activeFolder);
+  const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(data.selectedAccountId);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<MailMessageDetailVM | null>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
+  const [syncProgress, setSyncProgress] = React.useState<{ processed: number; total: number; label: string } | null>(
+    null,
+  );
   const [compose, setCompose] = React.useState<ComposeContext | null>(null);
+  const [chatOpen, setChatOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
 
   const flash = React.useCallback((message: string) => {
@@ -92,13 +117,26 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 2600);
   }, []);
 
-  const visibleMessages = React.useMemo(
-    () =>
-      activeCategory
-        ? data.messages.filter((message) => message.priority?.category === activeCategory)
-        : data.messages,
-    [data.messages, activeCategory],
+  const pushNav = React.useCallback(
+    (next: { folder?: MailFolderKey; account?: string | null }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next.folder) params.set("folder", next.folder);
+      if (next.account === null) params.delete("account");
+      else if (next.account) params.set("account", next.account);
+      router.push(`/mail?${params.toString()}`);
+    },
+    [router, searchParams],
   );
+
+  const visibleMessages = React.useMemo(() => {
+    let list = data.messages;
+    if (activeCategory) {
+      list = list.filter((message) => message.priority?.category === activeCategory);
+    }
+    if (filter === "ungelesen") list = list.filter((message) => !message.isRead);
+    if (filter === "markiert") list = list.filter((message) => (message.priority?.priority ?? 0) >= 70);
+    return list;
+  }, [data.messages, activeCategory, filter]);
 
   const loadDetail = React.useCallback(
     async (id: string) => {
@@ -132,6 +170,55 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     [loadDetail],
   );
 
+  async function parseJsonResponse(response: Response): Promise<Record<string, unknown>> {
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new Error(text.slice(0, 200) || `HTTP ${response.status}`);
+    }
+  }
+
+  async function runSync() {
+    const account =
+      (selectedAccountId ? data.accounts.find((entry) => entry.id === selectedAccountId) : null) ??
+      data.accounts.find((entry) => entry.imapHost) ??
+      data.accounts[0];
+    if (!account) {
+      flash("Kein IMAP-Konto verbunden — unter Einstellungen anlegen.");
+      setView("settings");
+      return;
+    }
+    setSyncing(true);
+    setSyncProgress({ processed: 0, total: 0, label: "Sync wird gestartet…" });
+    try {
+      const response = await fetch(studioApiUrl("/api/admin/mail/sync"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId: account.id, fullSync: true }),
+      });
+      const payload = await parseJsonResponse(response);
+      if (!response.ok) {
+        flash(String(payload.error ?? "Sync fehlgeschlagen."));
+        return;
+      }
+      const jobId = typeof payload.jobId === "string" ? payload.jobId : null;
+      if (jobId) {
+        const job = await waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800 });
+        const result = job.result as { imported?: number } | undefined;
+        flash(`${result?.imported ?? 0} Nachrichten synchronisiert.`);
+      } else {
+        flash("Synchronisation abgeschlossen.");
+      }
+      router.refresh();
+    } catch (error) {
+      flash(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
+    } finally {
+      setSyncing(false);
+      setSyncProgress(null);
+    }
+  }
+
   async function postJson(path: string, body: Record<string, unknown>): Promise<boolean> {
     const response = await fetch(studioApiUrl(path), {
       method: "POST",
@@ -139,27 +226,11 @@ export function MailCenter({ data }: { data: MailCenterData }) {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      flash(payload.error ?? "Aktion fehlgeschlagen.");
+      const payload = await parseJsonResponse(response).catch(() => ({ error: "Aktion fehlgeschlagen." }));
+      flash(String(payload.error ?? "Aktion fehlgeschlagen."));
       return false;
     }
     return true;
-  }
-
-  async function runSync() {
-    const account = data.accounts.find((entry) => entry.imapHost) ?? data.accounts[0];
-    if (!account) {
-      flash("Kein IMAP-Konto verbunden — unter Einstellungen anlegen.");
-      setView("settings");
-      return;
-    }
-    setSyncing(true);
-    const ok = await postJson("/api/admin/mail/sync", { accountId: account.id, limit: 50 });
-    setSyncing(false);
-    if (ok) {
-      flash("Sync gestartet.");
-      router.refresh();
-    }
   }
 
   async function summarize(id: string) {
@@ -192,9 +263,34 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     router.refresh();
   }
 
+  async function archiveMessage() {
+    if (!detail) return;
+    setBusy(true);
+    const ok = await postJson("/api/admin/mail/actions", { action: "archive", messageId: detail.id });
+    setBusy(false);
+    if (ok) {
+      flash("Archiviert.");
+      router.refresh();
+    }
+  }
+
+  async function trashMessage() {
+    if (!detail) return;
+    setBusy(true);
+    const ok = await postJson("/api/admin/mail/actions", { action: "trash", messageId: detail.id });
+    setBusy(false);
+    if (ok) {
+      flash("In den Papierkorb verschoben.");
+      setDetail(null);
+      setSelectedId(null);
+      router.refresh();
+    }
+  }
+
   function replyTo(message: MailMessageDetailVM) {
     setCompose({
       messageId: message.id,
+      accountId: message.accountId,
       to: message.fromAddress,
       subject: message.subject.startsWith("Re:") ? message.subject : `Re: ${message.subject}`,
       body: "",
@@ -202,8 +298,29 @@ export function MailCenter({ data }: { data: MailCenterData }) {
   }
 
   function openComposeNew() {
-    setCompose({ messageId: null, to: "", subject: "", body: "" });
+    setCompose({
+      messageId: null,
+      accountId: selectedAccountId ?? data.accounts[0]?.id ?? null,
+      to: "",
+      subject: "",
+      body: "",
+    });
   }
+
+  function handleSelectFolder(folder: MailFolderKey) {
+    setActiveFolder(folder);
+    setView(folder === "drafts" ? "drafts" : folder === "sent" ? "sent" : "inbox");
+    setSelectedId(null);
+    setDetail(null);
+    pushNav({ folder, account: selectedAccountId });
+  }
+
+  function handleSelectAccount(accountId: string | null) {
+    setSelectedAccountId(accountId);
+    pushNav({ folder: activeFolder, account: accountId });
+  }
+
+  const listTitle = activeCategory ? "Gefiltert" : folderTitle(activeFolder);
 
   const mainArea = (() => {
     if (view === "settings") {
@@ -230,11 +347,16 @@ export function MailCenter({ data }: { data: MailCenterData }) {
         />
       );
     }
-    if (data.messages.length === 0) {
+    if (view === "drafts") {
+      return <MailDraftsList drafts={data.drafts} onCompose={openComposeNew} title="Entwürfe" />;
+    }
+    if (data.messages.length === 0 && activeFolder === "inbox") {
       return (
         <MailEmptyInbox
           hasAccounts={data.accounts.length > 0}
           syncing={syncing}
+          autoSyncEnabled={data.autoSyncEnabled}
+          syncProgress={syncProgress}
           onOpenTriage={() => setView("triage")}
           onCompose={openComposeNew}
           onSync={() => void runSync()}
@@ -242,49 +364,110 @@ export function MailCenter({ data }: { data: MailCenterData }) {
       );
     }
     return (
-      <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
-        <MailMessageList
-          messages={visibleMessages}
-          selectedId={selectedId}
-          filter={filter}
-          onFilter={setFilter}
-          onSelect={selectMessage}
-          onSync={() => void runSync()}
-          syncing={syncing}
-          title={activeCategory ? "Gefiltert" : "Posteingang"}
-        />
-        <MailReader
-          message={detail}
-          loading={loadingDetail}
-          rtxState={data.rtxState}
-          busy={busy}
-          onReply={() => detail && replyTo(detail)}
-          onForward={() => flash("Weiterleiten geöffnet.")}
-          onSummarize={() => detail && void summarize(detail.id)}
-          onCapture={() => flash("In Capture übernommen.")}
-          onTask={() => flash("Als Aufgabe vorgemerkt.")}
-          onArchive={() => flash("Archiviert.")}
-          onDelete={() => flash("In den Papierkorb verschoben.")}
-        />
+      <div style={{ flex: 1, display: "flex", minWidth: 0, flexDirection: "column" }}>
+        {syncProgress ? (
+          <div
+            style={{
+              padding: "8px 16px",
+              background: "color-mix(in srgb, var(--uwe-accent) 10%, var(--uwe-panel))",
+              borderBottom: "1px solid var(--uwe-border)",
+              fontSize: 12,
+              color: "var(--uwe-fg-muted)",
+            }}
+          >
+            {syncProgress.label}
+            <div
+              style={{
+                marginTop: 6,
+                height: 4,
+                borderRadius: 999,
+                background: "var(--uwe-border-muted)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: "40%",
+                  background: "var(--uwe-accent)",
+                  animation: "pulse 1.2s ease-in-out infinite",
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+        <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+          <MailMessageList
+            messages={visibleMessages}
+            selectedId={selectedId}
+            filter={filter}
+            onFilter={setFilter}
+            onSelect={selectMessage}
+            onSync={() => void runSync()}
+            syncing={syncing}
+            title={listTitle}
+          />
+          <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
+            <MailReader
+              message={detail}
+              loading={loadingDetail}
+              rtxState={data.rtxState}
+              busy={busy}
+              onReply={() => detail && replyTo(detail)}
+              onForward={() => flash("Weiterleiten geöffnet.")}
+              onSummarize={() => detail && void summarize(detail.id)}
+              onCapture={() => flash("In Capture übernommen.")}
+              onTask={() => flash("Als Aufgabe vorgemerkt.")}
+              onArchive={() => void archiveMessage()}
+              onDelete={() => void trashMessage()}
+              onOpenChat={() => setChatOpen(true)}
+            />
+            {chatOpen && detail ? (
+              <MailChatPanel
+                message={detail}
+                rtxState={data.rtxState}
+                onClose={() => setChatOpen(false)}
+                onActionComplete={() => {
+                  router.refresh();
+                  void loadDetail(detail.id);
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     );
   })();
 
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: 0, background: "var(--uwe-bg)", overflow: "hidden", position: "relative" }}>
+    <div
+      style={{
+        display: "flex",
+        height: "100%",
+        minHeight: 0,
+        background: "var(--uwe-bg)",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
       <div className="hidden lg:flex" style={{ height: "100%" }}>
         <MailRail
           accounts={data.accounts}
           folders={data.folders}
           categories={data.categories}
           activeCategory={activeCategory}
+          activeFolder={activeFolder}
+          selectedAccountId={selectedAccountId}
           view={view}
           triageCount={data.counts.triage}
           onCompose={openComposeNew}
           onOpenTriage={() => setView("triage")}
+          onSelectFolder={handleSelectFolder}
+          onSelectAccount={handleSelectAccount}
           onSelectCategory={(category) => {
             setActiveCategory(category);
             setView("inbox");
+            handleSelectFolder("inbox");
           }}
         />
       </div>

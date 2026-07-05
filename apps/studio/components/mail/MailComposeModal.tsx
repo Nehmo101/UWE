@@ -9,6 +9,7 @@ import type { MailAccountVM } from "./mail-types";
 
 export interface ComposeContext {
   messageId: string | null;
+  accountId: string | null;
   to: string;
   subject: string;
   body: string;
@@ -27,7 +28,7 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
   const [to, setTo] = React.useState(context.to);
   const [subject, setSubject] = React.useState(context.subject);
   const [body, setBody] = React.useState(context.body);
-  const [accountId, setAccountId] = React.useState(accounts[0]?.id ?? "");
+  const [accountId, setAccountId] = React.useState(context.accountId ?? accounts[0]?.id ?? "");
   const [tone, setTone] = React.useState<MailReplyTone>("friendly");
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState<string | null>(null);
@@ -76,19 +77,32 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
     setBusy(true);
     setStatus(null);
     try {
-      const response = await fetch(studioApiUrl("/api/mail/send"), {
+      const response = await fetch(studioApiUrl("/api/admin/mail/send"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: recipients, subject: subject.trim(), bodyText: body }),
+        body: JSON.stringify({
+          accountId: accountId || undefined,
+          to: recipients.map((entry) => entry.email),
+          subject: subject.trim(),
+          bodyText: body,
+          confirm: true,
+        }),
       });
-      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      const text = await response.text();
+      let payload: { ok?: boolean; error?: string };
+      try {
+        payload = JSON.parse(text) as { ok?: boolean; error?: string };
+      } catch {
+        setStatus(text.slice(0, 200) || `Versand fehlgeschlagen (HTTP ${response.status}).`);
+        return;
+      }
       if (!response.ok || !payload.ok) {
         setStatus(payload.error ?? "Versand fehlgeschlagen.");
         return;
       }
       onSent();
-    } catch {
-      setStatus("Netzwerkfehler beim Versand.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Netzwerkfehler beim Versand.");
     } finally {
       setBusy(false);
     }

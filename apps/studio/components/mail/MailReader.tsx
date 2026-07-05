@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { NavIcon } from "@/src/components/ui/icon";
 import { RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
 import { MailButton, IconButton, Avatar, ActionChip } from "./mail-ui";
@@ -25,6 +26,7 @@ interface MailReaderProps {
   onTask: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onOpenChat?: () => void;
 }
 
 export function MailReader({
@@ -39,6 +41,7 @@ export function MailReader({
   onTask,
   onArchive,
   onDelete,
+  onOpenChat,
 }: MailReaderProps) {
   const bodyRef = React.useRef<HTMLDivElement>(null);
   const [imagesRevealed, setImagesRevealed] = React.useState(false);
@@ -52,10 +55,15 @@ export function MailReader({
   const revealBlockedImages = React.useCallback(() => {
     bodyRef.current?.querySelectorAll<HTMLImageElement>("img[data-uwe-remote-src]").forEach((img) => {
       const src = img.getAttribute("data-uwe-remote-src");
-      if (src) img.setAttribute("src", src);
+      if (!src || !message?.id) return;
+      img.setAttribute(
+        "src",
+        studioApiUrl(`/api/admin/mail/messages/${message.id}/images/proxy?url=${encodeURIComponent(src)}`),
+      );
+      img.removeAttribute("data-uwe-remote-src");
     });
     setImagesRevealed(true);
-  }, []);
+  }, [message?.id]);
 
   if (!message) {
     return (
@@ -167,6 +175,11 @@ export function MailReader({
           <MailButton variant="subtle" size="sm" icon="list-todo" onClick={onTask} disabled={busy}>
             Als Aufgabe
           </MailButton>
+          {onOpenChat ? (
+            <MailButton variant="subtle" size="sm" icon="message-circle" onClick={onOpenChat} disabled={busy}>
+              RTX fragen
+            </MailButton>
+          ) : null}
           <span style={{ flex: 1 }} />
           <IconButton icon="archive" size={15} bordered title="Archivieren" onClick={onArchive} disabled={busy} />
           <IconButton icon="trash-2" size={15} bordered tone="danger" title="Löschen" onClick={onDelete} disabled={busy} />
@@ -305,8 +318,10 @@ export function MailReader({
         {message.attachments.length > 0 ? (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
             {message.attachments.map((attachment) => (
-              <div
+              <a
                 key={attachment.id}
+                href={studioApiUrl(`/api/admin/mail/messages/${message.id}/attachments/${attachment.id}`)}
+                download={attachment.filename}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -315,6 +330,8 @@ export function MailReader({
                   border: "1px solid var(--uwe-border)",
                   borderRadius: 10,
                   background: "var(--uwe-card-bg)",
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
                 <NavIcon name="file-text" width={21} height={21} style={{ color: "var(--uwe-accent)" }} />
@@ -330,7 +347,7 @@ export function MailReader({
                   height={16}
                   style={{ color: "var(--uwe-fg-muted)", marginLeft: 10 }}
                 />
-              </div>
+              </a>
             ))}
           </div>
         ) : null}

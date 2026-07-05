@@ -39,10 +39,21 @@ export {
 
 export {
   fetchImapInboxMessages,
+  fetchImapAttachmentContent,
   describeImapError,
   type ImapCredentials,
   type FetchedInboxMessage,
+  type ImapSyncProgress,
+  type FetchImapOptions,
 } from "./imap-sync";
+
+export {
+  readMailScheduleConfig,
+  writeMailScheduleConfig,
+  resolveMailSchedulePath,
+  type MailScheduleConfig,
+  type MailSyncIntervalMinutes,
+} from "./schedule";
 
 export {
   parseListUnsubscribeHeader,

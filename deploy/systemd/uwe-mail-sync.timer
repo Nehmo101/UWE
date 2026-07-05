@@ -1,0 +1,10 @@
+[Unit]
+Description=Check UWE mail auto-sync schedule (interval from UWE settings)
+Documentation=file:///opt/uwe/docs/engineering/self-service-config.md
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+
+[Install]
+WantedBy=timers.target

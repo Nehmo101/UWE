@@ -19,7 +19,7 @@ export async function GET(request: Request, context: RouteContext) {
   // `bodyHtmlRaw` is unsanitized MIME output — never let it leave the server.
   // Render callers get `bodySafeHtml` (DOMPurify + tracking-pixel blocking) instead.
   const { bodyHtmlRaw, ...safeMessage } = message;
-  const bodySafeHtml = bodyHtmlRaw ? sanitizeMailBodyHtml(bodyHtmlRaw) : null;
+  const bodySafeHtml = bodyHtmlRaw ? sanitizeMailBodyHtml(bodyHtmlRaw, { messageId: id }) : null;
 
   return NextResponse.json({ message: { ...safeMessage, bodySafeHtml } });
 }

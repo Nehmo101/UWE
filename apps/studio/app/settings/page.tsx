@@ -616,10 +616,30 @@ export default async function SettingsPage({ searchParams }: Props) {
                     name="inboxLimit"
                     type="number"
                     min={10}
-                    max={500}
+                    max={5000}
                     step={10}
                     defaultValue={settings.mail.inboxLimit}
                   />
+                </label>
+                <label className="uwe-checkbox">
+                  <input
+                    type="checkbox"
+                    name="mailAutoSyncEnabled"
+                    defaultChecked={settings.mail.autoSyncEnabled}
+                  />
+                  Auto-Sync im Hintergrund (Host-Timer)
+                </label>
+                <label>
+                  Auto-Sync-Intervall
+                  <select
+                    name="mailAutoSyncInterval"
+                    defaultValue={String(settings.mail.autoSyncIntervalMinutes)}
+                  >
+                    <option value="5">alle 5 Minuten</option>
+                    <option value="15">alle 15 Minuten</option>
+                    <option value="30">alle 30 Minuten</option>
+                    <option value="60">alle 60 Minuten</option>
+                  </select>
                 </label>
               </SettingsCollapsiblePanel>
 

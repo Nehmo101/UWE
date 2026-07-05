@@ -6,7 +6,6 @@ import { createPrismaClient } from "./client";
 import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
-  buildMailSmtpCredentialsUpdate,
   createSettingsService,
   getPersistentPathConfiguration,
   getSystemSettingsSnapshotSafe,
@@ -15,6 +14,7 @@ import {
   resolveLocalOnlyMode,
   resolveSessionInactivityTimeoutMs,
 } from "./settings-service";
+import { buildMailSmtpCredentialsUpdate } from "./mail-smtp-settings";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 describe("SettingsService", () => {

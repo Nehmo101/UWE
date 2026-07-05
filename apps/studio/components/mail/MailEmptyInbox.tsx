@@ -7,12 +7,22 @@ import { MailButton } from "./mail-ui";
 interface MailEmptyInboxProps {
   hasAccounts: boolean;
   syncing: boolean;
+  autoSyncEnabled?: boolean;
+  syncProgress?: { processed: number; total: number; label: string } | null;
   onOpenTriage: () => void;
   onCompose: () => void;
   onSync: () => void;
 }
 
-export function MailEmptyInbox({ hasAccounts, syncing, onOpenTriage, onCompose, onSync }: MailEmptyInboxProps) {
+export function MailEmptyInbox({
+  hasAccounts,
+  syncing,
+  autoSyncEnabled = false,
+  syncProgress,
+  onOpenTriage,
+  onCompose,
+  onSync,
+}: MailEmptyInboxProps) {
   return (
     <div
       style={{
@@ -62,8 +72,16 @@ export function MailEmptyInbox({ hasAccounts, syncing, onOpenTriage, onCompose, 
             Verfassen
           </MailButton>
         </div>
+        {syncProgress ? (
+          <div style={{ marginTop: 16, maxWidth: 320, marginInline: "auto" }}>
+            <div style={{ fontSize: 12, color: "var(--uwe-fg-muted)", marginBottom: 6 }}>{syncProgress.label}</div>
+            <div style={{ height: 4, borderRadius: 999, background: "var(--uwe-border-muted)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: "45%", background: "var(--uwe-accent)" }} />
+            </div>
+          </div>
+        ) : null}
         <div style={{ marginTop: 18, fontSize: 11, color: "var(--uwe-fg-subtle)" }}>
-          Auto-Sync aktiv · nichts verlässt deinen Host
+          {autoSyncEnabled ? "Auto-Sync aktiv" : "Auto-Sync in Einstellungen aktivierbar"} · nichts verlässt deinen Host
         </div>
       </div>
     </div>

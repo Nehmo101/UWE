@@ -1,10 +1,11 @@
 import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
 import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
+import { BACKGROUND_PATTERN_VALUES } from "./settings-service";
 import {
-  BACKGROUND_PATTERN_VALUES,
   MAIL_INBOX_LIMIT_MAX,
   MAIL_INBOX_LIMIT_MIN,
-} from "./settings-service";
+  normalizeMailSyncInterval,
+} from "./mail-settings";
 
 const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
 const BACKGROUND_PATTERN_SET = new Set<BackgroundPattern>(BACKGROUND_PATTERN_VALUES);
@@ -59,7 +60,14 @@ const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
-const MAIL_KEYS = new Set(["enabled", "fromDisplayName", "logBody", "inboxLimit"]);
+const MAIL_KEYS = new Set([
+  "enabled",
+  "fromDisplayName",
+  "logBody",
+  "inboxLimit",
+  "autoSyncEnabled",
+  "autoSyncIntervalMinutes",
+]);
 const IMAGE_STUDIO_KEYS = new Set([
   "enabled",
   "defaultProviderMode",
@@ -373,7 +381,7 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
 
   if ("mail" in body) {
     const sectionErrors = validateSection(body.mail, MAIL_KEYS, "settings.mail", (key, value, sectionErrors) => {
-      if (key === "enabled" || key === "logBody") {
+      if (key === "enabled" || key === "logBody" || key === "autoSyncEnabled") {
         requireBoolean(value, `settings.mail.${key}`, sectionErrors);
       }
       if (key === "fromDisplayName") {
@@ -396,6 +404,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
           );
         }
       }
+      if (key === "autoSyncIntervalMinutes") {
+        const minutes = typeof value === "number" ? value : Number(value);
+        if (!Number.isFinite(minutes) || ![5, 15, 30, 60].includes(Math.round(minutes))) {
+          sectionErrors.push("settings.mail.autoSyncIntervalMinutes muss 5, 15, 30 oder 60 sein.");
+        }
+      }
     });
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.mail)) {
@@ -411,6 +425,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (body.mail.inboxLimit !== undefined) {
         mail.inboxLimit = Math.round(body.mail.inboxLimit as number);
+      }
+      if (body.mail.autoSyncEnabled !== undefined) {
+        mail.autoSyncEnabled = body.mail.autoSyncEnabled as boolean;
+      }
+      if (body.mail.autoSyncIntervalMinutes !== undefined) {
+        mail.autoSyncIntervalMinutes = normalizeMailSyncInterval(body.mail.autoSyncIntervalMinutes);
       }
       if (Object.keys(mail).length > 0) {
         update.mail = mail;

@@ -1159,9 +1159,7 @@ export {
   resolveEffectiveUploadsPath,
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
-  resolveEffectiveSmtpConfig,
   resolveSessionInactivityTimeoutMs,
-  buildMailSmtpCredentialsUpdate,
   buildAiProviderKeyUpdate,
   resolveDecryptedProviderKeys,
   getPersistentPathConfiguration,
@@ -1174,8 +1172,9 @@ export {
   resolveLocalOnlyMode,
 } from "./settings-service";
 
+export { resolveEffectiveSmtpConfig, buildMailSmtpCredentialsUpdate } from "./mail-smtp-settings";
+
 export {
-  evaluateMaintenanceGate,
   isMaintenanceGateBypassPath,
   isMaintenanceMiddlewareBypassPath,
   resolveMaintenanceGateContext,

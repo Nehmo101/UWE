@@ -15,12 +15,13 @@ import {
   type ThemeAppearance,
   type AiProviderStoredKey,
 } from "@uwe/database/server";
-import { normalizeMailInboxLimit } from "@uwe/database/settings-service";
+import { normalizeMailInboxLimit, normalizeMailSyncInterval } from "@uwe/database/mail-settings";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertStudioTrusted } from "@/src/lib/authz";
 import { syncBackupScheduleFromSettings } from "@/src/lib/backup-schedule-sync";
 import { syncBriefingScheduleFromSettings } from "@/src/lib/briefing-schedule-sync";
+import { syncMailScheduleFromSettings } from "@/src/lib/mail-schedule-sync";
 
 function repo() {
   return getAppRepository();
@@ -166,6 +167,10 @@ export async function updateSettingsAction(formData: FormData) {
         fromDisplayName: String(formData.get("fromDisplayName") || ""),
         logBody: parseBoolean(formData.get("mailLogBody")),
         inboxLimit: normalizeMailInboxLimit(formData.get("inboxLimit")),
+        autoSyncEnabled: parseBoolean(formData.get("mailAutoSyncEnabled")),
+        autoSyncIntervalMinutes: normalizeMailSyncInterval(
+          Number.parseInt(String(formData.get("mailAutoSyncInterval") || "15"), 10),
+        ),
         smtpCredentials,
       };
       break;
@@ -219,6 +224,11 @@ export async function updateSettingsAction(formData: FormData) {
   if (update.briefing) {
     const settings = await repo().getSystemSettings();
     syncBriefingScheduleFromSettings(settings.briefing);
+  }
+
+  if (update.mail) {
+    const settings = await repo().getSystemSettings();
+    syncMailScheduleFromSettings(settings.mail);
   }
 
   revalidatePath("/settings");

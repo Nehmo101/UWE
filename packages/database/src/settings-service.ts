@@ -184,29 +184,21 @@ export interface MailSmtpStoredCredentials {
   useMock: boolean;
 }
 
+import {
+  normalizeMailInboxLimit,
+  normalizeMailSyncInterval,
+  type MailSyncIntervalMinutes,
+} from "./mail-settings";
+
 export interface MailSettings {
   enabled: boolean;
   fromDisplayName: string;
   logBody: boolean;
-  /** Max. Anzahl Nachrichten, die im Posteingang (Mail Center) angezeigt werden. */
   inboxLimit: number;
+  autoSyncEnabled: boolean;
+  autoSyncIntervalMinutes: MailSyncIntervalMinutes;
   smtp: MailSmtpStatus;
   smtpCredentials?: MailSmtpStoredCredentials | null;
-}
-
-export const MAIL_INBOX_LIMIT_MIN = 10;
-export const MAIL_INBOX_LIMIT_MAX = 500;
-export const MAIL_INBOX_LIMIT_DEFAULT = 100;
-
-export function normalizeMailInboxLimit(value: unknown): number {
-  const limit = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(limit)) {
-    return MAIL_INBOX_LIMIT_DEFAULT;
-  }
-  const rounded = Math.round(limit);
-  if (rounded < MAIL_INBOX_LIMIT_MIN) return MAIL_INBOX_LIMIT_MIN;
-  if (rounded > MAIL_INBOX_LIMIT_MAX) return MAIL_INBOX_LIMIT_MAX;
-  return rounded;
 }
 
 export interface ImageStudioPortalSettings {
@@ -234,7 +226,16 @@ export type UweSystemSettingsUpdate = {
   portal?: Partial<PortalSettings>;
   ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys">>;
   mail?: Partial<
-    Pick<MailSettings, "enabled" | "fromDisplayName" | "logBody" | "inboxLimit" | "smtpCredentials">
+    Pick<
+      MailSettings,
+      | "enabled"
+      | "fromDisplayName"
+      | "logBody"
+      | "inboxLimit"
+      | "autoSyncEnabled"
+      | "autoSyncIntervalMinutes"
+      | "smtpCredentials"
+    >
   >;
   imageStudio?: Partial<ImageStudioPortalSettings>;
   storage?: Partial<StorageSettings>;
@@ -253,6 +254,8 @@ interface MailSettingsInput {
   fromDisplayName?: string;
   logBody?: boolean;
   inboxLimit?: number;
+  autoSyncEnabled?: boolean;
+  autoSyncIntervalMinutes?: number;
   smtpCredentials?: MailSmtpStoredCredentials | null;
 }
 
@@ -302,6 +305,9 @@ function readMailSettingsInput(stored: unknown): MailSettingsInput | undefined {
     fromDisplayName: typeof mail.fromDisplayName === "string" ? mail.fromDisplayName : undefined,
     logBody: typeof mail.logBody === "boolean" ? mail.logBody : undefined,
     inboxLimit: typeof mail.inboxLimit === "number" ? mail.inboxLimit : undefined,
+    autoSyncEnabled: typeof mail.autoSyncEnabled === "boolean" ? mail.autoSyncEnabled : undefined,
+    autoSyncIntervalMinutes:
+      typeof mail.autoSyncIntervalMinutes === "number" ? mail.autoSyncIntervalMinutes : undefined,
     smtpCredentials:
       smtpCredentials === null
         ? null
@@ -354,69 +360,10 @@ function buildMailSettings(stored?: MailSettingsInput): MailSettings {
     fromDisplayName: stored?.fromDisplayName?.trim() ?? "",
     logBody: logBody ?? envStatus.logBody,
     inboxLimit: normalizeMailInboxLimit(stored?.inboxLimit),
+    autoSyncEnabled: stored?.autoSyncEnabled ?? false,
+    autoSyncIntervalMinutes: normalizeMailSyncInterval(stored?.autoSyncIntervalMinutes),
     smtp: status,
     smtpCredentials: stored?.smtpCredentials ?? null,
-  };
-}
-
-export function resolveEffectiveSmtpConfig(
-  settings: UweSystemSettings,
-  env: NodeJS.ProcessEnv = process.env,
-): import("@uwe/mail").SmtpConfig {
-  const creds = settings.mail.smtpCredentials;
-  const portalConfig = creds?.host
-    ? {
-        enabled: settings.mail.enabled,
-        host: creds.host,
-        port: creds.port,
-        secure: creds.secure,
-        user: creds.user,
-        password: decryptSecret(creds.passwordEnc, resolveTokenEncryptionSecret()),
-        from: creds.from,
-        logBody: settings.mail.logBody,
-        useMock: creds.useMock,
-      }
-    : null;
-
-  return mergeSmtpConfig(env, portalConfig, {
-    enabled: settings.mail.enabled,
-    logBody: settings.mail.logBody,
-  });
-}
-
-export function buildMailSmtpCredentialsUpdate(input: {
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string;
-  password?: string;
-  from: string;
-  useMock: boolean;
-  existing?: MailSmtpStoredCredentials | null;
-}): MailSmtpStoredCredentials | null {
-  const host = input.host.trim();
-  if (!host && !input.useMock) {
-    return null;
-  }
-
-  const password = input.password?.trim();
-  const passwordEnc =
-    password && password.length > 0
-      ? encryptSecret(password, resolveTokenEncryptionSecret())
-      : input.existing?.passwordEnc;
-
-  if (!passwordEnc && !input.useMock) {
-    throw new Error("SMTP_PASSWORD_REQUIRED");
-  }
-
-  return {
-    host,
-    port: input.port,
-    secure: input.secure,
-    user: input.user.trim(),
-    passwordEnc: passwordEnc ?? "",
-    from: input.from.trim(),
-    useMock: input.useMock,
   };
 }
 
@@ -677,6 +624,8 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       fromDisplayName: settings.mail.fromDisplayName,
       logBody: settings.mail.logBody,
       inboxLimit: settings.mail.inboxLimit,
+      autoSyncEnabled: settings.mail.autoSyncEnabled,
+      autoSyncIntervalMinutes: settings.mail.autoSyncIntervalMinutes,
       smtpCredentials: settings.mail.smtpCredentials,
     }),
     imageStudio: buildImageStudioSettings({
@@ -948,6 +897,9 @@ export class SettingsService {
         fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,
         logBody: update.mail?.logBody ?? current.mail.logBody,
         inboxLimit: update.mail?.inboxLimit ?? current.mail.inboxLimit,
+        autoSyncEnabled: update.mail?.autoSyncEnabled ?? current.mail.autoSyncEnabled,
+        autoSyncIntervalMinutes:
+          update.mail?.autoSyncIntervalMinutes ?? current.mail.autoSyncIntervalMinutes,
         smtpCredentials:
           update.mail?.smtpCredentials !== undefined
             ? update.mail.smtpCredentials

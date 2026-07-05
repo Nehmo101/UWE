@@ -21,6 +21,8 @@
     "./knowledge-assistant": "./src/knowledge-assistant-service.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./settings-service": "./src/settings-service.ts",
+    "./mail-settings": "./src/mail-settings.ts",
+    "./mail-smtp-settings": "./src/mail-smtp-settings.ts",
     "./deployment": "./src/deployment.ts",
     "./enums": "./src/enums.ts",
     "./content-access": "./src/content-access.ts",

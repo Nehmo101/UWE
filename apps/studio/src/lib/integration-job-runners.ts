@@ -216,7 +216,12 @@ export async function runAgentJob(ctx: JobRunnerContext): Promise<Record<string,
 }
 
 export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as { accountId?: string; limit?: number };
+  const payload = (ctx.job.payload ?? {}) as {
+    accountId?: string;
+    limit?: number;
+    fullSync?: boolean;
+    mailbox?: string;
+  };
   if (!payload.accountId) {
     throw new Error("Mail-Sync: accountId fehlt.");
   }
@@ -224,11 +229,21 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
   const db = createPrismaClient();
   const mail = createMailAccountService(db);
 
-  await ctx.jobs.updateProgress(ctx.jobId, 20, "IMAP Postfach synchronisieren");
+  await ctx.jobs.updateProgress(ctx.jobId, 5, "IMAP Postfach synchronisieren");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   try {
-    const result = await mail.syncInbox(payload.accountId, { limit: payload.limit ?? 50 });
+    const result = await mail.syncInbox(payload.accountId, {
+      limit: payload.limit ?? 50,
+      fullSync: payload.fullSync ?? false,
+      mailbox: payload.mailbox,
+      onProgress: async (progress) => {
+        const pct = progress.total > 0 ? Math.round((progress.processed / progress.total) * 90) + 5 : 50;
+        await ctx.jobs.updateProgress(ctx.jobId, Math.min(pct, 95), progress.phase);
+        await assertNotCancelled(ctx.jobs, ctx.jobId);
+      },
+    });
+    await ctx.jobs.updateProgress(ctx.jobId, 100, `${result.imported} Nachrichten synchronisiert`);
     await db.$disconnect();
     return result;
   } catch (error) {

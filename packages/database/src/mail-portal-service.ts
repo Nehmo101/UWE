@@ -1,8 +1,4 @@
-import type {
-  MailAuditAction,
-  MailPriorityCategory,
-  Prisma,
-} from "./generated/prisma/client";
+import type { MailAuditAction, MailPriorityCategory } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import {
   MAIL_PROVIDER_PRESETS,
@@ -18,6 +14,13 @@ import { scoreMailPriority } from "./mail-priority-service";
 import { createMailLogService } from "./mail-log-service";
 import { createMailUnsubscribeService, type UnsubscribeOutcome } from "./mail-unsubscribe-service";
 import { describeImapError } from "@uwe/mail";
+import {
+  MailPortalInboxService,
+  type MailFolderKey,
+  type MailInboxMessageSummary,
+  type MailSearchQuery,
+} from "./mail-portal-inbox-service";
+import { sendDirectMail } from "./mail-portal-send-service";
 
 export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
   providerPreset?: MailProviderPreset;
@@ -25,12 +28,7 @@ export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
   ownerId?: string | null;
 }
 
-export interface MailSearchQuery {
-  accountId?: string;
-  q?: string;
-  category?: MailPriorityCategory;
-  limit?: number;
-}
+export type { MailFolderKey, MailInboxMessageSummary, MailSearchQuery };
 
 export interface MailExtractedAction {
   type: string;
@@ -77,10 +75,33 @@ function normalizeExtractedMailActions(raw: unknown): MailExtractedAction[] {
 }
 
 export class MailPortalService {
+  private readonly inbox: MailPortalInboxService;
+
   constructor(
     private readonly db: PrismaClient,
     private readonly encryptionSecret: string = resolveTokenEncryptionSecret(),
-  ) {}
+  ) {
+    this.inbox = new MailPortalInboxService(
+      this.db,
+      this.encryptionSecret,
+      () => this.accountService(),
+      (input) => this.logAudit(input),
+      (row) => this.toMessageSummary(row),
+    );
+    this.searchMessages = this.inbox.searchMessages.bind(this.inbox);
+    this.listSentMessages = this.inbox.listSentMessages.bind(this.inbox);
+    this.fetchAttachmentContent = this.inbox.fetchAttachmentContent.bind(this.inbox);
+    this.archiveMessage = this.inbox.archiveMessage.bind(this.inbox);
+    this.trashMessage = this.inbox.trashMessage.bind(this.inbox);
+    this.deleteMessagesBySender = this.inbox.deleteMessagesBySender.bind(this.inbox);
+  }
+
+  searchMessages: MailPortalInboxService["searchMessages"];
+  listSentMessages: MailPortalInboxService["listSentMessages"];
+  fetchAttachmentContent: MailPortalInboxService["fetchAttachmentContent"];
+  archiveMessage: MailPortalInboxService["archiveMessage"];
+  trashMessage: MailPortalInboxService["trashMessage"];
+  deleteMessagesBySender: MailPortalInboxService["deleteMessagesBySender"];
 
   private accountService() {
     return createMailAccountService(this.db);
@@ -212,8 +233,17 @@ export class MailPortalService {
     }
   }
 
-  async syncAccount(accountId: string, actorUserId?: string | null, limit = 50) {
-    const result = await this.accountService().syncInbox(accountId, { limit });
+  async syncAccount(
+    accountId: string,
+    actorUserId?: string | null,
+    limit = 50,
+    options?: { fullSync?: boolean; mailbox?: string },
+  ) {
+    const result = await this.accountService().syncInbox(accountId, {
+      limit,
+      fullSync: options?.fullSync ?? false,
+      mailbox: options?.mailbox,
+    });
     await this.logAudit({
       action: "sync",
       accountId,
@@ -223,41 +253,17 @@ export class MailPortalService {
     return result;
   }
 
-  async searchMessages(query: MailSearchQuery, actorUserId?: string | null) {
-    const limit = query.limit ?? 50;
-    const where: Prisma.MailInboxMessageWhereInput = {};
-
-    if (query.accountId) where.accountId = query.accountId;
-    if (query.q?.trim()) {
-      const q = query.q.trim();
-      where.OR = [
-        { subject: { contains: q } },
-        { fromAddress: { contains: q } },
-        { snippet: { contains: q } },
-        { bodyText: { contains: q } },
-      ];
-    }
-    if (query.category) {
-      where.priority = { category: query.category };
-    }
-
-    const rows = await this.db.mailInboxMessage.findMany({
-      where,
-      orderBy: [{ priority: { priority: "desc" } }, { receivedAt: "desc" }],
-      take: limit,
-      include: {
-        account: { select: { id: true, label: true } },
-        priority: true,
-      },
-    });
-
-    await this.logAudit({
-      action: "search",
-      userId: actorUserId,
-      detail: query.q ? `Suche: ${query.q.slice(0, 80)}` : undefined,
-    });
-
-    return rows.map((row) => this.toMessageSummary(row));
+  async sendDirect(
+    input: {
+      accountId: string;
+      to: string[];
+      subject: string;
+      bodyText: string;
+      bodyHtml?: string | null;
+    },
+    actorUserId?: string | null,
+  ) {
+    return sendDirectMail(this.db, this.encryptionSecret, (audit) => this.logAudit(audit), input, actorUserId);
   }
 
   /**

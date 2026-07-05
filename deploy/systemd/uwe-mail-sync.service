@@ -1,0 +1,14 @@
+[Unit]
+Description=Trigger UWE automatic IMAP mail sync
+Documentation=file:///opt/uwe/docs/engineering/self-service-config.md
+After=network-online.target uwe.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/uwe/deploy/scripts/uwe-mail-sync.sh
+User=uwe
+Group=uwe
+
+[Install]
+WantedBy=multi-user.target

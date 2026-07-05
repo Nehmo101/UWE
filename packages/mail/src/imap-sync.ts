@@ -90,9 +90,138 @@ export function describeImapError(error: unknown): string {
   return String(error);
 }
 
+export interface ImapSyncProgress {
+  processed: number;
+  total: number;
+  phase: string;
+}
+
+export interface FetchImapOptions {
+  limit?: number;
+  mailbox?: string;
+  /** When true, fetch all UIDs in batches instead of only the most recent `limit`. */
+  fullSync?: boolean;
+  batchSize?: number;
+  onProgress?: (progress: ImapSyncProgress) => void | Promise<void>;
+}
+
+async function fetchUidMessages(
+  client: ImapFlow,
+  uid: number,
+): Promise<FetchedInboxMessage | null> {
+  const message = await client.fetchOne(
+    uid,
+    {
+      uid: true,
+      envelope: true,
+      source: true,
+      flags: true,
+      internalDate: true,
+    },
+    { uid: true },
+  );
+
+  if (!message || message.uid == null) return null;
+
+  let bodyText: string | null = null;
+  let bodyHtml: string | null = null;
+  let attachments: ParsedMailAttachment[] = [];
+  let listUnsubscribeHttpUrl: string | null = null;
+  let listUnsubscribeMailto: string | null = null;
+  let listUnsubscribePostSupported = false;
+  if (message.source) {
+    try {
+      const parsed = await parseRawMailSource(message.source);
+      bodyText = parsed.bodyText;
+      bodyHtml = parsed.bodyHtml;
+      attachments = parsed.attachments;
+    } catch {
+      bodyText = message.source.toString("utf8").slice(0, 8000);
+    }
+
+    const headers = parseRawHeaders(message.source.toString("utf8"));
+    const unsubscribeTargets = parseListUnsubscribeHeader(headers.get("list-unsubscribe"));
+    listUnsubscribeHttpUrl = unsubscribeTargets.httpUrl;
+    listUnsubscribeMailto = unsubscribeTargets.mailto;
+    listUnsubscribePostSupported = supportsOneClickUnsubscribe(headers.get("list-unsubscribe-post"));
+  }
+
+  const envelope = message.envelope;
+  return {
+    imapUid: String(message.uid),
+    messageId: envelope?.messageId ?? null,
+    subject: envelope?.subject ?? "",
+    fromAddress: extractAddress(envelope?.from?.[0]),
+    toAddresses: (envelope?.to ?? []).map((entry) => extractAddress(entry)).filter(Boolean),
+    snippet: truncateSnippet(bodyText ?? (bodyHtml ? sanitizeMailHtml(bodyHtml) : null) ?? envelope?.subject ?? ""),
+    bodyText,
+    bodyHtml,
+    attachments,
+    receivedAt:
+      message.internalDate instanceof Date
+        ? message.internalDate
+        : new Date(message.internalDate ?? Date.now()),
+    isRead: Boolean(message.flags?.has("\\Seen")),
+    listUnsubscribeHttpUrl,
+    listUnsubscribeMailto,
+    listUnsubscribePostSupported,
+  };
+}
+
+export async function fetchImapAttachmentContent(
+  credentials: ImapCredentials,
+  options: { mailbox?: string; imapUid: string; attachmentId: string; filename: string; contentId?: string | null },
+): Promise<{ content: Buffer; mimeType: string; filename: string } | null> {
+  const client = new ImapFlow({
+    host: credentials.host,
+    port: credentials.port ?? 993,
+    secure: credentials.secure ?? true,
+    auth: { user: credentials.username, pass: credentials.password },
+    logger: false,
+  });
+
+  const mailbox = options.mailbox ?? "INBOX";
+  const uid = Number.parseInt(options.imapUid, 10);
+  if (!Number.isFinite(uid)) return null;
+
+  await client.connect();
+  try {
+    const lock = await client.getMailboxLock(mailbox);
+    try {
+      const message = await client.fetchOne(uid, { source: true }, { uid: true });
+      if (!message || typeof message === "boolean" || !message.source) return null;
+      const source = message.source;
+      const parsed = await parseRawMailSource(source);
+      const match = parsed.attachments.find(
+        (entry) =>
+          entry.filename === options.filename ||
+          (options.contentId && entry.contentId === options.contentId),
+      );
+      if (!match) return null;
+      const { simpleParser } = await import("mailparser");
+      const parsedMail = await simpleParser(source);
+      const part = (parsedMail.attachments ?? []).find(
+        (entry) =>
+          entry.filename === options.filename ||
+          (options.contentId && entry.cid?.replace(/^<|>$/g, "") === options.contentId),
+      );
+      if (!part?.content) return null;
+      return {
+        content: part.content,
+        mimeType: part.contentType || match.mimeType,
+        filename: part.filename ?? options.filename,
+      };
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => undefined);
+  }
+}
+
 export async function fetchImapInboxMessages(
   credentials: ImapCredentials,
-  options?: { limit?: number; mailbox?: string },
+  options?: FetchImapOptions,
 ): Promise<FetchedInboxMessage[]> {
   const client = new ImapFlow({
     host: credentials.host,
@@ -105,6 +234,7 @@ export async function fetchImapInboxMessages(
     logger: false,
   });
 
+  const batchSize = options?.batchSize ?? 100;
   const limit = options?.limit ?? 50;
   const mailbox = options?.mailbox ?? "INBOX";
   const messages: FetchedInboxMessage[] = [];
@@ -115,67 +245,25 @@ export async function fetchImapInboxMessages(
     try {
       const uids = await client.search({ all: true }, { uid: true });
       const uidList = Array.isArray(uids) ? uids : [];
-      const selected = uidList.slice(-limit).reverse();
+      const selected = options?.fullSync
+        ? [...uidList].reverse()
+        : uidList.slice(-limit).reverse();
+      const total = selected.length;
 
-      for (const uid of selected) {
-        const message = await client.fetchOne(
-          uid,
-          {
-            uid: true,
-            envelope: true,
-            source: true,
-            flags: true,
-            internalDate: true,
-          },
-          { uid: true },
-        );
+      await options?.onProgress?.({ processed: 0, total, phase: "IMAP Nachrichten abrufen" });
 
-        if (!message || message.uid == null) continue;
+      for (let index = 0; index < selected.length; index += 1) {
+        const uid = selected[index];
+        const fetched = await fetchUidMessages(client, uid);
+        if (fetched) messages.push(fetched);
 
-        let bodyText: string | null = null;
-        let bodyHtml: string | null = null;
-        let attachments: ParsedMailAttachment[] = [];
-        let listUnsubscribeHttpUrl: string | null = null;
-        let listUnsubscribeMailto: string | null = null;
-        let listUnsubscribePostSupported = false;
-        if (message.source) {
-          try {
-            const parsed = await parseRawMailSource(message.source);
-            bodyText = parsed.bodyText;
-            bodyHtml = parsed.bodyHtml;
-            attachments = parsed.attachments;
-          } catch {
-            // Fall back to raw source truncation if MIME parsing fails outright.
-            bodyText = message.source.toString("utf8").slice(0, 8000);
-          }
-
-          const headers = parseRawHeaders(message.source.toString("utf8"));
-          const unsubscribeTargets = parseListUnsubscribeHeader(headers.get("list-unsubscribe"));
-          listUnsubscribeHttpUrl = unsubscribeTargets.httpUrl;
-          listUnsubscribeMailto = unsubscribeTargets.mailto;
-          listUnsubscribePostSupported = supportsOneClickUnsubscribe(headers.get("list-unsubscribe-post"));
+        if ((index + 1) % batchSize === 0 || index === selected.length - 1) {
+          await options?.onProgress?.({
+            processed: index + 1,
+            total,
+            phase: `${index + 1} / ${total} Nachrichten abgeholt`,
+          });
         }
-
-        const envelope = message.envelope;
-        messages.push({
-          imapUid: String(message.uid),
-          messageId: envelope?.messageId ?? null,
-          subject: envelope?.subject ?? "",
-          fromAddress: extractAddress(envelope?.from?.[0]),
-          toAddresses: (envelope?.to ?? []).map((entry) => extractAddress(entry)).filter(Boolean),
-          snippet: truncateSnippet(bodyText ?? (bodyHtml ? sanitizeMailHtml(bodyHtml) : null) ?? envelope?.subject ?? ""),
-          bodyText,
-          bodyHtml,
-          attachments,
-          receivedAt:
-            message.internalDate instanceof Date
-              ? message.internalDate
-              : new Date(message.internalDate ?? Date.now()),
-          isRead: Boolean(message.flags?.has("\\Seen")),
-          listUnsubscribeHttpUrl,
-          listUnsubscribeMailto,
-          listUnsubscribePostSupported,
-        });
       }
     } finally {
       lock.release();

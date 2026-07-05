@@ -11,7 +11,8 @@ import {
 } from "@uwe/mail";
 import type { PrismaClient } from "./client";
 import { createMailLogService, type MailLogEntry } from "./mail-log-service";
-import { createSettingsService, resolveEffectiveSmtpConfig } from "./settings-service";
+import { createSettingsService } from "./settings-service";
+import { resolveEffectiveSmtpConfig } from "./mail-smtp-settings";
 
 export interface SendMailInput {
   to: MailAddress[];

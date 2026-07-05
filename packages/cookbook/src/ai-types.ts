@@ -37,6 +37,7 @@ export type CookbookAiTaskType =
   | "synthesize_research"
   | "summarize_mail"
   | "prioritize_mail"
+  | "answer_mail_question"
   | "generate_briefing";
 
 /**

@@ -7,7 +7,9 @@ import { MAIL_PRIORITY_LABELS, type MailPriorityCategory } from "@uwe/mail/porta
  * serialize all `Date`s to ISO strings before crossing the client boundary.
  */
 
-export type MailView = "inbox" | "triage" | "settings";
+export type MailView = "inbox" | "triage" | "settings" | "drafts" | "sent";
+
+export type MailFolderKey = "inbox" | "marked" | "drafts" | "sent" | "archive" | "trash";
 
 export interface MailAccountVM {
   id: string;
@@ -100,7 +102,7 @@ export interface MailConfigVM {
 }
 
 export interface MailFolderVM {
-  key: string;
+  key: MailFolderKey;
   name: string;
   icon: string;
   count: number | null;
@@ -117,6 +119,7 @@ export interface MailCenterData {
   rtxState: RtxConnectorState;
   accounts: MailAccountVM[];
   messages: MailMessageVM[];
+  sentMessages: MailMessageVM[];
   drafts: MailDraftVM[];
   logs: MailLogVM[];
   worlds: MailWorldVM[];
@@ -124,8 +127,11 @@ export interface MailCenterData {
   folders: MailFolderVM[];
   categories: MailCategoryVM[];
   activeCategory: MailPriorityCategory | null;
+  activeFolder: MailFolderKey;
+  selectedAccountId: string | null;
   query: string;
-  counts: { inbox: number; unread: number; drafts: number; triage: number };
+  autoSyncEnabled: boolean;
+  counts: { inbox: number; unread: number; drafts: number; triage: number; sent: number };
 }
 
 export const CATEGORY_LABELS = MAIL_PRIORITY_LABELS;

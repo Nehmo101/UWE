@@ -1,7 +1,7 @@
 import type { MailDraftStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
-import { fetchImapInboxMessages, type FetchedInboxMessage } from "@uwe/mail";
+import { fetchImapInboxMessages, type FetchedInboxMessage, type ImapSyncProgress } from "@uwe/mail";
 
 export interface CreateMailAccountInput {
   label: string;
@@ -112,7 +112,15 @@ export class MailAccountService {
     }));
   }
 
-  async syncInbox(accountId: string, options?: { limit?: number }) {
+  async syncInbox(
+    accountId: string,
+    options?: {
+      limit?: number;
+      fullSync?: boolean;
+      mailbox?: string;
+      onProgress?: (progress: ImapSyncProgress) => void | Promise<void>;
+    },
+  ) {
     const account = await this.db.mailAccount.findUnique({ where: { id: accountId } });
     if (!account) {
       throw new Error("Mail-Account nicht gefunden.");
@@ -120,8 +128,12 @@ export class MailAccountService {
     if (!account.imapHost) {
       throw new Error("IMAP-Host ist für diesen Account nicht konfiguriert.");
     }
+    if (account.syncEnabled === false) {
+      return { accountId, imported: 0, skipped: true as const };
+    }
 
     const password = decryptSecret(account.passwordEnc, this.encryptionSecret);
+    const mailbox = options?.mailbox ?? account.imapMailbox ?? "INBOX";
     const fetched = await fetchImapInboxMessages(
       {
         host: account.imapHost,
@@ -129,12 +141,18 @@ export class MailAccountService {
         username: account.username,
         password,
       },
-      { limit: options?.limit ?? 50 },
+      {
+        limit: options?.limit ?? 50,
+        mailbox,
+        fullSync: options?.fullSync ?? false,
+        batchSize: 100,
+        onProgress: options?.onProgress,
+      },
     );
 
     let imported = 0;
     for (const message of fetched) {
-      await this.persistFetchedMessage(accountId, message);
+      await this.persistFetchedMessage(accountId, message, mailbox);
       imported += 1;
     }
 
@@ -146,11 +164,12 @@ export class MailAccountService {
       },
     });
 
-    return { accountId, imported };
+    return { accountId, imported, total: fetched.length };
   }
 
   /** Upserts one IMAP-fetched message and rebuilds its attachment metadata rows. */
-  async persistFetchedMessage(accountId: string, message: FetchedInboxMessage) {
+  async persistFetchedMessage(accountId: string, message: FetchedInboxMessage, mailbox = "INBOX") {
+    const folder = await this.ensureFolder(accountId, mailbox);
     const hasAttachments = message.attachments.length > 0;
     const saved = await this.db.mailInboxMessage.upsert({
       where: {
@@ -161,6 +180,7 @@ export class MailAccountService {
       },
       create: {
         accountId,
+        folderId: folder?.id ?? null,
         imapUid: message.imapUid,
         messageId: message.messageId,
         subject: message.subject,
@@ -177,6 +197,7 @@ export class MailAccountService {
         listUnsubscribePostSupported: message.listUnsubscribePostSupported,
       },
       update: {
+        folderId: folder?.id ?? null,
         messageId: message.messageId,
         subject: message.subject,
         fromAddress: message.fromAddress,
@@ -209,6 +230,46 @@ export class MailAccountService {
     }
 
     return saved;
+  }
+
+  private async ensureFolder(accountId: string, imapPath: string) {
+    return this.db.mailFolder.upsert({
+      where: { accountId_imapPath: { accountId, imapPath } },
+      create: {
+        accountId,
+        imapPath,
+        displayName: imapPath,
+      },
+      update: { syncedAt: new Date() },
+    });
+  }
+
+  async ensureLocalFolder(accountId: string, localKey: "LOCAL:archived" | "LOCAL:trash", displayName: string) {
+    return this.ensureFolder(accountId, localKey).then((folder) =>
+      this.db.mailFolder.update({
+        where: { id: folder.id },
+        data: { displayName },
+      }),
+    );
+  }
+
+  async moveMessageToLocalFolder(messageId: string, localKey: "LOCAL:archived" | "LOCAL:trash", displayName: string) {
+    const message = await this.db.mailInboxMessage.findUnique({ where: { id: messageId } });
+    if (!message) throw new Error("Nachricht nicht gefunden.");
+    const folder = await this.ensureLocalFolder(message.accountId, localKey, displayName);
+    return this.db.mailInboxMessage.update({
+      where: { id: messageId },
+      data: { folderId: folder.id },
+    });
+  }
+
+  async deleteMessagesBySender(accountId: string | undefined, senderPattern: string) {
+    const where = {
+      fromAddress: { contains: senderPattern },
+      ...(accountId ? { accountId } : {}),
+    };
+    const result = await this.db.mailInboxMessage.deleteMany({ where });
+    return result.count;
   }
 
   async markImapSyncError(accountId: string, error: string) {
