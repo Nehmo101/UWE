@@ -12,13 +12,19 @@ import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/grap
 import { GRAPH_NODE_CATEGORIES } from "@uwe/database/graph-types";
 
 // --- Physik-Parameter (aus dem Design-Handoff, unverändert) -------------------
-const REP = 2900; // Abstoßungsstärke
+const REP = 2900; // Abstoßungsstärke (Basis, skaliert mit √n)
 const SPRING = 0.018; // Federkonstante
 const GRAV = 0.0065; // Zentrierungskraft
 const DAMP = 0.86; // Dämpfung → System kommt zur Ruhe
 const REST = 0.045; // Schwelle "in Ruhe"
 const HL_LERP = 0.16; // Fokus-/Sichtbarkeits-Interpolation pro Frame
 const EDGE_BEND = 0.12; // Kantenbiegung
+const MIN_DIST = 2.4; // Mindestabstand in der Abstoßung (verhindert Kraft-Spitzen)
+const MAX_FORCE = 42; // Obergrenze pro Knoten und Schritt
+const MAX_VEL = 24; // Obergrenze für Geschwindigkeit pro Schritt
+const PREWARM_BASE = 40; // Vorab-Schritte vor dem ersten Frame
+const PREWARM_PER_NODE = 0.35; // Zusätzliche Vorab-Schritte pro Knoten
+const POSITION_CACHE_LIMIT = 6000; // Positions-Cache jenseits dieser Koordinaten verwerfen
 
 /**
  * Erdige Parchment-Palette (Design-Handoff). Wird als Fallback benutzt, wenn kein
@@ -67,6 +73,29 @@ function lerp(a: number, b: number, t: number): number {
 }
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
+}
+
+function capVector(fx: number, fy: number, max: number): [number, number] {
+  const mag = Math.hypot(fx, fy);
+  if (mag <= max) return [fx, fy];
+  const scale = max / mag;
+  return [fx * scale, fy * scale];
+}
+
+/** Positions-Cache aus Remounts/Rebuilds auf Plausibilität prüfen. */
+export function isGraphPositionCacheValid(
+  cache: Record<string, { x: number; y: number }>,
+  nodeIds: Iterable<string>,
+): boolean {
+  for (const id of nodeIds) {
+    const p = cache[id];
+    if (!p) continue;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return false;
+    if (Math.abs(p.x) > POSITION_CACHE_LIMIT || Math.abs(p.y) > POSITION_CACHE_LIMIT) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Parse `#rgb`/`#rrggbb`/`rgb()`/`rgba()` in `[r,g,b]`; null bei Unbekanntem. */
@@ -222,9 +251,10 @@ export class GraphEngine {
   // --- Layout-Init: Knoten dicht am Ursprung, fließen dann auseinander --------
   private initLayout(): void {
     const n = this.nodes.length;
+    const spread = 26 + Math.random() * 30 + Math.sqrt(n) * 7;
     this.nodes.forEach((nd, i) => {
       const a = (i / Math.max(n, 1)) * Math.PI * 2;
-      const r = 26 + Math.random() * 30;
+      const r = spread + (Math.random() - 0.5) * 12;
       nd.x = Math.cos(a) * r + (Math.random() - 0.5) * 8;
       nd.y = Math.sin(a) * r + (Math.random() - 0.5) * 8;
       nd.vx = 0;
@@ -264,7 +294,13 @@ export class GraphEngine {
   start(prewarm = true): void {
     if (this.raf) return;
     // vorab ein paar Schritte, damit der erste Frame nicht chaotisch ist
-    if (prewarm) for (let i = 0; i < 40; i++) this.step();
+    if (prewarm) {
+      const steps = Math.min(
+        160,
+        Math.round(PREWARM_BASE + this.nodes.length * PREWARM_PER_NODE),
+      );
+      for (let i = 0; i < steps; i++) this.step();
+    }
     this.resize();
     this.fit(false);
     this.awake = true;
@@ -377,6 +413,8 @@ export class GraphEngine {
   // --- Physik -----------------------------------------------------------------
   private step(): number {
     const ns = this.nodes;
+    const minDist2 = MIN_DIST * MIN_DIST;
+    const repScale = REP / Math.sqrt(Math.max(ns.length, 1));
     for (let i = 0; i < ns.length; i++) {
       const a = ns[i];
       let fx = 0,
@@ -387,21 +425,22 @@ export class GraphEngine {
         let dx = a.x - b.x,
           dy = a.y - b.y;
         let d2 = dx * dx + dy * dy;
-        if (d2 < 0.01) {
-          dx = Math.random() - 0.5;
-          dy = Math.random() - 0.5;
-          d2 = 1;
+        if (d2 < minDist2) {
+          if (d2 < 1e-6) {
+            dx = Math.random() - 0.5;
+            dy = Math.random() - 0.5;
+          }
+          d2 = minDist2;
         }
         const d = Math.sqrt(d2);
         // größere Knoten stoßen stärker ab → mehr Platz für Hubs
-        const f = (REP * (0.55 + (a.r + b.r) / 42)) / d2;
+        const f = (repScale * (0.55 + (a.r + b.r) / 42)) / d2;
         fx += (dx / d) * f;
         fy += (dy / d) * f;
       }
       fx -= a.x * GRAV;
       fy -= a.y * GRAV;
-      a._fx = fx;
-      a._fy = fy;
+      [a._fx, a._fy] = capVector(fx, fy, MAX_FORCE);
     }
     this.edges.forEach((e) => {
       const s = this.byId(e.sourceId),
@@ -429,6 +468,7 @@ export class GraphEngine {
       }
       a.vx = (a.vx + a._fx) * DAMP;
       a.vy = (a.vy + a._fy) * DAMP;
+      [a.vx, a.vy] = capVector(a.vx, a.vy, MAX_VEL);
       a.x += a.vx;
       a.y += a.vy;
       ke += a.vx * a.vx + a.vy * a.vy;

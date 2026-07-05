@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Lock, LockOpen, Maximize, Minus, Plus, Search, X } from "lucide-react";
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORY_LABELS } from "@uwe/database/graph-types";
-import { GraphEngine, GRAPH_CATEGORY_COLORS } from "./graph-engine";
+import { GraphEngine, GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid } from "./graph-engine";
 import { PageTypeBadge, VisibilityBadge } from "./StatusBadges";
 
 export interface GraphViewProps {
@@ -115,7 +115,10 @@ export function GraphView({
         setSelected(node);
       },
     });
-    engine.applyPositions(posCacheRef.current);
+    const cachedPositions = isGraphPositionCacheValid(posCacheRef.current, nodes.map((node) => node.id))
+      ? posCacheRef.current
+      : {};
+    engine.applyPositions(cachedPositions);
     engine.setHiddenCats(hiddenRef.current);
     engine.setQuery(queryRef.current);
     engineRef.current = engine;

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { GraphEdge, GraphNode } from "@uwe/database/graph-types";
-import { GraphEngine } from "./graph-engine";
+import { GraphEngine, isGraphPositionCacheValid } from "./graph-engine";
 
 /**
  * Interaktions-Verhalten der Canvas-Engine ohne echtes Rendering: der Konstruktor
@@ -123,4 +123,93 @@ test("select(null) hebt die Fixierung des Auswahl-Knotens auf", () => {
 
   assert.equal(engine.selectedId, null);
   assert.equal(engine.nodes.find((n) => n.id === "a")?.fixed, false);
+});
+
+function makeStressGraph(n: number, mesh = false) {
+  const nodes: GraphNode[] = Array.from({ length: n }, (_, i) => ({
+    id: `n${i}`,
+    title: `Node ${i}`,
+    slug: `n${i}`,
+    type: "npc",
+    category: "npc",
+    visibility: "dm_only",
+    tags: [],
+    href: `/n${i}`,
+    campaignId: null,
+  }));
+  const edges: GraphEdge[] = [];
+  if (mesh) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n && j < i + 4; j++) {
+        edges.push({
+          id: `e${i}-${j}`,
+          sourceId: `n${i}`,
+          targetId: `n${j}`,
+          kind: "wiki",
+          relationType: "wiki",
+          label: "link",
+        });
+      }
+    }
+  } else {
+    for (let i = 0; i < n - 1; i++) {
+      edges.push({
+        id: `e${i}`,
+        sourceId: `n${i}`,
+        targetId: `n${i + 1}`,
+        kind: "wiki",
+        relationType: "wiki",
+        label: "link",
+      });
+    }
+  }
+  return { nodes, edges };
+}
+
+function maxCoord(engine: GraphEngine): number {
+  let max = 0;
+  for (const node of engine.nodes) {
+    max = Math.max(max, Math.abs(node.x), Math.abs(node.y));
+  }
+  return max;
+}
+
+test("Physik bleibt bei großen Graphen stabil (Ketten- und Mesh-Layout)", () => {
+  for (const [n, mesh] of [
+    [120, false],
+    [120, true],
+    [220, true],
+  ] as const) {
+    const canvas = makeCanvas();
+    const { nodes, edges } = makeStressGraph(n, mesh);
+    const engine = new GraphEngine(canvas, { nodes, edges });
+    for (let i = 0; i < 140; i++) engine["step"]();
+    assert.ok(
+      maxCoord(engine) < 4000,
+      `Graph n=${n} mesh=${mesh} explodierte (maxCoord=${maxCoord(engine).toFixed(1)})`,
+    );
+  }
+});
+
+test("Remount-Positionscache wird verworfen wenn Koordinaten aus dem Ruder laufen", () => {
+  const cache = {
+    a: { x: 120, y: 40 },
+    b: { x: 9000, y: -3000 },
+  };
+  assert.equal(isGraphPositionCacheValid(cache, ["a", "b"]), false);
+  assert.equal(isGraphPositionCacheValid(cache, ["a"]), true);
+});
+
+test("Remount mit frühem Positionscache bleibt stabil", () => {
+  const canvas = makeCanvas();
+  const { nodes, edges } = makeStressGraph(100, true);
+  const first = new GraphEngine(canvas, { nodes, edges });
+  for (let i = 0; i < 5; i++) first["step"]();
+  const cache = first.capturePositions();
+  assert.equal(isGraphPositionCacheValid(cache, nodes.map((node) => node.id)), true);
+
+  const second = new GraphEngine(canvas, { nodes, edges });
+  second.applyPositions(cache);
+  for (let i = 0; i < 80; i++) second["step"]();
+  assert.ok(maxCoord(second) < 4000, `Remount explodierte (maxCoord=${maxCoord(second).toFixed(1)})`);
 });
