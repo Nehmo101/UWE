@@ -27,10 +27,19 @@ description: Implement new UWE features following monorepo conventions — domai
 ## Quality gate
 
 ```bash
+pnpm file-size:check   # seconds — run before the full gate
 pnpm lint && pnpm typecheck && pnpm test && pnpm build:release
 ```
 
 Add `pnpm test:security` when touching auth, visibility, or API routes.
+
+## Module size (CI blocker)
+
+New production files (`apps/`, `packages/`, `tools/`) must stay **under 700 lines**. Split at ~500 lines — do not wait for CI. Legacy files in `scripts/file-size-baseline.json` are frozen; extract code instead of growing them.
+
+## HTML sanitization / mail routes
+
+Never top-level-import `isomorphic-dompurify` or `jsdom`. Lazy-init inside a function and list both in `apps/studio/next.config.ts` → `serverExternalPackages`. Reference: `apps/studio/src/lib/sanitize-html.ts`.
 
 ## Conventions
 

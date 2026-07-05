@@ -31,6 +31,7 @@ Rules:
 - Public (no-session) Studio routes are an explicit allowlist (health, Spotify OAuth callback)
   verified by `scripts/studio-route-auth.test.ts` — adding a public route means updating that test.
 - Never import server-only modules into client components (breaks the Studio production build).
+- HTML sanitization: never top-level-import `isomorphic-dompurify`/`jsdom` — lazy-init + `serverExternalPackages`.
 - Portal responses must go through visibility filtering — never return `dm_only` content.
 - Validate input, return structured errors; enforce CSRF/rate-limits on sensitive endpoints.
 

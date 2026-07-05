@@ -16,6 +16,7 @@ alwaysApply: true
 | `pnpm quality` | Full main gate (+ security, audit) |
 | `pnpm quality:quiet` | Same as quality; agent-friendly summary on failure |
 | `pnpm lint` / `typecheck` / `test` / `test:security` | Individual steps |
+| `pnpm file-size:check` | Anti-monolith gate (~5 s, no install) |
 
 ## Test expectations
 

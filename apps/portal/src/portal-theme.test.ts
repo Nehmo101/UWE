@@ -15,10 +15,12 @@ describe("portal theme sync layout", () => {
 
     assert.match(layout, /getSystemSettingsSnapshotSafe\(\)/);
     assert.match(layout, /resolveThemePreferencesForScope\(settings\.app, "portal"\)/);
+    assert.match(layout, /toUweThemePreferences\(/);
     assert.match(layout, /buildVisualThemeHtmlAttributes\(settings\.app/);
     assert.match(layout, /ThemeBootstrapScript[\s\S]*scope="portal"/);
     assert.match(layout, /const serverTheme: ThemeAppearance = settings\.app\.theme/);
     assert.match(layout, /<ThemeDocumentSync theme=\{serverTheme\} \/>/);
     assert.match(layout, /PortalThemeSyncProvider/);
+    assert.match(layout, /serverPreferences=\{serverThemePreferences\}/);
   });
 });

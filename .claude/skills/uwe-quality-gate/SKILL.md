@@ -8,7 +8,8 @@ description: Run the UWE quality gate before finishing work and fix the recurrin
 Before committing/pushing agent work (GitHub Cloud CI is the authoritative gate):
 
 1. `pnpm install --frozen-lockfile` (the SessionStart harness normally does this already).
-2. Run one gate:
+2. **`pnpm file-size:check`** — seconds; run before the full gate when adding code.
+3. Run one gate:
    - **`pnpm quality:quiet`** — recommended for agents (summary + tail on failure)
    - `pnpm quality` — full verbose main-gate mirror
    - `pnpm ci:light` — faster PR mirror
@@ -22,8 +23,10 @@ Recurring failures (fix, don't silence):
 - **Wrong auth import path** → use `@uwe/auth`; see the table in `AGENTS.md`.
 - **Missing Prisma client** → `pnpm --filter @uwe/database db:generate`.
 - **Lockfile drift** → `pnpm install`, commit `pnpm-lock.yaml` (CI uses `--frozen-lockfile`).
-- **File-size budget** → split the file; run `node scripts/file-size-budget-check.mjs --ratchet`
-  after shrinking. Never raise a baseline or add an entry.
+- **File-size budget** → split the file at ~500 lines; `pnpm file-size:check` before push.
+  Run `node scripts/file-size-budget-check.mjs --ratchet` after shrinking. Never raise a baseline.
+- **Studio build / jsdom** → lazy-init `isomorphic-dompurify`; add `jsdom` + `isomorphic-dompurify`
+  to `serverExternalPackages` in `apps/studio/next.config.ts` (see `sanitize-html.ts`).
 
 Never use broad `eslint-disable` / `@ts-ignore`, skip checks, or import server-only modules into client components.
 

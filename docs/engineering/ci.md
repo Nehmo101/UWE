@@ -1,20 +1,20 @@
 # CI — Workflows, Scripts, and Debugging
 
-Stand: 2026-06-29
+Stand: 2026-07-05
 
 UWE uses **pnpm** (lockfile: `pnpm-lock.yaml`, `packageManager: pnpm@10.12.1`) and **Turbo** for the monorepo. CI runs on **Node 22** in GitHub Actions.
 
 ## Caching and job timeouts
 
-Hosted jobs restore **Turbo** (`.turbo/`) and **Next.js build** caches (`.next/cache` in Studio and Portal) via `actions/cache`. Cache keys are keyed by **lockfile hash** so PR and main runs reuse the same Turbo cache across commits until dependencies change.
+Hosted jobs restore **pnpm store**, **Turbo** (`.turbo/`), **Next.js build** caches (`.next/cache`), and **Playwright browsers** (`~/.cache/ms-playwright`) via `actions/cache`. Cache keys are keyed by **lockfile hash** so PR and main runs reuse caches across commits until dependencies change.
 
-PR gate runs **`lint`** first (~2 min, fail-fast), then **`fast-checks`** with `pnpm ci:light:pr:gate` (affected typecheck/test, no duplicate lint). Main gate runs full `pnpm quality`.
+PR gate runs **`file-size:check`** first (~5 s, no install), then a single **`fast-checks`** job (lint + affected gate + optional Studio build). Main gate runs full `pnpm quality`.
 
 | Job | Timeout | Typical warm duration |
 |-----|---------|----------------------|
-| PR `lint` | 10 min | ~1–3 min |
-| PR `fast-checks` | 25 min | ~6–10 min |
+| PR `fast-checks` | 35 min | ~6–18 min |
 | Main `quality` | 50 min | ~10–20 min |
+| Main `e2e-auth-smoke` | 20 min | ~3–8 min (warm Playwright cache) |
 | `postgres-smoke` | 15 min | ~3–5 min |
 | `e2e` (scheduled/manual) | 30 min | ~15–25 min |
 | `security-*` | 20 min | ~5–10 min |
@@ -26,7 +26,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 | Event | Workflow | Gate |
 |-------|----------|------|
-| **Pull request** | `pr-check.yml` | `lint` + `ci:light:pr:gate` (affected typecheck/test, secret scan, docs) |
+| **Pull request** | `pr-check.yml` | `file-size:check` + lint + `ci:light:pr:gate` (affected typecheck/test, secret scan, docs) + optional Studio build |
 | **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke (when DB paths change) |
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
@@ -51,10 +51,15 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 ### Branch protection (recommended)
 
+**Integration model:** Keep **`main` as the only integration branch**. Do not add a standing `dev` branch or daily batch merges — PRs already provide isolation, and a dev→main promotion adds latency without fixing the real issues (file-size discipline, branch protection). Instead:
+
+- **Block direct pushes to `main`** (Settings → Branches → require pull requests).
+- **Require status check:** `fast-checks` only (lint runs inside this job since 2026-07).
+- Optional: enable GitHub **merge queue** when many agent PRs land in bursts (reduces cancelled main CI runs).
+
 **Required status checks** — only these should block merges:
 
-- `fast-checks` (heavy gate in `pr-check.yml`; fails fast when `lint` failed)
-- `lint` (recommended — fail-fast ESLint before typecheck/tests)
+- `fast-checks` (lint + affected gate + optional Studio build in `pr-check.yml`)
 
 **Do not mark as required** (path-filtered, expensive, or post-merge gates):
 
@@ -66,13 +71,14 @@ Configure in GitHub: **Settings → Branches → Branch protection rules → `ma
 
 ### PR Check (`pr-check.yml`)
 
-The only automatic workflow on pull requests (two jobs):
+The only automatic workflow on pull requests:
 
-1. **`detect-changes`** — path filter (docs-only vs code)
-2. **`lint`** — `pnpm install` + lockfile check + `pnpm lint` (~2 min); skipped for docs-only PRs
-3. **`fast-checks`** — if lint failed: exit immediately (saves runner minutes); if docs-only: success without gate; else:
-   - Restore Turbo cache (`actions/cache`, lockfile hash key)
-   - `pnpm ci:light:pr:gate` — db:generate, **affected** typecheck/test, secret scan, docs:check
+1. **`detect-changes`** — path filter (docs-only vs code; Studio build scope)
+2. **`fast-checks`** — single job (one `pnpm install`); skipped for docs-only PRs; else:
+   - `node scripts/file-size-budget-check.mjs` — fail in ~5 s before install
+   - Restore pnpm store + Turbo caches
+   - `pnpm lint` then `pnpm ci:light:pr:gate` — db:generate, **affected** typecheck/test, secret scan, docs:check
+   - **Studio production build** only when diff touches `apps/studio/**`, `packages/**`, lockfile, or `turbo.json`
 
 `turbo.json` no longer runs `^build` before `typecheck`/`test` (tsc and node tests do not need compiled package outputs). Main-only `build:release` still builds Studio and Portal.
 
@@ -82,8 +88,8 @@ No `pnpm quality`, no E2E, no security tests, no release build on PRs.
 
 Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatch`:
 
-1. Install with frozen lockfile
-2. Restore Turbo + Next.js build caches (`actions/cache`)
+1. `file-size:check` (no install)
+2. Install with frozen lockfile; restore pnpm store + Turbo + Next.js build caches
 3. `pnpm quality` — full gate:
    - Prisma client generate
    - Lint (zero warnings)

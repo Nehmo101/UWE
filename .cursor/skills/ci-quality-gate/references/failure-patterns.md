@@ -57,6 +57,41 @@ src/security/middleware.ts(5,3): error TS2305: Module '"../runtime-config"' has 
 
 ---
 
+## Pattern E — File size budget (anti-monolith)
+
+**Symptom:** CI fails at `file-size-budget.test.ts` or the early `file-size:check` step (~5 s).
+
+**Example error:**
+
+```
+apps/rtx-connector-client/src/App.tsx: 707 lines (budget 700)
+tools/uwe-rtx-connector/src/client-cli.ts: 732 lines (budget 700)
+```
+
+**Fix:** Extract helpers into colocated modules or a feature package. **Never** raise values in `scripts/file-size-baseline.json`.
+
+**Prevention:** Run `pnpm file-size:check` before push. Agents: split when approaching ~500 lines.
+
+---
+
+## Pattern F — Studio production build: jsdom / DOMPurify
+
+**Symptom:** `next build` fails with `Failed to collect page data` and `ENOENT ... default-stylesheet.css`.
+
+**Cause:** Top-level `import` of `isomorphic-dompurify` or `jsdom` in a module loaded during static analysis.
+
+**Fix:** Lazy-init DOMPurify inside a function (see `apps/studio/src/lib/sanitize-html.ts`) and add to `serverExternalPackages` in `apps/studio/next.config.ts`:
+
+```typescript
+serverExternalPackages: [
+  ...standalone.serverExternalPackages,
+  "jsdom",
+  "isomorphic-dompurify",
+],
+```
+
+---
+
 ## CI step order (`.github/workflows/ci.yml` / `pnpm quality`)
 
 1. `pnpm install --frozen-lockfile`

@@ -49,9 +49,22 @@ jobs:
           set -euo pipefail
           cd /opt/uwe
 
-          git fetch origin main
+          fetch_ok=0
+          for attempt in 1 2 3; do
+            if git fetch origin main; then
+              fetch_ok=1
+              break
+            fi
+            echo "git fetch failed (attempt ${attempt}/3); retrying in $((attempt * 5))s..."
+            sleep $((attempt * 5))
+          done
+          if [ "$fetch_ok" -ne 1 ]; then
+            echo "::error::git fetch origin main failed after 3 attempts"
+            exit 128
+          fi
 
           if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "Host repo has local changes — stashing before deploy sync."
             git status --short
             git stash push -m "host deploy pre-sync $(date -Iseconds)"
           fi

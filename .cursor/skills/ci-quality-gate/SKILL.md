@@ -12,7 +12,8 @@ Before committing/pushing agent work, after rebase, or when CI fails on your PR.
 ## Workflow
 
 1. `pnpm install --frozen-lockfile`
-2. Run gate — pick one:
+2. **`pnpm file-size:check`** — fail in seconds if a file exceeds the 700-line budget (see Pattern E)
+3. Run gate — pick one:
    - **`pnpm quality:quiet`** — recommended for agents (summary + tail on failure)
    - **`pnpm quality`** — full verbose output
    - **`pnpm ci:light`** — faster PR mirror
@@ -24,6 +25,7 @@ Full step list and common failures: **[AGENTS.md](../../../AGENTS.md)**.
 - Push with only partial checks
 - Skip `pnpm-lock.yaml` after dependency changes
 - Import server-only modules into client components
+- Grow production files past **700 lines** — split into modules first (`pnpm file-size:check`)
 
 ## References
 

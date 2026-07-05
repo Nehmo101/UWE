@@ -28,6 +28,10 @@ Add `"use client"` only when needed:
 
 Pass serializable props from server parents instead.
 
+## HTML sanitization (mail, wiki previews)
+
+Do **not** top-level-import `isomorphic-dompurify` or `jsdom` — it breaks `next build` (`ENOENT default-stylesheet.css`). Lazy-init inside a function and add both packages to `serverExternalPackages` in `apps/studio/next.config.ts`. Pattern: `apps/studio/src/lib/sanitize-html.ts`.
+
 ## File layout
 
 ```txt
