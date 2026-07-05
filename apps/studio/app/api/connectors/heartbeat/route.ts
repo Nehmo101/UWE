@@ -32,6 +32,20 @@ const heartbeatSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const pausedHostConfig = resolveHostConnectorConfig();
+  if (!pausedHostConfig.queueEnabled) {
+    return NextResponse.json({
+      connector: {
+        id: "host-queue-paused",
+        name: "UWE Host Queue",
+        status: "offline",
+        queueEnabled: false,
+      },
+      config: pausedHostConfig,
+      activeJobIds: [],
+    });
+  }
+
   const auth = await authenticateConnector(request);
   if (!auth.ok) return auth.response;
 
