@@ -19,8 +19,8 @@ export interface RtxHealthStatus {
   modelCount?: number;
   /** Worker status when RTX_AGENT_URL is configured. */
   agentStatus?: RtxWorkerStatus;
-  /** Whether health was read from RTX agent vs direct inference. */
-  source: "agent" | "inference";
+  /** Whether health was read from RTX agent, direct inference, or connector queue. */
+  source: "agent" | "inference" | "connector";
   urlAllowed: boolean;
   urlKind: InferenceUrlKind | string;
   publicExposureWarning?: string;

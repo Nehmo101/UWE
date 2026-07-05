@@ -6,12 +6,12 @@ import {
   type PublicLeakScanResult,
 } from "@uwe/database/server";
 import { validateUweEnvironment, type EnvValidationIssue } from "@uwe/auth";
-import { checkRtxHealth, type RtxHealthStatus } from "@uwe/ai-brain/router";
+import { checkRtxReadiness, type RtxReadinessStatus } from "@uwe/ai-brain/router";
 import { getInferenceStatus, type InferenceStatus } from "@uwe/ai-brain/inference";
 
 export interface AdminDashboardStatus extends AdminStatus {
   inference: InferenceStatus;
-  rtx: RtxHealthStatus;
+  rtx: RtxReadinessStatus;
   envValidation: EnvValidationIssue[];
   publicLeaks: PublicLeakScanResult;
 }
@@ -23,7 +23,7 @@ export async function getAdminDashboardStatus(
   const [admin, inference, rtx, publicLeaks] = await Promise.all([
     getAdminStatus(db, { rateLimiterMode: options.rateLimiterMode }),
     getInferenceStatus({ useMock: options.useMockInference }),
-    checkRtxHealth({ useMock: options.useMockInference }),
+    checkRtxReadiness({ useMock: options.useMockInference, prisma: db }),
     scanPublicContentLeaks(db),
   ]);
 
@@ -46,5 +46,5 @@ export async function getAdminDashboardStatus(
   };
 }
 
-export type { InferenceStatus, RtxHealthStatus };
+export type { InferenceStatus, RtxReadinessStatus as RtxHealthStatus };
 

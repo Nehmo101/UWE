@@ -91,6 +91,8 @@ export interface InferenceStatusInput {
   urlAllowed?: boolean;
   message?: string;
   offlineReason?: string;
+  /** Connector heartbeat is fresh but reports lastError — show warn, not full offline. */
+  degraded?: boolean;
 }
 
 /** Map backend inference (or future RTX-agent) payload to UI capabilities. */
@@ -100,6 +102,9 @@ export function mapInferenceToRtxState(input: InferenceStatusInput): RtxDisplayS
   }
   if (input.urlAllowed === false) {
     return "error";
+  }
+  if (input.degraded && input.online) {
+    return "starting";
   }
   const detail = `${input.message ?? ""} ${input.offlineReason ?? ""}`.toLowerCase();
   if (/starting|wird gestartet|startet/.test(detail)) {
@@ -122,11 +127,12 @@ export function buildAiPromptCapabilities(input: {
 }): AiPromptCapabilities {
   const rtxState = mapInferenceToRtxState(input.inference);
   const rtxOnline = rtxState === "online";
+  const localAiReady = rtxState === "online" || rtxState === "starting";
   return {
     rtxEnabled: input.inference.enabled,
     rtxOnline,
     rtxState,
-    localAiReady: rtxOnline,
+    localAiReady,
     cloudAvailable: input.cloudAvailable,
     brainLocal: input.brainLocal,
     hasCurrentObject: input.hasCurrentObject,

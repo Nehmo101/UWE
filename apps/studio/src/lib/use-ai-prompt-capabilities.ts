@@ -24,27 +24,17 @@ interface AdminStatusPayload {
     ready: boolean;
     online: boolean;
     message: string;
-    source: "agent" | "inference";
+    source: "agent" | "inference" | "connector";
     agentStatus?: string;
     endpoint?: string;
+    connectorReady?: boolean;
+    connectorDegraded?: boolean;
+    connectorLastError?: string | null;
   };
   brain: {
     enabled: boolean;
     ok: boolean;
   };
-}
-
-interface ConnectorStatusPayload {
-  connectors: Array<{
-    status: "online" | "offline" | "degraded" | "disabled";
-    disabled: boolean;
-    capabilities: string[];
-    models: Array<{
-      name?: string;
-      modelType?: string;
-      enabledForUwe?: boolean;
-    }>;
-  }>;
 }
 
 const DEFAULT_CAPS: AiPromptCapabilities = {
@@ -60,7 +50,7 @@ const DEFAULT_CAPS: AiPromptCapabilities = {
 export interface UseAiPromptCapabilitiesOptions {
   worldSlug?: string;
   pageSlug?: string;
-  /** Poll interval in ms; 0 disables polling. Default 30s. */
+  /** Poll interval in ms; 0 disables polling. Default 15s (matches connector heartbeat). */
   pollIntervalMs?: number;
 }
 
@@ -111,39 +101,35 @@ async function parseStatusJson<T>(response: Response, label: string): Promise<T>
   throw new Error(`${label} konnte nicht geladen werden.`);
 }
 
-function isLiveConnector(connector: ConnectorStatusPayload["connectors"][number]): boolean {
-  return !connector.disabled && (connector.status === "online" || connector.status === "degraded");
-}
+function buildInferenceInputFromAdmin(admin: AdminStatusPayload) {
+  if (admin.rtx) {
+    return {
+      enabled: admin.inference?.enabled ?? true,
+      online: admin.rtx.ready,
+      urlAllowed: true,
+      message: admin.rtx.message,
+      offlineReason:
+        admin.rtx.connectorDegraded && admin.rtx.connectorLastError
+          ? admin.rtx.connectorLastError
+          : admin.rtx.agentStatus === "error" || admin.rtx.agentStatus === "unreachable"
+            ? admin.rtx.message
+            : undefined,
+      degraded: admin.rtx.connectorDegraded,
+    };
+  }
 
-function connectorHasLocalLlm(payload: ConnectorStatusPayload | null): boolean {
-  return Boolean(
-    payload?.connectors.some(
-      (connector) =>
-        isLiveConnector(connector) &&
-        connector.capabilities.includes("llm_local") &&
-        connector.models.some(
-          (model) => model.enabledForUwe !== false && model.modelType !== "embedding",
-        ),
-    ),
-  );
-}
-
-function connectorModelCount(payload: ConnectorStatusPayload | null): number {
   return (
-    payload?.connectors.reduce(
-      (count, connector) =>
-        isLiveConnector(connector)
-          ? count + connector.models.filter((model) => model.enabledForUwe !== false).length
-          : count,
-      0,
-    ) ?? 0
+    admin.inference ?? {
+      enabled: false,
+      online: false,
+    }
   );
 }
 
 export function useAiPromptCapabilities(
   options: UseAiPromptCapabilitiesOptions = {},
 ): UseAiPromptCapabilitiesResult {
-  const { worldSlug, pageSlug, pollIntervalMs = 30_000 } = options;
+  const { worldSlug, pageSlug, pollIntervalMs = 15_000 } = options;
 
   const [caps, setCaps] = useState<AiPromptCapabilities>({
     ...DEFAULT_CAPS,
@@ -158,10 +144,9 @@ export function useAiPromptCapabilities(
 
   const loadStatus = useCallback(async () => {
     try {
-      const [adminRes, settingsRes, connectorsRes] = await Promise.all([
+      const [adminRes, settingsRes] = await Promise.all([
         fetch(studioApiUrl("/api/admin/status")),
         fetch(studioApiUrl("/api/ai/settings")),
-        fetch(studioApiUrl("/api/admin/connectors")),
       ]);
 
       if (!settingsRes.ok) {
@@ -180,39 +165,13 @@ export function useAiPromptCapabilities(
       const admin = await parseStatusJson<AdminStatusPayload>(adminRes, "Admin-Status");
       const settingsData = (await settingsRes.json()) as { settings: AiBrainSettings };
       const settings = settingsData.settings;
-      const connectors = connectorsRes.ok
-        ? ((await connectorsRes.json()) as ConnectorStatusPayload)
-        : null;
 
       const cloudAvailable =
         !settings.localOnly &&
         settings.providers.some((p) => !p.isLocal && p.enabled && p.hasApiKey);
 
-      const connectorLocalLlmReady = connectorHasLocalLlm(connectors);
-      const localModelCount = connectorModelCount(connectors);
-
-      const inferenceInput = connectorLocalLlmReady
-        ? {
-            enabled: true,
-            online: true,
-            urlAllowed: true,
-            message: `RTX Connector bereit (${localModelCount} Modell(e)).`,
-          }
-        : admin.rtx
-          ? {
-              enabled: admin.inference?.enabled ?? true,
-              online: admin.rtx.online,
-              urlAllowed: true,
-              message: admin.rtx.message,
-              offlineReason:
-                admin.rtx.agentStatus === "error" || admin.rtx.agentStatus === "unreachable"
-                  ? admin.rtx.message
-                  : undefined,
-            }
-          : admin.inference ?? { enabled: false, online: false };
-
       const nextCaps = buildAiPromptCapabilities({
-        inference: inferenceInput,
+        inference: buildInferenceInputFromAdmin(admin),
         cloudAvailable,
         brainLocal: (admin.brain?.enabled ?? false) && (admin.brain?.ok ?? false),
         hasCurrentObject: Boolean(worldSlug && pageSlug),

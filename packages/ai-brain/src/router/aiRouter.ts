@@ -35,7 +35,7 @@ import { buildRouterContext } from "./context/contextBuilder";
 
 import { createBrainRetrievalAdapter } from "./context/brainRetrieval";
 
-import { checkRtxHealth } from "./health/rtxHealthcheck";
+import { checkRtxReadiness } from "./health/rtxReadiness";
 
 import {
 
@@ -270,12 +270,15 @@ export async function resolveProviderRoute(
 
   apiKeyStore: ApiKeyStore,
 
-  options?: { useMock?: boolean; cloudProviderId?: AiProviderId },
+  options?: { useMock?: boolean; cloudProviderId?: AiProviderId; prisma?: PrismaClient },
 
 ): Promise<ProviderResolution> {
   validateProviderContextCombination(providerMode, contextMode);
 
-  const rtxHealth = await checkRtxHealth({ useMock: options?.useMock });
+  const rtxHealth = await checkRtxReadiness({
+    useMock: options?.useMock,
+    prisma: options?.prisma,
+  });
 
   const rtxOnline = rtxHealth.ready;
 
@@ -469,6 +472,8 @@ export async function routeAiRequest(
 
       cloudProviderId: request.cloudProviderId,
 
+      prisma: deps.prisma ?? sharedPrisma,
+
     },
 
   );
@@ -479,7 +484,10 @@ export async function routeAiRequest(
 
 
 
-  const rtxHealth = await checkRtxHealth({ useMock: request.useMock });
+  const rtxHealth = await checkRtxReadiness({
+    useMock: request.useMock,
+    prisma: deps.prisma ?? sharedPrisma,
+  });
 
   let model = resolveModel(request, resolution, rtxHealth.defaultModel);
 
