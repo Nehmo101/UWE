@@ -76,6 +76,7 @@ export interface AtlasStaticExportPayload {
     y: number;
     scale: number;
     rotation: number;
+    style: unknown;
     linkedPageId: string | null;
     layer: number;
   }>;
@@ -202,6 +203,7 @@ export async function writeAtlasStaticBundle(
       y: object.y,
       scale: object.scale,
       rotation: object.rotation,
+      style: object.style ?? null,
       linkedPageId: object.linkedPageId,
       layer: object.layer,
     })),

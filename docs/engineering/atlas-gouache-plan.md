@@ -1,6 +1,10 @@
 # Atlas — Gouache-Redesign & CoK-Feature-Plan
 
-> Status: **Entwurf / Owner-Freigabe ausstehend** · Umfang: Umsetzungsplan, **kein Code**.
+> Status: **Phase 1 umgesetzt** (Gouache-Asset-Engine, per-Objekt `style` mit
+> Liniendicke + Unschärfe, Untergrund-Intensität, Editor- & Portal-Rendering).
+> Offen: `plot`-Fill-Workflow, Settlement-Generator, Static-Viewer-Parität,
+> größere Asset-Bibliothek — siehe [atlas-follow-ups.md](atlas-follow-ups.md).
+> Ursprünglicher Umfang: Umsetzungsplan.
 > Kontext: Annäherung des Atlas-Editors an [Canvas of Kings](https://store.steampowered.com/app/2498570/Canvas_of_Kings/) — gemalte Assets, selbstfüllende Flächen, direkte Objektgriffe.
 > Verwandt: [atlas-cok-gap-analysis.md](atlas-cok-gap-analysis.md) · [atlas-follow-ups.md](atlas-follow-ups.md)
 

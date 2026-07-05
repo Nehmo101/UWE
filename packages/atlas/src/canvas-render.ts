@@ -32,6 +32,47 @@ export function roundedRectPath(
   ctx.closePath();
 }
 
+/**
+ * Adjust the saturation/depth of a `#rrggbb` colour by an intensity factor.
+ * `1` = unchanged, `<1` = paler/washed-out, `>1` = more saturated & slightly
+ * deeper. Non-hex inputs are returned unchanged. Drives the per-biome
+ * "Untergrund-Intensität" control.
+ */
+export function applyColorIntensity(color: string, factor: number): string {
+  if (factor === 1 || !/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  const n = parseInt(color.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255,
+    g = ((n >> 8) & 255) / 255,
+    b = (n & 255) / 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b),
+    l = (max + min) / 2;
+  let h = 0,
+    s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  const s2 = Math.max(0, Math.min(1, s * factor));
+  const l2 = Math.max(0, Math.min(1, l - (factor - 1) * 0.06));
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l2 < 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
+  const p = 2 * l2 - q;
+  const to = (t: number) => Math.round(hue2rgb(p, q, t) * 255);
+  return `rgb(${to(h + 1 / 3)},${to(h)},${to(h - 1 / 3)})`;
+}
+
 /** Options for {@link paintTerrainBlobs}. */
 export interface PaintTerrainBlobsOptions {
   /** Number of tile columns. */
@@ -46,6 +87,8 @@ export interface PaintTerrainBlobsOptions {
   fillFor: (biome: string) => string;
   /** Corner radius relative to the tile edge (0..0.5, default 0.4). */
   radiusRatio?: number;
+  /** Optional per-biome intensity factor (1 = unchanged). */
+  intensityFor?: (biome: string) => number;
 }
 
 /**
@@ -58,14 +101,16 @@ export function paintTerrainBlobs(
   ctx: CanvasRenderingContext2D,
   opts: PaintTerrainBlobsOptions,
 ): void {
-  const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4 } = opts;
+  const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const biome = getCell(c, r);
       if (!biome) continue;
       const { x, y, w, h } = tileRect(c, r);
       const radius = Math.min(w, h) * radiusRatio;
-      ctx.fillStyle = fillFor(biome);
+      ctx.fillStyle = intensityFor
+        ? applyColorIntensity(fillFor(biome), intensityFor(biome))
+        : fillFor(biome);
 
       roundedRectPath(ctx, x, y, w, h, radius);
       ctx.fill();

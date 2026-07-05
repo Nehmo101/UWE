@@ -671,6 +671,7 @@ export async function saveAtlasObjectsAction(
     y: number;
     scale?: number;
     rotation?: number;
+    style?: unknown;
     layer?: number;
     visibility?: string;
   }
@@ -704,6 +705,7 @@ export async function saveAtlasObjectsAction(
           y: obj.y,
           scale: obj.scale,
           rotation: obj.rotation,
+          style: obj.style as CreateAtlasFeatureInput["style"],
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as UpdateAtlasNodeInput["visibility"],
         });
@@ -716,6 +718,7 @@ export async function saveAtlasObjectsAction(
           y: obj.y,
           scale: obj.scale,
           rotation: obj.rotation,
+          style: obj.style as CreateAtlasFeatureInput["style"],
           layer: obj.layer,
           visibility: (obj.visibility ?? "dm_only") as CreateAtlasFeatureInput["visibility"],
         });
