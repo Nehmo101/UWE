@@ -3,6 +3,7 @@ import {
   createAuthService,
   createPrismaClient,
   createUweRepository,
+  disconnectPrismaClientIfOwned,
 } from "@uwe/database/server";
 import type { AccessContext } from "@uwe/auth";
 import type { SafeUser } from "@uwe/auth";
@@ -35,10 +36,12 @@ export async function getCurrentUser() {
 
   const db = getDb();
   const auth = createAuthService(db);
-  const session = await auth.getSessionByToken(token);
-  await db.$disconnect();
-
-  return session?.user ?? null;
+  try {
+    const session = await auth.getSessionByToken(token);
+    return session?.user ?? null;
+  } finally {
+    await disconnectPrismaClientIfOwned(db);
+  }
 }
 
 export async function getUserFromRequestCookieHeader(
@@ -64,7 +67,7 @@ export async function getUserFromRequestCookieHeader(
     const session = await auth.getSessionByToken(decodeURIComponent(token));
     return session?.user ?? null;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }
 
@@ -88,7 +91,7 @@ export async function getAccessContextForWorld(
     preview: previewAsUserId ? { previewAsUserId } : undefined,
   });
 
-  await db.$disconnect();
+  await disconnectPrismaClientIfOwned(db);
   return ctx;
 }
 
@@ -96,9 +99,11 @@ export async function listAuthWorlds() {
   const user = await getCurrentUser();
   const db = getDb();
   const auth = createAuthService(db);
-  const worlds = await auth.listAccessibleWorldsForUser(user?.id ?? null);
-  await db.$disconnect();
-  return worlds;
+  try {
+    return await auth.listAccessibleWorldsForUser(user?.id ?? null);
+  } finally {
+    await disconnectPrismaClientIfOwned(db);
+  }
 }
 
 export async function listPortalWorlds() {
@@ -134,9 +139,11 @@ export async function assertWorldReadable(
 export async function getWorldPlayers(worldSlug: string) {
   const db = getDb();
   const auth = createAuthService(db);
-  const players = await auth.listWorldPlayers(worldSlug);
-  await db.$disconnect();
-  return players;
+  try {
+    return await auth.listWorldPlayers(worldSlug);
+  } finally {
+    await disconnectPrismaClientIfOwned(db);
+  }
 }
 
 export async function canUsePreview(worldSlug: string): Promise<boolean> {

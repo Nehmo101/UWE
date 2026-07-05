@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
-import { getAppRepository, getSystemSettingsSnapshot, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { getAppRepository, getSystemSettingsSnapshotSafe, resolveThemePreferencesForScope } from "@uwe/database/server";
 import {
   ThemeBootstrapScript,
   ThemeDocumentSync,
@@ -63,10 +63,14 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const pathname = headersList.get("x-uwe-pathname") ?? "/";
-  await enforceStudioMaintenance(pathname);
+  try {
+    await enforceStudioMaintenance(pathname);
+  } catch {
+    // Cold-start DB/auth races must not take down the root layout.
+  }
   await enforceStudioPageAuth(pathname);
 
-  const { settings, updatedAt } = await getSystemSettingsSnapshot();
+  const { settings, updatedAt } = await getSystemSettingsSnapshotSafe();
   const serverThemePreferences = toUweThemePreferences(
     resolveThemePreferencesForScope(settings.app, "studio"),
     "studio",

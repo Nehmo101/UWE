@@ -3,7 +3,14 @@
  * Import from `@uwe/database/server` in Next.js route handlers and server components.
  */
 
-export { createPrismaClient, prisma, resolveDatabaseUrl } from "./client";
+export {
+  createPrismaClient,
+  disconnectPrismaClientIfOwned,
+  getSharedPrismaClient,
+  isSharedPrismaClient,
+  prisma,
+  resolveDatabaseUrl,
+} from "./client";
 export type { PrismaClient } from "./client";
 export type { Prisma } from "./generated/prisma/client";
 
@@ -1152,6 +1159,7 @@ export {
   getSystemSettings,
   getSystemSettingsForClient,
   getSystemSettingsSnapshot,
+  getSystemSettingsSnapshotSafe,
   buildAppSettingsFromThemePreferences,
   DEFAULT_SYSTEM_SETTINGS,
   BACKGROUND_PATTERN_VALUES,

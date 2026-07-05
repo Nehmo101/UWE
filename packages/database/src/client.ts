@@ -48,7 +48,33 @@ function createPostgresClient(url: string): PostgresPrismaClient {
   return new PostgresPrismaClient({ adapter });
 }
 
+/** Process-wide SQLite singleton — avoids lock storms from per-request clients. */
+export function getSharedPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createSqliteClient(resolveDatabaseUrl());
+  }
+
+  return globalForPrisma.prisma;
+}
+
+export function isSharedPrismaClient(client: PrismaClient): boolean {
+  return client === globalForPrisma.prisma;
+}
+
+export async function disconnectPrismaClientIfOwned(client: PrismaClient): Promise<void> {
+  if (!isSharedPrismaClient(client)) {
+    await client.$disconnect();
+  }
+}
+
 export function createPrismaClient(databaseUrl?: string): PrismaClient {
+  if (!databaseUrl) {
+    const url = resolveDatabaseUrl();
+    if (!isPostgresDatabaseUrl(url)) {
+      return getSharedPrismaClient();
+    }
+  }
+
   const url = resolveDatabaseUrl(databaseUrl);
 
   if (isPostgresDatabaseUrl(url)) {
@@ -58,10 +84,6 @@ export function createPrismaClient(databaseUrl?: string): PrismaClient {
   return createSqliteClient(url);
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = getSharedPrismaClient();
 
 export { SqlitePrismaClient, PostgresPrismaClient };

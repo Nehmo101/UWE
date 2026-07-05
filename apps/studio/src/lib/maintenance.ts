@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   evaluateMaintenanceGate,
-  getSystemSettingsSnapshot,
+  getSystemSettingsSnapshotSafe,
   resolveMaintenanceGateContext,
 } from "@uwe/database/server";
 import { getCurrentAuthUser } from "./auth";
@@ -11,13 +11,20 @@ export async function enforceStudioMaintenance(pathname: string): Promise<void> 
     return;
   }
 
-  const [{ settings }, user] = await Promise.all([
-    getSystemSettingsSnapshot(),
-    getCurrentAuthUser(),
-  ]);
+  let settingsSnapshot: Awaited<ReturnType<typeof getSystemSettingsSnapshotSafe>>;
+  let user: Awaited<ReturnType<typeof getCurrentAuthUser>> = null;
+
+  try {
+    [settingsSnapshot, user] = await Promise.all([
+      getSystemSettingsSnapshotSafe(),
+      getCurrentAuthUser(),
+    ]);
+  } catch {
+    return;
+  }
 
   const decision = evaluateMaintenanceGate({
-    settings,
+    settings: settingsSnapshot.settings,
     surface: "studio",
     pathname,
     context: resolveMaintenanceGateContext({ userRole: user?.role ?? null }),

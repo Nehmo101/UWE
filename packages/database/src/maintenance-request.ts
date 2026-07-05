@@ -1,6 +1,10 @@
 import { SESSION_COOKIE_NAME, type UweRole } from "@uwe/auth";
 import { createAuthService } from "./auth";
-import { createPrismaClient, type PrismaClient } from "./client";
+import {
+  createPrismaClient,
+  disconnectPrismaClientIfOwned,
+  type PrismaClient,
+} from "./client";
 import {
   evaluateMaintenanceGate,
   resolveMaintenanceGateContext,
@@ -46,7 +50,7 @@ export async function evaluateMaintenanceForRequest(input: {
     });
   } finally {
     if (ownsConnection) {
-      await db.$disconnect();
+      await disconnectPrismaClientIfOwned(db);
     }
   }
 }

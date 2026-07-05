@@ -12,5 +12,11 @@ export async function register() {
     // are effective from the first request (env stays the fallback). Never throws.
     const { refreshDeploymentRuntimeOverrides } = await import("@uwe/database/deployment");
     await refreshDeploymentRuntimeOverrides();
+    const { getSharedPrismaClient } = await import("@uwe/database/server");
+    try {
+      await getSharedPrismaClient().systemSettings.findFirst({ select: { id: true } });
+    } catch {
+      // Boot-time DB not ready — first layout load uses safe fallbacks.
+    }
   }
 }
