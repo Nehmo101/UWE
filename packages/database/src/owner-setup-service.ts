@@ -493,6 +493,14 @@ async function buildRtxSection(
   env: NodeJS.ProcessEnv,
 ): Promise<SetupSectionStatus> {
   const connectors = await createConnectorService(db).listConnectors();
+  const liveConnectors = connectors.filter(
+    (connector) =>
+      !connector.disabled &&
+      (connector.status === "online" || connector.status === "degraded"),
+  );
+  const connectorLlmReady = liveConnectors.some((connector) =>
+    connector.capabilities.includes("llm_local"),
+  );
   const onlineConnectors = connectors.filter((c) => c.status === "online").length;
   const inference = resolveInferenceEnvSummary(env);
 
@@ -501,7 +509,7 @@ async function buildRtxSection(
       id: "connectors",
       label: "RTX Host Connectors",
       configured: connectors.length > 0,
-      displayValue: `${connectors.length} registriert · ${onlineConnectors} online`,
+      displayValue: `${connectors.length} registriert · ${liveConnectors.length} live (${onlineConnectors} online)`,
       source: "db",
       editable: true,
       href: "/system/rtx-connector",
@@ -547,8 +555,10 @@ async function buildRtxSection(
   const nextSteps: string[] = [];
   if (connectors.length === 0) {
     nextSteps.push("RTX Host Connector anlegen unter RTX & Hardware → Connector.");
-  } else if (onlineConnectors === 0) {
+  } else if (liveConnectors.length === 0) {
     nextSteps.push("Connector-Token im RTX-Client eintragen und Dienst starten.");
+  } else if (!connectorLlmReady) {
+    nextSteps.push("Connector läuft, aber lokale LLM-Fähigkeit fehlt — Ollama auf dem RTX-PC prüfen.");
   }
   if (inference.enabled) {
     nextSteps.push("Inference-Endpunkt per RTX-Test prüfen.");
@@ -562,16 +572,24 @@ async function buildRtxSection(
 
   const level: SetupSectionLevel = !admin.rtxExposure.ok
     ? "error"
-    : connectors.length === 0 || !inference.configured
-      ? "degraded"
-      : "ok";
+    : connectorLlmReady
+      ? "ok"
+      : connectors.length === 0 || !inference.configured
+        ? "degraded"
+        : "degraded";
+
+  const statusMessage = connectorLlmReady
+    ? "RTX Host Connector meldet lokale KI-Fähigkeit."
+    : liveConnectors.length > 0
+      ? "Connector verbunden, aber lokale Inference noch nicht bereit."
+      : admin.rtxExposure.message;
 
   return {
     id: "rtx",
     title: "RTX & Hardware",
     level,
     statusLabel: level === "ok" ? "Verbunden" : level === "degraded" ? "Teilweise" : "Warnung",
-    message: admin.rtxExposure.message,
+    message: statusMessage,
     nextSteps,
     settings: settingsItems,
     testAction: "rtx",

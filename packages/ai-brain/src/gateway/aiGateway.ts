@@ -18,11 +18,13 @@ import {
   AI_FEATURE_PERMISSION_LABELS,
   MASTER_ADMIN_PERMISSIONS,
   resolveRequiredPermission,
-  isMasterAdminRole, resolveFeatureModelOverride,
+  isMasterAdminRole,
+  resolveFeatureModelOverride,
+  prisma as sharedPrisma,
 } from "@uwe/database/server";
 import type { AiRouterRequest, AiRouterResult } from "../router/types";
 import { routeAiRequest, type AiRouterDeps } from "../router/aiRouter";
-import { checkRtxHealth } from "../router/health/rtxHealthcheck";
+import { checkRtxReadiness } from "../router/health/rtxReadiness";
 import { createApiKeyStoreFromEnv } from "../settings";
 import type { AiProviderMode } from "../router/types";
 import { AiRouterError } from "../router/types";
@@ -603,7 +605,10 @@ async function routeAiRequestWithGatewayRouting(
 
   if (options.routingMode === "LOCAL_ONLY" || !options.cloudFallbackAllowed) {
     if (request.providerMode === "auto") {
-      const rtxHealth = await checkRtxHealth({ useMock: request.useMock });
+      const rtxHealth = await checkRtxReadiness({
+        useMock: request.useMock,
+        prisma: deps.prisma ?? sharedPrisma,
+      });
       if (!rtxHealth.ready) {
         throw new AiRouterError(
           rtxHealth.message ||
@@ -616,7 +621,10 @@ async function routeAiRequestWithGatewayRouting(
 
   // Standard path — routeAiRequest handles auto local→cloud when allowed
   if (request.providerMode === "auto" && !options.cloudFallbackAllowed) {
-    const rtxHealth = await checkRtxHealth({ useMock: request.useMock });
+    const rtxHealth = await checkRtxReadiness({
+      useMock: request.useMock,
+      prisma: deps.prisma ?? sharedPrisma,
+    });
     if (!rtxHealth.ready) {
       throw new AiRouterError(
         "RTX offline und Cloud-Fallback nicht erlaubt. Bitte RTX prüfen oder Master-Admin kontaktieren.",
@@ -635,14 +643,14 @@ export async function getAiGatewayStatusForClient(
   config: Omit<AiGatewayConfigRecord, "updatedAt"> & { updatedAt: string };
   providers: Awaited<ReturnType<AiGatewayService["listCloudProviders"]>>;
   budget: Awaited<ReturnType<AiGatewayService["getBudgetStatus"]>>;
-  rtxHealth: Awaited<ReturnType<typeof checkRtxHealth>>;
+  rtxHealth: Awaited<ReturnType<typeof checkRtxReadiness>>;
 }> {
   const gateway = gatewayService ?? createAiGatewayService();
   const [config, providers, budget, rtxHealth] = await Promise.all([
     gateway.getConfig(),
     gateway.listCloudProviders(),
     gateway.getBudgetStatus(),
-    checkRtxHealth(),
+    checkRtxReadiness({ prisma: sharedPrisma }),
   ]);
 
   return {
@@ -660,7 +668,7 @@ export async function runAiGatewayFallbackTest(
   deps: AiGatewayDeps,
   user: AiGatewayUserContext,
 ): Promise<{ localOk: boolean; cloudOk: boolean; message: string }> {
-  const rtxHealth = await checkRtxHealth();
+  const rtxHealth = await checkRtxReadiness({ prisma: deps.prisma ?? sharedPrisma });
   let cloudOk = false;
 
   try {
