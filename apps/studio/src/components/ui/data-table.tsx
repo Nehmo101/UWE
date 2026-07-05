@@ -46,6 +46,8 @@ export interface DataTableProps<TData, TValue> {
     selectedIds: string[];
     clearSelection: () => void;
   }) => React.ReactNode;
+  /** Client-side pagination (default: true). */
+  enablePagination?: boolean;
 }
 
 function readStoredColumnVisibility(key: string): VisibilityState {
@@ -81,6 +83,7 @@ export function DataTable<TData, TValue>({
   enableRowSelection = false,
   getRowId,
   renderBatchActions,
+  enablePagination = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
@@ -145,8 +148,10 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize } },
+    ...(enablePagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    initialState: enablePagination
+      ? { pagination: { pageSize } }
+      : { pagination: { pageSize: Math.max(data.length, 1) } },
   });
 
   const hideableColumns = table.getAllColumns().filter((column) => column.getCanHide());
@@ -256,7 +261,7 @@ export function DataTable<TData, TValue>({
         </table>
       </div>
 
-      {table.getPageCount() > 1 ? (
+      {enablePagination && table.getPageCount() > 1 ? (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Seite {table.getState().pagination.pageIndex + 1} von {table.getPageCount()}

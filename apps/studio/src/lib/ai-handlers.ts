@@ -234,7 +234,7 @@ export async function postGenerate(
 
 export async function postSave(body: {
   proposalId: string;
-  mode: "idea" | "content_block" | "player_recap";
+  mode: "idea" | "content_block" | "player_recap" | "replace_content";
   title?: string;
   content?: string;
   sessionId?: string;

@@ -12,7 +12,7 @@ export type ExtendedVisibility =
 /** Normalized lifecycle status mapped from publishStatus. */
 export type ContentStatus = "draft" | "ready" | "published" | "archived";
 
-export type PublishStatusValue = "draft" | "internal" | "published" | "archived";
+export type PublishStatusValue = "draft" | "internal" | "review" | "published" | "archived";
 
 export type SecretLevel = "none" | "spoiler" | "dm_secret";
 
@@ -51,6 +51,7 @@ export interface ContentBlockAccessFields {
 export function mapPublishStatusToContentStatus(publishStatus: PublishStatusValue): ContentStatus {
   switch (publishStatus) {
     case "draft":
+    case "review":
       return "draft";
     case "internal":
       return "ready";

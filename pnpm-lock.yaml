@@ -313,6 +313,9 @@ importers:
       '@uwe/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@uwe/page-ai-review':
+        specifier: workspace:*
+        version: link:../../packages/page-ai-review
       '@uwe/player-hub':
         specifier: workspace:*
         version: link:../../packages/player-hub
@@ -837,6 +840,28 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.24
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/page-ai-review:
+    dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../ai-brain
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
       '@uwe/config':
         specifier: workspace:*
         version: link:../config

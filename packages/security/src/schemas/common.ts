@@ -79,6 +79,8 @@ export const AI_TASK_TYPES = [
   "create_encounter",
   "create_knowledge_text",
   "improve_lore_text",
+  "suggest_page_tags",
+  "page_ai_convert",
   "prepare_canon_check",
   "prepare_next_session",
   "create_player_handout",
@@ -148,7 +150,7 @@ export const lifeBrainChatBodySchema = z.object({
 
 export const aiSaveBodySchema = z.object({
   proposalId: idSchema,
-  mode: z.enum(["idea", "content_block", "player_recap"]),
+  mode: z.enum(["idea", "content_block", "player_recap", "replace_content"]),
   title: optionalString,
   content: optionalString,
   sessionId: idSchema.optional(),

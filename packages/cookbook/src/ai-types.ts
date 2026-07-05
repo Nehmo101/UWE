@@ -22,6 +22,8 @@ export type CookbookAiTaskType =
   | "create_encounter"
   | "create_knowledge_text"
   | "improve_lore_text"
+  | "suggest_page_tags"
+  | "page_ai_convert"
   | "prepare_canon_check"
   | "prepare_next_session"
   | "create_player_handout"

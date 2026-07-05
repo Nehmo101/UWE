@@ -1,5 +1,10 @@
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
+import {
+  capturePageContentReplaceUndo,
+  restorePageContentReplaceUndo,
+  type PageContentReplaceSnapshot,
+} from "./undo-page-content";
 import type {
   CanonicalStatus,
   ContentBlockType,
@@ -19,6 +24,7 @@ import type {
 export type UndoOperation =
   | "page.update"
   | "page.delete"
+  | "page.content_replace"
   | "block.update"
   | "block.delete"
   | "ai.page.create"
@@ -43,6 +49,7 @@ interface PageSnapshot {
     visibility: Visibility;
     publishStatus: PublishStatus;
     canonicalStatus: CanonicalStatus;
+    aiReviewedAt?: Date | null;
     tags: unknown;
     aliases: unknown;
   };
@@ -154,6 +161,7 @@ export class UndoService {
         visibility: page.visibility,
         publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
+        aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
         aliases: page.aliases,
       },
@@ -192,6 +200,7 @@ export class UndoService {
         visibility: page.visibility,
         publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
+        aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
         aliases: page.aliases,
       },
@@ -216,6 +225,11 @@ export class UndoService {
         snapshot: toPrismaJsonValue(snapshot),
       },
     });
+  }
+
+  /** Snapshot page body blocks before KI review content replacement. */
+  async capturePageContentReplace(pageId: string) {
+    return capturePageContentReplaceUndo(this.db, pageId);
   }
 
   /** Snapshot a content block before an update or deletion. */
@@ -530,6 +544,13 @@ export class UndoService {
       });
 
       return { ok: true, message: `Seite „${data.title}“ wiederhergestellt.` };
+    }
+
+    if (operation === "page.content_replace" && snapshot.blocks) {
+      return restorePageContentReplaceUndo(
+        this.db,
+        snapshot as unknown as PageContentReplaceSnapshot,
+      );
     }
 
     const existing = await this.db.page.findUnique({ where: { id: data.id } });

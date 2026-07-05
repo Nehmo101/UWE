@@ -7,10 +7,11 @@ import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import type { PageBulkOperation } from "@uwe/database/page-bulk";
 import { bulkUpdatePagesAction } from "@/app/page-bulk-actions";
 import { PageBatchConvertPanel } from "./PageBatchConvertPanel";
+import { PageBatchAiPanel } from "./PageBatchAiPanel";
+import type { PageAiReviewAction } from "@uwe/page-ai-review";
 
-/** "convert" ist keine deklarative Feldänderung (PageBulkOperation), sondern
- * eine eigene Vorschau/Anwenden-Aktion — siehe PageBatchConvertPanel. */
-type OpKind = PageBulkOperation["kind"] | "convert";
+/** "convert" und KI-Aktionen sind keine deklarativen Feldänderungen — eigene Panels. */
+type OpKind = PageBulkOperation["kind"] | "convert" | "ki_format" | "ki_tags" | "ki_convert";
 
 const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "visibility", label: "Sichtbarkeit setzen" },
@@ -20,6 +21,9 @@ const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "removeTags", label: "Tags entfernen" },
   { value: "campaign", label: "Kampagne zuweisen" },
   { value: "convert", label: "Konvertieren" },
+  { value: "ki_format", label: "KI ausarbeiten / formatieren" },
+  { value: "ki_tags", label: "KI Tags" },
+  { value: "ki_convert", label: "KI Konvertierung" },
   { value: "delete", label: "Löschen" },
 ];
 
@@ -124,6 +128,8 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
       ? "inline-flex h-8 items-center rounded-md bg-destructive px-3 text-sm text-destructive-foreground hover:opacity-90 disabled:opacity-60"
       : "inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60";
 
+  const isPanelOp = kind === "convert" || kind === "ki_format" || kind === "ki_tags" || kind === "ki_convert";
+
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex w-full flex-wrap items-center gap-2">
@@ -213,7 +219,7 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
           </select>
         )}
 
-        {kind !== "convert" && (
+        {kind !== "convert" && !isPanelOp && (
           <button type="button" className={applyClass} onClick={handleApply} disabled={loading}>
             {loading ? "Wird angewendet…" : "Anwenden"}
           </button>
@@ -227,8 +233,10 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
           Auswahl aufheben
         </button>
 
-        {kind !== "convert" && error && <span className="text-sm text-destructive">{error}</span>}
-        {kind !== "convert" && message && !error && (
+        {kind !== "convert" && !isPanelOp && error && (
+          <span className="text-sm text-destructive">{error}</span>
+        )}
+        {kind !== "convert" && !isPanelOp && message && !error && (
           <span className="text-sm text-muted-foreground">✓ {message}</span>
         )}
       </div>
@@ -237,6 +245,21 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
         <PageBatchConvertPanel
           worldSlug={worldSlug}
           selectedIds={selectedIds}
+          clearSelection={clearSelection}
+        />
+      )}
+
+      {(kind === "ki_format" || kind === "ki_tags" || kind === "ki_convert") && (
+        <PageBatchAiPanel
+          worldSlug={worldSlug}
+          selectedIds={selectedIds}
+          action={
+            (kind === "ki_format"
+              ? "format"
+              : kind === "ki_tags"
+                ? "tags"
+                : "convert") satisfies PageAiReviewAction
+          }
           clearSelection={clearSelection}
         />
       )}

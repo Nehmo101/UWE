@@ -114,6 +114,7 @@ export async function syncAiProposalReview(
     title: string;
     summary?: string;
     resultText?: string;
+    originalContent?: string;
     proposedByUserId?: string | null;
     targetHref?: string | null;
   },
@@ -126,7 +127,10 @@ export async function syncAiProposalReview(
     sourceId: input.proposalId,
     title: input.title,
     summary: input.summary ?? "",
-    diff: input.resultText ? { after: input.resultText } : null,
+    diff:
+      input.originalContent || input.resultText
+        ? { before: input.originalContent ?? "", after: input.resultText ?? "" }
+        : null,
     proposedByUserId: input.proposedByUserId,
     targetHref: input.targetHref,
   });

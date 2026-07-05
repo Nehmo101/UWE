@@ -18,7 +18,7 @@ import {
 import { GameSessionService } from "./game-session";
 import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
-import { toPrismaJsonValue } from "./json-utils";
+import { toPrismaJsonValue, parseStringArray } from "./json-utils";
 import { createUndoService } from "./undo-service";
 import { syncAiProposalReview } from "./review-bridge";
 import { createWorldEventService } from "./world-event-service";
@@ -110,6 +110,8 @@ export class AiReviewService {
       sessionId: input.sessionId,
       content: input.resultText,
       title: input.title,
+      originalContent: input.originalContent,
+      previousPublishStatus: input.previousPublishStatus,
     });
     const suggestedMode = suggestApplyMode(input.taskType);
 
@@ -118,7 +120,7 @@ export class AiReviewService {
       data: { proposals: toPrismaJsonValue([patch]) },
     });
 
-    const proposal = await this.db.aiProposal.create({
+    const created = await this.db.aiProposal.create({
       data: {
         aiRunId: input.aiRunId,
         worldId: input.worldId,
@@ -128,16 +130,26 @@ export class AiReviewService {
         sourcePageId: input.pageId,
         sessionId: input.sessionId ?? null,
       },
-      include: { aiRun: true },
     });
 
+    const proposal = await this.db.aiProposal.findUniqueOrThrow({
+      where: { id: created.id },
+      include: { aiRun: { include: { world: true, page: true } } },
+    });
+
+    const originalContent = patch.payload.originalContent ?? input.originalContent ?? "";
     await syncAiProposalReview(this.db, {
       proposalId: proposal.id,
       worldId: input.worldId,
+      worldSlug: proposal.aiRun.world?.slug ?? null,
       title: input.title ?? `KI-Vorschlag (${input.taskType})`,
       summary: input.resultText.slice(0, 200),
       resultText: input.resultText,
+      originalContent,
       proposedByUserId: run.userId ?? null,
+      targetHref: proposal.aiRun.page
+        ? `${buildPageUrl(proposal.aiRun.world?.slug ?? "", proposal.aiRun.page.type, proposal.aiRun.page.slug)}/page-review/${proposal.aiRun.page.id}`
+        : null,
     });
 
     return {
@@ -691,6 +703,34 @@ export class AiReviewService {
         appliedTargetId = block.id;
         applySummary = `KI-Vorschlag als ContentBlock auf „${sourcePage.title}“ übernommen.`;
         targetHref = `${buildPageUrl(worldSlug, sourcePage.type, sourcePage.slug)}/edit`;
+      } else if (input.mode === "replace_content") {
+        undoEntryId = (await this.undo.capturePageContentReplace(sourcePage.id)).id;
+
+        await repo.replacePageBodyContent(sourcePage.id, content);
+
+        const pageUpdate: {
+          publishStatus: "draft";
+          aiReviewedAt: Date;
+          tags?: string[];
+        } = {
+          publishStatus: "draft",
+          aiReviewedAt: new Date(),
+        };
+
+        if (input.applyTags?.length) {
+          const existingTags = parseStringArray(sourcePage.tags);
+          pageUpdate.tags = [...new Set([...existingTags, ...input.applyTags])];
+        } else if (patch.payload.suggestedTags?.length) {
+          const existingTags = parseStringArray(sourcePage.tags);
+          pageUpdate.tags = [...new Set([...existingTags, ...patch.payload.suggestedTags])];
+        }
+
+        await repo.updatePage(sourcePage.id, pageUpdate);
+
+        appliedTargetType = "page";
+        appliedTargetId = sourcePage.id;
+        applySummary = `KI-Review für „${sourcePage.title}“ übernommen (Entwurf, KI-Reviewd).`;
+        targetHref = buildPageUrl(worldSlug, sourcePage.type, sourcePage.slug);
       } else {
         const sessionId = input.sessionId ?? proposal.sessionId;
         if (!sessionId) {
@@ -1159,5 +1199,7 @@ export type {
 export {
   allowedApplyModes,
   buildGeneratedPatch,
+  buildPageReviewPatch,
+  isPageReviewTaskType,
   suggestApplyMode,
 } from "./ai-proposal-types";

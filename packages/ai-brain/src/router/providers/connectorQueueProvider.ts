@@ -151,6 +151,8 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   create_encounter: "dnd",
   create_knowledge_text: "dnd",
   improve_lore_text: "dnd",
+  suggest_page_tags: "dnd",
+  page_ai_convert: "dnd",
   prepare_canon_check: "analysis",
   prepare_next_session: "dnd",
   create_player_handout: "dnd",

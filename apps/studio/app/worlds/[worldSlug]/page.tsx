@@ -15,6 +15,7 @@ import {
   NAV_CATEGORIES,
   NAV_CATEGORY_LABELS,
   parseStringArray,
+  prisma,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   type NavCategory,
@@ -22,6 +23,7 @@ import {
   type Visibility,
   type CanonicalStatus,
 } from "@uwe/database/server";
+import { createPageAiReviewService } from "@uwe/page-ai-review";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar, WikiPageTable, type WikiPageRow } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
@@ -69,6 +71,8 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     canonicalStatus,
   });
 
+  const openReviewCount = await createPageAiReviewService(prisma).countOpenReviews(worldSlug);
+
   const searchResults = q?.trim()
     ? await repo.search("dm", {
         query: q,
@@ -108,6 +112,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     questStatus: page.questStatus ?? null,
     tags: parseStringArray(page.tags),
     updatedAt: page.updatedAt.toISOString(),
+    aiReviewedAt: page.aiReviewedAt?.toISOString() ?? null,
   }));
 
   const campaignItems = campaignNavItems(worldBase, campaigns, campaignSlug);
@@ -116,6 +121,7 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
     <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
+      openReviewCount={openReviewCount}
       breadcrumb={<BreadcrumbTrail items={worldRootBreadcrumb(world.name, worldSlug)} />}
       contextPanel={
         <CampaignSidebar

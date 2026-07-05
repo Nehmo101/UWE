@@ -19,8 +19,12 @@ import {
 
 const SECTION = "Welt";
 
-export function worldNav(worldSlug: string): NavGroup[] {
+export function worldNav(worldSlug: string, openReviewCount?: number): NavGroup[] {
   const base = `/worlds/${worldSlug}`;
+  const reviewLabel =
+    openReviewCount && openReviewCount > 0
+      ? `Texte zur Review (${openReviewCount})`
+      : "Texte zur Review";
 
   return [
     {
@@ -45,6 +49,14 @@ export function worldNav(worldSlug: string): NavGroup[] {
       title: "Wiki",
       items: [
         item("world-pages", "Wiki / Seiten", base, "book-open", "Wiki", ["wiki", "seiten", "pages"]),
+        item(
+          "world-page-review",
+          reviewLabel,
+          `${base}/page-review`,
+          "file-search",
+          "Wiki",
+          ["review", "ki", "texte"],
+        ),
         item("world-new-page", "Neue Seite", `${base}/pages/new`, "file-plus", "Wiki", [
           "neu",
           "create",
@@ -231,8 +243,12 @@ function item(
 }
 
 /** World sidebar groups with active flags resolved for the current path. */
-export function worldSidebar(worldSlug: string, activePath: string): ResolvedNavGroup[] {
-  return resolveNavGroups(worldNav(worldSlug), activePath);
+export function worldSidebar(
+  worldSlug: string,
+  activePath: string,
+  openReviewCount?: number,
+): ResolvedNavGroup[] {
+  return resolveNavGroups(worldNav(worldSlug, openReviewCount), activePath);
 }
 
 /** Flat list of world nav items. */

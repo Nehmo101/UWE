@@ -143,6 +143,7 @@ export interface UpdatePageInput {
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
   tags?: string[];
   aliases?: string[];
+  aiReviewedAt?: Date | null;
 }
 
 export interface UpdateContentBlockInput {
@@ -314,6 +315,7 @@ export class UweRepository {
         questStatus: input.questStatus,
         tags: input.tags ? toJsonArray(input.tags) : undefined,
         aliases: input.aliases ? toJsonArray(input.aliases) : undefined,
+        aiReviewedAt: input.aiReviewedAt,
       },
       include: {
         contentBlocks: { orderBy: { sortOrder: "asc" } },
@@ -708,6 +710,52 @@ export class UweRepository {
       select: { sortOrder: true },
     });
     return (lastBlock?.sortOrder ?? -1) + 1;
+  }
+
+  /** Replace editable body text blocks with a single rich_text block. */
+  async replacePageBodyContent(pageId: string, content: string) {
+    const page = await this.db.page.findUnique({
+      where: { id: pageId },
+      include: { contentBlocks: { orderBy: { sortOrder: "asc" } } },
+    });
+    if (!page) throw new Error(`Seite ${pageId} nicht gefunden.`);
+
+    const textTypes = new Set<ContentBlockType>([
+      "rich_text",
+      "html",
+      "gm_note",
+      "player_text",
+      "ai_summary",
+    ]);
+    const textBlocks = page.contentBlocks.filter((block) => textTypes.has(block.type));
+    const nonTextBlocks = page.contentBlocks.filter((block) => !textTypes.has(block.type));
+
+    if (textBlocks.length > 0) {
+      const [primary, ...rest] = textBlocks;
+      await this.db.contentBlock.update({
+        where: { id: primary.id },
+        data: { content, type: "rich_text" },
+      });
+      if (rest.length > 0) {
+        await this.db.contentBlock.deleteMany({
+          where: { id: { in: rest.map((block) => block.id) } },
+        });
+      }
+    } else {
+      const nextSort =
+        nonTextBlocks.length > 0 ? Math.min(...nonTextBlocks.map((block) => block.sortOrder)) : 0;
+      await this.db.contentBlock.create({
+        data: {
+          pageId,
+          type: "rich_text",
+          sortOrder: nextSort,
+          content,
+          visibility: "dm_only",
+        },
+      });
+    }
+
+    return this.getPageById(pageId);
   }
 
   async createIdeaPage(input: {

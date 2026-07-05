@@ -173,6 +173,7 @@ export {
   PageTypeBadge,
   PlayerNoteStatusBadge,
   PublishBadge,
+  AiReviewedBadge,
   QuestStatusBadge,
   RevealStateBadge,
   RtxStatusBadge,

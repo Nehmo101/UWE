@@ -11,6 +11,7 @@ export interface WorldShellProps {
   breadcrumb?: React.ReactNode;
   contextPanel?: React.ReactNode;
   footer?: React.ReactNode;
+  openReviewCount?: number;
   children: React.ReactNode;
 }
 
@@ -21,12 +22,13 @@ export function WorldShell({
   breadcrumb,
   contextPanel,
   footer,
+  openReviewCount,
   children,
 }: WorldShellProps) {
   const pathname = usePathname() ?? `/worlds/${worldSlug}/dashboard`;
   return (
     <AppShell
-      groups={worldSidebar(worldSlug, pathname)}
+      groups={worldSidebar(worldSlug, pathname, openReviewCount)}
       commands={worldCommands(worldSlug)}
       brandLabel={worldName}
       brandHref={`/worlds/${worldSlug}/dashboard`}

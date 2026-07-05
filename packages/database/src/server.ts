@@ -632,6 +632,8 @@ export {
   createAiReviewService,
   allowedApplyModes,
   buildGeneratedPatch,
+  buildPageReviewPatch,
+  isPageReviewTaskType,
   suggestApplyMode,
 } from "./ai-review-service";
 

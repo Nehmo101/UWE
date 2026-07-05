@@ -13,6 +13,8 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   create_encounter: "Encounter erstellen",
   create_knowledge_text: "Wissenstext erstellen",
   improve_lore_text: "Lore verbessern",
+  suggest_page_tags: "Seiten-Tags vorschlagen",
+  page_ai_convert: "Seite KI-konvertieren",
   prepare_canon_check: "Kanonprüfung vorbereiten",
   prepare_next_session: "Nächste Session vorbereiten",
   create_player_handout: "Spieler-Handout erstellen",
@@ -57,6 +59,10 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Erstelle einen strukturierten Wissenstext aus dem Kontext. Schreibe als nutzbares Brain-Dokument mit Titel, Kurzfassung, gesicherten Fakten, offenen Fragen und klar markierten Ideen. Verändere Kanon nicht ungeprüft.",
   improve_lore_text:
     "Verbessere den Lore-Text stilistisch und strukturell, ohne Kanon-Fakten zu verändern.",
+  suggest_page_tags:
+    "Schlage passende Wiki-Tags für die Seite vor. Antworte NUR als JSON {\"tags\":[\"tag1\",\"tag2\"]}. Keine Kanon-Änderung.",
+  page_ai_convert:
+    "Konvertiere und formatiere den Seitentext einheitlich (Überschriften, Absätze, Wikilinks). Gib den vollständigen überarbeiteten Seitentext zurück — nur den Text, keine Meta-Kommentare.",
   prepare_canon_check:
     "Bereite eine Kanonprüfung vor: Liste Abweichungen, fehlende Quellen, widersprüchliche Aussagen und Empfehlungen zur Kanonisierung.",
   prepare_next_session:

@@ -7,6 +7,7 @@ import {
   createBrainStoreService,
   buildCaptureAiProposal,
   createCaptureTriageService,
+  combineBlockContent,
   createLifeAdminService,
   createMailService,
   createPersonalBrainService,
@@ -64,6 +65,7 @@ import {
   type CreateBackupOptions,
 } from "@uwe/backup";
 import { listStudioBackups } from "./backup-paths";
+import { createPageAiReviewService, type PageAiReviewJobPayload } from "@uwe/page-ai-review";
 
 export interface JobRunnerContext {
   jobs: JobService;
@@ -415,7 +417,12 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
 export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
   const payload = (ctx.job.payload ?? {}) as AiRunJobPayload &
     BrainActionJobPayload &
-    DeferredAiPromptJobPayload;
+    DeferredAiPromptJobPayload &
+    PageAiReviewJobPayload & {
+      pageReviewRefine?: boolean;
+      parentProposalId?: string;
+      refineUserPrompt?: string;
+    };
   if (payload.deferredAiPrompt) {
     return runDeferredAiPromptJob(ctx);
   }
@@ -524,6 +531,27 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       durationMs,
     });
 
+    const pageAiReview = createPageAiReviewService(prisma);
+
+    if (payload.pageReviewRefine && payload.parentProposalId) {
+      await pageAiReview.onRefineReady(
+        payload.parentProposalId,
+        result.text,
+        payload.refineUserPrompt ?? payload.userPrompt ?? "",
+      );
+      await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Verfeinerung abgeschlossen");
+      return {
+        aiRunId: completedRun.id,
+        runId: completedRun.id,
+        context,
+        result,
+        parentProposalId: payload.parentProposalId,
+      };
+    }
+
+    const originalContent =
+      payload.originalContent ?? combineBlockContent(page.contentBlocks);
+
     const { proposal } = await review.createProposalFromRun({
       aiRunId: completedRun.id,
       worldId: world.id,
@@ -531,7 +559,14 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       sessionId: payload.sessionId,
       taskType: payload.taskType,
       resultText: result.text,
+      originalContent,
+      previousPublishStatus: payload.previousPublishStatus ?? page.publishStatus,
+      title: payload.pageReview ? `Review: ${page.title}` : undefined,
     });
+
+    if (payload.pageReview) {
+      await pageAiReview.onProposalReady(proposal.id);
+    }
 
     await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Aufgabe abgeschlossen");
 

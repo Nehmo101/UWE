@@ -2,6 +2,7 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AiReviewedBadge,
   CanonicalBadge,
   PageTypeBadge,
   PublishBadge,
@@ -30,6 +31,7 @@ export interface WikiPageRow {
   questStatus?: QuestLifecycleStatus | null;
   tags: string[];
   updatedAt: string;
+  aiReviewedAt?: string | null;
 }
 
 const WIKI_TABLE_COLUMN_VISIBILITY_KEY = "uwe-wiki-page-table-columns";
@@ -81,7 +83,12 @@ const columns: ColumnDef<WikiPageRow>[] = [
     accessorKey: "publishStatus",
     header: "Status",
     meta: { label: "Status" },
-    cell: ({ row }) => <PublishBadge status={row.original.publishStatus} />,
+    cell: ({ row }) => (
+      <div className="flex flex-wrap items-center gap-1">
+        <PublishBadge status={row.original.publishStatus} />
+        {row.original.aiReviewedAt ? <AiReviewedBadge /> : null}
+      </div>
+    ),
   },
   {
     accessorKey: "canonicalStatus",
@@ -115,7 +122,7 @@ export function WikiPageTable({ rows, className, worldSlug, campaigns = [] }: Wi
       columns={columns}
       data={rows}
       filterPlaceholder="Seiten durchsuchen…"
-      pageSize={25}
+      enablePagination={false}
       className={className}
       enableColumnVisibility
       columnVisibilityStorageKey={WIKI_TABLE_COLUMN_VISIBILITY_KEY}

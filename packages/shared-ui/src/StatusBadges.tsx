@@ -67,6 +67,7 @@ export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
 export const PUBLISH_LABELS: Record<PublishStatus, string> = {
   draft: "Entwurf",
   internal: "Intern",
+  review: "Review",
   published: "Veröffentlicht",
   archived: "Archiviert",
 };
@@ -242,9 +243,20 @@ export function PublishBadge({ status }: { status: PublishStatus }) {
       ? "uwe-badge uwe-badge-published"
       : status === "draft"
         ? "uwe-badge uwe-badge-draft"
-        : "uwe-badge";
+        : status === "review"
+          ? "uwe-badge uwe-badge-warning"
+          : "uwe-badge";
 
   return <span className={className}>{PUBLISH_LABELS[status]}</span>;
+}
+
+/** Shown after a page passed through the KI review workflow. */
+export function AiReviewedBadge() {
+  return (
+    <span className="uwe-badge uwe-badge-accent" title="Diese Seite wurde per KI-Review bearbeitet und freigegeben.">
+      KI-Reviewd
+    </span>
+  );
 }
 
 export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) {

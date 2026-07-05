@@ -38,6 +38,7 @@ const KNOWN_VISIBILITIES: ReadonlySet<PageVisibility> = new Set([
 const KNOWN_PUBLISH_STATUSES: ReadonlySet<string> = new Set([
   "draft",
   "internal",
+  "review",
   "published",
   "archived",
 ]);
