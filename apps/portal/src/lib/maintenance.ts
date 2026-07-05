@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import {
   evaluateMaintenanceGate,
-  getSystemSettingsSnapshotSafe,
   resolveMaintenanceGateContext,
-} from "@uwe/database/server";
+} from "@uwe/database/maintenance-gate";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import { getCurrentUser } from "./auth";
 
 export async function enforcePortalMaintenance(pathname: string): Promise<void> {

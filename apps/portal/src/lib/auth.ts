@@ -3,8 +3,8 @@ import {
   createAuthService,
   createPrismaClient,
   createUweRepository,
-  disconnectPrismaClientIfOwned,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
 import type { AccessContext } from "@uwe/auth";
 import type { SafeUser } from "@uwe/auth";
 import {

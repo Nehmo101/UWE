@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import {
   createAuthService,
   createPrismaClient,
-  disconnectPrismaClientIfOwned,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
 import type { AuthUser, UweRole } from "@uwe/auth";
 import {
   ADMIN_ACCESS_ROLES,

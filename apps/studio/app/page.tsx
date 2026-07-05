@@ -1,4 +1,5 @@
-import { createAuthService, createPrismaClient, disconnectPrismaClientIfOwned } from "@uwe/database/server";
+import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
 import { UweLandingPage } from "@uwe/shared-ui";
 import { getCurrentUser } from "@/src/lib/auth";
 

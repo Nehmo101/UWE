@@ -12,7 +12,7 @@ export async function register() {
     // are effective from the first request (env stays the fallback). Never throws.
     const { refreshDeploymentRuntimeOverrides } = await import("@uwe/database/deployment");
     await refreshDeploymentRuntimeOverrides();
-    const { getSharedPrismaClient } = await import("@uwe/database/server");
+    const { getSharedPrismaClient } = await import("@uwe/database/client");
     try {
       await getSharedPrismaClient().systemSettings.findFirst({ select: { id: true } });
     } catch {

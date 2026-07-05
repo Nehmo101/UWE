@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./page-types": "./src/page-types.ts",
     "./graph-types": "./src/graph-types.ts",
+    "./client": "./src/client.ts",
     "./server": "./src/server.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
     "./player-questions": "./src/player-question-service.ts",

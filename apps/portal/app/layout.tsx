@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
-import { getSystemSettingsSnapshotSafe, isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import {
   ThemeBootstrapScript,
   ThemeDocumentSync,

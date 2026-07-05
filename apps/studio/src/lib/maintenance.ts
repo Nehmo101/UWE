@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import {
   evaluateMaintenanceGate,
-  getSystemSettingsSnapshotSafe,
   resolveMaintenanceGateContext,
-} from "@uwe/database/server";
+} from "@uwe/database/maintenance-gate";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import { getCurrentAuthUser } from "./auth";
 
 export async function enforceStudioMaintenance(pathname: string): Promise<void> {
