@@ -5,10 +5,12 @@
 > Editor- & Portal-Rendering).
 > Neu vorbereitet/umgesetzt: Settlement-Engine mit Ghost-UI und optionalem
 > Wasserfront-Hook, RTX-Asset-Proposal-Validator/Prompt-Kontext samt
-> `atlas_generate_asset_proposal`-Brain-Action und ein weiterer Gouache-Asset-Batch.
-> Offen: RTX-Asset-Studio-UI/Persistenz, echte Provider-/Modellauswahl für
-> Plot-/Asset-Proposals, größere Asset-Bibliothek und optionale
-> Terrain-Blend-Goldens — siehe
+> `atlas_generate_asset_proposal`-Brain-Action, ein weiterer Gouache-Asset-Batch
+> und das RTX-Asset-Studio-MVP (Studio-Panel, Server-Actions mit serverseitiger
+> Re-Validierung, Pending-`AtlasPaletteItem`-Persistenz).
+> Offen: Review-/Genehmigungs-UI für Pending-Assets, gemalte Rezept-Preview,
+> echte Provider-/Modellauswahl für Plot-Proposals, größere Asset-Bibliothek
+> und optionale Terrain-Blend-Goldens — siehe
 > [atlas-follow-ups.md](atlas-follow-ups.md).
 > Ursprünglicher Umfang: Umsetzungsplan.
 > Kontext: Annäherung des Atlas-Editors an [Canvas of Kings](https://store.steampowered.com/app/2498570/Canvas_of_Kings/) — gemalte Assets, selbstfüllende Flächen, direkte Objektgriffe.
@@ -60,7 +62,7 @@ Drei dokumentierte Leitplanken werden bewusst gelockert — gehört **vor** die 
 | **Unschärfegrad pro Objekt** | S | Reitet auf dem **gleichen** `AtlasObject.style`-Feld wie die Liniendicke (keine eigene Migration): `style.blur` (0…N px). Renderer setzt `ctx.filter = "blur(px)"` in `drawObject`/`drawGouacheAsset` — nur wenn `> 0`, Default `0`. Nutzen: atmosphärische Tiefe / bewusst „verschwommene" Objekte (Ferne, Nebel, weicher Hintergrund-Bewuchs). Regler neben Liniendicke. ⚠️ Perf: `ctx.filter`-Blur kostet pro Objekt — optional, Default aus. |
 | **Skalier-Griff am Rahmen** | S | Reine Editor-UI in `atlas.html` (Auswahlrahmen-Griff unten rechts + Drag → `scale`). Keine Schema-/Engine-Änderung. |
 | **Objektbereich füllen (Plot)** | M | Neuer `AtlasFeatureKind` `plot` (Pattern wie `vine`: `constants.ts` + beide Prisma-Enums + PG `ALTER TYPE`). Preset-Modus: `fillPlotWithGouacheAssets` platziert Gouache-Assets als reguläre `AtlasObject`s (Shortcut **F**, Refill/Reroll über Seed im `plot.style`). Review-only KI/RTX-Modus ist umgesetzt: `atlas_fill_area` erzeugt ein validiertes Proposal → Ghost → Übernehmen, **nie** Auto-Apply; echte Provider-/Modellauswahl bleibt offen. |
-| **RTX-Asset-Studio in UWE** | M–L | In-App-Workflow: DM beschreibt ein Asset, lokale RTX erzeugt anhand von `docs/prompts/atlas-pictogram-styleguide.md` + `asset-catalog.md` einen Gouache-Asset-Vorschlag. Grundlage umgesetzt: `@uwe/atlas/rtx-asset-proposal` validiert JSON-Rezept oder PNG-Fallback-Metadaten und liefert Styleguide-/Katalog-Kontext; `@uwe/ai-brain` kennt `atlas_generate_asset_proposal` als Review-only Action, **kein** frei ausgeführter TS-Code. Offen: Studio-UI, Preview/Review-Diff, Custom-Asset/PaletteItem-Persistenz. |
+| **RTX-Asset-Studio in UWE** | M–L | In-App-Workflow: DM beschreibt ein Asset, lokale RTX erzeugt anhand von `docs/prompts/atlas-pictogram-styleguide.md` + `asset-catalog.md` einen Gouache-Asset-Vorschlag. Umgesetzt: `@uwe/atlas/rtx-asset-proposal` validiert JSON-Rezept oder PNG-Fallback-Metadaten; `@uwe/ai-brain` kennt `atlas_generate_asset_proposal` als Review-only Action, **kein** frei ausgeführter TS-Code; MVP-Studio-Panel (`AtlasAssetProposalStudio`) + Server-Actions (`atlas-asset-actions.ts`) mit begrenztem DM-Prompt, lokal/RTX-Providern, serverseitiger Re-Validierung und Pending-`AtlasPaletteItem`-Persistenz (`styleTags`, migrationsfrei). Offen: Review-/Genehmigungs-UI, gemalte Rezept-Preview, Builtin-Promotion per PR. |
 | **Großstadt/Schloss-Generator** | M–L | Engine-Modul `packages/atlas/src/settlement.ts` umgesetzt (pur, deterministisch): `generateSettlement(polygon, opts) → { features: [Mauer-Pfad, Straßen, Plaza, optional Wasserfront/Piers], objects: [Tore, Türme, Häuser, Marktstand, Brunnen, Bergfried, optional Dock] }`; Ghost-Overlay und Übernahme-UI sind umgesetzt. Offen: UI-Parameter für Hafen/Werft, Feintuning und Golden-Screenshots. |
 | **Weiche Terrain-Übergänge** | M | `paintTerrainBlobs` besitzt `blendWidth`; `AtlasTileLayer.blendWidth` wird migrationsfrei in Editor, Portal und Static Viewer gerendert. Editor-Regler und Default/Fallback `6px` sind umgesetzt; offen bleibt nur visuelles Feintuning/Golden-Screenshots der Wasserfarben-Bleed-Optik. |
 
@@ -85,7 +87,7 @@ Gouache-Asset-Format + `drawGouacheAsset` in allen drei Pfaden · Untergrund-Int
 → Sofort sichtbarer CoK-Sprung, geringes Risiko.
 
 ### Phase 2 — Die CoK-Seele
-Plot-Fill (Preset + Review-Ghost umgesetzt; echte Provider-Auswahl offen) · Ausbau der Gouache-Asset-Bibliothek (weiterer Batch umgesetzt) · RTX-Asset-Studio in UWE (Validator + Styleguide-Kontext + Brain-Action umgesetzt; UI/Review/Persistenz offen).
+Plot-Fill (Preset + Review-Ghost umgesetzt; echte Provider-Auswahl offen) · Ausbau der Gouache-Asset-Bibliothek (weiterer Batch umgesetzt) · RTX-Asset-Studio in UWE (Validator + Styleguide-Kontext + Brain-Action + MVP-Panel/Pending-Persistenz umgesetzt; Review-UI/Rezept-Preview offen).
 → Hier entsteht das „das ist CoK"-Gefühl.
 
 ### Phase 3 — Generatoren & Feinschliff

@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 
+import { AtlasAssetProposalStudio } from "./AtlasAssetProposalStudio";
 import { AtlasStampGenerator } from "./AtlasStampGenerator";
 import { AtlasStudioHost } from "./AtlasStudioHost";
 import { RegionDescribePanel, type RegionDescribeTarget } from "./RegionDescribePanel";
@@ -43,6 +44,7 @@ export function AtlasStudioWorkspace({
   regions = [],
 }: AtlasStudioWorkspaceProps) {
   const [stampOpen, setStampOpen] = useState(false);
+  const [assetStudioOpen, setAssetStudioOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [describeTarget, setDescribeTarget] = useState<RegionDescribeTarget | null>(null);
 
@@ -59,6 +61,14 @@ export function AtlasStudioWorkspace({
       >
         <button type="button" style={toolBtn} onClick={() => setStampOpen(true)}>
           ✦ KI-Stempel
+        </button>
+        <button
+          type="button"
+          style={toolBtn}
+          onClick={() => setAssetStudioOpen(true)}
+          title="Gouache-Asset per lokaler RTX vorschlagen lassen (Review-only)"
+        >
+          ✦ RTX-Asset
         </button>
         <button
           type="button"
@@ -81,6 +91,13 @@ export function AtlasStudioWorkspace({
           nodeId={nodeId}
           onClose={() => setStampOpen(false)}
           onSaved={() => setStampOpen(false)}
+        />
+      )}
+
+      {assetStudioOpen && (
+        <AtlasAssetProposalStudio
+          worldSlug={worldSlug}
+          onClose={() => setAssetStudioOpen(false)}
         />
       )}
 

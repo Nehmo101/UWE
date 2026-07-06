@@ -27,6 +27,11 @@ export {
 } from "./AtlasStampGenerator";
 
 export {
+  AtlasAssetProposalStudio,
+  type AtlasAssetProposalStudioProps,
+} from "./AtlasAssetProposalStudio";
+
+export {
   RegionDescribePanel,
   type RegionDescribePanelProps,
   type RegionDescribeTarget,
