@@ -12,15 +12,20 @@ import type { AtlasFeatureKind as AtlasFeatureKindValue } from "./constants";
 import type { Coordinate, Path, Polygon } from "./geometry";
 import { distToSegment } from "./geometry";
 import { hashStringToSeed, mulberry32 } from "./prng";
+import { appendSettlementWaterfront, resolveWaterfrontOptions } from "./settlement-waterfront";
+import type { SettlementWaterfrontOptions } from "./settlement-waterfront";
 
-export type SettlementFeatureKind = "wall" | "road" | "plaza";
+export type { SettlementWaterfrontOptions } from "./settlement-waterfront";
+
+export type SettlementFeatureKind = "wall" | "road" | "plaza" | "waterfront" | "pier";
 export type SettlementObjectKind =
   | "building"
   | "keep"
   | "market"
   | "well"
   | "gate"
-  | "tower";
+  | "tower"
+  | "dock";
 
 export interface SettlementOptions {
   /** Deterministic seed. Strings are folded through hashStringToSeed. */
@@ -35,6 +40,8 @@ export interface SettlementOptions {
   density?: number;
   /** Explicit building count. When omitted it is derived from polygon area. */
   buildingCount?: number;
+  /** Optional harbor/waterfront variant; omitted keeps the inland default. */
+  waterfront?: boolean | SettlementWaterfrontOptions;
   /** Number of wall gates and road spokes. Defaults to 4, clamped to 1..6. */
   gateCount?: number;
   /** Number of wall towers. Defaults to gateCount when walls are enabled. */
@@ -106,6 +113,8 @@ export interface SettlementLayout {
     area: number;
     buildingCount: number;
     gateCount: number;
+    waterfront?: boolean;
+    pierCount?: number;
   };
 }
 
@@ -119,6 +128,7 @@ const DEFAULT_PALETTE_ITEMS: Record<SettlementObjectKind, string> = {
   well: "village",
   gate: "tower",
   tower: "tower",
+  dock: "harbor",
 };
 
 const DEFAULT_GOUACHE: Record<SettlementObjectKind, string> = {
@@ -128,6 +138,7 @@ const DEFAULT_GOUACHE: Record<SettlementObjectKind, string> = {
   well: "g_well",
   gate: "g_tower",
   tower: "g_tower",
+  dock: "g_ship",
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -455,7 +466,9 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
   const density = Math.max(0, options.density ?? 1);
   const inferredBuildingCount = density <= 0 ? 0 : clampInt(area * 90 * density, 6, 36);
   const buildingCount = clampInt(options.buildingCount ?? inferredBuildingCount, 0, 60);
+  const waterfrontOptions = resolveWaterfrontOptions(options.waterfront);
   const nodePart = options.nodeId ? { nodeId: options.nodeId } : {};
+  let generatedPierCount = 0;
 
   const roadPaths: Coordinate[][] = [];
   const gates: Coordinate[] = [];
@@ -555,6 +568,25 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
     );
   };
 
+  if (waterfrontOptions) {
+    generatedPierCount = appendSettlementWaterfront({
+      options: waterfrontOptions,
+      outer,
+      center,
+      span,
+      idPrefix,
+      visibility,
+      nodePart,
+      signedOuterArea: ringSignedArea(outer),
+      features,
+      roadPaths,
+      rng,
+      isInteriorPoint: (point) => pointInPolygonWithHoles(point, polygon),
+      addDockObject: (point, rotation, scale, meta) =>
+        addObject("dock", "dock", point, rotation, scale, meta),
+    });
+  }
+
   if (includeKeep) {
     const point = pointNear(center, span * 0.22, rng() * Math.PI * 2, polygon, rng, bbox);
     addObject("keep", "keep", point, rotationToward(point, center), 1.25, { role: "anchor" });
@@ -591,7 +623,7 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
     const point: Coordinate = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
     if (!pointInPolygonWithHoles(point, polygon)) continue;
     if (Math.hypot(point[0] - center[0], point[1] - center[1]) < plazaClearance) continue;
-    if (includeRoads && distanceToPaths(point, roadPaths) < roadClearance) continue;
+    if (roadPaths.length > 0 && distanceToPaths(point, roadPaths) < roadClearance) continue;
     if (tooClose(point, occupied, objectSpacing)) continue;
 
     const rotation = rotationToward(center, point) + 90 + (rng() - 0.5) * 16;
@@ -613,6 +645,9 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
       area,
       buildingCount: objects.filter((object) => object.kind === "building").length,
       gateCount,
+      ...(waterfrontOptions && generatedPierCount > 0
+        ? { waterfront: true, pierCount: generatedPierCount }
+        : {}),
     },
   };
 }

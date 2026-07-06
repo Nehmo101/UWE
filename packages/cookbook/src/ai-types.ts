@@ -32,6 +32,7 @@ export type CookbookAiTaskType =
   | "atlas_name_region"
   | "atlas_describe_region"
   | "atlas_fill_area"
+  | "atlas_generate_asset_proposal"
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"

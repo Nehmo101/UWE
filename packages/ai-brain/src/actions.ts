@@ -12,7 +12,8 @@ export type BrainActionId =
   | "mail_draft"
   | "atlas_name_regions"
   | "atlas_describe_region"
-  | "atlas_fill_area";
+  | "atlas_fill_area"
+  | "atlas_generate_asset_proposal";
 
 export type AiProposalTargetType =
   | "session_summary_dm"
@@ -23,7 +24,8 @@ export type AiProposalTargetType =
   | "mail_draft"
   | "atlas_draft_names"
   | "atlas_region_description"
-  | "atlas_plot_fill";
+  | "atlas_plot_fill"
+  | "atlas_asset_proposal";
 
 export interface BrainActionDefinition {
   id: BrainActionId;
@@ -162,6 +164,18 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "dm_internal",
     defaultProposalTarget: "atlas_plot_fill",
     defaultProposalLabel: "Atlas-Objektfläche (Rezept)",
+  },
+  atlas_generate_asset_proposal: {
+    id: "atlas_generate_asset_proposal",
+    label: "Atlas-Asset vorschlagen",
+    description:
+      "Schlägt ein sicheres Atlas-Gouache-Asset auf Basis des Styleguides vor. RTX liefert nur ein validierbares Asset-Proposal, nie Code.",
+    taskType: "atlas_generate_asset_proposal",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "atlas_asset_proposal",
+    defaultProposalLabel: "Atlas-Asset-Proposal",
   },
 };
 

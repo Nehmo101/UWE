@@ -95,6 +95,52 @@ describe("generateSettlement", () => {
     }
   });
 
+  it("keeps waterfront generation optional and can add dockyard geometry", () => {
+    const inland = generateSettlement(SITE, { seed: 9, idPrefix: "port", buildingCount: 6 });
+    const waterfront = generateSettlement(SITE, {
+      seed: 9,
+      idPrefix: "port",
+      buildingCount: 6,
+      waterfront: true,
+    });
+
+    assert.equal(
+      inland.features.some((feature) => feature.kind === "waterfront" || feature.kind === "pier"),
+      false,
+    );
+    assert.equal(inland.objects.some((object) => object.kind === "dock"), false);
+
+    const waterfrontFeature = waterfront.features.find((feature) => feature.kind === "waterfront");
+    const pierFeatures = waterfront.features.filter((feature) => feature.kind === "pier");
+    const dock = waterfront.objects.find((object) => object.kind === "dock");
+
+    assert.ok(waterfrontFeature);
+    assert.equal(waterfrontFeature.atlasKind, "region");
+    assert.equal(waterfrontFeature.style.fillColor, "#94b7c5");
+    assert.equal(pierFeatures.length, 2);
+    assert.ok(pierFeatures.every((feature) => feature.atlasKind === "road"));
+    assert.ok(dock);
+    assert.equal(dock.paletteItemId, "harbor");
+    assert.equal(dock.style.settlement, "dock");
+    assert.ok(pointInPolygon([dock.x, dock.y], SITE), "dock marker must stay inside the settlement polygon");
+    assert.equal(waterfront.meta.waterfront, true);
+    assert.equal(waterfront.meta.pierCount, 2);
+  });
+
+  it("honors waterfront pier count and dock suppression options", () => {
+    const layout = generateSettlement(SITE, {
+      seed: 18,
+      idPrefix: "shipyard",
+      buildingCount: 4,
+      waterfront: { edgeFraction: 0.25, pierCount: 4, includeDock: false },
+    });
+
+    assert.equal(layout.features.filter((feature) => feature.kind === "waterfront").length, 1);
+    assert.equal(layout.features.filter((feature) => feature.kind === "pier").length, 4);
+    assert.equal(layout.objects.filter((object) => object.kind === "dock").length, 0);
+    assert.equal(layout.meta.pierCount, 4);
+  });
+
   it("threads node, visibility, count, gate, and palette options through the output", () => {
     const layout = generateSettlement(SITE, {
       seed: "stone-market",

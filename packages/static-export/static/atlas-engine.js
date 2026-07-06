@@ -2090,6 +2090,19 @@ function buildVineLayout(points, options = {}) {
   };
 }
 
+// ../atlas/src/rtx-asset-prompt-context.ts
+var RTX_ATLAS_ASSET_STYLEGUIDE_EXCERPT = [
+  "Gouache assets use filled painterly shapes with body color, darker pigment edge, shadow, and highlight.",
+  "The object anchor is base-center: the placement point sits at the lower middle and the drawing grows upward.",
+  "Use muted map colors: earthy reds, ochres, greens, greys, and blues; no bright UI colors or photoreal textures.",
+  "Never copy external Canvas of Kings assets; proposals must be original data reviewed by UWE."
+];
+var RTX_ATLAS_ASSET_CATALOG_EXCERPT = [
+  "Stamp is a single AtlasObject asset; Plot fills an area; Path follows routes; Landmark can use pseudo-3D shadow/aura.",
+  "Gen assets are settlement-generator parts; Terrain assets affect biome or ground texture.",
+  "Useful backlog examples include fields, swamps, cliffs, ruins, market variants, ships, bridges, harbors, and fantasy landmarks."
+];
+
 // ../atlas/src/rtx-asset-proposal.ts
 var RTX_ATLAS_ASSET_STYLEGUIDE_PATH = "docs/prompts/atlas-pictogram-styleguide.md";
 var RTX_ATLAS_ASSET_CATALOG_PATH = "docs/design/atlas-redesign/asset-catalog.md";
@@ -2499,6 +2512,8 @@ function buildRtxAtlasAssetPromptContext(assets = GOUACHE_ASSETS) {
       name: asset.name,
       category: asset.category
     })),
+    styleguideExcerpt: [...RTX_ATLAS_ASSET_STYLEGUIDE_EXCERPT],
+    assetCatalogExcerpt: [...RTX_ATLAS_ASSET_CATALOG_EXCERPT],
     rules: [
       "Use the Atlas pictogram styleguide as the visual and review source.",
       "Use the asset catalog for backlog tags and engine placement context.",
@@ -2519,6 +2534,8 @@ function formatRtxAtlasAssetPromptContext(context = buildRtxAtlasAssetPromptCont
     `- Gouache categories: ${context.gouacheCategories.join(", ")}`,
     `- Asset catalog engine tags: ${context.assetCatalogTags.join(", ")}`,
     `- Existing Gouache assets: ${existingAssets || "none"}`,
+    `- Styleguide excerpt: ${context.styleguideExcerpt.join(" ")}`,
+    `- Asset catalog excerpt: ${context.assetCatalogExcerpt.join(" ")}`,
     "- Security: JSON recipe data or PNG fallback metadata only; no executable code.",
     "- Review flow: return a proposal for UWE validation, not an auto-applied asset."
   ].join("\n");
@@ -3078,34 +3095,22 @@ function generatePathAttachments(path, options) {
   return results;
 }
 
-// ../atlas/src/settlement.ts
-var DEFAULT_SEED = 7331;
-var DEFAULT_VISIBILITY = "dm_only";
-var DEFAULT_PALETTE_ITEMS = {
-  building: "village",
-  keep: "castle",
-  market: "village",
-  well: "village",
-  gate: "tower",
-  tower: "tower"
-};
-var DEFAULT_GOUACHE = {
-  building: "g_house",
-  keep: "g_keep",
-  market: "g_stall",
-  well: "g_well",
-  gate: "g_tower",
-  tower: "g_tower"
-};
+// ../atlas/src/settlement-waterfront.ts
 function clamp4(value, min, max) {
   return value < min ? min : value > max ? max : value;
 }
 function clampInt(value, min, max) {
   return Math.round(clamp4(value, min, max));
 }
-function seedToNumber(seed) {
-  if (seed == null) return DEFAULT_SEED;
-  return typeof seed === "number" ? seed | 0 : hashStringToSeed(seed);
+function resolveWaterfrontOptions(value) {
+  if (!value) return void 0;
+  const opts = value === true ? {} : value;
+  const resolved = {
+    pierCount: clampInt(opts.pierCount ?? 2, 1, 4),
+    includeDock: opts.includeDock ?? true
+  };
+  if (Number.isFinite(opts.edgeFraction)) resolved.edgeFraction = opts.edgeFraction;
+  return resolved;
 }
 function samePoint(a, b) {
   return Math.abs(a[0] - b[0]) < 1e-12 && Math.abs(a[1] - b[1]) < 1e-12;
@@ -3116,12 +3121,186 @@ function openRing(ring) {
   }
   return ring.map(([x, y]) => [x, y]);
 }
-function closeRing(ring) {
+function moveToward(from, to, amount) {
+  return [from[0] + (to[0] - from[0]) * amount, from[1] + (to[1] - from[1]) * amount];
+}
+function lerpPoint(a, b, amount) {
+  return [a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount];
+}
+function offsetPoint(point, direction, distance) {
+  return [point[0] + direction[0] * distance, point[1] + direction[1] * distance];
+}
+function rotationToward(from, to) {
+  return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+}
+function ringEdges(ring) {
   const open = openRing(ring);
+  if (open.length < 2) return [];
+  const lengths = [];
+  let total = 0;
+  for (let i = 0; i < open.length; i++) {
+    const start = open[i];
+    const end = open[(i + 1) % open.length];
+    const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
+    lengths.push(length);
+    total += length;
+  }
+  if (total <= 0) return [];
+  let walked = 0;
+  return open.map((start, i) => {
+    const end = open[(i + 1) % open.length];
+    const length = lengths[i];
+    const fractionStart = walked / total;
+    walked += length;
+    return {
+      start,
+      end,
+      midpoint: lerpPoint(start, end, 0.5),
+      length,
+      fractionStart,
+      fractionEnd: walked / total
+    };
+  });
+}
+function edgeAtFraction(ring, fraction) {
+  const edges = ringEdges(ring);
+  if (edges.length === 0) return void 0;
+  const target = (fraction % 1 + 1) % 1;
+  return edges.find((edge) => target >= edge.fractionStart && target <= edge.fractionEnd) ?? edges[0];
+}
+function longestRingEdge(ring) {
+  return ringEdges(ring).reduce(
+    (longest, edge) => !longest || edge.length > longest.length ? edge : longest,
+    void 0
+  );
+}
+function exteriorNormal(edge, signedArea) {
+  if (edge.length <= 0) return [0, -1];
+  const dx = edge.end[0] - edge.start[0];
+  const dy = edge.end[1] - edge.start[1];
+  return signedArea >= 0 ? [dy / edge.length, -dx / edge.length] : [-dy / edge.length, dx / edge.length];
+}
+function firstInteriorPointToward(from, to, isInteriorPoint) {
+  for (const amount of [0.04, 0.08, 0.14, 0.22, 0.35]) {
+    const point = moveToward(from, to, amount);
+    if (isInteriorPoint(point)) return point;
+  }
+  return void 0;
+}
+function appendSettlementWaterfront(input) {
+  const edge = input.options.edgeFraction == null ? longestRingEdge(input.outer) : edgeAtFraction(input.outer, input.options.edgeFraction);
+  if (!edge || edge.length <= 0) return 0;
+  const normal = exteriorNormal(edge, input.signedOuterArea);
+  const shoreStart = moveToward(edge.start, edge.end, 0.12);
+  const shoreEnd = moveToward(edge.end, edge.start, 0.12);
+  const waterStart = offsetPoint(shoreStart, normal, input.span * 0.075);
+  const waterEnd = offsetPoint(shoreEnd, normal, input.span * 0.075);
+  const landEnd = moveToward(shoreEnd, input.center, 0.1);
+  const landStart = moveToward(shoreStart, input.center, 0.1);
+  input.features.push({
+    id: `${input.idPrefix}-feature-waterfront`,
+    kind: "waterfront",
+    atlasKind: AtlasFeatureKind.region,
+    geometry: {
+      type: "Polygon",
+      rings: [[waterStart, waterEnd, landEnd, landStart, waterStart]]
+    },
+    layer: LAYER_Z.rivers,
+    visibility: input.visibility,
+    style: {
+      settlement: "waterfront",
+      fillColor: "#94b7c5",
+      strokeColor: "#365f6b",
+      strokeWidth: 2e-3,
+      opacity: 0.58
+    },
+    labelHint: "Waterfront",
+    meta: {
+      role: "waterfront",
+      edgeFraction: (edge.fractionStart + edge.fractionEnd) / 2
+    },
+    ...input.nodePart
+  });
+  for (let i = 0; i < input.options.pierCount; i++) {
+    const amount = (i + 1) / (input.options.pierCount + 1);
+    const shore = lerpPoint(edge.start, edge.end, amount);
+    const land = firstInteriorPointToward(shore, input.center, input.isInteriorPoint) ?? moveToward(shore, input.center, 0.1);
+    const water = offsetPoint(shore, normal, input.span * (0.09 + input.rng() * 0.025));
+    const path = [land, shore, water];
+    input.roadPaths.push(path);
+    input.features.push({
+      id: `${input.idPrefix}-feature-pier-${i}`,
+      kind: "pier",
+      atlasKind: AtlasFeatureKind.road,
+      geometry: { type: "Path", coordinates: path },
+      layer: LAYER_Z.roads + 2,
+      visibility: input.visibility,
+      style: {
+        settlement: "pier",
+        strokeColor: "#5f4229",
+        strokeWidth: 5e-3,
+        opacity: 0.92
+      },
+      labelHint: `Pier ${i + 1}`,
+      meta: { pierIndex: i, role: "waterfront" },
+      ...input.nodePart
+    });
+  }
+  if (input.options.includeDock) {
+    const point = firstInteriorPointToward(edge.midpoint, input.center, input.isInteriorPoint) ?? input.center;
+    input.addDockObject(point, rotationToward(point, offsetPoint(point, normal, 1)), 0.9, {
+      role: "waterfront"
+    });
+  }
+  return input.options.pierCount;
+}
+
+// ../atlas/src/settlement.ts
+var DEFAULT_SEED = 7331;
+var DEFAULT_VISIBILITY = "dm_only";
+var DEFAULT_PALETTE_ITEMS = {
+  building: "village",
+  keep: "castle",
+  market: "village",
+  well: "village",
+  gate: "tower",
+  tower: "tower",
+  dock: "harbor"
+};
+var DEFAULT_GOUACHE = {
+  building: "g_house",
+  keep: "g_keep",
+  market: "g_stall",
+  well: "g_well",
+  gate: "g_tower",
+  tower: "g_tower",
+  dock: "g_ship"
+};
+function clamp5(value, min, max) {
+  return value < min ? min : value > max ? max : value;
+}
+function clampInt2(value, min, max) {
+  return Math.round(clamp5(value, min, max));
+}
+function seedToNumber(seed) {
+  if (seed == null) return DEFAULT_SEED;
+  return typeof seed === "number" ? seed | 0 : hashStringToSeed(seed);
+}
+function samePoint2(a, b) {
+  return Math.abs(a[0] - b[0]) < 1e-12 && Math.abs(a[1] - b[1]) < 1e-12;
+}
+function openRing2(ring) {
+  if (ring.length > 1 && samePoint2(ring[0], ring[ring.length - 1])) {
+    return ring.slice(0, -1).map(([x, y]) => [x, y]);
+  }
+  return ring.map(([x, y]) => [x, y]);
+}
+function closeRing(ring) {
+  const open = openRing2(ring);
   return open.length > 0 ? [...open, open[0]] : [];
 }
 function ringSignedArea(ring) {
-  const open = openRing(ring);
+  const open = openRing2(ring);
   if (open.length < 3) return 0;
   let area = 0;
   for (let i = 0; i < open.length; i++) {
@@ -3154,7 +3333,7 @@ function ringBbox3(ring) {
   return [minX, minY, maxX, maxY];
 }
 function ringCentroid(ring) {
-  const open = openRing(ring);
+  const open = openRing2(ring);
   if (open.length === 0) return [0.5, 0.5];
   let twiceArea = 0;
   let cx = 0;
@@ -3175,7 +3354,7 @@ function ringCentroid(ring) {
 }
 function pointInRing3(point, ring) {
   const [px, py] = point;
-  const open = openRing(ring);
+  const open = openRing2(ring);
   let inside = false;
   for (let i = 0, j = open.length - 1; i < open.length; j = i++) {
     const [xi, yi] = open[i];
@@ -3207,9 +3386,9 @@ function interiorPoint(polygon, bbox, rng) {
   if (pointInPolygonWithHoles(centroid2, polygon)) return centroid2;
   const random = randomPointInPolygon(polygon, bbox, rng);
   if (random) return random;
-  return openRing(outer).find((point) => pointInPolygonWithHoles(point, polygon));
+  return openRing2(outer).find((point) => pointInPolygonWithHoles(point, polygon));
 }
-function moveToward(from, to, amount) {
+function moveToward2(from, to, amount) {
   return [from[0] + (to[0] - from[0]) * amount, from[1] + (to[1] - from[1]) * amount];
 }
 function pointOnRing(ring, fraction) {
@@ -3239,7 +3418,7 @@ function pointOnRing(ring, fraction) {
   }
   return closed[closed.length - 1];
 }
-function rotationToward(from, to) {
+function rotationToward2(from, to) {
   return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
 }
 function distanceToPaths(point, paths) {
@@ -3320,7 +3499,7 @@ function generateSettlement(polygon, options = {}) {
   const idPrefix = options.idPrefix ?? `settlement-${seed}`;
   const features = [];
   const objects = [];
-  if (!outer || openRing(outer).length < 3) {
+  if (!outer || openRing2(outer).length < 3) {
     return {
       seed,
       center: [0.5, 0.5],
@@ -3348,12 +3527,14 @@ function generateSettlement(polygon, options = {}) {
   const includeKeep = options.includeKeep ?? true;
   const includeMarket = options.includeMarket ?? true;
   const includeWell = options.includeWell ?? true;
-  const gateCount = clampInt(options.gateCount ?? 4, 1, 6);
-  const towerCount = clampInt(options.towerCount ?? (includeWalls ? gateCount : 0), 0, 12);
+  const gateCount = clampInt2(options.gateCount ?? 4, 1, 6);
+  const towerCount = clampInt2(options.towerCount ?? (includeWalls ? gateCount : 0), 0, 12);
   const density = Math.max(0, options.density ?? 1);
-  const inferredBuildingCount = density <= 0 ? 0 : clampInt(area * 90 * density, 6, 36);
-  const buildingCount = clampInt(options.buildingCount ?? inferredBuildingCount, 0, 60);
+  const inferredBuildingCount = density <= 0 ? 0 : clampInt2(area * 90 * density, 6, 36);
+  const buildingCount = clampInt2(options.buildingCount ?? inferredBuildingCount, 0, 60);
+  const waterfrontOptions = resolveWaterfrontOptions(options.waterfront);
   const nodePart = options.nodeId ? { nodeId: options.nodeId } : {};
+  let generatedPierCount = 0;
   const roadPaths = [];
   const gates = [];
   const gateOffset = rng();
@@ -3381,13 +3562,13 @@ function generateSettlement(polygon, options = {}) {
   if (includeRoads) {
     for (let i = 0; i < gates.length; i++) {
       const gate = gates[i];
-      const bendBase = moveToward(gate, center, 0.55);
-      const angle = rotationToward(gate, center) + 90;
+      const bendBase = moveToward2(gate, center, 0.55);
+      const angle = rotationToward2(gate, center) + 90;
       const bend = [
         bendBase[0] + Math.cos(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12,
         bendBase[1] + Math.sin(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12
       ];
-      const path = [moveToward(gate, center, 0.04), pointInPolygonWithHoles(bend, polygon) ? bend : bendBase, center];
+      const path = [moveToward2(gate, center, 0.04), pointInPolygonWithHoles(bend, polygon) ? bend : bendBase, center];
       roadPaths.push(path);
       features.push({
         id: `${idPrefix}-feature-road-${i}`,
@@ -3440,9 +3621,26 @@ function generateSettlement(polygon, options = {}) {
       })
     );
   };
+  if (waterfrontOptions) {
+    generatedPierCount = appendSettlementWaterfront({
+      options: waterfrontOptions,
+      outer,
+      center,
+      span,
+      idPrefix,
+      visibility,
+      nodePart,
+      signedOuterArea: ringSignedArea(outer),
+      features,
+      roadPaths,
+      rng,
+      isInteriorPoint: (point) => pointInPolygonWithHoles(point, polygon),
+      addDockObject: (point, rotation, scale, meta) => addObject("dock", "dock", point, rotation, scale, meta)
+    });
+  }
   if (includeKeep) {
     const point = pointNear(center, span * 0.22, rng() * Math.PI * 2, polygon, rng, bbox);
-    addObject("keep", "keep", point, rotationToward(point, center), 1.25, { role: "anchor" });
+    addObject("keep", "keep", point, rotationToward2(point, center), 1.25, { role: "anchor" });
   }
   if (includeMarket) {
     const point = pointNear(center, span * 0.035, rng() * Math.PI * 2, polygon, rng, bbox);
@@ -3453,14 +3651,14 @@ function generateSettlement(polygon, options = {}) {
     addObject("well", "well", point, 0, 0.68, { role: "civic" });
   }
   for (let i = 0; i < gates.length; i++) {
-    const point = moveToward(gates[i], center, 0.035);
+    const point = moveToward2(gates[i], center, 0.035);
     if (!pointInPolygonWithHoles(point, polygon)) continue;
-    addObject("gate", `gate-${i}`, point, rotationToward(point, center), 0.72, { gateIndex: i });
+    addObject("gate", `gate-${i}`, point, rotationToward2(point, center), 0.72, { gateIndex: i });
   }
   for (let i = 0; i < towerCount; i++) {
-    const point = moveToward(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035);
+    const point = moveToward2(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035);
     if (!pointInPolygonWithHoles(point, polygon)) continue;
-    addObject("tower", `tower-${i}`, point, rotationToward(point, center), 0.78, { towerIndex: i });
+    addObject("tower", `tower-${i}`, point, rotationToward2(point, center), 0.78, { towerIndex: i });
   }
   const roadClearance = span * 0.035;
   const plazaClearance = span * 0.08;
@@ -3471,9 +3669,9 @@ function generateSettlement(polygon, options = {}) {
     const point = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
     if (!pointInPolygonWithHoles(point, polygon)) continue;
     if (Math.hypot(point[0] - center[0], point[1] - center[1]) < plazaClearance) continue;
-    if (includeRoads && distanceToPaths(point, roadPaths) < roadClearance) continue;
+    if (roadPaths.length > 0 && distanceToPaths(point, roadPaths) < roadClearance) continue;
     if (tooClose(point, occupied, objectSpacing)) continue;
-    const rotation = rotationToward(center, point) + 90 + (rng() - 0.5) * 16;
+    const rotation = rotationToward2(center, point) + 90 + (rng() - 0.5) * 16;
     addObject(
       "building",
       `building-${objects.filter((object) => object.kind === "building").length}`,
@@ -3490,14 +3688,15 @@ function generateSettlement(polygon, options = {}) {
     meta: {
       area,
       buildingCount: objects.filter((object) => object.kind === "building").length,
-      gateCount
+      gateCount,
+      ...waterfrontOptions && generatedPierCount > 0 ? { waterfront: true, pierCount: generatedPierCount } : {}
     }
   };
 }
 
 // ../atlas/src/export-grid.ts
 var EPSILON = 1e-9;
-function clamp5(value, lo, hi) {
+function clamp6(value, lo, hi) {
   if (value < lo) return lo;
   if (value > hi) return hi;
   return value;
@@ -3515,12 +3714,12 @@ function buildSquareLines(rect, cellSize) {
   const lines = [];
   const colCount = Math.floor(rect.width / cellSize + EPSILON);
   for (let k = 0; k <= colCount; k++) {
-    const x = clamp5(minX + k * cellSize, minX, maxX);
+    const x = clamp6(minX + k * cellSize, minX, maxX);
     lines.push({ x1: x, y1: minY, x2: x, y2: maxY });
   }
   const rowCount = Math.floor(rect.height / cellSize + EPSILON);
   for (let k = 0; k <= rowCount; k++) {
-    const y = clamp5(minY + k * cellSize, minY, maxY);
+    const y = clamp6(minY + k * cellSize, minY, maxY);
     lines.push({ x1: minX, y1: y, x2: maxX, y2: y });
   }
   return lines;
@@ -3552,8 +3751,8 @@ function appendHex(lines, cx, cy, size, minX, minY, maxX, maxY) {
   const ys = [];
   for (let i = 0; i < 6; i++) {
     const angle = Math.PI / 180 * (90 + 60 * i);
-    xs.push(clamp5(cx + size * Math.cos(angle), minX, maxX));
-    ys.push(clamp5(cy + size * Math.sin(angle), minY, maxY));
+    xs.push(clamp6(cx + size * Math.cos(angle), minX, maxX));
+    ys.push(clamp6(cy + size * Math.sin(angle), minY, maxY));
   }
   for (let i = 0; i < 6; i++) {
     const j = (i + 1) % 6;

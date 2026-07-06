@@ -1,4 +1,5 @@
 import { validateAtlasPlotFillProposal } from "@uwe/atlas/plot-fill-proposal";
+import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
 import type { BrainActionDefinition } from "./actions";
 import type { AiProposalTargetType } from "./actions";
 
@@ -162,6 +163,34 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
           validation: validation.ok ? "ok" : "invalid",
           ...(validation.ok
             ? { warnings: validation.warnings }
+            : { errors: validation.errors }),
+        },
+      },
+    ];
+  }
+
+  if (action.id === "atlas_generate_asset_proposal") {
+    const parsed = extractJsonObject(resultText);
+    const validation = validateRtxAtlasAssetProposal(parsed);
+    const validContent = validation.ok
+      ? JSON.stringify(validation.proposal, null, 2)
+      : resultText.trim();
+    return [
+      {
+        id: `${baseId}-atlas-asset`,
+        label: action.defaultProposalLabel,
+        content: validContent,
+        targetType: "atlas_asset_proposal",
+        targetId: pageId ?? null,
+        visibility: "dm_only",
+        status: "pending",
+        metadata: {
+          source: "ai_generated",
+          autoApply: false,
+          proposalKind: "atlas_asset_proposal",
+          validation: validation.ok ? "ok" : "invalid",
+          ...(validation.ok
+            ? { warnings: validation.warnings, outputType: validation.proposal.outputType }
             : { errors: validation.errors }),
         },
       },

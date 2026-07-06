@@ -7,6 +7,10 @@
 
 import { GOUACHE_ASSETS, GOUACHE_CATEGORY_LABELS } from "./assets";
 import type { GouacheAsset, GouacheCategory } from "./assets";
+import {
+  RTX_ATLAS_ASSET_CATALOG_EXCERPT,
+  RTX_ATLAS_ASSET_STYLEGUIDE_EXCERPT,
+} from "./rtx-asset-prompt-context";
 
 export const RTX_ATLAS_ASSET_STYLEGUIDE_PATH =
   "docs/prompts/atlas-pictogram-styleguide.md";
@@ -118,6 +122,8 @@ export interface RtxAtlasAssetPromptContext {
   gouacheCategories: GouacheCategory[];
   assetCatalogTags: RtxAtlasAssetEngineTag[];
   existingAssets: Array<Pick<GouacheAsset, "key" | "name" | "category">>;
+  styleguideExcerpt: string[];
+  assetCatalogExcerpt: string[];
   rules: string[];
 }
 
@@ -651,6 +657,8 @@ export function buildRtxAtlasAssetPromptContext(
       name: asset.name,
       category: asset.category,
     })),
+    styleguideExcerpt: [...RTX_ATLAS_ASSET_STYLEGUIDE_EXCERPT],
+    assetCatalogExcerpt: [...RTX_ATLAS_ASSET_CATALOG_EXCERPT],
     rules: [
       "Use the Atlas pictogram styleguide as the visual and review source.",
       "Use the asset catalog for backlog tags and engine placement context.",
@@ -677,6 +685,8 @@ export function formatRtxAtlasAssetPromptContext(
     `- Gouache categories: ${context.gouacheCategories.join(", ")}`,
     `- Asset catalog engine tags: ${context.assetCatalogTags.join(", ")}`,
     `- Existing Gouache assets: ${existingAssets || "none"}`,
+    `- Styleguide excerpt: ${context.styleguideExcerpt.join(" ")}`,
+    `- Asset catalog excerpt: ${context.assetCatalogExcerpt.join(" ")}`,
     "- Security: JSON recipe data or PNG fallback metadata only; no executable code.",
     "- Review flow: return a proposal for UWE validation, not an auto-applied asset.",
   ].join("\n");

@@ -32,7 +32,8 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("atlas_name_regions"), "atlas_name_regions action must be present");
     assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
     assert.ok(ids.includes("atlas_fill_area"), "atlas_fill_area action must be present");
-    assert.equal(BRAIN_ACTION_LIST.length, 11);
+    assert.ok(ids.includes("atlas_generate_asset_proposal"), "atlas_generate_asset_proposal action must be present");
+    assert.equal(BRAIN_ACTION_LIST.length, 12);
   });
 
   it("marks player-safe actions correctly", () => {
@@ -117,6 +118,61 @@ describe("Brain Actions — proposals", () => {
     });
 
     assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
+    assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "invalid");
+    assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
+  });
+
+  it("builds review-only atlas asset proposals from validated JSON", () => {
+    const action = getBrainAction("atlas_generate_asset_proposal");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: JSON.stringify({
+        name: "Verwunschener Leuchtturm",
+        category: "landmark",
+        tags: ["lighthouse", "cliff"],
+        engineTags: ["Landmark", "Stamp"],
+        palette: ["#d8c99c", "#59432a"],
+        outputType: "json-recipe",
+        recipe: {
+          schemaVersion: 1,
+          coordinateSystem: "base-center-normalized",
+          layers: [
+            {
+              id: "ground-shadow",
+              role: "shadow",
+              shape: "ellipse",
+              fill: "#2a1e0c",
+              opacity: 0.18,
+              x: 0,
+              y: 0.06,
+              rx: 0.58,
+              ry: 0.16,
+            },
+          ],
+        },
+      }),
+      pageId: "page-1",
+    });
+
+    assert.equal(proposals.length, 1);
+    assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
+    assert.equal(proposals[0]?.visibility, "dm_only");
+    assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "ok");
+    assert.equal(proposals[0]?.metadata?.outputType, "json-recipe");
+    assert.match(proposals[0]?.content ?? "", /"outputType": "json-recipe"/);
+  });
+
+  it("keeps invalid atlas asset output as a non-applied review artifact", () => {
+    const action = getBrainAction("atlas_generate_asset_proposal");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: '{"name":"Unsafe","category":"spellbook","outputType":"png-fallback","pngFallback":{"mimeType":"image/jpeg","width":8192,"height":512,"transparentBackground":true}}',
+      pageId: "page-1",
+    });
+
+    assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
     assert.equal(proposals[0]?.metadata?.autoApply, false);
     assert.equal(proposals[0]?.metadata?.validation, "invalid");
     assert.ok(Array.isArray(proposals[0]?.metadata?.errors));

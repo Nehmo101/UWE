@@ -26,28 +26,30 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 - **KI/RTX-Plot-Fill-Rezept-Grundlage:** `@uwe/atlas/plot-fill-proposal` validiert `atlas_plot_fill`-Rezepte (Gouache-Allowlist, Density/Seed/Style-Grenzen, keine `AtlasObject`-/Code-Payloads); `@uwe/ai-brain` kennt `atlas_fill_area` als Review-only Brain-Action und speichert validierte/ungültige Ausgaben mit `autoApply: false`.
 - **KI/RTX-Plot-Fill-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen ein validiertes `atlas_plot_fill`-Rezept als transparente Ghost-Objekte anzeigen und erst nach explizitem Übernehmen reguläre `AtlasObject`s schreiben. `AtlasStudioHost` bedient `plot-fill-proposal-request/result/review`; bis zur echten Provider-/Modellauswahl liefert `generateAtlasPlotFillProposalAction` ein serverseitig validiertes, biomabhängiges Default-Rezept.
 - **Settlement-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen lokal/deterministisch `generateSettlement()` ausführen, Mauern/Straßen/Plaza/Objekte als transparente Ghosts prüfen und erst nach explizitem Übernehmen reguläre Atlas-Features/-Objects schreiben. Bestehende Settlement-Items werden nur für dieselbe Plot-Fläche über `style.settlementSourcePlotKey` ersetzt.
+- **KI/RTX-Asset-Proposal-Brain-Action:** `@uwe/ai-brain` kennt `atlas_generate_asset_proposal` als DM-only, Review-only Brain-Action. Der Prompt-Kontext kommt aus `@uwe/atlas/rtx-asset-proposal`, enthält Styleguide-/Katalog-Pflichtauszüge plus existierende Gouache-Assets und validiert Ergebnisse als `atlas_asset_proposal` ohne Auto-Apply.
+- **Settlement-Wasserfront-Engine-Hook:** `generateSettlement()` kann optional `waterfront` erzeugen: Wasserfront-Region, Pier-Pfade und optionaler Hafen/Dock-Marker. Der Default bleibt inland/aus, damit bestehende Ghost-Flows unverändert bleiben.
 
 ## Noch offen aus dem Gouache-Plan
 
-- **RTX-Asset-Studio in UWE:** Assets direkt in UWE mit lokaler RTX erstellen; Styleguide + Asset-Katalog als Prompt-Kontext; Ergebnis als validiertes Custom-Asset/PaletteItem-Proposal, Promotion zu Builtins per PR.
+- **RTX-Asset-Studio in UWE:** Brain-Action, Validator und Styleguide-/Katalog-Kontext sind vorbereitet. Offen bleiben Studio-Panel/Server-Action, Preview/Review-Diff, Pending-`AtlasPaletteItem`-Persistenz und spätere Builtin-Promotion per PR.
 - **Gouache-Asset-Bibliothek ausbauen:** Backlog aus `docs/design/atlas-redesign/asset-catalog.md` schrittweise als Rezepte/Custom-Assets umsetzen.
-- **Großstadt-/Schloss-Generator:** Kern-Engine + Ghost-Übernahme sind umgesetzt; offen bleiben Wasser-/Werft-Varianten, Feintuning der Gebäudeverteilung und Golden-Screenshots.
+- **Großstadt-/Schloss-Generator:** Kern-Engine, Ghost-Übernahme und optionaler Wasserfront-/Pier-Hook sind umgesetzt; offen bleiben UI-Parameter für Hafen/Werft, Feintuning der Gebäudeverteilung und Golden-Screenshots.
 - **Weiche Terrain-Übergänge:** nur noch visuelles Feintuning/Golden-Screenshots für `AtlasTileLayer.blendWidth`, falls der 6px-Default in echten Karten zu weich oder zu hart wirkt.
 - **Static-Viewer-Restparität:** Ranke-Details, `style.smooth`/`style.width` und Legenden-Feinschliff sind nachgezogen; explizite Custom-/AI-Stempel-Goldens fehlen dort weiterhin.
 - **Optionaler Editor-Layout-Umbau:** Werkstatt-orientiertes Layout erst nach den Kernfeatures entscheiden.
-- **Tests & Gates:** Plot-/Settlement-Golden-Tests, RTX-Asset-Validator-Tests, `scripts/security-leaks.test.ts`, `pnpm test:security`, `pnpm ci:light`.
+- **Tests & Gates:** RTX-Asset-Validator-Tests sind vorhanden; offen bleiben Plot-/Settlement-Golden-Tests, Security-Leak-Assertions für exportierbare Asset-Proposals, `pnpm test:security`, `pnpm ci:light`.
 - **Atlas-Engine-Bundle:** nach Engine-Änderungen `pnpm --filter @uwe/static-export build:atlas-engine` ausführen und den `atlas-engine.js`-Diff mitcommitten.
 
 ## Nächster Agent: empfohlener Einstieg
 
-**Priorität 1: RTX-Asset-Studio in UWE.** Plot-Fill und Settlement laufen jetzt als Review-only Ghost-Flows. Der nächste saubere Schnitt ist die Asset-Erstellung direkt in UWE: Ein Studio-Panel fragt über den lokalen RTX-Host ein Atlas-Pictogram/Gouache-Asset an, UWE gibt Styleguide + Asset-Katalog als Prompt-Kontext mit und speichert das Ergebnis erst als validiertes Custom-Asset/PaletteItem-Proposal.
+**Priorität 1: RTX-Asset-Studio in UWE.** Plot-Fill und Settlement laufen als Review-only Ghost-Flows; `atlas_generate_asset_proposal` liefert jetzt validierte Asset-Proposals mit Styleguide-/Katalog-Kontext. Der nächste saubere Schnitt ist die Studio-Oberfläche: Ein Panel fragt über den lokalen RTX-Host ein Atlas-Pictogram/Gouache-Asset an, zeigt Validierung/Preview und speichert das Ergebnis erst als Pending-Custom-Asset/PaletteItem.
 
 Betroffene Kernstellen:
 
-- `docs/prompts/atlas-pictogram-styleguide.md` und `docs/design/atlas-redesign/asset-catalog.md` als verpflichtender RTX-Kontext.
-- `packages/atlas/src/asset-proposal.ts` für Prompt-Kontext, Validator und erlaubte Ergebnisform erweitern statt freie Bild-/Code-Payloads durchzureichen.
-- `packages/ai-brain/src/brain-actions.ts` um eine Review-only Brain-Action wie `atlas_generate_asset_proposal` ergänzen.
-- `apps/studio/app/atlas-asset-actions.ts` oder ein eng geschnittener Server-Action-Slice für RTX-Aufruf, Validierung und Pending-PaletteItem-Anlage.
+- `docs/prompts/atlas-pictogram-styleguide.md` und `docs/design/atlas-redesign/asset-catalog.md` bleiben die verbindlichen Quellen; `packages/atlas/src/rtx-asset-proposal.ts` enthält die serverseitig nutzbaren Pflichtauszüge.
+- `packages/atlas/src/rtx-asset-proposal.ts` nur erweitern, wenn Preview-/Persistenzfelder wirklich fehlen; Validator bleibt das finale Gate.
+- `packages/ai-brain/src/actions.ts`, `packages/ai-brain/src/tasks.ts` und `packages/ai-brain/src/proposals.ts` kennen `atlas_generate_asset_proposal` bereits.
+- `apps/studio/app/atlas-asset-actions.ts` oder ein eng geschnittener Server-Action-Slice für RTX-Aufruf, Re-Validierung und Pending-PaletteItem-Anlage.
 - Studio-UI: kleines Panel im Atlas-Kontext für Prompt, Styleguide-Hinweis, Ghost/Preview, Übernehmen/Verwerfen.
 
 Security-Regeln:

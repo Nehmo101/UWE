@@ -173,6 +173,7 @@ describe("connectorQueueProvider", () => {
     assert.equal(workflowSlotForTask("summarize_page"), "analysis");
     assert.equal(workflowSlotForTask("prepare_mail_draft"), "chat");
     assert.equal(workflowSlotForTask("atlas_fill_area"), "dnd");
+    assert.equal(workflowSlotForTask("atlas_generate_asset_proposal"), "dnd");
 
     assert.equal(await resolveConnectorWorkflowModel(isolated, "create_npc"), null);
 

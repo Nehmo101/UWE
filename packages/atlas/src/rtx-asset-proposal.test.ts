@@ -175,5 +175,9 @@ describe("RTX Atlas asset prompt context", () => {
     assert.ok(context.existingAssets.some((asset) => asset.key === "g_oak"));
     assert.ok(promptContext.includes("json-recipe"));
     assert.ok(promptContext.includes("png-fallback"));
+    assert.ok(promptContext.includes("base-center"));
+    assert.ok(promptContext.includes("Stamp is a single AtlasObject asset"));
+    assert.ok(context.styleguideExcerpt.length > 0);
+    assert.ok(context.assetCatalogExcerpt.length > 0);
   });
 });

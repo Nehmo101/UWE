@@ -1,3 +1,4 @@
+import { formatRtxAtlasAssetPromptContext } from "@uwe/atlas/rtx-asset-proposal";
 import type { AiContext, AiTaskType } from "./types";
 
 export const AI_TASK_LABELS: Record<AiTaskType, string> = {
@@ -23,6 +24,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   atlas_name_region: "Atlas-Regionen benennen",
   atlas_describe_region: "Atlas-Region beschreiben",
   atlas_fill_area: "Atlas-Objektfläche füllen",
+  atlas_generate_asset_proposal: "Atlas-Asset vorschlagen",
   simulate_faction: "Fraktion simulieren",
   generate_structured_npc: "NPC strukturiert generieren",
   generate_structured_quest: "Quest strukturiert generieren",
@@ -80,6 +82,9 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
   atlas_fill_area:
     "Schlage ein Atlas-Plot-Fill-Rezept als reines JSON vor. Format: {\"schemaVersion\":1,\"kind\":\"atlas_plot_fill\",\"biomeKind\":\"forest\",\"density\":1,\"seed\":123,\"assets\":[{\"gouacheKey\":\"g_oak\",\"weight\":1}]}. Nutze nur bekannte Gouache-Asset-Keys aus der Zusatzanweisung oder dem Kontext. Liefere keine AtlasObject-Payloads, keine Koordinaten, keine Sichtbarkeit, keine Palette-DB-IDs und keinen Code. UWE erzeugt daraus Ghost-Objekte und übernimmt sie erst nach manueller Prüfung.",
+  atlas_generate_asset_proposal:
+    "Schlage ein Atlas-Gouache-Asset als reines JSON-Proposal vor. Nutze den Styleguide und Asset-Katalog aus dem folgenden Pflichtkontext. Liefere entweder `outputType:\"json-recipe\"` mit einem begrenzten Gouache-Rezept oder `outputType:\"png-fallback\"` mit PNG-Metadaten. Liefere keine AtlasObject-Payloads, keine Palette-DB-IDs, keine Dateipfade außer sicherem PNG-Dateinamen, keine Remote-URLs und keinen Code. UWE validiert das Proposal und übernimmt es erst nach manueller Prüfung.\n\n" +
+    formatRtxAtlasAssetPromptContext(),
   simulate_faction:
     "Simuliere einen Zeitsprung für die Fraktion im Kontext: Welche Ereignisse, Ressourcen- und Beziehungsänderungen ergeben sich? Antworte NUR als JSON-Objekt {\"events\":[...]} — jedes Event mit title, inGameDate {year,month,day}, summaryPlayer, summaryDm (optional), visibility (player_visible|private|dm_only). Keine Kanon-Änderungen ohne Review.",
   generate_structured_npc:
