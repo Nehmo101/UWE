@@ -1219,6 +1219,7 @@ async fn test_host_connection(
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::default())
         .setup(|app| {
             setup_tray(app)?;

@@ -10,7 +10,7 @@ import {
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { renderAttachmentsBlock } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { parseBody, parseParams, worldSlugParamSchema } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 import { dispatchSoundboardRtx } from "@/src/lib/soundboard-rtx";
 

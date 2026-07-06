@@ -67,6 +67,65 @@ export async function runOpenAiCompatibleChat(
   };
 }
 
+type OpenAiContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export async function runOpenAiCompatibleVision(
+  baseUrl: string,
+  provider: OpenAiCompatibleProvider,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Record<string, unknown>> {
+  const prompt = asString(payload.prompt);
+  if (!prompt) {
+    throw new Error("vision_extract: 'prompt' fehlt im Payload.");
+  }
+  const images = Array.isArray(payload.images)
+    ? payload.images.filter((image): image is string => typeof image === "string" && image.length > 0)
+    : [];
+  if (images.length === 0) {
+    throw new Error("vision_extract: 'images' (Base64) fehlt im Payload.");
+  }
+  const model = asString(payload.model, "local-model");
+  const maxTokens = asNumber(payload.maxTokens);
+  const mimeType = asString(payload.mimeType, "image/jpeg");
+  const content: OpenAiContentPart[] = [{ type: "text", text: prompt }];
+  for (const image of images) {
+    const url = image.startsWith("data:")
+      ? image
+      : `data:${mimeType};base64,${image}`;
+    content.push({ type: "image_url", image_url: { url } });
+  }
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: [{ role: "user", content }],
+    stream: false,
+  };
+  if (maxTokens != null) body.max_tokens = maxTokens;
+
+  const response = await fetchImpl(`${openAiBaseUrl(baseUrl)}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new Error(`${provider} vision HTTP ${response.status}`);
+  }
+  const data = (await response.json()) as {
+    model?: string;
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  return {
+    text: data.choices?.[0]?.message?.content ?? "",
+    model: data.model ?? model,
+    provider,
+  };
+}
+
 export async function runOpenAiCompatibleEmbedding(
   baseUrl: string,
   provider: OpenAiCompatibleProvider,

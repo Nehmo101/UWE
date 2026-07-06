@@ -7,7 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { executeAiPrompt } from "@/src/lib/ai-prompt-handlers";
 import { composeIdeaPromptGeneration } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";

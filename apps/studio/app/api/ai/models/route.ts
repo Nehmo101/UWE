@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getModels } from "../../../../src/lib/ai-handlers";
 import { aiModelsQuerySchema, parseQuery, safeHandlerError } from "@uwe/security";
 

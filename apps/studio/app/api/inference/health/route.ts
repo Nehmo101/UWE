@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getInferenceStatus, runInferenceTestPrompt } from "@uwe/ai-brain";
 import { inferenceHealthQuerySchema, parseQuery } from "@uwe/security";
 

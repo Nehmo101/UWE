@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getProposal } from "../../../../../src/lib/ai-handlers";
 import { idSchema, parseParams } from "@uwe/security";
 import { z } from "zod";

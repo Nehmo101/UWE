@@ -7,6 +7,7 @@ import {
   extractPdfText,
   prisma,
 } from "@uwe/database/server";
+import { runConnectorVisionExtract } from "@uwe/ai-brain/router";
 import { downscaleImageForVision } from "@uwe/assets";
 import {
   createScanInboxService,
@@ -89,11 +90,12 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
   // Das Ergebnis wird poll-on-demand via finalizeScanAction zurueckgeschrieben.
   const vision = await downscaleImageForVision({ buffer, mimeType: scan.mimeType });
   const base64 = vision.buffer.toString("base64");
-  const job = await createConnectorService(prisma).enqueueJob({
-    type: "vision_extract",
-    payload: { prompt: VISION_PROMPT, images: [base64] },
+  const job = await runConnectorVisionExtract(prisma, {
+    prompt: VISION_PROMPT,
+    images: [base64],
+    mimeType: vision.mimeType,
   });
-  await service().setConnectorJob(id, job.id);
+  await service().setConnectorJob(id, job.jobId);
   revalidate(id);
 }
 

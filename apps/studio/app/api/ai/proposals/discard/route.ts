@@ -1,5 +1,5 @@
 import { postDiscard } from "../../../../../src/lib/ai-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { idSchema, optionalString, parseBody } from "@uwe/security";
 import { z } from "zod";
 

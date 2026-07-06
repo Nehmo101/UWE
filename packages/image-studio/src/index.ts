@@ -62,13 +62,11 @@ export type ConnectorImageGenerate = (
 export interface ImageStudioProviderConfig {
   enabled: boolean;
   allowCloud: boolean;
-  rtxAgentUrl?: string;
-  rtxAgentToken?: string;
   cloudApiKey?: string;
   cloudProvider?: string;
   cloudModel?: string;
   defaultMode: ImageProviderMode;
-  /** When true, prefer the connector image_generate queue over direct RTX Agent HTTP. */
+  /** Prefer the connector image_generate queue (injected by the host at runtime). */
   useConnectorImage?: boolean;
   /** Host-injected connector queue bridge (see {@link ConnectorImageGenerate}). */
   connectorImageGenerate?: ConnectorImageGenerate;
@@ -77,57 +75,21 @@ export interface ImageStudioProviderConfig {
 export function resolveImageProviderConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): ImageStudioProviderConfig {
-  const rtxWorkerUrl = env.RTX_BASE_URL?.trim();
-  const rtxWorkerToken = env.RTX_SERVICE_TOKEN?.trim();
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
     allowCloud: env.IMAGE_STUDIO_ALLOW_CLOUD === "true",
-    rtxAgentUrl: rtxWorkerUrl,
-    rtxAgentToken: rtxWorkerToken,
     cloudApiKey: env.CLOUD_AI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim(),
     cloudProvider: env.CLOUD_AI_PROVIDER?.trim() || "openai",
     cloudModel: env.IMAGE_STUDIO_CLOUD_MODEL?.trim() || env.CLOUD_AI_MODEL?.trim() || "dall-e-3",
     defaultMode:
       (env.IMAGE_STUDIO_DEFAULT_PROVIDER?.trim() as ImageProviderMode) || "auto",
-    useConnectorImage: env.RTX_USE_CONNECTOR_IMAGE === "true",
+    useConnectorImage: env.RTX_USE_CONNECTOR_IMAGE !== "false",
   };
 }
 
-let warnedRtxAgentImageDeprecation = false;
-
-function warnRtxAgentImageDeprecation(via: "connector" | "direct"): void {
-  if (warnedRtxAgentImageDeprecation) return;
-  warnedRtxAgentImageDeprecation = true;
-  const tail =
-    via === "connector"
-      ? "Routing über die RTX-Host-Connector-Queue (image_generate)."
-      : "Direkter Aufruf des Legacy-Endpunkts — bitte auf den outbound RTX Host Connector migrieren (RTX_USE_CONNECTOR_IMAGE=true).";
-  console.warn(`[image-studio] Direkter RTX-Worker-Aufruf (RTX_BASE_URL) ist veraltet. ${tail}`);
-}
-
-/** A local image backend is available via the connector bridge or the legacy RTX Agent URL. */
+/** A local image backend is available via the outbound connector queue bridge. */
 function hasLocalImageBackend(config: ImageStudioProviderConfig): boolean {
-  return Boolean(
-    (config.useConnectorImage && config.connectorImageGenerate) || config.rtxAgentUrl,
-  );
-}
-
-async function checkRtxAvailable(config: ImageStudioProviderConfig): Promise<boolean> {
-  if (!config.rtxAgentUrl) return false;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const headers: Record<string, string> = {};
-    if (config.rtxAgentToken) headers.Authorization = `Bearer ${config.rtxAgentToken}`;
-    const response = await fetch(`${config.rtxAgentUrl.replace(/\/$/, "")}/health`, {
-      signal: controller.signal,
-      headers,
-    });
-    clearTimeout(timer);
-    return response.ok;
-  } catch {
-    return false;
-  }
+  return Boolean(config.useConnectorImage && config.connectorImageGenerate);
 }
 
 async function resolveProvider(
@@ -137,10 +99,8 @@ async function resolveProvider(
   if (mode === "disabled" || !config.enabled) return "disabled";
   if (mode === "local_rtx") return hasLocalImageBackend(config) ? "local_rtx" : "disabled";
   if (mode === "cloud") return config.allowCloud && config.cloudApiKey ? "cloud" : "disabled";
-  // auto: prefer the connector queue when configured, then legacy RTX Agent.
-  if (config.useConnectorImage && config.connectorImageGenerate) return "local_rtx";
-  const rtxUp = await checkRtxAvailable(config);
-  if (rtxUp) return "local_rtx";
+  // auto: prefer the connector queue when the host injected the bridge.
+  if (hasLocalImageBackend(config)) return "local_rtx";
   if (config.allowCloud && config.cloudApiKey) return "cloud";
   return "disabled";
 }
@@ -149,55 +109,14 @@ async function runLocalImageTask(
   config: ImageStudioProviderConfig,
   request: ImageStudioRequest,
 ): Promise<ImageStudioResult> {
-  if (config.useConnectorImage && config.connectorImageGenerate) {
-    if (config.rtxAgentUrl) warnRtxAgentImageDeprecation("connector");
+  if (config.connectorImageGenerate) {
     return config.connectorImageGenerate(request);
   }
-  if (config.rtxAgentUrl) warnRtxAgentImageDeprecation("direct");
-  return callRtxImageAgent(config, request);
-}
-
-async function callRtxImageAgent(
-  config: ImageStudioProviderConfig,
-  request: ImageStudioRequest,
-): Promise<ImageStudioResult> {
-  if (!config.rtxAgentUrl) {
-    return { success: false, providerUsed: "local_rtx", error: "RTX Agent URL nicht konfiguriert." };
-  }
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (config.rtxAgentToken) headers.Authorization = `Bearer ${config.rtxAgentToken}`;
-
-  const response = await fetch(`${config.rtxAgentUrl.replace(/\/$/, "")}/v1/images`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      task: request.task,
-      prompt: request.prompt,
-      source_image: request.sourceImageBase64,
-      mask: request.maskBase64,
-      width: request.width ?? 1024,
-      height: request.height ?? 1024,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    return {
-      success: false,
-      providerUsed: "local_rtx",
-      error: `RTX Image Agent Fehler (${response.status}): ${text.slice(0, 200)}`,
-    };
-  }
-
-  const data = (await response.json()) as { image?: string; mime_type?: string };
-  if (!data.image) {
-    return { success: false, providerUsed: "local_rtx", error: "Kein Bild vom RTX Agent erhalten." };
-  }
   return {
-    success: true,
+    success: false,
     providerUsed: "local_rtx",
-    imageBase64: data.image,
-    mimeType: data.mime_type ?? "image/png",
+    error:
+      "Kein lokaler Bild-Backend: RTX Host Connector mit image_generation erforderlich (outbound Connector-Queue).",
   };
 }
 
@@ -342,7 +261,7 @@ export async function runImageStudioTask(
       success: false,
       providerUsed: "disabled",
       error:
-        "Image Studio nicht verfügbar. RTX Agent offline und Cloud-KI deaktiviert oder nicht konfiguriert.",
+        "Image Studio nicht verfügbar. RTX Host Connector (image_generation) offline und Cloud-KI deaktiviert oder nicht konfiguriert.",
     };
   }
 

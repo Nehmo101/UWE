@@ -8,7 +8,7 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { runOpenAiCompatibleChat, runOpenAiCompatibleEmbedding } from "./openai-compatible-llm";
+import { runOpenAiCompatibleChat, runOpenAiCompatibleEmbedding, runOpenAiCompatibleVision } from "./openai-compatible-llm";
 
 describe("openai-compatible-llm", () => {
   it("calls /v1/chat/completions for LM Studio", async () => {
@@ -45,5 +45,28 @@ describe("openai-compatible-llm", () => {
     );
     assert.deepEqual(result.embedding, [0.1, 0.2]);
     assert.equal(result.provider, "llamacpp");
+  });
+
+  it("calls /v1/chat/completions with multimodal content for vision", async () => {
+    let body: Record<string, unknown> = {};
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({ model: "vision-model", choices: [{ message: { content: "Text" } }] }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await runOpenAiCompatibleVision(
+      "http://127.0.0.1:1234",
+      "lmstudio",
+      { prompt: "OCR", images: ["abc123"], model: "vision-model" },
+      1000,
+      fetchImpl,
+    );
+    const messages = body.messages as Array<{ content: Array<{ type: string }> }>;
+    assert.equal(messages[0]?.content.length, 2);
+    assert.equal(result.text, "Text");
+    assert.equal(result.provider, "lmstudio");
   });
 });

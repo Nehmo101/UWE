@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { parseParams, worldSlugParamSchema } from "@uwe/security";
 import { listSpotifyDevicesForWorld } from "@/src/lib/spotify-handlers";
 

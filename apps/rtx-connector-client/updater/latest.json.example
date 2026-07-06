@@ -1,0 +1,19 @@
+{
+  "version": "0.1.0",
+  "notes": "UWE RTX Connector Client release notes go here.",
+  "pub_date": "2026-07-06T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "<base64-signature>",
+      "url": "https://github.com/Nehmo101/UWE/releases/download/rtx-connector-v0.1.0/UWE-RTX-Connector-Client_0.1.0_x64-setup.exe"
+    },
+    "linux-x86_64": {
+      "signature": "<base64-signature>",
+      "url": "https://github.com/Nehmo101/UWE/releases/download/rtx-connector-v0.1.0/uwe-rtx-connector-client_0.1.0_amd64.AppImage"
+    },
+    "darwin-aarch64": {
+      "signature": "<base64-signature>",
+      "url": "https://github.com/Nehmo101/UWE/releases/download/rtx-connector-v0.1.0/UWE-RTX-Connector-Client_0.1.0_aarch64.dmg"
+    }
+  }
+}

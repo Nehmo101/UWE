@@ -19,11 +19,20 @@ test.describe("Studio label print (QF10)", () => {
     await expect(page.getByRole("button", { name: "Suchen" })).toBeVisible();
   });
 
-  test("physical label print via RTX host", async () => {
+  test("physical label print via RTX host", async ({ page }) => {
     test.skip(
       !process.env.UWE_E2E_LABEL_PRINT,
-      "Homelab only: set UWE_E2E_LABEL_PRINT=1 with RTX connector + CUPS. See docs/rtx-connector.md#manual-qa-label-printing.",
+      "Homelab only: set UWE_E2E_LABEL_PRINT=1 with RTX connector + stub/CUPS print. See docs/rtx-connector.md#manual-qa-label-printing.",
     );
-    // Future: drive world label UI → queue → connector stub when homelab harness exists.
+
+    await page.goto("/system/printers");
+    await expect(page.getByRole("heading", { name: "Drucker" })).toBeVisible();
+
+    const discover = page.getByRole("button", { name: "Suchen" });
+    await discover.click();
+
+    await expect(page.getByText(/Connector|Drucker|Warteschlange/i).first()).toBeVisible({
+      timeout: 60_000,
+    });
   });
 });

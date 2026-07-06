@@ -10,7 +10,7 @@ import {
   saveCaptureUploadFile,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 export async function POST(request: Request) {
   const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });

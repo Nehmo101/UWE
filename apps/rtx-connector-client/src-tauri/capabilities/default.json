@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default desktop capability for the UWE RTX Connector Client.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "updater:default"]
 }

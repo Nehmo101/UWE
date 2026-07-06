@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { lifeBrainChatBodySchema, parseBody } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { aiPromptErrorResponse } from "@/src/lib/ai-prompt-handlers";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { executeLifeBrainChat } from "@/src/lib/life-brain-chat";

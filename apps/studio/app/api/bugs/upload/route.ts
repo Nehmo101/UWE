@@ -21,7 +21,7 @@ import {
   resolveEffectiveUploadsPath,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 const IMAGE_KINDS: ReadonlySet<DetectedFileKind> = new Set(["png", "jpeg", "gif", "webp"]);
 

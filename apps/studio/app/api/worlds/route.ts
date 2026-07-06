@@ -7,7 +7,7 @@ import {
 } from "@uwe/database/server";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
 import { createWorldBodySchema, parseBody } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 
 export async function POST(request: Request) {

@@ -60,6 +60,67 @@ function resultRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+/** True when an online (or degraded) connector advertises local vision inference. */
+export async function isConnectorVisionAvailable(prisma: PrismaClient): Promise<boolean> {
+  const summary = await createConnectorService(prisma).summarize();
+  return summary.availableCapabilities.includes("vision_local");
+}
+
+export interface ConnectorVisionInput {
+  prompt: string;
+  images: string[];
+  model?: string;
+  provider?: string;
+  mimeType?: string;
+  worldId?: string;
+  timeoutMs?: number;
+  maxTokens?: number;
+}
+
+export interface ConnectorVisionResult {
+  text: string;
+  model: string;
+  jobId: string;
+}
+
+/**
+ * Enqueue a `vision_extract` job and wait for a connector to complete it.
+ * Host callers supply domain-specific payload fields (downscaled images, prompts).
+ */
+export async function runConnectorVisionExtract(
+  prisma: PrismaClient,
+  input: ConnectorVisionInput,
+): Promise<ConnectorVisionResult> {
+  const service = createConnectorService(prisma);
+  const payload: Record<string, unknown> = {
+    prompt: input.prompt,
+    images: input.images,
+  };
+  if (input.model?.trim()) payload.model = input.model.trim();
+  if (input.provider?.trim()) payload.provider = input.provider.trim();
+  if (input.mimeType?.trim()) payload.mimeType = input.mimeType.trim();
+  if (input.maxTokens != null) payload.maxTokens = input.maxTokens;
+
+  const job = await service.enqueueJob({
+    type: "vision_extract",
+    payload,
+    worldId: input.worldId ?? null,
+  });
+
+  const completed = await waitForConnectorJob(prisma, job.id, {
+    timeoutMs: input.timeoutMs ?? CONNECTOR_LLM_TIMEOUT_MS,
+    intervalMs: CONNECTOR_POLL_INTERVAL_MS,
+  });
+
+  const result = resultRecord(completed.result);
+  const text = typeof result.text === "string" ? result.text : "";
+  const model =
+    typeof result.model === "string" && result.model.trim()
+      ? result.model
+      : (input.model?.trim() ?? "");
+  return { text, model, jobId: job.id };
+}
+
 /** True when an online (or degraded) connector advertises local LLM inference. */
 export async function isConnectorLlmAvailable(prisma: PrismaClient): Promise<boolean> {
   const summary = await createConnectorService(prisma).summarize();

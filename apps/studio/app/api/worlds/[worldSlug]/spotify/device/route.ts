@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseParams, worldSlugParamSchema } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { setPreferredSpotifyDevice } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {

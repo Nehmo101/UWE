@@ -13,7 +13,7 @@ import {
   resolveEffectiveUploadsPath,
 } from "@uwe/database/server";
 import { createScanInboxService, type ScanPrivacyLevel } from "@uwe/scan-inbox";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 /** Storage namespace for world-independent scan uploads (Studio-only). */
 const SCAN_UPLOAD_NAMESPACE = "_scan";

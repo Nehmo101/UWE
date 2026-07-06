@@ -1,5 +1,5 @@
 import { postImportPreview } from "../../../../src/lib/import-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { importPreviewBodySchema, parseBody, safeHandlerError } from "@uwe/security";
 
 export async function POST(request: Request) {

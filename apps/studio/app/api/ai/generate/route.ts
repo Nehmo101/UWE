@@ -1,5 +1,5 @@
 import { postGenerate } from "../../../../src/lib/ai-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { aiGenerateBodySchema, parseBody } from "@uwe/security";
 

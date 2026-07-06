@@ -17,6 +17,7 @@ import {
   runConnectorEmbeddingGenerate,
   runConnectorImageGenerate,
   runConnectorLlmGenerate,
+  runConnectorVisionExtract,
   tryConnectorLlmGenerate,
   workflowSlotForTask,
 } from "./connectorQueueProvider";
@@ -25,7 +26,9 @@ async function onlineLlmConnector(
   db: PrismaClient,
   name: string,
   models: Array<{ id: string; provider: string; name: string }> = [],
-  capabilities: Array<"llm_local" | "embedding_local" | "image_generation"> = [
+  capabilities: Array<
+    "llm_local" | "embedding_local" | "image_generation" | "vision_local"
+  > = [
     "llm_local",
     "embedding_local",
   ],
@@ -79,6 +82,28 @@ describe("connectorQueueProvider", () => {
 
     await onlineLlmConnector(isolated, "Image Test", [], ["image_generation"]);
     assert.equal(await isConnectorImageAvailable(isolated), true);
+  });
+
+  it("enqueues a vision_extract job and returns OCR text", async () => {
+    const isolated = createPrismaClient(createTestDatabaseUrl());
+    const connector = await onlineLlmConnector(isolated, "Vision Run", [], ["vision_local"]);
+
+    const [result] = await Promise.all([
+      runConnectorVisionExtract(isolated, {
+        prompt: "Transkribiere",
+        images: ["abc123"],
+        mimeType: "image/jpeg",
+      }),
+      simulateConnectorCompletion(isolated, connector.id, "vision_extract", {
+        text: "Rechnung Nr. 42",
+        model: "llava",
+        provider: "ollama",
+      }),
+    ]);
+
+    assert.equal(result.text, "Rechnung Nr. 42");
+    assert.equal(result.model, "llava");
+    assert.ok(result.jobId);
   });
 
   it("enqueues an llm_generate job and returns the connector result", async () => {

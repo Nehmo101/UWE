@@ -1,5 +1,5 @@
 import { postContext } from "../../../../src/lib/ai-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { aiContextBodySchema, parseBody } from "@uwe/security";
 
 export async function POST(request: Request) {

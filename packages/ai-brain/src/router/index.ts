@@ -62,3 +62,10 @@ export {
   type RtxReadinessOptions,
   type RtxReadinessSource,
 } from "./health/rtxReadiness";
+
+export {
+  isConnectorVisionAvailable,
+  runConnectorVisionExtract,
+  type ConnectorVisionInput,
+  type ConnectorVisionResult,
+} from "./providers/connectorQueueProvider";

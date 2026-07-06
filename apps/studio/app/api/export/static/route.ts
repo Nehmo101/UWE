@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { jsonError } from "@/src/lib/api-response";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -12,7 +12,6 @@ import {
 } from "@uwe/database/server";
 import { exportWorldStatic } from "@uwe/static-export";
 import {
-  guardStudioMutation,
   optionalString,
   parseBody,
   safeHandlerError,

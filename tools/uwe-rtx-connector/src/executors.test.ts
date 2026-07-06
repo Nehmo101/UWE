@@ -133,6 +133,44 @@ describe("executeJob image_generate", () => {
   });
 });
 
+describe("executeJob vision_extract", () => {
+  it("routes vision_extract to OpenAI-compatible multimodal chat for LM Studio", async () => {
+    let body: Record<string, unknown> = {};
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({ model: "vision", choices: [{ message: { content: "OCR OK" } }] }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchImpl;
+    try {
+      const result = await executeJob(
+        {
+          ...genericJob("vision_extract", {
+            prompt: "OCR",
+            images: ["abc"],
+            model: "vision",
+          }),
+          lane: "gpu",
+        },
+        ctx({
+          lmStudioUrl: "http://127.0.0.1:1234",
+          resolveModelProvider: () => "lmstudio",
+        }),
+      );
+      assert.equal(result.text, "OCR OK");
+      assert.equal(result.provider, "lmstudio");
+      const messages = body.messages as Array<{ content: unknown[] }>;
+      assert.equal(messages[0]?.content.length, 2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 describe("executeJob lmstudio", () => {
   it("routes llm_generate to OpenAI-compatible chat when provider resolves", async () => {
     const fetchImpl = (async (url: string | URL | Request) => {

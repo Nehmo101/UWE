@@ -1,5 +1,5 @@
 import { postGeneratorAction } from "@/src/lib/generator-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { aiGeneratorBodySchema, parseBody } from "@uwe/security";
 
 export async function POST(request: Request) {

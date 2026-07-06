@@ -434,6 +434,9 @@ describe("AI Brain — generateAiTask with mock provider", () => {
     const seeded = await seedTerraWorld(repo);
     const apiKeyStore = new InMemoryApiKeyStore();
     apiKeyStore.set("openai", "test-key-should-not-be-used");
+    const { createAiGatewayService, createPrismaClient } = await import("@uwe/database/server");
+    const db = createPrismaClient(databaseUrl);
+    const gateway = createAiGatewayService(db);
 
     const { result } = await generateAiTask(repo, {
       taskType: "summarize_page",
@@ -448,6 +451,8 @@ describe("AI Brain — generateAiTask with mock provider", () => {
       },
       apiKeyStore,
       useMock: true,
+      prisma: db,
+      gatewayService: gateway,
     });
 
     assert.ok(result.text.length > 0);

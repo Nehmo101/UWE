@@ -8,7 +8,7 @@ import {
   type DevIdeaAttachment,
 } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
 
 const ideaIdParamSchema = z.object({ id: idSchema });

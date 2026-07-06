@@ -1,5 +1,5 @@
 import { postAiPrompt, type AiPromptRequestBody } from "@/src/lib/ai-prompt-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { aiPromptBodySchema, parseBody } from "@uwe/security";
 

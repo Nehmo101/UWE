@@ -25,6 +25,7 @@ import {
   resolveOpenAiCompatibleBaseUrl,
   runOpenAiCompatibleChat,
   runOpenAiCompatibleEmbedding,
+  runOpenAiCompatibleVision,
   type OpenAiCompatibleProvider,
 } from "./openai-compatible-llm";
 
@@ -79,6 +80,24 @@ async function runLlmGenerate(payload: Record<string, unknown>, ctx: ExecutorCon
     throw new Error(`Kein lokaler LLM-Provider (${providerLabel(provider)}) konfiguriert.`);
   }
   return runOpenAiCompatibleChat(
+    baseUrl,
+    provider as OpenAiCompatibleProvider,
+    payload,
+    ctx.requestTimeoutMs,
+  );
+}
+
+async function runVisionExtract(payload: Record<string, unknown>, ctx: ExecutorContext): Promise<JobResult> {
+  const provider = resolveLlmProvider(payload, ctx);
+  if (provider === "ollama") {
+    if (!ctx.ollamaUrl) throw new Error("Kein lokaler Vision-Provider (Ollama) konfiguriert.");
+    return runOllamaVision(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+  }
+  const baseUrl = resolveOpenAiCompatibleBaseUrl(provider, ctx);
+  if (!baseUrl) {
+    throw new Error(`Kein lokaler Vision-Provider (${providerLabel(provider)}) konfiguriert.`);
+  }
+  return runOpenAiCompatibleVision(
     baseUrl,
     provider as OpenAiCompatibleProvider,
     payload,
@@ -382,8 +401,7 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
       return runEmbeddingGenerate(payload, ctx);
     }
     case "vision_extract": {
-      if (!ctx.ollamaUrl) throw new Error("Kein lokaler Vision-Provider (Ollama) konfiguriert.");
-      return runOllamaVision(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+      return runVisionExtract(payload, ctx);
     }
     case "connector_refresh_models": {
       const count = await ctx.refreshModels();

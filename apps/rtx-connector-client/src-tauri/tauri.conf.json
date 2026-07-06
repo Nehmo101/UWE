@@ -36,8 +36,10 @@
   "plugins": {
     "updater": {
       "active": false,
-      "endpoints": [],
-      "dialog": false,
+      "endpoints": [
+        "https://github.com/Nehmo101/UWE/releases/download/rtx-connector-v{{version}}/latest.json"
+      ],
+      "dialog": true,
       "pubkey": ""
     }
   }

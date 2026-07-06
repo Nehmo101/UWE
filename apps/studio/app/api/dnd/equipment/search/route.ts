@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { resolveDndApiConfig } from "@uwe/database/server";
 import { searchEquipment, summarizeOpen5eEquipment, type Open5eEquipmentKind } from "@uwe/dnd-api";

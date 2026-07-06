@@ -1,5 +1,5 @@
 import { postBrainRun } from "../../../../src/lib/brain-handlers";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { brainRunBodySchema, parseBody } from "@uwe/security";
 

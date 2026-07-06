@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getRuns } from "../../../../src/lib/ai-handlers";
 import { parseQuery, passthroughBodySchema } from "@uwe/security";
 

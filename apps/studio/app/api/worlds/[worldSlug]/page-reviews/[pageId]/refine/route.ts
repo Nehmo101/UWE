@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@uwe/database/server";
 import { createPageAiReviewService } from "@uwe/page-ai-review";
 import { parseBody, safeHandlerError } from "@uwe/security";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { dispatchJob } from "@/src/lib/job-executor";
 
 const refineBodySchema = z.object({

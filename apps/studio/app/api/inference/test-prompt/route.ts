@@ -1,5 +1,5 @@
 import { runInferenceTestPrompt } from "@uwe/ai-brain";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { inferenceTestPromptBodySchema, parseBody } from "@uwe/security";
 
 /**

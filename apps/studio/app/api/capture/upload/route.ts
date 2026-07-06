@@ -18,7 +18,7 @@ import {
   resolveEffectiveUploadsPath,
   saveCaptureUploadFile,
 } from "@uwe/database/server";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 const ATTACHMENT_CAPTURE_TYPES = new Set(["file_image", "voice_memo"]);
 
