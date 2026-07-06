@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createLabelPrintQueueService } from "@uwe/database/server";
+import { createLabelPrintQueueService, LabelPrintDocumentAccessError } from "@uwe/database/server";
 import { idSchema, parseParams } from "@uwe/security";
 import { authenticateConnector } from "@/src/lib/connector-auth";
 const paramSchema = z.object({ jobId: idSchema });
@@ -11,8 +11,17 @@ export async function GET(request: Request, context: RouteContext) {
   const parsedParams = await parseParams(context.params, paramSchema);
   if (!parsedParams.success) return parsedParams.response;
   const queue = createLabelPrintQueueService();
-  const job = await queue.getJob(parsedParams.data.jobId);
-  if (!job || job.type !== "label_print") return NextResponse.json({ error: "not found" }, { status: 404 });
+  try {
+    await queue.assertConnectorPrintDocumentAccess(parsedParams.data.jobId, auth.connector.id);
+  } catch (error) {
+    if (error instanceof LabelPrintDocumentAccessError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.code === "not_found" ? 404 : 403 },
+      );
+    }
+    throw error;
+  }
   try {
     const doc = await queue.renderDocument(parsedParams.data.jobId, new URL(request.url).origin);
     const body = typeof doc.body === "string" ? doc.body : new Uint8Array(doc.body);

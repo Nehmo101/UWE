@@ -76,6 +76,17 @@ export interface LabelPrintDocument {
   filename: string;
 }
 
+export type LabelPrintDocumentAccessCode = "not_found" | "forbidden";
+
+export class LabelPrintDocumentAccessError extends Error {
+  readonly code: LabelPrintDocumentAccessCode;
+
+  constructor(code: LabelPrintDocumentAccessCode) {
+    super(code === "not_found" ? "Druckjob nicht gefunden." : "Kein Zugriff auf diesen Druckjob.");
+    this.code = code;
+  }
+}
+
 function toQueueItem(job: ConnectorJob, connectorName?: string | null): LabelPrintQueueItem {
   const payload = parseLabelPrintJobPayload(job.payload);
   const type = job.type === "printer_discover" ? "printer_discover" : "label_print";
@@ -180,6 +191,23 @@ export class LabelPrintQueueService {
     });
     if (!job || (job.type !== "label_print" && job.type !== "printer_discover")) return null;
     return toQueueItem(job, job.claimedBy?.name);
+  }
+
+  /** Ensures only the connector that claimed the job can fetch its document. */
+  async assertConnectorPrintDocumentAccess(jobId: string, connectorId: string): Promise<void> {
+    const job = await this.db.connectorJob.findUnique({
+      where: { id: jobId },
+      select: { type: true, claimedByConnectorId: true, status: true },
+    });
+    if (!job || job.type !== "label_print") {
+      throw new LabelPrintDocumentAccessError("not_found");
+    }
+    if (job.claimedByConnectorId !== connectorId) {
+      throw new LabelPrintDocumentAccessError("forbidden");
+    }
+    if (job.status !== "claimed" && job.status !== "running") {
+      throw new LabelPrintDocumentAccessError("forbidden");
+    }
   }
 
   async listPrinters(): Promise<

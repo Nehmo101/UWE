@@ -32,22 +32,22 @@ const heartbeatSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const pausedHostConfig = resolveHostConnectorConfig();
-  if (!pausedHostConfig.queueEnabled) {
+  const auth = await authenticateConnector(request);
+  if (!auth.ok) return auth.response;
+
+  const hostConfig = resolveHostConnectorConfig();
+  if (!hostConfig.queueEnabled) {
     return NextResponse.json({
       connector: {
-        id: "host-queue-paused",
-        name: "UWE Host Queue",
+        id: auth.connector.id,
+        name: auth.connector.name,
         status: "offline",
         queueEnabled: false,
       },
-      config: pausedHostConfig,
+      config: hostConfig,
       activeJobIds: [],
     });
   }
-
-  const auth = await authenticateConnector(request);
-  if (!auth.ok) return auth.response;
 
   const parsed = await parseBody(request, heartbeatSchema);
   if (!parsed.success) return parsed.response;
@@ -63,7 +63,6 @@ export async function POST(request: Request) {
     lastError: parsed.data.lastError,
   });
 
-  const hostConfig = resolveHostConnectorConfig();
   const activeJobs = await service.listActiveJobs(auth.connector.id);
 
   return NextResponse.json({

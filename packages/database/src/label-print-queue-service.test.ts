@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createPrismaClient } from "./client";
 import { createConnectorService } from "./connector-service";
-import { createLabelPrintQueueService } from "./label-print-queue-service";
+import {
+  createLabelPrintQueueService,
+  LabelPrintDocumentAccessError,
+} from "./label-print-queue-service";
 import { createPrintListService } from "./label-print-list-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -29,5 +32,48 @@ describe("LabelPrintQueueService", () => {
     const { connector } = await connectorService.createConnector("RTX2");
     const job = await queue.enqueuePrinterDiscover({ targetConnectorId: connector.id });
     assert.equal(job.type, "printer_discover");
+  });
+
+  it("denies label print document access to connectors that did not claim the job", async () => {
+    const dbUrl = createTestDatabaseUrl();
+    const isolatedDb = createPrismaClient(dbUrl);
+    const connectorService = createConnectorService(isolatedDb);
+    const queue = createLabelPrintQueueService(dbUrl);
+    const printLists = createPrintListService(dbUrl);
+    const world = await isolatedDb.world.create({ data: { slug: `print-auth-${Date.now()}`, name: "Test" } });
+    const list = await printLists.create({ worldId: world.id, name: "Secure Pack" });
+    const { connector: owner } = await connectorService.createConnector("Owner RTX");
+    const { connector: intruder } = await connectorService.createConnector("Intruder RTX");
+    const job = await queue.enqueuePrintList({
+      worldSlug: world.slug,
+      printListId: list.id,
+      printerId: "p1",
+      targetConnectorId: owner.id,
+      includeDmOnly: true,
+    });
+
+    await assert.rejects(
+      () => queue.assertConnectorPrintDocumentAccess(job.id, intruder.id),
+      (error: unknown) => {
+        assert.ok(error instanceof LabelPrintDocumentAccessError);
+        assert.equal(error.code, "forbidden");
+        return true;
+      },
+    );
+
+    await isolatedDb.connectorJob.update({
+      where: { id: job.id },
+      data: { claimedByConnectorId: owner.id, status: "claimed", claimedAt: new Date() },
+    });
+
+    await assert.doesNotReject(() => queue.assertConnectorPrintDocumentAccess(job.id, owner.id));
+    await assert.rejects(
+      () => queue.assertConnectorPrintDocumentAccess(job.id, intruder.id),
+      (error: unknown) => {
+        assert.ok(error instanceof LabelPrintDocumentAccessError);
+        assert.equal(error.code, "forbidden");
+        return true;
+      },
+    );
   });
 });
