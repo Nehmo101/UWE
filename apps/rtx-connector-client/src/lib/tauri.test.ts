@@ -262,6 +262,17 @@ describe("browser-preview mock backend (no Tauri runtime)", () => {
     assert.equal(stopped.lastHeartbeatAt, null);
   });
 
+  it("probeRunners returns runner probe rows from invoke", async () => {
+    installFakeTauri({
+      probe_runners: [
+        { id: "ollama", label: "Ollama", online: true, endpoint: "http://127.0.0.1:11434" },
+      ],
+    });
+    const rows = await probeRunners();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.id, "ollama");
+  });
+
   it("validates host url and token in test_host_connection", async () => {
     const empty = await testHostConnection("");
     assert.equal(empty.ok, false);

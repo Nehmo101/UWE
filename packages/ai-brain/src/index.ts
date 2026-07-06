@@ -101,7 +101,6 @@ export {
   isRtxReady,
   isRtxReadinessReady,
   isRtxWorkerConfigured,
-  isRtxAgentConfigured,
   type RtxReadinessStatus,
   AiRouterError,
   type AiProviderMode,

@@ -27,10 +27,18 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": ["msi", "nsis", "deb", "appimage", "dmg", "app"],
     "publisher": "UWE",
     "icon": ["icons/icon.svg", "icons/icon.ico"],
     "shortDescription": "Local desktop client for the UWE RTX Host Connector",
-    "longDescription": "Windows desktop client for the optional outbound UWE RTX Host Connector. It manages local connector configuration, model downloads, runner visibility, jobs and logs."
+    "longDescription": "Desktop client for the optional outbound UWE RTX Host Connector. Windows (MSI/NSIS), Linux (deb/AppImage), and macOS (dmg/app) bundles are supported when built on the matching host OS."
+  },
+  "plugins": {
+    "updater": {
+      "active": false,
+      "endpoints": [],
+      "dialog": false,
+      "pubkey": ""
+    }
   }
 }

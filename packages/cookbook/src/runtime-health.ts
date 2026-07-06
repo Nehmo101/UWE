@@ -179,7 +179,7 @@ export async function buildCookbookRuntimeHealth(
 
   if (!probe.inference.urlAllowed || !probe.rtx.urlAllowed) {
     warnings.push("Inference- oder RTX-URL ist öffentlich — nur private Adressen für Kampagnendaten.");
-    nextSteps.push("AI_INFERENCE_BASE_URL / RTX_AGENT_URL auf private IP oder localhost setzen.");
+    nextSteps.push("AI_INFERENCE_BASE_URL / RTX_BASE_URL auf private IP oder localhost setzen.");
   }
 
   if (localOnlyMode && !probe.rtx.ready && !probe.inference.online) {

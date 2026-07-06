@@ -133,6 +133,37 @@ describe("executeJob image_generate", () => {
   });
 });
 
+describe("executeJob lmstudio", () => {
+  it("routes llm_generate to OpenAI-compatible chat when provider resolves", async () => {
+    const fetchImpl = (async (url: string | URL | Request) => {
+      assert.match(String(url), /\/v1\/chat\/completions$/);
+      return new Response(
+        JSON.stringify({ model: "lm-model", choices: [{ message: { content: "OK" } }] }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchImpl;
+    try {
+      const result = await executeJob(
+        {
+          ...genericJob("llm_generate", { prompt: "Hi", model: "lm-model" }),
+          lane: "gpu",
+        },
+        ctx({
+          lmStudioUrl: "http://127.0.0.1:1234",
+          resolveModelProvider: () => "lmstudio",
+        }),
+      );
+      assert.equal(result.text, "OK");
+      assert.equal(result.provider, "lmstudio");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 describe("executeJob spotify", () => {
   it("fails clearly when spotify credentials are missing", async () => {
     await assert.rejects(

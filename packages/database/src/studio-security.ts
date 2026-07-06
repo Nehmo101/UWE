@@ -307,7 +307,7 @@ export function assessRtxExposure(env: NodeJS.ProcessEnv = process.env): RtxExpo
   const nextSteps: string[] = [];
 
   const endpoints: EndpointExposureCheck[] = [
-    buildEndpointCheck("RTX_AGENT_URL", env.RTX_AGENT_URL?.trim() ?? null, allowPublicUrl),
+    buildEndpointCheck("RTX_BASE_URL", env.RTX_BASE_URL?.trim() ?? null, allowPublicUrl),
     buildEndpointCheck("AI_INFERENCE_BASE_URL", resolveInferenceBaseUrl(env), allowPublicUrl),
     buildEndpointCheck("BRAIN_EMBEDDING_BASE_URL", resolveEmbeddingBaseUrl(env), allowPublicUrl),
   ];

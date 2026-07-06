@@ -24,7 +24,7 @@ interface AdminStatusPayload {
     ready: boolean;
     online: boolean;
     message: string;
-    source: "agent" | "inference" | "connector";
+    source: "inference" | "connector";
     agentStatus?: string;
     endpoint?: string;
     connectorReady?: boolean;

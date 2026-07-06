@@ -193,10 +193,7 @@ function resolveSessionSecret(env: NodeJS.ProcessEnv): { value: string | undefin
 
 function resolveRtxServiceToken(env: NodeJS.ProcessEnv): { value: string | undefined; envKey: string } {
   const rtxService = env.RTX_SERVICE_TOKEN?.trim();
-  if (rtxService) {
-    return { value: rtxService, envKey: "RTX_SERVICE_TOKEN" };
-  }
-  return { value: env.RTX_AGENT_TOKEN?.trim(), envKey: "RTX_AGENT_TOKEN" };
+  return { value: rtxService, envKey: "RTX_SERVICE_TOKEN" };
 }
 
 function formatBytes(bytes: number): string {
@@ -252,19 +249,19 @@ function assessRtxServiceToken(
 ): SecurityDashboardStatus["env"]["rtxServiceToken"] {
   const { value, envKey } = resolveRtxServiceToken(env);
   const configured = Boolean(value);
-  const rtxAgentUrl = env.RTX_AGENT_URL?.trim();
+  const rtxBaseUrl = env.RTX_BASE_URL?.trim();
 
-  const required = aiEnabled && Boolean(rtxAgentUrl);
+  const required = aiEnabled && Boolean(rtxBaseUrl);
 
   let message: string;
   if (!required) {
     message = configured
-      ? `${envKey} gesetzt (optional, lokale KI ohne RTX-Agent)`
-      : "Nicht erforderlich (kein RTX-Agent / KI deaktiviert)";
+      ? `${envKey} gesetzt (optional, lokale KI ohne RTX Worker)`
+      : "Nicht erforderlich (kein RTX Worker / KI deaktiviert)";
   } else if (configured) {
     message = `${envKey} gesetzt`;
   } else {
-    message = `${envKey} fehlt — RTX-Agent-URL ist konfiguriert`;
+    message = `${envKey} fehlt — RTX_BASE_URL ist konfiguriert`;
   }
 
   return {

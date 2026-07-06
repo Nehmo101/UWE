@@ -21,9 +21,18 @@ import {
 import type { ClaimedJob } from "./host-client";
 import { log } from "./logging";
 import { runLabelPrintJob, runPrinterDiscover } from "./label-printing";
+import {
+  resolveOpenAiCompatibleBaseUrl,
+  runOpenAiCompatibleChat,
+  runOpenAiCompatibleEmbedding,
+  type OpenAiCompatibleProvider,
+} from "./openai-compatible-llm";
 
 export interface ExecutorContext {
   ollamaUrl?: string;
+  lmStudioUrl?: string;
+  llamaCppUrl?: string;
+  resolveModelProvider?: (modelName: string) => string | undefined;
   audioCommand?: string;
   spotifyAccessToken?: string;
   spotifyDeviceId?: string;
@@ -40,6 +49,59 @@ export type JobResult = Record<string, unknown>;
 
 function asString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
+}
+
+function resolveLlmProvider(payload: Record<string, unknown>, ctx: ExecutorContext): string {
+  const explicit = asString(payload.provider);
+  if (explicit) return explicit;
+  const model = asString(payload.model);
+  if (model && ctx.resolveModelProvider) {
+    const resolved = ctx.resolveModelProvider(model);
+    if (resolved) return resolved;
+  }
+  return "ollama";
+}
+
+function providerLabel(provider: string): string {
+  if (provider === "lmstudio") return "LM Studio";
+  if (provider === "llamacpp") return "llama.cpp";
+  return "Ollama";
+}
+
+async function runLlmGenerate(payload: Record<string, unknown>, ctx: ExecutorContext): Promise<JobResult> {
+  const provider = resolveLlmProvider(payload, ctx);
+  if (provider === "ollama") {
+    if (!ctx.ollamaUrl) throw new Error("Kein lokaler LLM-Provider (Ollama) konfiguriert.");
+    return runOllamaChat(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+  }
+  const baseUrl = resolveOpenAiCompatibleBaseUrl(provider, ctx);
+  if (!baseUrl) {
+    throw new Error(`Kein lokaler LLM-Provider (${providerLabel(provider)}) konfiguriert.`);
+  }
+  return runOpenAiCompatibleChat(
+    baseUrl,
+    provider as OpenAiCompatibleProvider,
+    payload,
+    ctx.requestTimeoutMs,
+  );
+}
+
+async function runEmbeddingGenerate(payload: Record<string, unknown>, ctx: ExecutorContext): Promise<JobResult> {
+  const provider = resolveLlmProvider(payload, ctx);
+  if (provider === "ollama") {
+    if (!ctx.ollamaUrl) throw new Error("Kein lokaler Embedding-Provider konfiguriert.");
+    return runOllamaEmbedding(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+  }
+  const baseUrl = resolveOpenAiCompatibleBaseUrl(provider, ctx);
+  if (!baseUrl) {
+    throw new Error(`Kein lokaler Embedding-Provider (${providerLabel(provider)}) konfiguriert.`);
+  }
+  return runOpenAiCompatibleEmbedding(
+    baseUrl,
+    provider as OpenAiCompatibleProvider,
+    payload,
+    ctx.requestTimeoutMs,
+  );
 }
 
 function asNumber(value: unknown): number | null {
@@ -314,12 +376,10 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
 
   switch (type) {
     case "llm_generate": {
-      if (!ctx.ollamaUrl) throw new Error("Kein lokaler LLM-Provider (Ollama) konfiguriert.");
-      return runOllamaChat(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+      return runLlmGenerate(payload, ctx);
     }
     case "embedding_generate": {
-      if (!ctx.ollamaUrl) throw new Error("Kein lokaler Embedding-Provider konfiguriert.");
-      return runOllamaEmbedding(ctx.ollamaUrl, payload, ctx.requestTimeoutMs);
+      return runEmbeddingGenerate(payload, ctx);
     }
     case "vision_extract": {
       if (!ctx.ollamaUrl) throw new Error("Kein lokaler Vision-Provider (Ollama) konfiguriert.");

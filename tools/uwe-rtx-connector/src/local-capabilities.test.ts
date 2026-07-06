@@ -130,11 +130,18 @@ describe("detectCapabilities — local LLM capabilities require an enabled profi
     assert.deepEqual(detected.capabilities, ["embedding_local", "system_info"]);
   });
 
-  it("never treats LM Studio models as executable local LLM capabilities", () => {
-    const detected = detectCapabilities(summary("lmstudio", ["chat", "embeddings"]), env(), {
+  it("advertises llm_local for enabled LM Studio chat models", () => {
+    const detected = detectCapabilities(summary("lmstudio", ["chat"]), env(), {
       profiles: [enabledProfileFor("lmstudio", "lmstudio-model", { modelType: "chat" })],
     });
-    assert.deepEqual(detected.capabilities, ["system_info"]);
+    assert.deepEqual(detected.capabilities, ["llm_local", "system_info"]);
+  });
+
+  it("advertises embedding_local for enabled llama.cpp embedding models", () => {
+    const detected = detectCapabilities(summary("llamacpp", ["embeddings"]), env(), {
+      profiles: [enabledProfileFor("llamacpp", "llamacpp-model", { modelType: "embedding" })],
+    });
+    assert.deepEqual(detected.capabilities, ["embedding_local", "system_info"]);
   });
 });
 

@@ -110,4 +110,24 @@ describe("downloadHuggingFaceModel", () => {
     assert.ok(!existsSync(partFor("weights.gguf")), ".part temp should be cleaned up after a stream error");
     assert.ok(!existsSync(targetFor("weights.gguf")), "no final file on failed download");
   });
+
+  it("cleans up the .part temp when the write stream fails", async () => {
+    const { chmodSync, mkdirSync } = await import("node:fs");
+    const readOnlyDir = join(dir, "readonly");
+    mkdirSync(readOnlyDir, { recursive: true });
+    chmodSync(readOnlyDir, 0o444);
+    try {
+      await assert.rejects(
+        downloadHuggingFaceModel(
+          readOnlyDir,
+          { repoId: "acme/model", filename: "weights.gguf" },
+          undefined,
+          streamingFetch([new Uint8Array([1, 2, 3])]),
+        ),
+      );
+      assert.ok(!existsSync(join(readOnlyDir, "models", "huggingface", "acme", "model", "main", "weights.gguf.part")), ".part temp should be removed on writer failure");
+    } finally {
+      chmodSync(readOnlyDir, 0o755);
+    }
+  });
 });

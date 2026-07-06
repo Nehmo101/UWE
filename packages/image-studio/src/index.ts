@@ -77,8 +77,8 @@ export interface ImageStudioProviderConfig {
 export function resolveImageProviderConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): ImageStudioProviderConfig {
-  const rtxWorkerUrl = env.RTX_BASE_URL?.trim() || env.RTX_AGENT_URL?.trim();
-  const rtxWorkerToken = env.RTX_SERVICE_TOKEN?.trim() || env.RTX_AGENT_TOKEN?.trim();
+  const rtxWorkerUrl = env.RTX_BASE_URL?.trim();
+  const rtxWorkerToken = env.RTX_SERVICE_TOKEN?.trim();
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
     allowCloud: env.IMAGE_STUDIO_ALLOW_CLOUD === "true",
@@ -102,7 +102,7 @@ function warnRtxAgentImageDeprecation(via: "connector" | "direct"): void {
     via === "connector"
       ? "Routing über die RTX-Host-Connector-Queue (image_generate)."
       : "Direkter Aufruf des Legacy-Endpunkts — bitte auf den outbound RTX Host Connector migrieren (RTX_USE_CONNECTOR_IMAGE=true).";
-  console.warn(`[image-studio] RTX_AGENT_URL ist veraltet. ${tail}`);
+  console.warn(`[image-studio] Direkter RTX-Worker-Aufruf (RTX_BASE_URL) ist veraltet. ${tail}`);
 }
 
 /** A local image backend is available via the connector bridge or the legacy RTX Agent URL. */

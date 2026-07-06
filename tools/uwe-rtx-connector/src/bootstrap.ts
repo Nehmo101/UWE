@@ -238,6 +238,17 @@ export function createConnectorRunner(
     history,
     executorBase: {
       ollamaUrl: discoveryConfig.ollamaUrl,
+      lmStudioUrl: discoveryConfig.lmStudioUrl,
+      llamaCppUrl: discoveryConfig.llamaCppUrl,
+      resolveModelProvider: (modelName: string) => {
+        const store = loadModelProfileStore(dataDir);
+        const match = store.profiles.find(
+          (profile) =>
+            profile.enabledForUwe &&
+            (profile.name === modelName || profile.id === modelName),
+        );
+        return match?.provider;
+      },
       audioCommand: process.env.UWE_CONNECTOR_AUDIO_CMD?.trim() || undefined,
       spotifyAccessToken:
         process.env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() ||

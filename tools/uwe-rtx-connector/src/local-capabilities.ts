@@ -153,22 +153,33 @@ function executableCapabilities(
   return normalizeCapabilities(detected);
 }
 
+const EXECUTABLE_LLM_PROVIDERS = new Set(["ollama", "lmstudio", "llamacpp"]);
+
 /**
- * A local LLM capability is only advertised when there is a ready Ollama model
- * of the right kind that the user has explicitly enabled for UWE.
+ * A local LLM capability is only advertised when there is a ready model from an
+ * executable provider that the user has explicitly enabled for UWE.
  */
-function hasEnabledOllamaCapability(
+function hasEnabledProviderCapability(
   llms: LocalLlmSummary,
   enabledKeys: ReadonlySet<string>,
   capability: string,
 ): boolean {
   return llms.models.some(
     (model) =>
-      model.provider === "ollama" &&
+      EXECUTABLE_LLM_PROVIDERS.has(model.provider) &&
       model.status === "ready" &&
       model.capabilities?.includes(capability) &&
       enabledKeys.has(discoveredKey(model)),
   );
+}
+
+/** @deprecated use hasEnabledProviderCapability */
+function hasEnabledOllamaCapability(
+  llms: LocalLlmSummary,
+  enabledKeys: ReadonlySet<string>,
+  capability: string,
+): boolean {
+  return hasEnabledProviderCapability(llms, enabledKeys, capability);
 }
 
 /** Bekannte vision-fähige Ollama-Modellfamilien (Name-Heuristik als Fallback). */
@@ -183,7 +194,7 @@ function hasEnabledVisionModel(
   enabledKeys: ReadonlySet<string>,
 ): boolean {
   return llms.models.some((model) => {
-    if (model.provider !== "ollama" || model.status !== "ready") return false;
+    if (!EXECUTABLE_LLM_PROVIDERS.has(model.provider) || model.status !== "ready") return false;
     if (!enabledKeys.has(discoveredKey(model))) return false;
     if (model.capabilities?.includes("vision")) return true;
     const name = model.name ?? "";

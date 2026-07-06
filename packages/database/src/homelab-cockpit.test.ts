@@ -122,7 +122,7 @@ describe("homelab cockpit", () => {
         online: false,
         message: "offline",
         urlAllowed: true,
-        source: "agent",
+        source: "inference",
       },
       inference: {
         enabled: true,

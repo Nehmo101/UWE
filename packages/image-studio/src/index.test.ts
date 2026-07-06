@@ -9,12 +9,10 @@ describe("resolveImageProviderConfig", () => {
     assert.equal(config.enabled, true);
   });
 
-  it("prefers RTX_BASE_URL and RTX_SERVICE_TOKEN over legacy agent env names", () => {
+  it("reads RTX_BASE_URL and RTX_SERVICE_TOKEN", () => {
     const config = resolveImageProviderConfig({
       RTX_BASE_URL: "http://192.168.1.10:8765",
       RTX_SERVICE_TOKEN: "secret",
-      RTX_AGENT_URL: "http://legacy:9999",
-      RTX_AGENT_TOKEN: "legacy",
     });
     assert.equal(config.rtxAgentUrl, "http://192.168.1.10:8765");
     assert.equal(config.rtxAgentToken, "secret");

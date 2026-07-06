@@ -59,8 +59,6 @@ export interface ResolvedRawEnv {
   PUBLIC_BASE_URL?: string;
   AUTH_SECRET?: string;
   PUBLIC_APP_URL?: string;
-  RTX_AGENT_URL?: string;
-  RTX_AGENT_TOKEN?: string;
 }
 
 export interface UweEnv {
@@ -111,9 +109,8 @@ function normalizePublicBaseUrl(value: string | undefined): string | undefined {
 export function resolveRawEnv(env: NodeJS.ProcessEnv = process.env): ResolvedRawEnv {
   const sessionSecret = trimOrUndefined(env.SESSION_SECRET) ?? trimOrUndefined(env.AUTH_SECRET);
   const setupToken = trimOrUndefined(env.UWE_SETUP_TOKEN);
-  const rtxBaseUrl = trimOrUndefined(env.RTX_BASE_URL) ?? trimOrUndefined(env.RTX_AGENT_URL);
-  const rtxServiceToken =
-    trimOrUndefined(env.RTX_SERVICE_TOKEN) ?? trimOrUndefined(env.RTX_AGENT_TOKEN);
+  const rtxBaseUrl = trimOrUndefined(env.RTX_BASE_URL);
+  const rtxServiceToken = trimOrUndefined(env.RTX_SERVICE_TOKEN);
   const publicBaseUrl =
     normalizePublicBaseUrl(env.PUBLIC_BASE_URL) ?? normalizePublicBaseUrl(env.PUBLIC_APP_URL);
   const databaseUrl = trimOrUndefined(env.DATABASE_URL) ?? DEFAULT_DATABASE_URL;
@@ -135,8 +132,6 @@ export function resolveRawEnv(env: NodeJS.ProcessEnv = process.env): ResolvedRaw
     PUBLIC_BASE_URL: publicBaseUrl,
     AUTH_SECRET: sessionSecret,
     PUBLIC_APP_URL: publicBaseUrl,
-    RTX_AGENT_URL: rtxBaseUrl,
-    RTX_AGENT_TOKEN: rtxServiceToken,
   };
 }
 
@@ -274,7 +269,7 @@ export function parseUweEnv(env: NodeJS.ProcessEnv = process.env): UweEnv {
 }
 
 /**
- * Applies legacy aliases so existing modules reading AUTH_SECRET / RTX_AGENT_* keep working.
+ * Applies legacy aliases so existing modules reading AUTH_SECRET keep working.
  */
 export function syncLegacyEnvAliases(env: NodeJS.ProcessEnv = process.env): void {
   const raw = resolveRawEnv(env);
@@ -295,12 +290,10 @@ export function syncLegacyEnvAliases(env: NodeJS.ProcessEnv = process.env): void
 
   if (raw.RTX_BASE_URL) {
     env.RTX_BASE_URL = raw.RTX_BASE_URL;
-    env.RTX_AGENT_URL = raw.RTX_BASE_URL;
   }
 
   if (raw.RTX_SERVICE_TOKEN) {
     env.RTX_SERVICE_TOKEN = raw.RTX_SERVICE_TOKEN;
-    env.RTX_AGENT_TOKEN = raw.RTX_SERVICE_TOKEN;
   }
 
   if (raw.DATABASE_URL) {

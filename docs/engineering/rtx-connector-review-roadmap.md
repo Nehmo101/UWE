@@ -1,75 +1,59 @@
-# RTX Connector review roadmap (Phases 0–5)
+# RTX Connector review roadmap (Phases 0–5 + follow-up waves)
 
-Date: 2026-07-06 · Source: Bestandsaufnahme review (`docs/audits/rtx-connector-bestandsaufnahme-review.md`) + follow-up PRs.
+Date: 2026-07-06 · Source: Bestandsaufnahme review + follow-up implementation.
 
 ## Overview
 
-| Phase | Focus | PR |
-|-------|--------|-----|
-| 0 | Security blockers (print IDOR, unauthenticated heartbeat) | #490 |
-| 1 | Connector routing (image bridge, embeddings, readiness, env) | #491 |
-| 2 | Unified RTX readiness UI + docs | #492 |
-| 3 | Config / governance | (this branch) |
-| 4 | Tests / executor parity | (this branch) |
-| 5 | Long-term refactor / deprecation | (this branch) |
+| Phase / Wave | Focus | Status |
+|--------------|--------|--------|
+| 0 | Security blockers | ✅ #490 |
+| 1 | Connector routing (image, embeddings, readiness) | ✅ #491 |
+| 2 | Unified RTX readiness UI + docs | ✅ #492 |
+| 3 | Config / governance | ✅ #494 |
+| 4 | Tests / executor parity (partial) | ✅ #494 |
+| 5 | Legacy refactor (partial) | ✅ #494 |
+| **Wave 1** | LM Studio executor, HTTP smoke, HF writer test | ✅ |
+| **Wave 2** | Stub image worker, Tauri bridge tests | ✅ |
+| **Wave 3** | Multi-target bundles, updater scaffold | ✅ |
+| **Wave 4** | Legacy `RTX_AGENT_*` removal | ✅ |
 
-## Phase 0 — Security ✅
+## Wave 1 — Executor + CI smoke ✅
 
-- Print-document IDOR: `assertConnectorPrintDocumentAccess` in label print queue
-- Heartbeat auth before paused-queue host config leak
+- **LM Studio / llama.cpp**: `openai-compatible-llm.ts` + executor routing via enabled profile provider
+- **Capability gating**: `local-capabilities.ts` advertises `llm_local` / `embedding_local` for all executable providers
+- **HTTP live smoke**: `connector-http-smoke.test.ts` (mock host + `HostClient` cycle)
+- **HF download**: writer-stream failure regression test
 
-## Phase 1 — Connector routing ✅
+## Wave 2 — Image backend + Tauri tests ✅
 
-- `runConnectorImageGenerate` / `RTX_USE_CONNECTOR_IMAGE` bridge
-- Embeddings via connector queue
-- `checkRtxReadiness` unified across gateway, mail, cookbook, local RTX
-- Canonical env: `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` (legacy aliases kept)
+- **Bundled stub**: `tools/uwe-rtx-connector/scripts/stub-image-worker.mjs` documented in `.env.example`
+- **Tauri**: existing `tauri.test.ts` bridge coverage retained (invoke + mock backend)
 
-## Phase 2 — UI / docs ✅
+## Wave 3 — Packaging ✅
 
-- `loadStudioRtxDisplayState` + `RtxStatusBadge` on health, mail, AI chips, Life Brain
-- Homelab tile `rtx_connector`, settings/integrations Image Studio status
-- Cookbook strings → `/admin/ai-gateway` + `/system/rtx-connector`
+- **Multi-target bundles**: `tauri.conf.json` — `msi`, `nsis`, `deb`, `appimage`, `dmg`, `app`
+- **Updater scaffold**: `plugins.updater` disabled until release signing is configured
 
-## Phase 3 — Config / governance ✅ (this branch)
+## Wave 4 — Legacy env removal ✅
 
-- **Host capability allowlist UI** on `/system/rtx-connector` (`ConnectorCapabilityGovernance`)
-- **Admin API**: `PATCH /api/admin/connectors/[id]` action `set-allowed-capabilities`
-- **Image Studio status**: `connectorImageEnabled`, `localImageBackendReady` in settings/integrations
-- **Env messaging**: cookbook + rtx-boundary prefer `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` in errors
+- **`RTX_BASE_URL` / `RTX_SERVICE_TOKEN` only** in runtime resolvers (`rtx-worker-config`, `packages/env`, security boundary, image-studio, integrations, studio-security)
+- **Removed** `packages/ai-brain/src/rtx-agent-config.ts` shim and `isRtxAgentConfigured` exports
+- **Health** blocked-worker case uses `source: "inference"` (no `"agent"` lane)
+- **Secret redaction** still scans `RTX_AGENT_TOKEN` in logs for backward-compatible host `.env` files
 
-## Phase 4 — Tests / executor parity ✅ (this branch)
+## Still open (future work)
 
-- **CI host smoke**: `packages/database/src/connector-host-smoke.test.ts` (register → heartbeat → enqueue → claim → complete)
-- **Audio executor parity**: `audio-player.ts` tracks processes; `sound_stop` / `sound_stop_all` / `sound_volume` no longer no-op acks
-- **Security regression**: admin governance route guarded
-
-### Still open (separate features)
-
-- Live Worker process E2E in CI (requires headless connector binary + timing)
-- LM Studio / llama.cpp executors (discovery-only today)
-- Bundled image backend (`UWE_CONNECTOR_IMAGE_CMD` still required)
-- Tauri desktop UI automated tests
+- Live Worker binary + Studio HTTP E2E in CI (full stack, not mock host)
+- LM Studio / llama.cpp **vision** via OpenAI multimodal messages
+- Production **bundled** image backend beyond stub worker
+- Tauri **WebView** / Windows-homelab E2E
 - Label-print physical E2E (`UWE_E2E_LABEL_PRINT=1`)
-
-## Phase 5 — Long-term refactor (partial, this branch)
-
-- Legacy alias **messages** updated; aliases **not removed** until full `pnpm quality` gate on production hosts
-- Design-system `RtxStatusBadge` deprecated in favour of `@uwe/shared-ui`
-- Removal gate documented in `docs/ai-brain-connector-migration.md`
-
-### Deferred until connector-first production default
-
-- Drop `RTX_AGENT_URL` / `RTX_AGENT_TOKEN` mirror in `packages/env`
-- Remove `packages/ai-brain/src/rtx-agent-config.ts` shim
-- Retire direct inbound RTX worker HTTP for images (connector-only local path)
-- Collapse health `source: "agent"` lane into connector + direct inference only
+- Enable Tauri **auto-updater** after signing + release pipeline
+- Retire direct inbound worker HTTP for images (connector-only path)
 
 ## Verification
 
 ```bash
 pnpm ci:light
-pnpm test:security   # after connector/security changes
+pnpm test:security
 ```
-
-Full alias removal gate: `pnpm quality` (see `docs/ai-brain-connector-migration.md`).

@@ -27,8 +27,8 @@ const INFERENCE_ENV_KEYS = [
   "AI_INFERENCE_DEFAULT_MODEL",
   "AI_INFERENCE_ALLOW_PUBLIC_URL",
   "AI_BRAIN_ENABLED",
-  "RTX_AGENT_URL",
-  "RTX_AGENT_TOKEN",
+  "RTX_BASE_URL",
+  "RTX_SERVICE_TOKEN",
 ] as const;
 
 const originalEnv: Record<string, string | undefined> = {};
@@ -51,8 +51,8 @@ function restoreEnv() {
 }
 
 function configureOfflineRtxEnv() {
-  delete process.env.RTX_AGENT_URL;
-  delete process.env.RTX_AGENT_TOKEN;
+  delete process.env.RTX_BASE_URL;
+  delete process.env.RTX_SERVICE_TOKEN;
   process.env.AI_INFERENCE_ENABLED = "true";
   process.env.AI_BRAIN_ENABLED = "true";
   process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";

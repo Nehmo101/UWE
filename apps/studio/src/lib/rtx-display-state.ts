@@ -2,7 +2,7 @@ import { checkRtxReadiness, type RtxReadinessStatus } from "@uwe/ai-brain/router
 import type { PrismaClient } from "@uwe/database/server";
 import type { RtxConnectorState } from "@uwe/shared-ui";
 
-export type RtxReadinessSourceLabel = "connector" | "inference" | "legacy_worker";
+export type RtxReadinessSourceLabel = "connector" | "inference";
 
 /** Map unified RTX readiness to the shared UI badge state. */
 export function mapRtxReadinessToConnectorState(status: RtxReadinessStatus): RtxConnectorState {
@@ -26,7 +26,6 @@ export function mapRtxReadinessToConnectorState(status: RtxReadinessStatus): Rtx
 
 export function resolveRtxReadinessSourceLabel(status: RtxReadinessStatus): RtxReadinessSourceLabel {
   if (status.source === "connector") return "connector";
-  if (status.source === "agent") return "legacy_worker";
   return "inference";
 }
 
@@ -34,8 +33,6 @@ export function rtxReadinessSourceLabelDe(status: RtxReadinessStatus): string {
   switch (resolveRtxReadinessSourceLabel(status)) {
     case "connector":
       return "RTX Host Connector";
-    case "legacy_worker":
-      return "Legacy RTX Worker";
     default:
       return "Direkt (Inference)";
   }
@@ -56,12 +53,6 @@ export function rtxReadinessNextSteps(status: RtxReadinessStatus, inferenceEnabl
         "RTX Host Connector auf dem RTX-Rechner starten (Desktop-Client oder pnpm connector:start).",
         "Token unter System → RTX Connector prüfen und Connector online melden.",
         "Brain-/Objekt-KI blockiert bei RTX offline — Allgemeiner Cloud-Chat bleibt möglich.",
-      ];
-    }
-    if (status.source === "agent") {
-      return [
-        "Legacy RTX Worker prüfen (RTX_BASE_URL/RTX_SERVICE_TOKEN) oder auf den outbound Connector migrieren.",
-        "Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft.",
       ];
     }
     return [

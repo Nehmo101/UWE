@@ -17,10 +17,10 @@ export interface RtxHealthStatus {
   defaultModel: string;
   health?: AiHealthCheckResult;
   modelCount?: number;
-  /** Worker status when RTX_BASE_URL (or legacy RTX_AGENT_URL) is configured. */
+  /** Worker status when RTX_BASE_URL is configured. */
   agentStatus?: RtxWorkerStatus;
-  /** Whether health was read from RTX agent, direct inference, or connector queue. */
-  source: "agent" | "inference" | "connector";
+  /** Whether health was read from direct inference or connector queue. */
+  source: "inference" | "connector";
   urlAllowed: boolean;
   urlKind: InferenceUrlKind | string;
   publicExposureWarning?: string;
@@ -37,12 +37,12 @@ export async function checkRtxHealth(options?: {
     return {
       online: false,
       ready: false,
-      message: agentEvaluation.blockReason ?? "RTX-Agent-URL ist öffentlich und blockiert.",
+      message: agentEvaluation.blockReason ?? "RTX-Worker-URL ist öffentlich und blockiert.",
       providerId: "ollama",
       endpoint: sanitizeInferenceEndpointLabel(agentEvaluation.url ?? ""),
       defaultModel: resolveInferenceConfig().defaultModel,
       agentStatus: "error",
-      source: "agent",
+      source: "inference",
       urlAllowed: false,
       urlKind: agentEvaluation.urlKind ?? "public",
       publicExposureWarning:
@@ -77,6 +77,3 @@ export async function isRtxReady(options?: { useMock?: boolean }): Promise<boole
 }
 
 export { isRtxWorkerConfigured };
-
-/** @deprecated Use {@link isRtxWorkerConfigured}. */
-export const isRtxAgentConfigured = isRtxWorkerConfigured;

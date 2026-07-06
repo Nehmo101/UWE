@@ -146,21 +146,21 @@ describe("studio security assessment", () => {
 });
 
 describe("RTX exposure assessment", () => {
-  it("flags public RTX_AGENT_URL", () => {
+  it("flags public RTX_BASE_URL", () => {
     const assessment = assessRtxExposure({
-      RTX_AGENT_URL: "https://rtx.example.com",
+      RTX_BASE_URL: "https://rtx.example.com",
       AI_INFERENCE_ALLOW_PUBLIC_URL: "false",
     });
 
     assert.equal(assessment.ok, false);
     assert.equal(assessment.severity, "critical");
-    assert.ok(assessment.endpoints.some((endpoint) => endpoint.envKey === "RTX_AGENT_URL"));
-    assert.ok(assessment.nextSteps.some((step) => step.includes("RTX_AGENT_URL")));
+    assert.ok(assessment.endpoints.some((endpoint) => endpoint.envKey === "RTX_BASE_URL"));
+    assert.ok(assessment.nextSteps.some((step) => step.includes("RTX_BASE_URL")));
   });
 
   it("allows private home network URLs", () => {
     const assessment = assessRtxExposure({
-      RTX_AGENT_URL: "http://192.168.1.100:8787",
+      RTX_BASE_URL: "http://192.168.1.100:8787",
       AI_INFERENCE_BASE_URL: "http://192.168.1.100:11434",
     });
 
@@ -181,8 +181,8 @@ describe("RTX exposure assessment", () => {
 
   it("does not leak RTX tokens in serialized output", () => {
     const assessment = assessRtxExposure({
-      RTX_AGENT_URL: "http://192.168.1.100:8787",
-      RTX_AGENT_TOKEN: "secret-rtx-token-do-not-leak",
+      RTX_BASE_URL: "http://192.168.1.100:8787",
+      RTX_SERVICE_TOKEN: "secret-rtx-token-do-not-leak",
     });
 
     assert.ok(!JSON.stringify(assessment).includes("secret-rtx-token-do-not-leak"));

@@ -26,7 +26,7 @@ const ENV_KEYS = [
   "OLLAMA_BASE_URL",
   "OPENAI_COMPATIBLE_BASE_URL",
   "AI_DEFAULT_PROVIDER",
-  "RTX_AGENT_URL",
+  "RTX_BASE_URL",
 ] as const;
 
 const originalEnv: Record<string, string | undefined> = {};
@@ -302,12 +302,12 @@ describe("createProvider URL guard", () => {
   });
 });
 
-describe("RTX agent URL evaluation", () => {
+describe("RTX worker URL evaluation", () => {
   beforeEach(() => snapshotEnv());
   afterEach(() => restoreEnv());
 
-  it("allows private RTX agent URLs", () => {
-    process.env.RTX_AGENT_URL = "http://192.168.1.50:8787";
+  it("allows private RTX worker URLs", () => {
+    process.env.RTX_BASE_URL = "http://192.168.1.50:8787";
 
     const evaluation = evaluateRtxWorkerUrl(process.env);
 
@@ -316,8 +316,8 @@ describe("RTX agent URL evaluation", () => {
     assert.equal(evaluation.urlKind, "private");
   });
 
-  it("blocks public RTX agent URLs without throwing", () => {
-    process.env.RTX_AGENT_URL = "https://rtx.public.example:8787";
+  it("blocks public RTX worker URLs without throwing", () => {
+    process.env.RTX_BASE_URL = "https://rtx.public.example:8787";
 
     const evaluation = evaluateRtxWorkerUrl(process.env);
 
@@ -328,7 +328,7 @@ describe("RTX agent URL evaluation", () => {
   });
 
   it("reports public exposure in RTX health status", async () => {
-    process.env.RTX_AGENT_URL = "https://rtx.public.example:8787";
+    process.env.RTX_BASE_URL = "https://rtx.public.example:8787";
 
     const health = await checkRtxHealth({ env: process.env });
 
