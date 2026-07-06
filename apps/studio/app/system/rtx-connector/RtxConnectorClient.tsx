@@ -9,6 +9,7 @@ import {
   ConnectorModelPicker,
   type ConnectorPickerModelView,
 } from "@/components/ConnectorModelPicker";
+import { ConnectorCapabilityGovernance } from "./ConnectorCapabilityGovernance";
 
 interface ConnectorModelView {
   id?: string;
@@ -50,6 +51,8 @@ interface ConnectorView {
   disabled: boolean;
   queueEnabled: boolean;
   capabilities: ConnectorCapability[];
+  reportedCapabilities: ConnectorCapability[];
+  allowedCapabilities: ConnectorCapability[] | null;
   models: ConnectorModelView[];
   version: string | null;
   currentJobs: number;
@@ -201,14 +204,22 @@ export function RtxConnectorClient({
   }, [newName, reload]);
 
   const patchConnector = useCallback(
-    async (id: string, action: "enable" | "disable" | "rotate-token") => {
+    async (
+      id: string,
+      action: "enable" | "disable" | "rotate-token" | "set-allowed-capabilities",
+      allowedCapabilities?: ConnectorCapability[] | null,
+    ) => {
       setBusy(true);
       setError(null);
       try {
         const response = await fetch(`/api/admin/connectors/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify(
+            action === "set-allowed-capabilities"
+              ? { action, allowedCapabilities: allowedCapabilities ?? null }
+              : { action },
+          ),
         });
         const data = (await response.json()) as { token?: string; error?: string };
         if (!response.ok) {
@@ -392,13 +403,23 @@ export function RtxConnectorClient({
                   {connector.currentJobs}
                 </p>
                 <p>
-                  Fähigkeiten:{" "}
+                  Fähigkeiten (effektiv):{" "}
                   {connector.capabilities.length === 0
                     ? "—"
                     : connector.capabilities
                         .map((cap) => CONNECTOR_CAPABILITY_LABELS[cap])
                         .join(", ")}
                 </p>
+                <ConnectorCapabilityGovernance
+                  connectorId={connector.id}
+                  reportedCapabilities={connector.reportedCapabilities ?? connector.capabilities}
+                  allowedCapabilities={connector.allowedCapabilities ?? null}
+                  disabled={connector.disabled}
+                  busy={busy}
+                  onSave={async (allowed) =>
+                    patchConnector(connector.id, "set-allowed-capabilities", allowed)
+                  }
+                />
                 <p>Modelle:</p>
                 {connector.models.length === 0 ? (
                   <p className="uwe-dashboard-muted">—</p>

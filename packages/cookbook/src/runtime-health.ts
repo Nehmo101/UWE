@@ -103,7 +103,9 @@ function buildEngineStatuses(probe: CookbookRuntimeProbeInput): RuntimeEngineSta
         endpoint: rtx.agentConfigured ? rtx.endpoint : null,
         modelCount: rtx.modelCount ?? null,
         defaultModel: rtx.defaultModel,
-        message: rtx.agentConfigured ? rtx.message : "RTX_AGENT_URL nicht konfiguriert.",
+        message: rtx.agentConfigured
+          ? rtx.message
+          : "RTX Worker nicht konfiguriert (RTX_BASE_URL / RTX_SERVICE_TOKEN).",
         urlAllowed: rtx.urlAllowed,
       });
       continue;

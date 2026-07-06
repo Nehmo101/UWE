@@ -17,7 +17,7 @@ export interface RtxHealthStatus {
   defaultModel: string;
   health?: AiHealthCheckResult;
   modelCount?: number;
-  /** Worker status when RTX_AGENT_URL is configured. */
+  /** Worker status when RTX_BASE_URL (or legacy RTX_AGENT_URL) is configured. */
   agentStatus?: RtxWorkerStatus;
   /** Whether health was read from RTX agent, direct inference, or connector queue. */
   source: "agent" | "inference" | "connector";
@@ -46,7 +46,7 @@ export async function checkRtxHealth(options?: {
       urlAllowed: false,
       urlKind: agentEvaluation.urlKind ?? "public",
       publicExposureWarning:
-        "RTX_AGENT_URL zeigt auf eine öffentliche Adresse — nur Heimnetz/private IP nutzen.",
+        "RTX Worker URL zeigt auf eine öffentliche Adresse — nur Heimnetz/private IP nutzen (RTX_BASE_URL).",
     };
   }
 

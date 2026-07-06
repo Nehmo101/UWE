@@ -99,6 +99,10 @@ The host stores capability policy separately:
   restriction; `[]` denies all connector-served capabilities for that connector.
 - `capabilities`: effective, job-claimable capabilities used by queue matching.
 
+Owner/admin UI: **Studio → System → RTX Connector** — per-connector „Host-Freigabe“
+(`ConnectorCapabilityGovernance`). API: `PATCH /api/admin/connectors/[id]` with
+`action: "set-allowed-capabilities"`.
+
 `effectiveCapabilities = reportedCapabilities` when no allowlist is set;
 otherwise the host uses the ordered intersection of reported and allowed values.
 

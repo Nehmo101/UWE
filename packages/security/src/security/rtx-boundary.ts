@@ -49,7 +49,7 @@ export function rejectClientWorkerUrl(
     );
   }
 
-  const rawUrl = env.RTX_AGENT_URL?.trim() ?? env.RTX_BASE_URL?.trim();
+  const rawUrl = env.RTX_BASE_URL?.trim() ?? env.RTX_AGENT_URL?.trim();
   if (!rawUrl) {
     return;
   }
@@ -70,7 +70,7 @@ export function resolveRtxWorkerBoundary(
 
   if (!config.token.trim()) {
     throw new RtxBoundaryError(
-      "RTX_AGENT_TOKEN fehlt — Service-Token zwischen UWE und RTX-Worker ist erforderlich.",
+      "RTX_SERVICE_TOKEN fehlt — Service-Token zwischen UWE und RTX-Worker ist erforderlich (Legacy-Alias: RTX_AGENT_TOKEN).",
     );
   }
 

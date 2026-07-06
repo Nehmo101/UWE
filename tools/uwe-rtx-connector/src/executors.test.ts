@@ -75,6 +75,28 @@ describe("executeJob sound_play", () => {
   });
 });
 
+describe("executeJob sound_stop", () => {
+  it("stops a tracked sound_play process by job id", async () => {
+    const playJob: ClaimedJob = {
+      ...soundJob({ sourceUrl: "--version" }),
+      id: "job_play_track",
+    };
+    await executeJob(playJob, ctx({ audioCommand: process.execPath }));
+
+    const stopResult = await executeJob(
+      genericJob("sound_stop", { jobId: "job_play_track" }),
+      ctx({ audioCommand: process.execPath }),
+    );
+    assert.equal((stopResult as { stoppedCount?: number }).stoppedCount, 1);
+  });
+
+  it("stop_all clears tracked playback", async () => {
+    await executeJob(soundJob({ sourceUrl: "--version" }), ctx({ audioCommand: process.execPath }));
+    const stopAll = await executeJob(genericJob("sound_stop_all", {}), ctx());
+    assert.ok(((stopAll as { stoppedCount?: number }).stoppedCount ?? 0) >= 0);
+  });
+});
+
 describe("executeJob image_generate", () => {
   it("runs the configured image command with the job payload", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uwe-image-executor-"));

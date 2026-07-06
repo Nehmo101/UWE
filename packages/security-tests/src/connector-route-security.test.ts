@@ -37,4 +37,11 @@ describe("connector route security regressions", () => {
     const renderIndex = source.indexOf("renderDocument");
     assert.ok(accessIndex >= 0 && renderIndex > accessIndex, "ownership check must precede renderDocument");
   });
+
+  it("requires admin auth for connector capability governance", () => {
+    const source = read("apps/studio/app/api/admin/connectors/[id]/route.ts");
+    assert.match(source, /set-allowed-capabilities/);
+    assert.match(source, /setAllowedCapabilities/);
+    assert.match(source, /requireAdminApiAuth/);
+  });
 });

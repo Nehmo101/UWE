@@ -12,6 +12,12 @@ import { spawn } from "node:child_process";
 
 import type { ConnectorJobType } from "@uwe/connector";
 
+import {
+  playTrackedSound,
+  setTrackedSoundVolume,
+  stopAllTrackedSounds,
+  stopTrackedSound,
+} from "./audio-player";
 import type { ClaimedJob } from "./host-client";
 import { log } from "./logging";
 import { runLabelPrintJob, runPrinterDiscover } from "./label-printing";
@@ -148,15 +154,12 @@ function splitCommand(command: string): [string, ...string[]] {
   return parts as [string, ...string[]];
 }
 
-function playSound(audioCommand: string, payload: Record<string, unknown>): JobResult {
+function playSound(audioCommand: string, payload: Record<string, unknown>, jobId?: string): JobResult {
   const source = asString(payload.sourceUrl ?? payload.url ?? payload.path ?? payload.source);
   if (!source) {
     throw new Error("sound_play: keine Audioquelle im Payload.");
   }
-  const [cmd, ...baseArgs] = splitCommand(audioCommand);
-  const child = spawn(cmd, [...baseArgs, source], { stdio: "ignore", detached: true });
-  child.unref();
-  return { dispatched: true, via: cmd, source };
+  return playTrackedSound(audioCommand, source, jobId);
 }
 
 async function spotifyRequest(
@@ -333,12 +336,21 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
         });
         throw new Error("sound_play: kein lokaler Audio-Player konfiguriert (UWE_CONNECTOR_AUDIO_CMD fehlt).");
       }
-      return playSound(ctx.audioCommand, payload);
+      return playSound(ctx.audioCommand, payload, job.id);
     }
-    case "sound_stop":
-    case "sound_stop_all":
+    case "sound_stop": {
+      const targetJobId = asString(payload.jobId ?? payload.playJobId);
+      return stopTrackedSound(targetJobId || undefined);
+    }
+    case "sound_stop_all": {
+      return stopAllTrackedSounds();
+    }
     case "sound_volume": {
-      return { acknowledged: true, type };
+      const volume = asNumber(payload.volume);
+      if (volume == null) {
+        throw new Error("sound_volume: 'volume' (0–1) fehlt im Payload.");
+      }
+      return setTrackedSoundVolume(volume);
     }
     case "spotify_play":
     case "spotify_pause":
