@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { apiError, type ApiErrorBody } from "@uwe/security";
+import { apiError, type ApiErrorBody } from "@uwe/security/errors";
 
 export type { ApiErrorBody };
 
