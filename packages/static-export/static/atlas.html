@@ -528,16 +528,44 @@ function requestAiDraft() {
   if (embedded) { bridgePost({ type: "ai-draft-request", seed }); flash("KI-Entwurf über RTX-Host angefragt…"); return; }
   receiveAiDraft(engine.proceduralDraft(seed).features);
 }
+const AI_DRAFT_LAYERS = { biome: 10, plot: 18, region: 20, relief: 20, river: 30, road: 40, pin: 50 };
+function aiDraftGeometryMatchesKind(kind, geometry) {
+  if (!geometry) return false;
+  if (kind === "region" || kind === "biome" || kind === "plot") return geometry.type === "Polygon";
+  if (kind === "river" || kind === "road" || kind === "relief") return geometry.type === "Path";
+  return kind === "pin" && geometry.type === "Point";
+}
+function normalizeAiDraftFeatures(features) {
+  const raw = Array.isArray(features) ? features : [];
+  const normalized = engine.normalizeAtlasDraftFeatures
+    ? engine.normalizeAtlasDraftFeatures(raw)
+    : raw.filter((f) => f && AI_DRAFT_LAYERS[f.kind] != null && aiDraftGeometryMatchesKind(f.kind, f.geometry));
+  return normalized.map((f) => ({
+    ...f,
+    layer: Number.isFinite(f.layer) ? f.layer : AI_DRAFT_LAYERS[f.kind],
+    labelColor: f.labelColor === "red" ? "red" : "black",
+  }));
+}
 function receiveAiDraft(features) {
-  aiDraftFeatures = (features || []).map((f) => ({ ...f, _key: nextKey() }));
+  const normalized = normalizeAiDraftFeatures(features);
+  aiDraftFeatures = normalized.map((f) => ({ ...f, _key: nextKey() }));
   setState({ aiReview: { count: aiDraftFeatures.length } });
+  if (!aiDraftFeatures.length) flash("KI-Entwurf enthielt keine unterstützten Atlas-Features.");
   draw();
 }
 function acceptAiDraft() {
   if (aiDraftFeatures) {
     pushUndo();
     for (const f of aiDraftFeatures) {
-      doc.features.push({ ...f, id: nextKey(), nodeId: state.nodeId, layer: f.kind === "biome" ? 10 : 30, visibility: "dm_only" });
+      const accepted = {
+        ...f,
+        id: nextKey(),
+        nodeId: state.nodeId,
+        layer: Number.isFinite(f.layer) ? f.layer : AI_DRAFT_LAYERS[f.kind],
+        visibility: "dm_only",
+      };
+      doc.features.push(accepted);
+      if (accepted.kind === "plot") fillPlotObjects(accepted, false);
     }
     markDirty();
   }

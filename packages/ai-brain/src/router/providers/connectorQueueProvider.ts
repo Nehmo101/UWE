@@ -308,6 +308,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   prepare_mail_draft: "chat",
   atlas_name_region: "dnd",
   atlas_describe_region: "dnd",
+  atlas_fill_area: "dnd",
   simulate_faction: "dnd",
   generate_structured_npc: "dnd",
   generate_structured_quest: "dnd",

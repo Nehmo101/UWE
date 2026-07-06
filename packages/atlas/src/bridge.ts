@@ -5,9 +5,12 @@
  * transforms are single-source and unit-testable without Next.js or Prisma.
  *
  * Direction & origin check (see docs/handoffs/atlas-singlefile/README.md §6):
- *   Editor → Host carry `source: "uwe-atlas"`  (ready | save | visibility | ai-draft-request | handout-request)
- *   Host → Editor carry `source: "uwe-studio"` (saved | ai-draft-result | load)
+ *   Editor → Host carry `source: "uwe-atlas"`  (ready | save | visibility | ai-draft-request | plot-fill-proposal-request | handout-request)
+ *   Host → Editor carry `source: "uwe-studio"` (saved | ai-draft-result | plot-fill-proposal-result | load)
  */
+
+import type { AtlasDraftFeatureProposal } from "./draft-proposal";
+import type { AtlasPlotFillProposal } from "./plot-fill-proposal";
 
 export const ATLAS_BRIDGE_EDITOR_SOURCE = "uwe-atlas" as const;
 export const ATLAS_BRIDGE_HOST_SOURCE = "uwe-studio" as const;
@@ -39,6 +42,22 @@ export interface EditorAiDraftRequestMessage {
   type: "ai-draft-request";
   seed: number;
 }
+export interface EditorPlotFillProposalRequestMessage {
+  source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
+  type: "plot-fill-proposal-request";
+  /** Client plot key only; UWE resolves real ids server-side if needed. */
+  plotKey: string;
+  seed: number;
+  biomeKind?: string;
+  prompt?: string;
+}
+export interface EditorPlotFillProposalReviewMessage {
+  source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
+  type: "plot-fill-proposal-review";
+  plotKey: string;
+  accepted: boolean;
+  objectCount?: number;
+}
 export interface EditorHandoutRequestMessage {
   source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
   type: "handout-request";
@@ -56,6 +75,8 @@ export type EditorToHostMessage =
   | EditorSaveMessage
   | EditorVisibilityMessage
   | EditorAiDraftRequestMessage
+  | EditorPlotFillProposalRequestMessage
+  | EditorPlotFillProposalReviewMessage
   | EditorHandoutRequestMessage
   | EditorNodeRenameMessage;
 
@@ -66,37 +87,71 @@ export interface HostSavedMessage {
 export interface HostAiDraftResultMessage {
   source: typeof ATLAS_BRIDGE_HOST_SOURCE;
   type: "ai-draft-result";
-  features: unknown[];
+  features: AtlasDraftFeatureProposal[];
+}
+export interface HostPlotFillProposalResultMessage {
+  source: typeof ATLAS_BRIDGE_HOST_SOURCE;
+  type: "plot-fill-proposal-result";
+  plotKey: string;
+  proposal?: AtlasPlotFillProposal;
+  error?: string;
 }
 export interface HostLoadMessage {
   source: typeof ATLAS_BRIDGE_HOST_SOURCE;
   type: "load";
   doc: unknown;
 }
-export type HostToEditorMessage = HostSavedMessage | HostAiDraftResultMessage | HostLoadMessage;
+export type HostToEditorMessage =
+  | HostSavedMessage
+  | HostAiDraftResultMessage
+  | HostPlotFillProposalResultMessage
+  | HostLoadMessage;
 
 const EDITOR_TYPES = new Set([
   "ready",
   "save",
   "visibility",
   "ai-draft-request",
+  "plot-fill-proposal-request",
+  "plot-fill-proposal-review",
   "handout-request",
   "node-rename",
 ]);
-const HOST_TYPES = new Set(["saved", "ai-draft-result", "load"]);
+const HOST_TYPES = new Set(["saved", "ai-draft-result", "plot-fill-proposal-result", "load"]);
 
 /** True when `data` is a well-formed Editor→Host message (origin + type checked). */
 export function isEditorMessage(data: unknown): data is EditorToHostMessage {
   if (!data || typeof data !== "object") return false;
   const d = data as { source?: unknown; type?: unknown };
-  return d.source === ATLAS_BRIDGE_EDITOR_SOURCE && typeof d.type === "string" && EDITOR_TYPES.has(d.type);
+  if (d.source !== ATLAS_BRIDGE_EDITOR_SOURCE || typeof d.type !== "string" || !EDITOR_TYPES.has(d.type)) {
+    return false;
+  }
+  if (d.type === "plot-fill-proposal-request") {
+    const msg = d as { plotKey?: unknown; seed?: unknown };
+    return typeof msg.plotKey === "string" && typeof msg.seed === "number" && Number.isFinite(msg.seed);
+  }
+  if (d.type === "plot-fill-proposal-review") {
+    const msg = d as { plotKey?: unknown; accepted?: unknown };
+    return typeof msg.plotKey === "string" && typeof msg.accepted === "boolean";
+  }
+  return true;
 }
 
 /** True when `data` is a well-formed Host→Editor message (origin + type checked). */
 export function isHostMessage(data: unknown): data is HostToEditorMessage {
   if (!data || typeof data !== "object") return false;
   const d = data as { source?: unknown; type?: unknown };
-  return d.source === ATLAS_BRIDGE_HOST_SOURCE && typeof d.type === "string" && HOST_TYPES.has(d.type);
+  if (d.source !== ATLAS_BRIDGE_HOST_SOURCE || typeof d.type !== "string" || !HOST_TYPES.has(d.type)) return false;
+  if (d.type === "ai-draft-result") return Array.isArray((d as { features?: unknown }).features);
+  if (d.type === "plot-fill-proposal-result") {
+    const msg = d as { plotKey?: unknown; proposal?: unknown; error?: unknown };
+    return (
+      typeof msg.plotKey === "string" &&
+      (msg.proposal === undefined || (typeof msg.proposal === "object" && msg.proposal !== null)) &&
+      (msg.error === undefined || typeof msg.error === "string")
+    );
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------

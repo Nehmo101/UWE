@@ -15,8 +15,31 @@ describe("bridge message guards", () => {
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "save", doc: {} }), true);
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "ready", mode: "editor" }), true);
     assert.equal(
+      isEditorMessage({
+        source: ATLAS_BRIDGE_EDITOR_SOURCE,
+        type: "plot-fill-proposal-request",
+        plotKey: "ck-plot",
+        seed: 42,
+      }),
+      true,
+    );
+    assert.equal(
+      isEditorMessage({
+        source: ATLAS_BRIDGE_EDITOR_SOURCE,
+        type: "plot-fill-proposal-review",
+        plotKey: "ck-plot",
+        accepted: true,
+        objectCount: 12,
+      }),
+      true,
+    );
+    assert.equal(
       isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "node-rename", nodeId: "n1", title: "Terra" }),
       true,
+    );
+    assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "plot-fill-proposal-request", seed: 42 }),
+      false,
     );
     // wrong source (a host message must not pass the editor guard)
     assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "save" }), false);
@@ -30,6 +53,20 @@ describe("bridge message guards", () => {
   it("accepts well-formed host messages and rejects editor/unknown", () => {
     assert.equal(isHostMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "load", doc: {} }), true);
     assert.equal(isHostMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "ai-draft-result", features: [] }), true);
+    assert.equal(isHostMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "ai-draft-result" }), false);
+    assert.equal(
+      isHostMessage({
+        source: ATLAS_BRIDGE_HOST_SOURCE,
+        type: "plot-fill-proposal-result",
+        plotKey: "ck-plot",
+        proposal: { schemaVersion: 1, kind: "atlas_plot_fill", density: 1, seed: 1, assets: [] },
+      }),
+      true,
+    );
+    assert.equal(
+      isHostMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "plot-fill-proposal-result", proposal: {} }),
+      false,
+    );
     assert.equal(isHostMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "load" }), false);
     assert.equal(isHostMessage({ source: ATLAS_BRIDGE_HOST_SOURCE, type: "nope" }), false);
   });

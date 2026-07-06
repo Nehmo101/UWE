@@ -22,6 +22,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   prepare_mail_draft: "Mail-Entwurf vorbereiten",
   atlas_name_region: "Atlas-Regionen benennen",
   atlas_describe_region: "Atlas-Region beschreiben",
+  atlas_fill_area: "Atlas-Objektfläche füllen",
   simulate_faction: "Fraktion simulieren",
   generate_structured_npc: "NPC strukturiert generieren",
   generate_structured_quest: "Quest strukturiert generieren",
@@ -77,6 +78,8 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Schlage stimmungsvolle, zum Weltbuilding passende Namen für die Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nutze den Kampagnen-Kontext für thematische Kohärenz. Gib für jede Einheit einen primären Namen und optional einen Alternativnamen an. Format: eine Zeile je Eintrag 'ID: Name (optional: Alternativname)'. Nie automatisch in den Kanon übernehmen.",
   atlas_describe_region:
     "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
+  atlas_fill_area:
+    "Schlage ein Atlas-Plot-Fill-Rezept als reines JSON vor. Format: {\"schemaVersion\":1,\"kind\":\"atlas_plot_fill\",\"biomeKind\":\"forest\",\"density\":1,\"seed\":123,\"assets\":[{\"gouacheKey\":\"g_oak\",\"weight\":1}]}. Nutze nur bekannte Gouache-Asset-Keys aus der Zusatzanweisung oder dem Kontext. Liefere keine AtlasObject-Payloads, keine Koordinaten, keine Sichtbarkeit, keine Palette-DB-IDs und keinen Code. UWE erzeugt daraus Ghost-Objekte und übernimmt sie erst nach manueller Prüfung.",
   simulate_faction:
     "Simuliere einen Zeitsprung für die Fraktion im Kontext: Welche Ereignisse, Ressourcen- und Beziehungsänderungen ergeben sich? Antworte NUR als JSON-Objekt {\"events\":[...]} — jedes Event mit title, inGameDate {year,month,day}, summaryPlayer, summaryDm (optional), visibility (player_visible|private|dm_only). Keine Kanon-Änderungen ohne Review.",
   generate_structured_npc:

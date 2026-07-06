@@ -22,9 +22,12 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 - **Objektbereich füllen — Preset-Modus** (`plot`, Shortcut **F**): Polygon zeichnen → Gouache-Objekte werden deterministisch als reguläre `AtlasObject`s gestreut (`fillPlotWithGouacheAssets`); Auswahl-Panel kann refillen/rerollen. KI/RTX-Proposal bleibt Backlog.
 - **Static Viewer — Gouache/Intensität-/Legenden-Parität:** Static Export legt `atlas-engine.js` neben `atlas-viewer.js`; der read-only Viewer rendert `style.gouache`, `lineWidth`, `blur` und `AtlasTileLayer.intensity` und zeigt eine node-synchrone Kartenlegende für Untergrund, Kartenzeichen und Objekte.
 
+- **KI/RTX-Draft-Bridge-Grundlage:** `@uwe/atlas/draft-proposal` normalisiert prozedurale/RTX-Draft-Features auf erlaubte Atlas-Kinds; Studio-Host und `atlas.html` akzeptieren für Draft-Review nur noch unterstützte Geometrie/Kinds. Angenommene `plot`-Proposals lösen bestehenden deterministischen Plot-Fill aus.
+- **KI/RTX-Plot-Fill-Rezept-Grundlage:** `@uwe/atlas/plot-fill-proposal` validiert `atlas_plot_fill`-Rezepte (Gouache-Allowlist, Density/Seed/Style-Grenzen, keine `AtlasObject`-/Code-Payloads); `@uwe/ai-brain` kennt `atlas_fill_area` als Review-only Brain-Action und speichert validierte/ungültige Ausgaben mit `autoApply: false`.
+
 ## Noch offen aus dem Gouache-Plan
 
-- **Objektbereich füllen (Plot):** KI/RTX-Proposal-Flow mit Ghost-Overlay und Review vor Übernahme; Preset-Scatter ist umgesetzt.
+- **Objektbereich füllen (Plot):** Ghost-Overlay-UI + Übernehmen/Verwerfen für validierte `atlas_plot_fill`-Rezepte; Preset-Scatter und Recipe-/Brain-Validator sind umgesetzt.
 - **RTX-Asset-Studio in UWE:** Assets direkt in UWE mit lokaler RTX erstellen; Styleguide + Asset-Katalog als Prompt-Kontext; Ergebnis als validiertes Custom-Asset/PaletteItem-Proposal, Promotion zu Builtins per PR.
 - **Gouache-Asset-Bibliothek ausbauen:** Backlog aus `docs/design/atlas-redesign/asset-catalog.md` schrittweise als Rezepte/Custom-Assets umsetzen.
 - **Großstadt-/Schloss-Generator:** deterministisches `settlement.ts` mit Mauern, Straßen, Türmen, Häusern, Kirche, Marktständen, Brunnen, Bergfried und Werft.
@@ -36,14 +39,13 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ## Nächster Agent: empfohlener Einstieg
 
-**Priorität 1: KI/RTX-Plot-Fill als Review-Flow.** Der Preset-Scatter ist fertig; der nächste kleine, saubere Schnitt ist `atlas_fill_area` als Rezept-Proposal, nicht als direktes Object-Payload. AI/RTX liefert nur validierte Parameter, UWE erzeugt daraus mit `fillPlotWithGouacheAssets` sichere Ghost-Objects.
+**Priorität 1: KI/RTX-Plot-Fill-Ghost-UI.** Der Preset-Scatter und das sichere `atlas_fill_area`-Recipe-Proposal sind fertig; der nächste kleine, saubere Schnitt ist die Editor-Review: RTX/AI-Rezept anfragen, mit `validateAtlasPlotFillProposal` prüfen, daraus Ghost-Objects via `fillPlotWithGouacheAssets` rendern und erst nach explizitem Übernehmen persistieren.
 
 Betroffene Kernstellen:
 
-- `packages/ai-brain/src/actions.ts`, `types.ts`, `tasks.ts`, `proposals.ts`, `brain-actions.test.ts`
-- `packages/ai-brain/src/router/providers/connectorQueueProvider.ts`
-- optional `packages/ai-brain/src/atlas-plot-fill-proposal.ts` als Parser/Guard
-- `packages/atlas/src/bridge.ts` + `bridge.test.ts` für `plot-fill-proposal-request/result/review`
+- `packages/atlas/src/plot-fill-proposal.ts` + `plot-fill-proposal.test.ts` als fertiger Parser/Guard
+- `packages/ai-brain/src/actions.ts`, `types.ts`, `tasks.ts`, `proposals.ts`, `brain-actions.test.ts` als fertiger Brain-Action-Einstieg
+- `packages/atlas/src/bridge.ts` + `bridge.test.ts` für bereits angelegte `plot-fill-proposal-request/result/review`
 - `apps/studio/app/atlas-actions.ts` für Authz, Node-Zugehörigkeit und Rezept → Objects
 - `apps/studio/src/components/atlas/AtlasStudioHost.tsx` für Bridge-Handling
 - `packages/static-export/static/atlas.html` für KI/RTX-Button, Ghost-Overlay, Übernehmen/Verwerfen

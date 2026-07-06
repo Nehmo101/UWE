@@ -31,6 +31,7 @@ export type CookbookAiTaskType =
   | "prepare_mail_draft"
   | "atlas_name_region"
   | "atlas_describe_region"
+  | "atlas_fill_area"
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"

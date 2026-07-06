@@ -1,3 +1,4 @@
+import { validateAtlasPlotFillProposal } from "@uwe/atlas/plot-fill-proposal";
 import type { BrainActionDefinition } from "./actions";
 import type { AiProposalTargetType } from "./actions";
 
@@ -30,6 +31,20 @@ function extractMailSubject(text: string): { subject: string; body: string } {
     return { subject, body };
   }
   return { subject: "Session-Update", body: text.trim() };
+}
+
+function extractJsonObject(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const source = fenced?.[1]?.trim() || trimmed;
+  const start = source.indexOf("{");
+  const end = source.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(source.slice(start, end + 1));
+  } catch {
+    return null;
+  }
 }
 
 export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[] {
@@ -120,6 +135,34 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         metadata: {
           source: "ai_generated",
           autoApply: false,
+        },
+      },
+    ];
+  }
+
+  if (action.id === "atlas_fill_area") {
+    const parsed = extractJsonObject(resultText);
+    const validation = validateAtlasPlotFillProposal(parsed);
+    const validContent = validation.ok
+      ? JSON.stringify(validation.proposal, null, 2)
+      : resultText.trim();
+    return [
+      {
+        id: `${baseId}-atlas-plot-fill`,
+        label: action.defaultProposalLabel,
+        content: validContent,
+        targetType: "atlas_plot_fill",
+        targetId: pageId ?? null,
+        visibility: "dm_only",
+        status: "pending",
+        metadata: {
+          source: "ai_generated",
+          autoApply: false,
+          proposalKind: "atlas_plot_fill",
+          validation: validation.ok ? "ok" : "invalid",
+          ...(validation.ok
+            ? { warnings: validation.warnings }
+            : { errors: validation.errors }),
         },
       },
     ];

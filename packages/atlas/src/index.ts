@@ -111,6 +111,23 @@ export type {
   PlotFillObject,
 } from "./plot-fill";
 
+// Plot-fill proposal validation — review-only RTX/AI recipe payloads
+export {
+  ATLAS_PLOT_FILL_PROPOSAL_KIND,
+  ATLAS_PLOT_FILL_SCHEMA_VERSION,
+  buildAtlasPlotFillPromptContext,
+  formatAtlasPlotFillPromptContext,
+  isAtlasPlotFillProposal,
+  validateAtlasPlotFillProposal,
+} from "./plot-fill-proposal";
+export type {
+  AtlasPlotFillPromptContext,
+  AtlasPlotFillProposal,
+  AtlasPlotFillProposalIssue,
+  AtlasPlotFillProposalIssueCode,
+  AtlasPlotFillProposalValidationResult,
+} from "./plot-fill-proposal";
+
 // Serialization (geometry-level)
 export {
   AtlasParseError,
@@ -212,6 +229,16 @@ export {
   rerollDraft,
   proceduralDraft,
 } from "./procedural";
+
+// Draft proposal normalization — safe editor/RTX bridge payloads
+export {
+  normalizeAtlasDraftFeature,
+  normalizeAtlasDraftFeatures,
+} from "./draft-proposal";
+export type {
+  AtlasDraftFeatureProposal,
+  AtlasDraftProposalKind,
+} from "./draft-proposal";
 
 // AI stamp generation — P5
 export {

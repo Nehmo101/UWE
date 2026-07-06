@@ -31,7 +31,8 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("mail_draft"));
     assert.ok(ids.includes("atlas_name_regions"), "atlas_name_regions action must be present");
     assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
-    assert.equal(BRAIN_ACTION_LIST.length, 10);
+    assert.ok(ids.includes("atlas_fill_area"), "atlas_fill_area action must be present");
+    assert.equal(BRAIN_ACTION_LIST.length, 11);
   });
 
   it("marks player-safe actions correctly", () => {
@@ -82,6 +83,43 @@ describe("Brain Actions — proposals", () => {
     assert.equal(proposals[0]?.targetType, "brain_document");
     assert.equal(proposals[0]?.visibility, "dm_only");
     assert.equal(proposals[0]?.metadata?.documentType, "world_knowledge");
+  });
+
+  it("builds review-only atlas plot-fill proposals from validated JSON", () => {
+    const action = getBrainAction("atlas_fill_area");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: JSON.stringify({
+        schemaVersion: 1,
+        kind: "atlas_plot_fill",
+        biomeKind: "forest",
+        density: 1.25,
+        seed: 77,
+        assets: [{ gouacheKey: "g_oak", weight: 2 }],
+      }),
+      pageId: "page-1",
+    });
+
+    assert.equal(proposals.length, 1);
+    assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
+    assert.equal(proposals[0]?.visibility, "dm_only");
+    assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "ok");
+    assert.match(proposals[0]?.content ?? "", /"kind": "atlas_plot_fill"/);
+  });
+
+  it("keeps invalid atlas plot-fill output as a non-applied review artifact", () => {
+    const action = getBrainAction("atlas_fill_area");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: '{"kind":"atlas_plot_fill","density":99,"seed":1,"assets":[{"gouacheKey":"missing"}]}',
+      pageId: "page-1",
+    });
+
+    assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
+    assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "invalid");
+    assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
   });
 });
 

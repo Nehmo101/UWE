@@ -11,7 +11,8 @@ export type BrainActionId =
   | "fill_dungeon_room"
   | "mail_draft"
   | "atlas_name_regions"
-  | "atlas_describe_region";
+  | "atlas_describe_region"
+  | "atlas_fill_area";
 
 export type AiProposalTargetType =
   | "session_summary_dm"
@@ -21,7 +22,8 @@ export type AiProposalTargetType =
   | "idea_page"
   | "mail_draft"
   | "atlas_draft_names"
-  | "atlas_region_description";
+  | "atlas_region_description"
+  | "atlas_plot_fill";
 
 export interface BrainActionDefinition {
   id: BrainActionId;
@@ -148,6 +150,18 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "dm_internal",
     defaultProposalTarget: "atlas_region_description",
     defaultProposalLabel: "Regionsbeschreibung (Entwurf)",
+  },
+  atlas_fill_area: {
+    id: "atlas_fill_area",
+    label: "Atlas-Objektfläche füllen",
+    description:
+      "Schlägt ein sicheres Gouache-Scatter-Rezept für eine Atlas-Objektfläche vor. RTX liefert nur Parameter, nie fertige Kartenobjekte.",
+    taskType: "atlas_fill_area",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "atlas_plot_fill",
+    defaultProposalLabel: "Atlas-Objektfläche (Rezept)",
   },
 };
 

@@ -19,6 +19,7 @@ import {
   isEditorMessage,
   splitDocForSave,
 } from "@uwe/atlas/bridge";
+import { normalizeAtlasDraftFeatures } from "@uwe/atlas/draft-proposal";
 import { useCallback, useEffect, useRef } from "react";
 
 import {
@@ -132,7 +133,7 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         const result = await generateAtlasDraftAction(fd);
         const draft = result && "draft" in result ? result.draft : undefined;
         if (draft) {
-          post({ type: "ai-draft-result", features: draft.features });
+          post({ type: "ai-draft-result", features: normalizeAtlasDraftFeatures(draft.features) });
         }
       } catch (error) {
         console.error("Atlas-Bridge: KI-Entwurf fehlgeschlagen —", error);

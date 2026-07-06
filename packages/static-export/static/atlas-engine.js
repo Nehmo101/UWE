@@ -766,6 +766,731 @@ function fillPlotWithGouacheAssets(polygon, options) {
   return results;
 }
 
+// ../atlas/src/assets.ts
+var GOUACHE_CATEGORY_LABELS = {
+  flora: "Flora",
+  structure: "Bauwerke",
+  landmark: "Landmarken",
+  vehicle: "Fahrzeuge",
+  market: "Markt",
+  prop: "Deko"
+};
+var GOUACHE_ASSETS = [
+  { key: "g_oak", name: "Eiche", category: "flora" },
+  { key: "g_pine", name: "Nadelbaum", category: "flora" },
+  { key: "g_bush", name: "Busch", category: "flora" },
+  { key: "g_mushroom", name: "Riesenpilz", category: "flora" },
+  { key: "g_house", name: "Haus", category: "structure" },
+  { key: "g_tower", name: "Turm", category: "structure" },
+  { key: "g_keep", name: "Bergfried", category: "structure" },
+  { key: "g_church", name: "Kirche", category: "structure" },
+  { key: "g_windmill", name: "Windmühle", category: "structure" },
+  { key: "g_tent", name: "Zelt", category: "structure" },
+  { key: "g_ruin", name: "Ruine", category: "structure" },
+  { key: "g_signal_tower", name: "Signalturm", category: "structure" },
+  { key: "g_bridge", name: "Steinbrücke", category: "structure" },
+  { key: "g_pyramid", name: "Pyramide", category: "landmark" },
+  { key: "g_obelisk", name: "Obelisk", category: "landmark" },
+  { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
+  { key: "g_magic_crystal", name: "Magiekristall", category: "landmark" },
+  { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
+  { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
+  { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
+  { key: "g_ship", name: "Schiff", category: "vehicle" },
+  { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
+  { key: "g_airship", name: "Flugschiff", category: "vehicle" },
+  { key: "g_stall", name: "Marktstand", category: "market" },
+  { key: "g_well", name: "Brunnen", category: "prop" }
+];
+var GOUACHE_ASSET_KEYS = GOUACHE_ASSETS.map(
+  (a) => a.key
+);
+var ASSETS_BY_KEY = new Map(GOUACHE_ASSETS.map((a) => [a.key, a]));
+function getGouacheAsset(key) {
+  return key ? ASSETS_BY_KEY.get(key) : void 0;
+}
+function listGouacheAssetsByCategory(cat) {
+  return GOUACHE_ASSETS.filter((a) => a.category === cat);
+}
+function hexRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+function darken(h, f) {
+  const [r, g, b] = hexRgb(h);
+  return `rgb(${Math.round(r * (1 - f))},${Math.round(g * (1 - f))},${Math.round(b * (1 - f))})`;
+}
+function lighten(h, f) {
+  const [r, g, b] = hexRgb(h);
+  return `rgb(${Math.round(r + (255 - r) * f)},${Math.round(g + (255 - g) * f)},${Math.round(b + (255 - b) * f)})`;
+}
+function shadow(ctx, x, y, rx) {
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = "#2a1e0c";
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, rx * 0.34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+function rectFn(x, y, w, h) {
+  return (c) => {
+    c.beginPath();
+    c.rect(x, y, w, h);
+  };
+}
+function polyFn(pts) {
+  return (c) => {
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+  };
+}
+function blobFn(pts) {
+  return (c) => {
+    const n = pts.length;
+    c.beginPath();
+    c.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const cur = pts[i];
+      const nx = pts[(i + 1) % n];
+      c.quadraticCurveTo(cur[0], cur[1], (cur[0] + nx[0]) / 2, (cur[1] + nx[1]) / 2);
+    }
+    c.closePath();
+  };
+}
+function iblob(cx, cy, rx, ry, rng, jag = 0.24, n = 12) {
+  const p = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2;
+    const k = 1 + (rng() - 0.5) * 2 * jag;
+    p.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  return p;
+}
+function paint(ctx, pf, fill, lw, edgeColor) {
+  ctx.save();
+  ctx.fillStyle = fill;
+  pf(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = edgeColor ?? darken(fill, 0.42);
+  ctx.lineWidth = Math.max(0.5, lw);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  pf(ctx);
+  ctx.stroke();
+  ctx.restore();
+}
+function tree(ctx, s, rng, lw, base, dark, hi) {
+  const cy = -s * 0.55;
+  shadow(ctx, 0, s * 0.02, s * 0.5);
+  paint(ctx, rectFn(-s * 0.07, -s * 0.3, s * 0.14, s * 0.34), "#7a5230", lw * 0.8, "#4a3320");
+  const blob = iblob(0, cy, s * 0.5, s * 0.46, rng, 0.26, 12);
+  const P = blobFn(blob);
+  ctx.save();
+  ctx.fillStyle = base;
+  P(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = dark;
+  ctx.globalAlpha = 0.5;
+  blobFn(blob.map((p) => [p[0] + s * 0.08, p[1] + s * 0.12]))(ctx);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = hi;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.13, cy - s * 0.15, s * 0.2, s * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = darken(base, 0.5);
+  ctx.lineWidth = Math.max(0.6, lw);
+  ctx.lineJoin = "round";
+  P(ctx);
+  ctx.stroke();
+  ctx.restore();
+}
+var RECIPES = {
+  g_oak: (ctx, s, rng, lw) => tree(ctx, s, rng, lw, "#5f9a4a", "#33613a", "#aacf7a"),
+  g_bush: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.4);
+    const b = iblob(0, -s * 0.24, s * 0.42, s * 0.3, rng, 0.3, 10);
+    paint(ctx, blobFn(b), "#5c8f43", lw);
+  },
+  g_pine: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    paint(ctx, rectFn(-s * 0.06, -s * 0.28, s * 0.12, s * 0.3), "#6a4a2a", lw * 0.8);
+    for (let i = 0; i < 3; i++) {
+      const y = -s * (0.25 + i * 0.22), w = s * (0.42 - i * 0.1);
+      paint(ctx, polyFn([[-w, y], [0, y - s * 0.34], [w, y]]), i === 0 ? "#3f6d39" : "#478043", lw);
+    }
+  },
+  g_mushroom: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    paint(ctx, rectFn(-s * 0.13, -s * 0.5, s * 0.26, s * 0.52), "#e6dcc4", lw);
+    paint(ctx, blobFn(iblob(0, -s * 0.5, s * 0.5, s * 0.26, () => 0.5, 0.05, 10)), "#b4402f", lw);
+    ctx.save();
+    ctx.fillStyle = "#f0e6cf";
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.arc(i * s * 0.24, -s * 0.56, s * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_house: (ctx, s, _rng, lw) => {
+    const w = s * 0.95, h = s * 0.62;
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#dcc79c", lw);
+    paint(ctx, polyFn([[-w * 0.62, -h + 2], [0, -h * 1.7], [w * 0.62, -h + 2]]), "#a8432e", lw);
+    ctx.save();
+    ctx.fillStyle = "#5a4026";
+    ctx.fillRect(-s * 0.08, -h * 0.55, s * 0.16, h * 0.55);
+    ctx.restore();
+  },
+  g_tower: (ctx, s, _rng, lw) => {
+    const w = s * 0.5, h = s * 0.95;
+    shadow(ctx, 0, s * 0.03, s * 0.42);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#cbb98e", lw);
+    paint(ctx, polyFn([[-w * 0.72, -h + 1], [0, -h * 1.5], [w * 0.72, -h + 1]]), "#8a3526", lw);
+  },
+  g_keep: (ctx, s, _rng, lw) => {
+    const w = s * 1.1, h = s * 1.1;
+    shadow(ctx, 0, s * 0.05, s * 0.8);
+    for (const sx of [-1, 1]) {
+      paint(ctx, rectFn(sx * w * 0.42 - s * 0.13, -h * 1.15, s * 0.26, h * 1.15), "#bcac80", lw);
+      paint(ctx, polyFn([[sx * w * 0.42 - s * 0.2, -h * 1.15], [sx * w * 0.42, -h * 1.45], [sx * w * 0.42 + s * 0.2, -h * 1.15]]), "#7f3222", lw);
+    }
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#c6b487", lw);
+    for (let i = 0; i < 3; i++) paint(ctx, rectFn(-w / 2 + w * (i / 2) - s * 0.12, -h - s * 0.16, s * 0.24, s * 0.18), "#c6b487", lw * 0.8);
+    ctx.save();
+    ctx.fillStyle = "#4a3722";
+    ctx.fillRect(-s * 0.14, -h * 0.5, s * 0.28, h * 0.5);
+    ctx.restore();
+  },
+  g_church: (ctx, s, _rng, lw) => {
+    const w = s * 0.85, h = s * 0.6;
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#d7cba6", lw);
+    paint(ctx, polyFn([[-w * 0.6, -h], [0, -h * 1.5], [w * 0.6, -h]]), "#7a4a2a", lw);
+    const tx = -w * 0.34, tw = s * 0.34, th = s * 1.15;
+    paint(ctx, rectFn(tx - tw / 2, -th, tw, th), "#cdbd95", lw);
+    paint(ctx, polyFn([[tx - tw * 0.62, -th], [tx, -th - s * 0.5], [tx + tw * 0.62, -th]]), "#5f6f78", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a4030";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(tx, -th - s * 0.5);
+    ctx.lineTo(tx, -th - s * 0.74);
+    ctx.moveTo(tx - s * 0.08, -th - s * 0.66);
+    ctx.lineTo(tx + s * 0.08, -th - s * 0.66);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_windmill: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.44);
+    paint(ctx, polyFn([[-s * 0.3, 0], [-s * 0.22, -s], [s * 0.22, -s], [s * 0.3, 0]]), "#cdbd95", lw);
+    paint(ctx, polyFn([[-s * 0.28, -s], [0, -s * 1.28], [s * 0.28, -s]]), "#7a4a2a", lw);
+    ctx.save();
+    ctx.translate(0, -s * 0.75);
+    ctx.strokeStyle = "#4a3722";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.fillStyle = "#e0d3ad";
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2 + 0.5);
+      ctx.fillRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
+      ctx.strokeRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
+    }
+    ctx.restore();
+  },
+  g_tent: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.5);
+    paint(ctx, polyFn([[-s * 0.5, 0], [0, -s * 0.9], [s * 0.5, 0]]), "#c99a5a", lw);
+    ctx.save();
+    ctx.strokeStyle = "#6a4a2a";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.9);
+    ctx.lineTo(0, -s * 0.05);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_ruin: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.55);
+    paint(ctx, rectFn(-s * 0.45, -s * 0.5, s * 0.22, s * 0.5), "#b7a880", lw);
+    paint(ctx, rectFn(s * 0.05, -s * 0.75, s * 0.2, s * 0.75), "#b0a179", lw);
+    paint(ctx, rectFn(-s * 0.1, -s * 0.32, s * 0.12, s * 0.32), "#a99a72", lw);
+    ctx.save();
+    ctx.strokeStyle = "#6f5c3c";
+    ctx.lineWidth = Math.max(0.8, lw * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45, -s * 0.5);
+    ctx.lineTo(-s * 0.34, -s * 0.62);
+    ctx.lineTo(-s * 0.23, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_signal_tower: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.42);
+    for (const dx of [-0.18, 0.18]) paint(ctx, polyFn([[dx * s - s * 0.04, 0], [dx * s + s * 0.04, 0], [dx * s + s * 0.02, -s * 0.82], [dx * s - s * 0.02, -s * 0.82]]), "#7a5230", lw * 0.65, "#4a3320");
+    ctx.save();
+    ctx.strokeStyle = "#5a4026";
+    ctx.lineWidth = Math.max(0.8, lw * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.2, -s * 0.22);
+    ctx.lineTo(s * 0.2, -s * 0.58);
+    ctx.moveTo(s * 0.2, -s * 0.22);
+    ctx.lineTo(-s * 0.2, -s * 0.58);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.3, -s * 0.9, s * 0.6, s * 0.17), "#8a5e34", lw, "#4a3320");
+    paint(ctx, polyFn([[-s * 0.2, -s * 0.91], [0, -s * 1.2], [s * 0.2, -s * 0.91]]), "#c96a2f", lw, "#80301d");
+    paint(ctx, polyFn([[-s * 0.09, -s * 0.92], [0, -s * 1.1], [s * 0.08, -s * 0.92]]), "#f0c35c", lw * 0.65, "#9a4a22");
+  },
+  g_bridge: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.62);
+    paint(ctx, polyFn([[-s * 0.62, -s * 0.08], [-s * 0.5, -s * 0.46], [s * 0.5, -s * 0.46], [s * 0.62, -s * 0.08], [s * 0.5, s * 0.02], [-s * 0.5, s * 0.02]]), "#b9aa86", lw, "#6f6145");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.3, s * 0.01);
+      c.lineTo(-s * 0.3, -s * 0.1);
+      c.quadraticCurveTo(0, -s * 0.4, s * 0.3, -s * 0.1);
+      c.lineTo(s * 0.3, s * 0.01);
+      c.closePath();
+    }, "#4a4638", lw * 0.7, "#5a513d");
+    for (let i = 0; i < 4; i++) {
+      const x = -s * 0.44 + i * s * 0.29;
+      paint(ctx, rectFn(x, -s * 0.5, s * 0.16, s * 0.12), "#c7ba92", lw * 0.45, "#756845");
+    }
+  },
+  g_pyramid: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.7);
+    paint(ctx, polyFn([[-s * 0.7, 0], [0, -s], [s * 0.05, -s], [s * 0.05, 0]]), "#c8a75a", lw);
+    paint(ctx, polyFn([[s * 0.05, 0], [s * 0.05, -s], [s * 0.7, 0]]), "#a98640", lw);
+  },
+  g_obelisk: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.28);
+    paint(ctx, polyFn([[-s * 0.12, 0], [-s * 0.08, -s], [0, -s * 1.15], [s * 0.08, -s], [s * 0.12, 0]]), "#9a9488", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a4636";
+    ctx.lineWidth = Math.max(0.6, lw * 0.6);
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.06, -s * 0.2 * i);
+      ctx.lineTo(s * 0.06, -s * 0.2 * i);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_cave_mouth: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.55);
+    paint(ctx, blobFn(iblob(0, -s * 0.34, s * 0.56, s * 0.42, rng, 0.18, 11)), "#8f8774", lw, "#5f5846");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.28, 0);
+      c.lineTo(-s * 0.24, -s * 0.2);
+      c.quadraticCurveTo(0, -s * 0.58, s * 0.24, -s * 0.2);
+      c.lineTo(s * 0.28, 0);
+      c.closePath();
+    }, "#2f2a24", lw * 0.8, "#4a4030");
+    paint(ctx, blobFn(iblob(-s * 0.22, -s * 0.6, s * 0.16, s * 0.08, () => 0.5, 0.08, 7)), "#5f8a4a", lw * 0.45, "#3a5f35");
+    paint(ctx, blobFn(iblob(s * 0.22, -s * 0.52, s * 0.14, s * 0.07, () => 0.5, 0.08, 7)), "#5f8a4a", lw * 0.45, "#3a5f35");
+  },
+  g_magic_crystal: (ctx, s, _rng, lw) => {
+    shadow(ctx, s * 0.08, s * 0.35, s * 0.42);
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = "#7fcfe0";
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.62, s * 0.46, s * 0.78, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, polyFn([[0, -s * 1.25], [s * 0.28, -s * 0.78], [s * 0.18, -s * 0.22], [0, -s * 0.04], [-s * 0.18, -s * 0.22], [-s * 0.28, -s * 0.78]]), "#68b9cf", lw, "#2e6376");
+    paint(ctx, polyFn([[0, -s * 1.25], [s * 0.28, -s * 0.78], [0, -s * 0.7]]), lighten("#68b9cf", 0.28), lw * 0.55, "#4f91a2");
+    paint(ctx, polyFn([[0, -s * 0.7], [s * 0.18, -s * 0.22], [0, -s * 0.04], [-s * 0.18, -s * 0.22]]), "#4c94b0", lw * 0.55, "#2e6376");
+  },
+  g_stone_circle: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.58);
+    const stones = [[-0.42, -0.12, 0.16, 0.44], [-0.22, -0.32, 0.14, 0.5], [0, -0.42, 0.16, 0.52], [0.22, -0.32, 0.14, 0.5], [0.42, -0.12, 0.16, 0.44]];
+    for (const [x, y, w, h] of stones) paint(ctx, polyFn([[x * s - w * s * 0.5, y * s], [x * s - w * s * 0.38, y * s - h * s * 0.78], [x * s, y * s - h * s], [x * s + w * s * 0.38, y * s - h * s * 0.78], [x * s + w * s * 0.5, y * s]]), "#9a9488", lw, "#5f5a4d");
+    ctx.save();
+    ctx.strokeStyle = "#6f664f";
+    ctx.lineWidth = Math.max(0.7, lw * 0.55);
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.18, s * 0.42, s * 0.16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_floating_island: (ctx, s, rng, lw) => {
+    shadow(ctx, s * 0.1, s * 0.5, s * 0.55);
+    paint(ctx, polyFn([[-s * 0.55, -s * 0.5], [s * 0.55, -s * 0.5], [s * 0.3, -s * 0.05], [0, s * 0.2], [-s * 0.3, -s * 0.05]]), "#7a5a38", lw);
+    paint(ctx, blobFn(iblob(0, -s * 0.55, s * 0.55, s * 0.16, rng, 0.18, 10)), "#5f9a4a", lw);
+    for (const dx of [-0.28, 0.05, 0.3]) {
+      ctx.save();
+      ctx.translate(dx * s, -s * 0.5);
+      tree(ctx, s * 0.34, () => 0.5, lw * 0.8, "#5f9a4a", "#33613a", "#aacf7a");
+      ctx.restore();
+    }
+  },
+  g_turtle_castle: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.05, s * 0.7);
+    paint(ctx, blobFn(iblob(0, -s * 0.2, s * 0.6, s * 0.32, () => 0.5, 0.05, 12)), "#5c7a4a", lw);
+    for (const dx of [-0.7, -0.35, 0.35, 0.7]) paint(ctx, polyFn([[dx * s - s * 0.06, 0], [dx * s, -s * 0.18], [dx * s + s * 0.06, 0]]), "#4a6640", lw);
+    paint(ctx, polyFn([[s * 0.6, -s * 0.15], [s * 0.78, -s * 0.32], [s * 0.72, -s * 0.05]]), "#4a6640", lw);
+    paint(ctx, rectFn(-s * 0.24, -s * 0.7, s * 0.48, s * 0.42), "#c6b487", lw);
+    for (const sx of [-1, 1]) paint(ctx, rectFn(sx * s * 0.28 - s * 0.08, -s * 0.78, s * 0.16, s * 0.5), "#bcac80", lw);
+  },
+  g_ship: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.5);
+    paint(ctx, polyFn([[-s * 0.55, -s * 0.1], [s * 0.55, -s * 0.1], [s * 0.38, s * 0.16], [-s * 0.38, s * 0.16]]), "#7a4f2c", lw);
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.1);
+    ctx.lineTo(0, -s * 0.95);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, polyFn([[0, -s * 0.9], [s * 0.4, -s * 0.32], [0, -s * 0.32]]), "#efe4c6", lw);
+  },
+  g_airship: (ctx, s, _rng, lw) => {
+    shadow(ctx, s * 0.1, s * 0.75, s * 0.4);
+    paint(ctx, blobFn(iblob(0, -s * 0.7, s * 0.6, s * 0.34, () => 0.5, 0.04, 12)), "#b0563f", lw);
+    ctx.save();
+    ctx.fillStyle = "#e8ddc0";
+    for (let i = -2; i <= 2; i++) ctx.fillRect(i * s * 0.2 - s * 0.02, -s * 1.04, s * 0.04, s * 0.68);
+    ctx.restore();
+    paint(ctx, polyFn([[-s * 0.28, -s * 0.32], [s * 0.28, -s * 0.32], [s * 0.2, -s * 0.1], [-s * 0.2, -s * 0.1]]), "#7a4f2c", lw);
+  },
+  g_stall: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.42);
+    ctx.save();
+    ctx.strokeStyle = "#6a4a2a";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.35, 0);
+    ctx.lineTo(-s * 0.35, -s * 0.5);
+    ctx.moveTo(s * 0.35, 0);
+    ctx.lineTo(s * 0.35, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.42, -s * 0.64, s * 0.84, s * 0.17), "#c24a3a", lw * 0.7, "#8a2f22");
+    ctx.save();
+    ctx.fillStyle = "#e8ddc0";
+    for (let i = 0; i < 3; i++) ctx.fillRect(-s * 0.42 + i * s * 0.28 + s * 0.07, -s * 0.64, s * 0.14, s * 0.17);
+    ctx.restore();
+  },
+  g_cart: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.05, s * 0.5);
+    paint(ctx, rectFn(-s * 0.4, -s * 0.45, s * 0.8, s * 0.3), "#8a5e34", lw);
+    ctx.save();
+    ctx.fillStyle = "#3a2a18";
+    ctx.strokeStyle = "#2a1e10";
+    ctx.lineWidth = Math.max(1, lw);
+    for (const dx of [-0.24, 0.24]) {
+      ctx.beginPath();
+      ctx.arc(dx * s, -s * 0.05, s * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_well: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.3);
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.ellipse(0, -s * 0.1, s * 0.22, s * 0.14, 0, 0, Math.PI * 2);
+    }, "#b6a680", lw);
+    ctx.save();
+    ctx.strokeStyle = "#5a4026";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.22, -s * 0.1);
+    ctx.lineTo(-s * 0.26, -s * 0.5);
+    ctx.moveTo(s * 0.22, -s * 0.1);
+    ctx.lineTo(s * 0.26, -s * 0.5);
+    ctx.moveTo(-s * 0.3, -s * 0.5);
+    ctx.lineTo(s * 0.3, -s * 0.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+function drawGouacheAsset(ctx, key, opts) {
+  const recipe = RECIPES[key];
+  if (!recipe) return;
+  const size = (opts.size ?? 30) * (opts.scale ?? 1);
+  const lw = opts.lineWidth ?? 1.4;
+  const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
+  ctx.save();
+  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
+  ctx.translate(opts.x, opts.y);
+  if (opts.rotation) ctx.rotate(opts.rotation);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  recipe(ctx, size, rng, lw);
+  ctx.restore();
+}
+function isGouacheAsset(key) {
+  return !!key && key in RECIPES;
+}
+
+// ../atlas/src/plot-fill-proposal.ts
+var ATLAS_PLOT_FILL_PROPOSAL_KIND = "atlas_plot_fill";
+var ATLAS_PLOT_FILL_SCHEMA_VERSION = 1;
+var TOP_LEVEL_KEYS = [
+  "schemaVersion",
+  "kind",
+  "plotKey",
+  "biomeKind",
+  "density",
+  "seed",
+  "assets",
+  "notes",
+  "rationale"
+];
+var ASSET_KEYS = [
+  "gouacheKey",
+  "weight",
+  "scaleMin",
+  "scaleMax",
+  "rotateMin",
+  "rotateMax",
+  "lineWidth",
+  "blur"
+];
+var EXECUTABLE_KEYS = /* @__PURE__ */ new Set([
+  "code",
+  "sourcecode",
+  "script",
+  "javascript",
+  "typescript",
+  "jsx",
+  "tsx",
+  "executable",
+  "functionbody",
+  "renderfunction",
+  "drawfunction",
+  "objects",
+  "atlasobjects"
+]);
+var EXECUTABLE_TEXT = [
+  /<\s*script\b/i,
+  /\b(?:function|class)\s+[A-Za-z_$]/,
+  /=>/,
+  /\bimport\s+(?:type\s+)?(?:\{|[A-Za-z_$*])/,
+  /\bexport\s+(?:default|function|class|const|let|var|\{|\*)/,
+  /\b(?:eval|Function|setTimeout|setInterval)\s*\(/,
+  /\b(?:require|process|child_process|Deno)\b/
+];
+var SAFE_PLOT_KEY = /^[A-Za-z0-9:_-]{1,120}$/;
+var GOUACHE_KEY_SET = new Set(GOUACHE_ASSET_KEYS);
+var BIOME_VALUES = Object.values(BiomeKind);
+function add(issues, path, code, message) {
+  issues.push({ path, code, message });
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function rejectUnknown(obj, allowed, path, issues) {
+  for (const key of Object.keys(obj)) {
+    if (!allowed.includes(key)) {
+      add(issues, `${path}.${key}`, "unexpected_field", `Unexpected field "${key}".`);
+    }
+  }
+}
+function scanExecutable(value, path, issues, seen = /* @__PURE__ */ new WeakSet()) {
+  if (typeof value === "function") {
+    add(issues, path, "executable_code", "Function values are not accepted.");
+    return;
+  }
+  if (typeof value === "string") {
+    if (EXECUTABLE_TEXT.some((pattern) => pattern.test(value))) {
+      add(issues, path, "executable_code", "Executable source text is not accepted.");
+    }
+    return;
+  }
+  if (typeof value !== "object" || value === null || seen.has(value)) return;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => scanExecutable(entry, `${path}[${index}]`, issues, seen));
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (EXECUTABLE_KEYS.has(key.toLowerCase())) {
+      add(issues, `${path}.${key}`, "executable_code", `Executable/object field "${key}" is not accepted.`);
+    }
+    scanExecutable(entry, `${path}.${key}`, issues, seen);
+  }
+}
+function stringValue(obj, key, path, issues, opts = {}) {
+  const value = obj[key];
+  if (value === void 0) return void 0;
+  if (typeof value !== "string") {
+    add(issues, `${path}.${key}`, "invalid_type", `${key} must be a string.`);
+    return void 0;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || opts.max !== void 0 && trimmed.length > opts.max || opts.pattern && !opts.pattern.test(trimmed)) {
+    add(issues, `${path}.${key}`, "invalid_value", `${key} is empty or invalid.`);
+    return void 0;
+  }
+  return trimmed;
+}
+function numberValue(obj, key, path, issues, opts = {}) {
+  const value = obj[key];
+  if (value === void 0) {
+    if (opts.required) add(issues, `${path}.${key}`, "missing_field", `${key} is required.`);
+    return void 0;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    add(issues, `${path}.${key}`, "invalid_type", `${key} must be a finite number.`);
+    return void 0;
+  }
+  if (opts.integer && !Number.isInteger(value)) {
+    add(issues, `${path}.${key}`, "invalid_value", `${key} must be an integer.`);
+  }
+  if (opts.min !== void 0 && value < opts.min) {
+    add(issues, `${path}.${key}`, "invalid_value", `${key} must be >= ${opts.min}.`);
+  }
+  if (opts.max !== void 0 && value > opts.max) {
+    add(issues, `${path}.${key}`, "invalid_value", `${key} must be <= ${opts.max}.`);
+  }
+  return value;
+}
+function optionalNumber(raw, key, path, issues, opts) {
+  return numberValue(raw, key, path, issues, opts);
+}
+function parseAsset(raw, path, issues) {
+  if (!isRecord(raw)) {
+    add(issues, path, "invalid_type", "assets entries must be objects.");
+    return null;
+  }
+  const before = issues.length;
+  rejectUnknown(raw, ASSET_KEYS, path, issues);
+  const gouacheKey = stringValue(raw, "gouacheKey", path, issues, { max: 80 });
+  if (!gouacheKey) add(issues, `${path}.gouacheKey`, "missing_field", "gouacheKey is required.");
+  else if (!GOUACHE_KEY_SET.has(gouacheKey)) {
+    add(issues, `${path}.gouacheKey`, "invalid_value", "Unknown Gouache asset key.");
+  }
+  const asset = { gouacheKey: gouacheKey ?? "" };
+  const weight = optionalNumber(raw, "weight", path, issues, { min: 0.05, max: 10 });
+  const scaleMin = optionalNumber(raw, "scaleMin", path, issues, { min: 0.2, max: 3 });
+  const scaleMax = optionalNumber(raw, "scaleMax", path, issues, { min: 0.2, max: 3 });
+  const rotateMin = optionalNumber(raw, "rotateMin", path, issues, { min: -180, max: 180 });
+  const rotateMax = optionalNumber(raw, "rotateMax", path, issues, { min: -180, max: 180 });
+  const lineWidth = optionalNumber(raw, "lineWidth", path, issues, { min: 0.3, max: 6 });
+  const blur = optionalNumber(raw, "blur", path, issues, { min: 0, max: 8 });
+  if (scaleMin !== void 0 && scaleMax !== void 0 && scaleMin > scaleMax) {
+    add(issues, `${path}.scaleMin`, "invalid_value", "scaleMin must be <= scaleMax.");
+  }
+  if (rotateMin !== void 0 && rotateMax !== void 0 && rotateMin > rotateMax) {
+    add(issues, `${path}.rotateMin`, "invalid_value", "rotateMin must be <= rotateMax.");
+  }
+  if (weight !== void 0) asset.weight = weight;
+  if (scaleMin !== void 0) asset.scaleMin = scaleMin;
+  if (scaleMax !== void 0) asset.scaleMax = scaleMax;
+  if (rotateMin !== void 0) asset.rotateMin = rotateMin;
+  if (rotateMax !== void 0) asset.rotateMax = rotateMax;
+  if (lineWidth !== void 0) asset.lineWidth = lineWidth;
+  if (blur !== void 0) asset.blur = blur;
+  return issues.length === before && gouacheKey ? asset : null;
+}
+function parseAssets(raw, issues) {
+  if (!Array.isArray(raw)) {
+    add(issues, "$.assets", "invalid_type", "assets must be an array.");
+    return [];
+  }
+  if (raw.length === 0) add(issues, "$.assets", "missing_field", "At least one asset is required.");
+  if (raw.length > 12) add(issues, "$.assets", "invalid_value", "At most 12 assets are accepted.");
+  return raw.slice(0, 12).flatMap((entry, index) => {
+    const asset = parseAsset(entry, `$.assets[${index}]`, issues);
+    return asset ? [asset] : [];
+  });
+}
+function validateAtlasPlotFillProposal(raw) {
+  const errors = [];
+  scanExecutable(raw, "$", errors);
+  if (!isRecord(raw)) {
+    add(errors, "$", "invalid_type", "Proposal must be a JSON object.");
+    return { ok: false, errors };
+  }
+  rejectUnknown(raw, TOP_LEVEL_KEYS, "$", errors);
+  if (raw.schemaVersion !== void 0 && raw.schemaVersion !== ATLAS_PLOT_FILL_SCHEMA_VERSION) {
+    add(errors, "$.schemaVersion", "invalid_value", "schemaVersion must be 1.");
+  }
+  if (raw.kind !== void 0 && raw.kind !== ATLAS_PLOT_FILL_PROPOSAL_KIND) {
+    add(errors, "$.kind", "invalid_value", "kind must be atlas_plot_fill.");
+  }
+  const plotKey = stringValue(raw, "plotKey", "$", errors, { pattern: SAFE_PLOT_KEY });
+  const biomeKind = typeof raw.biomeKind === "string" && BIOME_VALUES.includes(raw.biomeKind) ? raw.biomeKind : void 0;
+  if (raw.biomeKind !== void 0 && !biomeKind) {
+    add(errors, "$.biomeKind", "invalid_value", "Unknown biome kind.");
+  }
+  const density = numberValue(raw, "density", "$", errors, { required: true, min: 0.05, max: 3 });
+  const seed = numberValue(raw, "seed", "$", errors, { required: true, integer: true, min: 0, max: 4294967295 });
+  const assets = parseAssets(raw.assets, errors);
+  const notes = stringValue(raw, "notes", "$", errors, { max: 500 });
+  const rationale = stringValue(raw, "rationale", "$", errors, { max: 800 });
+  if (errors.length > 0 || density === void 0 || seed === void 0 || assets.length === 0) {
+    return { ok: false, errors };
+  }
+  return {
+    ok: true,
+    proposal: {
+      schemaVersion: ATLAS_PLOT_FILL_SCHEMA_VERSION,
+      kind: ATLAS_PLOT_FILL_PROPOSAL_KIND,
+      ...plotKey ? { plotKey } : {},
+      ...biomeKind ? { biomeKind } : {},
+      density,
+      seed,
+      assets,
+      ...notes ? { notes } : {},
+      ...rationale ? { rationale } : {}
+    },
+    warnings: []
+  };
+}
+function isAtlasPlotFillProposal(raw) {
+  return validateAtlasPlotFillProposal(raw).ok;
+}
+function buildAtlasPlotFillPromptContext() {
+  return {
+    schemaVersion: ATLAS_PLOT_FILL_SCHEMA_VERSION,
+    kind: ATLAS_PLOT_FILL_PROPOSAL_KIND,
+    acceptedBiomes: [...BIOME_VALUES],
+    acceptedGouacheAssets: GOUACHE_ASSETS.map((asset) => ({
+      key: asset.key,
+      name: asset.name,
+      category: asset.category
+    })),
+    rules: [
+      "Return only JSON, no Markdown and no code.",
+      "Use kind atlas_plot_fill and schemaVersion 1.",
+      "Use only Gouache keys from acceptedGouacheAssets.",
+      "Do not return AtlasObject payloads, coordinates, visibility, palette database ids, or executable code.",
+      "UWE will create ghost objects from this recipe and requires explicit user review before persistence."
+    ]
+  };
+}
+function formatAtlasPlotFillPromptContext(context = buildAtlasPlotFillPromptContext()) {
+  const assets = context.acceptedGouacheAssets.map((asset) => `${asset.key} (${asset.category}: ${asset.name})`).join(", ");
+  return [
+    "Atlas plot-fill proposal context:",
+    `- JSON shape: {"schemaVersion":1,"kind":"${context.kind}","biomeKind":"forest","density":1,"seed":123,"assets":[{"gouacheKey":"g_oak","weight":1}]}`,
+    `- Accepted biomes: ${context.acceptedBiomes.join(", ")}`,
+    `- Accepted Gouache assets: ${assets}`,
+    "- Bounds: density 0.05..3, seed integer 0..4294967295, max 12 assets.",
+    "- Security: no AtlasObject payloads, no code, no coordinates, no visibility, no palette database ids.",
+    "- Review flow: RTX proposes a recipe only; UWE renders ghost objects and the DM must accept explicitly."
+  ].join("\n");
+}
+
 // ../atlas/src/serialization.ts
 var AtlasParseError = class extends Error {
   constructor(message) {
@@ -1365,397 +2090,438 @@ function buildVineLayout(points, options = {}) {
   };
 }
 
-// ../atlas/src/assets.ts
-var GOUACHE_CATEGORY_LABELS = {
-  flora: "Flora",
-  structure: "Bauwerke",
-  landmark: "Landmarken",
-  vehicle: "Fahrzeuge",
-  market: "Markt",
-  prop: "Deko"
-};
-var GOUACHE_ASSETS = [
-  { key: "g_oak", name: "Eiche", category: "flora" },
-  { key: "g_pine", name: "Nadelbaum", category: "flora" },
-  { key: "g_bush", name: "Busch", category: "flora" },
-  { key: "g_mushroom", name: "Riesenpilz", category: "flora" },
-  { key: "g_house", name: "Haus", category: "structure" },
-  { key: "g_tower", name: "Turm", category: "structure" },
-  { key: "g_keep", name: "Bergfried", category: "structure" },
-  { key: "g_church", name: "Kirche", category: "structure" },
-  { key: "g_windmill", name: "Windmühle", category: "structure" },
-  { key: "g_tent", name: "Zelt", category: "structure" },
-  { key: "g_ruin", name: "Ruine", category: "structure" },
-  { key: "g_pyramid", name: "Pyramide", category: "landmark" },
-  { key: "g_obelisk", name: "Obelisk", category: "landmark" },
-  { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
-  { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
-  { key: "g_ship", name: "Schiff", category: "vehicle" },
-  { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
-  { key: "g_airship", name: "Flugschiff", category: "vehicle" },
-  { key: "g_stall", name: "Marktstand", category: "market" },
-  { key: "g_well", name: "Brunnen", category: "prop" }
-];
-var GOUACHE_ASSET_KEYS = GOUACHE_ASSETS.map(
-  (a) => a.key
+// ../atlas/src/rtx-asset-proposal.ts
+var RTX_ATLAS_ASSET_STYLEGUIDE_PATH = "docs/prompts/atlas-pictogram-styleguide.md";
+var RTX_ATLAS_ASSET_CATALOG_PATH = "docs/design/atlas-redesign/asset-catalog.md";
+var RTX_ATLAS_ASSET_REGISTRY_EXPORT = "@uwe/atlas/assets#GOUACHE_ASSETS";
+var RTX_ATLAS_ASSET_OUTPUT_TYPES = ["json-recipe", "png-fallback"];
+var RTX_ATLAS_ASSET_ENGINE_TAGS = ["Stamp", "Plot", "Path", "Landmark", "Gen", "Terrain"];
+var RTX_GOUACHE_RECIPE_LAYER_ROLES = ["shadow", "base", "highlight", "detail", "outline"];
+var RTX_GOUACHE_RECIPE_SHAPES = ["ellipse", "rect", "polygon", "path"];
+var RTX_ATLAS_ASSET_GOUACHE_CATEGORIES = Object.keys(
+  GOUACHE_CATEGORY_LABELS
 );
-var ASSETS_BY_KEY = new Map(GOUACHE_ASSETS.map((a) => [a.key, a]));
-function getGouacheAsset(key) {
-  return key ? ASSETS_BY_KEY.get(key) : void 0;
-}
-function listGouacheAssetsByCategory(cat) {
-  return GOUACHE_ASSETS.filter((a) => a.category === cat);
-}
-function hexRgb(h) {
-  const n = parseInt(h.slice(1), 16);
-  return [n >> 16 & 255, n >> 8 & 255, n & 255];
-}
-function darken(h, f) {
-  const [r, g, b] = hexRgb(h);
-  return `rgb(${Math.round(r * (1 - f))},${Math.round(g * (1 - f))},${Math.round(b * (1 - f))})`;
-}
-function shadow(ctx, x, y, rx) {
-  ctx.save();
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = "#2a1e0c";
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, rx * 0.34, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-function rectFn(x, y, w, h) {
-  return (c) => {
-    c.beginPath();
-    c.rect(x, y, w, h);
-  };
-}
-function polyFn(pts) {
-  return (c) => {
-    c.beginPath();
-    c.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-    c.closePath();
-  };
-}
-function blobFn(pts) {
-  return (c) => {
-    const n = pts.length;
-    c.beginPath();
-    c.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
-    for (let i = 0; i < n; i++) {
-      const cur = pts[i];
-      const nx = pts[(i + 1) % n];
-      c.quadraticCurveTo(cur[0], cur[1], (cur[0] + nx[0]) / 2, (cur[1] + nx[1]) / 2);
-    }
-    c.closePath();
-  };
-}
-function iblob(cx, cy, rx, ry, rng, jag = 0.24, n = 12) {
-  const p = [];
-  for (let i = 0; i < n; i++) {
-    const a = i / n * Math.PI * 2;
-    const k = 1 + (rng() - 0.5) * 2 * jag;
-    p.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
-  }
-  return p;
-}
-function paint(ctx, pf, fill, lw, edgeColor) {
-  ctx.save();
-  ctx.fillStyle = fill;
-  pf(ctx);
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  ctx.strokeStyle = edgeColor ?? darken(fill, 0.42);
-  ctx.lineWidth = Math.max(0.5, lw);
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  pf(ctx);
-  ctx.stroke();
-  ctx.restore();
-}
-function tree(ctx, s, rng, lw, base, dark, hi) {
-  const cy = -s * 0.55;
-  shadow(ctx, 0, s * 0.02, s * 0.5);
-  paint(ctx, rectFn(-s * 0.07, -s * 0.3, s * 0.14, s * 0.34), "#7a5230", lw * 0.8, "#4a3320");
-  const blob = iblob(0, cy, s * 0.5, s * 0.46, rng, 0.26, 12);
-  const P = blobFn(blob);
-  ctx.save();
-  ctx.fillStyle = base;
-  P(ctx);
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  ctx.fillStyle = dark;
-  ctx.globalAlpha = 0.5;
-  blobFn(blob.map((p) => [p[0] + s * 0.08, p[1] + s * 0.12]))(ctx);
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  ctx.fillStyle = hi;
-  ctx.globalAlpha = 0.7;
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.13, cy - s * 0.15, s * 0.2, s * 0.15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  ctx.strokeStyle = darken(base, 0.5);
-  ctx.lineWidth = Math.max(0.6, lw);
-  ctx.lineJoin = "round";
-  P(ctx);
-  ctx.stroke();
-  ctx.restore();
-}
-var RECIPES = {
-  g_oak: (ctx, s, rng, lw) => tree(ctx, s, rng, lw, "#5f9a4a", "#33613a", "#aacf7a"),
-  g_bush: (ctx, s, rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.4);
-    const b = iblob(0, -s * 0.24, s * 0.42, s * 0.3, rng, 0.3, 10);
-    paint(ctx, blobFn(b), "#5c8f43", lw);
-  },
-  g_pine: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.42);
-    paint(ctx, rectFn(-s * 0.06, -s * 0.28, s * 0.12, s * 0.3), "#6a4a2a", lw * 0.8);
-    for (let i = 0; i < 3; i++) {
-      const y = -s * (0.25 + i * 0.22), w = s * (0.42 - i * 0.1);
-      paint(ctx, polyFn([[-w, y], [0, y - s * 0.34], [w, y]]), i === 0 ? "#3f6d39" : "#478043", lw);
-    }
-  },
-  g_mushroom: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.42);
-    paint(ctx, rectFn(-s * 0.13, -s * 0.5, s * 0.26, s * 0.52), "#e6dcc4", lw);
-    paint(ctx, blobFn(iblob(0, -s * 0.5, s * 0.5, s * 0.26, () => 0.5, 0.05, 10)), "#b4402f", lw);
-    ctx.save();
-    ctx.fillStyle = "#f0e6cf";
-    for (let i = -1; i <= 1; i++) {
-      ctx.beginPath();
-      ctx.arc(i * s * 0.24, -s * 0.56, s * 0.06, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  },
-  g_house: (ctx, s, _rng, lw) => {
-    const w = s * 0.95, h = s * 0.62;
-    shadow(ctx, 0, s * 0.04, s * 0.6);
-    paint(ctx, rectFn(-w / 2, -h, w, h), "#dcc79c", lw);
-    paint(ctx, polyFn([[-w * 0.62, -h + 2], [0, -h * 1.7], [w * 0.62, -h + 2]]), "#a8432e", lw);
-    ctx.save();
-    ctx.fillStyle = "#5a4026";
-    ctx.fillRect(-s * 0.08, -h * 0.55, s * 0.16, h * 0.55);
-    ctx.restore();
-  },
-  g_tower: (ctx, s, _rng, lw) => {
-    const w = s * 0.5, h = s * 0.95;
-    shadow(ctx, 0, s * 0.03, s * 0.42);
-    paint(ctx, rectFn(-w / 2, -h, w, h), "#cbb98e", lw);
-    paint(ctx, polyFn([[-w * 0.72, -h + 1], [0, -h * 1.5], [w * 0.72, -h + 1]]), "#8a3526", lw);
-  },
-  g_keep: (ctx, s, _rng, lw) => {
-    const w = s * 1.1, h = s * 1.1;
-    shadow(ctx, 0, s * 0.05, s * 0.8);
-    for (const sx of [-1, 1]) {
-      paint(ctx, rectFn(sx * w * 0.42 - s * 0.13, -h * 1.15, s * 0.26, h * 1.15), "#bcac80", lw);
-      paint(ctx, polyFn([[sx * w * 0.42 - s * 0.2, -h * 1.15], [sx * w * 0.42, -h * 1.45], [sx * w * 0.42 + s * 0.2, -h * 1.15]]), "#7f3222", lw);
-    }
-    paint(ctx, rectFn(-w / 2, -h, w, h), "#c6b487", lw);
-    for (let i = 0; i < 3; i++) paint(ctx, rectFn(-w / 2 + w * (i / 2) - s * 0.12, -h - s * 0.16, s * 0.24, s * 0.18), "#c6b487", lw * 0.8);
-    ctx.save();
-    ctx.fillStyle = "#4a3722";
-    ctx.fillRect(-s * 0.14, -h * 0.5, s * 0.28, h * 0.5);
-    ctx.restore();
-  },
-  g_church: (ctx, s, _rng, lw) => {
-    const w = s * 0.85, h = s * 0.6;
-    shadow(ctx, 0, s * 0.04, s * 0.6);
-    paint(ctx, rectFn(-w / 2, -h, w, h), "#d7cba6", lw);
-    paint(ctx, polyFn([[-w * 0.6, -h], [0, -h * 1.5], [w * 0.6, -h]]), "#7a4a2a", lw);
-    const tx = -w * 0.34, tw = s * 0.34, th = s * 1.15;
-    paint(ctx, rectFn(tx - tw / 2, -th, tw, th), "#cdbd95", lw);
-    paint(ctx, polyFn([[tx - tw * 0.62, -th], [tx, -th - s * 0.5], [tx + tw * 0.62, -th]]), "#5f6f78", lw);
-    ctx.save();
-    ctx.strokeStyle = "#4a4030";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.beginPath();
-    ctx.moveTo(tx, -th - s * 0.5);
-    ctx.lineTo(tx, -th - s * 0.74);
-    ctx.moveTo(tx - s * 0.08, -th - s * 0.66);
-    ctx.lineTo(tx + s * 0.08, -th - s * 0.66);
-    ctx.stroke();
-    ctx.restore();
-  },
-  g_windmill: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.03, s * 0.44);
-    paint(ctx, polyFn([[-s * 0.3, 0], [-s * 0.22, -s], [s * 0.22, -s], [s * 0.3, 0]]), "#cdbd95", lw);
-    paint(ctx, polyFn([[-s * 0.28, -s], [0, -s * 1.28], [s * 0.28, -s]]), "#7a4a2a", lw);
-    ctx.save();
-    ctx.translate(0, -s * 0.75);
-    ctx.strokeStyle = "#4a3722";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.fillStyle = "#e0d3ad";
-    for (let i = 0; i < 4; i++) {
-      ctx.rotate(Math.PI / 2 + 0.5);
-      ctx.fillRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
-      ctx.strokeRect(s * 0.05, -s * 0.03, s * 0.5, s * 0.12);
-    }
-    ctx.restore();
-  },
-  g_tent: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.03, s * 0.5);
-    paint(ctx, polyFn([[-s * 0.5, 0], [0, -s * 0.9], [s * 0.5, 0]]), "#c99a5a", lw);
-    ctx.save();
-    ctx.strokeStyle = "#6a4a2a";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.beginPath();
-    ctx.moveTo(0, -s * 0.9);
-    ctx.lineTo(0, -s * 0.05);
-    ctx.stroke();
-    ctx.restore();
-  },
-  g_ruin: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.03, s * 0.55);
-    paint(ctx, rectFn(-s * 0.45, -s * 0.5, s * 0.22, s * 0.5), "#b7a880", lw);
-    paint(ctx, rectFn(s * 0.05, -s * 0.75, s * 0.2, s * 0.75), "#b0a179", lw);
-    paint(ctx, rectFn(-s * 0.1, -s * 0.32, s * 0.12, s * 0.32), "#a99a72", lw);
-    ctx.save();
-    ctx.strokeStyle = "#6f5c3c";
-    ctx.lineWidth = Math.max(0.8, lw * 0.7);
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.45, -s * 0.5);
-    ctx.lineTo(-s * 0.34, -s * 0.62);
-    ctx.lineTo(-s * 0.23, -s * 0.5);
-    ctx.stroke();
-    ctx.restore();
-  },
-  g_pyramid: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.03, s * 0.7);
-    paint(ctx, polyFn([[-s * 0.7, 0], [0, -s], [s * 0.05, -s], [s * 0.05, 0]]), "#c8a75a", lw);
-    paint(ctx, polyFn([[s * 0.05, 0], [s * 0.05, -s], [s * 0.7, 0]]), "#a98640", lw);
-  },
-  g_obelisk: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.28);
-    paint(ctx, polyFn([[-s * 0.12, 0], [-s * 0.08, -s], [0, -s * 1.15], [s * 0.08, -s], [s * 0.12, 0]]), "#9a9488", lw);
-    ctx.save();
-    ctx.strokeStyle = "#4a4636";
-    ctx.lineWidth = Math.max(0.6, lw * 0.6);
-    for (let i = 1; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.06, -s * 0.2 * i);
-      ctx.lineTo(s * 0.06, -s * 0.2 * i);
-      ctx.stroke();
-    }
-    ctx.restore();
-  },
-  g_floating_island: (ctx, s, rng, lw) => {
-    shadow(ctx, s * 0.1, s * 0.5, s * 0.55);
-    paint(ctx, polyFn([[-s * 0.55, -s * 0.5], [s * 0.55, -s * 0.5], [s * 0.3, -s * 0.05], [0, s * 0.2], [-s * 0.3, -s * 0.05]]), "#7a5a38", lw);
-    paint(ctx, blobFn(iblob(0, -s * 0.55, s * 0.55, s * 0.16, rng, 0.18, 10)), "#5f9a4a", lw);
-    for (const dx of [-0.28, 0.05, 0.3]) {
-      ctx.save();
-      ctx.translate(dx * s, -s * 0.5);
-      tree(ctx, s * 0.34, () => 0.5, lw * 0.8, "#5f9a4a", "#33613a", "#aacf7a");
-      ctx.restore();
-    }
-  },
-  g_turtle_castle: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.05, s * 0.7);
-    paint(ctx, blobFn(iblob(0, -s * 0.2, s * 0.6, s * 0.32, () => 0.5, 0.05, 12)), "#5c7a4a", lw);
-    for (const dx of [-0.7, -0.35, 0.35, 0.7]) paint(ctx, polyFn([[dx * s - s * 0.06, 0], [dx * s, -s * 0.18], [dx * s + s * 0.06, 0]]), "#4a6640", lw);
-    paint(ctx, polyFn([[s * 0.6, -s * 0.15], [s * 0.78, -s * 0.32], [s * 0.72, -s * 0.05]]), "#4a6640", lw);
-    paint(ctx, rectFn(-s * 0.24, -s * 0.7, s * 0.48, s * 0.42), "#c6b487", lw);
-    for (const sx of [-1, 1]) paint(ctx, rectFn(sx * s * 0.28 - s * 0.08, -s * 0.78, s * 0.16, s * 0.5), "#bcac80", lw);
-  },
-  g_ship: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.04, s * 0.5);
-    paint(ctx, polyFn([[-s * 0.55, -s * 0.1], [s * 0.55, -s * 0.1], [s * 0.38, s * 0.16], [-s * 0.38, s * 0.16]]), "#7a4f2c", lw);
-    ctx.save();
-    ctx.strokeStyle = "#4a3320";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.beginPath();
-    ctx.moveTo(0, -s * 0.1);
-    ctx.lineTo(0, -s * 0.95);
-    ctx.stroke();
-    ctx.restore();
-    paint(ctx, polyFn([[0, -s * 0.9], [s * 0.4, -s * 0.32], [0, -s * 0.32]]), "#efe4c6", lw);
-  },
-  g_airship: (ctx, s, _rng, lw) => {
-    shadow(ctx, s * 0.1, s * 0.75, s * 0.4);
-    paint(ctx, blobFn(iblob(0, -s * 0.7, s * 0.6, s * 0.34, () => 0.5, 0.04, 12)), "#b0563f", lw);
-    ctx.save();
-    ctx.fillStyle = "#e8ddc0";
-    for (let i = -2; i <= 2; i++) ctx.fillRect(i * s * 0.2 - s * 0.02, -s * 1.04, s * 0.04, s * 0.68);
-    ctx.restore();
-    paint(ctx, polyFn([[-s * 0.28, -s * 0.32], [s * 0.28, -s * 0.32], [s * 0.2, -s * 0.1], [-s * 0.2, -s * 0.1]]), "#7a4f2c", lw);
-  },
-  g_stall: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.42);
-    ctx.save();
-    ctx.strokeStyle = "#6a4a2a";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.35, 0);
-    ctx.lineTo(-s * 0.35, -s * 0.5);
-    ctx.moveTo(s * 0.35, 0);
-    ctx.lineTo(s * 0.35, -s * 0.5);
-    ctx.stroke();
-    ctx.restore();
-    paint(ctx, rectFn(-s * 0.42, -s * 0.64, s * 0.84, s * 0.17), "#c24a3a", lw * 0.7, "#8a2f22");
-    ctx.save();
-    ctx.fillStyle = "#e8ddc0";
-    for (let i = 0; i < 3; i++) ctx.fillRect(-s * 0.42 + i * s * 0.28 + s * 0.07, -s * 0.64, s * 0.14, s * 0.17);
-    ctx.restore();
-  },
-  g_cart: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.05, s * 0.5);
-    paint(ctx, rectFn(-s * 0.4, -s * 0.45, s * 0.8, s * 0.3), "#8a5e34", lw);
-    ctx.save();
-    ctx.fillStyle = "#3a2a18";
-    ctx.strokeStyle = "#2a1e10";
-    ctx.lineWidth = Math.max(1, lw);
-    for (const dx of [-0.24, 0.24]) {
-      ctx.beginPath();
-      ctx.arc(dx * s, -s * 0.05, s * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.restore();
-  },
-  g_well: (ctx, s, _rng, lw) => {
-    shadow(ctx, 0, s * 0.02, s * 0.3);
-    paint(ctx, (c) => {
-      c.beginPath();
-      c.ellipse(0, -s * 0.1, s * 0.22, s * 0.14, 0, 0, Math.PI * 2);
-    }, "#b6a680", lw);
-    ctx.save();
-    ctx.strokeStyle = "#5a4026";
-    ctx.lineWidth = Math.max(1, lw);
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.22, -s * 0.1);
-    ctx.lineTo(-s * 0.26, -s * 0.5);
-    ctx.moveTo(s * 0.22, -s * 0.1);
-    ctx.lineTo(s * 0.26, -s * 0.5);
-    ctx.moveTo(-s * 0.3, -s * 0.5);
-    ctx.lineTo(s * 0.3, -s * 0.5);
-    ctx.stroke();
-    ctx.restore();
-  }
+var TOP_LEVEL_KEYS2 = [
+  "name",
+  "category",
+  "tags",
+  "engineTags",
+  "palette",
+  "prompt",
+  "rationale",
+  "styleguideNotes",
+  "outputType",
+  "recipe",
+  "pngFallback"
+];
+var RECIPE_KEYS = ["schemaVersion", "coordinateSystem", "description", "layers"];
+var LAYER_KEYS = [
+  "id",
+  "role",
+  "shape",
+  "fill",
+  "stroke",
+  "opacity",
+  "lineWidth",
+  "x",
+  "y",
+  "width",
+  "height",
+  "rx",
+  "ry",
+  "rotation",
+  "points",
+  "path"
+];
+var PNG_KEYS = [
+  "mimeType",
+  "width",
+  "height",
+  "transparentBackground",
+  "filename",
+  "sha256",
+  "altText",
+  "notes"
+];
+var NUMERIC_LAYER_RANGES = {
+  opacity: [0, 1],
+  lineWidth: [0, 10],
+  x: [-4, 4],
+  y: [-4, 4],
+  width: [0, 8],
+  height: [0, 8],
+  rx: [0, 8],
+  ry: [0, 8],
+  rotation: [-Math.PI * 2, Math.PI * 2]
 };
-function drawGouacheAsset(ctx, key, opts) {
-  const recipe = RECIPES[key];
-  if (!recipe) return;
-  const size = (opts.size ?? 30) * (opts.scale ?? 1);
-  const lw = opts.lineWidth ?? 1.4;
-  const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
-  ctx.save();
-  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
-  ctx.translate(opts.x, opts.y);
-  if (opts.rotation) ctx.rotate(opts.rotation);
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  recipe(ctx, size, rng, lw);
-  ctx.restore();
+var SHAPE_REQUIRED_NUMBERS = {
+  ellipse: ["x", "y", "rx", "ry"],
+  rect: ["x", "y", "width", "height"]
+};
+var EXECUTABLE_KEYS2 = /* @__PURE__ */ new Set([
+  "code",
+  "sourcecode",
+  "script",
+  "javascript",
+  "typescript",
+  "jsx",
+  "tsx",
+  "executable",
+  "functionbody",
+  "renderfunction",
+  "drawfunction"
+]);
+var EXECUTABLE_TEXT2 = [
+  /<\s*script\b/i,
+  /\b(?:function|class)\s+[A-Za-z_$]/,
+  /=>/,
+  /\bimport\s+(?:type\s+)?(?:\{|[A-Za-z_$*])/,
+  /\bexport\s+(?:default|function|class|const|let|var|\{|\*)/,
+  /\b(?:eval|Function|setTimeout|setInterval)\s*\(/,
+  /\b(?:require|process|child_process|Deno)\b/
+];
+var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+var SAFE_ID = /^[a-z][a-z0-9_-]{1,47}$/i;
+var SAFE_FILENAME = /^[a-z0-9][a-z0-9._-]{0,95}\.png$/i;
+var SAFE_PATH = /^[MmLlHhVvCcSsQqTtAaZz0-9,.\-\s]+$/;
+function add2(issues, path, code, message) {
+  issues.push({ path, code, message });
 }
-function isGouacheAsset(key) {
-  return !!key && key in RECIPES;
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isAllowed(value, allowed) {
+  return typeof value === "string" && allowed.includes(value);
+}
+function rejectUnknown2(obj, allowed, path, issues) {
+  for (const key of Object.keys(obj)) {
+    if (!allowed.includes(key)) {
+      add2(issues, `${path}.${key}`, "unexpected_field", `Unexpected field "${key}".`);
+    }
+  }
+}
+function scanExecutable2(value, path, issues, seen = /* @__PURE__ */ new WeakSet()) {
+  if (typeof value === "function") {
+    add2(issues, path, "executable_code", "Function values are not accepted.");
+    return;
+  }
+  if (typeof value === "string") {
+    if (EXECUTABLE_TEXT2.some((pattern) => pattern.test(value))) {
+      add2(issues, path, "executable_code", "Executable source text is not accepted.");
+    }
+    return;
+  }
+  if (typeof value !== "object" || value === null || seen.has(value)) return;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => scanExecutable2(entry, `${path}[${index}]`, issues, seen));
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (EXECUTABLE_KEYS2.has(key.toLowerCase())) {
+      add2(issues, `${path}.${key}`, "executable_code", `Executable field "${key}" is not accepted.`);
+    }
+    scanExecutable2(entry, `${path}.${key}`, issues, seen);
+  }
+}
+function stringValue2(obj, key, path, issues, opts = {}) {
+  const value = obj[key];
+  if (value === void 0) {
+    if (opts.required) add2(issues, `${path}.${key}`, "missing_field", `${key} is required.`);
+    return void 0;
+  }
+  if (typeof value !== "string") {
+    add2(issues, `${path}.${key}`, "invalid_type", `${key} must be a string.`);
+    return void 0;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || opts.max !== void 0 && trimmed.length > opts.max) {
+    add2(issues, `${path}.${key}`, "invalid_value", `${key} is empty or too long.`);
+    return void 0;
+  }
+  return trimmed;
+}
+function numberValue2(obj, key, path, issues, opts = {}) {
+  const value = obj[key];
+  if (value === void 0) {
+    if (opts.required) add2(issues, `${path}.${key}`, "missing_field", `${key} is required.`);
+    return void 0;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    add2(issues, `${path}.${key}`, "invalid_type", `${key} must be a finite number.`);
+    return void 0;
+  }
+  if (opts.integer && !Number.isInteger(value)) {
+    add2(issues, `${path}.${key}`, "invalid_value", `${key} must be an integer.`);
+  }
+  if (opts.min !== void 0 && value < opts.min) {
+    add2(issues, `${path}.${key}`, "invalid_value", `${key} must be >= ${opts.min}.`);
+  }
+  if (opts.max !== void 0 && value > opts.max) {
+    add2(issues, `${path}.${key}`, "invalid_value", `${key} must be <= ${opts.max}.`);
+  }
+  return value;
+}
+function stringArray(obj, key, path, issues, opts) {
+  const value = obj[key];
+  if (value === void 0) return [];
+  if (!Array.isArray(value)) {
+    add2(issues, `${path}.${key}`, "invalid_type", `${key} must be an array.`);
+    return [];
+  }
+  if (value.length > opts.maxItems) {
+    add2(issues, `${path}.${key}`, "invalid_value", `${key} has too many items.`);
+  }
+  return value.slice(0, opts.maxItems).flatMap((entry, index) => {
+    if (typeof entry !== "string") {
+      add2(issues, `${path}.${key}[${index}]`, "invalid_type", `${key} entries must be strings.`);
+      return [];
+    }
+    const trimmed = entry.trim();
+    if (!trimmed || trimmed.length > opts.maxLength || opts.pattern && !opts.pattern.test(trimmed)) {
+      add2(issues, `${path}.${key}[${index}]`, "invalid_value", `${key} entry is invalid.`);
+      return [];
+    }
+    return [trimmed];
+  });
+}
+function parseEngineTags(obj, path, issues) {
+  const value = obj.engineTags;
+  if (value === void 0) return [];
+  if (!Array.isArray(value)) {
+    add2(issues, `${path}.engineTags`, "invalid_type", "engineTags must be an array.");
+    return [];
+  }
+  const tags = [];
+  value.forEach((entry, index) => {
+    if (!isAllowed(entry, RTX_ATLAS_ASSET_ENGINE_TAGS)) {
+      add2(issues, `${path}.engineTags[${index}]`, "invalid_value", "Unknown asset catalog engine tag.");
+      return;
+    }
+    if (!tags.includes(entry)) tags.push(entry);
+  });
+  return tags;
+}
+function parsePoints(value, path, issues, minPoints) {
+  if (value === void 0) return void 0;
+  if (!Array.isArray(value) || value.length < minPoints || value.length > 64) {
+    add2(issues, path, "invalid_value", `points must contain ${minPoints}-64 [x, y] entries.`);
+    return void 0;
+  }
+  const points = [];
+  value.forEach((entry, index) => {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "number" || typeof entry[1] !== "number" || !Number.isFinite(entry[0]) || !Number.isFinite(entry[1]) || entry[0] < -4 || entry[0] > 4 || entry[1] < -4 || entry[1] > 4) {
+      add2(issues, `${path}[${index}]`, "invalid_value", "points entries must be normalized [x, y] numbers.");
+      return;
+    }
+    points.push([entry[0], entry[1]]);
+  });
+  return points;
+}
+function parseLayer(raw, path, issues) {
+  if (!isRecord2(raw)) {
+    add2(issues, path, "invalid_type", "Recipe layers must be objects.");
+    return null;
+  }
+  const before = issues.length;
+  rejectUnknown2(raw, LAYER_KEYS, path, issues);
+  const id = stringValue2(raw, "id", path, issues, { required: true, max: 48 });
+  if (id && !SAFE_ID.test(id)) add2(issues, `${path}.id`, "invalid_value", "Layer id must be slug-like.");
+  const role = isAllowed(raw.role, RTX_GOUACHE_RECIPE_LAYER_ROLES) ? raw.role : void 0;
+  if (!role) add2(issues, `${path}.role`, "invalid_value", "Unknown layer role.");
+  const shape = isAllowed(raw.shape, RTX_GOUACHE_RECIPE_SHAPES) ? raw.shape : void 0;
+  if (!shape) add2(issues, `${path}.shape`, "invalid_value", "Unknown layer shape.");
+  const fill = stringValue2(raw, "fill", path, issues, { max: 16 });
+  if (fill && !HEX_COLOR.test(fill)) add2(issues, `${path}.fill`, "invalid_value", "fill must be a hex color.");
+  const stroke = stringValue2(raw, "stroke", path, issues, { max: 16 });
+  if (stroke && !HEX_COLOR.test(stroke)) add2(issues, `${path}.stroke`, "invalid_value", "stroke must be a hex color.");
+  if (!id || !role || !shape) return null;
+  const layer = { id, role, shape };
+  if (fill) layer.fill = fill;
+  if (stroke) layer.stroke = stroke;
+  for (const field of Object.keys(NUMERIC_LAYER_RANGES)) {
+    const [min, max] = NUMERIC_LAYER_RANGES[field];
+    const value = numberValue2(raw, field, path, issues, { min, max });
+    if (value !== void 0) layer[field] = value;
+  }
+  for (const field of SHAPE_REQUIRED_NUMBERS[shape] ?? []) {
+    if (raw[field] === void 0) add2(issues, `${path}.${field}`, "missing_field", `${field} is required for ${shape}.`);
+  }
+  const minPoints = shape === "polygon" ? 3 : 2;
+  const points = parsePoints(raw.points, `${path}.points`, issues, minPoints);
+  if (points) layer.points = points;
+  if (shape === "polygon" && !points) add2(issues, `${path}.points`, "missing_field", "polygon layers require points.");
+  const pathData = stringValue2(raw, "path", path, issues, { max: 1200 });
+  if (pathData && !SAFE_PATH.test(pathData)) {
+    add2(issues, `${path}.path`, "invalid_value", "path must contain SVG path commands and numbers only.");
+  }
+  if (pathData) layer.path = pathData;
+  if (shape === "path" && !pathData) add2(issues, `${path}.path`, "missing_field", "path layers require path.");
+  return issues.length === before ? layer : null;
+}
+function parseRecipe(raw, path, issues) {
+  if (!isRecord2(raw)) {
+    add2(issues, path, "invalid_type", "recipe must be an object.");
+    return null;
+  }
+  const before = issues.length;
+  rejectUnknown2(raw, RECIPE_KEYS, path, issues);
+  if (raw.schemaVersion !== 1) add2(issues, `${path}.schemaVersion`, "invalid_value", "schemaVersion must be 1.");
+  if (raw.coordinateSystem !== void 0 && raw.coordinateSystem !== "base-center-normalized") {
+    add2(issues, `${path}.coordinateSystem`, "invalid_value", "coordinateSystem must be base-center-normalized.");
+  }
+  if (!Array.isArray(raw.layers) || raw.layers.length === 0 || raw.layers.length > 64) {
+    add2(issues, `${path}.layers`, "invalid_value", "recipe.layers must contain 1-64 layer objects.");
+  }
+  const description = stringValue2(raw, "description", path, issues, { max: 500 });
+  const layers = Array.isArray(raw.layers) ? raw.layers.flatMap((layer, index) => {
+    const parsed = parseLayer(layer, `${path}.layers[${index}]`, issues);
+    return parsed ? [parsed] : [];
+  }) : [];
+  if (issues.length !== before) return null;
+  return {
+    schemaVersion: 1,
+    coordinateSystem: "base-center-normalized",
+    ...description ? { description } : {},
+    layers
+  };
+}
+function parsePngFallback(raw, path, issues) {
+  if (!isRecord2(raw)) {
+    add2(issues, path, "invalid_type", "pngFallback must be an object.");
+    return null;
+  }
+  const before = issues.length;
+  rejectUnknown2(raw, PNG_KEYS, path, issues);
+  if (raw.mimeType !== "image/png") add2(issues, `${path}.mimeType`, "invalid_value", "mimeType must be image/png.");
+  const width = numberValue2(raw, "width", path, issues, { required: true, integer: true, min: 1, max: 4096 });
+  const height = numberValue2(raw, "height", path, issues, { required: true, integer: true, min: 1, max: 4096 });
+  if (typeof raw.transparentBackground !== "boolean") {
+    add2(issues, `${path}.transparentBackground`, "missing_field", "transparentBackground must be a boolean.");
+  }
+  const filename = stringValue2(raw, "filename", path, issues, { max: 100 });
+  if (filename && !SAFE_FILENAME.test(filename)) {
+    add2(issues, `${path}.filename`, "invalid_value", "filename must be a safe .png filename.");
+  }
+  const sha256 = stringValue2(raw, "sha256", path, issues, { max: 64 });
+  if (sha256 && !/^[0-9a-f]{64}$/i.test(sha256)) {
+    add2(issues, `${path}.sha256`, "invalid_value", "sha256 must be 64 hex chars.");
+  }
+  const altText = stringValue2(raw, "altText", path, issues, { max: 240 });
+  const notes = stringValue2(raw, "notes", path, issues, { max: 500 });
+  if (issues.length !== before || width === void 0 || height === void 0 || typeof raw.transparentBackground !== "boolean") {
+    return null;
+  }
+  return {
+    mimeType: "image/png",
+    width,
+    height,
+    transparentBackground: raw.transparentBackground,
+    ...filename ? { filename } : {},
+    ...sha256 ? { sha256 } : {},
+    ...altText ? { altText } : {},
+    ...notes ? { notes } : {}
+  };
+}
+function inferOutputType(obj, issues) {
+  if (obj.outputType !== void 0) {
+    if (isAllowed(obj.outputType, RTX_ATLAS_ASSET_OUTPUT_TYPES)) return obj.outputType;
+    add2(issues, "$.outputType", "invalid_value", "outputType must be json-recipe or png-fallback.");
+    return void 0;
+  }
+  if (obj.recipe !== void 0 && obj.pngFallback === void 0) return "json-recipe";
+  if (obj.pngFallback !== void 0 && obj.recipe === void 0) return "png-fallback";
+  add2(issues, "$.outputType", "missing_field", "Provide outputType or exactly one of recipe/pngFallback.");
+  return void 0;
+}
+function validateRtxAtlasAssetProposal(raw) {
+  const errors = [];
+  scanExecutable2(raw, "$", errors);
+  if (!isRecord2(raw)) {
+    add2(errors, "$", "invalid_type", "Proposal must be a JSON object.");
+    return { ok: false, errors };
+  }
+  rejectUnknown2(raw, TOP_LEVEL_KEYS2, "$", errors);
+  const name = stringValue2(raw, "name", "$", errors, { required: true, max: 80 });
+  const category = isAllowed(raw.category, RTX_ATLAS_ASSET_GOUACHE_CATEGORIES) ? raw.category : void 0;
+  if (!category) add2(errors, "$.category", "invalid_value", "Unknown Gouache category.");
+  const tags = stringArray(raw, "tags", "$", errors, { maxItems: 12, maxLength: 40 });
+  const engineTags = parseEngineTags(raw, "$", errors);
+  const palette = stringArray(raw, "palette", "$", errors, { maxItems: 8, maxLength: 16, pattern: HEX_COLOR });
+  const prompt = stringValue2(raw, "prompt", "$", errors, { max: 280 });
+  const rationale = stringValue2(raw, "rationale", "$", errors, { max: 800 });
+  const styleguideNotes = stringValue2(raw, "styleguideNotes", "$", errors, { max: 800 });
+  const outputType = inferOutputType(raw, errors);
+  if (raw.recipe !== void 0 && raw.pngFallback !== void 0) {
+    add2(errors, "$", "invalid_value", "Provide a JSON recipe or PNG fallback metadata, not both.");
+  }
+  const recipe = outputType === "json-recipe" ? parseRecipe(raw.recipe, "$.recipe", errors) : void 0;
+  const pngFallback = outputType === "png-fallback" ? parsePngFallback(raw.pngFallback, "$.pngFallback", errors) : void 0;
+  if (errors.length > 0 || !name || !category || !outputType) return { ok: false, errors };
+  const base = {
+    name,
+    category,
+    tags,
+    engineTags,
+    palette,
+    ...prompt ? { prompt } : {},
+    ...rationale ? { rationale } : {},
+    ...styleguideNotes ? { styleguideNotes } : {}
+  };
+  if (outputType === "json-recipe" && recipe) {
+    return { ok: true, proposal: { ...base, outputType, recipe }, warnings: [] };
+  }
+  if (outputType === "png-fallback" && pngFallback) {
+    return { ok: true, proposal: { ...base, outputType, pngFallback }, warnings: [] };
+  }
+  return {
+    ok: false,
+    errors: [{
+      path: "$.outputType",
+      code: "missing_field",
+      message: "A valid JSON recipe or PNG fallback metadata is required."
+    }]
+  };
+}
+function isRtxAtlasAssetProposal(raw) {
+  return validateRtxAtlasAssetProposal(raw).ok;
+}
+function buildRtxAtlasAssetPromptContext(assets = GOUACHE_ASSETS) {
+  return {
+    styleguidePath: RTX_ATLAS_ASSET_STYLEGUIDE_PATH,
+    assetCatalogPath: RTX_ATLAS_ASSET_CATALOG_PATH,
+    registryExport: RTX_ATLAS_ASSET_REGISTRY_EXPORT,
+    acceptedOutputs: [...RTX_ATLAS_ASSET_OUTPUT_TYPES],
+    gouacheCategories: [...RTX_ATLAS_ASSET_GOUACHE_CATEGORIES],
+    assetCatalogTags: [...RTX_ATLAS_ASSET_ENGINE_TAGS],
+    existingAssets: assets.map((asset) => ({
+      key: asset.key,
+      name: asset.name,
+      category: asset.category
+    })),
+    rules: [
+      "Use the Atlas pictogram styleguide as the visual and review source.",
+      "Use the asset catalog for backlog tags and engine placement context.",
+      "Return either a json-recipe object or png-fallback metadata.",
+      "Do not return JavaScript, TypeScript, JSX, TSX, HTML, scripts, or functions.",
+      "RTX proposals are review inputs and must not auto-apply."
+    ]
+  };
+}
+function formatRtxAtlasAssetPromptContext(context = buildRtxAtlasAssetPromptContext()) {
+  const existingAssets = context.existingAssets.map((asset) => `${asset.key} (${asset.category}: ${asset.name})`).join(", ");
+  return [
+    "Atlas RTX Gouache asset context:",
+    `- Styleguide: ${context.styleguidePath}`,
+    `- Asset catalog/backlog: ${context.assetCatalogPath}`,
+    `- Existing registry: ${context.registryExport}`,
+    `- Accepted outputs: ${context.acceptedOutputs.join(", ")}`,
+    `- Gouache categories: ${context.gouacheCategories.join(", ")}`,
+    `- Asset catalog engine tags: ${context.assetCatalogTags.join(", ")}`,
+    `- Existing Gouache assets: ${existingAssets || "none"}`,
+    "- Security: JSON recipe data or PNG fallback metadata only; no executable code.",
+    "- Review flow: return a proposal for UWE validation, not an auto-applied asset."
+  ].join("\n");
 }
 
 // ../atlas/src/procedural.ts
@@ -2038,6 +2804,95 @@ function proceduralDraft(seed) {
   };
 }
 
+// ../atlas/src/draft-proposal.ts
+var KIND_ALIASES = {
+  coastline: AtlasFeatureKind.region,
+  region: AtlasFeatureKind.region,
+  forest: AtlasFeatureKind.biome,
+  biome: AtlasFeatureKind.biome,
+  mountain: AtlasFeatureKind.relief,
+  relief: AtlasFeatureKind.relief,
+  river: AtlasFeatureKind.river,
+  road: AtlasFeatureKind.road,
+  city: AtlasFeatureKind.pin,
+  pin: AtlasFeatureKind.pin,
+  plot: AtlasFeatureKind.plot
+};
+var DEFAULT_LAYER = {
+  region: LAYER_Z.relief,
+  river: LAYER_Z.rivers,
+  road: LAYER_Z.roads,
+  biome: LAYER_Z.biome,
+  relief: LAYER_Z.relief,
+  pin: LAYER_Z.objects,
+  plot: 18
+};
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function jsonRecord(value, maxKeys = 24) {
+  if (!isRecord3(value)) return void 0;
+  const out = {};
+  for (const [key, entry] of Object.entries(value).slice(0, maxKeys)) {
+    if (entry == null || typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean") {
+      out[key] = entry;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : void 0;
+}
+function safeString(value, maxLength) {
+  if (typeof value !== "string") return void 0;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : void 0;
+}
+function resolveKind(raw) {
+  const kind = typeof raw.kind === "string" ? KIND_ALIASES[raw.kind] : void 0;
+  if (kind) return kind;
+  return typeof raw.atlasKind === "string" ? KIND_ALIASES[raw.atlasKind] ?? null : null;
+}
+function geometryMatchesKind(kind, geometry) {
+  if (kind === "region" || kind === "biome" || kind === "plot") return geometry.type === "Polygon";
+  if (kind === "river" || kind === "road" || kind === "relief") return geometry.type === "Path";
+  return kind === "pin" && geometry.type === "Point";
+}
+function resolveBiome(raw, style) {
+  const candidate = typeof style.biomeKind === "string" ? style.biomeKind : raw.biome;
+  return typeof candidate === "string" && Object.values(BiomeKind).includes(candidate) ? candidate : void 0;
+}
+function resolveLayer(raw, kind) {
+  return typeof raw.layer === "number" && Number.isFinite(raw.layer) && raw.layer >= 0 && raw.layer <= 100 ? raw.layer : DEFAULT_LAYER[kind];
+}
+function normalizeAtlasDraftFeature(raw) {
+  if (!isRecord3(raw)) return null;
+  const kind = resolveKind(raw);
+  if (!kind) return null;
+  const geometry = tryParseGeometry(raw.geometry);
+  if (!geometry || !geometryMatchesKind(kind, geometry)) return null;
+  const style = jsonRecord(raw.style) ?? {};
+  const biome = resolveBiome(raw, style);
+  if (kind === "biome" && biome) style.biomeKind = biome;
+  if (kind === "plot") {
+    style.plotPreset = "gouache_scatter";
+    style.biomeKind = biome ?? BiomeKind.forest;
+    style.density = typeof style.density === "number" && Number.isFinite(style.density) ? style.density : 1;
+    style.seed = typeof style.seed === "number" && Number.isFinite(style.seed) ? style.seed : hashStringToSeed(String(raw.id ?? raw.labelHint ?? "atlas-plot"));
+  }
+  return {
+    ...safeString(raw.id, 120) ? { id: safeString(raw.id, 120) } : {},
+    kind,
+    geometry,
+    ...Object.keys(style).length > 0 ? { style } : {},
+    ...safeString(raw.labelHint, 120) ? { labelHint: safeString(raw.labelHint, 120) } : {},
+    labelColor: raw.labelColor === "red" ? "red" : "black",
+    layer: resolveLayer(raw, kind),
+    ...jsonRecord(raw.meta) ? { meta: jsonRecord(raw.meta) } : {}
+  };
+}
+function normalizeAtlasDraftFeatures(rawFeatures) {
+  if (!Array.isArray(rawFeatures)) return [];
+  return rawFeatures.map((feature) => normalizeAtlasDraftFeature(feature)).filter((feature) => feature !== null);
+}
+
 // ../atlas/src/stamp-prompt.ts
 var ATLAS_STAMP_STYLE_PROMPT = "tolkien-style ink line art, fantasy cartography map stamp, black ink on transparent background, medieval illuminated manuscript style, highly detailed pen and ink illustration, no color fill, pure line art, transparent background, isolated map symbol, stamp style, DnD map icon";
 function assembleStampPrompt(keyword) {
@@ -2223,9 +3078,426 @@ function generatePathAttachments(path, options) {
   return results;
 }
 
+// ../atlas/src/settlement.ts
+var DEFAULT_SEED = 7331;
+var DEFAULT_VISIBILITY = "dm_only";
+var DEFAULT_PALETTE_ITEMS = {
+  building: "village",
+  keep: "castle",
+  market: "village",
+  well: "village",
+  gate: "tower",
+  tower: "tower"
+};
+var DEFAULT_GOUACHE = {
+  building: "g_house",
+  keep: "g_keep",
+  market: "g_stall",
+  well: "g_well",
+  gate: "g_tower",
+  tower: "g_tower"
+};
+function clamp4(value, min, max) {
+  return value < min ? min : value > max ? max : value;
+}
+function clampInt(value, min, max) {
+  return Math.round(clamp4(value, min, max));
+}
+function seedToNumber(seed) {
+  if (seed == null) return DEFAULT_SEED;
+  return typeof seed === "number" ? seed | 0 : hashStringToSeed(seed);
+}
+function samePoint(a, b) {
+  return Math.abs(a[0] - b[0]) < 1e-12 && Math.abs(a[1] - b[1]) < 1e-12;
+}
+function openRing(ring) {
+  if (ring.length > 1 && samePoint(ring[0], ring[ring.length - 1])) {
+    return ring.slice(0, -1).map(([x, y]) => [x, y]);
+  }
+  return ring.map(([x, y]) => [x, y]);
+}
+function closeRing(ring) {
+  const open = openRing(ring);
+  return open.length > 0 ? [...open, open[0]] : [];
+}
+function ringSignedArea(ring) {
+  const open = openRing(ring);
+  if (open.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < open.length; i++) {
+    const [x1, y1] = open[i];
+    const [x2, y2] = open[(i + 1) % open.length];
+    area += x1 * y2 - x2 * y1;
+  }
+  return area / 2;
+}
+function ringArea3(ring) {
+  return Math.abs(ringSignedArea(ring));
+}
+function polygonArea2(polygon) {
+  const outer = polygon.rings[0];
+  if (!outer) return 0;
+  const holes = polygon.rings.slice(1).reduce((sum, ring) => sum + ringArea3(ring), 0);
+  return Math.max(0, ringArea3(outer) - holes);
+}
+function ringBbox3(ring) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of ring) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return [minX, minY, maxX, maxY];
+}
+function ringCentroid(ring) {
+  const open = openRing(ring);
+  if (open.length === 0) return [0.5, 0.5];
+  let twiceArea = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < open.length; i++) {
+    const [x1, y1] = open[i];
+    const [x2, y2] = open[(i + 1) % open.length];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    cx += (x1 + x2) * cross;
+    cy += (y1 + y2) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-12) {
+    const sums = open.reduce((acc, [x, y]) => [acc[0] + x, acc[1] + y], [0, 0]);
+    return [sums[0] / open.length, sums[1] / open.length];
+  }
+  return [cx / (3 * twiceArea), cy / (3 * twiceArea)];
+}
+function pointInRing3(point, ring) {
+  const [px, py] = point;
+  const open = openRing(ring);
+  let inside = false;
+  for (let i = 0, j = open.length - 1; i < open.length; j = i++) {
+    const [xi, yi] = open[i];
+    const [xj, yj] = open[j];
+    if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+function pointInPolygonWithHoles(point, polygon) {
+  const outer = polygon.rings[0];
+  if (!outer || !pointInRing3(point, outer)) return false;
+  return !polygon.rings.slice(1).some((ring) => pointInRing3(point, ring));
+}
+function randomPointInPolygon(polygon, bbox, rng) {
+  const [minX, minY, maxX, maxY] = bbox;
+  if (maxX <= minX || maxY <= minY) return void 0;
+  for (let i = 0; i < 500; i++) {
+    const point = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
+    if (pointInPolygonWithHoles(point, polygon)) return point;
+  }
+  return void 0;
+}
+function interiorPoint(polygon, bbox, rng) {
+  const outer = polygon.rings[0];
+  if (!outer) return void 0;
+  const centroid2 = ringCentroid(outer);
+  if (pointInPolygonWithHoles(centroid2, polygon)) return centroid2;
+  const random = randomPointInPolygon(polygon, bbox, rng);
+  if (random) return random;
+  return openRing(outer).find((point) => pointInPolygonWithHoles(point, polygon));
+}
+function moveToward(from, to, amount) {
+  return [from[0] + (to[0] - from[0]) * amount, from[1] + (to[1] - from[1]) * amount];
+}
+function pointOnRing(ring, fraction) {
+  const closed = closeRing(ring);
+  if (closed.length === 0) return [0.5, 0.5];
+  if (closed.length === 1) return closed[0];
+  let total = 0;
+  for (let i = 0; i < closed.length - 1; i++) {
+    const [ax, ay] = closed[i];
+    const [bx, by] = closed[i + 1];
+    total += Math.hypot(bx - ax, by - ay);
+  }
+  if (total <= 0) return closed[0];
+  let target = (fraction % 1 + 1) % 1;
+  target *= total;
+  let walked = 0;
+  for (let i = 0; i < closed.length - 1; i++) {
+    const [ax, ay] = closed[i];
+    const [bx, by] = closed[i + 1];
+    const seg = Math.hypot(bx - ax, by - ay);
+    if (seg === 0) continue;
+    if (walked + seg >= target) {
+      const t = (target - walked) / seg;
+      return [ax + (bx - ax) * t, ay + (by - ay) * t];
+    }
+    walked += seg;
+  }
+  return closed[closed.length - 1];
+}
+function rotationToward(from, to) {
+  return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+}
+function distanceToPaths(point, paths) {
+  let nearest = Infinity;
+  for (const path of paths) {
+    for (let i = 0; i < path.length - 1; i++) {
+      nearest = Math.min(nearest, distToSegment(point, path[i], path[i + 1]));
+    }
+  }
+  return nearest;
+}
+function squarePolygon(center, radius) {
+  const [cx, cy] = center;
+  const ring = [
+    [cx - radius, cy - radius],
+    [cx + radius, cy - radius],
+    [cx + radius, cy + radius],
+    [cx - radius, cy + radius],
+    [cx - radius, cy - radius]
+  ];
+  return { type: "Polygon", rings: [ring] };
+}
+function safeSquarePolygon(center, maxRadius, polygon) {
+  let radius = maxRadius;
+  for (let i = 0; i < 8; i++) {
+    const candidate = squarePolygon(center, radius);
+    const corners = candidate.rings[0].slice(0, -1);
+    if (corners.every((point) => pointInPolygonWithHoles(point, polygon))) return candidate;
+    radius *= 0.65;
+  }
+  return squarePolygon(center, Math.max(maxRadius * 0.08, 1e-3));
+}
+function objectStyle(kind) {
+  return {
+    settlement: kind,
+    gouache: DEFAULT_GOUACHE[kind],
+    lineWidth: kind === "keep" || kind === "tower" || kind === "gate" ? 1.6 : 1.2,
+    blur: kind === "well" ? 0.2 : void 0
+  };
+}
+function createObject(kind, id, point, rotation, scale, opts) {
+  return {
+    id,
+    kind,
+    paletteItemId: opts.paletteItemIds?.[kind] ?? DEFAULT_PALETTE_ITEMS[kind],
+    x: point[0],
+    y: point[1],
+    scale,
+    rotation,
+    layer: LAYER_Z.objects,
+    visibility: opts.visibility,
+    style: objectStyle(kind),
+    ...opts.nodeId ? { nodeId: opts.nodeId } : {},
+    ...opts.meta ? { meta: opts.meta } : {}
+  };
+}
+function pointNear(center, distance, angle, polygon, rng, bbox) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const a = angle + attempt * 0.73;
+    for (let step = 1; step >= 0.15; step -= 0.17) {
+      const point = [
+        center[0] + Math.cos(a) * distance * step,
+        center[1] + Math.sin(a) * distance * step
+      ];
+      if (pointInPolygonWithHoles(point, polygon)) return point;
+    }
+  }
+  return randomPointInPolygon(polygon, bbox, rng) ?? center;
+}
+function tooClose(point, occupied, minDistance) {
+  return occupied.some(([x, y]) => Math.hypot(point[0] - x, point[1] - y) < minDistance);
+}
+function generateSettlement(polygon, options = {}) {
+  const seed = seedToNumber(options.seed);
+  const rng = mulberry32(seed);
+  const outer = polygon.rings[0];
+  const visibility = options.visibility ?? DEFAULT_VISIBILITY;
+  const idPrefix = options.idPrefix ?? `settlement-${seed}`;
+  const features = [];
+  const objects = [];
+  if (!outer || openRing(outer).length < 3) {
+    return {
+      seed,
+      center: [0.5, 0.5],
+      features,
+      objects,
+      meta: { area: 0, buildingCount: 0, gateCount: 0 }
+    };
+  }
+  const area = polygonArea2(polygon);
+  const bbox = ringBbox3(outer);
+  const [minX, minY, maxX, maxY] = bbox;
+  const span = Math.max(1e-3, Math.min(maxX - minX, maxY - minY));
+  const center = interiorPoint(polygon, bbox, rng);
+  if (!center || area <= 0) {
+    return {
+      seed,
+      center: [0.5, 0.5],
+      features,
+      objects,
+      meta: { area: 0, buildingCount: 0, gateCount: 0 }
+    };
+  }
+  const includeWalls = options.includeWalls ?? true;
+  const includeRoads = options.includeRoads ?? true;
+  const includeKeep = options.includeKeep ?? true;
+  const includeMarket = options.includeMarket ?? true;
+  const includeWell = options.includeWell ?? true;
+  const gateCount = clampInt(options.gateCount ?? 4, 1, 6);
+  const towerCount = clampInt(options.towerCount ?? (includeWalls ? gateCount : 0), 0, 12);
+  const density = Math.max(0, options.density ?? 1);
+  const inferredBuildingCount = density <= 0 ? 0 : clampInt(area * 90 * density, 6, 36);
+  const buildingCount = clampInt(options.buildingCount ?? inferredBuildingCount, 0, 60);
+  const nodePart = options.nodeId ? { nodeId: options.nodeId } : {};
+  const roadPaths = [];
+  const gates = [];
+  const gateOffset = rng();
+  for (let i = 0; i < gateCount; i++) {
+    gates.push(pointOnRing(outer, gateOffset + i / gateCount));
+  }
+  if (includeWalls) {
+    features.push({
+      id: `${idPrefix}-feature-wall`,
+      kind: "wall",
+      atlasKind: AtlasFeatureKind.road,
+      geometry: { type: "Path", coordinates: closeRing(outer), closed: true },
+      layer: LAYER_Z.roads + 5,
+      visibility,
+      style: {
+        settlement: "wall",
+        strokeColor: "#4f4036",
+        strokeWidth: 6e-3,
+        opacity: 0.95
+      },
+      labelHint: "Wall",
+      ...nodePart
+    });
+  }
+  if (includeRoads) {
+    for (let i = 0; i < gates.length; i++) {
+      const gate = gates[i];
+      const bendBase = moveToward(gate, center, 0.55);
+      const angle = rotationToward(gate, center) + 90;
+      const bend = [
+        bendBase[0] + Math.cos(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12,
+        bendBase[1] + Math.sin(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12
+      ];
+      const path = [moveToward(gate, center, 0.04), pointInPolygonWithHoles(bend, polygon) ? bend : bendBase, center];
+      roadPaths.push(path);
+      features.push({
+        id: `${idPrefix}-feature-road-${i}`,
+        kind: "road",
+        atlasKind: AtlasFeatureKind.road,
+        geometry: { type: "Path", coordinates: path },
+        layer: LAYER_Z.roads,
+        visibility,
+        style: {
+          settlement: "road",
+          strokeColor: "#8f6f4a",
+          strokeWidth: 4e-3,
+          opacity: 0.9
+        },
+        labelHint: `Road ${i + 1}`,
+        meta: { gateIndex: i },
+        ...nodePart
+      });
+    }
+  }
+  if (includeMarket) {
+    const plaza = safeSquarePolygon(center, span * 0.055, polygon);
+    features.push({
+      id: `${idPrefix}-feature-plaza`,
+      kind: "plaza",
+      atlasKind: AtlasFeatureKind.region,
+      geometry: plaza,
+      layer: LAYER_Z.roads - 1,
+      visibility,
+      style: {
+        settlement: "plaza",
+        fillColor: "#d8bd8b",
+        strokeColor: "#8f6f4a",
+        strokeWidth: 2e-3,
+        opacity: 0.65
+      },
+      labelHint: "Market square",
+      ...nodePart
+    });
+  }
+  const occupied = [];
+  const addObject = (kind, suffix, point, rotation, scale, meta) => {
+    occupied.push(point);
+    objects.push(
+      createObject(kind, `${idPrefix}-object-${suffix}`, point, rotation, scale, {
+        nodeId: options.nodeId,
+        visibility,
+        paletteItemIds: options.paletteItemIds,
+        meta
+      })
+    );
+  };
+  if (includeKeep) {
+    const point = pointNear(center, span * 0.22, rng() * Math.PI * 2, polygon, rng, bbox);
+    addObject("keep", "keep", point, rotationToward(point, center), 1.25, { role: "anchor" });
+  }
+  if (includeMarket) {
+    const point = pointNear(center, span * 0.035, rng() * Math.PI * 2, polygon, rng, bbox);
+    addObject("market", "market", point, (rng() - 0.5) * 12, 0.95, { role: "civic" });
+  }
+  if (includeWell) {
+    const point = pointNear(center, span * 0.075, rng() * Math.PI * 2, polygon, rng, bbox);
+    addObject("well", "well", point, 0, 0.68, { role: "civic" });
+  }
+  for (let i = 0; i < gates.length; i++) {
+    const point = moveToward(gates[i], center, 0.035);
+    if (!pointInPolygonWithHoles(point, polygon)) continue;
+    addObject("gate", `gate-${i}`, point, rotationToward(point, center), 0.72, { gateIndex: i });
+  }
+  for (let i = 0; i < towerCount; i++) {
+    const point = moveToward(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035);
+    if (!pointInPolygonWithHoles(point, polygon)) continue;
+    addObject("tower", `tower-${i}`, point, rotationToward(point, center), 0.78, { towerIndex: i });
+  }
+  const roadClearance = span * 0.035;
+  const plazaClearance = span * 0.08;
+  const objectSpacing = span * 0.04;
+  let attempts = 0;
+  while (objects.filter((object) => object.kind === "building").length < buildingCount && attempts < buildingCount * 90 + 100) {
+    attempts++;
+    const point = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
+    if (!pointInPolygonWithHoles(point, polygon)) continue;
+    if (Math.hypot(point[0] - center[0], point[1] - center[1]) < plazaClearance) continue;
+    if (includeRoads && distanceToPaths(point, roadPaths) < roadClearance) continue;
+    if (tooClose(point, occupied, objectSpacing)) continue;
+    const rotation = rotationToward(center, point) + 90 + (rng() - 0.5) * 16;
+    addObject(
+      "building",
+      `building-${objects.filter((object) => object.kind === "building").length}`,
+      point,
+      rotation,
+      0.78 + rng() * 0.36
+    );
+  }
+  return {
+    seed,
+    center,
+    features,
+    objects,
+    meta: {
+      area,
+      buildingCount: objects.filter((object) => object.kind === "building").length,
+      gateCount
+    }
+  };
+}
+
 // ../atlas/src/export-grid.ts
 var EPSILON = 1e-9;
-function clamp4(value, lo, hi) {
+function clamp5(value, lo, hi) {
   if (value < lo) return lo;
   if (value > hi) return hi;
   return value;
@@ -2243,12 +3515,12 @@ function buildSquareLines(rect, cellSize) {
   const lines = [];
   const colCount = Math.floor(rect.width / cellSize + EPSILON);
   for (let k = 0; k <= colCount; k++) {
-    const x = clamp4(minX + k * cellSize, minX, maxX);
+    const x = clamp5(minX + k * cellSize, minX, maxX);
     lines.push({ x1: x, y1: minY, x2: x, y2: maxY });
   }
   const rowCount = Math.floor(rect.height / cellSize + EPSILON);
   for (let k = 0; k <= rowCount; k++) {
-    const y = clamp4(minY + k * cellSize, minY, maxY);
+    const y = clamp5(minY + k * cellSize, minY, maxY);
     lines.push({ x1: minX, y1: y, x2: maxX, y2: y });
   }
   return lines;
@@ -2280,8 +3552,8 @@ function appendHex(lines, cx, cy, size, minX, minY, maxX, maxY) {
   const ys = [];
   for (let i = 0; i < 6; i++) {
     const angle = Math.PI / 180 * (90 + 60 * i);
-    xs.push(clamp4(cx + size * Math.cos(angle), minX, maxX));
-    ys.push(clamp4(cy + size * Math.sin(angle), minY, maxY));
+    xs.push(clamp5(cx + size * Math.cos(angle), minX, maxX));
+    ys.push(clamp5(cy + size * Math.sin(angle), minY, maxY));
   }
   for (let i = 0; i < 6; i++) {
     const j = (i + 1) % 6;
@@ -2295,6 +3567,8 @@ function appendHex(lines, cx, cy, size, minX, minY, maxX, maxY) {
 }
 export {
   ATLAS_GLYPH_CATEGORIES,
+  ATLAS_PLOT_FILL_PROPOSAL_KIND,
+  ATLAS_PLOT_FILL_SCHEMA_VERSION,
   ATLAS_STAMP_STYLE_PROMPT,
   AtlasFeatureKind,
   AtlasLabelColor,
@@ -2312,13 +3586,23 @@ export {
   GOUACHE_ASSET_KEYS,
   GOUACHE_CATEGORY_LABELS,
   LAYER_Z,
+  RTX_ATLAS_ASSET_CATALOG_PATH,
+  RTX_ATLAS_ASSET_ENGINE_TAGS,
+  RTX_ATLAS_ASSET_GOUACHE_CATEGORIES,
+  RTX_ATLAS_ASSET_OUTPUT_TYPES,
+  RTX_ATLAS_ASSET_REGISTRY_EXPORT,
+  RTX_ATLAS_ASSET_STYLEGUIDE_PATH,
+  RTX_GOUACHE_RECIPE_LAYER_ROLES,
+  RTX_GOUACHE_RECIPE_SHAPES,
   SCHEMA_VERSION,
   STYLE_PRESETS,
   TOLKIEN_INK,
   applyColorIntensity,
   assembleStampPrompt,
+  buildAtlasPlotFillPromptContext,
   buildGridLines,
   buildReliefShading,
+  buildRtxAtlasAssetPromptContext,
   buildVineLayout,
   canvasToWorld,
   centroid,
@@ -2330,18 +3614,25 @@ export {
   drawVine,
   emptyDrawLayerMap,
   fillPlotWithGouacheAssets,
+  formatAtlasPlotFillPromptContext,
+  formatRtxAtlasAssetPromptContext,
   generateDraft,
   generatePathAttachments,
+  generateSettlement,
   getGlyphByKey,
   getGouacheAsset,
   groupGlyphsByCategory,
   hashStringToSeed,
+  isAtlasPlotFillProposal,
   isGouacheAsset,
+  isRtxAtlasAssetProposal,
   layoutCharactersOnPath,
   listGlyphsByCategory,
   listGouacheAssetsByCategory,
   migrateDoc,
   mulberry32,
+  normalizeAtlasDraftFeature,
+  normalizeAtlasDraftFeatures,
   paintTerrainBlobs,
   parseExtent,
   parseFeatureGeometry,
@@ -2363,5 +3654,7 @@ export {
   stampSeedFromKey,
   translateGeometry,
   tryParseGeometry,
+  validateAtlasPlotFillProposal,
+  validateRtxAtlasAssetProposal,
   worldToCanvas
 };

@@ -432,6 +432,9 @@ importers:
 
   packages/ai-brain:
     dependencies:
+      '@uwe/atlas':
+        specifier: workspace:*
+        version: link:../atlas
       '@uwe/cookbook':
         specifier: workspace:*
         version: link:../cookbook
