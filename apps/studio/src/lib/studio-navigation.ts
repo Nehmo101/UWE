@@ -1,10 +1,40 @@
 import { isLikelyGameSessionId } from "./session-route";
 import { studioCommands } from "../navigation/studio-nav";
+import { worldNavItems as canonicalWorldNavItems } from "../navigation/world-nav";
 
 /** Horizontal cockpit tabs for world overview (reduced to cockpit-level areas). */
 export function worldCockpitTabItems(worldSlug: string, active?: WorldNavKey) {
-  const tabKeys: WorldNavKey[] = ["overview", "pages", "sessions", "dungeons", "assets"];
+  const tabKeys: WorldNavKey[] = [
+    "overview",
+    "pages",
+    "sessions",
+    "prepare-session",
+    "dungeons",
+    "assets",
+    "brain",
+  ];
   return worldNavItems(worldSlug, active).filter((item) => tabKeys.includes(item.key));
+}
+
+/** DM tools surfaced on the world dashboard for discoverability (canonical world IA). */
+export function worldDmToolQuickLinks(worldSlug: string): { label: string; href: string }[] {
+  const highlightIds = new Set([
+    "world-radar",
+    "world-prepare-session",
+    "world-one-shot",
+    "world-open-items",
+    "world-page-review",
+    "world-quality",
+    "world-inspector",
+    "world-roll-tables",
+    "world-print-center",
+    "world-ai-runs",
+    "world-atlas",
+    "world-magic-items",
+  ]);
+  return canonicalWorldNavItems(worldSlug)
+    .filter((item) => highlightIds.has(item.id))
+    .map((item) => ({ label: item.label, href: item.href }));
 }
 
 export type WorldNavKey =
@@ -26,7 +56,18 @@ export type WorldNavKey =
   | "ai-runs"
   | "dnd-api"
   | "backup"
-  | "new-page";
+  | "new-page"
+  | "radar"
+  | "page-review"
+  | "atlas"
+  | "magic-items"
+  | "prepare-session"
+  | "one-shot"
+  | "open-items"
+  | "roll-tables"
+  | "questions"
+  | "print-center"
+  | "quality";
 
 export type WorldBottomNavKey = "overview" | "content" | "sessions" | "tools" | "more";
 
@@ -71,6 +112,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       title: "Sessions",
       items: [
         { key: "sessions", label: "Sessions", href: `${base}/sessions` },
+        { key: "prepare-session", label: "Session vorbereiten", href: `${base}/prepare-session` },
         { key: "calendar", label: "Weltuhr", href: `${base}/calendar` },
         { key: "chronicle", label: "Chronik", href: `${base}/chronicle` },
         { key: "treasury", label: "Gruppenschatz", href: `${base}/treasury` },
@@ -97,7 +139,9 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       items: [
         { key: "brain", label: "Brain Store", href: `${base}/brain` },
         { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
+        { key: "atlas", label: "Atlas", href: `${base}/atlas` },
         { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
+        { key: "quality", label: "Wiki-Pflege", href: `${base}/quality` },
         { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
         { key: "import", label: "Import", href: `${base}/import` },
         { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
@@ -122,17 +166,45 @@ export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNav
 
 /** Map world nav key to mobile bottom nav active tab. */
 export function worldBottomNavKey(active: WorldNavKey, isSearching = false): WorldBottomNavKey {
-  if (active === "overview") return "overview";
-  if (active === "pages" || active === "new-page" || isSearching) return "content";
-  if (active === "sessions" || active === "notes" || active === "calendar" || active === "chronicle" || active === "treasury") return "sessions";
+  if (active === "overview" || active === "radar") return "overview";
+  if (
+    active === "pages" ||
+    active === "new-page" ||
+    active === "graph" ||
+    active === "atlas" ||
+    active === "magic-items" ||
+    active === "page-review" ||
+    isSearching
+  ) {
+    return "content";
+  }
+  if (
+    active === "sessions" ||
+    active === "notes" ||
+    active === "calendar" ||
+    active === "chronicle" ||
+    active === "treasury" ||
+    active === "prepare-session" ||
+    active === "one-shot" ||
+    active === "open-items" ||
+    active === "roll-tables" ||
+    active === "questions" ||
+    active === "dungeons"
+  ) {
+    return "sessions";
+  }
   if (
     active === "brain" ||
-    active === "graph" ||
     active === "inspector" ||
     active === "ai-runs" ||
     active === "import" ||
     active === "dnd-api" ||
-    active === "backup"
+    active === "backup" ||
+    active === "quality" ||
+    active === "assets" ||
+    active === "soundboard" ||
+    active === "labels" ||
+    active === "print-center"
   ) {
     return "tools";
   }
@@ -203,6 +275,7 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   const base = `/worlds/${worldSlug}`;
   const normalized = pathname.replace(/\/$/, "");
 
+  if (normalized === `${base}/radar`) return "radar";
   if (normalized === `${base}/dashboard`) return "overview";
   if (normalized === base) return "pages";
   const sessionDetailMatch = normalized.match(new RegExp(`^${base}/sessions/([^/]+)$`));
@@ -214,13 +287,23 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/calendar`)) return "calendar";
   if (normalized.startsWith(`${base}/chronicle`)) return "chronicle";
   if (normalized.startsWith(`${base}/treasury`)) return "treasury";
+  if (normalized.startsWith(`${base}/prepare-session`)) return "prepare-session";
+  if (normalized.startsWith(`${base}/one-shot`)) return "one-shot";
+  if (normalized.startsWith(`${base}/open-items`)) return "open-items";
+  if (normalized.startsWith(`${base}/roll-tables`)) return "roll-tables";
+  if (normalized.startsWith(`${base}/questions`)) return "questions";
   if (normalized.startsWith(`${base}/dungeons`)) return "dungeons";
   if (normalized.startsWith(`${base}/assets`)) return "assets";
   if (normalized.startsWith(`${base}/labels`)) return "labels";
+  if (normalized.startsWith(`${base}/print-center`)) return "print-center";
   if (normalized.startsWith(`${base}/notes`)) return "notes";
   if (normalized.startsWith(`${base}/soundboard`)) return "soundboard";
   if (normalized.startsWith(`${base}/graph`)) return "graph";
+  if (normalized.startsWith(`${base}/atlas`)) return "atlas";
+  if (normalized.startsWith(`${base}/magic-items`)) return "magic-items";
+  if (normalized.startsWith(`${base}/page-review`)) return "page-review";
   if (normalized.startsWith(`${base}/inspector`)) return "inspector";
+  if (normalized.startsWith(`${base}/quality`)) return "quality";
   if (normalized.startsWith(`${base}/brain`)) return "brain";
   if (normalized.startsWith(`${base}/ai-runs`)) return "ai-runs";
   if (normalized.startsWith(`${base}/import`)) return "import";
@@ -286,53 +369,14 @@ export function studioCommandPaletteCommands(options: {
     const world = worlds.find((entry) => entry.slug === worldSlug);
     const fallbackGroup = world ? `Welt: ${world.name}` : "Aktuelle Welt";
 
-    for (const section of worldNavSections(worldSlug)) {
-      const group = `${fallbackGroup} / ${section.title}`;
-      for (const item of section.items) {
-        const keywords =
-          item.key === "overview"
-            ? ["dashboard", "overview"]
-            : item.key === "pages"
-              ? ["wiki", "seitenliste"]
-              : item.key === "inspector"
-                ? ["sicherheit", "kanon", "leak", "check"]
-                : item.key === "graph"
-                  ? ["beziehungen", "links"]
-                  : item.key === "assets"
-                    ? ["karten", "bilder", "uploads"]
-                    : item.key === "soundboard"
-                      ? ["musik", "audio"]
-                      : item.key === "notes"
-                        ? ["kommentare", "review"]
-                        : item.key === "dungeons"
-                          ? ["räume", "cockpit"]
-                          : item.key === "labels"
-                            ? ["druck", "handout", "6x4", "label"]
-                            : item.key === "import"
-                              ? ["knoteforge"]
-                              : item.key === "backup"
-                                ? ["sicherung"]
-                                : item.key === "new-page"
-                                  ? ["create", "erstellen"]
-                                  : item.key === "sessions"
-                                    ? ["spielabend", "create"]
-                                    : undefined;
-
-        list.push({
-          id: `world-${item.key}`,
-          label:
-            item.key === "overview"
-              ? "Dashboard öffnen"
-              : item.key === "pages"
-                ? "Seitenliste öffnen"
-                : item.key === "new-page"
-                  ? "Neue Seite erstellen"
-                  : `${item.label} öffnen`,
-          href: item.href,
-          group,
-          keywords,
-        });
-      }
+    for (const item of canonicalWorldNavItems(worldSlug)) {
+      list.push({
+        id: item.id,
+        label: `${item.label} öffnen`,
+        href: item.href,
+        group: `${fallbackGroup} / ${item.group}`,
+        keywords: item.keywords,
+      });
     }
 
     for (const shortcut of PAGE_TEMPLATE_SHORTCUTS) {

@@ -592,12 +592,50 @@ export async function createAtlasHandoutPageAction(
   const nodeId = String(formData.get("nodeId"));
   const title = String(formData.get("title") || "Karten-Handout").trim();
 
+  const ATLAS_LEVEL_LABELS: Record<string, string> = {
+    globe: "Globus",
+    continent: "Kontinent",
+    landscape: "Landschaft",
+    city: "Stadt",
+    district: "Stadtteil",
+    building: "Gebäude",
+  };
+
   const { db, atlas, repo } = getAtlasDeps();
   let pageId: string;
   let pageSlug: string;
   try {
     const world = await repo.getWorldBySlug(worldSlug);
     if (!world) throw new Error("Welt nicht gefunden");
+
+    const node = await atlas.getNode(nodeId);
+    if (!node) throw new Error("Atlas-Knoten nicht gefunden");
+
+    const features = await atlas.listFeaturesForNode(nodeId);
+    const labeledFeatures = features
+      .map((feature) => feature.labelText?.trim())
+      .filter((label): label is string => Boolean(label));
+
+    const levelLabel = ATLAS_LEVEL_LABELS[node.level] ?? node.level;
+    const handoutBody = [
+      `# ${title}`,
+      "",
+      `Karten-Handout für **${node.title}** (${levelLabel}).`,
+      "",
+      "## Übersicht",
+      "",
+      `- Atlas-Knoten: ${node.title}`,
+      `- Ebene: ${levelLabel}`,
+      labeledFeatures.length > 0
+        ? `- Markierungen: ${labeledFeatures.slice(0, 12).join(", ")}${labeledFeatures.length > 12 ? " …" : ""}`
+        : "- Markierungen: (keine beschrifteten Features)",
+      "",
+      "## Spieler-Notizen",
+      "",
+      "_Beschreibe hier, was die Spieler auf dieser Karte sehen sollen._",
+      "",
+      "> Tipp: Exportiere die Karte als PNG im Atlas-Editor und füge das Bild als Asset in diese Seite ein.",
+    ].join("\n");
 
     const slug =
       `handout-${title
@@ -613,7 +651,15 @@ export async function createAtlasHandoutPageAction(
       slug,
       type: "handout" as PageType,
       visibility: "dm_only",
-      summary: `Karten-Handout für Atlas-Knoten ${nodeId}`,
+      summary: `Karten-Handout für ${node.title} (${levelLabel})`,
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          content: handoutBody,
+          visibility: "private",
+        },
+      ],
     });
     pageId = page.id;
     pageSlug = page.slug;

@@ -19,6 +19,33 @@ const ideaPromptBodySchema = z.object({
   providerMode: z.enum(["auto", "local_rtx", "cloud"]).default("auto"),
 });
 
+const ideaPromptPatchSchema = z.object({
+  generatedPrompt: z.string().max(50_000),
+});
+
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  const authError = await guardStudioApiMutation(request);
+  if (authError) return authError;
+
+  const owner = await resolveOwnerApiUser();
+  if (!owner) return ownerForbiddenResponse();
+
+  const parsedParams = await parseParams(context.params, ideaIdParamSchema);
+  if (!parsedParams.success) return parsedParams.response;
+
+  const parsed = await parseBody(request, ideaPromptPatchSchema);
+  if (!parsed.success) return parsed.response;
+
+  const ideas = createDevIdeaService(prisma);
+  const idea = await ideas.getIdea(parsedParams.data.id);
+  if (!idea) {
+    return jsonError("Idee nicht gefunden.", 404);
+  }
+
+  const updated = await ideas.setGeneratedPrompt(idea.id, parsed.data.generatedPrompt.trim());
+  return NextResponse.json({ generatedPrompt: updated.generatedPrompt });
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;

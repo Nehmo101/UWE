@@ -134,6 +134,8 @@ describe("world cockpit navigation", () => {
       "Übersicht",
       "Wiki / Seiten",
       "Sessions",
+      "Weltuhr",
+      "Chronik",
       "Dungeons",
       "Medien / Assets",
       "Labels & Print",
@@ -141,6 +143,9 @@ describe("world cockpit navigation", () => {
       "Import & Konvertierung",
       "KI / Generatoren",
       "Brain / Wissen",
+      "Session vorbereiten",
+      "Kampagnen-Radar",
+      "Wiki-Pflege",
     ]) {
       assert.ok(labels.includes(label), `missing world area: ${label}`);
     }

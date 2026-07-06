@@ -428,8 +428,24 @@ export const studioCharacterSpellHomebrewAddSchema = characterSpellHomebrewAddSc
   category: slugSchema,
 });
 
+export const studioCharacterSpellImportLevelSchema = z.object({
+  worldSlug: slugSchema,
+  characterId: idSchema,
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+  spellLevel: spellLevelField,
+  prepared: z
+    .union([z.literal("true"), z.literal("false"), z.literal("on"), z.literal("off"), z.boolean()])
+    .optional(),
+});
+
 export const dndSpellSearchQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
+});
+
+export const dndSpellLevelQuerySchema = z.object({
+  level: z.coerce.number().int().min(0).max(9),
 });
 
 export const dndEquipmentSearchQuerySchema = dndSpellSearchQuerySchema;

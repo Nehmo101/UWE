@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createMailPortalService, prisma } from "@uwe/database/server";
+import {
+  createCaptureTriageService,
+  createLifeAdminService,
+  createMailPortalService,
+  prisma,
+} from "@uwe/database/server";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 
 export async function POST(request: Request) {
@@ -8,7 +13,7 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   let body: {
-    action?: "archive" | "trash" | "delete_by_sender" | "unsubscribe";
+    action?: "archive" | "trash" | "delete_by_sender" | "unsubscribe" | "capture" | "task";
     messageId?: string;
     senderPattern?: string;
     accountId?: string;
@@ -51,6 +56,56 @@ export async function POST(request: Request) {
     if (body.action === "unsubscribe" && body.messageId) {
       const outcome = await service.unsubscribeFromMessage(body.messageId, auth.user?.id);
       return NextResponse.json({ ok: true, outcome });
+    }
+    if (body.action === "capture" && body.messageId) {
+      const message = await service.getMessage(body.messageId, auth.user?.id);
+      if (!message) {
+        return mailApiError("Nachricht nicht gefunden.", 404);
+      }
+      const lifeAdmin = createLifeAdminService(prisma);
+      const capture = await lifeAdmin.createCapture({
+        title: message.subject?.trim() || "Mail-Capture",
+        content: [
+          `Von: ${message.fromAddress}`,
+          `Datum: ${message.receivedAt.toISOString()}`,
+          "",
+          message.bodyText?.trim() || message.snippet?.trim() || "(Kein Textinhalt)",
+        ].join("\n"),
+        captureType: "quick_note",
+        metadata: {
+          source: "mail",
+          mailMessageId: message.id,
+          mailAccountId: message.accountId,
+        },
+      });
+      await createCaptureTriageService(prisma).ensureAiProposal(capture.id);
+      return NextResponse.json({ ok: true, captureId: capture.id });
+    }
+    if (body.action === "task" && body.messageId) {
+      const message = await service.getMessage(body.messageId, auth.user?.id);
+      if (!message) {
+        return mailApiError("Nachricht nicht gefunden.", 404);
+      }
+      const lifeAdmin = createLifeAdminService(prisma);
+      const snippet = message.bodyText?.trim() || message.snippet?.trim() || "";
+      const project = await lifeAdmin.createPersonalProject({
+        name: message.subject?.trim() || "Mail-Aufgabe",
+        description: [
+          `Von: ${message.fromAddress}`,
+          `Datum: ${message.receivedAt.toISOString()}`,
+          "",
+          snippet || "(Kein Textinhalt)",
+        ].join("\n"),
+        status: "idea",
+        category: "other",
+        nextAction: `Mail beantworten: ${message.fromAddress}`,
+        metadata: {
+          source: "mail",
+          mailMessageId: message.id,
+          mailAccountId: message.accountId,
+        },
+      });
+      return NextResponse.json({ ok: true, projectId: project.id });
     }
     return mailApiError("Unbekannte Aktion oder fehlende Parameter.", 400);
   } catch (error) {

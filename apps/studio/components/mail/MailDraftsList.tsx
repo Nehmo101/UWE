@@ -6,10 +6,11 @@ import { formatMailTime, type MailDraftVM } from "./mail-types";
 interface MailDraftsListProps {
   drafts: MailDraftVM[];
   onCompose: () => void;
+  onEditDraft: (draftId: string) => void;
   title: string;
 }
 
-export function MailDraftsList({ drafts, onCompose, title }: MailDraftsListProps) {
+export function MailDraftsList({ drafts, onCompose, onEditDraft, title }: MailDraftsListProps) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <div
@@ -34,18 +35,26 @@ export function MailDraftsList({ drafts, onCompose, title }: MailDraftsListProps
           </div>
         ) : (
           drafts.map((draft) => (
-            <div
+            <button
               key={draft.id}
+              type="button"
+              onClick={() => onEditDraft(draft.id)}
               style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
                 padding: "12px 18px",
+                border: "none",
                 borderBottom: "1px solid var(--uwe-border-muted)",
+                background: "transparent",
+                cursor: "pointer",
               }}
             >
               <div style={{ fontSize: 14, color: "var(--uwe-fg)" }}>{draft.subject || "(Ohne Betreff)"}</div>
               <div style={{ fontSize: 11, color: "var(--uwe-fg-subtle)", marginTop: 4 }}>
                 {draft.status} · {formatMailTime(draft.updatedAt)}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

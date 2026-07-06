@@ -70,9 +70,14 @@ export function CalendarMonthGrid({ month, events }: CalendarMonthGridProps) {
           >
             {cell.day && <div style={{ fontWeight: 600 }}>{cell.day}</div>}
             {cell.events.slice(0, 2).map((event) => (
-              <div key={event.id} className="uwe-badge" style={{ display: "block", marginTop: "0.15rem" }}>
+              <a
+                key={event.id}
+                href={`#event-${event.id}`}
+                className="uwe-badge"
+                style={{ display: "block", marginTop: "0.15rem", textDecoration: "none" }}
+              >
                 {event.title}
-              </div>
+              </a>
             ))}
             {cell.events.length > 2 && (
               <div className="uwe-dashboard-muted">+{cell.events.length - 2}</div>

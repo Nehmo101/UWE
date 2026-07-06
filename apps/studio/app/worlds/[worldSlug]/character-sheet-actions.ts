@@ -20,13 +20,14 @@ import {
   type Prisma,
   type UpdateCharacterInput,
 } from "@uwe/database/server";
-import { searchOpen5eSpells } from "@uwe/dnd-api";
+import { searchOpen5eSpells, listOpen5eSpellsByLevel } from "@uwe/dnd-api";
 import {
   parseFormDataOrThrow,
   studioCharacterSheetUpdateSchema,
   studioCharacterLevelUpApplySchema,
   studioCharacterSpellAddSchema,
   studioCharacterSpellHomebrewAddSchema,
+  studioCharacterSpellImportLevelSchema,
   studioCharacterSpellRemoveSchema,
   studioCharacterSpellTogglePreparedSchema,
 } from "@uwe/security";
@@ -302,6 +303,41 @@ export async function addHomebrewSpellAction(formData: FormData) {
       description: homebrew.description,
       notes: homebrew.notes,
     });
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(editPath(worldSlug, category, pageSlug));
+  redirect(`${editPath(worldSlug, category, pageSlug)}?spellSaved=1`);
+}
+
+export async function importSpellsByLevelAction(formData: FormData) {
+  const parsed = parseFormDataOrThrow(formData, studioCharacterSpellImportLevelSchema);
+  const { worldSlug, pageId, pageSlug, category, characterId } = parsed;
+  const spellLevel = parsed.spellLevel ?? 0;
+  const prepared = parsePreparedFlag(parsed.prepared ?? false);
+  const { db, characters } = await assertStudioCharacterAccess(worldSlug, pageId, characterId);
+
+  try {
+    const config = resolveDndApiConfig();
+    const results = await listOpen5eSpellsByLevel(spellLevel, {
+      open5eEnabled: config.open5eEnabled,
+      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
+    });
+
+    for (const item of results) {
+      await characters.upsertSpell({
+        characterId,
+        spellKey: item.id,
+        spellLevel: extractOpen5eSpellLevel(item.raw),
+        prepared,
+        source: "open5e",
+        displayName: item.name,
+        school: extractOpen5eSpellSchool(item.raw),
+        description: extractOpen5eSpellDescription(item.raw),
+        notes: "",
+      });
+    }
   } finally {
     await db.$disconnect();
   }

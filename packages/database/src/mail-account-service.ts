@@ -1,6 +1,7 @@
 import type { MailDraftStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
+import { toPrismaJsonValue, jsonDbNull } from "./json-utils";
 import { fetchImapInboxMessages, type FetchedInboxMessage, type ImapSyncProgress } from "@uwe/mail";
 
 export interface CreateMailAccountInput {
@@ -21,6 +22,16 @@ export interface CreateMailDraftInput {
   subject: string;
   bodyText?: string | null;
   bodyHtml?: string | null;
+  status?: MailDraftStatus;
+  toAddresses?: string[] | null;
+}
+
+export interface UpdateMailDraftInput {
+  accountId?: string | null;
+  subject?: string;
+  bodyText?: string | null;
+  bodyHtml?: string | null;
+  toAddresses?: string[] | null;
   status?: MailDraftStatus;
 }
 
@@ -85,7 +96,42 @@ export class MailAccountService {
         subject: input.subject.trim(),
         bodyText: input.bodyText ?? null,
         bodyHtml: input.bodyHtml ?? null,
+        toAddresses:
+          input.toAddresses === undefined
+            ? undefined
+            : input.toAddresses === null
+              ? jsonDbNull
+              : toPrismaJsonValue(input.toAddresses),
         status: input.status ?? "draft",
+      },
+    });
+  }
+
+  async getDraft(id: string) {
+    return this.db.mailDraft.findUnique({ where: { id } });
+  }
+
+  async updateDraft(id: string, input: UpdateMailDraftInput) {
+    return this.db.mailDraft.update({
+      where: { id },
+      data: {
+        ...(input.accountId !== undefined
+          ? input.accountId
+            ? { account: { connect: { id: input.accountId } } }
+            : { account: { disconnect: true } }
+          : {}),
+        ...(input.subject !== undefined ? { subject: input.subject.trim() } : {}),
+        ...(input.bodyText !== undefined ? { bodyText: input.bodyText } : {}),
+        ...(input.bodyHtml !== undefined ? { bodyHtml: input.bodyHtml } : {}),
+        ...(input.toAddresses !== undefined
+          ? {
+              toAddresses:
+                input.toAddresses === null
+                  ? jsonDbNull
+                  : toPrismaJsonValue(input.toAddresses),
+            }
+          : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
       },
     });
   }

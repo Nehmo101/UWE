@@ -13,7 +13,6 @@
  *   pnpm verify:tag-backfill [-- --world-id=<id>]
  *   pnpm tsx scripts/verify-tag-backfill.ts [--world-id=<id>]
  */
-import "dotenv/config";
 import { createPrismaClient } from "../packages/database/src/client";
 import { verifyTagBackfill } from "../packages/database/src/tag-service";
 

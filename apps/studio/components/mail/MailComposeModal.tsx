@@ -8,6 +8,7 @@ import { MailButton, IconButton } from "./mail-ui";
 import type { MailAccountVM } from "./mail-types";
 
 export interface ComposeContext {
+  draftId?: string | null;
   messageId: string | null;
   accountId: string | null;
   to: string;
@@ -29,11 +30,59 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
   const [subject, setSubject] = React.useState(context.subject);
   const [body, setBody] = React.useState(context.body);
   const [accountId, setAccountId] = React.useState(context.accountId ?? accounts[0]?.id ?? "");
+  const [draftId, setDraftId] = React.useState(context.draftId ?? null);
   const [tone, setTone] = React.useState<MailReplyTone>("friendly");
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    setTo(context.to);
+    setSubject(context.subject);
+    setBody(context.body);
+    setAccountId(context.accountId ?? accounts[0]?.id ?? "");
+    setDraftId(context.draftId ?? null);
+  }, [accounts, context]);
+
   const fromEmail = accounts.find((account) => account.id === accountId)?.email ?? "—";
+
+  function parseRecipients(value: string) {
+    return (value.match(EMAIL_RE) ?? []).map((email) => email);
+  }
+
+  async function persistDraft() {
+    const recipients = parseRecipients(to);
+    const payload = {
+      subject: subject.trim() || "(Ohne Betreff)",
+      bodyText: body,
+      accountId: accountId || null,
+      toAddresses: recipients.length > 0 ? recipients : null,
+    };
+
+    if (draftId) {
+      const response = await fetch(studioApiUrl(`/api/mail/drafts/${draftId}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? "Entwurf konnte nicht gespeichert werden.");
+      }
+      return draftId;
+    }
+
+    const response = await fetch(studioApiUrl("/api/mail/drafts"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = (await response.json()) as { draft?: { id: string }; error?: string };
+    if (!response.ok || !data.draft?.id) {
+      throw new Error(data.error ?? "Entwurf konnte nicht angelegt werden.");
+    }
+    setDraftId(data.draft.id);
+    return data.draft.id;
+  }
 
   async function regenerate(nextTone: MailReplyTone) {
     setTone(nextTone);
@@ -60,8 +109,21 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
     }
   }
 
+  async function saveDraft() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      await persistDraft();
+      setStatus("Entwurf gespeichert.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Speichern fehlgeschlagen.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
-    const recipients = (to.match(EMAIL_RE) ?? []).map((email) => ({ email }));
+    const recipients = parseRecipients(to);
     if (recipients.length === 0) {
       setStatus("Gültige Empfängeradresse erforderlich.");
       return;
@@ -77,16 +139,21 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
     setBusy(true);
     setStatus(null);
     try {
+      const activeDraftId = await persistDraft();
       const response = await fetch(studioApiUrl("/api/admin/mail/send"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: accountId || undefined,
-          to: recipients.map((entry) => entry.email),
-          subject: subject.trim(),
-          bodyText: body,
-          confirm: true,
-        }),
+        body: JSON.stringify(
+          activeDraftId
+            ? { draftId: activeDraftId, confirm: true }
+            : {
+                accountId: accountId || undefined,
+                to: recipients,
+                subject: subject.trim(),
+                bodyText: body,
+                confirm: true,
+              },
+        ),
       });
       const text = await response.text();
       let payload: { ok?: boolean; error?: string };
@@ -148,7 +215,7 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
         >
           <NavIcon name="pen-line" width={15} height={15} style={{ color: "var(--uwe-accent)" }} />
           <span style={{ fontFamily: "var(--uwe-font-serif)", fontSize: 15, color: "var(--uwe-fg)" }}>
-            {context.messageId ? "Antwort verfassen" : "Neue Nachricht"}
+            {draftId ? "Entwurf bearbeiten" : context.messageId ? "Antwort verfassen" : "Neue Nachricht"}
           </span>
           <span style={{ flex: 1 }} />
           <IconButton icon="minus" size={15} title="Minimieren" onClick={onClose} />
@@ -290,6 +357,9 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
         >
           <MailButton variant="accent" icon="send" onClick={() => void send()} disabled={busy}>
             {busy ? "…" : "Senden"}
+          </MailButton>
+          <MailButton variant="subtle" onClick={() => void saveDraft()} disabled={busy}>
+            Speichern
           </MailButton>
           <IconButton icon="paperclip" size={16} bordered title="Anhang" />
           <span style={{ flex: 1 }} />

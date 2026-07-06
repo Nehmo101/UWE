@@ -4,6 +4,7 @@ import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminLinksService } from "./life-admin-links-service";
 import {
   PROJECT_ACTIVE_STATUSES,
+  PROJECT_CATEGORY_LABELS,
   PROJECT_CATEGORY_ORDER,
   PROJECT_OPEN_STATUSES,
   type CreatePersonalProjectInput,
@@ -203,6 +204,7 @@ export class LifeAdminProjectService {
         );
         return {
           category,
+          label: PROJECT_CATEGORY_LABELS[category],
           total: categoryTotal,
           active,
           done,

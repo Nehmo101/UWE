@@ -454,6 +454,71 @@ export async function createCalendarFeedAction(formData: FormData) {
   revalidatePath("/calendar");
 }
 
+export async function updateCalendarEventAction(formData: FormData) {
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
+
+  await requireStudioActionAuth();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Event-ID fehlt.");
+
+  const calendar = createCalendarService(prisma);
+  const updated = await calendar.updateEvent(id, {
+    title: String(formData.get("title") ?? ""),
+    description: String(formData.get("description") ?? "") || null,
+    startAt: new Date(String(formData.get("startAt") ?? "")),
+    endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
+    allDay: formData.get("allDay") === "on",
+    kind: (String(formData.get("kind") ?? "personal") as "session" | "prep" | "personal" | "dnd"),
+  });
+
+  const feed = updated.feedId ? await calendar.getFeed(updated.feedId) : null;
+  if (feed?.type === "caldav" && feed.direction === "read_write") {
+    await calendar.markEventPendingWrite(updated.id);
+    const jobs = createJobService(prisma);
+    const job = await jobs.enqueue({
+      type: "calendar_sync",
+      title: `Kalender-Sync: ${feed.name}`,
+      payload: { feedId: feed.id },
+    });
+    void dispatchJob(job.id);
+  }
+
+  revalidatePath("/calendar");
+}
+
+export async function deleteCalendarEventAction(formData: FormData) {
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
+
+  await requireStudioActionAuth();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Event-ID fehlt.");
+
+  const calendar = createCalendarService(prisma);
+  const existing = await prisma.calendarEvent.findUnique({
+    where: { id },
+    include: { feed: true },
+  });
+  if (!existing) throw new Error("Termin nicht gefunden.");
+
+  await calendar.deleteEvent(id);
+
+  if (existing.feed?.type === "caldav" && existing.feed.direction === "read_write") {
+    const jobs = createJobService(prisma);
+    const job = await jobs.enqueue({
+      type: "calendar_sync",
+      title: `Kalender-Sync: ${existing.feed.name}`,
+      payload: { feedId: existing.feed.id },
+    });
+    void dispatchJob(job.id);
+  }
+
+  revalidatePath("/calendar");
+}
+
 export async function addDndBeyondReferenceAction(formData: FormData) {
   await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug") ?? "");

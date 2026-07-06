@@ -124,6 +124,27 @@ describe("NlCommandService", () => {
     if (disable.ok) {
       assert.equal(disable.intent.intent, "disable_user");
     }
+
+    const members = parseCommandIntent("zeige mitglieder in terra");
+    assert.equal(members.ok, true);
+    if (members.ok && members.intent.intent === "list_world_members") {
+      assert.equal(members.intent.worldQuery, "terra");
+      assert.equal(members.requiresConfirmation, false);
+    }
+
+    const deleteUser = parseCommandIntent("delete user testplayer");
+    assert.equal(deleteUser.ok, true);
+    if (deleteUser.ok) {
+      assert.equal(deleteUser.intent.intent, "delete_user");
+      assert.equal(deleteUser.requiresConfirmation, true);
+    }
+
+    const resetPassword = parseCommandIntent("reset password for carina");
+    assert.equal(resetPassword.ok, true);
+    if (resetPassword.ok) {
+      assert.equal(resetPassword.intent.intent, "reset_password");
+      assert.equal(resetPassword.requiresConfirmation, true);
+    }
   });
 
   it("parses maintenance enable/disable intents", () => {

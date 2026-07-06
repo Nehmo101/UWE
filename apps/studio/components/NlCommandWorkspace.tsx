@@ -19,7 +19,12 @@ interface NlCommandIntentPayload {
     | "remove_world_membership"
     | "disable_user"
     | "enable_user"
-    | "invite_user";
+    | "invite_user"
+    | "create_world"
+    | "set_user_role"
+    | "list_world_members"
+    | "delete_user"
+    | "reset_password";
   enabled?: boolean;
   message?: string;
   userQuery?: string;
@@ -28,6 +33,7 @@ interface NlCommandIntentPayload {
   email?: string;
   displayName?: string;
   worldRole?: string;
+  name?: string;
 }
 
 interface ParseSuccessResponse {
@@ -76,6 +82,9 @@ const EXAMPLE_COMMANDS = [
   "Erstelle eine neue Welt Aventurien",
   "invite player@example.com as player in terra",
   "disable user carina",
+  "zeige mitglieder in terra",
+  "delete user testplayer",
+  "reset password for carina",
   "list open bugs",
   "secrets status",
   "pending migrations",

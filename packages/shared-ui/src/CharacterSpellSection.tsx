@@ -21,6 +21,7 @@ export interface CharacterSpellSectionProps {
   removeSpellAction: (formData: FormData) => void | Promise<void>;
   togglePreparedAction: (formData: FormData) => void | Promise<void>;
   addHomebrewSpellAction: (formData: FormData) => void | Promise<void>;
+  importSpellsByLevelAction?: (formData: FormData) => void | Promise<void>;
   searchSpellsUrl?: string;
   searchSpellsAction?: (query: string) => Promise<SpellSearchResult[]>;
 }
@@ -39,6 +40,7 @@ export function CharacterSpellSection({
   removeSpellAction,
   togglePreparedAction,
   addHomebrewSpellAction,
+  importSpellsByLevelAction,
   searchSpellsUrl,
   searchSpellsAction,
 }: CharacterSpellSectionProps) {
@@ -207,6 +209,35 @@ export function CharacterSpellSection({
               </ul>
             )}
           </div>
+
+          {importSpellsByLevelAction ? (
+            <form action={importSpellsByLevelAction} className="auth-note-form auth-character-spell-homebrew">
+              <h4>Katalog-Import (Open5e / SRD)</h4>
+              <p className="auth-muted">
+                Alle Zauber eines Grads aus dem Open5e-Katalog auf einmal hinzufügen (z. B. alle
+                Zaubertricks oder Grad-1-Zauber).
+              </p>
+              <label>
+                Zaubergrad
+                <select name="spellLevel" defaultValue={1}>
+                  <option value={0}>Zaubertrick (Grad 0)</option>
+                  {Array.from({ length: 9 }, (_, index) => index + 1).map((level) => (
+                    <option key={level} value={level}>
+                      Grad {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="auth-checkbox-label">
+                <input name="prepared" type="checkbox" />
+                Als vorbereitet markieren
+              </label>
+              {renderHiddenFields()}
+              <button type="submit" className="auth-btn auth-btn-small">
+                Grad importieren
+              </button>
+            </form>
+          ) : null}
 
           <form action={addHomebrewSpellAction} className="auth-note-form auth-character-spell-homebrew">
             <h4>Homebrew-Zauber</h4>

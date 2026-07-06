@@ -13,6 +13,19 @@ import {
   userRoleLabel,
   worldMemberRoleLabel,
 } from "./nl-command-entity-resolver";
+import {
+  extractUserQuery,
+  extractWorldQuery,
+  matchesAny,
+} from "./nl-command-text-helpers";
+import {
+  executeDeleteUserIntent,
+  executeListWorldMembersIntent,
+  executeResetPasswordIntent,
+  parseDeleteUserIntent,
+  parseListWorldMembersIntent,
+  parseResetPasswordIntent,
+} from "./nl-command-user-mgmt-intents";
 import { slugifyPageTitle } from "./page-templates";
 import { getSecretsStatusSnapshot } from "./secrets-status-service";
 import { createSettingsService } from "./settings-service";
@@ -38,6 +51,9 @@ export const NL_COMMAND_INTENTS = [
   "invite_user",
   "create_world",
   "set_user_role",
+  "list_world_members",
+  "delete_user",
+  "reset_password",
 ] as const;
 
 export type NlCommandIntentName = (typeof NL_COMMAND_INTENTS)[number];
@@ -88,7 +104,10 @@ export type NlCommandIntent =
       worldRole?: WorldMemberRole;
     }
   | { intent: "create_world"; name: string }
-  | { intent: "set_user_role"; userQuery: string; role: UserRole };
+  | { intent: "set_user_role"; userQuery: string; role: UserRole }
+  | { intent: "list_world_members"; worldQuery: string }
+  | { intent: "delete_user"; userQuery: string }
+  | { intent: "reset_password"; userQuery: string };
 
 export type ParseCommandResult =
   | { ok: true; intent: NlCommandIntent; requiresConfirmation: boolean }
@@ -164,6 +183,12 @@ function canonicalIntentPayload(intent: NlCommandIntent): string {
       return `create_world:${intent.name}`;
     case "set_user_role":
       return `set_user_role:${intent.userQuery}:${intent.role}`;
+    case "list_world_members":
+      return `list_world_members:${intent.worldQuery}`;
+    case "delete_user":
+      return `delete_user:${intent.userQuery}`;
+    case "reset_password":
+      return `reset_password:${intent.userQuery}`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -186,16 +211,14 @@ export function isMutationIntent(intent: NlCommandIntent): boolean {
     intent.intent === "enable_user" ||
     intent.intent === "invite_user" ||
     intent.intent === "create_world" ||
-    intent.intent === "set_user_role"
+    intent.intent === "set_user_role" ||
+    intent.intent === "delete_user" ||
+    intent.intent === "reset_password"
   );
 }
 
 function normalizeText(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-function matchesAny(text: string, patterns: RegExp[]): boolean {
-  return patterns.some((pattern) => pattern.test(text));
 }
 
 function parseToggleEnabled(text: string): boolean | null {
@@ -295,6 +318,9 @@ function parseListUsersIntent(text: string): NlCommandIntent | null {
 }
 
 function parseListWorldsIntent(text: string): NlCommandIntent | null {
+  if (/\b(mitglieder|members|spieler|membership|weltmitglieder)\b/.test(text)) {
+    return null;
+  }
   const patterns = [
     /\b(list|liste|zeige|show)\b.*\b(worlds?|welten)\b/,
     /\b(welten|worlds?)\s*(liste|list|übersicht|overview)\b/,
@@ -340,100 +366,6 @@ function parseMigrationStatusIntent(text: string): NlCommandIntent | null {
     /\b(migration status|migrations.?status|migrationsstand)\b/,
   ];
   return matchesAny(text, patterns) ? { intent: "get_migration_status" } : null;
-}
-
-function extractWorldQuery(text: string): string | null {
-  const quoted = text.match(/\b(?:in|für|for|world|welt)\s+(["'])([^"']+)\1/i);
-  if (quoted?.[2]) {
-    return quoted[2].trim();
-  }
-  const plain = text.match(/\b(?:in|für|for|world|welt)\s+([a-z0-9_-]+)/i);
-  return plain?.[1]?.trim() ?? null;
-}
-
-const USER_QUERY_STOPWORDS = new Set([
-  "die",
-  "der",
-  "das",
-  "den",
-  "dem",
-  "des",
-  "the",
-  "a",
-  "an",
-  "ein",
-  "eine",
-  "einen",
-  "einem",
-  "einer",
-  "user",
-  "benutzer",
-  "nutzer",
-  "account",
-  "globale",
-  "global",
-  "rolle",
-  "role",
-]);
-
-function isUserQueryStopword(token: string): boolean {
-  return USER_QUERY_STOPWORDS.has(token.toLowerCase());
-}
-
-function extractUserQuery(text: string): string | null {
-  const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w+/);
-  if (emailMatch?.[0]) {
-    return emailMatch[0];
-  }
-
-  const userLabel = text.match(/\b(?:user|benutzer|nutzer)\s+(\S+)/i);
-  if (userLabel?.[1]) {
-    return userLabel[1].replace(/[.,;]+$/, "");
-  }
-
-  const roleOfUser = text.match(
-    /\b(?:rolle\s+von|role\s+of)\s+([a-zäöüß0-9._-]+)/i,
-  );
-  if (roleOfUser?.[1] && !isUserQueryStopword(roleOfUser[1])) {
-    return roleOfUser[1];
-  }
-
-  const machUser = text.match(
-    /\b(?:mach|mache|make|setze|set|assign|weise)\s+([a-zäöüß0-9._-]+)/i,
-  );
-  if (machUser?.[1] && !isUserQueryStopword(machUser[1])) {
-    return machUser[1];
-  }
-
-  const promoteUser = text.match(
-    /\b(?:promote|befördere|ernenne)\s+([a-zäöüß0-9._-]+)/i,
-  );
-  if (promoteUser?.[1] && !isUserQueryStopword(promoteUser[1])) {
-    return promoteUser[1];
-  }
-
-  const removeUser = text.match(
-    /\b(?:entferne|remove|delete)\s+([a-zäöüß0-9._-]+)/i,
-  );
-  if (removeUser?.[1]) {
-    return removeUser[1];
-  }
-
-  const disableUser = text.match(
-    /\b(?:deaktiviere|disable|sperre)\s+(?:benutzer|user|nutzer|account)?\s*([a-zäöüß0-9._-]+)/i,
-  );
-  if (disableUser?.[1]) {
-    return disableUser[1];
-  }
-
-  const enableUser = text.match(
-    /\b(?:aktiviere|enable|freischalte)\s+(?:benutzer|user|nutzer|account)?\s*([a-zäöüß0-9._-]+)/i,
-  );
-  if (enableUser?.[1]) {
-    return enableUser[1];
-  }
-
-  return null;
 }
 
 function extractWorldMemberRole(text: string): WorldMemberRole | null {
@@ -717,6 +649,15 @@ export function parseCommandIntent(text: string): ParseCommandResult {
   const setUserRole = parseSetUserRoleIntent(normalized);
   if (setUserRole) candidates.push(setUserRole);
 
+  const listWorldMembers = parseListWorldMembersIntent(normalized);
+  if (listWorldMembers) candidates.push(listWorldMembers);
+
+  const deleteUser = parseDeleteUserIntent(normalized);
+  if (deleteUser) candidates.push(deleteUser);
+
+  const resetPassword = parseResetPasswordIntent(normalized);
+  if (resetPassword) candidates.push(resetPassword);
+
   if (candidates.length === 0) {
     return {
       ok: false,
@@ -783,6 +724,12 @@ export function buildConfirmationMessage(intent: NlCommandIntent): string {
       return `Neue Welt „${intent.name}“ anlegen (du wirst Welt-Besitzer, Standard-Seiten werden erstellt).`;
     case "set_user_role":
       return `Globale Rolle von „${intent.userQuery}“ auf ${userRoleLabel(intent.role)} setzen (systemweit — keine Welt-Rolle).`;
+    case "list_world_members":
+      return `Mitglieder der Welt „${intent.worldQuery}“ anzeigen (nur Lesen).`;
+    case "delete_user":
+      return `Benutzer „${intent.userQuery}“ dauerhaft löschen (inkl. Sitzungen und Mitgliedschaften).`;
+    case "reset_password":
+      return `Passwort für „${intent.userQuery}“ zurücksetzen und ein temporäres Passwort ausgeben.`;
     default: {
       const _exhaustive: never = intent;
       return _exhaustive;
@@ -839,8 +786,10 @@ async function logNlCommandAudit(
     "enable_user",
     "invite_user",
     "set_user_role",
+    "delete_user",
+    "reset_password",
   ]);
-  const worldIntents = new Set(["create_world"]);
+  const worldIntents = new Set(["create_world", "list_world_members"]);
   const targetType = userIntents.has(intent.intent)
     ? "user"
     : worldIntents.has(intent.intent)
@@ -1447,6 +1396,12 @@ export class NlCommandService {
           },
         };
       }
+      case "list_world_members":
+        return executeListWorldMembersIntent(this.db, ctx, intent);
+      case "delete_user":
+        return executeDeleteUserIntent(this.db, ctx, intent);
+      case "reset_password":
+        return executeResetPasswordIntent(this.db, ctx, intent);
       default: {
         const _exhaustive: never = intent;
         return _exhaustive;

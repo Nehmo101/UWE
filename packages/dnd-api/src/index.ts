@@ -103,6 +103,25 @@ export async function searchOpen5eSpells(
   }));
 }
 
+/** Lists Open5e spells for one spell level (SRD catalog import). */
+export async function listOpen5eSpellsByLevel(
+  level: number,
+  options: DndApiClientOptions = {},
+): Promise<DndApiSearchResult[]> {
+  if (options.open5eEnabled === false) return [];
+  const safeLevel = Math.max(0, Math.min(9, Math.floor(level)));
+  const timeout = options.timeoutMs ?? 10000;
+  const url = `${OPEN5E_BASE}/spells/?level_int=${safeLevel}&limit=100`;
+  const data = await fetchJson<Open5eListResponse>(url, timeout);
+  return data.results.map((item) => ({
+    provider: "open5e" as const,
+    id: item.slug,
+    name: item.name,
+    url: `${OPEN5E_BASE}/spells/${item.slug}/`,
+    raw: item,
+  }));
+}
+
 export type Open5eEquipmentKind = "weapon" | "magicitem";
 
 export type Open5eEquipmentResource = "weapons" | "magicitems";

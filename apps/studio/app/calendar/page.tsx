@@ -13,26 +13,43 @@ import {
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { CalendarMonthGrid } from "@/components/CalendarMonthGrid";
 import { CalendarWeekGrid } from "@/components/CalendarWeekGrid";
-import { createCalendarEventAction, createCalendarFeedAction } from "../integration-actions";
+import { CalendarEventFocus } from "@/components/CalendarEventFocus";
+import {
+  createCalendarEventAction,
+  createCalendarFeedAction,
+  deleteCalendarEventAction,
+  updateCalendarEventAction,
+} from "../integration-actions";
+import {
+  calendarPageHref,
+  parseCalendarFocusDate,
+  shiftCalendarMonth,
+  startOfWeekMonday,
+  toDateTimeLocalValue,
+} from "@/src/lib/calendar-nav";
 
 const DATE_FMT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
 interface Props {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; year?: string; month?: string }>;
 }
 
 export default async function CalendarPage({ searchParams }: Props) {
-  const { view } = await searchParams;
-  const calendarView = view === "week" ? "week" : "month";
+  const params = await searchParams;
+  const calendarView = params.view === "week" ? "week" : "month";
+  const now = new Date();
+  const focusDate = parseCalendarFocusDate(params.year, params.month, now);
+  const prevMonth = shiftCalendarMonth(focusDate, -1);
+  const nextMonth = shiftCalendarMonth(focusDate, 1);
 
   const config = resolveCalendarConfig();
   const calendar = createCalendarService(prisma);
   const repo = getAppRepository();
-  const now = new Date();
-  const in30Days = new Date(now.getTime() + 30 * 86400000);
+  const rangeStart = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
+  const rangeEnd = new Date(focusDate.getFullYear(), focusDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const [events, feeds, worlds] = await Promise.all([
-    calendar.listEvents({ from: new Date(now.getFullYear(), now.getMonth(), 1), to: in30Days }),
+    calendar.listEvents({ from: rangeStart, to: rangeEnd }),
     calendar.listFeeds(true),
     repo.listWorldsWithGuestMode(),
   ]);
@@ -50,19 +67,26 @@ export default async function CalendarPage({ searchParams }: Props) {
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Kalender" }]} />}>
+      <CalendarEventFocus />
       <PageHeader
         title="Kalender"
         summary="Lokaler UWE-Kalender, CalDAV/iCal-Sync, Session-Termine und FamilyWall read-only."
         actions={
           <>
+            <Link href={calendarPageHref("month", prevMonth)} className="uwe-v2-btn">
+              ←
+            </Link>
+            <Link href={calendarPageHref("month", nextMonth)} className="uwe-v2-btn">
+              →
+            </Link>
             <Link
-              href="/calendar?view=month"
+              href={calendarPageHref("month", focusDate)}
               className={`uwe-v2-btn ${calendarView === "month" ? "uwe-v2-btn-primary" : ""}`}
             >
               Monat
             </Link>
             <Link
-              href="/calendar?view=week"
+              href={calendarPageHref("week", focusDate)}
               className={`uwe-v2-btn ${calendarView === "week" ? "uwe-v2-btn-primary" : ""}`}
             >
               Woche
@@ -189,9 +213,9 @@ export default async function CalendarPage({ searchParams }: Props) {
           </div>
 
           {calendarView === "week" ? (
-            <CalendarWeekGrid weekStart={now} events={gridEvents} />
+            <CalendarWeekGrid weekStart={startOfWeekMonday(focusDate)} events={gridEvents} />
           ) : (
-            <CalendarMonthGrid month={now} events={gridEvents} />
+            <CalendarMonthGrid month={focusDate} events={gridEvents} />
           )}
 
           <section style={{ marginTop: "1.5rem" }}>
@@ -220,16 +244,75 @@ export default async function CalendarPage({ searchParams }: Props) {
           </section>
 
           <section style={{ marginTop: "1.5rem" }}>
-            <h2 className="uwe-v2-section-title">Nächste 30 Tage</h2>
+            <h2 className="uwe-v2-section-title">
+              Termine im{" "}
+              {new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" }).format(focusDate)}
+            </h2>
             {events.length === 0 ? (
               <EmptyState title="Keine Termine" description="Lege einen Termin an oder synchronisiere einen Feed." />
             ) : (
               <ul className="uwe-list-cards">
                 {events.map((event) => (
-                  <li key={event.id} className="uwe-list-card">
-                    <strong>{event.title}</strong>
-                    <span className="uwe-badge">{CALENDAR_EVENT_KIND_LABELS[event.kind]}</span>
-                    <p className="uwe-dashboard-muted">{DATE_FMT.format(event.startAt)}</p>
+                  <li key={event.id} className="uwe-list-card" id={`event-${event.id}`}>
+                    <details>
+                      <summary style={{ cursor: "pointer" }}>
+                        <strong>{event.title}</strong>{" "}
+                        <span className="uwe-badge">{CALENDAR_EVENT_KIND_LABELS[event.kind]}</span>
+                        <span className="uwe-dashboard-muted"> — {DATE_FMT.format(event.startAt)}</span>
+                      </summary>
+                      <div className="uwe-form" style={{ marginTop: "0.75rem" }}>
+                        <form action={updateCalendarEventAction} className="uwe-form">
+                          <input type="hidden" name="id" value={event.id} />
+                          <label>
+                            Titel
+                            <input name="title" defaultValue={event.title} required />
+                          </label>
+                          <label>
+                            Art
+                            <select name="kind" defaultValue={event.kind}>
+                              {Object.entries(CALENDAR_EVENT_KIND_LABELS).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Start
+                            <input
+                              name="startAt"
+                              type="datetime-local"
+                              defaultValue={toDateTimeLocalValue(event.startAt)}
+                              required
+                            />
+                          </label>
+                          <label>
+                            Ende (optional)
+                            <input
+                              name="endAt"
+                              type="datetime-local"
+                              defaultValue={event.endAt ? toDateTimeLocalValue(event.endAt) : ""}
+                            />
+                          </label>
+                          <label>
+                            <input name="allDay" type="checkbox" defaultChecked={event.allDay} /> Ganztägig
+                          </label>
+                          <label>
+                            Beschreibung
+                            <textarea name="description" rows={2} defaultValue={event.description ?? ""} />
+                          </label>
+                          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+                            Speichern
+                          </button>
+                        </form>
+                        <form action={deleteCalendarEventAction} style={{ marginTop: "0.75rem" }}>
+                          <input type="hidden" name="id" value={event.id} />
+                          <button type="submit" className="uwe-v2-btn">
+                            Termin löschen
+                          </button>
+                        </form>
+                      </div>
+                    </details>
                     {event.feed && <span className="uwe-dashboard-muted">Feed: {event.feed.name}</span>}
                   </li>
                 ))}

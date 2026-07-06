@@ -7,6 +7,7 @@ import {
   createWorldOverviewService,
   getAppRepository,
   getSystemSettings,
+  PersonalProjectDashboardStats,
   type AggregatedCalendarItem,
 } from "@uwe/database/server";
 import { createMaintenanceService } from "@uwe/database/maintenance";
@@ -49,6 +50,7 @@ export interface TodayDashboardData {
   prioritizedMail: Awaited<
     ReturnType<ReturnType<typeof createMailPortalService>["getInboxPrioritySummary"]>
   >;
+  projectDomains: PersonalProjectDashboardStats;
   systemOk: boolean;
   systemLabel: string;
   rtxReady: boolean;
@@ -134,6 +136,7 @@ export async function getTodayDashboardData(
     upcomingMaintenance,
     expiringPantry,
     prioritizedMail,
+    projectDomains,
   ] = await Promise.all([
     lifeAdmin.getTodaySummary(),
     getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
@@ -147,6 +150,7 @@ export async function getTodayDashboardData(
     maintenance.getUpcoming(),
     pantry.getExpiring(30),
     mailPortal.getInboxPrioritySummary({ limit: 5 }),
+    lifeAdmin.getPersonalProjectDashboardStats(),
   ]);
 
   const systemLabel = adminStatus.ok
@@ -198,5 +202,6 @@ export async function getTodayDashboardData(
       expiredPantryCount,
     },
     prioritizedMail,
+    projectDomains,
   };
 }

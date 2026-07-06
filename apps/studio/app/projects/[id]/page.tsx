@@ -64,6 +64,44 @@ export default async function ProjectDetailPage({ params }: Props) {
       </p>
 
       <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Domänen-Module</h2>
+        <ul className="uwe-list-cards">
+          {project.category === "uwe" && (
+            <>
+              <li className="uwe-list-card">
+                <Link href="/ideas">Ideen & Feature-Registry →</Link>
+              </li>
+              <li className="uwe-list-card">
+                <Link href="/command">NL-Befehlszentrale →</Link>
+              </li>
+            </>
+          )}
+          {project.category === "hardware_homelab" && (
+            <li className="uwe-list-card">
+              <Link href="/hardware">Hardware / Homelab →</Link>
+            </li>
+          )}
+          {project.category === "dnd" && (
+            <li className="uwe-list-card">
+              <Link href={project.world ? `/worlds/${project.world.slug}/dashboard` : "/worlds"}>
+                {project.world ? `DnD-Welt: ${project.world.name}` : "Welten-Übersicht"} →
+              </Link>
+            </li>
+          )}
+          {(project.category === "art_workshop" || project.category === "printing_3d") && (
+            <li className="uwe-list-card">
+              <Link href="/workshop">Werkstatt →</Link>
+            </li>
+          )}
+          {project.category === "other" && (
+            <li className="uwe-list-card">
+              <Link href="/capture">Capture-Inbox →</Link>
+            </li>
+          )}
+        </ul>
+      </section>
+
+      <section className="uwe-v2-card uwe-v2-section">
         <h2 className="uwe-v2-section-title">Status wechseln</h2>
         <div className="uwe-today-quick-chips">
           {Object.values(PersonalProjectStatusEnum).map((status) =>

@@ -8,7 +8,7 @@ import {
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
-import { worldCockpitTabItems } from "@/src/lib/studio-navigation";
+import { worldCockpitTabItems, worldDmToolQuickLinks } from "@/src/lib/studio-navigation";
 import { WorldDashboardClient } from "./WorldDashboardClient";
 
 interface Props {
@@ -35,6 +35,7 @@ export default async function WorldDashboardPage({ params }: Props) {
   ];
 
   const cockpitTabs = worldCockpitTabItems(worldSlug, "overview");
+  const dmTools = worldDmToolQuickLinks(worldSlug);
 
   return (
     <WorldShell
@@ -56,6 +57,20 @@ export default async function WorldDashboardPage({ params }: Props) {
                   href={action.href}
                 >
                   {action.label}
+                </Link>
+              ))}
+            </div>
+          </SidebarSection>
+
+          <SidebarSection title="DM-Werkzeuge">
+            <div className="flex flex-col gap-1">
+              {dmTools.map((tool) => (
+                <Link
+                  key={tool.href}
+                  className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                  href={tool.href}
+                >
+                  {tool.label}
                 </Link>
               ))}
             </div>

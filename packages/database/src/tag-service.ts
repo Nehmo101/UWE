@@ -3,6 +3,12 @@ import type { EntityTagEntityType } from "./generated/prisma/client";
 import { createEntityTagService } from "./entity-tag-service";
 import { asMetadataRecord, parseStringArray, parseTagsFromMetadata, toPrismaJsonValue } from "./json-utils";
 
+/** When true, tag merges update EntityTag only (Json dual-write skipped). Requires completed backfill. */
+export function isEntityTagsPrimaryMode(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.UWE_ENTITY_TAGS_PRIMARY?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
 export type TagEntityType = EntityTagEntityType;
 
 export const ENTITY_TAG_ENTITY_TYPE_LABELS: Record<EntityTagEntityType, string> = {
@@ -403,6 +409,7 @@ async function mergeMetadataEntityTags(
   },
 ): Promise<number> {
   let updatedEntities = 0;
+  const skipJsonWrite = isEntityTagsPrimaryMode();
 
   if (entityType === "capture") {
     const rows = await db.captureEntry.findMany({
@@ -419,10 +426,12 @@ async function mergeMetadataEntityTags(
       );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
-      await db.captureEntry.update({
-        where: { id: row.id },
-        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-      });
+      if (!skipJsonWrite) {
+        await db.captureEntry.update({
+          where: { id: row.id },
+          data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "capture", row.id, next, row.worldId);
       updatedEntities++;
     }
@@ -444,10 +453,12 @@ async function mergeMetadataEntityTags(
       );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
-      await db.personalProject.update({
-        where: { id: row.id },
-        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-      });
+      if (!skipJsonWrite) {
+        await db.personalProject.update({
+          where: { id: row.id },
+          data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "project", row.id, next, row.worldId);
       updatedEntities++;
     }
@@ -469,10 +480,12 @@ async function mergeMetadataEntityTags(
       );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
-      await db.workshopProject.update({
-        where: { id: row.id },
-        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-      });
+      if (!skipJsonWrite) {
+        await db.workshopProject.update({
+          where: { id: row.id },
+          data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "workshop", row.id, next, row.worldId);
       updatedEntities++;
     }
@@ -493,10 +506,12 @@ async function mergeMetadataEntityTags(
       );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
-      await db.contractExpense.update({
-        where: { id: row.id },
-        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-      });
+      if (!skipJsonWrite) {
+        await db.contractExpense.update({
+          where: { id: row.id },
+          data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "contract", row.id, next, null);
       updatedEntities++;
     }
@@ -517,10 +532,12 @@ async function mergeMetadataEntityTags(
       );
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
-      await db.hardwareDevice.update({
-        where: { id: row.id },
-        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-      });
+      if (!skipJsonWrite) {
+        await db.hardwareDevice.update({
+          where: { id: row.id },
+          data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "hardware", row.id, next, null);
       updatedEntities++;
     }
@@ -540,10 +557,12 @@ async function mergeMetadataEntityTags(
     );
     const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
     if (!next) continue;
-    await db.devIdea.update({
-      where: { id: row.id },
-      data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
-    });
+    if (!skipJsonWrite) {
+      await db.devIdea.update({
+        where: { id: row.id },
+        data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
+      });
+    }
     await syncEntityTagsForJsonEntity(db, "dev_idea", row.id, next, null);
     updatedEntities++;
   }
@@ -792,7 +811,9 @@ export async function mergeTags(
     const tags = await resolveEntityTagsForMerge(db, "page", page.id, parseStringArray(page.tags));
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
-      await db.page.update({ where: { id: page.id }, data: { tags: toPrismaJsonValue(next) } });
+      if (!isEntityTagsPrimaryMode()) {
+        await db.page.update({ where: { id: page.id }, data: { tags: toPrismaJsonValue(next) } });
+      }
       await syncEntityTagsForJsonEntity(db, "page", page.id, next, page.worldId);
       updatedEntities++;
     }
@@ -806,7 +827,9 @@ export async function mergeTags(
     const tags = await resolveEntityTagsForMerge(db, "asset", asset.id, parseStringArray(asset.tags));
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
-      await db.asset.update({ where: { id: asset.id }, data: { tags: toPrismaJsonValue(next) } });
+      if (!isEntityTagsPrimaryMode()) {
+        await db.asset.update({ where: { id: asset.id }, data: { tags: toPrismaJsonValue(next) } });
+      }
       await syncEntityTagsForJsonEntity(db, "asset", asset.id, next, asset.worldId);
       updatedEntities++;
     }
@@ -825,10 +848,12 @@ export async function mergeTags(
     );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
-      await db.soundboardButton.update({
-        where: { id: button.id },
-        data: { tags: toPrismaJsonValue(next) },
-      });
+      if (!isEntityTagsPrimaryMode()) {
+        await db.soundboardButton.update({
+          where: { id: button.id },
+          data: { tags: toPrismaJsonValue(next) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "soundboard_button", button.id, next, button.worldId);
       updatedEntities++;
     }
@@ -844,10 +869,12 @@ export async function mergeTags(
     );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
-      await db.personalBrainDocument.update({
-        where: { id: doc.id },
-        data: { tags: toPrismaJsonValue(next) },
-      });
+      if (!isEntityTagsPrimaryMode()) {
+        await db.personalBrainDocument.update({
+          where: { id: doc.id },
+          data: { tags: toPrismaJsonValue(next) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "personal_brain_document", doc.id, next, null);
       updatedEntities++;
     }
@@ -863,10 +890,12 @@ export async function mergeTags(
     );
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
-      await db.personalBrainFact.update({
-        where: { id: fact.id },
-        data: { tags: toPrismaJsonValue(next) },
-      });
+      if (!isEntityTagsPrimaryMode()) {
+        await db.personalBrainFact.update({
+          where: { id: fact.id },
+          data: { tags: toPrismaJsonValue(next) },
+        });
+      }
       await syncEntityTagsForJsonEntity(db, "personal_brain_fact", fact.id, next, null);
       updatedEntities++;
     }

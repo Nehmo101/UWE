@@ -72,9 +72,14 @@ export function CalendarWeekGrid({ weekStart, events }: CalendarWeekGridProps) {
                   {dayNumber}. {monthShort}
                 </div>
                 {dayEvents.map((event) => (
-                  <div key={event.id} className="uwe-badge" style={{ display: "block", marginTop: "0.2rem" }}>
+                  <a
+                    key={event.id}
+                    href={`#event-${event.id}`}
+                    className="uwe-badge"
+                    style={{ display: "block", marginTop: "0.2rem", textDecoration: "none" }}
+                  >
                     {event.title}
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>

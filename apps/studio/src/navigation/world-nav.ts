@@ -90,6 +90,18 @@ export function worldNav(worldSlug: string, openReviewCount?: number): NavGroup[
           "sessions",
           "spielabend",
           "recap",
+          "live",
+        ]),
+        item("world-calendar", "Weltuhr", `${base}/calendar`, "clock", "Spiel", [
+          "weltuhr",
+          "kalender",
+          "in-game",
+          "zeit",
+        ]),
+        item("world-chronicle", "Chronik", `${base}/chronicle`, "scroll-text", "Spiel", [
+          "chronik",
+          "timeline",
+          "geschichte",
         ]),
         item("world-prepare-session", "Session vorbereiten", `${base}/prepare-session`, "clipboard-list", "Spiel", [
           "session",

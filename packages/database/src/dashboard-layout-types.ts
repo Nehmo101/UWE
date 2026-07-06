@@ -28,6 +28,7 @@ export const STUDIO_TODAY_WIDGET_TYPES = [
   "prioritized-mail",
   "household",
   "jobs-queue",
+  "projects-by-domain",
 ] as const;
 
 export type StudioTodayWidgetType = (typeof STUDIO_TODAY_WIDGET_TYPES)[number];
@@ -92,6 +93,7 @@ export const DEFAULT_STUDIO_TODAY_LAYOUT: DashboardWidgetConfig[] = [
   widget("dnd-favorite", "dnd-favorite", 0, 2),
   widget("prioritized-mail", "prioritized-mail", 1, 2),
   widget("projects", "projects", 2, 2),
+  widget("projects-by-domain", "projects-by-domain", 3, 2),
   widget("capture-inbox", "capture-inbox", 0, 3),
   widget("household", "household", 1, 3),
   widget("jobs-queue", "jobs-queue", 2, 3),

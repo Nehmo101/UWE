@@ -4,7 +4,7 @@ Kurze, eindeutige Wahrheit über den aktiven Stand. Bei Widersprüchen in andere
 Dokumenten gilt diese Datei (Runtime/CI) bzw.
 [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md) (Feature-Reifegrade).
 
-Stand: 2026-07-01 (Doku-Sync nach PR #394; Backlog-Wellen A–D über PRs #357–#394 umgesetzt).
+Stand: 2026-07-06 (Doku-Sync nach Roadmap-Welle PR #498).
 
 ## Aktive Runtime
 
@@ -69,34 +69,15 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 ## Produkt-Backlog (bestätigt offen)
 
-Offene Rest-Punkte aus den Backlog-Wellen (Details:
-[FEATURE_BACKLOG_PLAN.md](FEATURE_BACKLOG_PLAN.md) §2–§5):
+Offene Rest-Punkte (Details: [FEATURE_BACKLOG_PLAN.md](FEATURE_BACKLOG_PLAN.md) §2–§5):
 
-- **Charaktersheet:** SRD/Open5e-Zauberkatalog-Import; einzelne derived Stats
-  (z. B. passive Wahrnehmung) — Folge-PR in Arbeit.
-- **Party-Treasury:** player-safe Filtering der Portal-Sicht verifizieren.
-- **Generatoren:** dedizierte Quest-Builder- und Magic-Item-Builder-UIs
-  (strukturierte Felder).
-- **Statblock Studio:** visueller Feld-Editor (aktuell JSON-Textarea).
-- **NL-Kommandos:** User-/Welt-Management-Intents in PR #395 (offen);
-  `create_world` + globale Rollenänderung fehlen.
-- **Agent Jobs:** 1-Klick-Kampagnen-Presets.
-- **Import-Zentrale:** Obsidian-/PDF-Upload-UI.
-- **Dokumentengenerator:** Generier-Workflow (Modell + Route vorhanden).
-- **Feature Registry:** Filter-UI + Prompt-CRUD.
-- **Miniaturen:** Fotovergleich-Slider.
-- **Projekt-Dashboards:** pro-Domäne-Kacheln.
-- **Mobile Portal:** Bottom-Nav als Standard überall — Folge-PR in Arbeit.
-- **`nextSession`-Bug:** behoben (Code-Audit 2026-07-03): `getPortalDashboard` nutzt
-  `listVisibleToPlayersForPortal` + `playerVisibleSchedule`-Flag statt des
-  recapPublished-Filters; E2E-Nachweis im Portal bei nächster Gelegenheit mitprüfen.
-- **Tags:** EntityTag-Backfill-Vollständigkeit verifizieren, dann Json-Dual-Write
-  abschalten.
+- **NL-Kommandos:** LLM-Intent-Parsing (bewusst nicht verfolgt); optionale Template-Auswahl bei `create_world`.
+- **Import-Zentrale:** Obsidian-/PDF-Upload-UI (bewusst nicht verfolgt laut Produkt).
+- **Tags:** Auf Produktions-Hosts nach `pnpm verify:tag-backfill` ggf. `UWE_ENTITY_TAGS_PRIMARY=true` setzen (Json-Dual-Write bei Merges aus).
 
-Zuletzt umgesetzt (Wellen A–D, PRs #357–#394): Charaktersheet-Kern, Party-Treasury,
-strukturierte Generatoren, Statblock-Exporte, World-Clock/Chronik/Faction-Sim,
-Bug Center, „Was ist offen?“-View, Unified Activity + Owner Cockpit (#394),
-Cross-Domain-Suche (#391), Kanon-Lifecycle (#392), EntityTag-Primärquelle (#393).
+Zuletzt umgesetzt (Roadmap-Welle PR #498+): NL `list_world_members`, `delete_user`, `reset_password`;
+Today-Widget „Projekte nach Domäne“; Projekt-Detail mit Domänen-Modul-Links; EntityTag-Primary-Mode für Tag-Merges;
+Mail-Entwürfe, Kalender-Grid, Ideas-Prompt-CRUD, Atlas-Handout, Zaubergrad-Import, Weltuhr/Chronik-Nav.
 
 **Nicht im Backlog** (bewusst nicht verfolgt): Asset-Level-Secrets, manuelle Browser-QA
 über 9 Theme-Presets, vollständiges Light-Theme-Refactoring, DB↔Client-Theme-Sync,

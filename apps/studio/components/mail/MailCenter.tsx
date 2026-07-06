@@ -118,11 +118,16 @@ export function MailCenter({ data }: { data: MailCenterData }) {
   }, []);
 
   const pushNav = React.useCallback(
-    (next: { folder?: MailFolderKey; account?: string | null }) => {
+    (next: { folder?: MailFolderKey; account?: string | null; q?: string | null }) => {
       const params = new URLSearchParams(searchParams.toString());
       if (next.folder) params.set("folder", next.folder);
       if (next.account === null) params.delete("account");
       else if (next.account) params.set("account", next.account);
+      if (next.q === null) params.delete("q");
+      else if (next.q !== undefined) {
+        if (next.q) params.set("q", next.q);
+        else params.delete("q");
+      }
       router.push(`/mail?${params.toString()}`);
     },
     [router, searchParams],
@@ -287,8 +292,87 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     }
   }
 
+  function forwardMessage(message: MailMessageDetailVM) {
+    const quoted = message.bodyText?.trim() || message.snippet?.trim() || "";
+    setCompose({
+      draftId: null,
+      messageId: null,
+      accountId: message.accountId,
+      to: "",
+      subject: message.subject.startsWith("Fwd:") ? message.subject : `Fwd: ${message.subject}`,
+      body: [
+        "",
+        "---------- Weitergeleitete Nachricht ----------",
+        `Von: ${message.fromAddress}`,
+        `Betreff: ${message.subject}`,
+        "",
+        quoted,
+      ].join("\n"),
+    });
+  }
+
+  async function captureMessage(message: MailMessageDetailVM) {
+    setBusy(true);
+    const ok = await postJson("/api/admin/mail/actions", {
+      action: "capture",
+      messageId: message.id,
+    });
+    setBusy(false);
+    if (ok) {
+      flash("In Capture übernommen.");
+    }
+  }
+
+  async function taskMessage(messageId: string) {
+    setBusy(true);
+    const ok = await postJson("/api/admin/mail/actions", {
+      action: "task",
+      messageId,
+    });
+    setBusy(false);
+    if (ok) {
+      flash("Als Projekt-Aufgabe angelegt.");
+    }
+  }
+
+  async function openDraft(draftId: string) {
+    setBusy(true);
+    try {
+      const response = await fetch(studioApiUrl(`/api/mail/drafts/${draftId}`));
+      const payload = (await response.json()) as {
+        draft?: {
+          id: string;
+          accountId: string | null;
+          replyToMessageId: string | null;
+          subject: string;
+          bodyText: string | null;
+          toAddresses: string[];
+        };
+        error?: string;
+      };
+      if (!response.ok || !payload.draft) {
+        flash(payload.error ?? "Entwurf konnte nicht geladen werden.");
+        return;
+      }
+      const draft = payload.draft;
+      setCompose({
+        draftId: draft.id,
+        messageId: draft.replyToMessageId,
+        accountId: draft.accountId,
+        to: draft.toAddresses.join(", "),
+        subject: draft.subject,
+        body: draft.bodyText ?? "",
+      });
+    } catch {
+      flash("Netzwerkfehler beim Laden des Entwurfs.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function replyTo(message: MailMessageDetailVM) {
     setCompose({
+      draftId: null,
       messageId: message.id,
       accountId: message.accountId,
       to: message.fromAddress,
@@ -299,6 +383,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
 
   function openComposeNew() {
     setCompose({
+      draftId: null,
       messageId: null,
       accountId: selectedAccountId ?? data.accounts[0]?.id ?? null,
       to: "",
@@ -341,14 +426,20 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           rtxState={data.rtxState}
           onOpen={selectMessage}
           onReplyDraft={(id) => selectMessage(id)}
-          onTask={() => flash("Als Aufgabe vorgemerkt.")}
-          onCapture={() => flash("In Capture übernommen.")}
+          onTask={(id) => void taskMessage(id)}
+          onCapture={(id) => {
+            setBusy(true);
+            void postJson("/api/admin/mail/actions", { action: "capture", messageId: id }).then((ok) => {
+              setBusy(false);
+              if (ok) flash("In Capture übernommen.");
+            });
+          }}
           onUnsubscribe={(id) => void unsubscribe(id)}
         />
       );
     }
     if (view === "drafts") {
-      return <MailDraftsList drafts={data.drafts} onCompose={openComposeNew} title="Entwürfe" />;
+      return <MailDraftsList drafts={data.drafts} onCompose={openComposeNew} onEditDraft={(id) => void openDraft(id)} title="Entwürfe" />;
     }
     if (data.messages.length === 0 && activeFolder === "inbox") {
       return (
@@ -406,6 +497,8 @@ export function MailCenter({ data }: { data: MailCenterData }) {
             onSync={() => void runSync()}
             syncing={syncing}
             title={listTitle}
+            searchQuery={data.query}
+            onSearch={(q) => pushNav({ folder: activeFolder, account: selectedAccountId, q: q || null })}
           />
           <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
             <MailReader
@@ -414,10 +507,10 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               rtxState={data.rtxState}
               busy={busy}
               onReply={() => detail && replyTo(detail)}
-              onForward={() => flash("Weiterleiten geöffnet.")}
+              onForward={() => detail && forwardMessage(detail)}
               onSummarize={() => detail && void summarize(detail.id)}
-              onCapture={() => flash("In Capture übernommen.")}
-              onTask={() => flash("Als Aufgabe vorgemerkt.")}
+              onCapture={() => detail && void captureMessage(detail)}
+              onTask={() => detail && void taskMessage(detail.id)}
               onArchive={() => void archiveMessage()}
               onDelete={() => void trashMessage()}
               onOpenChat={() => setChatOpen(true)}

@@ -21,6 +21,8 @@ interface MailMessageListProps {
   onSync: () => void;
   syncing: boolean;
   title: string;
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
 }
 
 function isMarked(message: MailMessageVM): boolean {
@@ -36,6 +38,8 @@ export function MailMessageList({
   onSync,
   syncing,
   title,
+  searchQuery = "",
+  onSearch,
 }: MailMessageListProps) {
   const unreadCount = messages.filter((m) => !m.isRead).length;
   const filtered = messages.filter((message) => {
@@ -96,6 +100,23 @@ export function MailMessageList({
         />
         <IconButton icon="sliders-horizontal" size={15} title="Filter" />
       </div>
+
+      {onSearch ? (
+        <div style={{ padding: "0 12px 10px", borderBottom: "1px solid var(--uwe-border-muted)" }}>
+          <input
+            type="search"
+            className="uwe-v2-input"
+            placeholder="Betreff, Absender, Inhalt…"
+            defaultValue={searchQuery}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                onSearch((event.currentTarget as HTMLInputElement).value.trim());
+              }
+            }}
+            aria-label="Mail durchsuchen"
+          />
+        </div>
+      ) : null}
 
       <div
         style={{

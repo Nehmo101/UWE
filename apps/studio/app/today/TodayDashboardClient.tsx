@@ -210,6 +210,40 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
             </p>
           </section>
         );
+      case "projects-by-domain":
+        return (
+          <section className="uwe-v2-card uwe-dashboard-card">
+            <h2 className="uwe-v2-section-title">Projekte nach Domäne</h2>
+            <p className="uwe-dashboard-muted">
+              {data.projectDomains.activeTotal} aktiv / {data.projectDomains.total} gesamt
+            </p>
+            <div className="uwe-today-card-list">
+              {data.projectDomains.categories.map((summary) => (
+                <article key={summary.category} className="uwe-today-card">
+                  <h3>
+                    <Link href={`/projects?category=${summary.category}`}>{summary.label}</Link>
+                  </h3>
+                  <p>
+                    {summary.active} aktiv · {summary.total} gesamt
+                    {summary.progressPercent > 0 ? ` · ${summary.progressPercent}% erledigt` : ""}
+                  </p>
+                  {summary.recentProjects.length > 0 ? (
+                    <ul className="uwe-list-compact">
+                      {summary.recentProjects.slice(0, 2).map((project) => (
+                        <li key={project.id}>
+                          <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+            <p>
+              <Link href="/projects">Projekt-Dashboards →</Link>
+            </p>
+          </section>
+        );
       case "contracts":
         return (
           <section className="uwe-v2-card uwe-dashboard-card">

@@ -409,6 +409,7 @@ export interface CreateGeneratorOutputInput {
 
 export interface PersonalProjectCategorySummary {
   category: PersonalProjectCategory;
+  label: string;
   total: number;
   /** Projects in PROJECT_ACTIVE_STATUSES. */
   active: number;

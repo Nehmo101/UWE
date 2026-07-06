@@ -448,6 +448,7 @@ function PromptColumn({
   const [draft, setDraft] = useState(idea?.generatedPrompt ?? "");
   const [providerMode, setProviderMode] = useState<ProviderMode>("auto");
   const [genBusy, setGenBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
   const [dispatchBusy, setDispatchBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -519,6 +520,30 @@ function PromptColumn({
       setError(genError instanceof Error ? genError.message : "Prompt-Erstellung fehlgeschlagen.");
     } finally {
       setGenBusy(false);
+    }
+  }
+
+  async function savePrompt() {
+    if (saveBusy || !idea) return;
+    setSaveBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(studioApiUrl(`/api/ideas/${idea.id}/prompt`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ generatedPrompt: draft }),
+      });
+      const data = (await res.json()) as { generatedPrompt?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Prompt konnte nicht gespeichert werden.");
+      }
+      const prompt = data.generatedPrompt ?? draft;
+      setDraft(prompt);
+      onPrompt(prompt);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Prompt konnte nicht gespeichert werden.");
+    } finally {
+      setSaveBusy(false);
     }
   }
 
@@ -641,6 +666,14 @@ function PromptColumn({
       />
 
       <div className="uwe-idea-prompt-actions">
+        <button
+          type="button"
+          className="uwe-v2-btn uwe-v2-btn-ghost"
+          onClick={() => void savePrompt()}
+          disabled={saveBusy || draft.trim().length === 0}
+        >
+          {saveBusy ? "Speichere…" : "Prompt speichern"}
+        </button>
         <button
           type="button"
           className="uwe-v2-btn uwe-v2-btn-ghost"

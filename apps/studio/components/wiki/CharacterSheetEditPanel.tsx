@@ -20,6 +20,7 @@ import {
   addHomebrewSpellAction,
   addSpellAction,
   applyStudioLevelUpAction,
+  importSpellsByLevelAction,
   removeSpellAction,
   togglePreparedAction,
   updateStudioCharacterSheetAction,
@@ -209,6 +210,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
         removeSpellAction={removeSpellAction}
         togglePreparedAction={togglePreparedAction}
         addHomebrewSpellAction={addHomebrewSpellAction}
+        importSpellsByLevelAction={importSpellsByLevelAction}
         searchSpellsUrl={studioApiUrl("/api/dnd/spells/search")}
       />
 
