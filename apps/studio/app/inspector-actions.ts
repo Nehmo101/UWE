@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createActivityLogService,
   createInspectorFixService,
@@ -10,7 +11,6 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  assertStudioTrusted,
   requireStudioContentEdit,
   requireStudioWorldEdit,
 } from "@/src/lib/authz";
@@ -25,6 +25,7 @@ const FIX_ACTIONS: InspectorFixAction[] = [
 ];
 
 export async function applyInspectorFixAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const action = String(formData.get("fixAction")) as InspectorFixAction;
   const pageId = String(formData.get("pageId") || "");
@@ -59,7 +60,7 @@ export async function applyInspectorFixAction(formData: FormData) {
 
 /** Undo a change from the activity log (inspector fixes, deletions). */
 export async function undoActivityAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const undoEntryId = String(formData.get("undoEntryId"));
   const redirectTo = String(formData.get("redirectTo") || "/");

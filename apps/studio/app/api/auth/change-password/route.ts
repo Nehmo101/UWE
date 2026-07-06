@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import {
   auditRequestFromHeaders,
@@ -7,17 +8,17 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
-import { guardStudioMutation } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "login" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "login" });
   if (authError) return authError;
 
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
   if (!user) {
-    return NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 });
+    return jsonError("Anmeldung erforderlich.", 401);
   }
 
   const body = (await request.json()) as {
@@ -110,11 +111,11 @@ export async function POST(request: Request) {
     }
 
     if (result === "invalid_current" || result === "no_password") {
-      return NextResponse.json({ error: "Passwortänderung fehlgeschlagen." }, { status: 401 });
+      return jsonError("Passwortänderung fehlgeschlagen.", 401);
     }
 
     if (result === "not_found") {
-      return NextResponse.json({ error: "Passwortänderung fehlgeschlagen." }, { status: 401 });
+      return jsonError("Passwortänderung fehlgeschlagen.", 401);
     }
 
     return NextResponse.json({

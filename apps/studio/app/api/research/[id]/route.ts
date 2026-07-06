@@ -1,19 +1,20 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createResearchService, prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { id } = await context.params;
   const service = createResearchService(prisma);
   const session = await service.get(id);
   if (!session) {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return jsonError("Nicht gefunden.", 404);
   }
 
   return NextResponse.json({
@@ -29,7 +30,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { id } = await context.params;

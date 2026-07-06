@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   ensureUploadDirectory,
   inferAssetTypeFromMime,
@@ -20,7 +21,7 @@ import {
   resolveEffectiveUploadsPath,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import { guardStudioMutation } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 const IMAGE_KINDS: ReadonlySet<DetectedFileKind> = new Set(["png", "jpeg", "gif", "webp"]);
 
@@ -33,13 +34,13 @@ function imageOnlyUploadPolicy(): UploadPolicyConfig {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Bild erforderlich." }, { status: 400 });
+    return jsonError("Bild erforderlich.", 400);
   }
 
   const maxUploadBytes = getUweEnvOrNull()?.maxUploadBytes ?? 25 * 1024 * 1024;
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof UploadValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     throw error;
   }

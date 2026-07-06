@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { z } from "zod";
 
 import { createConnectorService, prisma } from "@uwe/database/server";
@@ -34,7 +35,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const service = createConnectorService(prisma);
   const existing = await service.getConnector(parsedParams.data.id);
   if (!existing) {
-    return NextResponse.json({ error: "Connector nicht gefunden." }, { status: 404 });
+    return jsonError("Connector nicht gefunden.", 404);
   }
 
   if (parsed.data.action === "rotate-token") {
@@ -81,7 +82,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   const service = createConnectorService(prisma);
   const existing = await service.getConnector(parsedParams.data.id);
   if (!existing) {
-    return NextResponse.json({ error: "Connector nicht gefunden." }, { status: 404 });
+    return jsonError("Connector nicht gefunden.", 404);
   }
 
   await service.deleteConnector(existing.id);

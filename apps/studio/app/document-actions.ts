@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { DocumentTemplateCategory } from "@uwe/database/server";
 import {
   createDocumentTemplateService,
@@ -8,7 +9,6 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import {
   extractTemplateVariables,
   type GenerateDocumentActionResult,
@@ -36,7 +36,7 @@ function parseCategory(value: FormDataEntryValue | null): DocumentTemplateCatego
 }
 
 export async function createDocumentTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const body = String(formData.get("body") || "");
   await documentTemplates().createTemplate({
@@ -50,7 +50,7 @@ export async function createDocumentTemplateAction(formData: FormData) {
 }
 
 export async function updateDocumentTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") || "").trim();
   if (!id) {
@@ -69,7 +69,7 @@ export async function updateDocumentTemplateAction(formData: FormData) {
 }
 
 export async function deleteDocumentTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") || "").trim();
   if (!id) {
@@ -90,7 +90,7 @@ export async function generateDocumentFromTemplateAction(input: {
   title?: string;
   values: Record<string, string>;
 }): Promise<GenerateDocumentActionResult> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const templateId = input.templateId?.trim();
   if (!templateId) {

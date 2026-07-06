@@ -1,12 +1,9 @@
 import { postGeneratorAction } from "@/src/lib/generator-handlers";
-import {
-  aiGeneratorBodySchema,
-  guardStudioMutation,
-  parseBody,
-} from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { aiGeneratorBodySchema, parseBody } from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, aiGeneratorBodySchema);

@@ -66,18 +66,47 @@ export function requireOwner(user: AuthUser | null): AuthUser {
   return requireRole(user, ["owner"]);
 }
 
+function normalizeApiPathname(pathname: string): string {
+  const withoutQuery = pathname.split("?")[0]?.split("#")[0] ?? pathname;
+  const normalized = withoutQuery.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+  return normalized.toLowerCase();
+}
+
+/** Studio API routes that stay public at the role gate (health, auth entry, callbacks). */
+const PUBLIC_STUDIO_API_PREFIXES = [
+  "/api/health",
+  "/api/maintenance/status",
+  "/api/maintenance/evaluate",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/setup",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/two-factor/verify",
+  "/api/spotify/callback",
+  "/api/agent-jobs/callback",
+  "/api/connectors/",
+] as const;
+
+function isPublicStudioApiPath(pathname: string): boolean {
+  const normalized = normalizeApiPathname(pathname);
+  return PUBLIC_STUDIO_API_PREFIXES.some(
+    (prefix) => normalized === prefix || normalized.startsWith(prefix),
+  );
+}
+
 export function getRequiredRolesForApiPath(pathname: string): readonly UweRole[] | null {
-  if (pathname.startsWith("/api/admin")) {
+  const normalized = normalizeApiPathname(pathname);
+  if (!normalized.startsWith("/api/")) {
+    return null;
+  }
+  if (isPublicStudioApiPath(normalized)) {
+    return null;
+  }
+  if (normalized.startsWith("/api/admin")) {
     return ADMIN_ACCESS_ROLES;
   }
-  if (
-    pathname.startsWith("/api/brain") ||
-    pathname.startsWith("/api/ai") ||
-    pathname.startsWith("/api/import")
-  ) {
-    return STUDIO_ACCESS_ROLES;
-  }
-  return null;
+  return STUDIO_ACCESS_ROLES;
 }
 
 export function getRequiredRolesForPagePath(pathname: string): readonly UweRole[] | null {

@@ -65,6 +65,7 @@ export {
   requirePortalReadAuth,
   requireRestoreOwnerAuth,
   requireStudioApiAuth,
+  requireStudioRoleApiAuth,
   type AdminGuardOptions,
   type ApiAuthContext,
   type PortalGuardOptions,

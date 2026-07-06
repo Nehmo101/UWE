@@ -3,9 +3,8 @@ export {
   executeAiGatewayImageRequest,
   executeAiGatewayResearchJob,
   createGatewayApiKeyStore,
-  getAiGatewayStatusForClient,
+  AI_GATEWAY_SYSTEM_USER,
   resolveConnectorAwareImageProviderConfig,
-  runAiGatewayFallbackTest,
   AiGatewayAccessDeniedError,
   AiGatewayBudgetExceededError,
   AiGatewayDisabledError,
@@ -29,6 +28,10 @@ export {
   type AiFeaturePermission,
   type AiGatewayConfigRecord,
 } from "./aiGateway";
+export {
+  getAiGatewayStatusForClient,
+  runAiGatewayFallbackTest,
+} from "./ai-gateway-diagnostics";
 export {
   simulateGatewayRouting,
   type AiGatewaySimulationCase,

@@ -1,13 +1,10 @@
 import { postGenerate } from "../../../../src/lib/ai-handlers";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getCurrentAuthUser } from "@/src/lib/auth";
-import {
-  aiGenerateBodySchema,
-  guardStudioMutation,
-  parseBody,
-} from "@uwe/security";
+import { aiGenerateBodySchema, parseBody } from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, aiGenerateBodySchema);

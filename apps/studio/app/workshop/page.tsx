@@ -13,7 +13,13 @@ import {
   WorkshopStatusEnum,
   type WorkshopStatus,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import {
+  AdminCreateCard,
+  AdminEntityForm,
+  AdminFilterChips,
+  AdminModulePage,
+  BreadcrumbTrail,
+} from "@/src/components/admin";
 import { advanceWorkshopStatusAction } from "../life-admin-actions";
 import { createWorkshopAction } from "../workshop-actions";
 
@@ -69,30 +75,20 @@ export default async function WorkshopPage({ searchParams }: Props) {
     filter === "dnd" ? workshops.filter((item) => Boolean(item.worldId)) : workshops;
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Werkstatt" }]} />}>
-      <PageHeader
-        title="Werkstatt"
-        summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Werkstatt" }]} />}
+      title="Werkstatt"
+      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
+    >
+      <AdminFilterChips
+        ariaLabel="Werkstatt-Filter"
+        chips={WORKSHOP_FILTERS.map((item) => ({
+          href: item.value === "all" ? "/workshop" : `/workshop?filter=${item.value}`,
+          label: item.label,
+          count: filterCounts[item.value],
+          active: filter === item.value,
+        }))}
       />
-      <section className="uwe-today-attention" aria-label="Werkstatt-Filter">
-        <div className="uwe-today-quick-chips">
-          {WORKSHOP_FILTERS.map((item) => {
-            const count = filterCounts[item.value];
-            const active = filter === item.value;
-            return (
-              <Link
-                key={item.value}
-                href={item.value === "all" ? "/workshop" : `/workshop?filter=${item.value}`}
-                className="uwe-today-quick-chip"
-                data-severity={active ? "warn" : "info"}
-                aria-current={active ? "page" : undefined}
-              >
-                {item.label} ({count})
-              </Link>
-            );
-          })}
-        </div>
-      </section>
 
       <nav className="uwe-inline-actions uwe-v2-section">
         <Link href="/workshop/recipes">Paint-Rezepte</Link>
@@ -101,54 +97,48 @@ export default async function WorkshopPage({ searchParams }: Props) {
         <Link href="/miniatures">Miniaturen-Sammlung</Link>
       </nav>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neues Werkstatt-Projekt</h2>
-        <form action={createWorkshopAction} className="uwe-brain-create-form">
-          <label>
-            Titel
-            <input name="title" required />
-          </label>
-          <label>
-            Typ
-            <select name="projectType" defaultValue="dnd_terrain">
-              {Object.values(WorkshopProjectTypeEnum).map((type) => (
-                <option key={type} value={type}>
-                  {WORKSHOP_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select name="status" defaultValue="idea">
-              {Object.values(WorkshopStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {WORKSHOP_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nächster Schritt
-            <input name="nextAction" placeholder="z. B. Grundierung auftragen" />
-          </label>
-          <label>
-            Materialien (Name | Menge | ja/nein)
-            <textarea
-              name="materialsNeeded"
-              rows={3}
-              placeholder={"XPS-Schaum | 2 Platten | nein\nCitadel Abaddon Black | 1 Flasche | ja"}
-            />
-          </label>
-          <label>
-            Beschreibung
-            <textarea name="description" rows={3} />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Werkstatt-Projekt anlegen
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neues Werkstatt-Projekt">
+        <AdminEntityForm
+          action={createWorkshopAction}
+          submitLabel="Werkstatt-Projekt anlegen"
+          fields={[
+            { name: "title", label: "Titel", required: true },
+            {
+              name: "projectType",
+              label: "Typ",
+              type: "select",
+              defaultValue: "dnd_terrain",
+              options: Object.values(WorkshopProjectTypeEnum).map((type) => ({
+                value: type,
+                label: WORKSHOP_TYPE_LABELS[type],
+              })),
+            },
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              defaultValue: "idea",
+              options: Object.values(WorkshopStatusEnum).map((status) => ({
+                value: status,
+                label: WORKSHOP_STATUS_LABELS[status],
+              })),
+            },
+            {
+              name: "nextAction",
+              label: "Nächster Schritt",
+              placeholder: "z. B. Grundierung auftragen",
+            },
+            {
+              name: "materialsNeeded",
+              label: "Materialien (Name | Menge | ja/nein)",
+              type: "textarea",
+              rows: 3,
+              placeholder: "XPS-Schaum | 2 Platten | nein\nCitadel Abaddon Black | 1 Flasche | ja",
+            },
+            { name: "description", label: "Beschreibung", type: "textarea", rows: 3 },
+          ]}
+        />
+      </AdminCreateCard>
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Projekte ({visibleWorkshops.length})</h2>
@@ -238,6 +228,6 @@ export default async function WorkshopPage({ searchParams }: Props) {
           </div>
         )}
       </section>
-    </StudioShell>
+    </AdminModulePage>
   );
 }

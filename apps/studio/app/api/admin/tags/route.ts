@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createTagService,
   ENTITY_TAG_ENTITY_TYPE_LABELS,
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   };
 
   if (body.action !== "merge" && body.action !== "backfill") {
-    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+    return jsonError("Unsupported action", 400);
   }
 
   if (body.action === "backfill") {
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 
   const toTag = String(body.toTag || "").trim();
   if (!toTag) {
-    return NextResponse.json({ error: "toTag is required" }, { status: 400 });
+    return jsonError("toTag is required", 400);
   }
 
   const fromTags = Array.isArray(body.fromTags)
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     : parseTagsInput(body.fromTags);
 
   if (fromTags.length === 0) {
-    return NextResponse.json({ error: "fromTags is required" }, { status: 400 });
+    return jsonError("fromTags is required", 400);
   }
 
   const tags = createTagService(prisma);

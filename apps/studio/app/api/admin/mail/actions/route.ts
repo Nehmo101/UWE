@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 
@@ -54,6 +55,6 @@ export async function POST(request: Request) {
     return mailApiError("Unbekannte Aktion oder fehlende Parameter.", 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Aktion fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }

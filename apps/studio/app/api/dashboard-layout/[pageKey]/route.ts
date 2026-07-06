@@ -1,7 +1,8 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createDashboardLayoutService, prisma } from "@uwe/database/server";
 import { getUweRuntimeConfig } from "@uwe/auth";
-import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 
 interface RouteParams {
@@ -26,12 +27,12 @@ async function requireLayoutSessionUser(request: Request) {
   }
 
   return {
-    error: NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 }),
+    error: jsonError("Anmeldung erforderlich.", 401),
   };
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const session = await requireLayoutSessionUser(request);
@@ -45,7 +46,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const session = await requireLayoutSessionUser(request);
@@ -55,11 +56,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     body = (await request.json()) as { widgets?: unknown };
   } catch {
-    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    return jsonError("Ungültiger JSON-Body.", 400);
   }
 
   if (!Array.isArray(body.widgets)) {
-    return NextResponse.json({ error: "widgets muss ein Array sein." }, { status: 400 });
+    return jsonError("widgets muss ein Array sein.", 400);
   }
 
   const { pageKey } = await params;

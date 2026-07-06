@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/src/lib/api-response";
 import {
   capabilityOfflineMessage,
   type ConnectorCapability,
@@ -94,7 +95,7 @@ export async function tryDispatchSpotifyConnector(
 
   const world = await deps.resolveWorld(worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+    return jsonError("Welt nicht gefunden.", 404);
   }
 
   const payload: Record<string, unknown> = {};

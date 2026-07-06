@@ -6,7 +6,8 @@ import {
   parseIdeaAttachments,
   prisma,
 } from "@uwe/database/server";
-import { guardStudioMutation, idSchema, parseBody, parseParams } from "@uwe/security";
+import { idSchema, parseBody, parseParams } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { executeAiPrompt } from "@/src/lib/ai-prompt-handlers";
 import { composeIdeaPromptGeneration } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
@@ -19,7 +20,7 @@ const ideaPromptBodySchema = z.object({
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();
@@ -34,7 +35,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const ideas = createDevIdeaService(prisma);
   const idea = await ideas.getIdea(parsedParams.data.id);
   if (!idea) {
-    return NextResponse.json({ error: "Idee nicht gefunden." }, { status: 404 });
+    return jsonError("Idee nicht gefunden.", 404);
   }
 
   const transcript = parseDevIdeaTranscript(idea.chatTranscript);

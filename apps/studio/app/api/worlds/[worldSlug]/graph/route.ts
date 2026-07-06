@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   buildWorldGraph,
   getAppRepository,
@@ -7,14 +9,14 @@ import {
   type GraphViewMode,
   type Visibility,
 } from "@uwe/database/server";
-import { parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+import { parseParams, worldSlugParamSchema } from "@uwe/security";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = await parseParams(params, worldSlugParamSchema);
@@ -26,7 +28,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "World not found" }, { status: 404 });
+    return jsonError("World not found", 404);
   }
 
   const campaignSlug = url.searchParams.get("campaign");

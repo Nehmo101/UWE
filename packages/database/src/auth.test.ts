@@ -135,18 +135,20 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("shows guests only public content when guest mode is enabled", async () => {
+  it("denies anonymous viewers when guest mode is disabled", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
     assert.equal(ctx.effectiveRole, "guest");
+    assert.equal(ctx.guestModeEnabled, false);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    const slugs = pages.map((page) => page.slug);
-
-    assert.deepEqual(slugs, ["public-notice"]);
+    assert.deepEqual(
+      pages.map((page) => page.slug),
+      [],
+    );
 
     await db.$disconnect();
   });

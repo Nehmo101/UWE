@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   buildMailSmtpCredentialsUpdate,
   getAppRepository,
@@ -24,6 +25,7 @@ function setupRedirect(tab: string) {
 }
 
 export async function updateOwnerSetupAction(formData: FormData) {
+  await requireStudioActionAuth();
   await requireOwner();
 
   const tab = String(formData.get("tab") || "system");

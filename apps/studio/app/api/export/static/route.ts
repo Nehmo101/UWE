@@ -1,3 +1,5 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { jsonError } from "@/src/lib/api-response";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import {
@@ -41,7 +43,7 @@ async function resolveExportDir(worldSlug: string, requestedDirName?: string): P
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) {
     return authError;
   }
@@ -53,23 +55,17 @@ export async function POST(request: Request) {
     const worldSlug = parsed.data.worldSlug;
     const outputDir = await resolveExportDir(worldSlug, parsed.data.outputDir);
     if (!outputDir) {
-      return NextResponse.json(
-        { error: "outputDir muss ein Ordnername innerhalb des Export-Verzeichnisses sein." },
-        { status: 400 },
-      );
+      return jsonError("outputDir muss ein Ordnername innerhalb des Export-Verzeichnisses sein.", 400);
     }
 
     const repo = getAppRepository();
     const settings = await getSystemSettings();
     const world = await repo.getWorldBySlug(worldSlug);
     if (!world) {
-      return NextResponse.json({ error: `World not found: ${worldSlug}` }, { status: 404 });
+      return jsonError(`World not found: ${worldSlug}`, 404);
     }
     if (world.isSandbox) {
-      return NextResponse.json(
-        { error: "Sandbox-Testwelten können nicht exportiert werden." },
-        { status: 400 },
-      );
+      return jsonError("Sandbox-Testwelten können nicht exportiert werden.", 400);
     }
 
     const result = await exportWorldStatic(repo, {

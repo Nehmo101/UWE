@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -25,7 +26,7 @@ export async function POST(request: Request, context: RouteContext) {
   };
 
   if (!body.worldId?.trim()) {
-    return NextResponse.json({ error: "Welt-ID ist erforderlich." }, { status: 400 });
+    return jsonError("Welt-ID ist erforderlich.", 400);
   }
 
   const role = VALID_WORLD_ROLES.includes(body.role as (typeof VALID_WORLD_ROLES)[number])
@@ -35,12 +36,12 @@ export async function POST(request: Request, context: RouteContext) {
   const service = createUserService(prisma);
   const user = await service.getUserById(userId);
   if (!user) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+    return jsonError("Benutzer nicht gefunden.", 404);
   }
 
   const world = await prisma.world.findUnique({ where: { id: body.worldId } });
   if (!world) {
-    return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+    return jsonError("Welt nicht gefunden.", 404);
   }
 
   const membership = await service.upsertWorldMembership({

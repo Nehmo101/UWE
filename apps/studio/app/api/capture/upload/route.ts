@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   ensureUploadDirectory,
   inferAssetTypeFromMime,
@@ -17,18 +18,18 @@ import {
   resolveEffectiveUploadsPath,
   saveCaptureUploadFile,
 } from "@uwe/database/server";
-import { guardStudioMutation } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 const ATTACHMENT_CAPTURE_TYPES = new Set(["file_image", "voice_memo"]);
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Datei erforderlich." }, { status: 400 });
+    return jsonError("Datei erforderlich.", 400);
   }
 
   const uploadOnly = formData.get("uploadOnly") === "1";
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload fehlgeschlagen.";
-      return NextResponse.json({ error: message }, { status: 400 });
+      return jsonError(message, 400);
     }
   }
 
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     mimeType = validated.mimeType;
   } catch (error) {
     if (error instanceof UploadValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     throw error;
   }

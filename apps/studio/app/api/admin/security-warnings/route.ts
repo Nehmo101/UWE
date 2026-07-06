@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createSecurityWarningService,
   getSecurityDashboardStatus,
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const user = context.user ?? (await requireAdminAccess());
   const body = (await request.json()) as { code?: string };
   if (!body.code?.trim()) {
-    return NextResponse.json({ error: "code erforderlich." }, { status: 400 });
+    return jsonError("code erforderlich.", 400);
   }
 
   const service = createSecurityWarningService(prisma);

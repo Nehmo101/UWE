@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   auditRequestFromHeaders,
   createAuditLogService,
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   if (!context.user) {
-    return NextResponse.json({ error: "Owner-Session erforderlich." }, { status: 401 });
+    return jsonError("Owner-Session erforderlich.", 401);
   }
 
   const db = createPrismaClient();
@@ -57,9 +58,9 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: 202 });
   } catch (error) {
     if (error instanceof HostUpdateError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return jsonError(error.message, error.status);
     }
-    return NextResponse.json({ error: "Host-Update konnte nicht gestartet werden." }, { status: 500 });
+    return jsonError("Host-Update konnte nicht gestartet werden.", 500);
   } finally {
     await db.$disconnect();
   }

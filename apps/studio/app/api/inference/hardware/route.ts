@@ -1,5 +1,5 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 /**
  * Deprecated: this endpoint used to call the legacy inbound RTX Agent
@@ -9,7 +9,7 @@ import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
  * cookbook runner in `tools/uwe-rtx-connector` and `docs/rtx-connector.md`.
  */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   return NextResponse.json(

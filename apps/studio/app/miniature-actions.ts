@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { MiniatureCollectionStatus } from "@uwe/database/server";
 import {
   createMiniatureCollectionService,
@@ -8,7 +9,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function miniatureService() {
   return createMiniatureCollectionService(prisma);
@@ -59,7 +59,7 @@ function readMiniatureFields(formData: FormData) {
 }
 
 export async function createMiniatureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const item = await miniatureService().createItem(readMiniatureFields(formData));
   revalidateMiniaturePaths();
@@ -67,7 +67,7 @@ export async function createMiniatureAction(formData: FormData) {
 }
 
 export async function updateMiniatureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await miniatureService().updateItem(id, readMiniatureFields(formData));
@@ -76,7 +76,7 @@ export async function updateMiniatureAction(formData: FormData) {
 }
 
 export async function deleteMiniatureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await miniatureService().deleteItem(String(formData.get("id")));
   revalidateMiniaturePaths();

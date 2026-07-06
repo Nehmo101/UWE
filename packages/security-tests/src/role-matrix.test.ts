@@ -22,14 +22,14 @@ interface RoleExpectations {
 
 const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
   anonymous: {
-    publicPage: "visible",
+    publicPage: "hidden",
     playerVisiblePage: "hidden",
     playerVisibleBlocks: "none",
     dmOnlyPage: "hidden",
     privateDraftPage: "hidden",
     hiddenSecretPage: "hidden",
     revealedSecretPage: "hidden",
-    publicMedia: "visible",
+    publicMedia: "hidden",
     privateMedia: "hidden",
     privateWorldDmPage: "hidden",
   },

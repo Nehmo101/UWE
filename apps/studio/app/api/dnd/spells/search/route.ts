@@ -1,3 +1,4 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   extractOpen5eSpellDescription,
@@ -6,10 +7,10 @@ import {
   resolveDndApiConfig,
 } from "@uwe/database/server";
 import { searchOpen5eSpells } from "@uwe/dnd-api";
-import { dndSpellSearchQuerySchema, parseQuery, requireStudioApiAuth } from "@uwe/security";
+import { dndSpellSearchQuerySchema, parseQuery } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, dndSpellSearchQuerySchema);

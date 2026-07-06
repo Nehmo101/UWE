@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { z } from "zod";
 import {
   createDevIdeaService,
@@ -7,13 +8,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import type { DevIdeaChatMessage } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  idSchema,
-  nonEmptyString,
-  parseBody,
-  parseParams,
-} from "@uwe/security";
+import { idSchema, nonEmptyString, parseBody, parseParams } from "@uwe/security";
 import { executeAiPrompt } from "@/src/lib/ai-prompt-handlers";
 import { composeIdeaChatPrompt } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
@@ -27,7 +22,7 @@ const ideaChatBodySchema = z.object({
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();
@@ -42,7 +37,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const ideas = createDevIdeaService(prisma);
   const idea = await ideas.getIdea(parsedParams.data.id);
   if (!idea) {
-    return NextResponse.json({ error: "Idee nicht gefunden." }, { status: 404 });
+    return jsonError("Idee nicht gefunden.", 404);
   }
 
   const transcript = parseDevIdeaTranscript(idea.chatTranscript);

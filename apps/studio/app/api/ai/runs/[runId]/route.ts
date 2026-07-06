@@ -1,11 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getRun, patchRun } from "../../../../../src/lib/ai-handlers";
-import {
-  guardStudioMutation,
-  idSchema,
-  parseBody,
-  parseParams,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { idSchema, parseBody, parseParams } from "@uwe/security";
 import { z } from "zod";
 
 const runIdParamSchema = z.object({ runId: idSchema });
@@ -19,7 +14,7 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, runIdParamSchema);
@@ -29,7 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, runIdParamSchema);

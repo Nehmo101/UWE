@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -26,8 +27,8 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
     if (code === "USER_NOT_FOUND") {
-      return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+      return jsonError("Benutzer nicht gefunden.", 404);
     }
-    return NextResponse.json({ error: "Reaktivierung fehlgeschlagen." }, { status: 400 });
+    return jsonError("Reaktivierung fehlgeschlagen.", 400);
   }
 }

@@ -1,3 +1,5 @@
+import type { AccessContext as ViewerAccessContext } from "@uwe/auth";
+import { canViewPage, filterBlocksForViewer, isWorldStaff } from "@uwe/auth";
 import type { PageType } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
@@ -344,6 +346,161 @@ export async function buildPageGraph(
   mode: GraphViewMode = "neighbors",
 ): Promise<WorldGraphData> {
   return buildWorldGraph(repo, worldSlug, context, {
+    focusPageId: pageId,
+    mode,
+  });
+}
+
+function collectWikiEdgesForViewer(
+  pages: PageWithBlocks[],
+  worldSlug: string,
+  ctx: ViewerAccessContext,
+  nodeIds: Set<string>,
+): GraphEdge[] {
+  const lookup = new Map<string, PageWithBlocks>();
+
+  for (const page of pages) {
+    const keys = [
+      normalizeLookupKey(page.title),
+      normalizeLookupKey(page.slug),
+      ...parseStringArray(page.aliases).map(normalizeLookupKey),
+    ];
+    for (const key of keys) {
+      if (!lookup.has(key)) {
+        lookup.set(key, page);
+      }
+    }
+  }
+
+  const edges: GraphEdge[] = [];
+  const seen = new Set<string>();
+
+  for (const page of pages) {
+    const blocks = filterBlocksForViewer(ctx, page.contentBlocks, page);
+    const content = combineBlockContent(blocks);
+    const parsedLinks = parseWikiLinks(content);
+
+    for (const raw of parsedLinks) {
+      const targetPage = lookup.get(normalizeLookupKey(raw.target));
+      if (!targetPage || !canViewPage(ctx, targetPage)) continue;
+      if (!nodeIds.has(page.id) || !nodeIds.has(targetPage.id)) continue;
+
+      const relationType = "wikilink";
+      const label = edgeLabel(relationType, raw.label ?? raw.target);
+      const edgeKey = `${page.id}->${targetPage.id}:${relationType}:${label}`;
+      if (seen.has(edgeKey)) continue;
+      seen.add(edgeKey);
+
+      edges.push({
+        id: edgeKey,
+        sourceId: page.id,
+        targetId: targetPage.id,
+        kind: "wiki",
+        relationType,
+        label,
+      });
+    }
+  }
+
+  return edges;
+}
+
+function collectRelationEdgesForViewer(
+  pageLinks: Awaited<ReturnType<UweRepository["listPageLinksForWorld"]>>,
+  ctx: ViewerAccessContext,
+  nodeIds: Set<string>,
+  pageById: Map<string, PageWithBlocks>,
+): GraphEdge[] {
+  const edges: GraphEdge[] = [];
+  const seen = new Set<string>();
+
+  for (const link of pageLinks) {
+    const source = pageById.get(link.sourcePageId);
+    const target = pageById.get(link.targetPageId);
+    if (!source || !target) continue;
+
+    if (!isWorldStaff(ctx)) {
+      if (!canViewPage(ctx, source) || !canViewPage(ctx, target)) {
+        continue;
+      }
+    }
+
+    if (!nodeIds.has(source.id) || !nodeIds.has(target.id)) continue;
+
+    const label = edgeLabel(link.relationType, link.label);
+    const edgeKey = `${source.id}->${target.id}:relation:${link.relationType}:${label}`;
+    if (seen.has(edgeKey)) continue;
+    seen.add(edgeKey);
+
+    edges.push({
+      id: edgeKey,
+      sourceId: source.id,
+      targetId: target.id,
+      kind: "relation",
+      relationType: link.relationType,
+      label,
+    });
+  }
+
+  return edges;
+}
+
+export async function buildWorldGraphForViewer(
+  repo: UweRepository,
+  worldSlug: string,
+  ctx: ViewerAccessContext,
+  filters: GraphFilters = {},
+): Promise<WorldGraphData> {
+  const mode = filters.mode ?? (filters.focusPageId ? "neighbors" : "full");
+  const pages = await repo.listPagesWithBlocksForGraphUnfiltered(worldSlug, {
+    campaignId: filters.campaignId,
+    types: filters.categories?.length
+      ? pageTypesForGraphCategories(filters.categories)
+      : undefined,
+  });
+
+  const visiblePages = isWorldStaff(ctx)
+    ? pages
+    : pages.filter((page) => canViewPage(ctx, page));
+
+  const viewerPages = visiblePages.map((page) => ({
+    ...page,
+    contentBlocks: isWorldStaff(ctx)
+      ? page.contentBlocks
+      : filterBlocksForViewer(ctx, page.contentBlocks, page),
+  }));
+
+  const nodes = viewerPages.map((page) => pageToGraphNode(worldSlug, page));
+  const filteredNodes = filterNodes(nodes, filters);
+  const nodeIds = new Set(filteredNodes.map((node) => node.id));
+  const pageById = new Map(viewerPages.map((page) => [page.id, page]));
+
+  const pageLinks = await repo.listPageLinksForWorld(worldSlug);
+  const edges = [
+    ...collectWikiEdgesForViewer(viewerPages, worldSlug, ctx, nodeIds),
+    ...collectRelationEdgesForViewer(pageLinks, ctx, nodeIds, pageById),
+    ...collectHierarchyEdges(viewerPages, nodeIds),
+  ];
+
+  const scopedEdges = filterEdgesForNodes(edges, nodeIds);
+  const focused = applyFocusMode(filteredNodes, scopedEdges, filters.focusPageId, mode);
+
+  return {
+    nodes: focused.nodes,
+    edges: focused.edges,
+    focusPageId: filters.focusPageId,
+    mode,
+  };
+}
+
+export async function buildPageGraphForViewer(
+  repo: UweRepository,
+  worldSlug: string,
+  pageId: string,
+  ctx: ViewerAccessContext,
+  mode: GraphViewMode = "neighbors",
+): Promise<WorldGraphData> {
+  return buildWorldGraphForViewer(repo, worldSlug, ctx, {
     focusPageId: pageId,
     mode,
   });

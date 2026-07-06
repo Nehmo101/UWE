@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
+import { buildWorldGraphForViewer } from "@uwe/database/graph-service";
 import {
-  buildWorldGraph,
   getAppRepository,
   getSystemSettings,
   isPortalGloballyEnabled,
@@ -46,7 +46,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const focusPageId = url.searchParams.get("focusPageId") ?? undefined;
   const mode = (url.searchParams.get("mode") as GraphViewMode | null) ?? "full";
 
-  const graph = await buildWorldGraph(repo, worldSlug, "portal", {
+  const graph = await buildWorldGraphForViewer(repo, worldSlug, ctx, {
     focusPageId,
     mode: focusPageId ? mode : "full",
   });

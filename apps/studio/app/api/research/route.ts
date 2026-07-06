@@ -1,11 +1,12 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createJobService, createResearchService, prisma } from "@uwe/database/server";
-import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
@@ -25,18 +26,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   let body: { query?: string; worldId?: string; contextMode?: "dnd_brain" | "life_brain" | "open_web" };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    return jsonError("Ungültiger JSON-Body.", 400);
   }
 
   if (!body.query?.trim()) {
-    return NextResponse.json({ error: "query ist erforderlich." }, { status: 400 });
+    return jsonError("query ist erforderlich.", 400);
   }
 
   try {

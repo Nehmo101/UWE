@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   auditRequestFromHeaders,
   createPrismaClient,
@@ -16,7 +17,7 @@ async function requireSessionUser(request: Request) {
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
   if (!user) {
     return {
-      error: NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 }),
+      error: jsonError("Anmeldung erforderlich.", 401),
     } as const;
   }
 
@@ -44,7 +45,7 @@ export async function handleTwoFactorSetup(request: Request) {
   const twoFactor = createTwoFactorService(db);
   try {
     if (await twoFactor.isEnabled(session.user.id)) {
-      return NextResponse.json({ error: "2FA ist bereits aktiv." }, { status: 400 });
+      return jsonError("2FA ist bereits aktiv.", 400);
     }
 
     const setup = await twoFactor.beginSetup(
@@ -64,7 +65,7 @@ export async function handleTwoFactorActivate(request: Request) {
   const body = (await request.json()) as { code?: string };
   const code = body.code?.trim() ?? "";
   if (!code) {
-    return NextResponse.json({ error: "Code ist erforderlich." }, { status: 400 });
+    return jsonError("Code ist erforderlich.", 400);
   }
 
   const ip = clientIpFromHeaders(request.headers);
@@ -89,7 +90,7 @@ export async function handleTwoFactorActivate(request: Request) {
         targetId: session.user.id,
         request: auditRequestFromHeaders(request.headers),
       });
-      return NextResponse.json({ error: "Ungültiger Code." }, { status: 400 });
+      return jsonError("Ungültiger Code.", 400);
     }
 
     await logAuditEvent(db, {
@@ -116,14 +117,14 @@ export async function handleTwoFactorDisable(request: Request) {
   const body = (await request.json()) as { code?: string };
   const code = body.code?.trim() ?? "";
   if (!code) {
-    return NextResponse.json({ error: "Code ist erforderlich." }, { status: 400 });
+    return jsonError("Code ist erforderlich.", 400);
   }
 
   const db = createPrismaClient();
   const twoFactor = createTwoFactorService(db);
   try {
     if (!(await twoFactor.isEnabled(session.user.id))) {
-      return NextResponse.json({ error: "2FA ist nicht aktiv." }, { status: 400 });
+      return jsonError("2FA ist nicht aktiv.", 400);
     }
 
     const challenge = await twoFactor.createLoginChallenge(session.user.id);
@@ -136,7 +137,7 @@ export async function handleTwoFactorDisable(request: Request) {
         targetId: session.user.id,
         request: auditRequestFromHeaders(request.headers),
       });
-      return NextResponse.json({ error: "Ungültiger Code." }, { status: 400 });
+      return jsonError("Ungültiger Code.", 400);
     }
 
     await twoFactor.disable(session.user.id);

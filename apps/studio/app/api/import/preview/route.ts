@@ -1,13 +1,9 @@
 import { postImportPreview } from "../../../../src/lib/import-handlers";
-import {
-  guardStudioMutation,
-  importPreviewBodySchema,
-  parseBody,
-  safeHandlerError,
-} from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { importPreviewBodySchema, parseBody, safeHandlerError } from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "import" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "import" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, importPreviewBodySchema);

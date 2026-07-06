@@ -821,10 +821,10 @@ export function getPersistentPathConfiguration(
 }
 
 export function isGuestPortalAccessAllowed(
-  settings: UweSystemSettings,
-  worldGuestModeEnabled: boolean,
+  _settings: UweSystemSettings,
+  _worldGuestModeEnabled: boolean,
 ): boolean {
-  return settings.portal.guestAccessEnabled && worldGuestModeEnabled;
+  return false;
 }
 
 export function isMaintenanceModeActive(settings: UweSystemSettings): boolean {

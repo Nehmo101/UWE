@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createAuthService,
   createPrismaClient,
@@ -18,7 +19,6 @@ import {
 import { normalizeMailInboxLimit, normalizeMailSyncInterval } from "@uwe/database/mail-settings";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { syncBackupScheduleFromSettings } from "@/src/lib/backup-schedule-sync";
 import { syncBriefingScheduleFromSettings } from "@/src/lib/briefing-schedule-sync";
 import { syncMailScheduleFromSettings } from "@/src/lib/mail-schedule-sync";
@@ -32,7 +32,7 @@ function parseBoolean(value: FormDataEntryValue | null): boolean {
 }
 
 export async function updateSettingsAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const tab = String(formData.get("tab") || "general");
   const update: UweSystemSettingsUpdate = {};
@@ -236,7 +236,7 @@ export async function updateSettingsAction(formData: FormData) {
 }
 
 export async function setWorldGuestModeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const worldId = String(formData.get("worldId"));
   const enabled = parseBoolean(formData.get("guestModeEnabled"));

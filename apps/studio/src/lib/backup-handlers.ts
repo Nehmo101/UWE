@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import fs from "node:fs";
 import {
   createActivityLogService,
@@ -21,7 +22,6 @@ import {
 import type { UweRole } from "@uwe/auth";
 import { getUserFromRequestCookieHeader } from "./auth-session";
 import { enqueueAndDispatch, runJob } from "./job-executor";
-import { jsonError } from "./api-response";
 import { listStudioBackups } from "./backup-paths";
 
 export interface BackupCreateBody {
@@ -90,7 +90,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
       });
       const completed = await runJob(job.id);
       if (completed?.status === "failed") {
-        return NextResponse.json({ error: completed.errorMessage ?? "Backup fehlgeschlagen." }, { status: 500 });
+        return jsonError(completed.errorMessage ?? "Backup fehlgeschlagen.", 500);
       }
       const result = completed?.result as { filename?: string; path?: string; manifest?: unknown } | null;
       return NextResponse.json({
@@ -127,7 +127,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
       targetType: "system",
       summary: `Backup-Erstellung fehlgeschlagen: ${message}`,
     });
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, 500);
   }
 }
 
@@ -278,6 +278,6 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
       targetType: "system",
       summary: `Restore fehlgeschlagen: ${message}`,
     });
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, 500);
   }
 }

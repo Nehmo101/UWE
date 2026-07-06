@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createDevAgentJobService,
   prisma,
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
   const config = resolveAgentJobsConfig();
   if (!config.enabled) {
-    return NextResponse.json({ error: "Agent Jobs sind deaktiviert." }, { status: 403 });
+    return jsonError("Agent Jobs sind deaktiviert.", 403);
   }
 
   const parsed = await parseBody(request, agentJobCallbackSchema);
@@ -41,6 +42,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Callback fehlgeschlagen.";
     const status = message.includes("nicht gefunden") ? 404 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(message, status);
   }
 }

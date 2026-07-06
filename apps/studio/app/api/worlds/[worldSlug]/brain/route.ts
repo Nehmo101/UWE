@@ -1,18 +1,12 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  parseBody,
-  parseParams,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-  safeHandlerError,
-  worldSlugParamSchema,
-} from "@uwe/security";
+import { parseBody, parseParams, passthroughBodySchema, safeHandlerError, worldSlugParamSchema } from "@uwe/security";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
@@ -24,7 +18,7 @@ function brainService() {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);
@@ -39,7 +33,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   try {
     const world = await repo.getWorldBySlug(worldSlug);
     if (!world) {
-      return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+      return jsonError("Welt nicht gefunden.", 404);
     }
 
     const campaign = campaignSlug
@@ -65,7 +59,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);
@@ -89,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   };
 
   if (!body.kind || !body.title?.trim()) {
-    return NextResponse.json({ error: "kind und title sind erforderlich." }, { status: 400 });
+    return jsonError("kind und title sind erforderlich.", 400);
   }
 
   const { worldSlug } = parsedParams.data;
@@ -97,7 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const world = await repo.getWorldBySlug(worldSlug);
     if (!world) {
-      return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+      return jsonError("Welt nicht gefunden.", 404);
     }
 
     if (body.kind === "document") {

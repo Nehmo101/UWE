@@ -1,14 +1,10 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { getAppRepository, validateSettingsUpdate } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  parseBody,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { parseBody, passthroughBodySchema } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const settings = await getAppRepository().getSystemSettings();
@@ -16,7 +12,7 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "setup" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);

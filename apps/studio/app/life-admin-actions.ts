@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type {
   ContractBillingInterval,
   ContractStatus,
@@ -18,7 +19,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 function lifeAdmin() {
@@ -53,7 +53,7 @@ function revalidateAdminPaths() {
 }
 
 export async function createProjectAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().createPersonalProject({
     name: String(formData.get("name") || "").trim(),
@@ -72,7 +72,7 @@ export async function createProjectAction(formData: FormData) {
 }
 
 export async function updateProjectAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await lifeAdmin().updatePersonalProject(id, {
@@ -91,7 +91,7 @@ export async function updateProjectAction(formData: FormData) {
 }
 
 export async function updateProjectStatusAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as PersonalProjectStatus;
@@ -105,7 +105,7 @@ export async function updateProjectStatusAction(formData: FormData) {
 }
 
 export async function deleteProjectAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deletePersonalProject(String(formData.get("id")));
   revalidateAdminPaths();
@@ -113,7 +113,7 @@ export async function deleteProjectAction(formData: FormData) {
 }
 
 export async function advanceWorkshopStatusAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await lifeAdmin().advanceWorkshopStatus(id);
@@ -121,7 +121,7 @@ export async function advanceWorkshopStatusAction(formData: FormData) {
 }
 
 export async function createContractAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().createContractExpense({
     name: String(formData.get("name") || "").trim(),
@@ -144,7 +144,7 @@ export async function createContractAction(formData: FormData) {
 }
 
 export async function updateContractAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await lifeAdmin().updateContractExpense(id, {
@@ -165,7 +165,7 @@ export async function updateContractAction(formData: FormData) {
 }
 
 export async function deleteContractAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deleteContractExpense(String(formData.get("id")));
   await createCalendarService(prisma).syncContractDeadlinesToCalendar();
@@ -173,7 +173,7 @@ export async function deleteContractAction(formData: FormData) {
 }
 
 export async function syncAiUsageContractAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const periodRaw = String(formData.get("period") || "current_month");
   const period =
@@ -187,7 +187,7 @@ export async function syncAiUsageContractAction(formData: FormData) {
 }
 
 export async function createHardwareAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const runbook = String(formData.get("runbook") || "").trim();
 
@@ -226,7 +226,7 @@ export async function createHardwareAction(formData: FormData) {
 }
 
 export async function updateHardwareAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const servicesRaw = String(formData.get("services") || "")
@@ -266,7 +266,7 @@ export async function updateHardwareAction(formData: FormData) {
 }
 
 export async function addHardwareErrorAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const deviceId = String(formData.get("deviceId"));
   const affectedRaw = String(formData.get("affectedServices") || "")
@@ -283,14 +283,14 @@ export async function addHardwareErrorAction(formData: FormData) {
 }
 
 export async function recordHardwareCheckAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().recordHardwareCheck(String(formData.get("deviceId")));
   revalidateAdminPaths();
 }
 
 export async function toggleHardwareSetupStepAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const deviceId = String(formData.get("deviceId"));
   const stepIndex = Number.parseInt(String(formData.get("stepIndex")), 10);
@@ -299,7 +299,7 @@ export async function toggleHardwareSetupStepAction(formData: FormData) {
 }
 
 export async function deleteHardwareAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deleteHardwareDevice(String(formData.get("id")));
   revalidateAdminPaths();
@@ -313,7 +313,7 @@ function parseCommaTags(formData: FormData, field = "tags"): string[] {
 }
 
 export async function createLifeBrainDocumentAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const document = await lifeAdmin().createPersonalBrainDocument({
     title: String(formData.get("title") || "").trim(),
@@ -338,7 +338,7 @@ export async function createLifeBrainDocumentAction(formData: FormData) {
 }
 
 export async function createLifeBrainFactAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().createPersonalBrainFact({
     title: String(formData.get("title") || "").trim(),
@@ -351,7 +351,7 @@ export async function createLifeBrainFactAction(formData: FormData) {
 }
 
 export async function updateLifeBrainDocumentTagsAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const document = await lifeAdmin().updatePersonalBrainDocument(id, {
@@ -374,7 +374,7 @@ export async function updateLifeBrainDocumentTagsAction(formData: FormData) {
 }
 
 export async function updateLifeBrainFactTagsAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().updatePersonalBrainFact(String(formData.get("id")), {
     tags: parseCommaTags(formData),
@@ -383,21 +383,21 @@ export async function updateLifeBrainFactTagsAction(formData: FormData) {
 }
 
 export async function deleteLifeBrainDocumentAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deletePersonalBrainDocument(String(formData.get("id")));
   revalidateAdminPaths();
 }
 
 export async function deleteLifeBrainFactAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deletePersonalBrainFact(String(formData.get("id")));
   revalidateAdminPaths();
 }
 
 export async function setFavoriteWorldAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const slug = String(formData.get("favoriteWorldSlug") || "").trim() || null;
   await createSettingsService(prisma).updateSettings({

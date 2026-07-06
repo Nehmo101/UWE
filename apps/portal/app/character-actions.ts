@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { parseFormDataOrThrow, playerCharacterBlockSchema } from "@uwe/security";
@@ -7,6 +8,7 @@ import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
 
 export async function updatePlayerCharacterBlockAction(formData: FormData) {
+  await requirePortalActionAuth();
   const { worldSlug, pageSlug, blockId, content, returnPath } = parseFormDataOrThrow(
     formData,
     playerCharacterBlockSchema,

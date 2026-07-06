@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/src/lib/api-response";
 import { parseConnectorBearer } from "@uwe/connector";
 import { type Connector, createConnectorService, prisma } from "@uwe/database/server";
 import { enforceRateLimit } from "@uwe/security";
@@ -40,7 +41,7 @@ export async function authenticateConnector(request: Request): Promise<Connector
   if (!connector) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Ungültiges Connector-Token." }, { status: 401 }),
+      response: jsonError("Ungültiges Connector-Token.", 401),
     };
   }
   if (connector.disabled) {

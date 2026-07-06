@@ -1,11 +1,11 @@
+import { guardStudioAdminApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@uwe/security";
 import { getStudioCookbookDashboard } from "@/src/lib/cookbook-dashboard";
 
 /** Admin Cookbook JSON — hardware fit, local models, diagnostics. No secrets. */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "setup" });
+  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
   if (authError) {
     return authError;
   }

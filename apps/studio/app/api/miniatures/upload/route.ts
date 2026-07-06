@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { inferAssetTypeFromMime } from "@uwe/assets";
 import {
   getAppRepository,
@@ -9,16 +10,16 @@ import {
   saveCaptureUploadFile,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import { guardStudioMutation } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Datei erforderlich." }, { status: 400 });
+    return jsonError("Datei erforderlich.", 400);
   }
 
   const maxUploadBytes = getUweEnvOrNull()?.maxUploadBytes ?? 50 * 1024 * 1024;
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 
   const repo = getAppRepository();

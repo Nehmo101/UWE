@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -27,7 +28,7 @@ export async function POST(request: Request, context: RouteContext) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
     switch (code) {
       case "USER_NOT_FOUND":
-        return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+        return jsonError("Benutzer nicht gefunden.", 404);
       case "LAST_OWNER":
         return NextResponse.json(
           { error: "Der letzte aktive Owner kann nicht gelöscht werden." },
@@ -39,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
           { status: 400 },
         );
       default:
-        return NextResponse.json({ error: "Löschen fehlgeschlagen." }, { status: 400 });
+        return jsonError("Löschen fehlgeschlagen.", 400);
     }
   }
 }

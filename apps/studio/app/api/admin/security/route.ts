@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { canAccessSecurityDashboard } from "@uwe/auth";
 import {
   assertSecurityDashboardHasNoSecrets,
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   if (context.authMethod === "session" && context.user && !canAccessSecurityDashboard(context.user.role)) {
-    return NextResponse.json({ error: "Nur OWNER/ADMIN dürfen das Security Dashboard sehen." }, { status: 403 });
+    return jsonError("Nur OWNER/ADMIN dürfen das Security Dashboard sehen.", 403);
   }
 
   const status = await getSecurityDashboardStatus(prisma);

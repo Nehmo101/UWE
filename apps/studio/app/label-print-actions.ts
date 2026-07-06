@@ -1,4 +1,5 @@
 "use server";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { capabilityOfflineMessage, type LabelPrintFormat } from "@uwe/connector";
 import { createConnectorService, createLabelPrintQueueService, prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -7,6 +8,7 @@ import { getCurrentAuthUser } from "@/src/lib/auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 export async function refreshPrintersAction(formData: FormData) {
+  await requireStudioActionAuth();
   const user = await getCurrentAuthUser();
   if (!user) redirect("/login");
   const returnTo = String(formData.get("returnTo") || "/system/printers");
@@ -19,6 +21,7 @@ export async function refreshPrintersAction(formData: FormData) {
 }
 
 export async function enqueueLabelPrintAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug") || "");
   const printListId = String(formData.get("printListId") || "");
   const printerKey = String(formData.get("printerKey") || "").trim();

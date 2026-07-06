@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@uwe/database/server";
@@ -8,7 +9,6 @@ import {
   type PromptTemplateCategory,
   type PromptTemplateInput,
 } from "@uwe/database/prompt-library";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function library() {
   return createPromptLibraryService(prisma);
@@ -28,14 +28,14 @@ function readForm(formData: FormData): PromptTemplateInput {
 }
 
 export async function createPromptAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const prompt = await library().create(readForm(formData));
   revalidatePath("/prompts");
   redirect(`/prompts/${prompt.id}`);
 }
 
 export async function updatePromptAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   await library().update(id, readForm(formData));
   revalidatePath("/prompts");
@@ -44,7 +44,7 @@ export async function updatePromptAction(formData: FormData) {
 }
 
 export async function deletePromptAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   await library().remove(String(formData.get("id")));
   revalidatePath("/prompts");
   redirect("/prompts");

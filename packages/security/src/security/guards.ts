@@ -1,6 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import type { ApiTokenScope, AuthUser } from "@uwe/auth";
-import { evaluateAdminGate, isApiTokenFormat, parseBearerToken, type AdminGateResult } from "@uwe/auth";
+import {
+  evaluateAdminGate,
+  getRequiredRolesForApiPath,
+  hasAnyRole,
+  isApiTokenFormat,
+  parseBearerToken,
+  type AdminGateResult,
+} from "@uwe/auth";
 import { isCrossSiteBrowserRequest, isSameOriginBrowserRequest } from "./csrf";
 import { csrfError, forbidden, unauthorized } from "./errors";
 import {
@@ -87,6 +94,50 @@ export function requireAdminApiAuth(
   });
 
   return adminGateToResponse(gate);
+}
+
+/**
+ * Studio API guard with CSRF + session/API-token role enforcement.
+ * Every protected Studio API route must resolve auth context and call this.
+ */
+export function requireStudioRoleApiAuth(
+  request: Request,
+  context: ApiAuthContext,
+  options: StudioGuardOptions & { pathname?: string } = {},
+): Response | null {
+  const base = requireStudioApiAuth(request, options);
+  if (base) {
+    return base;
+  }
+
+  const pathname =
+    options.pathname ??
+    (() => {
+      try {
+        return new URL(request.url).pathname;
+      } catch {
+        return "/";
+      }
+    })();
+
+  const requiredRoles = getRequiredRolesForApiPath(pathname);
+  if (!requiredRoles) {
+    return null;
+  }
+
+  if (context.authMethod === "env_token") {
+    return null;
+  }
+
+  if (!context.user) {
+    return unauthorized("Anmeldung erforderlich.");
+  }
+
+  if (!hasAnyRole(context.user, requiredRoles)) {
+    return forbidden("Kein Studio-Zugriff für diese Rolle.");
+  }
+
+  return null;
 }
 
 /** Shorthand for mutating Studio routes with CSRF + optional rate limit. */

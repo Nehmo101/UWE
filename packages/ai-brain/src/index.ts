@@ -2,9 +2,13 @@ import type { UweRepository } from "@uwe/database/server";
 import {
   legacyContextMode,
   providerIdToMode,
-  routeAiRequest,
 } from "./router";
-import { executeAiGatewayRequest, type AiGatewayUserContext, type AiGatewayDeps } from "./gateway";
+import {
+  AI_GATEWAY_SYSTEM_USER,
+  executeAiGatewayRequest,
+  type AiGatewayUserContext,
+  type AiGatewayDeps,
+} from "./gateway";
 import {
   createApiKeyStoreFromEnv,
   resolveAiBrainSettings,
@@ -124,7 +128,12 @@ export interface GenerateAiTaskInput {
   useMock?: boolean;
   /** When set, routes through AI Gateway (permissions, budget, logging). */
   user?: AiGatewayUserContext;
+  /** Include DnD brain retrieval alongside page context (default: true). */
+  withBrain?: boolean;
   feature?: string;
+  /** Optional gateway deps for tests or isolated DB routing. */
+  gatewayService?: AiGatewayDeps["gatewayService"];
+  prisma?: AiGatewayDeps["prisma"];
 }
 
 export interface GenerateAiTaskBySlugInput extends Omit<GenerateAiTaskInput, "worldId" | "pageId"> {
@@ -167,7 +176,7 @@ export async function generateAiTask(
 
   const routerRequest = {
     providerMode: providerIdToMode(input.providerId),
-    contextMode: legacyContextMode({ withBrain: false }),
+    contextMode: legacyContextMode({ withBrain: input.withBrain ?? true }),
     taskType: input.taskType,
     worldSlug,
     pageSlug,
@@ -179,16 +188,18 @@ export async function generateAiTask(
     options: input.options,
   };
 
-  const routed = input.user
-    ? await executeAiGatewayRequest(
-        { repo } as AiGatewayDeps,
-        {
-          ...routerRequest,
-          user: input.user,
-          feature: input.feature ?? "AI_DND_USE",
-        },
-      )
-    : await routeAiRequest({ repo }, routerRequest);
+  const routed = await executeAiGatewayRequest(
+    {
+      repo,
+      gatewayService: input.gatewayService,
+      prisma: input.prisma,
+    } as AiGatewayDeps,
+    {
+      ...routerRequest,
+      user: input.user ?? AI_GATEWAY_SYSTEM_USER,
+      feature: input.feature ?? "AI_DND_USE",
+    },
+  );
 
   return {
     context: routed.context,
@@ -254,6 +265,7 @@ export {
   resolveConnectorAwareImageProviderConfig,
   runAiGatewayFallbackTest,
   simulateGatewayRouting,
+  AI_GATEWAY_SYSTEM_USER,
   AiGatewayAccessDeniedError,
   AiGatewayBudgetExceededError,
   AiGatewayDisabledError,

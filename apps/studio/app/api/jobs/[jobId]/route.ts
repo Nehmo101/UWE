@@ -1,11 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getJobDetail, postCancelJob, postRetryJob } from "../../../../src/lib/job-api-handlers";
-import {
-  guardStudioMutation,
-  idSchema,
-  parseBody,
-  parseParams,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { idSchema, parseBody, parseParams } from "@uwe/security";
 import { z } from "zod";
 
 const jobIdParamSchema = z.object({ jobId: idSchema });
@@ -19,7 +14,7 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, jobIdParamSchema);
@@ -29,7 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, jobIdParamSchema);

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { scoreMailPriority } from "./mail-priority-service";
+import { scoreMailPriority } from "./priority";
 
 describe("mail-priority-service", () => {
   it("flags urgent keywords", () => {

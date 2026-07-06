@@ -1,17 +1,12 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailRecipientService,
   prisma,
 } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  parseBody,
-  parseQuery,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-  slugSchema,
-} from "@uwe/security";
+import { parseBody, parseQuery, passthroughBodySchema, slugSchema } from "@uwe/security";
 import { z } from "zod";
 
 const mailRecipientsQuerySchema = z.object({
@@ -19,7 +14,7 @@ const mailRecipientsQuerySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, mailRecipientsQuerySchema);
@@ -37,7 +32,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);
@@ -48,7 +43,7 @@ export async function POST(request: Request) {
   const worldSlug = String(payload.worldSlug ?? "").trim();
 
   if (!worldSlug) {
-    return NextResponse.json({ error: "worldSlug erforderlich." }, { status: 400 });
+    return jsonError("worldSlug erforderlich.", 400);
   }
 
   const recipients = createMailRecipientService(prisma);
@@ -76,5 +71,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ group });
   }
 
-  return NextResponse.json({ error: "Unbekannte Aktion." }, { status: 400 });
+  return jsonError("Unbekannte Aktion.", 400);
 }

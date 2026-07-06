@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   auditRequestFromHeaders,
   createNlCommandService,
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
 
   const actor = context.user;
   if (!actor) {
-    return NextResponse.json({ error: "Authentifizierung erforderlich." }, { status: 401 });
+    return jsonError("Authentifizierung erforderlich.", 401);
   }
 
   const body = (await request.json()) as {
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
   };
 
   if (!isNlCommandIntent(body.intent)) {
-    return NextResponse.json({ error: "Unbekannter oder ungültiger Befehl." }, { status: 400 });
+    return jsonError("Unbekannter oder ungültiger Befehl.", 400);
   }
 
   const service = createNlCommandService(prisma);

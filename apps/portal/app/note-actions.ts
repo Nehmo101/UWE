@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import {
   canCreatePlayerNote,
@@ -46,6 +47,7 @@ async function getAuthContext(worldSlug: string) {
 }
 
 export async function createPlayerNoteAction(formData: FormData) {
+  await requirePortalActionAuth();
   const {
     worldSlug,
     campaignId,
@@ -84,6 +86,7 @@ export async function createPlayerNoteAction(formData: FormData) {
 }
 
 export async function submitPlayerNoteAction(formData: FormData) {
+  await requirePortalActionAuth();
   const { worldSlug, noteId, returnPath } = parseFormDataOrThrow(formData, playerNoteIdSchema);
   const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
@@ -106,6 +109,7 @@ export async function submitPlayerNoteAction(formData: FormData) {
 }
 
 export async function updatePlayerNoteAction(formData: FormData) {
+  await requirePortalActionAuth();
   const { worldSlug, noteId, content, returnPath } = parseFormDataOrThrow(
     formData,
     playerNoteUpdateSchema,

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 import { requireAdminAccess } from "@/src/lib/auth";
+import { jsonError } from "@/src/lib/api-response";
 
 export async function requireAdminMailApi(request: Request) {
   const context = await resolveStudioApiAuthContext(request);
@@ -27,6 +27,5 @@ export async function requireAdminMailMutation(request: Request) {
   return { error: null, context, user };
 }
 
-export function mailApiError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+/** @deprecated Use jsonError from @/src/lib/api-response */
+export const mailApiError = jsonError;

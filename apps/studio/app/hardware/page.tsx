@@ -5,10 +5,11 @@ import {
   HARDWARE_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { AdminCreateCard, AdminEntityForm, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
 import { SystemHubBanner } from "@/components/SystemHubBanner";
 import { HostUpdatePanel } from "@/components/HostUpdatePanel";
 import { getCurrentAuthUser } from "@/src/lib/auth";
+import { formatStudioDateTime } from "@/src/lib/format";
 import {
   addHardwareErrorAction,
   createHardwareAction,
@@ -18,11 +19,6 @@ import {
   updateHardwareAction,
 } from "../life-admin-actions";
 import { getHomelabCockpitData } from "@/src/lib/homelab-dashboard";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function severityStatus(severity: string, ok: boolean): "ok" | "warn" | "error" {
   if (severity === "ok" || ok) return "ok";
@@ -45,11 +41,11 @@ export default async function HardwarePage() {
   const canTriggerHostUpdate = user?.role === "owner";
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Hardware / Homelab" }]} />}>
-      <PageHeader
-        title="Hardware / Homelab"
-        summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
-      />
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Hardware / Homelab" }]} />}
+      title="Hardware / Homelab"
+      summary="Kontrollzentrum für Host, RTX, Cloudflare, Dienste, Runbooks und Security."
+    >
       <SystemHubBanner />
       <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
 
@@ -69,7 +65,7 @@ export default async function HardwarePage() {
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Service-Status</h2>
         <p className="uwe-dashboard-muted">
-          Stand: {DATE_FORMAT.format(new Date(cockpit.timestamp))} ·{" "}
+          Stand: {formatStudioDateTime(cockpit.timestamp)} ·{" "}
           <Link href="/admin/status">Admin Status →</Link>
         </p>
         <div className="uwe-homelab-service-grid">
@@ -135,7 +131,7 @@ export default async function HardwarePage() {
               <article key={`${entry.deviceId}-${entry.id}`} className="uwe-today-card">
                 <h3>{entry.problem}</h3>
                 <p>
-                  {entry.deviceName} · {DATE_FORMAT.format(new Date(entry.occurredAt))}
+                  {entry.deviceName} · {formatStudioDateTime(entry.occurredAt)}
                 </p>
                 {entry.affectedServices && entry.affectedServices.length > 0 ? (
                   <p className="uwe-dashboard-muted">
@@ -149,72 +145,60 @@ export default async function HardwarePage() {
         )}
       </section>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neues Gerät</h2>
-        <form action={createHardwareAction} className="uwe-brain-create-form">
-          <label>
-            Name
-            <input name="name" required />
-          </label>
-          <label>
-            Rolle
-            <input name="role" placeholder="z. B. UWE Host, RTX-Rechner, Cloudflare" />
-          </label>
-          <label>
-            Status
-            <select name="status" defaultValue="planned">
-              {Object.values(HardwareStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {HARDWARE_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Hostname
-            <input name="hostname" />
-          </label>
-          <label>
-            IP (lokal)
-            <input name="ipAddress" placeholder="192.168.x.x" />
-          </label>
-          <label>
-            Lokale URL
-            <input name="localUrl" placeholder="http://192.168.x.x:3000" />
-          </label>
-          <label>
-            Öffentliche URL (nur UWE Host — nie RTX/Ollama)
-            <input name="publicUrl" />
-          </label>
-          <label>
-            Betriebssystem
-            <input name="operatingSystem" />
-          </label>
-          <label>
-            Specs (eine Zeile pro Eintrag)
-            <textarea name="specs" rows={2} placeholder="CPU: …&#10;RAM: 32 GB" />
-          </label>
-          <label>
-            Dienste (eine Zeile pro Dienst)
-            <textarea name="services" rows={2} placeholder="UWE Studio&#10;PostgreSQL" />
-          </label>
-          <label>
-            Setup-Schritte (eine Zeile pro Schritt)
-            <textarea name="setupSteps" rows={3} />
-          </label>
-          <label>
-            Fehlernotizen
-            <textarea name="errorNotes" rows={2} />
-          </label>
-          <label>
-            Notizen
-            <textarea name="notes" rows={2} />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Gerät anlegen
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neues Gerät">
+        <AdminEntityForm
+          action={createHardwareAction}
+          submitLabel="Gerät anlegen"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            {
+              name: "role",
+              label: "Rolle",
+              placeholder: "z. B. UWE Host, RTX-Rechner, Cloudflare",
+            },
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              defaultValue: "planned",
+              options: Object.values(HardwareStatusEnum).map((status) => ({
+                value: status,
+                label: HARDWARE_STATUS_LABELS[status],
+              })),
+            },
+            { name: "hostname", label: "Hostname" },
+            { name: "ipAddress", label: "IP (lokal)", placeholder: "192.168.x.x" },
+            { name: "localUrl", label: "Lokale URL", placeholder: "http://192.168.x.x:3000" },
+            {
+              name: "publicUrl",
+              label: "Öffentliche URL (nur UWE Host — nie RTX/Ollama)",
+            },
+            { name: "operatingSystem", label: "Betriebssystem" },
+            {
+              name: "specs",
+              label: "Specs (eine Zeile pro Eintrag)",
+              type: "textarea",
+              rows: 2,
+              placeholder: "CPU: …\nRAM: 32 GB",
+            },
+            {
+              name: "services",
+              label: "Dienste (eine Zeile pro Dienst)",
+              type: "textarea",
+              rows: 2,
+              placeholder: "UWE Studio\nPostgreSQL",
+            },
+            {
+              name: "setupSteps",
+              label: "Setup-Schritte (eine Zeile pro Schritt)",
+              type: "textarea",
+              rows: 3,
+            },
+            { name: "errorNotes", label: "Fehlernotizen", type: "textarea", rows: 2 },
+            { name: "notes", label: "Notizen", type: "textarea", rows: 2 },
+          ]}
+        />
+      </AdminCreateCard>
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Geräte ({cockpit.deviceCards.length})</h2>
@@ -258,7 +242,7 @@ export default async function HardwarePage() {
                       <dt>Letzte Prüfung</dt>
                       <dd>
                         {device.lastCheckedAt
-                          ? DATE_FORMAT.format(new Date(device.lastCheckedAt))
+                          ? formatStudioDateTime(device.lastCheckedAt)
                           : "—"}
                       </dd>
                     </div>
@@ -439,6 +423,6 @@ export default async function HardwarePage() {
           </div>
         )}
       </section>
-    </StudioShell>
+    </AdminModulePage>
   );
 }

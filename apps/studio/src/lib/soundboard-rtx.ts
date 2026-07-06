@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/src/lib/api-response";
 import { capabilityOfflineMessage, type ConnectorJobType } from "@uwe/connector";
 import { createConnectorService, getDbWorldBySlug, prisma } from "@uwe/database/server";
 
@@ -35,7 +36,7 @@ export async function dispatchSoundboardRtx(
 ): Promise<NextResponse> {
   const world = await getDbWorldBySlug(worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+    return jsonError("Welt nicht gefunden.", 404);
   }
 
   const service = createConnectorService(prisma);

@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -164,6 +165,7 @@ function revalidateCharacterPaths(worldSlug: string, path: string) {
 }
 
 export async function updateCharacterSheetAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSheetUpdateSchema);
   const path = resolveReturnPath(parsed);
 
@@ -203,6 +205,7 @@ export async function updateCharacterSheetAction(formData: FormData) {
 }
 
 export async function applyPortalLevelUpAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterLevelUpApplySchema);
   const path = resolveReturnPath(parsed);
   const { db, auth, ctx } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
@@ -231,6 +234,7 @@ export async function applyPortalLevelUpAction(formData: FormData) {
 }
 
 export async function addSpellAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellAddSchema);
   const path = resolveReturnPath(parsed);
   const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
@@ -256,6 +260,7 @@ export async function addSpellAction(formData: FormData) {
 }
 
 export async function removeSpellAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellRemoveSchema);
   const path = resolveReturnPath(parsed);
   const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
@@ -271,6 +276,7 @@ export async function removeSpellAction(formData: FormData) {
 }
 
 export async function togglePreparedAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellTogglePreparedSchema);
   const path = resolveReturnPath(parsed);
   const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
@@ -290,6 +296,7 @@ export async function togglePreparedAction(formData: FormData) {
 }
 
 export async function addHomebrewSpellAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellHomebrewAddSchema);
   const path = resolveReturnPath(parsed);
   const homebrew = parseHomebrewSpellInput({
@@ -325,6 +332,7 @@ export async function addHomebrewSpellAction(formData: FormData) {
 }
 
 export async function searchOpen5eSpellsAction(query: string) {
+  await requirePortalActionAuth();
   const user = await getCurrentUser();
   if (!user) {
     throw new Error("Nicht angemeldet");

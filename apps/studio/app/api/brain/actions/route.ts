@@ -1,8 +1,8 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getBrainActions } from "../../../../src/lib/brain-handlers";
-import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = await requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   return getBrainActions();

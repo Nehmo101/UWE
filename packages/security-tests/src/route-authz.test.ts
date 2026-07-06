@@ -4,8 +4,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, it } from "node:test";
 import { requireStudioApiAuth } from "@uwe/security";
+import {
+  assertStudioRouteProtected,
+  listProtectedStudioApiRoutes,
+  listStudioApiRouteFiles,
+  STUDIO_AUTH_GUARD_PATTERN,
+  STUDIO_DELEGATED_GUARD_ROUTES,
+  STUDIO_PUBLIC_API_ALLOWLIST,
+  STUDIO_PUBLIC_READ_API_ROUTES,
+} from "./studio-route-inventory";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const TWO_FACTOR_ROUTES_HELPER = path.join(repoRoot, "apps/studio/src/lib/two-factor-routes.ts");
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -55,51 +65,17 @@ function makeAnonymousGet(apiPath: string): Request {
   });
 }
 
-const AUTH_GUARD = /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation/;
+const AUTH_GUARD = STUDIO_AUTH_GUARD_PATTERN;
 
-/** Routes that mutate state or expose DM data — must call a studio auth guard. */
-const STUDIO_PROTECTED_API_ROUTES = [
-  ...listRouteFiles("apps/studio/app/api/admin"),
-  ...listRouteFiles("apps/studio/app/api/import").filter(
-    (route) => !route.endsWith("import/formats/route.ts"),
-  ),
-  ...listRouteFiles("apps/studio/app/api/brain"),
-  "apps/studio/app/api/ai/context/route.ts",
-  "apps/studio/app/api/ai/generate/route.ts",
-  "apps/studio/app/api/ai/prompt/route.ts",
-  "apps/studio/app/api/ai/runs/route.ts",
-  "apps/studio/app/api/ai/save/route.ts",
-  "apps/studio/app/api/ai/proposals/discard/route.ts",
-  "apps/studio/app/api/ai/proposals/[id]/route.ts",
-  "apps/studio/app/api/ai/runs/[runId]/route.ts",
-  "apps/studio/app/api/ai/settings/route.ts",
-  "apps/studio/app/api/ai/sessions/route.ts",
-  "apps/studio/app/api/ai/models/route.ts",
-  "apps/studio/app/api/backup/route.ts",
-  "apps/studio/app/api/settings/route.ts",
-  "apps/studio/app/api/export/static/route.ts",
-  "apps/studio/app/api/agent-jobs/route.ts",
-  "apps/studio/app/api/ideas/[id]/chat/route.ts",
-  "apps/studio/app/api/ideas/[id]/prompt/route.ts",
-  "apps/studio/app/api/ideas/[id]/dispatch/route.ts",
-  "apps/studio/app/api/dnd-api/route.ts",
-  "apps/studio/app/api/dnd-generator/route.ts",
-  "apps/studio/app/api/research/route.ts",
-  "apps/studio/app/api/research/[id]/route.ts",
-  "apps/studio/app/api/image-studio/route.ts",
-  "apps/studio/app/api/capture/upload/route.ts",
-  "apps/studio/app/api/miniatures/upload/route.ts",
-  "apps/studio/app/api/inference/health/route.ts",
-  "apps/studio/app/api/inference/test-prompt/route.ts",
-  "apps/studio/app/api/worlds/[worldSlug]/brain/route.ts",
-  "apps/studio/app/api/worlds/[worldSlug]/brain/[entryId]/route.ts",
-  "apps/studio/app/api/worlds/[worldSlug]/assets/upload/route.ts",
-];
+/** Routes that mutate state or expose DM data — derived from full Studio API inventory. */
+const STUDIO_PROTECTED_API_ROUTES = listProtectedStudioApiRoutes(repoRoot).map(
+  (relative) => `apps/studio/app/api/${relative}`,
+);
 
-/** Intentionally public read-only Studio endpoints (health, generator UI helpers). */
+/** @deprecated use STUDIO_PUBLIC_API_ALLOWLIST — kept for explicit public route tests */
 const STUDIO_PUBLIC_API_ROUTES = [
-  "apps/studio/app/api/health/route.ts",
-  "apps/studio/app/api/import/formats/route.ts",
+  ...[...STUDIO_PUBLIC_API_ALLOWLIST].map((route) => `apps/studio/app/api/${route}`),
+  ...[...STUDIO_PUBLIC_READ_API_ROUTES].map((route) => `apps/studio/app/api/${route}`),
 ];
 
 const STUDIO_UI_ROUTES = [
@@ -286,9 +262,9 @@ describe("route authorization — /worlds/* (Portal)", () => {
     });
   }
 
-  it("portal graph route uses portal visibility context", () => {
+  it("portal graph route uses viewer access context for graph filtering", () => {
     const source = read("apps/portal/app/api/worlds/[worldSlug]/graph/route.ts");
-    assert.match(source, /buildWorldGraph\(repo, worldSlug, "portal"/);
+    assert.match(source, /buildWorldGraphForViewer\(repo, worldSlug, ctx/);
   });
 
   it("portal middleware guards portal routes in production", () => {
@@ -311,9 +287,24 @@ describe("route authorization — player management (/players/* → auth + mail)
 });
 
 describe("route authorization — protected Studio API inventory", () => {
-  for (const route of STUDIO_PROTECTED_API_ROUTES) {
-    it(`${route} exists and calls a studio auth guard`, () => {
-      assert.ok(exists(route), `Missing protected route: ${route}`);
+  const routes = listStudioApiRouteFiles(repoRoot);
+
+  it("discovers the full Studio API surface", () => {
+    assert.ok(routes.length >= 50, `expected many routes, got ${routes.length}`);
+  });
+
+  for (const relativeRoute of routes) {
+    it(`${relativeRoute} is protected or explicitly allowlisted`, () => {
+      assert.doesNotThrow(() =>
+        assertStudioRouteProtected(repoRoot, relativeRoute, TWO_FACTOR_ROUTES_HELPER),
+      );
+    });
+  }
+
+  for (const route of STUDIO_PROTECTED_API_ROUTES.filter(
+    (entry) => !STUDIO_DELEGATED_GUARD_ROUTES.has(entry.replace("apps/studio/app/api/", "")),
+  )) {
+    it(`${route} calls a studio auth guard`, () => {
       assert.match(read(route), AUTH_GUARD);
     });
   }

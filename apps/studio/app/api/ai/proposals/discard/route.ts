@@ -1,10 +1,6 @@
 import { postDiscard } from "../../../../../src/lib/ai-handlers";
-import {
-  guardStudioMutation,
-  idSchema,
-  optionalString,
-  parseBody,
-} from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { idSchema, optionalString, parseBody } from "@uwe/security";
 import { z } from "zod";
 
 const aiDiscardBodySchema = z.object({
@@ -13,7 +9,7 @@ const aiDiscardBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, aiDiscardBodySchema);

@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailService,
   prisma,
 } from "@uwe/database/server";
-import {
-  emailSchema,
-  guardStudioMutation,
-  idSchema,
-  nonEmptyString,
-  optionalString,
-  parseBody,
-} from "@uwe/security";
+import { emailSchema, idSchema, nonEmptyString, optionalString, parseBody } from "@uwe/security";
 import { z } from "zod";
 
 const mailRecipientSchema = z.object({
@@ -33,7 +28,7 @@ const mailSendBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, mailSendBodySchema);
@@ -42,7 +37,7 @@ export async function POST(request: Request) {
   const { to, subject, bodyText, bodyHtml, ...rest } = parsed.data;
 
   if (!bodyText?.trim() && !bodyHtml?.trim()) {
-    return NextResponse.json({ error: "Nachrichtentext erforderlich." }, { status: 400 });
+    return jsonError("Nachrichtentext erforderlich.", 400);
   }
 
   const mail = createMailService(prisma);

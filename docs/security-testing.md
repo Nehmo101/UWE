@@ -18,7 +18,7 @@ pnpm test:authz
 pnpm test:leaks
 ```
 
-CI runs `pnpm test:security` on every pull request before merge.
+Pull requests with code changes run `pnpm test:security` as part of `pnpm ci:light:pr:gate` (see `.github/workflows/pr-check.yml`). Docs-only PRs skip the heavy gate.
 
 ## What is tested
 
@@ -100,7 +100,7 @@ Studio API routes require session login (or bearer token) plus CSRF protection; 
 - **DM-only leak:** `public-leak-scanner.test.ts` fails if `__DM_ONLY_SECRET_SHOULD_NOT_LEAK__` appears on anonymous paths.
 - **Role matrix:** `role-matrix.test.ts` covers all five roles against pages, blocks, assets, and both worlds.
 - **pnpm integration:** `pnpm test:security`, `pnpm test:authz`, `pnpm test:leaks` at repo root.
-- **CI gate:** `.github/workflows/ci.yml` runs security tests, `pnpm secret:scan`, and `pnpm audit:prod` before build.
+- **CI gate:** `.github/workflows/pr-check.yml` runs `pnpm test:security` via `pnpm ci:light:pr:gate` on code PRs; `.github/workflows/ci.yml` runs the full `pnpm quality` gate (including security, `pnpm secret:scan`, and `pnpm audit:prod`) on `main`.
 
 ## Extending the suite
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { timingSafeEqual } from "node:crypto";
 
 /**
@@ -29,7 +30,7 @@ export function requireAgentJobCallbackAuth(request: Request): NextResponse | nu
   const expected = Buffer.from(requiredToken);
 
   if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
-    return NextResponse.json({ error: "Ungültiges Studio-API-Token." }, { status: 401 });
+    return jsonError("Ungültiges Studio-API-Token.", 401);
   }
 
   return null;

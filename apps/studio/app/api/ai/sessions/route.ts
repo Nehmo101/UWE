@@ -1,13 +1,9 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getSessions } from "../../../../src/lib/ai-handlers";
-import {
-  aiSessionsQuerySchema,
-  parseQuery,
-  requireStudioApiAuth,
-  safeHandlerError,
-} from "@uwe/security";
+import { aiSessionsQuerySchema, parseQuery, safeHandlerError } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, aiSessionsQuerySchema);

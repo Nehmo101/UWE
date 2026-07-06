@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createKitchenService,
   createMealPlanService,
@@ -25,7 +26,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function kitchen() {
   return createKitchenService(prisma);
@@ -117,7 +117,7 @@ function revalidateKitchenPaths() {
 }
 
 export async function createRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const recipe = await kitchen().createRecipe(readRecipeForm(formData));
   revalidateKitchenPaths();
@@ -125,7 +125,7 @@ export async function createRecipeAction(formData: FormData) {
 }
 
 export async function updateRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await kitchen().updateRecipe(id, readRecipeForm(formData));
@@ -134,7 +134,7 @@ export async function updateRecipeAction(formData: FormData) {
 }
 
 export async function archiveRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await kitchen().archiveRecipe(String(formData.get("id")));
   revalidateKitchenPaths();
@@ -144,7 +144,7 @@ export async function archiveRecipeAction(formData: FormData) {
 // ── Wochenplan ────────────────────────────────────────────────────
 
 export async function addMealEntryAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
   const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
@@ -166,7 +166,7 @@ export async function addMealEntryAction(formData: FormData) {
 }
 
 export async function removeMealEntryAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await mealPlan().removeEntry(String(formData.get("entryId")));
   revalidatePath("/kitchen/plan");
@@ -174,7 +174,7 @@ export async function removeMealEntryAction(formData: FormData) {
 }
 
 export async function toggleMealCookedAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await mealPlan().toggleCooked(String(formData.get("entryId")));
   revalidatePath("/kitchen/plan");
@@ -190,7 +190,7 @@ export async function toggleMealCookedAction(formData: FormData) {
  * Antwort unlesbar, wird der Grund als Query-Flag zurückgereicht.
  */
 export async function suggestWeekAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
   const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
@@ -232,7 +232,7 @@ export async function suggestWeekAction(formData: FormData) {
 
 /** Übernimmt einen einzelnen Tag des KI-Entwurfs als echten Wochenplan-Eintrag. */
 export async function applyDraftEntryAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
   const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
@@ -259,7 +259,7 @@ export async function applyDraftEntryAction(formData: FormData) {
 
 /** Verwirft den KI-Entwurf einer Woche. */
 export async function dismissWeekDraftAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const isoYear = parseOptionalInt(formData.get("isoYear")) ?? 0;
   const isoWeek = parseOptionalInt(formData.get("isoWeek")) ?? 0;
@@ -272,7 +272,7 @@ export async function dismissWeekDraftAction(formData: FormData) {
 // ── Einkaufsliste ─────────────────────────────────────────────────
 
 export async function generateShoppingListAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const list = await shopping().generateFromWeek(String(formData.get("weekId")), {
     recurringBasics: [...RECURRING_BASICS],
@@ -282,7 +282,7 @@ export async function generateShoppingListAction(formData: FormData) {
 }
 
 export async function toggleShoppingItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await shopping().toggleItem(String(formData.get("itemId")));
   revalidatePath("/kitchen/shopping");
@@ -290,7 +290,7 @@ export async function toggleShoppingItemAction(formData: FormData) {
 }
 
 export async function addShoppingItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const listId = String(formData.get("listId"));
   await shopping().addItem({
@@ -303,7 +303,7 @@ export async function addShoppingItemAction(formData: FormData) {
 }
 
 export async function removeShoppingItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const listId = String(formData.get("listId"));
   await shopping().removeItem(String(formData.get("itemId")));
@@ -314,7 +314,7 @@ export async function removeShoppingItemAction(formData: FormData) {
 // ── Vorratskammer (K3) ────────────────────────────────────────────
 
 export async function createPantryItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await pantry().create({
     name: String(formData.get("name") || "").trim(),
@@ -329,7 +329,7 @@ export async function createPantryItemAction(formData: FormData) {
 }
 
 export async function updatePantryItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await pantry().update(String(formData.get("id")), {
     name: String(formData.get("name") || "").trim(),
@@ -344,14 +344,14 @@ export async function updatePantryItemAction(formData: FormData) {
 }
 
 export async function removePantryItemAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await pantry().remove(String(formData.get("id")));
   revalidatePath("/kitchen/pantry");
 }
 
 export async function markPantryLowStockAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const lowStock = String(formData.get("lowStock") || "") === "1";
   await pantry().update(String(formData.get("id")), { lowStock });
@@ -361,7 +361,7 @@ export async function markPantryLowStockAction(formData: FormData) {
 // ── Rezept-Bild-Upload (K3) ───────────────────────────────────────
 
 export async function uploadRecipeImageAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const file = formData.get("image");

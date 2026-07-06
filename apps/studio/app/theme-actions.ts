@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   buildAppSettingsFromThemePreferences,
   getAppRepository,
@@ -9,13 +10,12 @@ import {
   type ThemePreferencesScope,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 export async function saveThemePreferencesAction(
   scope: ThemePreferencesScope,
   preferences: ThemePreferencesRecord,
 ): Promise<string> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const normalized = normalizeThemePreferencesRecord(preferences, scope);
   if (!normalized) {

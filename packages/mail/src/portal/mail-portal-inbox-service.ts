@@ -1,7 +1,7 @@
-import type { MailPriorityCategory, MailAuditAction, Prisma } from "./generated/prisma/client";
-import type { PrismaClient } from "./client";
-import { decryptSecret } from "./token-crypto";
-import type { MailAccountService } from "./mail-account-service";
+import type { MailPriorityCategory, MailAuditAction, Prisma } from "@uwe/database/mail-prisma-types";
+import type { PrismaClient } from "@uwe/database/client";
+import { decryptSecret } from "@uwe/database/token-crypto";
+import type { MailAccountService } from "@uwe/database/mail-account-service";
 
 export type MailFolderKey = "inbox" | "marked" | "drafts" | "sent" | "archive" | "trash";
 
@@ -208,7 +208,7 @@ export class MailPortalInboxService {
     if (!imapHost) throw new Error("IMAP-Host fehlt.");
     const password = decryptSecret(account.passwordEnc, this.encryptionSecret);
     const mailbox = attachment.message.folder?.imapPath ?? account.imapMailbox ?? "INBOX";
-    const { fetchImapAttachmentContent } = await import("@uwe/mail");
+    const { fetchImapAttachmentContent } = await import("../imap-sync");
     const fetched = await fetchImapAttachmentContent(
       {
         host: imapHost,

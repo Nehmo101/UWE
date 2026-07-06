@@ -1,6 +1,7 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { assertPersonalBrainLocalOnly, prisma } from "@uwe/database/server";
-import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 import { loadStudioPersonalBrainPromptContext } from "@/src/lib/personal-brain-ai-context";
 
 interface ContextBody {
@@ -28,7 +29,7 @@ async function buildContext(query: string, limit: number) {
 }
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
@@ -56,14 +57,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   let body: ContextBody;
   try {
     body = (await request.json()) as ContextBody;
   } catch {
-    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    return jsonError("Ungültiger JSON-Body.", 400);
   }
 
   const { query, limit, provider } = parseContextBody(body);

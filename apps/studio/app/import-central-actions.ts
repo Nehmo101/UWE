@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createImportJobService,
   createUndoService,
@@ -22,7 +23,6 @@ import {
   type ImportPreviewResult,
 } from "@uwe/knoteforge-import";
 import { revalidatePath } from "next/cache";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
   importCentralUsesWorldTarget,
@@ -134,7 +134,7 @@ async function resolveWorldContext(targetWorldId: string | null) {
 }
 
 export async function createImportCentralJobAction(formData: FormData): Promise<{ jobId: string }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const sourceTypeRaw = String(formData.get("sourceType") || "").trim();
   const targetTypeRaw = String(formData.get("targetType") || "").trim();
@@ -184,7 +184,7 @@ export async function previewImportCentralJobAction(
   jobId: string,
   content: string,
 ): Promise<{ preview: ImportPreviewResult | MarkdownImportPreviewResult }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (!isImportCentralComboSupported(job.sourceType, job.targetType)) {
@@ -250,7 +250,7 @@ export async function executeImportCentralJobAction(
   content: string,
   itemIds?: string[],
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (!isImportCentralComboSupported(job.sourceType, job.targetType)) {
@@ -288,7 +288,7 @@ export async function previewImportCentralPdfJobAction(
   jobId: string,
   contentBase64: string,
 ): Promise<{ preview: MarkdownImportPreviewResult }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (job.sourceType !== "pdf" || !isImportCentralMarkdownTarget(job.targetType)) {
@@ -316,7 +316,7 @@ export async function executeImportCentralPdfJobAction(
   contentBase64: string,
   itemIds?: string[],
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (job.sourceType !== "pdf" || !isImportCentralMarkdownTarget(job.targetType)) {
@@ -353,7 +353,7 @@ export async function previewImportCentralObsidianVaultAction(
   jobId: string,
   contentBase64: string,
 ): Promise<ObsidianVaultPreviewResponse> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (job.sourceType !== "obsidian" || !isImportCentralMarkdownTarget(job.targetType)) {
@@ -380,7 +380,7 @@ export async function executeImportCentralObsidianVaultAction(
   contentBase64: string,
   itemIds?: string[],
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const job = await requireImportJob(jobId);
   if (job.sourceType !== "obsidian" || !isImportCentralMarkdownTarget(job.targetType)) {
@@ -408,7 +408,7 @@ export async function executeImportCentralObsidianVaultAction(
 }
 
 export async function markImportCentralExecutingAction(jobId: string): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   await requireImportJob(jobId);
   await importJobs().markExecuting(jobId);
   revalidateImportCentral();
@@ -419,21 +419,21 @@ export async function completeImportCentralJobAction(
   resultSummary: Record<string, unknown>,
   undoToken?: string | null,
 ): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   await requireImportJob(jobId);
   await importJobs().markCompleted(jobId, resultSummary, undoToken ?? null);
   revalidateImportCentral();
 }
 
 export async function failImportCentralJobAction(jobId: string, errorMessage: string): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   await requireImportJob(jobId);
   await importJobs().markFailed(jobId, errorMessage);
   revalidateImportCentral();
 }
 
 export async function rollbackImportCentralJobAction(jobId: string): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const job = await requireImportJob(jobId);
   if (job.status !== "completed") {
     throw new Error("Nur abgeschlossene Import-Jobs können zurückgerollt werden.");

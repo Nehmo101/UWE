@@ -336,13 +336,14 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("shows guests only public content when guest mode is enabled", async () => {
+  it("denies anonymous guest search when guest mode is disabled", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
     assert.equal(ctx.effectiveRole, "guest");
+    assert.equal(ctx.guestModeEnabled, false);
 
     const results = await searchForAuthContext(db, ctx, {
       query: "Markt",
@@ -350,11 +351,7 @@ describe("UWE global search", () => {
       urlMode: "auth-portal",
     });
 
-    const slugs = results.map((result) => result.slug);
-    assert.ok(slugs.includes("marktplatz"));
-    assert.ok(!slugs.includes("elara"));
-    assert.ok(!slugs.includes("geheime-verschwoerung"));
-    assert.ok(!slugs.includes("entwurf"));
+    assert.deepEqual(results.map((result) => result.slug), []);
 
     await db.$disconnect();
   });

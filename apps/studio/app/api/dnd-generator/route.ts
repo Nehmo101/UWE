@@ -1,3 +1,4 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   buildDndGeneratorView,
@@ -14,7 +15,6 @@ import {
   createUweRepository,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@uwe/security";
 import { jsonError } from "@/src/lib/api-response";
 
 async function resolveContext(searchParams: URLSearchParams): Promise<DndContextDescriptor | null> {
@@ -93,7 +93,7 @@ async function resolveContext(searchParams: URLSearchParams): Promise<DndContext
 }
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);

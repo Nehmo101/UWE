@@ -17,7 +17,7 @@ import {
   validateStructuredGeneratorInput,
   type GeneratorActionId,
 } from "@uwe/database/server";
-import { getInferenceStatus } from "@uwe/ai-brain";
+import { checkRtxReadiness, getInferenceStatus } from "@uwe/ai-brain";
 import { enforceAiRequestLimits } from "@uwe/security";
 import { postGenerate } from "./ai-handlers";
 import { buildGeneratorUserPrompt, mapGeneratorActionToTaskType } from "./generator-action-map";
@@ -52,15 +52,21 @@ export async function getGeneratorPanelData(worldSlug: string, pageSlug: string)
     prepStatus: page.prepStatus,
   });
 
-  const inference = await getInferenceStatus({
-    useMock: process.env.AI_USE_MOCK === "true",
-  });
+  const [inference, rtxHealth] = await Promise.all([
+    getInferenceStatus({
+      useMock: process.env.AI_USE_MOCK === "true",
+    }),
+    checkRtxReadiness({
+      useMock: process.env.AI_USE_MOCK === "true",
+      prisma,
+    }),
+  ]);
 
   return {
     context,
     actions,
     missingHints,
-    rtxReady: inference.online,
+    rtxReady: rtxHealth.ready,
     rtxEnabled: inference.enabled,
   };
 }
@@ -130,7 +136,10 @@ export async function postGeneratorAction(body: {
   } else {
     userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, structuredInput);
   }
-  const inference = await getInferenceStatus({ useMock: body.useMock });
+  const [inference, rtxHealth] = await Promise.all([
+    getInferenceStatus({ useMock: body.useMock }),
+    checkRtxReadiness({ useMock: body.useMock, prisma }),
+  ]);
   const model =
     process.env.AI_INFERENCE_DEFAULT_MODEL?.trim() ||
     inference.defaultModel?.trim() ||
@@ -144,7 +153,7 @@ export async function postGeneratorAction(body: {
     model,
     userPrompt,
     useMock: body.useMock,
-    sync: body.sync ?? !inference.online,
+    sync: body.sync ?? !rtxHealth.ready,
   });
 
   const payload = (await response.json()) as {

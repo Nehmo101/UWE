@@ -1,5 +1,7 @@
 import fs from "node:fs";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   ensureUploadDirectory,
   inferAssetTypeFromMime,
@@ -17,20 +19,14 @@ import {
   type AssetType,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import {
-  guardStudioMutation,
-  parseFormData,
-  parseParams,
-  uploadMetadataSchema,
-  worldSlugParamSchema,
-} from "@uwe/security";
+import { parseFormData, parseParams, uploadMetadataSchema, worldSlugParamSchema } from "@uwe/security";
 
 interface RouteContext {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, worldSlugParamSchema);
@@ -41,7 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
   const world = await repo.getWorldBySlug(worldSlug);
 
   if (!world) {
-    return NextResponse.json({ error: "World not found" }, { status: 404 });
+    return jsonError("World not found", 404);
   }
 
   const formData = await request.formData();
@@ -50,7 +46,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "File required" }, { status: 400 });
+    return jsonError("File required", 400);
   }
 
   const maxUploadBytes = getUweEnvOrNull()?.maxUploadBytes ?? 50 * 1024 * 1024;
@@ -82,7 +78,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
   } catch (error) {
     if (error instanceof UploadValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     throw error;
   }

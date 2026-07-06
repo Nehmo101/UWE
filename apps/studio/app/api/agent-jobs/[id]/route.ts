@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createDevAgentJobService,
   prisma,
@@ -12,13 +14,7 @@ import {
   resolveAgentJobsDispatchConfig,
 } from "@uwe/agent-jobs";
 import { dispatchJob } from "@/src/lib/job-executor";
-import {
-  guardStudioMutation,
-  idSchema,
-  parseBody,
-  parseParams,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { idSchema, parseBody, parseParams } from "@uwe/security";
 import { z } from "zod";
 
 const jobIdParamSchema = z.object({ id: idSchema });
@@ -32,7 +28,7 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, jobIdParamSchema);
@@ -41,14 +37,14 @@ export async function GET(request: Request, context: RouteContext) {
   const agentJobs = createDevAgentJobService(prisma);
   const job = await agentJobs.getJob(parsedParams.data.id);
   if (!job) {
-    return NextResponse.json({ error: "Agent-Job nicht gefunden." }, { status: 404 });
+    return jsonError("Agent-Job nicht gefunden.", 404);
   }
 
   return NextResponse.json({ job });
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, jobIdParamSchema);
@@ -63,7 +59,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (parsed.data.action === "retry") {
     const config = resolveAgentJobsConfig();
     if (!config.enabled) {
-      return NextResponse.json({ error: "Agent Jobs sind deaktiviert." }, { status: 403 });
+      return jsonError("Agent Jobs sind deaktiviert.", 403);
     }
 
     try {
@@ -72,13 +68,13 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ job, queueJobId });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Retry fehlgeschlagen.";
-      return NextResponse.json({ error: message }, { status: 400 });
+      return jsonError(message, 400);
     }
   }
 
   const existing = await agentJobs.getJob(jobId);
   if (!existing) {
-    return NextResponse.json({ error: "Agent-Job nicht gefunden." }, { status: 404 });
+    return jsonError("Agent-Job nicht gefunden.", 404);
   }
 
   if (existing.provider === "cursor_cloud") {
@@ -88,7 +84,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const cursorConfig = resolveAgentJobsDispatchConfig();
     if (!cursorConfig.cursorCloudApiKey) {
-      return NextResponse.json({ error: "CURSOR_CLOUD_API_KEY fehlt." }, { status: 503 });
+      return jsonError("CURSOR_CLOUD_API_KEY fehlt.", 503);
     }
 
     try {
@@ -104,7 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ job, polled: true, cursorStatus });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Cursor-Poll fehlgeschlagen.";
-      return NextResponse.json({ error: message }, { status: 502 });
+      return jsonError(message, 502);
     }
   }
 
@@ -121,12 +117,12 @@ export async function POST(request: Request, context: RouteContext) {
   const githubToken = dispatchConfig.githubToken;
 
   if (!githubRepo || !githubToken) {
-    return NextResponse.json({ error: "GitHub-Konfiguration fehlt." }, { status: 503 });
+    return jsonError("GitHub-Konfiguration fehlt.", 503);
   }
 
   const [owner, repo] = githubRepo.split("/");
   if (!owner || !repo) {
-    return NextResponse.json({ error: "AGENT_JOBS_GITHUB_REPO ungültig." }, { status: 503 });
+    return jsonError("AGENT_JOBS_GITHUB_REPO ungültig.", 503);
   }
 
   try {
@@ -167,6 +163,6 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ job, polled: true, runStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Poll fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return jsonError(message, 502);
   }
 }

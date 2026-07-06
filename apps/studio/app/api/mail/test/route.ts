@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailService,
   prisma,
 } from "@uwe/database/server";
-import {
-  emailSchema,
-  guardStudioMutation,
-  parseBody,
-} from "@uwe/security";
+import { emailSchema, parseBody } from "@uwe/security";
 import { z } from "zod";
 
 const mailTestBodySchema = z.object({
@@ -16,7 +13,7 @@ const mailTestBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, mailTestBodySchema);

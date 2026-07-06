@@ -22,6 +22,7 @@ export type AuthorizeScope =
   | "studio-api"
   | "studio-action"
   | "portal-api"
+  | "portal-action"
   | "portal-session";
 
 export interface AuthorizeInput {
@@ -80,6 +81,8 @@ export function authorize(input: AuthorizeInput): AuthorizeResult {
       return authorizeStudio(input.request, pathname, input.scope, env);
     case "portal-api":
       return authorizePortalApi(input.request, pathname, input.hasSession ?? false);
+    case "portal-action":
+      return authorizePortalAction(input.request, input.hasSession ?? false, env);
     case "portal-session":
       return authorizePortalSession(pathname, input.hasSession ?? false);
     default:
@@ -147,6 +150,33 @@ function authorizeStudio(
     status: 401,
     error: "Studio-Zugriff erfordert Authentifizierung.",
   };
+}
+
+function authorizePortalAction(
+  request: Pick<Request, "headers">,
+  hasSession: boolean,
+  env: NodeJS.ProcessEnv = process.env,
+): AuthorizeResult {
+  if (isCrossSiteBrowserRequest(request, env)) {
+    return {
+      status: 403,
+      error: "Cross-Origin-Anfragen an Portal-Aktionen sind nicht erlaubt.",
+    };
+  }
+
+  if (!hasSession) {
+    return { status: 401, error: "Anmeldung erforderlich." };
+  }
+
+  if (isSameOriginBrowserRequest(request, env)) {
+    return null;
+  }
+
+  if (!request.headers.get("origin")) {
+    return null;
+  }
+
+  return { status: 401, error: "Anmeldung erforderlich." };
 }
 
 function authorizePortalApi(

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -41,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!ok) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+    return jsonError("Benutzer nicht gefunden.", 404);
   }
 
   return NextResponse.json({

@@ -1,4 +1,4 @@
-import { prisma, type PrismaClient } from "@uwe/database/server";
+import { prisma, type PrismaClient } from "./client";
 
 /**
  * Haushalts-Cockpit: wiederkehrende Wartungs-/Haushaltsaufgaben (Müll, Rauchmelder,

@@ -10,10 +10,9 @@ import {
   PROJECT_STATUS_LABELS,
   type PersonalProjectCategory,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { AdminCreateCard, AdminEntityForm, AdminFilterChips, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
+import { formatStudioDate } from "@/src/lib/format";
 import { createProjectAction } from "../life-admin-actions";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 function formatProjectBudget(cents: number | null | undefined): string {
   if (cents == null) return "—";
@@ -45,10 +44,30 @@ export default async function ProjectsPage({ searchParams }: Props) {
   ]);
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Projekte" }]} />}>
-      <PageHeader
-        title="Projekte"
-        summary="Persönliche Projekte — UWE, Hardware, DnD, Werkstatt und mehr."
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Projekte" }]} />}
+      title="Projekte"
+      summary="Persönliche Projekte — UWE, Hardware, DnD, Werkstatt und mehr."
+    >
+      <AdminFilterChips
+        ariaLabel="Projekt-Kategorien"
+        chips={[
+          {
+            href: "/projects",
+            label: "Alle",
+            count: dashboard.total,
+            active: !categoryFilter,
+          },
+          ...dashboard.categories.map((summary) => ({
+            href:
+              categoryFilter === summary.category
+                ? "/projects"
+                : `/projects?category=${summary.category}`,
+            label: PROJECT_CATEGORY_LABELS[summary.category],
+            count: summary.total,
+            active: categoryFilter === summary.category,
+          })),
+        ]}
       />
 
       <section className="uwe-v2-section" aria-label="Projekt-Dashboards">
@@ -114,7 +133,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                         <Link href={`/projects/${project.id}`}>{project.name}</Link>
                         <p className="uwe-dashboard-muted">
                           {PROJECT_STATUS_LABELS[project.status]} ·{" "}
-                          {DATE_FORMAT.format(project.updatedAt)}
+                          {formatStudioDate(project.updatedAt, "medium")}
                         </p>
                       </li>
                     ))}
@@ -158,54 +177,39 @@ export default async function ProjectsPage({ searchParams }: Props) {
         </p>
       )}
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neues Projekt</h2>
-        <form action={createProjectAction} className="uwe-brain-create-form">
-          <label>
-            Name
-            <input name="name" required />
-          </label>
-          <label>
-            Kategorie
-            <select name="category" defaultValue={categoryFilter ?? "other"}>
-              {Object.values(PersonalProjectCategoryEnum).map((category) => (
-                <option key={category} value={category}>
-                  {PROJECT_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select name="status" defaultValue="idea">
-              {Object.values(PersonalProjectStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {PROJECT_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nächste Aktion
-            <input name="nextAction" />
-          </label>
-          <label>
-            Fälligkeitsdatum
-            <input name="nextActionDate" type="date" />
-          </label>
-          <label>
-            Beschreibung
-            <textarea name="description" rows={3} />
-          </label>
-          <label>
-            Kosten (Cent)
-            <input name="costCents" type="number" min={0} />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Projekt anlegen
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neues Projekt">
+        <AdminEntityForm
+          action={createProjectAction}
+          submitLabel="Projekt anlegen"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            {
+              name: "category",
+              label: "Kategorie",
+              type: "select",
+              defaultValue: categoryFilter ?? "other",
+              options: Object.values(PersonalProjectCategoryEnum).map((category) => ({
+                value: category,
+                label: PROJECT_CATEGORY_LABELS[category],
+              })),
+            },
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              defaultValue: "idea",
+              options: Object.values(PersonalProjectStatusEnum).map((status) => ({
+                value: status,
+                label: PROJECT_STATUS_LABELS[status],
+              })),
+            },
+            { name: "nextAction", label: "Nächste Aktion" },
+            { name: "nextActionDate", label: "Fälligkeitsdatum", type: "date" },
+            { name: "description", label: "Beschreibung", type: "textarea", rows: 3 },
+            { name: "costCents", label: "Kosten (Cent)", type: "number", min: 0 },
+          ]}
+        />
+      </AdminCreateCard>
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">
@@ -241,7 +245,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                     {project.nextActionDate && (
                       <span className="uwe-dashboard-muted">
                         {project.nextAction ? " · " : ""}
-                        Fällig: {DATE_FORMAT.format(project.nextActionDate)}
+                        Fällig: {formatStudioDate(project.nextActionDate, "medium")}
                       </span>
                     )}
                   </p>
@@ -254,10 +258,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
           </div>
         )}
       </section>
-
-      <p className="uwe-dashboard-muted">
-        <Link href="/today">← Heute</Link>
-      </p>
-    </StudioShell>
+    </AdminModulePage>
   );
 }

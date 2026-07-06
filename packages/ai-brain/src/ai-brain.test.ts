@@ -454,14 +454,23 @@ describe("AI Brain — generateAiTask with mock provider", () => {
     assert.equal(result.provider, "ollama");
   });
 
-  it("rejects cloud provider when datenschutz mode blocks cloud (AiPrivacyError)", async () => {
+  it("rejects cloud provider when gateway privacy forbids cloud for DnD (AiRouterError)", async () => {
     const repo = createUweRepository(databaseUrl);
     const seeded = await seedTerraWorld(repo);
     const apiKeyStore = new InMemoryApiKeyStore();
     apiKeyStore.set("openai", "test-openai-key");
+    const { createAiGatewayService, createPrismaClient, DEFAULT_PRIVACY_RULES } = await import(
+      "@uwe/database/server"
+    );
+    const db = createPrismaClient(databaseUrl);
+    const gateway = createAiGatewayService(db);
+    await gateway.updateConfig({
+      privacyRules: {
+        ...DEFAULT_PRIVACY_RULES,
+        dnd_world: "CLOUD_FORBIDDEN",
+      },
+    });
 
-    // datenschutzMode=true blocks cloud even when localOnly=false — validateProviderForContext fires.
-    // W0 note: cloud + current_object is now routing-allowed; datenschutz is the blocking layer.
     await assert.rejects(
       () =>
         generateAiTask(repo, {
@@ -477,34 +486,40 @@ describe("AI Brain — generateAiTask with mock provider", () => {
           },
           apiKeyStore,
           useMock: true,
+          prisma: db,
+          gatewayService: gateway,
         }),
-      AiPrivacyError,
+      AiRouterError,
     );
   });
 
-  it("rejects cloud provider when local-only mode is active (AiRouterError)", async () => {
+  it("forces local routing when gateway routing is LOCAL_ONLY even for cloud provider", async () => {
     const repo = createUweRepository(databaseUrl);
     const seeded = await seedTerraWorld(repo);
     const apiKeyStore = new InMemoryApiKeyStore();
     apiKeyStore.set("openai", "test-openai-key");
+    const { createAiGatewayService, createPrismaClient } = await import("@uwe/database/server");
+    const db = createPrismaClient(databaseUrl);
+    const gateway = createAiGatewayService(db);
+    await gateway.updateConfig({ routingMode: "LOCAL_ONLY" });
 
-    await assert.rejects(
-      () =>
-        generateAiTask(repo, {
-          taskType: "summarize_page",
-          worldId: seeded.world.id,
-          pageId: seeded.pages.validori.id,
-          providerId: "openai",
-          model: "gpt-4o-mini",
-          options: {
-            datenschutzMode: false,
-            localOnly: true,
-            allowDmOnly: false,
-          },
-          apiKeyStore,
-          useMock: true,
-        }),
-      AiRouterError,
-    );
+    const { result } = await generateAiTask(repo, {
+      taskType: "summarize_page",
+      worldId: seeded.world.id,
+      pageId: seeded.pages.validori.id,
+      providerId: "openai",
+      model: "mock-model",
+      options: {
+        datenschutzMode: false,
+        localOnly: true,
+        allowDmOnly: false,
+      },
+      apiKeyStore,
+      useMock: true,
+      prisma: db,
+      gatewayService: gateway,
+    });
+
+    assert.equal(result.provider, "ollama");
   });
 });

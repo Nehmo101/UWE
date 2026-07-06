@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   API_TOKEN_SCOPES,
   API_TOKEN_SCOPE_LABELS,
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   };
 
   if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Name ist erforderlich." }, { status: 400 });
+    return jsonError("Name ist erforderlich.", 400);
   }
 
   const scopes = (body.scopes ?? []).filter((scope): scope is ApiTokenScope =>
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   );
 
   if (scopes.length === 0) {
-    return NextResponse.json({ error: "Mindestens ein Scope erforderlich." }, { status: 400 });
+    return jsonError("Mindestens ein Scope erforderlich.", 400);
   }
 
   const service = createApiTokenService(prisma);

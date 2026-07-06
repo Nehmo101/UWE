@@ -1,4 +1,5 @@
-import { parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { parseParams, worldSlugParamSchema } from "@uwe/security";
 import { listSpotifyDevicesForWorld } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {
@@ -6,7 +7,7 @@ interface RouteParams {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = await requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);

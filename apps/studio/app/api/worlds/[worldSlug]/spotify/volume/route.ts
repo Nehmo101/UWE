@@ -1,5 +1,5 @@
+import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import {
-  guardStudioMutation,
   parseBody,
   parseParams,
   worldSlugParamSchema,
@@ -16,7 +16,7 @@ interface RouteParams {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);

@@ -1,8 +1,9 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getImportFormats } from "../../../../src/lib/import-handlers";
-import { requireStudioApiAuth, safeHandlerError } from "@uwe/security";
+import { safeHandlerError } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   try {

@@ -1,13 +1,13 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const mail = createMailService(prisma);

@@ -1,12 +1,9 @@
 import { postContext } from "../../../../src/lib/ai-handlers";
-import {
-  aiContextBodySchema,
-  guardStudioMutation,
-  parseBody,
-} from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { aiContextBodySchema, parseBody } from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, aiContextBodySchema);

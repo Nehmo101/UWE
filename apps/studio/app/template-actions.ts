@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createPageTemplateService,
   prisma,
@@ -9,7 +10,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function templateService() {
   return createPageTemplateService(prisma);
@@ -48,7 +48,7 @@ function redirectWithError(path: string, error: unknown): never {
 }
 
 export async function createTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   let templateId: string;
   try {
@@ -70,7 +70,7 @@ export async function createTemplateAction(formData: FormData) {
 }
 
 export async function updateTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const templateId = String(formData.get("templateId"));
   try {
@@ -92,7 +92,7 @@ export async function updateTemplateAction(formData: FormData) {
 }
 
 export async function duplicateTemplateAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const templateId = String(formData.get("templateId"));
   let copyId: string;
@@ -108,7 +108,7 @@ export async function duplicateTemplateAction(formData: FormData) {
 }
 
 export async function setTemplateActiveAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const templateId = String(formData.get("templateId"));
   const isActive = String(formData.get("isActive")) === "true";

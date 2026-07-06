@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   ensureUploadDirectory,
   resolveAssetFilePath,
@@ -12,19 +13,19 @@ import {
   resolveEffectiveUploadsPath,
 } from "@uwe/database/server";
 import { createScanInboxService, type ScanPrivacyLevel } from "@uwe/scan-inbox";
-import { guardStudioMutation } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 /** Storage namespace for world-independent scan uploads (Studio-only). */
 const SCAN_UPLOAD_NAMESPACE = "_scan";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Datei erforderlich." }, { status: 400 });
+    return jsonError("Datei erforderlich.", 400);
   }
 
   const title = String(formData.get("title") ?? "").trim() || file.name || "Scan";
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     mimeType = validated.mimeType;
   } catch (error) {
     if (error instanceof UploadValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     throw error;
   }

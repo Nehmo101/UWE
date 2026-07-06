@@ -1,13 +1,9 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getBackupList, getBackupPermissions, postBackupCreate, type BackupCreateBody } from "../../../src/lib/backup-handlers";
-import {
-  guardStudioMutation,
-  passthroughBodySchema,
-  parseBody,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { passthroughBodySchema, parseBody } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -19,7 +15,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "setup" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);

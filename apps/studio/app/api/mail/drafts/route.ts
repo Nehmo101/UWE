@@ -1,9 +1,10 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailAccountService, prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const service = createMailAccountService(prisma);
@@ -20,18 +21,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   let body: { subject?: string; bodyText?: string; worldId?: string; accountId?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    return jsonError("Ungültiger JSON-Body.", 400);
   }
 
   if (!body.subject?.trim()) {
-    return NextResponse.json({ error: "subject ist erforderlich." }, { status: 400 });
+    return jsonError("subject ist erforderlich.", 400);
   }
 
   const service = createMailAccountService(prisma);

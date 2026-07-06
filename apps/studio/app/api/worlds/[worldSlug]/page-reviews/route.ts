@@ -1,14 +1,15 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@uwe/database/server";
 import { createPageAiReviewService } from "@uwe/page-ai-review";
-import { requireStudioApiAuth, safeHandlerError } from "@uwe/security";
+import { safeHandlerError } from "@uwe/security";
 
 interface RouteContext {
   params: Promise<{ worldSlug: string }>;
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = await requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   try {

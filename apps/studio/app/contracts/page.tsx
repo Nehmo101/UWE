@@ -13,7 +13,7 @@ import {
   CONTRACT_STATUS_LABELS,
   type AiUsageRollupPeriod,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { AdminCreateCard, AdminEntityForm, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
 import { requireStudioAccess } from "@/src/lib/auth";
 import {
   createContractAction,
@@ -60,14 +60,13 @@ export default async function ContractsPage({ searchParams }: Props) {
   );
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Verträge & Ausgaben" }]} />}>
-      <PageHeader
-        title="Verträge & Monatsausgaben"
-        summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen und KI-Kosten."
-      />
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Verträge & Ausgaben" }]} />}
+      title="Verträge & Monatsausgaben"
+      summary="Manuelle Verwaltung ohne Bankdaten — Abos, Miete, Versicherungen und KI-Kosten."
+    >
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">KI-Kosten (Schätzung)</h2>
+      <AdminCreateCard title="KI-Kosten (Schätzung)">
         <p className="uwe-dashboard-muted">
           Rollup aus <code>ai_usage_logs</code> — nur Cloud-Schätzungen (RTX = 0 USD). Keine
           Prompt-Inhalte.
@@ -168,10 +167,9 @@ export default async function ContractsPage({ searchParams }: Props) {
           Detail-Logs und Budgets:{" "}
           <Link href="/admin/ai-gateway">AI Gateway (Owner)</Link>
         </p>
-      </section>
+      </AdminCreateCard>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Kostenübersicht</h2>
+      <AdminCreateCard title="Kostenübersicht">
         <p>
           Monatlich (aktiv, inkl. KI-Schätzung): {formatEuroFromCents(costs.monthlyTotalCents)} ·
           Jährlich: {formatEuroFromCents(costs.yearlyTotalCents)} · Aktive Verträge:{" "}
@@ -191,68 +189,48 @@ export default async function ContractsPage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AdminCreateCard>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neuer Vertrag / Ausgabe</h2>
-        <form action={createContractAction} className="uwe-brain-create-form">
-          <label>
-            Name
-            <input name="name" required />
-          </label>
-          <label>
-            Anbieter
-            <input name="vendor" />
-          </label>
-          <label>
-            Kategorie
-            <input name="categoryLabel" placeholder="z. B. Cloud, Versicherung" />
-          </label>
-          <label>
-            Intervall
-            <select name="billingInterval" defaultValue="monthly">
-              {Object.values(ContractBillingIntervalEnum).map((interval) => (
-                <option key={interval} value={interval}>
-                  {BILLING_INTERVAL_LABELS[interval]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Betrag (Cent)
-            <input name="amountCents" type="number" min={0} />
-          </label>
-          <label>
-            Status
-            <select name="status" defaultValue="active">
-              {Object.values(ContractStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {CONTRACT_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nächste Zahlung
-            <input name="nextPaymentDate" type="date" />
-          </label>
-          <label>
-            Kündigen bis
-            <input name="cancelByDate" type="date" />
-          </label>
-          <label>
-            Portal-Link
-            <input name="portalUrl" type="url" />
-          </label>
-          <label>
-            Notizen
-            <textarea name="notes" rows={2} />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Vertrag anlegen
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neuer Vertrag / Ausgabe">
+        <AdminEntityForm
+          action={createContractAction}
+          submitLabel="Vertrag anlegen"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            { name: "vendor", label: "Anbieter" },
+            {
+              name: "categoryLabel",
+              label: "Kategorie",
+              placeholder: "z. B. Cloud, Versicherung",
+            },
+            {
+              name: "billingInterval",
+              label: "Intervall",
+              type: "select",
+              defaultValue: "monthly",
+              options: Object.values(ContractBillingIntervalEnum).map((interval) => ({
+                value: interval,
+                label: BILLING_INTERVAL_LABELS[interval],
+              })),
+            },
+            { name: "amountCents", label: "Betrag (Cent)", type: "number", min: 0 },
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              defaultValue: "active",
+              options: Object.values(ContractStatusEnum).map((status) => ({
+                value: status,
+                label: CONTRACT_STATUS_LABELS[status],
+              })),
+            },
+            { name: "nextPaymentDate", label: "Nächste Zahlung", type: "date" },
+            { name: "cancelByDate", label: "Kündigen bis", type: "date" },
+            { name: "portalUrl", label: "Portal-Link", type: "url" },
+            { name: "notes", label: "Notizen", type: "textarea", rows: 2 },
+          ]}
+        />
+      </AdminCreateCard>
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Verträge ({contracts.length})</h2>
@@ -343,8 +321,7 @@ export default async function ContractsPage({ searchParams }: Props) {
       </section>
 
       {aiUsageContracts.length > 0 && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">KI-Vertragseinträge (automatisch)</h2>
+        <AdminCreateCard title="KI-Vertragseinträge (automatisch)">
           <ul className="uwe-inspector-findings">
             {aiUsageContracts.map((entry) => (
               <li key={entry.id}>
@@ -353,8 +330,8 @@ export default async function ContractsPage({ searchParams }: Props) {
               </li>
             ))}
           </ul>
-        </section>
+        </AdminCreateCard>
       )}
-    </StudioShell>
+    </AdminModulePage>
   );
 }

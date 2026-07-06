@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   buildDocumentPrintHtml,
   createLifeAdminService,
@@ -6,14 +8,13 @@ import {
   prisma,
   type DocumentTemplateCategory,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@uwe/security";
 
 /**
  * Print-freundliche Ansicht eines generierten Dokuments
  * (Life-Brain-Dokument, Konvention wie /api/worlds/.../characters/print).
  */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) {
     return authError;
   }
@@ -21,13 +22,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get("documentId")?.trim();
   if (!documentId) {
-    return NextResponse.json({ error: "documentId fehlt." }, { status: 400 });
+    return jsonError("documentId fehlt.", 400);
   }
 
   const service = createLifeAdminService(prisma);
   const document = await service.getPersonalBrainDocument(documentId);
   if (!document) {
-    return NextResponse.json({ error: "Dokument nicht gefunden." }, { status: 404 });
+    return jsonError("Dokument nicht gefunden.", 404);
   }
 
   const metadata =

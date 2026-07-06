@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { buildAccessContext } from "@uwe/auth";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
-import { buildPageGraph, buildWorldGraph } from "./graph-service";
+import { buildPageGraph, buildWorldGraph, buildWorldGraphForViewer } from "./graph-service";
 
 describe("graph-service", () => {
   let databaseUrl: string;
@@ -202,5 +203,62 @@ describe("graph-service", () => {
 
     assert.deepEqual(portalGraph.nodes, previewGraph.nodes);
     assert.deepEqual(portalGraph.edges, previewGraph.edges);
+  });
+
+  it("buildWorldGraphForViewer hides dm_only pages from player viewers", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const ctx = buildAccessContext({
+      user: {
+        id: "player-1",
+        displayName: "Player",
+        email: "player@test.local",
+        role: "player",
+      },
+      worldMembership: {
+        userId: "player-1",
+        worldId,
+        role: "player",
+        characterName: "Tester",
+      },
+      guestModeEnabled: false,
+    });
+
+    const graph = await buildWorldGraphForViewer(repo, worldSlug, ctx);
+
+    const titles = graph.nodes.map((node) => node.title);
+    assert.ok(!titles.includes("Shagottar"));
+
+    const secretEdges = graph.edges.filter(
+      (edge) => edge.sourceId === secretPageId || edge.targetId === secretPageId,
+    );
+    assert.equal(secretEdges.length, 0);
+
+    const dmRelation = graph.edges.find((edge) => edge.relationType === "threatens");
+    assert.equal(dmRelation, undefined);
+  });
+
+  it("buildWorldGraphForViewer matches legacy portal graph for player viewers", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const ctx = buildAccessContext({
+      user: {
+        id: "player-1",
+        displayName: "Player",
+        email: "player@test.local",
+        role: "player",
+      },
+      worldMembership: {
+        userId: "player-1",
+        worldId,
+        role: "player",
+        characterName: "Tester",
+      },
+      guestModeEnabled: false,
+    });
+
+    const viewerGraph = await buildWorldGraphForViewer(repo, worldSlug, ctx);
+    const portalGraph = await buildWorldGraph(repo, worldSlug, "portal");
+
+    assert.deepEqual(viewerGraph.nodes, portalGraph.nodes);
+    assert.deepEqual(viewerGraph.edges, portalGraph.edges);
   });
 });

@@ -27,9 +27,7 @@ export const CONTEXT_LABELS: Record<AiContextMode, string> = {
 };
 
 export const HINT_CLOUD_NO_BRAIN =
-  "Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.";
-export const HINT_BRAIN_LOCAL_ONLY =
-  "DnD-/World-Wissen ist nur mit lokaler KI verfügbar.";
+  "Cloud-KI darf persönliches Life-Brain nicht nutzen.";
 export const HINT_RTX_NOT_READY = "Der RTX Connector ist aktuell nicht bereit.";
 export const HINT_LOCAL_READY = "Lokale KI bereit.";
 export const HINT_RTX_DISABLED = "RTX Connector deaktiviert.";
@@ -167,15 +165,14 @@ export interface AiPromptUiState {
   }>;
 }
 
-const LOCAL_CONTEXT_MODES: AiContextMode[] = [
-  "brain",
-  "current_object",
-  "current_object_plus_brain",
-  "personal_brain",
-];
+const LOCAL_CONTEXT_MODES: AiContextMode[] = ["personal_brain"];
 
 export function requiresLocalContext(mode: AiContextMode): boolean {
   return LOCAL_CONTEXT_MODES.includes(mode);
+}
+
+function isPersonalBrainMode(mode: AiContextMode): boolean {
+  return mode === "personal_brain";
 }
 
 export function deriveStatusChips(caps: AiPromptCapabilities): AiStatusChip[] {
@@ -204,8 +201,8 @@ function isContextDisabled(
   provider: AiProviderMode,
   caps: AiPromptCapabilities,
 ): { disabled: boolean; reason?: string } {
-  if (provider === "cloud" && requiresLocalContext(mode)) {
-    return { disabled: true, reason: HINT_CLOUD_NO_BRAIN };
+  if (provider === "cloud" && isPersonalBrainMode(mode)) {
+    return { disabled: true, reason: HINT_PERSONAL_BRAIN_LOCAL_ONLY };
   }
 
   if (
@@ -215,24 +212,16 @@ function isContextDisabled(
     return { disabled: true, reason: HINT_OBJECT_NEEDS_PAGE };
   }
 
-  if (requiresLocalContext(mode) && !caps.localAiReady) {
-    if (provider === "auto" && caps.cloudAvailable && mode !== "general_chat") {
-      return {
-        disabled: true,
-        reason: mode === "personal_brain" ? HINT_PERSONAL_BRAIN_LOCAL_ONLY : HINT_BRAIN_LOCAL_ONLY,
-      };
-    }
-    if (provider === "auto") {
-      return {
-        disabled: true,
-        reason: mode === "personal_brain" ? HINT_PERSONAL_BRAIN_LOCAL_ONLY : HINT_BRAIN_LOCAL_ONLY,
-      };
-    }
+  if (isPersonalBrainMode(mode) && !caps.localAiReady) {
+    return { disabled: true, reason: HINT_PERSONAL_BRAIN_LOCAL_ONLY };
+  }
+
+  if (provider === "local_rtx" && !caps.localAiReady && mode !== "general_chat") {
     return { disabled: true, reason: HINT_LOCAL_NOT_READY };
   }
 
-  if (requiresLocalContext(mode) && !caps.brainLocal && mode === "brain") {
-    return { disabled: true, reason: "Brain ist lokal nicht verfügbar." };
+  if (provider === "auto" && mode === "general_chat" && !caps.localAiReady && !caps.cloudAvailable) {
+    return { disabled: true, reason: "Weder lokale KI noch Cloud-KI ist verfügbar." };
   }
 
   return { disabled: false };
@@ -259,12 +248,22 @@ export function computePromptUiState(
 ): AiPromptUiState {
   const hints: string[] = [];
 
-  if (provider === "cloud") {
+  if (provider === "cloud" && isPersonalBrainMode(context)) {
     hints.push(HINT_CLOUD_NO_BRAIN);
   }
 
-  if (provider === "auto" && !caps.localAiReady && requiresLocalContext(context)) {
-    hints.push(HINT_BRAIN_LOCAL_ONLY);
+  if (provider === "auto" && isPersonalBrainMode(context) && !caps.localAiReady) {
+    hints.push(HINT_PERSONAL_BRAIN_LOCAL_ONLY);
+  }
+
+  if (
+    provider === "auto" &&
+    !caps.localAiReady &&
+    !requiresLocalContext(context) &&
+    context !== "general_chat" &&
+    caps.cloudAvailable
+  ) {
+    hints.push("RTX offline — Cloud-Fallback für DnD-/World-Kontext ist verfügbar.");
   }
 
   if (provider === "local_rtx" && !caps.localAiReady) {
@@ -313,9 +312,9 @@ export function computePromptUiState(
   } else if (provider === "cloud" && !caps.cloudAvailable) {
     canSend = false;
     sendBlockedReason = "Cloud-KI ist nicht konfiguriert.";
-  } else if (provider === "auto" && requiresLocalContext(context) && !caps.localAiReady) {
+  } else if (provider === "auto" && isPersonalBrainMode(context) && !caps.localAiReady) {
     canSend = false;
-    sendBlockedReason = HINT_BRAIN_LOCAL_ONLY;
+    sendBlockedReason = HINT_PERSONAL_BRAIN_LOCAL_ONLY;
   } else if (
     provider === "auto" &&
     context === "general_chat" &&

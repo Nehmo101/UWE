@@ -1,9 +1,9 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { indexPersonalBrainDocument, reindexPersonalBrain } from "@uwe/ai-brain";
 import { createPersonalBrainService, prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 function personalBrain() {
@@ -11,7 +11,7 @@ function personalBrain() {
 }
 
 export async function reindexLifeBrainAction() {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const useMock = process.env.AI_USE_MOCK === "true";
 
@@ -32,7 +32,7 @@ export async function reindexLifeBrainAction() {
 }
 
 export async function indexLifeBrainDocumentAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const documentId = String(formData.get("documentId") || "");
   await indexPersonalBrainDocument(personalBrain(), documentId, undefined, {

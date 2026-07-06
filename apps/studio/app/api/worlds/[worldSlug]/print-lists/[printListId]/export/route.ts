@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   assertPlayerSafeExport,
   createPrintListService,
@@ -10,7 +12,7 @@ import {
 } from "@uwe/database/server";
 import { logPrintListExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
-import { idSchema, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+import { idSchema, parseParams, worldSlugParamSchema } from "@uwe/security";
 
 const printListExportParamsSchema = worldSlugParamSchema.extend({
   printListId: idSchema,
@@ -21,7 +23,7 @@ interface Props {
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, printListExportParamsSchema);
@@ -37,12 +39,12 @@ export async function GET(request: Request, { params }: Props) {
 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "World not found" }, { status: 404 });
+    return jsonError("World not found", 404);
   }
 
   const list = await printListService.getById(printListId);
   if (!list || list.worldId !== world.id) {
-    return NextResponse.json({ error: "Print list not found" }, { status: 404 });
+    return jsonError("Print list not found", 404);
   }
 
   const expanded = printListService.expandItemsForExport(list);
@@ -97,7 +99,7 @@ export async function GET(request: Request, { params }: Props) {
   if (format === "png") {
     const first = exportOptions[0];
     if (!first) {
-      return NextResponse.json({ error: "Druckliste ist leer" }, { status: 400 });
+      return jsonError("Druckliste ist leer", 400);
     }
     const exported = await renderLabelPngExportAsync(first);
     const body =

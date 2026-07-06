@@ -299,8 +299,8 @@ describe("integration smoke — AI security policy module", () => {
   it("protects unauthenticated AI routes", () => {
     const dndGenerator = read("apps/studio/app/api/dnd-generator/route.ts");
     const inferenceTest = read("apps/studio/app/api/inference/test-prompt/route.ts");
-    assert.match(dndGenerator, /requireStudioApiAuth|guardStudioMutation/);
-    assert.match(inferenceTest, /requireStudioApiAuth|guardStudioMutation/);
+    assert.match(dndGenerator, /requireStudioApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation/);
+    assert.match(inferenceTest, /requireStudioApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation/);
   });
 });
 

@@ -127,7 +127,7 @@ describe("SettingsService", () => {
     assert.equal(page.canonicalStatus, "canon");
   });
 
-  it("guest access setting controls portal guest access", async () => {
+  it("keeps portal guest access disabled regardless of settings", async () => {
     const db = createPrismaClient(databaseUrl);
     const service = createSettingsService(db);
     const auth = createAuthService(db);
@@ -141,25 +141,14 @@ describe("SettingsService", () => {
     });
 
     await service.updateSettings({
-      portal: { guestAccessEnabled: false },
-    });
-
-    const disabledSettings = await service.getSettings();
-    const ctxDisabled = await auth.buildAccessContextForWorld("guest-world");
-    assert.ok(ctxDisabled);
-    assert.equal(
-      isGuestPortalAccessAllowed(disabledSettings, true),
-      false,
-    );
-    assert.equal(ctxDisabled.guestModeEnabled, false);
-
-    await service.updateSettings({
       portal: { guestAccessEnabled: true },
     });
 
-    const ctxEnabled = await auth.buildAccessContextForWorld("guest-world");
-    assert.ok(ctxEnabled);
-    assert.equal(ctxEnabled.guestModeEnabled, true);
+    const settings = await service.getSettings();
+    const ctx = await auth.buildAccessContextForWorld("guest-world");
+    assert.ok(ctx);
+    assert.equal(isGuestPortalAccessAllowed(settings, true), false);
+    assert.equal(ctx.guestModeEnabled, false);
   });
 
   it("exposes local-only mode from settings", async () => {

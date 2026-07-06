@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import fs from "node:fs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -31,11 +32,11 @@ import { validateImageContextForProvider } from "@uwe/image-studio";
 import { dispatchJob } from "@/src/lib/job-executor";
 import {
   assertStudioCanUseAI,
-  assertStudioTrusted,
   requireStudioWorldEdit,
 } from "@/src/lib/authz";
 
 export async function createImageStudioJobAction(formData: FormData) {
+  await requireStudioActionAuth();
   const settings = await getSystemSettings();
   const config = {
     enabled: settings.imageStudio.enabled,
@@ -161,6 +162,7 @@ export async function createImageStudioJobAction(formData: FormData) {
 }
 
 export async function retryImageStudioProjectAction(formData: FormData) {
+  await requireStudioActionAuth();
   const settings = await getSystemSettings();
   if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
 
@@ -206,6 +208,7 @@ export async function retryImageStudioProjectAction(formData: FormData) {
 }
 
 export async function saveImageStudioDraftAction(formData: FormData) {
+  await requireStudioActionAuth();
   const settings = await getSystemSettings();
   if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
 
@@ -223,7 +226,7 @@ export async function saveImageStudioDraftAction(formData: FormData) {
 }
 
 export async function adoptImageStudioAssetAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const assetId = String(formData.get("assetId") ?? "");
   const targetType = String(formData.get("targetType") ?? "") as
@@ -259,7 +262,7 @@ export async function adoptImageStudioAssetAction(formData: FormData) {
 }
 
 export async function saveImageStudioCanvasAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const projectId = String(formData.get("projectId") ?? "");
   const imageBase64 = String(formData.get("imageBase64") ?? "");
@@ -342,7 +345,7 @@ export async function createAgentJobAction(formData: FormData) {
   const config = resolveAgentJobsConfig();
   if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
 
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   assertStudioCanUseAI();
 
   const title = String(formData.get("title") ?? "");
@@ -356,7 +359,7 @@ export async function createAgentJobFromPresetAction(formData: FormData) {
   const config = resolveAgentJobsConfig();
   if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
 
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   assertStudioCanUseAI();
 
   const presetId = String(formData.get("preset") ?? "");
@@ -379,7 +382,7 @@ export async function createCalendarEventAction(formData: FormData) {
   const calConfig = resolveCalendarConfig();
   if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
 
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const calendar = createCalendarService(prisma);
   const feedIdInput = String(formData.get("feedId") ?? "");
@@ -416,7 +419,7 @@ export async function createCalendarFeedAction(formData: FormData) {
   const calConfig = resolveCalendarConfig();
   if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
 
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const type = String(formData.get("type") ?? "ical_url") as
     | "caldav"
@@ -452,6 +455,7 @@ export async function createCalendarFeedAction(formData: FormData) {
 }
 
 export async function addDndBeyondReferenceAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug") ?? "");
   const url = String(formData.get("url") ?? "");
   if (!url.includes("dndbeyond.com")) {

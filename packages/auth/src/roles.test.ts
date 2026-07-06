@@ -48,6 +48,7 @@ describe("role guards", () => {
     assert.deepEqual(getRequiredRolesForApiPath("/api/brain/run"), STUDIO_ACCESS_ROLES);
     assert.deepEqual(getRequiredRolesForApiPath("/api/ai/generate"), STUDIO_ACCESS_ROLES);
     assert.deepEqual(getRequiredRolesForApiPath("/api/import/preview"), STUDIO_ACCESS_ROLES);
+    assert.deepEqual(getRequiredRolesForApiPath("/api/backup"), STUDIO_ACCESS_ROLES);
     assert.equal(getRequiredRolesForApiPath("/api/health"), null);
 
     assert.deepEqual(getRequiredRolesForPagePath("/admin/status"), ADMIN_ACCESS_ROLES);

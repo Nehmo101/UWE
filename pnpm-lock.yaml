@@ -818,6 +818,9 @@ importers:
 
   packages/mail:
     dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
       '@uwe/env':
         specifier: workspace:*
         version: link:../env

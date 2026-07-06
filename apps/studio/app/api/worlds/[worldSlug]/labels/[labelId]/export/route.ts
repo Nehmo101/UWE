@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   assertPlayerSafeExport,
   createLabelService,
@@ -9,7 +11,7 @@ import {
 } from "@uwe/database/server";
 import { logLabelExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
-import { idSchema, parseParams, requireStudioApiAuth, worldSlugParamSchema } from "@uwe/security";
+import { idSchema, parseParams, worldSlugParamSchema } from "@uwe/security";
 
 const labelExportParamsSchema = worldSlugParamSchema.extend({
   labelId: idSchema,
@@ -20,7 +22,7 @@ interface Props {
 }
 
 export async function GET(request: Request, { params }: Props) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, labelExportParamsSchema);
@@ -37,12 +39,12 @@ export async function GET(request: Request, { params }: Props) {
 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "World not found" }, { status: 404 });
+    return jsonError("World not found", 404);
   }
 
   const label = await labelService.getLabelById(labelId);
   if (!label || label.worldId !== world.id) {
-    return NextResponse.json({ error: "Label not found" }, { status: 404 });
+    return jsonError("Label not found", 404);
   }
 
   const parsed = normalizeLabel(label);
@@ -53,7 +55,7 @@ export async function GET(request: Request, { params }: Props) {
 
   const safety = assertPlayerSafeExport(content, allowDm || !playerVersion);
   if (!safety.allowed && playerVersion) {
-    return NextResponse.json({ error: safety.reason }, { status: 403 });
+    return jsonError(safety.reason ?? "Export nicht erlaubt.", 403);
   }
 
   const imageUrls: Record<string, string> = {};

@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type {
   WorkshopPaintTarget,
   WorkshopProjectType,
@@ -18,7 +19,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function lifeAdmin() {
   return createLifeAdminService(prisma);
@@ -55,7 +55,7 @@ function readWorkshopStructuredFields(formData: FormData) {
 }
 
 export async function createWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const structured = readWorkshopStructuredFields(formData);
   const workshop = await lifeAdmin().createWorkshopProject({
@@ -75,7 +75,7 @@ export async function createWorkshopAction(formData: FormData) {
 }
 
 export async function updateWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const structured = readWorkshopStructuredFields(formData);
@@ -95,7 +95,7 @@ export async function updateWorkshopAction(formData: FormData) {
 }
 
 export async function deleteWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deleteWorkshopProject(String(formData.get("id")));
   revalidateWorkshopPaths();
@@ -103,7 +103,7 @@ export async function deleteWorkshopAction(formData: FormData) {
 }
 
 export async function promoteCaptureToWorkshopAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const captureId = String(formData.get("captureId"));
   const workshop = await lifeAdmin().promoteCaptureToWorkshop(captureId, {
@@ -117,7 +117,7 @@ export async function promoteCaptureToWorkshopAction(formData: FormData) {
 }
 
 export async function createPaintRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const workshopProjectId = String(formData.get("workshopProjectId") || "").trim() || null;
   await lifeAdmin().createWorkshopPaintRecipe({
@@ -139,7 +139,7 @@ export async function createPaintRecipeAction(formData: FormData) {
 }
 
 export async function updatePaintRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const workshopProjectId = String(formData.get("workshopProjectId") || "").trim() || null;
@@ -162,7 +162,7 @@ export async function updatePaintRecipeAction(formData: FormData) {
 }
 
 export async function deletePaintRecipeAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const returnTo = String(formData.get("returnTo") || "/workshop/recipes");
@@ -172,7 +172,7 @@ export async function deletePaintRecipeAction(formData: FormData) {
 }
 
 export async function createPrintProfileAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const workshopProjectId = String(formData.get("workshopProjectId") || "").trim() || null;
   await lifeAdmin().createWorkshopPrintProfile({
@@ -194,7 +194,7 @@ export async function createPrintProfileAction(formData: FormData) {
 }
 
 export async function deletePrintProfileAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const returnTo = String(formData.get("returnTo") || "/workshop/print-profiles");
   await lifeAdmin().deleteWorkshopPrintProfile(String(formData.get("id")));
@@ -203,7 +203,7 @@ export async function deletePrintProfileAction(formData: FormData) {
 }
 
 export async function createTerrainRentalAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().createWorkshopTerrainRental({
     terrainSetName: String(formData.get("terrainSetName") || "").trim(),
@@ -224,7 +224,7 @@ export async function createTerrainRentalAction(formData: FormData) {
 }
 
 export async function updateTerrainRentalAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await lifeAdmin().updateWorkshopTerrainRental(id, {
@@ -246,7 +246,7 @@ export async function updateTerrainRentalAction(formData: FormData) {
 }
 
 export async function deleteTerrainRentalAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   await lifeAdmin().deleteWorkshopTerrainRental(String(formData.get("id")));
   revalidateWorkshopPaths();

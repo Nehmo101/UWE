@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -20,7 +21,7 @@ export async function GET(request: Request, context: RouteContext) {
   const user = await service.getUserForAdmin(id);
 
   if (!user) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+    return jsonError("Benutzer nicht gefunden.", 404);
   }
 
   return NextResponse.json({ user });
@@ -48,7 +49,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const user = await service.updateUser(id, body, authContext.user?.id ?? null);
     if (!user) {
-      return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
+      return jsonError("Benutzer nicht gefunden.", 404);
     }
     return NextResponse.json({ user });
   } catch (error) {
@@ -65,6 +66,6 @@ export async function PATCH(request: Request, context: RouteContext) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ error: "Anfrage konnte nicht verarbeitet werden." }, { status: 400 });
+    return jsonError("Anfrage konnte nicht verarbeitet werden.", 400);
   }
 }

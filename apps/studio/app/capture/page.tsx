@@ -1,7 +1,5 @@
 import Link from "next/link";
-import {
-  EmptyState,
-} from "@uwe/shared-ui";
+import { EmptyState } from "@uwe/shared-ui";
 import {
   CAPTURE_STATUS_LABELS,
   CAPTURE_TYPE_LABELS,
@@ -11,13 +9,9 @@ import {
 } from "@uwe/database/server";
 import { CaptureImageUpload } from "@/components/CaptureImageUpload";
 import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { AdminCreateCard, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
+import { formatStudioDateTime } from "@/src/lib/format";
 import { deleteCaptureAction } from "../capture-actions";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 interface Props {
   searchParams: Promise<{ quick?: string; status?: string }>;
@@ -43,29 +37,28 @@ export default async function CapturePage({ searchParams }: Props) {
   const showQuickForm = quick === "1" || quick === "true";
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Capture Inbox" }]} />}>
-      <PageHeader
-        title="Capture Inbox"
-        summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Sprachmemos, Dateien und To-dos ohne RTX."
-      />
-          <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Bild erfassen (Mobile)</h2>
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Capture Inbox" }]} />}
+      title="Capture Inbox"
+      summary="Universeller mobiler Eingang — Notizen, Ideen, Links, Sprachmemos, Dateien und To-dos ohne RTX."
+    >
+          <AdminCreateCard title="Bild erfassen (Mobile)">
             <p className="uwe-hint">
               Fotos von Miniaturen, Terrain oder Handouts — optional direkt als Asset in einer Welt.
             </p>
             <CaptureImageUpload worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))} />
-          </section>
+          </AdminCreateCard>
 
-          <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section uwe-capture-quick-section">
-            <h2 className="uwe-v2-section-title">
-              {showQuickForm ? "Schnell erfassen" : "Neuer Capture"}
-            </h2>
+          <AdminCreateCard
+            title={showQuickForm ? "Schnell erfassen" : "Neuer Capture"}
+            className="uwe-capture-quick-section"
+          >
             <QuickCaptureForm
               returnTo="/capture"
               autoFocus={showQuickForm}
               compact={showQuickForm}
             />
-          </section>
+          </AdminCreateCard>
 
           <section className="uwe-v2-section">
             <div className="uwe-capture-inbox-head">
@@ -104,7 +97,7 @@ export default async function CapturePage({ searchParams }: Props) {
                         <h3>{capture.title}</h3>
                         <p>
                           {typeLabel} · {CAPTURE_STATUS_LABELS[capture.status]} ·{" "}
-                          {DATE_FORMAT.format(capture.capturedAt)}
+                          {formatStudioDateTime(capture.capturedAt)}
                         </p>
                         {capture.content ? <p className="uwe-capture-snippet">{capture.content}</p> : null}
                         {capture.storageKey ? <p className="uwe-capture-snippet">📎 Anhang</p> : null}
@@ -126,10 +119,6 @@ export default async function CapturePage({ searchParams }: Props) {
               </div>
             )}
           </section>
-
-          <p className="uwe-dashboard-muted">
-            <Link href="/today">← Zurück zu Heute</Link>
-          </p>
-    </StudioShell>
+    </AdminModulePage>
   );
 }

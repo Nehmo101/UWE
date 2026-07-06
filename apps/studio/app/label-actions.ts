@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   applyAutoFitToContent,
   createLabelService,
@@ -16,7 +17,10 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
-import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
+import {
+  requireStudioContentEdit,
+  requireStudioWorldEdit,
+} from "@/src/lib/authz";
 
 function labels() {
   return createLabelService();
@@ -81,6 +85,7 @@ async function logLabelActivity(
 }
 
 export async function createLabelFromSourceAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);
 
@@ -134,6 +139,7 @@ export async function createLabelFromSourceAction(formData: FormData) {
 }
 
 export async function createManualLabelAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);
 
@@ -178,6 +184,7 @@ export async function createManualLabelAction(formData: FormData) {
 }
 
 export async function updateLabelAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const action = String(formData.get("action") || "save");
@@ -275,6 +282,7 @@ export async function updateLabelAction(formData: FormData) {
 }
 
 export async function duplicateLabelAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
 
@@ -287,6 +295,7 @@ export async function duplicateLabelAction(formData: FormData) {
 }
 
 export async function deleteLabelAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
 
@@ -299,6 +308,7 @@ export async function deleteLabelAction(formData: FormData) {
 }
 
 export async function saveLabelAsTemplateAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const name = String(formData.get("templateName") || "Mein Template");
@@ -315,6 +325,7 @@ export async function saveLabelAsTemplateAction(formData: FormData) {
 }
 
 export async function resetLabelToTemplateAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
 
@@ -327,6 +338,7 @@ export async function resetLabelToTemplateAction(formData: FormData) {
 }
 
 export async function duplicateTemplateAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const templateId = String(formData.get("templateId"));
 
@@ -342,6 +354,7 @@ export async function duplicateTemplateAction(formData: FormData) {
 }
 
 export async function renameTemplateAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const templateId = String(formData.get("templateId"));
   const name = String(formData.get("name"));
@@ -355,6 +368,7 @@ export async function renameTemplateAction(formData: FormData) {
 }
 
 export async function deleteTemplateAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const templateId = String(formData.get("templateId"));
 
@@ -367,6 +381,7 @@ export async function deleteTemplateAction(formData: FormData) {
 }
 
 export async function createPrintListAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);
 
@@ -396,6 +411,7 @@ export async function createPrintListAction(formData: FormData) {
 }
 
 export async function preparePrintListFromSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
   await requireStudioWorldEdit(worldSlug);
@@ -432,6 +448,7 @@ export async function preparePrintListFromSessionAction(formData: FormData) {
 }
 
 export async function preparePrintListFromRoomAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const roomPageId = String(formData.get("roomPageId"));
   const childPageIds = String(formData.get("childPageIds") || "")
@@ -467,6 +484,7 @@ export async function preparePrintListFromRoomAction(formData: FormData) {
 }
 
 export async function preparePrintListFromPageAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const pageId = String(formData.get("pageId"));
   await requireStudioContentEdit(worldSlug, pageId);
@@ -497,6 +515,7 @@ export async function preparePrintListFromPageAction(formData: FormData) {
 }
 
 export async function addLabelToPrintListAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
   const labelId = String(formData.get("labelId"));
@@ -512,6 +531,7 @@ export async function addLabelToPrintListAction(formData: FormData) {
 }
 
 export async function updatePrintListAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
   await requireStudioWorldEdit(worldSlug);
@@ -558,6 +578,7 @@ export async function updatePrintListAction(formData: FormData) {
 }
 
 export async function setPrintListStatusAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
   const status = String(formData.get("status")) as LabelPrintStatus;
@@ -587,6 +608,7 @@ export async function setPrintListStatusAction(formData: FormData) {
 }
 
 export async function deletePrintListAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const printListId = String(formData.get("printListId"));
 
@@ -620,6 +642,7 @@ export async function logLabelExportActivity(
   title: string,
   format: string,
 ) {
+  await requireStudioActionAuth();
   await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
@@ -643,6 +666,7 @@ export async function logPrintListExportActivity(
   name: string,
   format: string,
 ) {
+  await requireStudioActionAuth();
   await requireStudioWorldEdit(worldSlug);
 
   const world = await repo().getWorldBySlug(worldSlug);
@@ -661,6 +685,7 @@ export async function logPrintListExportActivity(
 }
 
 export async function setLabelPrintStatusAction(formData: FormData) {
+  await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const labelId = String(formData.get("labelId"));
   const status = String(formData.get("status")) as LabelPrintStatus;

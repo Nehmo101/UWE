@@ -1,5 +1,5 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
-import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 import {
   readBackupScheduleConfig,
   writeBackupScheduleConfig,
@@ -8,7 +8,7 @@ import {
 import { getUserFromRequestCookieHeader } from "../../../../src/lib/auth-session";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const schedule = readBackupScheduleConfig();
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { guardStudioMutation, parseParams, worldSlugParamSchema } from "@uwe/security";
+import { parseParams, worldSlugParamSchema } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { setPreferredSpotifyDevice } from "@/src/lib/spotify-handlers";
 
 interface RouteParams {
@@ -12,7 +13,7 @@ const setDeviceSchema = z.object({
 });
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);

@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createDndApiService,
   getAppRepository,
@@ -18,16 +20,7 @@ import {
   suggestEncounterComposition,
   type EncounterCandidate,
 } from "@uwe/dnd-api";
-import {
-  guardStudioMutation,
-  idSchema,
-  nonEmptyString,
-  optionalString,
-  parseBody,
-  parseQuery,
-  requireStudioApiAuth,
-  slugSchema,
-} from "@uwe/security";
+import { idSchema, nonEmptyString, optionalString, parseBody, parseQuery, slugSchema } from "@uwe/security";
 import { z } from "zod";
 
 const dndApiQuerySchema = z.object({
@@ -103,7 +96,7 @@ async function resolveUniquePageSlug(worldSlug: string, title: string, suffix?: 
 }
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, dndApiQuerySchema);
@@ -162,7 +155,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, dndApiPostSchema);
@@ -171,7 +164,7 @@ export async function POST(request: Request) {
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(parsed.data.worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+    return jsonError("Welt nicht gefunden.", 404);
   }
 
   if (parsed.data.action === "add_beyond_reference") {

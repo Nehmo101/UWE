@@ -457,9 +457,8 @@ export class UweRepository {
     });
   }
 
-  async listPagesWithBlocksForGraph(
+  async listPagesWithBlocksForGraphUnfiltered(
     worldSlug: string,
-    context: AccessContext,
     options?: { campaignId?: string | null; types?: PageType[] },
   ): Promise<PageWithBlocks[]> {
     const world = await this.getWorldBySlug(worldSlug);
@@ -478,6 +477,16 @@ export class UweRepository {
       orderBy: [{ title: "asc" }],
     });
 
+    return pages.map((page) => withParsedArrays(page));
+  }
+
+  async listPagesWithBlocksForGraph(
+    worldSlug: string,
+    context: AccessContext,
+    options?: { campaignId?: string | null; types?: PageType[] },
+  ): Promise<PageWithBlocks[]> {
+    const pages = await this.listPagesWithBlocksForGraphUnfiltered(worldSlug, options);
+
     const portalOptions =
       context === "portal" || context === "preview"
         ? await this.getPortalAccessOptions()
@@ -486,7 +495,7 @@ export class UweRepository {
     return pages
       .filter((page) => isPageAccessible(page, context, portalOptions))
       .map((page) => ({
-        ...withParsedArrays(page),
+        ...page,
         contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
       }));
   }

@@ -9,7 +9,7 @@ import {
 } from "@uwe/database/server";
 import { LifeBrainIndexPanel } from "@/components/life-brain/LifeBrainIndexPanel";
 import { LifeBrainSearchPanel } from "@/components/life-brain/LifeBrainSearchPanel";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { AdminCreateCard, AdminEntityForm, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
 import {
   createLifeBrainDocumentAction,
   createLifeBrainFactAction,
@@ -31,78 +31,66 @@ export default async function LifeBrainPage() {
   ]);
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Persönliches Brain" }]} />}>
-      <PageHeader
-        title="Persönliches Brain"
-        summary="Life-Wissen lokal in UWE — niemals an Cloud-KI. Getrennt vom DnD Brain."
-      />
+    <AdminModulePage
+      breadcrumb={<BreadcrumbTrail items={[{ label: "Persönliches Brain" }]} />}
+      title="Persönliches Brain"
+      summary="Life-Wissen lokal in UWE — niemals an Cloud-KI. Getrennt vom DnD Brain."
+      headerActions={
+        <Link href="/life-brain/chat" className="uwe-v2-btn uwe-v2-btn-secondary">
+          Life-Brain Chat →
+        </Link>
+      }
+    >
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
-      </p>
-      <p>
-        <Link href="/life-brain/chat" className="uwe-v2-btn uwe-v2-btn-secondary">
-          Life-Brain Chat öffnen →
-        </Link>
       </p>
 
       <LifeBrainIndexPanel />
       <LifeBrainSearchPanel />
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neues Dokument</h2>
-        <form action={createLifeBrainDocumentAction} className="uwe-brain-create-form">
-          <label>
-            Titel
-            <input name="title" required />
-          </label>
-          <label>
-            Kategorie
-            <select name="category" defaultValue="personal_notes">
-              {PERSONAL_BRAIN_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {PERSONAL_BRAIN_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Inhalt
-            <textarea name="content" rows={5} required />
-          </label>
-          <label>
-            Tags (kommagetrennt)
-            <input name="tags" placeholder="homelab, netzwerk" />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Dokument speichern
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neues Dokument">
+        <AdminEntityForm
+          action={createLifeBrainDocumentAction}
+          submitLabel="Dokument speichern"
+          fields={[
+            { name: "title", label: "Titel", required: true },
+            {
+              name: "category",
+              label: "Kategorie",
+              type: "select",
+              defaultValue: "personal_notes",
+              options: PERSONAL_BRAIN_CATEGORIES.map((category) => ({
+                value: category,
+                label: PERSONAL_BRAIN_CATEGORY_LABELS[category],
+              })),
+            },
+            { name: "content", label: "Inhalt", type: "textarea", rows: 5, required: true },
+            {
+              name: "tags",
+              label: "Tags (kommagetrennt)",
+              placeholder: "homelab, netzwerk",
+            },
+          ]}
+        />
+      </AdminCreateCard>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neuer Fakt</h2>
-        <form action={createLifeBrainFactAction} className="uwe-brain-create-form">
-          <label>
-            Titel
-            <input name="title" required />
-          </label>
-          <label>
-            Typ
-            <input name="factType" defaultValue="custom" />
-          </label>
-          <label>
-            Inhalt
-            <textarea name="content" rows={3} />
-          </label>
-          <label>
-            Tags (kommagetrennt)
-            <input name="tags" placeholder="material, 3d-print" />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-            Fakt speichern
-          </button>
-        </form>
-      </section>
+      <AdminCreateCard title="Neuer Fakt">
+        <AdminEntityForm
+          action={createLifeBrainFactAction}
+          submitLabel="Fakt speichern"
+          submitClassName="uwe-v2-btn uwe-v2-btn-secondary"
+          fields={[
+            { name: "title", label: "Titel", required: true },
+            { name: "factType", label: "Typ", defaultValue: "custom" },
+            { name: "content", label: "Inhalt", type: "textarea", rows: 3 },
+            {
+              name: "tags",
+              label: "Tags (kommagetrennt)",
+              placeholder: "material, 3d-print",
+            },
+          ]}
+        />
+      </AdminCreateCard>
 
       {documents.length === 0 && facts.length === 0 ? (
         <EmptyState
@@ -157,6 +145,6 @@ export default async function LifeBrainPage() {
           </section>
         </>
       )}
-    </StudioShell>
+    </AdminModulePage>
   );
 }

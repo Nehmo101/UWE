@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import {
   createAuthService,
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   const code = body.code?.trim();
 
   if (!challengeToken || !code) {
-    return NextResponse.json({ error: "Challenge-Token und Code sind erforderlich." }, { status: 400 });
+    return jsonError("Challenge-Token und Code sind erforderlich.", 400);
   }
 
   const ip = clientIpFromHeaders(request.headers);
@@ -43,12 +44,12 @@ export async function POST(request: Request) {
   try {
     const verified = await twoFactor.verifyLoginChallenge(challengeToken, code);
     if (!verified) {
-      return NextResponse.json({ error: "Ungültiger oder abgelaufener 2FA-Code." }, { status: 401 });
+      return jsonError("Ungültiger oder abgelaufener 2FA-Code.", 401);
     }
 
     const user = await db.user.findUnique({ where: { id: verified.userId } });
     if (!user || !canAccessStudio(auth.toAuthUser(user))) {
-      return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
+      return jsonError("Ungültige Anmeldedaten.", 401);
     }
 
     const session = await auth.createSession(user.id);

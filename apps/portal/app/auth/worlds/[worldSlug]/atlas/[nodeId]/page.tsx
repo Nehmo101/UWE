@@ -3,10 +3,11 @@ import {
   createAtlasService,
   createPrismaClient,
   isAtlasEntityAccessible,
-  PORTAL_PAGE_VISIBILITIES,
 } from "@uwe/database/server";
+import { filterPagesForViewer } from "@uwe/auth";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
+import { getAccessContextForWorld } from "@/src/lib/auth";
 import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap, ViewerTileLayer } from "@/src/components/atlas/AtlasViewer";
 
 interface Props {
@@ -15,6 +16,10 @@ interface Props {
 
 export default async function PortalAtlasNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
+  const ctx = await getAccessContextForWorld(worldSlug);
+  if (!ctx) {
+    notFound();
+  }
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
@@ -174,12 +179,17 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       const pages = await db.page.findMany({
         where: {
           id: { in: pageIds },
-          visibility: { in: PORTAL_PAGE_VISIBILITIES },
-          publishStatus: "published",
         },
-        select: { id: true, slug: true },
+        select: {
+          id: true,
+          slug: true,
+          visibility: true,
+          publishStatus: true,
+          secretLevel: true,
+          revealState: true,
+        },
       });
-      for (const page of pages) {
+      for (const page of filterPagesForViewer(ctx, pages)) {
         pageLinkMap[page.id] = page.slug;
       }
     }

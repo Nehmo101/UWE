@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import {
@@ -42,6 +43,7 @@ async function requireWritableViewer(worldSlug: string) {
 }
 
 export async function setQuestPriorityAction(formData: FormData) {
+  await requirePortalActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const pageId = String(formData.get("pageId"));
   const priority = normalizeQuestPriority(String(formData.get("priority")));
@@ -71,6 +73,7 @@ export async function setQuestPriorityAction(formData: FormData) {
 }
 
 export async function setSessionAvailabilityAction(formData: FormData) {
+  await requirePortalActionAuth();
   const worldSlug = String(formData.get("worldSlug"));
   const sessionId = String(formData.get("sessionId"));
   const status = normalizeAvailabilityStatus(String(formData.get("status")));

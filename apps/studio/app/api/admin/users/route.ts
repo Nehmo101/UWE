@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
   const displayName = body.displayName?.trim();
   if (!displayName) {
-    return NextResponse.json({ error: "Anzeigename ist erforderlich." }, { status: 400 });
+    return jsonError("Anzeigename ist erforderlich.", 400);
   }
 
   const service = createUserService(prisma);
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   if (body.invite) {
     const email = body.email?.trim().toLowerCase();
     if (!email) {
-      return NextResponse.json({ error: "E-Mail ist für Einladungen erforderlich." }, { status: 400 });
+      return jsonError("E-Mail ist für Einladungen erforderlich.", 400);
     }
 
     const invited = await service.createInvite({

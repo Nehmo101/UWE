@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import { timingSafeEqual } from "node:crypto";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
@@ -42,7 +43,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const config = getUweRuntimeConfig();
   if (!config.setupToken) {
-    return NextResponse.json({ error: "Setup ist nicht konfiguriert." }, { status: 503 });
+    return jsonError("Setup ist nicht konfiguriert.", 503);
   }
 
   const ip = clientIpFromHeaders(request.headers);
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
 
   const setupToken = body.setupToken?.trim() ?? "";
   if (!tokensMatch(setupToken, config.setupToken)) {
-    return NextResponse.json({ error: "Ungültiges Setup-Token." }, { status: 403 });
+    return jsonError("Ungültiges Setup-Token.", 403);
   }
 
   const displayName = body.displayName?.trim();
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
 
   try {
     if (!(await auth.isSetupAvailable())) {
-      return NextResponse.json({ error: "Setup ist nicht mehr verfügbar." }, { status: 403 });
+      return jsonError("Setup ist nicht mehr verfügbar.", 403);
     }
 
     const owner = await auth.createOwnerViaSetup({ displayName, email, password });
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "SETUP_DISABLED") {
-      return NextResponse.json({ error: "Setup ist nicht mehr verfügbar." }, { status: 403 });
+      return jsonError("Setup ist nicht mehr verfügbar.", 403);
     }
     throw error;
   } finally {

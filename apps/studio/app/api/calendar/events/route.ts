@@ -1,17 +1,11 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   createCalendarService,
   prisma,
 } from "@uwe/database/server";
 import { generateIcalCalendar } from "@uwe/calendar";
-import {
-  guardStudioMutation,
-  idSchema,
-  nonEmptyString,
-  optionalString,
-  parseBody,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { idSchema, nonEmptyString, optionalString, parseBody } from "@uwe/security";
 import { z } from "zod";
 
 const calendarEventCreateSchema = z.object({
@@ -27,7 +21,7 @@ const calendarEventCreateSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -67,7 +61,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, calendarEventCreateSchema);

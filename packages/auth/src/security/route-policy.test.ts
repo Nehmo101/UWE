@@ -11,21 +11,22 @@ import {
 } from "./route-policy";
 
 describe("route policy", () => {
-  it("keeps only portal auth entrypoints public", () => {
+  it("keeps portal auth entrypoints and anonymous share links public", () => {
     assert.equal(isPublicRoute("/login", "portal"), true);
     assert.equal(isPublicRoute("/forgot-password", "portal"), true);
     assert.equal(isPublicRoute("/reset-password", "portal"), true);
+    assert.equal(isPublicRoute("/share/abc123", "portal"), true);
     assert.equal(isPublicRoute("/", "portal"), false);
     assert.equal(isPublicRoute("/worlds", "portal"), false);
     assert.equal(isPublicRoute("/worlds/terra", "portal"), false);
     assert.equal(isPublicRoute("/players/terra", "portal"), false);
-    assert.equal(isPublicRoute("/share/abc123", "portal"), false);
   });
 
   it("treats portal app content routes as session-protected", () => {
-    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players/terra", "/share/abc123"]) {
+    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players/terra"]) {
       assert.equal(classifyRoute(path, "portal").access, "protected-session", path);
     }
+    assert.equal(classifyRoute("/share/abc123", "portal").access, "public");
   });
 
   it("treats portal auth routes as session-protected", () => {
@@ -37,14 +38,21 @@ describe("route policy", () => {
     assert.equal(classifyRoute("/api/worlds", "portal").access, "protected-session");
   });
 
-  it("treats dashboard, graph, share and asset portal APIs as session-protected", () => {
+  it("treats dashboard, graph, print and asset portal APIs as session-protected", () => {
     for (const path of [
       "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
-      "/api/share/abc123",
+      "/api/worlds/terra/characters/print",
       "/api/assets/asset-123/file",
     ]) {
       assert.equal(classifyRoute(path, "portal").access, "protected-session", path);
+      assert.equal(isUnknownProtectedApi(path, "portal"), false, path);
+    }
+  });
+
+  it("treats share portal APIs as public (token/password gated in handlers)", () => {
+    for (const path of ["/api/share/abc123", "/api/share/abc123/verify"]) {
+      assert.equal(classifyRoute(path, "portal").access, "public", path);
       assert.equal(isUnknownProtectedApi(path, "portal"), false, path);
     }
   });

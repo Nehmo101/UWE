@@ -1,3 +1,4 @@
+import { jsonError } from "./src/lib/api-response";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -135,7 +136,7 @@ export async function middleware(request: NextRequest) {
     if (!hasSession) {
       if (pathname.startsWith("/api/")) {
         return applySecurityHeaders(
-          NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 }),
+          jsonError("Anmeldung erforderlich.", 401),
           process.env,
           { allowYouTubeEmbeds: true },
           request,
@@ -172,7 +173,7 @@ export async function middleware(request: NextRequest) {
 
   if (decision.status === 404) {
     return applySecurityHeaders(
-      NextResponse.json({ error: decision.error ?? "Nicht gefunden." }, { status: 404 }),
+      jsonError(decision.error ?? "Nicht gefunden.", 404),
       process.env,
       { allowYouTubeEmbeds: true },
       request,

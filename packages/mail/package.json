@@ -7,13 +7,16 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./portal-types": "./src/mail-portal-types.ts"
+    "./portal-types": "./src/mail-portal-types.ts",
+    "./priority": "./src/priority.ts",
+    "./portal": "./src/portal/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
     "imapflow": "^1.0.187",
     "mailparser": "^3.9.12",

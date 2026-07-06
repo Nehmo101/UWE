@@ -1,25 +1,26 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailAccountService, createJobService, prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 export async function POST(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   let body: { accountId?: string; limit?: number };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Ungültiger JSON-Body." }, { status: 400 });
+    return jsonError("Ungültiger JSON-Body.", 400);
   }
 
   if (!body.accountId) {
-    return NextResponse.json({ error: "accountId ist erforderlich." }, { status: 400 });
+    return jsonError("accountId ist erforderlich.", 400);
   }
 
   const account = await createMailAccountService(prisma).getAccount(body.accountId);
   if (!account) {
-    return NextResponse.json({ error: "Mail-Account nicht gefunden." }, { status: 404 });
+    return jsonError("Mail-Account nicht gefunden.", 404);
   }
 
   const jobs = createJobService(prisma);

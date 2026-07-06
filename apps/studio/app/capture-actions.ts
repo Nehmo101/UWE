@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { CaptureType } from "@uwe/database/server";
 import {
   createCaptureTriageService,
@@ -9,7 +10,6 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 const VALID_CAPTURE_TYPES = new Set<CaptureType>([
@@ -52,7 +52,7 @@ function parseMetadataJson(raw: string | null): Record<string, unknown> | null {
 }
 
 export async function createCaptureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
@@ -100,15 +100,20 @@ export async function createCaptureAction(formData: FormData) {
 
   revalidateCapturePaths();
 
-  const returnTo = String(formData.get("returnTo") || "/capture");
-  if (returnTo.includes("/capture/")) {
+  const returnTo = String(formData.get("returnTo") || "").trim();
+  if (
+    returnTo &&
+    returnTo.startsWith("/") &&
+    !returnTo.startsWith("//") &&
+    returnTo !== "/capture"
+  ) {
     redirect(returnTo);
   }
   redirect(`/capture/${capture.id}`);
 }
 
 export async function updateCaptureStatusAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as "inbox" | "triaged" | "linked" | "archived";
@@ -119,7 +124,7 @@ export async function updateCaptureStatusAction(formData: FormData) {
 }
 
 export async function deleteCaptureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   await lifeAdmin().deleteCapture(id);
@@ -128,7 +133,7 @@ export async function deleteCaptureAction(formData: FormData) {
 }
 
 export async function generateCaptureProposalAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const useMock = process.env.AI_USE_MOCK === "true";
@@ -157,7 +162,7 @@ export async function generateCaptureProposalAction(formData: FormData) {
 }
 
 export async function reviewCaptureProposalAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as "accepted" | "rejected";
@@ -169,7 +174,7 @@ export async function reviewCaptureProposalAction(formData: FormData) {
 }
 
 export async function triageCaptureAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id"));
   const action = String(formData.get("action")) as CaptureTriageAction;

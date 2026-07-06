@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createReviewService,
   prisma,
@@ -23,7 +24,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const reviews = createReviewService(prisma);
   const review = await reviews.getById(id);
   if (!review) {
-    return NextResponse.json({ error: "Review nicht gefunden." }, { status: 404 });
+    return jsonError("Review nicht gefunden.", 404);
   }
 
   const comments = await reviews.listComments(id);
@@ -39,7 +40,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (authError) return authError;
 
   if (!context.user) {
-    return NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 });
+    return jsonError("Anmeldung erforderlich.", 401);
   }
 
   const { id } = await params;
@@ -54,7 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (body.action === "comment") {
     if (!body.content?.trim()) {
-      return NextResponse.json({ error: "Kommentar darf nicht leer sein." }, { status: 400 });
+      return jsonError("Kommentar darf nicht leer sein.", 400);
     }
     const comment = await reviews.addComment({
       reviewId: id,
@@ -78,10 +79,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (body.action === "approve") {
     const result = await resolveReview(prisma, id, context.user.id, body.worldSlug);
     if (!result.ok) {
-      return NextResponse.json({ error: result.message }, { status: 400 });
+      return jsonError(result.message, 400);
     }
     return NextResponse.json({ ok: true, review: result.review, message: result.message });
   }
 
-  return NextResponse.json({ error: "Unbekannte Aktion." }, { status: 400 });
+  return jsonError("Unbekannte Aktion.", 400);
 }

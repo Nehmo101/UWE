@@ -1,21 +1,17 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getJobsList, postEnqueueJob } from "../../../src/lib/job-api-handlers";
 import type { JobType } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  parseBody,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { parseBody, passthroughBodySchema } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   return getJobsList(request);
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);

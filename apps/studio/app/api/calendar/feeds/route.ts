@@ -1,17 +1,13 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createCalendarService,
   createJobService,
   prisma,
   resolveCalendarConfig,
 } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  nonEmptyString,
-  optionalString,
-  parseBody,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { nonEmptyString, optionalString, parseBody } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { z } from "zod";
 
@@ -26,7 +22,7 @@ const calendarFeedCreateSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const calendar = createCalendarService(prisma);
@@ -35,12 +31,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const calConfig = resolveCalendarConfig();
   if (!calConfig.enabled) {
-    return NextResponse.json({ error: "Kalender ist deaktiviert." }, { status: 403 });
+    return jsonError("Kalender ist deaktiviert.", 403);
   }
 
   const parsed = await parseBody(request, calendarFeedCreateSchema);
@@ -54,7 +50,7 @@ export async function POST(request: Request) {
     );
   }
   if (body.type === "familywall" && !calConfig.familywallEnabled) {
-    return NextResponse.json({ error: "FamilyWall-Feeds sind deaktiviert." }, { status: 403 });
+    return jsonError("FamilyWall-Feeds sind deaktiviert.", 403);
   }
 
   const calendar = createCalendarService(prisma);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createPrismaClient, requestPasswordReset } from "@uwe/database/server";
 import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
   const email = body.email?.trim();
 
   if (!email) {
-    return NextResponse.json({ error: "E-Mail ist erforderlich." }, { status: 400 });
+    return jsonError("E-Mail ist erforderlich.", 400);
   }
 
   const ip = clientIpFromHeaders(request.headers);

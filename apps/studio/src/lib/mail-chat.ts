@@ -2,7 +2,12 @@ import {
   executeAiGatewayRequest,
   isRtxReadinessReady,
 } from "@uwe/ai-brain";
-import { createBrainStoreService, createUweRepository, getSystemSettings, prisma } from "@uwe/database/server";
+import {
+  createBrainStoreService,
+  createUweRepository,
+  getSystemSettings,
+  prisma,
+} from "@uwe/database/server";
 import { mailBodyForProcessing } from "@uwe/mail/portal-types";
 import { buildMailChatPrompt, type MailChatMessage } from "./mail-chat-prompt";
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { revalidatePath } from "next/cache";
 import {
   createConnectorService,
@@ -12,7 +13,6 @@ import {
   SCAN_FILING_TARGET_LABELS,
   type ScanFilingTarget,
 } from "@uwe/scan-inbox";
-import { assertStudioTrusted } from "@/src/lib/authz";
 import { readScanFileBuffer } from "@/app/scan-inbox/scan-file";
 
 const VISION_PROMPT =
@@ -37,7 +37,7 @@ function revalidate(id: string): void {
  * wird analysiert und ein Ablage-Vorschlag gebaut. Funktioniert ohne RTX.
  */
 export async function analyzeWithTextAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   const text = String(formData.get("ocrText") ?? "");
   await service().applyAnalysis(id, { ocrText: text, ocrEngine: "manual" });
@@ -49,7 +49,7 @@ export async function analyzeWithTextAction(formData: FormData): Promise<void> {
  * Ohne Online-Vision-Connector wird der Scan auf `waiting_for_rtx` gesetzt.
  */
 export async function autoAnalyzeAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   const scan = await service().get(id);
   if (!scan) throw new Error("Scan nicht gefunden.");
@@ -102,7 +102,7 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
  * den erkannten Text via Analyse zurück. Läuft der Job noch, bleibt `analyzing`.
  */
 export async function finalizeScanAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   await service().applyConnectorJobResult(id);
   revalidate(id);
@@ -110,7 +110,7 @@ export async function finalizeScanAction(formData: FormData): Promise<void> {
 
 /** Markiert den Scan als DnD-Modus und ordnet ihn einer Welt zu (für DnD-Ablage). */
 export async function setScanDndWorldAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   const worldId = String(formData.get("worldId") || "").trim();
   if (!worldId) throw new Error("Keine Welt gewählt.");
@@ -120,7 +120,7 @@ export async function setScanDndWorldAction(formData: FormData): Promise<void> {
 
 /** Legt den Scan beim bestätigten Ziel ab — nur auf explizite Owner-Aktion. */
 export async function fileScanAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   const targetRaw = String(formData.get("target") ?? "");
   if (!isFilingTarget(targetRaw)) {
@@ -134,14 +134,14 @@ export async function fileScanAction(formData: FormData): Promise<void> {
 }
 
 export async function rejectScanAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   await service().reject(id);
   revalidate(id);
 }
 
 export async function archiveScanAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
   const id = String(formData.get("id"));
   await service().archive(id);
   revalidate(id);

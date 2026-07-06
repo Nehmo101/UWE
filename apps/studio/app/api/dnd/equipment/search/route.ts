@@ -1,7 +1,8 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { resolveDndApiConfig } from "@uwe/database/server";
 import { searchEquipment, summarizeOpen5eEquipment, type Open5eEquipmentKind } from "@uwe/dnd-api";
-import { dndEquipmentSearchQuerySchema, parseQuery, requireStudioApiAuth } from "@uwe/security";
+import { dndEquipmentSearchQuerySchema, parseQuery } from "@uwe/security";
 
 function resolveOpen5eEquipmentKind(raw: unknown): Open5eEquipmentKind | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -10,7 +11,7 @@ function resolveOpen5eEquipmentKind(raw: unknown): Open5eEquipmentKind | null {
 }
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, dndEquipmentSearchQuerySchema);

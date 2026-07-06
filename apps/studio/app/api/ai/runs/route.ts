@@ -1,8 +1,9 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getRuns } from "../../../../src/lib/ai-handlers";
-import { parseQuery, passthroughBodySchema, requireStudioApiAuth } from "@uwe/security";
+import { parseQuery, passthroughBodySchema } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = await requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, passthroughBodySchema);

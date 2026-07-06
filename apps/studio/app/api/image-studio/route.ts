@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { resolveClientIp } from "@uwe/auth";
 import {
   createImageStudioService,
@@ -7,15 +9,7 @@ import {
   prisma,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
-import {
-  enforceAiAccessPolicy,
-  guardStudioMutation,
-  nonEmptyString,
-  optionalString,
-  parseBody,
-  requireStudioApiAuth,
-  slugSchema,
-} from "@uwe/security";
+import { enforceAiAccessPolicy, nonEmptyString, optionalString, parseBody, slugSchema } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -37,7 +31,7 @@ const imageStudioCreateSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -52,7 +46,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   try {
@@ -67,7 +61,7 @@ export async function POST(request: Request) {
 
   const config = resolveImageStudioConfig();
   if (!config.enabled) {
-    return NextResponse.json({ error: "Image Studio ist deaktiviert." }, { status: 403 });
+    return jsonError("Image Studio ist deaktiviert.", 403);
   }
 
   const parsed = await parseBody(request, imageStudioCreateSchema);
@@ -92,7 +86,7 @@ export async function POST(request: Request) {
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(body.worldSlug);
   if (!world) {
-    return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+    return jsonError("Welt nicht gefunden.", 404);
   }
 
   const imageStudio = createImageStudioService(prisma);

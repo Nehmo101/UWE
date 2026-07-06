@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createWebhookService, prisma, type WebhookEvent } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ endpoint: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Update fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }
 

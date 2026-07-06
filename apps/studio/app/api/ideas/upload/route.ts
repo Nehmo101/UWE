@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { guardStudioMutation } from "@uwe/security";
+import { jsonError } from "@/src/lib/api-response";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { storeImageAsset } from "@/src/lib/image-asset-upload";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+    return jsonError(result.error, result.status);
   }
 
   return NextResponse.json(result.asset);

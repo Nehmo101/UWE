@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { z } from "zod";
 import { prisma } from "@uwe/database/server";
 import { createPageAiReviewService } from "@uwe/page-ai-review";
-import { guardStudioMutation, parseBody, safeHandlerError } from "@uwe/security";
+import { parseBody, safeHandlerError } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { dispatchJob } from "@/src/lib/job-executor";
 
 const refineBodySchema = z.object({
@@ -17,7 +19,7 @@ interface RouteContext {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, refineBodySchema);
@@ -28,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
     const service = createPageAiReviewService(prisma);
     const detail = await service.getReviewDetail(worldSlug, pageId);
     if (!detail) {
-      return NextResponse.json({ error: "Review nicht gefunden." }, { status: 404 });
+      return jsonError("Review nicht gefunden.", 404);
     }
 
     const result = await service.enqueueRefineJob({

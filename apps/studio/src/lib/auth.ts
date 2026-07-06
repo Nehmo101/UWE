@@ -4,14 +4,16 @@ import {
   createAuthService,
 } from "@uwe/database/server";
 import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
-import type { AuthUser, UweRole } from "@uwe/auth";
+import type { AccessContext, AuthUser, UweRole } from "@uwe/auth";
 import {
   ADMIN_ACCESS_ROLES,
   AuthRequiredError,
   ForbiddenRoleError,
+  PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   STUDIO_ACCESS_ROLES,
   canAccessStudio,
+  canPreviewAsPlayer,
   getRequiredRolesForPagePath,
   getUweRuntimeConfig,
   hasAnyRole,
@@ -26,6 +28,50 @@ function getDb() {
 export async function getSessionToken(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+}
+
+export async function getPreviewUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(PREVIEW_COOKIE_NAME)?.value ?? null;
+}
+
+export async function getAccessContextForWorld(
+  worldSlug: string,
+): Promise<AccessContext | null> {
+  const token = await getSessionToken();
+  const previewAsUserId = await getPreviewUserId();
+
+  const db = getDb();
+  const auth = createAuthService(db);
+
+  let userId: string | null = null;
+  if (token) {
+    const session = await auth.getSessionByToken(token);
+    userId = session?.user.id ?? null;
+  }
+
+  const ctx = await auth.buildAccessContextForWorld(worldSlug, {
+    userId,
+    preview: previewAsUserId ? { previewAsUserId } : undefined,
+  });
+
+  await disconnectPrismaClientIfOwned(db);
+  return ctx;
+}
+
+export async function getWorldPlayers(worldSlug: string) {
+  const db = getDb();
+  const auth = createAuthService(db);
+  try {
+    return await auth.listWorldPlayers(worldSlug);
+  } finally {
+    await disconnectPrismaClientIfOwned(db);
+  }
+}
+
+export async function canUsePreview(worldSlug: string): Promise<boolean> {
+  const ctx = await getAccessContextForWorld(worldSlug);
+  return ctx ? canPreviewAsPlayer(ctx) : false;
 }
 
 export async function getCurrentUser() {
@@ -160,4 +206,4 @@ export async function enforceStudioPageAuth(pathname: string): Promise<void> {
 
 export { getUserFromRequestCookieHeader } from "./auth-session";
 
-export { SESSION_COOKIE_NAME, canAccessStudio, ADMIN_ACCESS_ROLES, STUDIO_ACCESS_ROLES };
+export { SESSION_COOKIE_NAME, PREVIEW_COOKIE_NAME, canAccessStudio, ADMIN_ACCESS_ROLES, STUDIO_ACCESS_ROLES };

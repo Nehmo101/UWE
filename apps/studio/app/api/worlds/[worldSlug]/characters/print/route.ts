@@ -1,4 +1,6 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   buildCharacterSheetMarkdown,
   buildCharacterSheetPrintHtml,
@@ -8,14 +10,14 @@ import {
   getAppRepository,
   toPortalCharacterView,
 } from "@uwe/database/server";
-import { characterSheetPrintQuerySchema, parseQuery, requireStudioApiAuth } from "@uwe/security";
+import { characterSheetPrintQuerySchema, parseQuery } from "@uwe/security";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ worldSlug: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) {
     return authError;
   }
@@ -32,7 +34,7 @@ export async function GET(
     const repo = getAppRepository();
     const world = await repo.getWorldBySlug(worldSlug);
     if (!world) {
-      return NextResponse.json({ error: "Welt nicht gefunden." }, { status: 404 });
+      return jsonError("Welt nicht gefunden.", 404);
     }
 
     const db = createPrismaClient();
@@ -40,7 +42,7 @@ export async function GET(
       const characters = createCharacterService(db);
       const record = await characters.getById(parsed.data.characterId);
       if (!record || record.worldId !== world.id) {
-        return NextResponse.json({ error: "Charakter nicht gefunden." }, { status: 404 });
+        return jsonError("Charakter nicht gefunden.", 404);
       }
 
       const character = toPortalCharacterView(record);
@@ -77,6 +79,6 @@ export async function GET(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Druckansicht fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 403 });
+    return jsonError(message, 403);
   }
 }

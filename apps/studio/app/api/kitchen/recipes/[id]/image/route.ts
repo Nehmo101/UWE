@@ -1,6 +1,7 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import fs from "node:fs";
 import { NextResponse } from "next/server";
-import { requireStudioApiAuth } from "@uwe/security";
+import { jsonError } from "@/src/lib/api-response";
 import { resolveRecipeImageFile } from "@/app/kitchen/recipe-image-file";
 
 interface RouteContext {
@@ -8,13 +9,13 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { id } = await context.params;
   const data = await resolveRecipeImageFile(id);
   if (!data || !fs.existsSync(data.filePath)) {
-    return NextResponse.json({ error: "Rezeptbild nicht gefunden" }, { status: 404 });
+    return jsonError("Rezeptbild nicht gefunden", 404);
   }
 
   const bytes = fs.readFileSync(data.filePath);

@@ -27,8 +27,15 @@ const productionPortalEnv = {
 };
 
 describe("middleware evaluation", () => {
+  it("allows anonymous share routes without a session", () => {
+    for (const path of ["/share/abc123", "/api/share/abc123", "/api/share/abc123/verify"]) {
+      const decision = evaluatePortalMiddleware(makeRequest(path), productionPortalEnv);
+      assert.equal(decision.action, "allow", path);
+    }
+  });
+
   it("redirects portal app content to login without a session", () => {
-    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players", "/players/terra", "/share/abc123"]) {
+    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players", "/players/terra"]) {
       const decision = evaluatePortalMiddleware(makeRequest(path), productionPortalEnv);
       assert.equal(decision.action, "redirect-login", path);
       assert.equal(decision.redirectPath, "/login", path);
@@ -36,7 +43,7 @@ describe("middleware evaluation", () => {
   });
 
   it("allows portal app content with a session", () => {
-    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players/terra", "/share/abc123"]) {
+    for (const path of ["/", "/portal", "/worlds", "/worlds/terra", "/players/terra"]) {
       const decision = evaluatePortalMiddleware(makeRequest(path, { session: "session-token" }), productionPortalEnv);
       assert.equal(decision.action, "allow", path);
     }
@@ -46,7 +53,6 @@ describe("middleware evaluation", () => {
     for (const path of [
       "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
-      "/api/share/abc123",
       "/api/assets/asset-123/file",
     ]) {
       const decision = evaluatePortalMiddleware(makeRequest(path), productionPortalEnv);
@@ -59,7 +65,7 @@ describe("middleware evaluation", () => {
     for (const path of [
       "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
-      "/api/share/abc123",
+      "/api/worlds/terra/characters/print",
       "/api/assets/asset-123/file",
     ]) {
       const decision = evaluatePortalMiddleware(makeRequest(path, { session: "session-token" }), productionPortalEnv);

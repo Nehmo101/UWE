@@ -1,3 +1,4 @@
+import { guardStudioAdminApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   deleteAiCloudProvider,
   deleteAiUserGrant,
@@ -11,10 +12,9 @@ import {
   upsertAiUserGrant,
 } from "@/src/lib/ai-gateway-handlers";
 import { getCurrentAuthUser } from "@/src/lib/auth";
-import { guardStudioMutation, requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "setup" });
+  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const user = await getCurrentAuthUser();
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "setup" });
+  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const user = await getCurrentAuthUser();
@@ -51,7 +51,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "setup" });
+  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const user = await getCurrentAuthUser();
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "setup" });
+  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const user = await getCurrentAuthUser();

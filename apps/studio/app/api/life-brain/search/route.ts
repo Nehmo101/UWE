@@ -1,3 +1,4 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
 import {
@@ -5,10 +6,9 @@ import {
   createPersonalBrainService,
   prisma,
 } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "search" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "search" });
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);

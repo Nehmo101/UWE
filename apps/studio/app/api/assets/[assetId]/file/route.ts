@@ -1,15 +1,17 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import fs from "node:fs";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { resolveAssetFilePath } from "@uwe/assets";
 import { getAppRepository } from "@uwe/database/server";
-import { assetIdParamSchema, parseParams, requireStudioApiAuth } from "@uwe/security";
+import { assetIdParamSchema, parseParams } from "@uwe/security";
 
 interface RouteContext {
   params: Promise<{ assetId: string }>;
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = await parseParams(context.params, assetIdParamSchema);
@@ -20,18 +22,18 @@ export async function GET(request: Request, context: RouteContext) {
   const asset = await repo.getAssetById(assetId);
 
   if (!asset) {
-    return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+    return jsonError("Asset not found", 404);
   }
 
   let filePath: string;
   try {
     filePath = resolveAssetFilePath(asset.storageKey);
   } catch {
-    return NextResponse.json({ error: "Invalid storage key" }, { status: 400 });
+    return jsonError("Invalid storage key", 400);
   }
 
   if (!fs.existsSync(filePath)) {
-    return NextResponse.json({ error: "File missing on disk" }, { status: 404 });
+    return jsonError("File missing on disk", 404);
   }
 
   const data = fs.readFileSync(filePath);

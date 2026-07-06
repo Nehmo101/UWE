@@ -1,12 +1,13 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createPageVersionService, prisma } from "@uwe/database/server";
-import { requireStudioApiAuth } from "@/src/lib/studio-api-auth";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ worldSlug: string; pageId: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { pageId } = await context.params;
@@ -24,7 +25,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ worldSlug: string; pageId: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { pageId } = await context.params;
@@ -33,7 +34,7 @@ export async function POST(
     include: { contentBlocks: true },
   });
   if (!page) {
-    return NextResponse.json({ error: "Seite nicht gefunden." }, { status: 404 });
+    return jsonError("Seite nicht gefunden.", 404);
   }
 
   const versionService = createPageVersionService(prisma);

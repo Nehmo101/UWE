@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import { createPartyTreasuryService, createPrismaClient } from "@uwe/database/server";
 import {
@@ -19,6 +20,7 @@ function revalidateTreasuryPaths(worldSlug: string, returnPath?: string) {
 
 /** Spieler übernimmt ein Treasury-Item in das Inventar eines EIGENEN Charakters. */
 export async function assignTreasuryItemToCharacterAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, treasuryItemAssignSchema);
 
   const user = await getCurrentUser();
@@ -46,6 +48,7 @@ export async function assignTreasuryItemToCharacterAction(formData: FormData) {
 
 /** Spieler legt ein Item aus dem EIGENEN Charakter-Inventar zurück in die Schatzkammer. */
 export async function returnTreasuryItemFromCharacterAction(formData: FormData) {
+  await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, treasuryItemReturnSchema);
 
   const user = await getCurrentUser();

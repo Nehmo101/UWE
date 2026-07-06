@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createUserService, prisma } from "@uwe/database/server";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
@@ -24,8 +25,8 @@ export async function DELETE(request: Request, context: RouteContext) {
   } catch (error) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
     if (code === "MEMBERSHIP_NOT_FOUND") {
-      return NextResponse.json({ error: "Mitgliedschaft nicht gefunden." }, { status: 404 });
+      return jsonError("Mitgliedschaft nicht gefunden.", 404);
     }
-    return NextResponse.json({ error: "Mitgliedschaft konnte nicht entfernt werden." }, { status: 400 });
+    return jsonError("Mitgliedschaft konnte nicht entfernt werden.", 400);
   }
 }

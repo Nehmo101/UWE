@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { z } from "zod";
 import {
   createDevAgentJobService,
@@ -8,7 +9,8 @@ import {
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import { guardStudioMutation, idSchema, parseBody, parseParams } from "@uwe/security";
+import { idSchema, parseBody, parseParams } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { renderAttachmentsBlock } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
@@ -22,7 +24,7 @@ const ideaDispatchBodySchema = z.object({
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();
@@ -68,7 +70,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const ideas = createDevIdeaService(prisma);
   const idea = await ideas.getIdea(parsedParams.data.id);
   if (!idea) {
-    return NextResponse.json({ error: "Idee nicht gefunden." }, { status: 404 });
+    return jsonError("Idee nicht gefunden.", 404);
   }
 
   const overridePrompt = parsed.data.prompt?.trim();

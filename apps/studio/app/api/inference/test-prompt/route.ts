@@ -1,15 +1,12 @@
 import { runInferenceTestPrompt } from "@uwe/ai-brain";
-import {
-  guardStudioMutation,
-  inferenceTestPromptBodySchema,
-  parseBody,
-} from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { inferenceTestPromptBodySchema, parseBody } from "@uwe/security";
 
 /**
  * RTX inference smoke test — no secrets in response.
  */
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, inferenceTestPromptBodySchema);

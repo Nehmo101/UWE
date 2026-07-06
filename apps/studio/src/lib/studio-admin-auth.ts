@@ -2,7 +2,8 @@ import {
   createApiTokenService,
   createPrismaClient,
 } from "@uwe/database/server";
-import type { ApiAuthContext } from "@uwe/security";
+import type { ApiAuthContext, StudioGuardOptions } from "@uwe/security";
+import { requireAdminApiAuth, requireStudioRoleApiAuth } from "@uwe/security";
 import { isApiTokenFormat, parseBearerToken } from "@uwe/auth";
 import { getUserFromRequestCookieHeader } from "./auth-session";
 
@@ -65,4 +66,42 @@ export async function resolveStudioApiAuthContext(request: Request): Promise<Api
     apiTokenScopes: null,
     authMethod: "none",
   };
+}
+
+function readRequestPathname(request: Request): string {
+  try {
+    return new URL(request.url).pathname;
+  } catch {
+    return "/";
+  }
+}
+
+/** CSRF + role gate for Studio API routes (strict STUDIO_ACCESS_ROLES / admin paths). */
+export async function guardStudioApiRequest(
+  request: Request,
+  options: StudioGuardOptions = {},
+): Promise<Response | null> {
+  const context = await resolveStudioApiAuthContext(request);
+  return requireStudioRoleApiAuth(request, context, {
+    ...options,
+    pathname: readRequestPathname(request),
+  });
+}
+
+/** Mutating Studio API routes — same as guardStudioApiRequest with optional rate limit. */
+export async function guardStudioApiMutation(
+  request: Request,
+  options: StudioGuardOptions = {},
+): Promise<Response | null> {
+  return guardStudioApiRequest(request, options);
+}
+
+/** Admin Studio API routes — CSRF + ADMIN_ACCESS_ROLES or scoped API token. */
+export async function guardStudioAdminApiRequest(
+  request: Request,
+  options: StudioGuardOptions & { requiredScopes?: readonly import("@uwe/auth").ApiTokenScope[] } = {},
+): Promise<{ error: Response | null; context: ApiAuthContext }> {
+  const context = await resolveStudioApiAuthContext(request);
+  const error = requireAdminApiAuth(request, context, options);
+  return { error, context };
 }

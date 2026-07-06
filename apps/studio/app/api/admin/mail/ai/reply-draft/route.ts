@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
 import type { MailReplyTone } from "@uwe/mail/portal-types";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
@@ -54,6 +55,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Antwortentwurf fehlgeschlagen.";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return jsonError(msg, 400);
   }
 }

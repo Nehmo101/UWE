@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { guardStudioMutation, lifeBrainChatBodySchema, parseBody } from "@uwe/security";
+import { lifeBrainChatBodySchema, parseBody } from "@uwe/security";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { aiPromptErrorResponse } from "@/src/lib/ai-prompt-handlers";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { executeLifeBrainChat } from "@/src/lib/life-brain-chat";
 import { jsonError } from "@/src/lib/api-response";
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, lifeBrainChatBodySchema);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     });
 
     if (result.kind === "unavailable") {
-      return NextResponse.json({ error: result.message, unavailable: true }, { status: 503 });
+      return jsonError(result.message, 503, { unavailable: true });
     }
 
     return NextResponse.json({

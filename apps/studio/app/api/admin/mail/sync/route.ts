@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sync fehlgeschlagen.";
-      return NextResponse.json({ error: message }, { status: 502 });
+      return jsonError(message, 502);
     }
   }
 

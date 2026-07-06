@@ -1,16 +1,13 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   createDevAgentJobService,
   createJobService,
   prisma,
   resolveAgentJobsConfig,
 } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  nonEmptyString,
-  parseBody,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { nonEmptyString, parseBody } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { z } from "zod";
 
@@ -21,7 +18,7 @@ const agentJobCreateSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const agentJobs = createDevAgentJobService(prisma);
@@ -43,12 +40,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const config = resolveAgentJobsConfig();
   if (!config.enabled) {
-    return NextResponse.json({ error: "Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED)." }, { status: 403 });
+    return jsonError("Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED).", 403);
   }
 
   const parsed = await parseBody(request, agentJobCreateSchema);

@@ -1,15 +1,12 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getInferenceStatus, runInferenceTestPrompt } from "@uwe/ai-brain";
-import {
-  inferenceHealthQuerySchema,
-  parseQuery,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { inferenceHealthQuerySchema, parseQuery } from "@uwe/security";
 
 /**
  * RTX inference health — no secrets, only reachability and config facts.
  */
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, inferenceHealthQuerySchema);

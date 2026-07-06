@@ -1,16 +1,10 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   getBrainRunById,
   postApplyProposal,
   postDiscardRun,
 } from "../../../../../src/lib/brain-handlers";
-import {
-  guardStudioMutation,
-  idSchema,
-  parseBody,
-  parseParams,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-} from "@uwe/security";
+import { idSchema, parseBody, parseParams, passthroughBodySchema } from "@uwe/security";
 import { z } from "zod";
 
 const runIdParamSchema = z.object({ runId: idSchema });
@@ -19,7 +13,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ runId: string }> },
 ) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, runIdParamSchema);
@@ -32,7 +26,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ runId: string }> },
 ) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, runIdParamSchema);

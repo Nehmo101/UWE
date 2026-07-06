@@ -212,14 +212,14 @@ describe("security boundary", () => {
       if (needsAlternateGuard) {
         assert.match(
           content,
-          /requirePrivateHealthAuth|requireAgentJobCallbackAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireAdminMailApi|requireAdminMailMutation/,
+          /requirePrivateHealthAuth|requireAgentJobCallbackAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireAdminMailApi|requireAdminMailMutation/,
           `${file} must call an auth guard`,
         );
         continue;
       }
       assert.match(
         content,
-        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/,
+        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/,
         `${file} must call requireStudioApiAuth, requireAdminApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, requireAdminMailApi, or authenticateConnector`,
       );
     }

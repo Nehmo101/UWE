@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
 import { createPrismaClient } from "@uwe/database/server";
 import { createPlayerQuestionService } from "@uwe/database/player-questions";
@@ -13,6 +14,7 @@ const MAX_QUESTION_LENGTH = 2000;
  * hier nur Auth, Eingabe-Validierung und Revalidierung.
  */
 export async function askPlayerQuestionAction(formData: FormData) {
+  await requirePortalActionAuth();
   const worldSlug = String(formData.get("worldSlug") ?? "").trim();
   const question = String(formData.get("question") ?? "").trim();
 

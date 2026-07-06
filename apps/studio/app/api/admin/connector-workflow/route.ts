@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { z } from "zod";
 
 import {
@@ -59,7 +60,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, default: saved });
   } catch (error) {
     if (error instanceof ConnectorWorkflowValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     throw error;
   }

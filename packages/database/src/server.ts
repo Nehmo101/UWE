@@ -1061,7 +1061,6 @@ export type {
 
 export {
   createLabelPrintQueueService,
-  LabelPrintDocumentAccessError,
   LabelPrintQueueService,
   LABEL_PRINT_QUEUE_STATUS_LABELS,
 } from "./label-print-queue-service";
@@ -1069,7 +1068,6 @@ export {
 export type {
   EnqueuePrintListInput,
   LabelPrintDocument,
-  LabelPrintDocumentAccessCode,
   LabelPrintQueueItem,
   LabelPrintQueueStatus,
 } from "./label-print-queue-service";

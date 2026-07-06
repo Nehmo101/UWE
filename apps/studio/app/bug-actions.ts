@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -11,7 +12,6 @@ import {
   type BugReportStatus,
 } from "@uwe/database/server";
 import { getCurrentAuthUser } from "@/src/lib/auth";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function bugs() {
   return createBugReportService(prisma);
@@ -62,7 +62,7 @@ function readFilters(formData: FormData) {
 }
 
 export async function createBugReportAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) {
@@ -86,7 +86,7 @@ export async function createBugReportAction(formData: FormData): Promise<void> {
 }
 
 export async function updateBugReportAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") ?? "");
   if (!id) {
@@ -108,7 +108,7 @@ export async function updateBugReportAction(formData: FormData): Promise<void> {
 }
 
 export async function updateBugReportStatusAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") ?? "");
   const status = parseStatus(formData.get("status"));
@@ -125,7 +125,7 @@ export async function updateBugReportStatusAction(formData: FormData): Promise<v
 }
 
 export async function updateBugReportSeverityAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") ?? "");
   const severity = parseSeverity(formData.get("severity"));
@@ -142,7 +142,7 @@ export async function updateBugReportSeverityAction(formData: FormData): Promise
 }
 
 export async function deleteBugReportAction(formData: FormData): Promise<void> {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") ?? "");
   if (!id) {

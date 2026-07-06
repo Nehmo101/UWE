@@ -1,34 +1,24 @@
-import { originMatchesTrustedHost } from "@uwe/auth";
+import {
+  isCrossSiteBrowserRequest as authIsCrossSiteBrowserRequest,
+  isSameOriginBrowserRequest as authIsSameOriginBrowserRequest,
+} from "@uwe/auth";
+import { csrfError } from "./errors";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /** True when a browser request originates from a foreign site (CSRF vector). */
-export function isCrossSiteBrowserRequest(request: Request): boolean {
-  const secFetchSite = request.headers.get("sec-fetch-site");
-  if (secFetchSite === "cross-site") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-  if (!origin || origin === "null") {
-    // Non-browser clients (curl, scripts) send no Origin header.
-    return false;
-  }
-
-  return !originMatchesTrustedHost(origin, request.headers.get("host"));
+export function isCrossSiteBrowserRequest(
+  request: Request,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return authIsCrossSiteBrowserRequest(request, env);
 }
 
-export function isSameOriginBrowserRequest(request: Request): boolean {
-  if (request.headers.get("sec-fetch-site") === "same-origin") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-  if (origin && origin !== "null") {
-    return originMatchesTrustedHost(origin, request.headers.get("host"));
-  }
-
-  return false;
+export function isSameOriginBrowserRequest(
+  request: Request,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return authIsSameOriginBrowserRequest(request, env);
 }
 
 /** Rejects cross-origin mutating browser requests. Safe for cookie-based auth. */
@@ -38,10 +28,7 @@ export function requireSameOriginMutation(request: Request): Response | null {
   }
 
   if (isCrossSiteBrowserRequest(request)) {
-    return new Response(JSON.stringify({ error: "Cross-Origin-Anfragen sind nicht erlaubt." }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
+    return csrfError();
   }
 
   return null;
@@ -50,10 +37,7 @@ export function requireSameOriginMutation(request: Request): Response | null {
 /** Rejects any cross-origin browser request (GET included) for protected read endpoints. */
 export function requireSameOrigin(request: Request): Response | null {
   if (isCrossSiteBrowserRequest(request)) {
-    return new Response(JSON.stringify({ error: "Cross-Origin-Anfragen sind nicht erlaubt." }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
+    return csrfError();
   }
 
   return null;

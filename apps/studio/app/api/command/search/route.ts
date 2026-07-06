@@ -1,3 +1,4 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   ADMIN_SEARCH_ENTITY_LABELS,
@@ -5,14 +6,10 @@ import {
   searchStudioCrossDomain,
 } from "@uwe/database/server";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
-import {
-  parseQuery,
-  requireStudioApiAuth,
-  searchQuerySchema,
-} from "@uwe/security";
+import { parseQuery, searchQuerySchema } from "@uwe/security";
 
 export async function GET(request: Request) {
-  const authError = requireStudioApiAuth(request, { rateLimit: "search" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "search" });
   if (authError) return authError;
 
   const parsed = parseQuery(request.url, searchQuerySchema);

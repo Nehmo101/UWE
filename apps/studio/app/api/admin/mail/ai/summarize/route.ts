@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { generateMailSummary } from "@/src/lib/mail-portal-ai";
@@ -39,6 +40,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ action });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Zusammenfassung fehlgeschlagen.";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return jsonError(msg, 400);
   }
 }

@@ -1,15 +1,8 @@
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createBrainStoreService, createPrismaClient } from "@uwe/database/server";
-import {
-  guardStudioMutation,
-  idSchema,
-  parseBody,
-  parseParams,
-  passthroughBodySchema,
-  requireStudioApiAuth,
-  safeHandlerError,
-  worldSlugParamSchema,
-} from "@uwe/security";
+import { idSchema, parseBody, parseParams, passthroughBodySchema, safeHandlerError, worldSlugParamSchema } from "@uwe/security";
 
 const brainEntryParamsSchema = worldSlugParamSchema.extend({
   entryId: idSchema,
@@ -20,7 +13,7 @@ interface RouteParams {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const authError = requireStudioApiAuth(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, brainEntryParamsSchema);
@@ -36,7 +29,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (kind === "fact") {
       const fact = await brain.getFactByIdForWorld(worldSlug, entryId);
       if (!fact) {
-        return NextResponse.json({ error: "Brain-Fakt nicht gefunden." }, { status: 404 });
+        return jsonError("Brain-Fakt nicht gefunden.", 404);
       }
       const links = await Promise.all([
         brain.listLinksForSource(worldSlug, "brain_fact", entryId),
@@ -47,7 +40,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const document = await brain.getDocumentByIdForWorld(worldSlug, entryId);
     if (!document) {
-      return NextResponse.json({ error: "Brain-Dokument nicht gefunden." }, { status: 404 });
+      return jsonError("Brain-Dokument nicht gefunden.", 404);
     }
     const links = await Promise.all([
       brain.listLinksForSource(worldSlug, "brain_document", entryId),
@@ -60,7 +53,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const authError = guardStudioMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, brainEntryParamsSchema);
@@ -93,7 +86,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const existingFact = await brain.getFactByIdForWorld(worldSlug, entryId);
     if (!existingFact) {
-      return NextResponse.json({ error: "Brain-Eintrag nicht gefunden." }, { status: 404 });
+      return jsonError("Brain-Eintrag nicht gefunden.", 404);
     }
 
     const fact = await brain.updateFact(entryId, {

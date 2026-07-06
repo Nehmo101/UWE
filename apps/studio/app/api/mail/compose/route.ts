@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailComposeService,
   prisma,
 } from "@uwe/database/server";
 import type { MailComposeKind } from "@uwe/mail";
-import {
-  guardStudioMutation,
-  idSchema,
-  optionalString,
-  parseBody,
-  slugSchema,
-} from "@uwe/security";
+import { idSchema, optionalString, parseBody, slugSchema } from "@uwe/security";
 import { z } from "zod";
 
 const COMPOSE_KINDS = [
@@ -34,7 +30,7 @@ const mailComposeBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = guardStudioMutation(request);
+  const authError = await guardStudioApiMutation(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, mailComposeBodySchema);
@@ -50,7 +46,7 @@ export async function POST(request: Request) {
   });
 
   if (!draft) {
-    return NextResponse.json({ error: "Quelle nicht gefunden." }, { status: 404 });
+    return jsonError("Quelle nicht gefunden.", 404);
   }
 
   const response = { draft };

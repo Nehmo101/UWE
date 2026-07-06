@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { executeMailChat } from "@/src/lib/mail-chat";
@@ -53,6 +54,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Chat fehlgeschlagen.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { resolveClientIp } from "@uwe/auth";
 import {
   AiAccessDeniedError,
@@ -49,20 +50,20 @@ export function enforceStudioAiRequestLimits(input: {
 
 export function aiPolicyErrorResponse(error: unknown): NextResponse {
   if (error instanceof AiAccessDeniedError) {
-    return NextResponse.json({ error: error.message }, { status: 403 });
+    return jsonError(error.message, 403);
   }
 
   if (error instanceof AiPolicyViolationError) {
-    return NextResponse.json({ error: error.message }, { status: 429 });
+    return jsonError(error.message, 429);
   }
 
   if (error instanceof RtxBoundaryError || error instanceof SsrfBlockedError) {
-    return NextResponse.json({ error: error.message }, { status: 403 });
+    return jsonError(error.message, 403);
   }
 
   if (error instanceof Error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return jsonError(error.message, 400);
   }
 
-  return NextResponse.json({ error: "KI-Anfrage blockiert." }, { status: 400 });
+  return jsonError("KI-Anfrage blockiert.", 400);
 }

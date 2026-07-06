@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import {
   WEBHOOK_EVENTS,
   createWebhookService,
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
   };
 
   if (!body.name?.trim() || !body.url?.trim()) {
-    return NextResponse.json({ error: "Name und URL sind erforderlich." }, { status: 400 });
+    return jsonError("Name und URL sind erforderlich.", 400);
   }
 
   const events = (body.events ?? []).filter((event): event is WebhookEvent =>
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   );
 
   if (events.length === 0) {
-    return NextResponse.json({ error: "Mindestens ein Event erforderlich." }, { status: 400 });
+    return jsonError("Mindestens ein Event erforderlich.", 400);
   }
 
   try {
@@ -69,6 +70,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Webhook konnte nicht erstellt werden.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }

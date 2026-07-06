@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import {
   auditRequestFromHeaders,
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       await db.$disconnect();
     }
 
-    return NextResponse.json({ error: "E-Mail und Passwort sind erforderlich." }, { status: 400 });
+    return jsonError("E-Mail und Passwort sind erforderlich.", 400);
   }
 
   const ip = clientIpFromHeaders(request.headers);
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
         errorMessage: "Ungültige Anmeldedaten.",
       });
 
-      return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
+      return jsonError("Ungültige Anmeldedaten.", 401);
     }
 
     await resetRateLimitAsync(rateKey);

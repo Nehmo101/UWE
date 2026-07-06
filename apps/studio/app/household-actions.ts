@@ -1,5 +1,6 @@
 "use server";
 
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createMaintenanceService,
   MAINTENANCE_INTERVALS,
@@ -7,7 +8,6 @@ import {
 } from "@uwe/database/maintenance";
 import { prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
-import { assertStudioTrusted } from "@/src/lib/authz";
 
 function household() {
   return createMaintenanceService(prisma);
@@ -28,7 +28,7 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
 }
 
 export async function createMaintenanceTaskAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const title = String(formData.get("title") || "").trim();
   if (!title) return;
@@ -44,7 +44,7 @@ export async function createMaintenanceTaskAction(formData: FormData) {
 }
 
 export async function markMaintenanceDoneAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") || "").trim();
   if (id) {
@@ -55,7 +55,7 @@ export async function markMaintenanceDoneAction(formData: FormData) {
 }
 
 export async function deleteMaintenanceTaskAction(formData: FormData) {
-  assertStudioTrusted();
+  await requireStudioActionAuth();
 
   const id = String(formData.get("id") || "").trim();
   if (id) {
