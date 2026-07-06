@@ -2,6 +2,8 @@
 
 Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
+> Stand: 2026-07-06 nach PR #502 (`feat(atlas): add asset proposal action and waterfront settlements`). Dieser Stand ist auf `main`.
+>
 > Hinweis: Die CoK-Gap-Analyse ([atlas-cok-gap-analysis.md](atlas-cok-gap-analysis.md), Stand 2026-07-01) ist teilweise überholt — Säumen-UI, Stempel-Variation, Undo/Redo, Multi-Select und der Export-Dialog (Ausschnitt + Grid + Deko) sind inzwischen auf `main`.
 
 ## Erledigt auf `main`
@@ -70,6 +72,49 @@ Empfohlene Gates:
 - `corepack pnpm --filter @uwe/static-export typecheck`
 - `node --import tsx --test packages/static-export/src/static-export.test.ts`
 - `corepack pnpm test:security`
+
+## Follow-up Prompt für den nächsten Agent
+
+Kopierbarer Einstieg für einen neuen Codex-Agenten:
+
+```text
+Arbeite im Repo `Nehmo101/UWE` auf aktuellem `main`. Bitte lies zuerst `docs/engineering/atlas-follow-ups.md`, `docs/engineering/atlas-gouache-plan.md`, `docs/prompts/atlas-pictogram-styleguide.md` und `docs/design/atlas-redesign/asset-catalog.md`.
+
+Ziel: Setze den nächsten kleinen Roadmap-Slice "RTX-Asset-Studio in UWE" um.
+
+Aktueller Stand:
+- `@uwe/atlas/rtx-asset-proposal` validiert RTX-Asset-Proposals als `json-recipe` oder `png-fallback`.
+- `@uwe/atlas/rtx-asset-prompt-context` liefert Styleguide-/Katalog-Pflichtauszüge.
+- `@uwe/ai-brain` kennt `atlas_generate_asset_proposal` als DM-only Review-Action mit `autoApply: false`.
+- Plot-Fill und Settlement laufen bereits als Review/Ghost-Flows.
+- `generateSettlement()` hat einen optionalen `waterfront` Hook, aber noch keine Studio-UI-Parameter dafür.
+
+Implementiere bitte nur einen reviewbaren MVP-Slice:
+1. Lege `apps/studio/app/atlas-asset-actions.ts` oder einen passenden kleinen Server-Action-Slice an.
+2. Implementiere eine serverseitige Action, die einen DM-Prompt begrenzt, `runBrainAction` mit `atlas_generate_asset_proposal` lokal/RTX ausführt und das Ergebnis erneut mit `validateRtxAtlasAssetProposal` prüft.
+3. Implementiere eine zweite Action, die nur ein erneut validiertes Proposal als Pending-`AtlasPaletteItem`/Custom-Asset-Metadaten speichert. Kein Auto-Apply, kein AtlasObject erzeugen, keine Builtin-Promotion.
+4. Baue eine kleine Studio-UI im Atlas-Kontext: Prompt-Eingabe, Validierungsstatus, JSON/Recipe-Preview, Fehleranzeige, "als Pending Asset speichern" und Verwerfen. Keine große Layout-Rewrite.
+5. Wenn Persistenzfelder fehlen, erweitere bevorzugt `styleTags`/bestehende PaletteItem-Metadaten statt eine Migration anzufangen. Nur bei wirklich nötigem Schema-Need stoppen und klar begründen.
+
+Security-Grenzen:
+- Keine generierten TS/JS/SVG/HTML-Code-Payloads ausführen.
+- Keine Remote-URLs oder unsicheren Dateipfade akzeptieren.
+- Ergebnis bleibt Proposal/Review-Artefakt, bis ein Mensch übernimmt.
+- Sichtbarkeit und Ownership serverseitig bestimmen, nicht vom RTX-Output übernehmen.
+- Validierung serverseitig wiederholen; Client-Daten nie vertrauen.
+
+Empfohlene Checks:
+- `corepack pnpm --filter @uwe/atlas test`
+- `corepack pnpm --filter @uwe/ai-brain test`
+- `corepack pnpm --filter @uwe/studio typecheck`
+- `corepack pnpm --filter @uwe/static-export typecheck`
+- `node scripts/file-size-budget-check.mjs`
+- `corepack pnpm docs:check`
+- `corepack pnpm test:security` falls neue exportierbare Payloads/Palette-Metadaten entstehen
+- `git diff --check`
+
+Bitte Roadmap danach aktualisieren, PR erstellen und erst nach grünen Checks mergen.
+```
 
 ## Bewusst zurückgestellt
 
