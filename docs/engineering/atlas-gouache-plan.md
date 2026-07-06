@@ -3,8 +3,11 @@
 > Status: **Phase 1 umgesetzt** (Gouache-Asset-Engine, per-Objekt `style` mit
 > Liniendicke + Unschärfe, Untergrund-Intensität, Terrain-Blend-Defaults/-Regler,
 > Editor- & Portal-Rendering).
-> Offen: KI/RTX-`plot`-Proposal-Flow, Settlement-Generator,
-> Custom-/AI-Stempel-Goldens im Static Viewer, größere Asset-Bibliothek, RTX-Asset-Studio in UWE — siehe
+> Neu vorbereitet: Settlement-Engine, RTX-Asset-Proposal-Validator/Prompt-Kontext
+> und ein weiterer Gouache-Asset-Batch.
+> Offen: KI/RTX-`plot`-Proposal-Flow, RTX-Asset-Studio-UI/Persistenz,
+> Settlement-Ghost-Overlay/Übernahme-UI, größere Asset-Bibliothek und optionale
+> Terrain-Blend-Goldens — siehe
 > [atlas-follow-ups.md](atlas-follow-ups.md).
 > Ursprünglicher Umfang: Umsetzungsplan.
 > Kontext: Annäherung des Atlas-Editors an [Canvas of Kings](https://store.steampowered.com/app/2498570/Canvas_of_Kings/) — gemalte Assets, selbstfüllende Flächen, direkte Objektgriffe.
@@ -56,8 +59,8 @@ Drei dokumentierte Leitplanken werden bewusst gelockert — gehört **vor** die 
 | **Unschärfegrad pro Objekt** | S | Reitet auf dem **gleichen** `AtlasObject.style`-Feld wie die Liniendicke (keine eigene Migration): `style.blur` (0…N px). Renderer setzt `ctx.filter = "blur(px)"` in `drawObject`/`drawGouacheAsset` — nur wenn `> 0`, Default `0`. Nutzen: atmosphärische Tiefe / bewusst „verschwommene" Objekte (Ferne, Nebel, weicher Hintergrund-Bewuchs). Regler neben Liniendicke. ⚠️ Perf: `ctx.filter`-Blur kostet pro Objekt — optional, Default aus. |
 | **Skalier-Griff am Rahmen** | S | Reine Editor-UI in `atlas.html` (Auswahlrahmen-Griff unten rechts + Drag → `scale`). Keine Schema-/Engine-Änderung. |
 | **Objektbereich füllen (Plot)** | M | Neuer `AtlasFeatureKind` `plot` (Pattern wie `vine`: `constants.ts` + beide Prisma-Enums + PG `ALTER TYPE`). Preset-Modus: `fillPlotWithGouacheAssets` platziert Gouache-Assets als reguläre `AtlasObject`s (Shortcut **F**, Refill/Reroll über Seed im `plot.style`). KI-Modus bleibt offen: neue ai-brain-Action `atlas_fill_area` (Proposal → Ghost → Übernehmen, **nie** Auto-Apply). |
-| **RTX-Asset-Studio in UWE** | M–L | In-App-Workflow: DM beschreibt ein Asset, lokale RTX erzeugt anhand von `docs/prompts/atlas-pictogram-styleguide.md` + `asset-catalog.md` einen Gouache-Asset-Vorschlag. Output ist ein validierbares JSON-Rezept oder PNG-Fallback, **kein** frei ausgeführter TS-Code. UWE zeigt Preview + Diff/Metadaten; Übernehmen legt ein Custom-Asset/PaletteItem an, Promotion zu Builtin-Rezepten bleibt ein PR-Schritt. |
-| **Großstadt/Schloss-Generator** | M–L | Neues Engine-Modul `packages/atlas/src/settlement.ts` (pur, deterministisch): `generateSettlement(polygon, opts) → { features: [Mauer-Pfad, Straßen], objects: [Türme, Häuser, Kirche, Marktstände, Brunnen, Bergfried, Werft] }`. Wasser-Erkennung: Nachbarschaft zu `river`/`coast`-Features → Werft. Output als **Proposal** (Ghost-Overlay); Übernahme persistiert Features + Objects. Golden-Tests wie `path-attachments`. |
+| **RTX-Asset-Studio in UWE** | M–L | In-App-Workflow: DM beschreibt ein Asset, lokale RTX erzeugt anhand von `docs/prompts/atlas-pictogram-styleguide.md` + `asset-catalog.md` einen Gouache-Asset-Vorschlag. Grundlage umgesetzt: `@uwe/atlas/rtx-asset-proposal` validiert JSON-Rezept oder PNG-Fallback-Metadaten und liefert Styleguide-/Katalog-Kontext, **kein** frei ausgeführter TS-Code. Offen: UI-Preview, Review-Diff, Custom-Asset/PaletteItem-Persistenz. |
+| **Großstadt/Schloss-Generator** | M–L | Engine-Modul `packages/atlas/src/settlement.ts` umgesetzt (pur, deterministisch): `generateSettlement(polygon, opts) → { features: [Mauer-Pfad, Straßen, Plaza], objects: [Tore, Türme, Häuser, Marktstand, Brunnen, Bergfried] }`. Offen: Wasser-Erkennung/Werft, Ghost-Overlay und Übernahme-UI. |
 | **Weiche Terrain-Übergänge** | M | `paintTerrainBlobs` besitzt `blendWidth`; `AtlasTileLayer.blendWidth` wird migrationsfrei in Editor, Portal und Static Viewer gerendert. Editor-Regler und Default/Fallback `6px` sind umgesetzt; offen bleibt nur visuelles Feintuning/Golden-Screenshots der Wasserfarben-Bleed-Optik. |
 
 ---
@@ -81,11 +84,11 @@ Gouache-Asset-Format + `drawGouacheAsset` in allen drei Pfaden · Untergrund-Int
 → Sofort sichtbarer CoK-Sprung, geringes Risiko.
 
 ### Phase 2 — Die CoK-Seele
-Plot-Fill (Preset umgesetzt; KI-Proposal offen) · Ausbau der Gouache-Asset-Bibliothek (Bäume/Nadelbäume/Häuser/Kirche/Türme/Marktstände als Rezepte) · RTX-Asset-Studio in UWE (Styleguide-Kontext → Asset-Proposal → Review).
+Plot-Fill (Preset umgesetzt; KI-Proposal offen) · Ausbau der Gouache-Asset-Bibliothek (weiterer Batch umgesetzt) · RTX-Asset-Studio in UWE (Validator + Styleguide-Kontext umgesetzt; UI/Review/Persistenz offen).
 → Hier entsteht das „das ist CoK"-Gefühl.
 
 ### Phase 3 — Generatoren & Feinschliff
-Settlement-Generator (`settlement.ts`) · optionales Terrain-Blend-Feintuning/Goldens · optional Editor-Layout-Umbau Richtung „Werkstatt".
+Settlement-Generator-Engine (`settlement.ts`) umgesetzt · Settlement-Proposal-UI · optionales Terrain-Blend-Feintuning/Goldens · optional Editor-Layout-Umbau Richtung „Werkstatt".
 → Security-relevant (Payload) ⇒ zusätzlich `pnpm test:security`.
 
 ---

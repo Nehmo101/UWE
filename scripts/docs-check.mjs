@@ -37,7 +37,7 @@ function checkMarkdownFile(relativePath) {
   }
 
   if (relativePath.endsWith(".md") && !content.startsWith("#")) {
-    const startsWithFrontmatter = content.startsWith("---\n");
+    const startsWithFrontmatter = /^---\r?\n/.test(content);
     if (!startsWithFrontmatter) {
       issues.push(`${relativePath}: should start with a top-level heading`);
     }

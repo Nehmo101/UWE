@@ -46,7 +46,7 @@ nach und nach entstehen.
 - Wasserfall — vertikaler Fluss-Sturz (Path-Endpunkt + Gischt).
 - Vulkan (aktiv) — Kegel mit Rauch/Lava-Glut.
 - Krater / Meteoreinschlag — Ringwall, evtl. glühender Kern.
-- Höhlen-/Minen-Eingang — dunkles Portal im Fels.
+- Höhlen-/Minen-Eingang — dunkles Portal im Fels (`g_cave_mouth` als Stamp umgesetzt).
 - Gletscher / Eisfeld — bläuliches Eis mit Spalten.
 - Felsbogen (Natural Arch) — freistehender Steinbogen.
 - Felsnadeln / Hoodoos — hohe, schmale Gesteinssäulen.
@@ -57,10 +57,10 @@ nach und nach entstehen.
 - **Fliegende Inseln** `Landmark` — schwebende Felsbrocken mit Bewuchs, langem Schatten am Boden, evtl. Wasserfall ins Nichts; als Cluster gruppierbar.
 - **Riesenschildkröte mit Schloss auf dem Rücken** `Landmark` — wandelnde Festung; Panzer + Türmchen + Schattenwurf.
 - Weltenbaum / Riesenranke — bereits umgesetzt (`vine`), hier als Referenz.
-- Schwebender Kristall / Magie-Monolith — leuchtender Kristall mit Aura.
+- Schwebender Kristall / Magie-Monolith — leuchtender Kristall mit Aura (`g_magic_crystal`).
 - Schwebende Ruine / Himmelsburg — Trümmer, die in der Luft hängen.
 - Portalbogen / Sternentor — magischer Torbogen, schimmernd.
-- Runen-Obelisk / Menhir-Steinkreis — antike Steinsetzung.
+- Runen-Obelisk (`g_obelisk`) / Menhir-Steinkreis (`g_stone_circle`) — antike Steinsetzung.
 - Drachenhorst / Nest — Klippennest mit Ei/Drache.
 - Riesenpilz-Dorf — bewohnte Übergroß-Pilze.
 - Versteinerter Titan / Kolossruine — halb verschütteter Riese.
@@ -76,12 +76,12 @@ nach und nach entstehen.
 - Kirche / Kathedrale `Gen` — Langhaus + Glockenturm (bereits im Generator).
 - Kloster / Abtei `Gen` — Klosterhof mit Kreuzgang.
 - Burg / Festung `Gen` — Bergfried, Ringmauer, Zwinger.
-- Wach-/Signalturm `Stamp` — einzelner Turm mit Feuerkorb.
+- Wach-/Signalturm `Stamp` — einzelner Turm mit Feuerkorb (`g_signal_tower`).
 - Windmühle / Wassermühle `Stamp` — Flügelrad / Mühlrad am Bach.
 - Schmiede, Taverne, Bäckerei `Gen` — Sondergebäude im Stadtnetz.
 - Gehöft / Bauernhof + Scheune `Stamp`/`Gen` — Hofensemble mit Feldern.
 - Stadttor / Torhaus `Gen` — Durchlass in der Mauer mit Fallgitter.
-- Brücke (Stein/Holz/Zugbrücke) `Stamp`/`Path` — Fluss-/Schluchtquerung.
+- Brücke (Stein/Holz/Zugbrücke) `Stamp`/`Path` — Fluss-/Schluchtquerung (`g_bridge` als Stamp; Path-Variante offen).
 - Aquädukt `Path` — Bogen-Wasserleitung über Land.
 - Amphitheater / Kolosseum `Stamp` — antikes Rund.
 - Tempel / Ziggurat `Stamp`/`Landmark` — Stufentempel.

@@ -58,8 +58,13 @@ export const GOUACHE_ASSETS: readonly GouacheAsset[] = [
   { key: "g_windmill", name: "Windmühle", category: "structure" },
   { key: "g_tent", name: "Zelt", category: "structure" },
   { key: "g_ruin", name: "Ruine", category: "structure" },
+  { key: "g_signal_tower", name: "Signalturm", category: "structure" },
+  { key: "g_bridge", name: "Steinbrücke", category: "structure" },
   { key: "g_pyramid", name: "Pyramide", category: "landmark" },
   { key: "g_obelisk", name: "Obelisk", category: "landmark" },
+  { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
+  { key: "g_magic_crystal", name: "Magiekristall", category: "landmark" },
+  { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
   { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
   { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
   { key: "g_ship", name: "Schiff", category: "vehicle" },
@@ -263,6 +268,23 @@ const RECIPES: Record<string, Recipe> = {
     paint(ctx, rectFn(-s * 0.1, -s * 0.32, s * 0.12, s * 0.32), "#a99a72", lw);
     ctx.save(); ctx.strokeStyle = "#6f5c3c"; ctx.lineWidth = Math.max(0.8, lw * 0.7); ctx.beginPath(); ctx.moveTo(-s * 0.45, -s * 0.5); ctx.lineTo(-s * 0.34, -s * 0.62); ctx.lineTo(-s * 0.23, -s * 0.5); ctx.stroke(); ctx.restore();
   },
+  g_signal_tower: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.42);
+    for (const dx of [-0.18, 0.18]) paint(ctx, polyFn([[dx * s - s * 0.04, 0], [dx * s + s * 0.04, 0], [dx * s + s * 0.02, -s * 0.82], [dx * s - s * 0.02, -s * 0.82]]), "#7a5230", lw * 0.65, "#4a3320");
+    ctx.save(); ctx.strokeStyle = "#5a4026"; ctx.lineWidth = Math.max(0.8, lw * 0.7); ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * 0.22); ctx.lineTo(s * 0.2, -s * 0.58); ctx.moveTo(s * 0.2, -s * 0.22); ctx.lineTo(-s * 0.2, -s * 0.58); ctx.stroke(); ctx.restore();
+    paint(ctx, rectFn(-s * 0.3, -s * 0.9, s * 0.6, s * 0.17), "#8a5e34", lw, "#4a3320");
+    paint(ctx, polyFn([[-s * 0.2, -s * 0.91], [0, -s * 1.2], [s * 0.2, -s * 0.91]]), "#c96a2f", lw, "#80301d");
+    paint(ctx, polyFn([[-s * 0.09, -s * 0.92], [0, -s * 1.1], [s * 0.08, -s * 0.92]]), "#f0c35c", lw * 0.65, "#9a4a22");
+  },
+  g_bridge: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.62);
+    paint(ctx, polyFn([[-s * 0.62, -s * 0.08], [-s * 0.5, -s * 0.46], [s * 0.5, -s * 0.46], [s * 0.62, -s * 0.08], [s * 0.5, s * 0.02], [-s * 0.5, s * 0.02]]), "#b9aa86", lw, "#6f6145");
+    paint(ctx, (c) => { c.beginPath(); c.moveTo(-s * 0.3, s * 0.01); c.lineTo(-s * 0.3, -s * 0.1); c.quadraticCurveTo(0, -s * 0.4, s * 0.3, -s * 0.1); c.lineTo(s * 0.3, s * 0.01); c.closePath(); }, "#4a4638", lw * 0.7, "#5a513d");
+    for (let i = 0; i < 4; i++) {
+      const x = -s * 0.44 + i * s * 0.29;
+      paint(ctx, rectFn(x, -s * 0.5, s * 0.16, s * 0.12), "#c7ba92", lw * 0.45, "#756845");
+    }
+  },
   g_pyramid: (ctx, s, _rng, lw) => {
     shadow(ctx, 0, s * 0.03, s * 0.7);
     paint(ctx, polyFn([[-s * 0.7, 0], [0, -s], [s * 0.05, -s], [s * 0.05, 0]]), "#c8a75a", lw);
@@ -272,6 +294,26 @@ const RECIPES: Record<string, Recipe> = {
     shadow(ctx, 0, s * 0.02, s * 0.28);
     paint(ctx, polyFn([[-s * 0.12, 0], [-s * 0.08, -s], [0, -s * 1.15], [s * 0.08, -s], [s * 0.12, 0]]), "#9a9488", lw);
     ctx.save(); ctx.strokeStyle = "#4a4636"; ctx.lineWidth = Math.max(0.6, lw * 0.6); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-s * 0.06, -s * 0.2 * i); ctx.lineTo(s * 0.06, -s * 0.2 * i); ctx.stroke(); } ctx.restore();
+  },
+  g_cave_mouth: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.55);
+    paint(ctx, blobFn(iblob(0, -s * 0.34, s * 0.56, s * 0.42, rng, 0.18, 11)), "#8f8774", lw, "#5f5846");
+    paint(ctx, (c) => { c.beginPath(); c.moveTo(-s * 0.28, 0); c.lineTo(-s * 0.24, -s * 0.2); c.quadraticCurveTo(0, -s * 0.58, s * 0.24, -s * 0.2); c.lineTo(s * 0.28, 0); c.closePath(); }, "#2f2a24", lw * 0.8, "#4a4030");
+    paint(ctx, blobFn(iblob(-s * 0.22, -s * 0.6, s * 0.16, s * 0.08, () => 0.5, 0.08, 7)), "#5f8a4a", lw * 0.45, "#3a5f35");
+    paint(ctx, blobFn(iblob(s * 0.22, -s * 0.52, s * 0.14, s * 0.07, () => 0.5, 0.08, 7)), "#5f8a4a", lw * 0.45, "#3a5f35");
+  },
+  g_magic_crystal: (ctx, s, _rng, lw) => {
+    shadow(ctx, s * 0.08, s * 0.35, s * 0.42);
+    ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = "#7fcfe0"; ctx.beginPath(); ctx.ellipse(0, -s * 0.62, s * 0.46, s * 0.78, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    paint(ctx, polyFn([[0, -s * 1.25], [s * 0.28, -s * 0.78], [s * 0.18, -s * 0.22], [0, -s * 0.04], [-s * 0.18, -s * 0.22], [-s * 0.28, -s * 0.78]]), "#68b9cf", lw, "#2e6376");
+    paint(ctx, polyFn([[0, -s * 1.25], [s * 0.28, -s * 0.78], [0, -s * 0.7]]), lighten("#68b9cf", 0.28), lw * 0.55, "#4f91a2");
+    paint(ctx, polyFn([[0, -s * 0.7], [s * 0.18, -s * 0.22], [0, -s * 0.04], [-s * 0.18, -s * 0.22]]), "#4c94b0", lw * 0.55, "#2e6376");
+  },
+  g_stone_circle: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.58);
+    const stones: Array<[number, number, number, number]> = [[-0.42, -0.12, 0.16, 0.44], [-0.22, -0.32, 0.14, 0.5], [0, -0.42, 0.16, 0.52], [0.22, -0.32, 0.14, 0.5], [0.42, -0.12, 0.16, 0.44]];
+    for (const [x, y, w, h] of stones) paint(ctx, polyFn([[x * s - w * s * 0.5, y * s], [x * s - w * s * 0.38, y * s - h * s * 0.78], [x * s, y * s - h * s], [x * s + w * s * 0.38, y * s - h * s * 0.78], [x * s + w * s * 0.5, y * s]]), "#9a9488", lw, "#5f5a4d");
+    ctx.save(); ctx.strokeStyle = "#6f664f"; ctx.lineWidth = Math.max(0.7, lw * 0.55); ctx.beginPath(); ctx.ellipse(0, -s * 0.18, s * 0.42, s * 0.16, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   },
   g_floating_island: (ctx, s, rng, lw) => {
     shadow(ctx, s * 0.1, s * 0.5, s * 0.55);
@@ -373,6 +415,3 @@ export function drawGouacheAsset(
 export function isGouacheAsset(key: string | null | undefined): boolean {
   return !!key && key in RECIPES;
 }
-
-// Silence unused in non-DOM lint contexts; lighten is used by future recipes.
-void lighten;

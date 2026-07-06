@@ -38,6 +38,31 @@ describe("gouache asset registry", () => {
     assert.equal(isGouacheAsset("nope"), false);
   });
 
+  it("includes the current catalog expansion batch", () => {
+    const expansionKeys = new Set([
+      "g_signal_tower",
+      "g_bridge",
+      "g_cave_mouth",
+      "g_magic_crystal",
+      "g_stone_circle",
+    ]);
+
+    assert.deepEqual(
+      GOUACHE_ASSETS.filter((a) => expansionKeys.has(a.key)).map((a) => ({
+        key: a.key,
+        name: a.name,
+        category: a.category,
+      })),
+      [
+        { key: "g_signal_tower", name: "Signalturm", category: "structure" },
+        { key: "g_bridge", name: "Steinbrücke", category: "structure" },
+        { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
+        { key: "g_magic_crystal", name: "Magiekristall", category: "landmark" },
+        { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
+      ],
+    );
+  });
+
   it("groups by category consistently", () => {
     let total = 0;
     for (const cat of Object.keys(GOUACHE_CATEGORY_LABELS) as Array<

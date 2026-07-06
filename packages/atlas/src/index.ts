@@ -175,6 +175,37 @@ export type {
   DrawGouacheAssetOptions,
 } from "./assets";
 
+// RTX Asset Studio proposal validation and prompt context
+export {
+  RTX_ATLAS_ASSET_STYLEGUIDE_PATH,
+  RTX_ATLAS_ASSET_CATALOG_PATH,
+  RTX_ATLAS_ASSET_REGISTRY_EXPORT,
+  RTX_ATLAS_ASSET_OUTPUT_TYPES,
+  RTX_ATLAS_ASSET_ENGINE_TAGS,
+  RTX_ATLAS_ASSET_GOUACHE_CATEGORIES,
+  RTX_GOUACHE_RECIPE_LAYER_ROLES,
+  RTX_GOUACHE_RECIPE_SHAPES,
+  buildRtxAtlasAssetPromptContext,
+  formatRtxAtlasAssetPromptContext,
+  validateRtxAtlasAssetProposal,
+  isRtxAtlasAssetProposal,
+} from "./rtx-asset-proposal";
+export type {
+  RtxAtlasAssetEngineTag,
+  RtxAtlasAssetOutputType,
+  RtxAtlasAssetPromptContext,
+  RtxAtlasAssetProposal,
+  RtxAtlasAssetProposalBase,
+  RtxAtlasAssetProposalIssue,
+  RtxAtlasAssetProposalIssueCode,
+  RtxAtlasAssetProposalValidationResult,
+  RtxGouacheJsonRecipe,
+  RtxGouacheRecipeLayer,
+  RtxGouacheRecipeLayerRole,
+  RtxGouacheRecipeShape,
+  RtxPngFallbackMetadata,
+} from "./rtx-asset-proposal";
+
 // Procedural draft generators
 export {
   generateDraft,
@@ -220,6 +251,19 @@ export type {
   PathAttachmentOptions,
   PathAttachmentPlacement,
 } from "./path-attachments";
+
+// Settlement generator — deterministic wall/road/building layout inside a polygon
+export { generateSettlement } from "./settlement";
+export type {
+  SettlementFeatureKind,
+  SettlementObjectKind,
+  SettlementOptions,
+  SettlementFeatureStyle,
+  SettlementFeature,
+  SettlementObjectStyle,
+  SettlementObject,
+  SettlementLayout,
+} from "./settlement";
 
 // Export grid — square/hex grid line geometry for map export
 export { buildGridLines } from "./export-grid";
