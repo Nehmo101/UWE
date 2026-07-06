@@ -316,6 +316,7 @@ let drawingPoints = [];
 let measurePoints = [];
 let aiDraftFeatures = null;
 let plotFillReview = null;
+let settlementReview = null;
 let labelRed = false;
 let keyCounter = 0;
 const nextKey = () => "ck-" + (++keyCounter);
@@ -457,6 +458,9 @@ function applyHistory(json) {
   doc = migrate(JSON.parse(json));
   selection.clear();
   drawingPoints = [];
+  aiDraftFeatures = null;
+  plotFillReview = null;
+  settlementReview = null;
   if (!doc.nodes.some((n) => n.id === state.nodeId)) state.nodeId = doc.rootNodeId;
   setState({ selectedKey: null, dirty: true, saveStatus: "Ungespeichert" });
   draw();
@@ -518,7 +522,12 @@ function onBridgeMessage(e) {
   } else if (d.type === "ai-draft-result") { receiveAiDraft(d.features || []); }
   else if (d.type === "plot-fill-proposal-result") { receivePlotFillProposal(d.plotKey, d.proposal, d.error); }
   else if (d.type === "load" && d.doc) {
-    try { doc = migrate(d.doc); setState({ nodeId: doc.rootNodeId, selectedKey: null }); draw(); }
+    try {
+      doc = migrate(d.doc);
+      aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+      setState({ nodeId: doc.rootNodeId, selectedKey: null, aiReview: null });
+      draw();
+    }
     catch (err) { console.error("Atlas: Doc-Load vom Host fehlgeschlagen —", err); }
   }
 }
@@ -551,6 +560,7 @@ function normalizeAiDraftFeatures(features) {
 function receiveAiDraft(features) {
   const normalized = normalizeAiDraftFeatures(features);
   plotFillReview = null;
+  settlementReview = null;
   aiDraftFeatures = normalized.map((f) => ({ ...f, _key: nextKey() }));
   setState({ aiReview: { count: aiDraftFeatures.length, label: "KI-Entwurf", unit: "Features" } });
   if (!aiDraftFeatures.length) flash("KI-Entwurf enthielt keine unterstützten Atlas-Features.");
@@ -625,12 +635,17 @@ function receivePlotFillProposal(plotKey, rawProposal, error) {
   const objects = ghostObjectsForPlotProposal(feature, proposal);
   if (!objects.length) { flash("KI-Rezept erzeugt keine Objekte für diese Fläche."); return; }
   aiDraftFeatures = null;
+  settlementReview = null;
   plotFillReview = { plotKey: feature._key, proposal, objects };
   setState({ aiReview: { count: objects.length, label: "Objektfläche", unit: "Ghost-Objekte" } });
   draw();
 }
 function requestPlotFillProposal(feature) {
   if (!feature || feature.kind !== "plot") return;
+  aiDraftFeatures = null;
+  plotFillReview = null;
+  settlementReview = null;
+  setState({ aiReview: null });
   const styleSeed = feature.style && Number.isFinite(feature.style.seed) ? feature.style.seed : undefined;
   const seed = (styleSeed ?? engine.hashStringToSeed(feature._key || "plot-fill")) >>> 0;
   if (embedded) {
@@ -685,12 +700,121 @@ function discardPlotFillReview() {
   setState({ aiReview: null });
   draw();
 }
+function settlementSourceKey(feature) {
+  return feature && (feature._key || feature.id || "plot");
+}
+function settlementSeedForPlot(feature) {
+  const st = feature.style || {};
+  const raw = Number.isFinite(st.settlementSeed) ? st.settlementSeed : engine.hashStringToSeed(String(settlementSourceKey(feature)) + ":settlement");
+  return raw >>> 0;
+}
+function ghostSettlementForPlot(feature) {
+  if (!feature || feature.kind !== "plot" || !feature.geometry || feature.geometry.type !== "Polygon") return null;
+  if (!engine.generateSettlement) return null;
+  const seed = settlementSeedForPlot(feature);
+  const sourcePlotKey = settlementSourceKey(feature);
+  const visibility = feature.visibility || "dm_only";
+  const layout = engine.generateSettlement(feature.geometry, {
+    seed,
+    idPrefix: "settlement-" + sourcePlotKey,
+    nodeId: state.nodeId,
+    visibility,
+  });
+  const features = (layout.features || []).map((sf) => ({
+    ...sf,
+    id: "ghost-" + sf.id,
+    _key: "ghost-" + sf.id,
+    nodeId: state.nodeId,
+    kind: sf.atlasKind,
+    visibility,
+    style: {
+      ...(sf.style || {}),
+      settlement: sf.kind,
+      settlementSourcePlotKey: sourcePlotKey,
+      ghost: true,
+    },
+    meta: { ...(sf.meta || {}), settlementKind: sf.kind },
+  }));
+  const objects = (layout.objects || []).map((obj) => ({
+    ...obj,
+    id: "ghost-" + obj.id,
+    _key: "ghost-" + obj.id,
+    nodeId: state.nodeId,
+    visibility,
+    style: {
+      ...(obj.style || {}),
+      settlement: obj.kind,
+      settlementSourcePlotKey: sourcePlotKey,
+      ghost: true,
+    },
+  }));
+  return { plotKey: sourcePlotKey, sourcePlotKey, seed, features, objects, meta: layout.meta };
+}
+function requestSettlementReview(feature) {
+  aiDraftFeatures = null;
+  plotFillReview = null;
+  settlementReview = null;
+  setState({ aiReview: null });
+  const review = ghostSettlementForPlot(feature);
+  if (!review) { flash("Siedlungs-Vorschau ist für diese Fläche nicht verfügbar."); return; }
+  if (!review.features.length && !review.objects.length) { flash("Siedlungs-Vorschau erzeugt keine Einträge für diese Fläche."); return; }
+  settlementReview = review;
+  setState({ aiReview: { count: review.features.length + review.objects.length, label: "Siedlung", unit: "Ghost-Einträge" } });
+  draw();
+}
+function acceptSettlementReview() {
+  if (!settlementReview) return;
+  const sourcePlotKey = settlementReview.sourcePlotKey;
+  const feature = doc && doc.features.find((f) => (f._key || f.id) === settlementReview.plotKey && f.kind === "plot");
+  if (!feature) { discardSettlementReview(); return; }
+  pushUndo();
+  doc.features = doc.features.filter((f) => !(f.nodeId === state.nodeId && f.style && f.style.settlementSourcePlotKey === sourcePlotKey));
+  doc.objects = doc.objects.filter((o) => !(o.nodeId === state.nodeId && o.style && o.style.settlementSourcePlotKey === sourcePlotKey));
+  feature.style = { ...(feature.style || {}), settlementPreset: "local_settlement", settlementSeed: settlementReview.seed };
+  for (const ghost of settlementReview.features) {
+    const k = nextKey();
+    const style = { ...(ghost.style || {}) };
+    delete style.ghost;
+    doc.features.push({
+      ...ghost,
+      id: k,
+      _key: k,
+      nodeId: state.nodeId,
+      kind: ghost.kind,
+      visibility: ghost.visibility || "dm_only",
+      style,
+    });
+  }
+  for (const ghost of settlementReview.objects) {
+    const k = nextKey();
+    const style = { ...(ghost.style || {}) };
+    delete style.ghost;
+    doc.objects.push({
+      ...ghost,
+      id: k,
+      _key: k,
+      nodeId: state.nodeId,
+      visibility: ghost.visibility || "dm_only",
+      style,
+    });
+  }
+  settlementReview = null;
+  setState({ aiReview: null });
+  markDirty(); draw(); refreshChrome();
+}
+function discardSettlementReview() {
+  settlementReview = null;
+  setState({ aiReview: null });
+  draw();
+}
 function acceptAiReview() {
   if (plotFillReview) acceptPlotFillReview();
+  else if (settlementReview) acceptSettlementReview();
   else acceptAiDraft();
 }
 function discardAiReview() {
   if (plotFillReview) discardPlotFillReview();
+  else if (settlementReview) discardSettlementReview();
   else discardAiDraft();
 }
 function requestHandout() {
@@ -847,6 +971,14 @@ function drawScene(ctx, W, H, chrome) {
     for (const o of plotFillReview.objects) drawObject(ctx, o);
     ctx.restore();
   }
+  if (settlementReview) {
+    ctx.save(); ctx.globalAlpha = 0.46;
+    for (const f of settlementReview.features || []) drawFeature(ctx, f);
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.58;
+    for (const o of settlementReview.objects || []) drawObject(ctx, o);
+    ctx.restore();
+  }
   drawPending(ctx);
   drawMeasure(ctx);
   drawSelectionRects(ctx);
@@ -903,8 +1035,11 @@ function drawFeature(ctx, f) {
       }
       scatterInPolygon(ctx, rings, bk, (f.style && f.style.density) || 1, f._key);
     } else {
-      ctx.fillStyle = f.labelColor === "red" ? "rgba(139,26,16,0.16)" : "rgba(26,16,8,0.10)"; ctx.fill();
-      ctx.strokeStyle = sel ? "#c2622b" : pr.colors.ink; ctx.lineWidth = (sel ? 2.5 : 1.5) * z; ctx.stroke();
+      const ss = f.style && f.style.settlement ? f.style : null;
+      if (ss && Number.isFinite(ss.opacity)) ctx.globalAlpha = ctx.globalAlpha * ss.opacity;
+      ctx.fillStyle = (ss && ss.fillColor) || (f.labelColor === "red" ? "rgba(139,26,16,0.16)" : "rgba(26,16,8,0.10)"); ctx.fill();
+      ctx.strokeStyle = sel ? "#c2622b" : ((ss && ss.strokeColor) || pr.colors.ink);
+      ctx.lineWidth = ss && Number.isFinite(ss.strokeWidth) ? Math.max(1, ss.strokeWidth * WORLD_W * z) : (sel ? 2.5 : 1.5) * z; ctx.stroke();
       if (f.labelText && rings[0]) { const ctd = engine.centroid(rings[0]); const [lx, ly] = n2c(ctd[0], ctd[1]);
         ctx.font = Math.round(15 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
         ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(f.labelText.toUpperCase(), lx, ly); }
@@ -920,7 +1055,12 @@ function drawFeature(ctx, f) {
       if (f.kind === "road") {
         ctx.beginPath(); const [sx, sy] = n2c(coords[0][0], coords[0][1]); ctx.moveTo(sx, sy);
         for (let i = 1; i < coords.length; i++) { const [px, py] = n2c(coords[i][0], coords[i][1]); ctx.lineTo(px, py); }
-        ctx.strokeStyle = sel ? "#c2622b" : pr.colors.road; ctx.lineWidth = (sel ? 2.6 : 2) * z; ctx.setLineDash([8 * z, 4 * z]); ctx.stroke(); ctx.setLineDash([]);
+        const ss = f.style && f.style.settlement ? f.style : null;
+        if (ss && Number.isFinite(ss.opacity)) ctx.globalAlpha = ctx.globalAlpha * ss.opacity;
+        ctx.strokeStyle = sel ? "#c2622b" : ((ss && ss.strokeColor) || pr.colors.road);
+        ctx.lineWidth = ss && Number.isFinite(ss.strokeWidth) ? Math.max(1, ss.strokeWidth * WORLD_W * z) : (sel ? 2.6 : 2) * z;
+        ctx.setLineDash(ss ? (Array.isArray(ss.lineDash) ? ss.lineDash.map((n) => n * z) : []) : [8 * z, 4 * z]);
+        ctx.stroke(); ctx.setLineDash([]);
       } else {
         const maxW = (sel ? 2.8 : 2.2) * z, minW = (sel ? 1.2 : 0.8) * z;
         ctx.strokeStyle = sel ? "#c2622b" : pr.colors.inkAccent;
@@ -1484,6 +1624,7 @@ function doExport() {
   const savedSel = [...selection]; selection.clear();
   const savedDraft = aiDraftFeatures; aiDraftFeatures = null;
   const savedPlotReview = plotFillReview; plotFillReview = null;
+  const savedSettlementReview = settlementReview; settlementReview = null;
   state.zoom = scale; state.panX = -rect.x * scale; state.panY = -rect.y * scale;
   try {
     drawScene(octx, off.width, off.height, false);
@@ -1515,6 +1656,7 @@ function doExport() {
     for (const k of savedSel) selection.add(k);
     aiDraftFeatures = savedDraft;
     plotFillReview = savedPlotReview;
+    settlementReview = savedSettlementReview;
   }
   downloadCanvas(off);
   closeExportDialog();
@@ -1526,7 +1668,7 @@ function clearAll() {
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
   if (state.nodeId === doc.rootNodeId) doc.tileLayer.cells = {};
-  aiDraftFeatures = null; plotFillReview = null;
+  aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
   drawingPoints = []; clearSel(); setState({ aiReview: null }); markDirty(); draw();
 }
 
@@ -1762,6 +1904,8 @@ function refreshChrome() {
           '<button class="tb-btn" data-plot="fill" style="flex:1;justify-content:center;">✦ Füllen</button>' +
           '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
           '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
+          "</div>" +
+          '<button class="tb-btn" data-plot="settlement" style="width:100%;justify-content:center;margin-top:6px;" title="Siedlung als Ghost-Vorschlag">Siedlung</button>' +
           "</div></div>"
         : "") +
       (isPathKind
@@ -1856,6 +2000,8 @@ function wire() {
       if (f && f.kind === "plot") {
         if (plotBtn.dataset.plot === "ai") {
           requestPlotFillProposal(f);
+        } else if (plotBtn.dataset.plot === "settlement") {
+          requestSettlementReview(f);
         } else {
           pushUndo();
           fillPlotObjects(f, plotBtn.dataset.plot === "roll");

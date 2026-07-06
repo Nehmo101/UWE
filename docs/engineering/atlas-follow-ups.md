@@ -25,12 +25,13 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 - **KI/RTX-Draft-Bridge-Grundlage:** `@uwe/atlas/draft-proposal` normalisiert prozedurale/RTX-Draft-Features auf erlaubte Atlas-Kinds; Studio-Host und `atlas.html` akzeptieren für Draft-Review nur noch unterstützte Geometrie/Kinds. Angenommene `plot`-Proposals lösen bestehenden deterministischen Plot-Fill aus.
 - **KI/RTX-Plot-Fill-Rezept-Grundlage:** `@uwe/atlas/plot-fill-proposal` validiert `atlas_plot_fill`-Rezepte (Gouache-Allowlist, Density/Seed/Style-Grenzen, keine `AtlasObject`-/Code-Payloads); `@uwe/ai-brain` kennt `atlas_fill_area` als Review-only Brain-Action und speichert validierte/ungültige Ausgaben mit `autoApply: false`.
 - **KI/RTX-Plot-Fill-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen ein validiertes `atlas_plot_fill`-Rezept als transparente Ghost-Objekte anzeigen und erst nach explizitem Übernehmen reguläre `AtlasObject`s schreiben. `AtlasStudioHost` bedient `plot-fill-proposal-request/result/review`; bis zur echten Provider-/Modellauswahl liefert `generateAtlasPlotFillProposalAction` ein serverseitig validiertes, biomabhängiges Default-Rezept.
+- **Settlement-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen lokal/deterministisch `generateSettlement()` ausführen, Mauern/Straßen/Plaza/Objekte als transparente Ghosts prüfen und erst nach explizitem Übernehmen reguläre Atlas-Features/-Objects schreiben. Bestehende Settlement-Items werden nur für dieselbe Plot-Fläche über `style.settlementSourcePlotKey` ersetzt.
 
 ## Noch offen aus dem Gouache-Plan
 
 - **RTX-Asset-Studio in UWE:** Assets direkt in UWE mit lokaler RTX erstellen; Styleguide + Asset-Katalog als Prompt-Kontext; Ergebnis als validiertes Custom-Asset/PaletteItem-Proposal, Promotion zu Builtins per PR.
 - **Gouache-Asset-Bibliothek ausbauen:** Backlog aus `docs/design/atlas-redesign/asset-catalog.md` schrittweise als Rezepte/Custom-Assets umsetzen.
-- **Großstadt-/Schloss-Generator:** deterministisches `settlement.ts` mit Mauern, Straßen, Türmen, Häusern, Kirche, Marktständen, Brunnen, Bergfried und Werft.
+- **Großstadt-/Schloss-Generator:** Kern-Engine + Ghost-Übernahme sind umgesetzt; offen bleiben Wasser-/Werft-Varianten, Feintuning der Gebäudeverteilung und Golden-Screenshots.
 - **Weiche Terrain-Übergänge:** nur noch visuelles Feintuning/Golden-Screenshots für `AtlasTileLayer.blendWidth`, falls der 6px-Default in echten Karten zu weich oder zu hart wirkt.
 - **Static-Viewer-Restparität:** Ranke-Details, `style.smooth`/`style.width` und Legenden-Feinschliff sind nachgezogen; explizite Custom-/AI-Stempel-Goldens fehlen dort weiterhin.
 - **Optionaler Editor-Layout-Umbau:** Werkstatt-orientiertes Layout erst nach den Kernfeatures entscheiden.
@@ -39,21 +40,23 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ## Nächster Agent: empfohlener Einstieg
 
-**Priorität 1: Settlement-Ghost-UI.** Der Plot-Fill Review-Pfad ist fertig genug für Nutzung; der nächste kleine, saubere Schnitt ist eine lokale Settlement-Vorschau auf einer markierten `plot`-Fläche: `generateSettlement()` erzeugt Ghost-Features/-Objects, UWE rendert sie transparent und schreibt sie erst nach explizitem Übernehmen in das Dokument.
+**Priorität 1: RTX-Asset-Studio in UWE.** Plot-Fill und Settlement laufen jetzt als Review-only Ghost-Flows. Der nächste saubere Schnitt ist die Asset-Erstellung direkt in UWE: Ein Studio-Panel fragt über den lokalen RTX-Host ein Atlas-Pictogram/Gouache-Asset an, UWE gibt Styleguide + Asset-Katalog als Prompt-Kontext mit und speichert das Ergebnis erst als validiertes Custom-Asset/PaletteItem-Proposal.
 
 Betroffene Kernstellen:
 
-- `packages/static-export/static/atlas.html` für `settlementReview`, Plot-Panel-Button, Ghost-Rendering, Übernehmen/Verwerfen
-- `packages/atlas/src/settlement.ts` + `settlement.test.ts` als fertige Engine-Grundlage
-- Wichtig: `SettlementFeature.kind` ist lokal (`wall|road|plaza`); beim Einfügen in `doc.features` muss `kind` aus `settlementFeature.atlasKind` kommen und `style.settlement` die lokale Semantik tragen.
-- Bestehende Settlement-Items aus derselben Plot-Fläche über `style.settlementSourcePlotKey` ersetzen, nicht globale Settlement-Objekte löschen.
+- `docs/prompts/atlas-pictogram-styleguide.md` und `docs/design/atlas-redesign/asset-catalog.md` als verpflichtender RTX-Kontext.
+- `packages/atlas/src/asset-proposal.ts` für Prompt-Kontext, Validator und erlaubte Ergebnisform erweitern statt freie Bild-/Code-Payloads durchzureichen.
+- `packages/ai-brain/src/brain-actions.ts` um eine Review-only Brain-Action wie `atlas_generate_asset_proposal` ergänzen.
+- `apps/studio/app/atlas-asset-actions.ts` oder ein eng geschnittener Server-Action-Slice für RTX-Aufruf, Validierung und Pending-PaletteItem-Anlage.
+- Studio-UI: kleines Panel im Atlas-Kontext für Prompt, Styleguide-Hinweis, Ghost/Preview, Übernehmen/Verwerfen.
 
 Security-Regeln:
 
 - Kein Auto-Apply: Proposal → Ghost → explizite Übernahme.
-- AI/RTX darf keine fertigen `AtlasObject`-Payloads und keinen Code liefern; Settlement bleibt im nächsten Slice lokal/deterministisch.
-- Allowlist für Object-Style: `gouache`, `lineWidth`, `blur`, optional `plotKey`.
-- Begrenzen: Polygonpunkte, Exclusions, Density, maximale Objektzahl, Scale/Rotation/LineWidth/Blur.
+- AI/RTX darf keine fertigen `AtlasObject`-Payloads und keinen Code liefern; erlaubt sind nur validierte Asset-/PaletteItem-Proposals.
+- Styleguide muss serverseitig in den Prompt-Kontext injiziert werden; die UI darf ihn anzeigen/verlinken, aber nicht als freie User-Payload vertrauen.
+- Allowlist für Asset-Felder: Name, Kategorie, Gouache-Rezept/Style-Parameter, optional transparente Bildreferenz; keine Dateipfade, Shell-Kommandos oder Remote-URLs ohne Validator.
+- Begrenzen: Prompt-Länge, Bild-/SVG-Größe, PaletteItem-Metadaten, Kategorien und Style-Parameter.
 - Sichtbarkeit nicht von AI erzwingen lassen; Default/Inheritance serverseitig bestimmen.
 - `scripts/security-leaks.test.ts` erweitern, bevor neue Proposal-Payloads exportierbar werden.
 
@@ -61,7 +64,7 @@ Empfohlene Gates:
 
 - `corepack pnpm --filter @uwe/ai-brain test`
 - `corepack pnpm --filter @uwe/atlas test`
-- `corepack pnpm --filter @uwe/static-export build:atlas-engine`
+- `corepack pnpm --filter @uwe/studio typecheck`
 - `corepack pnpm --filter @uwe/static-export typecheck`
 - `node --import tsx --test packages/static-export/src/static-export.test.ts`
 - `corepack pnpm test:security`
