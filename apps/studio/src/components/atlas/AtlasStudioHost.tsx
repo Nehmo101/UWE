@@ -32,6 +32,7 @@ import {
   setAtlasNodeVisibilityAction,
   updateAtlasNodeAction,
 } from "@/app/atlas-actions";
+import { generateAtlasPlotFillProposalAction } from "@/app/atlas-plot-fill-actions";
 
 interface HostDoc {
   nodes?: Array<{ id: string; title?: string }>;
@@ -142,6 +143,37 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     [post, worldSlug],
   );
 
+  const handlePlotFillProposal = useCallback(
+    async (plotKey: string, seed: number, biomeKind?: string, prompt?: string) => {
+      const fd = new FormData();
+      fd.set("worldSlug", worldSlug);
+      fd.set("plotKey", plotKey);
+      fd.set("seed", String(seed));
+      if (biomeKind?.trim()) fd.set("biomeKind", biomeKind.trim());
+      if (prompt?.trim()) fd.set("prompt", prompt.trim());
+      try {
+        const result = await generateAtlasPlotFillProposalAction(fd);
+        if ("proposal" in result && result.proposal) {
+          post({ type: "plot-fill-proposal-result", plotKey, proposal: result.proposal });
+        } else {
+          post({
+            type: "plot-fill-proposal-result",
+            plotKey,
+            error: result.error ?? "Plot-Fill-Rezept konnte nicht erstellt werden.",
+          });
+        }
+      } catch (error) {
+        console.error("Atlas-Bridge: Plot-Fill-Rezept fehlgeschlagen -", error);
+        post({
+          type: "plot-fill-proposal-result",
+          plotKey,
+          error: error instanceof Error ? error.message : "Plot-Fill-Rezept konnte nicht erstellt werden.",
+        });
+      }
+    },
+    [post, worldSlug],
+  );
+
   const handleNodeRename = useCallback(
     async (nodeId: string, title: string) => {
       const trimmed = title.trim();
@@ -196,6 +228,11 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         case "ai-draft-request":
           void handleAiDraft(data.seed);
           break;
+        case "plot-fill-proposal-request":
+          void handlePlotFillProposal(data.plotKey, data.seed, data.biomeKind, data.prompt);
+          break;
+        case "plot-fill-proposal-review":
+          break;
         case "handout-request":
           void handleHandout(data.nodeId, data.title);
           break;
@@ -208,7 +245,16 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [doc, handleAiDraft, handleHandout, handleNodeRename, handleSave, handleVisibility, post]);
+  }, [
+    doc,
+    handleAiDraft,
+    handleHandout,
+    handleNodeRename,
+    handlePlotFillProposal,
+    handleSave,
+    handleVisibility,
+    post,
+  ]);
 
   return (
     <iframe

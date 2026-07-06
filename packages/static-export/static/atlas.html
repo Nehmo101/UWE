@@ -315,6 +315,7 @@ let doc = null;
 let drawingPoints = [];
 let measurePoints = [];
 let aiDraftFeatures = null;
+let plotFillReview = null;
 let labelRed = false;
 let keyCounter = 0;
 const nextKey = () => "ck-" + (++keyCounter);
@@ -515,6 +516,7 @@ function onBridgeMessage(e) {
     setState({ dirty: false, saveStatus: "In UWE-DB gespeichert ✓" });
     clearTimeout(msgTimer); msgTimer = setTimeout(() => setState({ saveStatus: "Bereit" }), 2400);
   } else if (d.type === "ai-draft-result") { receiveAiDraft(d.features || []); }
+  else if (d.type === "plot-fill-proposal-result") { receivePlotFillProposal(d.plotKey, d.proposal, d.error); }
   else if (d.type === "load" && d.doc) {
     try { doc = migrate(d.doc); setState({ nodeId: doc.rootNodeId, selectedKey: null }); draw(); }
     catch (err) { console.error("Atlas: Doc-Load vom Host fehlgeschlagen —", err); }
@@ -548,8 +550,9 @@ function normalizeAiDraftFeatures(features) {
 }
 function receiveAiDraft(features) {
   const normalized = normalizeAiDraftFeatures(features);
+  plotFillReview = null;
   aiDraftFeatures = normalized.map((f) => ({ ...f, _key: nextKey() }));
-  setState({ aiReview: { count: aiDraftFeatures.length } });
+  setState({ aiReview: { count: aiDraftFeatures.length, label: "KI-Entwurf", unit: "Features" } });
   if (!aiDraftFeatures.length) flash("KI-Entwurf enthielt keine unterstützten Atlas-Features.");
   draw();
 }
@@ -572,6 +575,124 @@ function acceptAiDraft() {
   aiDraftFeatures = null; setState({ aiReview: null }); draw();
 }
 function discardAiDraft() { aiDraftFeatures = null; setState({ aiReview: null }); draw(); }
+function validatePlotFillProposal(raw) {
+  if (engine.validateAtlasPlotFillProposal) {
+    const result = engine.validateAtlasPlotFillProposal(raw);
+    return result && result.ok ? result.proposal : null;
+  }
+  return raw && raw.kind === "atlas_plot_fill" && Array.isArray(raw.assets) ? raw : null;
+}
+function buildPlotFillFallbackProposal(feature) {
+  const st = feature.style || {};
+  const seed = Number.isFinite(st.seed) ? st.seed : engine.hashStringToSeed(feature._key || "plot-fill");
+  const biomeKind = st.biomeKind || state.brush;
+  return {
+    schemaVersion: 1,
+    kind: "atlas_plot_fill",
+    plotKey: feature._key,
+    biomeKind,
+    density: Number.isFinite(st.density) ? st.density : 1,
+    seed,
+    assets: [{ gouacheKey: st.gouache || defaultPlotGouacheForBrush(biomeKind), weight: 1 }],
+    notes: "Lokales Vorschau-Rezept; in Studio ersetzt der RTX-Host diese Parameter.",
+  };
+}
+function ghostObjectsForPlotProposal(feature, proposal) {
+  if (!feature || feature.kind !== "plot" || !feature.geometry || feature.geometry.type !== "Polygon") return [];
+  const objects = engine.fillPlotWithGouacheAssets(feature.geometry, {
+    seed: proposal.seed,
+    density: proposal.density,
+    paletteItemId: state.glyphKey || "tree",
+    assets: proposal.assets || [],
+    exclusions: scatterExclusions(),
+    idPrefix: "ghost-" + feature._key,
+    layer: 50,
+    visibility: feature.visibility || "dm_only",
+  });
+  return objects.map((obj) => ({
+    ...obj,
+    _key: "ghost-" + obj.id,
+    nodeId: state.nodeId,
+    style: { ...obj.style, plotKey: feature._key, ghost: true },
+  }));
+}
+function receivePlotFillProposal(plotKey, rawProposal, error) {
+  if (error) { flash(error); return; }
+  const feature = doc && doc.features.find((f) => f._key === plotKey && f.kind === "plot");
+  if (!feature) { flash("Objektfläche für KI-Rezept nicht mehr gefunden."); return; }
+  const proposal = validatePlotFillProposal(rawProposal);
+  if (!proposal) { flash("KI-Rezept wurde von UWE abgelehnt."); return; }
+  const objects = ghostObjectsForPlotProposal(feature, proposal);
+  if (!objects.length) { flash("KI-Rezept erzeugt keine Objekte für diese Fläche."); return; }
+  aiDraftFeatures = null;
+  plotFillReview = { plotKey: feature._key, proposal, objects };
+  setState({ aiReview: { count: objects.length, label: "Objektfläche", unit: "Ghost-Objekte" } });
+  draw();
+}
+function requestPlotFillProposal(feature) {
+  if (!feature || feature.kind !== "plot") return;
+  const styleSeed = feature.style && Number.isFinite(feature.style.seed) ? feature.style.seed : undefined;
+  const seed = (styleSeed ?? engine.hashStringToSeed(feature._key || "plot-fill")) >>> 0;
+  if (embedded) {
+    bridgePost({
+      type: "plot-fill-proposal-request",
+      plotKey: feature._key,
+      seed,
+      biomeKind: feature.style && feature.style.biomeKind,
+      prompt: feature.labelText || "",
+    });
+    flash("RTX-Rezept für Objektfläche angefragt...");
+    return;
+  }
+  receivePlotFillProposal(feature._key, buildPlotFillFallbackProposal(feature));
+}
+function acceptPlotFillReview() {
+  if (!plotFillReview) return;
+  const feature = doc && doc.features.find((f) => f._key === plotFillReview.plotKey && f.kind === "plot");
+  if (!feature) { discardPlotFillReview(); return; }
+  pushUndo();
+  const proposal = plotFillReview.proposal;
+  const nextStyle = {
+    ...(feature.style || {}),
+    plotPreset: "gouache_scatter",
+    ...(proposal.biomeKind ? { biomeKind: proposal.biomeKind } : {}),
+    density: proposal.density,
+    seed: proposal.seed,
+  };
+  if (proposal.assets && proposal.assets[0]) nextStyle.gouache = proposal.assets[0].gouacheKey;
+  feature.style = nextStyle;
+  doc.objects = doc.objects.filter((o) => !(o.style && o.style.plotKey === feature._key));
+  for (const ghost of plotFillReview.objects) {
+    const k = nextKey();
+    const style = { ...(ghost.style || {}) };
+    delete style.ghost;
+    doc.objects.push({
+      ...ghost,
+      id: k,
+      _key: k,
+      nodeId: state.nodeId,
+      style,
+    });
+  }
+  if (embedded) bridgePost({ type: "plot-fill-proposal-review", plotKey: feature._key, accepted: true, objectCount: plotFillReview.objects.length });
+  plotFillReview = null;
+  setState({ aiReview: null });
+  markDirty(); draw(); refreshChrome();
+}
+function discardPlotFillReview() {
+  if (plotFillReview && embedded) bridgePost({ type: "plot-fill-proposal-review", plotKey: plotFillReview.plotKey, accepted: false });
+  plotFillReview = null;
+  setState({ aiReview: null });
+  draw();
+}
+function acceptAiReview() {
+  if (plotFillReview) acceptPlotFillReview();
+  else acceptAiDraft();
+}
+function discardAiReview() {
+  if (plotFillReview) discardPlotFillReview();
+  else discardAiDraft();
+}
 function requestHandout() {
   if (embedded) { bridgePost({ type: "handout-request", nodeId: node().id, title: (node().title || "Atlas") + " — Handout" }); flash("Handout-Erstellung angefragt…"); }
   else flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
@@ -719,6 +840,11 @@ function drawScene(ctx, W, H, chrome) {
   if (aiDraftFeatures && aiDraftFeatures.length) {
     ctx.save(); ctx.globalAlpha = 0.5;
     for (const f of aiDraftFeatures) drawFeature(ctx, f);
+    ctx.restore();
+  }
+  if (plotFillReview && plotFillReview.objects && plotFillReview.objects.length) {
+    ctx.save(); ctx.globalAlpha = 0.58;
+    for (const o of plotFillReview.objects) drawObject(ctx, o);
     ctx.restore();
   }
   drawPending(ctx);
@@ -1357,6 +1483,7 @@ function doExport() {
   const saved = { zoom: state.zoom, panX: state.panX, panY: state.panY };
   const savedSel = [...selection]; selection.clear();
   const savedDraft = aiDraftFeatures; aiDraftFeatures = null;
+  const savedPlotReview = plotFillReview; plotFillReview = null;
   state.zoom = scale; state.panX = -rect.x * scale; state.panY = -rect.y * scale;
   try {
     drawScene(octx, off.width, off.height, false);
@@ -1387,6 +1514,7 @@ function doExport() {
     state.zoom = saved.zoom; state.panX = saved.panX; state.panY = saved.panY;
     for (const k of savedSel) selection.add(k);
     aiDraftFeatures = savedDraft;
+    plotFillReview = savedPlotReview;
   }
   downloadCanvas(off);
   closeExportDialog();
@@ -1398,7 +1526,8 @@ function clearAll() {
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
   if (state.nodeId === doc.rootNodeId) doc.tileLayer.cells = {};
-  drawingPoints = []; clearSel(); markDirty(); draw();
+  aiDraftFeatures = null; plotFillReview = null;
+  drawingPoints = []; clearSel(); setState({ aiReview: null }); markDirty(); draw();
 }
 
 // ===========================================================================
@@ -1632,6 +1761,7 @@ function refreshChrome() {
           '<div style="display:flex;gap:6px;margin-top:8px;">' +
           '<button class="tb-btn" data-plot="fill" style="flex:1;justify-content:center;">✦ Füllen</button>' +
           '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
+          '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
           "</div></div>"
         : "") +
       (isPathKind
@@ -1657,7 +1787,10 @@ function refreshChrome() {
 
   // AI review
   const ai = el("ai-review");
-  if (st.aiReview) { el("ai-review-text").textContent = "KI-Vorschlag — " + st.aiReview.count + " Features zur Prüfung (kein Auto-Apply)"; ai.style.display = "flex"; }
+  if (st.aiReview) {
+    el("ai-review-text").textContent = (st.aiReview.label || "KI-Vorschlag") + " — " + st.aiReview.count + " " + (st.aiReview.unit || "Einträge") + " zur Prüfung (kein Auto-Apply)";
+    ai.style.display = "flex";
+  }
   else ai.style.display = "none";
 
   // Toast
@@ -1707,8 +1840,8 @@ function wire() {
   el("btn-undo").addEventListener("click", undo);
   el("btn-redo").addEventListener("click", redo);
   el("btn-erase-sel").addEventListener("click", () => { if (selection.size) eraseSelection(); });
-  el("btn-ai-accept").addEventListener("click", acceptAiDraft);
-  el("btn-ai-discard").addEventListener("click", discardAiDraft);
+  el("btn-ai-accept").addEventListener("click", acceptAiReview);
+  el("btn-ai-discard").addEventListener("click", discardAiReview);
   el("subbar").addEventListener("click", (e) => {
     const t = e.target.closest("[data-act]"); if (!t) return;
     if (t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); }
@@ -1721,9 +1854,13 @@ function wire() {
     if (plotBtn) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);
       if (f && f.kind === "plot") {
-        pushUndo();
-        fillPlotObjects(f, plotBtn.dataset.plot === "roll");
-        markDirty(); draw(); refreshChrome();
+        if (plotBtn.dataset.plot === "ai") {
+          requestPlotFillProposal(f);
+        } else {
+          pushUndo();
+          fillPlotObjects(f, plotBtn.dataset.plot === "roll");
+          markDirty(); draw(); refreshChrome();
+        }
       }
       return;
     }

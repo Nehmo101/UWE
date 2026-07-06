@@ -24,10 +24,10 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 - **KI/RTX-Draft-Bridge-Grundlage:** `@uwe/atlas/draft-proposal` normalisiert prozedurale/RTX-Draft-Features auf erlaubte Atlas-Kinds; Studio-Host und `atlas.html` akzeptieren für Draft-Review nur noch unterstützte Geometrie/Kinds. Angenommene `plot`-Proposals lösen bestehenden deterministischen Plot-Fill aus.
 - **KI/RTX-Plot-Fill-Rezept-Grundlage:** `@uwe/atlas/plot-fill-proposal` validiert `atlas_plot_fill`-Rezepte (Gouache-Allowlist, Density/Seed/Style-Grenzen, keine `AtlasObject`-/Code-Payloads); `@uwe/ai-brain` kennt `atlas_fill_area` als Review-only Brain-Action und speichert validierte/ungültige Ausgaben mit `autoApply: false`.
+- **KI/RTX-Plot-Fill-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen ein validiertes `atlas_plot_fill`-Rezept als transparente Ghost-Objekte anzeigen und erst nach explizitem Übernehmen reguläre `AtlasObject`s schreiben. `AtlasStudioHost` bedient `plot-fill-proposal-request/result/review`; bis zur echten Provider-/Modellauswahl liefert `generateAtlasPlotFillProposalAction` ein serverseitig validiertes, biomabhängiges Default-Rezept.
 
 ## Noch offen aus dem Gouache-Plan
 
-- **Objektbereich füllen (Plot):** Ghost-Overlay-UI + Übernehmen/Verwerfen für validierte `atlas_plot_fill`-Rezepte; Preset-Scatter und Recipe-/Brain-Validator sind umgesetzt.
 - **RTX-Asset-Studio in UWE:** Assets direkt in UWE mit lokaler RTX erstellen; Styleguide + Asset-Katalog als Prompt-Kontext; Ergebnis als validiertes Custom-Asset/PaletteItem-Proposal, Promotion zu Builtins per PR.
 - **Gouache-Asset-Bibliothek ausbauen:** Backlog aus `docs/design/atlas-redesign/asset-catalog.md` schrittweise als Rezepte/Custom-Assets umsetzen.
 - **Großstadt-/Schloss-Generator:** deterministisches `settlement.ts` mit Mauern, Straßen, Türmen, Häusern, Kirche, Marktständen, Brunnen, Bergfried und Werft.
@@ -39,21 +39,19 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ## Nächster Agent: empfohlener Einstieg
 
-**Priorität 1: KI/RTX-Plot-Fill-Ghost-UI.** Der Preset-Scatter und das sichere `atlas_fill_area`-Recipe-Proposal sind fertig; der nächste kleine, saubere Schnitt ist die Editor-Review: RTX/AI-Rezept anfragen, mit `validateAtlasPlotFillProposal` prüfen, daraus Ghost-Objects via `fillPlotWithGouacheAssets` rendern und erst nach explizitem Übernehmen persistieren.
+**Priorität 1: Settlement-Ghost-UI.** Der Plot-Fill Review-Pfad ist fertig genug für Nutzung; der nächste kleine, saubere Schnitt ist eine lokale Settlement-Vorschau auf einer markierten `plot`-Fläche: `generateSettlement()` erzeugt Ghost-Features/-Objects, UWE rendert sie transparent und schreibt sie erst nach explizitem Übernehmen in das Dokument.
 
 Betroffene Kernstellen:
 
-- `packages/atlas/src/plot-fill-proposal.ts` + `plot-fill-proposal.test.ts` als fertiger Parser/Guard
-- `packages/ai-brain/src/actions.ts`, `types.ts`, `tasks.ts`, `proposals.ts`, `brain-actions.test.ts` als fertiger Brain-Action-Einstieg
-- `packages/atlas/src/bridge.ts` + `bridge.test.ts` für bereits angelegte `plot-fill-proposal-request/result/review`
-- `apps/studio/app/atlas-actions.ts` für Authz, Node-Zugehörigkeit und Rezept → Objects
-- `apps/studio/src/components/atlas/AtlasStudioHost.tsx` für Bridge-Handling
-- `packages/static-export/static/atlas.html` für KI/RTX-Button, Ghost-Overlay, Übernehmen/Verwerfen
+- `packages/static-export/static/atlas.html` für `settlementReview`, Plot-Panel-Button, Ghost-Rendering, Übernehmen/Verwerfen
+- `packages/atlas/src/settlement.ts` + `settlement.test.ts` als fertige Engine-Grundlage
+- Wichtig: `SettlementFeature.kind` ist lokal (`wall|road|plaza`); beim Einfügen in `doc.features` muss `kind` aus `settlementFeature.atlasKind` kommen und `style.settlement` die lokale Semantik tragen.
+- Bestehende Settlement-Items aus derselben Plot-Fläche über `style.settlementSourcePlotKey` ersetzen, nicht globale Settlement-Objekte löschen.
 
 Security-Regeln:
 
 - Kein Auto-Apply: Proposal → Ghost → explizite Übernahme.
-- AI/RTX darf keine fertigen `AtlasObject`-Payloads und keinen Code liefern.
+- AI/RTX darf keine fertigen `AtlasObject`-Payloads und keinen Code liefern; Settlement bleibt im nächsten Slice lokal/deterministisch.
 - Allowlist für Object-Style: `gouache`, `lineWidth`, `blur`, optional `plotKey`.
 - Begrenzen: Polygonpunkte, Exclusions, Density, maximale Objektzahl, Scale/Rotation/LineWidth/Blur.
 - Sichtbarkeit nicht von AI erzwingen lassen; Default/Inheritance serverseitig bestimmen.
