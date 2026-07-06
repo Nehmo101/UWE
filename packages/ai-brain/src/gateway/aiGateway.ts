@@ -1,4 +1,3 @@
-import type { AiProviderId, ApiKeyStore } from "../types";
 import type {
   AiFeatureCategory,
   AiFeaturePermission,
@@ -25,17 +24,21 @@ import {
 import type { AiRouterRequest, AiRouterResult } from "../router/types";
 import { routeAiRequest, type AiRouterDeps } from "../router/aiRouter";
 import { checkRtxReadiness } from "../router/health/rtxReadiness";
-import { createApiKeyStoreFromEnv } from "../settings";
 import type { AiProviderMode } from "../router/types";
 import { AiRouterError } from "../router/types";
 import {
   runImageStudioTask,
-  resolveImageProviderConfig,
   type ImageStudioRequest,
   type ImageStudioResult,
   type ImageProviderMode,
 } from "@uwe/image-studio";
 import type { CreateUsageLogInput } from "@uwe/database/server";
+import { buildGatewayImageProviderConfig } from "./aiGatewayImageConfig";
+import { createGatewayApiKeyStore } from "./apiKeyStore";
+import { createApiKeyStoreFromEnv } from "../settings";
+
+export { createGatewayApiKeyStore } from "./apiKeyStore";
+export { resolveConnectorAwareImageProviderConfig } from "./aiGatewayImageConfig";
 
 export type {
   AiRoutingMode,
@@ -80,27 +83,6 @@ export interface AiGatewayResult extends AiRouterResult {
     privacyLevel: AiPrivacyLevel;
     durationMs: number;
   };
-}
-
-/** Build API key store: DB cloud providers take precedence over ENV. */
-export async function createGatewayApiKeyStore(
-  gatewayService?: AiGatewayService,
-): Promise<ApiKeyStore> {
-  const store = createApiKeyStoreFromEnv();
-  const service = gatewayService ?? createAiGatewayService();
-  const providers = await service.listCloudProviders();
-
-  for (const provider of providers) {
-    if (!provider.isEnabled || !provider.hasApiKey) {
-      continue;
-    }
-    const key = await service.resolveCloudProviderApiKey(provider.providerId);
-    if (key) {
-      store.set(provider.providerId as AiProviderId, key);
-    }
-  }
-
-  return store;
 }
 
 function estimateCostUsd(input: {
@@ -379,33 +361,6 @@ async function prepareAiGatewayExecution(
     privacyLevel,
     cloudFallbackAllowed,
     effectiveProviderMode,
-  };
-}
-
-async function buildGatewayImageProviderConfig(
-  gateway: AiGatewayService,
-  cloudFallbackAllowed: boolean,
-  privacyLevel: AiPrivacyLevel,
-  config: AiGatewayConfigRecord,
-): Promise<ReturnType<typeof resolveImageProviderConfig>> {
-  const envConfig = resolveImageProviderConfig();
-  const apiKeyStore = await createGatewayApiKeyStore(gateway);
-  const cloudApiKey =
-    apiKeyStore.get("openai") ??
-    envConfig.cloudApiKey ??
-    undefined;
-  const allowCloud =
-    config.routingMode !== "LOCAL_ONLY" &&
-    config.routingMode !== "DISABLED" &&
-    config.cloudFallbackEnabled &&
-    cloudFallbackAllowed &&
-    privacyLevel === "CLOUD_ALLOWED";
-
-  return {
-    ...envConfig,
-    allowCloud: allowCloud && Boolean(cloudApiKey),
-    cloudApiKey,
-    cloudModel: resolveFeatureModelOverride(config, "image_generation")?.model ?? envConfig.cloudModel,
   };
 }
 

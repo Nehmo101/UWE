@@ -20,7 +20,8 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 import { generateDraft, rerollDraft } from "@uwe/atlas/procedural";
 import type { AtlasDraft, ProceduralPromptHints, ProceduralBounds } from "@uwe/atlas/procedural";
-import { runImageStudioTask, resolveImageProviderConfig } from "@uwe/image-studio";
+import { resolveConnectorAwareImageProviderConfig } from "@uwe/ai-brain";
+import { runImageStudioTask } from "@uwe/image-studio";
 import { assembleStampPrompt } from "@uwe/atlas/stamp-prompt";
 import { validateUploadInput, UploadValidationError } from "@uwe/assets";
 
@@ -779,7 +780,7 @@ export async function generateAtlasStampVariantsAction(
   }
 
   const prompt = assembleStampPrompt(keyword);
-  const config = resolveImageProviderConfig();
+  const config = await resolveConnectorAwareImageProviderConfig({ prisma: getAtlasDeps().db });
 
   const VARIANT_COUNT = 5;
 

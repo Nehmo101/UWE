@@ -1,6 +1,7 @@
 import type { CookbookRuntimeProbeInput } from "@uwe/cookbook";
+import { prisma } from "@uwe/database/server";
 import { getInferenceStatus } from "./inference";
-import { checkRtxHealth } from "./router/health/rtxHealthcheck";
+import { checkRtxReadiness } from "./router/health/rtxReadiness";
 import { isRtxWorkerConfigured } from "./rtx-worker-config";
 
 export async function buildCookbookRuntimeProbe(options?: {
@@ -9,7 +10,7 @@ export async function buildCookbookRuntimeProbe(options?: {
 }): Promise<CookbookRuntimeProbeInput> {
   const [inference, rtx] = await Promise.all([
     getInferenceStatus({ useMock: options?.useMock }),
-    checkRtxHealth({ useMock: options?.useMock, env: options?.env }),
+    checkRtxReadiness({ useMock: options?.useMock, env: options?.env, prisma }),
   ]);
 
   return {

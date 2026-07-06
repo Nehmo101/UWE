@@ -36,7 +36,7 @@ export interface RtxWorkerUrlEvaluation {
 }
 
 export function evaluateRtxWorkerUrl(env: NodeJS.ProcessEnv = process.env): RtxWorkerUrlEvaluation {
-  const rawUrl = env.RTX_AGENT_URL?.trim();
+  const rawUrl = env.RTX_BASE_URL?.trim() || env.RTX_AGENT_URL?.trim();
   if (!rawUrl) {
     return {
       configured: false,
@@ -82,7 +82,7 @@ export function resolveRtxWorkerConfig(env: NodeJS.ProcessEnv = process.env): Rt
   }
 
   const timeoutMs = Number.parseInt(env.RTX_TIMEOUT_MS ?? "3000", 10);
-  const token = env.RTX_AGENT_TOKEN?.trim() ?? "";
+  const token = env.RTX_SERVICE_TOKEN?.trim() || env.RTX_AGENT_TOKEN?.trim() || "";
 
   if (!token) {
     return null;
@@ -97,7 +97,7 @@ export function resolveRtxWorkerConfig(env: NodeJS.ProcessEnv = process.env): Rt
 }
 
 export function isRtxWorkerConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.RTX_AGENT_URL?.trim());
+  return Boolean(env.RTX_BASE_URL?.trim() || env.RTX_AGENT_URL?.trim());
 }
 
 // --- Deprecated backward-compat aliases (legacy "RtxAgent" terminology) ---

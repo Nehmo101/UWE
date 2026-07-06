@@ -77,11 +77,13 @@ export interface ImageStudioProviderConfig {
 export function resolveImageProviderConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): ImageStudioProviderConfig {
+  const rtxWorkerUrl = env.RTX_BASE_URL?.trim() || env.RTX_AGENT_URL?.trim();
+  const rtxWorkerToken = env.RTX_SERVICE_TOKEN?.trim() || env.RTX_AGENT_TOKEN?.trim();
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
     allowCloud: env.IMAGE_STUDIO_ALLOW_CLOUD === "true",
-    rtxAgentUrl: env.RTX_AGENT_URL?.trim(),
-    rtxAgentToken: env.RTX_AGENT_TOKEN?.trim(),
+    rtxAgentUrl: rtxWorkerUrl,
+    rtxAgentToken: rtxWorkerToken,
     cloudApiKey: env.CLOUD_AI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim(),
     cloudProvider: env.CLOUD_AI_PROVIDER?.trim() || "openai",
     cloudModel: env.IMAGE_STUDIO_CLOUD_MODEL?.trim() || env.CLOUD_AI_MODEL?.trim() || "dall-e-3",

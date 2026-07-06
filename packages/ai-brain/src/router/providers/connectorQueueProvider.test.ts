@@ -11,9 +11,11 @@ import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 
 import {
   isConnectorEmbeddingAvailable,
+  isConnectorImageAvailable,
   isConnectorLlmAvailable,
   resolveConnectorWorkflowModel,
   runConnectorEmbeddingGenerate,
+  runConnectorImageGenerate,
   runConnectorLlmGenerate,
   tryConnectorLlmGenerate,
   workflowSlotForTask,
@@ -23,11 +25,15 @@ async function onlineLlmConnector(
   db: PrismaClient,
   name: string,
   models: Array<{ id: string; provider: string; name: string }> = [],
+  capabilities: Array<"llm_local" | "embedding_local" | "image_generation"> = [
+    "llm_local",
+    "embedding_local",
+  ],
 ) {
   const service = createConnectorService(db);
   const { connector } = await service.createConnector(name);
   await service.heartbeat(connector.id, {
-    capabilities: ["llm_local", "embedding_local"],
+    capabilities,
     models,
   });
   return connector;
@@ -60,14 +66,19 @@ async function simulateConnectorCompletion(
 }
 
 describe("connectorQueueProvider", () => {
-  it("reports llm/embedding availability only when a connector advertises it", async () => {
+  it("reports llm/embedding/image availability only when a connector advertises it", async () => {
     const isolated = createPrismaClient(createTestDatabaseUrl());
     assert.equal(await isConnectorLlmAvailable(isolated), false);
     assert.equal(await isConnectorEmbeddingAvailable(isolated), false);
+    assert.equal(await isConnectorImageAvailable(isolated), false);
 
     await onlineLlmConnector(isolated, "Avail Test");
     assert.equal(await isConnectorLlmAvailable(isolated), true);
     assert.equal(await isConnectorEmbeddingAvailable(isolated), true);
+    assert.equal(await isConnectorImageAvailable(isolated), false);
+
+    await onlineLlmConnector(isolated, "Image Test", [], ["image_generation"]);
+    assert.equal(await isConnectorImageAvailable(isolated), true);
   });
 
   it("enqueues an llm_generate job and returns the connector result", async () => {
@@ -106,6 +117,24 @@ describe("connectorQueueProvider", () => {
 
     assert.deepEqual(result.embedding, [0.1, 0.2, 0.3]);
     assert.equal(result.model, "nomic-embed-text");
+  });
+
+  it("enqueues an image_generate job and returns base64 image data", async () => {
+    const isolated = createPrismaClient(createTestDatabaseUrl());
+    const connector = await onlineLlmConnector(isolated, "Image Run", [], ["image_generation"]);
+
+    const [result] = await Promise.all([
+      runConnectorImageGenerate(isolated, { task: "generate", prompt: "a red dragon" }),
+      simulateConnectorCompletion(isolated, connector.id, "image_generate", {
+        image: "aGVsbG8=",
+        mime_type: "image/png",
+      }),
+    ]);
+
+    assert.equal(result.success, true);
+    assert.equal(result.providerUsed, "local_rtx");
+    assert.equal(result.imageBase64, "aGVsbG8=");
+    assert.equal(result.mimeType, "image/png");
   });
 
   it("maps task types to workflow slots and resolves stored default models", async () => {

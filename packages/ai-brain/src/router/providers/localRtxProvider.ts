@@ -1,11 +1,13 @@
+import type { PrismaClient } from "@uwe/database/server";
 import { resolveInferenceConfig } from "../../inference-config";
 import { createProvider, type CreateProviderOptions } from "../../providers/registry";
 import type { AiProvider, AiProviderId, ApiKeyStore } from "../../types";
-import { checkRtxHealth } from "../health/rtxHealthcheck";
+import { checkRtxReadiness } from "../health/rtxReadiness";
 import { AiRouterError } from "../types";
 
 export interface LocalRtxProviderOptions extends CreateProviderOptions {
   useMock?: boolean;
+  prisma?: PrismaClient;
 }
 
 /**
@@ -39,8 +41,14 @@ export function getLocalRtxProviderId(): AiProviderId {
   return resolveInferenceConfig().providerId;
 }
 
-export async function assertLocalRtxReady(options?: { useMock?: boolean }): Promise<void> {
-  const health = await checkRtxHealth(options);
+export async function assertLocalRtxReady(options?: {
+  useMock?: boolean;
+  prisma?: PrismaClient;
+}): Promise<void> {
+  const health = await checkRtxReadiness({
+    useMock: options?.useMock,
+    prisma: options?.prisma,
+  });
   if (!health.ready) {
     throw new AiRouterError(
       health.message || "Lokale RTX-Inference ist nicht bereit.",

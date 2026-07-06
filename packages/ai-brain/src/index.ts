@@ -252,6 +252,7 @@ export {
   executeAiGatewayResearchJob,
   createGatewayApiKeyStore,
   getAiGatewayStatusForClient,
+  resolveConnectorAwareImageProviderConfig,
   runAiGatewayFallbackTest,
   simulateGatewayRouting,
   AiGatewayAccessDeniedError,

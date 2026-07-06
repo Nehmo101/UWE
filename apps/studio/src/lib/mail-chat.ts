@@ -1,8 +1,8 @@
 import {
   executeAiGatewayRequest,
-  isRtxReady,
+  isRtxReadinessReady,
 } from "@uwe/ai-brain";
-import { createBrainStoreService, createUweRepository, getSystemSettings } from "@uwe/database/server";
+import { createBrainStoreService, createUweRepository, getSystemSettings, prisma } from "@uwe/database/server";
 import { mailBodyForProcessing } from "@uwe/mail/portal-types";
 import { buildMailChatPrompt, type MailChatMessage } from "./mail-chat-prompt";
 
@@ -48,7 +48,7 @@ export async function executeMailChat(
     throw new Error("KI ist deaktiviert.");
   }
 
-  const rtxReady = await isRtxReady({ useMock: body.useMock });
+  const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
   if (!rtxReady) {
     return {
       kind: "unavailable",

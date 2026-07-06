@@ -12,7 +12,7 @@ import {
 import {
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
-  checkRtxHealth,
+  checkRtxReadiness,
   simulateGatewayRouting,
 } from "@uwe/ai-brain";
 import type { AuthUser } from "@uwe/auth";
@@ -252,7 +252,7 @@ export async function postAiGatewayFallbackTest(user: AuthUser | null) {
     { userId: user.id, role: user.role },
   );
 
-  const rtxHealth = await checkRtxHealth();
+  const rtxHealth = await checkRtxReadiness({ prisma });
 
   return NextResponse.json({
     ...result,

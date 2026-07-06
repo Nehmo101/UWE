@@ -4,6 +4,7 @@ export {
   executeAiGatewayResearchJob,
   createGatewayApiKeyStore,
   getAiGatewayStatusForClient,
+  resolveConnectorAwareImageProviderConfig,
   runAiGatewayFallbackTest,
   AiGatewayAccessDeniedError,
   AiGatewayBudgetExceededError,

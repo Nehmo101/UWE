@@ -361,7 +361,8 @@ export function resolveImageStudioConfigStatus(
   portal?: ImageStudioPortalOverrides | null,
 ): ImageStudioConfigStatus {
   const config = resolveImageStudioConfig(env, portal);
-  const rtxAgentConfigured = Boolean(env.RTX_AGENT_URL?.trim());
+  const rtxWorkerUrl = env.RTX_BASE_URL?.trim() || env.RTX_AGENT_URL?.trim();
+  const rtxAgentConfigured = Boolean(rtxWorkerUrl);
   const connectorImageEnabled = env.RTX_USE_CONNECTOR_IMAGE === "true";
   // A local image backend is available via the outbound connector queue or the
   // legacy inbound RTX Agent URL.
@@ -382,9 +383,9 @@ export function resolveImageStudioConfigStatus(
   } else if (!localImageBackend && config.allowCloud && !cloudApiKeyConfigured) {
     message = "Lokaler Bild-Backend fehlt — Cloud erlaubt, aber kein API-Key konfiguriert.";
   } else if (connectorImageEnabled) {
-    message = "Bildgenerierung über RTX Host Connector (image_generate).";
+    message = "Bildgenerierung über RTX Host Connector (image_generate) — Connector muss image_generation werben.";
   } else if (rtxAgentConfigured) {
-    message = "Legacy RTX Agent konfiguriert (RTX_AGENT_URL) — outbound Connector bevorzugt.";
+    message = "Legacy RTX Worker konfiguriert (RTX_BASE_URL/RTX_AGENT_URL) — outbound Connector bevorzugt.";
   }
 
   return {

@@ -1,6 +1,6 @@
 import {
   executeAiGatewayRequest,
-  isRtxReady,
+  isRtxReadinessReady,
   resolveAiBrainSettings,
 } from "@uwe/ai-brain";
 import {
@@ -65,7 +65,7 @@ export async function executeLifeBrainChat(
     throw new Error("KI ist deaktiviert.");
   }
 
-  const rtxReady = await isRtxReady({ useMock: body.useMock });
+  const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
   if (!rtxReady) {
     return {
       kind: "unavailable",

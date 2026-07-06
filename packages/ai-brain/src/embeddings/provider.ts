@@ -1,4 +1,9 @@
+import { prisma as sharedPrisma, type PrismaClient } from "@uwe/database/server";
 import { OllamaProvider } from "../providers/openai-family";
+import {
+  isConnectorEmbeddingAvailable,
+  runConnectorEmbeddingGenerate,
+} from "../router/providers/connectorQueueProvider";
 import { resolveBrainEmbeddingSettings } from "./settings";
 import type {
   BrainEmbeddingSettings,
@@ -8,7 +13,7 @@ import type {
 import { BrainEmbeddingError } from "./types";
 
 export function createEmbeddingProvider(
-  options?: Partial<BrainEmbeddingSettings> & { useMock?: boolean },
+  options?: Partial<BrainEmbeddingSettings> & { useMock?: boolean; prisma?: PrismaClient },
 ): EmbeddingProvider {
   const settings = resolveBrainEmbeddingSettings(options);
 
@@ -20,13 +25,62 @@ export function createEmbeddingProvider(
     return new DisabledEmbeddingProvider();
   }
 
+  let direct: EmbeddingProvider;
   switch (settings.provider) {
     case "ollama":
-      return new OllamaEmbeddingProvider(settings);
+      direct = new OllamaEmbeddingProvider(settings);
+      break;
     case "openai_compatible":
-      return new OpenAiCompatibleEmbeddingProvider(settings);
+      direct = new OpenAiCompatibleEmbeddingProvider(settings);
+      break;
     default:
       throw new BrainEmbeddingError(`Unbekannter Embedding-Provider: ${settings.provider satisfies never}`);
+  }
+
+  return new ConnectorPreferredEmbeddingProvider(
+    direct,
+    options?.prisma ?? sharedPrisma,
+    settings.model,
+  );
+}
+
+class ConnectorPreferredEmbeddingProvider implements EmbeddingProvider {
+  readonly id: EmbeddingProvider["id"];
+  readonly isLocal = true;
+  readonly model: string;
+
+  constructor(
+    private readonly direct: EmbeddingProvider,
+    private readonly db: PrismaClient,
+    model: string,
+  ) {
+    this.id = direct.id;
+    this.model = model;
+  }
+
+  async embedText(text: string): Promise<number[]> {
+    if (await isConnectorEmbeddingAvailable(this.db)) {
+      const result = await runConnectorEmbeddingGenerate(this.db, {
+        input: text,
+        model: this.model,
+      });
+      if (result.embedding.length > 0) {
+        return result.embedding;
+      }
+    }
+    return this.direct.embedText(text);
+  }
+
+  async healthCheck(): Promise<EmbeddingHealthCheckResult> {
+    if (await isConnectorEmbeddingAvailable(this.db)) {
+      return {
+        ok: true,
+        provider: this.id,
+        message: "RTX Host Connector (embedding_local) bereit",
+        latencyMs: 1,
+      };
+    }
+    return this.direct.healthCheck();
   }
 }
 

@@ -20,9 +20,12 @@ import {
   type PrismaClient,
 } from "@uwe/database/server";
 
+import type { ImageStudioRequest, ImageStudioResult } from "@uwe/image-studio";
+
 import type { AiProviderId, AiTaskType, GenerateTextResult } from "../../types";
 
 const CONNECTOR_LLM_TIMEOUT_MS = 120_000;
+const CONNECTOR_IMAGE_TIMEOUT_MS = 300_000;
 const CONNECTOR_POLL_INTERVAL_MS = 500;
 
 export interface ConnectorLlmInput {
@@ -67,6 +70,12 @@ export async function isConnectorLlmAvailable(prisma: PrismaClient): Promise<boo
 export async function isConnectorEmbeddingAvailable(prisma: PrismaClient): Promise<boolean> {
   const summary = await createConnectorService(prisma).summarize();
   return summary.availableCapabilities.includes("embedding_local");
+}
+
+/** True when an online (or degraded) connector advertises local image generation. */
+export async function isConnectorImageAvailable(prisma: PrismaClient): Promise<boolean> {
+  const summary = await createConnectorService(prisma).summarize();
+  return summary.availableCapabilities.includes("image_generation");
 }
 
 /**
@@ -135,6 +144,84 @@ export async function runConnectorEmbeddingGenerate(
       ? result.model
       : (input.model?.trim() ?? "");
   return { embedding, model, jobId: job.id };
+}
+
+function parseConnectorImageResult(result: Record<string, unknown>): {
+  imageBase64?: string;
+  mimeType: string;
+} {
+  const imageBase64 =
+    typeof result.image === "string"
+      ? result.image
+      : typeof result.imageBase64 === "string"
+        ? result.imageBase64
+        : typeof result.b64_json === "string"
+          ? result.b64_json
+          : undefined;
+  const mimeType =
+    typeof result.mime_type === "string"
+      ? result.mime_type
+      : typeof result.mimeType === "string"
+        ? result.mimeType
+        : "image/png";
+  return { imageBase64, mimeType };
+}
+
+/**
+ * Enqueue an `image_generate` job and wait for a connector to complete it.
+ * Maps the connector JSON result into {@link ImageStudioResult}.
+ */
+export async function runConnectorImageGenerate(
+  prisma: PrismaClient,
+  request: ImageStudioRequest,
+): Promise<ImageStudioResult> {
+  const service = createConnectorService(prisma);
+  const payload: Record<string, unknown> = {
+    task: request.task,
+    prompt: request.prompt,
+    width: request.width ?? 1024,
+    height: request.height ?? 1024,
+  };
+  if (request.sourceImageBase64) payload.source_image = request.sourceImageBase64;
+  if (request.maskBase64) payload.mask = request.maskBase64;
+
+  const job = await service.enqueueJob({
+    type: "image_generate",
+    payload,
+  });
+
+  try {
+    const completed = await waitForConnectorJob(prisma, job.id, {
+      timeoutMs: CONNECTOR_IMAGE_TIMEOUT_MS,
+      intervalMs: CONNECTOR_POLL_INTERVAL_MS,
+    });
+    const { imageBase64, mimeType } = parseConnectorImageResult(resultRecord(completed.result));
+    if (!imageBase64) {
+      return {
+        success: false,
+        providerUsed: "local_rtx",
+        error: "Connector lieferte kein Bild (image_generate ohne image/imageBase64).",
+        metadata: { jobId: job.id },
+      };
+    }
+    return {
+      success: true,
+      providerUsed: "local_rtx",
+      imageBase64,
+      mimeType,
+      metadata: { jobId: job.id, via: "connector" },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      providerUsed: "local_rtx",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Bildgenerierung über RTX Host Connector fehlgeschlagen.",
+      metadata: { jobId: job.id },
+    };
+  }
 }
 
 /** Map an AI task type to the connector workflow slot that supplies its default model. */
