@@ -14,7 +14,8 @@ interface SpotifyOAuthSummary {
 
 interface ImageStudioSummary {
   enabled: boolean;
-  rtxAgentConfigured: boolean;
+  connectorImageEnabled: boolean;
+  localImageBackendReady: boolean;
   cloudApiKeyConfigured: boolean;
 }
 
@@ -130,7 +131,9 @@ export function IntegrationsSetupPanel({
                 <td>
                   {statusLabel(imageStudio.enabled)}
                   {" · "}
-                  RTX: {imageStudio.rtxAgentConfigured ? "OK" : "fehlt"}
+                  Connector: {imageStudio.connectorImageEnabled ? "Queue an" : "aus"}
+                  {" · "}
+                  Lokal: {imageStudio.localImageBackendReady ? "OK" : "fehlt"}
                   {" · "}
                   Cloud-Key: {imageStudio.cloudApiKeyConfigured ? "OK" : "fehlt"}
                 </td>

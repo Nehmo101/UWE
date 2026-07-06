@@ -305,6 +305,8 @@ export interface ImageStudioConfigStatus extends ImageStudioConfig {
   rtxAgentConfigured: boolean;
   /** Local image generation routes through the outbound RTX Host Connector queue. */
   connectorImageEnabled: boolean;
+  /** Connector queue or legacy RTX worker URL configured. */
+  localImageBackendReady: boolean;
   cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
@@ -392,6 +394,7 @@ export function resolveImageStudioConfigStatus(
     ...config,
     rtxAgentConfigured,
     connectorImageEnabled,
+    localImageBackendReady: localImageBackend,
     cloudApiKeyConfigured,
     source: fromPortal ? "portal" : "env",
     message,

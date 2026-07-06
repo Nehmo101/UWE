@@ -567,7 +567,8 @@ export default async function SettingsPage({ searchParams }: Props) {
                 spotifyOAuth={spotifyOAuth}
                 imageStudio={{
                   enabled: imageStudioConfig.enabled,
-                  rtxAgentConfigured: imageStudioConfig.rtxAgentConfigured,
+                  connectorImageEnabled: imageStudioConfig.connectorImageEnabled,
+                  localImageBackendReady: imageStudioConfig.localImageBackendReady,
                   cloudApiKeyConfigured: imageStudioConfig.cloudApiKeyConfigured,
                 }}
                 calendar={{
@@ -762,13 +763,15 @@ export default async function SettingsPage({ searchParams }: Props) {
                 defaultOpen
               >
                 <p className="uwe-hint">
-                  Odysseus-inspirierte Bild-Pipeline: RTX Agent lokal, optional Cloud nur für
-                  generate/variant. RTX-URL und API-Keys bleiben in <code>.env</code>.
+                  Bild-Pipeline: RTX Host Connector (empfohlen) oder Legacy RTX Worker, optional
+                  Cloud nur für generate/variant. Konfiguration in <code>.env</code>.
                 </p>
                 <p className="uwe-notice">
                   {imageStudioConfig.message}
                   {" · "}
-                  RTX: {imageStudioConfig.rtxAgentConfigured ? "konfiguriert" : "fehlt"}
+                  Connector-Queue: {imageStudioConfig.connectorImageEnabled ? "an" : "aus"}
+                  {" · "}
+                  Lokales Backend: {imageStudioConfig.localImageBackendReady ? "bereit" : "fehlt"}
                   {" · "}
                   Cloud-Key: {imageStudioConfig.cloudApiKeyConfigured ? "vorhanden" : "fehlt"}
                 </p>
@@ -812,13 +815,13 @@ export default async function SettingsPage({ searchParams }: Props) {
 
               <SettingsCollapsiblePanel
                 title="RTX / Diffusion"
-                summary="Agent-URL in .env, Diagnose-Links"
+                summary="Connector-Queue oder Legacy-Worker in .env"
                 defaultOpen={false}
               >
                 <p className="uwe-hint">
-                  Setze <code>RTX_AGENT_URL</code> und optional <code>RTX_AGENT_TOKEN</code> in{" "}
-                  <code>.env</code>. Diagnose unter{" "}
-                  <Link href="/system/rtx-connector">RTX Connector</Link> und{" "}
+                  Empfohlen: <code>RTX_USE_CONNECTOR_IMAGE=true</code> und Connector unter{" "}
+                  <Link href="/system/rtx-connector">System → RTX Connector</Link>. Legacy-Fallback:{" "}
+                  <code>RTX_BASE_URL</code> / <code>RTX_SERVICE_TOKEN</code>. Diagnose unter{" "}
                   <Link href="/admin/status">Systemstatus</Link>.
                 </p>
                 <p>
@@ -951,6 +954,9 @@ export default async function SettingsPage({ searchParams }: Props) {
                 </Link>
                 <Link className="uwe-v2-btn" href="/admin/status">
                   Admin Status Dashboard
+                </Link>
+                <Link className="uwe-v2-btn" href="/system/rtx-connector">
+                  RTX Connector
                 </Link>
                 <Link className="uwe-v2-btn" href="/ai">
                   KI

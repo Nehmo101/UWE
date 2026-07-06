@@ -8,7 +8,7 @@ export type HomelabServiceId =
   | "portal"
   | "database"
   | "cloudflare_tunnel"
-  | "rtx_agent"
+  | "rtx_connector"
   | "ollama"
   | "backup";
 
@@ -82,6 +82,8 @@ export interface HomelabHealthInput {
     message: string;
     urlAllowed: boolean;
     source: string;
+    connectorDegraded?: boolean;
+    connectorOnlineCount?: number;
   };
   inference: {
     enabled: boolean;
@@ -105,7 +107,7 @@ function severityFromOk(ok: boolean, warnWhenFalse = false): HomelabSeverity {
 }
 
 export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabServiceStatus[] {
-  const { system, studioSecurity, rtxExposure, rtx, inference, backup, portalProbe } = input;
+  const { system, studioSecurity, rtx, inference, backup, portalProbe } = input;
 
   const studioOk = system.ok && system.app.ok;
   const portalOk = portalProbe?.ok ?? false;
@@ -133,20 +135,14 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
         : "Cloudflare Tunnel + TRUST_PROXY aktiv"
       : "Öffentliche Erreichbarkeit ohne Tunnel/TRUST_PROXY-Konfiguration";
 
-  const rtxAgentConfigured =
-    rtx.source === "agent" ||
-    rtxExposure.endpoints.some((entry) => entry.envKey === "RTX_AGENT_URL" && entry.configured);
-  const rtxAgentOk =
-    !inference.enabled || !rtxAgentConfigured
-      ? !rtxAgentConfigured && !inference.enabled
-      : rtx.urlAllowed && rtx.ready;
-  const rtxAgentSeverity: HomelabSeverity = !inference.enabled
+  const rtxConnectorOk = !inference.enabled || rtx.ready;
+  const rtxConnectorSeverity: HomelabSeverity = !inference.enabled
     ? "unknown"
-    : !rtxAgentConfigured
-      ? "warn"
-      : rtxAgentOk
-        ? "ok"
-        : "error";
+    : rtx.ready
+      ? rtx.connectorDegraded
+        ? "warn"
+        : "ok"
+      : "error";
 
   const ollamaOk = inference.enabled && inference.online && inference.provider.includes("ollama");
   const ollamaSeverity: HomelabSeverity = !inference.enabled
@@ -194,19 +190,15 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
       message: tunnelMessage,
     },
     {
-      id: "rtx_agent",
-      label: "RTX Agent (Legacy)",
-      ok: rtxAgentOk,
-      severity: rtxAgentSeverity,
+      id: "rtx_connector",
+      label: "RTX Host Connector",
+      ok: rtxConnectorOk,
+      severity: rtxConnectorSeverity,
       message: !inference.enabled
-        ? "KI deaktiviert — Legacy RTX Agent optional (outbound Connector bevorzugt)"
-        : !rtxAgentConfigured
-          ? "RTX_AGENT_URL nicht konfiguriert"
-          : !rtx.urlAllowed
-            ? "RTX-Agent-URL ist nicht LAN-only — niemals öffentlich exposen"
-            : rtx.ready
-              ? rtx.message
-              : rtx.message || "RTX Agent nicht erreichbar",
+        ? "KI deaktiviert — Connector optional"
+        : rtx.ready
+          ? rtx.message
+          : rtx.message || "RTX Host Connector nicht bereit — System → RTX Connector prüfen",
     },
     {
       id: "ollama",
@@ -218,7 +210,7 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
         : ollamaOk
           ? inference.message
           : rtx.ready
-            ? "Inference über RTX Agent bereit"
+            ? "Inference über RTX Host Connector bereit"
             : inference.message || "Ollama/Inference offline",
     },
     {
@@ -404,28 +396,28 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
       ],
     },
     {
-      id: "check_rtx_agent",
-      title: "RTX-Agent prüfen (Legacy)",
-      summary: "Legacy inbound RTX Agent — deprecated; bevorzugt outbound Connector. Nur Heimnetz, Token erforderlich.",
+      id: "check_rtx_connector",
+      title: "RTX Host Connector prüfen",
+      summary: "Outbound Connector — Token, Heartbeat und lokale Executors auf dem RTX-Rechner.",
       steps: [
         {
           order: 1,
-          instruction: "Agent Health (nur aus LAN)",
-          command: "curl -s -H 'Authorization: Bearer $RTX_AGENT_TOKEN' http://<rtx-ip>:8787/health",
+          instruction: "Connector auf dem RTX-Rechner starten",
+          command: "pnpm connector:start",
         },
         {
           order: 2,
-          instruction: "Ollama erreichbar vom Agent",
-          command: "curl -s http://<rtx-ip>:11434/api/tags",
+          instruction: "Studio: System → RTX Connector — Token und Online-Status prüfen",
         },
         {
           order: 3,
-          instruction: "Studio Inference Health",
-          command: "/admin/status → RTX Inference",
+          instruction: "Ollama erreichbar",
+          command: "curl -s http://<rtx-ip>:11434/api/tags",
         },
         {
           order: 4,
-          instruction: "Niemals RTX-Agent-URL in Cloudflare Tunnel oder publicUrl eintragen",
+          instruction: "Admin-Status: RTX / Lokale KI",
+          command: "/admin/status",
         },
       ],
     },
@@ -487,7 +479,7 @@ export function buildHomelabSecurityChecklist(input: {
     },
     {
       id: "no_public_rtx",
-      label: "Keine öffentliche RTX-Agent-URL",
+      label: "Keine öffentliche RTX-/Connector-URL",
       ok: !rtxPublic && input.rtxExposure.severity !== "critical",
       severity: rtxPublic || input.rtxExposure.severity === "critical" ? "error" : "ok",
       message:
@@ -512,8 +504,8 @@ export function buildHomelabSecurityChecklist(input: {
       ok: !publicExposure || input.system.proxy.cloudflareTunnel,
       severity: publicExposure && !input.system.proxy.cloudflareTunnel ? "warn" : "unknown",
       message: publicExposure
-        ? "Nur 443/80 via Cloudflare — SSH und RTX-Agent nur LAN/VPN"
-        : "Lokal: Studio 3000, Portal 3001, RTX Agent nur LAN",
+        ? "Nur 443/80 via Cloudflare — SSH und RTX Host Connector nur LAN/VPN"
+        : "Lokal: Studio 3000, Portal 3001, RTX Host Connector nur LAN",
       manual: true,
     },
   ];

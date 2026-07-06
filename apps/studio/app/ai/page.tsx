@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { resolveAiChatAccess } from "@/src/lib/ai-gateway-access";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -13,7 +14,8 @@ export default async function AiPage() {
       <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
         <PageHeader title="KI" summary={access.message} />
         <p className="uwe-dashboard-muted">
-          Master-Admin: Cookbook → KI &amp; RTX Fallback → User-Freigaben →{" "}
+          Master-Admin:{" "}
+          <Link href="/admin/ai-gateway">KI-Gateway</Link> → User-Freigaben →{" "}
           <code>AI_CHAT_USE</code> vergeben.
         </p>
       </StudioShell>

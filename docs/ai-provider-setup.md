@@ -48,7 +48,7 @@ CLOUD_AI_MODEL=gpt-4o-mini
 
 ## Master-Admin Setup
 
-1. Studio → **Cookbook** → **KI & RTX Fallback** (`/admin/ai-gateway`)
+1. Studio → **KI-Gateway** (`/admin/ai-gateway`) — RTX Connector unter `/system/rtx-connector`
 2. RTX Health-Check prüfen
 3. Routing-Modus wählen
 4. Cloud-Fallback aktivieren (optional)

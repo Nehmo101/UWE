@@ -6,6 +6,7 @@ import {
 import { prisma, UWE_VERSION } from "@uwe/database/server";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
+import { rtxReadinessNextSteps, rtxReadinessSourceLabelDe } from "@/src/lib/rtx-display-state";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { SystemHubBanner } from "@/components/SystemHubBanner";
@@ -376,33 +377,17 @@ export default async function AdminStatusPage() {
                   : rtx.message
               }
               details={[
-                { label: "Quelle", value: rtx.source === "agent" ? "RTX-Agent" : "Direkt (Inference)" },
+                { label: "Quelle", value: rtxReadinessSourceLabelDe(rtx) },
                 { label: "Agent-Status", value: rtx.agentStatus ?? "—" },
                 { label: "Endpoint", value: rtx.endpoint },
                 { label: "URL erlaubt", value: rtx.urlAllowed },
                 { label: "URL-Typ", value: rtx.urlKind },
                 { label: "Standardmodell", value: rtx.defaultModel },
+                { label: "Connector online", value: rtx.connectorOnlineCount ?? 0 },
                 { label: "Inference aktiv", value: inference.enabled },
                 { label: "Inference online", value: inference.online },
               ]}
-              nextSteps={
-                !rtx.urlAllowed
-                  ? [
-                      rtx.publicExposureWarning ??
-                        "RTX-/Inference-URL ist öffentlich — private Heimnetz-IP verwenden.",
-                      "Keinen Cloudflare-Tunnel direkt zum RTX-Agent legen.",
-                      "AI_INFERENCE_ALLOW_PUBLIC_URL=true nur bewusst für Tests setzen.",
-                    ]
-                  : !rtx.ready && inference.enabled
-                    ? [
-                        rtx.source === "agent"
-                          ? "Prüfe UWE RTX-Agent auf dem RTX-Rechner (Tray, Token, Ollama)."
-                          : "Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft.",
-                        "Prüfe RTX_AGENT_URL oder AI_INFERENCE_BASE_URL (private Heimnetz-IP).",
-                        "Brain-/Objekt-KI blockiert bei RTX offline — Allgemeiner Cloud-Chat bleibt möglich.",
-                      ]
-                    : []
-              }
+              nextSteps={rtxReadinessNextSteps(rtx, inference.enabled)}
               wide
             />
 

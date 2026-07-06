@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@uwe/database/server";
 import { createHealthMetricsService, type HealthLight } from "@uwe/database/health-metrics";
+import { RtxStatusBadge } from "@uwe/shared-ui";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { BuildVersionFooter } from "@/src/components/system/BuildVersion";
 import { getBuildInfo } from "@/src/lib/build-info";
+import {
+  loadStudioRtxDisplayState,
+  rtxReadinessSourceLabelDe,
+} from "@/src/lib/rtx-display-state";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +28,10 @@ const LIGHT_COLOR: Record<HealthLight, string> = {
 export default async function SystemHealthPage() {
   await requireStudioAccess();
   const info = getBuildInfo();
-  const metrics = await createHealthMetricsService(prisma).getMetrics();
+  const [metrics, rtxDisplay] = await Promise.all([
+    createHealthMetricsService(prisma).getMetrics(),
+    loadStudioRtxDisplayState(prisma).catch(() => null),
+  ]);
   const maxCount = Math.max(1, ...metrics.largestTables.map((t) => t.count));
 
   return (
@@ -86,11 +94,26 @@ export default async function SystemHealthPage() {
                 </>
               ) : null}
             </li>
-            <li>
-              RTX-Connector:{" "}
-              <strong>{metrics.connector.online ? `${metrics.connector.count} online` : "offline"}</strong>{" "}
+            <li style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.45rem" }}>
+              RTX / Lokale KI:{" "}
+              {rtxDisplay ? (
+                <>
+                  <RtxStatusBadge state={rtxDisplay.connectorState} />
+                  <span className="text-muted-foreground">
+                    ({rtxReadinessSourceLabelDe(rtxDisplay.status)}
+                    {metrics.connector.count > 0
+                      ? ` · ${metrics.connector.count} Connector online`
+                      : ""}
+                    )
+                  </span>
+                </>
+              ) : (
+                <strong>
+                  {metrics.connector.online ? `${metrics.connector.count} online` : "offline"}
+                </strong>
+              )}{" "}
               <Link href="/system/rtx-connector" className="text-primary hover:underline">
-                Details →
+                RTX Connector →
               </Link>
             </li>
           </ul>

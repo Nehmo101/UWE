@@ -27,6 +27,9 @@ Captures aus `/capture` können per „Ins Life Brain“ als Dokument übernomme
 | `current_object` | Nein | Ja |
 | `current_object_plus_brain` | Nein | Ja |
 | `personal_brain` | **Nein** | **Ja** |
+| Mail-KI (Triage/Entwürfe) | Nein (nur Allgemeiner Chat-Fallback optional) | Ja |
+
+Mail Center nutzt lokale RTX für Triage und Entwürfe; Cloud-Fallback gilt nur für allgemeinen Chat ohne persönliche Inhalte — siehe `/mail` Einstellungen.
 
 ## Implementierung
 

@@ -9,5 +9,6 @@ export interface RtxStatusBadgeProps extends React.HTMLAttributes<HTMLSpanElemen
   label?: React.ReactNode;
 }
 
+/** @deprecated Import from `@uwe/shared-ui` instead — canonical RTX status badge. */
 export function RtxStatusBadge(props: RtxStatusBadgeProps): React.JSX.Element;
 export const RTX_STATE_LABELS: Record<RtxConnectorState, string>;

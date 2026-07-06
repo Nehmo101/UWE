@@ -526,7 +526,7 @@ async function buildRtxSection(
     {
       id: "image-studio",
       label: "Image Studio",
-      configured: settings.imageStudio.enabled && settings.imageStudio.rtxAgentConfigured,
+      configured: settings.imageStudio.enabled && settings.imageStudio.localImageBackendReady,
       displayValue: settings.imageStudio.message,
       source: settings.imageStudio.source === "portal" ? "db" : "env",
       editable: true,

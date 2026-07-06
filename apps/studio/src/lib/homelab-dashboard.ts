@@ -89,6 +89,8 @@ export async function getHomelabCockpitData(
       message: adminStatus.rtx.message,
       urlAllowed: adminStatus.rtx.urlAllowed,
       source: adminStatus.rtx.source,
+      connectorDegraded: adminStatus.rtx.connectorDegraded,
+      connectorOnlineCount: adminStatus.rtx.connectorOnlineCount,
     },
     inference: {
       enabled: adminStatus.inference.enabled,

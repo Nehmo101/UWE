@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingSpinner } from "@uwe/shared-ui";
+import { LoadingSpinner, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
 import {
   computePromptUiState,
   deriveStatusChips,
@@ -139,7 +139,15 @@ export function AiPromptControls({
             {chips.map((chip) => (
               <li key={chip.id} className={`mobile-ai-chip ${chipLevelClass(chip.level)}`}>
                 <span className="mobile-ai-chip-label">{chip.label}</span>
-                <span className="mobile-ai-chip-value">{chip.value}</span>
+                {chip.id === "rtx" ? (
+                  <RtxStatusBadge
+                    state={caps.rtxState as RtxConnectorState}
+                    label={chip.value}
+                    className="mobile-ai-chip-rtx-badge"
+                  />
+                ) : (
+                  <span className="mobile-ai-chip-value">{chip.value}</span>
+                )}
               </li>
             ))}
           </ul>

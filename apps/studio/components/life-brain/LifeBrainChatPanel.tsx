@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ErrorAlert, LoadingSpinner } from "@uwe/shared-ui";
+import { ErrorAlert, LoadingSpinner, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useAiPromptCapabilities } from "@/src/lib/use-ai-prompt-capabilities";
 
@@ -79,10 +79,15 @@ export function LifeBrainChatPanel({ useMock = false, pollIntervalMs }: LifeBrai
 
   return (
     <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section" aria-label="Life-Brain Chat">
-      <p className="uwe-dashboard-muted">
-        Fragen an dein persönliches Wissen — läuft ausschließlich auf der lokalen RTX, niemals in
-        der Cloud.
-      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.65rem" }}>
+        <p className="uwe-dashboard-muted" style={{ margin: 0, flex: "1 1 16rem" }}>
+          Fragen an dein persönliches Wissen — läuft ausschließlich auf der lokalen RTX, niemals in
+          der Cloud.
+        </p>
+        {!statusLoading && (
+          <RtxStatusBadge state={caps.rtxState as RtxConnectorState} />
+        )}
+      </div>
 
       {!statusLoading && !rtxAvailable && (
         <p className="uwe-form-error" role="note">

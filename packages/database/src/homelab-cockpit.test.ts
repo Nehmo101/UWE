@@ -142,7 +142,7 @@ describe("homelab cockpit", () => {
 
     const db = statuses.find((entry) => entry.id === "database");
     const backup = statuses.find((entry) => entry.id === "backup");
-    const rtx = statuses.find((entry) => entry.id === "rtx_agent");
+    const rtx = statuses.find((entry) => entry.id === "rtx_connector");
 
     assert.equal(db?.ok, false);
     assert.equal(backup?.severity, "error");
@@ -210,12 +210,12 @@ describe("homelab cockpit", () => {
     const metadata = appendHardwareErrorEntry(null, {
       problem: "RTX Agent timeout",
       resolution: "Ollama neu gestartet",
-      affectedServices: ["rtx_agent", "ollama"],
+      affectedServices: ["rtx_connector", "ollama"],
     });
 
     const history = parseHardwareErrorHistory(metadata);
     assert.equal(history.length, 1);
     assert.equal(history[0]?.problem, "RTX Agent timeout");
-    assert.deepEqual(history[0]?.affectedServices, ["rtx_agent", "ollama"]);
+    assert.deepEqual(history[0]?.affectedServices, ["rtx_connector", "ollama"]);
   });
 });

@@ -1,5 +1,4 @@
 import {
-  createConnectorService,
   createMailAccountService,
   createMailLogService,
   createMailPortalService,
@@ -8,6 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import type { RtxConnectorState } from "@uwe/shared-ui";
+import { loadStudioRtxDisplayState } from "@/src/lib/rtx-display-state";
 import { MAIL_PRIORITY_CATEGORIES, MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";
 import { StudioShell, BreadcrumbTrail } from "@/src/components/shell";
 import { MailCenter } from "@/components/mail/MailCenter";
@@ -58,7 +58,7 @@ export default async function MailCenterPage({
     markedOnly: activeFolder === "marked",
   };
 
-  const [portalAccounts, portalMessages, sentMessages, drafts, logs, worlds, config, connector] =
+  const [portalAccounts, portalMessages, sentMessages, drafts, logs, worlds, config, rtxDisplay] =
     await Promise.all([
       portal.listAccounts(),
       activeFolder === "sent"
@@ -73,10 +73,10 @@ export default async function MailCenterPage({
       createMailLogService(prisma).list({ limit: 10 }),
       repo.listWorlds(),
       mailService.getConfigStatus(),
-      createConnectorService(prisma).summarize().catch(() => null),
+      loadStudioRtxDisplayState(prisma).catch(() => null),
     ]);
 
-  const rtxState: RtxConnectorState = connector?.anyOnline ? "online" : "offline";
+  const rtxState: RtxConnectorState = rtxDisplay?.connectorState ?? "offline";
 
   const accounts = portalAccounts.map((account) => ({
     id: account.id,

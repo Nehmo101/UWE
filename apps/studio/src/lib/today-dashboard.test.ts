@@ -55,8 +55,8 @@ describe("homelab today alert aggregation", () => {
       openSetupSteps: 0,
       serviceStatuses: [
         {
-          id: "rtx_agent",
-          label: "RTX Agent",
+          id: "rtx_connector",
+          label: "RTX Host Connector",
           ok: false,
           severity: "error",
           message: "offline",
@@ -65,7 +65,7 @@ describe("homelab today alert aggregation", () => {
       securityChecks: [
         {
           id: "no_public_rtx",
-          label: "Keine öffentliche RTX-Agent-URL",
+          label: "Keine öffentliche RTX-/Connector-URL",
           ok: false,
           severity: "error",
           message: "blocked",

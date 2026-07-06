@@ -211,14 +211,9 @@ export function MailSettings({ accounts, config, logs, worlds, rtxState }: MailS
             hint="Nur Allgemeiner Chat, ohne Brain- &amp; Weltwissen."
             control={<Toggle on={cloudFallback} onChange={() => setCloudFallback((v) => !v)} label="Cloud-Fallback" />}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 0 2px" }}>
-            <NavIcon name="server" width={16} height={16} style={{ color: "var(--uwe-fg-subtle)", flex: "none" }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: "var(--uwe-fg)" }}>Lokales Modell</div>
-              <div style={{ fontSize: 11.5, color: "var(--uwe-fg-subtle)" }}>RTX Host Connector · lokale KI</div>
-            </div>
-            <RtxStatusBadge state={rtxState} />
-          </div>
+          <p style={{ margin: "12px 0 2px", fontSize: 11.5, color: "var(--uwe-fg-subtle)" }}>
+            Lokales Modell über RTX Host Connector — siehe Badge oben.
+          </p>
         </SettingCard>
 
         <SettingCard icon="server-cog" title="SMTP &amp; Diagnose">

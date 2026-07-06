@@ -214,6 +214,8 @@ export interface ImageStudioSettings {
   allowCloud: boolean;
   backgroundRemovalEnabled: boolean;
   rtxAgentConfigured: boolean;
+  connectorImageEnabled: boolean;
+  localImageBackendReady: boolean;
   cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
@@ -287,6 +289,8 @@ function buildImageStudioSettings(stored?: ImageStudioPortalSettings): ImageStud
     allowCloud: status.allowCloud,
     backgroundRemovalEnabled: status.backgroundRemovalEnabled,
     rtxAgentConfigured: status.rtxAgentConfigured,
+    connectorImageEnabled: status.connectorImageEnabled,
+    localImageBackendReady: status.localImageBackendReady,
     cloudApiKeyConfigured: status.cloudApiKeyConfigured,
     source: status.source,
     message: status.message,
