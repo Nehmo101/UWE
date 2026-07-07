@@ -174,7 +174,7 @@ export function ReviewWorkspace() {
       {error ? <p className="uwe-error">{error}</p> : null}
       {loading ? <p>Lade Reviews…</p> : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 24rem), 1fr))", gap: "1.5rem" }}>
         <section className="uwe-v2-card">
           <h2>Liste</h2>
           <table className="uwe-table">

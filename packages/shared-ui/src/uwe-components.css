@@ -341,6 +341,23 @@
   font-size: 0.8rem;
 }
 
+/* Mobile: auch "nackte" .uwe-table ohne .uwe-table-wrap darf die Seite nicht
+   horizontal sprengen — die Tabelle scrollt dann selbst. Innerhalb von
+   .uwe-table-wrap bleibt das normale Verhalten (max-content ist dort egal). */
+@media (max-width: 960px) {
+  .uwe-table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .uwe-table-wrap > .uwe-table {
+    display: table;
+    overflow-x: visible;
+  }
+}
+
 .uwe-table-sub {
   margin: 0.15rem 0 0;
   color: var(--uwe-fg-muted);

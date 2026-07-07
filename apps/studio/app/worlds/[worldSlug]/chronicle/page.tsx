@@ -170,7 +170,7 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
             <input name="title" required />
           </label>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))", gap: "1rem" }}>
             <label>
               Jahr
               <input name="inGameYear" type="number" defaultValue={currentDate.year} required />

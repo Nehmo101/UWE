@@ -130,6 +130,7 @@ export function PageBatchConvertPanel({ worldSlug, selectedIds, clearSelection }
       )}
 
       {preview && preview.typeChanges.length > 0 && (
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-border">
@@ -152,6 +153,7 @@ export function PageBatchConvertPanel({ worldSlug, selectedIds, clearSelection }
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

@@ -186,7 +186,7 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
             <input name="name" required />
           </label>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))", gap: "1rem" }}>
             <label>
               Anzahl
               <input name="quantity" type="number" min={1} defaultValue={1} required />

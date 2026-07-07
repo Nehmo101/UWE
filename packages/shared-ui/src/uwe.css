@@ -2311,6 +2311,7 @@ html[data-theme="light"] {
     transition: transform 0.25s ease;
     border-right: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+    padding-top: var(--uwe-safe-top);
     padding-bottom: calc(1rem + var(--uwe-safe-bottom));
   }
 
@@ -4780,10 +4781,13 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-shell {
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
 
-/* Topbar — 54px tall, warm sand, heavy ink border */
+/* Topbar — 54px tall (plus Geräte-Statusleiste im Fullscreen), warm sand, heavy ink border.
+   Die fixe Höhe MUSS um --uwe-safe-top mitwachsen, sonst quetscht das
+   Safe-Area-Padding den Inhalt unter die Handy-Statusleiste (Menübutton
+   im PWA-/Fullscreen-Modus nicht mehr drückbar). */
 html[data-uwe-theme="uwe-parchment-os"] .uwe-topbar {
-  height: 54px;
-  min-height: 54px;
+  height: calc(54px + var(--uwe-safe-top));
+  min-height: calc(54px + var(--uwe-safe-top));
   padding-top: calc(0.45rem + var(--uwe-safe-top));
   padding-bottom: 0.45rem;
   background: #e9dfca;

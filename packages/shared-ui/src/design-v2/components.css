@@ -250,6 +250,17 @@
   resize: vertical;
 }
 
+/* Mobile: iOS Safari zoomt beim Fokussieren von Inputs mit font-size < 16px
+   in die Seite hinein — auf kleinen Screens mindestens 16px + Touch-Höhe. */
+@media (max-width: 960px) {
+  .uwe-v2-input,
+  .uwe-v2-textarea,
+  .uwe-v2-select {
+    font-size: max(16px, 0.9rem);
+    min-height: var(--uwe-touch-min, 2.75rem);
+  }
+}
+
 .uwe-v2-input:focus-visible,
 .uwe-v2-textarea:focus-visible,
 .uwe-v2-select:focus-visible {

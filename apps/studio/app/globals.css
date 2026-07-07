@@ -565,12 +565,17 @@ body {
   gap: 0.5rem;
 }
 
+/* Visually-hidden Datei-Input: !important, damit generische Formular-Regeln
+   (z. B. `.uwe-brain-create-form input { width: 100% }`) die Geometrie nicht
+   ueberschreiben — sonst erzeugt der unsichtbare Input horizontalen Scroll
+   auf Handys. */
 .uwe-miniature-photo-upload-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: -1px !important;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;

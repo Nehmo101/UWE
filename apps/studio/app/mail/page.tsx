@@ -234,7 +234,7 @@ export default async function MailCenterPage({
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Mail Center" }]} />}>
-      <div className="-m-4 md:-m-6 h-[calc(100dvh-3.5rem)] overflow-hidden">
+      <div className="-m-4 md:-m-6 h-[calc(100dvh-3.5rem-var(--uwe-safe-top))] overflow-hidden">
         <MailCenter data={data} />
       </div>
     </StudioShell>

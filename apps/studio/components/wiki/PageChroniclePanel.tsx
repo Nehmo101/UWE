@@ -102,7 +102,7 @@ export async function PageChroniclePanel({ worldSlug, pageId, pageSlug, category
           <input name="title" required placeholder="Ereignis auf dieser Seite" />
         </label>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))", gap: "1rem" }}>
           <label>
             Jahr
             <input name="inGameYear" type="number" defaultValue={currentDate.year} required />
