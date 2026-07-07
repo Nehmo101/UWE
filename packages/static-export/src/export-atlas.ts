@@ -3,6 +3,10 @@ import path from "node:path";
 import { resolveStylePreset, type AtlasStylePreset } from "@uwe/atlas/style-presets";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import {
+  validateRtxAtlasAssetProposal,
+  type RtxGouacheJsonRecipe,
+} from "@uwe/atlas/rtx-asset-proposal";
+import {
   createAtlasService,
   type PrismaClient,
   type UweRepository,
@@ -36,7 +40,8 @@ export interface AtlasStaticExportPayload {
   }>;
   /**
    * Palette items referenced by the exported (portal-visible) objects —
-   * approved-only, resolved to builtin glyph keys or inline image stamps.
+   * approved-only, resolved to builtin glyph keys, inline image stamps, or
+   * (for rtx_asset items) the re-validated JSON draw recipe.
    */
   paletteItems: Record<
     string,
@@ -45,6 +50,7 @@ export interface AtlasStaticExportPayload {
       builtinGlyphKey: string | null;
       imageData?: string;
       mimeType?: string;
+      recipe?: RtxGouacheJsonRecipe;
     }
   >;
   pageLinks: Record<string, string>;
@@ -139,7 +145,22 @@ export async function writeAtlasStaticBundle(
       const tags = (item.styleTags ?? {}) as {
         imageData?: string;
         mimeType?: string;
+        rtxAssetProposal?: unknown;
       };
+      if (tags.rtxAssetProposal !== undefined) {
+        // RTX asset: never ship raw styleTags. Re-validate the stored proposal
+        // and export ONLY the validated recipe object — all other proposal
+        // metadata stays server-side. Invalid or png-fallback items are
+        // excluded entirely (their objects drop out via approvedPaletteIds).
+        const validation = validateRtxAtlasAssetProposal(tags.rtxAssetProposal);
+        if (!validation.ok || validation.proposal.outputType !== "json-recipe") continue;
+        paletteItems[item.id] = {
+          source: item.source,
+          builtinGlyphKey: item.builtinGlyphKey ?? null,
+          recipe: validation.proposal.recipe,
+        };
+        continue;
+      }
       paletteItems[item.id] = {
         source: item.source,
         builtinGlyphKey: item.builtinGlyphKey ?? null,

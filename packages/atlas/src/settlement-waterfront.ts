@@ -39,6 +39,10 @@ export interface AppendWaterfrontInput {
   roadPaths: Coordinate[][];
   rng: () => number;
   isInteriorPoint: (point: Coordinate) => boolean;
+  /** Existing object positions (gates, towers) the dock marker should keep clear of. */
+  dockAvoidPoints?: readonly Coordinate[];
+  /** Minimum distance between the dock marker and every avoid point. */
+  dockAvoidDistance?: number;
   addDockObject: (
     point: Coordinate,
     rotation: number,
@@ -231,7 +235,18 @@ export function appendSettlementWaterfront(input: AppendWaterfrontInput): number
   }
 
   if (input.options.includeDock) {
-    const point = firstInteriorPointToward(edge.midpoint, input.center, input.isInteriorPoint) ?? input.center;
+    const avoid = input.dockAvoidPoints ?? [];
+    const minAvoid = input.dockAvoidDistance ?? 0;
+    const isClear = (point: Coordinate): boolean =>
+      minAvoid <= 0 || avoid.every(([x, y]) => Math.hypot(point[0] - x, point[1] - y) >= minAvoid);
+    const point =
+      firstInteriorPointToward(
+        edge.midpoint,
+        input.center,
+        (candidate) => input.isInteriorPoint(candidate) && isClear(candidate),
+      ) ??
+      firstInteriorPointToward(edge.midpoint, input.center, input.isInteriorPoint) ??
+      input.center;
     input.addDockObject(point, rotationToward(point, offsetPoint(point, normal, 1)), 0.9, {
       role: "waterfront",
     });

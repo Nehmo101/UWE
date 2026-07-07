@@ -14,6 +14,7 @@ export {
   type StudioAtlasNodeInput,
   type StudioAtlasFeatureInput,
   type StudioAtlasObjectInput,
+  type StudioAtlasRtxPaletteItemInput,
 } from "./atlas-doc-adapter";
 
 // Builtin pictogram registry — re-exported from the canonical source so existing

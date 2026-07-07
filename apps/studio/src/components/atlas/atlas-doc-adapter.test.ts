@@ -84,6 +84,32 @@ describe("buildStudioAtlasDoc", () => {
     assert.equal(doc.nodes.length, 1);
   });
 
+  it("carries validated RTX palette recipes into the doc (empty by default)", () => {
+    const recipe = {
+      schemaVersion: 1 as const,
+      coordinateSystem: "base-center-normalized" as const,
+      layers: [{ id: "base", role: "base" as const, shape: "ellipse" as const, fill: "#8a6d3b", x: 0, y: 0, rx: 2, ry: 1 }],
+    };
+    const doc = buildStudioAtlasDoc({
+      worldSlug: "terra",
+      node: { id: "n1", title: "N", level: "continent" },
+      parentChain: [],
+      features: [],
+      objects: [],
+      rtxPaletteItems: [{ id: "pi_rtx_1", name: "RTX Wachturm", recipe }],
+    });
+    assert.deepEqual(doc.rtxPaletteItems, [{ id: "pi_rtx_1", name: "RTX Wachturm", recipe }]);
+
+    const empty = buildStudioAtlasDoc({
+      worldSlug: "terra",
+      node: { id: "n1", title: "N", level: "continent" },
+      parentChain: [],
+      features: [],
+      objects: [],
+    });
+    assert.deepEqual(empty.rtxPaletteItems, []);
+  });
+
   it("preserves an existing tile layer", () => {
     const tileLayer = { cols: 64, rows: 40, tile: 32, cells: { "3,4": "coast" }, blendWidth: 0 };
     const doc = buildStudioAtlasDoc({

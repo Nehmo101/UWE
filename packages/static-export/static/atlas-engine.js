@@ -766,59 +766,7 @@ function fillPlotWithGouacheAssets(polygon, options) {
   return results;
 }
 
-// ../atlas/src/assets.ts
-var GOUACHE_CATEGORY_LABELS = {
-  flora: "Flora",
-  structure: "Bauwerke",
-  landmark: "Landmarken",
-  vehicle: "Fahrzeuge",
-  market: "Markt",
-  prop: "Deko"
-};
-var GOUACHE_ASSETS = [
-  { key: "g_oak", name: "Eiche", category: "flora" },
-  { key: "g_pine", name: "Nadelbaum", category: "flora" },
-  { key: "g_bush", name: "Busch", category: "flora" },
-  { key: "g_mushroom", name: "Riesenpilz", category: "flora" },
-  { key: "g_house", name: "Haus", category: "structure" },
-  { key: "g_tower", name: "Turm", category: "structure" },
-  { key: "g_keep", name: "Bergfried", category: "structure" },
-  { key: "g_church", name: "Kirche", category: "structure" },
-  { key: "g_windmill", name: "Windmühle", category: "structure" },
-  { key: "g_watermill", name: "Wassermühle", category: "structure" },
-  { key: "g_tent", name: "Zelt", category: "structure" },
-  { key: "g_ruin", name: "Ruine", category: "structure" },
-  { key: "g_signal_tower", name: "Signalturm", category: "structure" },
-  { key: "g_bridge", name: "Steinbrücke", category: "structure" },
-  { key: "g_lighthouse", name: "Leuchtturm", category: "structure" },
-  { key: "g_amphitheater", name: "Amphitheater", category: "structure" },
-  { key: "g_burial_mound", name: "Grabhügel", category: "structure" },
-  { key: "g_caravanserai", name: "Karawanserei", category: "structure" },
-  { key: "g_pyramid", name: "Pyramide", category: "landmark" },
-  { key: "g_obelisk", name: "Obelisk", category: "landmark" },
-  { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
-  { key: "g_magic_crystal", name: "Magiekristall", category: "landmark" },
-  { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
-  { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
-  { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
-  { key: "g_ziggurat", name: "Ziggurat", category: "landmark" },
-  { key: "g_portal_arch", name: "Portalbogen", category: "landmark" },
-  { key: "g_ship", name: "Schiff", category: "vehicle" },
-  { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
-  { key: "g_airship", name: "Flugschiff", category: "vehicle" },
-  { key: "g_stall", name: "Marktstand", category: "market" },
-  { key: "g_well", name: "Brunnen", category: "prop" }
-];
-var GOUACHE_ASSET_KEYS = GOUACHE_ASSETS.map(
-  (a) => a.key
-);
-var ASSETS_BY_KEY = new Map(GOUACHE_ASSETS.map((a) => [a.key, a]));
-function getGouacheAsset(key) {
-  return key ? ASSETS_BY_KEY.get(key) : void 0;
-}
-function listGouacheAssetsByCategory(cat) {
-  return GOUACHE_ASSETS.filter((a) => a.category === cat);
-}
+// ../atlas/src/assets-toolkit.ts
 function hexRgb(h) {
   const n = parseInt(h.slice(1), 16);
   return [n >> 16 & 255, n >> 8 & 255, n & 255];
@@ -896,6 +844,409 @@ function paint(ctx, pf, fill, lw, edgeColor) {
   pf(ctx);
   ctx.stroke();
   ctx.restore();
+}
+
+// ../atlas/src/assets-batch4.ts
+var GOUACHE_ASSETS_BATCH4 = [
+  { key: "g_giant_mushroom", name: "Titanenpilz", category: "flora" },
+  { key: "g_smithy", name: "Schmiede", category: "structure" },
+  { key: "g_wizard_tower", name: "Zauberturm", category: "landmark" },
+  { key: "g_dragon_perch", name: "Drachenhorst", category: "landmark" },
+  { key: "g_waterfall", name: "Wasserfall", category: "landmark" },
+  { key: "g_shipwreck", name: "Schiffswrack", category: "vehicle" },
+  { key: "g_hot_spring", name: "Heiße Quelle", category: "prop" },
+  { key: "g_shrine", name: "Wegschrein", category: "prop" }
+];
+var BATCH4_RECIPES = {
+  g_giant_mushroom: (ctx, s, rng, lw) => {
+    shadow(ctx, s * 0.05, s * 0.03, s * 0.62);
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.17, 0);
+      c.quadraticCurveTo(-s * 0.22, -s * 0.55, -s * 0.04, -s * 0.94);
+      c.lineTo(s * 0.14, -s * 0.94);
+      c.quadraticCurveTo(s * 0.05, -s * 0.5, s * 0.19, 0);
+      c.closePath();
+    }, "#d8cdb0", lw, "#8a7d5c");
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#d8cdb0", 0.32);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.06, -s * 0.5, s * 0.05, s * 0.36, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, ellipseFn(s * 0.04, -s * 0.92, s * 0.46, s * 0.13), "#c4b699", lw * 0.6, "#8a7d5c");
+    ctx.save();
+    ctx.strokeStyle = "#8a7d5c";
+    ctx.lineWidth = Math.max(0.5, lw * 0.4);
+    ctx.globalAlpha = 0.7;
+    for (const dx of [-0.32, -0.14, 0.22, 0.4]) {
+      ctx.beginPath();
+      ctx.moveTo(s * 0.04, -s * 0.92);
+      ctx.lineTo(s * (0.04 + dx), -s * 0.92 + Math.abs(dx) * s * 0.24);
+      ctx.stroke();
+    }
+    ctx.restore();
+    paint(ctx, blobFn(iblob(s * 0.04, -s * 1.04, s * 0.6, s * 0.28, rng, 0.12, 14)), "#7d6b8f", lw, "#4e4060");
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = lighten("#7d6b8f", 0.3);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.16, -s * 1.15, s * 0.24, s * 0.1, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = "#d9d2e2";
+    for (const [dx, dy, r] of [[-0.28, -1.07, 0.05], [0.06, -1.17, 0.06], [0.34, -1.02, 0.04]]) {
+      ctx.beginPath();
+      ctx.arc(dx * s, dy * s, r * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    paint(ctx, rectFn(s * 0.3, -s * 0.13, s * 0.05, s * 0.13), "#d8cdb0", lw * 0.5, "#8a7d5c");
+    paint(ctx, blobFn(iblob(s * 0.325, -s * 0.15, s * 0.1, s * 0.05, () => 0.5, 0.06, 8)), "#7d6b8f", lw * 0.5, "#4e4060");
+  },
+  g_smithy: (ctx, s, rng, lw) => {
+    const w = s * 0.95, h = s * 0.55;
+    shadow(ctx, 0, s * 0.04, s * 0.62);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#b09a72", lw, "#6f5c3c");
+    paint(ctx, rectFn(-s * 0.3, -h * 1.9, s * 0.16, h * 0.95), "#9a9488", lw, "#5f5a4d");
+    paint(ctx, polyFn([[-w * 0.62, -h + 1], [-w * 0.05, -h * 1.6], [w * 0.62, -h + 1]]), "#6e5a44", lw);
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#b09a72", 0.3);
+    ctx.fillRect(-w / 2 + s * 0.04, -h + s * 0.05, s * 0.16, s * 0.12);
+    ctx.restore();
+    paint(ctx, rectFn(s * 0.08, -h * 0.62, s * 0.3, h * 0.62), "#2f2a24", lw * 0.6, "#4a4030");
+    ctx.save();
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = "#c96a2f";
+    ctx.beginPath();
+    ctx.ellipse(s * 0.23, -h * 0.26, s * 0.1, s * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f0c35c";
+    ctx.beginPath();
+    ctx.ellipse(s * 0.23, -h * 0.25, s * 0.05, s * 0.035, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, polyFn([[-s * 0.38, -s * 0.16], [-s * 0.18, -s * 0.16], [-s * 0.24, -s * 0.1], [-s * 0.22, -s * 0.02], [-s * 0.34, -s * 0.02], [-s * 0.32, -s * 0.1]]), "#4a4636", lw * 0.6, "#2f2a24");
+    ctx.save();
+    ctx.fillStyle = "#8f8a84";
+    ctx.globalAlpha = 0.45;
+    for (let i = 0; i < 3; i++) {
+      const t = i / 2;
+      const x = -s * 0.22 + t * s * 0.18 + (rng() - 0.5) * s * 0.06;
+      const y = -h * 1.98 - t * s * 0.28;
+      const r = s * (0.06 + t * 0.05);
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_wizard_tower: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.48);
+    paint(ctx, polyFn([[-s * 0.3, 0], [-s * 0.2, -s * 1.05], [s * 0.2, -s * 1.05], [s * 0.3, 0]]), "#8f8a9c", lw, "#565064");
+    ctx.save();
+    ctx.strokeStyle = "#565064";
+    ctx.lineWidth = Math.max(0.6, lw * 0.5);
+    for (let i = 1; i <= 3; i++) {
+      const hw = s * (0.3 - 0.024 * i * 4);
+      ctx.beginPath();
+      ctx.moveTo(-hw, -s * i * 0.25);
+      ctx.lineTo(hw, -s * i * 0.25);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#8f8a9c", 0.3);
+    ctx.fillRect(-s * 0.16, -s, s * 0.07, s * 0.92);
+    ctx.restore();
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.09, 0);
+      c.lineTo(-s * 0.09, -s * 0.16);
+      c.quadraticCurveTo(0, -s * 0.3, s * 0.09, -s * 0.16);
+      c.lineTo(s * 0.09, 0);
+      c.closePath();
+    }, "#3a3226", lw * 0.6, "#57492f");
+    paint(ctx, rectFn(-s * 0.3, -s * 1.12, s * 0.6, s * 0.09), "#6f665a", lw * 0.6);
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = "#f0c35c";
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 1.28, s * 0.42, s * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.arc(0, -s * 1.12, s * 0.24, Math.PI, 0);
+      c.closePath();
+    }, "#f0c35c", lw, "#9a4a22");
+    ctx.save();
+    ctx.strokeStyle = "#9a4a22";
+    ctx.lineWidth = Math.max(0.5, lw * 0.45);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 1.36);
+    ctx.lineTo(0, -s * 1.12);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = "#e6f2f7";
+    ctx.globalAlpha = 0.85;
+    for (const dx of [-0.4, 0.36, 0.12]) {
+      const x = dx * s + (rng() - 0.5) * s * 0.08;
+      const y = -s * (1.34 + rng() * 0.2);
+      ctx.beginPath();
+      ctx.arc(x, y, s * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_dragon_perch: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, polyFn([[-s * 0.5, 0], [-s * 0.34, -s * 0.42], [-s * 0.4, -s * 0.62], [-s * 0.22, -s * 0.9], [s * 0.24, -s * 0.9], [s * 0.36, -s * 0.55], [s * 0.3, -s * 0.36], [s * 0.5, 0]]), "#8f8774", lw, "#5f5846");
+    paint(ctx, polyFn([[s * 0.05, 0], [s * 0.24, -s * 0.9], [s * 0.36, -s * 0.55], [s * 0.3, -s * 0.36], [s * 0.5, 0]]), "#766e5c", lw * 0.5, "#5f5846");
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = lighten("#8f8774", 0.3);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.18, -s * 0.55, s * 0.09, s * 0.22, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, ellipseFn(0, -s * 0.92, s * 0.34, s * 0.13), "#7a5230", lw, "#4a3320");
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(0.6, lw * 0.55);
+    for (let i = 0; i < 7; i++) {
+      const a = rng() * Math.PI * 2;
+      const x = Math.cos(a) * s * 0.3, y = -s * 0.92 + Math.sin(a) * s * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rng() - 0.5) * s * 0.2, y - rng() * s * 0.08);
+      ctx.stroke();
+    }
+    ctx.restore();
+    paint(ctx, ellipseFn(0, -s * 0.94, s * 0.2, s * 0.07), "#57492f", lw * 0.5, "#3a3226");
+    paint(ctx, ellipseFn(s * 0.02, -s * 1, s * 0.09, s * 0.12), "#e0d6b4", lw * 0.6, "#8a6f3a");
+    ctx.save();
+    ctx.fillStyle = "#b0a179";
+    for (const [dx, dy] of [[-0.01, -1.04], [0.05, -0.98]]) {
+      ctx.beginPath();
+      ctx.arc(dx * s, dy * s, s * 0.016, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_waterfall: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.55);
+    paint(ctx, blobFn(iblob(0, -s * 0.04, s * 0.52, s * 0.15, rng, 0.14, 10)), "#7290a2", lw * 0.6, "#46606e");
+    paint(ctx, polyFn([[-s * 0.62, 0], [-s * 0.56, -s * 0.85], [-s * 0.2, -s * 0.9], [-s * 0.24, -s * 0.14]]), "#8f8774", lw, "#5f5846");
+    paint(ctx, polyFn([[s * 0.62, 0], [s * 0.56, -s * 0.85], [s * 0.2, -s * 0.9], [s * 0.24, -s * 0.14]]), "#8f8774", lw, "#5f5846");
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = lighten("#8f8774", 0.3);
+    ctx.fillRect(-s * 0.52, -s * 0.8, s * 0.08, s * 0.6);
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.2, -s * 0.94, s * 0.4, s * 0.08), "#7290a2", lw * 0.5, "#46606e");
+    paint(ctx, polyFn([[-s * 0.2, -s * 0.88], [s * 0.2, -s * 0.88], [s * 0.24, -s * 0.08], [-s * 0.24, -s * 0.08]]), "#9fc0cf", lw * 0.6, "#5b7f91");
+    ctx.save();
+    ctx.strokeStyle = "#e6f2f7";
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = Math.max(0.7, lw * 0.6);
+    for (let i = 0; i < 4; i++) {
+      const x = -s * 0.14 + i * s * 0.09 + (rng() - 0.5) * s * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(x, -s * 0.85);
+      ctx.lineTo(x + s * 0.02, -s * 0.14);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = "#e6f2f7";
+    for (const [dx, dy, r] of [[-0.2, -0.1, 0.12], [0.18, -0.08, 0.14], [0, -0.16, 0.1]]) {
+      ctx.beginPath();
+      ctx.ellipse(dx * s, dy * s, r * s, r * s * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+  g_shipwreck: (ctx, s, rng, lw) => {
+    paint(ctx, blobFn(iblob(0, -s * 0.02, s * 0.6, s * 0.14, rng, 0.14, 10)), "#7290a2", lw * 0.55, "#46606e");
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.18, -s * 0.4);
+    ctx.lineTo(s * 0.02, -s * 0.92);
+    ctx.stroke();
+    ctx.restore();
+    paint(ctx, polyFn([[s * 0, -s * 0.88], [s * 0.26, -s * 0.62], [s * 0.06, -s * 0.56], [s * 0.12, -s * 0.72]]), "#e8ddc0", lw * 0.6, "#9a8c66");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.52, -s * 0.02);
+      c.quadraticCurveTo(-s * 0.52, -s * 0.34, -s * 0.36, -s * 0.52);
+      c.lineTo(-s * 0.24, -s * 0.36);
+      c.lineTo(-s * 0.04, -s * 0.42);
+      c.lineTo(s * 0.4, -s * 0.1);
+      c.lineTo(s * 0.34, s * 0.03);
+      c.closePath();
+    }, "#6a4a2a", lw, "#3a2a18");
+    ctx.save();
+    ctx.strokeStyle = "#3a2a18";
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = Math.max(0.5, lw * 0.45);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.46, -s * 0.16);
+    ctx.lineTo(s * 0.3, -s * 0.02);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.44, -s * 0.3);
+    ctx.lineTo(s * 0.08, -s * 0.14);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#6a4a2a", 0.3);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.36, -s * 0.36, s * 0.05, s * 0.1, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(0.8, lw * 0.7);
+    for (const [x0, y1] of [[0.48, 0.26], [0.58, 0.2], [0.66, 0.13]]) {
+      ctx.beginPath();
+      ctx.moveTo(x0 * s, -s * 0.01);
+      ctx.quadraticCurveTo(x0 * s - s * 0.05, -y1 * s, x0 * s - s * 0.11, -y1 * s + s * 0.04);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_hot_spring: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.5);
+    paint(ctx, blobFn(iblob(0, -s * 0.12, s * 0.5, s * 0.2, rng, 0.12, 11)), "#c9b586", lw, "#8a7448");
+    paint(ctx, ellipseFn(0, -s * 0.13, s * 0.34, s * 0.13), "#b6a680", lw * 0.5, "#8a7448");
+    paint(ctx, ellipseFn(0, -s * 0.14, s * 0.26, s * 0.1), "#6fa8a0", lw * 0.6, "#3f6b64");
+    ctx.save();
+    ctx.globalAlpha = 0.65;
+    ctx.fillStyle = lighten("#6fa8a0", 0.35);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.08, -s * 0.16, s * 0.1, s * 0.035, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = "#e6f2f7";
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = Math.max(0.5, lw * 0.4);
+    for (const dx of [-0.1, 0.08]) {
+      ctx.beginPath();
+      ctx.arc(dx * s, -s * 0.13, s * 0.02, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = "#e6f2f7";
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = Math.max(1, lw * 0.9);
+    ctx.lineCap = "round";
+    for (const dx of [-0.14, 0.02, 0.16]) {
+      const x = dx * s + (rng() - 0.5) * s * 0.05;
+      const top = s * (0.55 + rng() * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(x, -s * 0.2);
+      ctx.bezierCurveTo(x - s * 0.08, -s * 0.35, x + s * 0.08, -top + s * 0.15, x - s * 0.03, -top);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_shrine: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.02, s * 0.34);
+    paint(ctx, rectFn(-s * 0.16, -s * 0.16, s * 0.32, s * 0.16), "#9a9488", lw * 0.8, "#5f5a4d");
+    paint(ctx, rectFn(-s * 0.13, -s * 0.62, s * 0.26, s * 0.46), "#b7a880", lw, "#6f5c3c");
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#b7a880", 0.32);
+    ctx.fillRect(-s * 0.11, -s * 0.6, s * 0.04, s * 0.42);
+    ctx.restore();
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.07, -s * 0.22);
+      c.lineTo(-s * 0.07, -s * 0.42);
+      c.quadraticCurveTo(0, -s * 0.52, s * 0.07, -s * 0.42);
+      c.lineTo(s * 0.07, -s * 0.22);
+      c.closePath();
+    }, "#2f2a24", lw * 0.5, "#4a4030");
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#f0c35c";
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.34, s * 0.09, s * 0.11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.31, s * 0.035, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, polyFn([[-s * 0.2, -s * 0.6], [0, -s * 0.82], [s * 0.2, -s * 0.6]]), "#5f6f78", lw);
+  }
+};
+
+// ../atlas/src/assets.ts
+var GOUACHE_CATEGORY_LABELS = {
+  flora: "Flora",
+  structure: "Bauwerke",
+  landmark: "Landmarken",
+  vehicle: "Fahrzeuge",
+  market: "Markt",
+  prop: "Deko"
+};
+var GOUACHE_ASSETS = [
+  { key: "g_oak", name: "Eiche", category: "flora" },
+  { key: "g_pine", name: "Nadelbaum", category: "flora" },
+  { key: "g_bush", name: "Busch", category: "flora" },
+  { key: "g_mushroom", name: "Riesenpilz", category: "flora" },
+  { key: "g_house", name: "Haus", category: "structure" },
+  { key: "g_tower", name: "Turm", category: "structure" },
+  { key: "g_keep", name: "Bergfried", category: "structure" },
+  { key: "g_church", name: "Kirche", category: "structure" },
+  { key: "g_windmill", name: "Windmühle", category: "structure" },
+  { key: "g_watermill", name: "Wassermühle", category: "structure" },
+  { key: "g_tent", name: "Zelt", category: "structure" },
+  { key: "g_ruin", name: "Ruine", category: "structure" },
+  { key: "g_signal_tower", name: "Signalturm", category: "structure" },
+  { key: "g_bridge", name: "Steinbrücke", category: "structure" },
+  { key: "g_lighthouse", name: "Leuchtturm", category: "structure" },
+  { key: "g_amphitheater", name: "Amphitheater", category: "structure" },
+  { key: "g_burial_mound", name: "Grabhügel", category: "structure" },
+  { key: "g_caravanserai", name: "Karawanserei", category: "structure" },
+  { key: "g_pyramid", name: "Pyramide", category: "landmark" },
+  { key: "g_obelisk", name: "Obelisk", category: "landmark" },
+  { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
+  { key: "g_magic_crystal", name: "Magiekristall", category: "landmark" },
+  { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
+  { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
+  { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
+  { key: "g_ziggurat", name: "Ziggurat", category: "landmark" },
+  { key: "g_portal_arch", name: "Portalbogen", category: "landmark" },
+  { key: "g_ship", name: "Schiff", category: "vehicle" },
+  { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
+  { key: "g_airship", name: "Flugschiff", category: "vehicle" },
+  { key: "g_stall", name: "Marktstand", category: "market" },
+  { key: "g_well", name: "Brunnen", category: "prop" },
+  ...GOUACHE_ASSETS_BATCH4
+];
+var GOUACHE_ASSET_KEYS = GOUACHE_ASSETS.map(
+  (a) => a.key
+);
+var ASSETS_BY_KEY = new Map(GOUACHE_ASSETS.map((a) => [a.key, a]));
+function getGouacheAsset(key) {
+  return key ? ASSETS_BY_KEY.get(key) : void 0;
+}
+function listGouacheAssetsByCategory(cat) {
+  return GOUACHE_ASSETS.filter((a) => a.category === cat);
 }
 function tree(ctx, s, rng, lw, base, dark, hi) {
   const cy = -s * 0.55;
@@ -1471,7 +1822,8 @@ var RECIPES = {
     ctx.lineTo(s * 0.3, -s * 0.5);
     ctx.stroke();
     ctx.restore();
-  }
+  },
+  ...BATCH4_RECIPES
 };
 function drawGouacheAsset(ctx, key, opts) {
   const recipe = RECIPES[key];
@@ -2793,6 +3145,198 @@ function formatRtxAtlasAssetPromptContext(context = buildRtxAtlasAssetPromptCont
   ].join("\n");
 }
 
+// ../atlas/src/rtx-asset-preview.ts
+var RTX_RECIPE_NORMALIZED_EXTENT = 4;
+var RTX_RECIPE_ROLE_DEFAULT_OPACITY = {
+  shadow: 0.2,
+  base: 1,
+  highlight: 0.85,
+  detail: 1,
+  outline: 1
+};
+var HEX_COLOR2 = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+var TAU = Math.PI * 2;
+var PATH_ARG_COUNTS = {
+  M: 2,
+  L: 2,
+  H: 1,
+  V: 1,
+  Q: 4,
+  C: 6,
+  Z: 0
+};
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+function safeHexColor(value) {
+  return typeof value === "string" && HEX_COLOR2.test(value) ? value : void 0;
+}
+function clamp012(value) {
+  return Math.min(1, Math.max(0, value));
+}
+function buildEllipseOps(layer, project, unit) {
+  const { x, y, rx, ry } = layer;
+  if (!isFiniteNumber(x) || !isFiniteNumber(y) || !isFiniteNumber(rx) || !isFiniteNumber(ry)) return null;
+  if (rx < 0 || ry < 0) return null;
+  const [px, py] = project(x, y);
+  const rotation = isFiniteNumber(layer.rotation) ? layer.rotation : 0;
+  return [["ellipse", px, py, rx * unit, ry * unit, rotation, 0, TAU]];
+}
+function buildRectOps(layer, project, unit) {
+  const { x, y, width, height } = layer;
+  if (!isFiniteNumber(x) || !isFiniteNumber(y) || !isFiniteNumber(width) || !isFiniteNumber(height)) return null;
+  if (width < 0 || height < 0) return null;
+  const rotation = isFiniteNumber(layer.rotation) ? layer.rotation : 0;
+  const [cx, cy] = project(x, y);
+  const hw = width / 2 * unit;
+  const hh = height / 2 * unit;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const corners = [
+    [-hw, -hh],
+    [hw, -hh],
+    [hw, hh],
+    [-hw, hh]
+  ].map(([dx, dy]) => [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos]);
+  const ops = [["moveTo", corners[0][0], corners[0][1]]];
+  for (const [px, py] of corners.slice(1)) ops.push(["lineTo", px, py]);
+  ops.push(["closePath"]);
+  return ops;
+}
+function buildPolygonOps(layer, project) {
+  const points = layer.points;
+  if (!Array.isArray(points) || points.length < 3) return null;
+  const projected = [];
+  for (const point of points) {
+    if (!Array.isArray(point) || point.length !== 2 || !isFiniteNumber(point[0]) || !isFiniteNumber(point[1])) {
+      return null;
+    }
+    projected.push(project(point[0], point[1]));
+  }
+  const ops = [["moveTo", projected[0][0], projected[0][1]]];
+  for (const [px, py] of projected.slice(1)) ops.push(["lineTo", px, py]);
+  ops.push(["closePath"]);
+  return ops;
+}
+function buildPathOps(layer, project) {
+  const d = layer.path;
+  if (typeof d !== "string" || !d.trim()) return null;
+  const groups = d.match(/[A-Za-z][^A-Za-z]*/g);
+  if (!groups || !groups.join("").trim()) return null;
+  if (d.slice(0, d.indexOf(groups[0])).trim()) return null;
+  const ops = [];
+  let nx = 0;
+  let ny = 0;
+  for (const group of groups) {
+    const op = group[0];
+    const argCount = PATH_ARG_COUNTS[op];
+    if (argCount === void 0) return null;
+    const args = group.slice(1).trim().split(/[\s,]+/).filter(Boolean).map(Number);
+    if (args.some((value) => !Number.isFinite(value))) return null;
+    if (argCount === 0) {
+      if (args.length > 0) return null;
+      ops.push(["closePath"]);
+      continue;
+    }
+    if (args.length === 0 || args.length % argCount !== 0) return null;
+    for (let i = 0; i < args.length; i += argCount) {
+      switch (op) {
+        case "M": {
+          nx = args[i];
+          ny = args[i + 1];
+          ops.push([i === 0 ? "moveTo" : "lineTo", ...project(nx, ny)]);
+          break;
+        }
+        case "L": {
+          nx = args[i];
+          ny = args[i + 1];
+          ops.push(["lineTo", ...project(nx, ny)]);
+          break;
+        }
+        case "H": {
+          nx = args[i];
+          ops.push(["lineTo", ...project(nx, ny)]);
+          break;
+        }
+        case "V": {
+          ny = args[i];
+          ops.push(["lineTo", ...project(nx, ny)]);
+          break;
+        }
+        case "Q": {
+          const cp = project(args[i], args[i + 1]);
+          nx = args[i + 2];
+          ny = args[i + 3];
+          ops.push(["quadraticCurveTo", cp[0], cp[1], ...project(nx, ny)]);
+          break;
+        }
+        case "C": {
+          const c1 = project(args[i], args[i + 1]);
+          const c2 = project(args[i + 2], args[i + 3]);
+          nx = args[i + 4];
+          ny = args[i + 5];
+          ops.push(["bezierCurveTo", c1[0], c1[1], c2[0], c2[1], ...project(nx, ny)]);
+          break;
+        }
+      }
+    }
+  }
+  return ops.length > 0 ? ops : null;
+}
+function buildLayerOps(layer, project, unit) {
+  switch (layer.shape) {
+    case "ellipse":
+      return buildEllipseOps(layer, project, unit);
+    case "rect":
+      return buildRectOps(layer, project, unit);
+    case "polygon":
+      return buildPolygonOps(layer, project);
+    case "path":
+      return buildPathOps(layer, project);
+    default:
+      return null;
+  }
+}
+function isDrawableRecipe(recipe) {
+  return typeof recipe === "object" && recipe !== null && !Array.isArray(recipe) && recipe.schemaVersion === 1 && Array.isArray(recipe.layers) && recipe.layers.length > 0;
+}
+function drawRtxGouacheRecipePreview(ctx, recipe, opts) {
+  if (!ctx || !isDrawableRecipe(recipe)) return;
+  if (!isFiniteNumber(opts.x) || !isFiniteNumber(opts.y)) return;
+  const unit = opts.unitScale ?? 16;
+  if (!isFiniteNumber(unit) || unit <= 0) return;
+  const fallbackLineWidth = isFiniteNumber(opts.lineWidth) && opts.lineWidth > 0 ? opts.lineWidth : 1.4;
+  const project = (nx, ny) => [opts.x + nx * unit, opts.y + ny * unit];
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const layer of recipe.layers) {
+    if (typeof layer !== "object" || layer === null) continue;
+    const fill = safeHexColor(layer.fill);
+    const stroke = safeHexColor(layer.stroke);
+    if (!fill && !stroke) continue;
+    const ops = buildLayerOps(layer, project, unit);
+    if (!ops) continue;
+    const roleDefault = RTX_RECIPE_ROLE_DEFAULT_OPACITY[layer.role] ?? 1;
+    ctx.globalAlpha = clamp012(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
+    ctx.beginPath();
+    for (const [name, ...args] of ops) {
+      ctx[name](...args);
+    }
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    const strokeWidth = isFiniteNumber(layer.lineWidth) ? layer.lineWidth : fallbackLineWidth;
+    if (stroke && strokeWidth > 0) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 // ../atlas/src/procedural.ts
 function makePrng2(seed) {
   let s = seed | 0;
@@ -3296,7 +3840,7 @@ var KIND_GLYPH = {
   houses: "village",
   towers: "castle"
 };
-function clamp012(v) {
+function clamp013(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
@@ -3336,8 +3880,8 @@ function generatePathAttachments(path, options) {
       for (const sign of signs) {
         const scale = 0.8 + rng() * 0.4;
         const rotation = (rng() - 0.5) * 2 * rotationRange;
-        const x = clamp012(cx + px * offset * sign);
-        const y = clamp012(cy + py * offset * sign);
+        const x = clamp013(cx + px * offset * sign);
+        const y = clamp013(cy + py * offset * sign);
         results.push({ glyphKey, x, y, scale, rotation });
       }
       d += spacing;
@@ -3345,6 +3889,89 @@ function generatePathAttachments(path, options) {
     accumulated = segLen - (d - spacing);
   }
   return results;
+}
+
+// ../atlas/src/settlement-layout.ts
+var WALL_CLEARANCE_FACTOR = 0.03;
+var OBJECT_SPACING_FACTOR = 0.04;
+var ROAD_CLEARANCE_FACTOR = 0.035;
+var PLAZA_CLEARANCE_FACTOR = 0.08;
+var BEST_CANDIDATE_SAMPLES = 4;
+function rotationToward(from, to) {
+  return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+}
+function distanceToPaths(point, paths) {
+  let nearest = Infinity;
+  for (const path of paths) {
+    for (let i = 0; i < path.length - 1; i++) {
+      nearest = Math.min(nearest, distToSegment(point, path[i], path[i + 1]));
+    }
+  }
+  return nearest;
+}
+function tooClose(point, occupied, minDistance) {
+  return occupied.some(([x, y]) => Math.hypot(point[0] - x, point[1] - y) < minDistance);
+}
+function nearestOccupiedDistance(point, occupied) {
+  let nearest = Infinity;
+  for (const [x, y] of occupied) {
+    nearest = Math.min(nearest, Math.hypot(point[0] - x, point[1] - y));
+  }
+  return nearest;
+}
+function pointInRing3(point, ring) {
+  const [px, py] = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+function placeSettlementBuildings(input) {
+  const placements = [];
+  if (input.count <= 0) return placements;
+  const [minX, minY, maxX, maxY] = input.bbox;
+  const roadClearance = input.span * ROAD_CLEARANCE_FACTOR;
+  const plazaClearance = input.span * PLAZA_CLEARANCE_FACTOR;
+  const spacing = input.span * OBJECT_SPACING_FACTOR;
+  const wallClearance = input.wallRing ? input.span * WALL_CLEARANCE_FACTOR : 0;
+  const wallPaths = input.wallRing ? [input.wallRing] : [];
+  const blocked = [...input.occupied];
+  const budget = input.count * 90 + 100;
+  let attempts = 0;
+  while (placements.length < input.count && attempts < budget) {
+    let best;
+    let bestScore = -Infinity;
+    let found = 0;
+    while (found < BEST_CANDIDATE_SAMPLES && attempts < budget) {
+      attempts++;
+      const point = [minX + input.rng() * (maxX - minX), minY + input.rng() * (maxY - minY)];
+      if (!input.isInterior(point)) continue;
+      if (Math.hypot(point[0] - input.center[0], point[1] - input.center[1]) < plazaClearance) continue;
+      if (input.roadPaths.length > 0 && distanceToPaths(point, input.roadPaths) < roadClearance) continue;
+      if (wallClearance > 0 && distanceToPaths(point, wallPaths) < wallClearance) continue;
+      if (input.keepOutRings?.some((ring) => pointInRing3(point, ring))) continue;
+      if (tooClose(point, blocked, spacing)) continue;
+      found++;
+      const score = nearestOccupiedDistance(point, blocked);
+      if (score > bestScore) {
+        bestScore = score;
+        best = point;
+      }
+    }
+    if (!best) continue;
+    blocked.push(best);
+    placements.push({
+      point: best,
+      rotation: rotationToward(input.center, best) + 90 + (input.rng() - 0.5) * 16,
+      scale: 0.78 + input.rng() * 0.36
+    });
+  }
+  return placements;
 }
 
 // ../atlas/src/settlement-waterfront.ts
@@ -3382,7 +4009,7 @@ function lerpPoint(a, b, amount) {
 function offsetPoint(point, direction, distance) {
   return [point[0] + direction[0] * distance, point[1] + direction[1] * distance];
 }
-function rotationToward(from, to) {
+function rotationToward2(from, to) {
   return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
 }
 function ringEdges(ring) {
@@ -3499,8 +4126,15 @@ function appendSettlementWaterfront(input) {
     });
   }
   if (input.options.includeDock) {
-    const point = firstInteriorPointToward(edge.midpoint, input.center, input.isInteriorPoint) ?? input.center;
-    input.addDockObject(point, rotationToward(point, offsetPoint(point, normal, 1)), 0.9, {
+    const avoid = input.dockAvoidPoints ?? [];
+    const minAvoid = input.dockAvoidDistance ?? 0;
+    const isClear = (point2) => minAvoid <= 0 || avoid.every(([x, y]) => Math.hypot(point2[0] - x, point2[1] - y) >= minAvoid);
+    const point = firstInteriorPointToward(
+      edge.midpoint,
+      input.center,
+      (candidate) => input.isInteriorPoint(candidate) && isClear(candidate)
+    ) ?? firstInteriorPointToward(edge.midpoint, input.center, input.isInteriorPoint) ?? input.center;
+    input.addDockObject(point, rotationToward2(point, offsetPoint(point, normal, 1)), 0.9, {
       role: "waterfront"
     });
   }
@@ -3604,7 +4238,7 @@ function ringCentroid(ring) {
   }
   return [cx / (3 * twiceArea), cy / (3 * twiceArea)];
 }
-function pointInRing3(point, ring) {
+function pointInRing4(point, ring) {
   const [px, py] = point;
   const open = openRing2(ring);
   let inside = false;
@@ -3619,8 +4253,8 @@ function pointInRing3(point, ring) {
 }
 function pointInPolygonWithHoles(point, polygon) {
   const outer = polygon.rings[0];
-  if (!outer || !pointInRing3(point, outer)) return false;
-  return !polygon.rings.slice(1).some((ring) => pointInRing3(point, ring));
+  if (!outer || !pointInRing4(point, outer)) return false;
+  return !polygon.rings.slice(1).some((ring) => pointInRing4(point, ring));
 }
 function randomPointInPolygon(polygon, bbox, rng) {
   const [minX, minY, maxX, maxY] = bbox;
@@ -3669,18 +4303,6 @@ function pointOnRing(ring, fraction) {
     walked += seg;
   }
   return closed[closed.length - 1];
-}
-function rotationToward2(from, to) {
-  return Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
-}
-function distanceToPaths(point, paths) {
-  let nearest = Infinity;
-  for (const path of paths) {
-    for (let i = 0; i < path.length - 1; i++) {
-      nearest = Math.min(nearest, distToSegment(point, path[i], path[i + 1]));
-    }
-  }
-  return nearest;
 }
 function squarePolygon(center, radius) {
   const [cx, cy] = center;
@@ -3739,9 +4361,6 @@ function pointNear(center, distance, angle, polygon, rng, bbox) {
     }
   }
   return randomPointInPolygon(polygon, bbox, rng) ?? center;
-}
-function tooClose(point, occupied, minDistance) {
-  return occupied.some(([x, y]) => Math.hypot(point[0] - x, point[1] - y) < minDistance);
 }
 function generateSettlement(polygon, options = {}) {
   const seed = seedToNumber(options.seed);
@@ -3815,7 +4434,7 @@ function generateSettlement(polygon, options = {}) {
     for (let i = 0; i < gates.length; i++) {
       const gate = gates[i];
       const bendBase = moveToward2(gate, center, 0.55);
-      const angle = rotationToward2(gate, center) + 90;
+      const angle = rotationToward(gate, center) + 90;
       const bend = [
         bendBase[0] + Math.cos(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12,
         bendBase[1] + Math.sin(angle * Math.PI / 180) * (rng() - 0.5) * span * 0.12
@@ -3873,6 +4492,13 @@ function generateSettlement(polygon, options = {}) {
       })
     );
   };
+  const gatePoints = gates.map((gate) => moveToward2(gate, center, 0.035));
+  const towerPoints = [];
+  for (let i = 0; i < towerCount; i++) {
+    towerPoints.push(
+      moveToward2(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035)
+    );
+  }
   if (waterfrontOptions) {
     generatedPierCount = appendSettlementWaterfront({
       options: waterfrontOptions,
@@ -3887,51 +4513,59 @@ function generateSettlement(polygon, options = {}) {
       roadPaths,
       rng,
       isInteriorPoint: (point) => pointInPolygonWithHoles(point, polygon),
+      dockAvoidPoints: [...gatePoints, ...towerPoints],
+      dockAvoidDistance: span * 0.05,
       addDockObject: (point, rotation, scale, meta) => addObject("dock", "dock", point, rotation, scale, meta)
     });
   }
+  const anchorSpacing = span * 0.05;
+  const pickAnchorPoint = (distance) => {
+    const baseAngle = rng() * Math.PI * 2;
+    let candidate = center;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      candidate = pointNear(center, distance, baseAngle + attempt * 1.7, polygon, rng, bbox);
+      if (!tooClose(candidate, occupied, anchorSpacing)) return candidate;
+    }
+    return candidate;
+  };
   if (includeKeep) {
-    const point = pointNear(center, span * 0.22, rng() * Math.PI * 2, polygon, rng, bbox);
-    addObject("keep", "keep", point, rotationToward2(point, center), 1.25, { role: "anchor" });
+    const point = pickAnchorPoint(span * 0.22);
+    addObject("keep", "keep", point, rotationToward(point, center), 1.25, { role: "anchor" });
   }
   if (includeMarket) {
-    const point = pointNear(center, span * 0.035, rng() * Math.PI * 2, polygon, rng, bbox);
+    const point = pickAnchorPoint(span * 0.035);
     addObject("market", "market", point, (rng() - 0.5) * 12, 0.95, { role: "civic" });
   }
   if (includeWell) {
-    const point = pointNear(center, span * 0.075, rng() * Math.PI * 2, polygon, rng, bbox);
+    const point = pickAnchorPoint(span * 0.075);
     addObject("well", "well", point, 0, 0.68, { role: "civic" });
   }
-  for (let i = 0; i < gates.length; i++) {
-    const point = moveToward2(gates[i], center, 0.035);
+  for (let i = 0; i < gatePoints.length; i++) {
+    const point = gatePoints[i];
     if (!pointInPolygonWithHoles(point, polygon)) continue;
-    addObject("gate", `gate-${i}`, point, rotationToward2(point, center), 0.72, { gateIndex: i });
+    addObject("gate", `gate-${i}`, point, rotationToward(point, center), 0.72, { gateIndex: i });
   }
-  for (let i = 0; i < towerCount; i++) {
-    const point = moveToward2(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035);
+  for (let i = 0; i < towerPoints.length; i++) {
+    const point = towerPoints[i];
     if (!pointInPolygonWithHoles(point, polygon)) continue;
-    addObject("tower", `tower-${i}`, point, rotationToward2(point, center), 0.78, { towerIndex: i });
+    addObject("tower", `tower-${i}`, point, rotationToward(point, center), 0.78, { towerIndex: i });
   }
-  const roadClearance = span * 0.035;
-  const plazaClearance = span * 0.08;
-  const objectSpacing = span * 0.04;
-  let attempts = 0;
-  while (objects.filter((object) => object.kind === "building").length < buildingCount && attempts < buildingCount * 90 + 100) {
-    attempts++;
-    const point = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
-    if (!pointInPolygonWithHoles(point, polygon)) continue;
-    if (Math.hypot(point[0] - center[0], point[1] - center[1]) < plazaClearance) continue;
-    if (roadPaths.length > 0 && distanceToPaths(point, roadPaths) < roadClearance) continue;
-    if (tooClose(point, occupied, objectSpacing)) continue;
-    const rotation = rotationToward2(center, point) + 90 + (rng() - 0.5) * 16;
-    addObject(
-      "building",
-      `building-${objects.filter((object) => object.kind === "building").length}`,
-      point,
-      rotation,
-      0.78 + rng() * 0.36
-    );
-  }
+  const waterfrontRings = features.filter((feature) => feature.kind === "waterfront" && feature.geometry.type === "Polygon").map((feature) => feature.geometry.rings[0]).filter((ring) => ring.length >= 3);
+  const buildingPlacements = placeSettlementBuildings({
+    count: buildingCount,
+    bbox,
+    center,
+    span,
+    rng,
+    isInterior: (point) => pointInPolygonWithHoles(point, polygon),
+    occupied,
+    roadPaths,
+    ...includeWalls ? { wallRing: closeRing(outer) } : {},
+    ...waterfrontRings.length > 0 ? { keepOutRings: waterfrontRings } : {}
+  });
+  buildingPlacements.forEach((placement, index) => {
+    addObject("building", `building-${index}`, placement.point, placement.rotation, placement.scale);
+  });
   return {
     seed,
     center,
@@ -4045,6 +4679,8 @@ export {
   RTX_ATLAS_ASSET_STYLEGUIDE_PATH,
   RTX_GOUACHE_RECIPE_LAYER_ROLES,
   RTX_GOUACHE_RECIPE_SHAPES,
+  RTX_RECIPE_NORMALIZED_EXTENT,
+  RTX_RECIPE_ROLE_DEFAULT_OPACITY,
   SCHEMA_VERSION,
   STYLE_PRESETS,
   TOLKIEN_INK,
@@ -4060,6 +4696,7 @@ export {
   distToSegment,
   drawCompassRose,
   drawGouacheAsset,
+  drawRtxGouacheRecipePreview,
   drawScaleBar,
   drawSvgPath,
   drawVine,

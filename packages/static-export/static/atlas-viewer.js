@@ -519,6 +519,13 @@
           continue;
         }
         const paletteItem = this.paletteItems[obj.paletteItemId];
+        if (paletteItem && paletteItem.recipe) {
+          addCount(objectCounts, `rtx:${obj.paletteItemId}`, {
+            label: "RTX-Asset",
+            icon: '<span class="atlas-static-legend-mark"></span>',
+          });
+          continue;
+        }
         if (paletteItem && paletteItem.imageData) {
           addCount(objectCounts, `img:${obj.paletteItemId}`, {
             label: "Custom-Stempel",
@@ -1018,6 +1025,30 @@
 
         const size = 24 * zoom * obj.scale;
         const blur = style.blur || 0;
+
+        if (
+          paletteItem &&
+          paletteItem.recipe &&
+          this.atlasEngine &&
+          this.atlasEngine.drawRtxGouacheRecipePreview
+        ) {
+          // Approved RTX asset: the export ships only the validated JSON recipe,
+          // drawn exclusively by the deterministic engine renderer (no eval).
+          const rtxSize = 30 * zoom * obj.scale;
+          ctx.save();
+          if (blur > 0) ctx.filter = `blur(${blur * zoom}px)`;
+          ctx.translate(ox, oy);
+          ctx.rotate((obj.rotation * Math.PI) / 180);
+          this.atlasEngine.drawRtxGouacheRecipePreview(ctx, paletteItem.recipe, {
+            x: 0,
+            y: 0,
+            unitScale: rtxSize / 8,
+            lineWidth: (style.lineWidth != null ? style.lineWidth : 1.4) * zoom,
+          });
+          ctx.restore();
+          continue;
+        }
+
         const stampImage = paletteItem && paletteItem.imageData ? this.stampImages[obj.paletteItemId] : null;
         if (stampImage && stampImage.complete && stampImage.naturalWidth > 0) {
           ctx.save();

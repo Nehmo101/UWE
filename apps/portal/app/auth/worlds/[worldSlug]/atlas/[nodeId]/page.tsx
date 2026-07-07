@@ -6,6 +6,7 @@ import {
 } from "@uwe/database/server";
 import { filterPagesForViewer } from "@uwe/auth";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
+import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
@@ -153,8 +154,10 @@ export default async function PortalAtlasNodePage({ params }: Props) {
     ];
 
     if (paletteItemIds.length > 0) {
+      // Approved-only: pending AI/upload stamps and pending RTX assets must
+      // never reach the player portal (same gate as the static export).
       const items = await db.atlasPaletteItem.findMany({
-        where: { id: { in: paletteItemIds } },
+        where: { id: { in: paletteItemIds }, reviewStatus: "approved" },
         select: {
           id: true,
           source: true,
@@ -166,7 +169,20 @@ export default async function PortalAtlasNodePage({ params }: Props) {
         const tags = (item.styleTags ?? {}) as {
           imageData?: string;
           mimeType?: string;
+          rtxAssetProposal?: unknown;
         };
+        if (tags.rtxAssetProposal !== undefined) {
+          // RTX asset: re-validate the stored proposal and pass ONLY the
+          // validated recipe to the client — never raw styleTags metadata.
+          const validation = validateRtxAtlasAssetProposal(tags.rtxAssetProposal);
+          if (!validation.ok || validation.proposal.outputType !== "json-recipe") continue;
+          paletteItems[item.id] = {
+            source: item.source,
+            builtinGlyphKey: item.builtinGlyphKey ?? null,
+            recipe: validation.proposal.recipe,
+          };
+          continue;
+        }
         paletteItems[item.id] = {
           source: item.source,
           builtinGlyphKey: item.builtinGlyphKey ?? null,

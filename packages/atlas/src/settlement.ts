@@ -10,8 +10,8 @@
 import { AtlasFeatureKind, LAYER_Z } from "./constants";
 import type { AtlasFeatureKind as AtlasFeatureKindValue } from "./constants";
 import type { Coordinate, Path, Polygon } from "./geometry";
-import { distToSegment } from "./geometry";
 import { hashStringToSeed, mulberry32 } from "./prng";
+import { placeSettlementBuildings, rotationToward, tooClose } from "./settlement-layout";
 import { appendSettlementWaterfront, resolveWaterfrontOptions } from "./settlement-waterfront";
 import type { SettlementWaterfrontOptions } from "./settlement-waterfront";
 
@@ -316,20 +316,6 @@ function pointOnRing(ring: readonly Coordinate[], fraction: number): Coordinate 
   return closed[closed.length - 1]!;
 }
 
-function rotationToward(from: Coordinate, to: Coordinate): number {
-  return (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI;
-}
-
-function distanceToPaths(point: Coordinate, paths: readonly Coordinate[][]): number {
-  let nearest = Infinity;
-  for (const path of paths) {
-    for (let i = 0; i < path.length - 1; i++) {
-      nearest = Math.min(nearest, distToSegment(point, path[i]!, path[i + 1]!));
-    }
-  }
-  return nearest;
-}
-
 function squarePolygon(center: Coordinate, radius: number): Polygon {
   const [cx, cy] = center;
   const ring: Coordinate[] = [
@@ -410,10 +396,6 @@ function pointNear(
     }
   }
   return randomPointInPolygon(polygon, bbox, rng) ?? center;
-}
-
-function tooClose(point: Coordinate, occupied: readonly Coordinate[], minDistance: number): boolean {
-  return occupied.some(([x, y]) => Math.hypot(point[0] - x, point[1] - y) < minDistance);
 }
 
 /**
@@ -568,6 +550,14 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
     );
   };
 
+  const gatePoints = gates.map((gate) => moveToward(gate, center, 0.035));
+  const towerPoints: Coordinate[] = [];
+  for (let i = 0; i < towerCount; i++) {
+    towerPoints.push(
+      moveToward(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035),
+    );
+  }
+
   if (waterfrontOptions) {
     generatedPierCount = appendSettlementWaterfront({
       options: waterfrontOptions,
@@ -582,59 +572,74 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
       roadPaths,
       rng,
       isInteriorPoint: (point) => pointInPolygonWithHoles(point, polygon),
+      dockAvoidPoints: [...gatePoints, ...towerPoints],
+      dockAvoidDistance: span * 0.05,
       addDockObject: (point, rotation, scale, meta) =>
         addObject("dock", "dock", point, rotation, scale, meta),
     });
   }
 
+  /**
+   * Civic anchors (keep, market, well) retry a few deterministic angle
+   * offsets so they no longer stack on top of the dock or each other.
+   */
+  const anchorSpacing = span * 0.05;
+  const pickAnchorPoint = (distance: number): Coordinate => {
+    const baseAngle = rng() * Math.PI * 2;
+    let candidate: Coordinate = center;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      candidate = pointNear(center, distance, baseAngle + attempt * 1.7, polygon, rng, bbox);
+      if (!tooClose(candidate, occupied, anchorSpacing)) return candidate;
+    }
+    return candidate;
+  };
+
   if (includeKeep) {
-    const point = pointNear(center, span * 0.22, rng() * Math.PI * 2, polygon, rng, bbox);
+    const point = pickAnchorPoint(span * 0.22);
     addObject("keep", "keep", point, rotationToward(point, center), 1.25, { role: "anchor" });
   }
 
   if (includeMarket) {
-    const point = pointNear(center, span * 0.035, rng() * Math.PI * 2, polygon, rng, bbox);
+    const point = pickAnchorPoint(span * 0.035);
     addObject("market", "market", point, (rng() - 0.5) * 12, 0.95, { role: "civic" });
   }
 
   if (includeWell) {
-    const point = pointNear(center, span * 0.075, rng() * Math.PI * 2, polygon, rng, bbox);
+    const point = pickAnchorPoint(span * 0.075);
     addObject("well", "well", point, 0, 0.68, { role: "civic" });
   }
 
-  for (let i = 0; i < gates.length; i++) {
-    const point = moveToward(gates[i]!, center, 0.035);
+  for (let i = 0; i < gatePoints.length; i++) {
+    const point = gatePoints[i]!;
     if (!pointInPolygonWithHoles(point, polygon)) continue;
     addObject("gate", `gate-${i}`, point, rotationToward(point, center), 0.72, { gateIndex: i });
   }
 
-  for (let i = 0; i < towerCount; i++) {
-    const point = moveToward(pointOnRing(outer, gateOffset + (i + 0.5) / Math.max(1, towerCount)), center, 0.035);
+  for (let i = 0; i < towerPoints.length; i++) {
+    const point = towerPoints[i]!;
     if (!pointInPolygonWithHoles(point, polygon)) continue;
     addObject("tower", `tower-${i}`, point, rotationToward(point, center), 0.78, { towerIndex: i });
   }
 
-  const roadClearance = span * 0.035;
-  const plazaClearance = span * 0.08;
-  const objectSpacing = span * 0.04;
-  let attempts = 0;
-  while (objects.filter((object) => object.kind === "building").length < buildingCount && attempts < buildingCount * 90 + 100) {
-    attempts++;
-    const point: Coordinate = [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
-    if (!pointInPolygonWithHoles(point, polygon)) continue;
-    if (Math.hypot(point[0] - center[0], point[1] - center[1]) < plazaClearance) continue;
-    if (roadPaths.length > 0 && distanceToPaths(point, roadPaths) < roadClearance) continue;
-    if (tooClose(point, occupied, objectSpacing)) continue;
-
-    const rotation = rotationToward(center, point) + 90 + (rng() - 0.5) * 16;
-    addObject(
-      "building",
-      `building-${objects.filter((object) => object.kind === "building").length}`,
-      point,
-      rotation,
-      0.78 + rng() * 0.36,
-    );
-  }
+  const waterfrontRings = features
+    .filter((feature) => feature.kind === "waterfront" && feature.geometry.type === "Polygon")
+    .map((feature) => (feature.geometry as Polygon).rings[0]!)
+    .filter((ring) => ring.length >= 3);
+  const buildingPlacements = placeSettlementBuildings({
+    count: buildingCount,
+    bbox,
+    center,
+    span,
+    rng,
+    isInterior: (point) => pointInPolygonWithHoles(point, polygon),
+    occupied,
+    roadPaths,
+    ...(includeWalls ? { wallRing: closeRing(outer) } : {}),
+    ...(waterfrontRings.length > 0 ? { keepOutRings: waterfrontRings } : {}),
+  });
+  buildingPlacements.forEach((placement, index) => {
+    addObject("building", `building-${index}`, placement.point, placement.rotation, placement.scale);
+  });
 
   return {
     seed,

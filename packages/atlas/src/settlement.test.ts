@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { generateSettlement } from "./settlement";
-import type { SettlementObjectKind } from "./settlement";
+import type { SettlementLayout, SettlementObjectKind, SettlementOptions } from "./settlement";
 import type { Coordinate, Polygon } from "./geometry";
+import { distToSegment } from "./geometry";
+import { hashStringToSeed } from "./prng";
+import { OBJECT_SPACING_FACTOR, WALL_CLEARANCE_FACTOR } from "./settlement-layout";
 
 const SITE: Polygon = {
   type: "Polygon",
@@ -217,5 +220,172 @@ describe("generateSettlement", () => {
     assert.deepEqual(layout.features, []);
     assert.deepEqual(layout.objects, []);
     assert.equal(layout.meta.area, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Golden regressions
+//
+// The digests below freeze the full generator output for fixed
+// (polygon, options, seed) combinations: per-kind feature/object counts, the
+// meta block, and a checksum over every emitted coordinate (rounded to 1e-6).
+// Any unintended behavior change — a shifted building, a different RNG draw
+// order, a new clearance — changes the checksum and fails the test. When a
+// change is intentional, regenerate the digests and update them deliberately.
+// ---------------------------------------------------------------------------
+
+function coordChecksum(values: readonly number[]): string {
+  return hashStringToSeed(values.map((value) => value.toFixed(6)).join("|")).toString(16);
+}
+
+function settlementDigest(layout: SettlementLayout) {
+  const featureCounts: Record<string, number> = {};
+  for (const feature of layout.features) {
+    featureCounts[feature.kind] = (featureCounts[feature.kind] ?? 0) + 1;
+  }
+  const objectCounts: Record<string, number> = {};
+  for (const object of layout.objects) {
+    objectCounts[object.kind] = (objectCounts[object.kind] ?? 0) + 1;
+  }
+  const values: number[] = [layout.seed, layout.center[0], layout.center[1]];
+  for (const feature of layout.features) {
+    if (feature.geometry.type === "Path") {
+      for (const [x, y] of feature.geometry.coordinates) values.push(x, y);
+    } else {
+      for (const ring of feature.geometry.rings) for (const [x, y] of ring) values.push(x, y);
+    }
+  }
+  for (const object of layout.objects) {
+    values.push(object.x, object.y, object.scale, object.rotation);
+  }
+  return {
+    featureCounts,
+    objectCounts,
+    meta: { ...layout.meta, area: Number(layout.meta.area.toFixed(6)) },
+    coordChecksum: coordChecksum(values),
+  };
+}
+
+interface GoldenCase {
+  name: string;
+  polygon: Polygon;
+  options: SettlementOptions;
+  digest: ReturnType<typeof settlementDigest>;
+}
+
+const GOLDEN_CASES: GoldenCase[] = [
+  {
+    name: "inland walled town (SITE, seed 42)",
+    polygon: SITE,
+    options: { seed: 42, idPrefix: "golden", buildingCount: 8 },
+    digest: {
+      featureCounts: { wall: 1, road: 4, plaza: 1 },
+      objectCounts: { keep: 1, market: 1, well: 1, gate: 4, tower: 4, building: 8 },
+      meta: { area: 0.3674, buildingCount: 8, gateCount: 4 },
+      coordChecksum: "83c9bd7",
+    },
+  },
+  {
+    name: "town around a hole (WITH_HOLE, seed 128)",
+    polygon: WITH_HOLE,
+    options: { seed: 128, idPrefix: "golden-hole", buildingCount: 18, gateCount: 4 },
+    digest: {
+      featureCounts: { wall: 1, road: 4, plaza: 1 },
+      objectCounts: { keep: 1, market: 1, well: 1, gate: 4, tower: 4, building: 18 },
+      meta: { area: 0.6204, buildingCount: 18, gateCount: 4 },
+      coordChecksum: "eb2e2c7a",
+    },
+  },
+  {
+    name: "waterfront harbor town (SITE, seed 9)",
+    polygon: SITE,
+    options: {
+      seed: 9,
+      idPrefix: "golden-port",
+      buildingCount: 6,
+      waterfront: { edgeFraction: 0.5, pierCount: 3, includeDock: true },
+    },
+    digest: {
+      featureCounts: { wall: 1, road: 4, plaza: 1, waterfront: 1, pier: 3 },
+      objectCounts: { dock: 1, keep: 1, market: 1, well: 1, gate: 4, tower: 4, building: 6 },
+      meta: { area: 0.3674, buildingCount: 6, gateCount: 4, waterfront: true, pierCount: 3 },
+      coordChecksum: "da78a346",
+    },
+  },
+];
+
+function polygonSpan(polygon: Polygon): number {
+  const outer = polygon.rings[0]!;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of outer) {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+  return Math.max(0.001, Math.min(maxX - minX, maxY - minY));
+}
+
+function distanceToRing(point: Coordinate, ring: readonly Coordinate[]): number {
+  let nearest = Infinity;
+  for (let i = 0; i < ring.length; i++) {
+    nearest = Math.min(nearest, distToSegment(point, ring[i]!, ring[(i + 1) % ring.length]!));
+  }
+  return nearest;
+}
+
+describe("generateSettlement / golden regressions", () => {
+  for (const golden of GOLDEN_CASES) {
+    it(`pins the ${golden.name} layout`, () => {
+      const digest = settlementDigest(generateSettlement(golden.polygon, golden.options));
+      assert.deepEqual(digest, golden.digest);
+    });
+  }
+
+  it("keeps buildings free of overlaps, the wall, and the water strip", () => {
+    const epsilon = 1e-9;
+    for (const golden of GOLDEN_CASES) {
+      const layout = generateSettlement(golden.polygon, golden.options);
+      const span = polygonSpan(golden.polygon);
+      const spacing = span * OBJECT_SPACING_FACTOR;
+      const wallClearance = span * WALL_CLEARANCE_FACTOR;
+      const outer = golden.polygon.rings[0]!;
+      const buildings = layout.objects.filter((object) => object.kind === "building");
+      const others = layout.objects.filter((object) => object.kind !== "building");
+      const waterRing = layout.features.find(
+        (feature) => feature.kind === "waterfront" && feature.geometry.type === "Polygon",
+      );
+
+      for (let i = 0; i < buildings.length; i++) {
+        const a = buildings[i]!;
+        const point: Coordinate = [a.x, a.y];
+        for (let j = i + 1; j < buildings.length; j++) {
+          const b = buildings[j]!;
+          assert.ok(
+            Math.hypot(a.x - b.x, a.y - b.y) >= spacing - epsilon,
+            `${golden.name}: buildings ${i}/${j} overlap`,
+          );
+        }
+        for (const other of others) {
+          assert.ok(
+            Math.hypot(a.x - other.x, a.y - other.y) >= spacing - epsilon,
+            `${golden.name}: building ${i} overlaps ${other.kind}`,
+          );
+        }
+        assert.ok(
+          distanceToRing(point, outer) >= wallClearance - epsilon,
+          `${golden.name}: building ${i} hugs the wall`,
+        );
+        if (waterRing && waterRing.geometry.type === "Polygon") {
+          assert.ok(
+            !pointInRing(point, waterRing.geometry.rings[0]! as Coordinate[]),
+            `${golden.name}: building ${i} stands in the water strip`,
+          );
+        }
+      }
+    }
   });
 });

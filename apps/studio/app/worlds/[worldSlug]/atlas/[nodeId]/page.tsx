@@ -18,7 +18,9 @@ import type {
   StudioAtlasFeatureInput,
   StudioAtlasNodeInput,
   StudioAtlasObjectInput,
+  StudioAtlasRtxPaletteItemInput,
 } from "@/src/components/atlas";
+import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
@@ -106,6 +108,17 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     _key: nextKey(),
   }));
 
+  // Approved RTX assets (json-recipe only) for the editor palette: re-validate
+  // the stored proposal server-side and hand the embedded editor ONLY the
+  // validated recipe — pending items and raw styleTags never enter the doc.
+  const rtxPaletteItems: StudioAtlasRtxPaletteItemInput[] = rawPaletteItems.flatMap((item) => {
+    if (item.kind !== "rtx_asset" || item.reviewStatus !== "approved") return [];
+    const tags = (item.styleTags ?? {}) as { rtxAssetProposal?: unknown };
+    const validation = validateRtxAtlasAssetProposal(tags.rtxAssetProposal);
+    if (!validation.ok || validation.proposal.outputType !== "json-recipe") return [];
+    return [{ id: item.id, name: item.name, recipe: validation.proposal.recipe }];
+  });
+
   const doc = buildStudioAtlasDoc({
     worldSlug,
     node: { id: node.id, title: node.title, level: node.level, visibility: nodeVisibility },
@@ -115,6 +128,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
     tileLayer: (tileLayer ?? null) as BuildStudioAtlasDocInput["tileLayer"],
     stylePreset: mapStylePreset ?? undefined,
     mapVisibility,
+    rtxPaletteItems,
   });
 
   const paletteIdMap = buildPaletteIdMap(

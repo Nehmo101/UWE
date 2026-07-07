@@ -23,6 +23,8 @@ import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawVine } from "@uwe/atlas/canvas-render";
 import { buildVineLayout } from "@uwe/atlas/vine";
 import { drawGouacheAsset, isGouacheAsset } from "@uwe/atlas/assets";
+import { drawRtxGouacheRecipePreview } from "@uwe/atlas/rtx-asset-preview";
+import type { RtxGouacheJsonRecipe } from "@uwe/atlas/rtx-asset-proposal";
 import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
 
 // ---------------------------------------------------------------------------
@@ -82,6 +84,12 @@ export interface PaletteItemInfo {
   /** Base64 image data for ai/upload stamps (may already be a data URL). */
   imageData?: string;
   mimeType?: string;
+  /**
+   * Validated RTX json recipe (approved items only; the server re-validated it
+   * with the shared proposal validator). Rendered exclusively via
+   * `drawRtxGouacheRecipePreview` — no other draw path exists.
+   */
+  recipe?: RtxGouacheJsonRecipe;
 }
 
 /** Map from AtlasObject.paletteItemId → its palette item metadata. */
@@ -807,7 +815,18 @@ export function AtlasViewer({
         ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6);
       }
 
-      if (paletteItem.source === "builtin") {
+      if (paletteItem.recipe) {
+        // Approved RTX asset — deterministic recipe renderer, base-centre anchor.
+        const rtxSize = 30 * zoom * obj.scale;
+        ctx.filter = st?.blur ? `blur(${st.blur * zoom}px)` : "none";
+        drawRtxGouacheRecipePreview(ctx, paletteItem.recipe, {
+          x: 0,
+          y: 0,
+          unitScale: rtxSize / 8,
+          lineWidth: (st?.lineWidth ?? 1.4) * zoom,
+        });
+        ctx.filter = "none";
+      } else if (paletteItem.source === "builtin") {
         const glyph = BUILTIN_GLYPHS.find((g) => g.key === paletteItem.builtinGlyphKey);
         if (glyph) {
           const scale = size / 24;

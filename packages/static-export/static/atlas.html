@@ -306,7 +306,7 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
 // ===========================================================================
 const state = {
-  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null,
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null, rtxKey: null,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
   toast: null, aiReview: null, stampVariation: true,
@@ -529,6 +529,7 @@ function onBridgeMessage(e) {
     try {
       doc = migrate(d.doc);
       aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+      buildRtxPaletteButtons();
       setState({ nodeId: doc.rootNodeId, selectedKey: null, aiReview: null });
       draw();
     }
@@ -1156,6 +1157,19 @@ function drawObject(ctx, o) {
     if (sel) { const hs = 30 * z * o.scale; ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15); ctx.setLineDash([]); ctx.restore(); }
     return;
   }
+  // Genehmigtes RTX-Asset: validiertes Rezept aus dem server-geprüften Doc-Kanal,
+  // gezeichnet nur über den deterministischen Rezept-Renderer.
+  const rtx = rtxPaletteItems.get(o.paletteItemId);
+  if (rtx && engine.drawRtxGouacheRecipePreview) {
+    const rsize = 30 * z * o.scale;
+    ctx.save();
+    if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
+    ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
+    engine.drawRtxGouacheRecipePreview(ctx, rtx.recipe, { x: 0, y: 0, unitScale: rsize / 8, lineWidth: Math.max(0.5, lw * z * 0.9) });
+    if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(-rsize / 2 - 3, -rsize / 2 - 3, rsize + 6, rsize + 6); ctx.setLineDash([]); }
+    ctx.restore();
+    return;
+  }
   const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
   const size = 26 * z * o.scale;
   ctx.save();
@@ -1370,11 +1384,14 @@ function placeStamp(nx, ny) {
     const v = engine.randomStampVariation(engine.stampSeedFromKey(k), { scaleMin: 0.78, scaleMax: 1.28, rotateMin: -12, rotateMax: 12 });
     scale = Math.round(v.scale * 100) / 100; rotation = Math.round(v.rotation * 10) / 10;
   }
-  const carrierGlyph = state.gouacheKey ? (state.glyphKey || "tree") : state.glyphKey;
+  // RTX-Asset: paletteItemId ist direkt die DB-Id des genehmigten Items
+  // (paletteIdMap mappt reale Ids auf sich selbst, der Save-Pfad bleibt gültig).
+  const rtxItem = state.rtxKey ? rtxPaletteItems.get(state.rtxKey) : null;
+  const carrierGlyph = rtxItem ? state.rtxKey : (state.gouacheKey ? (state.glyphKey || "tree") : state.glyphKey);
   const o = { id: nextKey(), _key: k, nodeId: state.nodeId, paletteItemId: carrierGlyph, x: nx, y: ny, scale, rotation, layer: 50, visibility: "dm_only" };
   // Gouache-Objekt: gemaltes Asset in style.gouache; paletteItemId bleibt ein
   // gültiger Builtin-Glyph als FK-Träger (der Renderer bevorzugt style.gouache).
-  if (state.gouacheKey) o.style = { gouache: state.gouacheKey };
+  if (!rtxItem && state.gouacheKey) o.style = { gouache: state.gouacheKey };
   doc.objects.push(o);
   markDirty(); draw();
 }
@@ -1701,8 +1718,41 @@ function clearAll() {
 // ===========================================================================
 function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
-function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null }); }
-function pickGouache(k) { setState({ tool: "stamp", gouacheKey: k, glyphKey: state.glyphKey || "tree" }); }
+function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null, rtxKey: null }); }
+function pickGouache(k) { setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
+function pickRtx(k) { setState({ tool: "stamp", rtxKey: k, gouacheKey: null }); }
+
+// Genehmigte RTX-Assets (json-recipe): kommen server-validiert über das
+// Doc-Feld `rtxPaletteItems` (Studio-Route prüft mit validateRtxAtlasAssetProposal
+// und übergibt NUR das Rezept). Gezeichnet wird ausschließlich über den
+// deterministischen Rezept-Renderer engine.drawRtxGouacheRecipePreview — kein eval.
+let rtxPaletteItems = new Map(); // AtlasPaletteItem-DB-Id -> { name, recipe }
+function readRtxPalette() {
+  rtxPaletteItems = new Map();
+  const items = doc && Array.isArray(doc.rtxPaletteItems) ? doc.rtxPaletteItems : [];
+  for (const it of items) {
+    if (!it || typeof it.id !== "string" || !it.recipe || typeof it.recipe !== "object") continue;
+    rtxPaletteItems.set(it.id, { name: typeof it.name === "string" && it.name ? it.name : "RTX-Asset", recipe: it.recipe });
+  }
+}
+function buildRtxPaletteButtons() {
+  readRtxPalette();
+  for (const [key, btn] of [...glyphButtons]) {
+    if (key.indexOf("rtx:") === 0) { btn.remove(); glyphButtons.delete(key); }
+  }
+  const grid = el("glyph-grid");
+  if (!grid || !engine.drawRtxGouacheRecipePreview) return;
+  for (const [id, item] of rtxPaletteItems) {
+    const btn = document.createElement("button");
+    btn.className = "glyph-btn"; btn.title = item.name + " · RTX-Asset";
+    const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
+    try { engine.drawRtxGouacheRecipePreview(cv.getContext("2d"), item.recipe, { x: 22, y: 22, unitScale: 5, lineWidth: 1.1 }); } catch (_) {}
+    btn.appendChild(cv);
+    btn.addEventListener("click", () => pickRtx(id));
+    grid.appendChild(btn); glyphButtons.set("rtx:" + id, btn);
+  }
+  if (state.rtxKey && !rtxPaletteItems.has(state.rtxKey)) state.rtxKey = null;
+}
 function toggleNodeVis() {
   pushUndo();
   const n = node(); n.visibility = n.visibility === "player_visible" ? "dm_only" : "player_visible"; markDirty();
@@ -1820,9 +1870,10 @@ function refreshChrome() {
   for (const [tool, b] of toolButtons) b.classList.toggle("active", st.tool === tool);
   for (const [biome, b] of swatchButtons) b.classList.toggle("on", st.tool === "terrain" && st.brush === biome);
   for (const [key, b] of glyphButtons) {
-    const gouacheActive = st.gouacheKey && key === "g:" + st.gouacheKey;
-    const glyphActive = !st.gouacheKey && st.glyphKey === key;
-    b.classList.toggle("on", st.tool === "stamp" && (gouacheActive || glyphActive));
+    const rtxActive = st.rtxKey && key === "rtx:" + st.rtxKey;
+    const gouacheActive = !st.rtxKey && st.gouacheKey && key === "g:" + st.gouacheKey;
+    const glyphActive = !st.rtxKey && !st.gouacheKey && st.glyphKey === key;
+    b.classList.toggle("on", st.tool === "stamp" && (rtxActive || gouacheActive || glyphActive));
   }
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
@@ -1842,7 +1893,9 @@ function refreshChrome() {
     else if (st.tool === "stamp") {
       subShow = true;
       let stampName;
-      if (st.gouacheKey && engine.getGouacheAsset) {
+      if (st.rtxKey && rtxPaletteItems.has(st.rtxKey)) {
+        stampName = rtxPaletteItems.get(st.rtxKey).name + " (RTX)";
+      } else if (st.gouacheKey && engine.getGouacheAsset) {
         const a = engine.getGouacheAsset(st.gouacheKey);
         stampName = a ? a.name + " (Gouache)" : st.gouacheKey;
       } else {
@@ -1875,12 +1928,13 @@ function refreshChrome() {
     selP.style.display = "block";
   } else if (selO) {
     const g = engine.getGlyphByKey(selO.paletteItemId);
+    const rtxSel = rtxPaletteItems.get(selO.paletteItemId);
     const numInp = (id, label, min, max, step, val) =>
       '<label style="flex:1;font-size:10px;color:var(--uwe-fg-muted);">' + label +
       '<input id="' + id + '" type="number" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" style="width:100%;padding:4px 6px;border:1.5px solid var(--uwe-border);border-radius:6px;font-size:12px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);"></label>';
     el("sel-kind").textContent = "Objekt";
     el("sel-controls").innerHTML =
-      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (g ? g.name : selO.paletteItemId) + "</div>" +
+      '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (g ? g.name : rtxSel ? rtxSel.name + " · RTX" : selO.paletteItemId) + "</div>" +
       (view
         ? '<div style="font-size:11px;color:var(--uwe-fg-muted);">Skala ' + selO.scale.toFixed(2) + " · " + Math.round(selO.rotation) + "°</div>"
         : '<div style="display:flex;gap:6px;">' +
@@ -2157,6 +2211,7 @@ function boot() {
   buildSidebar();
   wire();
   doc = loadDoc();
+  buildRtxPaletteButtons();
   state.nodeId = doc.rootNodeId;
   resize();
   refreshChrome();

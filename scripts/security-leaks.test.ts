@@ -110,6 +110,57 @@ describe("security leaks — atlas portal visibility (three-tier: map + node + f
   });
 });
 
+describe("security leaks — RTX asset recipes (approved-only, validated recipe only)", () => {
+  it("static export re-validates RTX proposals and never reads prompt/rationale metadata", () => {
+    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
+    // Approved rtx_asset items must be re-validated with the shared validator …
+    assert.match(exportAtlas, /validateRtxAtlasAssetProposal/);
+    // … and only the validated json-recipe object may be shipped.
+    assert.match(exportAtlas, /outputType\s*!==\s*["']json-recipe["']/);
+    assert.match(exportAtlas, /\.proposal\.recipe/);
+    // Proposal metadata (prompt/rationale/styleguideNotes/tags) must never be
+    // touched by the export serializer — only the recipe leaves the server.
+    assert.doesNotMatch(exportAtlas, /\bprompt\b/);
+    assert.doesNotMatch(exportAtlas, /rationale/);
+    assert.doesNotMatch(exportAtlas, /styleguideNotes/);
+  });
+
+  it("portal atlas page gates palette items to approved and re-validates RTX recipes", () => {
+    const nodePage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
+    // Pending stamps/assets must never reach the portal viewer …
+    assert.match(nodePage, /reviewStatus:\s*["']approved["']/);
+    // … and RTX recipes only pass after another validator run (never raw styleTags).
+    assert.match(nodePage, /validateRtxAtlasAssetProposal/);
+    assert.match(nodePage, /outputType\s*!==\s*["']json-recipe["']/);
+    assert.doesNotMatch(nodePage, /rationale/);
+    assert.doesNotMatch(nodePage, /styleguideNotes/);
+  });
+
+  it("portal viewer renders RTX assets only through the deterministic recipe renderer", () => {
+    const viewer = read("apps/portal/src/components/atlas/AtlasViewer.tsx");
+    assert.match(viewer, /drawRtxGouacheRecipePreview/);
+    // The client component never sees the raw proposal payload.
+    assert.doesNotMatch(viewer, /rtxAssetProposal/);
+    assert.doesNotMatch(viewer, /styleTags/);
+  });
+
+  it("studio editor doc only carries server-validated recipes of approved rtx_asset items", () => {
+    const studioPage = read("apps/studio/app/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
+    assert.match(studioPage, /reviewStatus\s*!==\s*["']approved["']/);
+    assert.match(studioPage, /validateRtxAtlasAssetProposal/);
+    assert.match(studioPage, /outputType\s*!==\s*["']json-recipe["']/);
+  });
+
+  it("single-file editor draws RTX assets via the engine recipe renderer without eval", () => {
+    const runtime = read("packages/static-export/static/atlas.html");
+    assert.match(runtime, /engine\.drawRtxGouacheRecipePreview/);
+    assert.doesNotMatch(runtime, /\beval\s*\(/);
+    const staticViewer = read("packages/static-export/static/atlas-viewer.js");
+    assert.match(staticViewer, /drawRtxGouacheRecipePreview/);
+    assert.doesNotMatch(staticViewer, /\beval\s*\(/);
+  });
+});
+
 describe("security leaks — production safety flags", () => {
   it("warns when PLAYER_PREVIEW_ALLOW_DM_ONLY is enabled in production", () => {
     const source = read("packages/database/src/production-safety.ts");

@@ -15,6 +15,22 @@
 
 import { mulberry32, hashStringToSeed } from "./prng";
 
+import { BATCH4_RECIPES, GOUACHE_ASSETS_BATCH4 } from "./assets-batch4";
+import {
+  type Ctx,
+  type Recipe,
+  type Rng,
+  blobFn,
+  darken,
+  ellipseFn,
+  iblob,
+  lighten,
+  paint,
+  polyFn,
+  rectFn,
+  shadow,
+} from "./assets-toolkit";
+
 // ---------------------------------------------------------------------------
 // Registry metadata (pure data — testable)
 // ---------------------------------------------------------------------------
@@ -79,6 +95,7 @@ export const GOUACHE_ASSETS: readonly GouacheAsset[] = [
   { key: "g_airship", name: "Flugschiff", category: "vehicle" },
   { key: "g_stall", name: "Marktstand", category: "market" },
   { key: "g_well", name: "Brunnen", category: "prop" },
+  ...GOUACHE_ASSETS_BATCH4,
 ] as const;
 
 export const GOUACHE_ASSET_KEYS: readonly string[] = GOUACHE_ASSETS.map(
@@ -98,102 +115,11 @@ export function listGouacheAssetsByCategory(cat: GouacheCategory): GouacheAsset[
 }
 
 // ---------------------------------------------------------------------------
-// Painting toolkit (browser-only bodies)
-// ---------------------------------------------------------------------------
-
-type Ctx = CanvasRenderingContext2D;
-type Rng = () => number;
-type PathFn = (ctx: Ctx) => void;
-
-function hexRgb(h: string): [number, number, number] {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function darken(h: string, f: number): string {
-  const [r, g, b] = hexRgb(h);
-  return `rgb(${Math.round(r * (1 - f))},${Math.round(g * (1 - f))},${Math.round(b * (1 - f))})`;
-}
-function lighten(h: string, f: number): string {
-  const [r, g, b] = hexRgb(h);
-  return `rgb(${Math.round(r + (255 - r) * f)},${Math.round(g + (255 - g) * f)},${Math.round(b + (255 - b) * f)})`;
-}
-
-function shadow(ctx: Ctx, x: number, y: number, rx: number): void {
-  ctx.save();
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = "#2a1e0c";
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, rx * 0.34, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function rectFn(x: number, y: number, w: number, h: number): PathFn {
-  return (c) => {
-    c.beginPath();
-    c.rect(x, y, w, h);
-  };
-}
-function polyFn(pts: number[][]): PathFn {
-  return (c) => {
-    c.beginPath();
-    c.moveTo(pts[0]![0]!, pts[0]![1]!);
-    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i]![0]!, pts[i]![1]!);
-    c.closePath();
-  };
-}
-function ellipseFn(cx: number, cy: number, rx: number, ry: number): PathFn {
-  return (c) => {
-    c.beginPath();
-    c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  };
-}
-function blobFn(pts: number[][]): PathFn {
-  return (c) => {
-    const n = pts.length;
-    c.beginPath();
-    c.moveTo((pts[0]![0]! + pts[n - 1]![0]!) / 2, (pts[0]![1]! + pts[n - 1]![1]!) / 2);
-    for (let i = 0; i < n; i++) {
-      const cur = pts[i]!;
-      const nx = pts[(i + 1) % n]!;
-      c.quadraticCurveTo(cur[0]!, cur[1]!, (cur[0]! + nx[0]!) / 2, (cur[1]! + nx[1]!) / 2);
-    }
-    c.closePath();
-  };
-}
-function iblob(cx: number, cy: number, rx: number, ry: number, rng: Rng, jag = 0.24, n = 12): number[][] {
-  const p: number[][] = [];
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    const k = 1 + (rng() - 0.5) * 2 * jag;
-    p.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
-  }
-  return p;
-}
-
-/** Fill (opaque) + darker pigment edge; `lw` drives the edge/ink weight. */
-function paint(ctx: Ctx, pf: PathFn, fill: string, lw: number, edgeColor?: string): void {
-  ctx.save();
-  ctx.fillStyle = fill;
-  pf(ctx);
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  ctx.strokeStyle = edgeColor ?? darken(fill, 0.42);
-  ctx.lineWidth = Math.max(0.5, lw);
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  pf(ctx);
-  ctx.stroke();
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------------------
 // Recipes — draw around origin (0,0) = base-centre; object grows upward (−y).
 // `s` is the asset size in px. `lw` is the ink/edge weight in px.
+// The painting toolkit (paint/shadow/blob helpers) lives in `assets-toolkit.ts`;
+// newer recipe batches live in their own modules (e.g. `assets-batch4.ts`).
 // ---------------------------------------------------------------------------
-
-type Recipe = (ctx: Ctx, s: number, rng: Rng, lw: number) => void;
 
 function tree(ctx: Ctx, s: number, rng: Rng, lw: number, base: string, dark: string, hi: string): void {
   const cy = -s * 0.55;
@@ -474,6 +400,7 @@ const RECIPES: Record<string, Recipe> = {
     paint(ctx, (c) => { c.beginPath(); c.ellipse(0, -s * 0.1, s * 0.22, s * 0.14, 0, 0, Math.PI * 2); }, "#b6a680", lw);
     ctx.save(); ctx.strokeStyle = "#5a4026"; ctx.lineWidth = Math.max(1, lw); ctx.beginPath(); ctx.moveTo(-s * 0.22, -s * 0.1); ctx.lineTo(-s * 0.26, -s * 0.5); ctx.moveTo(s * 0.22, -s * 0.1); ctx.lineTo(s * 0.26, -s * 0.5); ctx.moveTo(-s * 0.3, -s * 0.5); ctx.lineTo(s * 0.3, -s * 0.5); ctx.stroke(); ctx.restore();
   },
+  ...BATCH4_RECIPES,
 };
 
 // ---------------------------------------------------------------------------

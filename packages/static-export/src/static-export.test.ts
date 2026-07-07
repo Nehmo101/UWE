@@ -12,6 +12,44 @@ const CUSTOM_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQV
 const AI_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/lH9u7wAAAABJRU5ErkJggg==";
 const PENDING_AI_STAMP_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
+/** Valid RTX gouache json recipe (validator shape, base-center-normalized). */
+const RTX_RECIPE = {
+  schemaVersion: 1,
+  coordinateSystem: "base-center-normalized",
+  layers: [
+    { id: "shadow", role: "shadow", shape: "ellipse", fill: "#241a10", x: 0, y: 0.4, rx: 1.8, ry: 0.5 },
+    { id: "base", role: "base", shape: "rect", fill: "#8a6d3b", stroke: "#241a10", x: 0, y: -1, width: 1.6, height: 2.8 },
+    { id: "roof", role: "detail", shape: "polygon", fill: "#a03c28", points: [[-1, -2.4], [1, -2.4], [0, -3.4]] },
+  ],
+};
+
+/** Full proposal incl. review-only metadata that must NEVER be exported. */
+function rtxProposal(name: string) {
+  return {
+    name,
+    category: "structure",
+    tags: ["rtx-geheim-tag"],
+    engineTags: ["Stamp"],
+    palette: ["#8a6d3b"],
+    prompt: "rtx-geheimer-prompt wachturm",
+    rationale: "rtx-geheime-begruendung",
+    styleguideNotes: "rtx-geheime-styleguide-notiz",
+    outputType: "json-recipe",
+    recipe: RTX_RECIPE,
+  };
+}
+
+const RTX_PNG_FALLBACK_PROPOSAL = {
+  name: "RTX PNG Fallback",
+  category: "structure",
+  tags: [],
+  engineTags: [],
+  palette: [],
+  prompt: "rtx-geheimer-prompt png",
+  outputType: "png-fallback",
+  pngFallback: { mimeType: "image/png", width: 64, height: 64, transparentBackground: true },
+};
+
 describe("static export", () => {
   let databaseUrl: string;
   let outputDir: string;
@@ -19,6 +57,9 @@ describe("static export", () => {
   let uploadPaletteId: string;
   let aiPaletteId: string;
   let pendingAiPaletteId: string;
+  let rtxApprovedPaletteId: string;
+  let rtxPendingPaletteId: string;
+  let rtxPngFallbackPaletteId: string;
 
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
@@ -146,6 +187,33 @@ describe("static export", () => {
       styleTags: { imageData: PENDING_AI_STAMP_PNG, mimeType: "image/png", prompt: "secret gate" },
     });
     pendingAiPaletteId = pendingAiPalette.id;
+    const rtxApprovedPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "RTX Wachturm",
+      kind: "rtx_asset",
+      source: "ai",
+      reviewStatus: "approved",
+      styleTags: { proposalKind: "atlas_asset_proposal", rtxAssetProposal: rtxProposal("RTX Wachturm") },
+    });
+    rtxApprovedPaletteId = rtxApprovedPalette.id;
+    const rtxPendingPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "RTX Pending Obelisk",
+      kind: "rtx_asset",
+      source: "ai",
+      reviewStatus: "pending",
+      styleTags: { proposalKind: "atlas_asset_proposal", rtxAssetProposal: rtxProposal("RTX Pending Obelisk") },
+    });
+    rtxPendingPaletteId = rtxPendingPalette.id;
+    const rtxPngFallbackPalette = await atlas.createPaletteItem({
+      worldId: world.id,
+      name: "RTX PNG Fallback",
+      kind: "rtx_asset",
+      source: "ai",
+      reviewStatus: "approved",
+      styleTags: { proposalKind: "atlas_asset_proposal", rtxAssetProposal: RTX_PNG_FALLBACK_PROPOSAL },
+    });
+    rtxPngFallbackPaletteId = rtxPngFallbackPalette.id;
     await atlas.createObject({
       nodeId: westland.id,
       paletteItemId: treePalette.id,
@@ -185,6 +253,36 @@ describe("static export", () => {
       scale: 1,
       rotation: 0,
       layer: 57,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: rtxApprovedPalette.id,
+      x: 0.45,
+      y: 0.52,
+      scale: 1.1,
+      rotation: 5,
+      layer: 58,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: rtxPendingPalette.id,
+      x: 0.5,
+      y: 0.52,
+      scale: 1,
+      rotation: 0,
+      layer: 59,
+      visibility: "player_visible",
+    });
+    await atlas.createObject({
+      nodeId: westland.id,
+      paletteItemId: rtxPngFallbackPalette.id,
+      x: 0.55,
+      y: 0.52,
+      scale: 1,
+      rotation: 0,
+      layer: 60,
       visibility: "player_visible",
     });
     await db.$disconnect();
@@ -297,7 +395,13 @@ describe("static export", () => {
       builtinGlyphs: { key: string; pathData: string }[];
       paletteItems: Record<
         string,
-        { source: string; builtinGlyphKey: string | null; imageData?: string; mimeType?: string }
+        {
+          source: string;
+          builtinGlyphKey: string | null;
+          imageData?: string;
+          mimeType?: string;
+          recipe?: unknown;
+        }
       >;
       objects: {
         paletteItemId: string;
@@ -329,6 +433,11 @@ describe("static export", () => {
       false,
     );
     assert.ok(!JSON.stringify(atlasJson).includes(PENDING_AI_STAMP_PNG));
+    // Approved custom/AI stamps: placed objects stay visible in the payload …
+    assert.ok(atlasJson.objects.some((object) => object.paletteItemId === uploadPaletteId));
+    assert.ok(atlasJson.objects.some((object) => object.paletteItemId === aiPaletteId));
+    // … but AI-stamp styleTags metadata (e.g. the generation text) never ships.
+    assert.ok(!JSON.stringify(atlasJson).includes("crystal obelisk"));
     assert.ok(atlasJson.preset.colors.parchment);
 
     // Canonical pictogram registry is injected so the static viewer needs no copy.
@@ -348,5 +457,55 @@ describe("static export", () => {
     assert.match(indexHtml, /Atlas \/ Karte öffnen/);
     const atlasHtml = fs.readFileSync(path.join(exportRoot, "atlas/index.html"), "utf8");
     assert.match(atlasHtml, /\.atlas-static-legend/);
+  });
+
+  it("exports approved RTX assets as validated recipe-only palette items", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const exportRoot = path.join(outputDir, "atlas-rtx");
+    await exportWorldStatic(repo, { worldSlug, outputDir: exportRoot, databaseUrl });
+
+    const atlasJson = JSON.parse(
+      fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
+    ) as {
+      paletteItems: Record<
+        string,
+        { source: string; builtinGlyphKey: string | null; imageData?: string; recipe?: unknown }
+      >;
+      objects: { paletteItemId: string }[];
+    };
+
+    // Approved json-recipe item: exactly source + glyph key + validated recipe.
+    assert.deepEqual(atlasJson.paletteItems[rtxApprovedPaletteId], {
+      source: "ai",
+      builtinGlyphKey: null,
+      recipe: RTX_RECIPE,
+    });
+    assert.ok(
+      atlasJson.objects.some((object) => object.paletteItemId === rtxApprovedPaletteId),
+      "approved RTX object must stay visible",
+    );
+
+    // Pending rtx_asset items never reach the export — item and object are gone.
+    assert.equal(atlasJson.paletteItems[rtxPendingPaletteId], undefined);
+    assert.equal(
+      atlasJson.objects.some((object) => object.paletteItemId === rtxPendingPaletteId),
+      false,
+    );
+
+    // png-fallback proposals have no safe render path — excluded like invalid items.
+    assert.equal(atlasJson.paletteItems[rtxPngFallbackPaletteId], undefined);
+    assert.equal(
+      atlasJson.objects.some((object) => object.paletteItemId === rtxPngFallbackPaletteId),
+      false,
+    );
+
+    // Review-only proposal metadata must never appear anywhere in the payload.
+    const serialized = JSON.stringify(atlasJson);
+    assert.ok(!serialized.includes("rtx-geheimer-prompt"));
+    assert.ok(!serialized.includes("rtx-geheime-begruendung"));
+    assert.ok(!serialized.includes("rtx-geheime-styleguide-notiz"));
+    assert.ok(!serialized.includes("rtx-geheim-tag"));
+    assert.ok(!serialized.includes("rtxAssetProposal"));
+    assert.ok(!serialized.includes("pngFallback"));
   });
 });

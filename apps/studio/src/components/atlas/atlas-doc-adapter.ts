@@ -9,6 +9,7 @@
 
 import type { AtlasGeometry } from "@uwe/atlas";
 import { DEFAULT_TERRAIN_BLEND_WIDTH, type AtlasDocV2, type AtlasTileLayer } from "@uwe/atlas/doc";
+import type { RtxGouacheJsonRecipe } from "@uwe/atlas/rtx-asset-proposal";
 
 export interface StudioAtlasNodeInput {
   id: string;
@@ -45,6 +46,19 @@ export interface StudioAtlasObjectInput {
   _key: string;
 }
 
+/**
+ * Approved rtx_asset palette item for the embedded editor. The caller (Studio
+ * route) must have re-validated the stored proposal with
+ * `validateRtxAtlasAssetProposal` and passes ONLY the validated recipe here —
+ * raw styleTags never enter the editor doc.
+ */
+export interface StudioAtlasRtxPaletteItemInput {
+  /** Real AtlasPaletteItem DB id (placed objects reference it directly). */
+  id: string;
+  name: string;
+  recipe: RtxGouacheJsonRecipe;
+}
+
 export interface BuildStudioAtlasDocInput {
   worldSlug: string;
   node: StudioAtlasNodeInput;
@@ -55,6 +69,8 @@ export interface BuildStudioAtlasDocInput {
   tileLayer?: AtlasTileLayer | null;
   stylePreset?: string;
   mapVisibility?: string;
+  /** Approved, server-validated RTX recipe assets for the editor palette. */
+  rtxPaletteItems?: StudioAtlasRtxPaletteItemInput[];
 }
 
 const EMPTY_TILE_LAYER: AtlasTileLayer = {
@@ -80,6 +96,7 @@ export function buildStudioAtlasDoc(input: BuildStudioAtlasDocInput): AtlasDocV2
     tileLayer,
     stylePreset = "tolkien-ink",
     mapVisibility = "dm_only",
+    rtxPaletteItems = [],
   } = input;
 
   const nodes: Array<Record<string, unknown>> = [];
@@ -110,6 +127,13 @@ export function buildStudioAtlasDoc(input: BuildStudioAtlasDocInput): AtlasDocV2
     map: { title: "Atlas", stylePreset, visibility: mapVisibility },
     rootNodeId: node.id,
     pageLinks: {},
+    // Read-only palette channel for the embedded editor. serializeDoc emits a
+    // fixed field set, so this never rides back on the save path.
+    rtxPaletteItems: rtxPaletteItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      recipe: item.recipe,
+    })),
     nodes,
     features: features.map((f) => ({
       id: f.id,

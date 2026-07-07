@@ -223,6 +223,15 @@ export type {
   RtxPngFallbackMetadata,
 } from "./rtx-asset-proposal";
 
+// RTX recipe preview renderer — deterministic, data-driven (no eval); draws
+// validated json recipes in the editor, portal viewer, and static viewer.
+export {
+  RTX_RECIPE_NORMALIZED_EXTENT,
+  RTX_RECIPE_ROLE_DEFAULT_OPACITY,
+  drawRtxGouacheRecipePreview,
+} from "./rtx-asset-preview";
+export type { DrawRtxGouacheRecipePreviewOptions } from "./rtx-asset-preview";
+
 // Procedural draft generators
 export {
   generateDraft,
