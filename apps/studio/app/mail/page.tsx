@@ -222,6 +222,7 @@ export default async function MailCenterPage({
     selectedAccountId,
     query,
     autoSyncEnabled: systemSettings.mail.autoSyncEnabled,
+    autoSyncIntervalMinutes: systemSettings.mail.autoSyncIntervalMinutes,
     counts: {
       inbox: portalMessages.length,
       unread: unreadCount,

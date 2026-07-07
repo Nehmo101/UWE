@@ -2,6 +2,8 @@ import type { MailPriorityCategory, MailAuditAction, Prisma } from "@uwe/databas
 import type { PrismaClient } from "@uwe/database/client";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import type { MailAccountService } from "@uwe/database/mail-account-service";
+import type { ImapCredentials } from "../imap-sync";
+import { markImapMessageSeen, moveImapMessage, type ImapWritebackTarget } from "../imap-writeback";
 
 export type MailFolderKey = "inbox" | "marked" | "drafts" | "sent" | "archive" | "trash";
 
@@ -160,27 +162,103 @@ export class MailPortalInboxService {
     }));
   }
 
+  /**
+   * IMAP context (credentials + source mailbox + UID) for a message writeback.
+   * Must be captured BEFORE the local folder move — afterwards the message
+   * points at a LOCAL:* folder instead of its server mailbox. Returns null
+   * when the account has no IMAP host or the message is already local-only.
+   */
+  private async imapWritebackContext(messageId: string): Promise<{
+    accountId: string;
+    imap: { credentials: ImapCredentials; mailbox: string; imapUid: string } | null;
+  } | null> {
+    const message = await this.db.mailInboxMessage.findUnique({
+      where: { id: messageId },
+      include: { account: true, folder: { select: { imapPath: true } } },
+    });
+    if (!message) return null;
+    const mailbox = message.folder?.imapPath ?? message.account?.imapMailbox ?? "INBOX";
+    if (!message.account?.imapHost || !message.imapUid || mailbox.startsWith("LOCAL:")) {
+      return { accountId: message.accountId, imap: null };
+    }
+    return {
+      accountId: message.accountId,
+      imap: {
+        credentials: {
+          host: message.account.imapHost,
+          port: message.account.imapPort ?? undefined,
+          username: message.account.username,
+          password: decryptSecret(message.account.passwordEnc, this.encryptionSecret),
+        },
+        mailbox,
+        imapUid: message.imapUid,
+      },
+    };
+  }
+
+  /** Mirrors the local read state to the mailbox (best-effort, never throws). */
+  async markMessageSeenOnServer(messageId: string): Promise<void> {
+    try {
+      const context = await this.imapWritebackContext(messageId);
+      if (!context?.imap) return;
+      await markImapMessageSeen(context.imap.credentials, {
+        mailbox: context.imap.mailbox,
+        imapUid: context.imap.imapUid,
+      });
+    } catch (error) {
+      await this.logAudit({
+        action: "read",
+        messageId,
+        detail: `IMAP-Writeback (gelesen) fehlgeschlagen: ${error instanceof Error ? error.message : String(error)}`,
+      }).catch(() => undefined);
+    }
+  }
+
+  /**
+   * Best-effort server-side move for archive/trash. Without it the message
+   * stays in the server INBOX and the next full sync would pull it straight
+   * back into the local Posteingang.
+   */
+  private async writebackMove(
+    target: ImapWritebackTarget,
+    context: Awaited<ReturnType<MailPortalInboxService["imapWritebackContext"]>>,
+  ): Promise<string> {
+    if (!context?.imap) return "nur lokal (kein IMAP)";
+    try {
+      const result = await moveImapMessage(context.imap.credentials, {
+        mailbox: context.imap.mailbox,
+        imapUid: context.imap.imapUid,
+        target,
+      });
+      return `IMAP → ${result.movedTo}`;
+    } catch (error) {
+      return `IMAP-Writeback fehlgeschlagen: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
   async archiveMessage(messageId: string, actorUserId?: string | null) {
+    const context = await this.imapWritebackContext(messageId);
     await this.accountService().moveMessageToLocalFolder(messageId, "LOCAL:archived", "Archiv");
-    const message = await this.db.mailInboxMessage.findUnique({ where: { id: messageId } });
+    const writeback = await this.writebackMove("archive", context);
     await this.logAudit({
       action: "cleanup",
       messageId,
-      accountId: message?.accountId,
+      accountId: context?.accountId,
       userId: actorUserId,
-      detail: "archiviert",
+      detail: `archiviert · ${writeback}`,
     });
   }
 
   async trashMessage(messageId: string, actorUserId?: string | null) {
+    const context = await this.imapWritebackContext(messageId);
     await this.accountService().moveMessageToLocalFolder(messageId, "LOCAL:trash", "Papierkorb");
-    const message = await this.db.mailInboxMessage.findUnique({ where: { id: messageId } });
+    const writeback = await this.writebackMove("trash", context);
     await this.logAudit({
       action: "cleanup",
       messageId,
-      accountId: message?.accountId,
+      accountId: context?.accountId,
       userId: actorUserId,
-      detail: "in Papierkorb verschoben",
+      detail: `in Papierkorb verschoben · ${writeback}`,
     });
   }
 

@@ -57,8 +57,7 @@ export function MailMessageList({
   return (
     <div
       style={{
-        width: 400,
-        flex: "none",
+        width: "100%",
         borderRight: "1px solid var(--uwe-border)",
         display: "flex",
         flexDirection: "column",

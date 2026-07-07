@@ -27,6 +27,8 @@ interface MailReaderProps {
   onArchive: () => void;
   onDelete: () => void;
   onOpenChat?: () => void;
+  /** Mobil (< lg) füllt der Reader den Screen — zurück zur Nachrichtenliste. */
+  onBack?: () => void;
 }
 
 export function MailReader({
@@ -34,6 +36,7 @@ export function MailReader({
   loading,
   rtxState,
   busy,
+  onBack,
   onReply,
   onForward,
   onSummarize,
@@ -112,6 +115,39 @@ export function MailReader({
         transition: "opacity .12s ease",
       }}
     >
+      {onBack ? (
+        <div
+          className="lg:hidden"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 12px",
+            borderBottom: "1px solid var(--uwe-border)",
+            background: "var(--uwe-bg-elevated)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "none",
+              background: "transparent",
+              color: "var(--uwe-fg)",
+              fontSize: 13.5,
+              cursor: "pointer",
+            }}
+          >
+            <NavIcon name="arrow-left" width={16} height={16} />
+            Zurück zur Liste
+          </button>
+        </div>
+      ) : null}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px 26px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ flex: 1, minWidth: 0 }}>

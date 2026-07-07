@@ -365,6 +365,12 @@ export class MailPortalService {
       data: { isRead: true },
     });
 
+    if (!row.isRead) {
+      // Fire-and-forget: the reader must not wait for an IMAP roundtrip;
+      // markMessageSeenOnServer catches and audit-logs its own failures.
+      void this.inbox.markMessageSeenOnServer(id);
+    }
+
     await this.logAudit({
       action: "read",
       accountId: row.accountId,

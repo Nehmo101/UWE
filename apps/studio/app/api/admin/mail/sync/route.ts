@@ -15,9 +15,40 @@ export async function POST(request: Request) {
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  if (!body.accountId) return mailApiError("accountId erforderlich.");
-
   const service = createMailPortalService(prisma);
+
+  // accountId "all" (oder weggelassen): alle sync-fähigen Konten als Jobs einreihen —
+  // genutzt vom manuellen „Alle Konten"-Sync und vom Hintergrund-Timer im Mail Center.
+  if (!body.accountId || body.accountId === "all") {
+    const accounts = await service.listAccounts();
+    const syncAccounts = accounts.filter(
+      (account) => account.imapHost && account.syncEnabled !== false,
+    );
+    if (syncAccounts.length === 0) {
+      return mailApiError("Kein IMAP-Konto für den Sync konfiguriert.", 404);
+    }
+    const jobs = [];
+    for (const account of syncAccounts) {
+      const job = await enqueueAndDispatch({
+        type: "mail_sync",
+        title: `IMAP Sync — ${account.label}`,
+        payload: {
+          accountId: account.id,
+          limit: body.limit ?? 100,
+          fullSync: body.fullSync ?? true,
+        },
+        relatedType: "mail_account",
+        relatedId: account.id,
+        userId: auth.user?.id ?? null,
+      });
+      jobs.push({ accountId: account.id, jobId: job.id });
+    }
+    return NextResponse.json({
+      jobs,
+      status: "queued",
+      message: `Sync für ${jobs.length} Konto/Konten gestartet.`,
+    });
+  }
 
   // Optional synchronous quick sync (e.g. connection test with limit 1)
   if (body.sync === true) {

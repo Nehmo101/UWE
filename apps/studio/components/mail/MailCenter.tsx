@@ -13,6 +13,7 @@ import { MailSettings } from "./MailSettings";
 import { MailComposeModal, type ComposeContext } from "./MailComposeModal";
 import { MailChatPanel } from "./MailChatPanel";
 import { MailDraftsList } from "./MailDraftsList";
+import { MailComposeFab, MobileMailBar } from "./MailMobileNav";
 import {
   senderNameFromAddress,
   type MailCenterData,
@@ -111,6 +112,10 @@ export function MailCenter({ data }: { data: MailCenterData }) {
   const [compose, setCompose] = React.useState<ComposeContext | null>(null);
   const [chatOpen, setChatOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
+  const syncingRef = React.useRef(false);
+  const runSyncRef = React.useRef<(options?: { silent?: boolean }) => Promise<void>>(
+    async () => undefined,
+  );
 
   const flash = React.useCallback((message: string) => {
     setToast(message);
@@ -184,45 +189,81 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     }
   }
 
-  async function runSync() {
-    const account =
-      (selectedAccountId ? data.accounts.find((entry) => entry.id === selectedAccountId) : null) ??
-      data.accounts.find((entry) => entry.imapHost) ??
-      data.accounts[0];
-    if (!account) {
-      flash("Kein IMAP-Konto verbunden — unter Einstellungen anlegen.");
-      setView("settings");
+  /**
+   * Synchronisiert Postfächer per Job-Queue. Ohne Konto-Auswahl werden ALLE
+   * sync-fähigen Konten gezogen; `silent` nutzt der Hintergrund-Timer (keine
+   * Toasts/Progress, nur stiller Refresh der Ansicht).
+   */
+  async function runSync(options?: { silent?: boolean }) {
+    const silent = options?.silent === true;
+    if (syncingRef.current) return;
+    if (!data.accounts.some((entry) => entry.imapHost)) {
+      if (!silent) {
+        flash("Kein IMAP-Konto verbunden — unter Einstellungen anlegen.");
+        setView("settings");
+      }
       return;
     }
+    syncingRef.current = true;
     setSyncing(true);
-    setSyncProgress({ processed: 0, total: 0, label: "Sync wird gestartet…" });
+    if (!silent) setSyncProgress({ processed: 0, total: 0, label: "Sync wird gestartet…" });
     try {
       const response = await fetch(studioApiUrl("/api/admin/mail/sync"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: account.id, fullSync: true }),
+        body: JSON.stringify({ accountId: selectedAccountId ?? "all", fullSync: true }),
       });
       const payload = await parseJsonResponse(response);
       if (!response.ok) {
-        flash(String(payload.error ?? "Sync fehlgeschlagen."));
+        if (!silent) flash(String(payload.error ?? "Sync fehlgeschlagen."));
         return;
       }
-      const jobId = typeof payload.jobId === "string" ? payload.jobId : null;
-      if (jobId) {
-        const job = await waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800 });
-        const result = job.result as { imported?: number } | undefined;
-        flash(`${result?.imported ?? 0} Nachrichten synchronisiert.`);
-      } else {
+      const jobIds: string[] = Array.isArray(payload.jobs)
+        ? (payload.jobs as Array<{ jobId?: unknown }>)
+            .map((entry) => entry.jobId)
+            .filter((jobId): jobId is string => typeof jobId === "string")
+        : typeof payload.jobId === "string"
+          ? [payload.jobId]
+          : [];
+      if (jobIds.length > 0) {
+        const jobs = await Promise.all(
+          jobIds.map((jobId) => waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800 })),
+        );
+        const imported = jobs.reduce(
+          (sum, job) => sum + ((job.result as { imported?: number } | undefined)?.imported ?? 0),
+          0,
+        );
+        if (!silent) flash(`${imported} Nachrichten synchronisiert.`);
+      } else if (!silent) {
         flash("Synchronisation abgeschlossen.");
       }
       router.refresh();
     } catch (error) {
-      flash(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
+      if (!silent) flash(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
       setSyncProgress(null);
     }
   }
+
+  runSyncRef.current = runSync;
+
+  // Hintergrund-Timer: solange das Mail Center offen und der Tab sichtbar ist,
+  // werden alle Postfächer im eingestellten Intervall gepullt und die Ansicht
+  // aktualisiert — ergänzend zum Host-Timer (der läuft auch bei geschlossener App).
+  const autoSyncMs =
+    data.autoSyncEnabled && data.autoSyncIntervalMinutes > 0
+      ? data.autoSyncIntervalMinutes * 60_000
+      : 0;
+  React.useEffect(() => {
+    if (!autoSyncMs) return;
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void runSyncRef.current({ silent: true });
+    }, autoSyncMs);
+    return () => window.clearInterval(intervalId);
+  }, [autoSyncMs]);
 
   async function postJson(path: string, body: Record<string, unknown>): Promise<boolean> {
     const response = await fetch(studioApiUrl(path), {
@@ -488,24 +529,38 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           </div>
         ) : null}
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-          <MailMessageList
-            messages={visibleMessages}
-            selectedId={selectedId}
-            filter={filter}
-            onFilter={setFilter}
-            onSelect={selectMessage}
-            onSync={() => void runSync()}
-            syncing={syncing}
-            title={listTitle}
-            searchQuery={data.query}
-            onSearch={(q) => pushNav({ folder: activeFolder, account: selectedAccountId, q: q || null })}
-          />
-          <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
+          {/* Mobil: Liste und Reader teilen sich den Platz nicht — bei geöffneter
+              Nachricht wird der Reader vollflächig gezeigt, sonst die Liste. */}
+          <div
+            className={`${selectedId ? "hidden lg:flex" : "flex"} w-full flex-none lg:w-[400px]`}
+            style={{ minHeight: 0 }}
+          >
+            <MailMessageList
+              messages={visibleMessages}
+              selectedId={selectedId}
+              filter={filter}
+              onFilter={setFilter}
+              onSelect={selectMessage}
+              onSync={() => void runSync()}
+              syncing={syncing}
+              title={listTitle}
+              searchQuery={data.query}
+              onSearch={(q) => pushNav({ folder: activeFolder, account: selectedAccountId, q: q || null })}
+            />
+          </div>
+          <div
+            className={`${selectedId ? "flex" : "hidden lg:flex"}`}
+            style={{ flex: 1, minWidth: 0 }}
+          >
             <MailReader
               message={detail}
               loading={loadingDetail}
               rtxState={data.rtxState}
               busy={busy}
+              onBack={() => {
+                setSelectedId(null);
+                setDetail(null);
+              }}
               onReply={() => detail && replyTo(detail)}
               onForward={() => detail && forwardMessage(detail)}
               onSummarize={() => detail && void summarize(detail.id)}
@@ -565,7 +620,27 @@ export function MailCenter({ data }: { data: MailCenterData }) {
         />
       </div>
 
-      {mainArea}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        {/* Mobile Navigation: die Rail ist < lg ausgeblendet — Ordner, Triage und
+            Konto-Wechsel laufen hier über eine kompakte Chip-Leiste. */}
+        <div className={selectedId && view === "inbox" ? "hidden" : "lg:hidden"}>
+          <MobileMailBar
+            accounts={data.accounts}
+            folders={data.folders}
+            view={view}
+            activeFolder={activeFolder}
+            triageCount={data.counts.triage}
+            selectedAccountId={selectedAccountId}
+            onSelectFolder={handleSelectFolder}
+            onOpenTriage={() => setView("triage")}
+            onOpenSettings={() => setView("settings")}
+            onSelectAccount={handleSelectAccount}
+          />
+        </div>
+        {mainArea}
+      </div>
+
+      {!compose && !selectedId ? <MailComposeFab onCompose={openComposeNew} /> : null}
 
       {toast ? (
         <div

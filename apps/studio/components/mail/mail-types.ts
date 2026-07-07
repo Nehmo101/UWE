@@ -131,6 +131,8 @@ export interface MailCenterData {
   selectedAccountId: string | null;
   query: string;
   autoSyncEnabled: boolean;
+  /** Intervall des Hintergrund-Sync-Timers (Mail Center + Host-Timer) in Minuten. */
+  autoSyncIntervalMinutes: number;
   counts: { inbox: number; unread: number; drafts: number; triage: number; sent: number };
 }
 

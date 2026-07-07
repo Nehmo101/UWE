@@ -628,7 +628,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                     name="mailAutoSyncEnabled"
                     defaultChecked={settings.mail.autoSyncEnabled}
                   />
-                  Auto-Sync im Hintergrund (Host-Timer)
+                  Auto-Sync im Hintergrund (Host-Timer &amp; Mail Center)
                 </label>
                 <label>
                   Auto-Sync-Intervall

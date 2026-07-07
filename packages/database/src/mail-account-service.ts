@@ -217,6 +217,15 @@ export class MailAccountService {
   async persistFetchedMessage(accountId: string, message: FetchedInboxMessage, mailbox = "INBOX") {
     const folder = await this.ensureFolder(accountId, mailbox);
     const hasAttachments = message.attachments.length > 0;
+    // Local state guards: a re-sync must not un-read a locally read message and
+    // must not pull archived/trashed messages back into the inbox while the
+    // IMAP writeback is pending or has failed (best-effort writeback).
+    const existing = await this.db.mailInboxMessage.findUnique({
+      where: { accountId_imapUid: { accountId, imapUid: message.imapUid } },
+      select: { isRead: true, folder: { select: { imapPath: true } } },
+    });
+    const keepLocalFolder = existing?.folder?.imapPath.startsWith("LOCAL:") === true;
+    const isRead = message.isRead || existing?.isRead === true;
     const saved = await this.db.mailInboxMessage.upsert({
       where: {
         accountId_imapUid: {
@@ -243,7 +252,7 @@ export class MailAccountService {
         listUnsubscribePostSupported: message.listUnsubscribePostSupported,
       },
       update: {
-        folderId: folder?.id ?? null,
+        ...(keepLocalFolder ? {} : { folderId: folder?.id ?? null }),
         messageId: message.messageId,
         subject: message.subject,
         fromAddress: message.fromAddress,
@@ -253,7 +262,7 @@ export class MailAccountService {
         bodyHtml: message.bodyHtml,
         hasAttachments,
         receivedAt: message.receivedAt,
-        isRead: message.isRead,
+        isRead,
         syncedAt: new Date(),
         listUnsubscribeHttpUrl: message.listUnsubscribeHttpUrl,
         listUnsubscribeMailto: message.listUnsubscribeMailto,

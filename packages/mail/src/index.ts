@@ -48,6 +48,14 @@ export {
 } from "./imap-sync";
 
 export {
+  markImapMessageSeen,
+  moveImapMessage,
+  pickWritebackMailbox,
+  type ImapMailboxEntry,
+  type ImapWritebackTarget,
+} from "./imap-writeback";
+
+export {
   readMailScheduleConfig,
   writeMailScheduleConfig,
   resolveMailSchedulePath,
