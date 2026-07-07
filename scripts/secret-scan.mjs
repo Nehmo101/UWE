@@ -23,12 +23,17 @@ const SCAN_EXTENSIONS = new Set([
   ".tsx",
   ".js",
   ".mjs",
+  ".cjs",
+  ".mts",
+  ".cts",
   ".json",
   ".md",
   ".yml",
   ".yaml",
   ".env",
   ".example",
+  ".pem",
+  ".toml",
   ".sh",
   ".ps1",
 ]);
@@ -38,27 +43,44 @@ const ALLOWLIST_PATHS = [
   /packages\/database\/prisma\/seed\.ts$/,
   /packages\/security-tests\/src\/fixtures\/security-fixture\.ts$/,
   /apps\/portal\/app\/login\/page\.tsx$/,
-  /packages\/security-tests\/src\/fixtures\/security-fixture\.ts$/,
   /packages\/env\/src\/config\/env\.ts$/,
   /\.test\.(ts|tsx)$/,
   /docs\/secrets\.md$/,
-  /\.env\.example$/,
+  // Example env templates (placeholders like CHANGE_ME), incl. .env.production.example
+  /\.env(\.[^/]+)?\.example$/,
 ];
 
 const PATTERNS = [
   { name: "AWS access key", regex: /AKIA[0-9A-Z]{16}/g },
-  { name: "GitHub PAT", regex: /ghp_[A-Za-z0-9]{20,}/g },
-  { name: "OpenAI key", regex: /sk-[A-Za-z0-9]{20,}/g },
+  // GitHub PAT (classic ghp_ + fine-grained github_pat_) and OAuth/app tokens.
+  { name: "GitHub token", regex: /(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}/g },
+  { name: "GitHub fine-grained PAT", regex: /github_pat_[A-Za-z0-9_]{20,}/g },
+  // OpenAI/Anthropic style keys — allow internal hyphens (sk-proj-…, sk-ant-…).
+  { name: "OpenAI/Anthropic key", regex: /sk-[A-Za-z0-9-]{20,}/g },
   { name: "Slack token", regex: /xox[baprs]-[A-Za-z0-9-]{10,}/g },
   { name: "Private key block", regex: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
   {
-    name: "Hardcoded password assignment",
+    name: "Hardcoded password assignment (quoted)",
     regex:
       /(?:password|passwd|api[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"\s]{8,}['"]/gi,
   },
   {
-    name: "Hardcoded bearer or auth token assignment",
+    // Unquoted env-style assignment (no space around '='), e.g. an API key or
+    // password set directly on an env line. Requiring the tight `key=value` form
+    // avoids matching TS `const password = …`; excluding `<>` skips `<placeholder>`
+    // templates. `envOnly` keeps it off prose (markdown docs use example values).
+    name: "Hardcoded password assignment (env)",
+    regex: /(?:password|passwd|api[_-]?key|client[_-]?secret)=[^'"\s<>]{8,}/gi,
+    envOnly: true,
+  },
+  {
+    name: "Hardcoded bearer or auth token assignment (quoted)",
     regex: /(?:auth[_-]?token|access[_-]?token|refresh[_-]?token)\s*[:=]\s*['"][^'"\s]{12,}['"]/gi,
+  },
+  {
+    name: "Hardcoded bearer or auth token assignment (env)",
+    regex: /(?:auth[_-]?token|access[_-]?token|refresh[_-]?token)=[^'"\s<>]{12,}/gi,
+    envOnly: true,
   },
   {
     name: "Weak docker default",
@@ -66,9 +88,16 @@ const PATTERNS = [
   },
 ];
 
+// Real dotenv files (`.env`, `.env.local`, `.env.production`, …) have an empty
+// or misleading `path.extname`, so match them by basename instead.
+function isEnvFile(basename) {
+  return basename === ".env" || basename.startsWith(".env.");
+}
+
 function shouldScanFile(relativePath) {
   const ext = path.extname(relativePath);
-  if (!SCAN_EXTENSIONS.has(ext) && !relativePath.endsWith(".env.example")) {
+  const basename = path.basename(relativePath);
+  if (!SCAN_EXTENSIONS.has(ext) && !isEnvFile(basename)) {
     return false;
   }
 
@@ -95,7 +124,14 @@ function walk(dir, files = []) {
 function scanFile(relativePath, content) {
   const findings = [];
 
+  const isMarkdown = relativePath.endsWith(".md");
+
   for (const pattern of PATTERNS) {
+    // `envOnly` patterns target real config leaks, not the illustrative
+    // `KEY=value` examples that live in markdown documentation.
+    if (pattern.envOnly && isMarkdown) {
+      continue;
+    }
     pattern.regex.lastIndex = 0;
     let match;
     while ((match = pattern.regex.exec(content)) !== null) {

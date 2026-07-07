@@ -332,7 +332,11 @@ export async function triggerHostUpdate(
   });
 
   try {
-    await execFileAsync("sudo", [availability.triggerScript], {
+    // The trigger script now runs unprivileged and escalates only the single
+    // `systemctl start uwe-host-update.service` call internally (via a narrow
+    // sudoers grant). Invoking it without sudo keeps the writable repo script
+    // out of the root-executed path.
+    await execFileAsync(availability.triggerScript, [], {
       timeout: 30_000,
       maxBuffer: 256_000,
     });

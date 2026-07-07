@@ -1,9 +1,10 @@
 # Agent instructions (UWE)
 
 **GitHub Cloud CI is the authoritative gate.** A pull request is ready to merge when
-its GitHub checks are green — `pr-check.yml` (`pnpm ci:light`) on every PR, and the
-full `pnpm quality` gate on `main`. Agents (cloud, Cursor, Codex, Claude) run only in
-the GitHub Cloud; there is no required local or self-hosted gate.
+its GitHub checks are green — `pr-check.yml` (file-size budget check, `pnpm lint`, the
+affected-package `pnpm ci:light:pr:gate`, and a conditional Studio production build)
+on every PR, and the full `pnpm quality` gate on `main`. Agents (cloud, Cursor, Codex,
+Claude) run only in the GitHub Cloud; there is no required local or self-hosted gate.
 
 Running the quality gate locally before pushing is an **optional, recommended
 pre-check** that catches failures faster:

@@ -69,7 +69,11 @@ export async function semanticSearchPersonalBrainChunks(
   let queryVector: number[];
   try {
     queryVector = await embeddingProvider.embedText(query);
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[uwe/ai-brain] personal-brain embedding failed, falling back to keyword search",
+      error,
+    );
     return keywordSearch(chunks, query, limit);
   }
 

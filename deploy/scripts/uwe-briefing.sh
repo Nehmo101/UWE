@@ -18,7 +18,9 @@ if [[ -f "$UWE_ENV" ]]; then
   set +a
 fi
 
-BRIEFING_DIR="${UWE_BRIEFING_DIR:-${UWE_HOME}/data/briefings}"
+# Must match the writer (apps/studio/src/lib/briefing-schedule-sync.ts):
+# UWE_BRIEFING_DIR if set, else ${UWE_DATA_DIR}/briefings (resolveDataDir), else repo-local.
+BRIEFING_DIR="${UWE_BRIEFING_DIR:-${UWE_DATA_DIR:-${UWE_HOME}/data}/briefings}"
 SCHEDULE_FILE="${BRIEFING_DIR}/schedule.json"
 MARKER_FILE="${BRIEFING_DIR}/last-run"
 

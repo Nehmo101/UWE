@@ -30,6 +30,20 @@ export class PageAiReviewService {
     return createJobService(this.db);
   }
 
+  /**
+   * The proposal's `patch` column is stored as JSON, so it is untyped at
+   * runtime. Guard the `payload` before callers read `patch.payload.*`, turning
+   * a missing/corrupt patch into a clear error instead of a raw TypeError.
+   */
+  private asGeneratedPatch(patch: unknown): GeneratedPatch {
+    const payload =
+      patch && typeof patch === "object" ? (patch as { payload?: unknown }).payload : undefined;
+    if (!payload || typeof payload !== "object") {
+      throw new Error("AI review proposal patch is missing its payload");
+    }
+    return patch as GeneratedPatch;
+  }
+
   async countOpenReviews(worldSlug: string): Promise<number> {
     const repo = new UweRepository(this.db);
     const world = await repo.getWorldBySlug(worldSlug);
@@ -99,7 +113,7 @@ export class PageAiReviewService {
     });
     if (!proposal?.aiRun.page || !proposal.aiRun.world) return;
 
-    const patch = proposal.patch as unknown as GeneratedPatch;
+    const patch = this.asGeneratedPatch(proposal.patch);
     const repo = new UweRepository(this.db);
     const pageWithBlocks = await repo.getPageById(proposal.aiRun.page.id);
     const originalContent =
@@ -157,7 +171,7 @@ export class PageAiReviewService {
     const proposal = await this.db.aiProposal.findUnique({ where: { id: parentProposalId } });
     if (!proposal) return;
 
-    const patch = proposal.patch as unknown as GeneratedPatch;
+    const patch = this.asGeneratedPatch(proposal.patch);
     const chatHistory = Array.isArray(patch.payload.metadata?.chatHistory)
       ? [...(patch.payload.metadata!.chatHistory as Array<{ role: string; content: string; createdAt: string }>)]
       : [];
@@ -236,7 +250,7 @@ export class PageAiReviewService {
     });
     if (!proposal) return null;
 
-    const patch = proposal.patch as unknown as GeneratedPatch;
+    const patch = this.asGeneratedPatch(proposal.patch);
     const originalContent =
       patch.payload.originalContent ?? combineBlockContent(page.contentBlocks);
     const chatHistory = Array.isArray(patch.payload.metadata?.chatHistory)
@@ -297,7 +311,7 @@ export class PageAiReviewService {
       return { ok: false, message: "Review nicht gefunden." };
     }
 
-    const patch = proposal.patch as unknown as GeneratedPatch;
+    const patch = this.asGeneratedPatch(proposal.patch);
     const previousStatus =
       (patch.payload.previousPublishStatus as PublishStatus | undefined) ?? "draft";
 

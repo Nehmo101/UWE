@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveDataDir } from "@uwe/assets";
 
 export type MailSyncIntervalMinutes = 5 | 15 | 30 | 60;
 
@@ -15,7 +16,11 @@ export function resolveMailSchedulePath(baseDir?: string): string {
   const root =
     baseDir?.trim() ||
     process.env.UWE_MAIL_DIR?.trim() ||
-    path.join(process.cwd(), "data", "mail");
+    // Fall back to the persistent data dir (UWE_DATA_DIR), NOT process.cwd():
+    // the standalone Next server runs with a cwd that is not the repo root, so a
+    // cwd-relative path lands in a non-host-readable, sandbox-blocked location.
+    // Mirrors the backup writer (resolveBackupsDirFromEnv → resolveDataDir).
+    path.join(resolveDataDir(), "mail");
   return path.join(root, "schedule.json");
 }
 

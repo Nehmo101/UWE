@@ -39,40 +39,59 @@ jobs:
           fetch-depth: 0
 
       - name: Create branch
-        run: git checkout -b "${{ github.event.inputs.branch_name }}"
+        env:
+          BRANCH_NAME: ${{ github.event.inputs.branch_name }}
+        run: |
+          # Untrusted workflow_dispatch input — validate before use so it cannot
+          # inject shell commands or git ref-spec surprises downstream.
+          if ! printf '%s' "$BRANCH_NAME" | grep -Eq '^[A-Za-z0-9._/-]+$'; then
+            echo "Invalid branch_name: only [A-Za-z0-9._/-] are allowed" >&2
+            exit 1
+          fi
+          git checkout -b "$BRANCH_NAME"
 
       - name: Run Cursor CLI (if available)
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          PROMPT: ${{ github.event.inputs.prompt }}
+          TITLE: ${{ github.event.inputs.title }}
+          JOB_ID: ${{ github.event.inputs.job_id }}
         run: |
-          echo "UWE Agent Job: ${{ github.event.inputs.title }}"
-          echo "Job ID: ${{ github.event.inputs.job_id }}"
+          echo "UWE Agent Job: $TITLE"
+          echo "Job ID: $JOB_ID"
           if command -v cursor >/dev/null 2>&1; then
-            cursor agent --prompt "${{ github.event.inputs.prompt }}" || echo "Cursor CLI failed — manual follow-up required"
+            cursor agent --prompt "$PROMPT" || echo "Cursor CLI failed — manual follow-up required"
           else
             echo "Cursor CLI not installed in CI — create PR manually from branch"
-            echo "${{ github.event.inputs.prompt }}" > .cursor-agent-prompt.txt
+            printf '%s\n' "$PROMPT" > .cursor-agent-prompt.txt
           fi
 
       - name: Commit placeholder if changes
+        env:
+          TITLE: ${{ github.event.inputs.title }}
         run: |
           git config user.name "UWE Agent"
           git config user.email "agent@uwe.local"
           git add -A
-          git diff --staged --quiet || git commit -m "chore(agent): ${{ github.event.inputs.title }}"
+          git diff --staged --quiet || git commit -m "chore(agent): $TITLE"
 
       - name: Push branch
-        run: git push -u origin "${{ github.event.inputs.branch_name }}"
+        env:
+          BRANCH_NAME: ${{ github.event.inputs.branch_name }}
+        run: git push -u origin "$BRANCH_NAME"
 
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.event.inputs.branch_name }}
+          TITLE: ${{ github.event.inputs.title }}
+          JOB_ID: ${{ github.event.inputs.job_id }}
         run: |
           gh pr create \
             --base main \
-            --head "${{ github.event.inputs.branch_name }}" \
-            --title "${{ github.event.inputs.title }}" \
-            --body "Automated UWE Agent Job (${{ github.event.inputs.job_id }}). No auto-merge. PR gate (pr-check.yml) validates the opened PR; full gate runs on merge to main." \
+            --head "$BRANCH_NAME" \
+            --title "$TITLE" \
+            --body "Automated UWE Agent Job ($JOB_ID). No auto-merge. PR gate (pr-check.yml) validates the opened PR; full gate runs on merge to main." \
             --draft || echo "PR may already exist"
 
       - name: Notify UWE completion callback
@@ -81,6 +100,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STUDIO_API_TOKEN: ${{ secrets.STUDIO_API_TOKEN }}
           STUDIO_CALLBACK_URL: ${{ secrets.STUDIO_CALLBACK_URL }}
+          BRANCH_NAME: ${{ github.event.inputs.branch_name }}
+          JOB_ID: ${{ github.event.inputs.job_id }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           if [ -z "$STUDIO_CALLBACK_URL" ] || [ -z "$STUDIO_API_TOKEN" ]; then
             echo "STUDIO_CALLBACK_URL or STUDIO_API_TOKEN not set — skipping UWE callback"
@@ -88,16 +110,15 @@ jobs:
           fi
           STATUS="completed"
           ERROR_MESSAGE=""
-          if [ "${{ job.status }}" != "success" ]; then
+          if [ "$JOB_STATUS" != "success" ]; then
             STATUS="failed"
-            ERROR_MESSAGE="GitHub Actions job status: ${{ job.status }}"
+            ERROR_MESSAGE="GitHub Actions job status: $JOB_STATUS"
           fi
           PR_URL=""
           if [ "$STATUS" = "completed" ]; then
-            PR_URL="$(gh pr view "${{ github.event.inputs.branch_name }}" --json url -q .url 2>/dev/null || true)"
+            PR_URL="$(gh pr view "$BRANCH_NAME" --json url -q .url 2>/dev/null || true)"
           fi
-          PAYLOAD=$(node -e "console.log(JSON.stringify({job_id: process.argv[1], status: process.argv[2], pr_url: process.argv[3] || null, branch_name: process.argv[4], error_message: process.argv[5] || null}))" \
-            "${{ github.event.inputs.job_id }}" "$STATUS" "$PR_URL" "${{ github.event.inputs.branch_name }}" "$ERROR_MESSAGE")
+          PAYLOAD=$(STATUS="$STATUS" PR_URL="$PR_URL" ERROR_MESSAGE="$ERROR_MESSAGE" node -e "console.log(JSON.stringify({job_id: process.env.JOB_ID, status: process.env.STATUS, pr_url: process.env.PR_URL || null, branch_name: process.env.BRANCH_NAME, error_message: process.env.ERROR_MESSAGE || null}))")
           curl -sf -X POST "${STUDIO_CALLBACK_URL%/}/api/agent-jobs/callback" \
             -H "Authorization: Bearer ${STUDIO_API_TOKEN}" \
             -H "Content-Type: application/json" \

@@ -16,6 +16,7 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
     "imapflow": "^1.0.187",

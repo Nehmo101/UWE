@@ -843,6 +843,19 @@ export class AuthService {
   }
 
   async listPagesForViewer(worldSlug: string, ctx: AccessContext) {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return [];
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
     const pages = await this.db.page.findMany({
       where: {
         world: { slug: worldSlug },
@@ -1008,6 +1021,11 @@ export class AuthService {
       return [];
     }
 
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
     const events = createWorldEventService(this.db);
     const rows = await events.listForWorld(world.id);
     const portalRows = rows as WorldEventWithLinks[];
@@ -1048,6 +1066,19 @@ export class AuthService {
   }
 
   async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return [];
+    }
+
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
     const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
 
     if (isDm) {
@@ -1131,6 +1162,11 @@ export class AuthService {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
 
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
     const assets = await this.db.asset.findMany({
       where: {
         worldId: world.id,
@@ -1209,6 +1245,10 @@ export class AuthService {
     }
 
     const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
+      return [];
+    }
+
     const buttons = await this.soundboard.listByWorld(worldSlug, options);
 
     return buttons

@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
-import { resolveAssetFilePath, requiresSignedMediaAccess, verifySignedMediaToken } from "@uwe/assets";
+import {
+  resolveAssetFilePath,
+  requiresSignedMediaAccess,
+  verifySignedMediaToken,
+  buildAssetDownloadHeaders,
+} from "@uwe/assets";
 import {
   createAuthService,
   createPrismaClient,
@@ -87,11 +92,13 @@ export async function GET(request: Request, context: RouteContext) {
 
     const data = fs.readFileSync(filePath);
     return new NextResponse(data, {
-      headers: {
-        "Content-Type": asset.mimeType ?? "application/octet-stream",
-        "Content-Length": String(asset.size),
-        "Content-Disposition": `inline; filename="${encodeURIComponent(asset.title)}"`,
-      },
+      // Sandboxed, nosniff headers; non-image MIME types (svg/html) are served
+      // as an attachment so a stored asset cannot execute in this origin.
+      headers: buildAssetDownloadHeaders({
+        mimeType: asset.mimeType,
+        size: asset.size,
+        title: asset.title,
+      }),
     });
   } finally {
     await db.$disconnect();

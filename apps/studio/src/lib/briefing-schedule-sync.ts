@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveDataDir } from "@uwe/assets";
 import type { BriefingSettings } from "@uwe/database/server";
 
 /** Host-lesbare Konfiguration, die `deploy/scripts/uwe-briefing.sh` liest. */
@@ -14,7 +15,12 @@ const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 /** Absoluter Pfad der host-lesbaren Briefing-Schedule-Datei. */
 export function resolveBriefingSchedulePath(): string {
   const baseDir =
-    process.env.UWE_BRIEFING_DIR?.trim() || path.join(process.cwd(), "data", "briefings");
+    process.env.UWE_BRIEFING_DIR?.trim() ||
+    // Fall back to the persistent data dir (UWE_DATA_DIR), NOT process.cwd():
+    // the standalone Next server's cwd is not the repo root, so a cwd-relative
+    // path is not host-readable and is blocked by the systemd sandbox. Mirrors
+    // the backup writer (resolveBackupsDirFromEnv → resolveDataDir).
+    path.join(resolveDataDir(), "briefings");
   return path.join(baseDir, "schedule.json");
 }
 

@@ -19,9 +19,17 @@ export function dispatchJob(jobId: string): void {
   }
 
   activeJobs.add(jobId);
-  void runJob(jobId).finally(() => {
-    activeJobs.delete(jobId);
-  });
+  void runJob(jobId)
+    .catch((error) => {
+      // runJob's internal try/catch only covers the runner execution; if the
+      // surrounding job-store calls (getById/markRunning/isCancelled/markFailed)
+      // throw — e.g. the DB is unreachable — the rejection would be unhandled and
+      // crash the process. This dispatch is fire-and-forget, so swallow + log.
+      console.error("[uwe/job-executor] dispatched job crashed", jobId, error);
+    })
+    .finally(() => {
+      activeJobs.delete(jobId);
+    });
 }
 
 export async function enqueueAndDispatch(input: EnqueueJobInput): Promise<JobView> {

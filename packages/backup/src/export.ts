@@ -236,7 +236,13 @@ export function listStoredBackups(explicitBackupsDir?: string): StoredBackupInfo
       try {
         const parsed = parseStoredBackupEntry(dir, entry);
         return parsed ? [parsed] : [];
-      } catch {
+      } catch (error) {
+        // Skip corrupt/unreadable backup files, but surface which one so
+        // corruption is visible instead of silently vanishing from the listing.
+        console.warn(
+          `[uwe/backup] skipping unreadable backup file "${entry.name}"`,
+          error,
+        );
         return [];
       }
     })

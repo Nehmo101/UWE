@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Starts uwe-host-update.service after validating UWE_HOST_UPDATE_ENABLED and request file.
-# Invoked by the uwe service user via passwordless sudo (see deploy/sudoers/uwe-host-update).
+# Runs as the unprivileged uwe service user; it escalates ONLY the final
+# `systemctl start uwe-host-update.service` via passwordless sudo (see
+# deploy/sudoers/uwe-host-update). The script itself is NOT run via sudo anymore —
+# a sudo grant on this uwe-writable file would be a root privilege-escalation hole.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -63,7 +66,8 @@ assert_not_running() {
 }
 
 main() {
-  require_root
+  # Intentionally NOT require_root: this wrapper runs as the uwe service user and
+  # escalates only the single systemctl unit start below via the scoped sudoers rule.
   UWE_HOME="$(detect_uwe_home "$SCRIPT_DIR")"
   export UWE_HOME
 
@@ -80,7 +84,9 @@ main() {
   fi
 
   log "Starte $UPDATE_UNIT …"
-  systemctl start "$UPDATE_UNIT"
+  # Only this one command is escalated (NOPASSWD sudoers entry). systemctl and the
+  # unit file are root-owned, so uwe cannot alter what actually runs as root here.
+  sudo systemctl start "$UPDATE_UNIT"
   ok "Host-Update gestartet — Fortschritt: ${UWE_LOG_DIR}/host-update.log"
 }
 

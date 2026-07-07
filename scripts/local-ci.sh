@@ -152,8 +152,14 @@ stage_docs()       { _run_stage "docs:check"    "node scripts/docs-check.mjs"; }
 stage_e2e()        { _run_stage "test:e2e"      "pnpm test:e2e"; }
 stage_e2e_perf()   { _run_stage "test:e2e:perf" "pnpm test:e2e:perf"; }
 stage_shellcheck() {
+  # Only run when shellcheck is installed; when it is, let real findings fail the
+  # stage (no `|| true` no-op that always reports PASS).
+  if ! command -v shellcheck >/dev/null 2>&1; then
+    _record_skip "shellcheck" "shellcheck not installed"
+    return 0
+  fi
   _run_stage "shellcheck" \
-    "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/start-uwe.sh 2>/dev/null || true"
+    "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/start-uwe.sh"
 }
 
 ALL_STAGES=(install db:generate lockfile-sync lint secret:scan typecheck test:ci test test:security audit:prod build:release docs:check)

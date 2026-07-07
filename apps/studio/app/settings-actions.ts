@@ -9,6 +9,7 @@ import {
   resolveThemePreferencesForScope,
   buildMailSmtpCredentialsUpdate,
   buildAiProviderKeyUpdate,
+  validateSettingsUpdate,
   type BackgroundPattern,
   type UweSystemSettingsUpdate,
   type Visibility,
@@ -212,6 +213,28 @@ export async function updateSettingsAction(formData: FormData) {
       break;
     default:
       throw new Error(`Unknown settings tab: ${tab}`);
+  }
+
+  // Validate the update through the same guard the PUT /api/settings route uses,
+  // so raw enum casts (theme, backgroundPattern, visibility, canonical status,
+  // provider mode) and unsafe paths cannot slip into the settings JSON via the
+  // server action. The action additionally builds fields the validator does not
+  // model (themePreferences / cloudApiKeys / smtpCredentials are assembled by
+  // helpers above); strip those from the validation input so they don't trip the
+  // unknown-key check, but still persist the original update unchanged.
+  const validationInput = structuredClone(update);
+  if (validationInput.app) {
+    delete (validationInput.app as { themePreferences?: unknown }).themePreferences;
+  }
+  if (validationInput.ai) {
+    delete (validationInput.ai as { cloudApiKeys?: unknown }).cloudApiKeys;
+  }
+  if (validationInput.mail) {
+    delete (validationInput.mail as { smtpCredentials?: unknown }).smtpCredentials;
+  }
+  const validation = validateSettingsUpdate(validationInput);
+  if (!validation.ok) {
+    throw new Error(`Ungültige Einstellungen: ${validation.errors.join(" ")}`);
   }
 
   await repo().updateSystemSettings(update);

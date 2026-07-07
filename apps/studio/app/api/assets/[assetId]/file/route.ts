@@ -2,7 +2,7 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import fs from "node:fs";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { resolveAssetFilePath } from "@uwe/assets";
+import { resolveAssetFilePath, buildAssetDownloadHeaders } from "@uwe/assets";
 import { getAppRepository } from "@uwe/database/server";
 import { assetIdParamSchema, parseParams } from "@uwe/security";
 
@@ -38,10 +38,13 @@ export async function GET(request: Request, context: RouteContext) {
 
   const data = fs.readFileSync(filePath);
   return new NextResponse(data, {
-    headers: {
-      "Content-Type": asset.mimeType ?? "application/octet-stream",
-      "Content-Length": String(asset.size),
-      "Content-Disposition": `inline; filename="${encodeURIComponent(asset.title)}"`,
-    },
+    // buildAssetDownloadHeaders serves non-image MIME types (svg/html) as a
+    // sandboxed attachment with `Content-Security-Policy: default-src 'none';
+    // sandbox` + nosniff, so a stored asset can never execute in this origin.
+    headers: buildAssetDownloadHeaders({
+      mimeType: asset.mimeType,
+      size: asset.size,
+      title: asset.title,
+    }),
   });
 }

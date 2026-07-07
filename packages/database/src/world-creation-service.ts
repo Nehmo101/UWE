@@ -70,18 +70,35 @@ export class WorldCreationService {
       },
     });
 
-    const auth = createAuthService(this.db);
-    await auth.createWorldMembership({
-      userId,
-      worldId: world.id,
-      role: "owner",
-    });
-
-    const seededPageCount = await this.applyWorldTemplate(world.id, template);
+    // Membership, template pages and calendar are not created in a single
+    // interactive transaction (that would require threading a tx client through
+    // several service constructors). Instead, if any step fails, delete the
+    // world so callers never see a half-created world with a membership but
+    // empty content — the schema's onDelete cascades clean up children.
+    let seededPageCount: number;
     let seededCalendar = false;
-    if (template.seedCalendar) {
-      await createWorldCalendarService(this.db).upsertForWorld({ worldId: world.id });
-      seededCalendar = true;
+    try {
+      const auth = createAuthService(this.db);
+      await auth.createWorldMembership({
+        userId,
+        worldId: world.id,
+        role: "owner",
+      });
+
+      seededPageCount = await this.applyWorldTemplate(world.id, template);
+      if (template.seedCalendar) {
+        await createWorldCalendarService(this.db).upsertForWorld({ worldId: world.id });
+        seededCalendar = true;
+      }
+    } catch (error) {
+      await this.db.world.delete({ where: { id: world.id } }).catch((cleanupError) => {
+        console.error(
+          "[uwe/world-creation] failed to roll back partially created world",
+          world.id,
+          cleanupError,
+        );
+      });
+      throw error;
     }
 
     await logAuditEvent(this.db, {

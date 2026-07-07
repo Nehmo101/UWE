@@ -68,6 +68,31 @@ describe("authz integration — IDOR/BOLA", () => {
       publishStatus: "published",
     });
     privatePageBId = privatePageB.id;
+
+    // A player-visible page in the foreign, members-only world B. A non-member
+    // must NOT receive it through the viewer list services.
+    await repo.createPage({
+      worldId: worldBId,
+      title: "Public B",
+      slug: "public-b",
+      type: "lore",
+      visibility: "player_visible",
+      publishStatus: "published",
+    });
+  });
+
+  it("blocks a non-member from listing a foreign world's player-visible pages", async () => {
+    const userA = await auth.findUserByEmail("player-a@authz.test");
+    assert.ok(userA);
+
+    // World B is members-only (guestModeEnabled defaults to false) and User A
+    // is not a member. Before the world-membership guard, listPagesForViewer
+    // returned World B's player-visible pages to any logged-in player.
+    const ctxB = await auth.buildAccessContextForWorld(worldBSlug, { userId: userA.id });
+    assert.ok(ctxB);
+
+    const pages = await auth.listPagesForViewer(worldBSlug, ctxB);
+    assert.deepEqual(pages, []);
   });
 
   it("blocks User A from reading World B via authz", async () => {

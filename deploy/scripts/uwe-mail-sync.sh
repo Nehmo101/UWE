@@ -14,7 +14,9 @@ if [[ -f "$UWE_ENV" ]]; then
   set +a
 fi
 
-MAIL_DIR="${UWE_MAIL_DIR:-${UWE_HOME}/data/mail}"
+# Must match the writer (packages/mail/src/schedule.ts):
+# UWE_MAIL_DIR if set, else ${UWE_DATA_DIR}/mail (resolveDataDir), else repo-local.
+MAIL_DIR="${UWE_MAIL_DIR:-${UWE_DATA_DIR:-${UWE_HOME}/data}/mail}"
 SCHEDULE_FILE="${MAIL_DIR}/schedule.json"
 MARKER_FILE="${MAIL_DIR}/last-run"
 

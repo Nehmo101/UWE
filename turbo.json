@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["PORTAL_PATH", "PORTAL_PROXY_URL", "PORTAL_PORT"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {

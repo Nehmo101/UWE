@@ -1,7 +1,16 @@
-# UWE host update — allow service user to start the privileged update trigger only.
+# UWE host update — allow the service user to start ONLY the root-owned update unit.
 # Installed by deploy/scripts/setup-uwe-host.sh as /etc/sudoers.d/uwe-host-update
 #
+# Security: NEVER grant sudo on a script that lives in the uwe-writable repo
+# (/opt/uwe/deploy/scripts/*). A compromised uwe account could rewrite that file
+# and gain root. Instead sudo is scoped to the fixed, root-owned systemctl binary
+# starting one specific, root-owned unit. The unit's ExecStart (uwe-host-update.sh)
+# still re-checks UWE_HOST_UPDATE_ENABLED and a fresh request file before doing work.
+#
 # Validate after install: visudo -cf /etc/sudoers.d/uwe-host-update
-Defaults!/opt/uwe/deploy/scripts/uwe-host-update-trigger.sh !requiretty
-uwe ALL=(root) NOPASSWD: /opt/uwe/deploy/scripts/uwe-host-update-trigger.sh
-# uwe-cd-trigger.sh (SSH CD path) calls uwe-host-update-trigger.sh via sudo — covered above.
+Defaults!/usr/bin/systemctl !requiretty
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl start uwe-host-update.service
+# Callers: deploy/scripts/uwe-host-update-trigger.sh (guards + escalation) and
+# uwe-cd-trigger.sh (SSH CD path) both write a request file, then invoke the
+# systemctl command above via sudo. The Studio host-update service
+# (packages/database/src/host-update-service.ts) must invoke the same command.

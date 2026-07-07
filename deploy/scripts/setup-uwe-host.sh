@@ -173,6 +173,8 @@ UWE_DATA_DIR=${UWE_DATA_DIR}
 UWE_UPLOADS_DIR=${UWE_DATA_DIR}/uploads
 UWE_EXPORT_DIR=${UWE_DATA_DIR}/exports
 UWE_BACKUP_DIR=${UWE_BACKUP_DIR}
+UWE_MAIL_DIR=${UWE_DATA_DIR}/mail
+UWE_BRIEFING_DIR=${UWE_DATA_DIR}/briefings
 STUDIO_PORT=${STUDIO_PORT}
 PORTAL_PORT=${PORTAL_PORT}
 RUN_DB_SEED=false
@@ -229,6 +231,8 @@ ensure_env_file() {
   upsert_env_var_if_missing UWE_UPLOADS_DIR "${UWE_DATA_DIR}/uploads" "$UWE_ENV_FILE"
   upsert_env_var_if_missing UWE_EXPORT_DIR "${UWE_DATA_DIR}/exports" "$UWE_ENV_FILE"
   upsert_env_var_if_missing UWE_BACKUP_DIR "$UWE_BACKUP_DIR" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_MAIL_DIR "${UWE_DATA_DIR}/mail" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing UWE_BRIEFING_DIR "${UWE_DATA_DIR}/briefings" "$UWE_ENV_FILE"
   upsert_env_var_if_missing STUDIO_PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing PORTAL_PORT "$PORTAL_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing RUN_DB_SEED false "$UWE_ENV_FILE"

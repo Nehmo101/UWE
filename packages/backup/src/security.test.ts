@@ -3,7 +3,7 @@ import AdmZip from "adm-zip";
 import { describe, it } from "node:test";
 import { assertSafeZipEntryName, ZipSecurityError } from "@uwe/assets";
 import { extractBackupAssets } from "./archive";
-import { BACKUP_DATA_FILE, BACKUP_MANIFEST_FILE } from "./paths";
+import { assetZipPath, BACKUP_DATA_FILE, BACKUP_MANIFEST_FILE } from "./paths";
 import { BackupValidationError, validateBackupBundle } from "./validate";
 
 describe("backup security", () => {
@@ -77,6 +77,66 @@ describe("backup security", () => {
     assert.throws(
       () => extractBackupAssets(zip.toBuffer(), "/tmp/uwe-backup-test"),
       /Invalid storage key|Unsafe ZIP|ZipSecurityError/,
+    );
+  });
+
+  it("rejects backups whose asset payload is HTML/SVG (restore-path XSS)", () => {
+    const zip = new AdmZip();
+    const manifest = {
+      version: "1.0",
+      uweVersion: "test",
+      schemaVersion: "test",
+      type: "full",
+      createdAt: new Date().toISOString(),
+      includesUsers: false,
+      includesAuthSessions: false,
+      stats: {
+        worlds: 1,
+        campaigns: 0,
+        pages: 0,
+        contentBlocks: 0,
+        pageLinks: 0,
+        assets: 1,
+        gameSessions: 0,
+        labels: 0,
+        labelTemplates: 0,
+        printLists: 0,
+        soundboardButtons: 0,
+        pageTemplates: 0,
+        worldMemberships: 0,
+        shareLinks: 0,
+        playerNotes: 0,
+      },
+      assetFiles: [],
+    };
+    // Storage key + declared mimeType look like a harmless PNG, but the packaged
+    // bytes are HTML — the upload path blocks this; the restore path must too.
+    const storageKey = "world-test/evil.png";
+    const data = {
+      assets: [
+        {
+          id: "asset-1",
+          worldId: "world-test",
+          storageKey,
+          title: "evil",
+          type: "image",
+          mimeType: "image/png",
+          size: 40,
+          visibility: "public",
+        },
+      ],
+    };
+    zip.addFile(BACKUP_MANIFEST_FILE, Buffer.from(JSON.stringify(manifest), "utf8"));
+    zip.addFile(BACKUP_DATA_FILE, Buffer.from(JSON.stringify(data), "utf8"));
+    zip.addFile(
+      assetZipPath(storageKey),
+      Buffer.from("<html><body><script>alert(1)</script></body></html>", "utf8"),
+    );
+
+    assert.throws(
+      () => extractBackupAssets(zip.toBuffer(), "/tmp/uwe-backup-xss-test"),
+      (error: unknown) =>
+        error instanceof ZipSecurityError && /disallowed content/.test((error as Error).message),
     );
   });
 

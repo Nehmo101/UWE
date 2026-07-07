@@ -8,6 +8,17 @@ import { ensureSystemMailTemplates } from "../src/mail-template-service";
 import { seedTerraWorld, seedTerraChronicle } from "../src/terra-seed";
 
 async function main() {
+  // This seed creates demo users with the publicly known password "uwe-dev"
+  // and opens guest mode on the seeded world. Running it against a production
+  // database would hand out a working DM account and expose the world. Refuse
+  // unless an operator explicitly opts in.
+  if (process.env.NODE_ENV === "production" && process.env.UWE_ALLOW_PROD_SEED !== "1") {
+    throw new Error(
+      "Refusing to run the demo seed with NODE_ENV=production. " +
+        "Set UWE_ALLOW_PROD_SEED=1 only if you really intend to seed demo data with a known password.",
+    );
+  }
+
   const repo = createUweRepository();
   const auth = createAuthService(prisma);
 

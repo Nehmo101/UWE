@@ -4,6 +4,8 @@ import {
   createPrismaClient,
 } from "@uwe/database/server";
 import type { DbAtlasNode } from "@uwe/database/server";
+import { getAccessContextForWorld } from "@/src/lib/auth";
+import { assertPortalCanReadWorld } from "@/src/lib/authz";
 
 // ---------------------------------------------------------------------------
 // Level display helpers
@@ -112,6 +114,10 @@ interface Props {
 
 export default async function PortalAtlasIndexPage({ params }: Props) {
   const { worldSlug } = await params;
+  const ctx = await getAccessContextForWorld(worldSlug);
+  if (!ctx) {
+    notFound();
+  }
 
   const db = createPrismaClient();
   const atlas = createAtlasService(db);
@@ -122,10 +128,18 @@ export default async function PortalAtlasIndexPage({ params }: Props) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { name: true },
+      select: { id: true, name: true },
     });
     if (!world) notFound();
     worldName = world.name;
+
+    // Members-only worlds must not be reachable by non-member players via a
+    // direct URL — enforce world membership before loading any content.
+    try {
+      assertPortalCanReadWorld(ctx, world.id);
+    } catch {
+      notFound();
+    }
 
     const result = await atlas.getAtlasForContext(worldSlug, "portal");
     if (!result) {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import AdmZip from "adm-zip";
-import { resolveAssetFilePath, ZipSecurityError, assertSafeZipEntryName, resolveZipImportPolicy } from "@uwe/assets";
+import { resolveAssetFilePath, ZipSecurityError, assertSafeZipEntryName, resolveZipImportPolicy, detectFileKind } from "@uwe/assets";
 import type { BackupBundle, BackupManifest } from "./types";
 import {
   BACKUP_ASSETS_DIR,
@@ -70,6 +70,26 @@ export function parseBackupZip(zip: AdmZip): BackupBundle {
   return { manifest, data };
 }
 
+/**
+ * Backup archives are restored with the same trust level as a fresh upload, so
+ * re-run the upload path's content check. A crafted backup could otherwise
+ * smuggle an HTML/SVG/executable asset (the upload path blocks these) that
+ * would later be served inline and execute as stored XSS after a restore.
+ */
+function assertRestorableAssetContent(data: Buffer, entryPath: string): void {
+  const detection = detectFileKind(data);
+  if (
+    detection.kind === "html" ||
+    detection.kind === "svg" ||
+    detection.kind === "executable"
+  ) {
+    throw new ZipSecurityError(
+      `Backup contains disallowed content in ${entryPath}.`,
+      "blocked_content",
+    );
+  }
+}
+
 export function extractBackupAssets(
   zipInput: string | Buffer,
   targetUploadsRoot: string,
@@ -105,6 +125,7 @@ export function extractBackupAssets(
         "zip_bomb",
       );
     }
+    assertRestorableAssetContent(data, zipEntryPath);
 
     const mappedWorldId = idMap?.get(asset.worldId) ?? asset.worldId;
     const storageKey = asset.storageKey.replace(asset.worldId, mappedWorldId);
@@ -132,6 +153,7 @@ export function extractBackupAssets(
         "zip_bomb",
       );
     }
+    assertRestorableAssetContent(data, zipEntryPath);
 
     const targetPath = resolveAssetFilePath(entry.storageKey, targetUploadsRoot);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });

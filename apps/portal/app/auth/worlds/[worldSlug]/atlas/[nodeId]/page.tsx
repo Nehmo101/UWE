@@ -8,6 +8,7 @@ import { filterPagesForViewer } from "@uwe/auth";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap, ViewerTileLayer } from "@/src/components/atlas/AtlasViewer";
 
 interface Props {
@@ -41,9 +42,17 @@ export default async function PortalAtlasNodePage({ params }: Props) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { name: true },
+      select: { id: true, name: true },
     });
     if (!world) notFound();
+
+    // Members-only worlds must not be reachable by non-member players via a
+    // direct URL — enforce world membership before loading any content.
+    try {
+      assertPortalCanReadWorld(ctx, world.id);
+    } catch {
+      notFound();
+    }
 
     // Fetch atlas with portal context — this filters dm_only nodes/features/objects
     const atlasData = await atlas.getAtlasForContext(worldSlug, "portal");

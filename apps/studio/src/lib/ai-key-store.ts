@@ -16,8 +16,12 @@ export async function createApiKeyStore(): Promise<InMemoryApiKeyStore> {
         store.set(providerId as AiProviderId, key);
       }
     }
-  } catch {
+  } catch (error) {
     // Fall back to env-only if settings cannot be loaded
+    console.warn(
+      "[uwe/ai-key-store] failed to load AI keys from settings, falling back to env",
+      error,
+    );
   }
   return store;
 }

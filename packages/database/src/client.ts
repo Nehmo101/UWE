@@ -31,9 +31,32 @@ const globalForPrisma = globalThis as unknown as {
   pgPool?: pg.Pool;
 };
 
+/**
+ * Studio and Portal run as two separate Node processes against the same SQLite
+ * file. Without WAL, a reader blocks a writer (and vice versa); without a
+ * busy_timeout, the loser of that race fails immediately with SQLITE_BUSY
+ * instead of waiting. WAL is a persistent property of the database file, so
+ * setting it once on any connection is enough; busy_timeout is per-connection,
+ * so we apply it whenever a client is created. Best-effort: a failure here must
+ * never crash client creation.
+ */
+function applySqlitePragmas(client: SqlitePrismaClient): void {
+  void (async () => {
+    try {
+      await client.$queryRawUnsafe("PRAGMA journal_mode = WAL");
+      await client.$queryRawUnsafe("PRAGMA busy_timeout = 5000");
+      await client.$queryRawUnsafe("PRAGMA synchronous = NORMAL");
+    } catch (error) {
+      console.warn("[uwe/database] failed to apply SQLite pragmas", error);
+    }
+  })();
+}
+
 function createSqliteClient(url: string): SqlitePrismaClient {
   const adapter = new PrismaLibSql({ url });
-  return new SqlitePrismaClient({ adapter });
+  const client = new SqlitePrismaClient({ adapter });
+  applySqlitePragmas(client);
+  return client;
 }
 
 function createPostgresClient(url: string): PostgresPrismaClient {

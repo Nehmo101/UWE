@@ -32,8 +32,10 @@ main() {
     console.log('[CD] Update-Anfrage erstellt:', req.jobId);
   " "$commit_before" "$REQUEST_FILE"
 
-  log "Starte Host-Update via sudo …"
-  sudo "$SCRIPT_DIR/uwe-host-update-trigger.sh"
+  log "Starte Host-Update …"
+  # Run the trigger unprivileged; it escalates only `systemctl start uwe-host-update.service`
+  # via the scoped sudoers rule. Do NOT `sudo` the script itself (privilege-escalation risk).
+  "$SCRIPT_DIR/uwe-host-update-trigger.sh"
 }
 
 main "$@"

@@ -57,7 +57,11 @@ export async function semanticSearchBrainChunks(
   let queryVector: number[];
   try {
     queryVector = await embeddingProvider.embedText(query);
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[uwe/ai-brain] brain embedding failed, falling back to keyword search",
+      error,
+    );
     return keywordSearch(chunks, query, limit, minScore);
   }
 

@@ -111,7 +111,13 @@ describe("downloadHuggingFaceModel", () => {
     assert.ok(!existsSync(targetFor("weights.gguf")), "no final file on failed download");
   });
 
-  it("cleans up the .part temp when the write stream fails", async () => {
+  it("cleans up the .part temp when the write stream fails", async (t) => {
+    // root ignores file permission bits, so chmod 0o444 does not produce the
+    // write failure this test relies on. Skip under root (e.g. CI containers).
+    if (typeof process.getuid === "function" && process.getuid() === 0) {
+      t.skip("chmod-based write-failure test is unreliable as root");
+      return;
+    }
     const { chmodSync, mkdirSync } = await import("node:fs");
     const readOnlyDir = join(dir, "readonly");
     mkdirSync(readOnlyDir, { recursive: true });
