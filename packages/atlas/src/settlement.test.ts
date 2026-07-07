@@ -141,6 +141,32 @@ describe("generateSettlement", () => {
     assert.equal(layout.meta.pierCount, 4);
   });
 
+  it("is deterministic for the waterfront parameter combinations exposed in the editor UI", () => {
+    const opts = {
+      seed: 42,
+      idPrefix: "harbor",
+      buildingCount: 6,
+      waterfront: { edgeFraction: 0.5, pierCount: 3, includeDock: true },
+    };
+    const a = generateSettlement(SITE, opts);
+    const b = generateSettlement(SITE, opts);
+
+    assert.deepEqual(a, b);
+    assert.equal(a.features.filter((feature) => feature.kind === "pier").length, 3);
+    assert.equal(a.objects.filter((object) => object.kind === "dock").length, 1);
+    assert.equal(a.meta.pierCount, 3);
+  });
+
+  it("clamps out-of-range waterfront pier counts to 1..4", () => {
+    const high = generateSettlement(SITE, { seed: 42, idPrefix: "harbor", waterfront: { pierCount: 99 } });
+    const low = generateSettlement(SITE, { seed: 42, idPrefix: "harbor", waterfront: { pierCount: 0 } });
+
+    assert.equal(high.features.filter((feature) => feature.kind === "pier").length, 4);
+    assert.equal(high.meta.pierCount, 4);
+    assert.equal(low.features.filter((feature) => feature.kind === "pier").length, 1);
+    assert.equal(low.meta.pierCount, 1);
+  });
+
   it("threads node, visibility, count, gate, and palette options through the output", () => {
     const layout = generateSettlement(SITE, {
       seed: "stone-market",

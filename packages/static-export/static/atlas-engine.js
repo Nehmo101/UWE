@@ -785,10 +785,15 @@ var GOUACHE_ASSETS = [
   { key: "g_keep", name: "Bergfried", category: "structure" },
   { key: "g_church", name: "Kirche", category: "structure" },
   { key: "g_windmill", name: "Windmühle", category: "structure" },
+  { key: "g_watermill", name: "Wassermühle", category: "structure" },
   { key: "g_tent", name: "Zelt", category: "structure" },
   { key: "g_ruin", name: "Ruine", category: "structure" },
   { key: "g_signal_tower", name: "Signalturm", category: "structure" },
   { key: "g_bridge", name: "Steinbrücke", category: "structure" },
+  { key: "g_lighthouse", name: "Leuchtturm", category: "structure" },
+  { key: "g_amphitheater", name: "Amphitheater", category: "structure" },
+  { key: "g_burial_mound", name: "Grabhügel", category: "structure" },
+  { key: "g_caravanserai", name: "Karawanserei", category: "structure" },
   { key: "g_pyramid", name: "Pyramide", category: "landmark" },
   { key: "g_obelisk", name: "Obelisk", category: "landmark" },
   { key: "g_cave_mouth", name: "Höhleneingang", category: "landmark" },
@@ -796,6 +801,8 @@ var GOUACHE_ASSETS = [
   { key: "g_stone_circle", name: "Steinkreis", category: "landmark" },
   { key: "g_floating_island", name: "Fliegende Insel", category: "landmark" },
   { key: "g_turtle_castle", name: "Schildkröten-Schloss", category: "landmark" },
+  { key: "g_ziggurat", name: "Ziggurat", category: "landmark" },
+  { key: "g_portal_arch", name: "Portalbogen", category: "landmark" },
   { key: "g_ship", name: "Schiff", category: "vehicle" },
   { key: "g_cart", name: "Pferdekarren", category: "vehicle" },
   { key: "g_airship", name: "Flugschiff", category: "vehicle" },
@@ -845,6 +852,12 @@ function polyFn(pts) {
     c.moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
     c.closePath();
+  };
+}
+function ellipseFn(cx, cy, rx, ry) {
+  return (c) => {
+    c.beginPath();
+    c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   };
 }
 function blobFn(pts) {
@@ -1009,6 +1022,35 @@ var RECIPES = {
     }
     ctx.restore();
   },
+  g_watermill: (ctx, s, _rng, lw) => {
+    const h = s * 0.58;
+    shadow(ctx, 0, s * 0.04, s * 0.6);
+    paint(ctx, blobFn(iblob(s * 0.4, -s * 0.02, s * 0.3, s * 0.1, () => 0.5, 0.12, 8)), "#7290a2", lw * 0.55, "#46606e");
+    paint(ctx, rectFn(-s * 0.66, -h, s * 0.78, h), "#cdbd95", lw);
+    paint(ctx, polyFn([[-s * 0.76, -h + 1], [-s * 0.27, -h * 1.55], [s * 0.22, -h + 1]]), "#7a4a2a", lw);
+    ctx.save();
+    ctx.fillStyle = "#5a4026";
+    ctx.fillRect(-s * 0.42, -h * 0.55, s * 0.16, h * 0.55);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = lighten("#cdbd95", 0.32);
+    ctx.fillRect(-s * 0.6, -h + s * 0.04, s * 0.14, h * 0.34);
+    ctx.restore();
+    paint(ctx, ellipseFn(s * 0.36, -s * 0.34, s * 0.3, s * 0.3), "#8a5e34", lw, "#4a3320");
+    paint(ctx, ellipseFn(s * 0.36, -s * 0.34, s * 0.12, s * 0.12), "#cdbd95", lw * 0.6, "#4a3320");
+    ctx.save();
+    ctx.strokeStyle = "#4a3320";
+    ctx.lineWidth = Math.max(0.8, lw * 0.75);
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.36 - Math.cos(a) * s * 0.27, -s * 0.34 - Math.sin(a) * s * 0.27);
+      ctx.lineTo(s * 0.36 + Math.cos(a) * s * 0.27, -s * 0.34 + Math.sin(a) * s * 0.27);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
   g_tent: (ctx, s, _rng, lw) => {
     shadow(ctx, 0, s * 0.03, s * 0.5);
     paint(ctx, polyFn([[-s * 0.5, 0], [0, -s * 0.9], [s * 0.5, 0]]), "#c99a5a", lw);
@@ -1068,6 +1110,128 @@ var RECIPES = {
       const x = -s * 0.44 + i * s * 0.29;
       paint(ctx, rectFn(x, -s * 0.5, s * 0.16, s * 0.12), "#c7ba92", lw * 0.45, "#756845");
     }
+  },
+  g_lighthouse: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.5);
+    paint(ctx, blobFn(iblob(0, -s * 0.02, s * 0.42, s * 0.12, rng, 0.2, 9)), "#9a9488", lw * 0.7, "#5f5a4d");
+    const half = (t) => s * (0.24 - 0.12 * ((t - 0.04) / 0.92));
+    paint(ctx, polyFn([[-half(0.04), -s * 0.04], [-half(0.96), -s * 0.96], [half(0.96), -s * 0.96], [half(0.04), -s * 0.04]]), "#e0d6b4", lw);
+    for (const [a, b] of [[0.22, 0.38], [0.56, 0.72]]) {
+      paint(ctx, polyFn([[-half(a), -s * a], [-half(b), -s * b], [half(b), -s * b], [half(a), -s * a]]), "#a8432e", lw * 0.55, "#7f2f20");
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = lighten("#e0d6b4", 0.35);
+    ctx.fillRect(-s * 0.1, -s * 0.9, s * 0.05, s * 0.8);
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.17, -s * 1.02, s * 0.34, s * 0.07), "#6f665a", lw * 0.6);
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#f0c35c";
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 1.1, s * 0.34, s * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.09, -s * 1.16, s * 0.18, s * 0.14), "#f0c35c", lw * 0.6, "#9a4a22");
+    paint(ctx, polyFn([[-s * 0.13, -s * 1.16], [0, -s * 1.32], [s * 0.13, -s * 1.16]]), "#8a3526", lw);
+  },
+  g_amphitheater: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.04, s * 0.75);
+    paint(ctx, ellipseFn(0, -s * 0.34, s * 0.64, s * 0.36), "#c1b28a", lw, "#75664a");
+    paint(ctx, ellipseFn(0, -s * 0.4, s * 0.46, s * 0.24), "#a99a72", lw * 0.7, "#6f5c3c");
+    paint(ctx, ellipseFn(0, -s * 0.42, s * 0.3, s * 0.14), "#c8a75a", lw * 0.6, "#8a6f3a");
+    ctx.save();
+    ctx.fillStyle = "#4a4030";
+    for (let i = -2; i <= 2; i++) {
+      const x = i * s * 0.22, y = -s * 0.05 - Math.abs(i) * s * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.05, y);
+      ctx.lineTo(x - s * 0.05, y - s * 0.1);
+      ctx.quadraticCurveTo(x, y - s * 0.18, x + s * 0.05, y - s * 0.1);
+      ctx.lineTo(x + s * 0.05, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = lighten("#c1b28a", 0.35);
+    ctx.lineWidth = Math.max(1, lw * 1.3);
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.34, s * 0.56, s * 0.3, 0, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.stroke();
+    ctx.restore();
+  },
+  g_burial_mound: (ctx, s, rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.6);
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.58, 0);
+      c.quadraticCurveTo(-s * 0.55, -s * 0.52, 0, -s * 0.56);
+      c.quadraticCurveTo(s * 0.55, -s * 0.52, s * 0.58, 0);
+      c.closePath();
+    }, "#6b8a4f", lw, "#41582f");
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = "#a9c77a";
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.16, -s * 0.4, s * 0.22, s * 0.1, -0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = "#9a9488";
+    ctx.strokeStyle = "#5f5a4d";
+    ctx.lineWidth = Math.max(0.6, lw * 0.5);
+    for (const [dx, dy] of [[-0.3, -0.48], [0, -0.58], [0.3, -0.48]]) {
+      const x = (dx + (rng() - 0.5) * 0.05) * s;
+      ctx.beginPath();
+      ctx.arc(x, dy * s, s * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+    paint(ctx, polyFn([[-s * 0.2, 0], [-s * 0.16, -s * 0.3], [s * 0.16, -s * 0.3], [s * 0.2, 0]]), "#9a9488", lw * 0.8, "#5f5a4d");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.1, 0);
+      c.lineTo(-s * 0.1, -s * 0.12);
+      c.quadraticCurveTo(0, -s * 0.26, s * 0.1, -s * 0.12);
+      c.lineTo(s * 0.1, 0);
+      c.closePath();
+    }, "#2f2a24", lw * 0.6, "#4a4030");
+  },
+  g_caravanserai: (ctx, s, _rng, lw) => {
+    const w = s * 1.2, h = s * 0.46;
+    shadow(ctx, 0, s * 0.04, s * 0.8);
+    paint(ctx, rectFn(-w / 2, -h, w, h), "#d0bd8e", lw, "#8a7448");
+    for (let i = -2; i <= 2; i++) paint(ctx, rectFn(i * s * 0.26 - s * 0.05, -h - s * 0.1, s * 0.1, s * 0.12), "#d0bd8e", lw * 0.55, "#8a7448");
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#d0bd8e", 0.32);
+    ctx.fillRect(-w / 2 + s * 0.05, -h + s * 0.04, s * 0.2, s * 0.14);
+    ctx.restore();
+    for (const sx of [-1, 1]) {
+      paint(ctx, rectFn(sx * (w / 2) - s * 0.09, -s * 0.6, s * 0.18, s * 0.6), "#c4b083", lw, "#8a7448");
+      paint(ctx, (c) => {
+        c.beginPath();
+        c.arc(sx * (w / 2), -s * 0.6, s * 0.1, Math.PI, 0);
+        c.closePath();
+      }, "#5f6f78", lw * 0.7, "#3d4a52");
+    }
+    paint(ctx, rectFn(-s * 0.21, -s * 0.7, s * 0.42, s * 0.7), "#c9b586", lw, "#8a7448");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.arc(0, -s * 0.7, s * 0.14, Math.PI, 0);
+      c.closePath();
+    }, "#5f6f78", lw * 0.7, "#3d4a52");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.moveTo(-s * 0.1, 0);
+      c.lineTo(-s * 0.1, -s * 0.26);
+      c.quadraticCurveTo(0, -s * 0.44, s * 0.1, -s * 0.26);
+      c.lineTo(s * 0.1, 0);
+      c.closePath();
+    }, "#3a3226", lw * 0.6, "#57492f");
   },
   g_pyramid: (ctx, s, _rng, lw) => {
     shadow(ctx, 0, s * 0.03, s * 0.7);
@@ -1145,6 +1309,94 @@ var RECIPES = {
     paint(ctx, polyFn([[s * 0.6, -s * 0.15], [s * 0.78, -s * 0.32], [s * 0.72, -s * 0.05]]), "#4a6640", lw);
     paint(ctx, rectFn(-s * 0.24, -s * 0.7, s * 0.48, s * 0.42), "#c6b487", lw);
     for (const sx of [-1, 1]) paint(ctx, rectFn(sx * s * 0.28 - s * 0.08, -s * 0.78, s * 0.16, s * 0.5), "#bcac80", lw);
+  },
+  g_ziggurat: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.75);
+    const tiers = [[0.66, 0, 0.26], [0.48, 0.26, 0.24], [0.31, 0.5, 0.22]];
+    for (const [hw, b, ht] of tiers) {
+      const y0 = -s * b, y1 = -s * (b + ht), tw = hw * 0.82;
+      paint(ctx, polyFn([[-s * hw, y0], [-s * tw, y1], [s * tw, y1], [s * hw, y0]]), "#c8a75a", lw, "#7f6531");
+      paint(ctx, polyFn([[s * 0.02, y0], [s * 0.02, y1], [s * tw, y1], [s * hw, y0]]), "#a98640", lw * 0.5, "#7f6531");
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = lighten("#c8a75a", 0.32);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.62, -s * 0.03);
+    ctx.lineTo(-s * 0.52, -s * 0.24);
+    ctx.lineTo(-s * 0.42, -s * 0.24);
+    ctx.lineTo(-s * 0.52, -s * 0.03);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    paint(ctx, rectFn(-s * 0.13, -s * 0.94, s * 0.26, s * 0.22), "#b0563f", lw, "#6e3325");
+    paint(ctx, polyFn([[-s * 0.09, 0], [-s * 0.06, -s * 0.72], [s * 0.06, -s * 0.72], [s * 0.09, 0]]), "#e0d3ad", lw * 0.6, "#8a6f3a");
+    ctx.save();
+    ctx.strokeStyle = "#8a6f3a";
+    ctx.lineWidth = Math.max(0.6, lw * 0.5);
+    for (let i = 1; i <= 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.07, -s * 0.12 * i);
+      ctx.lineTo(s * 0.07, -s * 0.12 * i);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+  g_portal_arch: (ctx, s, _rng, lw) => {
+    shadow(ctx, 0, s * 0.03, s * 0.55);
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = "#9b8fd0";
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.6, s * 0.62, s * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = "#8fb7cf";
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.33, 0);
+    ctx.lineTo(-s * 0.33, -s * 0.55);
+    ctx.arc(0, -s * 0.55, s * 0.33, Math.PI, 0);
+    ctx.lineTo(s * 0.33, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = "#e6f2f7";
+    ctx.lineWidth = Math.max(1, lw);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.1, -s * 0.78);
+    ctx.quadraticCurveTo(s * 0.12, -s * 0.5, -s * 0.04, -s * 0.12);
+    ctx.stroke();
+    ctx.restore();
+    for (const sx of [-1, 1]) paint(ctx, rectFn(sx * s * 0.415 - s * 0.085, -s * 0.55, s * 0.17, s * 0.55), "#9a9488", lw, "#5f5a4d");
+    paint(ctx, (c) => {
+      c.beginPath();
+      c.arc(0, -s * 0.55, s * 0.5, Math.PI, 0);
+      c.lineTo(s * 0.33, -s * 0.55);
+      c.arc(0, -s * 0.55, s * 0.33, 0, Math.PI, true);
+      c.closePath();
+    }, "#9a9488", lw, "#5f5a4d");
+    ctx.save();
+    ctx.strokeStyle = "#4a4636";
+    ctx.lineWidth = Math.max(0.6, lw * 0.5);
+    for (const a of [-2.5, -2.05, -1.57, -1.09, -0.64]) {
+      const px = Math.cos(a), py = Math.sin(a);
+      ctx.beginPath();
+      ctx.moveTo(px * s * 0.38, -s * 0.55 + py * s * 0.38);
+      ctx.lineTo(px * s * 0.45, -s * 0.55 + py * s * 0.45);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = lighten("#9a9488", 0.35);
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.18, -s * 0.96, s * 0.12, s * 0.05, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   },
   g_ship: (ctx, s, _rng, lw) => {
     shadow(ctx, 0, s * 0.04, s * 0.5);

@@ -5,9 +5,15 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import type { DbAtlasNode } from "@uwe/database/server";
+import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
+import { GOUACHE_CATEGORY_LABELS } from "@uwe/atlas/assets";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DeleteAtlasNodeButton } from "@/src/components/atlas/DeleteAtlasNodeButton";
+import {
+  RtxAssetReviewList,
+  type RtxAssetReviewItemView,
+} from "@/src/components/atlas/RtxAssetReviewList";
 import {
   ensureAtlasAction,
   createAtlasNodeAction,
@@ -141,6 +147,50 @@ function NodeTreeRow({
 }
 
 // ---------------------------------------------------------------------------
+// Pending RTX asset review helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-validate a pending `rtx_asset` palette item's stored proposal.
+ * `styleTags` content is never rendered without going through
+ * `validateRtxAtlasAssetProposal` again — items whose stored JSON fails the
+ * validator are marked invalid and only offer deletion.
+ */
+function toRtxAssetReviewItemView(item: {
+  id: string;
+  name: string;
+  styleTags: unknown;
+}): RtxAssetReviewItemView {
+  const styleTags = item.styleTags;
+  const raw =
+    styleTags && typeof styleTags === "object" && !Array.isArray(styleTags)
+      ? (styleTags as Record<string, unknown>).rtxAssetProposal
+      : undefined;
+  const validation = validateRtxAtlasAssetProposal(raw);
+  if (!validation.ok) {
+    return { id: item.id, name: item.name, valid: false };
+  }
+  const proposal = validation.proposal;
+  const base = {
+    id: item.id,
+    name: proposal.name,
+    valid: true as const,
+    categoryLabel: GOUACHE_CATEGORY_LABELS[proposal.category] ?? proposal.category,
+    tags: proposal.tags,
+    engineTags: proposal.engineTags,
+    outputType: proposal.outputType,
+  };
+  if (proposal.outputType === "json-recipe") {
+    return { ...base, recipe: proposal.recipe };
+  }
+  const png = proposal.pngFallback;
+  return {
+    ...base,
+    pngLabel: `PNG ${png.width}×${png.height}${png.transparentBackground ? " · transparent" : ""}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -156,6 +206,7 @@ export default async function AtlasIndexPage({ params }: Props) {
 
   let nodes: DbAtlasNode[] = [];
   let mapId: string | null = null;
+  let pendingRtxAssets: Array<{ id: string; name: string; styleTags: unknown }> = [];
 
   try {
     const map = await db.atlasMap.findUnique({ where: { worldId: world.id } });
@@ -163,9 +214,15 @@ export default async function AtlasIndexPage({ params }: Props) {
       mapId = map.id;
       nodes = await atlas.listNodesForMap(map.id);
     }
+    pendingRtxAssets = await db.atlasPaletteItem.findMany({
+      where: { worldId: world.id, kind: "rtx_asset", reviewStatus: "pending" },
+      orderBy: { createdAt: "asc" },
+    });
   } finally {
     await db.$disconnect();
   }
+
+  const rtxReviewItems = pendingRtxAssets.map(toRtxAssetReviewItemView);
 
   const tree = buildTree(nodes);
 
@@ -288,6 +345,18 @@ export default async function AtlasIndexPage({ params }: Props) {
               </form>
             </details>
           )}
+        </section>
+      )}
+
+      {/* Pending RTX asset review — approve/delete via existing actions */}
+      {rtxReviewItems.length > 0 && (
+        <section className="uwe-atlas-rtx-review" style={{ marginTop: "2rem" }}>
+          <h2 style={{ fontSize: 16, margin: "0 0 0.25rem" }}>Ausstehende RTX-Assets</h2>
+          <p className="uwe-hint" style={{ margin: "0 0 0.75rem" }}>
+            KI-generierte Gouache-Asset-Proposals warten auf Genehmigung. Genehmigen
+            schaltet nur das Palette-Item frei — es entstehen keine Kartenobjekte.
+          </p>
+          <RtxAssetReviewList worldSlug={worldSlug} items={rtxReviewItems} />
         </section>
       )}
     </WorldShell>

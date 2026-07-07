@@ -22,6 +22,7 @@ import {
   saveAtlasAssetProposalAction,
   type AtlasAssetProposalIssueView,
 } from "@/app/atlas-asset-actions";
+import { RtxAssetRecipePreview } from "./RtxAssetRecipePreview";
 
 export interface AtlasAssetProposalStudioProps {
   worldSlug: string;
@@ -345,6 +346,13 @@ export function AtlasAssetProposalStudio({ worldSlug, onClose }: AtlasAssetPropo
                     }}
                   />
                 ))}
+              </div>
+            )}
+
+            {proposal.outputType === "json-recipe" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                <span style={sectionLabel}>Rezept-Preview (deterministisch gezeichnet, kein Code)</span>
+                <RtxAssetRecipePreview recipe={proposal.recipe} size={160} />
               </div>
             )}
 

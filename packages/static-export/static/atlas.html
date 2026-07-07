@@ -330,6 +330,10 @@ let moveUndoPushed = false;  // ein Undo-Schritt pro Drag, nicht pro Pixel
 // Pfad-Anhänge (CoK: Objekte säumen Straßen/Flüsse automatisch)
 const attachOpts = { kind: "trees", side: "both", spacing: 0.05 };
 
+// Siedlungs-Ghost: Hafen/Wasserfront-Parameter (Engine-Option `waterfront`,
+// siehe @uwe/atlas settlement-waterfront.ts). Default AUS = Inland unverändert.
+const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true };
+
 // Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
 const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, rect: null, picking: false };
 let exportPickStart = null;  // [nx,ny] während des Rechteck-Aufziehens
@@ -703,6 +707,18 @@ function discardPlotFillReview() {
 function settlementSourceKey(feature) {
   return feature && (feature._key || feature.id || "plot");
 }
+// Panel-Auswahl → Engine-Option `waterfront` (nur real existierende Felder:
+// edgeFraction, pierCount, includeDock). AUS ⇒ undefined ⇒ Inland wie bisher.
+function settlementWaterfrontOptions() {
+  if (!settlementWfOpts.harbor) return undefined;
+  const wf = {
+    pierCount: Math.min(4, Math.max(1, Math.round(Number(settlementWfOpts.piers) || 2))),
+    includeDock: settlementWfOpts.dock !== false,
+  };
+  const edge = Number(settlementWfOpts.edge);
+  if (settlementWfOpts.edge !== "auto" && Number.isFinite(edge)) wf.edgeFraction = edge;
+  return wf;
+}
 function settlementSeedForPlot(feature) {
   const st = feature.style || {};
   const raw = Number.isFinite(st.settlementSeed) ? st.settlementSeed : engine.hashStringToSeed(String(settlementSourceKey(feature)) + ":settlement");
@@ -714,11 +730,13 @@ function ghostSettlementForPlot(feature) {
   const seed = settlementSeedForPlot(feature);
   const sourcePlotKey = settlementSourceKey(feature);
   const visibility = feature.visibility || "dm_only";
+  const waterfront = settlementWaterfrontOptions();
   const layout = engine.generateSettlement(feature.geometry, {
     seed,
     idPrefix: "settlement-" + sourcePlotKey,
     nodeId: state.nodeId,
     visibility,
+    ...(waterfront ? { waterfront } : {}),
   });
   const features = (layout.features || []).map((sf) => ({
     ...sf,
@@ -748,7 +766,7 @@ function ghostSettlementForPlot(feature) {
       ghost: true,
     },
   }));
-  return { plotKey: sourcePlotKey, sourcePlotKey, seed, features, objects, meta: layout.meta };
+  return { plotKey: sourcePlotKey, sourcePlotKey, seed, waterfront: waterfront || null, features, objects, meta: layout.meta };
 }
 function requestSettlementReview(feature) {
   aiDraftFeatures = null;
@@ -771,6 +789,8 @@ function acceptSettlementReview() {
   doc.features = doc.features.filter((f) => !(f.nodeId === state.nodeId && f.style && f.style.settlementSourcePlotKey === sourcePlotKey));
   doc.objects = doc.objects.filter((o) => !(o.nodeId === state.nodeId && o.style && o.style.settlementSourcePlotKey === sourcePlotKey));
   feature.style = { ...(feature.style || {}), settlementPreset: "local_settlement", settlementSeed: settlementReview.seed };
+  if (settlementReview.waterfront) feature.style.settlementWaterfront = { ...settlementReview.waterfront };
+  else delete feature.style.settlementWaterfront;
   for (const ghost of settlementReview.features) {
     const k = nextKey();
     const style = { ...(ghost.style || {}) };
@@ -1466,6 +1486,10 @@ function vineSliderHtml(f, prop, label, min, max, step) {
     '<span style="width:28px;text-align:right;">' + v + "</span></label>";
 }
 
+// ---- Siedlungs-Ghost: Hafen/Wasserfront-Auswahllisten ----
+const SETTLEMENT_WF_EDGES = [["auto", "Ufer: Auto (längste Kante)"], ["0", "Ufer: Ringposition 0 %"], ["0.25", "Ufer: Ringposition 25 %"], ["0.5", "Ufer: Ringposition 50 %"], ["0.75", "Ufer: Ringposition 75 %"]];
+const SETTLEMENT_WF_PIERS = [["1", "1 Pier"], ["2", "2 Piere"], ["3", "3 Piere"], ["4", "4 Piere"]];
+
 // ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
 const ATTACH_KINDS = [["trees", "Bäume"], ["houses", "Häuser"], ["towers", "Türme"]];
 const ATTACH_SIDES = [["both", "beidseitig"], ["left", "links"], ["right", "rechts"]];
@@ -1905,6 +1929,12 @@ function refreshChrome() {
           '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
           '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
           "</div>" +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;cursor:pointer;"><input id="stl-wf" type="checkbox"' + (settlementWfOpts.harbor ? " checked" : "") + "> Hafen/Wasserfront</label>" +
+          (settlementWfOpts.harbor
+            ? '<select id="stl-wf-edge" class="sel-select">' + opt(SETTLEMENT_WF_EDGES, settlementWfOpts.edge) + "</select>" +
+              '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
+              '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
+            : "") +
           '<button class="tb-btn" data-plot="settlement" style="width:100%;justify-content:center;margin-top:6px;" title="Siedlung als Ghost-Vorschlag">Siedlung</button>' +
           "</div></div>"
         : "") +
@@ -2059,6 +2089,10 @@ function wire() {
     if (t.id === "att-kind") attachOpts.kind = t.value;
     else if (t.id === "att-side") attachOpts.side = t.value;
     else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
+    else if (t.id === "stl-wf") { settlementWfOpts.harbor = t.checked; refreshChrome(); }
+    else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
+    else if (t.id === "stl-wf-piers") settlementWfOpts.piers = Number(t.value);
+    else if (t.id === "stl-wf-dock") settlementWfOpts.dock = t.checked;
     else if (t.id === "obj-scale" || t.id === "obj-rot") {
       const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
       const v = Number(t.value);

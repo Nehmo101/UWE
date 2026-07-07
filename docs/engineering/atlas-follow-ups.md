@@ -2,7 +2,7 @@
 
 Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
-> Stand: 2026-07-06 nach dem RTX-Asset-Studio-MVP (`feat(atlas): add RTX asset studio MVP slice`, Studio-Panel + Server-Actions + Pending-Persistenz). Dieser Stand ist auf `main`.
+> Stand: 2026-07-07 nach dem Parallel-Batch „Review-UI + Rezept-Preview · Wasserfront-UI · Gouache-Batch 3“ (drei Slices in einem PR). Dieser Stand ist auf `main`.
 >
 > Hinweis: Die CoK-Gap-Analyse ([atlas-cok-gap-analysis.md](atlas-cok-gap-analysis.md), Stand 2026-07-01) ist teilweise überholt — Säumen-UI, Stempel-Variation, Undo/Redo, Multi-Select und der Export-Dialog (Ausschnitt + Grid + Deko) sind inzwischen auf `main`.
 
@@ -30,13 +30,16 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 - **Settlement-Ghost-UI:** `atlas.html` kann für ausgewählte `plot`-Flächen lokal/deterministisch `generateSettlement()` ausführen, Mauern/Straßen/Plaza/Objekte als transparente Ghosts prüfen und erst nach explizitem Übernehmen reguläre Atlas-Features/-Objects schreiben. Bestehende Settlement-Items werden nur für dieselbe Plot-Fläche über `style.settlementSourcePlotKey` ersetzt.
 - **KI/RTX-Asset-Proposal-Brain-Action:** `@uwe/ai-brain` kennt `atlas_generate_asset_proposal` als DM-only, Review-only Brain-Action. Der Prompt-Kontext kommt aus `@uwe/atlas/rtx-asset-proposal`, enthält Styleguide-/Katalog-Pflichtauszüge plus existierende Gouache-Assets und validiert Ergebnisse als `atlas_asset_proposal` ohne Auto-Apply.
 - **Settlement-Wasserfront-Engine-Hook:** `generateSettlement()` kann optional `waterfront` erzeugen: Wasserfront-Region, Pier-Pfade und optionaler Hafen/Dock-Marker. Der Default bleibt inland/aus, damit bestehende Ghost-Flows unverändert bleiben.
+- **Pending-Asset-Review & Rezept-Preview:** `@uwe/atlas/rtx-asset-preview` (`drawRtxGouacheRecipePreview`) rendert validierte `json-recipe`-Proposals rein datengetrieben (ellipse/rect/polygon/absolute-Pfade, Hex-Re-Check, Skip statt Throw bei unbekannten Befehlen; deterministisch, getestet). Das RTX-Asset-Modal zeigt die Canvas-Preview zusätzlich zur JSON-Ansicht; die Atlas-Index-Seite listet Pending-`rtx_asset`-Items („Ausstehende RTX-Assets“, serverseitig erneut validiert, ungültige Items delete-only) mit Genehmigen/Löschen über die bestehenden Actions.
+- **Settlement-Wasserfront-UI-Parameter:** Das Settlement-Ghost-Panel in `atlas.html` bietet einen Hafen/Wasserfront-Toggle (Default aus) plus die drei realen Engine-Optionen (`edgeFraction`, `pierCount` 1–4, `includeDock`); Werte fließen deterministisch in `generateSettlement()` und werden bei Übernahme als `style.settlementWaterfront` persistiert. Toggle aus = byte-identisches Inland-Verhalten.
+- **Gouache-Asset-Batch 3:** sieben neue Stamp-Rezepte in `assets.ts` (`g_watermill`, `g_lighthouse`, `g_amphitheater`, `g_burial_mound`, `g_caravanserai` als structure; `g_ziggurat`, `g_portal_arch` als landmark; `g_windmill` existierte bereits) — Styleguide-konform (Schatten/Highlight/Pigmentrand, Base-centre), Engine-Bundle neu gebaut.
 - **RTX-Asset-Studio — MVP (Studio-Panel + Pending-Persistenz):** `apps/studio/app/atlas-asset-actions.ts` begrenzt den DM-Prompt (max. 500 Zeichen), führt `atlas_generate_asset_proposal` über `runBrainAction` nur auf lokalen/RTX-Providern (`ollama`, `openai_compatible`) aus und re-validiert das Ergebnis serverseitig mit `validateRtxAtlasAssetProposal`. Das Modal `AtlasAssetProposalStudio` (Workspace-Button „✦ RTX-Asset“) zeigt Prompt-Eingabe, Validierungsstatus, JSON-/Metadaten-Preview (Kategorie/Tags/Palette) und Validator-Fehler samt verworfener Rohausgabe. „Als Pending-Asset speichern“ re-validiert das Proposal erneut serverseitig und legt nur ein `AtlasPaletteItem` mit `source=ai`, `reviewStatus=pending` und dem Proposal-JSON in `styleTags` an — kein Auto-Apply, kein `AtlasObject`, keine Builtin-Promotion; Pending-Items bleiben wie bisher aus Portal und Static Export ausgeschlossen.
 
 ## Noch offen aus dem Gouache-Plan
 
-- **RTX-Asset-Studio ausbauen:** MVP (Panel, Server-Actions, Pending-`AtlasPaletteItem`-Persistenz) ist umgesetzt. Offen bleiben eine gemalte Rezept-Preview (Canvas statt JSON), eine Genehmigungs-/Review-UI für Pending-`rtx_asset`-Items (`approveAtlasPaletteItemAction` existiert bereits ohne UI) und die spätere Builtin-Promotion per PR.
+- **RTX-Asset-Studio — Restarbeiten:** Panel, Pending-Persistenz, Review-UI und Rezept-Preview sind umgesetzt. Offen bleiben: genehmigte `rtx_asset`-Items tatsächlich in der Editor-Palette platzierbar machen (heute sind sie nach Genehmigung nur Metadaten ohne Renderpfad) und die spätere Builtin-Promotion als normaler PR-Schritt.
 - **Gouache-Asset-Bibliothek ausbauen:** Backlog aus `docs/design/atlas-redesign/asset-catalog.md` schrittweise als Rezepte/Custom-Assets umsetzen.
-- **Großstadt-/Schloss-Generator:** Kern-Engine, Ghost-Übernahme und optionaler Wasserfront-/Pier-Hook sind umgesetzt; offen bleiben UI-Parameter für Hafen/Werft, Feintuning der Gebäudeverteilung und Golden-Screenshots.
+- **Großstadt-/Schloss-Generator:** Kern-Engine, Ghost-Übernahme, Wasserfront-/Pier-Hook und die UI-Parameter für Hafen/Wasserfront sind umgesetzt; offen bleiben Feintuning der Gebäudeverteilung und Golden-Screenshots.
 - **Weiche Terrain-Übergänge:** nur noch visuelles Feintuning/Golden-Screenshots für `AtlasTileLayer.blendWidth`, falls der 6px-Default in echten Karten zu weich oder zu hart wirkt.
 - **Static-Viewer-Restparität:** Ranke-Details, `style.smooth`/`style.width` und Legenden-Feinschliff sind nachgezogen; explizite Custom-/AI-Stempel-Goldens fehlen dort weiterhin.
 - **Optionaler Editor-Layout-Umbau:** Werkstatt-orientiertes Layout erst nach den Kernfeatures entscheiden.
@@ -45,20 +48,19 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 ## Nächster Agent: empfohlener Einstieg
 
-**Priorität 1: Pending-Asset-Review & Rezept-Preview.** Das RTX-Asset-Studio-MVP erzeugt jetzt Pending-`AtlasPaletteItem`s (`kind=rtx_asset`, Proposal-JSON in `styleTags.rtxAssetProposal`), aber es gibt weder eine Review-/Genehmigungs-UI für diese Items noch eine gemalte Vorschau des JSON-Rezepts. Der nächste saubere Schnitt: eine kleine Review-Ansicht (Liste der Pending-Items pro Welt mit Genehmigen/Löschen über die bestehenden Actions `approveAtlasPaletteItemAction`/`deleteAtlasPaletteItemAction`) plus eine deterministische Canvas-Preview, die ein validiertes `json-recipe` (Layer: ellipse/rect/polygon/path, validierte Hex-Farben und normierte Koordinaten) rein datengetrieben zeichnet — kein `eval`, kein generierter Code.
+**Priorität 1: Genehmigte RTX-Assets in der Editor-Palette.** Der RTX-Flow ist bis zur Genehmigung geschlossen (Prompt → validiertes Proposal → Pending-Item → Review-UI mit Rezept-Preview → Genehmigen). Was fehlt, ist der letzte Schritt: Ein genehmigtes `rtx_asset`-Item (json-recipe) muss in der Editor-Palette auftauchen und als `AtlasObject` platzierbar/renderbar sein — analog zu genehmigten `ai_stamp`-Items, aber gezeichnet über den deterministischen Rezept-Renderer `drawRtxGouacheRecipePreview` (`@uwe/atlas/rtx-asset-preview`) statt über `imageData`.
 
 Betroffene Kernstellen:
 
-- `apps/studio/app/atlas-asset-actions.ts` — bestehende Actions (Generate/Save) als Muster; ggf. kleine List-Query ergänzen.
-- `apps/studio/src/components/atlas/AtlasAssetProposalStudio.tsx` — hier kann die Rezept-Preview zusätzlich zur JSON-Ansicht einziehen.
-- `apps/studio/app/atlas-actions.ts` — `approveAtlasPaletteItemAction` / `deleteAtlasPaletteItemAction` existieren bereits.
-- `packages/atlas/src/rtx-asset-proposal.ts` — Validator bleibt das finale Gate; Renderer nur gegen `RtxGouacheJsonRecipe` typisieren.
+- `packages/static-export/static/atlas.html` + Engine-Bundle: prüfen, wie genehmigte `ai_stamp`-PaletteItems heute in Palette/Rendering gelangen, und denselben Pfad für `rtx_asset` mit Rezept-Rendering erweitern (`rtx-asset-preview` ggf. ins Engine-Bundle aufnehmen, danach `build:atlas-engine`).
+- `apps/portal/src/components/atlas/AtlasViewer.tsx` und Static Viewer: Render-Parität für platzierte, genehmigte RTX-Assets.
+- `packages/static-export/src/export-atlas.ts`: Wenn Rezept-Daten exportiert werden müssen, NUR das validierte Rezept (nicht Prompt/Rationale) — **zuerst** `scripts/security-leaks.test.ts` und `static-export.test.ts` erweitern.
 
 Security-Regeln:
 
-- Kein Auto-Apply: Genehmigen bleibt ein expliziter DM-Klick; genehmigte `rtx_asset`-Items dürfen weiterhin keine `AtlasObject`s erzeugen.
-- Die Preview zeichnet ausschließlich validierte Rezept-Daten (Shapes, Hex-Farben, normierte Zahlenbereiche) — niemals Text/Code aus `styleTags` ausführen.
-- Vor jeder Export-Erweiterung (`export-atlas.ts` pickt heute nur `imageData`/`mimeType` aus `styleTags`): erst `scripts/security-leaks.test.ts` erweitern, damit Proposal-Metadaten (Prompt/Rationale) nie ins Portal/Static-Bundle leaken.
+- Rendern ausschließlich nach erneuter `validateRtxAtlasAssetProposal`-Prüfung; niemals rohe `styleTags` in Export oder Client-Rendering durchreichen.
+- Pending-Items bleiben unsichtbar; nur `reviewStatus=approved` erreicht Palette/Portal/Export.
+- Kein eval, keine neuen Payload-Formate — der bestehende Rezept-Renderer ist die einzige Zeichenlogik.
 
 Empfohlene Gates:
 
@@ -67,25 +69,26 @@ Empfohlene Gates:
 - `node --import tsx --test packages/static-export/src/static-export.test.ts`
 - `corepack pnpm test:security`
 - `node scripts/file-size-budget-check.mjs`
+- nach Engine-Änderung: `corepack pnpm --filter @uwe/static-export build:atlas-engine` + Bundle-Diff committen
 
 ## Follow-up Prompt für den nächsten Agent
 
 Kopierbarer Einstieg für einen neuen Codex-Agenten:
 
 ```text
-Arbeite im Repo `Nehmo101/UWE` auf aktuellem `main`. Bitte lies zuerst `docs/engineering/atlas-follow-ups.md`, `docs/engineering/atlas-gouache-plan.md` und `docs/prompts/atlas-pictogram-styleguide.md`.
+Arbeite im Repo `Nehmo101/UWE` auf aktuellem `main`. Bitte lies zuerst `docs/engineering/atlas-follow-ups.md` (Abschnitt "Nächster Agent"), `docs/prompts/atlas-pictogram-styleguide.md` und `packages/atlas/src/rtx-asset-preview.ts`.
 
-Ziel: Setze den nächsten kleinen Roadmap-Slice "Pending-Asset-Review & Rezept-Preview" um.
+Ziel: Setze den nächsten kleinen Roadmap-Slice "Genehmigte RTX-Assets in der Editor-Palette" um.
 
 Aktueller Stand:
-- Das RTX-Asset-Studio-MVP (apps/studio/app/atlas-asset-actions.ts + AtlasAssetProposalStudio) erzeugt validierte Proposals und speichert sie als Pending-AtlasPaletteItem (kind=rtx_asset, source=ai, reviewStatus=pending, Proposal-JSON in styleTags.rtxAssetProposal).
-- approveAtlasPaletteItemAction und deleteAtlasPaletteItemAction existieren in apps/studio/app/atlas-actions.ts, haben aber keine UI.
-- Der Validator @uwe/atlas/rtx-asset-proposal bleibt das finale Gate; json-recipe-Layer sind auf ellipse/rect/polygon/path, Hex-Farben und normierte Koordinaten (-4..4) begrenzt.
+- RTX-Flow bis Genehmigung komplett: Proposal-Generierung, Pending-AtlasPaletteItem (kind=rtx_asset, styleTags.rtxAssetProposal), Review-UI mit deterministischer Rezept-Preview (drawRtxGouacheRecipePreview aus @uwe/atlas/rtx-asset-preview).
+- Genehmigte rtx_asset-Items haben aber noch keinen Palette-/Renderpfad im Editor, Portal oder Static Viewer.
+- Genehmigte ai_stamp-Items (imageData in styleTags) sind das Vorbild dafür, wie Custom-Items in Palette und Rendering gelangen.
 
 Implementiere bitte nur einen reviewbaren MVP-Slice:
-1. Eine kleine Studio-Review-Ansicht im Atlas-Kontext: Pending-rtx_asset-Items pro Welt listen, Proposal-Metadaten zeigen, Genehmigen/Löschen über die bestehenden Actions.
-2. Eine deterministische Canvas-Preview für validierte json-recipe-Proposals (rein datengetrieben, kein eval, kein generierter Code) — nutzbar im AtlasAssetProposalStudio und in der Review-Ansicht.
-3. Keine Export-/Portal-Änderung: Pending-Items bleiben ausgeschlossen; styleTags-Proposal-Felder dürfen nicht in export-atlas.ts aufgenommen werden, ohne vorher scripts/security-leaks.test.ts zu erweitern.
+1. Genehmigte rtx_asset-Items (nur reviewStatus=approved, nur outputType json-recipe) erscheinen in der Editor-Palette und sind als reguläre AtlasObjects platzierbar; gezeichnet wird ausschließlich über drawRtxGouacheRecipePreview nach erneuter Validator-Prüfung.
+2. Render-Parität in Portal-Viewer und Static Viewer für platzierte RTX-Assets; export-atlas.ts darf dabei NUR das validierte Rezept exportieren (nie Prompt/Rationale) — erweitere zuerst scripts/security-leaks.test.ts und packages/static-export/src/static-export.test.ts.
+3. Nach Engine-Änderungen das Bundle neu bauen (build:atlas-engine) und den atlas-engine.js-Diff mitcommitten.
 
 Empfohlene Checks:
 - `corepack pnpm --filter @uwe/atlas test`

@@ -31,7 +31,8 @@
     "./export-grid": "./src/export-grid.ts",
     "./vine": "./src/vine.ts",
     "./assets": "./src/assets.ts",
-    "./rtx-asset-proposal": "./src/rtx-asset-proposal.ts"
+    "./rtx-asset-proposal": "./src/rtx-asset-proposal.ts",
+    "./rtx-asset-preview": "./src/rtx-asset-preview.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
