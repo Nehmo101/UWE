@@ -158,9 +158,14 @@ export class PageBulkService {
         await this.db.page.update({ where: { id: page.id }, data });
         undoEntryIds.push(entry.id);
         changedCount += 1;
-      } catch {
+      } catch (error) {
         // Einzelne Seite mit blockierenden Verknüpfungen o. Ä. überspringen,
-        // statt den ganzen Lauf abzubrechen.
+        // statt den ganzen Lauf abzubrechen. Fehler wird protokolliert, damit
+        // stille Massenfehler nachvollziehbar bleiben.
+        console.error(
+          `[uwe/page-bulk] Operation "${operation.kind}" für Seite ${page.id} fehlgeschlagen:`,
+          error,
+        );
         failedCount += 1;
       }
     }

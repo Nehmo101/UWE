@@ -698,11 +698,8 @@ export class UndoService {
   }
 
   private async undoImportExecute(snapshot: ImportExecuteSnapshot): Promise<UndoResult> {
-    for (const pageId of snapshot.createdPageIds) {
-      const page = await this.db.page.findUnique({ where: { id: pageId } });
-      if (page) {
-        await this.db.page.delete({ where: { id: pageId } });
-      }
+    if (snapshot.createdPageIds.length > 0) {
+      await this.db.page.deleteMany({ where: { id: { in: snapshot.createdPageIds } } });
     }
 
     for (const update of snapshot.updatedPages) {
@@ -747,25 +744,20 @@ export class UndoService {
   private async undoImportCentralExecute(
     snapshot: ImportCentralExecuteSnapshot,
   ): Promise<UndoResult> {
-    for (const documentId of snapshot.createdPersonalBrainDocumentIds) {
-      const doc = await this.db.personalBrainDocument.findUnique({ where: { id: documentId } });
-      if (doc) {
-        await this.db.personalBrainDocument.delete({ where: { id: documentId } });
-      }
+    if (snapshot.createdPersonalBrainDocumentIds.length > 0) {
+      await this.db.personalBrainDocument.deleteMany({
+        where: { id: { in: snapshot.createdPersonalBrainDocumentIds } },
+      });
     }
 
-    for (const captureId of snapshot.createdCaptureIds) {
-      const capture = await this.db.captureEntry.findUnique({ where: { id: captureId } });
-      if (capture) {
-        await this.db.captureEntry.delete({ where: { id: captureId } });
-      }
+    if (snapshot.createdCaptureIds.length > 0) {
+      await this.db.captureEntry.deleteMany({
+        where: { id: { in: snapshot.createdCaptureIds } },
+      });
     }
 
-    for (const pageId of snapshot.createdPageIds) {
-      const page = await this.db.page.findUnique({ where: { id: pageId } });
-      if (page) {
-        await this.db.page.delete({ where: { id: pageId } });
-      }
+    if (snapshot.createdPageIds.length > 0) {
+      await this.db.page.deleteMany({ where: { id: { in: snapshot.createdPageIds } } });
     }
 
     const total =

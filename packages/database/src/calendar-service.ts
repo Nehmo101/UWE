@@ -315,21 +315,25 @@ export class CalendarService {
     feedId: string,
     patch: { syncToken?: string | null; ctag?: string | null; lastMethod?: string },
   ) {
-    const feed = await this.db.calendarFeed.findUnique({ where: { id: feedId } });
-    if (!feed) return null;
-    const current =
-      feed.metadata && typeof feed.metadata === "object" && !Array.isArray(feed.metadata)
-        ? (feed.metadata as Record<string, unknown>)
-        : {};
-    const next = {
-      ...current,
-      ...(patch.syncToken !== undefined ? { caldavSyncToken: patch.syncToken } : {}),
-      ...(patch.ctag !== undefined ? { caldavCTag: patch.ctag } : {}),
-      ...(patch.lastMethod ? { caldavLastMethod: patch.lastMethod } : {}),
-    };
-    return this.db.calendarFeed.update({
-      where: { id: feedId },
-      data: { metadata: toPrismaJsonValue(next) },
+    // Read-modify-write der Feed-Metadaten in einer Transaktion, damit
+    // parallele Sync-Läufe sich nicht gegenseitig überschreiben (Lost Update).
+    return this.db.$transaction(async (tx) => {
+      const feed = await tx.calendarFeed.findUnique({ where: { id: feedId } });
+      if (!feed) return null;
+      const current =
+        feed.metadata && typeof feed.metadata === "object" && !Array.isArray(feed.metadata)
+          ? (feed.metadata as Record<string, unknown>)
+          : {};
+      const next = {
+        ...current,
+        ...(patch.syncToken !== undefined ? { caldavSyncToken: patch.syncToken } : {}),
+        ...(patch.ctag !== undefined ? { caldavCTag: patch.ctag } : {}),
+        ...(patch.lastMethod ? { caldavLastMethod: patch.lastMethod } : {}),
+      };
+      return tx.calendarFeed.update({
+        where: { id: feedId },
+        data: { metadata: toPrismaJsonValue(next) },
+      });
     });
   }
 

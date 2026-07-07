@@ -50,4 +50,23 @@ describe("two-factor service", () => {
 
     await db.$disconnect();
   });
+
+  it("removes secret and open challenges atomically on disable", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const twoFactor = createTwoFactorService(db);
+
+    const setup = await twoFactor.beginSetup(userId, "2fa@uwe.local");
+    const counter = Math.floor(Date.now() / 1000 / 30);
+    const code = generateTotpCode(setup.secret, counter);
+    await twoFactor.confirmSetup(userId, code);
+    await twoFactor.createLoginChallenge(userId);
+
+    await twoFactor.disable(userId);
+
+    assert.equal(await twoFactor.isEnabled(userId), false);
+    const remainingChallenges = await db.twoFactorChallenge.count({ where: { userId } });
+    assert.equal(remainingChallenges, 0);
+
+    await db.$disconnect();
+  });
 });

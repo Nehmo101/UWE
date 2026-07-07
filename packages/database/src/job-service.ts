@@ -382,8 +382,11 @@ export class JobService {
       throw new Error("Maximale Versuche erreicht.");
     }
 
-    const job = await this.db.job.update({
-      where: { id },
+    // Statusbedingtes Update: nur wiedereinreihen, wenn der Job seit dem Lesen
+    // unverändert ist. So überholt ein paralleles Retry/Cancel nicht und ein
+    // bereits laufender Wiedereinreihungs-Versuch wird nicht doppelt verarbeitet.
+    const requeued = await this.db.job.updateMany({
+      where: { id, status: existing.status },
       data: {
         status: "pending",
         errorMessage: null,
@@ -397,9 +400,16 @@ export class JobService {
       },
     });
 
-    await this.appendLog(job.id, "info", "Job für erneuten Versuch eingereiht.");
+    if (requeued.count === 0) {
+      // Ein paralleler Vorgang hat den Job zuerst geändert — aktuellen Stand
+      // zurückgeben, statt ihn zu überschreiben.
+      return this.getById(id);
+    }
 
-    return toJobView(job);
+    await this.appendLog(id, "info", "Job für erneuten Versuch eingereiht.");
+
+    const job = await this.db.job.findUnique({ where: { id } });
+    return job ? toJobView(job) : null;
   }
 
   async isCancelled(id: string): Promise<boolean> {

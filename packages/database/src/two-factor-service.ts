@@ -75,8 +75,12 @@ export class TwoFactorService {
   }
 
   async disable(userId: string): Promise<void> {
-    await this.db.twoFactorSecret.deleteMany({ where: { userId } });
-    await this.db.twoFactorChallenge.deleteMany({ where: { userId } });
+    // Secret und offene Challenges gemeinsam entfernen, damit bei einem Fehler
+    // zwischen den beiden Löschungen keine verwaisten Challenges zurückbleiben.
+    await this.db.$transaction([
+      this.db.twoFactorSecret.deleteMany({ where: { userId } }),
+      this.db.twoFactorChallenge.deleteMany({ where: { userId } }),
+    ]);
   }
 
   async createLoginChallenge(userId: string): Promise<TwoFactorLoginChallenge> {
