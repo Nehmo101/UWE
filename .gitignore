@@ -40,6 +40,9 @@ playwright-report/
 
 # Local databases and uploads
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 uploads/
