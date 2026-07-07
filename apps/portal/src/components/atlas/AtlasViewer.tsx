@@ -20,12 +20,13 @@ import {
 import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
-import { paintTerrainBlobs, drawVine } from "@uwe/atlas/canvas-render";
+import { paintTerrainBlobs, drawSvgPath, drawVine } from "@uwe/atlas/canvas-render";
 import { buildVineLayout } from "@uwe/atlas/vine";
 import { drawGouacheAsset, isGouacheAsset } from "@uwe/atlas/assets";
 import { drawRtxGouacheRecipePreview } from "@uwe/atlas/rtx-asset-preview";
 import type { RtxGouacheJsonRecipe } from "@uwe/atlas/rtx-asset-proposal";
 import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
+import { createElevationCache, drawElevationOverlays, resolveObjectElevation, drawObjectElevationShadow, objectParallax, elevationPathHeights } from "./atlas-elevation";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Studio EditorFeature / EditorObject, read-only)
@@ -62,7 +63,7 @@ export interface ViewerObject {
   rotation: number;
   layer?: number;
   linkedPageId?: string | null;
-  style?: { gouache?: string | null; lineWidth?: number; blur?: number } | null;
+  style?: { gouache?: string | null; lineWidth?: number; blur?: number; elevation?: number | null } | null;
   _key: string;
 }
 
@@ -106,6 +107,12 @@ export interface ViewerTileLayer {
   intensity?: Record<string, number> | null;
   /** Soft biome-border blend width at zoom 1; renderers scale it. */
   blendWidth?: number | null;
+  /** Sparse `"col,row"` → elevation [0,1]; missing cells are 0 (sea level). */
+  elevation?: Record<string, number> | null;
+  /** Per-map parallax strength [0,1]; undefined ⇒ default, 0 = off. */
+  parallaxStrength?: number | null;
+  contoursEnabled?: boolean | null;
+  contourSteps?: number | null;
 }
 
 export interface AtlasViewerProps {
@@ -237,30 +244,6 @@ function hashKey(key: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// SVG path parser for Canvas 2D
-// ---------------------------------------------------------------------------
-
-function drawSvgPath(ctx: CanvasRenderingContext2D, d: string) {
-  const cmds = d.match(/[MLHVZQCSA][^MLHVZQCSA]*/gi) ?? [];
-  let x = 0;
-  let y = 0;
-
-  for (const cmd of cmds) {
-    const op = cmd[0]!.toUpperCase();
-    const args = cmd.slice(1).trim().split(/[\s,]+/).filter(Boolean).map(Number);
-    switch (op) {
-      case "M": x = args[0] ?? 0; y = args[1] ?? 0; ctx.moveTo(x, y); break;
-      case "L": x = args[0] ?? x; y = args[1] ?? y; ctx.lineTo(x, y); break;
-      case "H": x = args[0] ?? x; ctx.lineTo(x, y); break;
-      case "V": y = args[0] ?? y; ctx.lineTo(x, y); break;
-      case "Z": ctx.closePath(); break;
-      case "Q": ctx.quadraticCurveTo(args[0] ?? x, args[1] ?? y, args[2] ?? x, args[3] ?? y); x = args[2] ?? x; y = args[3] ?? y; break;
-      case "C": ctx.bezierCurveTo(args[0] ?? x, args[1] ?? y, args[2] ?? x, args[3] ?? y, args[4] ?? x, args[5] ?? y); x = args[4] ?? x; y = args[5] ?? y; break;
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Decorations
 // ---------------------------------------------------------------------------
 
@@ -348,6 +331,8 @@ export function AtlasViewer({
   const stampImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   // Bumped when a stamp image finishes loading to trigger a redraw.
   const [stampImagesVersion, setStampImagesVersion] = useState(0);
+  // Hillshade/contour cache — invalidated by tileLayer.elevation reference.
+  const elevationCacheRef = useRef(createElevationCache());
 
   // Preload AI/upload stamp images whenever the palette map changes.
   useEffect(() => {
@@ -413,6 +398,8 @@ export function AtlasViewer({
         blendWidth: (tileLayer.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
         radiusRatio: 0.4,
       });
+      // 2.5D elevation: hillshade overlay + optional contour lines.
+      drawElevationOverlays(ctx, tileLayer, w2c, zoom, elevationCacheRef.current, preset.colors.ink);
     }
 
     const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
@@ -698,7 +685,7 @@ export function AtlasViewer({
             if (zoom >= 1.5 && coords.length >= 2) {
               const seed = hashKey(feat._key);
               const pathGeo = { type: "Path" as const, coordinates: coords };
-              const ridgeGlyphs = scatterGlyphsAlongPath(pathGeo, BiomeKind.hills, 0.06, undefined, seed);
+              const ridgeGlyphs = scatterGlyphsAlongPath(pathGeo, BiomeKind.hills, 0.06, tileLayer ? elevationPathHeights(tileLayer, coords) : undefined, seed);
               for (const sg of ridgeGlyphs) {
                 const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
                 if (!glyph) continue;
@@ -786,9 +773,12 @@ export function AtlasViewer({
       // rendered instead of (and before) the glyph/image stamp path.
       if (st?.gouache && isGouacheAsset(st.gouache)) {
         const [gx, gy] = w2c(obj.x, obj.y);
+        const ge = resolveObjectElevation(tileLayer, obj);
+        drawObjectElevationShadow(ctx, ge, gx, gy, 30 * zoom * obj.scale, zoom);
+        const [gpx, gpy] = objectParallax(tileLayer, ge, gx, gy, W, H);
         drawGouacheAsset(ctx, st.gouache, {
-          x: gx,
-          y: gy,
+          x: gx + gpx,
+          y: gy + gpy,
           size: 30 * zoom,
           scale: obj.scale,
           rotation: (obj.rotation * Math.PI) / 180,
@@ -805,9 +795,12 @@ export function AtlasViewer({
       const isObjHovered = obj._key === hoveredKey;
       const [ox, oy] = w2c(obj.x, obj.y);
       const size = 24 * zoom * obj.scale;
+      const oe = resolveObjectElevation(tileLayer, obj);
+      drawObjectElevationShadow(ctx, oe, ox, oy, size, zoom);
+      const [opx, opy] = objectParallax(tileLayer, oe, ox, oy, W, H);
 
       ctx.save();
-      ctx.translate(ox, oy);
+      ctx.translate(ox + opx, oy + opy);
       ctx.rotate((obj.rotation * Math.PI) / 180);
       if (isObjHovered) {
         ctx.strokeStyle = "#2563eb";

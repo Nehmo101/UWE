@@ -651,6 +651,243 @@ function buildReliefShading(polygon, biomeKind) {
   };
 }
 
+// ../atlas/src/elevation.ts
+var DEFAULT_PARALLAX_STRENGTH = 0.35;
+var DEFAULT_CONTOUR_STEPS = 5;
+var CONTOUR_MAJOR_EVERY = 5;
+var VERTICAL_SCALE = 6;
+var PARALLAX_FACTOR = 0.08;
+var LIGHT_X = -0.5;
+var LIGHT_Y = -0.5;
+var LIGHT_Z = Math.SQRT1_2;
+var HILLSHADE_GAIN = 1.35;
+var HILLSHADE_MAX_ALPHA = 0.42;
+var HIGHLIGHT_RGB = [255, 250, 235];
+var SHADOW_RGB = [45, 35, 20];
+function clamp01(v) {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+function cellElevation(grid, col, row) {
+  const { cols, rows, elevation } = grid;
+  if (!elevation || cols <= 0 || rows <= 0) return 0;
+  const c = col < 0 ? 0 : col >= cols ? cols - 1 : col;
+  const r = row < 0 ? 0 : row >= rows ? rows - 1 : row;
+  const v = elevation[`${c},${r}`];
+  return typeof v === "number" && Number.isFinite(v) ? clamp01(v) : 0;
+}
+function hasElevation(grid) {
+  const { elevation } = grid;
+  if (!elevation) return false;
+  for (const key of Object.keys(elevation)) {
+    const v = elevation[key];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return true;
+  }
+  return false;
+}
+function sampleElevation(grid, nx, ny) {
+  const { cols, rows } = grid;
+  if (!grid.elevation || cols <= 0 || rows <= 0) return 0;
+  const gx = clamp01(nx) * cols - 0.5;
+  const gy = clamp01(ny) * rows - 0.5;
+  const c0 = Math.floor(gx);
+  const r0 = Math.floor(gy);
+  const tx = gx - c0;
+  const ty = gy - r0;
+  const v00 = cellElevation(grid, c0, r0);
+  const v10 = cellElevation(grid, c0 + 1, r0);
+  const v01 = cellElevation(grid, c0, r0 + 1);
+  const v11 = cellElevation(grid, c0 + 1, r0 + 1);
+  const top = v00 + (v10 - v00) * tx;
+  const bottom = v01 + (v11 - v01) * tx;
+  return top + (bottom - top) * ty;
+}
+function sampleElevationAlongPath(grid, coords) {
+  return coords.map(([x, y]) => sampleElevation(grid, x, y));
+}
+function buildHillshadeRGBA(grid) {
+  const { cols, rows } = grid;
+  const out = new Uint8ClampedArray(Math.max(0, cols) * Math.max(0, rows) * 4);
+  if (!grid.elevation || cols <= 0 || rows <= 0) return out;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const dzdx = (cellElevation(grid, c + 1, r) - cellElevation(grid, c - 1, r)) / 2 * VERTICAL_SCALE;
+      const dzdy = (cellElevation(grid, c, r + 1) - cellElevation(grid, c, r - 1)) / 2 * VERTICAL_SCALE;
+      if (dzdx === 0 && dzdy === 0) continue;
+      const invLen = 1 / Math.hypot(dzdx, dzdy, 1);
+      const shade = (-dzdx * LIGHT_X - dzdy * LIGHT_Y + LIGHT_Z) * invLen;
+      const delta = shade - LIGHT_Z;
+      if (delta === 0) continue;
+      const alpha = Math.min(1, Math.abs(delta) * HILLSHADE_GAIN) * HILLSHADE_MAX_ALPHA;
+      const [cr, cg, cb] = delta > 0 ? HIGHLIGHT_RGB : SHADOW_RGB;
+      const i = (r * cols + c) * 4;
+      out[i] = cr;
+      out[i + 1] = cg;
+      out[i + 2] = cb;
+      out[i + 3] = Math.round(alpha * 255);
+    }
+  }
+  return out;
+}
+function ptKey(p) {
+  return `${Math.round(p[0] * 1e6)},${Math.round(p[1] * 1e6)}`;
+}
+function chainSegments(segments) {
+  const adj = /* @__PURE__ */ new Map();
+  const used = new Array(segments.length).fill(false);
+  segments.forEach((seg, i) => {
+    for (const pt of seg) {
+      const key = ptKey(pt);
+      const entry = adj.get(key);
+      if (entry) entry.segs.push(i);
+      else adj.set(key, { pt, segs: [i] });
+    }
+  });
+  const lines = [];
+  for (let start = 0; start < segments.length; start++) {
+    if (used[start]) continue;
+    used[start] = true;
+    const line = [segments[start][0], segments[start][1]];
+    for (const dir of [1, -1]) {
+      for (; ; ) {
+        const tip = dir === 1 ? line[line.length - 1] : line[0];
+        const entry = adj.get(ptKey(tip));
+        const nextIdx = entry?.segs.find((i) => !used[i]);
+        if (nextIdx === void 0) break;
+        used[nextIdx] = true;
+        const [a, b] = segments[nextIdx];
+        const next = ptKey(a) === ptKey(tip) ? b : a;
+        if (dir === 1) line.push(next);
+        else line.unshift(next);
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+function buildContourLines(grid, steps = DEFAULT_CONTOUR_STEPS) {
+  const { cols, rows } = grid;
+  const n = Math.max(2, Math.min(24, Math.round(steps)));
+  if (!grid.elevation || cols < 2 || rows < 2 || !hasElevation(grid)) return [];
+  const nodeX = (c) => (c + 0.5) / cols;
+  const nodeY = (r) => (r + 0.5) / rows;
+  const result = [];
+  for (let li = 1; li < n; li++) {
+    const level = li / n;
+    const segments = [];
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const tl = cellElevation(grid, c, r);
+        const tr = cellElevation(grid, c + 1, r);
+        const br = cellElevation(grid, c + 1, r + 1);
+        const bl = cellElevation(grid, c, r + 1);
+        const idx = (tl > level ? 8 : 0) | (tr > level ? 4 : 0) | (br > level ? 2 : 0) | (bl > level ? 1 : 0);
+        if (idx === 0 || idx === 15) continue;
+        const lerp2 = (a, b) => (level - a) / (b - a);
+        const top = [nodeX(c) + lerp2(tl, tr) / cols, nodeY(r)];
+        const right = [nodeX(c + 1), nodeY(r) + lerp2(tr, br) / rows];
+        const bottom = [nodeX(c) + lerp2(bl, br) / cols, nodeY(r + 1)];
+        const left = [nodeX(c), nodeY(r) + lerp2(tl, bl) / rows];
+        const push = (a, b) => segments.push([a, b]);
+        switch (idx) {
+          case 1:
+            push(left, bottom);
+            break;
+          case 2:
+            push(bottom, right);
+            break;
+          case 3:
+            push(left, right);
+            break;
+          case 4:
+            push(top, right);
+            break;
+          case 5: {
+            const centerAbove = (tl + tr + br + bl) / 4 > level;
+            if (centerAbove) {
+              push(top, left);
+              push(bottom, right);
+            } else {
+              push(top, right);
+              push(left, bottom);
+            }
+            break;
+          }
+          case 6:
+            push(top, bottom);
+            break;
+          case 7:
+            push(top, left);
+            break;
+          case 8:
+            push(top, left);
+            break;
+          case 9:
+            push(top, bottom);
+            break;
+          case 10: {
+            const centerAbove = (tl + tr + br + bl) / 4 > level;
+            if (centerAbove) {
+              push(top, right);
+              push(left, bottom);
+            } else {
+              push(top, left);
+              push(bottom, right);
+            }
+            break;
+          }
+          case 11:
+            push(top, right);
+            break;
+          case 12:
+            push(left, right);
+            break;
+          case 13:
+            push(bottom, right);
+            break;
+          case 14:
+            push(left, bottom);
+            break;
+        }
+      }
+    }
+    if (!segments.length) continue;
+    const major = li % CONTOUR_MAJOR_EVERY === 0;
+    for (const points of chainSegments(segments)) {
+      if (points.length >= 2) result.push({ level, major, points });
+    }
+  }
+  return result;
+}
+function parallaxCanvasOffset(e, canvasX, canvasY, centerX, centerY, strength) {
+  if (!(e > 0) || !(strength > 0)) return [0, 0];
+  const k = clamp01(e) * clamp01(strength) * PARALLAX_FACTOR;
+  return [(canvasX - centerX) * k, (canvasY - centerY) * k];
+}
+function elevationShadowOffset(e, zoom) {
+  const d = clamp01(e) * zoom;
+  return [d * 10, d * 7];
+}
+function normalizeElevationCells(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return void 0;
+  const out = {};
+  let any = false;
+  for (const [key, raw] of Object.entries(value)) {
+    if (!/^\d+,\d+$/.test(key)) continue;
+    if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) continue;
+    out[key] = clamp01(raw);
+    any = true;
+  }
+  return any ? out : void 0;
+}
+function normalizeParallaxStrength(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_PARALLAX_STRENGTH;
+  return clamp01(value);
+}
+function normalizeContourSteps(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_CONTOUR_STEPS;
+  return Math.max(2, Math.min(24, Math.round(value)));
+}
+
 // ../atlas/src/plot-fill.ts
 var BASE_PLOT_DENSITY = 42;
 function ringBbox2(ring) {
@@ -2220,7 +2457,7 @@ function tryParseGeometry(raw) {
 }
 
 // ../atlas/src/doc.ts
-var SCHEMA_VERSION = 2;
+var SCHEMA_VERSION = 3;
 var DEFAULT_TERRAIN_BLEND_WIDTH = 6;
 function emptyTileLayer() {
   return { cols: 64, rows: 40, tile: 32, cells: {}, blendWidth: DEFAULT_TERRAIN_BLEND_WIDTH };
@@ -2234,7 +2471,7 @@ function migrateDoc(doc) {
     throw new AtlasParseError("Atlas-Doc ist leer oder ungültig.");
   }
   const d = { ...doc };
-  if (!d.schemaVersion) d.schemaVersion = SCHEMA_VERSION;
+  if (!d.schemaVersion || d.schemaVersion < SCHEMA_VERSION) d.schemaVersion = SCHEMA_VERSION;
   d.nodes = d.nodes ?? [];
   d.features = d.features ?? [];
   d.objects = d.objects ?? [];
@@ -2242,6 +2479,18 @@ function migrateDoc(doc) {
   d.tileLayer = d.tileLayer ?? emptyTileLayer();
   d.tileLayer.cells = d.tileLayer.cells ?? {};
   d.tileLayer.blendWidth = normalizeTerrainBlendWidth(d.tileLayer.blendWidth);
+  const elevation = normalizeElevationCells(d.tileLayer.elevation);
+  if (elevation) d.tileLayer.elevation = elevation;
+  else delete d.tileLayer.elevation;
+  if (d.tileLayer.parallaxStrength !== void 0) {
+    d.tileLayer.parallaxStrength = normalizeParallaxStrength(d.tileLayer.parallaxStrength);
+  }
+  if (d.tileLayer.contoursEnabled !== void 0) {
+    d.tileLayer.contoursEnabled = d.tileLayer.contoursEnabled === true;
+  }
+  if (d.tileLayer.contourSteps !== void 0) {
+    d.tileLayer.contourSteps = normalizeContourSteps(d.tileLayer.contourSteps);
+  }
   return d;
 }
 function serializeDoc(doc, extra) {
@@ -2356,6 +2605,16 @@ function paintTerrainBlobs(ctx, opts) {
       }
     }
   }
+}
+function createHillshadeCanvas(rgba, cols, rows) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, cols);
+  canvas.height = Math.max(1, rows);
+  const ctx = canvas.getContext("2d");
+  if (ctx && cols > 0 && rows > 0 && rgba.length === cols * rows * 4) {
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), cols, rows), 0, 0);
+  }
+  return canvas;
 }
 function drawCompassRose(ctx, opts) {
   const { x, y, radius: r, ink, accent, parchment } = opts;
@@ -2606,13 +2865,13 @@ var COIL_TURNS = 6;
 var SHADOW_OFFSET = 0.05;
 var AURA_RADIUS = 0.09;
 var AURA_CLOUDS = 5;
-function clamp01(v) {
+function clamp012(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
 }
 function clampCoord(c) {
-  return [clamp01(c[0]), clamp01(c[1])];
+  return [clamp012(c[0]), clamp012(c[1])];
 }
 function perpendicularAt(spine, i) {
   const prev = spine[Math.max(0, i - 1)];
@@ -2635,9 +2894,9 @@ function buildVineLayout(points, options = {}) {
   }
   const taperStart = options.taperStart ?? 0.9;
   const taperEnd = options.taperEnd ?? 0.15;
-  const coil = clamp01(options.coil ?? 0.6);
+  const coil = clamp012(options.coil ?? 0.6);
   const tendrilCount = Math.max(0, Math.round(options.tendrils ?? 3));
-  const height = clamp01(options.height ?? 0.7);
+  const height = clamp012(options.height ?? 0.7);
   const seed = options.seed ?? 1;
   const segments = options.smoothSegments ?? 16;
   const spine = smoothPath(points, { segments, tension: 0.5 }).map(clampCoord);
@@ -3171,7 +3430,7 @@ function isFiniteNumber(value) {
 function safeHexColor(value) {
   return typeof value === "string" && HEX_COLOR2.test(value) ? value : void 0;
 }
-function clamp012(value) {
+function clamp013(value) {
   return Math.min(1, Math.max(0, value));
 }
 function buildEllipseOps(layer, project, unit) {
@@ -3318,7 +3577,7 @@ function drawRtxGouacheRecipePreview(ctx, recipe, opts) {
     const ops = buildLayerOps(layer, project, unit);
     if (!ops) continue;
     const roleDefault = RTX_RECIPE_ROLE_DEFAULT_OPACITY[layer.role] ?? 1;
-    ctx.globalAlpha = clamp012(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
+    ctx.globalAlpha = clamp013(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
     ctx.beginPath();
     for (const [name, ...args] of ops) {
       ctx[name](...args);
@@ -3840,7 +4099,7 @@ var KIND_GLYPH = {
   houses: "village",
   towers: "castle"
 };
-function clamp013(v) {
+function clamp014(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
@@ -3880,8 +4139,8 @@ function generatePathAttachments(path, options) {
       for (const sign of signs) {
         const scale = 0.8 + rng() * 0.4;
         const rotation = (rng() - 0.5) * 2 * rotationRange;
-        const x = clamp013(cx + px * offset * sign);
-        const y = clamp013(cy + py * offset * sign);
+        const x = clamp014(cx + px * offset * sign);
+        const y = clamp014(cy + py * offset * sign);
         results.push({ glyphKey, x, y, scale, rotation });
       }
       d += spacing;
@@ -4665,6 +4924,9 @@ export {
   BUILTIN_GLYPHS,
   BUILTIN_GLYPH_KEYS,
   BiomeKind,
+  CONTOUR_MAJOR_EVERY,
+  DEFAULT_CONTOUR_STEPS,
+  DEFAULT_PARALLAX_STRENGTH,
   DEFAULT_TERRAIN_BLEND_WIDTH,
   DRAW_LAYERS,
   GOUACHE_ASSETS,
@@ -4687,12 +4949,16 @@ export {
   applyColorIntensity,
   assembleStampPrompt,
   buildAtlasPlotFillPromptContext,
+  buildContourLines,
   buildGridLines,
+  buildHillshadeRGBA,
   buildReliefShading,
   buildRtxAtlasAssetPromptContext,
   buildVineLayout,
   canvasToWorld,
+  cellElevation,
   centroid,
+  createHillshadeCanvas,
   distToSegment,
   drawCompassRose,
   drawGouacheAsset,
@@ -4700,6 +4966,7 @@ export {
   drawScaleBar,
   drawSvgPath,
   drawVine,
+  elevationShadowOffset,
   emptyDrawLayerMap,
   fillPlotWithGouacheAssets,
   formatAtlasPlotFillPromptContext,
@@ -4710,6 +4977,7 @@ export {
   getGlyphByKey,
   getGouacheAsset,
   groupGlyphsByCategory,
+  hasElevation,
   hashStringToSeed,
   isAtlasPlotFillProposal,
   isGouacheAsset,
@@ -4721,7 +4989,11 @@ export {
   mulberry32,
   normalizeAtlasDraftFeature,
   normalizeAtlasDraftFeatures,
+  normalizeContourSteps,
+  normalizeElevationCells,
+  normalizeParallaxStrength,
   paintTerrainBlobs,
+  parallaxCanvasOffset,
   parseExtent,
   parseFeatureGeometry,
   parseGeometry,
@@ -4733,6 +5005,8 @@ export {
   rerollDraft,
   resolveStylePreset,
   roundedRectPath,
+  sampleElevation,
+  sampleElevationAlongPath,
   sampleTaperedWidths,
   scatterGlyphsAlongPath,
   scatterGlyphsInPolygon,

@@ -350,6 +350,10 @@
       this.ctx = null;
       this.nodeId = data.rootNodeId || (data.nodes[0] && data.nodes[0].id);
       this.paletteItems = data.paletteItems || {};
+      // Height simulation caches — keyed by tileLayer identity so a data
+      // change invalidates them; pan/zoom only re-drawImage's the cached canvas.
+      this.hillshadeCache = null;
+      this.contourCache = null;
       // Preload AI/upload image stamps (approved-only, inlined by the export).
       this.stampImages = {};
       for (const [id, item] of Object.entries(this.paletteItems)) {
@@ -719,6 +723,38 @@
       return null;
     }
 
+    // Tile layer as an elevation grid for the engine (cols/rows defaults match
+    // the terrain painting below); null when there is no tile layer at all.
+    getElevationGrid() {
+      const tl = this.data.tileLayer;
+      if (!tl) return null;
+      return { cols: tl.cols || 64, rows: tl.rows || 40, elevation: tl.elevation || null };
+    }
+
+    getHillshadeCanvas() {
+      const engine = this.atlasEngine;
+      const tl = this.data.tileLayer;
+      const grid = this.getElevationGrid();
+      if (!engine || !engine.buildHillshadeRGBA || !engine.createHillshadeCanvas || !grid) return null;
+      if (this.hillshadeCache && this.hillshadeCache.source === tl) return this.hillshadeCache.canvas;
+      const rgba = engine.buildHillshadeRGBA(grid);
+      const canvas = engine.createHillshadeCanvas(rgba, grid.cols, grid.rows);
+      this.hillshadeCache = { source: tl, canvas };
+      return canvas;
+    }
+
+    getContourLines() {
+      const engine = this.atlasEngine;
+      const tl = this.data.tileLayer;
+      const grid = this.getElevationGrid();
+      if (!engine || !engine.buildContourLines || !grid) return null;
+      if (this.contourCache && this.contourCache.source === tl) return this.contourCache.lines;
+      const steps = tl.contourSteps != null ? tl.contourSteps : engine.DEFAULT_CONTOUR_STEPS;
+      const lines = engine.buildContourLines(grid, steps);
+      this.contourCache = { source: tl, lines };
+      return lines;
+    }
+
     render() {
       if (!this.ctx) return;
       const ctx = this.ctx;
@@ -755,6 +791,49 @@
           blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
           radiusRatio: 0.4,
         });
+      }
+
+      // 2.5D height simulation — hillshade + contour lines over the terrain
+      // layer. Skipped entirely when the engine is unavailable (offline
+      // fallback) or the map carries no height field.
+      const engine = this.atlasEngine;
+      const elevationGrid = this.getElevationGrid();
+      const hasHeightField = Boolean(
+        tl && engine && engine.hasElevation && elevationGrid && engine.hasElevation(elevationGrid),
+      );
+      if (hasHeightField) {
+        const hillshade = this.getHillshadeCanvas();
+        if (hillshade) {
+          const [mx0, my0] = w2c(0, 0);
+          const [mx1, my1] = w2c(1, 1);
+          ctx.save();
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(hillshade, mx0, my0, mx1 - mx0, my1 - my0);
+          ctx.restore();
+        }
+        if (tl.contoursEnabled) {
+          const contours = this.getContourLines();
+          if (contours && contours.length) {
+            ctx.save();
+            ctx.strokeStyle = preset.colors.ink;
+            ctx.globalAlpha = 0.45;
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+            for (const line of contours) {
+              if (!line.points || line.points.length < 2) continue;
+              ctx.lineWidth = (line.major ? 1.6 : 0.9) * zoom;
+              ctx.beginPath();
+              const [sx, sy] = w2c(line.points[0][0], line.points[0][1]);
+              ctx.moveTo(sx, sy);
+              for (let i = 1; i < line.points.length; i++) {
+                const [px, py] = w2c(line.points[i][0], line.points[i][1]);
+                ctx.lineTo(px, py);
+              }
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
       }
 
       const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * zoom, W / 2, H / 2, W * 0.75);
@@ -996,10 +1075,51 @@
         ctx.restore();
       }
 
+      const canElevateObjects = Boolean(
+        engine &&
+          engine.sampleElevation &&
+          engine.elevationShadowOffset &&
+          engine.parallaxCanvasOffset,
+      );
+      const parallaxStrength = canElevateObjects
+        ? tl && tl.parallaxStrength != null
+          ? tl.parallaxStrength
+          : engine.DEFAULT_PARALLAX_STRENGTH
+        : 0;
+
       for (const obj of this.getNodeObjects()) {
         const paletteItem = this.paletteItems[obj.paletteItemId];
         const [ox, oy] = w2c(obj.x, obj.y);
         const style = obj.style || {};
+
+        // Elevated objects cast a soft ground shadow (light fixed NW → shadow
+        // SE) and draw parallax-shifted; hit-testing stays at the ground
+        // position (ox, oy).
+        let drawX = ox;
+        let drawY = oy;
+        if (canElevateObjects) {
+          const elevation =
+            style.elevation != null
+              ? style.elevation
+              : hasHeightField
+                ? engine.sampleElevation(elevationGrid, obj.x, obj.y)
+                : 0;
+          if (elevation > 0.02) {
+            const groundSize = 24 * zoom * obj.scale;
+            const [sdx, sdy] = engine.elevationShadowOffset(elevation, zoom);
+            ctx.save();
+            ctx.beginPath();
+            ctx.ellipse(ox + sdx, oy + sdy, groundSize * 0.45, groundSize * 0.28, 0, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(26,16,8,${0.10 + 0.15 * elevation})`;
+            ctx.fill();
+            ctx.restore();
+            const [pdx, pdy] = engine.parallaxCanvasOffset(
+              elevation, ox, oy, W / 2, H / 2, parallaxStrength,
+            );
+            drawX = ox + pdx;
+            drawY = oy + pdy;
+          }
+        }
 
         if (
           style.gouache &&
@@ -1009,8 +1129,8 @@
           this.atlasEngine.isGouacheAsset(style.gouache)
         ) {
           this.atlasEngine.drawGouacheAsset(ctx, style.gouache, {
-            x: ox,
-            y: oy,
+            x: drawX,
+            y: drawY,
             size: 30 * zoom,
             scale: obj.scale,
             rotation: (obj.rotation * Math.PI) / 180,
@@ -1053,7 +1173,7 @@
         if (stampImage && stampImage.complete && stampImage.naturalWidth > 0) {
           ctx.save();
           if (blur > 0) ctx.filter = `blur(${blur * zoom}px)`;
-          ctx.translate(ox, oy);
+          ctx.translate(drawX, drawY);
           ctx.rotate((obj.rotation * Math.PI) / 180);
           ctx.drawImage(stampImage, -size / 2, -size / 2, size, size);
           ctx.restore();
@@ -1065,7 +1185,7 @@
         if (!glyph) continue;
         ctx.save();
         if (blur > 0) ctx.filter = `blur(${blur * zoom}px)`;
-        ctx.translate(ox, oy);
+        ctx.translate(drawX, drawY);
         ctx.rotate((obj.rotation * Math.PI) / 180);
         const scale = size / 24;
         ctx.scale(scale, scale);

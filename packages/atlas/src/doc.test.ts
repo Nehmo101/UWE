@@ -41,15 +41,15 @@ function terraV1Doc() {
 }
 
 describe("SCHEMA_VERSION", () => {
-  it("is 2", () => {
-    assert.equal(SCHEMA_VERSION, 2);
+  it("is 3", () => {
+    assert.equal(SCHEMA_VERSION, 3);
   });
 });
 
-describe("migrateDoc — v1 → v2", () => {
-  it("adds schemaVersion=2 and an empty tileLayer", () => {
+describe("migrateDoc — v1/v2 → v3", () => {
+  it("adds schemaVersion=3 and an empty tileLayer", () => {
     const migrated = migrateDoc(terraV1Doc());
-    assert.equal(migrated.schemaVersion, 2);
+    assert.equal(migrated.schemaVersion, 3);
     assert.deepEqual(migrated.tileLayer, {
       cols: 64,
       rows: 40,
@@ -126,6 +126,55 @@ describe("migrateDoc — v1 → v2", () => {
   });
 });
 
+describe("migrateDoc — v3 height field", () => {
+  it("bumps v2 docs to v3 without touching cells", () => {
+    const migrated = migrateDoc({
+      schemaVersion: 2,
+      tileLayer: { cols: 64, rows: 40, tile: 32, cells: { "1,2": "forest" } },
+    });
+    assert.equal(migrated.schemaVersion, 3);
+    assert.deepEqual(migrated.tileLayer.cells, { "1,2": "forest" });
+    assert.ok(!("elevation" in migrated.tileLayer), "no elevation added by default");
+  });
+
+  it("normalises the elevation field (clamps, drops invalid/zero entries)", () => {
+    const migrated = migrateDoc({
+      schemaVersion: 3,
+      tileLayer: {
+        cols: 64, rows: 40, tile: 32, cells: {},
+        elevation: { "1,1": 0.5, "2,2": 7, "bad": 0.3, "3,3": 0 },
+      },
+    });
+    assert.deepEqual(migrated.tileLayer.elevation, { "1,1": 0.5, "2,2": 1 });
+  });
+
+  it("drops an entirely invalid elevation value", () => {
+    const migrated = migrateDoc({
+      schemaVersion: 3,
+      tileLayer: { cols: 64, rows: 40, tile: 32, cells: {}, elevation: [0.1, 0.2] },
+    });
+    assert.ok(!("elevation" in migrated.tileLayer));
+  });
+
+  it("normalises height-display settings when present, leaves them absent otherwise", () => {
+    const absent = migrateDoc({ worldSlug: "w" });
+    assert.ok(!("parallaxStrength" in absent.tileLayer));
+    assert.ok(!("contoursEnabled" in absent.tileLayer));
+    assert.ok(!("contourSteps" in absent.tileLayer));
+
+    const migrated = migrateDoc({
+      schemaVersion: 3,
+      tileLayer: {
+        cols: 64, rows: 40, tile: 32, cells: {},
+        parallaxStrength: 4, contoursEnabled: 1, contourSteps: 99,
+      },
+    });
+    assert.equal(migrated.tileLayer.parallaxStrength, 1);
+    assert.equal(migrated.tileLayer.contoursEnabled, false);
+    assert.equal(migrated.tileLayer.contourSteps, 24);
+  });
+});
+
 describe("serializeDoc", () => {
   it("strips the transient _key from features and objects", () => {
     const serialized = serializeDoc(migrateDoc(terraV1Doc()));
@@ -140,7 +189,7 @@ describe("serializeDoc", () => {
   it("merges extra fields into the envelope", () => {
     const serialized = serializeDoc(migrateDoc(terraV1Doc()), { savedAt: "2026-07-01T00:00:00Z" });
     assert.equal(serialized.savedAt, "2026-07-01T00:00:00Z");
-    assert.equal(serialized.schemaVersion, 2);
+    assert.equal(serialized.schemaVersion, 3);
   });
 
   it("round-trips: migrate ∘ serialize is stable", () => {
@@ -150,10 +199,10 @@ describe("serializeDoc", () => {
     assert.deepEqual(s2, s1);
   });
 
-  it("regression: Terra v1 → migrate → serialize matches the expected canonical v2 doc", () => {
+  it("regression: Terra v1 → migrate → serialize matches the expected canonical v3 doc", () => {
     const actual = serializeDoc(migrateDoc(terraV1Doc()));
     assert.deepEqual(actual, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       worldSlug: "terra",
       map: { id: "map_terra", title: "Atlas", stylePreset: "tolkien-ink" },
       rootNodeId: "node_root",

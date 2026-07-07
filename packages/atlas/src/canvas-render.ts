@@ -175,6 +175,34 @@ export function paintTerrainBlobs(
   }
 }
 
+/**
+ * Turn a hillshade RGBA buffer (from `buildHillshadeRGBA`, grid resolution)
+ * into a tiny offscreen canvas. Renderers draw it stretched over the map rect
+ * with image smoothing enabled, letting the browser's bilinear filter turn the
+ * per-cell shading into a smooth overlay:
+ *
+ *   const shade = createHillshadeCanvas(rgba, cols, rows);   // cacheable
+ *   ctx.imageSmoothingEnabled = true;
+ *   ctx.drawImage(shade, x, y, w, h);                        // whole-map rect
+ *
+ * The returned canvas only changes when the height field changes, so callers
+ * should cache it across pan/zoom frames.
+ */
+export function createHillshadeCanvas(
+  rgba: Uint8ClampedArray,
+  cols: number,
+  rows: number,
+): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, cols);
+  canvas.height = Math.max(1, rows);
+  const ctx = canvas.getContext("2d");
+  if (ctx && cols > 0 && rows > 0 && rgba.length === cols * rows * 4) {
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), cols, rows), 0, 0);
+  }
+  return canvas;
+}
+
 /** Options for {@link drawCompassRose}. */
 export interface CompassRoseOptions {
   /** Centre x in canvas pixels. */

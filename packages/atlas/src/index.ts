@@ -103,6 +103,25 @@ export {
 } from "./terrain";
 export type { ScatterExclusion } from "./terrain";
 
+// Elevation engine — height field, hillshade, contours, parallax (2.5D)
+export {
+  DEFAULT_PARALLAX_STRENGTH,
+  DEFAULT_CONTOUR_STEPS,
+  CONTOUR_MAJOR_EVERY,
+  cellElevation,
+  hasElevation,
+  sampleElevation,
+  sampleElevationAlongPath,
+  buildHillshadeRGBA,
+  buildContourLines,
+  parallaxCanvasOffset,
+  elevationShadowOffset,
+  normalizeElevationCells,
+  normalizeParallaxStrength,
+  normalizeContourSteps,
+} from "./elevation";
+export type { ElevationGrid, ContourLine } from "./elevation";
+
 // Plot fill — deterministic object scatter for `plot` features
 export { fillPlotWithGouacheAssets } from "./plot-fill";
 export type {
@@ -160,6 +179,7 @@ export {
   roundedRectPath,
   paintTerrainBlobs,
   applyColorIntensity,
+  createHillshadeCanvas,
   drawSvgPath,
   drawCompassRose,
   drawScaleBar,

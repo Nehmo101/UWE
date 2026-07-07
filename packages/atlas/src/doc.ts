@@ -9,6 +9,9 @@
  * v1 (implicit, no `schemaVersion`): `{ worldSlug, map, pageLinks, nodes[],
  * features[], objects[], ... }`.
  * v2 (additive): adds `schemaVersion: 2` and a `tileLayer` terrain grid.
+ * v3 (additive): the tile layer gains an optional elevation height field
+ * (`elevation`, sparse `"c,r"` → [0,1]) plus the per-map height-display
+ * settings `parallaxStrength`, `contoursEnabled` and `contourSteps`.
  * Migration is additive and idempotent — features/objects are never touched,
  * they are rendered alongside the tile layer.
  *
@@ -16,9 +19,14 @@
  */
 
 import { AtlasParseError } from "./serialization";
+import {
+  normalizeContourSteps,
+  normalizeElevationCells,
+  normalizeParallaxStrength,
+} from "./elevation";
 
 /** Current Atlas document schema version. */
-export const SCHEMA_VERSION = 2 as const;
+export const SCHEMA_VERSION = 3 as const;
 
 /** Default soft biome-border blend width in world pixels at zoom 1. */
 export const DEFAULT_TERRAIN_BLEND_WIDTH = 6 as const;
@@ -40,6 +48,21 @@ export interface AtlasTileLayer {
   intensity?: Record<string, number>;
   /** Optional soft biome-border blend width at zoom 1; renderers scale it. */
   blendWidth?: number;
+  /**
+   * Optional sparse height field, keyed `"col,row"` → elevation [0, 1]
+   * (`0` = sea level, missing cells are 0). Drives hillshade, contour lines,
+   * parallax and elevation-coupled glyph scaling (v3).
+   */
+  elevation?: Record<string, number>;
+  /**
+   * Per-map parallax strength [0, 1]; `0` disables the effect. Owner decision:
+   * parallax is configurable per map (light direction stays fixed NW).
+   */
+  parallaxStrength?: number;
+  /** Per-map toggle for contour-line rendering (owner decision: toggleable). */
+  contoursEnabled?: boolean;
+  /** Number of contour steps between elevation 0 and 1 (default 5). */
+  contourSteps?: number;
 }
 
 /**
@@ -102,11 +125,14 @@ function normalizeTerrainBlendWidth(value: unknown): number {
 }
 
 /**
- * Migrate any Atlas document to the current schema version (v1 → v2).
+ * Migrate any Atlas document to the current schema version (v1 → v3).
  *
- * - Missing `schemaVersion` marks a v1 document → set to {@link SCHEMA_VERSION}.
+ * - Missing `schemaVersion` marks a v1 document → set to {@link SCHEMA_VERSION};
+ *   older versions are bumped (all migrations are additive).
  * - Missing `nodes` / `features` / `objects` default to `[]`, `pageLinks` to `{}`.
  * - Missing `tileLayer` gets an empty 64×40 grid; existing tiles are preserved.
+ * - v3: the height field (`elevation`) and height-display settings are
+ *   normalised — invalid entries are dropped, values clamped to [0, 1].
  * - Features and objects are left untouched (rendered alongside the tiles).
  *
  * Idempotent: `migrateDoc(migrateDoc(d))` equals `migrateDoc(d)`.
@@ -120,7 +146,7 @@ export function migrateDoc(doc: unknown): AtlasDocV2 {
     throw new AtlasParseError("Atlas-Doc ist leer oder ungültig.");
   }
   const d: AtlasDoc = { ...(doc as AtlasDoc) };
-  if (!d.schemaVersion) d.schemaVersion = SCHEMA_VERSION;
+  if (!d.schemaVersion || d.schemaVersion < SCHEMA_VERSION) d.schemaVersion = SCHEMA_VERSION;
   d.nodes = d.nodes ?? [];
   d.features = d.features ?? [];
   d.objects = d.objects ?? [];
@@ -128,6 +154,18 @@ export function migrateDoc(doc: unknown): AtlasDocV2 {
   d.tileLayer = d.tileLayer ?? emptyTileLayer();
   d.tileLayer.cells = d.tileLayer.cells ?? {};
   d.tileLayer.blendWidth = normalizeTerrainBlendWidth(d.tileLayer.blendWidth);
+  const elevation = normalizeElevationCells(d.tileLayer.elevation);
+  if (elevation) d.tileLayer.elevation = elevation;
+  else delete d.tileLayer.elevation;
+  if (d.tileLayer.parallaxStrength !== undefined) {
+    d.tileLayer.parallaxStrength = normalizeParallaxStrength(d.tileLayer.parallaxStrength);
+  }
+  if (d.tileLayer.contoursEnabled !== undefined) {
+    d.tileLayer.contoursEnabled = d.tileLayer.contoursEnabled === true;
+  }
+  if (d.tileLayer.contourSteps !== undefined) {
+    d.tileLayer.contourSteps = normalizeContourSteps(d.tileLayer.contourSteps);
+  }
   return d as AtlasDocV2;
 }
 

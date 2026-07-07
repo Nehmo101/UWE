@@ -257,6 +257,7 @@ const preset = engine.resolveStylePreset("tolkien-ink");
 const TOOL_DEFS = [
   ["select", "Auswahl", "S", "select", "Auswählen & verschieben"],
   ["terrain", "Terrain-Pinsel", "G", "terrain", "Tiles malen (Gras/Wasser/Erde/Sand)"],
+  ["height", "Höhe", "H", "height", "Höhenfeld malen: Anheben / Absenken / Glätten (Rechtsklick invertiert)"],
   ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
   ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
@@ -270,12 +271,13 @@ const TOOL_DEFS = [
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", t: "stamp", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
     select: "M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z",
     terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
+    height: "M3 18 L9 7 L13 13 L16 9 L21 18 M6 14 L11 14 M14 13 L18 13 M3 21 L21 21",
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
     plot: "M4 7 L12 3 L20 7 L18 18 L7 20 Z M9 10 L9 10 M13 9 L13 9 M16 13 L16 13 M11 16 L11 16",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
@@ -307,10 +309,12 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // ===========================================================================
 const state = {
   tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null, rtxKey: null,
+  heightMode: "raise", heightStrength: 0.15,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
   toast: null, aiReview: null, stampVariation: true,
 };
+const HEIGHT_MODE_LABEL = { raise: "Anheben", lower: "Absenken", smooth: "Glätten" };
 let doc = null;
 let drawingPoints = [];
 let measurePoints = [];
@@ -343,6 +347,26 @@ const root = el("atlas-root");
 const canvas = el("atlas-canvas");
 let dpr = 1, cssW = 0, cssH = 0, fitted = false;
 let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
+let paintingHeight = false, heightInvert = false;
+// Für Parallax/Schatten: Maße + Höhenfeld-Status des zuletzt gerenderten Frames
+// (auch beim Offscreen-Export korrekt, da drawScene sie pro Aufruf setzt).
+let sceneW = 0, sceneH = 0, sceneElevOn = false;
+// Hillshade-/Kontur-Cache — invalidiert nach jedem Höhen-Pinselstrich sowie
+// implizit über die elevation-Objektreferenz (Undo/Redo, Bridge-Load).
+let elevCache = { ref: null, steps: 0, shade: null, contours: null };
+function invalidateElevationCache() { elevCache = { ref: null, steps: 0, shade: null, contours: null }; }
+function elevationVisuals(tl) {
+  const steps = tl.contourSteps ?? engine.DEFAULT_CONTOUR_STEPS;
+  if (elevCache.ref !== tl.elevation || elevCache.steps !== steps) {
+    elevCache = {
+      ref: tl.elevation, steps,
+      shade: engine.createHillshadeCanvas(engine.buildHillshadeRGBA(tl), tl.cols || COLS, tl.rows || ROWS),
+      contours: null,
+    };
+  }
+  if (tl.contoursEnabled && !elevCache.contours) elevCache.contours = engine.buildContourLines(tl, steps);
+  return elevCache;
+}
 let last = { x: 0, y: 0 }, clickStart = null;
 let msgTimer = null, toastTimer = null, coordRaf = null, pendingCoord = null;
 
@@ -930,6 +954,8 @@ function draw() {
 // temporär überschrieben).
 function drawScene(ctx, W, H, chrome) {
   const pr = preset, z = state.zoom;
+  sceneW = W; sceneH = H;
+  sceneElevOn = engine.hasElevation(doc.tileLayer);
   ctx.clearRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = false;
 
@@ -948,6 +974,32 @@ function drawScene(ctx, W, H, chrome) {
     intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
     blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * z,
   });
+
+  // Höhen-Simulation (2.5D): Hillshade gestreckt über das Karten-Rect (der
+  // Bilinear-Filter des Browsers glättet das Zellraster) + optionale Höhenlinien.
+  if (sceneElevOn) {
+    const ev = elevationVisuals(tl);
+    if (ev.shade) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(ev.shade, x0, y0, x1 - x0, y1 - y0);
+      ctx.restore();
+      ctx.imageSmoothingEnabled = false;
+    }
+    if (tl.contoursEnabled && ev.contours) {
+      ctx.save();
+      ctx.strokeStyle = pr.colors.ink; ctx.globalAlpha = 0.45; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      for (const line of ev.contours) {
+        if (line.points.length < 2) continue;
+        ctx.lineWidth = (line.major ? 1.6 : 0.9) * z;
+        ctx.beginPath();
+        const [sx, sy] = n2c(line.points[0][0], line.points[0][1]); ctx.moveTo(sx, sy);
+        for (let i = 1; i < line.points.length; i++) { const [px, py] = n2c(line.points[i][0], line.points[i][1]); ctx.lineTo(px, py); }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
 
   const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.3 * z, W / 2, H / 2, W * 0.75);
   g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(80,50,20,0.16)");
@@ -1000,9 +1052,29 @@ function drawScene(ctx, W, H, chrome) {
     for (const o of settlementReview.objects || []) drawObject(ctx, o);
     ctx.restore();
   }
+  if (state.tool === "height" && !isView()) drawHeightOverlay(ctx);
   drawPending(ctx);
   drawMeasure(ctx);
   drawSelectionRects(ctx);
+}
+
+// Editor-Overlay bei aktivem Höhen-Tool: transparente Heat-Darstellung des
+// Höhenfelds (Weiß→Rot über die Deckkraft), damit sichtbar ist, wo gemalt wurde.
+function drawHeightOverlay(ctx) {
+  const elev = doc.tileLayer.elevation;
+  if (!elev) return;
+  const ts = TILE * state.zoom;
+  ctx.save();
+  for (const k in elev) {
+    const e = elev[k];
+    if (!(e > 0)) continue;
+    const ci = k.indexOf(",");
+    const c = +k.slice(0, ci), r = +k.slice(ci + 1);
+    const [px, py] = w2c(c * TILE, r * TILE);
+    ctx.fillStyle = "rgba(200,60,30," + (e * 0.35).toFixed(3) + ")";
+    ctx.fillRect(px, py, ts, ts);
+  }
+  ctx.restore();
 }
 
 // Shift-Rahmenauswahl + Export-Rechteck als gestrichelte Overlays.
@@ -1090,6 +1162,27 @@ function drawFeature(ctx, f) {
           const [sx, sy] = n2c(coords[i][0], coords[i][1]); const [ex, ey] = n2c(coords[i + 1][0], coords[i + 1][1]);
           ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineWidth = w; ctx.stroke();
         }
+        // Relief-Pfade ans Höhenfeld koppeln: Grat-Glyphen wachsen, wo die Karte
+        // hoch ist. Ohne Höhenfeld bleibt das Rendering exakt unverändert.
+        if (f.kind === "relief") {
+          const heightMetadata = sceneElevOn ? engine.sampleElevationAlongPath(doc.tileLayer, coords) : undefined;
+          if (heightMetadata) {
+            const items = engine.scatterGlyphsAlongPath(
+              { type: "Path", coordinates: coords }, "mountains", 0.03,
+              heightMetadata, engine.hashStringToSeed(String(f._key || f.id)),
+            );
+            ctx.save(); ctx.globalAlpha = 0.75; ctx.lineJoin = "round"; ctx.lineCap = "round";
+            for (const p of items) {
+              const rg = engine.getGlyphByKey(p.glyphKey); if (!rg) continue;
+              const [px, py] = n2c(p.x, p.y); const sz = 13 * z * p.scale;
+              ctx.save(); ctx.translate(px, py); ctx.rotate((p.rotation * Math.PI) / 180);
+              const s = sz / 24; ctx.scale(s, s); ctx.translate(-12, -12);
+              ctx.strokeStyle = sel ? "#c2622b" : rg.color; ctx.lineWidth = 1.2 / s;
+              ctx.beginPath(); engine.drawSvgPath(ctx, rg.pathData); ctx.stroke(); ctx.restore();
+            }
+            ctx.restore();
+          }
+        }
       }
     }
   } else if (geo.type === "Point" || geo.type === "LabelAnchor") {
@@ -1148,9 +1241,28 @@ function drawVineFeature(ctx, f, sel) {
 
 function drawObject(ctx, o) {
   const z = state.zoom, sel = selection.has(o._key);
-  const [ox, oy] = n2c(o.x, o.y);
+  let [ox, oy] = n2c(o.x, o.y);
   const st = o.style || {};
   const lw = (st.lineWidth != null ? st.lineWidth : 1.5), blur = st.blur || 0;
+  // Höhe: manuelle style.elevation (>0) schlägt das Höhenfeld; 0/leer = auto.
+  // WICHTIG: nur die DARSTELLUNG wird versetzt — Hit-Testing/Selektion/Drag
+  // arbeiten weiter auf der unversetzten Boden-Position (o.x/o.y).
+  const manualElev = typeof st.elevation === "number" && Number.isFinite(st.elevation) && st.elevation > 0
+    ? Math.min(1, st.elevation) : null;
+  const e = manualElev != null ? manualElev : (sceneElevOn ? engine.sampleElevation(doc.tileLayer, o.x, o.y) : 0);
+  if (e > 0.02) {
+    const size = (st.gouache ? 30 : 26) * z * (o.scale || 1);
+    const [sdx, sdy] = engine.elevationShadowOffset(e, z);
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(ox + sdx, oy + sdy, size * 0.45, size * 0.28, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(26,16,8," + (0.10 + 0.15 * e).toFixed(3) + ")";
+    ctx.fill();
+    ctx.restore();
+    const strength = doc.tileLayer.parallaxStrength ?? engine.DEFAULT_PARALLAX_STRENGTH;
+    const [pdx, pdy] = engine.parallaxCanvasOffset(e, ox, oy, sceneW / 2, sceneH / 2, strength);
+    ox += pdx; oy += pdy;
+  }
   // Gemaltes Gouache-Asset (Canvas-of-Kings-Optik) — base-centre am Objektpunkt.
   if (st.gouache && engine.isGouacheAsset && engine.isGouacheAsset(st.gouache)) {
     engine.drawGouacheAsset(ctx, st.gouache, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
@@ -1266,6 +1378,12 @@ function onPointerDown(e) {
     else { paintingTiles = true; paintTiles(cx, cy, false); }
     return;
   }
+  if (tool === "height") {
+    pushUndo();
+    paintingHeight = true; heightInvert = e.button === 2;
+    paintHeight(cx, cy, heightInvert);
+    return;
+  }
   if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
   if (tool === "select") {
     const hit = hitTest(nx, ny);
@@ -1299,6 +1417,7 @@ function onPointerMove(e) {
   if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
   if (erasingTiles) { paintTiles(cx, cy, true); return; }
+  if (paintingHeight) { paintHeight(cx, cy, heightInvert); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
     const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return;
@@ -1341,8 +1460,8 @@ function onPointerUp(e) {
     draw();
     return;
   }
-  if (paintingTiles || erasingTiles) markDirty();
-  panning = moving = paintingTiles = erasingTiles = false;
+  if (paintingTiles || erasingTiles || paintingHeight) markDirty();
+  panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
 }
 function handleViewClick(entity) {
   if (entity.childNodeId) { navTo(entity.childNodeId); return; }
@@ -1372,6 +1491,40 @@ function paintTiles(cx, cy, erase) {
     else if (cells[k] !== state.brush) { cells[k] = state.brush; changed = true; }
   }
   if (changed) draw();
+}
+
+// ---- Höhen-Pinsel: Anheben / Absenken / Glätten mit weichem radialem Falloff.
+// Sparse-Disziplin: Zellen ≤ 0 werden aus dem elevation-Objekt GELÖSCHT.
+function paintHeight(cx, cy, invert) {
+  const tl = doc.tileLayer;
+  const [tc, tr] = tileAt(cx, cy);
+  const rad = [1, 2, 4][state.brushSize];
+  const mode = state.heightMode;
+  const elev = tl.elevation || (tl.elevation = {});
+  const get = (c, r) => { const v = elev[c + "," + r]; return typeof v === "number" ? v : 0; };
+  let changed = false;
+  for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
+    const d2 = dc * dc + dr * dr;
+    if (d2 > rad * rad + 0.5) continue;
+    const c = tc + dc, r = tr + dr;
+    if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+    const fall = 1 - Math.sqrt(d2) / (rad + 1);
+    const cur = get(c, r);
+    let next;
+    if (mode === "smooth") {
+      const avg = (get(c - 1, r) + get(c + 1, r) + get(c, r - 1) + get(c, r + 1)) / 4;
+      next = cur + (avg - cur) * Math.min(1, state.heightStrength * 2) * fall;
+    } else {
+      const dir = (mode === "lower") !== invert ? -1 : 1;
+      next = cur + dir * state.heightStrength * fall;
+    }
+    next = Math.max(0, Math.min(1, next));
+    const k = c + "," + r;
+    if (next <= 0.001) { if (k in elev) { delete elev[k]; changed = true; } }
+    else { const rounded = Math.round(next * 1000) / 1000; if (rounded !== cur) { elev[k] = rounded; changed = true; } }
+  }
+  if (!Object.keys(elev).length) delete tl.elevation;
+  if (changed) { invalidateElevationCache(); draw(); }
 }
 
 // ---- Objekte / Features mutieren ----
@@ -1708,7 +1861,7 @@ function clearAll() {
   pushUndo();
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
-  if (state.nodeId === doc.rootNodeId) doc.tileLayer.cells = {};
+  if (state.nodeId === doc.rootNodeId) { doc.tileLayer.cells = {}; delete doc.tileLayer.elevation; invalidateElevationCache(); }
   aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
   drawingPoints = []; clearSel(); setState({ aiReview: null }); markDirty(); draw();
 }
@@ -1766,6 +1919,7 @@ function toggleNodeVis() {
 const toolButtons = new Map();   // tool -> button
 const swatchButtons = new Map(); // biome -> button
 const glyphButtons = new Map();  // glyphKey -> button
+const heightModeButtons = new Map(); // heightMode -> button
 
 function buildSidebar() {
   const toolList = el("tool-list");
@@ -1824,6 +1978,54 @@ function buildSidebar() {
   gb.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.blendWidth = Math.max(0, Number(e.target.value) || 0);
+    markDirty(); refreshChrome(); draw();
+  });
+
+  // Höhen-Pinsel (Anheben/Absenken/Glätten) + Stärke-Regler.
+  const hp = document.createElement("div");
+  hp.style.cssText = "padding:10px 2px 2px;";
+  hp.innerHTML =
+    '<div class="grp-label" style="padding:0 0 6px;">Höhen-Pinsel</div>' +
+    '<div id="height-modes" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;"></div>' +
+    '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-sidebar-fg-muted);margin:8px 0 3px;">Stärke <span id="height-strength-val" style="float:right;">15%</span></div>' +
+    '<input id="height-strength" type="range" min="0.02" max="0.5" step="0.01" value="0.15" style="width:100%;accent-color:var(--uwe-accent);">';
+  swatches.parentElement.appendChild(hp);
+  for (const m of ["raise", "lower", "smooth"]) {
+    const btn = document.createElement("button");
+    btn.className = "swatch-btn"; btn.style.justifyContent = "center";
+    btn.textContent = HEIGHT_MODE_LABEL[m];
+    btn.title = "Höhen-Pinsel: " + HEIGHT_MODE_LABEL[m];
+    btn.addEventListener("click", () => setState({ tool: "height", heightMode: m }));
+    hp.querySelector("#height-modes").appendChild(btn); heightModeButtons.set(m, btn);
+  }
+  hp.querySelector("#height-strength").addEventListener("input", (e) => {
+    setState({ heightStrength: Math.min(0.5, Math.max(0.02, Number(e.target.value) || 0.15)) });
+  });
+
+  // Karten-Einstellungen für die Höhen-Darstellung (parallaxStrength /
+  // contoursEnabled / contourSteps) — gespeichert im tileLayer wie die cells.
+  const hs = document.createElement("div");
+  hs.style.cssText = "padding:10px 2px 2px;";
+  hs.innerHTML =
+    '<div class="grp-label" style="padding:0 0 6px;">Relief &amp; Parallax</div>' +
+    '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-sidebar-fg-muted);margin-bottom:3px;">Parallax-Stärke <span id="parallax-strength-val" style="float:right;">35%</span></div>' +
+    '<input id="parallax-strength" type="range" min="0" max="100" step="1" value="35" style="width:100%;accent-color:var(--uwe-accent);">' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:8px;cursor:pointer;"><input id="contours-on" type="checkbox"> Höhenlinien</label>' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:6px;">Stufen <input id="contour-steps" type="number" min="2" max="24" step="1" value="5" style="width:52px;margin-left:auto;padding:2px 4px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:var(--uwe-sidebar-fg);font-family:var(--mono);font-size:11px;"></label>';
+  swatches.parentElement.appendChild(hs);
+  hs.querySelector("#parallax-strength").addEventListener("input", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    doc.tileLayer.parallaxStrength = Math.min(1, Math.max(0, Number(e.target.value) / 100));
+    markDirty(); refreshChrome(); draw();
+  });
+  hs.querySelector("#contours-on").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    doc.tileLayer.contoursEnabled = e.target.checked === true;
+    markDirty(); refreshChrome(); draw();
+  });
+  hs.querySelector("#contour-steps").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    doc.tileLayer.contourSteps = Math.max(2, Math.min(24, Math.round(Number(e.target.value) || engine.DEFAULT_CONTOUR_STEPS)));
     markDirty(); refreshChrome(); draw();
   });
 }
@@ -1885,6 +2087,23 @@ function refreshChrome() {
   if (blendInput) blendInput.value = terrainBlend;
   if (blendValue) blendValue.textContent = terrainBlend + "px";
 
+  // Höhen-Pinsel + Relief/Parallax-Einstellungen
+  for (const [m, b] of heightModeButtons) b.classList.toggle("on", st.tool === "height" && st.heightMode === m);
+  const hsInput = el("height-strength"), hsVal = el("height-strength-val");
+  if (hsInput) hsInput.value = st.heightStrength;
+  if (hsVal) hsVal.textContent = Math.round(st.heightStrength * 100) + "%";
+  if (doc && doc.tileLayer) {
+    const tlh = doc.tileLayer;
+    const pct = Math.round((tlh.parallaxStrength ?? engine.DEFAULT_PARALLAX_STRENGTH) * 100);
+    const psInput = el("parallax-strength"), psVal = el("parallax-strength-val");
+    if (psInput) psInput.value = pct;
+    if (psVal) psVal.textContent = pct + "%";
+    const contoursBox = el("contours-on");
+    if (contoursBox) contoursBox.checked = tlh.contoursEnabled === true;
+    const stepsInput = el("contour-steps");
+    if (stepsInput) stepsInput.value = tlh.contourSteps ?? engine.DEFAULT_CONTOUR_STEPS;
+  }
+
   // Sub-bar
   const sub = el("subbar"), subC = el("subbar-content");
   let subHtml = "", subShow = false;
@@ -1904,6 +2123,7 @@ function refreshChrome() {
       }
       subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + stampName + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>';
     }
+    else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "region" || st.tool === "plot" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
@@ -1944,6 +2164,9 @@ function refreshChrome() {
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           numInp("obj-lw", "Linie px", 0.3, 6, 0.1, (selO.style && selO.style.lineWidth != null) ? selO.style.lineWidth : 1.5) +
           numInp("obj-blur", "Unschärfe", 0, 8, 0.5, (selO.style && selO.style.blur) || 0) +
+          "</div>" +
+          '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          numInp("obj-elev", "Höhe % (0 = auto)", 0, 100, 1, Math.round(((selO.style && typeof selO.style.elevation === "number") ? selO.style.elevation : 0) * 100)) +
           "</div>" +
           (selO.style && selO.style.gouache ? '<div style="font-size:10px;color:var(--uwe-accent);margin-top:4px;">🎨 Gouache: ' + (engine.getGouacheAsset(selO.style.gouache) ? engine.getGouacheAsset(selO.style.gouache).name : selO.style.gouache) + "</div>" : "") +
           '<button class="tb-btn" data-obj="vari" style="width:100%;justify-content:center;margin-top:8px;" title="Skala/Rotation deterministisch neu würfeln">↻ Variieren</button>') +
@@ -2154,6 +2377,17 @@ function wire() {
         pushUndo();
         if (t.id === "obj-scale") o.scale = Math.min(3, Math.max(0.2, v));
         else o.rotation = Math.min(180, Math.max(-180, v));
+        markDirty(); draw();
+      }
+    }
+    else if (t.id === "obj-elev") {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      const v = Number(t.value);
+      if (o && Number.isFinite(v)) {
+        pushUndo(); o.style = o.style || {};
+        const e2 = Math.min(100, Math.max(0, v)) / 100;
+        // 0/leer = automatisch vom Höhenfeld (sparse halten wie bei den Zellen).
+        if (e2 > 0) o.style.elevation = e2; else delete o.style.elevation;
         markDirty(); draw();
       }
     }

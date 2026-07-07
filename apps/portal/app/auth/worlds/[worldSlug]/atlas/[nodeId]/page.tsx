@@ -76,6 +76,11 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       rows?: number;
       cells?: Record<string, string>;
       intensity?: Record<string, number>;
+      blendWidth?: number;
+      elevation?: Record<string, number>;
+      parallaxStrength?: number;
+      contoursEnabled?: boolean;
+      contourSteps?: number;
     } | null;
     if (
       rawTileLayer &&
@@ -89,6 +94,11 @@ export default async function PortalAtlasNodePage({ params }: Props) {
         rows: rawTileLayer.rows,
         cells: rawTileLayer.cells,
         intensity: rawTileLayer.intensity ?? null,
+        blendWidth: rawTileLayer.blendWidth ?? null,
+        elevation: rawTileLayer.elevation ?? null,
+        parallaxStrength: rawTileLayer.parallaxStrength ?? null,
+        contoursEnabled: rawTileLayer.contoursEnabled ?? null,
+        contourSteps: rawTileLayer.contourSteps ?? null,
       };
     }
 

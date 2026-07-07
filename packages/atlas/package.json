@@ -19,6 +19,7 @@
     "./prng": "./src/prng.ts",
     "./canvas-render": "./src/canvas-render.ts",
     "./terrain": "./src/terrain.ts",
+    "./elevation": "./src/elevation.ts",
     "./procedural": "./src/procedural.ts",
     "./stamp-prompt": "./src/stamp-prompt.ts",
     "./label-layout": "./src/label-layout.ts",
