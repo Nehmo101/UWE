@@ -17,3 +17,5 @@ export * from "./meal-plan-service";
 export * from "./shopping-service";
 export * from "./pantry-service";
 export * from "./ai-suggest";
+export * from "./bring-client";
+export * from "./bring-service";

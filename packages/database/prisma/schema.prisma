@@ -3775,6 +3775,29 @@ model ShoppingListItem {
   @@map("shopping_list_items")
 }
 
+/**
+ * Anbindung an die Bring!-Einkaufsapp (inoffizielle API, api.getbring.com).
+ * Haushalts-Singleton (`id = "singleton"`), kein Weltbezug. E-Mail + Passwort
+ * werden mit `SESSION_SECRET` verschlüsselt abgelegt (token-crypto), niemals
+ * im Klartext. `available_lists` cacht die Bring!-Listen für die Auswahl, damit
+ * kein Login bei jedem Seiten-Render nötig ist.
+ */
+model BringConnection {
+  id                String    @id @default("singleton")
+  emailEncrypted    String    @map("email_encrypted")
+  passwordEncrypted String    @map("password_encrypted")
+  bringUserUuid     String?   @map("bring_user_uuid")
+  bringPublicUuid   String?   @map("bring_public_uuid")
+  defaultListUuid   String?   @map("default_list_uuid")
+  defaultListName   String?   @map("default_list_name")
+  availableLists    Json?     @map("available_lists")
+  lastSyncedAt      DateTime? @map("last_synced_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("bring_connections")
+}
+
 model StructuredItem {
   id           String   @id @default(cuid())
   worldId      String   @map("world_id")

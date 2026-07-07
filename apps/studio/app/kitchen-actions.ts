@@ -281,6 +281,16 @@ export async function generateShoppingListAction(formData: FormData) {
   redirect(`/kitchen/shopping?list=${list.id}`);
 }
 
+export async function createManualListAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const list = await shopping().createManualList(
+    String(formData.get("title") || ""),
+  );
+  revalidatePath("/kitchen/shopping");
+  redirect(`/kitchen/shopping?list=${list.id}`);
+}
+
 export async function toggleShoppingItemAction(formData: FormData) {
   await requireStudioActionAuth();
 

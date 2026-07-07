@@ -104,6 +104,33 @@ export class ShoppingService {
     return list;
   }
 
+  /**
+   * Legt eine leere, manuell befüllbare Liste an (ohne Wochenbezug) — für den
+   * spontanen Einkauf zwischendurch, unabhängig vom Essensplan.
+   */
+  async createManualList(title?: string) {
+    const trimmed = title?.trim();
+    return this.db.shoppingList.create({
+      data: { title: trimmed || "Einkauf (manuell)" },
+      include: LIST_INCLUDE,
+    });
+  }
+
+  /**
+   * Häufig verwendete Positionsnamen aus der gesamten Historie — als
+   * Autocomplete-Vorschläge („was schon mal auf der Liste stand"), absteigend
+   * nach Häufigkeit.
+   */
+  async getItemSuggestions(limit = 50): Promise<string[]> {
+    const rows = await this.db.shoppingListItem.groupBy({
+      by: ["name"],
+      _count: { name: true },
+      orderBy: { _count: { name: "desc" } },
+      take: limit,
+    });
+    return rows.map((row) => row.name);
+  }
+
   async getList(id: string) {
     return this.db.shoppingList.findUnique({ where: { id }, include: LIST_INCLUDE });
   }

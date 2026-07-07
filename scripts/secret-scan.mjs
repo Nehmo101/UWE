@@ -48,6 +48,10 @@ const ALLOWLIST_PATHS = [
   /docs\/secrets\.md$/,
   // Example env templates (placeholders like CHANGE_ME), incl. .env.production.example
   /\.env(\.[^/]+)?\.example$/,
+  // Bring!-Client: enthält nur den ÖFFENTLICHEN Web-Client-API-Key (in jedem
+  // Bring!-Client identisch, kein Nutzergeheimnis). Echte Zugangsdaten kommen
+  // ausschließlich als Funktions-Argumente herein, nie als Literal.
+  /packages\/kitchen\/src\/bring-client\.ts$/,
 ];
 
 const PATTERNS = [
