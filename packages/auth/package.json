@@ -7,6 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./form-utils": "./src/form-utils.ts",
     "./content-access": "./src/content-access.ts",
     "./security-headers": "./src/security-headers.ts",
     "./server": "./src/server.ts"
