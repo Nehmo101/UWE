@@ -52,6 +52,10 @@ const env = {
   PLAYER_PREVIEW_PUBLIC: "true",
   RUN_DB_SEED: "false",
   NODE_ENV: "production",
+  // The demo seed refuses to run under NODE_ENV=production unless opted in.
+  // E2E seeds a throwaway, isolated SQLite DB (tempDir/e2e.db) with the known
+  // demo credentials the auth-smoke specs log in with — the intended opt-in.
+  UWE_ALLOW_PROD_SEED: "1",
   NEXT_PUBLIC_STUDIO_URL: `http://127.0.0.1:${studioPort}`,
   NEXT_PUBLIC_PORTAL_URL: `http://127.0.0.1:${portalPort}`,
   STUDIO_PORT: studioPort,
