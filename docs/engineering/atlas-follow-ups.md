@@ -4,6 +4,8 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 > Stand: 2026-07-07 nach Parallel-Batch 2 „RTX-Assets renderbar · Settlement-Tuning + Goldens · Gouache-Batch 4“. Dieser Stand ist auf `main`.
 >
+> **Beschlossene nächste Welle:** [atlas-editor-roadmap.md](atlas-editor-roadmap.md) — 13 Editor-Design-/Tool-Punkte (Vertex-Editing, Küstensaum, Themes, Spray-Pinsel, Asset-Browser, Ebenen-Panel, Werkstatt-Layout …) + Reiseplaner, vom Owner bestätigt.
+>
 > Hinweis: Die CoK-Gap-Analyse ([atlas-cok-gap-analysis.md](atlas-cok-gap-analysis.md), Stand 2026-07-01) ist teilweise überholt — Säumen-UI, Stempel-Variation, Undo/Redo, Multi-Select und der Export-Dialog (Ausschnitt + Grid + Deko) sind inzwischen auf `main`.
 
 ## Erledigt auf `main`
