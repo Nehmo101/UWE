@@ -308,7 +308,7 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
 // ===========================================================================
 const state = {
-  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null, rtxKey: null,
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: "g_oak", rtxKey: null,
   heightMode: "raise", heightStrength: 0.15,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
@@ -329,6 +329,8 @@ const nextKey = () => "ck-" + (++keyCounter);
 // der Primär-Key (steuert das Auswahl-Panel), selection ist die volle Menge.
 const selection = new Set();
 let marquee = null;          // {x0,y0,x1,y1} normalisiert — Shift-Rahmenauswahl
+let scaleHandlePt = null;    // {x,y,key} canvas-px — Skalier-Griff der Einzelselektion
+let resizing = null;         // {key, anchor:[cx,cy], startDist, startScale} — Griff-Drag
 let moveUndoPushed = false;  // ein Undo-Schritt pro Drag, nicht pro Pixel
 
 // Pfad-Anhänge (CoK: Objekte säumen Straßen/Flüsse automatisch)
@@ -1019,6 +1021,7 @@ function drawScene(ctx, W, H, chrome) {
 
   const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
   for (const f of feats) drawFeature(ctx, f);
+  scaleHandlePt = null;
   for (const o of nodeObjects()) drawObject(ctx, o);
 
   if (!chrome) return;
@@ -1222,20 +1225,19 @@ function drawVineFeature(ctx, f, sel) {
     tendrils: s.tendrils, height: s.height, seed: s.seed,
   });
   if (layout.spine.length < 2) return;
+  // Gouache-Ranke: gefüllter, getaperter Stamm + Blattwerk (fill-Modus in drawVine).
   engine.drawVine(ctx, layout, {
     project: (c) => n2c(c[0], c[1]), zoom: state.zoom,
-    trunk: sel ? "#c2622b" : "#ffffff", coil: sel ? "#c2622b" : "#ffffff",
-    outline: "#241a10", thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
+    trunk: "#6f9a4d", coil: "#33531f",
+    thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
     shadow: "rgba(26,16,8,0.18)", selected: sel,
+    fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
   });
-  const cloud = engine.getGlyphByKey("cloud");
-  if (cloud) {
-    for (const pt of layout.aura.clouds) {
-      const [px, py] = n2c(pt[0], pt[1]); const size = 13 * state.zoom, sc = size / 24;
-      ctx.save(); ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-12, -12);
-      ctx.globalAlpha = 0.65; ctx.strokeStyle = cloud.color; ctx.lineWidth = 1.5 / sc; ctx.lineJoin = "round"; ctx.lineCap = "round";
-      ctx.beginPath(); engine.drawSvgPath(ctx, cloud.pathData); ctx.stroke(); ctx.restore();
-    }
+  for (const pt of layout.aura.clouds) {
+    const [px, py] = n2c(pt[0], pt[1]);
+    ctx.save(); ctx.globalAlpha = 0.75;
+    engine.drawGouacheAsset(ctx, "g_cloud", { x: px, y: py + 6 * state.zoom, size: 15 * state.zoom, lineWidth: Math.max(0.4, 0.9 * state.zoom), seed: (Math.round(pt[0] * 4096) * 31 + Math.round(pt[1] * 4096)) >>> 0 });
+    ctx.restore();
   }
 }
 
@@ -1264,9 +1266,17 @@ function drawObject(ctx, o) {
     ox += pdx; oy += pdy;
   }
   // Gemaltes Gouache-Asset (Canvas-of-Kings-Optik) — base-centre am Objektpunkt.
-  if (st.gouache && engine.isGouacheAsset && engine.isGouacheAsset(st.gouache)) {
-    engine.drawGouacheAsset(ctx, st.gouache, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
-    if (sel) { const hs = 30 * z * o.scale; ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15); ctx.setLineDash([]); ctx.restore(); }
+  // Ink-Glyph-Objekte werden über GLYPH_TO_GOUACHE ebenfalls gemalt gerendert.
+  const inkGlyph = st.gouache ? null : engine.getGlyphByKey(o.paletteItemId);
+  const gouacheKey = st.gouache && engine.isGouacheAsset(st.gouache)
+    ? st.gouache
+    : (inkGlyph && engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(inkGlyph.key) : null);
+  if (gouacheKey) {
+    engine.drawGouacheAsset(ctx, gouacheKey, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
+    if (sel) {
+      const hs = 30 * z * o.scale;
+      drawSelectionFrame(ctx, o, ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15);
+    }
     return;
   }
   // Genehmigtes RTX-Asset: validiertes Rezept aus dem server-geprüften Doc-Kanal,
@@ -1278,19 +1288,37 @@ function drawObject(ctx, o) {
     if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
     ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
     engine.drawRtxGouacheRecipePreview(ctx, rtx.recipe, { x: 0, y: 0, unitScale: rsize / 8, lineWidth: Math.max(0.5, lw * z * 0.9) });
-    if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(-rsize / 2 - 3, -rsize / 2 - 3, rsize + 6, rsize + 6); ctx.setLineDash([]); }
     ctx.restore();
+    if (sel) drawSelectionFrame(ctx, o, ox - rsize / 2 - 3, oy - rsize / 2 - 3, rsize + 6, rsize + 6);
     return;
   }
-  const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
+  // Ink-Fallback nur noch für Keys ohne Gouache-Äquivalent (sollte nicht vorkommen).
+  const g = inkGlyph; if (!g) return;
   const size = 26 * z * o.scale;
   ctx.save();
   if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
   ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
-  if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6); }
   const s = size / 24; ctx.scale(s, s); ctx.translate(-12, -12);
   ctx.strokeStyle = g.color || preset.colors.ink; ctx.lineWidth = Math.max(0.3, lw) / s; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath(); engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+  if (sel) drawSelectionFrame(ctx, o, ox - size / 2 - 3, oy - size / 2 - 3, size + 6, size + 6);
+}
+
+// Auswahlrahmen + Skalier-Griff (CoK): roter Punkt unten rechts, Ziehen skaliert.
+// Nur bei Einzelselektion im Editor-Modus wird der Griff angeboten.
+function drawSelectionFrame(ctx, o, L, T, W2, H2) {
+  ctx.save();
+  ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+  ctx.strokeRect(L, T, W2, H2);
+  ctx.setLineDash([]);
+  if (!isView() && selection.size === 1) {
+    const hx = L + W2, hy = T + H2;
+    ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#c2622b"; ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+    scaleHandlePt = { x: hx, y: hy, key: o._key };
+  }
+  ctx.restore();
 }
 
 function drawPending(ctx) {
@@ -1339,10 +1367,17 @@ function scatterInPolygon(ctx, rings, bk, density, keySeed) {
   const seed = typeof keySeed === "number" ? keySeed : engine.hashStringToSeed(String(keySeed));
   const points = engine.scatterGlyphsInPolygon({ type: "Polygon", rings }, bk, density * 0.6, seed, scatterExclusions());
   const z = state.zoom;
-  ctx.save(); ctx.globalAlpha = 0.7; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.save(); ctx.globalAlpha = 0.85; ctx.lineJoin = "round"; ctx.lineCap = "round";
   for (const p of points) {
+    const [px, py] = n2c(p.x, p.y);
+    const gk = engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(p.glyphKey) : null;
+    if (gk) {
+      // Gemalte Streuung: gleiche deterministische Punkte, Gouache-Mini-Assets.
+      engine.drawGouacheAsset(ctx, gk, { x: px, y: py + 6 * z * p.scale * 0.5, size: 15 * z, scale: p.scale, rotation: (p.rotation * Math.PI) / 180, lineWidth: Math.max(0.4, 0.9 * z), seed: (seed + Math.round(p.x * 4096) * 31 + Math.round(p.y * 4096)) >>> 0 });
+      continue;
+    }
     const g = engine.getGlyphByKey(p.glyphKey); if (!g) continue;
-    const [px, py] = n2c(p.x, p.y); const sz = 13 * z * p.scale;
+    const sz = 13 * z * p.scale;
     ctx.save(); ctx.translate(px, py); ctx.rotate((p.rotation * Math.PI) / 180);
     const s = sz / 24; ctx.scale(s, s); ctx.translate(-12, -12);
     ctx.strokeStyle = g.color; ctx.lineWidth = 1.2 / s;
@@ -1386,6 +1421,17 @@ function onPointerDown(e) {
   }
   if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
   if (tool === "select") {
+    // Skalier-Griff: Klick auf den roten Punkt startet Drag-Resize (CoK).
+    if (scaleHandlePt && Math.hypot(cx - scaleHandlePt.x, cy - scaleHandlePt.y) <= 12) {
+      const o = doc.objects.find((x) => x._key === scaleHandlePt.key);
+      if (o) {
+        pushUndo();
+        const [ax, ay] = n2c(o.x, o.y);
+        const d0 = Math.max(8, Math.hypot(cx - ax, cy - ay));
+        resizing = { key: o._key, anchor: [ax, ay], startDist: d0, startScale: o.scale || 1 };
+        return;
+      }
+    }
     const hit = hitTest(nx, ny);
     if (hit && e.shiftKey) { toggleSel(hit); requestAnimationFrame(draw); return; }
     if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; return; }
@@ -1413,6 +1459,15 @@ function onPointerMove(e) {
   if (!coordRaf) coordRaf = requestAnimationFrame(() => { coordRaf = null; el("status-tile").textContent = pendingCoord.tile; el("status-world").textContent = pendingCoord.world; });
 
   if (exp.picking && exportPickStart) { exp.rect = { x0: exportPickStart[0], y0: exportPickStart[1], x1: nx, y1: ny }; draw(); return; }
+  if (resizing) {
+    const o = doc.objects.find((x) => x._key === resizing.key);
+    if (o) {
+      const d = Math.hypot(cx - resizing.anchor[0], cy - resizing.anchor[1]);
+      o.scale = Math.round(Math.min(3, Math.max(0.2, resizing.startScale * (d / resizing.startDist))) * 100) / 100;
+      draw();
+    }
+    return;
+  }
   if (marquee) { marquee.x1 = nx; marquee.y1 = ny; draw(); return; }
   if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
@@ -1460,6 +1515,7 @@ function onPointerUp(e) {
     draw();
     return;
   }
+  if (resizing) { resizing = null; markDirty(); refreshChrome(); }
   if (paintingTiles || erasingTiles || paintingHeight) markDirty();
   panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
 }
@@ -1939,13 +1995,8 @@ function buildSidebar() {
     swatches.appendChild(btn); swatchButtons.set(b, btn);
   }
   const grid = el("glyph-grid");
-  for (const g of engine.BUILTIN_GLYPHS) {
-    const btn = document.createElement("button");
-    btn.className = "glyph-btn"; btn.title = g.name;
-    btn.innerHTML = '<span class="ico">' + glyphSvg(g) + "</span>";
-    btn.addEventListener("click", () => pickGlyph(g.key));
-    grid.appendChild(btn); glyphButtons.set(g.key, btn);
-  }
+  // Ink-Piktogramme sind aus der Palette entfernt — jedes Builtin-Motiv hat
+  // ein Gouache-Äquivalent (GLYPH_TO_GOUACHE); Bestandsobjekte rendern gemalt.
   // Gemalte Gouache-Assets (Canvas-of-Kings-Optik) — Vorschau per Mini-Canvas.
   if (engine.GOUACHE_ASSETS) {
     for (const a of engine.GOUACHE_ASSETS) {
@@ -2248,15 +2299,37 @@ function refreshChrome() {
   const toast = el("toast");
   if (st.toast) { toast.textContent = st.toast; toast.style.display = "flex"; } else toast.style.display = "none";
 
-  // Portal legend + empty-state
+  // Portal legend + empty-state — Gouache-Vorschauen (Ink nur als Fallback).
   if (view) {
     const legend = el("legend-list"); legend.innerHTML = "";
     const seen = new Set();
-    for (const o of nodeObjects()) {
-      if (seen.has(o.paletteItemId)) continue; seen.add(o.paletteItemId);
-      const g = engine.getGlyphByKey(o.paletteItemId); if (!g) continue;
+    const addRow = (name, drawFn) => {
       const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 2px;";
-      row.innerHTML = '<span style="width:18px;height:18px;flex:none;">' + glyphSvg(g) + "</span>" + g.name; legend.appendChild(row);
+      const cv = document.createElement("canvas"); cv.width = 22; cv.height = 22; cv.style.cssText = "width:18px;height:18px;flex:none;";
+      try { drawFn(cv.getContext("2d")); } catch (_) {}
+      row.appendChild(cv); row.appendChild(document.createTextNode(name)); legend.appendChild(row);
+    };
+    for (const o of nodeObjects()) {
+      const st2 = o.style || {};
+      const legendKey = st2.gouache || o.paletteItemId;
+      if (seen.has(legendKey)) continue; seen.add(legendKey);
+      if (st2.gouache && engine.isGouacheAsset(st2.gouache)) {
+        const a = engine.getGouacheAsset(st2.gouache);
+        addRow(a ? a.name : st2.gouache, (c) => engine.drawGouacheAsset(c, st2.gouache, { x: 11, y: 19, size: 14, lineWidth: 0.9 }));
+        continue;
+      }
+      const rtx = rtxPaletteItems.get(o.paletteItemId);
+      if (rtx && engine.drawRtxGouacheRecipePreview) {
+        addRow(rtx.name || "RTX-Asset", (c) => { c.translate(11, 12); engine.drawRtxGouacheRecipePreview(c, rtx.recipe, { x: 0, y: 0, unitScale: 14 / 8, lineWidth: 0.9 }); });
+        continue;
+      }
+      const g = engine.getGlyphByKey(o.paletteItemId); if (!g) continue;
+      const gk = engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(g.key) : null;
+      if (gk) addRow(g.name, (c) => engine.drawGouacheAsset(c, gk, { x: 11, y: 19, size: 14, lineWidth: 0.9 }));
+      else {
+        const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 2px;";
+        row.innerHTML = '<span style="width:18px;height:18px;flex:none;">' + glyphSvg(g) + "</span>" + g.name; legend.appendChild(row);
+      }
     }
     el("empty-state").style.display = (n && n.visibility !== "player_visible") ? "flex" : "none";
   }
@@ -2456,6 +2529,18 @@ function boot() {
 }
 
 boot();
+
+// Test-/Debug-Hook (read-mostly): erlaubt Headless-Smoke-Tests (Playwright),
+// Doc-Zustand zu prüfen und Selektion zu setzen. Exponiert nichts, was der
+// Browser-Nutzer nicht ohnehin über die Konsole manipulieren könnte.
+window.__atlasDebug = {
+  get doc() { return doc; },
+  get state() { return state; },
+  get scaleHandlePt() { return scaleHandlePt; },
+  get drawingPoints() { return drawingPoints; },
+  selectOnly,
+  draw,
+};
 </script>
 </body>
 </html>

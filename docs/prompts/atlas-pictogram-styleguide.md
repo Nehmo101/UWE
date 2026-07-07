@@ -12,6 +12,14 @@ die in Palette, Editor, Portal-Viewer und später im RTX-Asset-Studio erscheinen
 >
 > Für RTX-gestützte Asset-Erzeugung in UWE ist dieses Dokument die verbindliche
 > Prompt- und Review-Quelle. RTX-Ausgaben sind Vorschläge, nie Auto-Apply.
+>
+> **Gouache ist der kanonische Look (Owner-Entscheid).** Die Ink-Spur ist
+> **deprecated für Neues**: keine neuen Ink-Glyphen, die Editor-Palette zeigt
+> nur noch Gouache/RTX, und alle Generatoren (KI-Bild-Stempel via
+> `ATLAS_STAMP_STYLE_PROMPT`, RTX-Rezepte, Scatter, Säumen, Legenden) erzeugen
+> bzw. rendern Gouache. Bestehende Ink-Keys bleiben als stabile FK-Träger
+> (`AtlasObject.paletteItemId`, Restrict) und werden über `GLYPH_TO_GOUACHE`
+> (`packages/atlas/src/assets-batch5.ts`) automatisch gemalt gerendert.
 
 ---
 

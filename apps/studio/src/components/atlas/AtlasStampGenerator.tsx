@@ -219,7 +219,7 @@ export function AtlasStampGenerator({
             </button>
           </div>
           <p style={{ margin: 0, fontSize: 11, color: "var(--uwe-muted)" }}>
-            Tolkien Tusche-Linienkunst · transparent · Karten-Stempel-Stil
+            Gouache-Malstil (deckend, Pigmentkante) · transparent · Karten-Stempel-Stil
           </p>
         </div>
 

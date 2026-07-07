@@ -22,7 +22,7 @@ import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawSvgPath, drawVine } from "@uwe/atlas/canvas-render";
 import { buildVineLayout } from "@uwe/atlas/vine";
-import { drawGouacheAsset, isGouacheAsset } from "@uwe/atlas/assets";
+import { drawGouacheAsset, gouacheKeyForGlyph, isGouacheAsset } from "@uwe/atlas/assets";
 import { drawRtxGouacheRecipePreview } from "@uwe/atlas/rtx-asset-preview";
 import type { RtxGouacheJsonRecipe } from "@uwe/atlas/rtx-asset-proposal";
 import { DEFAULT_TERRAIN_BLEND_WIDTH } from "@uwe/atlas/doc";
@@ -241,6 +241,41 @@ function hashKey(key: string): number {
     h = (h * 16777619) >>> 0;
   }
   return h;
+}
+
+/** Painted gouache stand-in for a scattered/decorative ink glyph. */
+function drawScatterGouache(
+  ctx: CanvasRenderingContext2D, key: string, x: number, y: number,
+  size: number, scale: number, rotationDeg: number, lineWidth: number, seed: number, alpha: number,
+): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawGouacheAsset(ctx, key, { x, y, size, scale, rotation: (rotationDeg * Math.PI) / 180, lineWidth, seed });
+  ctx.restore();
+}
+
+/** Legacy ink-glyph stroke — fallback when no gouache mapping exists. */
+function strokeInkGlyph(
+  ctx: CanvasRenderingContext2D, glyphKey: string, x: number, y: number,
+  sizePx: number, rotationDeg: number, lineWidth: number, alpha: number, color?: string,
+): void {
+  const glyph = BUILTIN_GLYPHS.find((g) => g.key === glyphKey);
+  if (!glyph) return;
+  const s = sizePx / 24;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((rotationDeg * Math.PI) / 180);
+  ctx.scale(s, s);
+  ctx.translate(-12, -12);
+  ctx.strokeStyle = color ?? glyph.color;
+  ctx.lineWidth = lineWidth / s;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  drawSvgPath(ctx, glyph.pathData);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
@@ -522,27 +557,15 @@ export function AtlasViewer({
             const seed = bs?.seed ?? hashKey(feat._key);
             const poly = { type: "Polygon" as const, rings: rings as [number, number][][] };
             const glyphs = scatterGlyphsInPolygon(poly, bk, density * 0.6, seed, scatterExclusionList);
-            for (const sg of glyphs) {
-              const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
-              if (!glyph) continue;
+            for (let gi = 0; gi < glyphs.length; gi++) {
+              const sg = glyphs[gi]!;
               const [gx, gy] = w2c(sg.x, sg.y);
-              const size = 16 * zoom * sg.scale;
-              ctx.save();
-              ctx.translate(gx, gy);
-              ctx.rotate((sg.rotation * Math.PI) / 180);
-              const s = size / 24;
-              ctx.scale(s, s);
-              ctx.translate(-12, -12);
-              ctx.strokeStyle = glyph.color ?? preset.colors.ink;
-              ctx.lineWidth = 1.2 / s;
-              ctx.lineJoin = "round";
-              ctx.lineCap = "round";
-              ctx.globalAlpha = 0.75;
-              ctx.beginPath();
-              drawSvgPath(ctx, glyph.pathData);
-              ctx.stroke();
-              ctx.globalAlpha = 1;
-              ctx.restore();
+              const gk = gouacheKeyForGlyph(sg.glyphKey);
+              if (gk) {
+                drawScatterGouache(ctx, gk, gx, gy, 16 * zoom, sg.scale, sg.rotation, 1 * zoom, hashKey(`${feat._key}:${gi}`), 0.85);
+              } else {
+                strokeInkGlyph(ctx, sg.glyphKey, gx, gy, 16 * zoom * sg.scale, sg.rotation, 1.2, 0.75);
+              }
             }
           }
         } else {
@@ -632,26 +655,15 @@ export function AtlasViewer({
                 thickness: vs.thickness ?? 1,
                 shadow: "rgba(26,16,8,0.18)",
                 selected: isHovered,
+                fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
               });
-              const cloud = BUILTIN_GLYPHS.find((g) => g.key === "cloud");
-              if (cloud) {
-                for (const pt of layout.aura.clouds) {
-                  const [gx, gy] = w2c(pt[0], pt[1]);
-                  const s = (13 * zoom) / 24;
-                  ctx.save();
-                  ctx.translate(gx, gy);
-                  ctx.scale(s, s);
-                  ctx.translate(-12, -12);
-                  ctx.globalAlpha = 0.65;
-                  ctx.strokeStyle = cloud.color;
-                  ctx.lineWidth = 1.5 / s;
-                  ctx.lineJoin = "round";
-                  ctx.lineCap = "round";
-                  ctx.beginPath();
-                  drawSvgPath(ctx, cloud.pathData);
-                  ctx.stroke();
-                  ctx.restore();
-                }
+              const cloudKey = gouacheKeyForGlyph("cloud");
+              const cloudSeed = hashKey(feat._key);
+              for (let ci = 0; ci < layout.aura.clouds.length; ci++) {
+                const pt = layout.aura.clouds[ci]!;
+                const [gx, gy] = w2c(pt[0], pt[1]);
+                if (cloudKey) drawScatterGouache(ctx, cloudKey, gx, gy, 13 * zoom, 1, 0, 1 * zoom, cloudSeed + ci, 0.65);
+                else strokeInkGlyph(ctx, "cloud", gx, gy, 13 * zoom, 0, 1.5, 0.65);
               }
             }
           } else if (feat.kind === "road") {
@@ -686,27 +698,15 @@ export function AtlasViewer({
               const seed = hashKey(feat._key);
               const pathGeo = { type: "Path" as const, coordinates: coords };
               const ridgeGlyphs = scatterGlyphsAlongPath(pathGeo, BiomeKind.hills, 0.06, tileLayer ? elevationPathHeights(tileLayer, coords) : undefined, seed);
-              for (const sg of ridgeGlyphs) {
-                const glyph = BUILTIN_GLYPHS.find((g) => g.key === sg.glyphKey);
-                if (!glyph) continue;
+              for (let gi = 0; gi < ridgeGlyphs.length; gi++) {
+                const sg = ridgeGlyphs[gi]!;
                 const [gx, gy] = w2c(sg.x, sg.y);
-                const size = 10 * zoom * sg.scale;
-                ctx.save();
-                ctx.translate(gx, gy);
-                ctx.rotate((sg.rotation * Math.PI) / 180);
-                const s = size / 24;
-                ctx.scale(s, s);
-                ctx.translate(-12, -12);
-                ctx.strokeStyle = preset.colors.inkAccent;
-                ctx.lineWidth = 1.0 / s;
-                ctx.lineJoin = "round";
-                ctx.lineCap = "round";
-                ctx.globalAlpha = 0.35;
-                ctx.beginPath();
-                drawSvgPath(ctx, glyph.pathData);
-                ctx.stroke();
-                ctx.globalAlpha = 1;
-                ctx.restore();
+                const gk = gouacheKeyForGlyph(sg.glyphKey);
+                if (gk) {
+                  drawScatterGouache(ctx, gk, gx, gy, 10 * zoom, sg.scale, sg.rotation, 1 * zoom, seed + gi, 0.35);
+                } else {
+                  strokeInkGlyph(ctx, sg.glyphKey, gx, gy, 10 * zoom * sg.scale, sg.rotation, 1.0, 0.35, preset.colors.inkAccent);
+                }
               }
             }
           }
@@ -820,19 +820,21 @@ export function AtlasViewer({
         });
         ctx.filter = "none";
       } else if (paletteItem.source === "builtin") {
-        const glyph = BUILTIN_GLYPHS.find((g) => g.key === paletteItem.builtinGlyphKey);
-        if (glyph) {
-          const scale = size / 24;
-          ctx.scale(scale, scale);
-          ctx.translate(-12, -12);
+        const gk = gouacheKeyForGlyph(paletteItem.builtinGlyphKey);
+        if (gk) {
+          // ctx is already translated/rotated to the object — anchor at origin
+          // (same net options as the style.gouache branch above).
+          drawGouacheAsset(ctx, gk, {
+            x: 0, y: 0, size: 30 * zoom, scale: obj.scale,
+            lineWidth: (st?.lineWidth ?? 1.4) * zoom,
+            blur: (st?.blur ?? 0) * zoom,
+            seed: hashKey(obj._key),
+          });
+        } else if (paletteItem.builtinGlyphKey) {
+          // Ink fallback — gouacheKeyForGlyph covers every builtin glyph key,
+          // so this only fires for unknown/legacy keys.
           ctx.filter = st?.blur ? `blur(${st.blur * zoom}px)` : "none";
-          ctx.strokeStyle = glyph.color ?? preset.colors.ink;
-          ctx.lineWidth = (st?.lineWidth ?? 1.5) / scale;
-          ctx.lineJoin = "round";
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          drawSvgPath(ctx, glyph.pathData);
-          ctx.stroke();
+          strokeInkGlyph(ctx, paletteItem.builtinGlyphKey, 0, 0, size, 0, st?.lineWidth ?? 1.5, 1);
           ctx.filter = "none";
         }
       } else if (paletteItem.imageData) {

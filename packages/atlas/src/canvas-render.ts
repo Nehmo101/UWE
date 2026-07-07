@@ -339,6 +339,22 @@ export interface DrawVineOptions {
   thickness?: number;
   /** Draw a heavier trunk + highlight when selected. */
   selected?: boolean;
+  /**
+   * Gouache mode: paint the trunk as a filled tapered ribbon with a darker
+   * pigment edge and put leaf blobs on the tendril tips — the map's painted
+   * Canvas-of-Kings look. When set, `trunk`/`coil`/`outline` become the
+   * fallback stroke colours for coil/tendril lines only.
+   */
+  fill?: {
+    /** Trunk body fill (e.g. "#6f9a4d"). */
+    trunk: string;
+    /** Trunk pigment edge (e.g. "#33531f"). */
+    trunkEdge: string;
+    /** Leaf blob fill on tendril tips. */
+    leaf: string;
+    /** Leaf pigment edge. */
+    leafEdge: string;
+  };
 }
 
 /** Base trunk width in pixels at relative width 1.0 (before zoom, before thickness). */
@@ -401,6 +417,86 @@ export function drawVine(
   strokePolyline(ctx, shadowPts);
 
   const spinePts = p(spine);
+
+  // Gouache mode: filled tapered ribbon trunk + leaf blobs on tendril tips.
+  if (opts.fill) {
+    const f = opts.fill;
+    // Build the ribbon polygon: spine ± half-width along the local normal.
+    const left: Coordinate[] = [];
+    const right: Coordinate[] = [];
+    const n = spinePts.length;
+    for (let i = 0; i < n; i++) {
+      const prev = spinePts[Math.max(0, i - 1)]!;
+      const next = spinePts[Math.min(n - 1, i + 1)]!;
+      const tx = next[0] - prev[0];
+      const ty = next[1] - prev[1];
+      const len = Math.hypot(tx, ty) || 1;
+      const nx = -ty / len;
+      const ny = tx / len;
+      const half = Math.max(0.5, (widths[i] ?? 0.2) * base) / 2;
+      left.push([spinePts[i]![0] + nx * half, spinePts[i]![1] + ny * half]);
+      right.push([spinePts[i]![0] - nx * half, spinePts[i]![1] - ny * half]);
+    }
+    ctx.beginPath();
+    ctx.moveTo(left[0]![0], left[0]![1]);
+    for (let i = 1; i < n; i++) ctx.lineTo(left[i]![0], left[i]![1]);
+    for (let i = n - 1; i >= 0; i--) ctx.lineTo(right[i]![0], right[i]![1]);
+    ctx.closePath();
+    ctx.fillStyle = f.trunk;
+    ctx.fill();
+    ctx.strokeStyle = selected ? "#c2622b" : f.trunkEdge;
+    ctx.lineWidth = Math.max(0.8, 1.3 * zoom);
+    ctx.stroke();
+
+    // Highlight streak along the left flank — painted-light feel.
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(0.8, base * 0.14);
+    strokePolyline(ctx, left.filter((_, i) => i % 2 === 0));
+    ctx.restore();
+
+    // Coil helix over the trunk (darker accent), tendrils + leaf blobs.
+    ctx.strokeStyle = f.trunkEdge;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
+    strokePolyline(ctx, p(coil));
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = f.leafEdge;
+    ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
+    for (const t of tendrils) {
+      const tp = p(t);
+      strokePolyline(ctx, tp);
+      const tip = tp[tp.length - 1];
+      if (tip) {
+        const r = Math.max(1.6, base * 0.34);
+        ctx.beginPath();
+        ctx.ellipse(tip[0], tip[1], r, r * 0.62, 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = f.leaf;
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    // Tip aura — same faint rings as the stroke mode.
+    const cA = project(aura.center);
+    const eA = project([aura.center[0] + aura.radius, aura.center[1]]);
+    const prA = Math.hypot(eA[0] - cA[0], eA[1] - cA[1]);
+    if (prA > 1) {
+      ctx.strokeStyle = f.leafEdge;
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = Math.max(0.6, 1 * zoom);
+      for (const fr of [1, 0.66]) {
+        ctx.beginPath();
+        ctx.arc(cA[0], cA[1], prA * fr, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+    return;
+  }
 
   // 2) Optional outline pass — wider stroke beneath trunk/coil/tendrils, keeps
   // a light trunk colour (e.g. white) legible over parchment and biome fills.

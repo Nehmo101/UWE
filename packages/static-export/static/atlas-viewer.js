@@ -539,9 +539,17 @@
         }
         const glyphKey = paletteItem ? paletteItem.builtinGlyphKey : obj.paletteItemId;
         const glyph = glyphs.find((g) => g.key === glyphKey);
+        const gouacheIconKey =
+          this.atlasEngine && this.atlasEngine.gouacheKeyForGlyph && this.atlasEngine.drawGouacheAsset
+            ? this.atlasEngine.gouacheKeyForGlyph(glyphKey)
+            : undefined;
         addCount(objectCounts, `glyph:${glyphKey || obj.paletteItemId}`, {
           label: glyph ? glyph.name : "Stempel",
-          icon: glyphIconHtml(glyph),
+          // Mini gouache preview canvas; painted after innerHTML injection by
+          // paintLegendGouacheIcons(). Ink SVG mark stays as fallback.
+          icon: gouacheIconKey
+            ? `<canvas width="22" height="22" data-atlas-gouache-icon="${escapeAttr(gouacheIconKey)}" aria-hidden="true"></canvas>`
+            : glyphIconHtml(glyph),
         });
       }
       if (objectCounts.size) sections.push({ title: "Objekte", items: [...objectCounts.values()] });
@@ -568,6 +576,19 @@
               .join("")}</div></section>`,
         )
         .join("")}`;
+      // Paint the injected gouache preview canvases (innerHTML can't draw).
+      if (this.atlasEngine && this.atlasEngine.drawGouacheAsset) {
+        for (const cv of this.legendEl.querySelectorAll("[data-atlas-gouache-icon]")) {
+          const key = cv.getAttribute("data-atlas-gouache-icon");
+          const ctx = cv.getContext && cv.getContext("2d");
+          if (!key || !ctx) continue;
+          try {
+            this.atlasEngine.drawGouacheAsset(ctx, key, { x: 11, y: 19, size: 14, lineWidth: 0.9 });
+          } catch (_) {
+            /* leave the icon blank rather than break the legend */
+          }
+        }
+      }
     }
 
     updateChrome() {
@@ -959,26 +980,47 @@
                     outline: "#241a10",
                     thickness: vs.thickness != null ? vs.thickness : 1,
                     shadow: "rgba(26,16,8,0.18)",
+                    fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
                   });
-                  const cloud = glyphs.find((g) => g.key === "cloud");
-                  if (cloud) {
-                    for (const pt of layout.aura.clouds) {
-                      const [gx, gy] = w2c(pt[0], pt[1]);
-                      const scale = (13 * zoom) / 24;
+                  // Aura clouds — painted gouache when the engine maps them,
+                  // ink stroke as last-resort fallback.
+                  const cloudKey =
+                    this.atlasEngine.gouacheKeyForGlyph && this.atlasEngine.drawGouacheAsset
+                      ? this.atlasEngine.gouacheKeyForGlyph("cloud")
+                      : undefined;
+                  const cloudSeed = hashStringToSeed(String(feat.id || "vine"));
+                  const cloud = cloudKey ? null : glyphs.find((g) => g.key === "cloud");
+                  for (let ci = 0; ci < layout.aura.clouds.length; ci++) {
+                    const pt = layout.aura.clouds[ci];
+                    const [gx, gy] = w2c(pt[0], pt[1]);
+                    if (cloudKey) {
                       ctx.save();
-                      ctx.translate(gx, gy);
-                      ctx.scale(scale, scale);
-                      ctx.translate(-12, -12);
                       ctx.globalAlpha = 0.65;
-                      ctx.strokeStyle = cloud.color;
-                      ctx.lineWidth = 1.5 / scale;
-                      ctx.lineJoin = "round";
-                      ctx.lineCap = "round";
-                      ctx.beginPath();
-                      drawSvgPath(ctx, cloud.pathData);
-                      ctx.stroke();
+                      this.atlasEngine.drawGouacheAsset(ctx, cloudKey, {
+                        x: gx,
+                        y: gy,
+                        size: 13 * zoom,
+                        lineWidth: 1 * zoom,
+                        seed: cloudSeed + ci,
+                      });
                       ctx.restore();
+                      continue;
                     }
+                    if (!cloud) continue;
+                    const scale = (13 * zoom) / 24;
+                    ctx.save();
+                    ctx.translate(gx, gy);
+                    ctx.scale(scale, scale);
+                    ctx.translate(-12, -12);
+                    ctx.globalAlpha = 0.65;
+                    ctx.strokeStyle = cloud.color;
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.lineJoin = "round";
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    drawSvgPath(ctx, cloud.pathData);
+                    ctx.stroke();
+                    ctx.restore();
                   }
                 }
               } else {
@@ -1181,6 +1223,28 @@
         }
 
         const glyphKey = paletteItem ? paletteItem.builtinGlyphKey : obj.paletteItemId;
+        // Builtin ink glyphs render as their painted gouache equivalent when
+        // the engine provides the mapping (same options as the style.gouache
+        // branch above); the ink stroke below stays as last-resort fallback.
+        const gouacheKey =
+          this.atlasEngine && this.atlasEngine.gouacheKeyForGlyph && this.atlasEngine.drawGouacheAsset
+            ? this.atlasEngine.gouacheKeyForGlyph(glyphKey)
+            : undefined;
+        if (gouacheKey) {
+          this.atlasEngine.drawGouacheAsset(ctx, gouacheKey, {
+            x: drawX,
+            y: drawY,
+            size: 30 * zoom,
+            scale: obj.scale,
+            rotation: (obj.rotation * Math.PI) / 180,
+            lineWidth: (style.lineWidth != null ? style.lineWidth : 1.4) * zoom,
+            blur: blur * zoom,
+            seed: this.atlasEngine.hashStringToSeed
+              ? this.atlasEngine.hashStringToSeed(String(obj.id || obj.paletteItemId))
+              : hashStringToSeed(String(obj.id || obj.paletteItemId)),
+          });
+          continue;
+        }
         const glyph = glyphs.find((g) => g.key === glyphKey);
         if (!glyph) continue;
         ctx.save();

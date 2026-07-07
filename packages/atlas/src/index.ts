@@ -205,6 +205,8 @@ export {
   listGouacheAssetsByCategory,
   drawGouacheAsset,
   isGouacheAsset,
+  GLYPH_TO_GOUACHE,
+  gouacheKeyForGlyph,
 } from "./assets";
 export type {
   GouacheAsset,
