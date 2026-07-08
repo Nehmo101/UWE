@@ -77,6 +77,27 @@
   /* Mode-driven visibility (server-filter is authoritative in production; this is UX). */
   .atlas-app.is-view .editor-only { display: none !important; }
   .atlas-app:not(.is-view) .view-only { display: none !important; }
+
+  /* Werkstatt-Layout (Roadmap W4 #14): Werkzeug-Schiene · Canvas · Inspektor · Asset-Shelf */
+  #tool-rail { flex: none; width: 168px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding: 12px 10px; border-right: 1px solid rgba(0,0,0,0.3); }
+  #inspector { flex: none; width: 240px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(0,0,0,0.3); transition: width .16s ease; }
+  #inspector.collapsed { width: 30px; }
+  #inspector.collapsed #inspector-scroll { display: none; }
+  #inspector-head { flex: none; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-bottom: 1px solid rgba(0,0,0,0.25); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); }
+  #inspector.collapsed #inspector-title { display: none; }
+  #inspector-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .dock-btn { margin-left: auto; border: 0; background: transparent; color: var(--uwe-sidebar-fg-muted); font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+  .dock-btn:hover { background: rgba(255,255,255,0.08); color: var(--uwe-sidebar-fg); }
+  #asset-shelf { flex: none; display: flex; align-items: stretch; gap: 14px; height: 138px; padding: 8px 12px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); border-top: 1px solid rgba(0,0,0,0.3); transition: height .16s ease; }
+  #asset-shelf.collapsed { height: 30px; overflow: hidden; }
+  #asset-shelf .shelf-group { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+  #asset-shelf .shelf-assets { flex: 1; min-width: 0; }
+  #asset-shelf.collapsed .shelf-group { display: none; }
+  /* Inspektor-Auswahlkarte: statt schwebendem Overlay nun angedockt */
+  #inspector #sel-panel { position: static; width: auto; margin-bottom: 10px; }
+  /* Asset-Browser-Steuerung links neben dem horizontalen Icon-Grid */
+  #assets-row > div:first-child { flex: none; width: 158px; align-self: flex-start; }
+  #asset-shelf .shelf-assets { flex: 1; }
 </style>
 </head>
 <body>
@@ -113,35 +134,18 @@
     </div>
   </header>
 
-  <div style="flex:1; display:flex; min-height:0;">
-    <!-- ===================== LEFT SIDEBAR ===================== -->
-    <aside style="flex:none; width:212px; background:var(--uwe-sidebar-bg); color:var(--uwe-sidebar-fg); display:flex; flex-direction:column; overflow-y:auto; padding:12px 10px; gap:4px; border-right:1px solid rgba(0,0,0,0.3);">
-      <div class="editor-only" style="flex-direction:column; gap:4px; display:flex;">
-        <div class="grp-label">Werkzeuge</div>
-        <div id="tool-list" style="display:flex; flex-direction:column; gap:4px;"></div>
-
-        <div class="grp-label" style="margin-top:10px;">Terrain-Pinsel</div>
-        <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px;"></div>
-
-        <div class="grp-label" style="margin-top:10px;">Objekte &amp; Bauten</div>
-        <div id="glyph-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:0 2px;"></div>
-      </div>
-
-      <div class="view-only" style="flex-direction:column; gap:6px; display:flex;">
-        <div class="grp-label">Legende</div>
-        <div id="legend-list" style="display:flex; flex-direction:column; gap:2px;"></div>
-      </div>
-
-      <div class="editor-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+  <!-- Werkstatt-Layout (Roadmap W4 #14): Schiene · Canvas · Inspektor, darunter Asset-Shelf -->
+  <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+   <div style="flex:1; display:flex; min-height:0;">
+    <!-- ===================== LEFT TOOL RAIL ===================== -->
+    <aside id="tool-rail" class="editor-only">
+      <div class="grp-label">Werkzeuge</div>
+      <div id="tool-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+      <div style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
         <div>Links = malen/platzieren</div>
         <div>Rechts = löschen</div>
-        <div>Ziehen (Ø Werkzeug) = schwenken</div>
+        <div>Ziehen (Ø) = schwenken</div>
         <div>Scroll = zoomen</div>
-      </div>
-      <div class="view-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
-        <div>Nur Ansicht — Spieler-Portal</div>
-        <div>Klick = Ebene wechseln / Wiki</div>
-        <div>Ziehen = schwenken · Scroll = zoomen</div>
       </div>
     </aside>
 
@@ -175,12 +179,6 @@
       <div style="position:absolute; bottom:52px; right:16px; pointer-events:none; text-align:center;">
         <div style="width:80px; height:8px; border:1px solid #1a1008; background:repeating-linear-gradient(to right,#1a1008 0 10px,#f2e8c9 10px 20px);"></div>
         <div style="font-family:var(--serif); font-size:10px; color:#1a1008; margin-top:2px;">0 — 100 leagues</div>
-      </div>
-
-      <div id="sel-panel" style="position:absolute; top:14px; left:14px; display:none; width:210px; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; backdrop-filter:blur(10px); box-shadow:0 4px 14px rgba(0,0,0,.2);">
-        <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · <span id="sel-kind"></span></div>
-        <div id="sel-controls"></div>
-        <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
       </div>
 
       <div id="ai-review" style="position:absolute; top:52px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:10px; padding:9px 14px; background:var(--uwe-surface); border:1.5px solid var(--uwe-accent); border-radius:11px; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.22); font-size:12.5px;">
@@ -241,6 +239,50 @@
         <div style="font-size:13px; color:var(--uwe-fg-muted);">Wende dich an deinen Spielleiter.</div>
       </div>
     </main>
+
+    <!-- ===================== RIGHT INSPECTOR (andockbar) ===================== -->
+    <aside id="inspector">
+      <div id="inspector-head">
+        <span id="inspector-title">Inspektor</span>
+        <button id="btn-dock-insp" class="dock-btn" title="Inspektor ein-/ausklappen">⇥</button>
+      </div>
+      <div id="inspector-scroll">
+        <!-- Angedockte Auswahlkarte (vorher schwebend über dem Canvas) -->
+        <div id="sel-panel" style="display:none; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.18);">
+          <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · <span id="sel-kind"></span></div>
+          <div id="sel-controls"></div>
+          <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
+        </div>
+        <!-- Karten-Einstellungen (JS hängt Theme/Licht/Klima/Größe/… hier an) -->
+        <div id="inspector-body" class="editor-only" style="display:flex; flex-direction:column; gap:4px;"></div>
+        <!-- Legende (nur Ansicht) -->
+        <div class="view-only" style="flex-direction:column; gap:6px; display:flex;">
+          <div class="grp-label">Legende</div>
+          <div id="legend-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+          <div style="margin-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+            <div>Nur Ansicht — Spieler-Portal</div>
+            <div>Klick = Ebene wechseln / Wiki</div>
+            <div>Ziehen = schwenken · Scroll = zoomen</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+   </div>
+
+   <!-- ===================== BOTTOM ASSET SHELF ===================== -->
+   <div id="asset-shelf" class="editor-only">
+     <button id="btn-dock-shelf" class="dock-btn" title="Asset-Shelf ein-/ausklappen" style="margin:0; align-self:flex-start;">▾</button>
+     <div class="shelf-group" style="width:168px;">
+       <div class="grp-label">Terrain-Pinsel</div>
+       <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px; overflow-y:auto;"></div>
+     </div>
+     <div class="shelf-group shelf-assets">
+       <div class="grp-label">Objekte &amp; Bauten</div>
+       <div id="assets-row" style="display:flex; gap:8px; flex:1; min-height:0;">
+         <div id="glyph-grid" style="display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, 44px); gap:5px; padding:2px; overflow-x:auto; flex:1;"></div>
+       </div>
+     </div>
+   </div>
   </div>
 
   <!-- ===================== STATUS BAR ===================== -->
@@ -2832,7 +2874,7 @@ function buildSidebar() {
   tp.style.cssText = "padding:8px 2px 2px;";
   const presetOptions = Object.values(engine.STYLE_PRESETS).map((pr2) => '<option value="' + pr2.id + '">' + pr2.label + "</option>").join("");
   tp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Karten-Theme</div><select id="theme-picker" class="sel-select" style="width:100%;">' + presetOptions + "</select>";
-  swatches.parentElement.appendChild(tp);
+  el("inspector-body").appendChild(tp);
   tp.querySelector("select").addEventListener("change", (e) => {
     if (!doc) return;
     // Wert VOR pushUndo sichern — refreshChrome (via pushUndo) synct das
@@ -2849,7 +2891,7 @@ function buildSidebar() {
   const lp = document.createElement("div");
   lp.style.cssText = "padding:8px 2px 2px;";
   lp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Lichtrichtung</div><select id="light-dir" class="sel-select" style="width:100%;"><option value="nw">Nordwest (Standard)</option><option value="ne">Nordost</option><option value="sw">Südwest</option><option value="se">Südost</option></select>';
-  swatches.parentElement.appendChild(lp);
+  el("inspector-body").appendChild(lp);
   lp.querySelector("select").addEventListener("change", (e) => {
     if (!doc || !doc.tileLayer) return;
     const lightDir = e.target.value;
@@ -2862,8 +2904,8 @@ function buildSidebar() {
   // Klima-Bänder (Roadmap W4 #22): statisches Zonen-Overlay, im Doc persistiert.
   const cb = document.createElement("div");
   cb.style.cssText = "padding:8px 2px 2px;";
-  cb.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-fg);cursor:pointer;"><input id="climate-toggle" type="checkbox"> Klima-Bänder (arktisch → tropisch)</label>';
-  swatches.parentElement.appendChild(cb);
+  cb.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);cursor:pointer;"><input id="climate-toggle" type="checkbox"> Klima-Bänder (arktisch → tropisch)</label>';
+  el("inspector-body").appendChild(cb);
   cb.querySelector("input").addEventListener("change", (e) => {
     if (!doc || !doc.tileLayer) return;
     // Wert VOR pushUndo lesen — refreshChrome synct die Checkbox sonst auf
@@ -2878,7 +2920,7 @@ function buildSidebar() {
   const ms = document.createElement("div");
   ms.style.cssText = "padding:8px 2px 2px;";
   ms.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Kartengröße</div><select id="map-size" class="sel-select" style="width:100%;">' + MAP_SIZE_PRESETS.map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("") + "</select>";
-  swatches.parentElement.appendChild(ms);
+  el("inspector-body").appendChild(ms);
   ms.querySelector("select").addEventListener("change", (e) => {
     const preset2 = MAP_SIZE_PRESETS.find((p) => p[0] === e.target.value);
     if (preset2) resizeMap(preset2[2], preset2[3]);
@@ -2887,8 +2929,8 @@ function buildSidebar() {
   // der aktiven Ebene, die andere erscheint nur als blasser Kontext.
   const uw = document.createElement("div");
   uw.style.cssText = "padding:8px 2px 2px;";
-  uw.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-fg);cursor:pointer;"><input id="underworld-toggle" type="checkbox"> 🕳 Unterwelt-Ebene bearbeiten</label>';
-  swatches.parentElement.appendChild(uw);
+  uw.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);cursor:pointer;"><input id="underworld-toggle" type="checkbox"> 🕳 Unterwelt-Ebene bearbeiten</label>';
+  el("inspector-body").appendChild(uw);
   uw.querySelector("input").addEventListener("change", (e) => {
     const on = !!e.target.checked;
     clearSel();
@@ -2896,7 +2938,7 @@ function buildSidebar() {
     flash(on ? "🕳 Unterwelt-Ebene — neue Inhalte liegen darunter" : "Oberflächen-Ebene");
     draw();
   });
-  swatches.parentElement.appendChild(gi);
+  el("inspector-body").appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.intensity = doc.tileLayer.intensity || {};
@@ -2908,7 +2950,7 @@ function buildSidebar() {
   const gb = document.createElement("div");
   gb.style.cssText = "padding:8px 2px 2px;";
   gb.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Terrain-Blend <span id="terrain-blend-value" style="float:right;color:var(--uwe-fg-subtle);">' + DEFAULT_TERRAIN_BLEND_WIDTH + 'px</span></div><input id="terrain-blend-width" type="range" min="0" max="18" step="1" value="' + DEFAULT_TERRAIN_BLEND_WIDTH + '" style="width:100%;accent-color:var(--uwe-accent);">';
-  swatches.parentElement.appendChild(gb);
+  el("inspector-body").appendChild(gb);
   gb.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.blendWidth = Math.max(0, Number(e.target.value) || 0);
@@ -2923,7 +2965,7 @@ function buildSidebar() {
     '<div id="height-modes" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;"></div>' +
     '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-sidebar-fg-muted);margin:8px 0 3px;">Stärke <span id="height-strength-val" style="float:right;">15%</span></div>' +
     '<input id="height-strength" type="range" min="0.02" max="0.5" step="0.01" value="0.15" style="width:100%;accent-color:var(--uwe-accent);">';
-  swatches.parentElement.appendChild(hp);
+  el("inspector-body").appendChild(hp);
   for (const m of ["raise", "lower", "smooth"]) {
     const btn = document.createElement("button");
     btn.className = "swatch-btn"; btn.style.justifyContent = "center";
@@ -2946,7 +2988,7 @@ function buildSidebar() {
     '<input id="parallax-strength" type="range" min="0" max="100" step="1" value="35" style="width:100%;accent-color:var(--uwe-accent);">' +
     '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:8px;cursor:pointer;"><input id="contours-on" type="checkbox"> Höhenlinien</label>' +
     '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:6px;">Stufen <input id="contour-steps" type="number" min="2" max="24" step="1" value="5" style="width:52px;margin-left:auto;padding:2px 4px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:var(--uwe-sidebar-fg);font-family:var(--mono);font-size:11px;"></label>';
-  swatches.parentElement.appendChild(hs);
+  el("inspector-body").appendChild(hs);
   hs.querySelector("#parallax-strength").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.parallaxStrength = Math.min(1, Math.max(0, Number(e.target.value) / 100));
@@ -2967,7 +3009,7 @@ function buildSidebar() {
   const pfb = document.createElement("div");
   pfb.style.cssText = "padding:10px 2px 2px;";
   pfb.innerHTML = '<div class="grp-label" style="padding:0 0 4px;">Prefabs</div><div id="prefab-list"></div>';
-  swatches.parentElement.appendChild(pfb);
+  el("inspector-body").appendChild(pfb);
   pfb.addEventListener("click", (e) => {
     const ins = e.target.closest("[data-prefab-ins]");
     if (ins) { insertPrefab(Number(ins.dataset.prefabIns)); return; }
@@ -3501,6 +3543,12 @@ function wire() {
     const k = e.target && e.target.dataset ? e.target.dataset.layer : null;
     if (k) { layerVis[k] = !!e.target.checked; draw(); }
   });
+
+  // Werkstatt-Layout (W4 #14): Inspektor + Asset-Shelf andocken/einklappen.
+  const dockInsp = el("btn-dock-insp");
+  if (dockInsp) dockInsp.addEventListener("click", () => { el("inspector").classList.toggle("collapsed"); requestAnimationFrame(resize); });
+  const dockShelf = el("btn-dock-shelf");
+  if (dockShelf) dockShelf.addEventListener("click", () => { el("asset-shelf").classList.toggle("collapsed"); requestAnimationFrame(resize); });
 
   el("mini-toolbar").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-mini]");
