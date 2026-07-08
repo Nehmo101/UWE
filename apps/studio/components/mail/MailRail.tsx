@@ -26,6 +26,7 @@ interface MailRailProps {
   triageCount: number;
   onCompose: () => void;
   onOpenTriage: () => void;
+  onOpenSettings: () => void;
   onSelectFolder: (folder: MailFolderKey) => void;
   onSelectAccount: (accountId: string | null) => void;
   onSelectCategory: (category: MailPriorityVM["category"] | null) => void;
@@ -60,11 +61,13 @@ export function MailRail({
   triageCount,
   onCompose,
   onOpenTriage,
+  onOpenSettings,
   onSelectFolder,
   onSelectAccount,
   onSelectCategory,
 }: MailRailProps) {
   const triageActive = view === "triage";
+  const settingsActive = view === "settings";
   return (
     <div
       style={{
@@ -223,6 +226,18 @@ export function MailRail({
             })}
           </>
         ) : null}
+      </div>
+
+      <div style={{ padding: "8px", borderTop: "1px solid var(--uwe-border)" }}>
+        <button type="button" onClick={onOpenSettings} style={railButtonStyle(settingsActive)}>
+          <NavIcon
+            name="settings"
+            width={15}
+            height={15}
+            style={{ flex: "none", color: settingsActive ? "var(--uwe-accent)" : "var(--uwe-fg-subtle)" }}
+          />
+          <span style={{ flex: 1 }}>Einstellungen</span>
+        </button>
       </div>
     </div>
   );

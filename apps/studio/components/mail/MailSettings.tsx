@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { NavIcon } from "@/src/components/ui/icon";
 import { RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
-import { MailButton, Dot } from "./mail-ui";
+import { MailButton } from "./mail-ui";
+import { MailAccountManager } from "./MailAccountManager";
 import { MailRulesPanel } from "./MailRulesPanel";
 import type { MailAccountVM, MailConfigVM, MailLogVM, MailWorldVM } from "./mail-types";
 
@@ -139,61 +140,7 @@ export function MailSettings({ accounts, config, logs, worlds, rtxState }: MailS
 
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 26px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
         <SettingCard icon="at-sign" title="Konten">
-          {accounts.length === 0 ? (
-            <p style={{ margin: "4px 0 12px", fontSize: 12.5, color: "var(--uwe-fg-subtle)" }}>
-              Noch kein Konto verbunden.
-            </p>
-          ) : (
-            accounts.map((account) => (
-              <div
-                key={account.id}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--uwe-border-muted)" }}
-              >
-                <Dot color={account.ok ? "var(--uwe-success)" : "var(--uwe-danger)"} size={9} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, color: "var(--uwe-fg)" }}>{account.email}</div>
-                  <div style={{ fontSize: 11.5, color: "var(--uwe-fg-subtle)" }}>
-                    IMAP · SMTP · {account.imapHost ?? account.smtpHost ?? "—"}
-                  </div>
-                </div>
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    color: account.ok ? "var(--uwe-fg-muted)" : "var(--uwe-danger)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {account.imapSyncError
-                    ? "Fehler · Sync"
-                    : account.lastImapSyncAt
-                      ? `Sync ${new Date(account.lastImapSyncAt).toLocaleDateString("de-DE")}`
-                      : "Noch kein Sync"}
-                </span>
-                <Link
-                  href="/admin/mail"
-                  aria-label="Konto bearbeiten"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--uwe-fg-muted)",
-                    border: "1px solid var(--uwe-border-muted)",
-                  }}
-                >
-                  <NavIcon name="pencil" width={14} height={14} />
-                </Link>
-              </div>
-            ))
-          )}
-          <div style={{ marginTop: 12 }}>
-            <Link href="/admin/mail" className="uwe-v2-btn uwe-v2-btn-subtle uwe-v2-btn-sm">
-              <NavIcon name="plus" width={14} height={14} />
-              Konto hinzufügen
-            </Link>
-          </div>
+          <MailAccountManager accounts={accounts} />
         </SettingCard>
 
         <SettingCard icon="filter" title="Regeln &amp; VIP-Absender">

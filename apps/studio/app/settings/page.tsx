@@ -732,18 +732,17 @@ export default async function SettingsPage({ searchParams }: Props) {
 
               <SettingsCollapsiblePanel
                 title="IMAP / Posteingang"
-                summary="Konten im Mail Portal verwalten"
+                summary="Konten im Mail Center verwalten"
                 defaultOpen={false}
               >
                 <p className="uwe-hint">
                   IMAP-Konten werden im{" "}
-                  <Link href="/admin/mail">Mail Portal</Link> verwaltet (verschlüsselte App-Passwörter).
-                  Der <Link href="/mail?tab=inbox">Mail Center Posteingang</Link> zeigt synchronisierte
-                  Nachrichten; Smart Inbox und KI-Entwürfe nur im Mail Portal.
+                  <Link href="/mail?folder=inbox">Mail Center</Link> unter Einstellungen verwaltet
+                  (verschlüsselte App-Passwörter). Dort laufen auch Smart Inbox, Regeln und KI-Entwürfe.
                 </p>
                 <p>
-                  <Link href="/admin/mail" className="uwe-v2-btn uwe-v2-btn-secondary">
-                    Mail Portal — Konten einrichten
+                  <Link href="/mail?folder=inbox" className="uwe-v2-btn uwe-v2-btn-secondary">
+                    Mail Center — Konten einrichten
                   </Link>
                 </p>
               </SettingsCollapsiblePanel>

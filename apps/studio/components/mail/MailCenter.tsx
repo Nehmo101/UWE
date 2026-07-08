@@ -445,6 +445,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           triageCount={data.counts.triage}
           onCompose={openComposeNew}
           onOpenTriage={() => setView("triage")}
+          onOpenSettings={() => setView("settings")}
           onSelectFolder={handleSelectFolder}
           onSelectAccount={handleSelectAccount}
           onSelectCategory={(category) => {
