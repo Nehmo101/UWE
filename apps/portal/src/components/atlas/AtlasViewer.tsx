@@ -63,7 +63,7 @@ export interface ViewerObject {
   rotation: number;
   layer?: number;
   linkedPageId?: string | null;
-  style?: { gouache?: string | null; lineWidth?: number; blur?: number; elevation?: number | null } | null;
+  style?: { gouache?: string | null; lineWidth?: number; blur?: number; elevation?: number | null; tint?: { hue?: number; saturate?: number } | null } | null;
   _key: string;
 }
 
@@ -735,7 +735,7 @@ export function AtlasViewer({
 
     // Draw stamp objects
     for (const obj of objects) {
-      const st = obj.style as { gouache?: string; lineWidth?: number; blur?: number } | null | undefined;
+      const st = obj.style as { gouache?: string; lineWidth?: number; blur?: number; tint?: { hue?: number; saturate?: number } } | null | undefined;
       // Gouache style override: painted filled asset in canvas-pixel space,
       // rendered instead of (and before) the glyph/image stamp path.
       if (st?.gouache && isGouacheAsset(st.gouache)) {
@@ -752,6 +752,7 @@ export function AtlasViewer({
           lineWidth: (st.lineWidth ?? 1.4) * zoom,
           blur: (st.blur ?? 0) * zoom,
           seed: hashKey(obj._key),
+          tint: st.tint,
         });
         continue;
       }

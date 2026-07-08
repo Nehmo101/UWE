@@ -115,8 +115,10 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#13 Minimap** — Weltübersicht unten rechts über den geteilten `drawScene`-Pfad (gedrosselt), sichtbarer Ausschnitt markiert, Klick/Ziehen zentriert die Kamera. *Offen: Kamera-Lesezeichen.*
 - ✅ **#7 Lichtrichtung** — `tileLayer.lightDir` (nw/ne/sw/se, Default nw) dreht Hillshade (`buildHillshadeRGBA`-Option) + Höhen-Schattenwurf (`elevationShadowOffset`) konsistent in Editor, Portal und Static-Viewer; Sidebar-Setting, migrationsfest normalisiert (Default bleibt sparse).
 - ✅ **#8 Label-Presets** — `ATLAS_LABEL_PRESETS` (Region gesperrt/Stadt/Fluss kursiv) in `@uwe/atlas/label-layout`; `style.labelPreset` am Label, Typo-Select im Auswahl-Panel; identisches Rendering in allen drei Viewern (Portal via `atlas-label.ts`), ohne Preset byte-identischer Legacy-Look.
+- ✅ **#9 Streu-/Spray-Pinsel** — Werkzeug „O": Gouache-Asset aus der Palette gedrückt streuen; Positions-/Größen-/Rotations-Jitter deterministisch pro Strich-Seed, ein Undo-Schritt pro Strich, Rechtsklick löscht.
+- ✅ **#11 Asset-Tinting** — `drawGouacheAsset`-Option `tint` (Hue-Rotation + Sättigung via Canvas-Filter); `style.tint` am Objekt, „Tönung °"-Regler im Auswahl-Panel, Parität in Portal- und Static-Viewer.
+- ✅ **#12 Ebenen-Panel** — Sichtbarkeits-Schalter (Terrain/Politik/Routen/Objekte/Labels) unten links; filtert `drawScene` (Minimap/Export folgen automatisch). *Offen: Deckkraft + Sperren.*
 
-**Offen:** #4 Prefabs, #9 Spray-Pinsel, #11 Tinting, #12 Ebenen-Panel,
-#14 Werkstatt-Layout, #15 Reiseplaner, #16 Kartengröße,
-#17 Landmassen-Pinsel, #18 Fluss-Intelligenz, #22 Klima-Bänder,
-#23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.
+**Offen:** #4 Prefabs, #14 Werkstatt-Layout, #15 Reiseplaner,
+#16 Kartengröße, #17 Landmassen-Pinsel, #18 Fluss-Intelligenz,
+#22 Klima-Bänder, #23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.

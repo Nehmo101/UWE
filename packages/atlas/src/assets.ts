@@ -426,6 +426,12 @@ export interface DrawGouacheAssetOptions {
   blur?: number;
   /** Deterministic seed; defaults to a hash of the asset key. */
   seed?: number;
+  /**
+   * Tint (Roadmap W3 #11): hue rotation in degrees (−180…180) and optional
+   * saturation factor (1 = unchanged). Applied via canvas `filter`, so the
+   * whole painted asset shifts consistently; omit for the original palette.
+   */
+  tint?: { hue?: number; saturate?: number };
 }
 
 /**
@@ -443,7 +449,15 @@ export function drawGouacheAsset(
   const lw = opts.lineWidth ?? 1.4;
   const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
   ctx.save();
-  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
+  const filters: string[] = [];
+  if (opts.blur && opts.blur > 0) filters.push(`blur(${opts.blur}px)`);
+  if (opts.tint) {
+    const hue = Number.isFinite(opts.tint.hue) ? (opts.tint.hue as number) : 0;
+    const sat = Number.isFinite(opts.tint.saturate) ? (opts.tint.saturate as number) : 1;
+    if (hue !== 0) filters.push(`hue-rotate(${hue}deg)`);
+    if (sat !== 1) filters.push(`saturate(${Math.max(0, sat)})`);
+  }
+  if (filters.length) ctx.filter = filters.join(" ");
   ctx.translate(opts.x, opts.y);
   if (opts.rotation) ctx.rotate(opts.rotation);
   ctx.lineJoin = "round";

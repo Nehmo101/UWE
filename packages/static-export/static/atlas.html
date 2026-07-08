@@ -149,6 +149,9 @@
     <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
       <canvas id="atlas-canvas" style="width:100%; height:100%;"></canvas>
 
+      <!-- Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe -->
+      <div id="layer-panel" style="position:absolute; left:12px; bottom:34px; display:none; flex-direction:column; gap:3px; padding:8px 10px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; font-size:10.5px; box-shadow:0 2px 8px rgba(0,0,0,.22); backdrop-filter:blur(10px);"></div>
+
       <!-- Minimap (Roadmap W3 #13): Weltübersicht, Klick/Ziehen = Kamera-Pan -->
       <canvas id="minimap" width="176" height="110" title="Minimap — Klick oder Ziehen bewegt die Kamera" style="position:absolute; right:12px; bottom:34px; width:176px; height:110px; border:1.5px solid var(--uwe-border); border-radius:8px; background:var(--uwe-surface); box-shadow:0 2px 8px rgba(0,0,0,.22); cursor:crosshair; display:none;"></canvas>
 
@@ -267,6 +270,7 @@ const TOOL_DEFS = [
   ["terrain", "Terrain-Pinsel", "G", "terrain", "Tiles malen (Gras/Wasser/Erde/Sand)"],
   ["height", "Höhe", "H", "height", "Höhenfeld malen: Anheben / Absenken / Glätten (Rechtsklick invertiert)"],
   ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
+  ["spray", "Streu-Pinsel", "O", "spray", "Gouache-Assets streuen — gedrückt halten, Rechtsklick löscht"],
   ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
   ["plot", "Objektfläche", "F", "plot", "Gouache-Objekte in ein Polygon streuen"],
@@ -279,13 +283,14 @@ const TOOL_DEFS = [
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", o: "spray", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
     select: "M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z",
     terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
     height: "M3 18 L9 7 L13 13 L16 9 L21 18 M6 14 L11 14 M14 13 L18 13 M3 21 L21 21",
+    spray: "M6 7 L6.01 7 M11 4 L11.01 4 M16 8 L16.01 8 M8 12 L8.01 12 M14 13 L14.01 13 M5 17 L5.01 17 M11 18 L11.01 18 M17 18 L17.01 18 M19 12 L19.01 12",
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
     plot: "M4 7 L12 3 L20 7 L18 18 L7 20 Z M9 10 L9 10 M13 9 L13 9 M16 13 L16 13 M11 16 L11 16",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
@@ -364,6 +369,7 @@ const root = el("atlas-root");
 const canvas = el("atlas-canvas");
 let dpr = 1, cssW = 0, cssH = 0, fitted = false;
 let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
+let spraying = null;      // { rng } — aktiver Streu-Pinsel-Strich (W3 #9)
 let paintingHeight = false, heightInvert = false;
 // Für Parallax/Schatten: Maße + Höhenfeld-Status des zuletzt gerenderten Frames
 // (auch beim Offscreen-Export korrekt, da drawScene sie pro Aufruf setzt).
@@ -1027,6 +1033,17 @@ function tileAt(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / 
 // ===========================================================================
 // Rendering
 // ===========================================================================
+// Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe — reine
+// Editor-Session-Schalter (nicht im Doc); Minimap/Export folgen drawScene.
+const layerVis = { terrain: true, regions: true, routes: true, objects: true, labels: true };
+function layerGroupOf(f) {
+  if (f.kind === "region") return "regions";
+  if (f.kind === "river" || f.kind === "road" || f.kind === "vine") return "routes";
+  if (f.kind === "label" || f.kind === "curve") return "labels";
+  if (f.kind === "biome" || f.kind === "plot" || f.kind === "relief") return "terrain";
+  return "objects";
+}
+
 function draw() {
   const c = canvas; if (!c || !doc) return;
   const ctx = c.getContext("2d"); if (!ctx) return;
@@ -1094,7 +1111,7 @@ function drawScene(ctx, W, H, chrome) {
 
   // Tile-Layer — fließende, abgerundete Verschmelzung (Canvas-of-Kings-Stil).
   const tl = doc.tileLayer;
-  engine.paintTerrainBlobs(ctx, {
+  if (layerVis.terrain) engine.paintTerrainBlobs(ctx, {
     cols: COLS, rows: ROWS,
     getCell: (cc, rr) => tl.cells[cc + "," + rr],
     tileRect: (cc, rr) => { const [px, py] = w2c(cc * TILE, rr * TILE); const ts = TILE * z; return { x: px, y: py, w: ts, h: ts }; },
@@ -1149,9 +1166,9 @@ function drawScene(ctx, W, H, chrome) {
   ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2 * z; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
 
   const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
-  for (const f of feats) drawFeature(ctx, f);
+  for (const f of feats) { if (layerVis[layerGroupOf(f)] === false) continue; drawFeature(ctx, f); }
   scaleHandlePt = null;
-  for (const o of nodeObjects()) drawObject(ctx, o);
+  if (layerVis.objects) for (const o of nodeObjects()) drawObject(ctx, o);
 
   if (!chrome) return;
 
@@ -1488,7 +1505,7 @@ function drawObject(ctx, o) {
     ? st.gouache
     : (inkGlyph && engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(inkGlyph.key) : null);
   if (gouacheKey) {
-    engine.drawGouacheAsset(ctx, gouacheKey, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
+    engine.drawGouacheAsset(ctx, gouacheKey, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)), tint: st.tint });
     if (sel) {
       const hs = 30 * z * o.scale;
       drawSelectionFrame(ctx, o, ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15);
@@ -1636,6 +1653,13 @@ function onPointerDown(e) {
     return;
   }
   if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } const [sx, sy] = snapN(nx, ny); placeStamp(sx, sy); return; }
+  if (tool === "spray") {
+    if (e.button === 2) { eraseAt(nx, ny); return; }
+    pushUndo();
+    spraying = { rng: engine.mulberry32(engine.hashStringToSeed(nextKey() + ":spray")), last: [cx, cy] };
+    sprayAt(nx, ny);
+    return;
+  }
   if (tool === "select") {
     // Vertex-Editing: Griff anfassen (Drag) oder Alt+Klick = Punkt löschen.
     const vh = vertexHandleAt(cx, cy);
@@ -1720,6 +1744,14 @@ function onPointerMove(e) {
   if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
   if (erasingTiles) { paintTiles(cx, cy, true); return; }
+  if (spraying) {
+    if (Math.hypot(cx - spraying.last[0], cy - spraying.last[1]) > 16) {
+      spraying.last = [cx, cy];
+      const [sx2, sy2] = c2n(cx, cy);
+      sprayAt(sx2, sy2);
+    }
+    return;
+  }
   if (paintingHeight) { paintHeight(cx, cy, heightInvert); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
@@ -1781,6 +1813,7 @@ function onPointerUp(e) {
   dragAxisStart = null;
   if (paintingTiles || erasingTiles || paintingHeight) markDirty();
   panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
+  spraying = null;
 }
 function handleViewClick(entity) {
   if (entity.childNodeId) { navTo(entity.childNodeId); return; }
@@ -1884,6 +1917,32 @@ function placeStamp(nx, ny) {
   doc.objects.push(o);
   markDirty(); draw();
 }
+// Streu-Pinsel (Roadmap W3 #9): Gouache-Assets mit Positions-/Größen-/
+// Rotations-Jitter entlang des Strichs; PRNG einmal pro Strich geseedet
+// (deterministisch pro Klickpfad), EIN Undo-Schritt pro Strich.
+const SPRAY_RADIUS = [0.012, 0.022, 0.038];
+function sprayAt(nx, ny) {
+  if (!spraying || !doc) return;
+  const rng = spraying.rng;
+  const radius = SPRAY_RADIUS[state.brushSize] || SPRAY_RADIUS[1];
+  const gouache = state.gouacheKey || "g_oak";
+  const count = 1 + Math.floor(rng() * 2);
+  for (let i = 0; i < count; i++) {
+    const ang = rng() * Math.PI * 2;
+    const dist = Math.sqrt(rng()) * radius;
+    const x = Math.max(0, Math.min(1, nx + Math.cos(ang) * dist));
+    const y = Math.max(0, Math.min(1, ny + Math.sin(ang) * dist * (WORLD_W / WORLD_H)));
+    doc.objects.push({
+      id: nextKey(), _key: nextKey(), nodeId: state.nodeId,
+      paletteItemId: state.glyphKey || "tree", x, y,
+      scale: Math.round((0.55 + rng() * 0.55) * 100) / 100,
+      rotation: Math.round((rng() * 24 - 12) * 10) / 10,
+      layer: 50, visibility: "dm_only", style: { gouache },
+    });
+  }
+  markDirty(); draw();
+}
+
 function addPin(pt) {
   pushUndo();
   const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" };
@@ -2645,6 +2704,7 @@ function refreshChrome() {
       subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + stampName + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>';
     }
     else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
+    else if (st.tool === "spray") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Streu-Pinsel:</b> gedrückt halten & ziehen · Asset aus der Palette · Rechtsklick löscht'; }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
@@ -2693,6 +2753,7 @@ function refreshChrome() {
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           numInp("obj-lw", "Linie px", 0.3, 6, 0.1, (selO.style && selO.style.lineWidth != null) ? selO.style.lineWidth : 1.5) +
           numInp("obj-blur", "Unschärfe", 0, 8, 0.5, (selO.style && selO.style.blur) || 0) +
+          numInp("obj-tint", "Tönung °", -180, 180, 5, (selO.style && selO.style.tint && selO.style.tint.hue) || 0) +
           "</div>" +
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           numInp("obj-elev", "Höhe % (0 = auto)", 0, 100, 1, Math.round(((selO.style && typeof selO.style.elevation === "number") ? selO.style.elevation : 0) * 100)) +
@@ -2841,6 +2902,8 @@ function refreshChrome() {
 function wire() {
   if (isView()) root.classList.add("is-view");
   el("badge-view").style.display = isView() ? "inline-flex" : "none";
+  const lpEl = el("layer-panel");
+  if (lpEl) lpEl.style.display = isView() ? "none" : "flex";
   el("badge-bridge").style.display = embedded ? "inline-flex" : "none";
 
   el("brush-s").addEventListener("click", () => setState({ brushSize: 0 }));
@@ -2996,6 +3059,17 @@ function wire() {
         markDirty(); draw();
       }
     }
+    else if (t.id === "obj-tint") {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      const v = Number(t.value);
+      if (o && Number.isFinite(v)) {
+        pushUndo(); o.style = o.style || {};
+        const hue = Math.max(-180, Math.min(180, v));
+        // 0 = Original-Palette — sparse halten wie bei blur/elevation.
+        if (hue !== 0) o.style.tint = { hue }; else delete o.style.tint;
+        markDirty(); draw();
+      }
+    }
     else if (t.id === "obj-lw" || t.id === "obj-blur") {
       const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
       const v = Number(t.value);
@@ -3036,6 +3110,15 @@ function wire() {
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.addEventListener("dblclick", onDblClick);
+
+  const lpanel = el("layer-panel");
+  const LAYER_GROUPS = [["terrain", "Terrain"], ["regions", "Politik"], ["routes", "Routen"], ["objects", "Objekte"], ["labels", "Labels"]];
+  lpanel.innerHTML = '<div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:2px;">Ebenen</div>' +
+    LAYER_GROUPS.map(([k, l]) => '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--uwe-fg);"><input type="checkbox" data-layer="' + k + '" checked> ' + l + "</label>").join("");
+  lpanel.addEventListener("change", (e) => {
+    const k = e.target && e.target.dataset ? e.target.dataset.layer : null;
+    if (k) { layerVis[k] = !!e.target.checked; draw(); }
+  });
 
   const mm = el("minimap");
   mm.addEventListener("pointerdown", (e) => { minimapDragging = true; mm.setPointerCapture(e.pointerId); minimapPanTo(e); });

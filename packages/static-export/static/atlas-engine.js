@@ -2522,7 +2522,15 @@ function drawGouacheAsset(ctx, key, opts) {
   const lw = opts.lineWidth ?? 1.4;
   const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
   ctx.save();
-  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
+  const filters = [];
+  if (opts.blur && opts.blur > 0) filters.push(`blur(${opts.blur}px)`);
+  if (opts.tint) {
+    const hue = Number.isFinite(opts.tint.hue) ? opts.tint.hue : 0;
+    const sat = Number.isFinite(opts.tint.saturate) ? opts.tint.saturate : 1;
+    if (hue !== 0) filters.push(`hue-rotate(${hue}deg)`);
+    if (sat !== 1) filters.push(`saturate(${Math.max(0, sat)})`);
+  }
+  if (filters.length) ctx.filter = filters.join(" ");
   ctx.translate(opts.x, opts.y);
   if (opts.rotation) ctx.rotate(opts.rotation);
   ctx.lineJoin = "round";

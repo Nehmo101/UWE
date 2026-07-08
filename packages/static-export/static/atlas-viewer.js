@@ -1193,6 +1193,7 @@
             seed: this.atlasEngine.hashStringToSeed
               ? this.atlasEngine.hashStringToSeed(String(obj.id || obj.paletteItemId))
               : hashStringToSeed(String(obj.id || obj.paletteItemId)),
+            tint: style.tint,
           });
           continue;
         }
