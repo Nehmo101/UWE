@@ -70,6 +70,12 @@ export interface EditorNodeRenameMessage {
   nodeId: string;
   title: string;
 }
+export interface EditorMapStyleMessage {
+  source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
+  type: "map-style";
+  /** Key into STYLE_PRESETS (e.g. "tolkien-ink", "nachtkarte"). */
+  stylePreset: string;
+}
 export type EditorToHostMessage =
   | EditorReadyMessage
   | EditorSaveMessage
@@ -78,7 +84,8 @@ export type EditorToHostMessage =
   | EditorPlotFillProposalRequestMessage
   | EditorPlotFillProposalReviewMessage
   | EditorHandoutRequestMessage
-  | EditorNodeRenameMessage;
+  | EditorNodeRenameMessage
+  | EditorMapStyleMessage;
 
 export interface HostSavedMessage {
   source: typeof ATLAS_BRIDGE_HOST_SOURCE;
@@ -116,6 +123,7 @@ const EDITOR_TYPES = new Set([
   "plot-fill-proposal-review",
   "handout-request",
   "node-rename",
+  "map-style",
 ]);
 const HOST_TYPES = new Set(["saved", "ai-draft-result", "plot-fill-proposal-result", "load"]);
 
@@ -133,6 +141,9 @@ export function isEditorMessage(data: unknown): data is EditorToHostMessage {
   if (d.type === "plot-fill-proposal-review") {
     const msg = d as { plotKey?: unknown; accepted?: unknown };
     return typeof msg.plotKey === "string" && typeof msg.accepted === "boolean";
+  }
+  if (d.type === "map-style") {
+    return typeof (d as { stylePreset?: unknown }).stylePreset === "string";
   }
   return true;
 }

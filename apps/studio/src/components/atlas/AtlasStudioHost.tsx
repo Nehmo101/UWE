@@ -32,6 +32,7 @@ import {
   setAtlasNodeVisibilityAction,
   updateAtlasNodeAction,
 } from "@/app/atlas-actions";
+import { setAtlasMapStyleAction } from "@/app/atlas-style-actions";
 import { generateAtlasPlotFillProposalAction } from "@/app/atlas-plot-fill-actions";
 
 interface HostDoc {
@@ -191,6 +192,20 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     [worldSlug],
   );
 
+  const handleMapStyle = useCallback(
+    async (stylePreset: string) => {
+      const fd = new FormData();
+      fd.set("worldSlug", worldSlug);
+      fd.set("stylePreset", stylePreset);
+      try {
+        await setAtlasMapStyleAction(fd);
+      } catch (error) {
+        console.error("Atlas-Bridge: Karten-Theme speichern fehlgeschlagen —", error);
+      }
+    },
+    [worldSlug],
+  );
+
   const handleHandout = useCallback(
     async (nodeId: string, title: string) => {
       const fd = new FormData();
@@ -239,6 +254,9 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         case "node-rename":
           void handleNodeRename(data.nodeId, data.title);
           break;
+        case "map-style":
+          void handleMapStyle(data.stylePreset);
+          break;
         default:
           break;
       }
@@ -249,6 +267,7 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     doc,
     handleAiDraft,
     handleHandout,
+    handleMapStyle,
     handleNodeRename,
     handlePlotFillProposal,
     handleSave,
