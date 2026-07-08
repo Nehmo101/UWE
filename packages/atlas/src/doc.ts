@@ -71,6 +71,8 @@ export interface AtlasTileLayer {
    * migration keeps docs sparse by dropping the default.
    */
   lightDir?: string;
+  /** Klima-Bänder-Overlay (Roadmap W4 #22); missing = off (sparse). */
+  climateEnabled?: boolean;
 }
 
 /**
@@ -179,6 +181,10 @@ export function migrateDoc(doc: unknown): AtlasDocV2 {
     // Default bleibt implizit — Docs sparse halten wie bei elevation/contours.
     if (lightDir === DEFAULT_LIGHT_DIRECTION) delete d.tileLayer.lightDir;
     else d.tileLayer.lightDir = lightDir;
+  }
+  if (d.tileLayer.climateEnabled !== undefined) {
+    if (d.tileLayer.climateEnabled === true) d.tileLayer.climateEnabled = true;
+    else delete d.tileLayer.climateEnabled;
   }
   return d as AtlasDocV2;
 }

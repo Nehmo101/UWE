@@ -21,6 +21,7 @@ import { drawViewerLabel } from "./atlas-label";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawSvgPath, drawVine } from "@uwe/atlas/canvas-render";
+import { climateBands } from "@uwe/atlas/climate";
 import { buildVineLayout } from "@uwe/atlas/vine";
 import { drawGouacheAsset, gouacheKeyForGlyph, isGouacheAsset } from "@uwe/atlas/assets";
 import { drawRtxGouacheRecipePreview } from "@uwe/atlas/rtx-asset-preview";
@@ -115,6 +116,8 @@ export interface ViewerTileLayer {
   contourSteps?: number | null;
   /** Globale Lichtrichtung (W3 #7): "nw" (Default) | "ne" | "sw" | "se". */
   lightDir?: string | null;
+  /** Klima-Bänder-Overlay (W4 #22); fehlt = aus. */
+  climateEnabled?: boolean | null;
 }
 
 export interface AtlasViewerProps {
@@ -436,6 +439,15 @@ export function AtlasViewer({
         radiusRatio: 0.4,
         coast: {},
       });
+      // Klima-Bänder (W4 #22): dieselben Zonenfarben wie im Editor.
+      if (tileLayer.climateEnabled) {
+        for (const band of climateBands()) {
+          const [bx0, by0] = w2c(0, band.y0);
+          const [bx1, by1] = w2c(1, band.y1);
+          ctx.fillStyle = band.zone.color;
+          ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+        }
+      }
       // 2.5D elevation: hillshade overlay + optional contour lines.
       drawElevationOverlays(ctx, tileLayer, w2c, zoom, elevationCacheRef.current, preset.colors.ink);
     }

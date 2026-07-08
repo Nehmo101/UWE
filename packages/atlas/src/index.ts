@@ -201,6 +201,12 @@ export type { VineOptions, VineLayout, VineAura } from "./vine";
 
 // Roadmap Welle 3/4 engine slices
 export type { CoastStyleOptions } from "./coastline";
+export { WATER_BIOME, snapPointToWater, riverFlowsUphill } from "./river-tools";
+export type { SnapToWaterOptions, UphillCheckOptions } from "./river-tools";
+export { CLIMATE_ZONES, climateZoneAt, climateBands } from "./climate";
+export type { ClimateZone, ClimateBand } from "./climate";
+export { CARTOUCHE_STYLES, drawCartouche } from "./cartouche";
+export type { CartoucheStyle, CartoucheOptions } from "./cartouche";
 export { findBridgePoints } from "./bridge-points";
 export type { BridgePoint } from "./bridge-points";
 export { routeRoad } from "./route-astar";

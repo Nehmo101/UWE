@@ -816,6 +816,16 @@
           radiusRatio: 0.4,
           coast: {},
         });
+        // Klima-Bänder (W4 #22) — Engine-Zonen, gleiche Farben wie im Editor.
+        const engineForClimate = this.atlasEngine;
+        if (tl.climateEnabled && engineForClimate && engineForClimate.climateBands) {
+          for (const band of engineForClimate.climateBands()) {
+            const [bx0, by0] = w2c(0, band.y0);
+            const [bx1, by1] = w2c(1, band.y1);
+            ctx.fillStyle = band.zone.color;
+            ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+          }
+        }
       }
 
       // 2.5D height simulation — hillshade + contour lines over the terrain

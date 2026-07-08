@@ -118,7 +118,10 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#9 Streu-/Spray-Pinsel** — Werkzeug „O": Gouache-Asset aus der Palette gedrückt streuen; Positions-/Größen-/Rotations-Jitter deterministisch pro Strich-Seed, ein Undo-Schritt pro Strich, Rechtsklick löscht.
 - ✅ **#11 Asset-Tinting** — `drawGouacheAsset`-Option `tint` (Hue-Rotation + Sättigung via Canvas-Filter); `style.tint` am Objekt, „Tönung °"-Regler im Auswahl-Panel, Parität in Portal- und Static-Viewer.
 - ✅ **#12 Ebenen-Panel** — Sichtbarkeits-Schalter (Terrain/Politik/Routen/Objekte/Labels) unten links; filtert `drawScene` (Minimap/Export folgen automatisch). *Offen: Deckkraft + Sperren.*
+- ✅ **#18 Fluss-Intelligenz** — `snapPointToWater` + `riverFlowsUphill` in `@uwe/atlas/river-tools`; beim Fluss-Abschluss snappt die Mündung an nahes Wasser (≤ 0.045), Bergauf-Warnung übers Höhenfeld als Hinweis (nie Auto-Korrektur). *Offen: Delta-Verzweigung.*
+- ✅ **#22 Klima-Bänder** — `CLIMATE_ZONES`/`climateBands` in `@uwe/atlas/climate` (arktisch → tropisch); Doc-Setting `tileLayer.climateEnabled` (migrationsfest, sparse), Overlay in Editor (mit Zonen-Labels), Portal- und Static-Viewer. *Offen: Biom-Vorschlags-Färbung + Reiseplaner-Kopplung.*
+- ✅ **#23 Kartuschen** — `drawCartouche` in `@uwe/atlas/cartouche` (Schriftrolle/Banner/Doppellinien); Titelkartusche wählbar im PNG-Export-Dialog (Titel = Ebenen-Name). *Offen: Live-Deko + weitere Zier-Rahmen/Windrosen-Stile.*
 
 **Offen:** #4 Prefabs, #14 Werkstatt-Layout, #15 Reiseplaner,
-#16 Kartengröße, #17 Landmassen-Pinsel, #18 Fluss-Intelligenz,
-#22 Klima-Bänder, #23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.
+#16 Kartengröße, #17 Landmassen-Pinsel, #26 Unterwelt,
+#28 Asset-Wunsch-Queue.

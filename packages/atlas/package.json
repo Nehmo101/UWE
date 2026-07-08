@@ -38,7 +38,10 @@
     "./bridge-points": "./src/bridge-points.ts",
     "./route-astar": "./src/route-astar.ts",
     "./territory": "./src/territory.ts",
-    "./name-culture": "./src/name-culture.ts"
+    "./name-culture": "./src/name-culture.ts",
+    "./river-tools": "./src/river-tools.ts",
+    "./climate": "./src/climate.ts",
+    "./cartouche": "./src/cartouche.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -82,6 +82,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       contoursEnabled?: boolean;
       contourSteps?: number;
       lightDir?: string;
+      climateEnabled?: boolean;
     } | null;
     if (
       rawTileLayer &&
@@ -101,6 +102,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
         contoursEnabled: rawTileLayer.contoursEnabled ?? null,
         contourSteps: rawTileLayer.contourSteps ?? null,
         lightDir: rawTileLayer.lightDir ?? null,
+        climateEnabled: rawTileLayer.climateEnabled ?? null,
       };
     }
 

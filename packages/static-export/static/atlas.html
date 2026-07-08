@@ -210,6 +210,12 @@
           </div>
           <div class="row">
             <label class="chk"><input id="exp-deco" type="checkbox" checked />Kompass &amp; Maßstab</label>
+            <select id="exp-cartouche" class="sel-select" title="Titelkartusche (Roadmap W4 #23)">
+              <option value="none">Keine Kartusche</option>
+              <option value="scroll">Kartusche: Schriftrolle</option>
+              <option value="banner">Kartusche: Banner</option>
+              <option value="plain">Kartusche: Doppellinien</option>
+            </select>
             <label class="chk"><input id="exp-frame" type="checkbox" checked />Tintenrahmen</label>
           </div>
           <div id="exp-hint" style="font-size:10.5px;color:var(--uwe-fg-muted);margin-bottom:12px;"></div>
@@ -361,7 +367,7 @@ const attachOpts = { kind: "trees", side: "both", spacing: 0.05, align: ATTACH_A
 const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true, condition: "thriving" };
 
 // Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
-const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, rect: null, picking: false };
+const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, cartouche: "none", rect: null, picking: false };
 let exportPickStart = null;  // [nx,ny] während des Rechteck-Aufziehens
 
 const el = (id) => document.getElementById(id);
@@ -1122,6 +1128,24 @@ function drawScene(ctx, W, H, chrome) {
     coast: {},
     blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * z,
   });
+
+  // Klima-Bänder (Roadmap W4 #22): dezente Zonen-Färbung + Labels (nur Chrome).
+  if (tl.climateEnabled && engine.climateBands) {
+    ctx.save();
+    for (const band of engine.climateBands()) {
+      const [bx0, by0] = w2c(0, band.y0 * WORLD_H);
+      const [bx1, by1] = w2c(WORLD_W, band.y1 * WORLD_H);
+      ctx.fillStyle = band.zone.color;
+      ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+      if (chrome) {
+        ctx.fillStyle = "rgba(42,30,12,0.55)";
+        ctx.font = Math.max(8, 9 * z) + "px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(band.zone.label, bx0 + 6, by0 + Math.max(10, 11 * z));
+      }
+    }
+    ctx.restore();
+  }
 
   // Höhen-Simulation (2.5D): Hillshade gestreckt über das Karten-Rect (der
   // Bilinear-Filter des Browsers glättet das Zellraster) + optionale Höhenlinien.
@@ -2031,6 +2055,16 @@ function finishPath() {
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
   doc.features.push(f); drawingPoints = [];
+  // Fluss-Intelligenz (Roadmap W4 #18): Mündung an nahes Wasser snappen +
+  // Bergauf-Warnung übers Höhenfeld — Hinweis, nie Auto-Korrektur.
+  if (!isRoad && !isVine) {
+    const co = f.geometry.coordinates;
+    const snapped = engine.snapPointToWater ? engine.snapPointToWater(doc.tileLayer, co[co.length - 1], { maxDist: 0.045 }) : null;
+    if (snapped) co[co.length - 1] = snapped;
+    const uphill = engine.riverFlowsUphill && engine.riverFlowsUphill(doc.tileLayer, co);
+    if (uphill) flash((snapped ? "Mündung an Wasser gesnappt · " : "") + "⚠ Fluss fließt bergauf — Höhenfeld prüfen");
+    else if (snapped) flash("Mündung an Wasser gesnappt");
+  }
   autoPlaceBridges(f);
   selectOnly(f._key); markDirty(); draw();
 }
@@ -2270,6 +2304,7 @@ function refreshExportDialog() {
   el("exp-cell").disabled = exp.grid === "none";
   el("exp-deco").checked = exp.deco;
   el("exp-frame").checked = exp.frame;
+  el("exp-cartouche").value = exp.cartouche || "none";
   const r = resolveExportRectWorld();
   const leagues = ((r.w / WORLD_W) * 100).toFixed(0);
   el("exp-hint").textContent =
@@ -2326,6 +2361,17 @@ function doExport() {
       const bh = 9 * scale;
       const barLeagues = Math.max(1, Math.round(((bw / scale) / WORLD_W) * 100));
       engine.drawScaleBar(octx, { x: 20 * scale, y: off.height - bh - 30 * scale, width: bw, height: bh, ink: preset.colors.ink, parchment: preset.colors.parchment, label: "0 — " + barLeagues + " leagues", font: (12 * scale) + "px " + preset.typography.labelCity });
+    }
+    if (exp.cartouche && exp.cartouche !== "none" && engine.drawCartouche) {
+      const ch = Math.max(30, 40 * scale);
+      engine.drawCartouche(octx, {
+        x: off.width / 2, y: ch * 0.85 + 14 * scale,
+        width: Math.max(160, Math.min(off.width * 0.5, (node().title || "Atlas").length * 14 * scale + 90 * scale)),
+        height: ch, style: exp.cartouche,
+        title: node().title || (doc.map && doc.map.title) || "Atlas",
+        ink: preset.colors.ink, parchment: preset.colors.parchment, accent: preset.colors.inkAccent,
+        font: "bold " + Math.round(16 * scale) + "px " + preset.typography.title,
+      });
     }
     if (exp.frame) {
       octx.strokeStyle = preset.colors.ink;
@@ -2538,6 +2584,21 @@ function buildSidebar() {
     invalidateElevationCache();
     markDirty(); draw();
   });
+  // Klima-Bänder (Roadmap W4 #22): statisches Zonen-Overlay, im Doc persistiert.
+  const cb = document.createElement("div");
+  cb.style.cssText = "padding:8px 2px 2px;";
+  cb.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-fg);cursor:pointer;"><input id="climate-toggle" type="checkbox"> Klima-Bänder (arktisch → tropisch)</label>';
+  swatches.parentElement.appendChild(cb);
+  cb.querySelector("input").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    // Wert VOR pushUndo lesen — refreshChrome synct die Checkbox sonst auf
+    // den alten Doc-Stand zurück (gleiche Falle wie beim Theme-Picker).
+    const on = !!e.target.checked;
+    pushUndo();
+    if (on) doc.tileLayer.climateEnabled = true;
+    else delete doc.tileLayer.climateEnabled;
+    markDirty(); draw();
+  });
   swatches.parentElement.appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
@@ -2657,6 +2718,8 @@ function refreshChrome() {
   if (themeSel && doc) themeSel.value = (doc.map && doc.map.stylePreset) || "tolkien-ink";
   const lightSel = el("light-dir");
   if (lightSel && doc && doc.tileLayer) lightSel.value = doc.tileLayer.lightDir || "nw";
+  const climateBox = el("climate-toggle");
+  if (climateBox && doc && doc.tileLayer) climateBox.checked = doc.tileLayer.climateEnabled === true;
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
@@ -3098,6 +3161,7 @@ function wire() {
   });
   el("exp-grid").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.grid = b.dataset.v; refreshExportDialog(); });
   el("exp-res").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.res = Number(b.dataset.v); refreshExportDialog(); });
+  el("exp-cartouche").addEventListener("change", (e) => { exp.cartouche = e.target.value; });
   el("exp-cell").addEventListener("input", (e) => { exp.cell = Number(e.target.value); refreshExportDialog(); });
   el("exp-deco").addEventListener("change", (e) => { exp.deco = e.target.checked; });
   el("exp-frame").addEventListener("change", (e) => { exp.frame = e.target.checked; });

@@ -2962,6 +2962,10 @@ function migrateDoc(doc) {
     if (lightDir === DEFAULT_LIGHT_DIRECTION) delete d.tileLayer.lightDir;
     else d.tileLayer.lightDir = lightDir;
   }
+  if (d.tileLayer.climateEnabled !== void 0) {
+    if (d.tileLayer.climateEnabled === true) d.tileLayer.climateEnabled = true;
+    else delete d.tileLayer.climateEnabled;
+  }
   return d;
 }
 function serializeDoc(doc, extra) {
@@ -3571,6 +3575,151 @@ function buildVineLayout(points, options = {}) {
   };
 }
 
+// ../atlas/src/river-tools.ts
+var WATER_BIOME = "coast";
+function snapPointToWater(layer, point, options = {}) {
+  if (!layer || !layer.cells || !(layer.cols > 0) || !(layer.rows > 0)) return null;
+  const maxDist = options.maxDist ?? 0.04;
+  const water = options.waterBiome ?? WATER_BIOME;
+  const [px, py] = point;
+  const cols = layer.cols;
+  const rows = layer.rows;
+  const col = Math.min(cols - 1, Math.max(0, Math.floor(px * cols)));
+  const row = Math.min(rows - 1, Math.max(0, Math.floor(py * rows)));
+  if (layer.cells[`${col},${row}`] === water) return null;
+  const rx = Math.max(1, Math.ceil(maxDist * cols));
+  const ry = Math.max(1, Math.ceil(maxDist * rows));
+  let best = null;
+  let bestDist = maxDist;
+  for (let c = Math.max(0, col - rx); c <= Math.min(cols - 1, col + rx); c++) {
+    for (let r = Math.max(0, row - ry); r <= Math.min(rows - 1, row + ry); r++) {
+      if (layer.cells[`${c},${r}`] !== water) continue;
+      const cx = (c + 0.5) / cols;
+      const cy = (r + 0.5) / rows;
+      const d = Math.hypot(cx - px, cy - py);
+      if (d < bestDist) {
+        bestDist = d;
+        best = [cx, cy];
+      }
+    }
+  }
+  return best;
+}
+function riverFlowsUphill(grid, coords, options = {}) {
+  if (!grid || !grid.elevation || coords.length < 2) return false;
+  const threshold = options.threshold ?? 0.08;
+  const first = coords[0];
+  const last = coords[coords.length - 1];
+  const start = sampleElevation(grid, first[0], first[1]);
+  const end = sampleElevation(grid, last[0], last[1]);
+  return end - start > threshold;
+}
+
+// ../atlas/src/climate.ts
+var CLIMATE_ZONES = [
+  { key: "arktisch", label: "Arktisch", color: "rgba(190,215,235,0.28)" },
+  { key: "kalt", label: "Kalt-gemäßigt", color: "rgba(160,200,190,0.20)" },
+  { key: "gemaessigt", label: "Gemäßigt", color: "rgba(150,190,120,0.16)" },
+  { key: "subtropisch", label: "Subtropisch", color: "rgba(215,190,110,0.18)" },
+  { key: "tropisch", label: "Tropisch", color: "rgba(200,150,90,0.22)" }
+];
+function clamp013(v) {
+  return Math.max(0, Math.min(1, v));
+}
+function climateZoneAt(ny) {
+  const idx = Math.min(
+    CLIMATE_ZONES.length - 1,
+    Math.floor(clamp013(ny) * CLIMATE_ZONES.length)
+  );
+  return CLIMATE_ZONES[idx];
+}
+function climateBands() {
+  const n = CLIMATE_ZONES.length;
+  return CLIMATE_ZONES.map((zone, i) => ({ zone, y0: i / n, y1: (i + 1) / n }));
+}
+
+// ../atlas/src/cartouche.ts
+var CARTOUCHE_STYLES = [
+  { key: "scroll", label: "Schriftrolle" },
+  { key: "banner", label: "Banner" },
+  { key: "plain", label: "Doppellinien-Kasten" }
+];
+function drawCartouche(ctx, opts) {
+  const title = (opts.title || "").trim();
+  if (!title) return;
+  const { x, y, width: w, height: h } = opts;
+  const accent = opts.accent ?? opts.ink;
+  const left = x - w / 2;
+  const top = y - h / 2;
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  if (opts.style === "banner") {
+    const tail = Math.min(h * 0.9, w * 0.12);
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(left - tail, top + h * 0.2);
+    ctx.lineTo(left, top + h * 0.2);
+    ctx.lineTo(left, top + h * 0.8);
+    ctx.lineTo(left - tail, top + h * 0.8);
+    ctx.lineTo(left - tail * 0.45, y);
+    ctx.closePath();
+    ctx.moveTo(left + w + tail, top + h * 0.2);
+    ctx.lineTo(left + w, top + h * 0.2);
+    ctx.lineTo(left + w, top + h * 0.8);
+    ctx.lineTo(left + w + tail, top + h * 0.8);
+    ctx.lineTo(left + w + tail * 0.45, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = opts.parchment;
+    ctx.strokeStyle = opts.ink;
+    ctx.lineWidth = Math.max(1.2, h * 0.045);
+    ctx.beginPath();
+    ctx.rect(left, top, w, h);
+    ctx.fill();
+    ctx.stroke();
+  } else if (opts.style === "scroll") {
+    const curl = Math.min(h * 0.5, w * 0.07);
+    ctx.fillStyle = opts.parchment;
+    ctx.strokeStyle = opts.ink;
+    ctx.lineWidth = Math.max(1.2, h * 0.045);
+    ctx.beginPath();
+    ctx.moveTo(left + curl, top);
+    ctx.lineTo(left + w - curl, top);
+    ctx.quadraticCurveTo(left + w, top, left + w, top + h / 2);
+    ctx.quadraticCurveTo(left + w, top + h, left + w - curl, top + h);
+    ctx.lineTo(left + curl, top + h);
+    ctx.quadraticCurveTo(left, top + h, left, top + h / 2);
+    ctx.quadraticCurveTo(left, top, left + curl, top);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(1, h * 0.035);
+    for (const [cx, dir] of [[left + curl * 0.4, 1], [left + w - curl * 0.4, -1]]) {
+      ctx.beginPath();
+      ctx.arc(cx, y, curl * 0.55, Math.PI * 0.25 * dir, Math.PI * (2 - 0.25 * dir), dir < 0);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = opts.parchment;
+    ctx.strokeStyle = opts.ink;
+    ctx.lineWidth = Math.max(1.4, h * 0.05);
+    ctx.beginPath();
+    ctx.rect(left, top, w, h);
+    ctx.fill();
+    ctx.stroke();
+    ctx.lineWidth = Math.max(0.8, h * 0.02);
+    ctx.strokeRect(left + h * 0.12, top + h * 0.12, w - h * 0.24, h - h * 0.24);
+  }
+  ctx.fillStyle = opts.ink;
+  ctx.font = opts.font;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(title, x, y);
+  ctx.restore();
+}
+
 // ../atlas/src/bridge-points.ts
 function segmentIntersection(a1, a2, b1, b2) {
   const rX = a2[0] - a1[0];
@@ -3636,7 +3785,7 @@ var NEIGHBORS = [
   [-1, 1],
   [-1, -1]
 ];
-function clamp013(v) {
+function clamp014(v) {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 function octile(dx, dy) {
@@ -3713,8 +3862,8 @@ function routeRoad(tileLayer, start, goal, options = {}) {
   let minFactor = 1;
   for (const v of Object.values(biomeCost)) if (v < minFactor) minFactor = v;
   if (minFactor < 0) minFactor = 0;
-  const clampStart = [clamp013(start[0]), clamp013(start[1])];
-  const clampGoal = [clamp013(goal[0]), clamp013(goal[1])];
+  const clampStart = [clamp014(start[0]), clamp014(start[1])];
+  const clampGoal = [clamp014(goal[0]), clamp014(goal[1])];
   const idx = (c, r) => r * cols + c;
   const colOf = (i) => i % cols;
   const rowOf = (i) => (i - i % cols) / cols;
@@ -3814,7 +3963,7 @@ function routeRoad(tileLayer, start, goal, options = {}) {
 // ../atlas/src/territory.ts
 var DEFAULT_SAMPLES_X = 96;
 var DEFAULT_SAMPLES_Y = 60;
-function clamp014(v) {
+function clamp015(v) {
   return Math.max(0, Math.min(1, v));
 }
 function suggestTerritories(seeds, options = {}) {
@@ -3824,8 +3973,8 @@ function suggestTerritories(seeds, options = {}) {
   const exclude = options.exclude;
   const clamped = seeds.map((s) => ({
     key: s.key,
-    x: clamp014(s.x),
-    y: clamp014(s.y),
+    x: clamp015(s.x),
+    y: clamp015(s.y),
     weight: s.weight && s.weight > 0 ? s.weight : 1
   }));
   const assignment = new Int32Array(samplesX * samplesY).fill(-1);
@@ -4606,7 +4755,7 @@ function isFiniteNumber(value) {
 function safeHexColor(value) {
   return typeof value === "string" && HEX_COLOR2.test(value) ? value : void 0;
 }
-function clamp015(value) {
+function clamp016(value) {
   return Math.min(1, Math.max(0, value));
 }
 function buildEllipseOps(layer, project, unit) {
@@ -4753,7 +4902,7 @@ function drawRtxGouacheRecipePreview(ctx, recipe, opts) {
     const ops = buildLayerOps(layer, project, unit);
     if (!ops) continue;
     const roleDefault = RTX_RECIPE_ROLE_DEFAULT_OPACITY[layer.role] ?? 1;
-    ctx.globalAlpha = clamp015(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
+    ctx.globalAlpha = clamp016(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
     ctx.beginPath();
     for (const [name, ...args] of ops) {
       ctx[name](...args);
@@ -5283,7 +5432,7 @@ var KIND_GLYPH = {
   houses: "village",
   towers: "castle"
 };
-function clamp016(v) {
+function clamp017(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
@@ -5326,8 +5475,8 @@ function generatePathAttachments(path, options) {
         const scale = 0.8 + rng() * 0.4;
         const jitterRotation = (rng() - 0.5) * 2 * rotationRange;
         const rotation = alignToPath ? segmentAngleDeg + jitterRotation : jitterRotation;
-        const x = clamp016(cx + px * offset * sign);
-        const y = clamp016(cy + py * offset * sign);
+        const x = clamp017(cx + px * offset * sign);
+        const y = clamp017(cy + py * offset * sign);
         results.push({ glyphKey, x, y, scale, rotation });
       }
       d += spacing;
@@ -6147,6 +6296,8 @@ export {
   BUILTIN_GLYPHS,
   BUILTIN_GLYPH_KEYS,
   BiomeKind,
+  CARTOUCHE_STYLES,
+  CLIMATE_ZONES,
   CONTOUR_MAJOR_EVERY,
   CULTURE_PROFILES,
   DEFAULT_CONTOUR_STEPS,
@@ -6172,6 +6323,7 @@ export {
   SCHEMA_VERSION,
   STYLE_PRESETS,
   TOLKIEN_INK,
+  WATER_BIOME,
   applyColorIntensity,
   assembleStampPrompt,
   buildAtlasPlotFillPromptContext,
@@ -6184,8 +6336,11 @@ export {
   canvasToWorld,
   cellElevation,
   centroid,
+  climateBands,
+  climateZoneAt,
   createHillshadeCanvas,
   distToSegment,
+  drawCartouche,
   drawCompassRose,
   drawGouacheAsset,
   drawRtxGouacheRecipePreview,
@@ -6238,6 +6393,7 @@ export {
   rerollDraft,
   resolveLabelPreset,
   resolveStylePreset,
+  riverFlowsUphill,
   roundedRectPath,
   routeRoad,
   sampleElevation,
@@ -6248,6 +6404,7 @@ export {
   serializeDoc,
   serializeGeometry,
   smoothPath,
+  snapPointToWater,
   stampSeedFromKey,
   suggestTerritories,
   translateGeometry,
