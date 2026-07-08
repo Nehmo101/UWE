@@ -113,8 +113,10 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#25 Verfallsgrad** — `generateSettlement`-Option `condition` + Zustand-Auswahl (blühend/belagert/verlassen/Ruine) im Siedlungs-Ghost-Panel der Objektfläche.
 - ✅ **#10 Asset-Browser** — Suche + Kategorie-Filter (aus `GOUACHE_CATEGORY_LABELS`, inkl. RTX) + Favoriten (Rechtsklick ★, localStorage) + „zuletzt benutzt" über der Asset-Palette.
 - ✅ **#13 Minimap** — Weltübersicht unten rechts über den geteilten `drawScene`-Pfad (gedrosselt), sichtbarer Ausschnitt markiert, Klick/Ziehen zentriert die Kamera. *Offen: Kamera-Lesezeichen.*
+- ✅ **#7 Lichtrichtung** — `tileLayer.lightDir` (nw/ne/sw/se, Default nw) dreht Hillshade (`buildHillshadeRGBA`-Option) + Höhen-Schattenwurf (`elevationShadowOffset`) konsistent in Editor, Portal und Static-Viewer; Sidebar-Setting, migrationsfest normalisiert (Default bleibt sparse).
+- ✅ **#8 Label-Presets** — `ATLAS_LABEL_PRESETS` (Region gesperrt/Stadt/Fluss kursiv) in `@uwe/atlas/label-layout`; `style.labelPreset` am Label, Typo-Select im Auswahl-Panel; identisches Rendering in allen drei Viewern (Portal via `atlas-label.ts`), ohne Preset byte-identischer Legacy-Look.
 
-**Offen:** #4 Prefabs, #7 Lichtrichtung, #8 Label-Presets, #9 Spray-Pinsel,
-#11 Tinting, #12 Ebenen-Panel, #14 Werkstatt-Layout, #15 Reiseplaner,
-#16 Kartengröße, #17 Landmassen-Pinsel, #18 Fluss-Intelligenz,
-#22 Klima-Bänder, #23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.
+**Offen:** #4 Prefabs, #9 Spray-Pinsel, #11 Tinting, #12 Ebenen-Panel,
+#14 Werkstatt-Layout, #15 Reiseplaner, #16 Kartengröße,
+#17 Landmassen-Pinsel, #18 Fluss-Intelligenz, #22 Klima-Bänder,
+#23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.

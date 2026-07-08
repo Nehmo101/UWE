@@ -108,6 +108,7 @@ export {
   DEFAULT_PARALLAX_STRENGTH,
   DEFAULT_CONTOUR_STEPS,
   CONTOUR_MAJOR_EVERY,
+  DEFAULT_LIGHT_DIRECTION,
   cellElevation,
   hasElevation,
   sampleElevation,
@@ -116,11 +117,13 @@ export {
   buildContourLines,
   parallaxCanvasOffset,
   elevationShadowOffset,
+  lightDirectionSigns,
   normalizeElevationCells,
+  normalizeLightDirection,
   normalizeParallaxStrength,
   normalizeContourSteps,
 } from "./elevation";
-export type { ElevationGrid, ContourLine } from "./elevation";
+export type { ElevationGrid, ContourLine, LightDirection, HillshadeOptions } from "./elevation";
 
 // Plot fill — deterministic object scatter for `plot` features
 export { fillPlotWithGouacheAssets } from "./plot-fill";
@@ -297,8 +300,10 @@ export {
   layoutCharactersOnPath,
   pathLength,
   pointAtDistance,
+  ATLAS_LABEL_PRESETS,
+  resolveLabelPreset,
 } from "./label-layout";
-export type { CharacterPlacement } from "./label-layout";
+export type { CharacterPlacement, AtlasLabelPreset } from "./label-layout";
 
 // Stamp variation — deterministic scale/rotation jitter (CoK-style)
 export {

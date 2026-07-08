@@ -758,7 +758,7 @@
       const grid = this.getElevationGrid();
       if (!engine || !engine.buildHillshadeRGBA || !engine.createHillshadeCanvas || !grid) return null;
       if (this.hillshadeCache && this.hillshadeCache.source === tl) return this.hillshadeCache.canvas;
-      const rgba = engine.buildHillshadeRGBA(grid);
+      const rgba = engine.buildHillshadeRGBA(grid, { lightDir: tl && tl.lightDir });
       const canvas = engine.createHillshadeCanvas(rgba, grid.cols, grid.rows);
       this.hillshadeCache = { source: tl, canvas };
       return canvas;
@@ -1084,11 +1084,15 @@
           const coord = geo.coordinates;
           if (!coord) { ctx.restore(); continue; }
           const [px, py] = w2c(coord[0], coord[1]);
-          const labelText = feat.labelText || geo.text || "Label";
+          // Label-Preset (W3 #8) über die Engine; ohne Preset Legacy-Look.
+          const lp = engine && engine.resolveLabelPreset ? engine.resolveLabelPreset(feat.style && feat.style.labelPreset) : undefined;
+          const rawLabel = feat.labelText || geo.text || "Label";
+          const labelText = lp && lp.uppercase ? rawLabel.toUpperCase() : rawLabel;
           const inkColor = feat.labelColor === "red" ? preset.colors.inkAccent : preset.colors.ink;
+          const weight = lp ? (lp.bold ? "bold " : "") + (lp.italic ? "italic " : "") : null;
 
           if (geo.type === "LabelAnchor" && geo.pathCoordinates && geo.pathCoordinates.length >= 2) {
-            ctx.font = `bold ${Math.round(13 * zoom)}px ${preset.typography.labelRegion}`;
+            ctx.font = `${weight != null ? weight : "bold "}${Math.round((lp ? lp.sizePx : 13) * zoom)}px ${preset.typography.labelRegion}`;
             ctx.fillStyle = inkColor;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -1103,14 +1107,18 @@
               ctx.save();
               ctx.translate(cx, cy);
               ctx.rotate(placement.rotation);
+              if (lp && lp.halo) { ctx.strokeStyle = preset.colors.parchment; ctx.lineWidth = 3 * zoom; ctx.strokeText(placement.char, 0, 0); }
               ctx.fillText(placement.char, 0, 0);
               ctx.restore();
             }
           } else if (geo.type === "LabelAnchor" || feat.kind === "label") {
-            ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
-            ctx.fillStyle = inkColor;
+            ctx.font = `${weight || ""}${Math.round((lp ? lp.sizePx : 14) * zoom)}px ${preset.typography.labelCity}`;
             ctx.textAlign = "center";
+            if (lp && lp.letterSpacingPx) ctx.letterSpacing = `${lp.letterSpacingPx * zoom}px`;
+            if (lp && lp.halo) { ctx.strokeStyle = preset.colors.parchment; ctx.lineWidth = 3 * zoom; ctx.strokeText(labelText, px, py); }
+            ctx.fillStyle = inkColor;
             ctx.fillText(labelText, px, py);
+            if (lp && lp.letterSpacingPx) ctx.letterSpacing = "0px";
           } else {
             ctx.beginPath();
             ctx.arc(px, py, 5 * zoom, 0, Math.PI * 2);
@@ -1152,7 +1160,7 @@
                 : 0;
           if (elevation > 0.02) {
             const groundSize = 24 * zoom * obj.scale;
-            const [sdx, sdy] = engine.elevationShadowOffset(elevation, zoom);
+            const [sdx, sdy] = engine.elevationShadowOffset(elevation, zoom, this.data.tileLayer && this.data.tileLayer.lightDir);
             ctx.save();
             ctx.beginPath();
             ctx.ellipse(ox + sdx, oy + sdy, groundSize * 0.45, groundSize * 0.28, 0, 0, Math.PI * 2);

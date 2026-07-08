@@ -370,14 +370,15 @@ let paintingHeight = false, heightInvert = false;
 let sceneW = 0, sceneH = 0, sceneElevOn = false;
 // Hillshade-/Kontur-Cache — invalidiert nach jedem Höhen-Pinselstrich sowie
 // implizit über die elevation-Objektreferenz (Undo/Redo, Bridge-Load).
-let elevCache = { ref: null, steps: 0, shade: null, contours: null };
-function invalidateElevationCache() { elevCache = { ref: null, steps: 0, shade: null, contours: null }; }
+let elevCache = { ref: null, steps: 0, light: "nw", shade: null, contours: null };
+function invalidateElevationCache() { elevCache = { ref: null, steps: 0, light: "nw", shade: null, contours: null }; }
 function elevationVisuals(tl) {
   const steps = tl.contourSteps ?? engine.DEFAULT_CONTOUR_STEPS;
-  if (elevCache.ref !== tl.elevation || elevCache.steps !== steps) {
+  const light = tl.lightDir || "nw";
+  if (elevCache.ref !== tl.elevation || elevCache.steps !== steps || elevCache.light !== light) {
     elevCache = {
-      ref: tl.elevation, steps,
-      shade: engine.createHillshadeCanvas(engine.buildHillshadeRGBA(tl), tl.cols || COLS, tl.rows || ROWS),
+      ref: tl.elevation, steps, light,
+      shade: engine.createHillshadeCanvas(engine.buildHillshadeRGBA(tl, { lightDir: light }), tl.cols || COLS, tl.rows || ROWS),
       contours: null,
     };
   }
@@ -1393,20 +1394,34 @@ function drawFeature(ctx, f) {
     const coord = geo.coordinates; if (!coord) { ctx.restore(); return; }
     const [px, py] = n2c(coord[0], coord[1]);
     if (geo.type === "LabelAnchor") {
-      const text = (f.labelText || geo.text || "Label"), ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+      // Label-Preset (Roadmap W3 #8): geteilte Typo-Presets aus der Engine;
+      // ohne style.labelPreset bleibt der historische Look byte-identisch.
+      const lp = engine.resolveLabelPreset ? engine.resolveLabelPreset(f.style && f.style.labelPreset) : undefined;
+      const rawText = (f.labelText || geo.text || "Label");
+      const text = lp && lp.uppercase ? rawText.toUpperCase() : rawText;
+      const ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+      const weight = lp ? (lp.bold ? "bold " : "") + (lp.italic ? "italic " : "") : null;
       if (geo.pathCoordinates && geo.pathCoordinates.length >= 2) {
-        ctx.font = "bold " + Math.round(14 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = (weight != null ? weight : "bold ") + Math.round((lp ? lp.sizePx : 14) * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         // Konstantes Spacing in Weltkoordinaten: Font UND Abstand skalieren mit
         // dem Zoom, das Label bleibt in jeder Stufe kompakt lesbar.
         const pl = engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.0085, geo.pathReversed === true);
-        for (const p of pl) { const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation); ctx.fillText(p.char, 0, 0); ctx.restore(); }
+        for (const p of pl) {
+          const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation);
+          if (lp && lp.halo) { ctx.strokeStyle = pr.colors.parchment; ctx.lineWidth = 3 * z; ctx.strokeText(p.char, 0, 0); }
+          ctx.fillText(p.char, 0, 0); ctx.restore();
+        }
         if (sel) {
           ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.2 * z; ctx.setLineDash([4, 3]); ctx.beginPath();
           const [fx, fy] = n2c(geo.pathCoordinates[0][0], geo.pathCoordinates[0][1]); ctx.moveTo(fx, fy);
           for (let i = 1; i < geo.pathCoordinates.length; i++) { const [lx, ly] = n2c(geo.pathCoordinates[i][0], geo.pathCoordinates[i][1]); ctx.lineTo(lx, ly); } ctx.stroke(); ctx.setLineDash([]);
         }
       } else {
-        ctx.font = Math.round(15 * z) + "px " + pr.typography.labelCity; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(text, px, py);
+        ctx.font = (weight || "") + Math.round((lp ? lp.sizePx : 15) * z) + "px " + pr.typography.labelCity; ctx.textAlign = "center";
+        if (lp && lp.letterSpacingPx) ctx.letterSpacing = (lp.letterSpacingPx * z) + "px";
+        if (lp && lp.halo) { ctx.strokeStyle = pr.colors.parchment; ctx.lineWidth = 3 * z; ctx.strokeText(text, px, py); }
+        ctx.fillStyle = ink; ctx.fillText(text, px, py);
+        if (lp && lp.letterSpacingPx) ctx.letterSpacing = "0px";
         if (sel) { const tw = ctx.measureText(text).width; ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.5; ctx.strokeRect(px - tw / 2 - 3, py - 15 * z, tw + 6, 18 * z); }
       }
     } else {
@@ -1455,7 +1470,7 @@ function drawObject(ctx, o) {
   const e = manualElev != null ? manualElev : (sceneElevOn ? engine.sampleElevation(doc.tileLayer, o.x, o.y) : 0);
   if (e > 0.02) {
     const size = (st.gouache ? 30 : 26) * z * (o.scale || 1);
-    const [sdx, sdy] = engine.elevationShadowOffset(e, z);
+    const [sdx, sdy] = engine.elevationShadowOffset(e, z, doc.tileLayer && doc.tileLayer.lightDir);
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(ox + sdx, oy + sdy, size * 0.45, size * 0.28, 0, 0, Math.PI * 2);
@@ -2450,6 +2465,20 @@ function buildSidebar() {
     if (embedded) bridgePost({ type: "map-style", stylePreset });
     markDirty(); draw();
   });
+  // Lichtrichtung (Roadmap W3 #7): dreht Hillshade + Höhen-Schattenwurf.
+  const lp = document.createElement("div");
+  lp.style.cssText = "padding:8px 2px 2px;";
+  lp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Lichtrichtung</div><select id="light-dir" class="sel-select" style="width:100%;"><option value="nw">Nordwest (Standard)</option><option value="ne">Nordost</option><option value="sw">Südwest</option><option value="se">Südost</option></select>';
+  swatches.parentElement.appendChild(lp);
+  lp.querySelector("select").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    const lightDir = e.target.value;
+    pushUndo();
+    if (lightDir === "nw") delete doc.tileLayer.lightDir;
+    else doc.tileLayer.lightDir = lightDir;
+    invalidateElevationCache();
+    markDirty(); draw();
+  });
   swatches.parentElement.appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
@@ -2567,6 +2596,8 @@ function refreshChrome() {
   }
   const themeSel = el("theme-picker");
   if (themeSel && doc) themeSel.value = (doc.map && doc.map.stylePreset) || "tolkien-ink";
+  const lightSel = el("light-dir");
+  if (lightSel && doc && doc.tileLayer) lightSel.value = doc.tileLayer.lightDir || "nw";
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
@@ -2690,6 +2721,11 @@ function refreshChrome() {
           "</select>" +
           '<button class="tb-btn" data-name="roll" title="Deterministischer Namens-Vorschlag aus dem Kulturprofil (Roadmap W4 #24)">↻ Name</button>' +
           "</div>"
+        : "") +
+      (selF.kind === "label" && !view && engine.ATLAS_LABEL_PRESETS
+        ? '<select id="label-preset" class="sel-select" title="Typo-Preset für dieses Label (Roadmap W3 #8)"><option value="">Standard-Typo</option>' +
+          Object.values(engine.ATLAS_LABEL_PRESETS).map((p2) => '<option value="' + p2.key + '"' + (((selF.style && selF.style.labelPreset) || "") === p2.key ? " selected" : "") + ">" + p2.label + "</option>").join("") +
+          "</select>"
         : "") +
       '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';margin-top:6px;">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
       (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
@@ -2930,6 +2966,15 @@ function wire() {
     else if (t.id === "stl-wf-dock") settlementWfOpts.dock = t.checked;
     else if (t.id === "stl-condition") { settlementWfOpts.condition = t.value; draw(); }
     else if (t.id === "name-culture") territoryCulture = t.value;
+    else if (t.id === "label-preset") {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f) {
+        const labelPreset = t.value;
+        pushUndo(); f.style = f.style || {};
+        if (labelPreset) f.style.labelPreset = labelPreset; else delete f.style.labelPreset;
+        markDirty(); draw();
+      }
+    }
     else if (t.id === "obj-scale" || t.id === "obj-rot") {
       const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
       const v = Number(t.value);

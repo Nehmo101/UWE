@@ -761,17 +761,28 @@ function sampleElevation(grid, nx, ny) {
 function sampleElevationAlongPath(grid, coords) {
   return coords.map(([x, y]) => sampleElevation(grid, x, y));
 }
-function buildHillshadeRGBA(grid) {
+var DEFAULT_LIGHT_DIRECTION = "nw";
+function normalizeLightDirection(value) {
+  return value === "ne" || value === "sw" || value === "se" ? value : DEFAULT_LIGHT_DIRECTION;
+}
+function lightDirectionSigns(dir) {
+  const d = normalizeLightDirection(dir);
+  return [d === "ne" || d === "se" ? -1 : 1, d === "sw" || d === "se" ? -1 : 1];
+}
+function buildHillshadeRGBA(grid, options = {}) {
   const { cols, rows } = grid;
   const out = new Uint8ClampedArray(Math.max(0, cols) * Math.max(0, rows) * 4);
   if (!grid.elevation || cols <= 0 || rows <= 0) return out;
+  const [sx, sy] = lightDirectionSigns(options.lightDir);
+  const lightX = LIGHT_X * sx;
+  const lightY = LIGHT_Y * sy;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const dzdx = (cellElevation(grid, c + 1, r) - cellElevation(grid, c - 1, r)) / 2 * VERTICAL_SCALE;
       const dzdy = (cellElevation(grid, c, r + 1) - cellElevation(grid, c, r - 1)) / 2 * VERTICAL_SCALE;
       if (dzdx === 0 && dzdy === 0) continue;
       const invLen = 1 / Math.hypot(dzdx, dzdy, 1);
-      const shade = (-dzdx * LIGHT_X - dzdy * LIGHT_Y + LIGHT_Z) * invLen;
+      const shade = (-dzdx * lightX - dzdy * lightY + LIGHT_Z) * invLen;
       const delta = shade - LIGHT_Z;
       if (delta === 0) continue;
       const alpha = Math.min(1, Math.abs(delta) * HILLSHADE_GAIN) * HILLSHADE_MAX_ALPHA;
@@ -920,9 +931,10 @@ function parallaxCanvasOffset(e, canvasX, canvasY, centerX, centerY, strength) {
   const k = clamp01(e) * clamp01(strength) * PARALLAX_FACTOR;
   return [(canvasX - centerX) * k, (canvasY - centerY) * k];
 }
-function elevationShadowOffset(e, zoom) {
+function elevationShadowOffset(e, zoom, lightDir) {
   const d = clamp01(e) * zoom;
-  return [d * 10, d * 7];
+  const [sx, sy] = lightDirectionSigns(lightDir);
+  return [d * 10 * sx, d * 7 * sy];
 }
 function normalizeElevationCells(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return void 0;
@@ -2936,6 +2948,11 @@ function migrateDoc(doc) {
   }
   if (d.tileLayer.contourSteps !== void 0) {
     d.tileLayer.contourSteps = normalizeContourSteps(d.tileLayer.contourSteps);
+  }
+  if (d.tileLayer.lightDir !== void 0) {
+    const lightDir = normalizeLightDirection(d.tileLayer.lightDir);
+    if (lightDir === DEFAULT_LIGHT_DIRECTION) delete d.tileLayer.lightDir;
+    else d.tileLayer.lightDir = lightDir;
   }
   return d;
 }
@@ -5183,6 +5200,14 @@ function layoutCharactersOnPath(text, path, letterSpacing = 0.012, reverse = fal
     return { char, x: point[0], y: point[1], rotation };
   });
 }
+var ATLAS_LABEL_PRESETS = {
+  region: { key: "region", label: "Region (gesperrt)", sizePx: 15, letterSpacingPx: 2.2, uppercase: true, bold: true, italic: false, halo: true },
+  city: { key: "city", label: "Stadt", sizePx: 13, letterSpacingPx: 0.4, uppercase: false, bold: true, italic: false, halo: true },
+  river: { key: "river", label: "Fluss (kursiv)", sizePx: 11.5, letterSpacingPx: 1.1, uppercase: false, bold: false, italic: true, halo: false }
+};
+function resolveLabelPreset(key) {
+  return typeof key === "string" ? ATLAS_LABEL_PRESETS[key] : void 0;
+}
 
 // ../atlas/src/stamp-variation.ts
 function makePrng3(seed) {
@@ -6100,6 +6125,7 @@ function appendHex(lines, cx, cy, size, minX, minY, maxX, maxY) {
 }
 export {
   ATLAS_GLYPH_CATEGORIES,
+  ATLAS_LABEL_PRESETS,
   ATLAS_PLOT_FILL_PROPOSAL_KIND,
   ATLAS_PLOT_FILL_SCHEMA_VERSION,
   ATLAS_STAMP_STYLE_PROMPT,
@@ -6116,6 +6142,7 @@ export {
   CONTOUR_MAJOR_EVERY,
   CULTURE_PROFILES,
   DEFAULT_CONTOUR_STEPS,
+  DEFAULT_LIGHT_DIRECTION,
   DEFAULT_PARALLAX_STRENGTH,
   DEFAULT_TERRAIN_BLEND_WIDTH,
   DRAW_LAYERS,
@@ -6178,6 +6205,7 @@ export {
   isGouacheAsset,
   isRtxAtlasAssetProposal,
   layoutCharactersOnPath,
+  lightDirectionSigns,
   listCultureProfiles,
   listGlyphsByCategory,
   listGouacheAssetsByCategory,
@@ -6187,6 +6215,7 @@ export {
   normalizeAtlasDraftFeatures,
   normalizeContourSteps,
   normalizeElevationCells,
+  normalizeLightDirection,
   normalizeParallaxStrength,
   paintTerrainBlobs,
   parallaxCanvasOffset,
@@ -6199,6 +6228,7 @@ export {
   proceduralDraft,
   randomStampVariation,
   rerollDraft,
+  resolveLabelPreset,
   resolveStylePreset,
   roundedRectPath,
   routeRoad,

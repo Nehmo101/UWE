@@ -8,6 +8,8 @@ import {
   buildHillshadeRGBA,
   cellElevation,
   elevationShadowOffset,
+  lightDirectionSigns,
+  normalizeLightDirection,
   hasElevation,
   normalizeContourSteps,
   normalizeElevationCells,
@@ -155,6 +157,31 @@ describe("normalisation helpers", () => {
     assert.equal(normalizeElevationCells([1, 2]), undefined);
     assert.equal(normalizeElevationCells({ "1,1": 0, "bad": 0.5, "2,2": NaN }), undefined);
     assert.deepEqual(normalizeElevationCells({ "1,1": 0.5, "2,2": 7 }), { "1,1": 0.5, "2,2": 1 });
+  });
+
+  it("light direction: normalize + signs + shadow flip + hillshade parity", () => {
+    // Unknown/legacy values fall back to the historic NW light.
+    assert.equal(normalizeLightDirection(undefined), "nw");
+    assert.equal(normalizeLightDirection("N"), "nw");
+    assert.equal(normalizeLightDirection("se"), "se");
+    assert.deepEqual(lightDirectionSigns("nw"), [1, 1]);
+    assert.deepEqual(lightDirectionSigns("ne"), [-1, 1]);
+    assert.deepEqual(lightDirectionSigns("sw"), [1, -1]);
+    assert.deepEqual(lightDirectionSigns("se"), [-1, -1]);
+
+    // Cast shadow: omitted dir === explicit "nw"; "se" flips both axes.
+    assert.deepEqual(elevationShadowOffset(1, 2), elevationShadowOffset(1, 2, "nw"));
+    const [nx, ny] = elevationShadowOffset(1, 2);
+    assert.deepEqual(elevationShadowOffset(1, 2, "se"), [-nx, -ny]);
+
+    // Hillshade: default option is byte-identical to the legacy call; an
+    // asymmetric slope shades differently once the light rotates.
+    const grid = { cols: 3, rows: 3, elevation: { "2,2": 1 } };
+    assert.deepEqual(buildHillshadeRGBA(grid, {}), buildHillshadeRGBA(grid));
+    assert.deepEqual(buildHillshadeRGBA(grid, { lightDir: "nw" }), buildHillshadeRGBA(grid));
+    const nw = buildHillshadeRGBA(grid);
+    const se = buildHillshadeRGBA(grid, { lightDir: "se" });
+    assert.notDeepEqual([...se], [...nw], "rotated light changes the shading");
   });
 
   it("normalizeParallaxStrength / normalizeContourSteps clamp with defaults", () => {

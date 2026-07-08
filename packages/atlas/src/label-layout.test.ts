@@ -43,3 +43,20 @@ describe("label-layout", () => {
     assert.notDeepEqual(forward[0]!.x, reversed[0]!.x);
   });
 });
+
+describe("label presets (W3 #8)", () => {
+  it("resolveLabelPreset maps keys and rejects unknowns", async () => {
+    const { ATLAS_LABEL_PRESETS, resolveLabelPreset } = await import("./label-layout");
+    assert.equal(resolveLabelPreset(undefined), undefined);
+    assert.equal(resolveLabelPreset("nope"), undefined);
+    assert.equal(resolveLabelPreset(42), undefined);
+    for (const key of Object.keys(ATLAS_LABEL_PRESETS)) {
+      const p = resolveLabelPreset(key);
+      assert.ok(p, `preset ${key} resolves`);
+      assert.equal(p!.key, key);
+      assert.ok(p!.sizePx > 0 && Number.isFinite(p!.letterSpacingPx));
+    }
+    assert.equal(resolveLabelPreset("region")!.uppercase, true);
+    assert.equal(resolveLabelPreset("river")!.italic, true);
+  });
+});

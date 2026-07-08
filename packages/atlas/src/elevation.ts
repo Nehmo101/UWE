@@ -136,22 +136,51 @@ export function sampleElevationAlongPath(
 }
 
 // ---------------------------------------------------------------------------
-// Hillshade
+// Hillshade + global light direction (Roadmap W3 #7)
 // ---------------------------------------------------------------------------
+
+/** Map-wide light direction; "nw" is the historic default (shadows fall SE). */
+export type LightDirection = "nw" | "ne" | "sw" | "se";
+
+export const DEFAULT_LIGHT_DIRECTION: LightDirection = "nw";
+
+/** Normalises a persisted `tileLayer.lightDir` value; anything unknown → "nw". */
+export function normalizeLightDirection(value: unknown): LightDirection {
+  return value === "ne" || value === "sw" || value === "se" ? value : DEFAULT_LIGHT_DIRECTION;
+}
+
+/**
+ * Sign multipliers relative to the NW baseline, applied both to the light
+ * vector (hillshade) and to cast-shadow offsets: east-side light flips x,
+ * south-side light flips y. For "nw" this is [1, 1] → byte-identical output.
+ */
+export function lightDirectionSigns(dir?: unknown): [number, number] {
+  const d = normalizeLightDirection(dir);
+  return [d === "ne" || d === "se" ? -1 : 1, d === "sw" || d === "se" ? -1 : 1];
+}
+
+export interface HillshadeOptions {
+  /** Light direction; default "nw" (matches the historic fixed light). */
+  lightDir?: LightDirection | string;
+}
 
 /**
  * Compute a hillshade overlay as an RGBA buffer at grid resolution
- * (`cols × rows × 4`). Flat terrain is fully transparent; NW-facing slopes get
- * a warm highlight, SE-facing slopes a soft shadow (fixed NW light, matching
- * the existing biome relief shading). Renderers put this into a tiny offscreen
- * canvas and draw it stretched over the map with image smoothing enabled —
- * the browser's bilinear filter turns the cell grid into smooth shading
- * (see `createHillshadeCanvas` in `canvas-render.ts`).
+ * (`cols × rows × 4`). Flat terrain is fully transparent; light-facing slopes
+ * get a warm highlight, opposite slopes a soft shadow. The light defaults to
+ * NW (matching the existing biome relief shading) and can be rotated per map
+ * via `options.lightDir`. Renderers put this into a tiny offscreen canvas and
+ * draw it stretched over the map with image smoothing enabled — the browser's
+ * bilinear filter turns the cell grid into smooth shading (see
+ * `createHillshadeCanvas` in `canvas-render.ts`).
  */
-export function buildHillshadeRGBA(grid: ElevationGrid): Uint8ClampedArray {
+export function buildHillshadeRGBA(grid: ElevationGrid, options: HillshadeOptions = {}): Uint8ClampedArray {
   const { cols, rows } = grid;
   const out = new Uint8ClampedArray(Math.max(0, cols) * Math.max(0, rows) * 4);
   if (!grid.elevation || cols <= 0 || rows <= 0) return out;
+  const [sx, sy] = lightDirectionSigns(options.lightDir);
+  const lightX = LIGHT_X * sx;
+  const lightY = LIGHT_Y * sy;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -160,9 +189,9 @@ export function buildHillshadeRGBA(grid: ElevationGrid): Uint8ClampedArray {
       const dzdy = ((cellElevation(grid, c, r + 1) - cellElevation(grid, c, r - 1)) / 2) * VERTICAL_SCALE;
       if (dzdx === 0 && dzdy === 0) continue;
       const invLen = 1 / Math.hypot(dzdx, dzdy, 1);
-      // Lambert against the fixed NW light; flat ground scores LIGHT_Z.
+      // Lambert against the map light; flat ground scores LIGHT_Z.
       const shade =
-        (-dzdx * LIGHT_X - dzdy * LIGHT_Y + LIGHT_Z) * invLen;
+        (-dzdx * lightX - dzdy * lightY + LIGHT_Z) * invLen;
       const delta = shade - LIGHT_Z;
       if (delta === 0) continue;
       const alpha = Math.min(1, Math.abs(delta) * HILLSHADE_GAIN) * HILLSHADE_MAX_ALPHA;
@@ -336,11 +365,16 @@ export function parallaxCanvasOffset(
 
 /**
  * Ground-shadow offset (canvas pixels) for content at elevation `e` — cast
- * towards the southeast because the light is fixed northwest.
+ * away from the map light (default NW light → shadow towards the southeast).
  */
-export function elevationShadowOffset(e: number, zoom: number): [number, number] {
+export function elevationShadowOffset(
+  e: number,
+  zoom: number,
+  lightDir?: LightDirection | string,
+): [number, number] {
   const d = clamp01(e) * zoom;
-  return [d * 10, d * 7];
+  const [sx, sy] = lightDirectionSigns(lightDir);
+  return [d * 10 * sx, d * 7 * sy];
 }
 
 // ---------------------------------------------------------------------------

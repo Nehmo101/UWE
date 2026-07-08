@@ -17,7 +17,7 @@ import {
   scatterGlyphsAlongPath,
   buildReliefShading,
 } from "@uwe/atlas/terrain";
-import { layoutCharactersOnPath } from "@uwe/atlas/label-layout";
+import { drawViewerLabel } from "./atlas-label";
 import { BUILTIN_GLYPHS } from "@uwe/atlas/glyphs";
 import { smoothPath } from "@uwe/atlas/path-smoothing";
 import { paintTerrainBlobs, drawSvgPath, drawVine } from "@uwe/atlas/canvas-render";
@@ -113,6 +113,8 @@ export interface ViewerTileLayer {
   parallaxStrength?: number | null;
   contoursEnabled?: boolean | null;
   contourSteps?: number | null;
+  /** Globale Lichtrichtung (W3 #7): "nw" (Default) | "ne" | "sw" | "se". */
+  lightDir?: string | null;
 }
 
 export interface AtlasViewerProps {
@@ -718,44 +720,8 @@ export function AtlasViewer({
         const [px, py] = w2c(coord[0], coord[1]);
 
         if (feat.geometry.type === "LabelAnchor") {
-          const labelText = feat.labelText ?? feat.geometry.text ?? "Label";
-          const inkColor =
-            feat.labelColor === "red" ? preset.colors.inkAccent : preset.colors.ink;
-          const pathCoords = feat.geometry.pathCoordinates;
-
-          if (pathCoords && pathCoords.length >= 2) {
-            ctx.font = `bold ${Math.round(13 * zoom)}px ${preset.typography.labelRegion}`;
-            ctx.fillStyle = inkColor;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            // Constant spacing in world units — font and spacing both scale
-            // with zoom, keeping curved labels compact at every zoom level.
-            const placements = layoutCharactersOnPath(
-              labelText,
-              pathCoords,
-              0.0085,
-              feat.geometry.pathReversed === true,
-            );
-            for (const placement of placements) {
-              const [cx, cy] = w2c(placement.x, placement.y);
-              ctx.save();
-              ctx.translate(cx, cy);
-              ctx.rotate(placement.rotation);
-              ctx.fillText(placement.char, 0, 0);
-              ctx.restore();
-            }
-          } else {
-            ctx.font = `${Math.round(14 * zoom)}px ${preset.typography.labelCity}`;
-            ctx.fillStyle = inkColor;
-            ctx.textAlign = "center";
-            ctx.fillText(labelText, px, py);
-            if (isHovered) {
-              ctx.strokeStyle = "#2563eb";
-              ctx.lineWidth = 1.5;
-              const tw = ctx.measureText(labelText).width;
-              ctx.strokeRect(px - tw / 2 - 2, py - 14 * zoom, tw + 4, 16 * zoom);
-            }
-          }
+          // Gebogene/gerade Labels inkl. Typo-Presets (W3 #8) — atlas-label.ts.
+          drawViewerLabel(ctx, feat, px, py, preset, zoom, w2c, isHovered);
         } else {
           ctx.beginPath();
           ctx.arc(px, py, 5 * zoom, 0, Math.PI * 2);
@@ -775,7 +741,7 @@ export function AtlasViewer({
       if (st?.gouache && isGouacheAsset(st.gouache)) {
         const [gx, gy] = w2c(obj.x, obj.y);
         const ge = resolveObjectElevation(tileLayer, obj);
-        drawObjectElevationShadow(ctx, ge, gx, gy, 30 * zoom * obj.scale, zoom);
+        drawObjectElevationShadow(ctx, ge, gx, gy, 30 * zoom * obj.scale, zoom, tileLayer?.lightDir);
         const [gpx, gpy] = objectParallax(tileLayer, ge, gx, gy, W, H);
         drawGouacheAsset(ctx, st.gouache, {
           x: gx + gpx,
@@ -797,7 +763,7 @@ export function AtlasViewer({
       const [ox, oy] = w2c(obj.x, obj.y);
       const size = 24 * zoom * obj.scale;
       const oe = resolveObjectElevation(tileLayer, obj);
-      drawObjectElevationShadow(ctx, oe, ox, oy, size, zoom);
+      drawObjectElevationShadow(ctx, oe, ox, oy, size, zoom, tileLayer?.lightDir);
       const [opx, opy] = objectParallax(tileLayer, oe, ox, oy, W, H);
 
       ctx.save();
