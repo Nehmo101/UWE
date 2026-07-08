@@ -2107,7 +2107,9 @@ model MailAccount {
   smtpPort        Int?      @map("smtp_port")
   username        String
   passwordEnc     String    @map("password_enc")
+  /// reserved — kein OAuth-Flow implementiert (Passwort/App-Passwort only); siehe docs/engineering
   oauthProvider   String?   @map("oauth_provider")
+  /// reserved — siehe oauthProvider
   oauthTokenEnc   String?   @map("oauth_token_enc")
   isDefault       Boolean   @default(false) @map("is_default")
   ownerId         String?   @map("owner_id")
@@ -2122,6 +2124,7 @@ model MailAccount {
   folders       MailFolder[]
   auditLogs     MailAuditLog[]
   unsubscribeRequests MailUnsubscribeRequest[]
+  rules         MailRule[]
 
   @@map("mail_accounts")
 }
@@ -2132,6 +2135,8 @@ model MailFolder {
   imapPath     String   @map("imap_path")
   displayName  String   @map("display_name")
   uidValidity  String?  @map("uid_validity")
+  lastSeenUid  Int      @default(0) @map("last_seen_uid")
+  folderRole   String?  @map("folder_role")
   messageCount Int      @default(0) @map("message_count")
   syncedAt     DateTime @default(now()) @map("synced_at")
 
@@ -2149,16 +2154,20 @@ model MailInboxMessage {
   imapUid     String   @map("imap_uid")
   messageId   String?  @map("message_id")
   inReplyTo   String?  @map("in_reply_to")
+  references  String?
+  threadId    String?  @map("thread_id")
   subject     String   @default("")
   fromAddress String   @map("from_address")
   toAddresses Json?    @map("to_addresses")
   ccAddresses Json?    @map("cc_addresses")
+  bccAddresses Json?   @map("bcc_addresses")
   snippet     String?
   bodyText    String?  @map("body_text")
   bodyHtml    String?  @map("body_html")
   hasAttachments Boolean @default(false) @map("has_attachments")
   receivedAt  DateTime @map("received_at")
   isRead      Boolean  @default(false) @map("is_read")
+  isStarred   Boolean  @default(false) @map("is_starred")
   syncedAt    DateTime @default(now()) @map("synced_at")
 
   listUnsubscribeHttpUrl       String?  @map("list_unsubscribe_http_url")
@@ -2172,10 +2181,11 @@ model MailInboxMessage {
   aiActions   MailAiAction[]
   unsubscribeRequests MailUnsubscribeRequest[]
 
-  @@unique([accountId, imapUid])
+  @@unique([accountId, folderId, imapUid])
   @@index([accountId, receivedAt])
   @@index([accountId, subject])
   @@index([accountId, fromAddress])
+  @@index([accountId, threadId])
   @@map("mail_inbox_messages")
 }
 
@@ -2337,6 +2347,33 @@ model MailDraft {
 
   @@index([status, createdAt])
   @@map("mail_drafts")
+}
+
+model MailRule {
+  id            String    @id @default(cuid())
+  name          String
+  enabled       Boolean   @default(true)
+  sortOrder     Int       @default(0) @map("sort_order")
+  accountId     String?   @map("account_id")
+  conditions    Json
+  actions       Json
+  lastAppliedAt DateTime? @map("last_applied_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  account MailAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, sortOrder])
+  @@map("mail_rules")
+}
+
+model MailVipSender {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  label     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("mail_vip_senders")
 }
 
 // --- Daily Admin OS entities ---

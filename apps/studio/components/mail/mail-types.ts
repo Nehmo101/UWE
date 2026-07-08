@@ -39,9 +39,20 @@ export interface MailMessageVM {
   snippet: string | null;
   receivedAt: string;
   isRead: boolean;
+  isStarred?: boolean;
   hasAttachments: boolean;
   hasUnsubscribeTarget: boolean;
   priority: MailPriorityVM | null;
+}
+
+export interface MailThreadEntryVM {
+  id: string;
+  subject: string;
+  fromAddress: string;
+  snippet: string | null;
+  receivedAt: string;
+  isRead: boolean;
+  folderRole: string | null;
 }
 
 export interface MailAttachmentVM {
@@ -67,6 +78,7 @@ export interface MailMessageDetailVM extends MailMessageVM {
   ccAddresses: string[];
   attachments: MailAttachmentVM[];
   aiActions: MailAiActionVM[];
+  thread: MailThreadEntryVM[];
 }
 
 export interface MailDraftVM {

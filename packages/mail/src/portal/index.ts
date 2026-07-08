@@ -8,4 +8,6 @@ export {
   type MailInboxPrioritySummary,
   type MailPrioritySummaryMessage,
   type MailSearchQuery,
+  type MailSearchCursor,
+  type MailSearchResult,
 } from "./mail-portal-service";

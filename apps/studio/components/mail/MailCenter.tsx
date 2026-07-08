@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { waitForJob } from "@/src/lib/poll-job";
+import { useMailActions } from "./use-mail-actions";
+import { useMailKeyboard } from "./use-mail-keyboard";
 import { MailRail } from "./MailRail";
 import { MailMessageList, type MailListFilter } from "./MailMessageList";
 import { MailReader } from "./MailReader";
@@ -33,6 +34,7 @@ interface RawDetail {
   snippet: string | null;
   receivedAt: string;
   isRead: boolean;
+  isStarred?: boolean;
   hasAttachments: boolean;
   hasUnsubscribeTarget: boolean;
   bodyText: string | null;
@@ -43,9 +45,10 @@ interface RawDetail {
   priority: MailPriorityVM | null;
   attachments?: Array<{ id: string; filename: string; mimeType: string; sizeBytes: number }>;
   aiActions?: Array<{ kind: string; outputText: string | null; tone: string | null; createdAt: string }>;
+  thread?: Array<{ id: string; subject: string; fromAddress: string; snippet: string | null; receivedAt: string; isRead: boolean; folderRole: string | null }>;
 }
 
-function toDetail(raw: RawDetail): MailMessageDetailVM {
+function toDetail(raw: RawDetail, thread?: RawDetail["thread"]): MailMessageDetailVM {
   return {
     id: raw.id,
     accountId: raw.accountId,
@@ -56,6 +59,7 @@ function toDetail(raw: RawDetail): MailMessageDetailVM {
     snippet: raw.snippet,
     receivedAt: raw.receivedAt,
     isRead: raw.isRead,
+    isStarred: raw.isStarred ?? false,
     hasAttachments: raw.hasAttachments,
     hasUnsubscribeTarget: raw.hasUnsubscribeTarget,
     priority: raw.priority,
@@ -75,6 +79,15 @@ function toDetail(raw: RawDetail): MailMessageDetailVM {
       outputText: a.outputText,
       tone: a.tone,
       createdAt: a.createdAt,
+    })),
+    thread: (thread ?? raw.thread ?? []).map((entry) => ({
+      id: entry.id,
+      subject: entry.subject,
+      fromAddress: entry.fromAddress,
+      snippet: entry.snippet,
+      receivedAt: entry.receivedAt,
+      isRead: entry.isRead,
+      folderRole: entry.folderRole,
     })),
   };
 }
@@ -104,18 +117,9 @@ export function MailCenter({ data }: { data: MailCenterData }) {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<MailMessageDetailVM | null>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-  const [syncing, setSyncing] = React.useState(false);
-  const [syncProgress, setSyncProgress] = React.useState<{ processed: number; total: number; label: string } | null>(
-    null,
-  );
   const [compose, setCompose] = React.useState<ComposeContext | null>(null);
   const [chatOpen, setChatOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
-  const syncingRef = React.useRef(false);
-  const runSyncRef = React.useRef<(options?: { silent?: boolean }) => Promise<void>>(
-    async () => undefined,
-  );
 
   const flash = React.useCallback((message: string) => {
     setToast(message);
@@ -155,12 +159,12 @@ export function MailCenter({ data }: { data: MailCenterData }) {
         const response = await fetch(studioApiUrl(`/api/admin/mail/messages/${id}`), {
           headers: { Accept: "application/json" },
         });
-        const payload = (await response.json()) as { message?: RawDetail; error?: string };
+        const payload = (await response.json()) as { message?: RawDetail; thread?: RawDetail["thread"]; error?: string };
         if (!response.ok || !payload.message) {
           flash(payload.error ?? "Nachricht konnte nicht geladen werden.");
           return;
         }
-        setDetail(toDetail(payload.message));
+        setDetail(toDetail(payload.message, payload.thread));
         router.refresh();
       } catch {
         flash("Netzwerkfehler beim Laden.");
@@ -180,158 +184,34 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     [loadDetail],
   );
 
-  async function parseJsonResponse(response: Response): Promise<Record<string, unknown>> {
-    const text = await response.text();
-    try {
-      return JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      throw new Error(text.slice(0, 200) || `HTTP ${response.status}`);
-    }
-  }
-
-  /**
-   * Synchronisiert Postfächer per Job-Queue. Ohne Konto-Auswahl werden ALLE
-   * sync-fähigen Konten gezogen; `silent` nutzt der Hintergrund-Timer (keine
-   * Toasts/Progress, nur stiller Refresh der Ansicht).
-   */
-  async function runSync(options?: { silent?: boolean }) {
-    const silent = options?.silent === true;
-    if (syncingRef.current) return;
-    if (!data.accounts.some((entry) => entry.imapHost)) {
-      if (!silent) {
-        flash("Kein IMAP-Konto verbunden — unter Einstellungen anlegen.");
-        setView("settings");
-      }
-      return;
-    }
-    syncingRef.current = true;
-    setSyncing(true);
-    if (!silent) setSyncProgress({ processed: 0, total: 0, label: "Sync wird gestartet…" });
-    try {
-      const response = await fetch(studioApiUrl("/api/admin/mail/sync"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: selectedAccountId ?? "all", fullSync: true }),
-      });
-      const payload = await parseJsonResponse(response);
-      if (!response.ok) {
-        if (!silent) flash(String(payload.error ?? "Sync fehlgeschlagen."));
-        return;
-      }
-      const jobIds: string[] = Array.isArray(payload.jobs)
-        ? (payload.jobs as Array<{ jobId?: unknown }>)
-            .map((entry) => entry.jobId)
-            .filter((jobId): jobId is string => typeof jobId === "string")
-        : typeof payload.jobId === "string"
-          ? [payload.jobId]
-          : [];
-      if (jobIds.length > 0) {
-        const jobs = await Promise.all(
-          jobIds.map((jobId) => waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800 })),
-        );
-        const imported = jobs.reduce(
-          (sum, job) => sum + ((job.result as { imported?: number } | undefined)?.imported ?? 0),
-          0,
-        );
-        if (!silent) flash(`${imported} Nachrichten synchronisiert.`);
-      } else if (!silent) {
-        flash("Synchronisation abgeschlossen.");
-      }
-      router.refresh();
-    } catch (error) {
-      if (!silent) flash(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
-    } finally {
-      syncingRef.current = false;
-      setSyncing(false);
-      setSyncProgress(null);
-    }
-  }
-
-  runSyncRef.current = runSync;
-
-  // Hintergrund-Timer: solange das Mail Center offen und der Tab sichtbar ist,
-  // werden alle Postfächer im eingestellten Intervall gepullt und die Ansicht
-  // aktualisiert — ergänzend zum Host-Timer (der läuft auch bei geschlossener App).
-  const autoSyncMs =
-    data.autoSyncEnabled && data.autoSyncIntervalMinutes > 0
-      ? data.autoSyncIntervalMinutes * 60_000
-      : 0;
-  React.useEffect(() => {
-    if (!autoSyncMs) return;
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void runSyncRef.current({ silent: true });
-    }, autoSyncMs);
-    return () => window.clearInterval(intervalId);
-  }, [autoSyncMs]);
-
-  async function postJson(path: string, body: Record<string, unknown>): Promise<boolean> {
-    const response = await fetch(studioApiUrl(path), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const payload = await parseJsonResponse(response).catch(() => ({ error: "Aktion fehlgeschlagen." }));
-      flash(String(payload.error ?? "Aktion fehlgeschlagen."));
-      return false;
-    }
-    return true;
-  }
-
-  async function summarize(id: string) {
-    setBusy(true);
-    const ok = await postJson("/api/admin/mail/ai/summarize", { messageId: id });
-    setBusy(false);
-    if (ok) {
-      flash("Von RTX zusammengefasst.");
-      if (selectedId === id) void loadDetail(id);
-    }
-  }
-
-  async function unsubscribe(id: string) {
-    setBusy(true);
-    const response = await fetch(studioApiUrl("/api/admin/mail/unsubscribe"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId: id }),
-    });
-    setBusy(false);
-    const payload = (await response.json().catch(() => ({}))) as {
-      outcome?: { cleanedUpCount: number };
-      error?: string;
-    };
-    if (!response.ok || !payload.outcome) {
-      flash(payload.error ?? "Abmeldung fehlgeschlagen.");
-      return;
-    }
-    flash(`Abmeldung gesendet — ${payload.outcome.cleanedUpCount} Nachricht(en) aufgeräumt.`);
-    router.refresh();
-  }
-
-  async function archiveMessage() {
-    if (!detail) return;
-    setBusy(true);
-    const ok = await postJson("/api/admin/mail/actions", { action: "archive", messageId: detail.id });
-    setBusy(false);
-    if (ok) {
-      flash("Archiviert.");
-      router.refresh();
-    }
-  }
-
-  async function trashMessage() {
-    if (!detail) return;
-    setBusy(true);
-    const ok = await postJson("/api/admin/mail/actions", { action: "trash", messageId: detail.id });
-    setBusy(false);
-    if (ok) {
-      flash("In den Papierkorb verschoben.");
-      setDetail(null);
-      setSelectedId(null);
-      router.refresh();
-    }
-  }
+  const actions = useMailActions({
+    data,
+    router,
+    flash,
+    selectedAccountId,
+    selectedId,
+    detail,
+    setDetail,
+    setSelectedId,
+    setCompose,
+    setView,
+    loadDetail,
+  });
+  const {
+    busy,
+    syncing,
+    syncProgress,
+    runSync,
+    postJson,
+    summarize,
+    unsubscribe,
+    archiveMessage,
+    trashMessage,
+    captureMessage,
+    taskMessage,
+    toggleStar,
+    openDraft,
+  } = actions;
 
   function forwardMessage(message: MailMessageDetailVM) {
     const quoted = message.bodyText?.trim() || message.snippet?.trim() || "";
@@ -350,65 +230,6 @@ export function MailCenter({ data }: { data: MailCenterData }) {
         quoted,
       ].join("\n"),
     });
-  }
-
-  async function captureMessage(message: MailMessageDetailVM) {
-    setBusy(true);
-    const ok = await postJson("/api/admin/mail/actions", {
-      action: "capture",
-      messageId: message.id,
-    });
-    setBusy(false);
-    if (ok) {
-      flash("In Capture übernommen.");
-    }
-  }
-
-  async function taskMessage(messageId: string) {
-    setBusy(true);
-    const ok = await postJson("/api/admin/mail/actions", {
-      action: "task",
-      messageId,
-    });
-    setBusy(false);
-    if (ok) {
-      flash("Als Projekt-Aufgabe angelegt.");
-    }
-  }
-
-  async function openDraft(draftId: string) {
-    setBusy(true);
-    try {
-      const response = await fetch(studioApiUrl(`/api/mail/drafts/${draftId}`));
-      const payload = (await response.json()) as {
-        draft?: {
-          id: string;
-          accountId: string | null;
-          replyToMessageId: string | null;
-          subject: string;
-          bodyText: string | null;
-          toAddresses: string[];
-        };
-        error?: string;
-      };
-      if (!response.ok || !payload.draft) {
-        flash(payload.error ?? "Entwurf konnte nicht geladen werden.");
-        return;
-      }
-      const draft = payload.draft;
-      setCompose({
-        draftId: draft.id,
-        messageId: draft.replyToMessageId,
-        accountId: draft.accountId,
-        to: draft.toAddresses.join(", "),
-        subject: draft.subject,
-        body: draft.bodyText ?? "",
-      });
-    } catch {
-      flash("Netzwerkfehler beim Laden des Entwurfs.");
-    } finally {
-      setBusy(false);
-    }
   }
 
   function replyTo(message: MailMessageDetailVM) {
@@ -446,6 +267,21 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     pushNav({ folder: activeFolder, account: accountId });
   }
 
+  useMailKeyboard({
+    enabled: !compose && !chatOpen && view === "inbox",
+    messageIds: visibleMessages.map((message) => message.id),
+    selectedId,
+    onSelect: selectMessage,
+    onReply: () => detail && replyTo(detail),
+    onArchive: () => void archiveMessage(),
+    onTrash: () => void trashMessage(),
+    onStar: () => detail && void toggleStar(detail),
+    onFocusSearch: () => {
+      const input = document.querySelector<HTMLInputElement>("input[data-mail-search]");
+      input?.focus();
+    },
+  });
+
   const listTitle = activeCategory ? "Gefiltert" : folderTitle(activeFolder);
 
   const mainArea = (() => {
@@ -469,9 +305,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           onReplyDraft={(id) => selectMessage(id)}
           onTask={(id) => void taskMessage(id)}
           onCapture={(id) => {
-            setBusy(true);
             void postJson("/api/admin/mail/actions", { action: "capture", messageId: id }).then((ok) => {
-              setBusy(false);
               if (ok) flash("In Capture übernommen.");
             });
           }}
@@ -568,6 +402,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               onTask={() => detail && void taskMessage(detail.id)}
               onArchive={() => void archiveMessage()}
               onDelete={() => void trashMessage()}
+              onToggleStar={() => detail && void toggleStar(detail)}
               onOpenChat={() => setChatOpen(true)}
             />
             {chatOpen && detail ? (

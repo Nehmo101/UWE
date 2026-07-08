@@ -18,9 +18,12 @@ export async function sendDirectMail(
   input: {
     accountId: string;
     to: string[];
+    cc?: string[];
+    bcc?: string[];
     subject: string;
     bodyText: string;
     bodyHtml?: string | null;
+    attachments?: Array<{ filename: string; path?: string; contentType?: string }>;
   },
   actorUserId?: string | null,
 ) {
@@ -54,9 +57,12 @@ export async function sendDirectMail(
 
   const sendResult = await transport.send({
     to: input.to.map((email) => ({ email })),
+    cc: input.cc?.map((email) => ({ email })),
+    bcc: input.bcc?.map((email) => ({ email })),
     subject: input.subject,
     text: input.bodyText,
     html: input.bodyHtml ?? undefined,
+    attachments: input.attachments,
   });
 
   const result = sendResult.ok
@@ -67,11 +73,22 @@ export async function sendDirectMail(
         error: sendResult.error,
       };
 
+  // Never log bcc recipients or attachment contents — only counts.
+  const ccCount = input.cc?.length ?? 0;
+  const bccCount = input.bcc?.length ?? 0;
+  const attachmentCount = input.attachments?.length ?? 0;
+  const meta = [
+    ccCount ? `cc:${ccCount}` : null,
+    bccCount ? `bcc:${bccCount}` : null,
+    attachmentCount ? `anh:${attachmentCount}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   await logAudit({
     action: "send",
     accountId: input.accountId,
     userId: actorUserId,
-    detail: result.ok ? "Direkt gesendet" : `Fehler: ${result.error ?? "unbekannt"}`,
+    detail: result.ok ? `Direkt gesendet${meta ? ` (${meta})` : ""}` : `Fehler: ${input.subject ? "" : ""}${result.error ?? "unbekannt"}`,
   });
 
   return result;

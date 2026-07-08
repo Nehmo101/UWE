@@ -13,11 +13,12 @@ export default async function AdminMailPortalPage({ searchParams }: Props) {
   const service = createMailPortalService(prisma);
   const settings = await getSystemSettings(prisma);
 
-  const [accounts, messages, audit] = await Promise.all([
+  const [accounts, searchResult, audit] = await Promise.all([
     service.listAccounts(),
     service.searchMessages({ q, limit: settings.mail.inboxLimit }),
     service.listAuditLog(20),
   ]);
+  const messages = searchResult.items;
 
   const selectedMessage = messageId ? await service.getMessage(messageId) : null;
 

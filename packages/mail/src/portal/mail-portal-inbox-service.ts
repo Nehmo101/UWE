@@ -26,6 +26,11 @@ export interface MailInboxMessageSummary {
   } | null;
 }
 
+export interface MailSearchCursor {
+  receivedAt: string;
+  id: string;
+}
+
 export interface MailSearchQuery {
   accountId?: string;
   q?: string;
@@ -33,6 +38,13 @@ export interface MailSearchQuery {
   folder?: MailFolderKey;
   markedOnly?: boolean;
   limit?: number;
+  /** Cursor for date-ordered folder views (inbox/archive/trash/sent). */
+  cursor?: MailSearchCursor | null;
+}
+
+export interface MailSearchResult {
+  items: MailInboxMessageSummary[];
+  nextCursor: MailSearchCursor | null;
 }
 
 type AuditFn = (input: {
@@ -72,45 +84,89 @@ export class MailPortalInboxService {
     private readonly toMessageSummary: SummaryFn,
   ) {}
 
-  async searchMessages(query: MailSearchQuery, actorUserId?: string | null) {
+  /**
+   * Folder-role-aware, FTS-backed, cursor-paginated message search.
+   *
+   * - inbox: server INBOX + role=inbox, excludes sent/archive/trash + LOCAL:*
+   * - archive/trash: LOCAL pseudo-folder OR the matching server folder role
+   * - sent: role=sent (real synced Sent mail; the log-based fallback lives in listSentMessages)
+   * - marked: starred OR priority>=70 (priority-ordered, no cursor)
+   * Date-ordered views (inbox/archive/trash/sent) support the (receivedAt,id) cursor.
+   */
+  async searchMessages(query: MailSearchQuery, actorUserId?: string | null): Promise<MailSearchResult> {
     const limit = query.limit ?? 50;
-    const where: Prisma.MailInboxMessageWhereInput = {};
-    if (query.accountId) where.accountId = query.accountId;
+    const filters: Prisma.MailInboxMessageWhereInput[] = [];
+    if (query.accountId) filters.push({ accountId: query.accountId });
 
-    if (query.folder === "archive") {
-      where.folder = { imapPath: "LOCAL:archived" };
-    } else if (query.folder === "trash") {
-      where.folder = { imapPath: "LOCAL:trash" };
-    } else if (query.folder === "inbox" || !query.folder) {
-      where.OR = [
-        { folderId: null },
-        { folder: { imapPath: { in: ["INBOX", "Inbox"] } } },
-        { folder: { imapPath: { not: { startsWith: "LOCAL:" } } } },
-      ];
-    }
-    if (query.folder === "marked" || query.markedOnly) {
-      where.priority = { priority: { gte: 70 } };
-    }
-    if (query.q?.trim()) {
-      const q = query.q.trim();
-      where.AND = [
-        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-        {
-          OR: [
-            { subject: { contains: q } },
-            { fromAddress: { contains: q } },
-            { snippet: { contains: q } },
-            { bodyText: { contains: q } },
-          ],
+    const folder = query.folder;
+    if (folder === "archive") {
+      filters.push({ OR: [{ folder: { imapPath: "LOCAL:archived" } }, { folder: { folderRole: "archive" } }] });
+    } else if (folder === "trash") {
+      filters.push({ OR: [{ folder: { imapPath: "LOCAL:trash" } }, { folder: { folderRole: "trash" } }] });
+    } else if (folder === "sent") {
+      filters.push({ folder: { folderRole: "sent" } });
+    } else if (folder === "marked" || query.markedOnly) {
+      filters.push({ OR: [{ isStarred: true }, { priority: { priority: { gte: 70 } } }] });
+    } else {
+      // inbox (default): INBOX / role=inbox / no folder, never sent/archive/trash/LOCAL:*
+      filters.push({
+        OR: [
+          { folderId: null },
+          { folder: { imapPath: { in: ["INBOX", "Inbox"] } } },
+          { folder: { folderRole: "inbox" } },
+        ],
+      });
+      filters.push({
+        NOT: {
+          folder: { OR: [{ imapPath: { startsWith: "LOCAL:" } }, { folderRole: { in: ["sent", "archive", "trash"] } }] },
         },
-      ];
+      });
     }
-    if (query.category) where.priority = { category: query.category };
+
+    if (query.category) filters.push({ priority: { category: query.category } });
+
+    // Free-text: FTS5 first, contains-fallback when FTS is unavailable.
+    const parsed = query.q?.trim() ? (await import("../search/query-parser")).parseMailQuery(query.q) : null;
+    if (parsed?.from) filters.push({ fromAddress: { contains: parsed.from } });
+    if (parsed?.hasAttachment) filters.push({ hasAttachments: true });
+    if (parsed?.before) filters.push({ receivedAt: { lt: parsed.before } });
+    if (parsed?.after) filters.push({ receivedAt: { gte: parsed.after } });
+    if (parsed?.text) {
+      const { ftsSearchMessageIds } = await import("../search/mail-search-service");
+      const ids = await ftsSearchMessageIds(this.db, parsed.text, { limit: 500 });
+      if (ids) {
+        filters.push({ id: { in: ids } });
+      } else {
+        filters.push({
+          OR: [
+            { subject: { contains: parsed.text } },
+            { fromAddress: { contains: parsed.text } },
+            { snippet: { contains: parsed.text } },
+            { bodyText: { contains: parsed.text } },
+          ],
+        });
+      }
+    }
+
+    const priorityOrdered = folder === "marked" || query.markedOnly || Boolean(query.category);
+    const where: Prisma.MailInboxMessageWhereInput = { AND: filters };
+
+    // Cursor only applies to the stable date-ordered folder views.
+    if (!priorityOrdered && query.cursor) {
+      filters.push({
+        OR: [
+          { receivedAt: { lt: new Date(query.cursor.receivedAt) } },
+          { receivedAt: new Date(query.cursor.receivedAt), id: { lt: query.cursor.id } },
+        ],
+      });
+    }
 
     const rows = await this.db.mailInboxMessage.findMany({
       where,
-      orderBy: [{ priority: { priority: "desc" } }, { receivedAt: "desc" }],
-      take: limit,
+      orderBy: priorityOrdered
+        ? [{ priority: { priority: "desc" } }, { receivedAt: "desc" }]
+        : [{ receivedAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
       include: {
         account: { select: { id: true, label: true } },
         priority: true,
@@ -118,18 +174,11 @@ export class MailPortalInboxService {
       },
     });
 
-    const filtered =
-      query.folder === "inbox" || !query.folder
-        ? rows.filter(
-            (row) =>
-              !row.folder ||
-              row.folder.imapPath === "INBOX" ||
-              row.folder.imapPath === "Inbox" ||
-              (!row.folder.imapPath.startsWith("LOCAL:") &&
-                row.folder.imapPath !== "LOCAL:archived" &&
-                row.folder.imapPath !== "LOCAL:trash"),
-          )
-        : rows;
+    const hasMore = !priorityOrdered && rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor: MailSearchCursor | null =
+      hasMore && last ? { receivedAt: last.receivedAt.toISOString(), id: last.id } : null;
 
     await this.logAudit({
       action: "search",
@@ -137,7 +186,7 @@ export class MailPortalInboxService {
       detail: query.q ? `Suche: ${query.q.slice(0, 80)}` : undefined,
     });
 
-    return filtered.map((row) => this.toMessageSummary(row));
+    return { items: page.map((row) => this.toMessageSummary(row)), nextCursor };
   }
 
   async listSentMessages(query: { accountId?: string; limit?: number } = {}) {
@@ -260,6 +309,60 @@ export class MailPortalInboxService {
       userId: actorUserId,
       detail: `in Papierkorb verschoben · ${writeback}`,
     });
+  }
+
+  /** Sets/clears the local star and mirrors the \Flagged flag to the server (best-effort). */
+  async setMessageStarred(messageId: string, starred: boolean, actorUserId?: string | null) {
+    await this.db.mailInboxMessage.update({ where: { id: messageId }, data: { isStarred: starred } });
+    try {
+      const context = await this.imapWritebackContext(messageId);
+      if (context?.imap) {
+        const { setImapMessageFlagged } = await import("../imap-writeback");
+        await setImapMessageFlagged(context.imap.credentials, {
+          mailbox: context.imap.mailbox,
+          imapUid: context.imap.imapUid,
+          flagged: starred,
+        });
+      }
+    } catch (error) {
+      await this.logAudit({
+        action: "read",
+        messageId,
+        userId: actorUserId,
+        detail: `IMAP-Flag-Writeback fehlgeschlagen: ${error instanceof Error ? error.message : String(error)}`,
+      }).catch(() => undefined);
+    }
+  }
+
+  /** Returns the full conversation thread for a message, oldest first. */
+  async getThreadForMessage(messageId: string) {
+    const message = await this.db.mailInboxMessage.findUnique({
+      where: { id: messageId },
+      select: { accountId: true, threadId: true },
+    });
+    if (!message?.threadId) return [];
+    const rows = await this.db.mailInboxMessage.findMany({
+      where: { accountId: message.accountId, threadId: message.threadId },
+      orderBy: { receivedAt: "asc" },
+      select: {
+        id: true,
+        subject: true,
+        fromAddress: true,
+        snippet: true,
+        receivedAt: true,
+        isRead: true,
+        folder: { select: { folderRole: true } },
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      subject: row.subject,
+      fromAddress: row.fromAddress,
+      snippet: row.snippet,
+      receivedAt: row.receivedAt,
+      isRead: row.isRead,
+      folderRole: row.folder?.folderRole ?? null,
+    }));
   }
 
   async deleteMessagesBySender(senderPattern: string, accountId?: string, actorUserId?: string | null) {

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   let body: {
-    action?: "archive" | "trash" | "delete_by_sender" | "unsubscribe" | "capture" | "task";
+    action?: "archive" | "trash" | "delete_by_sender" | "unsubscribe" | "capture" | "task" | "star" | "unstar";
     messageId?: string;
     senderPattern?: string;
     accountId?: string;
@@ -35,6 +35,10 @@ export async function POST(request: Request) {
     if (body.action === "trash" && body.messageId) {
       await service.trashMessage(body.messageId, auth.user?.id);
       return NextResponse.json({ ok: true });
+    }
+    if ((body.action === "star" || body.action === "unstar") && body.messageId) {
+      await service.setMessageStarred(body.messageId, body.action === "star", auth.user?.id);
+      return NextResponse.json({ ok: true, starred: body.action === "star" });
     }
     if (body.action === "delete_by_sender" && body.senderPattern) {
       const count = await prisma.mailInboxMessage.count({

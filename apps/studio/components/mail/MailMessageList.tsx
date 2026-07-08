@@ -104,8 +104,9 @@ export function MailMessageList({
         <div style={{ padding: "0 12px 10px", borderBottom: "1px solid var(--uwe-border-muted)" }}>
           <input
             type="search"
+            data-mail-search
             className="uwe-v2-input"
-            placeholder="Betreff, Absender, Inhalt…"
+            placeholder="Betreff, Absender, Inhalt, from: has:attachment…"
             defaultValue={searchQuery}
             onKeyDown={(event) => {
               if (event.key === "Enter") {

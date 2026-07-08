@@ -58,13 +58,13 @@ export default async function MailCenterPage({
     markedOnly: activeFolder === "marked",
   };
 
-  const [portalAccounts, portalMessages, sentMessages, drafts, logs, worlds, config, rtxDisplay] =
+  const [portalAccounts, portalResult, sentMessages, drafts, logs, worlds, config, rtxDisplay] =
     await Promise.all([
       portal.listAccounts(),
       activeFolder === "sent"
-        ? Promise.resolve([])
+        ? Promise.resolve({ items: [], nextCursor: null })
         : activeFolder === "drafts"
-          ? Promise.resolve([])
+          ? Promise.resolve({ items: [], nextCursor: null })
           : portal.searchMessages(searchQuery),
       activeFolder === "sent" || activeFolder === "inbox"
         ? portal.listSentMessages({ accountId: selectedAccountId ?? undefined, limit: inboxLimit })
@@ -75,6 +75,8 @@ export default async function MailCenterPage({
       mailService.getConfigStatus(),
       loadStudioRtxDisplayState(prisma).catch(() => null),
     ]);
+
+  const portalMessages = portalResult.items;
 
   const rtxState: RtxConnectorState = rtxDisplay?.connectorState ?? "offline";
 

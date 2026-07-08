@@ -26,6 +26,7 @@ interface MailReaderProps {
   onTask: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleStar?: () => void;
   onOpenChat?: () => void;
   /** Mobil (< lg) füllt der Reader den Screen — zurück zur Nachrichtenliste. */
   onBack?: () => void;
@@ -44,6 +45,7 @@ export function MailReader({
   onTask,
   onArchive,
   onDelete,
+  onToggleStar,
   onOpenChat,
 }: MailReaderProps) {
   const bodyRef = React.useRef<HTMLDivElement>(null);
@@ -176,8 +178,13 @@ export function MailReader({
               {message.subject || "(Ohne Betreff)"}
             </h2>
           </div>
-          <IconButton icon="star" tone="warning" title="Markieren" />
-          <IconButton icon="more-horizontal" title="Weitere Aktionen" />
+          <IconButton
+            icon="star"
+            tone={message.isStarred ? "warning" : undefined}
+            title={message.isStarred ? "Markierung entfernen" : "Markieren"}
+            onClick={onToggleStar}
+            disabled={busy}
+          />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "15px 0 16px" }}>
@@ -220,6 +227,60 @@ export function MailReader({
           <IconButton icon="archive" size={15} bordered title="Archivieren" onClick={onArchive} disabled={busy} />
           <IconButton icon="trash-2" size={15} bordered tone="danger" title="Löschen" onClick={onDelete} disabled={busy} />
         </div>
+
+        {message.thread.length > 1 ? (
+          <div
+            style={{
+              border: "1px solid var(--uwe-border)",
+              borderRadius: 12,
+              padding: "8px 12px",
+              marginBottom: 16,
+              maxWidth: 620,
+              background: "var(--uwe-card-bg)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: ".04em",
+                textTransform: "uppercase",
+                color: "var(--uwe-fg-muted)",
+                marginBottom: 6,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <NavIcon name="messages-square" width={13} height={13} />
+              Konversation · {message.thread.length} Nachrichten
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {message.thread.map((entry) => (
+                <div
+                  key={entry.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 8,
+                    fontSize: 12.5,
+                    padding: "3px 0",
+                    color: entry.id === message.id ? "var(--uwe-fg)" : "var(--uwe-fg-muted)",
+                    fontWeight: entry.id === message.id ? 600 : 400,
+                  }}
+                >
+                  <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {entry.fromAddress}
+                    {entry.folderRole === "sent" ? " (gesendet)" : ""}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)", flexShrink: 0 }}>
+                    {formatMailFull(entry.receivedAt).date}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div
           style={{

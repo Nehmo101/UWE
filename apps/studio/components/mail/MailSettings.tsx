@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NavIcon } from "@/src/components/ui/icon";
 import { RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
 import { MailButton, Dot } from "./mail-ui";
+import { MailRulesPanel } from "./MailRulesPanel";
 import type { MailAccountVM, MailConfigVM, MailLogVM, MailWorldVM } from "./mail-types";
 
 interface MailSettingsProps {
@@ -193,6 +194,10 @@ export function MailSettings({ accounts, config, logs, worlds, rtxState }: MailS
               Konto hinzufügen
             </Link>
           </div>
+        </SettingCard>
+
+        <SettingCard icon="filter" title="Regeln &amp; VIP-Absender">
+          <MailRulesPanel />
         </SettingCard>
 
         <SettingCard icon="cpu" title="KI &amp; RTX" action={<RtxStatusBadge state={rtxState} />}>

@@ -84,6 +84,32 @@ export async function markImapMessageSeen(
   }
 }
 
+/** Adds or removes the \Flagged flag so a starred message shows flagged everywhere. */
+export async function setImapMessageFlagged(
+  credentials: ImapCredentials,
+  options: { mailbox?: string; imapUid: string; flagged: boolean },
+): Promise<void> {
+  const uid = Number.parseInt(options.imapUid, 10);
+  if (!Number.isFinite(uid)) throw new Error("Ungültige IMAP-UID.");
+
+  const client = createClient(credentials);
+  await client.connect();
+  try {
+    const lock = await client.getMailboxLock(options.mailbox ?? "INBOX");
+    try {
+      if (options.flagged) {
+        await client.messageFlagsAdd(String(uid), ["\\Flagged"], { uid: true });
+      } else {
+        await client.messageFlagsRemove(String(uid), ["\\Flagged"], { uid: true });
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => undefined);
+  }
+}
+
 /**
  * Moves the message into the account's archive/trash mailbox. A missing
  * archive mailbox is created ("Archive"); a missing trash mailbox falls back

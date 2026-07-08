@@ -39,13 +39,78 @@ export {
 
 export {
   fetchImapInboxMessages,
+  fetchImapMessages,
   fetchImapAttachmentContent,
+  listImapMailboxes,
+  parseImapMessage,
+  normalizeMessageIdList,
   describeImapError,
   type ImapCredentials,
   type FetchedInboxMessage,
   type ImapSyncProgress,
   type FetchImapOptions,
+  type FetchImapResult,
+  type ImapFolderEntry,
 } from "./imap-sync";
+
+export {
+  planImapSync,
+  buildUidFetchChunks,
+  type SyncPlanInput,
+  type SyncPlan,
+} from "./sync/sync-plan";
+
+export {
+  resolveThreadId,
+  normalizeSubjectForThreading,
+  type ThreadLookup,
+} from "./threading";
+
+export {
+  setImapMessageFlagged,
+} from "./imap-writeback";
+
+export {
+  MailRuleService,
+  createMailRuleService,
+  type UpsertMailRuleInput,
+} from "./rules/mail-rule-service";
+
+export {
+  evaluateRules,
+  ruleMatches,
+  type RuleEvaluation,
+} from "./rules/rule-engine";
+
+export {
+  parseRuleConditions,
+  parseRuleActions,
+  type MailRuleCondition,
+  type MailRuleAction,
+  type MailRuleDefinition,
+  type MailRuleMessage,
+} from "./rules/rule-types";
+
+export {
+  autoTriageNewMessages,
+  type AutoTriageOptions,
+} from "./triage/auto-triage";
+
+export {
+  storeOutboundAttachment,
+  resolveOutboundAttachmentPath,
+  deleteOutboundAttachment,
+  resolveOutboundDir,
+  sanitizeAttachmentFilename,
+  MAX_OUTBOUND_ATTACHMENT_BYTES,
+  type StoredOutboundAttachment,
+} from "./outbound-attachments";
+
+export {
+  scoreMailPriority,
+  type MailPriorityInput,
+  type MailPriorityResult,
+} from "./priority";
 
 export {
   markImapMessageSeen,

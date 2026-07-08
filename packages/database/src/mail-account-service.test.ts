@@ -45,9 +45,12 @@ describe("mail-account-service", () => {
     const fetchedMessage = {
       imapUid: "1001",
       messageId: "<msg-1@dazn.example>",
+      inReplyTo: null,
+      references: null,
       subject: "Saison 2026/27",
       fromAddress: "NFL Game Pass <mail@nflgamepass.dazn.com>",
       toAddresses: ["dm@uwe.local"],
+      ccAddresses: [],
       snippet: "Mach deine Kündigung jetzt.",
       bodyText: null,
       bodyHtml: '<p>Mach deine Kündigung jetzt.</p><img src="data:image/png;base64,iVBORw0KGgo=">',
@@ -62,9 +65,11 @@ describe("mail-account-service", () => {
       listUnsubscribePostSupported: false,
     };
 
-    const saved = await service.persistFetchedMessage(account.id, fetchedMessage);
+    const { saved } = await service.persistFetchedMessage(account.id, fetchedMessage);
     assert.equal(saved.bodyHtml, fetchedMessage.bodyHtml);
     assert.equal(saved.hasAttachments, true);
+    // A message with no References/In-Reply-To starts its own thread (its Message-ID).
+    assert.equal(saved.threadId, fetchedMessage.messageId);
 
     const attachments = await db.mailAttachment.findMany({ where: { messageId: saved.id } });
     assert.equal(attachments.length, 2);
@@ -72,10 +77,10 @@ describe("mail-account-service", () => {
     assert.equal(inline?.filename, "hero.png");
     assert.equal(inline?.mimeType, "image/png");
 
-    // Re-syncing the same message (same accountId/imapUid) replaces attachment rows
-    // instead of duplicating them, and clears them out entirely once none remain.
+    // Re-syncing the same message (same accountId/folder/imapUid) replaces attachment
+    // rows instead of duplicating them, and clears them out entirely once none remain.
     const resynced = { ...fetchedMessage, attachments: [] };
-    const savedAgain = await service.persistFetchedMessage(account.id, resynced);
+    const { saved: savedAgain } = await service.persistFetchedMessage(account.id, resynced);
     assert.equal(savedAgain.id, saved.id);
     assert.equal(savedAgain.hasAttachments, false);
     const attachmentsAfter = await db.mailAttachment.findMany({ where: { messageId: saved.id } });

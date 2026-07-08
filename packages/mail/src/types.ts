@@ -3,11 +3,22 @@ export interface MailAddress {
   name?: string;
 }
 
+export interface MailAttachmentInput {
+  filename: string;
+  /** Absolute path on disk; nodemailer streams it. Preferred over `content`. */
+  path?: string;
+  content?: Buffer | string;
+  contentType?: string;
+}
+
 export interface MailMessage {
   to: MailAddress[];
+  cc?: MailAddress[];
+  bcc?: MailAddress[];
   subject: string;
   text?: string;
   html?: string;
+  attachments?: MailAttachmentInput[];
 }
 
 export interface MailSendResult {

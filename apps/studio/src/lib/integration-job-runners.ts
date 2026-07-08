@@ -243,9 +243,46 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
         await assertNotCancelled(ctx.jobs, ctx.jobId);
       },
     });
+
+    // Apply user rules + local auto-triage to newly-synced INBOX messages so the
+    // Mail Center reflects filters/priorities immediately (all local, no LLM).
+    let ruleMoved = 0;
+    let triaged = 0;
+    const createdIds = "createdIds" in result ? (result.createdIds as string[]) : [];
+    if (!payload.mailbox && createdIds.length > 0) {
+      try {
+        const { createMailRuleService, autoTriageNewMessages } = await import("@uwe/mail");
+        const ruleService = createMailRuleService(db);
+        const { skipAiTriageIds, movedIds } = await ruleService.applyRules(createdIds);
+        ruleMoved = movedIds.length;
+        const vipSenders = await ruleService.listVipAddresses();
+        const trashedSet = new Set(movedIds);
+        const triageTargets = createdIds.filter((id) => !trashedSet.has(id));
+        const { scored } = await autoTriageNewMessages(db, triageTargets, {
+          vipSenders,
+          skipIds: skipAiTriageIds,
+        });
+        triaged = scored;
+      } catch {
+        // Rules/triage are best-effort; a failure must not fail the sync.
+      }
+    }
+
+    // Best-effort Sent-folder sync on primary-inbox syncs so "Gesendet" reflects
+    // real server mail. A failure here must not fail the INBOX sync.
+    let sentImported = 0;
+    if (!payload.mailbox) {
+      try {
+        const sent = await mail.syncSentFolder(payload.accountId, { limit: payload.limit ?? 50 });
+        sentImported = "imported" in sent ? sent.imported : 0;
+      } catch {
+        sentImported = 0;
+      }
+    }
+
     await ctx.jobs.updateProgress(ctx.jobId, 100, `${result.imported} Nachrichten synchronisiert`);
     await db.$disconnect();
-    return result;
+    return { ...result, sentImported, ruleMoved, triaged };
   } catch (error) {
     await mail.markImapSyncError(payload.accountId, describeImapError(error));
     await db.$disconnect();

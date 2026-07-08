@@ -21,6 +21,8 @@ import {
   type MailFolderKey,
   type MailInboxMessageSummary,
   type MailSearchQuery,
+  type MailSearchCursor,
+  type MailSearchResult,
 } from "./mail-portal-inbox-service";
 import { sendDirectMail } from "./mail-portal-send-service";
 import { MailPortalAiActions } from "./mail-portal-ai-actions";
@@ -31,7 +33,7 @@ export interface CreateMailPortalAccountInput extends CreateMailAccountInput {
   ownerId?: string | null;
 }
 
-export type { MailFolderKey, MailInboxMessageSummary, MailSearchQuery };
+export type { MailFolderKey, MailInboxMessageSummary, MailSearchQuery, MailSearchCursor, MailSearchResult };
 
 export interface MailExtractedAction {
   type: string;
@@ -100,6 +102,8 @@ export class MailPortalService {
     this.fetchAttachmentContent = this.inbox.fetchAttachmentContent.bind(this.inbox);
     this.archiveMessage = this.inbox.archiveMessage.bind(this.inbox);
     this.trashMessage = this.inbox.trashMessage.bind(this.inbox);
+    this.setMessageStarred = this.inbox.setMessageStarred.bind(this.inbox);
+    this.getThreadForMessage = this.inbox.getThreadForMessage.bind(this.inbox);
     this.deleteMessagesBySender = this.inbox.deleteMessagesBySender.bind(this.inbox);
   }
 
@@ -108,6 +112,8 @@ export class MailPortalService {
   fetchAttachmentContent: MailPortalInboxService["fetchAttachmentContent"];
   archiveMessage: MailPortalInboxService["archiveMessage"];
   trashMessage: MailPortalInboxService["trashMessage"];
+  setMessageStarred: MailPortalInboxService["setMessageStarred"];
+  getThreadForMessage: MailPortalInboxService["getThreadForMessage"];
   deleteMessagesBySender: MailPortalInboxService["deleteMessagesBySender"];
 
   private accountService() {
@@ -264,9 +270,12 @@ export class MailPortalService {
     input: {
       accountId: string;
       to: string[];
+      cc?: string[];
+      bcc?: string[];
       subject: string;
       bodyText: string;
       bodyHtml?: string | null;
+      attachments?: Array<{ filename: string; path?: string; contentType?: string }>;
     },
     actorUserId?: string | null,
   ) {

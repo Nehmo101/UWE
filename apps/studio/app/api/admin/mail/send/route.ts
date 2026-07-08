@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { createMailPortalService, prisma } from "@uwe/database/server";
+import { resolveOutboundAttachmentPath, deleteOutboundAttachment } from "@uwe/mail";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
+
+interface OutboundAttachmentRef {
+  key: string;
+  filename: string;
+  contentType?: string;
+}
 
 export async function POST(request: Request) {
   const auth = await requireAdminMailMutation(request);
@@ -11,9 +18,12 @@ export async function POST(request: Request) {
     draftId?: string;
     accountId?: string;
     to?: string[];
+    cc?: string[];
+    bcc?: string[];
     subject?: string;
     bodyText?: string;
     bodyHtml?: string | null;
+    attachments?: OutboundAttachmentRef[];
     confirm?: boolean;
   };
   try {
@@ -46,17 +56,31 @@ export async function POST(request: Request) {
   if (!body.bodyText?.trim()) return mailApiError("Nachrichtentext erforderlich.");
   if (body.confirm !== true) return mailApiError("Versand erfordert confirm=true.", 400);
 
+  const attachmentRefs = Array.isArray(body.attachments) ? body.attachments.filter((a) => a?.key && a?.filename) : [];
+  const attachments = attachmentRefs.map((ref) => ({
+    filename: ref.filename,
+    path: resolveOutboundAttachmentPath(ref.key, ref.filename),
+    contentType: ref.contentType,
+  }));
+
   try {
     const result = await service.sendDirect(
       {
         accountId: body.accountId,
         to: body.to,
+        cc: Array.isArray(body.cc) ? body.cc.filter(Boolean) : undefined,
+        bcc: Array.isArray(body.bcc) ? body.bcc.filter(Boolean) : undefined,
         subject: body.subject.trim(),
         bodyText: body.bodyText,
         bodyHtml: body.bodyHtml,
+        attachments: attachments.length > 0 ? attachments : undefined,
       },
       auth.user?.id,
     );
+    // Clean up stored attachments once the send attempt is done (success or failure).
+    if (result.ok) {
+      await Promise.all(attachmentRefs.map((ref) => deleteOutboundAttachment(ref.key)));
+    }
     return NextResponse.json(
       { ok: result.ok, logId: result.log.id, error: result.error ?? null },
       { status: result.ok ? 200 : 502 },

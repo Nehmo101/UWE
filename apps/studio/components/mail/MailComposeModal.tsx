@@ -27,21 +27,60 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 
 export function MailComposeModal({ context, accounts, onClose, onSent }: MailComposeModalProps) {
   const [to, setTo] = React.useState(context.to);
+  const [cc, setCc] = React.useState("");
+  const [bcc, setBcc] = React.useState("");
+  const [showCcBcc, setShowCcBcc] = React.useState(false);
   const [subject, setSubject] = React.useState(context.subject);
   const [body, setBody] = React.useState(context.body);
   const [accountId, setAccountId] = React.useState(context.accountId ?? accounts[0]?.id ?? "");
   const [draftId, setDraftId] = React.useState(context.draftId ?? null);
   const [tone, setTone] = React.useState<MailReplyTone>("friendly");
+  const [attachments, setAttachments] = React.useState<
+    Array<{ key: string; filename: string; contentType: string; sizeBytes: number }>
+  >([]);
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     setTo(context.to);
+    setCc("");
+    setBcc("");
+    setShowCcBcc(false);
     setSubject(context.subject);
     setBody(context.body);
     setAccountId(context.accountId ?? accounts[0]?.id ?? "");
     setDraftId(context.draftId ?? null);
+    setAttachments([]);
   }, [accounts, context]);
+
+  async function uploadFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      for (const file of Array.from(files)) {
+        const form = new FormData();
+        form.append("file", file);
+        const response = await fetch(studioApiUrl("/api/admin/mail/attachments/upload"), {
+          method: "POST",
+          body: form,
+        });
+        const data = (await response.json().catch(() => ({}))) as {
+          attachment?: { key: string; filename: string; contentType: string; sizeBytes: number };
+          error?: string;
+        };
+        if (!response.ok || !data.attachment) {
+          setStatus(data.error ?? `Upload von ${file.name} fehlgeschlagen.`);
+          continue;
+        }
+        setAttachments((current) => [...current, data.attachment!]);
+      }
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   const fromEmail = accounts.find((account) => account.id === accountId)?.email ?? "—";
 
@@ -136,21 +175,30 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
       setStatus("Nachrichtentext erforderlich.");
       return;
     }
+    const ccRecipients = parseRecipients(cc);
+    const bccRecipients = parseRecipients(bcc);
+    const hasExtras = ccRecipients.length > 0 || bccRecipients.length > 0 || attachments.length > 0;
     setBusy(true);
     setStatus(null);
     try {
       const activeDraftId = await persistDraft();
+      // Cc/Bcc/attachments are not stored on the draft record, so a send that
+      // uses them must go through the direct path (full payload) instead of draftId.
+      const useDraftPath = Boolean(activeDraftId) && !hasExtras;
       const response = await fetch(studioApiUrl("/api/admin/mail/send"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          activeDraftId
+          useDraftPath
             ? { draftId: activeDraftId, confirm: true }
             : {
                 accountId: accountId || undefined,
                 to: recipients,
+                cc: ccRecipients.length > 0 ? ccRecipients : undefined,
+                bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
                 subject: subject.trim(),
                 bodyText: body,
+                attachments: attachments.map((a) => ({ key: a.key, filename: a.filename, contentType: a.contentType })),
                 confirm: true,
               },
         ),
@@ -230,8 +278,40 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
               placeholder="name@example.com"
               style={composeInputStyle}
             />
-            <span style={{ fontSize: 12, color: "var(--uwe-fg-subtle)" }}>Cc · Bcc</span>
+            <button
+              type="button"
+              onClick={() => setShowCcBcc((current) => !current)}
+              style={{
+                fontSize: 12,
+                color: showCcBcc ? "var(--uwe-fg)" : "var(--uwe-fg-subtle)",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              Cc · Bcc
+            </button>
           </ComposeField>
+          {showCcBcc ? (
+            <>
+              <ComposeField label="Cc">
+                <input
+                  value={cc}
+                  onChange={(event) => setCc(event.target.value)}
+                  placeholder="cc@example.com"
+                  style={composeInputStyle}
+                />
+              </ComposeField>
+              <ComposeField label="Bcc">
+                <input
+                  value={bcc}
+                  onChange={(event) => setBcc(event.target.value)}
+                  placeholder="bcc@example.com"
+                  style={composeInputStyle}
+                />
+              </ComposeField>
+            </>
+          ) : null}
           <ComposeField label="Betreff">
             <input
               value={subject}
@@ -341,6 +421,36 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
           }}
         />
 
+        {attachments.length > 0 ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "4px 16px 8px" }}>
+            {attachments.map((attachment) => (
+              <span
+                key={attachment.key}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  fontSize: 12,
+                  color: "var(--uwe-fg)",
+                  border: "1px solid var(--uwe-border)",
+                  borderRadius: 999,
+                  padding: "3px 6px 3px 10px",
+                  background: "var(--uwe-card-bg)",
+                }}
+              >
+                <NavIcon name="paperclip" width={12} height={12} style={{ color: "var(--uwe-fg-muted)" }} />
+                {attachment.filename}
+                <IconButton
+                  icon="x"
+                  size={12}
+                  title="Entfernen"
+                  onClick={() => setAttachments((current) => current.filter((entry) => entry.key !== attachment.key))}
+                />
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         {status ? (
           <div style={{ padding: "0 16px 8px", fontSize: 12, color: "var(--uwe-danger)" }}>{status}</div>
         ) : null}
@@ -361,7 +471,21 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
           <MailButton variant="subtle" onClick={() => void saveDraft()} disabled={busy}>
             Speichern
           </MailButton>
-          <IconButton icon="paperclip" size={16} bordered title="Anhang" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={(event) => void uploadFiles(event.target.files)}
+          />
+          <IconButton
+            icon="paperclip"
+            size={16}
+            bordered
+            title="Anhang hinzufügen"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+          />
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)", display: "flex", alignItems: "center", gap: 6 }}>
             <NavIcon name="shield-check" width={13} height={13} />

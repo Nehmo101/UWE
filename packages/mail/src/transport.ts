@@ -55,14 +55,24 @@ class SmtpMailTransport implements MailTransport {
     }
 
     try {
+      const formatRecipients = (recipients: MailMessage["to"]) =>
+        recipients.map((recipient) =>
+          recipient.name ? `"${recipient.name}" <${recipient.email}>` : recipient.email,
+        );
       const info = await this.getTransporter().sendMail({
         from: this.config.from,
-        to: message.to.map((recipient) =>
-          recipient.name ? `"${recipient.name}" <${recipient.email}>` : recipient.email,
-        ),
+        to: formatRecipients(message.to),
+        cc: message.cc && message.cc.length > 0 ? formatRecipients(message.cc) : undefined,
+        bcc: message.bcc && message.bcc.length > 0 ? formatRecipients(message.bcc) : undefined,
         subject: message.subject,
         text: message.text,
         html: message.html,
+        attachments: message.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          path: attachment.path,
+          content: attachment.content,
+          contentType: attachment.contentType,
+        })),
       });
 
       return {

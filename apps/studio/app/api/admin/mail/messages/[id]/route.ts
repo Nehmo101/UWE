@@ -13,7 +13,10 @@ export async function GET(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   const service = createMailPortalService(prisma);
-  const message = await service.getMessage(id, auth.user?.id);
+  const [message, thread] = await Promise.all([
+    service.getMessage(id, auth.user?.id),
+    service.getThreadForMessage(id),
+  ]);
   if (!message) return mailApiError("Nachricht nicht gefunden.", 404);
 
   // `bodyHtmlRaw` is unsanitized MIME output — never let it leave the server.
@@ -21,5 +24,8 @@ export async function GET(request: Request, context: RouteContext) {
   const { bodyHtmlRaw, ...safeMessage } = message;
   const bodySafeHtml = bodyHtmlRaw ? sanitizeMailBodyHtml(bodyHtmlRaw, { messageId: id }) : null;
 
-  return NextResponse.json({ message: { ...safeMessage, bodySafeHtml } });
+  // Only expose the thread when it has more than the message itself.
+  const threadEntries = thread.length > 1 ? thread : [];
+
+  return NextResponse.json({ message: { ...safeMessage, bodySafeHtml }, thread: threadEntries });
 }

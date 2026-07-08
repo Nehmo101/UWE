@@ -9,7 +9,10 @@
     ".": "./src/index.ts",
     "./portal-types": "./src/mail-portal-types.ts",
     "./priority": "./src/priority.ts",
-    "./portal": "./src/portal/index.ts"
+    "./portal": "./src/portal/index.ts",
+    "./rules": "./src/rules/index.ts",
+    "./sync": "./src/sync/sync-plan.ts",
+    "./search": "./src/search/query-parser.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
