@@ -121,7 +121,7 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#18 Fluss-Intelligenz** — `snapPointToWater` + `riverFlowsUphill` in `@uwe/atlas/river-tools`; beim Fluss-Abschluss snappt die Mündung an nahes Wasser (≤ 0.045), Bergauf-Warnung übers Höhenfeld als Hinweis (nie Auto-Korrektur). *Offen: Delta-Verzweigung.*
 - ✅ **#22 Klima-Bänder** — `CLIMATE_ZONES`/`climateBands` in `@uwe/atlas/climate` (arktisch → tropisch); Doc-Setting `tileLayer.climateEnabled` (migrationsfest, sparse), Overlay in Editor (mit Zonen-Labels), Portal- und Static-Viewer. *Offen: Biom-Vorschlags-Färbung + Reiseplaner-Kopplung.*
 - ✅ **#23 Kartuschen** — `drawCartouche` in `@uwe/atlas/cartouche` (Schriftrolle/Banner/Doppellinien); Titelkartusche wählbar im PNG-Export-Dialog (Titel = Ebenen-Name). *Offen: Live-Deko + weitere Zier-Rahmen/Windrosen-Stile.*
+- ✅ **#15 Reiseplaner** — `planTravelRoute` in `@uwe/atlas/travel` (terrain-gewichtete Reisetage `TERRAIN_TRAVEL_FACTOR`, Rastpunkte je Reisetag, deterministisch); Messen-Werkzeug ist jetzt eine Multi-Punkt-Route mit Live-Anzeige (Distanz · Tage · Rast) und Lager-Markern, Enter speichert sie als `road`-Feature mit `style.travel`. *Offen: Encounter-Wurf je Etappe aus dem `dnd`-Package (Proposal → Review über die Bridge).*
 
-**Offen:** #4 Prefabs, #14 Werkstatt-Layout, #15 Reiseplaner,
-#16 Kartengröße, #17 Landmassen-Pinsel, #26 Unterwelt,
-#28 Asset-Wunsch-Queue.
+**Offen:** #4 Prefabs, #14 Werkstatt-Layout, #16 Kartengröße,
+#17 Landmassen-Pinsel, #26 Unterwelt, #28 Asset-Wunsch-Queue.

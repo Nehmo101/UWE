@@ -207,6 +207,8 @@ export { CLIMATE_ZONES, climateZoneAt, climateBands } from "./climate";
 export type { ClimateZone, ClimateBand } from "./climate";
 export { CARTOUCHE_STYLES, drawCartouche } from "./cartouche";
 export type { CartoucheStyle, CartoucheOptions } from "./cartouche";
+export { TERRAIN_TRAVEL_FACTOR, planTravelRoute } from "./travel";
+export type { TravelOptions, TravelSegment, TravelPlan } from "./travel";
 export { findBridgePoints } from "./bridge-points";
 export type { BridgePoint } from "./bridge-points";
 export { routeRoad } from "./route-astar";

@@ -1593,22 +1593,62 @@ function drawPending(ctx) {
   ctx.restore();
 }
 
+// Reiseplaner (Roadmap W3 #15): Messen-Tool ist eine Multi-Punkt-Route —
+// Distanz, terrain-gewichtete Reisetage (planTravelRoute) und Rastpunkte
+// live; Enter speichert die Route als road-Feature mit style.travel.
+function measurePlan() {
+  if (measurePoints.length < 2 || !engine.planTravelRoute) return null;
+  return engine.planTravelRoute(measurePoints, { layer: doc && doc.tileLayer });
+}
 function drawMeasure(ctx) {
   if (!measurePoints.length) return;
   ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.fillStyle = "#c2622b"; ctx.lineWidth = 2 * state.zoom;
   for (const [nx, ny] of measurePoints) { const [mx, my] = n2c(nx, ny); ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill(); }
-  if (measurePoints.length === 2) {
-    const [ax, ay] = n2c(measurePoints[0][0], measurePoints[0][1]);
-    const [bx, by] = n2c(measurePoints[1][0], measurePoints[1][1]);
-    ctx.setLineDash([6, 3]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-    const dx = measurePoints[1][0] - measurePoints[0][0], dy = measurePoints[1][1] - measurePoints[0][1];
-    const dist = Math.sqrt(dx * dx + dy * dy) * 100; const label = dist.toFixed(1) + " leagues";
-    const mx = (ax + bx) / 2, my = (ay + by) / 2; ctx.font = "bold 13px " + preset.typography.labelCity;
-    ctx.textAlign = "center"; const tw = ctx.measureText(label).width;
-    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(mx - tw / 2 - 5, my - 20, tw + 10, 18);
-    ctx.fillStyle = "#8b1a10"; ctx.fillText(label, mx, my - 7);
+  if (measurePoints.length >= 2) {
+    ctx.setLineDash([6, 3]); ctx.beginPath();
+    const [ax0, ay0] = n2c(measurePoints[0][0], measurePoints[0][1]);
+    ctx.moveTo(ax0, ay0);
+    for (let i = 1; i < measurePoints.length; i++) { const [px, py] = n2c(measurePoints[i][0], measurePoints[i][1]); ctx.lineTo(px, py); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const plan = measurePlan();
+    if (plan) {
+      // Rastpunkte: gefüllte Lager-Marker nach jedem vollen Reisetag.
+      for (const [cxn, cyn] of plan.camps) {
+        const [cpx, cpy] = n2c(cxn, cyn);
+        ctx.beginPath(); ctx.arc(cpx, cpy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#f2e8c9"; ctx.fill();
+        ctx.lineWidth = 1.6; ctx.strokeStyle = "#8b1a10"; ctx.stroke();
+        ctx.fillStyle = "#8b1a10"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("R", cpx, cpy);
+        ctx.textBaseline = "alphabetic";
+      }
+      const mid = measurePoints[Math.floor(measurePoints.length / 2)];
+      const [mx, my] = n2c(mid[0], mid[1]);
+      const unit = (preset.decorations && preset.decorations.scaleUnit) || "leagues";
+      const label = plan.totalLeagues.toFixed(1) + " " + unit + " · " + plan.days + " Tag(e) · " + plan.camps.length + " Rast";
+      ctx.font = "bold 13px " + preset.typography.labelCity;
+      ctx.textAlign = "center"; const tw = ctx.measureText(label).width;
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(mx - tw / 2 - 5, my - 20, tw + 10, 18);
+      ctx.fillStyle = "#8b1a10"; ctx.fillText(label, mx, my - 7);
+    }
   }
   ctx.restore();
+}
+function saveTravelRoute() {
+  const plan = measurePlan();
+  if (!plan || measurePoints.length < 2) { flash("Erst eine Route zusammenklicken (mind. 2 Punkte)"); return; }
+  pushUndo();
+  const k = nextKey();
+  const f = {
+    _key: k, id: nextKey(), nodeId: state.nodeId, kind: "road",
+    geometry: { type: "Path", coordinates: measurePoints.map((p) => [p[0], p[1]]) },
+    style: { smooth: true, travel: { days: plan.days, leagues: Math.round(plan.totalLeagues * 10) / 10, camps: plan.camps.length } },
+    labelText: plan.days + " Tagesreise", layer: 40, visibility: "dm_only",
+  };
+  doc.features.push(f);
+  measurePoints = [];
+  selectOnly(f._key); markDirty(); draw();
+  flash("🧭 Route gespeichert — " + f.style.travel.leagues + " leagues, " + plan.days + " Tag(e)");
 }
 
 // Streuung: reale @uwe/atlas-API erwartet ein Polygon-Objekt + numerischen Seed
@@ -1733,7 +1773,7 @@ function onPointerDown(e) {
   if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push(snapN(nx, ny)); draw(); return; }
   if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel(snapN(nx, ny), t, null); return; }
   if (tool === "pin") { addPin(snapN(nx, ny)); return; }
-  if (tool === "measure") { measurePoints = measurePoints.length >= 2 ? [[nx, ny]] : [...measurePoints, [nx, ny]]; draw(); return; }
+  if (tool === "measure") { measurePoints = [...measurePoints, [nx, ny]]; draw(); return; }
 }
 
 function onPointerMove(e) {
@@ -2263,7 +2303,7 @@ function onKeyDown(e) {
     drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
   }
   if (e.key === "Delete" || e.key === "Backspace") { if (selection.size) { e.preventDefault(); eraseSelection(); } return; }
-  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
+  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon(); else if (state.tool === "curve") finishCurve(); else if (state.tool === "measure") saveTravelRoute(); return; }
   const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
 }
 
@@ -2768,7 +2808,7 @@ function refreshChrome() {
     }
     else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
     else if (st.tool === "spray") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Streu-Pinsel:</b> gedrückt halten & ziehen · Asset aus der Palette · Rechtsklick löscht'; }
-    else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
+    else if (st.tool === "measure") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Reiseplaner:</b> Route zusammenklicken · Rastpunkte je Reisetag · Enter speichert als Route · Esc leert'; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
     else if (st.tool === "region") {

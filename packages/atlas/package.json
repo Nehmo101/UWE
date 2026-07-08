@@ -41,7 +41,8 @@
     "./name-culture": "./src/name-culture.ts",
     "./river-tools": "./src/river-tools.ts",
     "./climate": "./src/climate.ts",
-    "./cartouche": "./src/cartouche.ts"
+    "./cartouche": "./src/cartouche.ts",
+    "./travel": "./src/travel.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

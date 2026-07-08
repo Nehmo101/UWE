@@ -3720,6 +3720,71 @@ function drawCartouche(ctx, opts) {
   ctx.restore();
 }
 
+// ../atlas/src/travel.ts
+var TERRAIN_TRAVEL_FACTOR = {
+  grassland: 1,
+  hills: 1.3,
+  forest: 1.35,
+  desert: 1.4,
+  snow: 1.6,
+  swamp: 1.8,
+  mountains: 2,
+  // Wasser ohne Boot: Umweg/Fähre — bewusst teuer.
+  coast: 2.5
+};
+function biomeFactorAt(layer, x, y) {
+  if (!layer || !layer.cells || !(layer.cols > 0) || !(layer.rows > 0)) return 1;
+  const c = Math.min(layer.cols - 1, Math.max(0, Math.floor(x * layer.cols)));
+  const r = Math.min(layer.rows - 1, Math.max(0, Math.floor(y * layer.rows)));
+  const biome = layer.cells[`${c},${r}`];
+  return biome && TERRAIN_TRAVEL_FACTOR[biome] || 1;
+}
+function planTravelRoute(points, options = {}) {
+  const empty = { totalLeagues: 0, effortLeagues: 0, days: 0, camps: [], segments: [] };
+  if (points.length < 2) return empty;
+  const perDay = options.leaguesPerDay && options.leaguesPerDay > 0 ? options.leaguesPerDay : 8;
+  const scale = options.scaleLeagues && options.scaleLeagues > 0 ? options.scaleLeagues : 100;
+  const samples = Math.max(1, Math.floor(options.samplesPerSegment ?? 8));
+  const segments = [];
+  let totalLeagues = 0;
+  let effortLeagues = 0;
+  const camps = [];
+  let effortSinceCamp = 0;
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1];
+    const [bx, by] = points[i];
+    const leagues = Math.hypot(bx - ax, by - ay) * scale;
+    let factorSum = 0;
+    for (let k = 0; k < samples; k++) {
+      const t = (k + 0.5) / samples;
+      factorSum += biomeFactorAt(options.layer, ax + (bx - ax) * t, ay + (by - ay) * t);
+    }
+    const factor = factorSum / samples;
+    const effort = leagues * factor;
+    segments.push({ leagues, effortLeagues: effort, factor });
+    totalLeagues += leagues;
+    let remaining = effort;
+    let tStart = 0;
+    while (effortSinceCamp + remaining >= perDay && effort > 0) {
+      const needed = perDay - effortSinceCamp;
+      const tCamp = tStart + needed / effort * (1 - 0);
+      const t = Math.min(1, tCamp);
+      camps.push([ax + (bx - ax) * t, ay + (by - ay) * t]);
+      remaining -= needed;
+      tStart = t;
+      effortSinceCamp = 0;
+    }
+    effortSinceCamp += remaining;
+    effortLeagues += effort;
+  }
+  const last = points[points.length - 1];
+  while (camps.length && Math.hypot(camps[camps.length - 1][0] - last[0], camps[camps.length - 1][1] - last[1]) < 1e-9) {
+    camps.pop();
+  }
+  const days = Math.ceil(effortLeagues / perDay * 10) / 10;
+  return { totalLeagues, effortLeagues, days, camps, segments };
+}
+
 // ../atlas/src/bridge-points.ts
 function segmentIntersection(a1, a2, b1, b2) {
   const rX = a2[0] - a1[0];
@@ -6322,6 +6387,7 @@ export {
   RTX_RECIPE_ROLE_DEFAULT_OPACITY,
   SCHEMA_VERSION,
   STYLE_PRESETS,
+  TERRAIN_TRAVEL_FACTOR,
   TOLKIEN_INK,
   WATER_BIOME,
   applyColorIntensity,
@@ -6386,6 +6452,7 @@ export {
   parseFeatureGeometry,
   parseGeometry,
   pathLength,
+  planTravelRoute,
   pointAtDistance,
   pointInPolygon,
   proceduralDraft,
