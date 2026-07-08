@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -25,19 +26,19 @@ function getDb() {
   return getSharedPrismaClient();
 }
 
-export async function getSessionToken(): Promise<string | null> {
+export const getSessionToken = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
-}
+});
 
-export async function getPreviewUserId(): Promise<string | null> {
+export const getPreviewUserId = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(PREVIEW_COOKIE_NAME)?.value ?? null;
-}
+});
 
-export async function getAccessContextForWorld(
+export const getAccessContextForWorld = cache(async (
   worldSlug: string,
-): Promise<AccessContext | null> {
+): Promise<AccessContext | null> => {
   const token = await getSessionToken();
   const previewAsUserId = await getPreviewUserId();
 
@@ -57,7 +58,7 @@ export async function getAccessContextForWorld(
 
   await disconnectPrismaClientIfOwned(db);
   return ctx;
-}
+});
 
 export async function getWorldPlayers(worldSlug: string) {
   const db = getDb();
@@ -74,7 +75,7 @@ export async function canUsePreview(worldSlug: string): Promise<boolean> {
   return ctx ? canPreviewAsPlayer(ctx) : false;
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const token = await getSessionToken();
   if (!token) {
     return null;
@@ -88,9 +89,9 @@ export async function getCurrentUser() {
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }
-}
+});
 
-export async function getCurrentAuthUser(): Promise<AuthUser | null> {
+export const getCurrentAuthUser = cache(async (): Promise<AuthUser | null> => {
   const user = await getCurrentUser();
   if (!user) {
     return null;
@@ -103,7 +104,7 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }
-}
+});
 
 export function studioAuthRequired(): boolean {
   return getUweRuntimeConfig().authRequired;

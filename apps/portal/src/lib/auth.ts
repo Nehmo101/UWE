@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import {
   createAuthService,
@@ -17,17 +18,17 @@ function getDb() {
   return getSharedPrismaClient();
 }
 
-export async function getSessionToken(): Promise<string | null> {
+export const getSessionToken = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
-}
+});
 
-export async function getPreviewUserId(): Promise<string | null> {
+export const getPreviewUserId = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(PREVIEW_COOKIE_NAME)?.value ?? null;
-}
+});
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const token = await getSessionToken();
   if (!token) {
     return null;
@@ -41,7 +42,7 @@ export async function getCurrentUser() {
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }
-}
+});
 
 export async function getUserFromRequestCookieHeader(
   cookieHeader: string | null,
@@ -70,9 +71,9 @@ export async function getUserFromRequestCookieHeader(
   }
 }
 
-export async function getAccessContextForWorld(
+export const getAccessContextForWorld = cache(async (
   worldSlug: string,
-): Promise<AccessContext | null> {
+): Promise<AccessContext | null> => {
   const token = await getSessionToken();
   const previewAsUserId = await getPreviewUserId();
 
@@ -92,9 +93,9 @@ export async function getAccessContextForWorld(
 
   await disconnectPrismaClientIfOwned(db);
   return ctx;
-}
+});
 
-export async function listAuthWorlds() {
+export const listAuthWorlds = cache(async () => {
   const user = await getCurrentUser();
   const db = getDb();
   const auth = createAuthService(db);
@@ -103,18 +104,18 @@ export async function listAuthWorlds() {
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }
-}
+});
 
 export async function listPortalWorlds() {
   return listAuthWorlds();
 }
 
-export async function assertWorldReadable(
+export const assertWorldReadable = cache(async (
   worldSlug: string,
 ): Promise<{
   world: NonNullable<Awaited<ReturnType<ReturnType<typeof createUweRepository>["getWorldBySlug"]>>>;
   ctx: AccessContext;
-}> {
+}> => {
   const ctx = await getAccessContextForWorld(worldSlug);
   const repo = createUweRepository();
   const world = await repo.getWorldBySlug(worldSlug);
@@ -133,7 +134,7 @@ export async function assertWorldReadable(
   }
 
   return { world, ctx };
-}
+});
 
 export async function getWorldPlayers(worldSlug: string) {
   const db = getDb();
