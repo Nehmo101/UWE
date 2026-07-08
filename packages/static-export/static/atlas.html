@@ -255,8 +255,25 @@ import * as engine from "./atlas-engine.js";
 // ===========================================================================
 // Konstanten & Paletten
 // ===========================================================================
-const TILE = 32, COLS = 64, ROWS = 40;
-const WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+// Kartengröße (Roadmap W4 #16): Defaults; die aktiven Werte kommen aus
+// doc.tileLayer (cols/rows/tile) und werden via syncWorldDims() gespiegelt.
+let TILE = 32, COLS = 64, ROWS = 40;
+let WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+// Größen-Presets bewahren das 1.6-Seitenverhältnis ⇒ normalisierte [0,1]-
+// Geometrie rendert unverändert, nur die Terrain-Auflösung/Weltgröße ändert sich.
+const MAP_SIZE_PRESETS = [
+  ["64x40", "Klein (64×40)", 64, 40],
+  ["96x60", "Mittel (96×60)", 96, 60],
+  ["128x80", "Groß (128×80)", 128, 80],
+  ["192x120", "Riesig (192×120)", 192, 120],
+];
+function syncWorldDims() {
+  const tl = doc && doc.tileLayer;
+  if (tl && tl.cols > 0 && tl.rows > 0) {
+    COLS = tl.cols; ROWS = tl.rows; TILE = tl.tile || 32;
+    WORLD_W = COLS * TILE; WORLD_H = ROWS * TILE;
+  }
+}
 const DEFAULT_TERRAIN_BLEND_WIDTH = engine.DEFAULT_TERRAIN_BLEND_WIDTH ?? 6;
 
 const TILE_FILL = { grassland: "#a9c47f", coast: "#9fc0d2", hills: "#c2a878", desert: "#dcc47c", forest: "#7a9463", mountains: "#b4a487", swamp: "#8a9b78", snow: "#dde6f0" };
@@ -268,6 +285,50 @@ let preset = engine.resolveStylePreset("tolkien-ink");
 // Theme-System (Roadmap W3 #6): Preset folgt doc.map.stylePreset.
 function applyPresetFromDoc() {
   preset = engine.resolveStylePreset(doc && doc.map && doc.map.stylePreset);
+  syncWorldDims();
+}
+
+// Kartengröße ändern (Roadmap W4 #16): Ränder wachsen/schrumpfen top-left-
+// verankert — Terrain-Zellen (c,r) und Höhenfeld bleiben, normalisierte
+// Geometrie/Objekte werden um das Größenverhältnis skaliert, damit alles
+// visuell an derselben Stelle bleibt und nur Rand-Fläche hinzukommt/wegfällt.
+function scaleCoordPair(p, sx, sy) { return [Math.max(0, Math.min(1, p[0] * sx)), Math.max(0, Math.min(1, p[1] * sy))]; }
+function scaleGeometryInPlace(g, sx, sy) {
+  if (!g) return;
+  if (g.type === "Point" || g.type === "LabelAnchor") {
+    if (g.coordinates) g.coordinates = scaleCoordPair(g.coordinates, sx, sy);
+    if (Array.isArray(g.pathCoordinates)) g.pathCoordinates = g.pathCoordinates.map((p) => scaleCoordPair(p, sx, sy));
+  } else if (g.type === "Path") {
+    if (Array.isArray(g.coordinates)) g.coordinates = g.coordinates.map((p) => scaleCoordPair(p, sx, sy));
+  } else if (g.type === "Polygon") {
+    if (Array.isArray(g.rings)) g.rings = g.rings.map((ring) => ring.map((p) => scaleCoordPair(p, sx, sy)));
+  }
+}
+function resizeMap(newCols, newRows) {
+  if (!doc || !doc.tileLayer) return;
+  const tl = doc.tileLayer;
+  const oldCols = tl.cols || COLS, oldRows = tl.rows || ROWS;
+  if (newCols === oldCols && newRows === oldRows) return;
+  pushUndo();
+  const sx = oldCols / newCols, sy = oldRows / newRows;
+  for (const f of doc.features) scaleGeometryInPlace(f.geometry, sx, sy);
+  for (const o of doc.objects) { o.x = Math.max(0, Math.min(1, o.x * sx)); o.y = Math.max(0, Math.min(1, o.y * sy)); }
+  // Zellen/Höhenfeld bleiben top-left-verankert; beim Verkleinern Randzellen kappen.
+  if (newCols < oldCols || newRows < oldRows) {
+    for (const store of [tl.cells, tl.elevation]) {
+      if (!store) continue;
+      for (const key of Object.keys(store)) {
+        const [c, r] = key.split(",").map(Number);
+        if (c >= newCols || r >= newRows) delete store[key];
+      }
+    }
+  }
+  tl.cols = newCols; tl.rows = newRows;
+  syncWorldDims();
+  invalidateElevationCache();
+  fitted = false; resize();
+  markDirty(); refreshChrome();
+  flash("🗺 Kartengröße: " + newCols + "×" + newRows);
 }
 
 // Werkzeug-Definitionen (inkl. Curved Label als eigenes Tool, README §11).
@@ -2731,6 +2792,15 @@ function buildSidebar() {
     else delete doc.tileLayer.climateEnabled;
     markDirty(); draw();
   });
+  // Kartengröße (Roadmap W4 #16): Grid-/Weltgröße wählbar; Ränder wachsen.
+  const ms = document.createElement("div");
+  ms.style.cssText = "padding:8px 2px 2px;";
+  ms.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Kartengröße</div><select id="map-size" class="sel-select" style="width:100%;">' + MAP_SIZE_PRESETS.map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("") + "</select>";
+  swatches.parentElement.appendChild(ms);
+  ms.querySelector("select").addEventListener("change", (e) => {
+    const preset2 = MAP_SIZE_PRESETS.find((p) => p[0] === e.target.value);
+    if (preset2) resizeMap(preset2[2], preset2[3]);
+  });
   swatches.parentElement.appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
@@ -2865,6 +2935,8 @@ function refreshChrome() {
   if (lightSel && doc && doc.tileLayer) lightSel.value = doc.tileLayer.lightDir || "nw";
   const climateBox = el("climate-toggle");
   if (climateBox && doc && doc.tileLayer) climateBox.checked = doc.tileLayer.climateEnabled === true;
+  const sizeSel = el("map-size");
+  if (sizeSel && doc && doc.tileLayer) sizeSel.value = (doc.tileLayer.cols || 64) + "x" + (doc.tileLayer.rows || 40);
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
