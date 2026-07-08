@@ -152,6 +152,13 @@
       <!-- Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe -->
       <div id="layer-panel" style="position:absolute; left:12px; bottom:34px; display:none; flex-direction:column; gap:3px; padding:8px 10px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; font-size:10.5px; box-shadow:0 2px 8px rgba(0,0,0,.22); backdrop-filter:blur(10px);"></div>
 
+      <!-- Kontext-Mini-Toolbar (Roadmap W4 #14): Schnellaktionen am selektierten Objekt -->
+      <div id="mini-toolbar" style="position:absolute; display:none; gap:2px; padding:3px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.28); z-index:20; transform:translate(-50%,-100%);">
+        <button data-mini="dup" title="Duplizieren (Strg+D)" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">⧉</button>
+        <button data-mini="vis" title="Portal-Sichtbarkeit umschalten" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">👁</button>
+        <button data-mini="del" title="Löschen (Entf)" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">🗑</button>
+      </div>
+
       <!-- Minimap (Roadmap W3 #13): Weltübersicht, Klick/Ziehen = Kamera-Pan -->
       <canvas id="minimap" width="176" height="110" title="Minimap — Klick oder Ziehen bewegt die Kamera" style="position:absolute; right:12px; bottom:34px; width:176px; height:110px; border:1.5px solid var(--uwe-border); border-radius:8px; background:var(--uwe-surface); box-shadow:0 2px 8px rgba(0,0,0,.22); cursor:crosshair; display:none;"></canvas>
 
@@ -1124,6 +1131,25 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawScene(ctx, cssW, cssH, true);
   scheduleMinimap();
+  updateMiniToolbar();
+}
+
+// Kontext-Mini-Toolbar (Roadmap W4 #14): schwebt über dem einzeln
+// selektierten Objekt/Feature und bietet Schnellaktionen (CoK-Ergonomie).
+function updateMiniToolbar() {
+  const mt = el("mini-toolbar");
+  if (!mt) return;
+  if (isView() || selection.size !== 1 || !doc) { mt.style.display = "none"; return; }
+  const k = [...selection][0];
+  const o = doc.objects.find((x) => x._key === k);
+  const f = o ? null : doc.features.find((x) => x._key === k);
+  const anchor = o ? [o.x, o.y] : (f ? featureAnchorPoint(f) : null);
+  if (!anchor) { mt.style.display = "none"; return; }
+  const [cx, cy] = n2c(anchor[0], anchor[1]);
+  if (cx < 0 || cy < 0 || cx > cssW || cy > cssH) { mt.style.display = "none"; return; }
+  mt.style.left = cx + "px";
+  mt.style.top = Math.max(24, cy - 20) + "px";
+  mt.style.display = "flex";
 }
 
 // Minimap (Roadmap W3 #13): Weltübersicht unten rechts. Rendert gedrosselt
@@ -3474,6 +3500,19 @@ function wire() {
   lpanel.addEventListener("change", (e) => {
     const k = e.target && e.target.dataset ? e.target.dataset.layer : null;
     if (k) { layerVis[k] = !!e.target.checked; draw(); }
+  });
+
+  el("mini-toolbar").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mini]");
+    if (!btn || selection.size !== 1) return;
+    const act = btn.dataset.mini;
+    if (act === "dup") { copySelection(); pasteClipboard(); }
+    else if (act === "del") { eraseSelection(); }
+    else if (act === "vis") {
+      const k = [...selection][0];
+      const ent = doc.objects.find((x) => x._key === k) || doc.features.find((x) => x._key === k);
+      if (ent) setSelectionVisibility(ent.visibility === "player_visible" ? "dm_only" : "player_visible");
+    }
   });
 
   const mm = el("minimap");
