@@ -130,6 +130,8 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/agent-jobs/*",
   "/api/ideas",
   "/api/ideas/*",
+  "/api/projects",
+  "/api/projects/*",
   "/api/calendar",
   "/api/calendar/*",
   "/api/dnd-api",

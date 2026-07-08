@@ -112,6 +112,42 @@ export async function deleteProjectAction(formData: FormData) {
   redirect("/projects");
 }
 
+export async function addProjectStepAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const projectId = String(formData.get("projectId") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  if (!projectId || !title) {
+    return;
+  }
+  await lifeAdmin().addProjectStep(projectId, title);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function toggleProjectStepAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const projectId = String(formData.get("projectId") || "").trim();
+  const stepId = String(formData.get("stepId") || "").trim();
+  if (!projectId || !stepId) {
+    return;
+  }
+  await lifeAdmin().setProjectStepDone(stepId, formData.get("done") === "1");
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function deleteProjectStepAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const projectId = String(formData.get("projectId") || "").trim();
+  const stepId = String(formData.get("stepId") || "").trim();
+  if (!projectId || !stepId) {
+    return;
+  }
+  await lifeAdmin().deleteProjectStep(stepId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
 export async function advanceWorkshopStatusAction(formData: FormData) {
   await requireStudioActionAuth();
 

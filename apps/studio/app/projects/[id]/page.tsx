@@ -16,10 +16,14 @@ import {
 import { AdminEntityLinksPanel } from "@/components/admin/AdminEntityLinksPanel";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
+  addProjectStepAction,
   deleteProjectAction,
+  deleteProjectStepAction,
+  toggleProjectStepAction,
   updateProjectAction,
   updateProjectStatusAction,
 } from "../../life-admin-actions";
+import { ProjectMediaLibrary } from "./ProjectMediaLibrary";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -40,6 +44,8 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   const { project, linkedCaptures } = detail;
   const links = asLinkList(project.links);
+  const steps = project.steps;
+  const doneStepCount = steps.filter((step) => step.done).length;
 
   return (
     <StudioShell
@@ -60,7 +66,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         <Link href="/projects">← Alle Projekte</Link> ·{" "}
         <Link href={`/projects?category=${project.category}`}>
           {PROJECT_CATEGORY_LABELS[project.category]} filtern
-        </Link>
+        </Link>{" "}
+        · <a href="#projekt-bearbeiten">Projekt bearbeiten ↓</a>
       </p>
 
       <section className="uwe-v2-card uwe-v2-section">
@@ -146,6 +153,77 @@ export default async function ProjectDetailPage({ params }: Props) {
         </section>
       )}
 
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">
+          Schritte
+          {steps.length > 0 && (
+            <span className="uwe-dashboard-muted" style={{ fontWeight: 400 }}>
+              {" "}
+              ({doneStepCount}/{steps.length} erledigt)
+            </span>
+          )}
+        </h2>
+        {steps.length > 0 ? (
+          <ul className="uwe-project-steps">
+            {steps.map((step) => (
+              <li key={step.id} className="uwe-project-step" data-done={step.done ? "true" : undefined}>
+                <form action={toggleProjectStepAction} className="uwe-project-step-toggle">
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input type="hidden" name="stepId" value={step.id} />
+                  <input type="hidden" name="done" value={step.done ? "0" : "1"} />
+                  <button
+                    type="submit"
+                    className="uwe-project-step-check"
+                    aria-label={step.done ? "Als offen markieren" : "Als erledigt markieren"}
+                    aria-pressed={step.done}
+                  >
+                    {step.done ? "✓" : ""}
+                  </button>
+                </form>
+                <span className="uwe-project-step-title">{step.title}</span>
+                <form action={deleteProjectStepAction}>
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input type="hidden" name="stepId" value={step.id} />
+                  <button
+                    type="submit"
+                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+                    aria-label="Schritt löschen"
+                  >
+                    Löschen
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="uwe-dashboard-muted">Noch keine Schritte. Lege unten den ersten an.</p>
+        )}
+        <form action={addProjectStepAction} className="uwe-project-step-add">
+          <input type="hidden" name="projectId" value={project.id} />
+          <input
+            name="title"
+            placeholder="Neuen Schritt hinzufügen…"
+            required
+            aria-label="Neuer Schritt"
+          />
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+            Hinzufügen
+          </button>
+        </form>
+      </section>
+
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Mediathek</h2>
+        <ProjectMediaLibrary
+          projectId={project.id}
+          initialImages={project.images.map((image) => ({
+            id: image.id,
+            caption: image.caption,
+            originalFilename: image.originalFilename,
+          }))}
+        />
+      </section>
+
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Übersicht</h2>
         <div className="uwe-dashboard-grid">
@@ -220,7 +298,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         </section>
       )}
 
-      <section className="uwe-v2-card uwe-v2-section">
+      <section className="uwe-v2-card uwe-v2-section" id="projekt-bearbeiten">
         <h2 className="uwe-v2-section-title">Projekt bearbeiten</h2>
         <form action={updateProjectAction} className="uwe-brain-create-form">
           <input type="hidden" name="id" value={project.id} />
@@ -272,9 +350,18 @@ export default async function ProjectDetailPage({ params }: Props) {
             Notizen
             <textarea name="notes" rows={2} defaultValue={project.notes} />
           </label>
-          <label>
-            Links (eine Zeile pro Link: <code>Label | https://…</code>)
-            <textarea name="links" rows={3} defaultValue={formatLinksForForm(project.links)} />
+          <label className="uwe-field-with-hint">
+            <span className="uwe-field-label-row">
+              Links
+              <span className="uwe-field-hint">eine Zeile pro Link: Label | https://…</span>
+            </span>
+            <textarea
+              name="links"
+              rows={3}
+              className="uwe-field-mono"
+              placeholder="Anleitung | https://example.com/kintsugi"
+              defaultValue={formatLinksForForm(project.links)}
+            />
           </label>
           <label>
             Kosten (Cent)

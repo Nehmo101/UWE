@@ -87,6 +87,8 @@ export class LifeAdminProjectService {
             world: { select: { slug: true } },
           },
         },
+        steps: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+        images: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
       },
     });
   }
@@ -135,6 +137,85 @@ export class LifeAdminProjectService {
       },
     });
     return this.db.personalProject.delete({ where: { id } });
+  }
+
+  // — Steps (per-project checklist) —
+
+  async addProjectStep(projectId: string, title: string) {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const last = await this.db.projectStep.findFirst({
+      where: { projectId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    return this.db.projectStep.create({
+      data: {
+        projectId,
+        title: trimmed,
+        sortOrder: (last?.sortOrder ?? -1) + 1,
+      },
+    });
+  }
+
+  async setProjectStepDone(stepId: string, done: boolean) {
+    return this.db.projectStep.update({
+      where: { id: stepId },
+      data: { done },
+    });
+  }
+
+  async updateProjectStepTitle(stepId: string, title: string) {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      return null;
+    }
+    return this.db.projectStep.update({
+      where: { id: stepId },
+      data: { title: trimmed },
+    });
+  }
+
+  async deleteProjectStep(stepId: string) {
+    return this.db.projectStep.delete({ where: { id: stepId } });
+  }
+
+  // — Images (Mediathek) —
+
+  async addProjectImage(
+    projectId: string,
+    input: {
+      storageKey: string;
+      originalFilename?: string;
+      mimeType?: string;
+      caption?: string;
+    },
+  ) {
+    const last = await this.db.projectImage.findFirst({
+      where: { projectId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    return this.db.projectImage.create({
+      data: {
+        projectId,
+        storageKey: input.storageKey,
+        originalFilename: input.originalFilename ?? "",
+        mimeType: input.mimeType ?? "application/octet-stream",
+        caption: input.caption ?? "",
+        sortOrder: (last?.sortOrder ?? -1) + 1,
+      },
+    });
+  }
+
+  async getProjectImage(imageId: string) {
+    return this.db.projectImage.findUnique({ where: { id: imageId } });
+  }
+
+  async deleteProjectImage(imageId: string) {
+    return this.db.projectImage.delete({ where: { id: imageId } });
   }
 
   async getPersonalProjectDashboardStats(): Promise<PersonalProjectDashboardStats> {

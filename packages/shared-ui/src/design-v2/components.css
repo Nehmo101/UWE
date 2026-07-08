@@ -290,6 +290,15 @@
   margin-bottom: var(--uwe-v2-section-gap);
 }
 
+/*
+ * When a section is *also* a card (`.uwe-v2-card.uwe-v2-section`), the card
+ * surface needs inner padding — otherwise the section title and content sit
+ * flush against (and visually overlap) the card border.
+ */
+.uwe-v2-section.uwe-v2-card {
+  padding: var(--uwe-v2-content-gap);
+}
+
 .uwe-v2-section-title {
   margin: 0;
   font-family: var(--uwe-zone-heading-font);

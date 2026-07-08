@@ -161,6 +161,27 @@ export class LifeAdminService {
   getPersonalProjectDashboardStats(...args: Parameters<LifeAdminSubServices["project"]["getPersonalProjectDashboardStats"]>) {
     return this.project.getPersonalProjectDashboardStats(...args);
   }
+  addProjectStep(...args: Parameters<LifeAdminSubServices["project"]["addProjectStep"]>) {
+    return this.project.addProjectStep(...args);
+  }
+  setProjectStepDone(...args: Parameters<LifeAdminSubServices["project"]["setProjectStepDone"]>) {
+    return this.project.setProjectStepDone(...args);
+  }
+  updateProjectStepTitle(...args: Parameters<LifeAdminSubServices["project"]["updateProjectStepTitle"]>) {
+    return this.project.updateProjectStepTitle(...args);
+  }
+  deleteProjectStep(...args: Parameters<LifeAdminSubServices["project"]["deleteProjectStep"]>) {
+    return this.project.deleteProjectStep(...args);
+  }
+  addProjectImage(...args: Parameters<LifeAdminSubServices["project"]["addProjectImage"]>) {
+    return this.project.addProjectImage(...args);
+  }
+  getProjectImage(...args: Parameters<LifeAdminSubServices["project"]["getProjectImage"]>) {
+    return this.project.getProjectImage(...args);
+  }
+  deleteProjectImage(...args: Parameters<LifeAdminSubServices["project"]["deleteProjectImage"]>) {
+    return this.project.deleteProjectImage(...args);
+  }
   listWorkshopProjects(...args: Parameters<LifeAdminSubServices["workshop"]["listWorkshopProjects"]>) {
     return this.workshop.listWorkshopProjects(...args);
   }

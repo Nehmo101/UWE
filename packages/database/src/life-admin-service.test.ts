@@ -52,6 +52,54 @@ describe("life admin service", () => {
     assert.equal(workshop.projectType, "dnd_terrain");
   });
 
+  it("manages per-project steps as an ordered checklist", async () => {
+    const project = await service.createPersonalProject({ name: "Steps project" });
+
+    const first = await service.addProjectStep(project.id, "  Clean edges  ");
+    const second = await service.addProjectStep(project.id, "Mix gold paste");
+    assert.ok(first && second);
+    assert.equal(first.title, "Clean edges");
+    assert.ok(second.sortOrder > first.sortOrder);
+
+    // Empty titles are ignored.
+    assert.equal(await service.addProjectStep(project.id, "   "), null);
+
+    const toggled = await service.setProjectStepDone(first.id, true);
+    assert.equal(toggled.done, true);
+
+    const detail = await service.getPersonalProject(project.id);
+    assert.equal(detail?.steps.length, 2);
+    assert.deepEqual(
+      detail?.steps.map((step) => step.title),
+      ["Clean edges", "Mix gold paste"],
+    );
+
+    await service.deleteProjectStep(second.id);
+    const afterDelete = await service.getPersonalProject(project.id);
+    assert.equal(afterDelete?.steps.length, 1);
+  });
+
+  it("stores and removes project images (Mediathek)", async () => {
+    const project = await service.createPersonalProject({ name: "Media project" });
+
+    const image = await service.addProjectImage(project.id, {
+      storageKey: "capture/2026/07/demo.png",
+      originalFilename: "demo.png",
+      mimeType: "image/png",
+      caption: "Vorher",
+    });
+    assert.equal(image.caption, "Vorher");
+
+    const withImages = await service.getPersonalProject(project.id);
+    assert.equal(withImages?.images.length, 1);
+
+    const fetched = await service.getProjectImage(image.id);
+    assert.equal(fetched?.storageKey, "capture/2026/07/demo.png");
+
+    await service.deleteProjectImage(image.id);
+    assert.equal(await service.getProjectImage(image.id), null);
+  });
+
   it("returns personal project dashboard stats by category and status", async () => {
     await service.createPersonalProject({ name: "UWE stats", category: "uwe", status: "active" });
     await service.createPersonalProject({

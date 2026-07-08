@@ -2346,11 +2346,44 @@ model PersonalProject {
 
   world World? @relation(fields: [worldId], references: [id], onDelete: SetNull)
   page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  steps  ProjectStep[]
+  images ProjectImage[]
 
   @@index([status])
   @@index([category])
   @@index([worldId])
   @@map("personal_projects")
+}
+
+model ProjectStep {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  title     String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project PersonalProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
+  @@map("project_steps")
+}
+
+model ProjectImage {
+  id               String   @id @default(cuid())
+  projectId        String   @map("project_id")
+  storageKey       String   @map("storage_key")
+  originalFilename String   @default("") @map("original_filename")
+  mimeType         String   @default("application/octet-stream") @map("mime_type")
+  caption          String   @default("")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  project PersonalProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
+  @@map("project_images")
 }
 
 model WorkshopProject {
