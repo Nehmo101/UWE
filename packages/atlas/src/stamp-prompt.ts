@@ -3,7 +3,9 @@
  *
  * `ATLAS_STAMP_STYLE_PROMPT` is a fixed style suffix for all atlas stamp
  * generation requests.  The DM's keyword is prepended; the style prompt
- * ensures Tolkien ink line-art with a transparent background.
+ * enforces the map's canonical GOUACHE look (opaque painted map asset with a
+ * darker pigment edge on a transparent background) — the binding style rules
+ * live in `docs/prompts/atlas-pictogram-styleguide.md` (section "Gouache").
  *
  * `assembleStampPrompt(keyword)` is the canonical assembly function used by
  * both the server action and the unit tests.
@@ -11,13 +13,16 @@
 
 /**
  * Fixed style descriptor appended to every atlas stamp image-generation prompt.
- * Produces Tolkien-style ink line-art stamps suitable for fantasy map palettes.
+ * Produces opaque gouache-painted map stamps matching the builtin
+ * `@uwe/atlas/assets` recipes (filled shapes, soft shadow, highlight, darker
+ * pigment edge — never plain line art).
  */
 export const ATLAS_STAMP_STYLE_PROMPT =
-  "tolkien-style ink line art, fantasy cartography map stamp, " +
-  "black ink on transparent background, medieval illuminated manuscript style, " +
-  "highly detailed pen and ink illustration, no color fill, pure line art, " +
-  "transparent background, isolated map symbol, stamp style, DnD map icon";
+  "gouache painted fantasy map asset, opaque matte painted map stamp, " +
+  "flat painterly fills with soft shadow and subtle highlight, " +
+  "darker pigment edge outline, muted earth palette on transparent background, " +
+  "top-down-friendly medieval cartography icon, isolated map symbol, " +
+  "no photo, no 3d render, no plain line art, DnD map stamp";
 
 /**
  * Assembles the full image-generation prompt for a map stamp variant.

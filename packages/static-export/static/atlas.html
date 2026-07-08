@@ -58,6 +58,7 @@
   .swatch-btn .chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
   .glyph-btn { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
   .glyph-btn.on { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
+  .glyph-btn.fav { box-shadow: inset 0 0 0 1.5px #d9a441; }
   .glyph-btn .ico { width: 22px; height: 22px; }
   .grp-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
 
@@ -76,6 +77,27 @@
   /* Mode-driven visibility (server-filter is authoritative in production; this is UX). */
   .atlas-app.is-view .editor-only { display: none !important; }
   .atlas-app:not(.is-view) .view-only { display: none !important; }
+
+  /* Werkstatt-Layout (Roadmap W4 #14): Werkzeug-Schiene · Canvas · Inspektor · Asset-Shelf */
+  #tool-rail { flex: none; width: 168px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding: 12px 10px; border-right: 1px solid rgba(0,0,0,0.3); }
+  #inspector { flex: none; width: 240px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(0,0,0,0.3); transition: width .16s ease; }
+  #inspector.collapsed { width: 30px; }
+  #inspector.collapsed #inspector-scroll { display: none; }
+  #inspector-head { flex: none; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-bottom: 1px solid rgba(0,0,0,0.25); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); }
+  #inspector.collapsed #inspector-title { display: none; }
+  #inspector-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .dock-btn { margin-left: auto; border: 0; background: transparent; color: var(--uwe-sidebar-fg-muted); font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+  .dock-btn:hover { background: rgba(255,255,255,0.08); color: var(--uwe-sidebar-fg); }
+  #asset-shelf { flex: none; display: flex; align-items: stretch; gap: 14px; height: 138px; padding: 8px 12px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); border-top: 1px solid rgba(0,0,0,0.3); transition: height .16s ease; }
+  #asset-shelf.collapsed { height: 30px; overflow: hidden; }
+  #asset-shelf .shelf-group { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+  #asset-shelf .shelf-assets { flex: 1; min-width: 0; }
+  #asset-shelf.collapsed .shelf-group { display: none; }
+  /* Inspektor-Auswahlkarte: statt schwebendem Overlay nun angedockt */
+  #inspector #sel-panel { position: static; width: auto; margin-bottom: 10px; }
+  /* Asset-Browser-Steuerung links neben dem horizontalen Icon-Grid */
+  #assets-row > div:first-child { flex: none; width: 158px; align-self: flex-start; }
+  #asset-shelf .shelf-assets { flex: 1; }
 </style>
 </head>
 <body>
@@ -112,41 +134,37 @@
     </div>
   </header>
 
-  <div style="flex:1; display:flex; min-height:0;">
-    <!-- ===================== LEFT SIDEBAR ===================== -->
-    <aside style="flex:none; width:212px; background:var(--uwe-sidebar-bg); color:var(--uwe-sidebar-fg); display:flex; flex-direction:column; overflow-y:auto; padding:12px 10px; gap:4px; border-right:1px solid rgba(0,0,0,0.3);">
-      <div class="editor-only" style="flex-direction:column; gap:4px; display:flex;">
-        <div class="grp-label">Werkzeuge</div>
-        <div id="tool-list" style="display:flex; flex-direction:column; gap:4px;"></div>
-
-        <div class="grp-label" style="margin-top:10px;">Terrain-Pinsel</div>
-        <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px;"></div>
-
-        <div class="grp-label" style="margin-top:10px;">Objekte &amp; Bauten</div>
-        <div id="glyph-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:0 2px;"></div>
-      </div>
-
-      <div class="view-only" style="flex-direction:column; gap:6px; display:flex;">
-        <div class="grp-label">Legende</div>
-        <div id="legend-list" style="display:flex; flex-direction:column; gap:2px;"></div>
-      </div>
-
-      <div class="editor-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+  <!-- Werkstatt-Layout (Roadmap W4 #14): Schiene · Canvas · Inspektor, darunter Asset-Shelf -->
+  <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+   <div style="flex:1; display:flex; min-height:0;">
+    <!-- ===================== LEFT TOOL RAIL ===================== -->
+    <aside id="tool-rail" class="editor-only">
+      <div class="grp-label">Werkzeuge</div>
+      <div id="tool-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+      <div style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
         <div>Links = malen/platzieren</div>
         <div>Rechts = löschen</div>
-        <div>Ziehen (Ø Werkzeug) = schwenken</div>
+        <div>Ziehen (Ø) = schwenken</div>
         <div>Scroll = zoomen</div>
-      </div>
-      <div class="view-only" style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
-        <div>Nur Ansicht — Spieler-Portal</div>
-        <div>Klick = Ebene wechseln / Wiki</div>
-        <div>Ziehen = schwenken · Scroll = zoomen</div>
       </div>
     </aside>
 
     <!-- ===================== CANVAS STAGE ===================== -->
     <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
       <canvas id="atlas-canvas" style="width:100%; height:100%;"></canvas>
+
+      <!-- Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe -->
+      <div id="layer-panel" style="position:absolute; left:12px; bottom:34px; display:none; flex-direction:column; gap:3px; padding:8px 10px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; font-size:10.5px; box-shadow:0 2px 8px rgba(0,0,0,.22); backdrop-filter:blur(10px);"></div>
+
+      <!-- Kontext-Mini-Toolbar (Roadmap W4 #14): Schnellaktionen am selektierten Objekt -->
+      <div id="mini-toolbar" style="position:absolute; display:none; gap:2px; padding:3px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.28); z-index:20; transform:translate(-50%,-100%);">
+        <button data-mini="dup" title="Duplizieren (Strg+D)" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">⧉</button>
+        <button data-mini="vis" title="Portal-Sichtbarkeit umschalten" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">👁</button>
+        <button data-mini="del" title="Löschen (Entf)" style="border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px;">🗑</button>
+      </div>
+
+      <!-- Minimap (Roadmap W3 #13): Weltübersicht, Klick/Ziehen = Kamera-Pan -->
+      <canvas id="minimap" width="176" height="110" title="Minimap — Klick oder Ziehen bewegt die Kamera" style="position:absolute; right:12px; bottom:34px; width:176px; height:110px; border:1.5px solid var(--uwe-border); border-radius:8px; background:var(--uwe-surface); box-shadow:0 2px 8px rgba(0,0,0,.22); cursor:crosshair; display:none;"></canvas>
 
       <div id="subbar" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:12px; padding:6px 12px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:10px; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:11.5px;">
         <span id="subbar-content"></span>
@@ -161,12 +179,6 @@
       <div style="position:absolute; bottom:52px; right:16px; pointer-events:none; text-align:center;">
         <div style="width:80px; height:8px; border:1px solid #1a1008; background:repeating-linear-gradient(to right,#1a1008 0 10px,#f2e8c9 10px 20px);"></div>
         <div style="font-family:var(--serif); font-size:10px; color:#1a1008; margin-top:2px;">0 — 100 leagues</div>
-      </div>
-
-      <div id="sel-panel" style="position:absolute; top:14px; left:14px; display:none; width:210px; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; backdrop-filter:blur(10px); box-shadow:0 4px 14px rgba(0,0,0,.2);">
-        <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · <span id="sel-kind"></span></div>
-        <div id="sel-controls"></div>
-        <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
       </div>
 
       <div id="ai-review" style="position:absolute; top:52px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:10px; padding:9px 14px; background:var(--uwe-surface); border:1.5px solid var(--uwe-accent); border-radius:11px; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.22); font-size:12.5px;">
@@ -203,6 +215,12 @@
           </div>
           <div class="row">
             <label class="chk"><input id="exp-deco" type="checkbox" checked />Kompass &amp; Maßstab</label>
+            <select id="exp-cartouche" class="sel-select" title="Titelkartusche (Roadmap W4 #23)">
+              <option value="none">Keine Kartusche</option>
+              <option value="scroll">Kartusche: Schriftrolle</option>
+              <option value="banner">Kartusche: Banner</option>
+              <option value="plain">Kartusche: Doppellinien</option>
+            </select>
             <label class="chk"><input id="exp-frame" type="checkbox" checked />Tintenrahmen</label>
           </div>
           <div id="exp-hint" style="font-size:10.5px;color:var(--uwe-fg-muted);margin-bottom:12px;"></div>
@@ -221,6 +239,50 @@
         <div style="font-size:13px; color:var(--uwe-fg-muted);">Wende dich an deinen Spielleiter.</div>
       </div>
     </main>
+
+    <!-- ===================== RIGHT INSPECTOR (andockbar) ===================== -->
+    <aside id="inspector">
+      <div id="inspector-head">
+        <span id="inspector-title">Inspektor</span>
+        <button id="btn-dock-insp" class="dock-btn" title="Inspektor ein-/ausklappen">⇥</button>
+      </div>
+      <div id="inspector-scroll">
+        <!-- Angedockte Auswahlkarte (vorher schwebend über dem Canvas) -->
+        <div id="sel-panel" style="display:none; padding:12px 13px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.18);">
+          <div style="font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--uwe-fg-muted); margin-bottom:8px;">Auswahl · <span id="sel-kind"></span></div>
+          <div id="sel-controls"></div>
+          <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
+        </div>
+        <!-- Karten-Einstellungen (JS hängt Theme/Licht/Klima/Größe/… hier an) -->
+        <div id="inspector-body" class="editor-only" style="display:flex; flex-direction:column; gap:4px;"></div>
+        <!-- Legende (nur Ansicht) -->
+        <div class="view-only" style="flex-direction:column; gap:6px; display:flex;">
+          <div class="grp-label">Legende</div>
+          <div id="legend-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+          <div style="margin-top:12px; font-size:10px; color:var(--uwe-sidebar-fg-muted); line-height:1.6;">
+            <div>Nur Ansicht — Spieler-Portal</div>
+            <div>Klick = Ebene wechseln / Wiki</div>
+            <div>Ziehen = schwenken · Scroll = zoomen</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+   </div>
+
+   <!-- ===================== BOTTOM ASSET SHELF ===================== -->
+   <div id="asset-shelf" class="editor-only">
+     <button id="btn-dock-shelf" class="dock-btn" title="Asset-Shelf ein-/ausklappen" style="margin:0; align-self:flex-start;">▾</button>
+     <div class="shelf-group" style="width:168px;">
+       <div class="grp-label">Terrain-Pinsel</div>
+       <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px; overflow-y:auto;"></div>
+     </div>
+     <div class="shelf-group shelf-assets">
+       <div class="grp-label">Objekte &amp; Bauten</div>
+       <div id="assets-row" style="display:flex; gap:8px; flex:1; min-height:0;">
+         <div id="glyph-grid" style="display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, 44px); gap:5px; padding:2px; overflow-x:auto; flex:1;"></div>
+       </div>
+     </div>
+   </div>
   </div>
 
   <!-- ===================== STATUS BAR ===================== -->
@@ -242,8 +304,25 @@ import * as engine from "./atlas-engine.js";
 // ===========================================================================
 // Konstanten & Paletten
 // ===========================================================================
-const TILE = 32, COLS = 64, ROWS = 40;
-const WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+// Kartengröße (Roadmap W4 #16): Defaults; die aktiven Werte kommen aus
+// doc.tileLayer (cols/rows/tile) und werden via syncWorldDims() gespiegelt.
+let TILE = 32, COLS = 64, ROWS = 40;
+let WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
+// Größen-Presets bewahren das 1.6-Seitenverhältnis ⇒ normalisierte [0,1]-
+// Geometrie rendert unverändert, nur die Terrain-Auflösung/Weltgröße ändert sich.
+const MAP_SIZE_PRESETS = [
+  ["64x40", "Klein (64×40)", 64, 40],
+  ["96x60", "Mittel (96×60)", 96, 60],
+  ["128x80", "Groß (128×80)", 128, 80],
+  ["192x120", "Riesig (192×120)", 192, 120],
+];
+function syncWorldDims() {
+  const tl = doc && doc.tileLayer;
+  if (tl && tl.cols > 0 && tl.rows > 0) {
+    COLS = tl.cols; ROWS = tl.rows; TILE = tl.tile || 32;
+    WORLD_W = COLS * TILE; WORLD_H = ROWS * TILE;
+  }
+}
 const DEFAULT_TERRAIN_BLEND_WIDTH = engine.DEFAULT_TERRAIN_BLEND_WIDTH ?? 6;
 
 const TILE_FILL = { grassland: "#a9c47f", coast: "#9fc0d2", hills: "#c2a878", desert: "#dcc47c", forest: "#7a9463", mountains: "#b4a487", swamp: "#8a9b78", snow: "#dde6f0" };
@@ -251,7 +330,55 @@ const BIOME_LABEL = { grassland: "Grasland", coast: "Wasser", hills: "Erde", des
 const TERRAIN_ORDER = ["grassland", "coast", "hills", "desert", "forest", "mountains", "swamp", "snow"];
 const BIOME_POLY_FILL = { forest: "rgba(74,103,65,0.28)", mountains: "rgba(122,107,82,0.24)", hills: "rgba(154,136,96,0.20)", grassland: "rgba(164,196,130,0.24)", desert: "rgba(220,196,130,0.30)", swamp: "rgba(94,120,80,0.32)", coast: "rgba(168,196,212,0.38)", snow: "rgba(220,228,240,0.38)" };
 
-const preset = engine.resolveStylePreset("tolkien-ink");
+let preset = engine.resolveStylePreset("tolkien-ink");
+// Theme-System (Roadmap W3 #6): Preset folgt doc.map.stylePreset.
+function applyPresetFromDoc() {
+  preset = engine.resolveStylePreset(doc && doc.map && doc.map.stylePreset);
+  syncWorldDims();
+}
+
+// Kartengröße ändern (Roadmap W4 #16): Ränder wachsen/schrumpfen top-left-
+// verankert — Terrain-Zellen (c,r) und Höhenfeld bleiben, normalisierte
+// Geometrie/Objekte werden um das Größenverhältnis skaliert, damit alles
+// visuell an derselben Stelle bleibt und nur Rand-Fläche hinzukommt/wegfällt.
+function scaleCoordPair(p, sx, sy) { return [Math.max(0, Math.min(1, p[0] * sx)), Math.max(0, Math.min(1, p[1] * sy))]; }
+function scaleGeometryInPlace(g, sx, sy) {
+  if (!g) return;
+  if (g.type === "Point" || g.type === "LabelAnchor") {
+    if (g.coordinates) g.coordinates = scaleCoordPair(g.coordinates, sx, sy);
+    if (Array.isArray(g.pathCoordinates)) g.pathCoordinates = g.pathCoordinates.map((p) => scaleCoordPair(p, sx, sy));
+  } else if (g.type === "Path") {
+    if (Array.isArray(g.coordinates)) g.coordinates = g.coordinates.map((p) => scaleCoordPair(p, sx, sy));
+  } else if (g.type === "Polygon") {
+    if (Array.isArray(g.rings)) g.rings = g.rings.map((ring) => ring.map((p) => scaleCoordPair(p, sx, sy)));
+  }
+}
+function resizeMap(newCols, newRows) {
+  if (!doc || !doc.tileLayer) return;
+  const tl = doc.tileLayer;
+  const oldCols = tl.cols || COLS, oldRows = tl.rows || ROWS;
+  if (newCols === oldCols && newRows === oldRows) return;
+  pushUndo();
+  const sx = oldCols / newCols, sy = oldRows / newRows;
+  for (const f of doc.features) scaleGeometryInPlace(f.geometry, sx, sy);
+  for (const o of doc.objects) { o.x = Math.max(0, Math.min(1, o.x * sx)); o.y = Math.max(0, Math.min(1, o.y * sy)); }
+  // Zellen/Höhenfeld bleiben top-left-verankert; beim Verkleinern Randzellen kappen.
+  if (newCols < oldCols || newRows < oldRows) {
+    for (const store of [tl.cells, tl.elevation]) {
+      if (!store) continue;
+      for (const key of Object.keys(store)) {
+        const [c, r] = key.split(",").map(Number);
+        if (c >= newCols || r >= newRows) delete store[key];
+      }
+    }
+  }
+  tl.cols = newCols; tl.rows = newRows;
+  syncWorldDims();
+  invalidateElevationCache();
+  fitted = false; resize();
+  markDirty(); refreshChrome();
+  flash("🗺 Kartengröße: " + newCols + "×" + newRows);
+}
 
 // Werkzeug-Definitionen (inkl. Curved Label als eigenes Tool, README §11).
 const TOOL_DEFS = [
@@ -259,6 +386,8 @@ const TOOL_DEFS = [
   ["terrain", "Terrain-Pinsel", "G", "terrain", "Tiles malen (Gras/Wasser/Erde/Sand)"],
   ["height", "Höhe", "H", "height", "Höhenfeld malen: Anheben / Absenken / Glätten (Rechtsklick invertiert)"],
   ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
+  ["spray", "Streu-Pinsel", "O", "spray", "Gouache-Assets streuen — gedrückt halten, Rechtsklick löscht"],
+  ["landmass", "Landmasse", "K", "landmass", "Land malen (Küste entsteht organisch) — Rechtsklick malt Wasser"],
   ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
   ["plot", "Objektfläche", "F", "plot", "Gouache-Objekte in ein Polygon streuen"],
@@ -271,13 +400,15 @@ const TOOL_DEFS = [
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", o: "spray", k: "landmass", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
     select: "M4 3 L4 17 L8 13 L11 20 L13 19 L10 12 L16 12 Z",
     terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
     height: "M3 18 L9 7 L13 13 L16 9 L21 18 M6 14 L11 14 M14 13 L18 13 M3 21 L21 21",
+    spray: "M6 7 L6.01 7 M11 4 L11.01 4 M16 8 L16.01 8 M8 12 L8.01 12 M14 13 L14.01 13 M5 17 L5.01 17 M11 18 L11.01 18 M17 18 L17.01 18 M19 12 L19.01 12",
+    landmass: "M3 14 Q6 9 10 12 Q13 14 16 10 Q19 7 21 11 L21 20 L3 20 Z M3 8 Q7 6 11 8 M14 5 Q17 4 20 6",
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
     plot: "M4 7 L12 3 L20 7 L18 18 L7 20 Z M9 10 L9 10 M13 9 L13 9 M16 13 L16 13 M11 16 L11 16",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
@@ -308,12 +439,16 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
 // ===========================================================================
 const state = {
-  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: null, rtxKey: null,
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: "g_oak", rtxKey: null, snap: false,
   heightMode: "raise", heightStrength: 0.15,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
-  toast: null, aiReview: null, stampVariation: true,
+  toast: null, aiReview: null, stampVariation: true, underworld: false,
 };
+// Unterwelt-Ebene (Roadmap W4 #26): Entitäten tragen style.underworld; der
+// Modus-Toggle filtert Erzeugung, Rendering und Hit-Test.
+function entIsUnderworld(e) { return !!(e && e.style && e.style.underworld); }
+function tagUnderworld(e) { if (state.underworld) { e.style = e.style || {}; e.style.underworld = true; } return e; }
 const HEIGHT_MODE_LABEL = { raise: "Anheben", lower: "Absenken", smooth: "Glätten" };
 let doc = null;
 let drawingPoints = [];
@@ -321,6 +456,7 @@ let measurePoints = [];
 let aiDraftFeatures = null;
 let plotFillReview = null;
 let settlementReview = null;
+let territoryReview = null;
 let labelRed = false;
 let keyCounter = 0;
 const nextKey = () => "ck-" + (++keyCounter);
@@ -329,17 +465,25 @@ const nextKey = () => "ck-" + (++keyCounter);
 // der Primär-Key (steuert das Auswahl-Panel), selection ist die volle Menge.
 const selection = new Set();
 let marquee = null;          // {x0,y0,x1,y1} normalisiert — Shift-Rahmenauswahl
+let scaleHandlePt = null;    // {x,y,key} canvas-px — Skalier-Griff der Einzelselektion
+let resizing = null;         // {key, anchor:[cx,cy], startDist, startScale} — Griff-Drag
+let clipboard = null;        // {features:[],objects:[]} — Deep-Copies ohne _key/id
+let pasteCount = 0;          // wachsender Einfüge-Versatz pro Paste
+let dragAxisStart = null;    // [cx,cy] Drag-Beginn — Shift hält die dominante Achse
+let vertexDrag = null;       // {key, index, closed} — Punkt-Griff-Drag (Vertex-Editing)
+let vertexUndoPushed = false;
 let moveUndoPushed = false;  // ein Undo-Schritt pro Drag, nicht pro Pixel
 
 // Pfad-Anhänge (CoK: Objekte säumen Straßen/Flüsse automatisch)
-const attachOpts = { kind: "trees", side: "both", spacing: 0.05 };
+const ATTACH_ALIGN_DEFAULT = true; // Häuser folgen der Straßenrichtung (W4 #27)
+const attachOpts = { kind: "trees", side: "both", spacing: 0.05, align: ATTACH_ALIGN_DEFAULT };
 
 // Siedlungs-Ghost: Hafen/Wasserfront-Parameter (Engine-Option `waterfront`,
 // siehe @uwe/atlas settlement-waterfront.ts). Default AUS = Inland unverändert.
-const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true };
+const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true, condition: "thriving" };
 
 // Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
-const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, rect: null, picking: false };
+const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, cartouche: "none", rect: null, picking: false };
 let exportPickStart = null;  // [nx,ny] während des Rechteck-Aufziehens
 
 const el = (id) => document.getElementById(id);
@@ -347,20 +491,23 @@ const root = el("atlas-root");
 const canvas = el("atlas-canvas");
 let dpr = 1, cssW = 0, cssH = 0, fitted = false;
 let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
+let spraying = null;      // { rng } — aktiver Streu-Pinsel-Strich (W3 #9)
+let paintingLand = false, landWater = false; // Landmassen-Pinsel (W4 #17)
 let paintingHeight = false, heightInvert = false;
 // Für Parallax/Schatten: Maße + Höhenfeld-Status des zuletzt gerenderten Frames
 // (auch beim Offscreen-Export korrekt, da drawScene sie pro Aufruf setzt).
 let sceneW = 0, sceneH = 0, sceneElevOn = false;
 // Hillshade-/Kontur-Cache — invalidiert nach jedem Höhen-Pinselstrich sowie
 // implizit über die elevation-Objektreferenz (Undo/Redo, Bridge-Load).
-let elevCache = { ref: null, steps: 0, shade: null, contours: null };
-function invalidateElevationCache() { elevCache = { ref: null, steps: 0, shade: null, contours: null }; }
+let elevCache = { ref: null, steps: 0, light: "nw", shade: null, contours: null };
+function invalidateElevationCache() { elevCache = { ref: null, steps: 0, light: "nw", shade: null, contours: null }; }
 function elevationVisuals(tl) {
   const steps = tl.contourSteps ?? engine.DEFAULT_CONTOUR_STEPS;
-  if (elevCache.ref !== tl.elevation || elevCache.steps !== steps) {
+  const light = tl.lightDir || "nw";
+  if (elevCache.ref !== tl.elevation || elevCache.steps !== steps || elevCache.light !== light) {
     elevCache = {
-      ref: tl.elevation, steps,
-      shade: engine.createHillshadeCanvas(engine.buildHillshadeRGBA(tl), tl.cols || COLS, tl.rows || ROWS),
+      ref: tl.elevation, steps, light,
+      shade: engine.createHillshadeCanvas(engine.buildHillshadeRGBA(tl, { lightDir: light }), tl.cols || COLS, tl.rows || ROWS),
       contours: null,
     };
   }
@@ -484,11 +631,13 @@ function pushUndo() {
 }
 function applyHistory(json) {
   doc = migrate(JSON.parse(json));
+  applyPresetFromDoc();
   selection.clear();
   drawingPoints = [];
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   if (!doc.nodes.some((n) => n.id === state.nodeId)) state.nodeId = doc.rootNodeId;
   setState({ selectedKey: null, dirty: true, saveStatus: "Ungespeichert" });
   draw();
@@ -552,7 +701,8 @@ function onBridgeMessage(e) {
   else if (d.type === "load" && d.doc) {
     try {
       doc = migrate(d.doc);
-      aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+      applyPresetFromDoc();
+      aiDraftFeatures = null; plotFillReview = null; settlementReview = null; territoryReview = null;
       buildRtxPaletteButtons();
       setState({ nodeId: doc.rootNodeId, selectedKey: null, aiReview: null });
       draw();
@@ -590,6 +740,7 @@ function receiveAiDraft(features) {
   const normalized = normalizeAiDraftFeatures(features);
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   aiDraftFeatures = normalized.map((f) => ({ ...f, _key: nextKey() }));
   setState({ aiReview: { count: aiDraftFeatures.length, label: "KI-Entwurf", unit: "Features" } });
   if (!aiDraftFeatures.length) flash("KI-Entwurf enthielt keine unterstützten Atlas-Features.");
@@ -665,6 +816,7 @@ function receivePlotFillProposal(plotKey, rawProposal, error) {
   if (!objects.length) { flash("KI-Rezept erzeugt keine Objekte für diese Fläche."); return; }
   aiDraftFeatures = null;
   settlementReview = null;
+  territoryReview = null;
   plotFillReview = { plotKey: feature._key, proposal, objects };
   setState({ aiReview: { count: objects.length, label: "Objektfläche", unit: "Ghost-Objekte" } });
   draw();
@@ -674,6 +826,7 @@ function requestPlotFillProposal(feature) {
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   setState({ aiReview: null });
   const styleSeed = feature.style && Number.isFinite(feature.style.seed) ? feature.style.seed : undefined;
   const seed = (styleSeed ?? engine.hashStringToSeed(feature._key || "plot-fill")) >>> 0;
@@ -762,6 +915,9 @@ function ghostSettlementForPlot(feature) {
     nodeId: state.nodeId,
     visibility,
     ...(waterfront ? { waterfront } : {}),
+    ...(settlementWfOpts.condition && settlementWfOpts.condition !== "thriving"
+      ? { condition: settlementWfOpts.condition }
+      : {}),
   });
   const features = (layout.features || []).map((sf) => ({
     ...sf,
@@ -797,6 +953,7 @@ function requestSettlementReview(feature) {
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   setState({ aiReview: null });
   const review = ghostSettlementForPlot(feature);
   if (!review) { flash("Siedlungs-Vorschau ist für diese Fläche nicht verfügbar."); return; }
@@ -855,13 +1012,70 @@ function discardSettlementReview() {
 function acceptAiReview() {
   if (plotFillReview) acceptPlotFillReview();
   else if (settlementReview) acceptSettlementReview();
+  else if (territoryReview) acceptTerritoryReview();
   else acceptAiDraft();
 }
 function discardAiReview() {
   if (plotFillReview) discardPlotFillReview();
   else if (settlementReview) discardSettlementReview();
+  else if (territoryReview) discardTerritoryReview();
   else discardAiDraft();
 }
+
+// Territorien-Vorschlag (Roadmap W4 #21): Grid-Voronoi um Städte/Burgen/Dörfer
+// des aktiven Knotens (Wasser bleibt neutral), Namen aus den Kulturprofilen.
+// Ghost-Review wie bei der Siedlung — Übernehmen erzeugt normale region-
+// Features, die danach per Vertex-Editing verfeinert werden.
+const TERRITORY_SEED_WEIGHTS = {
+  g_city: 1.3, g_capital: 1.5, g_castle: 1.1, g_town: 1.0, g_village: 0.7, g_fort: 1.0,
+  city: 1.3, castle: 1.1, village: 0.7,
+};
+let territoryCulture = "imperial"; // Kulturprofil für generierte Namen (Panel-Auswahl)
+function territorySeedWeight(o) {
+  const key = (o.style && o.style.gouache) || o.paletteItemId;
+  return TERRITORY_SEED_WEIGHTS[key];
+}
+function requestTerritoryReview() {
+  if (!engine.suggestTerritories) { flash("Engine ohne suggestTerritories — Bundle neu bauen"); return; }
+  const seeds = nodeObjects()
+    .filter((o) => territorySeedWeight(o))
+    .map((o) => ({ key: String(o._key || o.id), x: o.x, y: o.y, weight: territorySeedWeight(o) }));
+  if (seeds.length < 2) { flash("Mindestens 2 Städte/Burgen/Dörfer platzieren, dann Territorien vorschlagen"); return; }
+  const tl = doc && doc.tileLayer;
+  const exclude = tl && tl.cells
+    ? (x, y) => tl.cells[Math.min(tl.cols - 1, Math.floor(x * tl.cols)) + "," + Math.min(tl.rows - 1, Math.floor(y * tl.rows))] === "coast"
+    : undefined;
+  const regions = engine.suggestTerritories(seeds, exclude ? { exclude } : {});
+  if (!regions.length) { flash("Kein Territorium ableitbar"); return; }
+  const names = engine.generatePlaceNames
+    ? engine.generatePlaceNames({ culture: territoryCulture, kind: "region", count: regions.length, seed: engine.hashStringToSeed(seeds.map((s) => s.key).join("|")) })
+    : [];
+  aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+  territoryReview = {
+    features: regions.map((r, i) => ({
+      _key: "ghost-territory-" + i, id: "ghost-territory-" + i, nodeId: state.nodeId, kind: "region",
+      geometry: { type: "Polygon", rings: [r.ring.map((pt) => [pt[0], pt[1]])] },
+      labelText: names[i] || ("Territorium " + (i + 1)), labelColor: "black",
+      style: { territorySeedKey: r.key, culture: territoryCulture, ghost: true }, layer: 20, visibility: "dm_only",
+    })),
+  };
+  setState({ aiReview: { count: territoryReview.features.length, label: "Territorien", unit: "Regionen" } });
+  draw();
+}
+function acceptTerritoryReview() {
+  if (!territoryReview) return;
+  pushUndo();
+  for (const ghost of territoryReview.features) {
+    const k = nextKey();
+    const style = { ...(ghost.style || {}) };
+    delete style.ghost;
+    doc.features.push({ ...ghost, id: k, _key: k, style });
+  }
+  territoryReview = null;
+  setState({ aiReview: null });
+  markDirty(); draw(); refreshChrome();
+}
+function discardTerritoryReview() { territoryReview = null; setState({ aiReview: null }); draw(); }
 function requestHandout() {
   if (embedded) { bridgePost({ type: "handout-request", nodeId: node().id, title: (node().title || "Atlas") + " — Handout" }); flash("Handout-Erstellung angefragt…"); }
   else flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
@@ -942,11 +1156,85 @@ function tileAt(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / 
 // ===========================================================================
 // Rendering
 // ===========================================================================
+// Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe — reine
+// Editor-Session-Schalter (nicht im Doc); Minimap/Export folgen drawScene.
+const layerVis = { terrain: true, regions: true, routes: true, objects: true, labels: true };
+function layerGroupOf(f) {
+  if (f.kind === "region") return "regions";
+  if (f.kind === "river" || f.kind === "road" || f.kind === "vine") return "routes";
+  if (f.kind === "label" || f.kind === "curve") return "labels";
+  if (f.kind === "biome" || f.kind === "plot" || f.kind === "relief") return "terrain";
+  return "objects";
+}
+
 function draw() {
   const c = canvas; if (!c || !doc) return;
   const ctx = c.getContext("2d"); if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawScene(ctx, cssW, cssH, true);
+  scheduleMinimap();
+  updateMiniToolbar();
+}
+
+// Kontext-Mini-Toolbar (Roadmap W4 #14): schwebt über dem einzeln
+// selektierten Objekt/Feature und bietet Schnellaktionen (CoK-Ergonomie).
+function updateMiniToolbar() {
+  const mt = el("mini-toolbar");
+  if (!mt) return;
+  if (isView() || selection.size !== 1 || !doc) { mt.style.display = "none"; return; }
+  const k = [...selection][0];
+  const o = doc.objects.find((x) => x._key === k);
+  const f = o ? null : doc.features.find((x) => x._key === k);
+  const anchor = o ? [o.x, o.y] : (f ? featureAnchorPoint(f) : null);
+  if (!anchor) { mt.style.display = "none"; return; }
+  const [cx, cy] = n2c(anchor[0], anchor[1]);
+  if (cx < 0 || cy < 0 || cx > cssW || cy > cssH) { mt.style.display = "none"; return; }
+  mt.style.left = cx + "px";
+  mt.style.top = Math.max(24, cy - 20) + "px";
+  mt.style.display = "flex";
+}
+
+// Minimap (Roadmap W3 #13): Weltübersicht unten rechts. Rendert gedrosselt
+// über denselben drawScene-Pfad wie der PNG-Export (zoom/pan temporär auf
+// Welt-Fit) und markiert den sichtbaren Ausschnitt; Klick/Ziehen zentriert
+// die Kamera auf den getroffenen Weltpunkt.
+let minimapTimer = 0, minimapLastRender = 0, minimapDragging = false;
+function minimapFit() {
+  const mc = el("minimap");
+  const z = Math.min(mc.width / WORLD_W, mc.height / WORLD_H);
+  return { mc, z, ox: (mc.width - WORLD_W * z) / 2, oy: (mc.height - WORLD_H * z) / 2 };
+}
+function renderMinimap() {
+  const mc = el("minimap"); if (!mc) return;
+  if (isView() || !doc) { mc.style.display = "none"; return; }
+  mc.style.display = "block";
+  minimapLastRender = performance.now();
+  const { z, ox, oy } = minimapFit();
+  const mctx = mc.getContext("2d"); if (!mctx) return;
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  const saved = { zoom: state.zoom, panX: state.panX, panY: state.panY };
+  state.zoom = z; state.panX = ox; state.panY = oy;
+  try { drawScene(mctx, mc.width, mc.height, false); } finally {
+    state.zoom = saved.zoom; state.panX = saved.panX; state.panY = saved.panY;
+  }
+  const [wx0, wy0] = c2w(0, 0), [wx1, wy1] = c2w(cssW, cssH);
+  mctx.save();
+  mctx.strokeStyle = "#c2622b"; mctx.lineWidth = 1.5;
+  mctx.strokeRect(ox + wx0 * z, oy + wy0 * z, (wx1 - wx0) * z, (wy1 - wy0) * z);
+  mctx.restore();
+}
+function scheduleMinimap() {
+  if (performance.now() - minimapLastRender > 400) { renderMinimap(); return; }
+  clearTimeout(minimapTimer);
+  minimapTimer = setTimeout(renderMinimap, 420);
+}
+function minimapPanTo(e) {
+  const { mc, z, ox, oy } = minimapFit();
+  const r = mc.getBoundingClientRect();
+  const wx = (e.clientX - r.left - ox) / z, wy = (e.clientY - r.top - oy) / z;
+  state.panX = cssW / 2 - wx * state.zoom;
+  state.panY = cssH / 2 - wy * state.zoom;
+  draw();
 }
 
 // Kern-Renderer — auch vom PNG-Export genutzt (chrome=false unterdrückt
@@ -965,15 +1253,35 @@ function drawScene(ctx, W, H, chrome) {
 
   // Tile-Layer — fließende, abgerundete Verschmelzung (Canvas-of-Kings-Stil).
   const tl = doc.tileLayer;
-  engine.paintTerrainBlobs(ctx, {
+  if (layerVis.terrain) engine.paintTerrainBlobs(ctx, {
     cols: COLS, rows: ROWS,
     getCell: (cc, rr) => tl.cells[cc + "," + rr],
     tileRect: (cc, rr) => { const [px, py] = w2c(cc * TILE, rr * TILE); const ts = TILE * z; return { x: px, y: py, w: ts, h: ts }; },
     fillFor: (b) => TILE_FILL[b] || "#ccc",
     radiusRatio: 0.4,
     intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
+    // Küstensaum + Wellen (Roadmap W3 #5) — deterministisch, engine-seitig.
+    coast: {},
     blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * z,
   });
+
+  // Klima-Bänder (Roadmap W4 #22): dezente Zonen-Färbung + Labels (nur Chrome).
+  if (tl.climateEnabled && engine.climateBands) {
+    ctx.save();
+    for (const band of engine.climateBands()) {
+      const [bx0, by0] = w2c(0, band.y0 * WORLD_H);
+      const [bx1, by1] = w2c(WORLD_W, band.y1 * WORLD_H);
+      ctx.fillStyle = band.zone.color;
+      ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+      if (chrome) {
+        ctx.fillStyle = "rgba(42,30,12,0.55)";
+        ctx.font = Math.max(8, 9 * z) + "px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(band.zone.label, bx0 + 6, by0 + Math.max(10, 11 * z));
+      }
+    }
+    ctx.restore();
+  }
 
   // Höhen-Simulation (2.5D): Hillshade gestreckt über das Karten-Rect (der
   // Bilinear-Filter des Browsers glättet das Zellraster) + optionale Höhenlinien.
@@ -1017,9 +1325,23 @@ function drawScene(ctx, W, H, chrome) {
 
   ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2 * z; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
 
+  // Unterwelt-Ebene (Roadmap W4 #26): dunkler Wash + Layer-Filter. Entitäten
+  // der jeweils anderen Ebene erscheinen beim Bearbeiten nur als blasser
+  // Kontext; im Export (chrome=false) wird nur die aktive Ebene ausgegeben.
+  const und = state.underworld;
+  if (und) { ctx.save(); ctx.fillStyle = "rgba(18,14,28,0.42)"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.restore(); }
+
   const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
-  for (const f of feats) drawFeature(ctx, f);
-  for (const o of nodeObjects()) drawObject(ctx, o);
+  for (const f of feats) {
+    if (layerVis[layerGroupOf(f)] === false) continue;
+    if (entIsUnderworld(f) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawFeature(ctx, f); ctx.restore(); continue; }
+    drawFeature(ctx, f);
+  }
+  scaleHandlePt = null;
+  if (layerVis.objects) for (const o of nodeObjects()) {
+    if (entIsUnderworld(o) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawObject(ctx, o); ctx.restore(); continue; }
+    drawObject(ctx, o);
+  }
 
   if (!chrome) return;
 
@@ -1052,10 +1374,16 @@ function drawScene(ctx, W, H, chrome) {
     for (const o of settlementReview.objects || []) drawObject(ctx, o);
     ctx.restore();
   }
+  if (territoryReview) {
+    ctx.save(); ctx.globalAlpha = 0.46;
+    for (const f of territoryReview.features || []) drawFeature(ctx, f);
+    ctx.restore();
+  }
   if (state.tool === "height" && !isView()) drawHeightOverlay(ctx);
   drawPending(ctx);
   drawMeasure(ctx);
   drawSelectionRects(ctx);
+  drawVertexHandles(ctx);
 }
 
 // Editor-Overlay bei aktivem Höhen-Tool: transparente Heat-Darstellung des
@@ -1078,6 +1406,73 @@ function drawHeightOverlay(ctx) {
 }
 
 // Shift-Rahmenauswahl + Export-Rechteck als gestrichelte Overlays.
+// ---- Vertex-Editing (Roadmap W3 #1): Punkte von Pfaden/Polygonen bearbeiten ----
+// Liefert die editierbare Punktliste eines Features (Path, Polygon-Außenring
+// oder Curved-Label-Pfad) samt Minimal-Punktzahl; null wenn nicht editierbar.
+function editablePoints(f) {
+  if (!f || !f.geometry) return null;
+  const g = f.geometry;
+  if (g.type === "Path" && Array.isArray(g.coordinates)) return { pts: g.coordinates, min: 2 };
+  if (g.type === "Polygon" && g.rings && Array.isArray(g.rings[0])) return { pts: g.rings[0], min: 3 };
+  if (g.type === "LabelAnchor" && Array.isArray(g.pathCoordinates)) return { pts: g.pathCoordinates, min: 2 };
+  return null;
+}
+function selectedEditableFeature() {
+  if (isView() || state.tool !== "select" || selection.size !== 1) return null;
+  const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+  const ep = f ? editablePoints(f) : null;
+  return ep ? { f, ...ep } : null;
+}
+// Ring geschlossen? (erster Punkt am Ende wiederholt — Seed-Konvention)
+function ringClosed(pts) {
+  if (pts.length < 2) return false;
+  const a = pts[0], b = pts[pts.length - 1];
+  return a[0] === b[0] && a[1] === b[1];
+}
+function vertexHandleAt(cx, cy) {
+  const sel = selectedEditableFeature();
+  if (!sel) return null;
+  const closed = ringClosed(sel.pts);
+  const lastIdx = closed ? sel.pts.length - 2 : sel.pts.length - 1;
+  for (let i = 0; i <= lastIdx; i++) {
+    const [px, py] = n2c(sel.pts[i][0], sel.pts[i][1]);
+    if (Math.hypot(cx - px, cy - py) <= 8) return { sel, index: i, closed };
+  }
+  return null;
+}
+// Nächstes Segment + Projektionspunkt (für Punkt-Einfügen per Doppelklick).
+function nearestSegment(sel, nx, ny, maxDistPx) {
+  const pts = sel.pts; let best = null;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const d = engine.distToSegment([nx, ny], a, b);
+    if (best == null || d < best.d) {
+      // Projektion auf das Segment für die Einfüge-Position
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((nx - a[0]) * dx + (ny - a[1]) * dy) / len2;
+      t = Math.max(0.05, Math.min(0.95, t));
+      best = { d, i, pt: [a[0] + dx * t, a[1] + dy * t] };
+    }
+  }
+  if (!best) return null;
+  const pxDist = best.d * WORLD_W * state.zoom;
+  return pxDist <= maxDistPx ? best : null;
+}
+function drawVertexHandles(ctx) {
+  const sel = selectedEditableFeature();
+  if (!sel) return;
+  const closed = ringClosed(sel.pts);
+  const lastIdx = closed ? sel.pts.length - 2 : sel.pts.length - 1;
+  ctx.save();
+  for (let i = 0; i <= lastIdx; i++) {
+    const [px, py] = n2c(sel.pts[i][0], sel.pts[i][1]);
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.6;
+    ctx.fillRect(px - 4, py - 4, 8, 8); ctx.strokeRect(px - 4, py - 4, 8, 8);
+  }
+  ctx.restore();
+}
+
 function drawSelectionRects(ctx) {
   const rects = [];
   if (marquee) rects.push({ r: marquee, color: "#2f6f63" });
@@ -1189,20 +1584,34 @@ function drawFeature(ctx, f) {
     const coord = geo.coordinates; if (!coord) { ctx.restore(); return; }
     const [px, py] = n2c(coord[0], coord[1]);
     if (geo.type === "LabelAnchor") {
-      const text = (f.labelText || geo.text || "Label"), ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+      // Label-Preset (Roadmap W3 #8): geteilte Typo-Presets aus der Engine;
+      // ohne style.labelPreset bleibt der historische Look byte-identisch.
+      const lp = engine.resolveLabelPreset ? engine.resolveLabelPreset(f.style && f.style.labelPreset) : undefined;
+      const rawText = (f.labelText || geo.text || "Label");
+      const text = lp && lp.uppercase ? rawText.toUpperCase() : rawText;
+      const ink = f.labelColor === "red" ? pr.colors.inkAccent : pr.colors.ink;
+      const weight = lp ? (lp.bold ? "bold " : "") + (lp.italic ? "italic " : "") : null;
       if (geo.pathCoordinates && geo.pathCoordinates.length >= 2) {
-        ctx.font = "bold " + Math.round(14 * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = (weight != null ? weight : "bold ") + Math.round((lp ? lp.sizePx : 14) * z) + "px " + pr.typography.labelRegion; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         // Konstantes Spacing in Weltkoordinaten: Font UND Abstand skalieren mit
         // dem Zoom, das Label bleibt in jeder Stufe kompakt lesbar.
         const pl = engine.layoutCharactersOnPath(text, geo.pathCoordinates, 0.0085, geo.pathReversed === true);
-        for (const p of pl) { const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation); ctx.fillText(p.char, 0, 0); ctx.restore(); }
+        for (const p of pl) {
+          const [cx, cy] = n2c(p.x, p.y); ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rotation);
+          if (lp && lp.halo) { ctx.strokeStyle = pr.colors.parchment; ctx.lineWidth = 3 * z; ctx.strokeText(p.char, 0, 0); }
+          ctx.fillText(p.char, 0, 0); ctx.restore();
+        }
         if (sel) {
           ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.2 * z; ctx.setLineDash([4, 3]); ctx.beginPath();
           const [fx, fy] = n2c(geo.pathCoordinates[0][0], geo.pathCoordinates[0][1]); ctx.moveTo(fx, fy);
           for (let i = 1; i < geo.pathCoordinates.length; i++) { const [lx, ly] = n2c(geo.pathCoordinates[i][0], geo.pathCoordinates[i][1]); ctx.lineTo(lx, ly); } ctx.stroke(); ctx.setLineDash([]);
         }
       } else {
-        ctx.font = Math.round(15 * z) + "px " + pr.typography.labelCity; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(text, px, py);
+        ctx.font = (weight || "") + Math.round((lp ? lp.sizePx : 15) * z) + "px " + pr.typography.labelCity; ctx.textAlign = "center";
+        if (lp && lp.letterSpacingPx) ctx.letterSpacing = (lp.letterSpacingPx * z) + "px";
+        if (lp && lp.halo) { ctx.strokeStyle = pr.colors.parchment; ctx.lineWidth = 3 * z; ctx.strokeText(text, px, py); }
+        ctx.fillStyle = ink; ctx.fillText(text, px, py);
+        if (lp && lp.letterSpacingPx) ctx.letterSpacing = "0px";
         if (sel) { const tw = ctx.measureText(text).width; ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.5; ctx.strokeRect(px - tw / 2 - 3, py - 15 * z, tw + 6, 18 * z); }
       }
     } else {
@@ -1222,20 +1631,19 @@ function drawVineFeature(ctx, f, sel) {
     tendrils: s.tendrils, height: s.height, seed: s.seed,
   });
   if (layout.spine.length < 2) return;
+  // Gouache-Ranke: gefüllter, getaperter Stamm + Blattwerk (fill-Modus in drawVine).
   engine.drawVine(ctx, layout, {
     project: (c) => n2c(c[0], c[1]), zoom: state.zoom,
-    trunk: sel ? "#c2622b" : "#ffffff", coil: sel ? "#c2622b" : "#ffffff",
-    outline: "#241a10", thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
+    trunk: "#6f9a4d", coil: "#33531f",
+    thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
     shadow: "rgba(26,16,8,0.18)", selected: sel,
+    fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
   });
-  const cloud = engine.getGlyphByKey("cloud");
-  if (cloud) {
-    for (const pt of layout.aura.clouds) {
-      const [px, py] = n2c(pt[0], pt[1]); const size = 13 * state.zoom, sc = size / 24;
-      ctx.save(); ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-12, -12);
-      ctx.globalAlpha = 0.65; ctx.strokeStyle = cloud.color; ctx.lineWidth = 1.5 / sc; ctx.lineJoin = "round"; ctx.lineCap = "round";
-      ctx.beginPath(); engine.drawSvgPath(ctx, cloud.pathData); ctx.stroke(); ctx.restore();
-    }
+  for (const pt of layout.aura.clouds) {
+    const [px, py] = n2c(pt[0], pt[1]);
+    ctx.save(); ctx.globalAlpha = 0.75;
+    engine.drawGouacheAsset(ctx, "g_cloud", { x: px, y: py + 6 * state.zoom, size: 15 * state.zoom, lineWidth: Math.max(0.4, 0.9 * state.zoom), seed: (Math.round(pt[0] * 4096) * 31 + Math.round(pt[1] * 4096)) >>> 0 });
+    ctx.restore();
   }
 }
 
@@ -1252,7 +1660,7 @@ function drawObject(ctx, o) {
   const e = manualElev != null ? manualElev : (sceneElevOn ? engine.sampleElevation(doc.tileLayer, o.x, o.y) : 0);
   if (e > 0.02) {
     const size = (st.gouache ? 30 : 26) * z * (o.scale || 1);
-    const [sdx, sdy] = engine.elevationShadowOffset(e, z);
+    const [sdx, sdy] = engine.elevationShadowOffset(e, z, doc.tileLayer && doc.tileLayer.lightDir);
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(ox + sdx, oy + sdy, size * 0.45, size * 0.28, 0, 0, Math.PI * 2);
@@ -1264,9 +1672,17 @@ function drawObject(ctx, o) {
     ox += pdx; oy += pdy;
   }
   // Gemaltes Gouache-Asset (Canvas-of-Kings-Optik) — base-centre am Objektpunkt.
-  if (st.gouache && engine.isGouacheAsset && engine.isGouacheAsset(st.gouache)) {
-    engine.drawGouacheAsset(ctx, st.gouache, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)) });
-    if (sel) { const hs = 30 * z * o.scale; ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15); ctx.setLineDash([]); ctx.restore(); }
+  // Ink-Glyph-Objekte werden über GLYPH_TO_GOUACHE ebenfalls gemalt gerendert.
+  const inkGlyph = st.gouache ? null : engine.getGlyphByKey(o.paletteItemId);
+  const gouacheKey = st.gouache && engine.isGouacheAsset(st.gouache)
+    ? st.gouache
+    : (inkGlyph && engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(inkGlyph.key) : null);
+  if (gouacheKey) {
+    engine.drawGouacheAsset(ctx, gouacheKey, { x: ox, y: oy, size: 30 * z, scale: o.scale, rotation: (o.rotation * Math.PI) / 180, lineWidth: Math.max(0.5, lw * z * 0.9), blur: blur * z, seed: engine.hashStringToSeed(String(o._key)), tint: st.tint });
+    if (sel) {
+      const hs = 30 * z * o.scale;
+      drawSelectionFrame(ctx, o, ox - hs * 0.5, oy - hs * 1.05, hs, hs * 1.15);
+    }
     return;
   }
   // Genehmigtes RTX-Asset: validiertes Rezept aus dem server-geprüften Doc-Kanal,
@@ -1278,19 +1694,37 @@ function drawObject(ctx, o) {
     if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
     ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
     engine.drawRtxGouacheRecipePreview(ctx, rtx.recipe, { x: 0, y: 0, unitScale: rsize / 8, lineWidth: Math.max(0.5, lw * z * 0.9) });
-    if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(-rsize / 2 - 3, -rsize / 2 - 3, rsize + 6, rsize + 6); ctx.setLineDash([]); }
     ctx.restore();
+    if (sel) drawSelectionFrame(ctx, o, ox - rsize / 2 - 3, oy - rsize / 2 - 3, rsize + 6, rsize + 6);
     return;
   }
-  const g = engine.getGlyphByKey(o.paletteItemId); if (!g) return;
+  // Ink-Fallback nur noch für Keys ohne Gouache-Äquivalent (sollte nicht vorkommen).
+  const g = inkGlyph; if (!g) return;
   const size = 26 * z * o.scale;
   ctx.save();
   if (blur > 0) ctx.filter = "blur(" + (blur * z) + "px)";
   ctx.translate(ox, oy); ctx.rotate((o.rotation * Math.PI) / 180);
-  if (sel) { ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.strokeRect(-size / 2 - 3, -size / 2 - 3, size + 6, size + 6); }
   const s = size / 24; ctx.scale(s, s); ctx.translate(-12, -12);
   ctx.strokeStyle = g.color || preset.colors.ink; ctx.lineWidth = Math.max(0.3, lw) / s; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath(); engine.drawSvgPath(ctx, g.pathData); ctx.stroke(); ctx.restore();
+  if (sel) drawSelectionFrame(ctx, o, ox - size / 2 - 3, oy - size / 2 - 3, size + 6, size + 6);
+}
+
+// Auswahlrahmen + Skalier-Griff (CoK): roter Punkt unten rechts, Ziehen skaliert.
+// Nur bei Einzelselektion im Editor-Modus wird der Griff angeboten.
+function drawSelectionFrame(ctx, o, L, T, W2, H2) {
+  ctx.save();
+  ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+  ctx.strokeRect(L, T, W2, H2);
+  ctx.setLineDash([]);
+  if (!isView() && selection.size === 1) {
+    const hx = L + W2, hy = T + H2;
+    ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#c2622b"; ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+    scaleHandlePt = { x: hx, y: hy, key: o._key };
+  }
+  ctx.restore();
 }
 
 function drawPending(ctx) {
@@ -1308,22 +1742,62 @@ function drawPending(ctx) {
   ctx.restore();
 }
 
+// Reiseplaner (Roadmap W3 #15): Messen-Tool ist eine Multi-Punkt-Route —
+// Distanz, terrain-gewichtete Reisetage (planTravelRoute) und Rastpunkte
+// live; Enter speichert die Route als road-Feature mit style.travel.
+function measurePlan() {
+  if (measurePoints.length < 2 || !engine.planTravelRoute) return null;
+  return engine.planTravelRoute(measurePoints, { layer: doc && doc.tileLayer });
+}
 function drawMeasure(ctx) {
   if (!measurePoints.length) return;
   ctx.save(); ctx.strokeStyle = "#c2622b"; ctx.fillStyle = "#c2622b"; ctx.lineWidth = 2 * state.zoom;
   for (const [nx, ny] of measurePoints) { const [mx, my] = n2c(nx, ny); ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill(); }
-  if (measurePoints.length === 2) {
-    const [ax, ay] = n2c(measurePoints[0][0], measurePoints[0][1]);
-    const [bx, by] = n2c(measurePoints[1][0], measurePoints[1][1]);
-    ctx.setLineDash([6, 3]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-    const dx = measurePoints[1][0] - measurePoints[0][0], dy = measurePoints[1][1] - measurePoints[0][1];
-    const dist = Math.sqrt(dx * dx + dy * dy) * 100; const label = dist.toFixed(1) + " leagues";
-    const mx = (ax + bx) / 2, my = (ay + by) / 2; ctx.font = "bold 13px " + preset.typography.labelCity;
-    ctx.textAlign = "center"; const tw = ctx.measureText(label).width;
-    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(mx - tw / 2 - 5, my - 20, tw + 10, 18);
-    ctx.fillStyle = "#8b1a10"; ctx.fillText(label, mx, my - 7);
+  if (measurePoints.length >= 2) {
+    ctx.setLineDash([6, 3]); ctx.beginPath();
+    const [ax0, ay0] = n2c(measurePoints[0][0], measurePoints[0][1]);
+    ctx.moveTo(ax0, ay0);
+    for (let i = 1; i < measurePoints.length; i++) { const [px, py] = n2c(measurePoints[i][0], measurePoints[i][1]); ctx.lineTo(px, py); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const plan = measurePlan();
+    if (plan) {
+      // Rastpunkte: gefüllte Lager-Marker nach jedem vollen Reisetag.
+      for (const [cxn, cyn] of plan.camps) {
+        const [cpx, cpy] = n2c(cxn, cyn);
+        ctx.beginPath(); ctx.arc(cpx, cpy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#f2e8c9"; ctx.fill();
+        ctx.lineWidth = 1.6; ctx.strokeStyle = "#8b1a10"; ctx.stroke();
+        ctx.fillStyle = "#8b1a10"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("R", cpx, cpy);
+        ctx.textBaseline = "alphabetic";
+      }
+      const mid = measurePoints[Math.floor(measurePoints.length / 2)];
+      const [mx, my] = n2c(mid[0], mid[1]);
+      const unit = (preset.decorations && preset.decorations.scaleUnit) || "leagues";
+      const label = plan.totalLeagues.toFixed(1) + " " + unit + " · " + plan.days + " Tag(e) · " + plan.camps.length + " Rast";
+      ctx.font = "bold 13px " + preset.typography.labelCity;
+      ctx.textAlign = "center"; const tw = ctx.measureText(label).width;
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(mx - tw / 2 - 5, my - 20, tw + 10, 18);
+      ctx.fillStyle = "#8b1a10"; ctx.fillText(label, mx, my - 7);
+    }
   }
   ctx.restore();
+}
+function saveTravelRoute() {
+  const plan = measurePlan();
+  if (!plan || measurePoints.length < 2) { flash("Erst eine Route zusammenklicken (mind. 2 Punkte)"); return; }
+  pushUndo();
+  const k = nextKey();
+  const f = {
+    _key: k, id: nextKey(), nodeId: state.nodeId, kind: "road",
+    geometry: { type: "Path", coordinates: measurePoints.map((p) => [p[0], p[1]]) },
+    style: { smooth: true, travel: { days: plan.days, leagues: Math.round(plan.totalLeagues * 10) / 10, camps: plan.camps.length } },
+    labelText: plan.days + " Tagesreise", layer: 40, visibility: "dm_only",
+  };
+  doc.features.push(f);
+  measurePoints = [];
+  selectOnly(f._key); markDirty(); draw();
+  flash("🧭 Route gespeichert — " + f.style.travel.leagues + " leagues, " + plan.days + " Tag(e)");
 }
 
 // Streuung: reale @uwe/atlas-API erwartet ein Polygon-Objekt + numerischen Seed
@@ -1339,10 +1813,17 @@ function scatterInPolygon(ctx, rings, bk, density, keySeed) {
   const seed = typeof keySeed === "number" ? keySeed : engine.hashStringToSeed(String(keySeed));
   const points = engine.scatterGlyphsInPolygon({ type: "Polygon", rings }, bk, density * 0.6, seed, scatterExclusions());
   const z = state.zoom;
-  ctx.save(); ctx.globalAlpha = 0.7; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.save(); ctx.globalAlpha = 0.85; ctx.lineJoin = "round"; ctx.lineCap = "round";
   for (const p of points) {
+    const [px, py] = n2c(p.x, p.y);
+    const gk = engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(p.glyphKey) : null;
+    if (gk) {
+      // Gemalte Streuung: gleiche deterministische Punkte, Gouache-Mini-Assets.
+      engine.drawGouacheAsset(ctx, gk, { x: px, y: py + 6 * z * p.scale * 0.5, size: 15 * z, scale: p.scale, rotation: (p.rotation * Math.PI) / 180, lineWidth: Math.max(0.4, 0.9 * z), seed: (seed + Math.round(p.x * 4096) * 31 + Math.round(p.y * 4096)) >>> 0 });
+      continue;
+    }
     const g = engine.getGlyphByKey(p.glyphKey); if (!g) continue;
-    const [px, py] = n2c(p.x, p.y); const sz = 13 * z * p.scale;
+    const sz = 13 * z * p.scale;
     ctx.save(); ctx.translate(px, py); ctx.rotate((p.rotation * Math.PI) / 180);
     const s = sz / 24; ctx.scale(s, s); ctx.translate(-12, -12);
     ctx.strokeStyle = g.color; ctx.lineWidth = 1.2 / s;
@@ -1384,11 +1865,54 @@ function onPointerDown(e) {
     paintHeight(cx, cy, heightInvert);
     return;
   }
-  if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
+  if (tool === "landmass") {
+    pushUndo();
+    paintingLand = true; landWater = e.button === 2;
+    paintLandmass(cx, cy, landWater);
+    return;
+  }
+  if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } const [sx, sy] = snapN(nx, ny); placeStamp(sx, sy); return; }
+  if (tool === "spray") {
+    if (e.button === 2) { eraseAt(nx, ny); return; }
+    pushUndo();
+    spraying = { rng: engine.mulberry32(engine.hashStringToSeed(nextKey() + ":spray")), last: [cx, cy] };
+    sprayAt(nx, ny);
+    return;
+  }
   if (tool === "select") {
+    // Vertex-Editing: Griff anfassen (Drag) oder Alt+Klick = Punkt löschen.
+    const vh = vertexHandleAt(cx, cy);
+    if (vh) {
+      const { sel, index, closed } = vh;
+      if (e.altKey) {
+        const count = closed ? sel.pts.length - 1 : sel.pts.length;
+        if (count > sel.min) {
+          pushUndo();
+          sel.pts.splice(index, 1);
+          if (closed && index === 0) { sel.pts.pop(); sel.pts.push([sel.pts[0][0], sel.pts[0][1]]); }
+          if (sel.f.kind === "plot") fillPlotObjects(sel.f, false);
+          markDirty(); draw();
+        } else flash("Minimum erreicht — Punkt bleibt");
+        return;
+      }
+      vertexDrag = { key: sel.f._key, index, closed };
+      vertexUndoPushed = false;
+      return;
+    }
+    // Skalier-Griff: Klick auf den roten Punkt startet Drag-Resize (CoK).
+    if (scaleHandlePt && Math.hypot(cx - scaleHandlePt.x, cy - scaleHandlePt.y) <= 12) {
+      const o = doc.objects.find((x) => x._key === scaleHandlePt.key);
+      if (o) {
+        pushUndo();
+        const [ax, ay] = n2c(o.x, o.y);
+        const d0 = Math.max(8, Math.hypot(cx - ax, cy - ay));
+        resizing = { key: o._key, anchor: [ax, ay], startDist: d0, startScale: o.scale || 1 };
+        return;
+      }
+    }
     const hit = hitTest(nx, ny);
     if (hit && e.shiftKey) { toggleSel(hit); requestAnimationFrame(draw); return; }
-    if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; return; }
+    if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; dragAxisStart = [cx, cy]; return; }
     if (hit) { selectOnly(hit); requestAnimationFrame(draw); return; }
     if (e.shiftKey) { marquee = { x0: nx, y0: ny, x1: nx, y1: ny }; return; }
     clearSel(); panning = true; requestAnimationFrame(draw);
@@ -1399,12 +1923,12 @@ function onPointerDown(e) {
 
   if (tool === "region" || tool === "biome" || tool === "plot") {
     if (drawingPoints.length >= 3) { const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); if (Math.hypot(cx - fx, cy - fy) < 10) { finishPolygon(); return; } }
-    drawingPoints.push([nx, ny]); draw(); return;
+    drawingPoints.push(snapN(nx, ny)); draw(); return;
   }
-  if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push([nx, ny]); draw(); return; }
-  if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel([nx, ny], t, null); return; }
-  if (tool === "pin") { addPin([nx, ny]); return; }
-  if (tool === "measure") { measurePoints = measurePoints.length >= 2 ? [[nx, ny]] : [...measurePoints, [nx, ny]]; draw(); return; }
+  if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push(snapN(nx, ny)); draw(); return; }
+  if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel(snapN(nx, ny), t, null); return; }
+  if (tool === "pin") { addPin(snapN(nx, ny)); return; }
+  if (tool === "measure") { measurePoints = [...measurePoints, [nx, ny]]; draw(); return; }
 }
 
 function onPointerMove(e) {
@@ -1413,14 +1937,50 @@ function onPointerMove(e) {
   if (!coordRaf) coordRaf = requestAnimationFrame(() => { coordRaf = null; el("status-tile").textContent = pendingCoord.tile; el("status-world").textContent = pendingCoord.world; });
 
   if (exp.picking && exportPickStart) { exp.rect = { x0: exportPickStart[0], y0: exportPickStart[1], x1: nx, y1: ny }; draw(); return; }
+  if (vertexDrag) {
+    const f = doc.features.find((x) => x._key === vertexDrag.key);
+    const ep = f ? editablePoints(f) : null;
+    if (ep && ep.pts[vertexDrag.index]) {
+      if (!vertexUndoPushed) { pushUndo(); vertexUndoPushed = true; }
+      const [sx2, sy2] = snapN(nx, ny);
+      ep.pts[vertexDrag.index] = [sx2, sy2];
+      // Geschlossener Ring: Endpunkt spiegelt Index 0.
+      if (vertexDrag.closed && vertexDrag.index === 0) ep.pts[ep.pts.length - 1] = [sx2, sy2];
+      draw();
+    }
+    return;
+  }
+  if (resizing) {
+    const o = doc.objects.find((x) => x._key === resizing.key);
+    if (o) {
+      const d = Math.hypot(cx - resizing.anchor[0], cy - resizing.anchor[1]);
+      o.scale = Math.round(Math.min(3, Math.max(0.2, resizing.startScale * (d / resizing.startDist))) * 100) / 100;
+      draw();
+    }
+    return;
+  }
   if (marquee) { marquee.x1 = nx; marquee.y1 = ny; draw(); return; }
   if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
   if (erasingTiles) { paintTiles(cx, cy, true); return; }
+  if (spraying) {
+    if (Math.hypot(cx - spraying.last[0], cy - spraying.last[1]) > 16) {
+      spraying.last = [cx, cy];
+      const [sx2, sy2] = c2n(cx, cy);
+      sprayAt(sx2, sy2);
+    }
+    return;
+  }
   if (paintingHeight) { paintHeight(cx, cy, heightInvert); return; }
+  if (paintingLand) { paintLandmass(cx, cy, landWater); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
-    const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return;
+    let dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom);
+    // Shift hält die dominante Achse (Roadmap W3 #2) — bezogen auf den Drag-Start.
+    if (e.shiftKey && dragAxisStart) {
+      if (Math.abs(cx - dragAxisStart[0]) >= Math.abs(cy - dragAxisStart[1])) dy = 0; else dx = 0;
+    }
+    last = { x: cx, y: cy }; moveSelected(dx, dy); return;
   }
   last = { x: cx, y: cy };
 }
@@ -1460,8 +2020,20 @@ function onPointerUp(e) {
     draw();
     return;
   }
-  if (paintingTiles || erasingTiles || paintingHeight) markDirty();
-  panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
+  if (vertexDrag) {
+    const f = doc.features.find((x) => x._key === vertexDrag.key);
+    if (f && f.kind === "plot") fillPlotObjects(f, false);
+    vertexDrag = null; markDirty(); draw();
+  }
+  if (resizing) { resizing = null; markDirty(); refreshChrome(); }
+  if (moving && state.snap && selection.size === 1) {
+    const so = doc.objects.find((x) => x._key === state.selectedKey);
+    if (so) { const [sx2, sy2] = snapN(so.x, so.y); so.x = sx2; so.y = sy2; draw(); }
+  }
+  dragAxisStart = null;
+  if (paintingTiles || erasingTiles || paintingHeight || paintingLand) markDirty();
+  panning = moving = paintingTiles = erasingTiles = paintingHeight = paintingLand = false;
+  spraying = null;
 }
 function handleViewClick(entity) {
   if (entity.childNodeId) { navTo(entity.childNodeId); return; }
@@ -1473,8 +2045,25 @@ function onWheel(e) {
   const panX = cx - (cx - state.panX) * (nz / state.zoom); const panY = cy - (cy - state.panY) * (nz / state.zoom);
   setState({ zoom: nz, panX, panY }); requestAnimationFrame(draw);
 }
-function onDblClick() {
+function onDblClick(e) {
   if (exp.picking) return;
+  if (state.tool === "select") {
+    // Doppelklick auf ein Segment fügt einen Punkt ein (Vertex-Editing).
+    const sel = selectedEditableFeature();
+    if (sel && e) {
+      const [cx, cy] = posOf(e); const [nx, ny] = c2n(cx, cy);
+      if (!vertexHandleAt(cx, cy)) {
+        const seg = nearestSegment(sel, nx, ny, 10);
+        if (seg) {
+          pushUndo();
+          sel.pts.splice(seg.i + 1, 0, [seg.pt[0], seg.pt[1]]);
+          if (sel.f.kind === "plot") fillPlotObjects(sel.f, false);
+          markDirty(); draw();
+        }
+      }
+    }
+    return;
+  }
   if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon();
   else if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath();
   else if (state.tool === "curve") finishCurve();
@@ -1491,6 +2080,30 @@ function paintTiles(cx, cy, erase) {
     else if (cells[k] !== state.brush) { cells[k] = state.brush; changed = true; }
   }
   if (changed) draw();
+}
+
+// Landmassen-Pinsel (Roadmap W4 #17): Land malen (grassland + leichtes Relief),
+// Rechtsklick malt Wasser (coast + Höhe 0). Die Küstenlinie entsteht organisch
+// aus dem grassland↔coast-Rand, den der Küstensaum (#5) bereits rendert.
+function paintLandmass(cx, cy, water) {
+  const tl = doc.tileLayer; const cells = tl.cells;
+  const elev = tl.elevation || (tl.elevation = {});
+  const [tc, tr] = tileAt(cx, cy); const rad = [1, 2, 3][state.brushSize];
+  let changed = false;
+  for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
+    if (dc * dc + dr * dr > rad * rad + 0.5) continue;
+    const c = tc + dc, r = tr + dr; if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+    const k = c + "," + r;
+    if (water) {
+      if (cells[k] !== "coast") { cells[k] = "coast"; changed = true; }
+      if (elev[k] != null) { delete elev[k]; changed = true; }
+    } else {
+      if (cells[k] !== "grassland") { cells[k] = "grassland"; changed = true; }
+      // Leichtes Relief auf Land, damit Hillshade/Schatten greifen (sparse: nur setzen, wenn noch flach).
+      if (!(elev[k] > 0.1)) { elev[k] = 0.12; changed = true; }
+    }
+  }
+  if (changed) { invalidateElevationCache(); draw(); }
 }
 
 // ---- Höhen-Pinsel: Anheben / Absenken / Glätten mit weichem radialem Falloff.
@@ -1545,17 +2158,44 @@ function placeStamp(nx, ny) {
   // Gouache-Objekt: gemaltes Asset in style.gouache; paletteItemId bleibt ein
   // gültiger Builtin-Glyph als FK-Träger (der Renderer bevorzugt style.gouache).
   if (!rtxItem && state.gouacheKey) o.style = { gouache: state.gouacheKey };
+  tagUnderworld(o);
   doc.objects.push(o);
   markDirty(); draw();
 }
+// Streu-Pinsel (Roadmap W3 #9): Gouache-Assets mit Positions-/Größen-/
+// Rotations-Jitter entlang des Strichs; PRNG einmal pro Strich geseedet
+// (deterministisch pro Klickpfad), EIN Undo-Schritt pro Strich.
+const SPRAY_RADIUS = [0.012, 0.022, 0.038];
+function sprayAt(nx, ny) {
+  if (!spraying || !doc) return;
+  const rng = spraying.rng;
+  const radius = SPRAY_RADIUS[state.brushSize] || SPRAY_RADIUS[1];
+  const gouache = state.gouacheKey || "g_oak";
+  const count = 1 + Math.floor(rng() * 2);
+  for (let i = 0; i < count; i++) {
+    const ang = rng() * Math.PI * 2;
+    const dist = Math.sqrt(rng()) * radius;
+    const x = Math.max(0, Math.min(1, nx + Math.cos(ang) * dist));
+    const y = Math.max(0, Math.min(1, ny + Math.sin(ang) * dist * (WORLD_W / WORLD_H)));
+    doc.objects.push({
+      id: nextKey(), _key: nextKey(), nodeId: state.nodeId,
+      paletteItemId: state.glyphKey || "tree", x, y,
+      scale: Math.round((0.55 + rng() * 0.55) * 100) / 100,
+      rotation: Math.round((rng() * 24 - 12) * 10) / 10,
+      layer: 50, visibility: "dm_only", style: { gouache },
+    });
+  }
+  markDirty(); draw();
+}
+
 function addPin(pt) {
   pushUndo();
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" };
+  const f = tagUnderworld({ _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" });
   doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 function addLabel(pt, text, path) {
   pushUndo();
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" };
+  const f = tagUnderworld({ _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" });
   doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 const PLOT_GOUACHE_BY_BIOME = {
@@ -1621,6 +2261,7 @@ function finishPolygon() {
     layer: isBiome ? 10 : isPlot ? 18 : 20,
     visibility: "dm_only",
   };
+  tagUnderworld(f);
   doc.features.push(f);
   if (isPlot) fillPlotObjects(f, false);
   drawingPoints = []; selectOnly(f._key); markDirty(); draw();
@@ -1635,7 +2276,59 @@ function finishPath() {
     ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
-  doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
+  tagUnderworld(f);
+  doc.features.push(f); drawingPoints = [];
+  // Fluss-Intelligenz (Roadmap W4 #18): Mündung an nahes Wasser snappen +
+  // Bergauf-Warnung übers Höhenfeld — Hinweis, nie Auto-Korrektur.
+  if (!isRoad && !isVine) {
+    const co = f.geometry.coordinates;
+    const snapped = engine.snapPointToWater ? engine.snapPointToWater(doc.tileLayer, co[co.length - 1], { maxDist: 0.045 }) : null;
+    if (snapped) co[co.length - 1] = snapped;
+    const uphill = engine.riverFlowsUphill && engine.riverFlowsUphill(doc.tileLayer, co);
+    if (uphill) flash((snapped ? "Mündung an Wasser gesnappt · " : "") + "⚠ Fluss fließt bergauf — Höhenfeld prüfen");
+    else if (snapped) flash("Mündung an Wasser gesnappt");
+  }
+  autoPlaceBridges(f);
+  selectOnly(f._key); markDirty(); draw();
+}
+
+// Straßen-Autorouting (Roadmap W4 #19): A* über die Terrain-Biome zwischen
+// erstem und letztem gesetzten Punkt. Ergebnis ist ein normales road-Feature
+// (Vertex-Editing greift), Brücken-Automatik läuft wie beim Handzeichnen.
+function autoRouteRoad() {
+  if (!engine.routeRoad) { flash("Engine ohne routeRoad — Bundle neu bauen"); return; }
+  if (drawingPoints.length < 2) { flash("Erst Start und Ziel klicken (mind. 2 Punkte), dann Auto-Route"); return; }
+  const start = drawingPoints[0], goal = drawingPoints[drawingPoints.length - 1];
+  const layer = doc.tileLayer && doc.tileLayer.cells ? doc.tileLayer : { cols: COLS, rows: ROWS, tile: TILE, cells: {} };
+  const res = engine.routeRoad(layer, start, goal);
+  if (!res.reachable || res.points.length < 2) { flash("⚠ Kein Weg gefunden — Wasser/Gebirge blockiert die Route"); return; }
+  pushUndo();
+  const k = nextKey();
+  const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: "road", geometry: { type: "Path", coordinates: res.points.map((p) => [p[0], p[1]]) }, style: { smooth: true }, layer: 40, visibility: "dm_only" };
+  doc.features.push(f); drawingPoints = [];
+  autoPlaceBridges(f);
+  selectOnly(f._key); markDirty(); draw();
+  flash("✦ Auto-Route gesetzt (" + f.geometry.coordinates.length + " Punkte)");
+}
+
+// Brücken-Automatik (Roadmap W4 #20): wo Straße × Fluss kreuzt, wird eine
+// Gouache-Steinbrücke gesetzt, ausgerichtet an der Straßenrichtung. Frühere
+// Auto-Brücken desselben Pfads werden ersetzt (style.bridgeFor).
+function autoPlaceBridges(f) {
+  if (!engine.findBridgePoints || (f.kind !== "road" && f.kind !== "river")) return;
+  const others = nodeFeatures().filter((x) => x._key !== f._key && x.geometry && x.geometry.type === "Path" && (f.kind === "road" ? x.kind === "river" : x.kind === "road"));
+  if (!others.length) return;
+  doc.objects = doc.objects.filter((o) => !(o.style && o.style.bridgeFor === f._key));
+  let placed = 0;
+  for (const other of others) {
+    const road = f.kind === "road" ? f : other;
+    const river = f.kind === "road" ? other : f;
+    for (const bp of engine.findBridgePoints(road.geometry.coordinates, river.geometry.coordinates)) {
+      doc.objects.push({ id: nextKey(), _key: nextKey(), nodeId: state.nodeId, paletteItemId: "tree", x: bp.x, y: bp.y, scale: 0.9, rotation: Math.round(bp.angleDeg * 10) / 10, style: { gouache: "g_bridge", bridgeFor: f._key }, layer: 50, visibility: "dm_only" });
+      placed++;
+    }
+  }
+  if (placed) flash("🌉 " + placed + " Brücke(n) automatisch gesetzt");
 }
 
 // ---- Ranke/Weltenwurzel: Panel-Defaults + Slider-Markup ----
@@ -1659,6 +2352,8 @@ function vineSliderHtml(f, prop, label, min, max, step) {
 // ---- Siedlungs-Ghost: Hafen/Wasserfront-Auswahllisten ----
 const SETTLEMENT_WF_EDGES = [["auto", "Ufer: Auto (längste Kante)"], ["0", "Ufer: Ringposition 0 %"], ["0.25", "Ufer: Ringposition 25 %"], ["0.5", "Ufer: Ringposition 50 %"], ["0.75", "Ufer: Ringposition 75 %"]];
 const SETTLEMENT_WF_PIERS = [["1", "1 Pier"], ["2", "2 Piere"], ["3", "3 Piere"], ["4", "4 Piere"]];
+// Verfallsgrad (Roadmap W4 #25): Engine-Option `condition` in generateSettlement.
+const SETTLEMENT_CONDITIONS = [["thriving", "Zustand: blühend"], ["besieged", "Zustand: belagert"], ["abandoned", "Zustand: verlassen"], ["ruined", "Zustand: Ruine"]];
 
 // ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
 const ATTACH_KINDS = [["trees", "Bäume"], ["houses", "Häuser"], ["towers", "Türme"]];
@@ -1674,7 +2369,7 @@ function generateAttachments(f, reroll) {
   if (f.style && f.style.smooth && coords.length >= 3) coords = engine.smoothPath(coords, { segments: 8 });
   const places = engine.generatePathAttachments(
     { type: "Path", coordinates: coords },
-    { kind: attachOpts.kind, spacing: attachOpts.spacing, side: attachOpts.side, offset: 0.02, jitter: 0.3, seed },
+    { kind: attachOpts.kind, spacing: attachOpts.spacing, side: attachOpts.side, offset: 0.02, jitter: 0.3, seed, alignToPath: attachOpts.align !== false },
   );
   // Frühere Anhänge dieses Pfads ersetzen (attachedTo ist client-only; die
   // Studio-Save-Action whitelistet Felder und ignoriert es server-seitig).
@@ -1693,6 +2388,133 @@ function finishCurve() {
   if (!text) { draw(); return; }
   const mid = path[Math.floor(path.length / 2)];
   addLabel(mid, text, path);
+}
+
+// ---- Einrasten (Roadmap W3 #2): halbe Tile-Schritte in Normalkoordinaten ----
+function snapN(nx, ny) {
+  if (!state.snap) return [nx, ny];
+  const sx = (TILE / 2) / WORLD_W, sy = (TILE / 2) / WORLD_H;
+  return [Math.round(nx / sx) * sx, Math.round(ny / sy) * sy];
+}
+
+// ---- Kopieren/Einfügen (Roadmap W3 #3) ----
+function copySelection() {
+  const feats = [], objs = [];
+  for (const k of selection) {
+    const f = doc.features.find((x) => x._key === k);
+    if (f) { const { _key, id, ...rest } = f; feats.push(JSON.parse(JSON.stringify(rest))); continue; }
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { const { _key, id, ...rest } = o; objs.push(JSON.parse(JSON.stringify(rest))); }
+  }
+  if (!feats.length && !objs.length) return;
+  clipboard = { features: feats, objects: objs };
+  pasteCount = 0;
+  flash("⧉ " + (feats.length + objs.length) + " Element(e) kopiert");
+}
+// Prefabs (Roadmap W3 #4): benannte Gruppen aus Objekten + Features, in
+// localStorage gespeichert (Editor-Bibliothek, nicht im Doc). Beim Einfügen
+// landet der Gruppen-Anker in der Viewport-Mitte, relative Anordnung bleibt.
+const PREFAB_KEY = "uwe.atlas.prefabs.v1";
+let atlasPrefabs;
+try { atlasPrefabs = JSON.parse(localStorage.getItem(PREFAB_KEY) || "[]"); } catch (_) { atlasPrefabs = []; }
+if (!Array.isArray(atlasPrefabs)) atlasPrefabs = [];
+function persistPrefabs() { try { localStorage.setItem(PREFAB_KEY, JSON.stringify(atlasPrefabs.slice(0, 40))); } catch (_) {} }
+function featureAnchorPoint(f) {
+  const g = f.geometry; if (!g) return null;
+  if (g.type === "Point" || g.type === "LabelAnchor") return g.coordinates || null;
+  if (g.type === "Path") return (g.coordinates && g.coordinates[0]) || null;
+  if (g.type === "Polygon") return (g.rings && g.rings[0] && g.rings[0][0]) || null;
+  return null;
+}
+function saveSelectionAsPrefab() {
+  const feats = [], objs = [], pts = [];
+  for (const k of selection) {
+    const f = doc.features.find((x) => x._key === k);
+    if (f) { const { _key, id, nodeId, ...rest } = f; feats.push(JSON.parse(JSON.stringify(rest))); const a = featureAnchorPoint(f); if (a) pts.push(a); continue; }
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { const { _key, id, nodeId, ...rest } = o; objs.push(JSON.parse(JSON.stringify(rest))); pts.push([o.x, o.y]); }
+  }
+  if (!feats.length && !objs.length) { flash("Erst Objekte/Features auswählen"); return; }
+  if (!pts.length) return;
+  const ax = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const ay = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  // Relativ zum Anker speichern (Anker → 0,0).
+  for (const f of feats) f.geometry = engine.translateGeometry(f.geometry, -ax, -ay);
+  for (const o of objs) { o.x -= ax; o.y -= ay; }
+  const name = prompt("Prefab-Name:", "Gruppe " + (atlasPrefabs.length + 1));
+  if (name == null) return;
+  atlasPrefabs.unshift({ name: name.trim() || ("Gruppe " + (atlasPrefabs.length + 1)), features: feats, objects: objs });
+  persistPrefabs();
+  buildPrefabList();
+  flash("★ Prefab „" + atlasPrefabs[0].name + "\" gespeichert");
+}
+function insertPrefab(idx) {
+  const pf = atlasPrefabs[idx];
+  if (!pf) return;
+  pushUndo();
+  clearSel();
+  // Anker → aktuelle Viewport-Mitte.
+  const [tx, ty] = c2n(cssW / 2, cssH / 2);
+  for (const src of pf.features || []) {
+    const f = JSON.parse(JSON.stringify(src));
+    f._key = nextKey(); f.id = nextKey(); f.nodeId = state.nodeId;
+    f.geometry = engine.translateGeometry(f.geometry, tx, ty);
+    if (f.kind === "plot") { doc.features.push(f); fillPlotObjects(f, false); }
+    else doc.features.push(f);
+    selection.add(f._key);
+  }
+  for (const src of pf.objects || []) {
+    const o = JSON.parse(JSON.stringify(src));
+    o._key = nextKey(); o.id = nextKey(); o.nodeId = state.nodeId;
+    o.x = Math.max(0, Math.min(1, o.x + tx)); o.y = Math.max(0, Math.min(1, o.y + ty));
+    doc.objects.push(o); selection.add(o._key);
+  }
+  const keys = [...selection];
+  setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+  markDirty(); draw();
+  flash("★ Prefab „" + pf.name + "\" eingefügt");
+}
+function deletePrefab(idx) {
+  if (!atlasPrefabs[idx]) return;
+  atlasPrefabs.splice(idx, 1);
+  persistPrefabs();
+  buildPrefabList();
+}
+function escHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function buildPrefabList() {
+  const host = el("prefab-list");
+  if (!host) return;
+  if (!atlasPrefabs.length) { host.innerHTML = '<div style="font-size:10px;color:var(--uwe-fg-subtle);padding:2px 0;">Noch keine Prefabs — Auswahl im Panel speichern.</div>'; return; }
+  host.innerHTML = atlasPrefabs.map((pf, i) =>
+    '<div style="display:flex;align-items:center;gap:4px;margin-top:3px;">' +
+    '<button class="tb-btn" data-prefab-ins="' + i + '" style="flex:1;justify-content:flex-start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Prefab einfügen">★ ' + escHtml(pf.name) + " (" + ((pf.features || []).length + (pf.objects || []).length) + ")</button>" +
+    '<button class="tb-btn" data-prefab-del="' + i + '" title="Prefab löschen">✕</button>' +
+    "</div>").join("");
+}
+
+function pasteClipboard() {
+  if (!clipboard) return;
+  pushUndo();
+  pasteCount++;
+  const off = 0.02 * pasteCount;
+  clearSel();
+  for (const src of clipboard.features) {
+    const f = JSON.parse(JSON.stringify(src));
+    f._key = nextKey(); f.id = nextKey(); f.nodeId = state.nodeId;
+    f.geometry = engine.translateGeometry(f.geometry, off, off);
+    doc.features.push(f); selection.add(f._key);
+  }
+  for (const src of clipboard.objects) {
+    const o = JSON.parse(JSON.stringify(src));
+    o._key = nextKey(); o.id = nextKey(); o.nodeId = state.nodeId;
+    o.x = Math.min(1, o.x + off); o.y = Math.min(1, o.y + off);
+    doc.objects.push(o); selection.add(o._key);
+  }
+  const keys = [...selection];
+  setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+  markDirty(); draw();
 }
 
 // Bewegt die GESAMTE Auswahl (CoK: Gruppen gemeinsam verschieben).
@@ -1716,7 +2538,9 @@ function eraseKey(k) {
 function eraseAt(nx, ny) { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); }
 
 function hitTest(wx, wy) {
-  const objs = nodeObjects(), feats = nodeFeatures();
+  // Nur die aktive Ebene (Oberfläche/Unterwelt) ist interaktiv (W4 #26).
+  const objs = nodeObjects().filter((o) => entIsUnderworld(o) === state.underworld);
+  const feats = nodeFeatures().filter((f) => entIsUnderworld(f) === state.underworld);
   const thr = 14 / (state.zoom * Math.max(WORLD_W, WORLD_H));
   for (let i = objs.length - 1; i >= 0; i--) { const o = objs[i]; if (Math.hypot(o.x - wx, o.y - wy) < thr * 2) return o._key; }
   for (let i = feats.length - 1; i >= 0; i--) { const f = feats[i], g = f.geometry; if (g.type === "Point" || g.type === "LabelAnchor") { const c = g.coordinates; if (c && Math.hypot(c[0] - wx, c[1] - wy) < thr * 2.4) return f._key; } }
@@ -1737,12 +2561,17 @@ function onKeyDown(e) {
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
   if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) { e.preventDefault(); redo(); return; }
+  // Kopieren / Einfügen / Duplizieren (CoK-Parität, Roadmap W3 #3).
+  if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C")) { if (selection.size) { e.preventDefault(); copySelection(); } return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) { if (clipboard) { e.preventDefault(); pasteClipboard(); } return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) { if (selection.size) { e.preventDefault(); copySelection(); pasteClipboard(); } return; }
+  if (e.key === "n" || e.key === "N") { setState({ snap: !state.snap }); flash(state.snap ? "🧲 Einrasten an" : "Einrasten aus"); return; }
   if (e.key === "Escape") {
     if (exp.picking) { exp.picking = false; exportPickStart = null; exp.rect = null; openExportDialog(); return; }
     drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
   }
   if (e.key === "Delete" || e.key === "Backspace") { if (selection.size) { e.preventDefault(); eraseSelection(); } return; }
-  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon(); else if (state.tool === "curve") finishCurve(); return; }
+  if (e.key === "Enter") { if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath(); else if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon(); else if (state.tool === "curve") finishCurve(); else if (state.tool === "measure") saveTravelRoute(); return; }
   const t = KEY_TOOL[e.key ? e.key.toLowerCase() : ""]; if (t) pickTool(t);
 }
 
@@ -1783,6 +2612,7 @@ function refreshExportDialog() {
   el("exp-cell").disabled = exp.grid === "none";
   el("exp-deco").checked = exp.deco;
   el("exp-frame").checked = exp.frame;
+  el("exp-cartouche").value = exp.cartouche || "none";
   const r = resolveExportRectWorld();
   const leagues = ((r.w / WORLD_W) * 100).toFixed(0);
   el("exp-hint").textContent =
@@ -1818,7 +2648,7 @@ function doExport() {
   const savedSel = [...selection]; selection.clear();
   const savedDraft = aiDraftFeatures; aiDraftFeatures = null;
   const savedPlotReview = plotFillReview; plotFillReview = null;
-  const savedSettlementReview = settlementReview; settlementReview = null;
+  const savedSettlementReview = settlementReview; settlementReview = null; const savedTerritoryReview = territoryReview; territoryReview = null;
   state.zoom = scale; state.panX = -rect.x * scale; state.panY = -rect.y * scale;
   try {
     drawScene(octx, off.width, off.height, false);
@@ -1840,6 +2670,17 @@ function doExport() {
       const barLeagues = Math.max(1, Math.round(((bw / scale) / WORLD_W) * 100));
       engine.drawScaleBar(octx, { x: 20 * scale, y: off.height - bh - 30 * scale, width: bw, height: bh, ink: preset.colors.ink, parchment: preset.colors.parchment, label: "0 — " + barLeagues + " leagues", font: (12 * scale) + "px " + preset.typography.labelCity });
     }
+    if (exp.cartouche && exp.cartouche !== "none" && engine.drawCartouche) {
+      const ch = Math.max(30, 40 * scale);
+      engine.drawCartouche(octx, {
+        x: off.width / 2, y: ch * 0.85 + 14 * scale,
+        width: Math.max(160, Math.min(off.width * 0.5, (node().title || "Atlas").length * 14 * scale + 90 * scale)),
+        height: ch, style: exp.cartouche,
+        title: node().title || (doc.map && doc.map.title) || "Atlas",
+        ink: preset.colors.ink, parchment: preset.colors.parchment, accent: preset.colors.inkAccent,
+        font: "bold " + Math.round(16 * scale) + "px " + preset.typography.title,
+      });
+    }
     if (exp.frame) {
       octx.strokeStyle = preset.colors.ink;
       octx.lineWidth = Math.max(2, scale * 1.4); octx.strokeRect(4, 4, off.width - 8, off.height - 8);
@@ -1850,7 +2691,7 @@ function doExport() {
     for (const k of savedSel) selection.add(k);
     aiDraftFeatures = savedDraft;
     plotFillReview = savedPlotReview;
-    settlementReview = savedSettlementReview;
+    settlementReview = savedSettlementReview; territoryReview = savedTerritoryReview;
   }
   downloadCanvas(off);
   closeExportDialog();
@@ -1862,7 +2703,7 @@ function clearAll() {
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
   if (state.nodeId === doc.rootNodeId) { doc.tileLayer.cells = {}; delete doc.tileLayer.elevation; invalidateElevationCache(); }
-  aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+  aiDraftFeatures = null; plotFillReview = null; settlementReview = null; territoryReview = null;
   drawingPoints = []; clearSel(); setState({ aiReview: null }); markDirty(); draw();
 }
 
@@ -1872,8 +2713,8 @@ function clearAll() {
 function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
 function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null, rtxKey: null }); }
-function pickGouache(k) { setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
-function pickRtx(k) { setState({ tool: "stamp", rtxKey: k, gouacheKey: null }); }
+function pickGouache(k) { noteAssetUsed(k); setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
+function pickRtx(k) { noteAssetUsed("rtx:" + k); setState({ tool: "stamp", rtxKey: k, gouacheKey: null }); }
 
 // Genehmigte RTX-Assets (json-recipe): kommen server-validiert über das
 // Doc-Feld `rtxPaletteItems` (Studio-Route prüft mit validateRtxAtlasAssetProposal
@@ -1897,14 +2738,18 @@ function buildRtxPaletteButtons() {
   if (!grid || !engine.drawRtxGouacheRecipePreview) return;
   for (const [id, item] of rtxPaletteItems) {
     const btn = document.createElement("button");
-    btn.className = "glyph-btn"; btn.title = item.name + " · RTX-Asset";
+    btn.className = "glyph-btn"; btn.title = item.name + " · RTX-Asset — Rechtsklick: Favorit ★";
+    btn.dataset.assetKey = "rtx:" + id; btn.dataset.cat = "rtx"; btn.dataset.name = (item.name || "").toLowerCase();
+    if (assetFavs.has("rtx:" + id)) btn.classList.add("fav");
     const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
     try { engine.drawRtxGouacheRecipePreview(cv.getContext("2d"), item.recipe, { x: 22, y: 22, unitScale: 5, lineWidth: 1.1 }); } catch (_) {}
     btn.appendChild(cv);
     btn.addEventListener("click", () => pickRtx(id));
+    btn.addEventListener("contextmenu", (e) => { e.preventDefault(); toggleAssetFav("rtx:" + id, btn); });
     grid.appendChild(btn); glyphButtons.set("rtx:" + id, btn);
   }
   if (state.rtxKey && !rtxPaletteItems.has(state.rtxKey)) state.rtxKey = null;
+  applyAssetFilter();
 }
 function toggleNodeVis() {
   pushUndo();
@@ -1920,6 +2765,48 @@ const toolButtons = new Map();   // tool -> button
 const swatchButtons = new Map(); // biome -> button
 const glyphButtons = new Map();  // glyphKey -> button
 const heightModeButtons = new Map(); // heightMode -> button
+
+// Asset-Browser (Roadmap W3 #10): Suche + Kategorie-Filter + Favoriten
+// (Rechtsklick auf ein Asset togglet den Stern) + „zuletzt benutzt".
+// Favoriten/Zuletzt sind reine Editor-Präferenzen → localStorage, nie im Doc.
+const ASSET_FAV_KEY = "uwe.atlas.assetFavs.v1";
+const ASSET_RECENT_KEY = "uwe.atlas.assetRecent.v1";
+let assetFavs; try { assetFavs = new Set(JSON.parse(localStorage.getItem(ASSET_FAV_KEY) || "[]")); } catch (_) { assetFavs = new Set(); }
+let assetRecent; try { assetRecent = JSON.parse(localStorage.getItem(ASSET_RECENT_KEY) || "[]"); } catch (_) { assetRecent = []; }
+if (!Array.isArray(assetRecent)) assetRecent = [];
+const assetFilter = { q: "", cat: "all" };
+function persistAssetPrefs() {
+  try {
+    localStorage.setItem(ASSET_FAV_KEY, JSON.stringify([...assetFavs]));
+    localStorage.setItem(ASSET_RECENT_KEY, JSON.stringify(assetRecent));
+  } catch (_) {}
+}
+function toggleAssetFav(key, btn) {
+  if (assetFavs.has(key)) assetFavs.delete(key); else assetFavs.add(key);
+  if (btn) btn.classList.toggle("fav", assetFavs.has(key));
+  persistAssetPrefs();
+  if (assetFilter.cat === "fav") applyAssetFilter();
+}
+function noteAssetUsed(key) {
+  assetRecent = [key].concat(assetRecent.filter((k) => k !== key)).slice(0, 12);
+  persistAssetPrefs();
+  if (assetFilter.cat === "recent") applyAssetFilter();
+}
+function applyAssetFilter() {
+  for (const [mapKey, btn] of glyphButtons) {
+    const name = btn.dataset.name || "";
+    const cat = btn.dataset.cat || "";
+    const assetKey = btn.dataset.assetKey || mapKey;
+    let show = true;
+    if (assetFilter.q && name.indexOf(assetFilter.q) < 0 && assetKey.toLowerCase().indexOf(assetFilter.q) < 0) show = false;
+    if (show && assetFilter.cat !== "all") {
+      if (assetFilter.cat === "fav") show = assetFavs.has(assetKey);
+      else if (assetFilter.cat === "recent") show = assetRecent.indexOf(assetKey) >= 0;
+      else show = cat === assetFilter.cat;
+    }
+    btn.style.display = show ? "" : "none";
+  }
+}
 
 function buildSidebar() {
   const toolList = el("tool-list");
@@ -1939,22 +2826,42 @@ function buildSidebar() {
     swatches.appendChild(btn); swatchButtons.set(b, btn);
   }
   const grid = el("glyph-grid");
-  for (const g of engine.BUILTIN_GLYPHS) {
-    const btn = document.createElement("button");
-    btn.className = "glyph-btn"; btn.title = g.name;
-    btn.innerHTML = '<span class="ico">' + glyphSvg(g) + "</span>";
-    btn.addEventListener("click", () => pickGlyph(g.key));
-    grid.appendChild(btn); glyphButtons.set(g.key, btn);
-  }
+  // Asset-Browser-Kopf: Suche + Kategorie/Favoriten/Zuletzt-Filter.
+  const browser = document.createElement("div");
+  browser.style.cssText = "display:flex;flex-direction:column;gap:5px;padding:0 2px 6px;";
+  const catOptions = [["all", "Alle Kategorien"], ["fav", "★ Favoriten"], ["recent", "Zuletzt benutzt"]]
+    .concat(Object.entries(engine.GOUACHE_CATEGORY_LABELS || {}))
+    .concat([["rtx", "RTX-Assets"]])
+    .map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("");
+  browser.innerHTML =
+    '<input id="asset-search" type="search" placeholder="Assets suchen…" style="width:100%;padding:5px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-size:11px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);">' +
+    '<select id="asset-cat" class="sel-select" style="margin-top:0;" title="Kategorie · Favoriten (Rechtsklick auf ein Asset setzt den Stern) · Zuletzt benutzt">' + catOptions + "</select>" +
+    '<button id="asset-wish" class="tb-btn" style="width:100%;justify-content:center;margin-top:2px;" title="Fehlt dir ein Asset? Wunsch ans RTX-Asset-Studio schicken (Roadmap W4 #28)">✎ Asset fehlt?</button>';
+  grid.parentElement.insertBefore(browser, grid);
+  browser.querySelector("#asset-search").addEventListener("input", (e) => { assetFilter.q = e.target.value.trim().toLowerCase(); applyAssetFilter(); });
+  browser.querySelector("#asset-cat").addEventListener("change", (e) => { assetFilter.cat = e.target.value; applyAssetFilter(); });
+  browser.querySelector("#asset-wish").addEventListener("click", () => {
+    const wish = prompt("Welches Gouache-Asset fehlt dir? (kurz beschreiben)");
+    if (wish == null) return;
+    const text = wish.trim();
+    if (!text) return;
+    if (embedded) { bridgePost({ type: "asset-request", prompt: text }); flash("✎ Asset-Wunsch ans RTX-Studio gesendet"); }
+    else flash("Asset-Wunsch nur in der Studio-Einbettung verfügbar");
+  });
+  // Ink-Piktogramme sind aus der Palette entfernt — jedes Builtin-Motiv hat
+  // ein Gouache-Äquivalent (GLYPH_TO_GOUACHE); Bestandsobjekte rendern gemalt.
   // Gemalte Gouache-Assets (Canvas-of-Kings-Optik) — Vorschau per Mini-Canvas.
   if (engine.GOUACHE_ASSETS) {
     for (const a of engine.GOUACHE_ASSETS) {
       const btn = document.createElement("button");
-      btn.className = "glyph-btn"; btn.title = a.name + " · Gouache";
+      btn.className = "glyph-btn"; btn.title = a.name + " · Gouache — Rechtsklick: Favorit ★";
+      btn.dataset.assetKey = a.key; btn.dataset.cat = a.category || ""; btn.dataset.name = (a.name || "").toLowerCase();
+      if (assetFavs.has(a.key)) btn.classList.add("fav");
       const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
       try { engine.drawGouacheAsset(cv.getContext("2d"), a.key, { x: 22, y: 36, size: 24, lineWidth: 1.1 }); } catch (_) {}
       btn.appendChild(cv);
       btn.addEventListener("click", () => pickGouache(a.key));
+      btn.addEventListener("contextmenu", (e) => { e.preventDefault(); toggleAssetFav(a.key, btn); });
       grid.appendChild(btn); glyphButtons.set("g:" + a.key, btn);
     }
   }
@@ -1962,7 +2869,76 @@ function buildSidebar() {
   const gi = document.createElement("div");
   gi.style.cssText = "padding:8px 2px 2px;";
   gi.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Untergrund-Intensität</div><input id="ground-intensity" type="range" min="0" max="1.6" step="0.05" value="1" style="width:100%;accent-color:var(--uwe-accent);">';
-  swatches.parentElement.appendChild(gi);
+  // Theme-Picker (Roadmap W3 #6): Preset pro Karte, persistiert über die Bridge.
+  const tp = document.createElement("div");
+  tp.style.cssText = "padding:8px 2px 2px;";
+  const presetOptions = Object.values(engine.STYLE_PRESETS).map((pr2) => '<option value="' + pr2.id + '">' + pr2.label + "</option>").join("");
+  tp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Karten-Theme</div><select id="theme-picker" class="sel-select" style="width:100%;">' + presetOptions + "</select>";
+  el("inspector-body").appendChild(tp);
+  tp.querySelector("select").addEventListener("change", (e) => {
+    if (!doc) return;
+    // Wert VOR pushUndo sichern — refreshChrome (via pushUndo) synct das
+    // Select sonst auf den alten doc-Wert zurück, bevor wir ihn lesen.
+    const stylePreset = e.target.value;
+    pushUndo();
+    doc.map = doc.map || {};
+    doc.map.stylePreset = stylePreset;
+    applyPresetFromDoc();
+    if (embedded) bridgePost({ type: "map-style", stylePreset });
+    markDirty(); draw();
+  });
+  // Lichtrichtung (Roadmap W3 #7): dreht Hillshade + Höhen-Schattenwurf.
+  const lp = document.createElement("div");
+  lp.style.cssText = "padding:8px 2px 2px;";
+  lp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Lichtrichtung</div><select id="light-dir" class="sel-select" style="width:100%;"><option value="nw">Nordwest (Standard)</option><option value="ne">Nordost</option><option value="sw">Südwest</option><option value="se">Südost</option></select>';
+  el("inspector-body").appendChild(lp);
+  lp.querySelector("select").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    const lightDir = e.target.value;
+    pushUndo();
+    if (lightDir === "nw") delete doc.tileLayer.lightDir;
+    else doc.tileLayer.lightDir = lightDir;
+    invalidateElevationCache();
+    markDirty(); draw();
+  });
+  // Klima-Bänder (Roadmap W4 #22): statisches Zonen-Overlay, im Doc persistiert.
+  const cb = document.createElement("div");
+  cb.style.cssText = "padding:8px 2px 2px;";
+  cb.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);cursor:pointer;"><input id="climate-toggle" type="checkbox"> Klima-Bänder (arktisch → tropisch)</label>';
+  el("inspector-body").appendChild(cb);
+  cb.querySelector("input").addEventListener("change", (e) => {
+    if (!doc || !doc.tileLayer) return;
+    // Wert VOR pushUndo lesen — refreshChrome synct die Checkbox sonst auf
+    // den alten Doc-Stand zurück (gleiche Falle wie beim Theme-Picker).
+    const on = !!e.target.checked;
+    pushUndo();
+    if (on) doc.tileLayer.climateEnabled = true;
+    else delete doc.tileLayer.climateEnabled;
+    markDirty(); draw();
+  });
+  // Kartengröße (Roadmap W4 #16): Grid-/Weltgröße wählbar; Ränder wachsen.
+  const ms = document.createElement("div");
+  ms.style.cssText = "padding:8px 2px 2px;";
+  ms.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Kartengröße</div><select id="map-size" class="sel-select" style="width:100%;">' + MAP_SIZE_PRESETS.map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("") + "</select>";
+  el("inspector-body").appendChild(ms);
+  ms.querySelector("select").addEventListener("change", (e) => {
+    const preset2 = MAP_SIZE_PRESETS.find((p) => p[0] === e.target.value);
+    if (preset2) resizeMap(preset2[2], preset2[3]);
+  });
+  // Unterwelt-Ebene (Roadmap W4 #26): Modus-Toggle — neue Inhalte landen auf
+  // der aktiven Ebene, die andere erscheint nur als blasser Kontext.
+  const uw = document.createElement("div");
+  uw.style.cssText = "padding:8px 2px 2px;";
+  uw.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);cursor:pointer;"><input id="underworld-toggle" type="checkbox"> 🕳 Unterwelt-Ebene bearbeiten</label>';
+  el("inspector-body").appendChild(uw);
+  uw.querySelector("input").addEventListener("change", (e) => {
+    const on = !!e.target.checked;
+    clearSel();
+    setState({ underworld: on });
+    flash(on ? "🕳 Unterwelt-Ebene — neue Inhalte liegen darunter" : "Oberflächen-Ebene");
+    draw();
+  });
+  el("inspector-body").appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.intensity = doc.tileLayer.intensity || {};
@@ -1974,7 +2950,7 @@ function buildSidebar() {
   const gb = document.createElement("div");
   gb.style.cssText = "padding:8px 2px 2px;";
   gb.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Terrain-Blend <span id="terrain-blend-value" style="float:right;color:var(--uwe-fg-subtle);">' + DEFAULT_TERRAIN_BLEND_WIDTH + 'px</span></div><input id="terrain-blend-width" type="range" min="0" max="18" step="1" value="' + DEFAULT_TERRAIN_BLEND_WIDTH + '" style="width:100%;accent-color:var(--uwe-accent);">';
-  swatches.parentElement.appendChild(gb);
+  el("inspector-body").appendChild(gb);
   gb.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.blendWidth = Math.max(0, Number(e.target.value) || 0);
@@ -1989,7 +2965,7 @@ function buildSidebar() {
     '<div id="height-modes" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;"></div>' +
     '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-sidebar-fg-muted);margin:8px 0 3px;">Stärke <span id="height-strength-val" style="float:right;">15%</span></div>' +
     '<input id="height-strength" type="range" min="0.02" max="0.5" step="0.01" value="0.15" style="width:100%;accent-color:var(--uwe-accent);">';
-  swatches.parentElement.appendChild(hp);
+  el("inspector-body").appendChild(hp);
   for (const m of ["raise", "lower", "smooth"]) {
     const btn = document.createElement("button");
     btn.className = "swatch-btn"; btn.style.justifyContent = "center";
@@ -2012,7 +2988,7 @@ function buildSidebar() {
     '<input id="parallax-strength" type="range" min="0" max="100" step="1" value="35" style="width:100%;accent-color:var(--uwe-accent);">' +
     '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:8px;cursor:pointer;"><input id="contours-on" type="checkbox"> Höhenlinien</label>' +
     '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-sidebar-fg);margin-top:6px;">Stufen <input id="contour-steps" type="number" min="2" max="24" step="1" value="5" style="width:52px;margin-left:auto;padding:2px 4px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:var(--uwe-sidebar-fg);font-family:var(--mono);font-size:11px;"></label>';
-  swatches.parentElement.appendChild(hs);
+  el("inspector-body").appendChild(hs);
   hs.querySelector("#parallax-strength").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
     doc.tileLayer.parallaxStrength = Math.min(1, Math.max(0, Number(e.target.value) / 100));
@@ -2028,6 +3004,19 @@ function buildSidebar() {
     doc.tileLayer.contourSteps = Math.max(2, Math.min(24, Math.round(Number(e.target.value) || engine.DEFAULT_CONTOUR_STEPS)));
     markDirty(); refreshChrome(); draw();
   });
+
+  // Prefab-Bibliothek (Roadmap W3 #4): benannte Gruppen wiederverwenden.
+  const pfb = document.createElement("div");
+  pfb.style.cssText = "padding:10px 2px 2px;";
+  pfb.innerHTML = '<div class="grp-label" style="padding:0 0 4px;">Prefabs</div><div id="prefab-list"></div>';
+  el("inspector-body").appendChild(pfb);
+  pfb.addEventListener("click", (e) => {
+    const ins = e.target.closest("[data-prefab-ins]");
+    if (ins) { insertPrefab(Number(ins.dataset.prefabIns)); return; }
+    const del = e.target.closest("[data-prefab-del]");
+    if (del) { deletePrefab(Number(del.dataset.prefabDel)); return; }
+  });
+  buildPrefabList();
 }
 
 function refreshChrome() {
@@ -2077,6 +3066,16 @@ function refreshChrome() {
     const glyphActive = !st.rtxKey && !st.gouacheKey && st.glyphKey === key;
     b.classList.toggle("on", st.tool === "stamp" && (rtxActive || gouacheActive || glyphActive));
   }
+  const themeSel = el("theme-picker");
+  if (themeSel && doc) themeSel.value = (doc.map && doc.map.stylePreset) || "tolkien-ink";
+  const lightSel = el("light-dir");
+  if (lightSel && doc && doc.tileLayer) lightSel.value = doc.tileLayer.lightDir || "nw";
+  const climateBox = el("climate-toggle");
+  if (climateBox && doc && doc.tileLayer) climateBox.checked = doc.tileLayer.climateEnabled === true;
+  const sizeSel = el("map-size");
+  if (sizeSel && doc && doc.tileLayer) sizeSel.value = (doc.tileLayer.cols || 64) + "x" + (doc.tileLayer.rows || 40);
+  const uwBox = el("underworld-toggle");
+  if (uwBox) uwBox.checked = st.underworld === true;
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
@@ -2124,9 +3123,19 @@ function refreshChrome() {
       subHtml = '<b style="color:var(--uwe-accent)">Objekt:</b> ' + stampName + ' — Linksklick platzieren, Rechtsklick löschen · <button class="tb-btn' + (st.stampVariation ? " on" : "") + '" data-act="vari" title="CoK-Zufallsvariation: Skalierung ±25%, Rotation ±12°">🎲 Variation</button>';
     }
     else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
-    else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
+    else if (st.tool === "spray") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Streu-Pinsel:</b> gedrückt halten & ziehen · Asset aus der Palette · Rechtsklick löscht'; }
+    else if (st.tool === "landmass") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Landmasse:</b> Land malen · Rechtsklick malt Wasser · Küste entsteht organisch · Pinsel ' + ["klein", "mittel", "groß"][st.brushSize]; }
+    else if (st.tool === "measure") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Reiseplaner:</b> Route zusammenklicken · Rastpunkte je Reisetag · Enter speichert als Route · Esc leert'; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
-    else if (st.tool === "region" || st.tool === "plot" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "region") {
+      subShow = true;
+      const cultures = (engine.CULTURE_PROFILES || []).map((c) => '<option value="' + c.key + '"' + (c.key === territoryCulture ? " selected" : "") + ">" + c.label + "</option>").join("");
+      subHtml = 'Punkte klicken · Doppelklick/Enter zum Abschließen · Esc bricht ab · ' +
+        (cultures ? '<select id="territory-culture" class="sel-select" style="width:auto;" title="Kulturprofil für generierte Territoriums-Namen">' + cultures + "</select> " : "") +
+        '<button class="tb-btn" data-act="territories" title="Grid-Voronoi um Städte/Burgen/Dörfer — Vorschlag als Ghost zum Prüfen, Wasser bleibt neutral">🗺 Territorien vorschlagen</button>';
+    }
+    else if (st.tool === "road") { subShow = true; subHtml = 'Punkte klicken · Doppelklick/Enter zum Abschließen · Esc bricht ab · <button class="tb-btn" data-act="autoroute" title="A*-Route über das Gelände zwischen erstem und letztem Punkt — meidet Wasser, Gebirge und Sumpf">✦ Auto-Route</button>'; }
     else if (st.tool === "label") { subShow = true; subHtml = 'Klick auf die Karte für Label-Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
     else if (st.tool === "curve") { subShow = true; subHtml = 'Pfad klicken · Doppelklick/Enter → Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
   }
@@ -2144,7 +3153,8 @@ function refreshChrome() {
       '<div style="display:flex;gap:6px;margin-top:8px;">' +
       '<button class="tb-btn" data-batch="show" style="flex:1;justify-content:center;">🌐 Portal</button>' +
       '<button class="tb-btn" data-batch="hide" style="flex:1;justify-content:center;">🔒 GM</button>' +
-      "</div>";
+      "</div>" +
+      '<button class="tb-btn" data-prefab="save" style="width:100%;justify-content:center;margin-top:6px;" title="Auswahl als wiederverwendbares Prefab in der Palette speichern">★ Als Prefab speichern</button>';
     selP.style.display = "block";
   } else if (selO) {
     const g = engine.getGlyphByKey(selO.paletteItemId);
@@ -2164,6 +3174,7 @@ function refreshChrome() {
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           numInp("obj-lw", "Linie px", 0.3, 6, 0.1, (selO.style && selO.style.lineWidth != null) ? selO.style.lineWidth : 1.5) +
           numInp("obj-blur", "Unschärfe", 0, 8, 0.5, (selO.style && selO.style.blur) || 0) +
+          numInp("obj-tint", "Tönung °", -180, 180, 5, (selO.style && selO.style.tint && selO.style.tint.hue) || 0) +
           "</div>" +
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           numInp("obj-elev", "Höhe % (0 = auto)", 0, 100, 1, Math.round(((selO.style && typeof selO.style.elevation === "number") ? selO.style.elevation : 0) * 100)) +
@@ -2185,6 +3196,19 @@ function refreshChrome() {
         ? '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (labelVal || kind) + "</div>"
         : '<label style="display:block;font-size:10px;color:var(--uwe-fg-muted);margin-bottom:4px;">Name</label>' +
           '<input id="sel-label-input" type="text" value="' + labelVal.replace(/"/g, "&quot;") + '" style="width:100%;padding:6px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-family:var(--serif);font-size:14px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);" placeholder="' + kind + '-Name">') +
+      (!view && engine.CULTURE_PROFILES
+        ? '<div style="display:flex;gap:6px;margin-top:6px;align-items:center;">' +
+          '<select id="name-culture" class="sel-select" style="flex:1;margin-top:0;" title="Kulturprofil für den Namens-Generator">' +
+          engine.CULTURE_PROFILES.map((c) => '<option value="' + c.key + '"' + (c.key === ((selF.style && selF.style.culture) || territoryCulture) ? " selected" : "") + ">" + c.label + "</option>").join("") +
+          "</select>" +
+          '<button class="tb-btn" data-name="roll" title="Deterministischer Namens-Vorschlag aus dem Kulturprofil (Roadmap W4 #24)">↻ Name</button>' +
+          "</div>"
+        : "") +
+      (selF.kind === "label" && !view && engine.ATLAS_LABEL_PRESETS
+        ? '<select id="label-preset" class="sel-select" title="Typo-Preset für dieses Label (Roadmap W3 #8)"><option value="">Standard-Typo</option>' +
+          Object.values(engine.ATLAS_LABEL_PRESETS).map((p2) => '<option value="' + p2.key + '"' + (((selF.style && selF.style.labelPreset) || "") === p2.key ? " selected" : "") + ">" + p2.label + "</option>").join("") +
+          "</select>"
+        : "") +
       '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';margin-top:6px;">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
       (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
       (!view && selF.geometry && selF.geometry.type === "LabelAnchor" && (selF.geometry.pathCoordinates || []).length >= 2
@@ -2212,6 +3236,7 @@ function refreshChrome() {
               '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
               '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
             : "") +
+          '<select id="stl-condition" class="sel-select" title="Verfallsgrad der generierten Siedlung">' + opt(SETTLEMENT_CONDITIONS, settlementWfOpts.condition) + "</select>" +
           '<button class="tb-btn" data-plot="settlement" style="width:100%;justify-content:center;margin-top:6px;" title="Siedlung als Ghost-Vorschlag">Siedlung</button>' +
           "</div></div>"
         : "") +
@@ -2221,6 +3246,7 @@ function refreshChrome() {
           '<select id="att-kind" class="sel-select">' + opt(ATTACH_KINDS, attachOpts.kind) + "</select>" +
           '<select id="att-side" class="sel-select">' + opt(ATTACH_SIDES, attachOpts.side) + "</select>" +
           '<select id="att-space" class="sel-select">' + opt(ATTACH_SPACING, attachOpts.spacing) + "</select>" +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px;color:var(--uwe-fg);"><input type="checkbox" id="att-align"' + (attachOpts.align !== false ? " checked" : "") + '> An Pfad ausrichten</label>' +
           '<div style="display:flex;gap:6px;margin-top:8px;">' +
           '<button class="tb-btn" data-att="gen" style="flex:1;justify-content:center;">✦ Säumen</button>' +
           '<button class="tb-btn" data-att="roll" title="Neuer Zufalls-Seed">↻</button>' +
@@ -2248,21 +3274,43 @@ function refreshChrome() {
   const toast = el("toast");
   if (st.toast) { toast.textContent = st.toast; toast.style.display = "flex"; } else toast.style.display = "none";
 
-  // Portal legend + empty-state
+  // Portal legend + empty-state — Gouache-Vorschauen (Ink nur als Fallback).
   if (view) {
     const legend = el("legend-list"); legend.innerHTML = "";
     const seen = new Set();
-    for (const o of nodeObjects()) {
-      if (seen.has(o.paletteItemId)) continue; seen.add(o.paletteItemId);
-      const g = engine.getGlyphByKey(o.paletteItemId); if (!g) continue;
+    const addRow = (name, drawFn) => {
       const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 2px;";
-      row.innerHTML = '<span style="width:18px;height:18px;flex:none;">' + glyphSvg(g) + "</span>" + g.name; legend.appendChild(row);
+      const cv = document.createElement("canvas"); cv.width = 22; cv.height = 22; cv.style.cssText = "width:18px;height:18px;flex:none;";
+      try { drawFn(cv.getContext("2d")); } catch (_) {}
+      row.appendChild(cv); row.appendChild(document.createTextNode(name)); legend.appendChild(row);
+    };
+    for (const o of nodeObjects()) {
+      const st2 = o.style || {};
+      const legendKey = st2.gouache || o.paletteItemId;
+      if (seen.has(legendKey)) continue; seen.add(legendKey);
+      if (st2.gouache && engine.isGouacheAsset(st2.gouache)) {
+        const a = engine.getGouacheAsset(st2.gouache);
+        addRow(a ? a.name : st2.gouache, (c) => engine.drawGouacheAsset(c, st2.gouache, { x: 11, y: 19, size: 14, lineWidth: 0.9 }));
+        continue;
+      }
+      const rtx = rtxPaletteItems.get(o.paletteItemId);
+      if (rtx && engine.drawRtxGouacheRecipePreview) {
+        addRow(rtx.name || "RTX-Asset", (c) => { c.translate(11, 12); engine.drawRtxGouacheRecipePreview(c, rtx.recipe, { x: 0, y: 0, unitScale: 14 / 8, lineWidth: 0.9 }); });
+        continue;
+      }
+      const g = engine.getGlyphByKey(o.paletteItemId); if (!g) continue;
+      const gk = engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(g.key) : null;
+      if (gk) addRow(g.name, (c) => engine.drawGouacheAsset(c, gk, { x: 11, y: 19, size: 14, lineWidth: 0.9 }));
+      else {
+        const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 2px;";
+        row.innerHTML = '<span style="width:18px;height:18px;flex:none;">' + glyphSvg(g) + "</span>" + g.name; legend.appendChild(row);
+      }
     }
     el("empty-state").style.display = (n && n.visibility !== "player_visible") ? "flex" : "none";
   }
 
   // Status bar
-  el("status-tool").textContent = view ? "Ansicht" : (TOOL_DEFS.find((t) => t[0] === st.tool) || [, "—"])[1];
+  el("status-tool").textContent = (view ? "Ansicht" : (TOOL_DEFS.find((t) => t[0] === st.tool) || [, "—"])[1]) + (st.snap && !view ? " · 🧲" : "");
   el("status-zoom").textContent = Math.round(st.zoom * 100) + "%";
   const save = el("status-save");
   save.textContent = view ? "Portal · schreibgeschützt" : st.saveStatus;
@@ -2275,6 +3323,8 @@ function refreshChrome() {
 function wire() {
   if (isView()) root.classList.add("is-view");
   el("badge-view").style.display = isView() ? "inline-flex" : "none";
+  const lpEl = el("layer-panel");
+  if (lpEl) lpEl.style.display = isView() ? "none" : "flex";
   el("badge-bridge").style.display = embedded ? "inline-flex" : "none";
 
   el("brush-s").addEventListener("click", () => setState({ brushSize: 0 }));
@@ -2297,6 +3347,11 @@ function wire() {
     const t = e.target.closest("[data-act]"); if (!t) return;
     if (t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); }
     else if (t.dataset.act === "vari") { setState({ stampVariation: !state.stampVariation }); }
+    else if (t.dataset.act === "autoroute") autoRouteRoad();
+    else if (t.dataset.act === "territories") requestTerritoryReview();
+  });
+  el("subbar").addEventListener("change", (e) => {
+    if (e.target && e.target.id === "territory-culture") territoryCulture = e.target.value;
   });
 
   // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
@@ -2321,6 +3376,28 @@ function wire() {
     if (att) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);
       if (f) generateAttachments(f, att.dataset.att === "roll");
+      return;
+    }
+    // Namens-Generator (Roadmap W4 #24): deterministischer Vorschlag aus dem
+    // Kulturprofil; jeder Klick zählt den Roll hoch ⇒ nächster Name der Folge.
+    const nameBtn = e.target.closest("[data-name]");
+    if (nameBtn) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && engine.generatePlaceNames) {
+        const cultureSel = el("name-culture");
+        const culture = cultureSel ? cultureSel.value : territoryCulture;
+        const nk = ({ river: "river", region: "region", biome: "region" })[f.kind] || "settlement";
+        pushUndo();
+        f.style = f.style || {};
+        f.style.culture = culture;
+        f.style.nameRoll = (Number.isFinite(f.style.nameRoll) ? f.style.nameRoll : -1) + 1;
+        const names = engine.generatePlaceNames({ culture, kind: nk, count: 1, seed: engine.hashStringToSeed(String(f._key) + ":" + culture + ":" + f.style.nameRoll) });
+        if (names.length) {
+          f.labelText = names[0];
+          if (f.geometry && f.geometry.type === "LabelAnchor") f.geometry.text = names[0];
+        }
+        markDirty(); draw(); refreshChrome();
+      }
       return;
     }
     const vineBtn = e.target.closest("[data-vine]");
@@ -2358,6 +3435,8 @@ function wire() {
       }
       return;
     }
+    const prefabBtn = e.target.closest("[data-prefab]");
+    if (prefabBtn) { saveSelectionAsPrefab(); return; }
     const batch = e.target.closest("[data-batch]");
     if (batch) setSelectionVisibility(batch.dataset.batch === "show" ? "player_visible" : "dm_only");
   });
@@ -2366,10 +3445,22 @@ function wire() {
     if (t.id === "att-kind") attachOpts.kind = t.value;
     else if (t.id === "att-side") attachOpts.side = t.value;
     else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
+    else if (t.id === "att-align") attachOpts.align = !!t.checked;
     else if (t.id === "stl-wf") { settlementWfOpts.harbor = t.checked; refreshChrome(); }
     else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
     else if (t.id === "stl-wf-piers") settlementWfOpts.piers = Number(t.value);
     else if (t.id === "stl-wf-dock") settlementWfOpts.dock = t.checked;
+    else if (t.id === "stl-condition") { settlementWfOpts.condition = t.value; draw(); }
+    else if (t.id === "name-culture") territoryCulture = t.value;
+    else if (t.id === "label-preset") {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f) {
+        const labelPreset = t.value;
+        pushUndo(); f.style = f.style || {};
+        if (labelPreset) f.style.labelPreset = labelPreset; else delete f.style.labelPreset;
+        markDirty(); draw();
+      }
+    }
     else if (t.id === "obj-scale" || t.id === "obj-rot") {
       const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
       const v = Number(t.value);
@@ -2388,6 +3479,17 @@ function wire() {
         const e2 = Math.min(100, Math.max(0, v)) / 100;
         // 0/leer = automatisch vom Höhenfeld (sparse halten wie bei den Zellen).
         if (e2 > 0) o.style.elevation = e2; else delete o.style.elevation;
+        markDirty(); draw();
+      }
+    }
+    else if (t.id === "obj-tint") {
+      const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
+      const v = Number(t.value);
+      if (o && Number.isFinite(v)) {
+        pushUndo(); o.style = o.style || {};
+        const hue = Math.max(-180, Math.min(180, v));
+        // 0 = Original-Palette — sparse halten wie bei blur/elevation.
+        if (hue !== 0) o.style.tint = { hue }; else delete o.style.tint;
         markDirty(); draw();
       }
     }
@@ -2419,6 +3521,7 @@ function wire() {
   });
   el("exp-grid").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.grid = b.dataset.v; refreshExportDialog(); });
   el("exp-res").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; exp.res = Number(b.dataset.v); refreshExportDialog(); });
+  el("exp-cartouche").addEventListener("change", (e) => { exp.cartouche = e.target.value; });
   el("exp-cell").addEventListener("input", (e) => { exp.cell = Number(e.target.value); refreshExportDialog(); });
   el("exp-deco").addEventListener("change", (e) => { exp.deco = e.target.checked; });
   el("exp-frame").addEventListener("change", (e) => { exp.frame = e.target.checked; });
@@ -2431,6 +3534,39 @@ function wire() {
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.addEventListener("dblclick", onDblClick);
+
+  const lpanel = el("layer-panel");
+  const LAYER_GROUPS = [["terrain", "Terrain"], ["regions", "Politik"], ["routes", "Routen"], ["objects", "Objekte"], ["labels", "Labels"]];
+  lpanel.innerHTML = '<div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:2px;">Ebenen</div>' +
+    LAYER_GROUPS.map(([k, l]) => '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--uwe-fg);"><input type="checkbox" data-layer="' + k + '" checked> ' + l + "</label>").join("");
+  lpanel.addEventListener("change", (e) => {
+    const k = e.target && e.target.dataset ? e.target.dataset.layer : null;
+    if (k) { layerVis[k] = !!e.target.checked; draw(); }
+  });
+
+  // Werkstatt-Layout (W4 #14): Inspektor + Asset-Shelf andocken/einklappen.
+  const dockInsp = el("btn-dock-insp");
+  if (dockInsp) dockInsp.addEventListener("click", () => { el("inspector").classList.toggle("collapsed"); requestAnimationFrame(resize); });
+  const dockShelf = el("btn-dock-shelf");
+  if (dockShelf) dockShelf.addEventListener("click", () => { el("asset-shelf").classList.toggle("collapsed"); requestAnimationFrame(resize); });
+
+  el("mini-toolbar").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mini]");
+    if (!btn || selection.size !== 1) return;
+    const act = btn.dataset.mini;
+    if (act === "dup") { copySelection(); pasteClipboard(); }
+    else if (act === "del") { eraseSelection(); }
+    else if (act === "vis") {
+      const k = [...selection][0];
+      const ent = doc.objects.find((x) => x._key === k) || doc.features.find((x) => x._key === k);
+      if (ent) setSelectionVisibility(ent.visibility === "player_visible" ? "dm_only" : "player_visible");
+    }
+  });
+
+  const mm = el("minimap");
+  mm.addEventListener("pointerdown", (e) => { minimapDragging = true; mm.setPointerCapture(e.pointerId); minimapPanTo(e); });
+  mm.addEventListener("pointermove", (e) => { if (minimapDragging) minimapPanTo(e); });
+  mm.addEventListener("pointerup", () => { minimapDragging = false; });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   window.addEventListener("keydown", onKeyDown);
   // Bridge is opt-in only via ?embed=1 (README §6) — never listen in the plain
@@ -2456,6 +3592,18 @@ function boot() {
 }
 
 boot();
+
+// Test-/Debug-Hook (read-mostly): erlaubt Headless-Smoke-Tests (Playwright),
+// Doc-Zustand zu prüfen und Selektion zu setzen. Exponiert nichts, was der
+// Browser-Nutzer nicht ohnehin über die Konsole manipulieren könnte.
+window.__atlasDebug = {
+  get doc() { return doc; },
+  get state() { return state; },
+  get scaleHandlePt() { return scaleHandlePt; },
+  get drawingPoints() { return drawingPoints; },
+  selectOnly,
+  draw,
+};
 </script>
 </body>
 </html>

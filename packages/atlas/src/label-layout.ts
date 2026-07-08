@@ -93,3 +93,38 @@ export function layoutCharactersOnPath(
     return { char, x: point[0], y: point[1], rotation };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Label-Typo-Presets (Roadmap W3 #8)
+// ---------------------------------------------------------------------------
+
+/**
+ * Shared typography presets for map labels — single source for the editor,
+ * the Portal viewer and the static viewer so labels render identically.
+ * Sizes/spacings are at zoom 1; renderers multiply by their zoom.
+ */
+export interface AtlasLabelPreset {
+  key: string;
+  /** German UI label for pickers. */
+  label: string;
+  /** Base font size at zoom 1 (px). */
+  sizePx: number;
+  /** Canvas `letterSpacing` at zoom 1 (px); 0 disables. */
+  letterSpacingPx: number;
+  uppercase: boolean;
+  bold: boolean;
+  italic: boolean;
+  /** Draw a parchment halo (strokeText) behind the fill for readability. */
+  halo: boolean;
+}
+
+export const ATLAS_LABEL_PRESETS: Record<string, AtlasLabelPreset> = {
+  region: { key: "region", label: "Region (gesperrt)", sizePx: 15, letterSpacingPx: 2.2, uppercase: true, bold: true, italic: false, halo: true },
+  city: { key: "city", label: "Stadt", sizePx: 13, letterSpacingPx: 0.4, uppercase: false, bold: true, italic: false, halo: true },
+  river: { key: "river", label: "Fluss (kursiv)", sizePx: 11.5, letterSpacingPx: 1.1, uppercase: false, bold: false, italic: true, halo: false },
+};
+
+/** Looks up a preset by `style.labelPreset`; undefined keeps the legacy look. */
+export function resolveLabelPreset(key: unknown): AtlasLabelPreset | undefined {
+  return typeof key === "string" ? ATLAS_LABEL_PRESETS[key] : undefined;
+}

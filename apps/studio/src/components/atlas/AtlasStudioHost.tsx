@@ -32,6 +32,7 @@ import {
   setAtlasNodeVisibilityAction,
   updateAtlasNodeAction,
 } from "@/app/atlas-actions";
+import { setAtlasMapStyleAction } from "@/app/atlas-style-actions";
 import { generateAtlasPlotFillProposalAction } from "@/app/atlas-plot-fill-actions";
 
 interface HostDoc {
@@ -46,9 +47,11 @@ export interface AtlasStudioHostProps {
   doc: Record<string, unknown>;
   /** Maps client palette keys (e.g. builtin glyph keys) → real AtlasPaletteItem DB ids. */
   paletteIdMap?: Record<string, string>;
+  /** Called when the editor requests a missing palette asset (opens the RTX studio). */
+  onAssetRequest?: (prompt: string) => void;
 }
 
-export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStudioHostProps) {
+export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {}, onAssetRequest }: AtlasStudioHostProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const post = useCallback((message: Record<string, unknown>) => {
@@ -191,6 +194,20 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     [worldSlug],
   );
 
+  const handleMapStyle = useCallback(
+    async (stylePreset: string) => {
+      const fd = new FormData();
+      fd.set("worldSlug", worldSlug);
+      fd.set("stylePreset", stylePreset);
+      try {
+        await setAtlasMapStyleAction(fd);
+      } catch (error) {
+        console.error("Atlas-Bridge: Karten-Theme speichern fehlgeschlagen —", error);
+      }
+    },
+    [worldSlug],
+  );
+
   const handleHandout = useCallback(
     async (nodeId: string, title: string) => {
       const fd = new FormData();
@@ -239,6 +256,12 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         case "node-rename":
           void handleNodeRename(data.nodeId, data.title);
           break;
+        case "map-style":
+          void handleMapStyle(data.stylePreset);
+          break;
+        case "asset-request":
+          onAssetRequest?.(data.prompt);
+          break;
         default:
           break;
       }
@@ -249,10 +272,12 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     doc,
     handleAiDraft,
     handleHandout,
+    handleMapStyle,
     handleNodeRename,
     handlePlotFillProposal,
     handleSave,
     handleVisibility,
+    onAssetRequest,
     post,
   ]);
 

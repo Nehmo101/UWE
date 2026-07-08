@@ -33,7 +33,16 @@
     "./vine": "./src/vine.ts",
     "./assets": "./src/assets.ts",
     "./rtx-asset-proposal": "./src/rtx-asset-proposal.ts",
-    "./rtx-asset-preview": "./src/rtx-asset-preview.ts"
+    "./rtx-asset-preview": "./src/rtx-asset-preview.ts",
+    "./coastline": "./src/coastline.ts",
+    "./bridge-points": "./src/bridge-points.ts",
+    "./route-astar": "./src/route-astar.ts",
+    "./territory": "./src/territory.ts",
+    "./name-culture": "./src/name-culture.ts",
+    "./river-tools": "./src/river-tools.ts",
+    "./climate": "./src/climate.ts",
+    "./cartouche": "./src/cartouche.ts",
+    "./travel": "./src/travel.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

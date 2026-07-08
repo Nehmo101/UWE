@@ -20,8 +20,10 @@
 
 import { AtlasParseError } from "./serialization";
 import {
+  DEFAULT_LIGHT_DIRECTION,
   normalizeContourSteps,
   normalizeElevationCells,
+  normalizeLightDirection,
   normalizeParallaxStrength,
 } from "./elevation";
 
@@ -56,13 +58,21 @@ export interface AtlasTileLayer {
   elevation?: Record<string, number>;
   /**
    * Per-map parallax strength [0, 1]; `0` disables the effect. Owner decision:
-   * parallax is configurable per map (light direction stays fixed NW).
+   * parallax is configurable per map.
    */
   parallaxStrength?: number;
   /** Per-map toggle for contour-line rendering (owner decision: toggleable). */
   contoursEnabled?: boolean;
   /** Number of contour steps between elevation 0 and 1 (default 5). */
   contourSteps?: number;
+  /**
+   * Global light direction (Roadmap W3 #7, beschlossen 2026-07-07): rotates
+   * hillshade + elevation cast shadows. Missing = "nw" (historic default);
+   * migration keeps docs sparse by dropping the default.
+   */
+  lightDir?: string;
+  /** Klima-Bänder-Overlay (Roadmap W4 #22); missing = off (sparse). */
+  climateEnabled?: boolean;
 }
 
 /**
@@ -165,6 +175,16 @@ export function migrateDoc(doc: unknown): AtlasDocV2 {
   }
   if (d.tileLayer.contourSteps !== undefined) {
     d.tileLayer.contourSteps = normalizeContourSteps(d.tileLayer.contourSteps);
+  }
+  if (d.tileLayer.lightDir !== undefined) {
+    const lightDir = normalizeLightDirection(d.tileLayer.lightDir);
+    // Default bleibt implizit — Docs sparse halten wie bei elevation/contours.
+    if (lightDir === DEFAULT_LIGHT_DIRECTION) delete d.tileLayer.lightDir;
+    else d.tileLayer.lightDir = lightDir;
+  }
+  if (d.tileLayer.climateEnabled !== undefined) {
+    if (d.tileLayer.climateEnabled === true) d.tileLayer.climateEnabled = true;
+    else delete d.tileLayer.climateEnabled;
   }
   return d as AtlasDocV2;
 }

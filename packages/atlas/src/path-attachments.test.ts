@@ -23,6 +23,15 @@ const HORIZONTAL_COORDS: Coordinate[] = [
   [0.9, 0.5],
 ];
 
+/** A straight vertical path at x = 0.5. */
+const VERTICAL_PATH: Path = {
+  type: "Path",
+  coordinates: [
+    [0.5, 0.1],
+    [0.5, 0.9],
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // generatePathAttachments / edge cases
 // ---------------------------------------------------------------------------
@@ -217,6 +226,84 @@ describe("generatePathAttachments / determinism & bounds", () => {
     for (const p of items) {
       assert.ok(p.x >= 0 && p.x <= 1, `x ${p.x} out of [0,1]`);
       assert.ok(p.y >= 0 && p.y <= 1, `y ${p.y} out of [0,1]`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generatePathAttachments / alignToPath
+// ---------------------------------------------------------------------------
+
+describe("generatePathAttachments / alignToPath", () => {
+  const baseOpts = { kind: "trees" as const, spacing: 0.07, seed: 42 };
+
+  it("defaults to unaligned (alignToPath omitted === alignToPath: false)", () => {
+    const omitted = generatePathAttachments(HORIZONTAL_PATH, baseOpts);
+    const explicitFalse = generatePathAttachments(HORIZONTAL_PATH, {
+      ...baseOpts,
+      alignToPath: false,
+    });
+    assert.deepEqual(omitted, explicitFalse);
+  });
+
+  it("keeps positions and scale identical between aligned and unaligned runs", () => {
+    // Diagonal path: segment angle 45° ≠ 0, so rotations must visibly differ
+    // while positions/scale stay identical (same PRNG stream either way).
+    const diagonal: Coordinate[] = [
+      [0.1, 0.1],
+      [0.8, 0.8],
+    ];
+    const unaligned = generatePathAttachments(diagonal, baseOpts);
+    const aligned = generatePathAttachments(diagonal, { ...baseOpts, alignToPath: true });
+
+    assert.equal(aligned.length, unaligned.length, "same placement count");
+    for (let i = 0; i < unaligned.length; i++) {
+      const a = aligned[i]!;
+      const u = unaligned[i]!;
+      assert.equal(a.x, u.x, `placement ${i} x should be identical`);
+      assert.equal(a.y, u.y, `placement ${i} y should be identical`);
+      assert.equal(a.scale, u.scale, `placement ${i} scale should be identical`);
+    }
+    // Rotation is the one field allowed to differ (by the 45° segment angle).
+    const anyRotationDiffers = aligned.some((p, i) => p.rotation !== unaligned[i]!.rotation);
+    assert.ok(anyRotationDiffers, "rotation should differ between aligned and unaligned");
+
+    // On a perfectly horizontal path the segment angle is 0°, so aligned
+    // output is fully identical to unaligned — assert that too.
+    assert.deepEqual(
+      generatePathAttachments(HORIZONTAL_PATH, { ...baseOpts, alignToPath: true }),
+      generatePathAttachments(HORIZONTAL_PATH, baseOpts),
+    );
+  });
+
+  it("aligns rotation to ~0° (± jitter range) for a horizontal path", () => {
+    const items = generatePathAttachments(HORIZONTAL_PATH, {
+      kind: "trees",
+      spacing: 0.05,
+      seed: 21,
+      alignToPath: true,
+    });
+    assert.ok(items.length > 0);
+    for (const p of items) {
+      // rotationRange for "trees" is 12° — aligned rotation should be within
+      // [0 - range, 0 + range] for a path pointing along +x.
+      assert.ok(Math.abs(p.rotation) <= 12.0001, `rotation ${p.rotation} not within ±12° of 0°`);
+    }
+  });
+
+  it("aligns rotation to ~90° (± jitter range) for a vertical path", () => {
+    const items = generatePathAttachments(VERTICAL_PATH, {
+      kind: "trees",
+      spacing: 0.05,
+      seed: 21,
+      alignToPath: true,
+    });
+    assert.ok(items.length > 0);
+    for (const p of items) {
+      assert.ok(
+        Math.abs(p.rotation - 90) <= 12.0001,
+        `rotation ${p.rotation} not within ±12° of 90°`,
+      );
     }
   });
 });

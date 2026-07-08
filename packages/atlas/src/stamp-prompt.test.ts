@@ -25,7 +25,8 @@ describe("assembleStampPrompt", () => {
   });
 
   it("style preset contains core keywords", () => {
-    assert.ok(ATLAS_STAMP_STYLE_PROMPT.includes("tolkien-style ink line art"));
+    assert.ok(ATLAS_STAMP_STYLE_PROMPT.includes("gouache painted fantasy map asset"));
+    assert.ok(ATLAS_STAMP_STYLE_PROMPT.includes("pigment edge"));
     assert.ok(ATLAS_STAMP_STYLE_PROMPT.includes("transparent background"));
     assert.ok(ATLAS_STAMP_STYLE_PROMPT.includes("map stamp"));
   });

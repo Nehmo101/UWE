@@ -4,6 +4,8 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 
 > Stand: 2026-07-07 nach Parallel-Batch 2 „RTX-Assets renderbar · Settlement-Tuning + Goldens · Gouache-Batch 4“. Dieser Stand ist auf `main`.
 >
+> **Beschlossene nächste Welle:** [atlas-editor-roadmap.md](atlas-editor-roadmap.md) — 13 Editor-Design-/Tool-Punkte (Vertex-Editing, Küstensaum, Themes, Spray-Pinsel, Asset-Browser, Ebenen-Panel, Werkstatt-Layout …) + Reiseplaner, vom Owner bestätigt.
+>
 > Hinweis: Die CoK-Gap-Analyse ([atlas-cok-gap-analysis.md](atlas-cok-gap-analysis.md), Stand 2026-07-01) ist teilweise überholt — Säumen-UI, Stempel-Variation, Undo/Redo, Multi-Select und der Export-Dialog (Ausschnitt + Grid + Deko) sind inzwischen auf `main`.
 
 ## Erledigt auf `main`
@@ -37,6 +39,11 @@ Offene oder geplante Erweiterungen nach dem initialen Atlas-Merge (W0–P7).
 - **Settlement-Wasserfront-UI-Parameter:** Das Settlement-Ghost-Panel in `atlas.html` bietet einen Hafen/Wasserfront-Toggle (Default aus) plus die drei realen Engine-Optionen (`edgeFraction`, `pierCount` 1–4, `includeDock`); Werte fließen deterministisch in `generateSettlement()` und werden bei Übernahme als `style.settlementWaterfront` persistiert. Toggle aus = byte-identisches Inland-Verhalten.
 - **Gouache-Asset-Batch 3:** sieben neue Stamp-Rezepte in `assets.ts` (`g_watermill`, `g_lighthouse`, `g_amphitheater`, `g_burial_mound`, `g_caravanserai` als structure; `g_ziggurat`, `g_portal_arch` als landmark; `g_windmill` existierte bereits) — Styleguide-konform (Schatten/Highlight/Pigmentrand, Base-centre), Engine-Bundle neu gebaut.
 - **RTX-Asset-Studio — MVP (Studio-Panel + Pending-Persistenz):** `apps/studio/app/atlas-asset-actions.ts` begrenzt den DM-Prompt (max. 500 Zeichen), führt `atlas_generate_asset_proposal` über `runBrainAction` nur auf lokalen/RTX-Providern (`ollama`, `openai_compatible`) aus und re-validiert das Ergebnis serverseitig mit `validateRtxAtlasAssetProposal`. Das Modal `AtlasAssetProposalStudio` (Workspace-Button „✦ RTX-Asset“) zeigt Prompt-Eingabe, Validierungsstatus, JSON-/Metadaten-Preview (Kategorie/Tags/Palette) und Validator-Fehler samt verworfener Rohausgabe. „Als Pending-Asset speichern“ re-validiert das Proposal erneut serverseitig und legt nur ein `AtlasPaletteItem` mit `source=ai`, `reviewStatus=pending` und dem Proposal-JSON in `styleTags` an — kein Auto-Apply, kein `AtlasObject`, keine Builtin-Promotion; Pending-Items bleiben wie bisher aus Portal und Static Export ausgeschlossen.
+
+- **Ink → Gouache komplett (Owner-Entscheid):** Der Gouache-Look ist kanonisch. Batch 5 (`assets-batch5.ts`, 20 Rezepte) liefert gemalte Äquivalente für **alle** Builtin-Ink-Glyphen; `GLYPH_TO_GOUACHE`/`gouacheKeyForGlyph` mappen Ink-Keys auf Gouache. Editor-Palette zeigt nur noch Gouache/RTX (Ink-Grid entfernt); Objekte mit Ink-`paletteItemId`, Biome-Scatter, Ranken-Wolken und die Legenden (Editor-View **und** Static Viewer, inkl. RTX-Zeilen) rendern gemalt. Ink bleibt DB-seitig stabiler FK-Träger; Ink-Rendering nur noch als Fallback für unbekannte Keys. KI-Bild-Stempel erzeugen jetzt Gouache (`ATLAS_STAMP_STYLE_PROMPT` umgestellt, Styleguide §Gouache ist verbindliche Prompt-Quelle).
+- **Ranke im Gouache-Look:** `drawVine` hat einen `fill`-Modus (gefüllter, getaperter Ribbon-Stamm mit Pigmentkante, Highlight, Blatt-Blobs an den Ausläufern); Editor, Portal und Static Viewer nutzen ihn mit satter Grün-Palette; Aura-Wolken sind Gouache (`g_cloud`).
+- **Skalier-Griff am Auswahlrahmen:** Einzelselektion zeigt einen roten Griff unten rechts; Ziehen skaliert live (0.2–3, Undo-fähig), funktioniert für Gouache-, RTX- und Fallback-Objekte. Headless-funktional getestet (Playwright: Plot-Fill-Flow + Griff-Drag).
+- **Editor-Testhook:** `window.__atlasDebug` (doc/state/scaleHandlePt/drawingPoints, selectOnly, draw) für Headless-Smoke-Tests — Grundlage für die geplanten Golden-Screenshots.
 
 ## Noch offen aus dem Gouache-Plan
 

@@ -108,6 +108,7 @@ export {
   DEFAULT_PARALLAX_STRENGTH,
   DEFAULT_CONTOUR_STEPS,
   CONTOUR_MAJOR_EVERY,
+  DEFAULT_LIGHT_DIRECTION,
   cellElevation,
   hasElevation,
   sampleElevation,
@@ -116,11 +117,13 @@ export {
   buildContourLines,
   parallaxCanvasOffset,
   elevationShadowOffset,
+  lightDirectionSigns,
   normalizeElevationCells,
+  normalizeLightDirection,
   normalizeParallaxStrength,
   normalizeContourSteps,
 } from "./elevation";
-export type { ElevationGrid, ContourLine } from "./elevation";
+export type { ElevationGrid, ContourLine, LightDirection, HillshadeOptions } from "./elevation";
 
 // Plot fill — deterministic object scatter for `plot` features
 export { fillPlotWithGouacheAssets } from "./plot-fill";
@@ -196,6 +199,30 @@ export type {
 export { buildVineLayout } from "./vine";
 export type { VineOptions, VineLayout, VineAura } from "./vine";
 
+// Roadmap Welle 3/4 engine slices
+export type { CoastStyleOptions } from "./coastline";
+export { WATER_BIOME, snapPointToWater, riverFlowsUphill } from "./river-tools";
+export type { SnapToWaterOptions, UphillCheckOptions } from "./river-tools";
+export { CLIMATE_ZONES, climateZoneAt, climateBands } from "./climate";
+export type { ClimateZone, ClimateBand } from "./climate";
+export { CARTOUCHE_STYLES, drawCartouche } from "./cartouche";
+export type { CartoucheStyle, CartoucheOptions } from "./cartouche";
+export { TERRAIN_TRAVEL_FACTOR, planTravelRoute } from "./travel";
+export type { TravelOptions, TravelSegment, TravelPlan } from "./travel";
+export { findBridgePoints } from "./bridge-points";
+export type { BridgePoint } from "./bridge-points";
+export { routeRoad } from "./route-astar";
+export type { RouteOptions, RouteResult } from "./route-astar";
+export { suggestTerritories } from "./territory";
+export type { TerritorySeed, TerritoryOptions, TerritoryRegion } from "./territory";
+export {
+  CULTURE_PROFILES,
+  listCultureProfiles,
+  getCultureProfile,
+  generatePlaceNames,
+} from "./name-culture";
+export type { CultureProfile, NameKind, GenerateNamesOptions } from "./name-culture";
+
 // Gouache painted-asset engine (Canvas-of-Kings style)
 export {
   GOUACHE_ASSETS,
@@ -205,6 +232,8 @@ export {
   listGouacheAssetsByCategory,
   drawGouacheAsset,
   isGouacheAsset,
+  GLYPH_TO_GOUACHE,
+  gouacheKeyForGlyph,
 } from "./assets";
 export type {
   GouacheAsset,
@@ -279,8 +308,10 @@ export {
   layoutCharactersOnPath,
   pathLength,
   pointAtDistance,
+  ATLAS_LABEL_PRESETS,
+  resolveLabelPreset,
 } from "./label-layout";
-export type { CharacterPlacement } from "./label-layout";
+export type { CharacterPlacement, AtlasLabelPreset } from "./label-layout";
 
 // Stamp variation — deterministic scale/rotation jitter (CoK-style)
 export {

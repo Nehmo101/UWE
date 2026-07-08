@@ -16,6 +16,7 @@
 import { mulberry32, hashStringToSeed } from "./prng";
 
 import { BATCH4_RECIPES, GOUACHE_ASSETS_BATCH4 } from "./assets-batch4";
+import { BATCH5_RECIPES, GOUACHE_ASSETS_BATCH5, GLYPH_TO_GOUACHE } from "./assets-batch5";
 import {
   type Ctx,
   type Recipe,
@@ -96,6 +97,7 @@ export const GOUACHE_ASSETS: readonly GouacheAsset[] = [
   { key: "g_stall", name: "Marktstand", category: "market" },
   { key: "g_well", name: "Brunnen", category: "prop" },
   ...GOUACHE_ASSETS_BATCH4,
+  ...GOUACHE_ASSETS_BATCH5,
 ] as const;
 
 export const GOUACHE_ASSET_KEYS: readonly string[] = GOUACHE_ASSETS.map(
@@ -401,6 +403,7 @@ const RECIPES: Record<string, Recipe> = {
     ctx.save(); ctx.strokeStyle = "#5a4026"; ctx.lineWidth = Math.max(1, lw); ctx.beginPath(); ctx.moveTo(-s * 0.22, -s * 0.1); ctx.lineTo(-s * 0.26, -s * 0.5); ctx.moveTo(s * 0.22, -s * 0.1); ctx.lineTo(s * 0.26, -s * 0.5); ctx.moveTo(-s * 0.3, -s * 0.5); ctx.lineTo(s * 0.3, -s * 0.5); ctx.stroke(); ctx.restore();
   },
   ...BATCH4_RECIPES,
+  ...BATCH5_RECIPES,
 };
 
 // ---------------------------------------------------------------------------
@@ -423,6 +426,12 @@ export interface DrawGouacheAssetOptions {
   blur?: number;
   /** Deterministic seed; defaults to a hash of the asset key. */
   seed?: number;
+  /**
+   * Tint (Roadmap W3 #11): hue rotation in degrees (−180…180) and optional
+   * saturation factor (1 = unchanged). Applied via canvas `filter`, so the
+   * whole painted asset shifts consistently; omit for the original palette.
+   */
+  tint?: { hue?: number; saturate?: number };
 }
 
 /**
@@ -440,7 +449,15 @@ export function drawGouacheAsset(
   const lw = opts.lineWidth ?? 1.4;
   const rng = mulberry32(opts.seed ?? hashStringToSeed(key));
   ctx.save();
-  if (opts.blur && opts.blur > 0) ctx.filter = `blur(${opts.blur}px)`;
+  const filters: string[] = [];
+  if (opts.blur && opts.blur > 0) filters.push(`blur(${opts.blur}px)`);
+  if (opts.tint) {
+    const hue = Number.isFinite(opts.tint.hue) ? (opts.tint.hue as number) : 0;
+    const sat = Number.isFinite(opts.tint.saturate) ? (opts.tint.saturate as number) : 1;
+    if (hue !== 0) filters.push(`hue-rotate(${hue}deg)`);
+    if (sat !== 1) filters.push(`saturate(${Math.max(0, sat)})`);
+  }
+  if (filters.length) ctx.filter = filters.join(" ");
   ctx.translate(opts.x, opts.y);
   if (opts.rotation) ctx.rotate(opts.rotation);
   ctx.lineJoin = "round";
@@ -452,4 +469,22 @@ export function drawGouacheAsset(
 /** Whether a key maps to a real gouache recipe (renderable). */
 export function isGouacheAsset(key: string | null | undefined): boolean {
   return !!key && key in RECIPES;
+}
+
+// ---------------------------------------------------------------------------
+// Ink glyph → gouache mapping (batch 5)
+// ---------------------------------------------------------------------------
+
+export { GLYPH_TO_GOUACHE } from "./assets-batch5";
+
+/**
+ * Gouache asset key for a builtin ink glyph key, or `undefined` when no
+ * painted equivalent exists. Complete for every `BUILTIN_GLYPHS` entry
+ * (asserted by tests) — renderers use this to paint legacy ink-glyph objects
+ * and scatter/attachment glyphs without touching stored data.
+ */
+export function gouacheKeyForGlyph(glyphKey: string | null | undefined): string | undefined {
+  if (!glyphKey) return undefined;
+  const mapped = GLYPH_TO_GOUACHE[glyphKey];
+  return mapped && mapped in RECIPES ? mapped : undefined;
 }

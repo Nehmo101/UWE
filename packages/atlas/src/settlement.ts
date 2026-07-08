@@ -11,11 +11,18 @@ import { AtlasFeatureKind, LAYER_Z } from "./constants";
 import type { AtlasFeatureKind as AtlasFeatureKindValue } from "./constants";
 import type { Coordinate, Path, Polygon } from "./geometry";
 import { hashStringToSeed, mulberry32 } from "./prng";
-import { placeSettlementBuildings, rotationToward, tooClose } from "./settlement-layout";
+import {
+  applySettlementCondition,
+  placeSettlementBuildings,
+  rotationToward,
+  tooClose,
+} from "./settlement-layout";
+import type { SettlementCondition } from "./settlement-layout";
 import { appendSettlementWaterfront, resolveWaterfrontOptions } from "./settlement-waterfront";
 import type { SettlementWaterfrontOptions } from "./settlement-waterfront";
 
 export type { SettlementWaterfrontOptions } from "./settlement-waterfront";
+export type { SettlementCondition } from "./settlement-layout";
 
 export type SettlementFeatureKind = "wall" | "road" | "plaza" | "waterfront" | "pier";
 export type SettlementObjectKind =
@@ -58,6 +65,12 @@ export interface SettlementOptions {
   includeWell?: boolean;
   /** Override builtin palette ids/keys per object kind. */
   paletteItemIds?: Partial<Record<SettlementObjectKind, string>>;
+  /**
+   * Deterioration/occupation state, applied as a deterministic post-process
+   * after the base layout. Defaults to "thriving", which is byte-identical to
+   * omitting this option entirely.
+   */
+  condition?: SettlementCondition;
 }
 
 export interface SettlementFeatureStyle {
@@ -67,6 +80,8 @@ export interface SettlementFeatureStyle {
   strokeWidth?: number;
   lineDash?: number[];
   opacity?: number;
+  /** Set by a non-"thriving" `condition` post-process; absent otherwise. */
+  condition?: SettlementCondition;
 }
 
 export interface SettlementFeature {
@@ -87,6 +102,8 @@ export interface SettlementObjectStyle {
   gouache?: string;
   lineWidth?: number;
   blur?: number;
+  /** Set by a non-"thriving" `condition` post-process; absent otherwise. */
+  condition?: SettlementCondition;
 }
 
 export interface SettlementObject {
@@ -641,14 +658,23 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
     addObject("building", `building-${index}`, placement.point, placement.rotation, placement.scale);
   });
 
+  // Condition is applied last, purely index-based, after the full base layout
+  // is computed — "thriving" (the default) skips this entirely so it stays
+  // byte-identical to omitting the option.
+  const condition = options.condition;
+  const conditioned =
+    condition && condition !== "thriving" ? applySettlementCondition(features, objects, condition) : undefined;
+  const finalFeatures = conditioned?.features ?? features;
+  const finalObjects = conditioned?.objects ?? objects;
+
   return {
     seed,
     center,
-    features,
-    objects,
+    features: finalFeatures,
+    objects: finalObjects,
     meta: {
       area,
-      buildingCount: objects.filter((object) => object.kind === "building").length,
+      buildingCount: finalObjects.filter((object) => object.kind === "building").length,
       gateCount,
       ...(waterfrontOptions && generatedPierCount > 0
         ? { waterfront: true, pierCount: generatedPierCount }

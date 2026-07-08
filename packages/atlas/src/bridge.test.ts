@@ -38,6 +38,21 @@ describe("bridge message guards", () => {
       true,
     );
     assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "map-style", stylePreset: "nachtkarte" }),
+      true,
+    );
+    // map-style without a string preset key is malformed
+    assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "map-style" }), false);
+    assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "map-style", stylePreset: 7 }),
+      false,
+    );
+    assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "asset-request", prompt: "Ein Leuchtturm" }),
+      true,
+    );
+    assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "asset-request" }), false);
+    assert.equal(
       isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "plot-fill-proposal-request", seed: 42 }),
       false,
     );

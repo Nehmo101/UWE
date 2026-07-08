@@ -75,3 +75,26 @@ describe("gouache asset registry", () => {
     assert.equal(total, GOUACHE_ASSETS.length, "every asset in exactly one category");
   });
 });
+
+describe("ink glyph → gouache mapping (batch 5)", () => {
+  it("maps every builtin ink glyph to a renderable gouache asset", async () => {
+    const { BUILTIN_GLYPH_KEYS } = await import("./glyphs");
+    const { GLYPH_TO_GOUACHE, gouacheKeyForGlyph, isGouacheAsset } = await import("./assets");
+    for (const key of BUILTIN_GLYPH_KEYS) {
+      const mapped = GLYPH_TO_GOUACHE[key];
+      assert.ok(mapped, `no gouache mapping for ink glyph "${key}"`);
+      assert.ok(isGouacheAsset(mapped), `mapping target "${mapped}" not renderable`);
+      assert.equal(gouacheKeyForGlyph(key), mapped);
+    }
+    assert.equal(gouacheKeyForGlyph("nope"), undefined);
+    assert.equal(gouacheKeyForGlyph(null), undefined);
+  });
+
+  it("registers every batch-5 asset in the canonical registry", async () => {
+    const { GOUACHE_ASSETS_BATCH5 } = await import("./assets-batch5");
+    const { getGouacheAsset } = await import("./assets");
+    for (const a of GOUACHE_ASSETS_BATCH5) {
+      assert.equal(getGouacheAsset(a.key)?.name, a.name);
+    }
+  });
+});

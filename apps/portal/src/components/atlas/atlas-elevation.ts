@@ -34,6 +34,8 @@ export interface ElevationTileLayer {
   parallaxStrength?: number | null;
   contoursEnabled?: boolean | null;
   contourSteps?: number | null;
+  /** Globale Lichtrichtung (W3 #7); undefined ⇒ "nw" wie bisher. */
+  lightDir?: string | null;
 }
 
 /** Unterhalb dieser Höhe gibt es weder Schatten noch Parallax. */
@@ -45,13 +47,14 @@ type W2C = (nx: number, ny: number) => [number, number];
 export interface ElevationRenderCache {
   /** Referenz des elevation-Records, für den die Caches gebaut wurden. */
   key: Record<string, number> | null | undefined;
+  lightDir: string;
   hillshade: HTMLCanvasElement | null;
   contours: ContourLine[] | null;
   contourSteps: number;
 }
 
 export function createElevationCache(): ElevationRenderCache {
-  return { key: undefined, hillshade: null, contours: null, contourSteps: 0 };
+  return { key: undefined, lightDir: "nw", hillshade: null, contours: null, contourSteps: 0 };
 }
 
 /**
@@ -68,10 +71,12 @@ export function drawElevationOverlays(
 ): void {
   if (!hasElevation(tileLayer)) return;
 
-  if (cache.key !== tileLayer.elevation) {
+  const lightDir = tileLayer.lightDir ?? "nw";
+  if (cache.key !== tileLayer.elevation || cache.lightDir !== lightDir) {
     cache.key = tileLayer.elevation;
+    cache.lightDir = lightDir;
     cache.hillshade = createHillshadeCanvas(
-      buildHillshadeRGBA(tileLayer),
+      buildHillshadeRGBA(tileLayer, { lightDir }),
       tileLayer.cols,
       tileLayer.rows,
     );
@@ -132,7 +137,8 @@ export function resolveObjectElevation(
 }
 
 /**
- * Weicher elliptischer Bodenschatten nach Südosten (Licht fix NW) — VOR dem
+ * Weicher elliptischer Bodenschatten, geworfen entgegen der Karten-
+ * Lichtrichtung (Default NW-Licht ⇒ Schatten nach Südosten) — VOR dem
  * Objekt zeichnen. No-op für flache Objekte.
  */
 export function drawObjectElevationShadow(
@@ -142,9 +148,10 @@ export function drawObjectElevationShadow(
   oy: number,
   size: number,
   zoom: number,
+  lightDir?: string | null,
 ): void {
   if (!(e > MIN_VISIBLE_ELEVATION)) return;
-  const [dx, dy] = elevationShadowOffset(e, zoom);
+  const [dx, dy] = elevationShadowOffset(e, zoom, lightDir ?? undefined);
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(ox + dx, oy + dy, size * 0.45, size * 0.28, 0, 0, Math.PI * 2);
