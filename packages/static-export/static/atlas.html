@@ -394,8 +394,12 @@ const state = {
   heightMode: "raise", heightStrength: 0.15,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
-  toast: null, aiReview: null, stampVariation: true,
+  toast: null, aiReview: null, stampVariation: true, underworld: false,
 };
+// Unterwelt-Ebene (Roadmap W4 #26): Entitäten tragen style.underworld; der
+// Modus-Toggle filtert Erzeugung, Rendering und Hit-Test.
+function entIsUnderworld(e) { return !!(e && e.style && e.style.underworld); }
+function tagUnderworld(e) { if (state.underworld) { e.style = e.style || {}; e.style.underworld = true; } return e; }
 const HEIGHT_MODE_LABEL = { raise: "Anheben", lower: "Absenken", smooth: "Glätten" };
 let doc = null;
 let drawingPoints = [];
@@ -1253,10 +1257,23 @@ function drawScene(ctx, W, H, chrome) {
 
   ctx.strokeStyle = pr.colors.ink; ctx.lineWidth = 2 * z; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
 
+  // Unterwelt-Ebene (Roadmap W4 #26): dunkler Wash + Layer-Filter. Entitäten
+  // der jeweils anderen Ebene erscheinen beim Bearbeiten nur als blasser
+  // Kontext; im Export (chrome=false) wird nur die aktive Ebene ausgegeben.
+  const und = state.underworld;
+  if (und) { ctx.save(); ctx.fillStyle = "rgba(18,14,28,0.42)"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.restore(); }
+
   const feats = [...nodeFeatures()].sort((a, b) => (a.layer || 0) - (b.layer || 0));
-  for (const f of feats) { if (layerVis[layerGroupOf(f)] === false) continue; drawFeature(ctx, f); }
+  for (const f of feats) {
+    if (layerVis[layerGroupOf(f)] === false) continue;
+    if (entIsUnderworld(f) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawFeature(ctx, f); ctx.restore(); continue; }
+    drawFeature(ctx, f);
+  }
   scaleHandlePt = null;
-  if (layerVis.objects) for (const o of nodeObjects()) drawObject(ctx, o);
+  if (layerVis.objects) for (const o of nodeObjects()) {
+    if (entIsUnderworld(o) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawObject(ctx, o); ctx.restore(); continue; }
+    drawObject(ctx, o);
+  }
 
   if (!chrome) return;
 
@@ -2073,6 +2090,7 @@ function placeStamp(nx, ny) {
   // Gouache-Objekt: gemaltes Asset in style.gouache; paletteItemId bleibt ein
   // gültiger Builtin-Glyph als FK-Träger (der Renderer bevorzugt style.gouache).
   if (!rtxItem && state.gouacheKey) o.style = { gouache: state.gouacheKey };
+  tagUnderworld(o);
   doc.objects.push(o);
   markDirty(); draw();
 }
@@ -2104,12 +2122,12 @@ function sprayAt(nx, ny) {
 
 function addPin(pt) {
   pushUndo();
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" };
+  const f = tagUnderworld({ _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "pin", geometry: { type: "Point", coordinates: pt }, layer: 50, visibility: "dm_only" });
   doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 function addLabel(pt, text, path) {
   pushUndo();
-  const f = { _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" };
+  const f = tagUnderworld({ _key: nextKey(), id: nextKey(), nodeId: state.nodeId, kind: "label", geometry: { type: "LabelAnchor", coordinates: pt, text, pathCoordinates: path || undefined }, labelText: text, labelColor: labelRed ? "red" : "black", layer: 60, visibility: "dm_only" });
   doc.features.push(f); selectOnly(f._key); markDirty(); draw();
 }
 const PLOT_GOUACHE_BY_BIOME = {
@@ -2175,6 +2193,7 @@ function finishPolygon() {
     layer: isBiome ? 10 : isPlot ? 18 : 20,
     visibility: "dm_only",
   };
+  tagUnderworld(f);
   doc.features.push(f);
   if (isPlot) fillPlotObjects(f, false);
   drawingPoints = []; selectOnly(f._key); markDirty(); draw();
@@ -2189,6 +2208,7 @@ function finishPath() {
     ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
+  tagUnderworld(f);
   doc.features.push(f); drawingPoints = [];
   // Fluss-Intelligenz (Roadmap W4 #18): Mündung an nahes Wasser snappen +
   // Bergauf-Warnung übers Höhenfeld — Hinweis, nie Auto-Korrektur.
@@ -2450,7 +2470,9 @@ function eraseKey(k) {
 function eraseAt(nx, ny) { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); }
 
 function hitTest(wx, wy) {
-  const objs = nodeObjects(), feats = nodeFeatures();
+  // Nur die aktive Ebene (Oberfläche/Unterwelt) ist interaktiv (W4 #26).
+  const objs = nodeObjects().filter((o) => entIsUnderworld(o) === state.underworld);
+  const feats = nodeFeatures().filter((f) => entIsUnderworld(f) === state.underworld);
   const thr = 14 / (state.zoom * Math.max(WORLD_W, WORLD_H));
   for (let i = objs.length - 1; i >= 0; i--) { const o = objs[i]; if (Math.hypot(o.x - wx, o.y - wy) < thr * 2) return o._key; }
   for (let i = feats.length - 1; i >= 0; i--) { const f = feats[i], g = f.geometry; if (g.type === "Point" || g.type === "LabelAnchor") { const c = g.coordinates; if (c && Math.hypot(c[0] - wx, c[1] - wy) < thr * 2.4) return f._key; } }
@@ -2835,6 +2857,19 @@ function buildSidebar() {
     const preset2 = MAP_SIZE_PRESETS.find((p) => p[0] === e.target.value);
     if (preset2) resizeMap(preset2[2], preset2[3]);
   });
+  // Unterwelt-Ebene (Roadmap W4 #26): Modus-Toggle — neue Inhalte landen auf
+  // der aktiven Ebene, die andere erscheint nur als blasser Kontext.
+  const uw = document.createElement("div");
+  uw.style.cssText = "padding:8px 2px 2px;";
+  uw.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--uwe-fg);cursor:pointer;"><input id="underworld-toggle" type="checkbox"> 🕳 Unterwelt-Ebene bearbeiten</label>';
+  swatches.parentElement.appendChild(uw);
+  uw.querySelector("input").addEventListener("change", (e) => {
+    const on = !!e.target.checked;
+    clearSel();
+    setState({ underworld: on });
+    flash(on ? "🕳 Unterwelt-Ebene — neue Inhalte liegen darunter" : "Oberflächen-Ebene");
+    draw();
+  });
   swatches.parentElement.appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
@@ -2971,6 +3006,8 @@ function refreshChrome() {
   if (climateBox && doc && doc.tileLayer) climateBox.checked = doc.tileLayer.climateEnabled === true;
   const sizeSel = el("map-size");
   if (sizeSel && doc && doc.tileLayer) sizeSel.value = (doc.tileLayer.cols || 64) + "x" + (doc.tileLayer.rows || 40);
+  const uwBox = el("underworld-toggle");
+  if (uwBox) uwBox.checked = st.underworld === true;
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
