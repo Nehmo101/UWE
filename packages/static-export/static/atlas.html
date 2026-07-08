@@ -170,16 +170,9 @@
         <span id="subbar-content"></span>
       </div>
 
-      <svg viewBox="0 0 80 80" width="60" height="60" style="position:absolute; top:14px; right:16px; opacity:.9; pointer-events:none;">
-        <circle cx="40" cy="40" r="36" fill="#f2e8c9" stroke="#1a1008" stroke-width="1.5" />
-        <polygon points="40,8 35,36 40,30 45,36" fill="#1a1008" />
-        <polygon points="40,72 35,44 40,50 45,44" fill="#8b1a10" />
-        <text x="40" y="6" text-anchor="middle" font-size="9" font-family="serif" fill="#1a1008" font-weight="bold">N</text>
-      </svg>
-      <div style="position:absolute; bottom:52px; right:16px; pointer-events:none; text-align:center;">
-        <div style="width:80px; height:8px; border:1px solid #1a1008; background:repeating-linear-gradient(to right,#1a1008 0 10px,#f2e8c9 10px 20px);"></div>
-        <div style="font-family:var(--serif); font-size:10px; color:#1a1008; margin-top:2px;">0 — 100 leagues</div>
-      </div>
+      <!-- Kompass & Maßstab werden live vom Canvas gezeichnet (drawScene: drawCompassRose/drawScaleBar,
+           theme-aware + zoom-genau, deckungsgleich mit dem PNG-Export). Die früheren statischen
+           SVG-/HTML-Deko-Overlays hier waren doppelt und sind entfernt. -->
 
       <div id="ai-review" style="position:absolute; top:52px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:10px; padding:9px 14px; background:var(--uwe-surface); border:1.5px solid var(--uwe-accent); border-radius:11px; backdrop-filter:blur(10px); box-shadow:0 4px 16px rgba(0,0,0,.22); font-size:12.5px;">
         <span style="color:var(--uwe-accent);">✦</span>
@@ -466,6 +459,7 @@ const nextKey = () => "ck-" + (++keyCounter);
 const selection = new Set();
 let marquee = null;          // {x0,y0,x1,y1} normalisiert — Shift-Rahmenauswahl
 let scaleHandlePt = null;    // {x,y,key} canvas-px — Skalier-Griff der Einzelselektion
+let sceneChrome = true;      // nur beim interaktiven Haupt-Canvas true (Minimap/Export: false)
 let resizing = null;         // {key, anchor:[cx,cy], startDist, startScale} — Griff-Drag
 let clipboard = null;        // {features:[],objects:[]} — Deep-Copies ohne _key/id
 let pasteCount = 0;          // wachsender Einfüge-Versatz pro Paste
@@ -480,7 +474,17 @@ const attachOpts = { kind: "trees", side: "both", spacing: 0.05, align: ATTACH_A
 
 // Siedlungs-Ghost: Hafen/Wasserfront-Parameter (Engine-Option `waterfront`,
 // siehe @uwe/atlas settlement-waterfront.ts). Default AUS = Inland unverändert.
-const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true, condition: "thriving" };
+// Siedlungs-Generator (Proposal #07 „Großstadt- & Schloss-Generator"):
+// mode = Großstadt|Schloss, density = Bebauung (0.5–1.5), harbor = „Am Wasser (Werft)".
+// seedBump wird von „↻ Neu würfeln" hochgezählt, um denselben Plot neu zu würfeln.
+const settlementWfOpts = { mode: "stadt", density: 1, seedBump: 0, harbor: false, edge: "auto", piers: 2, dock: true, condition: "thriving" };
+// Modus → Engine-Optionen. „Schloss" = kompakte Festung: ein Tor, Wehrtürme,
+// dominanter Bergfried, kein Marktplatz/Brunnen, dünnere Bebauung.
+function settlementModeOptions() {
+  return settlementWfOpts.mode === "schloss"
+    ? { gateCount: 1, towerCount: 4, includeMarket: false, includeWell: false, densityFactor: 0.55 }
+    : { densityFactor: 1 };
+}
 
 // Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
 const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, cartouche: "none", rect: null, picking: false };
@@ -899,8 +903,9 @@ function settlementWaterfrontOptions() {
 }
 function settlementSeedForPlot(feature) {
   const st = feature.style || {};
-  const raw = Number.isFinite(st.settlementSeed) ? st.settlementSeed : engine.hashStringToSeed(String(settlementSourceKey(feature)) + ":settlement");
-  return raw >>> 0;
+  const base = Number.isFinite(st.settlementSeed) ? st.settlementSeed : engine.hashStringToSeed(String(settlementSourceKey(feature)) + ":settlement");
+  // „↻ Neu würfeln" verschiebt den Seed deterministisch, ohne den Plot-Key zu ändern.
+  return (base + (settlementWfOpts.seedBump | 0) * 0x9e3779b1) >>> 0;
 }
 function ghostSettlementForPlot(feature) {
   if (!feature || feature.kind !== "plot" || !feature.geometry || feature.geometry.type !== "Polygon") return null;
@@ -909,11 +914,18 @@ function ghostSettlementForPlot(feature) {
   const sourcePlotKey = settlementSourceKey(feature);
   const visibility = feature.visibility || "dm_only";
   const waterfront = settlementWaterfrontOptions();
+  const mode = settlementModeOptions();
+  const density = Math.max(0.5, Math.min(1.5, Number(settlementWfOpts.density) || 1)) * mode.densityFactor;
   const layout = engine.generateSettlement(feature.geometry, {
     seed,
     idPrefix: "settlement-" + sourcePlotKey,
     nodeId: state.nodeId,
     visibility,
+    density,
+    ...(mode.gateCount != null ? { gateCount: mode.gateCount } : {}),
+    ...(mode.towerCount != null ? { towerCount: mode.towerCount } : {}),
+    ...(mode.includeMarket === false ? { includeMarket: false } : {}),
+    ...(mode.includeWell === false ? { includeWell: false } : {}),
     ...(waterfront ? { waterfront } : {}),
     ...(settlementWfOpts.condition && settlementWfOpts.condition !== "thriving"
       ? { condition: settlementWfOpts.condition }
@@ -1242,6 +1254,7 @@ function minimapPanTo(e) {
 // temporär überschrieben).
 function drawScene(ctx, W, H, chrome) {
   const pr = preset, z = state.zoom;
+  sceneChrome = chrome;
   sceneW = W; sceneH = H;
   sceneElevOn = engine.hasElevation(doc.tileLayer);
   ctx.clearRect(0, 0, W, H);
@@ -1337,7 +1350,7 @@ function drawScene(ctx, W, H, chrome) {
     if (entIsUnderworld(f) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawFeature(ctx, f); ctx.restore(); continue; }
     drawFeature(ctx, f);
   }
-  scaleHandlePt = null;
+  if (chrome) scaleHandlePt = null;
   if (layerVis.objects) for (const o of nodeObjects()) {
     if (entIsUnderworld(o) !== und) { if (!chrome) continue; ctx.save(); ctx.globalAlpha = 0.16; drawObject(ctx, o); ctx.restore(); continue; }
     drawObject(ctx, o);
@@ -1713,6 +1726,10 @@ function drawObject(ctx, o) {
 // Auswahlrahmen + Skalier-Griff (CoK): roter Punkt unten rechts, Ziehen skaliert.
 // Nur bei Einzelselektion im Editor-Modus wird der Griff angeboten.
 function drawSelectionFrame(ctx, o, L, T, W2, H2) {
+  // Auswahlrahmen + Skalier-Griff sind Editor-Chrome: nur auf dem Haupt-Canvas.
+  // Sonst überschreibt der gedrosselte Minimap-Render scaleHandlePt mit
+  // Minimap-Koordinaten und der sichtbare Griff wird unklickbar.
+  if (!sceneChrome) return;
   ctx.save();
   ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
   ctx.strokeRect(L, T, W2, H2);
@@ -3230,14 +3247,23 @@ function refreshChrome() {
           '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
           '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
           "</div>" +
-          '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;cursor:pointer;"><input id="stl-wf" type="checkbox"' + (settlementWfOpts.harbor ? " checked" : "") + "> Hafen/Wasserfront</label>" +
+          '<div style="font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-top:12px;">Siedlungs-Generator</div>' +
+          '<div style="display:flex;gap:4px;margin-top:6px;">' +
+          '<button class="tb-btn' + (settlementWfOpts.mode !== "schloss" ? " on" : "") + '" data-stlmode="stadt" style="flex:1;justify-content:center;" title="Ganze Stadt: Mauer, Straßennetz, Marktplatz, Kirche, Häuser">Großstadt</button>' +
+          '<button class="tb-btn' + (settlementWfOpts.mode === "schloss" ? " on" : "") + '" data-stlmode="schloss" style="flex:1;justify-content:center;" title="Kompakte Festung: ein Tor, Wehrtürme, dominanter Bergfried">Schloss</button>' +
+          "</div>" +
+          '<label style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;">Bebauung<input id="stl-density" type="range" min="0.5" max="1.5" step="0.1" value="' + (Number(settlementWfOpts.density) || 1) + '" style="flex:1;" title="Dichte der Bebauung"></label>' +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;cursor:pointer;"><input id="stl-wf" type="checkbox"' + (settlementWfOpts.harbor ? " checked" : "") + "> Am Wasser (Werft)</label>" +
           (settlementWfOpts.harbor
             ? '<select id="stl-wf-edge" class="sel-select">' + opt(SETTLEMENT_WF_EDGES, settlementWfOpts.edge) + "</select>" +
               '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
               '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
             : "") +
           '<select id="stl-condition" class="sel-select" title="Verfallsgrad der generierten Siedlung">' + opt(SETTLEMENT_CONDITIONS, settlementWfOpts.condition) + "</select>" +
-          '<button class="tb-btn" data-plot="settlement" style="width:100%;justify-content:center;margin-top:6px;" title="Siedlung als Ghost-Vorschlag">Siedlung</button>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          '<button class="tb-btn" data-plot="settlement" style="flex:1;justify-content:center;" title="Siedlung als Ghost-Vorschlag setzen">Siedlung setzen</button>' +
+          '<button class="tb-btn" data-plot="reroll" title="Siedlung mit neuem Seed neu würfeln">↻ Neu würfeln</button>' +
+          "</div>" +
           "</div></div>"
         : "") +
       (isPathKind
@@ -3356,6 +3382,14 @@ function wire() {
 
   // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
   el("sel-panel").addEventListener("click", (e) => {
+    const modeBtn = e.target.closest("[data-stlmode]");
+    if (modeBtn) {
+      settlementWfOpts.mode = modeBtn.dataset.stlmode === "schloss" ? "schloss" : "stadt";
+      refreshChrome();
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.kind === "plot" && settlementReview) requestSettlementReview(f);
+      return;
+    }
     const plotBtn = e.target.closest("[data-plot]");
     if (plotBtn) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);
@@ -3363,6 +3397,9 @@ function wire() {
         if (plotBtn.dataset.plot === "ai") {
           requestPlotFillProposal(f);
         } else if (plotBtn.dataset.plot === "settlement") {
+          requestSettlementReview(f);
+        } else if (plotBtn.dataset.plot === "reroll") {
+          settlementWfOpts.seedBump = (settlementWfOpts.seedBump | 0) + 1;
           requestSettlementReview(f);
         } else {
           pushUndo();
@@ -3446,6 +3483,11 @@ function wire() {
     else if (t.id === "att-side") attachOpts.side = t.value;
     else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
     else if (t.id === "att-align") attachOpts.align = !!t.checked;
+    else if (t.id === "stl-density") {
+      settlementWfOpts.density = Number(t.value);
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && f.kind === "plot" && settlementReview) requestSettlementReview(f);
+    }
     else if (t.id === "stl-wf") { settlementWfOpts.harbor = t.checked; refreshChrome(); }
     else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
     else if (t.id === "stl-wf-piers") settlementWfOpts.piers = Number(t.value);
