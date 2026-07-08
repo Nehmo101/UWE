@@ -338,6 +338,7 @@ const TOOL_DEFS = [
   ["height", "Höhe", "H", "height", "Höhenfeld malen: Anheben / Absenken / Glätten (Rechtsklick invertiert)"],
   ["stamp", "Objekt/Bau", "T", "stamp", "Glyph platzieren"],
   ["spray", "Streu-Pinsel", "O", "spray", "Gouache-Assets streuen — gedrückt halten, Rechtsklick löscht"],
+  ["landmass", "Landmasse", "K", "landmass", "Land malen (Küste entsteht organisch) — Rechtsklick malt Wasser"],
   ["region", "Region", "P", "region", "Polygon-Region zeichnen"],
   ["biome", "Biom-Fläche", "B", "terrain", "Biom-Polygon (gestreute Glyphen)"],
   ["plot", "Objektfläche", "F", "plot", "Gouache-Objekte in ein Polygon streuen"],
@@ -350,7 +351,7 @@ const TOOL_DEFS = [
   ["measure", "Messen", "M", "measure", "Distanz messen"],
   ["eraser", "Löschen", "E", "eraser", "Element löschen"],
 ];
-const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", o: "spray", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
+const KEY_TOOL = { s: "select", g: "terrain", h: "height", t: "stamp", o: "spray", k: "landmass", p: "region", b: "biome", f: "plot", r: "path", d: "road", w: "vine", l: "label", c: "curve", i: "pin", m: "measure", e: "eraser" };
 
 function toolIcon(name) {
   const p = {
@@ -358,6 +359,7 @@ function toolIcon(name) {
     terrain: "M3 17 Q7 10 12 14 Q17 18 21 12 M3 20 L21 20",
     height: "M3 18 L9 7 L13 13 L16 9 L21 18 M6 14 L11 14 M14 13 L18 13 M3 21 L21 21",
     spray: "M6 7 L6.01 7 M11 4 L11.01 4 M16 8 L16.01 8 M8 12 L8.01 12 M14 13 L14.01 13 M5 17 L5.01 17 M11 18 L11.01 18 M17 18 L17.01 18 M19 12 L19.01 12",
+    landmass: "M3 14 Q6 9 10 12 Q13 14 16 10 Q19 7 21 11 L21 20 L3 20 Z M3 8 Q7 6 11 8 M14 5 Q17 4 20 6",
     region: "M4 6 L12 3 L20 7 L18 18 L7 20 Z",
     plot: "M4 7 L12 3 L20 7 L18 18 L7 20 Z M9 10 L9 10 M13 9 L13 9 M16 13 L16 13 M11 16 L11 16",
     path: "M4 20 Q8 6 14 12 Q19 17 20 4",
@@ -437,6 +439,7 @@ const canvas = el("atlas-canvas");
 let dpr = 1, cssW = 0, cssH = 0, fitted = false;
 let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
 let spraying = null;      // { rng } — aktiver Streu-Pinsel-Strich (W3 #9)
+let paintingLand = false, landWater = false; // Landmassen-Pinsel (W4 #17)
 let paintingHeight = false, heightInvert = false;
 // Für Parallax/Schatten: Maße + Höhenfeld-Status des zuletzt gerenderten Frames
 // (auch beim Offscreen-Export korrekt, da drawScene sie pro Aufruf setzt).
@@ -1777,6 +1780,12 @@ function onPointerDown(e) {
     paintHeight(cx, cy, heightInvert);
     return;
   }
+  if (tool === "landmass") {
+    pushUndo();
+    paintingLand = true; landWater = e.button === 2;
+    paintLandmass(cx, cy, landWater);
+    return;
+  }
   if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } const [sx, sy] = snapN(nx, ny); placeStamp(sx, sy); return; }
   if (tool === "spray") {
     if (e.button === 2) { eraseAt(nx, ny); return; }
@@ -1878,6 +1887,7 @@ function onPointerMove(e) {
     return;
   }
   if (paintingHeight) { paintHeight(cx, cy, heightInvert); return; }
+  if (paintingLand) { paintLandmass(cx, cy, landWater); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
     let dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom);
@@ -1936,8 +1946,8 @@ function onPointerUp(e) {
     if (so) { const [sx2, sy2] = snapN(so.x, so.y); so.x = sx2; so.y = sy2; draw(); }
   }
   dragAxisStart = null;
-  if (paintingTiles || erasingTiles || paintingHeight) markDirty();
-  panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
+  if (paintingTiles || erasingTiles || paintingHeight || paintingLand) markDirty();
+  panning = moving = paintingTiles = erasingTiles = paintingHeight = paintingLand = false;
   spraying = null;
 }
 function handleViewClick(entity) {
@@ -1985,6 +1995,30 @@ function paintTiles(cx, cy, erase) {
     else if (cells[k] !== state.brush) { cells[k] = state.brush; changed = true; }
   }
   if (changed) draw();
+}
+
+// Landmassen-Pinsel (Roadmap W4 #17): Land malen (grassland + leichtes Relief),
+// Rechtsklick malt Wasser (coast + Höhe 0). Die Küstenlinie entsteht organisch
+// aus dem grassland↔coast-Rand, den der Küstensaum (#5) bereits rendert.
+function paintLandmass(cx, cy, water) {
+  const tl = doc.tileLayer; const cells = tl.cells;
+  const elev = tl.elevation || (tl.elevation = {});
+  const [tc, tr] = tileAt(cx, cy); const rad = [1, 2, 3][state.brushSize];
+  let changed = false;
+  for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
+    if (dc * dc + dr * dr > rad * rad + 0.5) continue;
+    const c = tc + dc, r = tr + dr; if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+    const k = c + "," + r;
+    if (water) {
+      if (cells[k] !== "coast") { cells[k] = "coast"; changed = true; }
+      if (elev[k] != null) { delete elev[k]; changed = true; }
+    } else {
+      if (cells[k] !== "grassland") { cells[k] = "grassland"; changed = true; }
+      // Leichtes Relief auf Land, damit Hillshade/Schatten greifen (sparse: nur setzen, wenn noch flach).
+      if (!(elev[k] > 0.1)) { elev[k] = 0.12; changed = true; }
+    }
+  }
+  if (changed) { invalidateElevationCache(); draw(); }
 }
 
 // ---- Höhen-Pinsel: Anheben / Absenken / Glätten mit weichem radialem Falloff.
@@ -2985,6 +3019,7 @@ function refreshChrome() {
     }
     else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
     else if (st.tool === "spray") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Streu-Pinsel:</b> gedrückt halten & ziehen · Asset aus der Palette · Rechtsklick löscht'; }
+    else if (st.tool === "landmass") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Landmasse:</b> Land malen · Rechtsklick malt Wasser · Küste entsteht organisch · Pinsel ' + ["klein", "mittel", "groß"][st.brushSize]; }
     else if (st.tool === "measure") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Reiseplaner:</b> Route zusammenklicken · Rastpunkte je Reisetag · Enter speichert als Route · Esc leert'; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
     else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
