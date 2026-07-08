@@ -107,13 +107,10 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#6 Theme-System** — 3 neue Presets (Pergament-Klassik, Nachtkarte, Winterfeldzug) + Theme-Picker im Editor; Persistenz über Bridge-Message `map-style` → `setAtlasMapStyleAction` → `AtlasMap.stylePreset`. *Offen: Preset „Verwittert".*
 - ✅ **#20 Brücken-Automatik** — `findBridgePoints` (Engine) + Auto-Platzierung `g_bridge` an Straße×Fluss-Kreuzungen, zur Straße rotiert.
 - ✅ **#27 Säum-Ausrichtung** — `alignToPath`-Option in `generatePathAttachments` + „An Pfad ausrichten"-Checkbox (Default an).
-
-**Engine fertig, Editor-UI offen:**
-
-- 🔶 **#19 Straßen-Autorouting** — `routeRoad` (A* über Biome, deterministisch, getestet) in `@uwe/atlas/route-astar`; UI (Stadt A/B anklicken) folgt.
-- 🔶 **#21 Territorien-Vorschlag** — `suggestTerritories` (Grid-Voronoi) in `@uwe/atlas/territory`; Ghost-Review-UI folgt.
-- 🔶 **#24 Kulturprofile** — `generatePlaceNames` + 6 Profile in `@uwe/atlas/name-culture`; Panel folgt.
-- 🔶 **#25 Verfallsgrad** — `generateSettlement`-Option `condition` (blühend/belagert/verlassen/Ruine); Regler im Siedlungs-Ghost folgt.
+- ✅ **#19 Straßen-Autorouting** — `routeRoad` (A* über Biome) + „✦ Auto-Route"-Button im Straßen-Werkzeug: erster/letzter gesetzter Punkt → geländebewusste Route als normales `road`-Feature (Vertex-Editing greift, Brücken-Automatik läuft mit).
+- ✅ **#21 Territorien-Vorschlag** — `suggestTerritories` (Grid-Voronoi, Wasser neutral) + „🗺 Territorien vorschlagen" im Region-Werkzeug; Ghost-Review (Übernehmen/Verwerfen) erzeugt editierbare `region`-Features, Namen aus dem gewählten Kulturprofil.
+- ✅ **#24 Kulturprofile** — `generatePlaceNames` + 6 Profile; Kultur-Auswahl + „↻ Name"-Würfel im Auswahl-Panel jedes Features (deterministische Roll-Folge in `style.culture`/`style.nameRoll`).
+- ✅ **#25 Verfallsgrad** — `generateSettlement`-Option `condition` + Zustand-Auswahl (blühend/belagert/verlassen/Ruine) im Siedlungs-Ghost-Panel der Objektfläche.
 
 **Offen:** #4 Prefabs, #7 Lichtrichtung, #8 Label-Presets, #9 Spray-Pinsel,
 #10 Asset-Browser, #11 Tinting, #12 Ebenen-Panel, #13 Minimap, #14

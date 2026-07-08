@@ -325,6 +325,7 @@ let measurePoints = [];
 let aiDraftFeatures = null;
 let plotFillReview = null;
 let settlementReview = null;
+let territoryReview = null;
 let labelRed = false;
 let keyCounter = 0;
 const nextKey = () => "ck-" + (++keyCounter);
@@ -348,7 +349,7 @@ const attachOpts = { kind: "trees", side: "both", spacing: 0.05, align: ATTACH_A
 
 // Siedlungs-Ghost: Hafen/Wasserfront-Parameter (Engine-Option `waterfront`,
 // siehe @uwe/atlas settlement-waterfront.ts). Default AUS = Inland unverändert.
-const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true };
+const settlementWfOpts = { harbor: false, edge: "auto", piers: 2, dock: true, condition: "thriving" };
 
 // Export-Dialog (CoK: definierbarer Ausschnitt + Square/Hex-Grid)
 const exp = { area: "viewport", grid: "none", cell: 64, res: 2, deco: true, frame: true, rect: null, picking: false };
@@ -502,6 +503,7 @@ function applyHistory(json) {
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   if (!doc.nodes.some((n) => n.id === state.nodeId)) state.nodeId = doc.rootNodeId;
   setState({ selectedKey: null, dirty: true, saveStatus: "Ungespeichert" });
   draw();
@@ -566,7 +568,7 @@ function onBridgeMessage(e) {
     try {
       doc = migrate(d.doc);
       applyPresetFromDoc();
-      aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+      aiDraftFeatures = null; plotFillReview = null; settlementReview = null; territoryReview = null;
       buildRtxPaletteButtons();
       setState({ nodeId: doc.rootNodeId, selectedKey: null, aiReview: null });
       draw();
@@ -604,6 +606,7 @@ function receiveAiDraft(features) {
   const normalized = normalizeAiDraftFeatures(features);
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   aiDraftFeatures = normalized.map((f) => ({ ...f, _key: nextKey() }));
   setState({ aiReview: { count: aiDraftFeatures.length, label: "KI-Entwurf", unit: "Features" } });
   if (!aiDraftFeatures.length) flash("KI-Entwurf enthielt keine unterstützten Atlas-Features.");
@@ -679,6 +682,7 @@ function receivePlotFillProposal(plotKey, rawProposal, error) {
   if (!objects.length) { flash("KI-Rezept erzeugt keine Objekte für diese Fläche."); return; }
   aiDraftFeatures = null;
   settlementReview = null;
+  territoryReview = null;
   plotFillReview = { plotKey: feature._key, proposal, objects };
   setState({ aiReview: { count: objects.length, label: "Objektfläche", unit: "Ghost-Objekte" } });
   draw();
@@ -688,6 +692,7 @@ function requestPlotFillProposal(feature) {
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   setState({ aiReview: null });
   const styleSeed = feature.style && Number.isFinite(feature.style.seed) ? feature.style.seed : undefined;
   const seed = (styleSeed ?? engine.hashStringToSeed(feature._key || "plot-fill")) >>> 0;
@@ -776,6 +781,9 @@ function ghostSettlementForPlot(feature) {
     nodeId: state.nodeId,
     visibility,
     ...(waterfront ? { waterfront } : {}),
+    ...(settlementWfOpts.condition && settlementWfOpts.condition !== "thriving"
+      ? { condition: settlementWfOpts.condition }
+      : {}),
   });
   const features = (layout.features || []).map((sf) => ({
     ...sf,
@@ -811,6 +819,7 @@ function requestSettlementReview(feature) {
   aiDraftFeatures = null;
   plotFillReview = null;
   settlementReview = null;
+  territoryReview = null;
   setState({ aiReview: null });
   const review = ghostSettlementForPlot(feature);
   if (!review) { flash("Siedlungs-Vorschau ist für diese Fläche nicht verfügbar."); return; }
@@ -869,13 +878,70 @@ function discardSettlementReview() {
 function acceptAiReview() {
   if (plotFillReview) acceptPlotFillReview();
   else if (settlementReview) acceptSettlementReview();
+  else if (territoryReview) acceptTerritoryReview();
   else acceptAiDraft();
 }
 function discardAiReview() {
   if (plotFillReview) discardPlotFillReview();
   else if (settlementReview) discardSettlementReview();
+  else if (territoryReview) discardTerritoryReview();
   else discardAiDraft();
 }
+
+// Territorien-Vorschlag (Roadmap W4 #21): Grid-Voronoi um Städte/Burgen/Dörfer
+// des aktiven Knotens (Wasser bleibt neutral), Namen aus den Kulturprofilen.
+// Ghost-Review wie bei der Siedlung — Übernehmen erzeugt normale region-
+// Features, die danach per Vertex-Editing verfeinert werden.
+const TERRITORY_SEED_WEIGHTS = {
+  g_city: 1.3, g_capital: 1.5, g_castle: 1.1, g_town: 1.0, g_village: 0.7, g_fort: 1.0,
+  city: 1.3, castle: 1.1, village: 0.7,
+};
+let territoryCulture = "imperial"; // Kulturprofil für generierte Namen (Panel-Auswahl)
+function territorySeedWeight(o) {
+  const key = (o.style && o.style.gouache) || o.paletteItemId;
+  return TERRITORY_SEED_WEIGHTS[key];
+}
+function requestTerritoryReview() {
+  if (!engine.suggestTerritories) { flash("Engine ohne suggestTerritories — Bundle neu bauen"); return; }
+  const seeds = nodeObjects()
+    .filter((o) => territorySeedWeight(o))
+    .map((o) => ({ key: String(o._key || o.id), x: o.x, y: o.y, weight: territorySeedWeight(o) }));
+  if (seeds.length < 2) { flash("Mindestens 2 Städte/Burgen/Dörfer platzieren, dann Territorien vorschlagen"); return; }
+  const tl = doc && doc.tileLayer;
+  const exclude = tl && tl.cells
+    ? (x, y) => tl.cells[Math.min(tl.cols - 1, Math.floor(x * tl.cols)) + "," + Math.min(tl.rows - 1, Math.floor(y * tl.rows))] === "coast"
+    : undefined;
+  const regions = engine.suggestTerritories(seeds, exclude ? { exclude } : {});
+  if (!regions.length) { flash("Kein Territorium ableitbar"); return; }
+  const names = engine.generatePlaceNames
+    ? engine.generatePlaceNames({ culture: territoryCulture, kind: "region", count: regions.length, seed: engine.hashStringToSeed(seeds.map((s) => s.key).join("|")) })
+    : [];
+  aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+  territoryReview = {
+    features: regions.map((r, i) => ({
+      _key: "ghost-territory-" + i, id: "ghost-territory-" + i, nodeId: state.nodeId, kind: "region",
+      geometry: { type: "Polygon", rings: [r.ring.map((pt) => [pt[0], pt[1]])] },
+      labelText: names[i] || ("Territorium " + (i + 1)), labelColor: "black",
+      style: { territorySeedKey: r.key, culture: territoryCulture, ghost: true }, layer: 20, visibility: "dm_only",
+    })),
+  };
+  setState({ aiReview: { count: territoryReview.features.length, label: "Territorien", unit: "Regionen" } });
+  draw();
+}
+function acceptTerritoryReview() {
+  if (!territoryReview) return;
+  pushUndo();
+  for (const ghost of territoryReview.features) {
+    const k = nextKey();
+    const style = { ...(ghost.style || {}) };
+    delete style.ghost;
+    doc.features.push({ ...ghost, id: k, _key: k, style });
+  }
+  territoryReview = null;
+  setState({ aiReview: null });
+  markDirty(); draw(); refreshChrome();
+}
+function discardTerritoryReview() { territoryReview = null; setState({ aiReview: null }); draw(); }
 function requestHandout() {
   if (embedded) { bridgePost({ type: "handout-request", nodeId: node().id, title: (node().title || "Atlas") + " — Handout" }); flash("Handout-Erstellung angefragt…"); }
   else flash("Handout nur in Studio-Einbettung (Bridge) verfügbar.");
@@ -1067,6 +1133,11 @@ function drawScene(ctx, W, H, chrome) {
     ctx.restore();
     ctx.save(); ctx.globalAlpha = 0.58;
     for (const o of settlementReview.objects || []) drawObject(ctx, o);
+    ctx.restore();
+  }
+  if (territoryReview) {
+    ctx.save(); ctx.globalAlpha = 0.46;
+    for (const f of territoryReview.features || []) drawFeature(ctx, f);
     ctx.restore();
   }
   if (state.tool === "height" && !isView()) drawHeightOverlay(ctx);
@@ -1842,6 +1913,25 @@ function finishPath() {
   selectOnly(f._key); markDirty(); draw();
 }
 
+// Straßen-Autorouting (Roadmap W4 #19): A* über die Terrain-Biome zwischen
+// erstem und letztem gesetzten Punkt. Ergebnis ist ein normales road-Feature
+// (Vertex-Editing greift), Brücken-Automatik läuft wie beim Handzeichnen.
+function autoRouteRoad() {
+  if (!engine.routeRoad) { flash("Engine ohne routeRoad — Bundle neu bauen"); return; }
+  if (drawingPoints.length < 2) { flash("Erst Start und Ziel klicken (mind. 2 Punkte), dann Auto-Route"); return; }
+  const start = drawingPoints[0], goal = drawingPoints[drawingPoints.length - 1];
+  const layer = doc.tileLayer && doc.tileLayer.cells ? doc.tileLayer : { cols: COLS, rows: ROWS, tile: TILE, cells: {} };
+  const res = engine.routeRoad(layer, start, goal);
+  if (!res.reachable || res.points.length < 2) { flash("⚠ Kein Weg gefunden — Wasser/Gebirge blockiert die Route"); return; }
+  pushUndo();
+  const k = nextKey();
+  const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: "road", geometry: { type: "Path", coordinates: res.points.map((p) => [p[0], p[1]]) }, style: { smooth: true }, layer: 40, visibility: "dm_only" };
+  doc.features.push(f); drawingPoints = [];
+  autoPlaceBridges(f);
+  selectOnly(f._key); markDirty(); draw();
+  flash("✦ Auto-Route gesetzt (" + f.geometry.coordinates.length + " Punkte)");
+}
+
 // Brücken-Automatik (Roadmap W4 #20): wo Straße × Fluss kreuzt, wird eine
 // Gouache-Steinbrücke gesetzt, ausgerichtet an der Straßenrichtung. Frühere
 // Auto-Brücken desselben Pfads werden ersetzt (style.bridgeFor).
@@ -1883,6 +1973,8 @@ function vineSliderHtml(f, prop, label, min, max, step) {
 // ---- Siedlungs-Ghost: Hafen/Wasserfront-Auswahllisten ----
 const SETTLEMENT_WF_EDGES = [["auto", "Ufer: Auto (längste Kante)"], ["0", "Ufer: Ringposition 0 %"], ["0.25", "Ufer: Ringposition 25 %"], ["0.5", "Ufer: Ringposition 50 %"], ["0.75", "Ufer: Ringposition 75 %"]];
 const SETTLEMENT_WF_PIERS = [["1", "1 Pier"], ["2", "2 Piere"], ["3", "3 Piere"], ["4", "4 Piere"]];
+// Verfallsgrad (Roadmap W4 #25): Engine-Option `condition` in generateSettlement.
+const SETTLEMENT_CONDITIONS = [["thriving", "Zustand: blühend"], ["besieged", "Zustand: belagert"], ["abandoned", "Zustand: verlassen"], ["ruined", "Zustand: Ruine"]];
 
 // ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
 const ATTACH_KINDS = [["trees", "Bäume"], ["houses", "Häuser"], ["towers", "Türme"]];
@@ -2091,7 +2183,7 @@ function doExport() {
   const savedSel = [...selection]; selection.clear();
   const savedDraft = aiDraftFeatures; aiDraftFeatures = null;
   const savedPlotReview = plotFillReview; plotFillReview = null;
-  const savedSettlementReview = settlementReview; settlementReview = null;
+  const savedSettlementReview = settlementReview; settlementReview = null; const savedTerritoryReview = territoryReview; territoryReview = null;
   state.zoom = scale; state.panX = -rect.x * scale; state.panY = -rect.y * scale;
   try {
     drawScene(octx, off.width, off.height, false);
@@ -2123,7 +2215,7 @@ function doExport() {
     for (const k of savedSel) selection.add(k);
     aiDraftFeatures = savedDraft;
     plotFillReview = savedPlotReview;
-    settlementReview = savedSettlementReview;
+    settlementReview = savedSettlementReview; territoryReview = savedTerritoryReview;
   }
   downloadCanvas(off);
   closeExportDialog();
@@ -2135,7 +2227,7 @@ function clearAll() {
   doc.features = doc.features.filter((f) => f.nodeId !== state.nodeId);
   doc.objects = doc.objects.filter((o) => o.nodeId !== state.nodeId);
   if (state.nodeId === doc.rootNodeId) { doc.tileLayer.cells = {}; delete doc.tileLayer.elevation; invalidateElevationCache(); }
-  aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
+  aiDraftFeatures = null; plotFillReview = null; settlementReview = null; territoryReview = null;
   drawingPoints = []; clearSel(); setState({ aiReview: null }); markDirty(); draw();
 }
 
@@ -2414,7 +2506,15 @@ function refreshChrome() {
     else if (st.tool === "height") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Höhe:</b> ' + HEIGHT_MODE_LABEL[st.heightMode] + " · Pinsel " + ["klein", "mittel", "groß"][st.brushSize] + " · Stärke " + Math.round(st.heightStrength * 100) + "% — Rechtsklick invertiert"; }
     else if (st.tool === "measure") { subShow = true; subHtml = "Zwei Punkte klicken für Distanz (leagues)"; }
     else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
-    else if (st.tool === "region" || st.tool === "plot" || st.tool === "path" || st.tool === "road") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
+    else if (st.tool === "region") {
+      subShow = true;
+      const cultures = (engine.CULTURE_PROFILES || []).map((c) => '<option value="' + c.key + '"' + (c.key === territoryCulture ? " selected" : "") + ">" + c.label + "</option>").join("");
+      subHtml = 'Punkte klicken · Doppelklick/Enter zum Abschließen · Esc bricht ab · ' +
+        (cultures ? '<select id="territory-culture" class="sel-select" style="width:auto;" title="Kulturprofil für generierte Territoriums-Namen">' + cultures + "</select> " : "") +
+        '<button class="tb-btn" data-act="territories" title="Grid-Voronoi um Städte/Burgen/Dörfer — Vorschlag als Ghost zum Prüfen, Wasser bleibt neutral">🗺 Territorien vorschlagen</button>';
+    }
+    else if (st.tool === "road") { subShow = true; subHtml = 'Punkte klicken · Doppelklick/Enter zum Abschließen · Esc bricht ab · <button class="tb-btn" data-act="autoroute" title="A*-Route über das Gelände zwischen erstem und letztem Punkt — meidet Wasser, Gebirge und Sumpf">✦ Auto-Route</button>'; }
     else if (st.tool === "label") { subShow = true; subHtml = 'Klick auf die Karte für Label-Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
     else if (st.tool === "curve") { subShow = true; subHtml = 'Pfad klicken · Doppelklick/Enter → Text · <button class="tb-btn" data-act="ink">Tinte: ' + (labelRed ? "rot" : "schwarz") + "</button>"; }
   }
@@ -2473,6 +2573,14 @@ function refreshChrome() {
         ? '<div style="font-family:var(--serif);font-size:15px;margin-bottom:6px;">' + (labelVal || kind) + "</div>"
         : '<label style="display:block;font-size:10px;color:var(--uwe-fg-muted);margin-bottom:4px;">Name</label>' +
           '<input id="sel-label-input" type="text" value="' + labelVal.replace(/"/g, "&quot;") + '" style="width:100%;padding:6px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-family:var(--serif);font-size:14px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);" placeholder="' + kind + '-Name">') +
+      (!view && engine.CULTURE_PROFILES
+        ? '<div style="display:flex;gap:6px;margin-top:6px;align-items:center;">' +
+          '<select id="name-culture" class="sel-select" style="flex:1;margin-top:0;" title="Kulturprofil für den Namens-Generator">' +
+          engine.CULTURE_PROFILES.map((c) => '<option value="' + c.key + '"' + (c.key === ((selF.style && selF.style.culture) || territoryCulture) ? " selected" : "") + ">" + c.label + "</option>").join("") +
+          "</select>" +
+          '<button class="tb-btn" data-name="roll" title="Deterministischer Namens-Vorschlag aus dem Kulturprofil (Roadmap W4 #24)">↻ Name</button>' +
+          "</div>"
+        : "") +
       '<div style="font-size:11px;color:' + (vis ? "var(--uwe-player-visible)" : "var(--uwe-dm-only)") + ';margin-top:6px;">' + (vis ? "● Portal sichtbar" : "● Nur GM") + "</div>" +
       (selF.childNodeId ? '<div style="font-size:11px;color:var(--uwe-accent);margin-top:4px;">↓ Drill-down verknüpft</div>' : "") +
       (!view && selF.geometry && selF.geometry.type === "LabelAnchor" && (selF.geometry.pathCoordinates || []).length >= 2
@@ -2500,6 +2608,7 @@ function refreshChrome() {
               '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
               '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
             : "") +
+          '<select id="stl-condition" class="sel-select" title="Verfallsgrad der generierten Siedlung">' + opt(SETTLEMENT_CONDITIONS, settlementWfOpts.condition) + "</select>" +
           '<button class="tb-btn" data-plot="settlement" style="width:100%;justify-content:center;margin-top:6px;" title="Siedlung als Ghost-Vorschlag">Siedlung</button>' +
           "</div></div>"
         : "") +
@@ -2608,6 +2717,11 @@ function wire() {
     const t = e.target.closest("[data-act]"); if (!t) return;
     if (t.dataset.act === "ink") { labelRed = !labelRed; refreshChrome(); }
     else if (t.dataset.act === "vari") { setState({ stampVariation: !state.stampVariation }); }
+    else if (t.dataset.act === "autoroute") autoRouteRoad();
+    else if (t.dataset.act === "territories") requestTerritoryReview();
+  });
+  el("subbar").addEventListener("change", (e) => {
+    if (e.target && e.target.id === "territory-culture") territoryCulture = e.target.value;
   });
 
   // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
@@ -2632,6 +2746,28 @@ function wire() {
     if (att) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);
       if (f) generateAttachments(f, att.dataset.att === "roll");
+      return;
+    }
+    // Namens-Generator (Roadmap W4 #24): deterministischer Vorschlag aus dem
+    // Kulturprofil; jeder Klick zählt den Roll hoch ⇒ nächster Name der Folge.
+    const nameBtn = e.target.closest("[data-name]");
+    if (nameBtn) {
+      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+      if (f && engine.generatePlaceNames) {
+        const cultureSel = el("name-culture");
+        const culture = cultureSel ? cultureSel.value : territoryCulture;
+        const nk = ({ river: "river", region: "region", biome: "region" })[f.kind] || "settlement";
+        pushUndo();
+        f.style = f.style || {};
+        f.style.culture = culture;
+        f.style.nameRoll = (Number.isFinite(f.style.nameRoll) ? f.style.nameRoll : -1) + 1;
+        const names = engine.generatePlaceNames({ culture, kind: nk, count: 1, seed: engine.hashStringToSeed(String(f._key) + ":" + culture + ":" + f.style.nameRoll) });
+        if (names.length) {
+          f.labelText = names[0];
+          if (f.geometry && f.geometry.type === "LabelAnchor") f.geometry.text = names[0];
+        }
+        markDirty(); draw(); refreshChrome();
+      }
       return;
     }
     const vineBtn = e.target.closest("[data-vine]");
@@ -2682,6 +2818,8 @@ function wire() {
     else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
     else if (t.id === "stl-wf-piers") settlementWfOpts.piers = Number(t.value);
     else if (t.id === "stl-wf-dock") settlementWfOpts.dock = t.checked;
+    else if (t.id === "stl-condition") { settlementWfOpts.condition = t.value; draw(); }
+    else if (t.id === "name-culture") territoryCulture = t.value;
     else if (t.id === "obj-scale" || t.id === "obj-rot") {
       const o = doc && doc.objects.find((x) => x._key === state.selectedKey);
       const v = Number(t.value);
