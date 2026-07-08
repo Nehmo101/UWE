@@ -432,6 +432,7 @@ export function AtlasViewer({
         intensityFor: (biome) => tileLayer?.intensity?.[biome] ?? 1,
         blendWidth: (tileLayer.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
         radiusRatio: 0.4,
+        coast: {},
       });
       // 2.5D elevation: hillshade overlay + optional contour lines.
       drawElevationOverlays(ctx, tileLayer, w2c, zoom, elevationCacheRef.current, preset.colors.ink);

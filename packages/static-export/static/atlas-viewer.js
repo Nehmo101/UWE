@@ -798,7 +798,10 @@
       if (tl && tl.cells) {
         const cols = tl.cols || 64;
         const rows = tl.rows || 40;
-        paintTerrainBlobs(ctx, {
+        // Prefer the engine renderer (adds the painted coast rim); the local
+        // mirror stays as offline fallback and ignores the coast option.
+        const paintBlobs = (this.atlasEngine && this.atlasEngine.paintTerrainBlobs) || paintTerrainBlobs;
+        paintBlobs(ctx, {
           cols,
           rows,
           getCell: (c, r) => tl.cells[`${c},${r}`],
@@ -811,6 +814,7 @@
           intensityFor: (biome) => (tl.intensity && tl.intensity[biome]) || 1,
           blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * zoom,
           radiusRatio: 0.4,
+          coast: {},
         });
       }
 
