@@ -136,10 +136,13 @@ export async function seedStressWorld(
   const pageStart = pageIds.length;
   const batchSize = 25;
 
-  for (let batch = Math.floor(pageStart / batchSize); batch < Math.ceil(scale.pages / batchSize); batch++) {
-    const start = batch * batchSize;
+  // Resume from exactly `pageStart`, not the start of the batch that
+  // contains it. Aligning down to a batch boundary (Math.floor(pageStart /
+  // batchSize)) re-creates the already-seeded pages in the partial batch and
+  // trips a unique-constraint violation whenever the existing count isn't a
+  // multiple of batchSize (e.g. after an interrupted mega seed).
+  for (let start = pageStart; start < scale.pages; start += batchSize) {
     const end = Math.min(start + batchSize, scale.pages);
-    if (start >= end) continue;
 
     const created = await Promise.all(
       Array.from({ length: end - start }, (_, offset) => {

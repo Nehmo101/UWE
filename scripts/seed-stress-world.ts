@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { prisma } from "../packages/database/src/client";
 import { createUweRepository } from "../packages/database/src/repository";
 import { runSeedOnce } from "../packages/database/src/seed-tracker";
