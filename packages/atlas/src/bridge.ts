@@ -76,6 +76,12 @@ export interface EditorMapStyleMessage {
   /** Key into STYLE_PRESETS (e.g. "tolkien-ink", "nachtkarte"). */
   stylePreset: string;
 }
+export interface EditorAssetRequestMessage {
+  source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;
+  type: "asset-request";
+  /** Free-text wish for a missing palette asset; opens the RTX proposal studio. */
+  prompt: string;
+}
 export type EditorToHostMessage =
   | EditorReadyMessage
   | EditorSaveMessage
@@ -85,7 +91,8 @@ export type EditorToHostMessage =
   | EditorPlotFillProposalReviewMessage
   | EditorHandoutRequestMessage
   | EditorNodeRenameMessage
-  | EditorMapStyleMessage;
+  | EditorMapStyleMessage
+  | EditorAssetRequestMessage;
 
 export interface HostSavedMessage {
   source: typeof ATLAS_BRIDGE_HOST_SOURCE;
@@ -124,6 +131,7 @@ const EDITOR_TYPES = new Set([
   "handout-request",
   "node-rename",
   "map-style",
+  "asset-request",
 ]);
 const HOST_TYPES = new Set(["saved", "ai-draft-result", "plot-fill-proposal-result", "load"]);
 
@@ -144,6 +152,9 @@ export function isEditorMessage(data: unknown): data is EditorToHostMessage {
   }
   if (d.type === "map-style") {
     return typeof (d as { stylePreset?: unknown }).stylePreset === "string";
+  }
+  if (d.type === "asset-request") {
+    return typeof (d as { prompt?: unknown }).prompt === "string";
   }
   return true;
 }

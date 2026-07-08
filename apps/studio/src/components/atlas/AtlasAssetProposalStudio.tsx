@@ -27,6 +27,8 @@ import { RtxAssetRecipePreview } from "./RtxAssetRecipePreview";
 export interface AtlasAssetProposalStudioProps {
   worldSlug: string;
   onClose: () => void;
+  /** Prefill the prompt (e.g. from an editor "Asset fehlt?" wish). */
+  initialPrompt?: string;
 }
 
 const MAX_PROMPT_LENGTH = 500;
@@ -46,10 +48,10 @@ const chip: React.CSSProperties = {
   background: "var(--uwe-surface)",
 };
 
-export function AtlasAssetProposalStudio({ worldSlug, onClose }: AtlasAssetProposalStudioProps) {
+export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "" }: AtlasAssetProposalStudioProps) {
   const router = useRouter();
 
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt.slice(0, MAX_PROMPT_LENGTH));
   const [provider, setProvider] = useState("ollama");
   const [model, setModel] = useState("gemma3:4b");
 

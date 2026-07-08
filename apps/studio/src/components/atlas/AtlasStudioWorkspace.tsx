@@ -45,6 +45,7 @@ export function AtlasStudioWorkspace({
 }: AtlasStudioWorkspaceProps) {
   const [stampOpen, setStampOpen] = useState(false);
   const [assetStudioOpen, setAssetStudioOpen] = useState(false);
+  const [assetWish, setAssetWish] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [describeTarget, setDescribeTarget] = useState<RegionDescribeTarget | null>(null);
 
@@ -82,7 +83,16 @@ export function AtlasStudioWorkspace({
       </div>
 
       <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-        <AtlasStudioHost worldSlug={worldSlug} doc={doc} paletteIdMap={paletteIdMap} />
+        <AtlasStudioHost
+          worldSlug={worldSlug}
+          doc={doc}
+          paletteIdMap={paletteIdMap}
+          onAssetRequest={(wish) => {
+            // Editor „Asset fehlt?" → RTX-Asset-Studio mit vorbelegtem Wunsch.
+            setAssetWish(wish);
+            setAssetStudioOpen(true);
+          }}
+        />
       </div>
 
       {stampOpen && (
@@ -97,7 +107,11 @@ export function AtlasStudioWorkspace({
       {assetStudioOpen && (
         <AtlasAssetProposalStudio
           worldSlug={worldSlug}
-          onClose={() => setAssetStudioOpen(false)}
+          initialPrompt={assetWish}
+          onClose={() => {
+            setAssetStudioOpen(false);
+            setAssetWish("");
+          }}
         />
       )}
 

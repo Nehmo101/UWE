@@ -122,6 +122,8 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#22 Klima-Bänder** — `CLIMATE_ZONES`/`climateBands` in `@uwe/atlas/climate` (arktisch → tropisch); Doc-Setting `tileLayer.climateEnabled` (migrationsfest, sparse), Overlay in Editor (mit Zonen-Labels), Portal- und Static-Viewer. *Offen: Biom-Vorschlags-Färbung + Reiseplaner-Kopplung.*
 - ✅ **#23 Kartuschen** — `drawCartouche` in `@uwe/atlas/cartouche` (Schriftrolle/Banner/Doppellinien); Titelkartusche wählbar im PNG-Export-Dialog (Titel = Ebenen-Name). *Offen: Live-Deko + weitere Zier-Rahmen/Windrosen-Stile.*
 - ✅ **#15 Reiseplaner** — `planTravelRoute` in `@uwe/atlas/travel` (terrain-gewichtete Reisetage `TERRAIN_TRAVEL_FACTOR`, Rastpunkte je Reisetag, deterministisch); Messen-Werkzeug ist jetzt eine Multi-Punkt-Route mit Live-Anzeige (Distanz · Tage · Rast) und Lager-Markern, Enter speichert sie als `road`-Feature mit `style.travel`. *Offen: Encounter-Wurf je Etappe aus dem `dnd`-Package (Proposal → Review über die Bridge).*
+- ✅ **#4 Prefabs** — Auswahl als benanntes Prefab (Objekte + Features, Anker-relativ) in einer localStorage-Bibliothek; „★ Als Prefab speichern" im Gruppen-Panel, Prefab-Liste in der Sidebar (Einfügen an Viewport-Mitte, Löschen). Reine Editor-Bibliothek, nie im Doc.
+- ✅ **#28 Asset-Wunsch-Queue** — „✎ Asset fehlt?" im Asset-Browser → Bridge-Message `asset-request` (Typ + Whitelist + Guard in `bridge.ts`, unit-getestet) → `AtlasStudioHost.onAssetRequest` öffnet das RTX-Asset-Studio mit vorbelegtem Wunsch (`AtlasAssetProposalStudio initialPrompt`). Bestehender Proposal→Review-Flow unverändert.
 
-**Offen:** #4 Prefabs, #14 Werkstatt-Layout, #16 Kartengröße,
-#17 Landmassen-Pinsel, #26 Unterwelt, #28 Asset-Wunsch-Queue.
+**Offen:** #14 Werkstatt-Layout, #16 Kartengröße, #17 Landmassen-Pinsel,
+#26 Unterwelt.

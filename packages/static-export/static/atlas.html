@@ -2228,6 +2228,89 @@ function copySelection() {
   pasteCount = 0;
   flash("⧉ " + (feats.length + objs.length) + " Element(e) kopiert");
 }
+// Prefabs (Roadmap W3 #4): benannte Gruppen aus Objekten + Features, in
+// localStorage gespeichert (Editor-Bibliothek, nicht im Doc). Beim Einfügen
+// landet der Gruppen-Anker in der Viewport-Mitte, relative Anordnung bleibt.
+const PREFAB_KEY = "uwe.atlas.prefabs.v1";
+let atlasPrefabs;
+try { atlasPrefabs = JSON.parse(localStorage.getItem(PREFAB_KEY) || "[]"); } catch (_) { atlasPrefabs = []; }
+if (!Array.isArray(atlasPrefabs)) atlasPrefabs = [];
+function persistPrefabs() { try { localStorage.setItem(PREFAB_KEY, JSON.stringify(atlasPrefabs.slice(0, 40))); } catch (_) {} }
+function featureAnchorPoint(f) {
+  const g = f.geometry; if (!g) return null;
+  if (g.type === "Point" || g.type === "LabelAnchor") return g.coordinates || null;
+  if (g.type === "Path") return (g.coordinates && g.coordinates[0]) || null;
+  if (g.type === "Polygon") return (g.rings && g.rings[0] && g.rings[0][0]) || null;
+  return null;
+}
+function saveSelectionAsPrefab() {
+  const feats = [], objs = [], pts = [];
+  for (const k of selection) {
+    const f = doc.features.find((x) => x._key === k);
+    if (f) { const { _key, id, nodeId, ...rest } = f; feats.push(JSON.parse(JSON.stringify(rest))); const a = featureAnchorPoint(f); if (a) pts.push(a); continue; }
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { const { _key, id, nodeId, ...rest } = o; objs.push(JSON.parse(JSON.stringify(rest))); pts.push([o.x, o.y]); }
+  }
+  if (!feats.length && !objs.length) { flash("Erst Objekte/Features auswählen"); return; }
+  if (!pts.length) return;
+  const ax = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const ay = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  // Relativ zum Anker speichern (Anker → 0,0).
+  for (const f of feats) f.geometry = engine.translateGeometry(f.geometry, -ax, -ay);
+  for (const o of objs) { o.x -= ax; o.y -= ay; }
+  const name = prompt("Prefab-Name:", "Gruppe " + (atlasPrefabs.length + 1));
+  if (name == null) return;
+  atlasPrefabs.unshift({ name: name.trim() || ("Gruppe " + (atlasPrefabs.length + 1)), features: feats, objects: objs });
+  persistPrefabs();
+  buildPrefabList();
+  flash("★ Prefab „" + atlasPrefabs[0].name + "\" gespeichert");
+}
+function insertPrefab(idx) {
+  const pf = atlasPrefabs[idx];
+  if (!pf) return;
+  pushUndo();
+  clearSel();
+  // Anker → aktuelle Viewport-Mitte.
+  const [tx, ty] = c2n(cssW / 2, cssH / 2);
+  for (const src of pf.features || []) {
+    const f = JSON.parse(JSON.stringify(src));
+    f._key = nextKey(); f.id = nextKey(); f.nodeId = state.nodeId;
+    f.geometry = engine.translateGeometry(f.geometry, tx, ty);
+    if (f.kind === "plot") { doc.features.push(f); fillPlotObjects(f, false); }
+    else doc.features.push(f);
+    selection.add(f._key);
+  }
+  for (const src of pf.objects || []) {
+    const o = JSON.parse(JSON.stringify(src));
+    o._key = nextKey(); o.id = nextKey(); o.nodeId = state.nodeId;
+    o.x = Math.max(0, Math.min(1, o.x + tx)); o.y = Math.max(0, Math.min(1, o.y + ty));
+    doc.objects.push(o); selection.add(o._key);
+  }
+  const keys = [...selection];
+  setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+  markDirty(); draw();
+  flash("★ Prefab „" + pf.name + "\" eingefügt");
+}
+function deletePrefab(idx) {
+  if (!atlasPrefabs[idx]) return;
+  atlasPrefabs.splice(idx, 1);
+  persistPrefabs();
+  buildPrefabList();
+}
+function escHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function buildPrefabList() {
+  const host = el("prefab-list");
+  if (!host) return;
+  if (!atlasPrefabs.length) { host.innerHTML = '<div style="font-size:10px;color:var(--uwe-fg-subtle);padding:2px 0;">Noch keine Prefabs — Auswahl im Panel speichern.</div>'; return; }
+  host.innerHTML = atlasPrefabs.map((pf, i) =>
+    '<div style="display:flex;align-items:center;gap:4px;margin-top:3px;">' +
+    '<button class="tb-btn" data-prefab-ins="' + i + '" style="flex:1;justify-content:flex-start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Prefab einfügen">★ ' + escHtml(pf.name) + " (" + ((pf.features || []).length + (pf.objects || []).length) + ")</button>" +
+    '<button class="tb-btn" data-prefab-del="' + i + '" title="Prefab löschen">✕</button>' +
+    "</div>").join("");
+}
+
 function pasteClipboard() {
   if (!clipboard) return;
   pushUndo();
@@ -2567,10 +2650,19 @@ function buildSidebar() {
     .map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("");
   browser.innerHTML =
     '<input id="asset-search" type="search" placeholder="Assets suchen…" style="width:100%;padding:5px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-size:11px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);">' +
-    '<select id="asset-cat" class="sel-select" style="margin-top:0;" title="Kategorie · Favoriten (Rechtsklick auf ein Asset setzt den Stern) · Zuletzt benutzt">' + catOptions + "</select>";
+    '<select id="asset-cat" class="sel-select" style="margin-top:0;" title="Kategorie · Favoriten (Rechtsklick auf ein Asset setzt den Stern) · Zuletzt benutzt">' + catOptions + "</select>" +
+    '<button id="asset-wish" class="tb-btn" style="width:100%;justify-content:center;margin-top:2px;" title="Fehlt dir ein Asset? Wunsch ans RTX-Asset-Studio schicken (Roadmap W4 #28)">✎ Asset fehlt?</button>';
   grid.parentElement.insertBefore(browser, grid);
   browser.querySelector("#asset-search").addEventListener("input", (e) => { assetFilter.q = e.target.value.trim().toLowerCase(); applyAssetFilter(); });
   browser.querySelector("#asset-cat").addEventListener("change", (e) => { assetFilter.cat = e.target.value; applyAssetFilter(); });
+  browser.querySelector("#asset-wish").addEventListener("click", () => {
+    const wish = prompt("Welches Gouache-Asset fehlt dir? (kurz beschreiben)");
+    if (wish == null) return;
+    const text = wish.trim();
+    if (!text) return;
+    if (embedded) { bridgePost({ type: "asset-request", prompt: text }); flash("✎ Asset-Wunsch ans RTX-Studio gesendet"); }
+    else flash("Asset-Wunsch nur in der Studio-Einbettung verfügbar");
+  });
   // Ink-Piktogramme sind aus der Palette entfernt — jedes Builtin-Motiv hat
   // ein Gouache-Äquivalent (GLYPH_TO_GOUACHE); Bestandsobjekte rendern gemalt.
   // Gemalte Gouache-Assets (Canvas-of-Kings-Optik) — Vorschau per Mini-Canvas.
@@ -2705,6 +2797,19 @@ function buildSidebar() {
     doc.tileLayer.contourSteps = Math.max(2, Math.min(24, Math.round(Number(e.target.value) || engine.DEFAULT_CONTOUR_STEPS)));
     markDirty(); refreshChrome(); draw();
   });
+
+  // Prefab-Bibliothek (Roadmap W3 #4): benannte Gruppen wiederverwenden.
+  const pfb = document.createElement("div");
+  pfb.style.cssText = "padding:10px 2px 2px;";
+  pfb.innerHTML = '<div class="grp-label" style="padding:0 0 4px;">Prefabs</div><div id="prefab-list"></div>';
+  swatches.parentElement.appendChild(pfb);
+  pfb.addEventListener("click", (e) => {
+    const ins = e.target.closest("[data-prefab-ins]");
+    if (ins) { insertPrefab(Number(ins.dataset.prefabIns)); return; }
+    const del = e.target.closest("[data-prefab-del]");
+    if (del) { deletePrefab(Number(del.dataset.prefabDel)); return; }
+  });
+  buildPrefabList();
 }
 
 function refreshChrome() {
@@ -2836,7 +2941,8 @@ function refreshChrome() {
       '<div style="display:flex;gap:6px;margin-top:8px;">' +
       '<button class="tb-btn" data-batch="show" style="flex:1;justify-content:center;">🌐 Portal</button>' +
       '<button class="tb-btn" data-batch="hide" style="flex:1;justify-content:center;">🔒 GM</button>' +
-      "</div>";
+      "</div>" +
+      '<button class="tb-btn" data-prefab="save" style="width:100%;justify-content:center;margin-top:6px;" title="Auswahl als wiederverwendbares Prefab in der Palette speichern">★ Als Prefab speichern</button>';
     selP.style.display = "block";
   } else if (selO) {
     const g = engine.getGlyphByKey(selO.paletteItemId);
@@ -3117,6 +3223,8 @@ function wire() {
       }
       return;
     }
+    const prefabBtn = e.target.closest("[data-prefab]");
+    if (prefabBtn) { saveSelectionAsPrefab(); return; }
     const batch = e.target.closest("[data-batch]");
     if (batch) setSelectionVisibility(batch.dataset.batch === "show" ? "player_visible" : "dm_only");
   });

@@ -48,6 +48,11 @@ describe("bridge message guards", () => {
       false,
     );
     assert.equal(
+      isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "asset-request", prompt: "Ein Leuchtturm" }),
+      true,
+    );
+    assert.equal(isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "asset-request" }), false);
+    assert.equal(
       isEditorMessage({ source: ATLAS_BRIDGE_EDITOR_SOURCE, type: "plot-fill-proposal-request", seed: 42 }),
       false,
     );

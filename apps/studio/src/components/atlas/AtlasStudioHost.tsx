@@ -47,9 +47,11 @@ export interface AtlasStudioHostProps {
   doc: Record<string, unknown>;
   /** Maps client palette keys (e.g. builtin glyph keys) → real AtlasPaletteItem DB ids. */
   paletteIdMap?: Record<string, string>;
+  /** Called when the editor requests a missing palette asset (opens the RTX studio). */
+  onAssetRequest?: (prompt: string) => void;
 }
 
-export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStudioHostProps) {
+export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {}, onAssetRequest }: AtlasStudioHostProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const post = useCallback((message: Record<string, unknown>) => {
@@ -257,6 +259,9 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
         case "map-style":
           void handleMapStyle(data.stylePreset);
           break;
+        case "asset-request":
+          onAssetRequest?.(data.prompt);
+          break;
         default:
           break;
       }
@@ -272,6 +277,7 @@ export function AtlasStudioHost({ worldSlug, doc, paletteIdMap = {} }: AtlasStud
     handlePlotFillProposal,
     handleSave,
     handleVisibility,
+    onAssetRequest,
     post,
   ]);
 
