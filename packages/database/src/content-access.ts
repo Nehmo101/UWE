@@ -162,6 +162,17 @@ export function sanitizeForPlayer(
   };
 }
 
+/**
+ * The content-block columns the search index and its authz filters actually
+ * read. Loading only these (instead of the whole `ContentBlock` row) keeps the
+ * search load path lean. A full `ContentBlock` is structurally assignable to
+ * this subset, so existing callers that pass complete rows still type-check.
+ */
+export type SearchIndexContentBlock = Pick<
+  ContentBlock,
+  "id" | "pageId" | "content" | "visibility" | "type" | "sortOrder" | "secretLevel" | "revealState"
+>;
+
 export interface SearchIndexPageInput extends ContentAccessFields {
   id: string;
   title: string;
@@ -172,7 +183,7 @@ export interface SearchIndexPageInput extends ContentAccessFields {
   aliases: unknown;
   canonicalStatus: Page["canonicalStatus"];
   questStatus?: Page["questStatus"];
-  contentBlocks: ContentBlock[];
+  contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;
   secretLevel?: SecretLevel | null;

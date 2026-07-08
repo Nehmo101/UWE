@@ -253,6 +253,40 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
+  it("stitches content blocks back to their own page after chunked load", async () => {
+    const db = createPrismaClient(databaseUrl);
+
+    // The search load path fetches content blocks in chunks and re-associates
+    // them with their page by id. Elara's second (dm_only) block content must
+    // surface only on Elara, and a different page's block must not bleed onto
+    // it — guards the per-page bucketing of the chunked loader.
+    const elaraBlock = await searchForWikiContext(db, "dm", {
+      query: "Doppelagent",
+      worldSlug,
+      entityFilter: "content_blocks",
+      urlMode: "studio",
+    });
+    assert.deepEqual(
+      [...new Set(elaraBlock.map((result) => result.slug))],
+      ["elara"],
+      "block content must attach only to its own page",
+    );
+
+    const marktBlock = await searchForWikiContext(db, "dm", {
+      query: "Gewürze",
+      worldSlug,
+      entityFilter: "content_blocks",
+      urlMode: "studio",
+    });
+    assert.ok(marktBlock.some((result) => result.slug === "marktplatz"));
+    assert.equal(
+      marktBlock.some((result) => result.slug === "elara"),
+      false,
+    );
+
+    await db.$disconnect();
+  });
+
   it("filters quests by lifecycle status", async () => {
     const db = createPrismaClient(databaseUrl);
 

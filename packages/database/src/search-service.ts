@@ -4,6 +4,7 @@ import type { PrismaClient } from "./client";
 import type {
   ContentBlock,
   CanonicalStatus,
+  Page,
   PageType,
   PublishStatus,
   QuestLifecycleStatus,
@@ -17,6 +18,7 @@ import {
   type AccessContext as WikiAccessContext,
   type PortalAccessOptions,
 } from "./permissions";
+import type { SearchIndexContentBlock } from "./content-access";
 import { buildSearchIndexForScope } from "./search-index";
 
 export const SEARCH_ENTITY_FILTERS = [
@@ -129,8 +131,10 @@ type IndexedPage = {
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
+  secretLevel?: Page["secretLevel"] | null;
+  revealState?: Page["revealState"] | null;
   campaignId: string | null;
-  contentBlocks: ContentBlock[];
+  contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;
 };
@@ -398,6 +402,14 @@ export function searchIndex(
   return results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, "de")).slice(0, limit);
 }
 
+/**
+ * SQLite/libsql cap the number of bind parameters per statement (~999).
+ * Loading content blocks for every page of a large world in one
+ * `WHERE pageId IN (...)` exceeds that ceiling at scale and throws P2029, so we
+ * page the id list in safe chunks. 500 keeps each statement well under the cap.
+ */
+const SEARCH_BLOCK_PAGE_CHUNK = 500;
+
 async function loadPagesForSearch(
   db: PrismaClient,
   options: Pick<
@@ -411,7 +423,10 @@ async function loadPagesForSearch(
 
   const canonicalFilter = options.canonicalStatusFilter;
 
-  return db.page.findMany({
+  // Select only the columns the index and its authz filters read, instead of
+  // hydrating whole rows via `include`. Behaviour is unchanged; the content
+  // blocks are loaded separately (chunked) below and stitched back on.
+  const pages = await db.page.findMany({
     where: {
       ...(options.worldSlug ? { world: { slug: options.worldSlug } } : {}),
       ...(options.campaignId ? { campaignId: options.campaignId } : {}),
@@ -424,13 +439,60 @@ async function loadPagesForSearch(
           }
         : {}),
     },
-    include: {
-      contentBlocks: { orderBy: { sortOrder: "asc" } },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+      summary: true,
+      tags: true,
+      aliases: true,
+      visibility: true,
+      publishStatus: true,
+      canonicalStatus: true,
+      questStatus: true,
+      secretLevel: true,
+      revealState: true,
+      campaignId: true,
       world: { select: { slug: true, name: true } },
       campaign: { select: { name: true } },
     },
     orderBy: [{ title: "asc" }],
   });
+
+  const blocksByPageId = new Map<string, SearchIndexContentBlock[]>();
+  for (let offset = 0; offset < pages.length; offset += SEARCH_BLOCK_PAGE_CHUNK) {
+    const pageIds = pages
+      .slice(offset, offset + SEARCH_BLOCK_PAGE_CHUNK)
+      .map((page) => page.id);
+    const blocks = await db.contentBlock.findMany({
+      where: { pageId: { in: pageIds } },
+      select: {
+        id: true,
+        pageId: true,
+        content: true,
+        visibility: true,
+        type: true,
+        secretLevel: true,
+        revealState: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+    for (const block of blocks) {
+      let list = blocksByPageId.get(block.pageId);
+      if (!list) {
+        list = [];
+        blocksByPageId.set(block.pageId, list);
+      }
+      list.push(block);
+    }
+  }
+
+  return pages.map((page) => ({
+    ...page,
+    contentBlocks: blocksByPageId.get(page.id) ?? [],
+  }));
 }
 
 export async function searchForWikiContext(
