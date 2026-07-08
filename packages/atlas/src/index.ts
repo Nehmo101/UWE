@@ -196,6 +196,22 @@ export type {
 export { buildVineLayout } from "./vine";
 export type { VineOptions, VineLayout, VineAura } from "./vine";
 
+// Roadmap Welle 3/4 engine slices
+export type { CoastStyleOptions } from "./coastline";
+export { findBridgePoints } from "./bridge-points";
+export type { BridgePoint } from "./bridge-points";
+export { routeRoad } from "./route-astar";
+export type { RouteOptions, RouteResult } from "./route-astar";
+export { suggestTerritories } from "./territory";
+export type { TerritorySeed, TerritoryOptions, TerritoryRegion } from "./territory";
+export {
+  CULTURE_PROFILES,
+  listCultureProfiles,
+  getCultureProfile,
+  generatePlaceNames,
+} from "./name-culture";
+export type { CultureProfile, NameKind, GenerateNamesOptions } from "./name-culture";
+
 // Gouache painted-asset engine (Canvas-of-Kings style)
 export {
   GOUACHE_ASSETS,

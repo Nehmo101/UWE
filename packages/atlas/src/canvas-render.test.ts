@@ -6,6 +6,7 @@ import {
   drawScaleBar,
   drawSvgPath,
   paintTerrainBlobs,
+  type PaintTerrainBlobsOptions,
   roundedRectPath,
 } from "./canvas-render";
 
@@ -21,6 +22,9 @@ function makeRecordingCtx() {
   };
   const ctx = {
     fillStyle: "",
+    strokeStyle: "",
+    lineWidth: 0,
+    globalAlpha: 1,
     beginPath: rec("beginPath"),
     closePath: rec("closePath"),
     moveTo: rec("moveTo"),
@@ -30,6 +34,9 @@ function makeRecordingCtx() {
     bezierCurveTo: rec("bezierCurveTo"),
     fill: rec("fill"),
     fillRect: rec("fillRect"),
+    stroke: rec("stroke"),
+    save: rec("save"),
+    restore: rec("restore"),
     createLinearGradient: (...args: number[]) => {
       calls.push(["createLinearGradient", ...args]);
       return {
@@ -174,6 +181,141 @@ describe("paintTerrainBlobs", () => {
       ["addColorStop", 1, "#06c"],
     ]);
     assert.deepEqual(calls.filter((c) => c[0] === "fillRect"), [["fillRect", 0, 8, 10, 4]]);
+  });
+});
+
+describe("paintTerrainBlobs — Küstensaum & Wasser-Look", () => {
+  /** A 2×2 grid: grass on the left column, water on the right. */
+  const mixedGrid = (
+    coast?: PaintTerrainBlobsOptions["coast"],
+  ): PaintTerrainBlobsOptions => ({
+    cols: 2,
+    rows: 2,
+    getCell: (c, r) =>
+      c < 0 || c > 1 || r < 0 || r > 1 ? undefined : c === 0 ? "grass" : "water",
+    tileRect: (c, r) => ({ x: c * 10, y: r * 10, w: 10, h: 10 }),
+    fillFor: (biome) => (biome === "water" ? "#06c" : "#0f0"),
+    coast,
+  });
+
+  it("is byte-identical whether coast is omitted or explicitly undefined", () => {
+    const a = makeRecordingCtx();
+    const b = makeRecordingCtx();
+    paintTerrainBlobs(a.ctx, mixedGrid());
+    paintTerrainBlobs(b.ctx, mixedGrid(undefined));
+    assert.deepEqual(a.calls, b.calls);
+    // Regression guard: no coast ops leak in when the option is absent.
+    assert.equal(a.count("save"), 0);
+    assert.equal(a.count("stroke"), 0);
+    assert.equal(a.count("quadraticCurveTo"), 0);
+  });
+
+  it("adds a shallow-water rim (extra fillRect) on water cells bordering land", () => {
+    // (0,0)=grass, (1,0)=water — the water cell's left neighbour is land.
+    const opts = (coast?: PaintTerrainBlobsOptions["coast"]): PaintTerrainBlobsOptions => ({
+      cols: 2,
+      rows: 1,
+      getCell: (c, r) => (r !== 0 ? undefined : c === 0 ? "grass" : c === 1 ? "water" : undefined),
+      tileRect: (c, r) => ({ x: c * 10, y: r * 10, w: 10, h: 10 }),
+      fillFor: (biome) => (biome === "water" ? "#06c" : "#0f0"),
+      coast,
+    });
+
+    const plain = makeRecordingCtx();
+    paintTerrainBlobs(plain.ctx, opts());
+    assert.equal(plain.count("fillRect"), 0, "no bridges, no coast ⇒ no rects");
+
+    const withCoast = makeRecordingCtx();
+    paintTerrainBlobs(withCoast.ctx, opts({}));
+    // One rim band along the single land-facing (left) edge, drawn inside save/restore.
+    assert.equal(withCoast.count("fillRect"), 1);
+    assert.equal(withCoast.count("save"), 1);
+    assert.equal(withCoast.count("restore"), 1);
+    assert.deepEqual(
+      withCoast.calls.filter((c) => c[0] === "fillRect"),
+      [["fillRect", 10, 0, 10 * 0.22, 10]],
+    );
+    // Explicit rimColor overrides the paler-fill default (still one rim rect).
+    const tinted = makeRecordingCtx();
+    paintTerrainBlobs(tinted.ctx, opts({ rimColor: "#abc" }));
+    assert.equal(tinted.count("fillRect"), 1);
+  });
+
+  it("draws open-water ripples only when the per-cell rng admits", () => {
+    // A single water cell with no land neighbours ⇒ open water (ripple path).
+    const single = (coast: PaintTerrainBlobsOptions["coast"]): PaintTerrainBlobsOptions => ({
+      cols: 1,
+      rows: 1,
+      getCell: (c, r) => (c === 0 && r === 0 ? "water" : undefined),
+      tileRect: () => ({ x: 0, y: 0, w: 10, h: 10 }),
+      fillFor: () => "#06c",
+      coast,
+    });
+
+    // Seed 7 gates cell (0,0) out (first rng() < 0.55) ⇒ nothing drawn.
+    const quiet = makeRecordingCtx();
+    paintTerrainBlobs(quiet.ctx, single({ rippleSeed: 7 }));
+    assert.equal(quiet.count("quadraticCurveTo"), 0);
+    assert.equal(quiet.count("stroke"), 0);
+
+    // Seed 1 admits cell (0,0) ⇒ 1–2 quadratic ripple arcs, each stroked.
+    const lively = makeRecordingCtx();
+    paintTerrainBlobs(lively.ctx, single({ rippleSeed: 1 }));
+    assert.ok(lively.count("quadraticCurveTo") >= 1, "at least one ripple arc");
+    assert.equal(
+      lively.count("quadraticCurveTo"),
+      lively.count("stroke"),
+      "one stroke per arc",
+    );
+    assert.equal(lively.count("save"), 1);
+  });
+
+  it("is deterministic: same seed ⇒ identical ops, different seed ⇒ different", () => {
+    // 3×3 all-water grid — every cell is open water (no land neighbours).
+    const waterField = (seed: number): PaintTerrainBlobsOptions => ({
+      cols: 3,
+      rows: 3,
+      getCell: (c, r) => (c >= 0 && c <= 2 && r >= 0 && r <= 2 ? "water" : undefined),
+      tileRect: (c, r) => ({ x: c * 10, y: r * 10, w: 10, h: 10 }),
+      fillFor: () => "#06c",
+      coast: { rippleSeed: seed },
+    });
+
+    const s1a = makeRecordingCtx();
+    const s1b = makeRecordingCtx();
+    const s2 = makeRecordingCtx();
+    paintTerrainBlobs(s1a.ctx, waterField(1));
+    paintTerrainBlobs(s1b.ctx, waterField(1));
+    paintTerrainBlobs(s2.ctx, waterField(2));
+
+    assert.deepEqual(s1a.calls, s1b.calls, "same seed ⇒ identical draw calls");
+    assert.notDeepEqual(s1a.calls, s2.calls, "different seed ⇒ different draw calls");
+    assert.ok(s1a.count("quadraticCurveTo") >= 1, "the field actually rippled");
+  });
+
+  it("accepts coast as an optional field at the type level", () => {
+    // Compiles without `coast` …
+    const withoutCoast: PaintTerrainBlobsOptions = {
+      cols: 1,
+      rows: 1,
+      getCell: () => "water",
+      tileRect: () => ({ x: 0, y: 0, w: 1, h: 1 }),
+      fillFor: () => "#06c",
+    };
+    // … and with a fully-specified coast config.
+    const withCoast: PaintTerrainBlobsOptions = {
+      ...withoutCoast,
+      coast: {
+        waterKinds: ["water", "coast", "river"],
+        rimColor: "#cde",
+        rimWidthRatio: 0.3,
+        rippleColor: "rgba(255,255,255,0.5)",
+        rippleSeed: 42,
+        rippleDensity: 2,
+      },
+    };
+    assert.equal(withoutCoast.coast, undefined);
+    assert.ok(withCoast.coast);
   });
 });
 

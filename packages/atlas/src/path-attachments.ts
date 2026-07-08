@@ -49,6 +49,14 @@ export interface PathAttachmentOptions {
   jitter?: number;
   /** PRNG seed for deterministic output (default 7). */
   seed?: number;
+  /**
+   * When true, each placement's `rotation` follows the local path segment's
+   * direction (degrees) plus the usual small jitter, instead of being pure
+   * jitter around 0°. Positions/scale are unaffected and the PRNG stream is
+   * consumed identically either way — only the rotation formula changes.
+   * Defaults to false (today's behavior, byte-identical).
+   */
+  alignToPath?: boolean;
 }
 
 export interface PathAttachmentPlacement {
@@ -115,6 +123,7 @@ export function generatePathAttachments(
   const offset = options.offset ?? 0.02;
   const jitter = options.jitter ?? 0.25;
   const seed = options.seed ?? 7;
+  const alignToPath = options.alignToPath ?? false;
 
   if (spacing <= 0) return [];
 
@@ -148,6 +157,9 @@ export function generatePathAttachments(
     // Perpendicular unit vector for the side offset.
     const px = -uy;
     const py = ux;
+    // Segment direction in degrees, only used when alignToPath is set — no
+    // rng() draw, so it never shifts the PRNG stream.
+    const segmentAngleDeg = alignToPath ? (Math.atan2(uy, ux) * 180) / Math.PI : 0;
 
     let d = accumulated === 0 ? spacing / 2 : spacing - accumulated;
     while (d <= segLen) {
@@ -158,7 +170,10 @@ export function generatePathAttachments(
 
       for (const sign of signs) {
         const scale = 0.8 + rng() * 0.4; // [0.8, 1.2]
-        const rotation = (rng() - 0.5) * 2 * rotationRange; // ±rotationRange
+        // Same single rng() draw regardless of alignToPath, so positions and
+        // scale stay identical between aligned/unaligned runs of the same seed.
+        const jitterRotation = (rng() - 0.5) * 2 * rotationRange; // ±rotationRange
+        const rotation = alignToPath ? segmentAngleDeg + jitterRotation : jitterRotation;
         const x = clamp01(cx + px * offset * sign);
         const y = clamp01(cy + py * offset * sign);
 

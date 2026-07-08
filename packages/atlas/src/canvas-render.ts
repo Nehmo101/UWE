@@ -7,6 +7,7 @@
  * browser (and the M1 `atlas.html` runtime), not in the Node test suite.
  */
 
+import { paintCoastCell, resolveCoastStyle, type CoastStyleOptions } from "./coastline";
 import type { Coordinate } from "./geometry";
 import type { VineLayout } from "./vine";
 
@@ -91,6 +92,12 @@ export interface PaintTerrainBlobsOptions {
   blendWidth?: number;
   /** Optional per-biome intensity factor (1 = unchanged). */
   intensityFor?: (biome: string) => number;
+  /**
+   * Wonderdraft-style coastline styling (additive; omit for byte-identical
+   * output): a paler shallow-water rim on water tiles that border land, plus
+   * deterministic ripple arcs on open water. See {@link CoastStyleOptions}.
+   */
+  coast?: CoastStyleOptions;
 }
 
 /**
@@ -110,6 +117,16 @@ export function paintTerrainBlobs(
       : 0;
   const fillForBiome = (biome: string): string =>
     intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
+
+  // Coastline decoration (additive): resolved once; a neighbour counts as
+  // "land" only when it holds a painted non-water biome (empty cells never do).
+  const coast = opts.coast ? resolveCoastStyle(opts.coast) : undefined;
+  const isLand = coast
+    ? (col: number, row: number): boolean => {
+        const k = getCell(col, row);
+        return !!k && !coast.waterKinds.has(k);
+      }
+    : undefined;
 
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
@@ -133,6 +150,13 @@ export function paintTerrainBlobs(
       // what makes borders between different biomes read as flowing, not blocky.
       if (rightSame && bottomSame && diagSame) {
         ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
+      }
+
+      // Coast rim / open-water ripples — painted on top of this water cell's
+      // base blob fill, still deterministic and self-contained (save/restore).
+      if (coast && isLand && coast.waterKinds.has(biome)) {
+        const rimColor = coast.rimColor ?? applyColorIntensity(fillFor(biome), 0.55);
+        paintCoastCell(ctx, coast, { col: c, row: r, x, y, w, h, rimColor, isLand });
       }
     }
   }

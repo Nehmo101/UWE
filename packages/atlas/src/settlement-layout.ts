@@ -10,6 +10,9 @@
 
 import type { Coordinate } from "./geometry";
 import { distToSegment } from "./geometry";
+// Type-only — erased at compile time, so this does not create a runtime
+// circular dependency with settlement.ts (which imports values from here).
+import type { SettlementFeature, SettlementObject } from "./settlement";
 
 /** Fraction of the polygon span kept clear between buildings and the wall ring. */
 export const WALL_CLEARANCE_FACTOR = 0.03;
@@ -152,4 +155,66 @@ export function placeSettlementBuildings(input: PlaceBuildingsInput): BuildingPl
   }
 
   return placements;
+}
+
+// ---------------------------------------------------------------------------
+// Settlement condition (Verfallsgrad) — deterministic decay/occupation post-pass
+// ---------------------------------------------------------------------------
+
+/** Deterioration/occupation state for a generated settlement. */
+export type SettlementCondition = "thriving" | "besieged" | "abandoned" | "ruined";
+
+/**
+ * Post-process an already-generated layout for a decay/occupation state. Purely
+ * index-based — draws no extra values from `rng` — so it stays deterministic
+ * independent of the shared PRNG stream used for the base layout, and repeated
+ * calls with identical inputs are deep-equal. Callers must skip invoking this
+ * for "thriving" (the default): returning the original arrays untouched is what
+ * keeps the golden/default settlement output byte-identical.
+ *
+ * - besieged: tags every feature/object `style.condition`; every 5th house
+ *   (index 0, 5, 10, …, ~20%) becomes a siege tent (`style.gouache = "g_tent"`).
+ * - abandoned: drops houses at an even index that is not also a multiple of 5
+ *   (an "every 2nd, minus every 5th" cull, ~40% of houses); every remaining
+ *   feature/object is tagged.
+ * - ruined: the first 3 of every 5 houses (index-based, ~60%) become rubble
+ *   (`style.gouache = "g_ruin"`); every 2nd wall tower (by index, 0-based) is
+ *   dropped; everything remaining is tagged.
+ */
+export function applySettlementCondition(
+  features: readonly SettlementFeature[],
+  objects: readonly SettlementObject[],
+  condition: SettlementCondition,
+): { features: SettlementFeature[]; objects: SettlementObject[] } {
+  const tagStyle = <S extends { condition?: SettlementCondition }>(style: S): S => ({
+    ...style,
+    condition,
+  });
+
+  let houseIndex = -1;
+  let towerIndex = -1;
+  const nextObjects: SettlementObject[] = [];
+  for (const object of objects) {
+    if (object.kind === "building") {
+      houseIndex++;
+      if (condition === "abandoned" && houseIndex % 2 === 0 && houseIndex % 5 !== 0) continue;
+      if (condition === "ruined" && houseIndex % 5 < 3) {
+        nextObjects.push({ ...object, style: { ...tagStyle(object.style), gouache: "g_ruin" } });
+        continue;
+      }
+      if (condition === "besieged" && houseIndex % 5 === 0) {
+        nextObjects.push({ ...object, style: { ...tagStyle(object.style), gouache: "g_tent" } });
+        continue;
+      }
+    } else if (object.kind === "tower") {
+      towerIndex++;
+      if (condition === "ruined" && towerIndex % 2 === 0) continue;
+    }
+    nextObjects.push({ ...object, style: tagStyle(object.style) });
+  }
+
+  return {
+    features: features.map((feature) => ({ ...feature, style: tagStyle(feature.style) })),
+    objects: nextObjects,
+  };
 }

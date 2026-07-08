@@ -114,12 +114,79 @@ export const TOLKIEN_INK: AtlasStylePreset = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Additional presets (Theme-System, Roadmap Welle 3 #6)
+// ---------------------------------------------------------------------------
+
+/** "pergament-klassik" — brighter, neutral parchment with blue waterways. */
+export const PARCHMENT_CLASSIC: AtlasStylePreset = {
+  id: "pergament-klassik",
+  label: "Pergament Klassik",
+  description:
+    "Helles, neutrales Pergament mit blauen Wasserwegen und warmem Braun — der zeitlose Schulatlas-Look.",
+  colors: {
+    parchment: "#f6efdb",
+    ink: "#2b2118",
+    inkAccent: "#3f6f9a",
+    water: "#9dc0d6",
+    land: "#efe6c8",
+    forest: "#557347",
+    mountain: "#8a7a5e",
+    road: "#7a5a34",
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations },
+} as const;
+
+/** "nachtkarte" — dark chart with pale ink, for star-lit war rooms. */
+export const NIGHT_CHART: AtlasStylePreset = {
+  id: "nachtkarte",
+  label: "Nachtkarte",
+  description:
+    "Dunkles Kartenblatt mit heller Tinte und kühlem Wasser — Kriegsrat bei Kerzenlicht.",
+  colors: {
+    parchment: "#232732",
+    ink: "#e6e2d2",
+    inkAccent: "#d9a44a",
+    water: "#3d5a74",
+    land: "#2c313e",
+    forest: "#3d5a45",
+    mountain: "#5a5a68",
+    road: "#a08a63",
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations },
+} as const;
+
+/** "winterfeldzug" — cold, desaturated palette with icy water. */
+export const WINTER_CAMPAIGN: AtlasStylePreset = {
+  id: "winterfeldzug",
+  label: "Winterfeldzug",
+  description:
+    "Kalte, entsättigte Töne, eisiges Wasser und schneegraues Land — Kampagnen im tiefen Winter.",
+  colors: {
+    parchment: "#eef0ee",
+    ink: "#2a303a",
+    inkAccent: "#8a3a2a",
+    water: "#a9c6d9",
+    land: "#e2e7e4",
+    forest: "#4f6a58",
+    mountain: "#8b93a0",
+    road: "#6f6354",
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations, scaleUnit: "days" },
+} as const;
+
+// ---------------------------------------------------------------------------
 // Preset registry
 // ---------------------------------------------------------------------------
 
 /** All built-in style presets indexed by their `id`. */
 export const STYLE_PRESETS: Record<string, AtlasStylePreset> = {
   [TOLKIEN_INK.id]: TOLKIEN_INK,
+  [PARCHMENT_CLASSIC.id]: PARCHMENT_CLASSIC,
+  [NIGHT_CHART.id]: NIGHT_CHART,
+  [WINTER_CAMPAIGN.id]: WINTER_CAMPAIGN,
 } as const;
 
 /**
