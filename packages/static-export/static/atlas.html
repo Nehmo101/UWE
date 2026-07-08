@@ -251,7 +251,11 @@ const BIOME_LABEL = { grassland: "Grasland", coast: "Wasser", hills: "Erde", des
 const TERRAIN_ORDER = ["grassland", "coast", "hills", "desert", "forest", "mountains", "swamp", "snow"];
 const BIOME_POLY_FILL = { forest: "rgba(74,103,65,0.28)", mountains: "rgba(122,107,82,0.24)", hills: "rgba(154,136,96,0.20)", grassland: "rgba(164,196,130,0.24)", desert: "rgba(220,196,130,0.30)", swamp: "rgba(94,120,80,0.32)", coast: "rgba(168,196,212,0.38)", snow: "rgba(220,228,240,0.38)" };
 
-const preset = engine.resolveStylePreset("tolkien-ink");
+let preset = engine.resolveStylePreset("tolkien-ink");
+// Theme-System (Roadmap W3 #6): Preset folgt doc.map.stylePreset.
+function applyPresetFromDoc() {
+  preset = engine.resolveStylePreset(doc && doc.map && doc.map.stylePreset);
+}
 
 // Werkzeug-Definitionen (inkl. Curved Label als eigenes Tool, README §11).
 const TOOL_DEFS = [
@@ -308,7 +312,7 @@ const embedded = mode !== "view" && params.get("embed") === "1";
 // State (reaktiv für Chrome) + nicht-reaktive Kern-Daten
 // ===========================================================================
 const state = {
-  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: "g_oak", rtxKey: null,
+  tool: "terrain", brush: "grassland", brushSize: 1, glyphKey: "tree", gouacheKey: "g_oak", rtxKey: null, snap: false,
   heightMode: "raise", heightStrength: 0.15,
   showGrid: true, gridCell: 32, zoom: 1, panX: 0, panY: 0,
   selectedKey: null, nodeId: null, dirty: false, saveStatus: "Bereit",
@@ -331,10 +335,16 @@ const selection = new Set();
 let marquee = null;          // {x0,y0,x1,y1} normalisiert — Shift-Rahmenauswahl
 let scaleHandlePt = null;    // {x,y,key} canvas-px — Skalier-Griff der Einzelselektion
 let resizing = null;         // {key, anchor:[cx,cy], startDist, startScale} — Griff-Drag
+let clipboard = null;        // {features:[],objects:[]} — Deep-Copies ohne _key/id
+let pasteCount = 0;          // wachsender Einfüge-Versatz pro Paste
+let dragAxisStart = null;    // [cx,cy] Drag-Beginn — Shift hält die dominante Achse
+let vertexDrag = null;       // {key, index, closed} — Punkt-Griff-Drag (Vertex-Editing)
+let vertexUndoPushed = false;
 let moveUndoPushed = false;  // ein Undo-Schritt pro Drag, nicht pro Pixel
 
 // Pfad-Anhänge (CoK: Objekte säumen Straßen/Flüsse automatisch)
-const attachOpts = { kind: "trees", side: "both", spacing: 0.05 };
+const ATTACH_ALIGN_DEFAULT = true; // Häuser folgen der Straßenrichtung (W4 #27)
+const attachOpts = { kind: "trees", side: "both", spacing: 0.05, align: ATTACH_ALIGN_DEFAULT };
 
 // Siedlungs-Ghost: Hafen/Wasserfront-Parameter (Engine-Option `waterfront`,
 // siehe @uwe/atlas settlement-waterfront.ts). Default AUS = Inland unverändert.
@@ -486,6 +496,7 @@ function pushUndo() {
 }
 function applyHistory(json) {
   doc = migrate(JSON.parse(json));
+  applyPresetFromDoc();
   selection.clear();
   drawingPoints = [];
   aiDraftFeatures = null;
@@ -554,6 +565,7 @@ function onBridgeMessage(e) {
   else if (d.type === "load" && d.doc) {
     try {
       doc = migrate(d.doc);
+      applyPresetFromDoc();
       aiDraftFeatures = null; plotFillReview = null; settlementReview = null;
       buildRtxPaletteButtons();
       setState({ nodeId: doc.rootNodeId, selectedKey: null, aiReview: null });
@@ -974,6 +986,8 @@ function drawScene(ctx, W, H, chrome) {
     fillFor: (b) => TILE_FILL[b] || "#ccc",
     radiusRatio: 0.4,
     intensityFor: (b) => (tl.intensity && tl.intensity[b]) || 1,
+    // Küstensaum + Wellen (Roadmap W3 #5) — deterministisch, engine-seitig.
+    coast: {},
     blendWidth: (tl.blendWidth ?? DEFAULT_TERRAIN_BLEND_WIDTH) * z,
   });
 
@@ -1059,6 +1073,7 @@ function drawScene(ctx, W, H, chrome) {
   drawPending(ctx);
   drawMeasure(ctx);
   drawSelectionRects(ctx);
+  drawVertexHandles(ctx);
 }
 
 // Editor-Overlay bei aktivem Höhen-Tool: transparente Heat-Darstellung des
@@ -1081,6 +1096,73 @@ function drawHeightOverlay(ctx) {
 }
 
 // Shift-Rahmenauswahl + Export-Rechteck als gestrichelte Overlays.
+// ---- Vertex-Editing (Roadmap W3 #1): Punkte von Pfaden/Polygonen bearbeiten ----
+// Liefert die editierbare Punktliste eines Features (Path, Polygon-Außenring
+// oder Curved-Label-Pfad) samt Minimal-Punktzahl; null wenn nicht editierbar.
+function editablePoints(f) {
+  if (!f || !f.geometry) return null;
+  const g = f.geometry;
+  if (g.type === "Path" && Array.isArray(g.coordinates)) return { pts: g.coordinates, min: 2 };
+  if (g.type === "Polygon" && g.rings && Array.isArray(g.rings[0])) return { pts: g.rings[0], min: 3 };
+  if (g.type === "LabelAnchor" && Array.isArray(g.pathCoordinates)) return { pts: g.pathCoordinates, min: 2 };
+  return null;
+}
+function selectedEditableFeature() {
+  if (isView() || state.tool !== "select" || selection.size !== 1) return null;
+  const f = doc && doc.features.find((x) => x._key === state.selectedKey);
+  const ep = f ? editablePoints(f) : null;
+  return ep ? { f, ...ep } : null;
+}
+// Ring geschlossen? (erster Punkt am Ende wiederholt — Seed-Konvention)
+function ringClosed(pts) {
+  if (pts.length < 2) return false;
+  const a = pts[0], b = pts[pts.length - 1];
+  return a[0] === b[0] && a[1] === b[1];
+}
+function vertexHandleAt(cx, cy) {
+  const sel = selectedEditableFeature();
+  if (!sel) return null;
+  const closed = ringClosed(sel.pts);
+  const lastIdx = closed ? sel.pts.length - 2 : sel.pts.length - 1;
+  for (let i = 0; i <= lastIdx; i++) {
+    const [px, py] = n2c(sel.pts[i][0], sel.pts[i][1]);
+    if (Math.hypot(cx - px, cy - py) <= 8) return { sel, index: i, closed };
+  }
+  return null;
+}
+// Nächstes Segment + Projektionspunkt (für Punkt-Einfügen per Doppelklick).
+function nearestSegment(sel, nx, ny, maxDistPx) {
+  const pts = sel.pts; let best = null;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const d = engine.distToSegment([nx, ny], a, b);
+    if (best == null || d < best.d) {
+      // Projektion auf das Segment für die Einfüge-Position
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((nx - a[0]) * dx + (ny - a[1]) * dy) / len2;
+      t = Math.max(0.05, Math.min(0.95, t));
+      best = { d, i, pt: [a[0] + dx * t, a[1] + dy * t] };
+    }
+  }
+  if (!best) return null;
+  const pxDist = best.d * WORLD_W * state.zoom;
+  return pxDist <= maxDistPx ? best : null;
+}
+function drawVertexHandles(ctx) {
+  const sel = selectedEditableFeature();
+  if (!sel) return;
+  const closed = ringClosed(sel.pts);
+  const lastIdx = closed ? sel.pts.length - 2 : sel.pts.length - 1;
+  ctx.save();
+  for (let i = 0; i <= lastIdx; i++) {
+    const [px, py] = n2c(sel.pts[i][0], sel.pts[i][1]);
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#c2622b"; ctx.lineWidth = 1.6;
+    ctx.fillRect(px - 4, py - 4, 8, 8); ctx.strokeRect(px - 4, py - 4, 8, 8);
+  }
+  ctx.restore();
+}
+
 function drawSelectionRects(ctx) {
   const rects = [];
   if (marquee) rects.push({ r: marquee, color: "#2f6f63" });
@@ -1419,8 +1501,27 @@ function onPointerDown(e) {
     paintHeight(cx, cy, heightInvert);
     return;
   }
-  if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } placeStamp(nx, ny); return; }
+  if (tool === "stamp") { if (e.button === 2) { eraseAt(nx, ny); return; } const [sx, sy] = snapN(nx, ny); placeStamp(sx, sy); return; }
   if (tool === "select") {
+    // Vertex-Editing: Griff anfassen (Drag) oder Alt+Klick = Punkt löschen.
+    const vh = vertexHandleAt(cx, cy);
+    if (vh) {
+      const { sel, index, closed } = vh;
+      if (e.altKey) {
+        const count = closed ? sel.pts.length - 1 : sel.pts.length;
+        if (count > sel.min) {
+          pushUndo();
+          sel.pts.splice(index, 1);
+          if (closed && index === 0) { sel.pts.pop(); sel.pts.push([sel.pts[0][0], sel.pts[0][1]]); }
+          if (sel.f.kind === "plot") fillPlotObjects(sel.f, false);
+          markDirty(); draw();
+        } else flash("Minimum erreicht — Punkt bleibt");
+        return;
+      }
+      vertexDrag = { key: sel.f._key, index, closed };
+      vertexUndoPushed = false;
+      return;
+    }
     // Skalier-Griff: Klick auf den roten Punkt startet Drag-Resize (CoK).
     if (scaleHandlePt && Math.hypot(cx - scaleHandlePt.x, cy - scaleHandlePt.y) <= 12) {
       const o = doc.objects.find((x) => x._key === scaleHandlePt.key);
@@ -1434,7 +1535,7 @@ function onPointerDown(e) {
     }
     const hit = hitTest(nx, ny);
     if (hit && e.shiftKey) { toggleSel(hit); requestAnimationFrame(draw); return; }
-    if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; return; }
+    if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; dragAxisStart = [cx, cy]; return; }
     if (hit) { selectOnly(hit); requestAnimationFrame(draw); return; }
     if (e.shiftKey) { marquee = { x0: nx, y0: ny, x1: nx, y1: ny }; return; }
     clearSel(); panning = true; requestAnimationFrame(draw);
@@ -1445,11 +1546,11 @@ function onPointerDown(e) {
 
   if (tool === "region" || tool === "biome" || tool === "plot") {
     if (drawingPoints.length >= 3) { const [fx, fy] = n2c(drawingPoints[0][0], drawingPoints[0][1]); if (Math.hypot(cx - fx, cy - fy) < 10) { finishPolygon(); return; } }
-    drawingPoints.push([nx, ny]); draw(); return;
+    drawingPoints.push(snapN(nx, ny)); draw(); return;
   }
-  if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push([nx, ny]); draw(); return; }
-  if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel([nx, ny], t, null); return; }
-  if (tool === "pin") { addPin([nx, ny]); return; }
+  if (tool === "path" || tool === "road" || tool === "vine" || tool === "curve") { drawingPoints.push(snapN(nx, ny)); draw(); return; }
+  if (tool === "label") { const t = prompt("Label-Text:"); if (t) addLabel(snapN(nx, ny), t, null); return; }
+  if (tool === "pin") { addPin(snapN(nx, ny)); return; }
   if (tool === "measure") { measurePoints = measurePoints.length >= 2 ? [[nx, ny]] : [...measurePoints, [nx, ny]]; draw(); return; }
 }
 
@@ -1459,6 +1560,19 @@ function onPointerMove(e) {
   if (!coordRaf) coordRaf = requestAnimationFrame(() => { coordRaf = null; el("status-tile").textContent = pendingCoord.tile; el("status-world").textContent = pendingCoord.world; });
 
   if (exp.picking && exportPickStart) { exp.rect = { x0: exportPickStart[0], y0: exportPickStart[1], x1: nx, y1: ny }; draw(); return; }
+  if (vertexDrag) {
+    const f = doc.features.find((x) => x._key === vertexDrag.key);
+    const ep = f ? editablePoints(f) : null;
+    if (ep && ep.pts[vertexDrag.index]) {
+      if (!vertexUndoPushed) { pushUndo(); vertexUndoPushed = true; }
+      const [sx2, sy2] = snapN(nx, ny);
+      ep.pts[vertexDrag.index] = [sx2, sy2];
+      // Geschlossener Ring: Endpunkt spiegelt Index 0.
+      if (vertexDrag.closed && vertexDrag.index === 0) ep.pts[ep.pts.length - 1] = [sx2, sy2];
+      draw();
+    }
+    return;
+  }
   if (resizing) {
     const o = doc.objects.find((x) => x._key === resizing.key);
     if (o) {
@@ -1475,7 +1589,12 @@ function onPointerMove(e) {
   if (paintingHeight) { paintHeight(cx, cy, heightInvert); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
-    const dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom); last = { x: cx, y: cy }; moveSelected(dx, dy); return;
+    let dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom);
+    // Shift hält die dominante Achse (Roadmap W3 #2) — bezogen auf den Drag-Start.
+    if (e.shiftKey && dragAxisStart) {
+      if (Math.abs(cx - dragAxisStart[0]) >= Math.abs(cy - dragAxisStart[1])) dy = 0; else dx = 0;
+    }
+    last = { x: cx, y: cy }; moveSelected(dx, dy); return;
   }
   last = { x: cx, y: cy };
 }
@@ -1515,7 +1634,17 @@ function onPointerUp(e) {
     draw();
     return;
   }
+  if (vertexDrag) {
+    const f = doc.features.find((x) => x._key === vertexDrag.key);
+    if (f && f.kind === "plot") fillPlotObjects(f, false);
+    vertexDrag = null; markDirty(); draw();
+  }
   if (resizing) { resizing = null; markDirty(); refreshChrome(); }
+  if (moving && state.snap && selection.size === 1) {
+    const so = doc.objects.find((x) => x._key === state.selectedKey);
+    if (so) { const [sx2, sy2] = snapN(so.x, so.y); so.x = sx2; so.y = sy2; draw(); }
+  }
+  dragAxisStart = null;
   if (paintingTiles || erasingTiles || paintingHeight) markDirty();
   panning = moving = paintingTiles = erasingTiles = paintingHeight = false;
 }
@@ -1529,8 +1658,25 @@ function onWheel(e) {
   const panX = cx - (cx - state.panX) * (nz / state.zoom); const panY = cy - (cy - state.panY) * (nz / state.zoom);
   setState({ zoom: nz, panX, panY }); requestAnimationFrame(draw);
 }
-function onDblClick() {
+function onDblClick(e) {
   if (exp.picking) return;
+  if (state.tool === "select") {
+    // Doppelklick auf ein Segment fügt einen Punkt ein (Vertex-Editing).
+    const sel = selectedEditableFeature();
+    if (sel && e) {
+      const [cx, cy] = posOf(e); const [nx, ny] = c2n(cx, cy);
+      if (!vertexHandleAt(cx, cy)) {
+        const seg = nearestSegment(sel, nx, ny, 10);
+        if (seg) {
+          pushUndo();
+          sel.pts.splice(seg.i + 1, 0, [seg.pt[0], seg.pt[1]]);
+          if (sel.f.kind === "plot") fillPlotObjects(sel.f, false);
+          markDirty(); draw();
+        }
+      }
+    }
+    return;
+  }
   if (state.tool === "region" || state.tool === "biome" || state.tool === "plot") finishPolygon();
   else if (state.tool === "path" || state.tool === "road" || state.tool === "vine") finishPath();
   else if (state.tool === "curve") finishCurve();
@@ -1691,7 +1837,29 @@ function finishPath() {
     ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
-  doc.features.push(f); drawingPoints = []; selectOnly(f._key); markDirty(); draw();
+  doc.features.push(f); drawingPoints = [];
+  autoPlaceBridges(f);
+  selectOnly(f._key); markDirty(); draw();
+}
+
+// Brücken-Automatik (Roadmap W4 #20): wo Straße × Fluss kreuzt, wird eine
+// Gouache-Steinbrücke gesetzt, ausgerichtet an der Straßenrichtung. Frühere
+// Auto-Brücken desselben Pfads werden ersetzt (style.bridgeFor).
+function autoPlaceBridges(f) {
+  if (!engine.findBridgePoints || (f.kind !== "road" && f.kind !== "river")) return;
+  const others = nodeFeatures().filter((x) => x._key !== f._key && x.geometry && x.geometry.type === "Path" && (f.kind === "road" ? x.kind === "river" : x.kind === "road"));
+  if (!others.length) return;
+  doc.objects = doc.objects.filter((o) => !(o.style && o.style.bridgeFor === f._key));
+  let placed = 0;
+  for (const other of others) {
+    const road = f.kind === "road" ? f : other;
+    const river = f.kind === "road" ? other : f;
+    for (const bp of engine.findBridgePoints(road.geometry.coordinates, river.geometry.coordinates)) {
+      doc.objects.push({ id: nextKey(), _key: nextKey(), nodeId: state.nodeId, paletteItemId: "tree", x: bp.x, y: bp.y, scale: 0.9, rotation: Math.round(bp.angleDeg * 10) / 10, style: { gouache: "g_bridge", bridgeFor: f._key }, layer: 50, visibility: "dm_only" });
+      placed++;
+    }
+  }
+  if (placed) flash("🌉 " + placed + " Brücke(n) automatisch gesetzt");
 }
 
 // ---- Ranke/Weltenwurzel: Panel-Defaults + Slider-Markup ----
@@ -1730,7 +1898,7 @@ function generateAttachments(f, reroll) {
   if (f.style && f.style.smooth && coords.length >= 3) coords = engine.smoothPath(coords, { segments: 8 });
   const places = engine.generatePathAttachments(
     { type: "Path", coordinates: coords },
-    { kind: attachOpts.kind, spacing: attachOpts.spacing, side: attachOpts.side, offset: 0.02, jitter: 0.3, seed },
+    { kind: attachOpts.kind, spacing: attachOpts.spacing, side: attachOpts.side, offset: 0.02, jitter: 0.3, seed, alignToPath: attachOpts.align !== false },
   );
   // Frühere Anhänge dieses Pfads ersetzen (attachedTo ist client-only; die
   // Studio-Save-Action whitelistet Felder und ignoriert es server-seitig).
@@ -1749,6 +1917,50 @@ function finishCurve() {
   if (!text) { draw(); return; }
   const mid = path[Math.floor(path.length / 2)];
   addLabel(mid, text, path);
+}
+
+// ---- Einrasten (Roadmap W3 #2): halbe Tile-Schritte in Normalkoordinaten ----
+function snapN(nx, ny) {
+  if (!state.snap) return [nx, ny];
+  const sx = (TILE / 2) / WORLD_W, sy = (TILE / 2) / WORLD_H;
+  return [Math.round(nx / sx) * sx, Math.round(ny / sy) * sy];
+}
+
+// ---- Kopieren/Einfügen (Roadmap W3 #3) ----
+function copySelection() {
+  const feats = [], objs = [];
+  for (const k of selection) {
+    const f = doc.features.find((x) => x._key === k);
+    if (f) { const { _key, id, ...rest } = f; feats.push(JSON.parse(JSON.stringify(rest))); continue; }
+    const o = doc.objects.find((x) => x._key === k);
+    if (o) { const { _key, id, ...rest } = o; objs.push(JSON.parse(JSON.stringify(rest))); }
+  }
+  if (!feats.length && !objs.length) return;
+  clipboard = { features: feats, objects: objs };
+  pasteCount = 0;
+  flash("⧉ " + (feats.length + objs.length) + " Element(e) kopiert");
+}
+function pasteClipboard() {
+  if (!clipboard) return;
+  pushUndo();
+  pasteCount++;
+  const off = 0.02 * pasteCount;
+  clearSel();
+  for (const src of clipboard.features) {
+    const f = JSON.parse(JSON.stringify(src));
+    f._key = nextKey(); f.id = nextKey(); f.nodeId = state.nodeId;
+    f.geometry = engine.translateGeometry(f.geometry, off, off);
+    doc.features.push(f); selection.add(f._key);
+  }
+  for (const src of clipboard.objects) {
+    const o = JSON.parse(JSON.stringify(src));
+    o._key = nextKey(); o.id = nextKey(); o.nodeId = state.nodeId;
+    o.x = Math.min(1, o.x + off); o.y = Math.min(1, o.y + off);
+    doc.objects.push(o); selection.add(o._key);
+  }
+  const keys = [...selection];
+  setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
+  markDirty(); draw();
 }
 
 // Bewegt die GESAMTE Auswahl (CoK: Gruppen gemeinsam verschieben).
@@ -1793,6 +2005,11 @@ function onKeyDown(e) {
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
   if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) { e.preventDefault(); redo(); return; }
+  // Kopieren / Einfügen / Duplizieren (CoK-Parität, Roadmap W3 #3).
+  if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C")) { if (selection.size) { e.preventDefault(); copySelection(); } return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) { if (clipboard) { e.preventDefault(); pasteClipboard(); } return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) { if (selection.size) { e.preventDefault(); copySelection(); pasteClipboard(); } return; }
+  if (e.key === "n" || e.key === "N") { setState({ snap: !state.snap }); flash(state.snap ? "🧲 Einrasten an" : "Einrasten aus"); return; }
   if (e.key === "Escape") {
     if (exp.picking) { exp.picking = false; exportPickStart = null; exp.rect = null; openExportDialog(); return; }
     drawingPoints = []; measurePoints = []; marquee = null; clearSel(); draw(); return;
@@ -2013,6 +2230,24 @@ function buildSidebar() {
   const gi = document.createElement("div");
   gi.style.cssText = "padding:8px 2px 2px;";
   gi.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Untergrund-Intensität</div><input id="ground-intensity" type="range" min="0" max="1.6" step="0.05" value="1" style="width:100%;accent-color:var(--uwe-accent);">';
+  // Theme-Picker (Roadmap W3 #6): Preset pro Karte, persistiert über die Bridge.
+  const tp = document.createElement("div");
+  tp.style.cssText = "padding:8px 2px 2px;";
+  const presetOptions = Object.values(engine.STYLE_PRESETS).map((pr2) => '<option value="' + pr2.id + '">' + pr2.label + "</option>").join("");
+  tp.innerHTML = '<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-bottom:3px;">Karten-Theme</div><select id="theme-picker" class="sel-select" style="width:100%;">' + presetOptions + "</select>";
+  swatches.parentElement.appendChild(tp);
+  tp.querySelector("select").addEventListener("change", (e) => {
+    if (!doc) return;
+    // Wert VOR pushUndo sichern — refreshChrome (via pushUndo) synct das
+    // Select sonst auf den alten doc-Wert zurück, bevor wir ihn lesen.
+    const stylePreset = e.target.value;
+    pushUndo();
+    doc.map = doc.map || {};
+    doc.map.stylePreset = stylePreset;
+    applyPresetFromDoc();
+    if (embedded) bridgePost({ type: "map-style", stylePreset });
+    markDirty(); draw();
+  });
   swatches.parentElement.appendChild(gi);
   gi.querySelector("input").addEventListener("input", (e) => {
     if (!doc || !doc.tileLayer) return;
@@ -2128,6 +2363,8 @@ function refreshChrome() {
     const glyphActive = !st.rtxKey && !st.gouacheKey && st.glyphKey === key;
     b.classList.toggle("on", st.tool === "stamp" && (rtxActive || gouacheActive || glyphActive));
   }
+  const themeSel = el("theme-picker");
+  if (themeSel && doc) themeSel.value = (doc.map && doc.map.stylePreset) || "tolkien-ink";
   const intensityInput = el("ground-intensity");
   if (intensityInput && doc && doc.tileLayer) {
     intensityInput.value = (doc.tileLayer.intensity && doc.tileLayer.intensity[st.brush]) || 1;
@@ -2272,6 +2509,7 @@ function refreshChrome() {
           '<select id="att-kind" class="sel-select">' + opt(ATTACH_KINDS, attachOpts.kind) + "</select>" +
           '<select id="att-side" class="sel-select">' + opt(ATTACH_SIDES, attachOpts.side) + "</select>" +
           '<select id="att-space" class="sel-select">' + opt(ATTACH_SPACING, attachOpts.spacing) + "</select>" +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px;color:var(--uwe-fg);"><input type="checkbox" id="att-align"' + (attachOpts.align !== false ? " checked" : "") + '> An Pfad ausrichten</label>' +
           '<div style="display:flex;gap:6px;margin-top:8px;">' +
           '<button class="tb-btn" data-att="gen" style="flex:1;justify-content:center;">✦ Säumen</button>' +
           '<button class="tb-btn" data-att="roll" title="Neuer Zufalls-Seed">↻</button>' +
@@ -2335,7 +2573,7 @@ function refreshChrome() {
   }
 
   // Status bar
-  el("status-tool").textContent = view ? "Ansicht" : (TOOL_DEFS.find((t) => t[0] === st.tool) || [, "—"])[1];
+  el("status-tool").textContent = (view ? "Ansicht" : (TOOL_DEFS.find((t) => t[0] === st.tool) || [, "—"])[1]) + (st.snap && !view ? " · 🧲" : "");
   el("status-zoom").textContent = Math.round(st.zoom * 100) + "%";
   const save = el("status-save");
   save.textContent = view ? "Portal · schreibgeschützt" : st.saveStatus;
@@ -2439,6 +2677,7 @@ function wire() {
     if (t.id === "att-kind") attachOpts.kind = t.value;
     else if (t.id === "att-side") attachOpts.side = t.value;
     else if (t.id === "att-space") attachOpts.spacing = Number(t.value);
+    else if (t.id === "att-align") attachOpts.align = !!t.checked;
     else if (t.id === "stl-wf") { settlementWfOpts.harbor = t.checked; refreshChrome(); }
     else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
     else if (t.id === "stl-wf-piers") settlementWfOpts.piers = Number(t.value);

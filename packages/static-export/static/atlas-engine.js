@@ -1,5 +1,8 @@
 /* AUTO-GENERATED from @uwe/atlas — do not edit by hand.
    Regenerate: pnpm --filter @uwe/static-export build:atlas-engine */
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // ../atlas/src/geometry.ts
 function worldToCanvas(nx, ny, panX, panY, zoom, w, h) {
@@ -155,8 +158,62 @@ var TOLKIEN_INK = {
     lineWeightScale: 1
   }
 };
+var PARCHMENT_CLASSIC = {
+  id: "pergament-klassik",
+  label: "Pergament Klassik",
+  description: "Helles, neutrales Pergament mit blauen Wasserwegen und warmem Braun — der zeitlose Schulatlas-Look.",
+  colors: {
+    parchment: "#f6efdb",
+    ink: "#2b2118",
+    inkAccent: "#3f6f9a",
+    water: "#9dc0d6",
+    land: "#efe6c8",
+    forest: "#557347",
+    mountain: "#8a7a5e",
+    road: "#7a5a34"
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations }
+};
+var NIGHT_CHART = {
+  id: "nachtkarte",
+  label: "Nachtkarte",
+  description: "Dunkles Kartenblatt mit heller Tinte und kühlem Wasser — Kriegsrat bei Kerzenlicht.",
+  colors: {
+    parchment: "#232732",
+    ink: "#e6e2d2",
+    inkAccent: "#d9a44a",
+    water: "#3d5a74",
+    land: "#2c313e",
+    forest: "#3d5a45",
+    mountain: "#5a5a68",
+    road: "#a08a63"
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations }
+};
+var WINTER_CAMPAIGN = {
+  id: "winterfeldzug",
+  label: "Winterfeldzug",
+  description: "Kalte, entsättigte Töne, eisiges Wasser und schneegraues Land — Kampagnen im tiefen Winter.",
+  colors: {
+    parchment: "#eef0ee",
+    ink: "#2a303a",
+    inkAccent: "#8a3a2a",
+    water: "#a9c6d9",
+    land: "#e2e7e4",
+    forest: "#4f6a58",
+    mountain: "#8b93a0",
+    road: "#6f6354"
+  },
+  typography: { ...TOLKIEN_INK.typography },
+  decorations: { ...TOLKIEN_INK.decorations, scaleUnit: "days" }
+};
 var STYLE_PRESETS = {
-  [TOLKIEN_INK.id]: TOLKIEN_INK
+  [TOLKIEN_INK.id]: TOLKIEN_INK,
+  [PARCHMENT_CLASSIC.id]: PARCHMENT_CLASSIC,
+  [NIGHT_CHART.id]: NIGHT_CHART,
+  [WINTER_CAMPAIGN.id]: WINTER_CAMPAIGN
 };
 function resolveStylePreset(id) {
   if (id && id in STYLE_PRESETS) {
@@ -2601,7 +2658,7 @@ function parseAsset(raw, path, issues) {
     add(issues, path, "invalid_type", "assets entries must be objects.");
     return null;
   }
-  const before = issues.length;
+  const before2 = issues.length;
   rejectUnknown(raw, ASSET_KEYS, path, issues);
   const gouacheKey = stringValue(raw, "gouacheKey", path, issues, { max: 80 });
   if (!gouacheKey) add(issues, `${path}.gouacheKey`, "missing_field", "gouacheKey is required.");
@@ -2629,7 +2686,7 @@ function parseAsset(raw, path, issues) {
   if (rotateMax !== void 0) asset.rotateMax = rotateMax;
   if (lineWidth !== void 0) asset.lineWidth = lineWidth;
   if (blur !== void 0) asset.blur = blur;
-  return issues.length === before && gouacheKey ? asset : null;
+  return issues.length === before2 && gouacheKey ? asset : null;
 }
 function parseAssets(raw, issues) {
   if (!Array.isArray(raw)) {
@@ -2898,6 +2955,74 @@ function serializeDoc(doc, extra) {
   };
 }
 
+// ../atlas/src/coastline.ts
+var COAST_DEFAULTS = {
+  waterKinds: ["coast", "water"],
+  rimWidthRatio: 0.22,
+  rippleColor: "rgba(255,255,255,0.35)",
+  rippleSeed: 7,
+  rippleDensity: 1
+};
+var finite = (v) => typeof v === "number" && Number.isFinite(v);
+function resolveCoastStyle(opts) {
+  const kinds = Array.isArray(opts.waterKinds) && opts.waterKinds.length > 0 ? opts.waterKinds : COAST_DEFAULTS.waterKinds;
+  return {
+    waterKinds: new Set(kinds),
+    rimColor: opts.rimColor,
+    rimWidthRatio: finite(opts.rimWidthRatio) ? Math.max(0, Math.min(0.5, opts.rimWidthRatio)) : COAST_DEFAULTS.rimWidthRatio,
+    rippleColor: opts.rippleColor ?? COAST_DEFAULTS.rippleColor,
+    rippleSeed: finite(opts.rippleSeed) ? opts.rippleSeed : COAST_DEFAULTS.rippleSeed,
+    rippleDensity: finite(opts.rippleDensity) ? Math.max(0, opts.rippleDensity) : COAST_DEFAULTS.rippleDensity
+  };
+}
+var RIM_ALPHA = 0.55;
+var RIPPLE_GATE = 0.55;
+var RIPPLE_LINE_RATIO = 0.03;
+function paintCoastCell(ctx, style, cell) {
+  const { col, row, x, y, w, h, rimColor, isLand } = cell;
+  const left = isLand(col - 1, row);
+  const right = isLand(col + 1, row);
+  const top = isLand(col, row - 1);
+  const bottom = isLand(col, row + 1);
+  if (left || right || top || bottom) {
+    const bandW = style.rimWidthRatio * w;
+    const bandH = style.rimWidthRatio * h;
+    ctx.save();
+    ctx.globalAlpha = RIM_ALPHA;
+    ctx.fillStyle = rimColor;
+    if (left) ctx.fillRect(x, y, bandW, h);
+    if (right) ctx.fillRect(x + w - bandW, y, bandW, h);
+    if (top) ctx.fillRect(x, y, w, bandH);
+    if (bottom) ctx.fillRect(x, y + h - bandH, w, bandH);
+    ctx.restore();
+    return;
+  }
+  paintRipples(ctx, style, cell);
+}
+function paintRipples(ctx, style, cell) {
+  const { col, row, x, y, w, h } = cell;
+  const rng = mulberry32(style.rippleSeed + col * 73856093 + row * 19349663);
+  if (rng() < RIPPLE_GATE) return;
+  const baseArcs = rng() < 0.5 ? 1 : 2;
+  const count = Math.max(0, Math.min(3, Math.round(baseArcs * style.rippleDensity)));
+  if (count <= 0) return;
+  ctx.save();
+  ctx.strokeStyle = style.rippleColor;
+  ctx.lineWidth = Math.min(w, h) * RIPPLE_LINE_RATIO;
+  for (let i = 0; i < count; i++) {
+    const len = w * (0.4 + rng() * 0.2);
+    const ax = x + rng() * Math.max(0, w - len);
+    const ay = y + h * (0.2 + rng() * 0.6);
+    const midX = ax + len / 2;
+    const midY = ay - h * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(midX, midY, ax + len, ay);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // ../atlas/src/canvas-render.ts
 function roundedRectPath(ctx, x, y, w, h, r) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -2942,6 +3067,11 @@ function paintTerrainBlobs(ctx, opts) {
   const { cols, rows, getCell, tileRect, fillFor, radiusRatio = 0.4, intensityFor } = opts;
   const blendWidth = typeof opts.blendWidth === "number" && Number.isFinite(opts.blendWidth) ? Math.max(0, opts.blendWidth) : 0;
   const fillForBiome = (biome) => intensityFor ? applyColorIntensity(fillFor(biome), intensityFor(biome)) : fillFor(biome);
+  const coast = opts.coast ? resolveCoastStyle(opts.coast) : void 0;
+  const isLand = coast ? (col, row) => {
+    const k = getCell(col, row);
+    return !!k && !coast.waterKinds.has(k);
+  } : void 0;
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const biome = getCell(c, r);
@@ -2958,6 +3088,10 @@ function paintTerrainBlobs(ctx, opts) {
       if (bottomSame) ctx.fillRect(x, y + h - radius, w, radius * 2);
       if (rightSame && bottomSame && diagSame) {
         ctx.fillRect(x + w - radius, y + h - radius, radius * 2, radius * 2);
+      }
+      if (coast && isLand && coast.waterKinds.has(biome)) {
+        const rimColor = coast.rimColor ?? applyColorIntensity(fillFor(biome), 0.55);
+        paintCoastCell(ctx, coast, { col: c, row: r, x, y, w, h, rimColor, isLand });
       }
     }
   }
@@ -3412,6 +3546,564 @@ function buildVineLayout(points, options = {}) {
   };
 }
 
+// ../atlas/src/bridge-points.ts
+function segmentIntersection(a1, a2, b1, b2) {
+  const rX = a2[0] - a1[0];
+  const rY = a2[1] - a1[1];
+  const sX = b2[0] - b1[0];
+  const sY = b2[1] - b1[1];
+  const denom = rX * sY - rY * sX;
+  if (denom === 0) return void 0;
+  const qpX = b1[0] - a1[0];
+  const qpY = b1[1] - a1[1];
+  const t = (qpX * sY - qpY * sX) / denom;
+  const u = (qpX * rY - qpY * rX) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return void 0;
+  return [a1[0] + t * rX, a1[1] + t * rY];
+}
+function findBridgePoints(road, river, opts) {
+  const minGap = opts?.minGap ?? 0.02;
+  if (road.length < 2 || river.length < 2) return [];
+  const raw = [];
+  let roadWalked = 0;
+  for (let i = 0; i < road.length - 1; i++) {
+    const a1 = road[i];
+    const a2 = road[i + 1];
+    const segLen = Math.hypot(a2[0] - a1[0], a2[1] - a1[1]);
+    if (segLen === 0) continue;
+    const angleDeg = Math.atan2(a2[1] - a1[1], a2[0] - a1[0]) * 180 / Math.PI;
+    for (let j = 0; j < river.length - 1; j++) {
+      const hit = segmentIntersection(a1, a2, river[j], river[j + 1]);
+      if (!hit) continue;
+      const distAlongSeg = Math.hypot(hit[0] - a1[0], hit[1] - a1[1]);
+      raw.push({ x: hit[0], y: hit[1], angleDeg, roadDistance: roadWalked + distAlongSeg });
+    }
+    roadWalked += segLen;
+  }
+  raw.sort((a, b) => a.roadDistance - b.roadDistance);
+  const merged = [];
+  for (const crossing of raw) {
+    const last = merged[merged.length - 1];
+    if (last && Math.hypot(crossing.x - last.x, crossing.y - last.y) < minGap) continue;
+    merged.push({ x: crossing.x, y: crossing.y, angleDeg: crossing.angleDeg });
+  }
+  return merged;
+}
+
+// ../atlas/src/route-astar.ts
+var SQRT2 = Math.SQRT2;
+var DEFAULT_BLOCKED = ["coast", "water"];
+var DEFAULT_BIOME_COST = {
+  mountains: 3,
+  swamp: 4,
+  hills: 1.5,
+  forest: 1.2
+};
+var DEFAULT_SLOPE_COST = 40;
+var SNAP_RADIUS = 3;
+var NEIGHBORS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1]
+];
+function clamp013(v) {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+function octile(dx, dy) {
+  const a = Math.abs(dx);
+  const b = Math.abs(dy);
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  return hi - lo + SQRT2 * lo;
+}
+function simplify(pts) {
+  if (pts.length <= 2) return pts;
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = out[out.length - 1];
+    const b = pts[i];
+    const c = pts[i + 1];
+    const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    if (Math.abs(cross) > 1e-9) out.push(b);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function before(a, b) {
+  return a.f < b.f || a.f === b.f && a.i < b.i;
+}
+var MinHeap = class {
+  constructor() {
+    __publicField(this, "data", []);
+  }
+  get size() {
+    return this.data.length;
+  }
+  push(entry) {
+    const d = this.data;
+    d.push(entry);
+    let c = d.length - 1;
+    while (c > 0) {
+      const p = c - 1 >> 1;
+      if (!before(d[c], d[p])) break;
+      [d[c], d[p]] = [d[p], d[c]];
+      c = p;
+    }
+  }
+  pop() {
+    const d = this.data;
+    const top = d[0];
+    const last = d.pop();
+    if (d.length > 0) {
+      d[0] = last;
+      let p = 0;
+      for (; ; ) {
+        const l = p * 2 + 1;
+        const r = l + 1;
+        let s = p;
+        if (l < d.length && before(d[l], d[s])) s = l;
+        if (r < d.length && before(d[r], d[s])) s = r;
+        if (s === p) break;
+        [d[p], d[s]] = [d[s], d[p]];
+        p = s;
+      }
+    }
+    return top;
+  }
+};
+function routeRoad(tileLayer, start, goal, options = {}) {
+  const cols = tileLayer.cols | 0;
+  const rows = tileLayer.rows | 0;
+  const unreachable = { points: [], reachable: false, cost: 0 };
+  if (cols <= 0 || rows <= 0) return unreachable;
+  const blocked = new Set(options.blocked ?? DEFAULT_BLOCKED);
+  const biomeCost = options.biomeCost ?? DEFAULT_BIOME_COST;
+  const slopeCost = options.slopeCost ?? DEFAULT_SLOPE_COST;
+  const maxExpansions = options.maxExpansions ?? cols * rows * 8;
+  let minFactor = 1;
+  for (const v of Object.values(biomeCost)) if (v < minFactor) minFactor = v;
+  if (minFactor < 0) minFactor = 0;
+  const clampStart = [clamp013(start[0]), clamp013(start[1])];
+  const clampGoal = [clamp013(goal[0]), clamp013(goal[1])];
+  const idx = (c, r) => r * cols + c;
+  const colOf = (i) => i % cols;
+  const rowOf = (i) => (i - i % cols) / cols;
+  const inBounds = (c, r) => c >= 0 && c < cols && r >= 0 && r < rows;
+  const biomeAt = (c, r) => tileLayer.cells?.[`${c},${r}`];
+  const passable = (c, r) => {
+    if (!inBounds(c, r)) return false;
+    const b = biomeAt(c, r);
+    return b === void 0 || !blocked.has(b);
+  };
+  const biomeFactor = (c, r) => {
+    const b = biomeAt(c, r);
+    return b === void 0 ? 1 : biomeCost[b] ?? 1;
+  };
+  const toCol = (n2) => Math.min(cols - 1, Math.max(0, Math.floor(n2 * cols)));
+  const toRow = (n2) => Math.min(rows - 1, Math.max(0, Math.floor(n2 * rows)));
+  const snap = (c0, r0) => {
+    if (passable(c0, r0)) return idx(c0, r0);
+    for (let rad = 1; rad <= SNAP_RADIUS; rad++) {
+      let best = -1;
+      for (let dr = -rad; dr <= rad; dr++) {
+        for (let dc = -rad; dc <= rad; dc++) {
+          if (Math.max(Math.abs(dr), Math.abs(dc)) !== rad) continue;
+          const c = c0 + dc;
+          const r = r0 + dr;
+          if (!passable(c, r)) continue;
+          const id = idx(c, r);
+          if (best === -1 || id < best) best = id;
+        }
+      }
+      if (best !== -1) return best;
+    }
+    return -1;
+  };
+  const startIdx = snap(toCol(clampStart[0]), toRow(clampStart[1]));
+  const goalIdx = snap(toCol(clampGoal[0]), toRow(clampGoal[1]));
+  if (startIdx < 0 || goalIdx < 0) return unreachable;
+  const gc = colOf(goalIdx);
+  const gr = rowOf(goalIdx);
+  const heuristic = (i) => minFactor * octile(gc - colOf(i), gr - rowOf(i));
+  const n = cols * rows;
+  const g = new Float64Array(n).fill(Infinity);
+  const from = new Int32Array(n).fill(-1);
+  const closed = new Uint8Array(n);
+  const open = new MinHeap();
+  g[startIdx] = 0;
+  open.push({ f: heuristic(startIdx), i: startIdx });
+  let expansions = 0;
+  let found = false;
+  while (open.size > 0 && expansions < maxExpansions) {
+    const cur = open.pop().i;
+    if (closed[cur]) continue;
+    if (cur === goalIdx) {
+      found = true;
+      break;
+    }
+    closed[cur] = 1;
+    expansions++;
+    const cc = colOf(cur);
+    const cr = rowOf(cur);
+    const elevCur = cellElevation(tileLayer, cc, cr);
+    for (const [dc, dr] of NEIGHBORS) {
+      const nc = cc + dc;
+      const nr = cr + dr;
+      if (!passable(nc, nr)) continue;
+      const ni = idx(nc, nr);
+      if (closed[ni]) continue;
+      const stepDist = dc !== 0 && dr !== 0 ? SQRT2 : 1;
+      const step = stepDist * biomeFactor(nc, nr) + slopeCost * Math.abs(cellElevation(tileLayer, nc, nr) - elevCur);
+      const tentative = g[cur] + step;
+      if (tentative < g[ni]) {
+        g[ni] = tentative;
+        from[ni] = cur;
+        open.push({ f: tentative + heuristic(ni), i: ni });
+      }
+    }
+  }
+  if (!found) return unreachable;
+  const cells = [];
+  for (let cur = goalIdx; cur !== -1; cur = from[cur]) cells.push(cur);
+  cells.reverse();
+  const center = (i) => [
+    (colOf(i) + 0.5) / cols,
+    (rowOf(i) + 0.5) / rows
+  ];
+  let pts;
+  if (cells.length <= 1) {
+    pts = [clampStart, clampGoal];
+  } else {
+    pts = cells.map(center);
+    pts[0] = clampStart;
+    pts[pts.length - 1] = clampGoal;
+  }
+  return { points: simplify(pts), reachable: true, cost: g[goalIdx] };
+}
+
+// ../atlas/src/territory.ts
+var DEFAULT_SAMPLES_X = 96;
+var DEFAULT_SAMPLES_Y = 60;
+function clamp014(v) {
+  return Math.max(0, Math.min(1, v));
+}
+function suggestTerritories(seeds, options = {}) {
+  if (!seeds.length) return [];
+  const samplesX = Math.max(1, Math.floor(options.samplesX ?? DEFAULT_SAMPLES_X));
+  const samplesY = Math.max(1, Math.floor(options.samplesY ?? DEFAULT_SAMPLES_Y));
+  const exclude = options.exclude;
+  const clamped = seeds.map((s) => ({
+    key: s.key,
+    x: clamp014(s.x),
+    y: clamp014(s.y),
+    weight: s.weight && s.weight > 0 ? s.weight : 1
+  }));
+  const assignment = new Int32Array(samplesX * samplesY).fill(-1);
+  for (let j = 0; j < samplesY; j++) {
+    const cy = (j + 0.5) / samplesY;
+    for (let i = 0; i < samplesX; i++) {
+      const cx = (i + 0.5) / samplesX;
+      if (exclude && exclude(cx, cy)) continue;
+      let best = -1;
+      let bestDist = Infinity;
+      for (let s = 0; s < clamped.length; s++) {
+        const seed = clamped[s];
+        const dist = Math.hypot(cx - seed.x, cy - seed.y) / seed.weight;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = s;
+        }
+      }
+      assignment[j * samplesX + i] = best;
+    }
+  }
+  const regions = [];
+  for (let s = 0; s < clamped.length; s++) {
+    const component = largestComponent(assignment, samplesX, samplesY, s);
+    if (!component || component.size === 0) {
+      regions.push({ key: clamped[s].key, ring: [], sampleCount: 0 });
+      continue;
+    }
+    const ring = traceBoundary(component, samplesX, samplesY).map(
+      ([gx, gy]) => [gx / samplesX, gy / samplesY]
+    );
+    regions.push({ key: clamped[s].key, ring, sampleCount: component.size });
+  }
+  return regions;
+}
+function largestComponent(assignment, samplesX, samplesY, seedIndex) {
+  const total = samplesX * samplesY;
+  const visited = new Uint8Array(total);
+  let best = null;
+  for (let idx = 0; idx < total; idx++) {
+    if (assignment[idx] !== seedIndex || visited[idx]) continue;
+    const stack = [idx];
+    visited[idx] = 1;
+    const comp = [];
+    while (stack.length) {
+      const cur = stack.pop();
+      comp.push(cur);
+      const ci = cur % samplesX;
+      const cj = (cur - ci) / samplesX;
+      const neighbors = [
+        [ci - 1, cj],
+        [ci + 1, cj],
+        [ci, cj - 1],
+        [ci, cj + 1]
+      ];
+      for (const [ni, nj] of neighbors) {
+        if (ni < 0 || ni >= samplesX || nj < 0 || nj >= samplesY) continue;
+        const nIdx = nj * samplesX + ni;
+        if (visited[nIdx] || assignment[nIdx] !== seedIndex) continue;
+        visited[nIdx] = 1;
+        stack.push(nIdx);
+      }
+    }
+    if (!best || comp.length > best.length) best = comp;
+  }
+  return best ? new Set(best) : null;
+}
+function traceBoundary(component, samplesX, samplesY) {
+  const filled = (ci, cj) => {
+    if (ci < 0 || ci >= samplesX || cj < 0 || cj >= samplesY) return false;
+    return component.has(cj * samplesX + ci);
+  };
+  const edges = [];
+  for (const idx of component) {
+    const ci = idx % samplesX;
+    const cj = (idx - ci) / samplesX;
+    const tl = [ci, cj];
+    const tr = [ci + 1, cj];
+    const br = [ci + 1, cj + 1];
+    const bl = [ci, cj + 1];
+    if (!filled(ci, cj - 1)) edges.push({ from: tl, to: tr });
+    if (!filled(ci + 1, cj)) edges.push({ from: tr, to: br });
+    if (!filled(ci, cj + 1)) edges.push({ from: br, to: bl });
+    if (!filled(ci - 1, cj)) edges.push({ from: bl, to: tl });
+  }
+  const key = (p) => `${p[0]},${p[1]}`;
+  const byStart = /* @__PURE__ */ new Map();
+  for (const e of edges) {
+    const k = key(e.from);
+    const list = byStart.get(k);
+    if (list) list.push(e);
+    else byStart.set(k, [e]);
+  }
+  const used = /* @__PURE__ */ new Set();
+  const loops = [];
+  for (const start of edges) {
+    if (used.has(start)) continue;
+    const loop = [start.from];
+    let current = start;
+    while (current) {
+      used.add(current);
+      loop.push(current.to);
+      if (current.to[0] === loop[0][0] && current.to[1] === loop[0][1]) break;
+      const candidates = byStart.get(key(current.to)) ?? [];
+      current = candidates.find((c) => !used.has(c));
+    }
+    loops.push(loop);
+  }
+  if (!loops.length) return [];
+  let outer = loops[0];
+  let outerArea = 0;
+  for (const loop of loops) {
+    const area = Math.abs(shoelace(loop));
+    if (area > outerArea) {
+      outerArea = area;
+      outer = loop;
+    }
+  }
+  return simplifyCollinear(outer);
+}
+function shoelace(ring) {
+  let sum = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return sum / 2;
+}
+function simplifyCollinear(ring) {
+  if (ring.length <= 4) return ring.slice();
+  const pts = ring.slice(0, -1);
+  const n = pts.length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const prev = pts[(i - 1 + n) % n];
+    const cur = pts[i];
+    const next = pts[(i + 1) % n];
+    const cross = (cur[0] - prev[0]) * (next[1] - cur[1]) - (cur[1] - prev[1]) * (next[0] - cur[0]);
+    if (cross !== 0) out.push(cur);
+  }
+  if (!out.length) return ring.slice();
+  out.push(out[0]);
+  return out;
+}
+
+// ../atlas/src/name-culture.ts
+var CULTURE_PROFILES = [
+  {
+    key: "nordisch",
+    label: "Nordisch",
+    onsets: ["Thor", "Grim", "Ulf", "Bjor", "Stein", "Frost", "Vald", "Ragn", "Sig", "Ost", "Nord", "Hrafn"],
+    middles: ["en", "ar", "ol", "or", "und", "in"],
+    endings: {
+      settlement: ["heim", "fjord", "gard", "borg", "vik", "holm"],
+      region: ["mark", "land", "gau", "reik"],
+      river: ["strom", "bach", "elv", "fluss"],
+      mountain: ["fjell", "horn", "spitze", "klippe"]
+    },
+    compoundChance: 0.18,
+    prefixes: ["Alt-", "Ober-", "Nieder-"]
+  },
+  {
+    key: "elbisch",
+    label: "Elbisch",
+    onsets: ["Ael", "Sil", "Gal", "Lor", "Mith", "Eryn", "Cael", "Fael", "Ithil", "Nyra", "Elu", "Syl"],
+    middles: ["ia", "ie", "ael", "il", "en", "or"],
+    endings: {
+      settlement: ["iel", "lond", "thil", "mir", "dor"],
+      region: ["nor", "wen", "driel", "ath"],
+      river: ["duin", "nen", "ril", "wen"],
+      mountain: ["dor", "tir", "orod", "thal"]
+    },
+    compoundChance: 0.12,
+    prefixes: ["Alt-", "Hoch-"]
+  },
+  {
+    key: "zwergisch",
+    label: "Zwergisch",
+    onsets: ["Thrain", "Dur", "Grom", "Bal", "Karn", "Ug", "Thok", "Brom", "Krag", "Dor", "Nain", "Bofur"],
+    middles: ["un", "or", "ak", "um", "ol", "in"],
+    endings: {
+      settlement: ["barak", "dun", "grimm", "hold", "feste"],
+      region: ["reich", "mark", "hold"],
+      river: ["bach", "quell", "strom"],
+      mountain: ["berg", "klamm", "schacht", "horn"]
+    },
+    compoundChance: 0.2,
+    prefixes: ["Unter-", "Ober-"]
+  },
+  {
+    key: "wuestenland",
+    label: "Wüstenländisch",
+    onsets: ["Al", "Sar", "Kaz", "Zahir", "Bas", "Nadir", "Qasr", "Ras", "Tamir", "Zan", "Amir", "Yusar"],
+    middles: ["a", "i", "u", "ar", "an", "ir"],
+    endings: {
+      settlement: ["abad", "iyya", "sar", "kand"],
+      region: ["sahra", "stan", "iyya"],
+      river: ["wadi", "nahr", "oase"],
+      mountain: ["kamm", "dar", "jabal", "riff"]
+    },
+    compoundChance: 0.1,
+    prefixes: ["Al-", "Bir-"]
+  },
+  {
+    key: "imperial",
+    label: "Imperial / Altweltlich",
+    onsets: ["Val", "Cor", "Aur", "Sever", "Max", "Octa", "Luc", "Traja", "Domin", "Fla", "Ner", "Aug"],
+    middles: ["an", "or", "in", "ur", "es", "ia"],
+    endings: {
+      settlement: ["ia", "polis", "anum", "opolis", "ium"],
+      region: ["ien", "anien", "ia"],
+      river: ["us", "fluvium", "onus"],
+      mountain: ["mons", "us", "anum"]
+    },
+    compoundChance: 0.08,
+    prefixes: ["Neu-", "Alt-"]
+  },
+  {
+    key: "sumpfland",
+    label: "Sumpfländisch",
+    onsets: ["Schlick", "Moor", "Nebel", "Faul", "Ried", "Sump", "Kroet", "Morast", "Duster", "Trueb", "Moder", "Fenn"],
+    middles: ["en", "el", "ig", "um", "ach", "or"],
+    endings: {
+      settlement: ["moor", "bruch", "fenn", "ried", "sumpf"],
+      region: ["moor", "marsch", "bruch"],
+      river: ["ried", "lache", "tuempel"],
+      mountain: ["kuppe", "horst", "damm"]
+    },
+    compoundChance: 0.15,
+    prefixes: ["Nieder-", "Hinter-"]
+  }
+];
+function listCultureProfiles() {
+  return [...CULTURE_PROFILES];
+}
+function getCultureProfile(key) {
+  if (!key) return void 0;
+  return CULTURE_PROFILES.find((profile) => profile.key === key);
+}
+var DEFAULT_COUNT = 8;
+var MIN_COUNT = 1;
+var MAX_COUNT = 24;
+var MIDDLE_CHANCE = 0.55;
+var PREFIX_CHANCE = 0.15;
+var MAX_ATTEMPTS_PER_NAME = 60;
+var MAX_EXTENDED_ROUNDS = 16;
+function pick(items, rng) {
+  const index = Math.min(items.length - 1, Math.floor(rng() * items.length));
+  return items[index];
+}
+function capitalize(word) {
+  return word.length === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1);
+}
+function buildName(profile, kind, rng, middleCount) {
+  const onset = pick(profile.onsets, rng).toLowerCase();
+  const count = middleCount ?? (rng() < MIDDLE_CHANCE ? 1 : 0);
+  let middles = "";
+  for (let i = 0; i < count; i++) middles += pick(profile.middles, rng).toLowerCase();
+  const ending = pick(profile.endings[kind], rng).toLowerCase();
+  let core = onset + middles + ending;
+  if (profile.compoundChance && rng() < profile.compoundChance) {
+    core = pick(profile.onsets, rng).toLowerCase() + core;
+  }
+  let name = capitalize(core);
+  if (profile.prefixes && profile.prefixes.length > 0 && rng() < PREFIX_CHANCE) {
+    name = pick(profile.prefixes, rng) + name;
+  }
+  return name;
+}
+function buildUniqueName(profile, kind, rng, used) {
+  for (let i = 0; i < MAX_ATTEMPTS_PER_NAME; i++) {
+    const candidate = buildName(profile, kind, rng);
+    if (!used.has(candidate)) return candidate;
+  }
+  for (let extra = 2; extra <= MAX_EXTENDED_ROUNDS; extra++) {
+    for (let i = 0; i < MAX_ATTEMPTS_PER_NAME; i++) {
+      const candidate = buildName(profile, kind, rng, extra);
+      if (!used.has(candidate)) return candidate;
+    }
+  }
+  return buildName(profile, kind, rng, MAX_EXTENDED_ROUNDS);
+}
+function clampCount(count) {
+  const raw = Number.isFinite(count) ? count : DEFAULT_COUNT;
+  return Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(raw)));
+}
+function generatePlaceNames(opts) {
+  const profile = getCultureProfile(opts.culture) ?? CULTURE_PROFILES[0];
+  if (!profile) return [];
+  const count = clampCount(opts.count);
+  const seed = opts.seed ?? hashStringToSeed(opts.culture + opts.kind);
+  const rng = mulberry32(seed);
+  const used = /* @__PURE__ */ new Set();
+  const names = [];
+  for (let i = 0; i < count; i++) {
+    const name = buildUniqueName(profile, opts.kind, rng, used);
+    used.add(name);
+    names.push(name);
+  }
+  return names;
+}
+
 // ../atlas/src/rtx-asset-prompt-context.ts
 var RTX_ATLAS_ASSET_STYLEGUIDE_EXCERPT = [
   "Gouache assets use filled painterly shapes with body color, darker pigment edge, shadow, and highlight.",
@@ -3658,7 +4350,7 @@ function parseLayer(raw, path, issues) {
     add2(issues, path, "invalid_type", "Recipe layers must be objects.");
     return null;
   }
-  const before = issues.length;
+  const before2 = issues.length;
   rejectUnknown2(raw, LAYER_KEYS, path, issues);
   const id = stringValue2(raw, "id", path, issues, { required: true, max: 48 });
   if (id && !SAFE_ID.test(id)) add2(issues, `${path}.id`, "invalid_value", "Layer id must be slug-like.");
@@ -3692,14 +4384,14 @@ function parseLayer(raw, path, issues) {
   }
   if (pathData) layer.path = pathData;
   if (shape === "path" && !pathData) add2(issues, `${path}.path`, "missing_field", "path layers require path.");
-  return issues.length === before ? layer : null;
+  return issues.length === before2 ? layer : null;
 }
 function parseRecipe(raw, path, issues) {
   if (!isRecord2(raw)) {
     add2(issues, path, "invalid_type", "recipe must be an object.");
     return null;
   }
-  const before = issues.length;
+  const before2 = issues.length;
   rejectUnknown2(raw, RECIPE_KEYS, path, issues);
   if (raw.schemaVersion !== 1) add2(issues, `${path}.schemaVersion`, "invalid_value", "schemaVersion must be 1.");
   if (raw.coordinateSystem !== void 0 && raw.coordinateSystem !== "base-center-normalized") {
@@ -3713,7 +4405,7 @@ function parseRecipe(raw, path, issues) {
     const parsed = parseLayer(layer, `${path}.layers[${index}]`, issues);
     return parsed ? [parsed] : [];
   }) : [];
-  if (issues.length !== before) return null;
+  if (issues.length !== before2) return null;
   return {
     schemaVersion: 1,
     coordinateSystem: "base-center-normalized",
@@ -3726,7 +4418,7 @@ function parsePngFallback(raw, path, issues) {
     add2(issues, path, "invalid_type", "pngFallback must be an object.");
     return null;
   }
-  const before = issues.length;
+  const before2 = issues.length;
   rejectUnknown2(raw, PNG_KEYS, path, issues);
   if (raw.mimeType !== "image/png") add2(issues, `${path}.mimeType`, "invalid_value", "mimeType must be image/png.");
   const width = numberValue2(raw, "width", path, issues, { required: true, integer: true, min: 1, max: 4096 });
@@ -3744,7 +4436,7 @@ function parsePngFallback(raw, path, issues) {
   }
   const altText = stringValue2(raw, "altText", path, issues, { max: 240 });
   const notes = stringValue2(raw, "notes", path, issues, { max: 500 });
-  if (issues.length !== before || width === void 0 || height === void 0 || typeof raw.transparentBackground !== "boolean") {
+  if (issues.length !== before2 || width === void 0 || height === void 0 || typeof raw.transparentBackground !== "boolean") {
     return null;
   }
   return {
@@ -3889,7 +4581,7 @@ function isFiniteNumber(value) {
 function safeHexColor(value) {
   return typeof value === "string" && HEX_COLOR2.test(value) ? value : void 0;
 }
-function clamp013(value) {
+function clamp015(value) {
   return Math.min(1, Math.max(0, value));
 }
 function buildEllipseOps(layer, project, unit) {
@@ -4036,7 +4728,7 @@ function drawRtxGouacheRecipePreview(ctx, recipe, opts) {
     const ops = buildLayerOps(layer, project, unit);
     if (!ops) continue;
     const roleDefault = RTX_RECIPE_ROLE_DEFAULT_OPACITY[layer.role] ?? 1;
-    ctx.globalAlpha = clamp013(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
+    ctx.globalAlpha = clamp015(isFiniteNumber(layer.opacity) ? layer.opacity : roleDefault);
     ctx.beginPath();
     for (const [name, ...args] of ops) {
       ctx[name](...args);
@@ -4558,7 +5250,7 @@ var KIND_GLYPH = {
   houses: "village",
   towers: "castle"
 };
-function clamp014(v) {
+function clamp016(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
@@ -4572,6 +5264,7 @@ function generatePathAttachments(path, options) {
   const offset = options.offset ?? 0.02;
   const jitter = options.jitter ?? 0.25;
   const seed = options.seed ?? 7;
+  const alignToPath = options.alignToPath ?? false;
   if (spacing <= 0) return [];
   const coords = toCoordinates(path);
   if (coords.length < 2) return [];
@@ -4590,6 +5283,7 @@ function generatePathAttachments(path, options) {
     const uy = (by - ay) / segLen;
     const px = -uy;
     const py = ux;
+    const segmentAngleDeg = alignToPath ? Math.atan2(uy, ux) * 180 / Math.PI : 0;
     let d = accumulated === 0 ? spacing / 2 : spacing - accumulated;
     while (d <= segLen) {
       const along = (rng() - 0.5) * spacing * jitter;
@@ -4597,9 +5291,10 @@ function generatePathAttachments(path, options) {
       const cy = ay + uy * (d + along);
       for (const sign of signs) {
         const scale = 0.8 + rng() * 0.4;
-        const rotation = (rng() - 0.5) * 2 * rotationRange;
-        const x = clamp014(cx + px * offset * sign);
-        const y = clamp014(cy + py * offset * sign);
+        const jitterRotation = (rng() - 0.5) * 2 * rotationRange;
+        const rotation = alignToPath ? segmentAngleDeg + jitterRotation : jitterRotation;
+        const x = clamp016(cx + px * offset * sign);
+        const y = clamp016(cy + py * offset * sign);
         results.push({ glyphKey, x, y, scale, rotation });
       }
       d += spacing;
@@ -4690,6 +5385,37 @@ function placeSettlementBuildings(input) {
     });
   }
   return placements;
+}
+function applySettlementCondition(features, objects, condition) {
+  const tagStyle = (style) => ({
+    ...style,
+    condition
+  });
+  let houseIndex = -1;
+  let towerIndex = -1;
+  const nextObjects = [];
+  for (const object of objects) {
+    if (object.kind === "building") {
+      houseIndex++;
+      if (condition === "abandoned" && houseIndex % 2 === 0 && houseIndex % 5 !== 0) continue;
+      if (condition === "ruined" && houseIndex % 5 < 3) {
+        nextObjects.push({ ...object, style: { ...tagStyle(object.style), gouache: "g_ruin" } });
+        continue;
+      }
+      if (condition === "besieged" && houseIndex % 5 === 0) {
+        nextObjects.push({ ...object, style: { ...tagStyle(object.style), gouache: "g_tent" } });
+        continue;
+      }
+    } else if (object.kind === "tower") {
+      towerIndex++;
+      if (condition === "ruined" && towerIndex % 2 === 0) continue;
+    }
+    nextObjects.push({ ...object, style: tagStyle(object.style) });
+  }
+  return {
+    features: features.map((feature) => ({ ...feature, style: tagStyle(feature.style) })),
+    objects: nextObjects
+  };
 }
 
 // ../atlas/src/settlement-waterfront.ts
@@ -5284,14 +6010,18 @@ function generateSettlement(polygon, options = {}) {
   buildingPlacements.forEach((placement, index) => {
     addObject("building", `building-${index}`, placement.point, placement.rotation, placement.scale);
   });
+  const condition = options.condition;
+  const conditioned = condition && condition !== "thriving" ? applySettlementCondition(features, objects, condition) : void 0;
+  const finalFeatures = conditioned?.features ?? features;
+  const finalObjects = conditioned?.objects ?? objects;
   return {
     seed,
     center,
-    features,
-    objects,
+    features: finalFeatures,
+    objects: finalObjects,
     meta: {
       area,
-      buildingCount: objects.filter((object) => object.kind === "building").length,
+      buildingCount: finalObjects.filter((object) => object.kind === "building").length,
       gateCount,
       ...waterfrontOptions && generatedPierCount > 0 ? { waterfront: true, pierCount: generatedPierCount } : {}
     }
@@ -5384,6 +6114,7 @@ export {
   BUILTIN_GLYPH_KEYS,
   BiomeKind,
   CONTOUR_MAJOR_EVERY,
+  CULTURE_PROFILES,
   DEFAULT_CONTOUR_STEPS,
   DEFAULT_PARALLAX_STRENGTH,
   DEFAULT_TERRAIN_BLEND_WIDTH,
@@ -5429,11 +6160,14 @@ export {
   elevationShadowOffset,
   emptyDrawLayerMap,
   fillPlotWithGouacheAssets,
+  findBridgePoints,
   formatAtlasPlotFillPromptContext,
   formatRtxAtlasAssetPromptContext,
   generateDraft,
   generatePathAttachments,
+  generatePlaceNames,
   generateSettlement,
+  getCultureProfile,
   getGlyphByKey,
   getGouacheAsset,
   gouacheKeyForGlyph,
@@ -5444,6 +6178,7 @@ export {
   isGouacheAsset,
   isRtxAtlasAssetProposal,
   layoutCharactersOnPath,
+  listCultureProfiles,
   listGlyphsByCategory,
   listGouacheAssetsByCategory,
   migrateDoc,
@@ -5466,6 +6201,7 @@ export {
   rerollDraft,
   resolveStylePreset,
   roundedRectPath,
+  routeRoad,
   sampleElevation,
   sampleElevationAlongPath,
   sampleTaperedWidths,
@@ -5475,6 +6211,7 @@ export {
   serializeGeometry,
   smoothPath,
   stampSeedFromKey,
+  suggestTerritories,
   translateGeometry,
   tryParseGeometry,
   validateAtlasPlotFillProposal,
