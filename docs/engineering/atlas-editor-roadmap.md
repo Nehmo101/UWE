@@ -111,9 +111,10 @@ Kampagnen-Ausschnitt (Portal-Beschnitt) · Ereignis-Zeitstrahl · Azgaar-Import.
 - ✅ **#21 Territorien-Vorschlag** — `suggestTerritories` (Grid-Voronoi, Wasser neutral) + „🗺 Territorien vorschlagen" im Region-Werkzeug; Ghost-Review (Übernehmen/Verwerfen) erzeugt editierbare `region`-Features, Namen aus dem gewählten Kulturprofil.
 - ✅ **#24 Kulturprofile** — `generatePlaceNames` + 6 Profile; Kultur-Auswahl + „↻ Name"-Würfel im Auswahl-Panel jedes Features (deterministische Roll-Folge in `style.culture`/`style.nameRoll`).
 - ✅ **#25 Verfallsgrad** — `generateSettlement`-Option `condition` + Zustand-Auswahl (blühend/belagert/verlassen/Ruine) im Siedlungs-Ghost-Panel der Objektfläche.
+- ✅ **#10 Asset-Browser** — Suche + Kategorie-Filter (aus `GOUACHE_CATEGORY_LABELS`, inkl. RTX) + Favoriten (Rechtsklick ★, localStorage) + „zuletzt benutzt" über der Asset-Palette.
+- ✅ **#13 Minimap** — Weltübersicht unten rechts über den geteilten `drawScene`-Pfad (gedrosselt), sichtbarer Ausschnitt markiert, Klick/Ziehen zentriert die Kamera. *Offen: Kamera-Lesezeichen.*
 
 **Offen:** #4 Prefabs, #7 Lichtrichtung, #8 Label-Presets, #9 Spray-Pinsel,
-#10 Asset-Browser, #11 Tinting, #12 Ebenen-Panel, #13 Minimap, #14
-Werkstatt-Layout, #15 Reiseplaner, #16 Kartengröße, #17 Landmassen-Pinsel,
-#18 Fluss-Intelligenz, #22 Klima-Bänder, #23 Kartuschen, #26 Unterwelt,
-#28 Asset-Wunsch-Queue.
+#11 Tinting, #12 Ebenen-Panel, #14 Werkstatt-Layout, #15 Reiseplaner,
+#16 Kartengröße, #17 Landmassen-Pinsel, #18 Fluss-Intelligenz,
+#22 Klima-Bänder, #23 Kartuschen, #26 Unterwelt, #28 Asset-Wunsch-Queue.

@@ -58,6 +58,7 @@
   .swatch-btn .chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
   .glyph-btn { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
   .glyph-btn.on { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
+  .glyph-btn.fav { box-shadow: inset 0 0 0 1.5px #d9a441; }
   .glyph-btn .ico { width: 22px; height: 22px; }
   .grp-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
 
@@ -147,6 +148,9 @@
     <!-- ===================== CANVAS STAGE ===================== -->
     <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
       <canvas id="atlas-canvas" style="width:100%; height:100%;"></canvas>
+
+      <!-- Minimap (Roadmap W3 #13): Weltübersicht, Klick/Ziehen = Kamera-Pan -->
+      <canvas id="minimap" width="176" height="110" title="Minimap — Klick oder Ziehen bewegt die Kamera" style="position:absolute; right:12px; bottom:34px; width:176px; height:110px; border:1.5px solid var(--uwe-border); border-radius:8px; background:var(--uwe-surface); box-shadow:0 2px 8px rgba(0,0,0,.22); cursor:crosshair; display:none;"></canvas>
 
       <div id="subbar" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:12px; padding:6px 12px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:10px; backdrop-filter:blur(10px); box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:11.5px;">
         <span id="subbar-content"></span>
@@ -1027,6 +1031,50 @@ function draw() {
   const ctx = c.getContext("2d"); if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawScene(ctx, cssW, cssH, true);
+  scheduleMinimap();
+}
+
+// Minimap (Roadmap W3 #13): Weltübersicht unten rechts. Rendert gedrosselt
+// über denselben drawScene-Pfad wie der PNG-Export (zoom/pan temporär auf
+// Welt-Fit) und markiert den sichtbaren Ausschnitt; Klick/Ziehen zentriert
+// die Kamera auf den getroffenen Weltpunkt.
+let minimapTimer = 0, minimapLastRender = 0, minimapDragging = false;
+function minimapFit() {
+  const mc = el("minimap");
+  const z = Math.min(mc.width / WORLD_W, mc.height / WORLD_H);
+  return { mc, z, ox: (mc.width - WORLD_W * z) / 2, oy: (mc.height - WORLD_H * z) / 2 };
+}
+function renderMinimap() {
+  const mc = el("minimap"); if (!mc) return;
+  if (isView() || !doc) { mc.style.display = "none"; return; }
+  mc.style.display = "block";
+  minimapLastRender = performance.now();
+  const { z, ox, oy } = minimapFit();
+  const mctx = mc.getContext("2d"); if (!mctx) return;
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  const saved = { zoom: state.zoom, panX: state.panX, panY: state.panY };
+  state.zoom = z; state.panX = ox; state.panY = oy;
+  try { drawScene(mctx, mc.width, mc.height, false); } finally {
+    state.zoom = saved.zoom; state.panX = saved.panX; state.panY = saved.panY;
+  }
+  const [wx0, wy0] = c2w(0, 0), [wx1, wy1] = c2w(cssW, cssH);
+  mctx.save();
+  mctx.strokeStyle = "#c2622b"; mctx.lineWidth = 1.5;
+  mctx.strokeRect(ox + wx0 * z, oy + wy0 * z, (wx1 - wx0) * z, (wy1 - wy0) * z);
+  mctx.restore();
+}
+function scheduleMinimap() {
+  if (performance.now() - minimapLastRender > 400) { renderMinimap(); return; }
+  clearTimeout(minimapTimer);
+  minimapTimer = setTimeout(renderMinimap, 420);
+}
+function minimapPanTo(e) {
+  const { mc, z, ox, oy } = minimapFit();
+  const r = mc.getBoundingClientRect();
+  const wx = (e.clientX - r.left - ox) / z, wy = (e.clientY - r.top - oy) / z;
+  state.panX = cssW / 2 - wx * state.zoom;
+  state.panY = cssH / 2 - wy * state.zoom;
+  draw();
 }
 
 // Kern-Renderer — auch vom PNG-Export genutzt (chrome=false unterdrückt
@@ -2237,8 +2285,8 @@ function clearAll() {
 function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
 function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null, rtxKey: null }); }
-function pickGouache(k) { setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
-function pickRtx(k) { setState({ tool: "stamp", rtxKey: k, gouacheKey: null }); }
+function pickGouache(k) { noteAssetUsed(k); setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
+function pickRtx(k) { noteAssetUsed("rtx:" + k); setState({ tool: "stamp", rtxKey: k, gouacheKey: null }); }
 
 // Genehmigte RTX-Assets (json-recipe): kommen server-validiert über das
 // Doc-Feld `rtxPaletteItems` (Studio-Route prüft mit validateRtxAtlasAssetProposal
@@ -2262,14 +2310,18 @@ function buildRtxPaletteButtons() {
   if (!grid || !engine.drawRtxGouacheRecipePreview) return;
   for (const [id, item] of rtxPaletteItems) {
     const btn = document.createElement("button");
-    btn.className = "glyph-btn"; btn.title = item.name + " · RTX-Asset";
+    btn.className = "glyph-btn"; btn.title = item.name + " · RTX-Asset — Rechtsklick: Favorit ★";
+    btn.dataset.assetKey = "rtx:" + id; btn.dataset.cat = "rtx"; btn.dataset.name = (item.name || "").toLowerCase();
+    if (assetFavs.has("rtx:" + id)) btn.classList.add("fav");
     const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
     try { engine.drawRtxGouacheRecipePreview(cv.getContext("2d"), item.recipe, { x: 22, y: 22, unitScale: 5, lineWidth: 1.1 }); } catch (_) {}
     btn.appendChild(cv);
     btn.addEventListener("click", () => pickRtx(id));
+    btn.addEventListener("contextmenu", (e) => { e.preventDefault(); toggleAssetFav("rtx:" + id, btn); });
     grid.appendChild(btn); glyphButtons.set("rtx:" + id, btn);
   }
   if (state.rtxKey && !rtxPaletteItems.has(state.rtxKey)) state.rtxKey = null;
+  applyAssetFilter();
 }
 function toggleNodeVis() {
   pushUndo();
@@ -2285,6 +2337,48 @@ const toolButtons = new Map();   // tool -> button
 const swatchButtons = new Map(); // biome -> button
 const glyphButtons = new Map();  // glyphKey -> button
 const heightModeButtons = new Map(); // heightMode -> button
+
+// Asset-Browser (Roadmap W3 #10): Suche + Kategorie-Filter + Favoriten
+// (Rechtsklick auf ein Asset togglet den Stern) + „zuletzt benutzt".
+// Favoriten/Zuletzt sind reine Editor-Präferenzen → localStorage, nie im Doc.
+const ASSET_FAV_KEY = "uwe.atlas.assetFavs.v1";
+const ASSET_RECENT_KEY = "uwe.atlas.assetRecent.v1";
+let assetFavs; try { assetFavs = new Set(JSON.parse(localStorage.getItem(ASSET_FAV_KEY) || "[]")); } catch (_) { assetFavs = new Set(); }
+let assetRecent; try { assetRecent = JSON.parse(localStorage.getItem(ASSET_RECENT_KEY) || "[]"); } catch (_) { assetRecent = []; }
+if (!Array.isArray(assetRecent)) assetRecent = [];
+const assetFilter = { q: "", cat: "all" };
+function persistAssetPrefs() {
+  try {
+    localStorage.setItem(ASSET_FAV_KEY, JSON.stringify([...assetFavs]));
+    localStorage.setItem(ASSET_RECENT_KEY, JSON.stringify(assetRecent));
+  } catch (_) {}
+}
+function toggleAssetFav(key, btn) {
+  if (assetFavs.has(key)) assetFavs.delete(key); else assetFavs.add(key);
+  if (btn) btn.classList.toggle("fav", assetFavs.has(key));
+  persistAssetPrefs();
+  if (assetFilter.cat === "fav") applyAssetFilter();
+}
+function noteAssetUsed(key) {
+  assetRecent = [key].concat(assetRecent.filter((k) => k !== key)).slice(0, 12);
+  persistAssetPrefs();
+  if (assetFilter.cat === "recent") applyAssetFilter();
+}
+function applyAssetFilter() {
+  for (const [mapKey, btn] of glyphButtons) {
+    const name = btn.dataset.name || "";
+    const cat = btn.dataset.cat || "";
+    const assetKey = btn.dataset.assetKey || mapKey;
+    let show = true;
+    if (assetFilter.q && name.indexOf(assetFilter.q) < 0 && assetKey.toLowerCase().indexOf(assetFilter.q) < 0) show = false;
+    if (show && assetFilter.cat !== "all") {
+      if (assetFilter.cat === "fav") show = assetFavs.has(assetKey);
+      else if (assetFilter.cat === "recent") show = assetRecent.indexOf(assetKey) >= 0;
+      else show = cat === assetFilter.cat;
+    }
+    btn.style.display = show ? "" : "none";
+  }
+}
 
 function buildSidebar() {
   const toolList = el("tool-list");
@@ -2304,17 +2398,33 @@ function buildSidebar() {
     swatches.appendChild(btn); swatchButtons.set(b, btn);
   }
   const grid = el("glyph-grid");
+  // Asset-Browser-Kopf: Suche + Kategorie/Favoriten/Zuletzt-Filter.
+  const browser = document.createElement("div");
+  browser.style.cssText = "display:flex;flex-direction:column;gap:5px;padding:0 2px 6px;";
+  const catOptions = [["all", "Alle Kategorien"], ["fav", "★ Favoriten"], ["recent", "Zuletzt benutzt"]]
+    .concat(Object.entries(engine.GOUACHE_CATEGORY_LABELS || {}))
+    .concat([["rtx", "RTX-Assets"]])
+    .map(([v, l]) => '<option value="' + v + '">' + l + "</option>").join("");
+  browser.innerHTML =
+    '<input id="asset-search" type="search" placeholder="Assets suchen…" style="width:100%;padding:5px 8px;border:1.5px solid var(--uwe-border);border-radius:8px;font-size:11px;background:var(--uwe-bg-elevated);color:var(--uwe-fg);">' +
+    '<select id="asset-cat" class="sel-select" style="margin-top:0;" title="Kategorie · Favoriten (Rechtsklick auf ein Asset setzt den Stern) · Zuletzt benutzt">' + catOptions + "</select>";
+  grid.parentElement.insertBefore(browser, grid);
+  browser.querySelector("#asset-search").addEventListener("input", (e) => { assetFilter.q = e.target.value.trim().toLowerCase(); applyAssetFilter(); });
+  browser.querySelector("#asset-cat").addEventListener("change", (e) => { assetFilter.cat = e.target.value; applyAssetFilter(); });
   // Ink-Piktogramme sind aus der Palette entfernt — jedes Builtin-Motiv hat
   // ein Gouache-Äquivalent (GLYPH_TO_GOUACHE); Bestandsobjekte rendern gemalt.
   // Gemalte Gouache-Assets (Canvas-of-Kings-Optik) — Vorschau per Mini-Canvas.
   if (engine.GOUACHE_ASSETS) {
     for (const a of engine.GOUACHE_ASSETS) {
       const btn = document.createElement("button");
-      btn.className = "glyph-btn"; btn.title = a.name + " · Gouache";
+      btn.className = "glyph-btn"; btn.title = a.name + " · Gouache — Rechtsklick: Favorit ★";
+      btn.dataset.assetKey = a.key; btn.dataset.cat = a.category || ""; btn.dataset.name = (a.name || "").toLowerCase();
+      if (assetFavs.has(a.key)) btn.classList.add("fav");
       const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
       try { engine.drawGouacheAsset(cv.getContext("2d"), a.key, { x: 22, y: 36, size: 24, lineWidth: 1.1 }); } catch (_) {}
       btn.appendChild(cv);
       btn.addEventListener("click", () => pickGouache(a.key));
+      btn.addEventListener("contextmenu", (e) => { e.preventDefault(); toggleAssetFav(a.key, btn); });
       grid.appendChild(btn); glyphButtons.set("g:" + a.key, btn);
     }
   }
@@ -2881,6 +2991,11 @@ function wire() {
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.addEventListener("dblclick", onDblClick);
+
+  const mm = el("minimap");
+  mm.addEventListener("pointerdown", (e) => { minimapDragging = true; mm.setPointerCapture(e.pointerId); minimapPanTo(e); });
+  mm.addEventListener("pointermove", (e) => { if (minimapDragging) minimapPanTo(e); });
+  mm.addEventListener("pointerup", () => { minimapDragging = false; });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   window.addEventListener("keydown", onKeyDown);
   // Bridge is opt-in only via ?embed=1 (README §6) — never listen in the plain
