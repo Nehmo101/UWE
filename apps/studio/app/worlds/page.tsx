@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
-import { getAppRepository, listWorldTemplateOptions } from "@uwe/database/server";
+import { listWorldTemplateOptions } from "@uwe/database/server";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
 import { StudioShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CreateWorldForm } from "@/components/CreateWorldForm";
 import { getCurrentAuthUser } from "@/src/lib/auth";
+import { getStudioWorldList } from "@/src/lib/world-list-cache";
 export default async function WorldsPage() {
   const [worlds, user, templates] = await Promise.all([
-    getAppRepository().listWorlds(),
+    getStudioWorldList(),
     getCurrentAuthUser(),
     Promise.resolve(listWorldTemplateOptions()),
   ]);

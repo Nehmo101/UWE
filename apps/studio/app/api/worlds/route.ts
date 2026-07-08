@@ -9,6 +9,7 @@ import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
 import { createWorldBodySchema, parseBody } from "@uwe/security";
 import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
+import { revalidateStudioWorldList } from "@/src/lib/world-list-cache";
 
 export async function POST(request: Request) {
   const authError = await guardStudioApiMutation(request, { rateLimit: "login" });
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
   try {
     const service = createWorldCreationService(db);
     const world = await service.createWorldForUser(user.id, parsed.data);
+
+    // A new world changes the cached studio world list.
+    revalidateStudioWorldList();
 
     return NextResponse.json({ world }, { status: 201 });
   } catch (error) {
