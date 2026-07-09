@@ -34,6 +34,7 @@ import { enforceStudioPageAuth, getCurrentAuthUser } from "@/src/lib/auth";
 import { enforceStudioMaintenance } from "@/src/lib/maintenance";
 import "@uwe/shared-ui/uwe.css";
 import "@uwe/shared-ui/wiki-base.css";
+import "@uwe/shared-ui/uwe-landing.css";
 import "./globals.css";
 import "./wiki.css";
 

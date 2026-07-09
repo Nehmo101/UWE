@@ -134,6 +134,7 @@ export {
   resolveAuthLinks,
   type AuthLinkTargets,
   type TurnstileWidgetProps,
+  type UweLandingPageProps,
   type UweAuthApp,
 } from "./auth";
 

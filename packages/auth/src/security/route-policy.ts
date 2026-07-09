@@ -159,6 +159,8 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/maintenance/status",
   "/api/maintenance/evaluate",
   "/api/auth/login",
+  // Landing-page (uweanddragons.org) unified sign-in for Studio & Portal targets.
+  "/api/auth/enter",
   "/api/auth/logout",
   "/api/auth/setup",
   "/api/auth/forgot-password",

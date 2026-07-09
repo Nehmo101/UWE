@@ -15,6 +15,13 @@ export interface UweRuntimeConfig {
   authRequired: boolean;
   sessionCookieSecure: boolean;
   sessionCookieSameSite: SessionCookieSameSite;
+  /**
+   * Optional cookie `Domain`. Unset = host-only (default). Set to a registrable
+   * domain (e.g. `.uweanddragons.org`) to share the session across all its
+   * subdomains — enables one sign-in on the apex landing to be valid on both
+   * `studio.` and `portal.` (SSO). Only set this for domains you fully control.
+   */
+  sessionCookieDomain: string | null;
   allowedCorsOrigins: string[];
   setupToken: string | null;
   playerPreviewPublic: boolean;
@@ -38,6 +45,8 @@ export interface SessionCookieOptions {
   sameSite: SessionCookieSameSite;
   secure: boolean;
   path: string;
+  /** Cookie `Domain` when a domain-wide (cross-subdomain) session is configured. */
+  domain?: string;
 }
 
 function parseBoolEnv(value: string | undefined, defaultValue: boolean): boolean {
@@ -62,6 +71,22 @@ function parseSameSite(value: string | undefined): SessionCookieSameSite {
     return normalized;
   }
   return "lax";
+}
+
+/**
+ * Normalize SESSION_COOKIE_DOMAIN. Empty/unset → null (host-only cookie).
+ * Accepts `example.org` or `.example.org` (leading dot = all subdomains).
+ */
+function normalizeCookieDomain(value: string | undefined): string | null {
+  const trimmed = value?.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  // Guard against obvious mistakes (scheme, path, port, whitespace).
+  if (/[/:\s]/.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
 }
 
 function parseAllowedCorsOrigins(value: string | undefined): string[] {
@@ -352,6 +377,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),
     sessionCookieSecure,
     sessionCookieSameSite: parseSameSite(env.SESSION_COOKIE_SAMESITE),
+    sessionCookieDomain: normalizeCookieDomain(env.SESSION_COOKIE_DOMAIN),
     allowedCorsOrigins: parseAllowedCorsOrigins(env.ALLOWED_CORS_ORIGINS),
     setupToken,
     playerPreviewPublic: parseBoolEnv(env.PLAYER_PREVIEW_PUBLIC, !isProduction),
@@ -375,6 +401,7 @@ export function getSessionCookieOptions(
     sameSite: config.sessionCookieSameSite,
     secure: config.sessionCookieSecure,
     path: "/",
+    ...(config.sessionCookieDomain ? { domain: config.sessionCookieDomain } : {}),
   };
 }
 

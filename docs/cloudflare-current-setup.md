@@ -48,6 +48,22 @@ Set on the host (not committed). The in-app status reflects these:
 | `TRUST_PROXY` | Trust Cloudflare proxy headers | `true` |
 | `CLOUDFLARE_TUNNEL` | Mark tunnel deployment | `true` |
 | `SESSION_COOKIE_SECURE` | Secure cookies (HTTPS only) | `true` in production |
+| `SESSION_COOKIE_DOMAIN` | Cookie `Domain` for cross-subdomain SSO | `.uweanddragons.org` (unset = host-only) |
+
+## Landing page + single sign-on across subdomains
+
+The apex `https://uweanddragons.org` serves the public **landing page** (the
+Studio app's root route `/`), routed to the Studio container (`:3000`) in the
+tunnel. A visitor chooses **UWE Studio** or **UWE Portal** and signs in in place;
+the landing's `POST /api/auth/enter` authenticates against UWE Core (Studio
+target requires GM access; Portal target accepts any active user), then the
+browser is sent to `studio.` / `portal.uweanddragons.org`.
+
+For that redirect to stay signed in, set **`SESSION_COOKIE_DOMAIN=.uweanddragons.org`**
+so the session cookie is shared across all subdomains (SSO). Left unset, the
+cookie is host-only and each origin must sign in separately. Only set this for a
+domain you fully control — every subdomain can then read the session; per-page
+authorization (e.g. Studio still rejects players) is unaffected.
 
 ## "Verify you are human" check (Cloudflare Turnstile)
 

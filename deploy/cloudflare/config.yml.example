@@ -1,7 +1,10 @@
 # Cloudflare Tunnel - UWE split-hostname deployment (recommended)
-# Studio: https://studio.uweanddragons.org -> local Studio app (:3000)
-# Portal: https://portal.uweanddragons.org -> local Portal app (:3001)
-# Legacy: https://uweanddragons.org (+ /portal, /studio paths) for bookmarks
+# Landing: https://uweanddragons.org        -> Studio app (:3000) — public entry + sign-in
+# Studio:  https://studio.uweanddragons.org  -> Studio app (:3000)
+# Portal:  https://portal.uweanddragons.org  -> Portal app (:3001)
+#
+# One sign-in on the apex landing is valid on both subdomains when
+# SESSION_COOKIE_DOMAIN=.uweanddragons.org is set (see .env.production.example).
 #
 # Remotely-managed tunnels: apply via Cloudflare Zero Trust dashboard or
 #   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh
@@ -16,12 +19,17 @@ ingress:
     service: http://127.0.0.1:3000
   - hostname: portal.uweanddragons.org
     service: http://127.0.0.1:3001
+  # Legacy /studio and /portal path bookmarks on the apex — keep these BEFORE the
+  # apex catch-all below so they still route to their app.
   - hostname: uweanddragons.org
     path: /studio
     service: http://127.0.0.1:3000
   - hostname: uweanddragons.org
     path: /portal
     service: http://127.0.0.1:3001
-  - hostname: uweandragons.org
-    service: http://127.0.0.1:3001
+  # Apex root = the public landing page, served by the Studio app. Its
+  # /api/auth/enter signs the visitor in (Studio or Portal target) and, with a
+  # domain-wide session cookie, the redirect to studio./portal. stays logged in.
+  - hostname: uweanddragons.org
+    service: http://127.0.0.1:3000
   - service: http_status:404

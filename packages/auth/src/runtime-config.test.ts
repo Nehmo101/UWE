@@ -59,6 +59,29 @@ describe("runtime config", () => {
     assert.equal(options.path, "/");
   });
 
+  it("omits cookie Domain by default (host-only)", () => {
+    const options = getSessionCookieOptions({ NODE_ENV: "production" });
+    assert.equal(options.domain, undefined);
+  });
+
+  it("sets a domain-wide cookie when SESSION_COOKIE_DOMAIN is configured", () => {
+    const options = getSessionCookieOptions({
+      NODE_ENV: "production",
+      SESSION_COOKIE_DOMAIN: ".uweanddragons.org",
+    });
+    assert.equal(options.domain, ".uweanddragons.org");
+  });
+
+  it("ignores a malformed SESSION_COOKIE_DOMAIN (scheme/path/port)", () => {
+    for (const bad of ["https://uweanddragons.org", "uweanddragons.org/x", "host:3000", "  "]) {
+      const options = getSessionCookieOptions({
+        NODE_ENV: "production",
+        SESSION_COOKIE_DOMAIN: bad,
+      });
+      assert.equal(options.domain, undefined, `expected no domain for ${JSON.stringify(bad)}`);
+    }
+  });
+
   it("keeps production cookies secure by default", () => {
     const options = getSessionCookieOptions({
       NODE_ENV: "production",

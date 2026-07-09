@@ -38,9 +38,11 @@ function PortalLoginFormInner({
   const redirectTo = searchParams.get("redirect") ?? defaultRedirect;
   const forbidden = searchParams.get("error") === "forbidden";
   const resetSuccess = searchParams.get("reset") === "success";
+  // Optional prefill forwarded from the uweanddragons.org landing page.
+  const prefillEmail = searchParams.get("email") ?? "";
 
   const [email, setEmail] = useState(
-    SHOW_DEV_CREDENTIALS && devDefaultEmail ? devDefaultEmail : "",
+    prefillEmail || (SHOW_DEV_CREDENTIALS && devDefaultEmail ? devDefaultEmail : ""),
   );
   const [password, setPassword] = useState(
     SHOW_DEV_CREDENTIALS && devDefaultPassword ? devDefaultPassword : "",

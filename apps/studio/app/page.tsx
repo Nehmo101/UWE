@@ -1,37 +1,23 @@
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { disconnectPrismaClientIfOwned } from "@uwe/database/client";
+import {
+  getTurnstileConfig,
+  resolvePortalPublicBaseUrl,
+  resolveStudioPublicBaseUrl,
+} from "@uwe/auth";
 import { UweLandingPage } from "@uwe/shared-ui";
-import { getCurrentUser } from "@/src/lib/auth";
 
-async function isSetupAvailable() {
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+// The public landing (uweanddragons.org) is served from the Studio/apex origin.
+// It reads the Studio/Portal origins and Turnstile key from runtime env, so
+// render it per-request.
+export const dynamic = "force-dynamic";
 
-  try {
-    return await auth.isSetupAvailable();
-  } catch {
-    return false;
-  } finally {
-    await disconnectPrismaClientIfOwned(db);
-  }
-}
-
-export default async function LandingPage() {
-  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
-  try {
-    user = await getCurrentUser();
-  } catch {
-    user = null;
-  }
-  const showSystemStatusLink = user?.role === "owner" || user?.role === "admin";
-
+export default function LandingPage() {
+  const turnstile = getTurnstileConfig();
   return (
     <UweLandingPage
-      currentApp="studio"
-      isLoggedIn={Boolean(user)}
-      userDisplayName={user?.displayName}
-      showSetupLink={await isSetupAvailable()}
-      showSystemStatusLink={showSystemStatusLink}
+      studioAppUrl={resolveStudioPublicBaseUrl()}
+      portalAppUrl={resolvePortalPublicBaseUrl()}
+      turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
+      rtxOnline
     />
   );
 }

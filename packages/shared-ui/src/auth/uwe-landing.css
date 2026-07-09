@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════════════════
+   UWE — "Uwe and Dragons" Landing Page (uweanddragons.org)
+   Pixel-spec: design_handoff_landing_page/README.md (Parchment OS).
+   Only pseudo-states, keyframes and media queries live here — layout
+   values are applied inline on the elements to mirror the design
+   reference 1:1. Colours come from the JS-applied --uwe-* theme tokens.
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes uweLpFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Expanding ring behind the RTX status dot when the host is online. */
+@keyframes uweLpPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 111, 99, 0.45);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgba(47, 111, 99, 0);
+  }
+}
+
+.uwe-lp-fade-hero {
+  animation: uweLpFadeUp 0.45s ease both;
+}
+.uwe-lp-fade-card-1 {
+  animation: uweLpFadeUp 0.45s ease 0.08s both;
+}
+.uwe-lp-fade-card-2 {
+  animation: uweLpFadeUp 0.45s ease 0.16s both;
+}
+.uwe-lp-fade-login {
+  animation: uweLpFadeUp 0.35s ease both;
+}
+
+/* Choice cards — lift on hover, nudge on press, accent border on hover.
+   The accent per card is provided via the --uwe-lp-accent custom prop. */
+.uwe-lp-card {
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.uwe-lp-card:hover,
+.uwe-lp-card:focus-visible {
+  border-color: var(--uwe-lp-accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(33, 29, 23, 0.24);
+  outline: none;
+}
+.uwe-lp-card:active {
+  transform: translateY(1px);
+}
+.uwe-lp-card:focus-visible {
+  box-shadow:
+    0 8px 24px rgba(33, 29, 23, 0.24),
+    0 0 0 2px var(--uwe-focus-shadow);
+}
+
+/* Text input — focus ring tinted to the chosen app accent. */
+.uwe-lp-input {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.uwe-lp-input:focus {
+  border-color: var(--uwe-lp-accent);
+  box-shadow: 0 0 0 2px var(--uwe-focus-shadow);
+}
+.uwe-lp-input::placeholder {
+  color: var(--uwe-fg-subtle);
+  opacity: 1;
+}
+
+/* Submit button — brighten on hover, press down on active. */
+.uwe-lp-submit {
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+.uwe-lp-submit:hover {
+  filter: brightness(1.06);
+}
+.uwe-lp-submit:active {
+  transform: translateY(1px);
+}
+.uwe-lp-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Ghost text buttons (back link, topbar brand). */
+.uwe-lp-ghost {
+  transition: color 0.15s ease;
+}
+.uwe-lp-back:hover,
+.uwe-lp-brand:hover {
+  color: var(--uwe-fg);
+}
+
+/* Reduced motion — kill every animation/transition and freeze the vines
+   (the canvas draws a single fully-grown static frame in JS). */
+@media (prefers-reduced-motion: reduce) {
+  .uwe-lp-root *,
+  .uwe-lp-root *::before,
+  .uwe-lp-root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
