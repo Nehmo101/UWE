@@ -64,7 +64,7 @@ describe("design v2 CSS bundle", () => {
   });
 });
 
-describe("theme preset QA — all 9 presets", () => {
+describe("theme preset QA — all 10 presets", () => {
   const requiredColorKeys = [
     "bg",
     "fg",

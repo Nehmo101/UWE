@@ -13,6 +13,7 @@ describe("uwe theme system", () => {
       "uwe-night-observatory",
       "uwe-parchment-study",
       "uwe-parchment-os",
+      "uwe-parchment-teal",
       "uwe-phosphor-console",
       "terra",
       "hells",

@@ -7,7 +7,7 @@ UWE uses a shared token-driven theme layer in `@uwe/shared-ui`:
 ```
 packages/shared-ui/src/theme/
   tokens.ts              # CSS variable names, font/density maps
-  themes.ts              # Preset definitions (9 UWE-native themes)
+  themes.ts              # Preset definitions (10 UWE-native themes)
   storage.ts             # localStorage per app scope + legacy ID map
   applyTheme.ts          # Runtime application to DOM
   bootstrapScript.ts     # Inline no-flash bootstrap
@@ -40,6 +40,7 @@ packages/shared-ui/src/
 | ID | Use case |
 |----|----------|
 | `uwe-parchment-os` | **Universal default** — light parchment OS (Studio + Portal) |
+| `uwe-parchment-teal` | Parchment OS chrome with teal player-visible accent (Portal-Design) |
 | `uwe-default` | Slate / indigo dark baseline |
 | `uwe-dark-fantasy` | Deep fantasy workspace |
 | `uwe-charcoal-desk` | Muted charcoal editing shell |

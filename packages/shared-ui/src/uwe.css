@@ -4756,11 +4756,14 @@ li[data-severity="warning"] .uwe-inspector-severity {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Parchment OS theme overrides
-   Selector: html[data-uwe-theme="uwe-parchment-os"]
+   Parchment chrome overrides — shared by Parchment OS + Parchment Teal
+   Selector: html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"])
+   Structural values (parchment surfaces, ink sidebar, serif headings) are
+   identical for both themes; every accent-colored spot reads var(--uwe-accent)
+   so the terracotta (OS) vs. teal (Teal) identity flows purely from the palette.
    ═══════════════════════════════════════════════════════════ */
 
-html[data-uwe-theme="uwe-parchment-os"] {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) {
   color-scheme: light;
   /* Space Mono drives all UI chrome; Newsreader handles display headings. */
   --uwe-font-family: var(--uwe-font-space-mono, ui-monospace, "Cascadia Code", monospace);
@@ -4771,12 +4774,12 @@ html[data-uwe-theme="uwe-parchment-os"] {
   --uwe-card: rgba(251, 246, 234, 0.95);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] body {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body {
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
 
 /* Shell — flat parchment background, no gradient */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-shell {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-shell {
   background: #f1e8d4;
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
@@ -4785,7 +4788,7 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-shell {
    Die fixe Höhe MUSS um --uwe-safe-top mitwachsen, sonst quetscht das
    Safe-Area-Padding den Inhalt unter die Handy-Statusleiste (Menübutton
    im PWA-/Fullscreen-Modus nicht mehr drückbar). */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-topbar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-topbar {
   height: calc(54px + var(--uwe-safe-top));
   min-height: calc(54px + var(--uwe-safe-top));
   padding-top: calc(0.45rem + var(--uwe-safe-top));
@@ -4796,14 +4799,14 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-topbar {
   -webkit-backdrop-filter: none;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] body.uwe-theme-frosted .uwe-topbar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body.uwe-theme-frosted .uwe-topbar {
   background: #e9dfca;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 /* Sidebar — dark ink panel */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar {
   background: #211d17;
   border-right: none;
   scrollbar-color: #3b342a transparent;
@@ -4815,86 +4818,86 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar {
   --uwe-link: var(--uwe-sidebar-fg);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] body.uwe-theme-frosted .uwe-sidebar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body.uwe-theme-frosted .uwe-sidebar {
   background: #211d17;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 /* Sidebar brand text */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar .uwe-brand strong {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-brand strong {
   color: #f1e8d4;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar .uwe-brand small {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-brand small {
   color: #b6ab92;
 }
 
 /* Sidebar section group headers — sidebar-fg-muted adapts per context: light on
    the dark nav sidebar, dark where .uwe-v2-context resets it for light panels. */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-section h3,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar h3 {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-section h3,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar h3 {
   color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
 }
 
 /* Sidebar nav — inactive */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-nav a {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-nav a {
   color: #b6ab92;
   border-left-color: transparent;
 }
 
 /* Sidebar nav — hover */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-nav a:hover {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-nav a:hover {
   color: #f1e8d4;
   background: rgba(255, 255, 255, 0.06);
 }
 
 /* Sidebar nav — active */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-nav a.active {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-nav a.active {
   color: #f1e8d4;
   background: #2c261d;
-  border-left-color: #c2622b;
+  border-left-color: var(--uwe-accent);
 }
 
 /* Nav badge inside sidebar */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar .uwe-nav-badge {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-nav-badge {
   background: #3b342a;
   color: #9a8f78;
 }
 
 /* Main content area */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-main {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main {
   background: #f1e8d4;
 }
 
 /* Headings in main use Newsreader serif */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-main h1,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-main h2,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-main h3,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-page-title,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-entity-title {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h1,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h2,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h3,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-page-title,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-entity-title {
   font-family: var(--uwe-font-newsreader, Georgia, serif);
   font-weight: 600;
 }
 
 /* Cards & panels — warm border, no glass */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-card {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-card {
   border-color: #e0d4ba;
 }
 
 /* Primary buttons — ink background */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-primary {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-btn-primary {
   background: #211d17;
   color: #fbf6ea;
   border-color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-primary:hover {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-btn-primary:hover {
   background: #2c261d;
 }
 
 /* Context / right panel — matches main parchment */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-context {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-context {
   background: #f1e8d4;
   border-left-color: #e0d4ba;
 }
@@ -4906,86 +4909,86 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-context {
    ─────────────────────────────────────────────────────────── */
 
 /* Auth shell — flat parchment, no dark gradient / glow */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-shell {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-shell {
   background: #f1e8d4;
   color: #211d17;
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-shell-glow {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-shell-glow {
   display: none;
 }
 
 /* Brand panel — warm sand, ink divider, no glass blur */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand {
   background: #e9dfca;
   border-right: 2px solid #211d17;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-kicker {
-  color: #c2622b;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-kicker {
+  color: var(--uwe-accent);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-title {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-title {
   color: #211d17;
   font-family: var(--uwe-font-newsreader, Georgia, serif);
 }
 
 /* Logo tile — solid amber, ink-cornered */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-logo {
-  background: #c2622b;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-logo {
+  background: var(--uwe-accent);
   color: #fbf6ea;
   border-radius: 0.3em;
   box-shadow: none;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-subtitle {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-subtitle {
   color: #574e40;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-desc {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-desc {
   color: #574e40;
 }
 
 /* Feature tiles — parchment cards with ink hairline */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-item {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-feature-item {
   background: #fbf6ea;
   border: 1.5px solid #e0d4ba;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-item:hover {
-  border-color: #c2622b;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-feature-item:hover {
+  border-color: var(--uwe-accent);
   background: #fbf6ea;
   box-shadow: 0 4px 14px rgba(33, 29, 23, 0.08);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-label {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-feature-label {
   color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-feature-detail {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-feature-detail {
   color: var(--uwe-fg-subtle);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-meta {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-meta {
   color: var(--uwe-fg-subtle);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-brand-badge {
-  background: #c2622b;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-brand-badge {
+  background: var(--uwe-accent);
   border-color: #211d17;
   color: #fbf6ea;
 }
 
 /* Auth content column */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-content {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-content {
   background: #f1e8d4;
 }
 
 /* Auth card — solid parchment card, ink border, no blur */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-card {
   background: #fbf6ea;
   border: 2px solid #211d17;
   border-radius: 16px;
@@ -4994,61 +4997,61 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card {
   -webkit-backdrop-filter: none;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card:hover {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-card:hover {
   border-color: #211d17;
   box-shadow: 0 14px 36px rgba(33, 29, 23, 0.14);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-card-header h1 {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-card-header h1 {
   color: #211d17;
   font-family: var(--uwe-font-newsreader, Georgia, serif);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-lead {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-lead {
   color: #574e40;
 }
 
 /* Auth form fields */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form label {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-form label {
   color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form input {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-form input {
   background: #fbf6ea;
   border: 1.5px solid #cbbfa3;
   color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-auth-form input:focus {
-  border-color: #c2622b;
-  box-shadow: 0 0 0 3px rgba(194, 98, 43, 0.18);
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-auth-form input:focus {
+  border-color: var(--uwe-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--uwe-accent) 20%, transparent);
 }
 
 /* Landing action buttons */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action-detail {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-landing-action-detail {
   color: inherit;
   opacity: 0.7;
 }
 
 /* Primary landing action = ink button */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-primary {
-  background: #c2622b;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-landing-action.uwe-btn-primary {
+  background: var(--uwe-accent);
   border-color: #211d17;
   color: #fbf6ea;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-primary:hover {
-  background: #d47030;
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-landing-action.uwe-btn-primary:hover {
+  background: var(--uwe-accent-hover);
 }
 
 /* Ghost landing actions = ink-outline on parchment */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-ghost {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-landing-action.uwe-btn-ghost {
   background: #fbf6ea;
   border: 1.5px solid #211d17;
   color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-ghost:hover {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-landing-action.uwe-btn-ghost:hover {
   background: #ece1c9;
 }
 
@@ -5057,20 +5060,20 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-landing-action.uwe-btn-ghost:hover 
    ─────────────────────────────────────────────────────────── */
 
 /* Display headings use Newsreader everywhere, not just .uwe-main */
-html[data-uwe-theme="uwe-parchment-os"] h1,
-html[data-uwe-theme="uwe-parchment-os"] h2,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-card-title,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-section-title {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) h1,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) h2,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-card-title,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-section-title {
   font-family: var(--uwe-font-newsreader, Georgia, serif);
 }
 
 /* Ghost buttons across the app — ink outline on parchment */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-ghost {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-btn-ghost {
   border-color: #cbbfa3;
   color: #211d17;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-btn-ghost:hover {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-btn-ghost:hover {
   background: #ece1c9;
   border-color: #211d17;
 }
