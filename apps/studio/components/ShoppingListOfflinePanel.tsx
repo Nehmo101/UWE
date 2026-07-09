@@ -18,10 +18,15 @@ function cacheKey(listId: string): string {
   return `uwe:shopping-offline:${listId}`;
 }
 
+function pendingKey(listId: string): string {
+  return `uwe:shopping-offline-pending:${listId}`;
+}
+
 export function ShoppingListOfflinePanel({ listId, items }: Props) {
   const [online, setOnline] = useState(true);
   const [offlineChecked, setOfflineChecked] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -57,6 +62,65 @@ export function ShoppingListOfflinePanel({ listId, items }: Props) {
     }
   }, [items, listId]);
 
+  async function syncItem(itemId: string, targetChecked: boolean) {
+    const serverItem = items.find((item) => item.id === itemId);
+    if (!serverItem || serverItem.checked === targetChecked) {
+      return;
+    }
+    const formData = new FormData();
+    formData.set("itemId", itemId);
+    formData.set("listId", listId);
+    await toggleShoppingItemAction(formData);
+  }
+
+  async function replayPending() {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      let pending: Record<string, boolean> = {};
+      try {
+        const raw = window.localStorage.getItem(pendingKey(listId));
+        pending = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      } catch {
+        pending = {};
+      }
+
+      const mergedPending = { ...pending };
+      for (const item of items) {
+        const localChecked = offlineChecked[item.id];
+        if (localChecked !== undefined && localChecked !== item.checked) {
+          mergedPending[item.id] = localChecked;
+        }
+      }
+
+      const entries = Object.entries(mergedPending);
+      if (entries.length === 0) {
+        setStatus(null);
+        return;
+      }
+
+      for (const [itemId, checked] of entries) {
+        await syncItem(itemId, checked);
+        delete mergedPending[itemId];
+        window.localStorage.setItem(pendingKey(listId), JSON.stringify(mergedPending));
+      }
+
+      window.localStorage.removeItem(pendingKey(listId));
+      setStatus("Offline-Änderungen synchronisiert.");
+    } catch {
+      setStatus("Sync fehlgeschlagen — lokaler Stand bleibt erhalten.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!online) return;
+    void replayPending();
+    // Replay only when connectivity returns — not on every checkbox change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, listId]);
+
   async function toggleOffline(itemId: string) {
     const nextChecked = !offlineChecked[itemId];
     const next = { ...offlineChecked, [itemId]: nextChecked };
@@ -64,17 +128,22 @@ export function ShoppingListOfflinePanel({ listId, items }: Props) {
     window.localStorage.setItem(cacheKey(listId), JSON.stringify(next));
 
     if (!online) {
+      const pendingRaw = window.localStorage.getItem(pendingKey(listId));
+      const pending = pendingRaw ? (JSON.parse(pendingRaw) as Record<string, boolean>) : {};
+      pending[itemId] = nextChecked;
+      window.localStorage.setItem(pendingKey(listId), JSON.stringify(pending));
       setStatus("Offline gespeichert — wird synchronisiert, sobald die Verbindung steht.");
       return;
     }
 
-    const formData = new FormData();
-    formData.set("itemId", itemId);
-    formData.set("listId", listId);
     try {
-      await toggleShoppingItemAction(formData);
+      await syncItem(itemId, nextChecked);
       setStatus(null);
     } catch {
+      const pendingRaw = window.localStorage.getItem(pendingKey(listId));
+      const pending = pendingRaw ? (JSON.parse(pendingRaw) as Record<string, boolean>) : {};
+      pending[itemId] = nextChecked;
+      window.localStorage.setItem(pendingKey(listId), JSON.stringify(pending));
       setStatus("Sync fehlgeschlagen — lokaler Stand bleibt erhalten.");
     }
   }
@@ -87,26 +156,29 @@ export function ShoppingListOfflinePanel({ listId, items }: Props) {
     <p className="uwe-dashboard-muted" style={{ fontSize: "0.85rem" }}>
       {!online ? (
         <>
-          <strong>Offline-Modus:</strong> Abhaken wird lokal zwischengespeichert.
-          {Object.entries(offlineChecked).map(([itemId, checked]) => {
-            const serverItem = items.find((item) => item.id === itemId);
-            if (!serverItem || serverItem.checked === checked) return null;
-            return (
-              <button
-                key={itemId}
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-small"
-                style={{ marginLeft: "0.5rem" }}
-                onClick={() => void toggleOffline(itemId)}
-              >
-                Sync {serverItem.name}
-              </button>
-            );
-          })}
+          <strong>Offline-Modus:</strong> Abhaken wird lokal zwischengespeichert und beim
+          Reconnect automatisch synchronisiert.
         </>
+      ) : syncing ? (
+        <>Synchronisiere Offline-Änderungen…</>
       ) : (
         <>Einkaufsliste wird lokal zwischengespeichert für kurze Offline-Phasen.</>
       )}
+      {Object.entries(offlineChecked).map(([itemId, checked]) => {
+        const serverItem = items.find((item) => item.id === itemId);
+        if (!serverItem || serverItem.checked === checked) return null;
+        return (
+          <button
+            key={itemId}
+            type="button"
+            className="uwe-v2-btn uwe-v2-btn-small"
+            style={{ marginLeft: "0.5rem" }}
+            onClick={() => void toggleOffline(itemId)}
+          >
+            Sync {serverItem.name}
+          </button>
+        );
+      })}
       {status ? <> {status}</> : null}
     </p>
   );

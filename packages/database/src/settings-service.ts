@@ -33,6 +33,7 @@ import {
   normalizeCustomThemes,
   type CustomThemeRecord,
 } from "./custom-theme-preferences";
+import { normalizeHiddenNavIds } from "./settings-validation-helpers";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 
@@ -79,6 +80,8 @@ export interface AppSettings {
   lastActiveWorldSlug?: string | null;
   /** UWE_VERSION the owner last acknowledged on the Startklar page. */
   startklarSeenVersion?: string | null;
+  /** Sidebar nav item ids hidden via System → Navigation (persisted in DB). */
+  hiddenNavIds?: string[];
 }
 
 export interface WorldSettings {
@@ -414,6 +417,7 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
     defaultLandingPage: normalizeDefaultLandingPage(app.defaultLandingPage),
+    hiddenNavIds: normalizeHiddenNavIds(app.hiddenNavIds),
     themePreferences: normalizeAppThemePreferences(app.themePreferences),
     customThemes: normalizeCustomThemes(app.customThemes),
   };
@@ -429,6 +433,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,
+    hiddenNavIds: [],
     customThemes: [],
     themePreferences: {
       studio: {

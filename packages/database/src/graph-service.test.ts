@@ -171,6 +171,16 @@ describe("graph-service", () => {
     assert.equal(relation.label, "Hafen");
   });
 
+  it("caps full-graph mode at MAX_GRAPH_NODES for performance", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const graph = await buildWorldGraph(repo, worldSlug, "dm", { mode: "full" });
+    if ((graph.totalNodeCount ?? graph.nodes.length) > 400) {
+      assert.equal(graph.truncated, true);
+      assert.equal(graph.nodes.length, 400);
+      assert.equal(graph.maxNodes, 400);
+    }
+  });
+
   it("does not expose secret pages or dm-only relations in portal graph", async () => {
     const repo = createUweRepository(databaseUrl);
     const graph = await buildWorldGraph(repo, worldSlug, "portal");

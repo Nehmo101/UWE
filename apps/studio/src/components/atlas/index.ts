@@ -5,6 +5,7 @@ export {
   AtlasStudioWorkspace,
   type AtlasStudioWorkspaceProps,
 } from "./AtlasStudioWorkspace";
+export { AtlasStudioWorkspaceLazy } from "./AtlasStudioWorkspaceLazy";
 export { AtlasNodeDetailPanel } from "./AtlasNodeDetailPanel";
 
 // Server → embedded-editor document adapter + palette id map.

@@ -91,3 +91,33 @@ export function validateSection(
   }
   return errors;
 }
+
+export function normalizeHiddenNavIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const ids = value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0 && entry.length <= 80);
+  return [...new Set(ids)].slice(0, 150);
+}
+
+export function parseHiddenNavIdsUpdate(
+  value: unknown,
+  errors: string[],
+): string[] | undefined {
+  if (!Array.isArray(value)) {
+    errors.push("settings.app.hiddenNavIds muss ein Array von Strings sein.");
+    return undefined;
+  }
+  const ids = value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0 && entry.length <= 80);
+  if (ids.length > 150) {
+    errors.push("settings.app.hiddenNavIds darf höchstens 150 Einträge haben.");
+    return undefined;
+  }
+  return [...new Set(ids)];
+}

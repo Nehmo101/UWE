@@ -26,6 +26,9 @@ import {
   type WorldGraphData,
 } from "./graph-types";
 
+/** Performance cap for full-graph mode (#648). */
+export const MAX_GRAPH_NODES = 400;
+
 export type {
   GraphEdge,
   GraphEdgeKind,
@@ -330,11 +333,29 @@ export async function buildWorldGraph(
   const scopedEdges = filterEdgesForNodes(edges, nodeIds);
   const focused = applyFocusMode(filteredNodes, scopedEdges, filters.focusPageId, mode);
 
+  if (mode === "full" && focused.nodes.length > MAX_GRAPH_NODES) {
+    const cappedIds = new Set(
+      focused.nodes.slice(0, MAX_GRAPH_NODES).map((node) => node.id),
+    );
+    return {
+      nodes: focused.nodes.slice(0, MAX_GRAPH_NODES),
+      edges: focused.edges.filter(
+        (edge) => cappedIds.has(edge.sourceId) && cappedIds.has(edge.targetId),
+      ),
+      focusPageId: filters.focusPageId,
+      mode,
+      totalNodeCount: focused.nodes.length,
+      truncated: true,
+      maxNodes: MAX_GRAPH_NODES,
+    };
+  }
+
   return {
     nodes: focused.nodes,
     edges: focused.edges,
     focusPageId: filters.focusPageId,
     mode,
+    totalNodeCount: focused.nodes.length,
   };
 }
 

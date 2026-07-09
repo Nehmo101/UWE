@@ -3,6 +3,7 @@ import { SettingsService, getProxyStatus, prisma } from "@uwe/database/server";
 import { applyDeploymentRuntimeOverrides, type DeploymentSettings } from "@uwe/database/deployment";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { CloudflareStatusAutoRefresh } from "@/components/CloudflareStatusAutoRefresh";
+import { CloudflareTunnelHealthPanel } from "@/components/CloudflareTunnelHealthPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Alert } from "@/src/components/ui/states";
 import { updateDeploymentConfigAction } from "./actions";
@@ -127,6 +128,7 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Effektiver Status</h2>
           <CloudflareStatusAutoRefresh />
+          <CloudflareTunnelHealthPanel />
           <StatusCard title="Routing" rows={routing} />
           <StatusCard title="Cloudflare" rows={cloudflare} />
           <StatusCard title="„Ich bin ein Mensch“-Prüfung" rows={humanCheck} />

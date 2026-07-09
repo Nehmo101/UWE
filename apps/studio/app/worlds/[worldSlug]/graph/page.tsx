@@ -122,7 +122,11 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
       >
         <PageHeader
           title="Link-Graph"
-          summary="Seiten als Knoten, Wikilinks und Relationen als Kanten."
+          summary={
+            graph.truncated
+              ? `Seiten als Knoten — ${graph.nodes.length} von ${graph.totalNodeCount ?? graph.nodes.length} angezeigt (Performance-Limit). Nutze Fokus/Filter oder Nachbarn-Modus.`
+              : "Seiten als Knoten, Wikilinks und Relationen als Kanten."
+          }
           actions={
             !isPlayerPreview ? (
               <Link

@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { NavItem } from "@uwe/shared-utils/navigation";
 import type { NavAudit, NavAuditEntry } from "../../navigation/inspect-navigation";
 import { readHiddenNavIds, toggleHiddenNavId } from "../../lib/nav-visibility-prefs";
+import { updateHiddenNavIdsAction } from "@/app/nav-actions";
 import { DataTable } from "../ui/data-table";
 import { NavIcon } from "../ui/icon";
 import { Alert, EmptyState } from "../ui/states";
@@ -83,7 +84,10 @@ export function NavigationOverview({ items, audit }: NavigationOverviewProps) {
   }, []);
 
   const handleToggle = React.useCallback((id: string, hidden: boolean) => {
-    setHiddenIds(toggleHiddenNavId(id, hidden));
+    const next = toggleHiddenNavId(id, hidden);
+    void updateHiddenNavIdsAction([...next]).catch(() => {
+      // localStorage remains the fallback when persistence fails
+    });
   }, []);
 
   const columns = React.useMemo(() => buildColumns(hiddenIds, handleToggle), [hiddenIds, handleToggle]);
@@ -102,7 +106,8 @@ export function NavigationOverview({ items, audit }: NavigationOverviewProps) {
         <p className="text-sm text-muted-foreground">
           Zentrale Navigation als Quelle für Sidebar, Mobile-Nav, Breadcrumbs und Command-Palette.
           Warnungen zeigen tote Links, geplante Routen, fehlende Nav-Einträge und Duplikate.
-          Ausgeblendete Einträge werden in der Sidebar ausgeblendet (lokal im Browser gespeichert).
+          Ausgeblendete Einträge werden in der Sidebar ausgeblendet und in den System-Einstellungen
+          gespeichert (geräteübergreifend).
         </p>
         <p className="text-sm text-muted-foreground">
           Live-Vorschau: <strong>{visibleCount}</strong> von {items.length} Einträgen sichtbar in der

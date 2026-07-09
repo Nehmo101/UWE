@@ -9,7 +9,7 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import type { BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import {
   AtlasNodeDetailPanel,
-  AtlasStudioWorkspace,
+  AtlasStudioWorkspaceLazy,
   buildPaletteIdMap,
   buildStudioAtlasDoc,
 } from "@/src/components/atlas";
@@ -189,7 +189,7 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
           linkedPage ? buildPageUrl(worldSlug, linkedPage.type as PageType, linkedPage.slug) : undefined
         }
       />
-      <AtlasStudioWorkspace
+      <AtlasStudioWorkspaceLazy
         worldSlug={worldSlug}
         nodeId={nodeId}
         doc={doc}

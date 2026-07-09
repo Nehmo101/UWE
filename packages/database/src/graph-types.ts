@@ -76,6 +76,11 @@ export interface WorldGraphData {
   edges: GraphEdge[];
   focusPageId?: string;
   mode: GraphViewMode;
+  /** Total nodes before performance cap (full mode). */
+  totalNodeCount?: number;
+  /** True when nodes were capped for performance. */
+  truncated?: boolean;
+  maxNodes?: number;
 }
 
 export function graphNodeCategoryLabel(category: GraphNodeCategory): string {

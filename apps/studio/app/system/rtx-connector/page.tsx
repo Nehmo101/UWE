@@ -7,6 +7,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { resolveHostConnectorConfig } from "@/src/lib/connector-config";
 import { RtxConnectorClient } from "./RtxConnectorClient";
+import { RtxInferenceTestPanel } from "./RtxInferenceTestPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,8 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
         hostQueueEnabled={hostConfig.queueEnabled}
         cloudFallbackAllowed={hostConfig.cloudFallbackAllowed}
       />
+
+      <RtxInferenceTestPanel useMock={process.env.AI_USE_MOCK === "true"} />
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Privacy-Guard</h2>
