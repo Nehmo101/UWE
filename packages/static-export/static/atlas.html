@@ -41,26 +41,27 @@
   .atlas-app canvas { display: block; touch-action: none; image-rendering: pixelated; }
   .atlas-app ::selection { background: rgba(194, 98, 43, 0.22); }
 
-  .tool-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--uwe-sidebar-fg); font-size: 12.5px; text-align: left; transition: background .12s ease, border-color .12s ease; }
+  .tool-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--uwe-sidebar-fg); font-size: 13px; text-align: left; transition: background .12s ease, border-color .12s ease; min-width: 0; }
   .tool-btn:hover { background: rgba(255, 255, 255, 0.06); }
   .tool-btn.active { background: var(--uwe-accent); color: #fff; border-color: rgba(0, 0, 0, 0.25); }
-  .tool-btn .k { margin-left: auto; font-size: 9.5px; opacity: .55; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
-  .tool-btn .ico { width: 18px; height: 18px; flex: none; }
-  .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 9px; border: 1.5px solid var(--uwe-border); background: var(--uwe-bg-elevated); color: var(--uwe-fg); font-size: 12px; transition: border-color .12s ease, background .12s ease; }
+  .tool-btn span:nth-child(2) { flex: 1; min-width: 0; line-height: 1.25; }
+  .tool-btn .k { margin-left: auto; flex: none; font-size: 9.5px; opacity: .55; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+  .tool-btn .ico { width: 20px; height: 20px; flex: none; }
+  .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 9px; border: 1.5px solid var(--uwe-border); background: var(--uwe-bg-elevated); color: var(--uwe-fg); font-size: 12.5px; transition: border-color .12s ease, background .12s ease; }
   .tb-btn:hover { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
   .tb-btn:active { transform: translateY(1px); }
   .tb-btn.on { background: var(--uwe-fg); color: var(--uwe-on-accent); border-color: var(--uwe-fg); }
   .seg { display: inline-flex; border: 1.5px solid var(--uwe-border); border-radius: 9px; overflow: hidden; background: var(--uwe-bg-elevated); }
   .seg button { height: 30px; padding: 0 11px; border: 0; background: transparent; color: var(--uwe-fg-muted); font-size: 11.5px; }
   .seg button.on { background: var(--uwe-accent); color: #fff; }
-  .swatch-btn { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; font-size: 11px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: var(--uwe-sidebar-fg); }
+  .swatch-btn { display: flex; align-items: center; gap: 7px; padding: 7px 8px; border-radius: 8px; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: var(--uwe-sidebar-fg); width: 100%; }
   .swatch-btn.on { background: rgba(194, 98, 43, 0.85); color: #fff; border-color: rgba(0, 0, 0, 0.3); }
-  .swatch-btn .chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
-  .glyph-btn { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+  .swatch-btn .chip { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
+  .glyph-btn { width: 52px; height: 52px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); flex: none; }
   .glyph-btn.on { border-color: var(--uwe-accent); background: var(--uwe-accent-muted); }
   .glyph-btn.fav { box-shadow: inset 0 0 0 1.5px #d9a441; }
-  .glyph-btn .ico { width: 22px; height: 22px; }
-  .grp-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
+  .glyph-btn .ico { width: 26px; height: 26px; }
+  .grp-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); padding: 2px 4px 6px; }
 
   .tb-btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
 
@@ -79,25 +80,24 @@
   .atlas-app:not(.is-view) .view-only { display: none !important; }
 
   /* Werkstatt-Layout (Roadmap W4 #14): Werkzeug-Schiene · Canvas · Inspektor · Asset-Shelf */
-  #tool-rail { flex: none; width: 168px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding: 12px 10px; border-right: 1px solid rgba(0,0,0,0.3); }
-  #inspector { flex: none; width: 240px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(0,0,0,0.3); transition: width .16s ease; }
-  #inspector.collapsed { width: 30px; }
+  #tool-rail { flex: none; width: 216px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; gap: 5px; overflow-y: auto; overflow-x: hidden; padding: 14px 12px; border-right: 1px solid rgba(0,0,0,0.3); }
+  #inspector { flex: none; width: 300px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(0,0,0,0.3); transition: width .16s ease; }
+  #inspector.collapsed { width: 34px; }
   #inspector.collapsed #inspector-scroll { display: none; }
-  #inspector-head { flex: none; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-bottom: 1px solid rgba(0,0,0,0.25); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); }
+  #inspector-head { flex: none; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-bottom: 1px solid rgba(0,0,0,0.25); font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--uwe-sidebar-fg-muted); }
   #inspector.collapsed #inspector-title { display: none; }
-  #inspector-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 16px; display: flex; flex-direction: column; gap: 4px; }
-  .dock-btn { margin-left: auto; border: 0; background: transparent; color: var(--uwe-sidebar-fg-muted); font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+  #inspector-scroll { flex: 1; overflow-y: auto; padding: 12px 12px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .dock-btn { margin-left: auto; border: 0; background: transparent; color: var(--uwe-sidebar-fg-muted); font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
   .dock-btn:hover { background: rgba(255,255,255,0.08); color: var(--uwe-sidebar-fg); }
-  #asset-shelf { flex: none; display: flex; align-items: stretch; gap: 14px; height: 138px; padding: 8px 12px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); border-top: 1px solid rgba(0,0,0,0.3); transition: height .16s ease; }
-  #asset-shelf.collapsed { height: 30px; overflow: hidden; }
-  #asset-shelf .shelf-group { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+  #asset-shelf { flex: none; display: flex; align-items: stretch; gap: 16px; height: 196px; padding: 10px 14px; background: var(--uwe-sidebar-bg); color: var(--uwe-sidebar-fg); border-top: 1px solid rgba(0,0,0,0.3); transition: height .16s ease; }
+  #asset-shelf.collapsed { height: 34px; overflow: hidden; }
+  #asset-shelf .shelf-group { display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+  #asset-shelf .shelf-terrain { flex: none; width: 204px; }
   #asset-shelf .shelf-assets { flex: 1; min-width: 0; }
   #asset-shelf.collapsed .shelf-group { display: none; }
-  /* Inspektor-Auswahlkarte: statt schwebendem Overlay nun angedockt */
-  #inspector #sel-panel { position: static; width: auto; margin-bottom: 10px; }
-  /* Asset-Browser-Steuerung links neben dem horizontalen Icon-Grid */
-  #assets-row > div:first-child { flex: none; width: 158px; align-self: flex-start; }
-  #asset-shelf .shelf-assets { flex: 1; }
+  #inspector #sel-panel { position: sticky; top: 0; z-index: 2; width: auto; margin-bottom: 4px; background: var(--uwe-surface); }
+  #inspector #plot-inspector { position: sticky; top: 0; z-index: 3; width: auto; margin-bottom: 8px; padding: 12px 13px; background: var(--uwe-surface); border: 1.5px solid var(--uwe-accent); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.2); }
+  #assets-row > div:first-child { flex: none; width: 188px; align-self: flex-start; }
 </style>
 </head>
 <body>
@@ -246,6 +246,8 @@
           <div id="sel-controls"></div>
           <button id="btn-erase-sel" class="tb-btn" style="width:100%; margin-top:10px; border-color:var(--uwe-danger); color:var(--uwe-danger); justify-content:center;">Löschen (Entf)</button>
         </div>
+        <!-- Objektfläche / Siedlungs-Generator — eigener sticky Block, unabhängig von Karten-Einstellungen -->
+        <div id="plot-inspector" class="editor-only" style="display:none;"></div>
         <!-- Karten-Einstellungen (JS hängt Theme/Licht/Klima/Größe/… hier an) -->
         <div id="inspector-body" class="editor-only" style="display:flex; flex-direction:column; gap:4px;"></div>
         <!-- Legende (nur Ansicht) -->
@@ -265,14 +267,14 @@
    <!-- ===================== BOTTOM ASSET SHELF ===================== -->
    <div id="asset-shelf" class="editor-only">
      <button id="btn-dock-shelf" class="dock-btn" title="Asset-Shelf ein-/ausklappen" style="margin:0; align-self:flex-start;">▾</button>
-     <div class="shelf-group" style="width:168px;">
+     <div class="shelf-group shelf-terrain">
        <div class="grp-label">Terrain-Pinsel</div>
-       <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:0 2px; overflow-y:auto;"></div>
+       <div id="terrain-swatches" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 2px; overflow-y:auto; flex:1; min-height:0;"></div>
      </div>
      <div class="shelf-group shelf-assets">
        <div class="grp-label">Objekte &amp; Bauten</div>
-       <div id="assets-row" style="display:flex; gap:8px; flex:1; min-height:0;">
-         <div id="glyph-grid" style="display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, 44px); gap:5px; padding:2px; overflow-x:auto; flex:1;"></div>
+       <div id="assets-row" style="display:flex; gap:10px; flex:1; min-height:0;">
+         <div id="glyph-grid" style="display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, 52px); gap:6px; padding:2px; overflow-x:auto; flex:1;"></div>
        </div>
      </div>
    </div>
@@ -672,6 +674,27 @@ function toggleSel(k) {
   setState({ selectedKey: keys.length ? keys[keys.length - 1] : null });
 }
 function clearSel() { selection.clear(); setState({ selectedKey: null }); }
+// Plot-Feature zur aktuellen Auswahl — direkt (Objektfläche) oder über Scatter-Objekt (style.plotKey).
+function plotFeatureForSelection() {
+  if (!doc) return null;
+  const f = doc.features.find((x) => x._key === state.selectedKey);
+  if (f && f.kind === "plot") return f;
+  const o = doc.objects.find((x) => x._key === state.selectedKey);
+  const pk = o && o.style && o.style.plotKey;
+  if (pk) return doc.features.find((x) => x._key === pk && x.kind === "plot") || null;
+  return null;
+}
+function scrollSelectionPanelIntoView() {
+  const plotInsp = el("plot-inspector");
+  if (plotInsp && plotInsp.style.display !== "none") {
+    requestAnimationFrame(() => { plotInsp.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+    return;
+  }
+  const selP = el("sel-panel");
+  if (selP && selP.style.display !== "none") {
+    requestAnimationFrame(() => { selP.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+  }
+}
 function eraseSelection() {
   if (!selection.size) return;
   pushUndo();
@@ -1927,7 +1950,7 @@ function onPointerDown(e) {
         return;
       }
     }
-    const hit = hitTest(nx, ny);
+    const hit = hitTest(nx, ny, { preferObject: e.shiftKey });
     if (hit && e.shiftKey) { toggleSel(hit); requestAnimationFrame(draw); return; }
     if (hit && selection.has(hit)) { moving = true; moveUndoPushed = false; dragAxisStart = [cx, cy]; return; }
     if (hit) { selectOnly(hit); requestAnimationFrame(draw); return; }
@@ -2371,6 +2394,40 @@ const SETTLEMENT_WF_EDGES = [["auto", "Ufer: Auto (längste Kante)"], ["0", "Ufe
 const SETTLEMENT_WF_PIERS = [["1", "1 Pier"], ["2", "2 Piere"], ["3", "3 Piere"], ["4", "4 Piere"]];
 // Verfallsgrad (Roadmap W4 #25): Engine-Option `condition` in generateSettlement.
 const SETTLEMENT_CONDITIONS = [["thriving", "Zustand: blühend"], ["besieged", "Zustand: belagert"], ["abandoned", "Zustand: verlassen"], ["ruined", "Zustand: Ruine"]];
+function optionHtml(list, cur) {
+  return list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
+}
+function plotSettlementPanelHtml(plotF, includePlotActions) {
+  const opt = optionHtml;
+  let html = "";
+  if (includePlotActions) {
+    html += '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objektfläche</div>' +
+      '<div style="font-size:10.5px;color:var(--uwe-fg-muted);margin-top:4px;">' + (plotF.style && plotF.style.gouache ? "Asset: " + plotF.style.gouache : "Gouache-Scatter") + "</div>" +
+      '<div style="display:flex;gap:6px;margin-top:8px;">' +
+      '<button class="tb-btn" data-plot="fill" style="flex:1;justify-content:center;">✦ Füllen</button>' +
+      '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
+      '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
+      "</div>";
+  }
+  html += '<div style="font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-top:' + (includePlotActions ? "12" : "0") + 'px;">Siedlungs-Generator</div>' +
+    '<div style="display:flex;gap:4px;margin-top:6px;">' +
+    '<button class="tb-btn' + (settlementWfOpts.mode !== "schloss" ? " on" : "") + '" data-stlmode="stadt" style="flex:1;justify-content:center;" title="Ganze Stadt: Mauer, Straßennetz, Marktplatz, Kirche, Häuser">Großstadt</button>' +
+    '<button class="tb-btn' + (settlementWfOpts.mode === "schloss" ? " on" : "") + '" data-stlmode="schloss" style="flex:1;justify-content:center;" title="Kompakte Festung: ein Tor, Wehrtürme, dominanter Bergfried">Schloss</button>' +
+    "</div>" +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;">Bebauung<input id="stl-density" type="range" min="0.5" max="1.5" step="0.1" value="' + (Number(settlementWfOpts.density) || 1) + '" style="flex:1;" title="Dichte der Bebauung"></label>' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;cursor:pointer;"><input id="stl-wf" type="checkbox"' + (settlementWfOpts.harbor ? " checked" : "") + "> Am Wasser (Werft)</label>" +
+    (settlementWfOpts.harbor
+      ? '<select id="stl-wf-edge" class="sel-select">' + opt(SETTLEMENT_WF_EDGES, settlementWfOpts.edge) + "</select>" +
+        '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
+      : "") +
+    '<select id="stl-condition" class="sel-select" title="Verfallsgrad der generierten Siedlung">' + opt(SETTLEMENT_CONDITIONS, settlementWfOpts.condition) + "</select>" +
+    '<div style="display:flex;gap:6px;margin-top:6px;">' +
+    '<button class="tb-btn" data-plot="settlement" style="flex:1;justify-content:center;" title="Siedlung als Ghost-Vorschlag setzen">Siedlung setzen</button>' +
+    '<button class="tb-btn" data-plot="reroll" title="Siedlung mit neuem Seed neu würfeln">↻ Neu würfeln</button>' +
+    "</div>";
+  return html;
+}
 
 // ---- Pfad-Anhänge (CoK): Objekte säumen einen Fluss/eine Straße ----
 const ATTACH_KINDS = [["trees", "Bäume"], ["houses", "Häuser"], ["towers", "Türme"]];
@@ -2554,11 +2611,32 @@ function eraseKey(k) {
 }
 function eraseAt(nx, ny) { const hit = hitTest(nx, ny); if (hit) eraseKey(hit); }
 
-function hitTest(wx, wy) {
+function polygonFeatureAt(wx, wy) {
+  const feats = nodeFeatures().filter((f) => entIsUnderworld(f) === state.underworld);
+  for (let i = feats.length - 1; i >= 0; i--) {
+    const f = feats[i];
+    if (f.kind !== "plot" && f.kind !== "biome" && f.kind !== "region") continue;
+    const g = f.geometry;
+    if (g && g.type === "Polygon") {
+      for (const ring of g.rings || []) {
+        if (engine.pointInPolygon([wx, wy], ring)) return f._key;
+      }
+    }
+  }
+  return null;
+}
+
+function hitTest(wx, wy, opts) {
+  opts = opts || {};
   // Nur die aktive Ebene (Oberfläche/Unterwelt) ist interaktiv (W4 #26).
   const objs = nodeObjects().filter((o) => entIsUnderworld(o) === state.underworld);
   const feats = nodeFeatures().filter((f) => entIsUnderworld(f) === state.underworld);
   const thr = 14 / (state.zoom * Math.max(WORLD_W, WORLD_H));
+  // Auswahl: Polygon-Flächen vor Scatter-Objekten (Shift = Einzelobjekt).
+  if (state.tool === "select" && !opts.preferObject) {
+    const polyKey = polygonFeatureAt(wx, wy);
+    if (polyKey) return polyKey;
+  }
   for (let i = objs.length - 1; i >= 0; i--) { const o = objs[i]; if (Math.hypot(o.x - wx, o.y - wy) < thr * 2) return o._key; }
   for (let i = feats.length - 1; i >= 0; i--) { const f = feats[i], g = f.geometry; if (g.type === "Point" || g.type === "LabelAnchor") { const c = g.coordinates; if (c && Math.hypot(c[0] - wx, c[1] - wy) < thr * 2.4) return f._key; } }
   for (let i = feats.length - 1; i >= 0; i--) {
@@ -2874,8 +2952,8 @@ function buildSidebar() {
       btn.className = "glyph-btn"; btn.title = a.name + " · Gouache — Rechtsklick: Favorit ★";
       btn.dataset.assetKey = a.key; btn.dataset.cat = a.category || ""; btn.dataset.name = (a.name || "").toLowerCase();
       if (assetFavs.has(a.key)) btn.classList.add("fav");
-      const cv = document.createElement("canvas"); cv.width = 44; cv.height = 44; cv.style.width = "100%"; cv.style.height = "auto";
-      try { engine.drawGouacheAsset(cv.getContext("2d"), a.key, { x: 22, y: 36, size: 24, lineWidth: 1.1 }); } catch (_) {}
+      const cv = document.createElement("canvas"); cv.width = 48; cv.height = 48; cv.style.width = "100%"; cv.style.height = "auto";
+      try { engine.drawGouacheAsset(cv.getContext("2d"), a.key, { x: 24, y: 38, size: 26, lineWidth: 1.1 }); } catch (_) {}
       btn.appendChild(cv);
       btn.addEventListener("click", () => pickGouache(a.key));
       btn.addEventListener("contextmenu", (e) => { e.preventDefault(); toggleAssetFav(a.key, btn); });
@@ -3143,7 +3221,7 @@ function refreshChrome() {
     else if (st.tool === "spray") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Streu-Pinsel:</b> gedrückt halten & ziehen · Asset aus der Palette · Rechtsklick löscht'; }
     else if (st.tool === "landmass") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Landmasse:</b> Land malen · Rechtsklick malt Wasser · Küste entsteht organisch · Pinsel ' + ["klein", "mittel", "groß"][st.brushSize]; }
     else if (st.tool === "measure") { subShow = true; subHtml = '<b style="color:var(--uwe-accent)">Reiseplaner:</b> Route zusammenklicken · Rastpunkte je Reisetag · Enter speichert als Route · Esc leert'; }
-    else if (st.tool === "select") { subShow = true; subHtml = "Klick = auswählen · Shift+Klick = erweitern · Shift+Ziehen = Rahmenauswahl · Ziehen = Gruppe bewegen"; }
+    else if (st.tool === "select") { subShow = true; subHtml = "Klick = Fläche/Pfad auswählen (Objektfläche vor Scatter) · Shift+Klick = Einzelobjekt · Shift+Ziehen = Rahmen · Ziehen = bewegen"; }
     else if (st.tool === "plot" || st.tool === "path") { subShow = true; subHtml = "Punkte klicken · Doppelklick oder Enter zum Abschließen · Esc bricht ab"; }
     else if (st.tool === "region") {
       subShow = true;
@@ -3162,6 +3240,7 @@ function refreshChrome() {
   const selP = el("sel-panel");
   const selO = doc && doc.objects.find((o) => o._key === st.selectedKey);
   const selF = doc && doc.features.find((f) => f._key === st.selectedKey);
+  const plotSel = !view ? plotFeatureForSelection() : null;
   if (selection.size > 1) {
     el("sel-kind").textContent = "Gruppe";
     el("sel-controls").innerHTML =
@@ -3198,14 +3277,14 @@ function refreshChrome() {
           "</div>" +
           (selO.style && selO.style.gouache ? '<div style="font-size:10px;color:var(--uwe-accent);margin-top:4px;">🎨 Gouache: ' + (engine.getGouacheAsset(selO.style.gouache) ? engine.getGouacheAsset(selO.style.gouache).name : selO.style.gouache) + "</div>" : "") +
           '<button class="tb-btn" data-obj="vari" style="width:100%;justify-content:center;margin-top:8px;" title="Skala/Rotation deterministisch neu würfeln">↻ Variieren</button>') +
-      '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben · Shift+Klick erweitert Auswahl</div>' +
+      '<div style="font-size:11px;color:var(--uwe-fg-muted);margin-top:4px;">Ziehen zum Verschieben · Shift+Klick = Einzelobjekt</div>' +
       (selO.linkedPageId ? '<div style="font-size:11px;color:var(--uwe-player-visible);margin-top:4px;">↗ Wiki verknüpft</div>' : "");
     selP.style.display = "block";
   } else if (selF) {
     const kind = ({ region: "Region", biome: "Biom", plot: "Objektfläche", river: "Fluss", road: "Straße", vine: "Ranke", label: "Label", pin: "Pin" })[selF.kind] || selF.kind;
     const vis = selF.visibility === "player_visible";
     const isPathKind = selF.kind === "river" || selF.kind === "road" || selF.kind === "vine";
-    const opt = (list, cur) => list.map(([v, l]) => '<option value="' + v + '"' + (String(cur) === v ? " selected" : "") + ">" + l + "</option>").join("");
+    const opt = optionHtml;
     el("sel-kind").textContent = kind;
     const labelVal = selF.labelText || "";
     el("sel-controls").innerHTML =
@@ -3238,34 +3317,6 @@ function refreshChrome() {
           '<button class="tb-btn" data-vine="roll" style="width:100%;justify-content:center;margin-top:8px;" title="Ausläufer neu würfeln">↻ Neu würfeln</button>' +
           "</div>"
         : "") +
-      (selF.kind === "plot" && !view
-        ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
-          '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objektfläche</div>' +
-          '<div style="font-size:10.5px;color:var(--uwe-fg-muted);margin-top:4px;">' + (selF.style && selF.style.gouache ? "Asset: " + selF.style.gouache : "Gouache-Scatter") + "</div>" +
-          '<div style="display:flex;gap:6px;margin-top:8px;">' +
-          '<button class="tb-btn" data-plot="fill" style="flex:1;justify-content:center;">✦ Füllen</button>' +
-          '<button class="tb-btn" data-plot="roll" title="Neuer Zufalls-Seed">↻</button>' +
-          '<button class="tb-btn" data-plot="ai" title="RTX-Rezept als Ghost-Vorschlag">KI</button>' +
-          "</div>" +
-          '<div style="font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--uwe-fg-muted);margin-top:12px;">Siedlungs-Generator</div>' +
-          '<div style="display:flex;gap:4px;margin-top:6px;">' +
-          '<button class="tb-btn' + (settlementWfOpts.mode !== "schloss" ? " on" : "") + '" data-stlmode="stadt" style="flex:1;justify-content:center;" title="Ganze Stadt: Mauer, Straßennetz, Marktplatz, Kirche, Häuser">Großstadt</button>' +
-          '<button class="tb-btn' + (settlementWfOpts.mode === "schloss" ? " on" : "") + '" data-stlmode="schloss" style="flex:1;justify-content:center;" title="Kompakte Festung: ein Tor, Wehrtürme, dominanter Bergfried">Schloss</button>' +
-          "</div>" +
-          '<label style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;">Bebauung<input id="stl-density" type="range" min="0.5" max="1.5" step="0.1" value="' + (Number(settlementWfOpts.density) || 1) + '" style="flex:1;" title="Dichte der Bebauung"></label>' +
-          '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:8px;cursor:pointer;"><input id="stl-wf" type="checkbox"' + (settlementWfOpts.harbor ? " checked" : "") + "> Am Wasser (Werft)</label>" +
-          (settlementWfOpts.harbor
-            ? '<select id="stl-wf-edge" class="sel-select">' + opt(SETTLEMENT_WF_EDGES, settlementWfOpts.edge) + "</select>" +
-              '<select id="stl-wf-piers" class="sel-select">' + opt(SETTLEMENT_WF_PIERS, settlementWfOpts.piers) + "</select>" +
-              '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--uwe-fg-muted);margin-top:6px;cursor:pointer;"><input id="stl-wf-dock" type="checkbox"' + (settlementWfOpts.dock ? " checked" : "") + "> Dock-Marker</label>"
-            : "") +
-          '<select id="stl-condition" class="sel-select" title="Verfallsgrad der generierten Siedlung">' + opt(SETTLEMENT_CONDITIONS, settlementWfOpts.condition) + "</select>" +
-          '<div style="display:flex;gap:6px;margin-top:6px;">' +
-          '<button class="tb-btn" data-plot="settlement" style="flex:1;justify-content:center;" title="Siedlung als Ghost-Vorschlag setzen">Siedlung setzen</button>' +
-          '<button class="tb-btn" data-plot="reroll" title="Siedlung mit neuem Seed neu würfeln">↻ Neu würfeln</button>' +
-          "</div>" +
-          "</div></div>"
-        : "") +
       (isPathKind
         ? '<div style="border-top:1px solid var(--uwe-border);margin-top:10px;padding-top:8px;">' +
           '<div style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--uwe-fg-muted);">Objekte säumen</div>' +
@@ -3287,6 +3338,21 @@ function refreshChrome() {
     }
     selP.style.display = "block";
   } else { selP.style.display = "none"; }
+
+  // Objektfläche / Siedlungs-Generator — eigener sticky Block (immer sichtbar bei Plot-Auswahl)
+  const plotInsp = el("plot-inspector");
+  if (plotInsp) {
+    if (plotSel && !view) {
+      plotInsp.innerHTML = plotSettlementPanelHtml(plotSel, !!(selF && selF.kind === "plot"));
+      plotInsp.style.display = "block";
+    } else if (st.tool === "plot" && !view) {
+      plotInsp.innerHTML = '<div style="font-size:10px;color:var(--uwe-fg-muted);line-height:1.5;">Polygon zeichnen (F) — Punkte setzen, Doppelklick/Enter abschließen. Danach erscheint der Siedlungs-Generator hier.</div>';
+      plotInsp.style.display = "block";
+    } else {
+      plotInsp.style.display = "none";
+    }
+  }
+  if ((selP.style.display === "block" && plotSel) || (plotInsp && plotInsp.style.display !== "none")) scrollSelectionPanelIntoView();
 
   // AI review
   const ai = el("ai-review");
@@ -3380,20 +3446,27 @@ function wire() {
     if (e.target && e.target.id === "territory-culture") territoryCulture = e.target.value;
   });
 
-  // Auswahl-Panel: Pfad-Anhänge + Gruppen-Aktionen (Delegation, da innerHTML neu baut)
-  el("sel-panel").addEventListener("click", (e) => {
+  // Inspektor-Panels: Auswahl + Objektfläche (Delegation, da innerHTML neu baut)
+  el("inspector-scroll").addEventListener("click", (e) => {
+    if (!e.target.closest("#sel-panel") && !e.target.closest("#plot-inspector")) return;
+    const selectPlotBtn = e.target.closest("[data-act=\"select-plot\"]");
+    if (selectPlotBtn) {
+      const pf = plotFeatureForSelection();
+      if (pf) { selectOnly(pf._key); draw(); }
+      return;
+    }
     const modeBtn = e.target.closest("[data-stlmode]");
     if (modeBtn) {
       settlementWfOpts.mode = modeBtn.dataset.stlmode === "schloss" ? "schloss" : "stadt";
       refreshChrome();
-      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
-      if (f && f.kind === "plot" && settlementReview) requestSettlementReview(f);
+      const f = plotFeatureForSelection();
+      if (f && settlementReview) requestSettlementReview(f);
       return;
     }
     const plotBtn = e.target.closest("[data-plot]");
     if (plotBtn) {
-      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
-      if (f && f.kind === "plot") {
+      const f = plotFeatureForSelection();
+      if (f) {
         if (plotBtn.dataset.plot === "ai") {
           requestPlotFillProposal(f);
         } else if (plotBtn.dataset.plot === "settlement") {
@@ -3409,6 +3482,7 @@ function wire() {
       }
       return;
     }
+    if (!e.target.closest("#sel-panel")) return;
     const att = e.target.closest("[data-att]");
     if (att) {
       const f = doc && doc.features.find((x) => x._key === state.selectedKey);
@@ -3477,7 +3551,8 @@ function wire() {
     const batch = e.target.closest("[data-batch]");
     if (batch) setSelectionVisibility(batch.dataset.batch === "show" ? "player_visible" : "dm_only");
   });
-  el("sel-panel").addEventListener("change", (e) => {
+  el("inspector-scroll").addEventListener("change", (e) => {
+    if (!e.target.closest("#sel-panel") && !e.target.closest("#plot-inspector")) return;
     const t = e.target;
     if (t.id === "att-kind") attachOpts.kind = t.value;
     else if (t.id === "att-side") attachOpts.side = t.value;
@@ -3485,8 +3560,8 @@ function wire() {
     else if (t.id === "att-align") attachOpts.align = !!t.checked;
     else if (t.id === "stl-density") {
       settlementWfOpts.density = Number(t.value);
-      const f = doc && doc.features.find((x) => x._key === state.selectedKey);
-      if (f && f.kind === "plot" && settlementReview) requestSettlementReview(f);
+      const f = plotFeatureForSelection();
+      if (f && settlementReview) requestSettlementReview(f);
     }
     else if (t.id === "stl-wf") { settlementWfOpts.harbor = t.checked; refreshChrome(); }
     else if (t.id === "stl-wf-edge") settlementWfOpts.edge = t.value;
