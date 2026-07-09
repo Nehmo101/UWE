@@ -1,5 +1,6 @@
 import { requireOwner } from "@/src/lib/auth";
 import { prisma } from "@uwe/database/server";
+import { BreadcrumbTrail } from "@/src/components/shell";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { getCommandCenterData } from "@/src/lib/command-center-data";
 import { CommandCenterClient } from "./CommandCenterClient";
@@ -12,7 +13,17 @@ export default async function SystemCommandCenterPage() {
   const initial = await getCommandCenterData(prisma, { useMockInference });
 
   return (
-    <SystemShell breadcrumb={<span>System / Kommandozentrale</span>}>
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Heute", href: "/today" },
+            { label: "System", href: "/system" },
+            { label: "Kommandozentrale" },
+          ]}
+        />
+      }
+    >
       <CommandCenterClient initial={initial} />
     </SystemShell>
   );

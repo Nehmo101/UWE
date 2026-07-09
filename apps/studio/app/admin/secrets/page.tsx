@@ -6,6 +6,8 @@ import { formatStudioDateTime } from "@/src/lib/format";
 import type {
   SecretItemStatus,
   SecretSource,
+  SecretsStatusItem,
+  SecretsStatusSection,
   SecretsStatusWarningSeverity,
 } from "@uwe/database/server";
 
@@ -13,6 +15,12 @@ function statusLabel(status: SecretItemStatus): string {
   if (status === "set") return "gesetzt";
   if (status === "decrypt_failed") return "Entschlüsselung fehlgeschlagen";
   return "fehlt";
+}
+
+function statusBadgeStatus(status: SecretItemStatus): "ok" | "degraded" | "error" {
+  if (status === "set") return "ok";
+  if (status === "decrypt_failed") return "error";
+  return "degraded";
 }
 
 function sourceLabel(source: SecretSource): string {
@@ -25,6 +33,99 @@ function warningBadgeClass(severity: SecretsStatusWarningSeverity): string {
   if (severity === "critical") return "uwe-badge uwe-badge-danger";
   if (severity === "warning") return "uwe-badge uwe-badge-warning";
   return "uwe-badge";
+}
+
+function sectionSummary(items: SecretsStatusItem[]): string {
+  const setCount = items.filter((item) => item.status === "set").length;
+  const missingCount = items.filter((item) => item.status === "missing").length;
+  const failedCount = items.filter((item) => item.status === "decrypt_failed").length;
+  const parts = [`${setCount} gesetzt`, `${missingCount} fehlen`];
+  if (failedCount > 0) {
+    parts.push(`${failedCount} Entschlüsselung fehlgeschlagen`);
+  }
+  return parts.join(" · ");
+}
+
+function SecretsSectionTable({ section }: { section: SecretsStatusSection }) {
+  const hasIssues = section.items.some(
+    (item) => item.status === "missing" || item.status === "decrypt_failed",
+  );
+  const defaultOpen = section.id !== "host-env" || hasIssues;
+
+  const content = (
+    <>
+      <p className="uwe-dashboard-muted">{section.description}</p>
+      <p className="uwe-dashboard-muted" style={{ marginTop: "0.35rem" }}>
+        {sectionSummary(section.items)}
+      </p>
+      <div className="uwe-table-wrap" style={{ marginTop: "0.75rem" }}>
+        <table className="uwe-table">
+          <thead>
+            <tr>
+              <th>Secret</th>
+              <th>Quelle</th>
+              <th>Status</th>
+              <th>Maskiert</th>
+              <th>Aktualisiert</th>
+              <th>Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {section.items.map((item) => (
+              <tr key={item.id}>
+                <td>
+                  <strong>{item.label}</strong>
+                  {item.description && (
+                    <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
+                      {item.description}
+                    </p>
+                  )}
+                  {item.envKey && (
+                    <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
+                      <code>{item.envKey}</code>
+                    </p>
+                  )}
+                </td>
+                <td>{sourceLabel(item.source)}</td>
+                <td>
+                  <HealthBadge status={statusBadgeStatus(item.status)} label={statusLabel(item.status)} />
+                </td>
+                <td>{item.maskedHint ?? (item.bootstrap ? "nur ENV" : "—")}</td>
+                <td>{item.updatedAt ? formatStudioDateTime(new Date(item.updatedAt)) : "—"}</td>
+                <td>
+                  {item.href ? (
+                    <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={item.href}>
+                      Konfigurieren
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+
+  if (section.id === "host-env") {
+    return (
+      <details className="uwe-v2-card" style={{ marginBottom: "1rem" }} open={defaultOpen}>
+        <summary className="uwe-v2-section-title" style={{ cursor: "pointer", listStyle: "none" }}>
+          {section.title}
+        </summary>
+        <div style={{ marginTop: "0.75rem" }}>{content}</div>
+      </details>
+    );
+  }
+
+  return (
+    <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
+      <h2 className="uwe-v2-section-title">{section.title}</h2>
+      {content}
+    </section>
+  );
 }
 
 export default async function AdminSecretsPage() {
@@ -47,14 +148,19 @@ export default async function AdminSecretsPage() {
         title="Secrets-Status"
         summary="Read-only Übersicht bekannter Secrets — Quelle, Status und maskiertes Last-4. Kein Klartext, kein Vault."
         actions={
-          <HealthBadge
-            status={snapshot.ok ? "ok" : "error"}
-            label={
-              snapshot.ok
-                ? "Keine kritischen Probleme"
-                : `${criticalWarnings.length} kritisch`
-            }
-          />
+          <>
+            <Link className="uwe-v2-btn" href="/admin/security">
+              Security Dashboard
+            </Link>
+            <HealthBadge
+              status={snapshot.ok ? "ok" : "error"}
+              label={
+                snapshot.ok
+                  ? "Keine kritischen Probleme"
+                  : `${criticalWarnings.length} kritisch`
+              }
+            />
+          </>
         }
       />
 
@@ -102,54 +208,7 @@ export default async function AdminSecretsPage() {
       )}
 
       {snapshot.sections.map((section) => (
-        <section key={section.id} className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
-          <h2 className="uwe-v2-section-title">{section.title}</h2>
-          <p className="uwe-dashboard-muted">{section.description}</p>
-          <div className="uwe-table-wrap" style={{ marginTop: "0.75rem" }}>
-            <table className="uwe-table">
-              <thead>
-                <tr>
-                  <th>Secret</th>
-                  <th>Quelle</th>
-                  <th>Status</th>
-                  <th>Maskiert</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {section.items.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.label}</strong>
-                      {item.description && (
-                        <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
-                          {item.description}
-                        </p>
-                      )}
-                      {item.envKey && (
-                        <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
-                          <code>{item.envKey}</code>
-                        </p>
-                      )}
-                    </td>
-                    <td>{sourceLabel(item.source)}</td>
-                    <td>{statusLabel(item.status)}</td>
-                    <td>{item.maskedHint ?? (item.bootstrap ? "—" : "—")}</td>
-                    <td>
-                      {item.href ? (
-                        <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={item.href}>
-                          Konfigurieren
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <SecretsSectionTable key={section.id} section={section} />
       ))}
 
       <p className="uwe-hint">

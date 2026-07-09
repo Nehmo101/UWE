@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -64,7 +65,7 @@ export default async function PortalCharactersPage({ params }: Props) {
       </ul>
 
       {characters.length === 0 && (
-        <p className="auth-muted">Noch keine Charakterbögen für deine Rolle verfügbar.</p>
+        <PortalEmptyState title="Keine Charakterbögen verfügbar" icon="user" />
       )}
     </section>
   );

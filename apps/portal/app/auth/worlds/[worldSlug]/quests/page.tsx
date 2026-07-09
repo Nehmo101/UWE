@@ -21,6 +21,7 @@ import {
   type QuestPriority,
 } from "@uwe/player-hub";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { setQuestPriorityAction } from "@/app/player-hub-actions";
 
 interface Props {
@@ -202,11 +203,11 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
       </ul>
 
       {filtered.length === 0 && (
-        <p>
-          {query
-            ? "Keine passenden Quests gefunden."
-            : "Noch keine Quests für deine Rolle freigeschaltet."}
-        </p>
+        <PortalEmptyState
+          title={query ? "Keine passenden Quests gefunden" : "Keine Quests freigeschaltet"}
+          description={query ? "Probiere einen anderen Suchbegriff." : undefined}
+          icon="scroll"
+        />
       )}
     </section>
   );

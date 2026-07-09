@@ -690,7 +690,7 @@ function buildDiagnoseSection(
         : `${publicLeaks.criticalCount} kritisch · ${publicLeaks.findingCount} gesamt`,
       source: "env",
       editable: false,
-      href: "/admin/status",
+      href: "/system?tab=diagnose",
     },
     {
       id: "env-validation",
@@ -699,7 +699,7 @@ function buildDiagnoseSection(
       displayValue: envOk ? "OK" : `${envIssues.length} Hinweise`,
       source: "env",
       editable: false,
-      href: "/admin/status",
+      href: "/system?tab=diagnose",
     },
     {
       id: "private-health",
@@ -714,12 +714,12 @@ function buildDiagnoseSection(
 
   const nextSteps: string[] = [];
   if (!leakOk) {
-    nextSteps.push("Leak-Scanner-Hinweise unter /admin/status prüfen.");
+    nextSteps.push("Leak-Scanner-Hinweise unter /system?tab=diagnose prüfen.");
   }
   if (!envOk) {
     nextSteps.push("ENV-Warnungen beheben — Details im Diagnose-Dashboard.");
   }
-  nextSteps.push("Vollständiges Diagnose-Dashboard: /admin/status");
+  nextSteps.push("Vollständiges Diagnose-Dashboard: /system?tab=diagnose");
 
   const level: SetupSectionLevel = admin.ok ? "ok" : leakOk ? "degraded" : "error";
 

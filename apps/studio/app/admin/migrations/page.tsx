@@ -117,7 +117,7 @@ export default async function AdminMigrationsPage() {
 
       <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>
         Nur für Owner/Admin im geschützten Studio. Siehe auch{" "}
-        <Link href="/admin/status">Systemstatus</Link> und{" "}
+        <Link href="/system?tab=diagnose">System-Diagnose</Link> und{" "}
         <Link href="/admin/setup?tab=diagnose">Einrichtung → Diagnose</Link>.
       </p>
     </SystemShell>

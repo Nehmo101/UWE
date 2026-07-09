@@ -1,16 +1,8 @@
 import Link from "next/link";
+import { HealthBadge } from "@uwe/shared-ui";
 import {
-  AdminStatusCard,
-  AdminStatusGrid,
-  HealthBadge,
-} from "@uwe/shared-ui";
-import {
-  getAppRepository,
-  getBackupFreshnessStatus,
   getProductionSafetyWarnings,
-  getSystemStatus,
   prisma,
-  assessStudioSecurity,
   type ProductionSafetyWarning,
 } from "@uwe/database/server";
 import { resolveUweAppUrls } from "@uwe/auth";
@@ -18,26 +10,15 @@ import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 
 export default async function AdminOverviewPage() {
-  const [dashboard, system, backup, productionWarnings, settings] = await Promise.all([
+  const [dashboard, productionWarnings] = await Promise.all([
     getAdminDashboardStatus(prisma),
-    getSystemStatus(prisma),
-    Promise.resolve(getBackupFreshnessStatus()),
     getProductionSafetyWarnings(prisma),
-    getAppRepository().getSystemSettings(),
   ]);
 
-  const studioSecurity = assessStudioSecurity(system);
   const appUrls = resolveUweAppUrls();
   const criticalWarnings = productionWarnings.filter(
     (w: ProductionSafetyWarning) => w.severity === "critical",
   );
-
-  const securityBadge =
-    studioSecurity.severity === "ok"
-      ? "ok"
-      : studioSecurity.severity === "warning"
-        ? "degraded"
-        : "error";
 
   return (
     <SystemShell
@@ -110,7 +91,7 @@ export default async function AdminOverviewPage() {
               <Link className="uwe-v2-btn" href="/admin/activity">
                 Verlauf
               </Link>
-              <Link className="uwe-v2-btn" href="/admin/status">
+              <Link className="uwe-v2-btn" href="/system?tab=diagnose">
                 Systemstatus
               </Link>
               <Link className="uwe-v2-btn" href="/admin/reviews">
@@ -139,100 +120,27 @@ export default async function AdminOverviewPage() {
             </div>
           </section>
 
-          <AdminStatusGrid>
-            <AdminStatusCard title="Studio Security">
-              <HealthBadge status={securityBadge} label={studioSecurity.label} />
-              <p className="uwe-dashboard-muted" style={{ marginTop: "0.75rem" }}>
-                {studioSecurity.message}
-              </p>
-            </AdminStatusCard>
-
-            <AdminStatusCard title="Cloudflare / Proxy">
-              <dl className="uwe-dl">
-                <div>
-                  <dt>Public Base URL</dt>
-                  <dd>{system.proxy.publicAppUrl ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Studio URL</dt>
-                  <dd>{system.proxy.studioUrl ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Portal URL</dt>
-                  <dd>{system.proxy.portalUrl ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>TRUST_PROXY</dt>
-                  <dd>{system.proxy.trustProxy ? "ja" : "nein"}</dd>
-                </div>
-                <div>
-                  <dt>CLOUDFLARE_TUNNEL</dt>
-                  <dd>{system.proxy.cloudflareTunnel ? "ja" : "nein"}</dd>
-                </div>
-                <div>
-                  <dt>STUDIO_API_TOKEN</dt>
-                  <dd>{system.trust.studioApiTokenConfigured ? "gesetzt" : "fehlt"}</dd>
-                </div>
-              </dl>
-            </AdminStatusCard>
-
-            <AdminStatusCard title="Auth &amp; Portal">
-              <dl className="uwe-dl">
-                <div>
-                  <dt>Portal AUTH_REQUIRED</dt>
-                  <dd>{system.proxy.authRequired ? "ja" : "nein"}</dd>
-                </div>
-                <div>
-                  <dt>Portal aktiv</dt>
-                  <dd>{settings.portal.portalEnabled ? "ja" : "nein"}</dd>
-                </div>
-                <div>
-                  <dt>Öffentliche Portal-Freigabe</dt>
-                  <dd>{system.trust.publicPortalSharingEnabled ? "aktiv" : "inaktiv"}</dd>
-                </div>
-                <div>
-                  <dt>Benutzer (Studio)</dt>
-                  <dd>
-                    <Link href="/admin/users">Benutzer verwalten</Link>
-                  </dd>
-                </div>
-                <div>
-                  <dt>2FA / Sicherheit</dt>
-                  <dd>
-                    <Link href="/account/security">Konto-Sicherheit</Link>
-                  </dd>
-                </div>
-              </dl>
-            </AdminStatusCard>
-
-            <AdminStatusCard
-              title="Backup"
-              actions={
-                <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/backup">
-                  Backup verwalten
-                </Link>
-              }
-            >
-              <dl className="uwe-dl">
-                <div>
-                  <dt>Anzahl Backups</dt>
-                  <dd>{backup.backupCount}</dd>
-                </div>
-                <div>
-                  <dt>Letztes Backup</dt>
-                  <dd>
-                    {backup.latestBackupAt
-                      ? backup.latestBackupAt.toLocaleString("de-DE")
-                      : "keines gefunden"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Verzeichnis lesbar</dt>
-                  <dd>{backup.readable ? "ja" : "nein"}</dd>
-                </div>
-              </dl>
-            </AdminStatusCard>
-          </AdminStatusGrid>
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">System & Betrieb</h2>
+            <p className="uwe-dashboard-muted">
+              Status, Diagnose und Cloudflare zentral im System-Hub — erweiterte Karten für RTX, Mail
+              und Brain.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", marginTop: "0.75rem" }}>
+              <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system">
+                System-Hub
+              </Link>
+              <Link className="uwe-v2-btn" href="/system?tab=diagnose">
+                Diagnose
+              </Link>
+              <Link className="uwe-v2-btn" href="/system/cloudflare">
+                Cloudflare
+              </Link>
+              <Link className="uwe-v2-btn" href="/admin/status">
+                Erweiterte Karten
+              </Link>
+            </div>
+          </section>
     </SystemShell>
   );
 }

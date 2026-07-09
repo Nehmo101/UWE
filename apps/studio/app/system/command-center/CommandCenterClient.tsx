@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CollapsibleSection } from "@uwe/shared-ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Alert } from "@/src/components/ui/states";
 import { Badge } from "@/src/components/ui/badge";
@@ -240,11 +242,14 @@ function homelabDot(severity: string): HostSeverity {
 }
 
 function OperationsBlock({ operations }: { operations: CommandCenterOperations }) {
-  const { health, services, securityChecks } = operations;
+  const { health, services, securityChecks, alerts } = operations;
   const healthSeverity: HostSeverity =
     health.light === "green" ? "ok" : health.light === "yellow" ? "warn" : "error";
   const securityIssues = securityChecks.filter(
     (check) => check.severity === "error" || (check.severity === "warn" && !check.ok),
+  );
+  const serviceIssues = services.filter(
+    (service) => service.severity === "error" || (service.severity === "warn" && !service.ok),
   );
 
   return (
@@ -253,6 +258,18 @@ function OperationsBlock({ operations }: { operations: CommandCenterOperations }
         <CardTitle>UWE-Betrieb</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {alerts.messages.length > 0 ? (
+          <Alert tone="warning" icon="server-cog" title={`${alerts.criticalCount} offene Punkte`}>
+            {alerts.messages.join(" · ")}
+          </Alert>
+        ) : (
+          <Alert tone="success" icon="shield-check" title="UWE-Betrieb unauffällig">
+            <Link href="/system?tab=diagnose" className="underline decoration-dotted underline-offset-2">
+              Vollständige Diagnose im System-Hub →
+            </Link>
+          </Alert>
+        )}
+
         <div className="uwe-v2-stat-grid">
           <StatCard label="Health-Ampel" value={SEVERITY_LABEL[healthSeverity]} severity={healthSeverity} />
           <StatCard label="DB-Größe" value={health.dbSizeLabel} />
@@ -265,26 +282,45 @@ function OperationsBlock({ operations }: { operations: CommandCenterOperations }
           />
         </div>
 
-        <div className="text-sm">
-          {services.map((service) => (
-            <StatusRow
-              key={service.id}
-              severity={homelabDot(service.severity)}
-              label={service.label}
-              value={service.message}
-            />
-          ))}
-        </div>
+        {serviceIssues.length > 0 ? (
+          <div className="text-sm">
+            {serviceIssues.map((service) => (
+              <StatusRow
+                key={service.id}
+                severity={homelabDot(service.severity)}
+                label={service.label}
+                value={service.message}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Alle Homelab-Dienste unauffällig.{" "}
+            <Link href="/system?tab=homelab" className="underline decoration-dotted underline-offset-2">
+              Homelab-Details →
+            </Link>
+          </p>
+        )}
 
         {securityIssues.length > 0 ? (
           <Alert tone="warning" icon="shield" title={`${securityIssues.length} Studio-Sicherheitshinweis(e)`}>
             {securityIssues.map((issue) => issue.label).join(" · ")}
           </Alert>
-        ) : (
-          <Alert tone="success" icon="shield-check" title="Studio-Sicherheit unauffällig">
-            Keine offenen Studio-Sicherheitshinweise.
-          </Alert>
-        )}
+        ) : null}
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/system" className="underline decoration-dotted underline-offset-2">
+            System-Hub
+          </Link>
+          {" · "}
+          <Link href="/system/health" className="underline decoration-dotted underline-offset-2">
+            Health-Ampel
+          </Link>
+          {" · "}
+          <Link href="/system/host-control" className="underline decoration-dotted underline-offset-2">
+            Host Control
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );
@@ -394,6 +430,15 @@ export function CommandCenterClient({ initial }: { initial: CommandCenterData })
   }, [data]);
 
   const overall = data.host.overall;
+  const diagnosticIssues =
+    data.host.openPorts.ports.length > 0 ||
+    data.host.recentErrors.entries.length > 0 ||
+    data.host.failedLogins.recent.length > 0;
+  const securityIssues =
+    data.host.security.some((check) => check.severity !== "ok") ||
+    data.operations.securityChecks.some(
+      (check) => check.severity === "error" || (check.severity === "warn" && !check.ok),
+    );
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -402,6 +447,23 @@ export function CommandCenterClient({ initial }: { initial: CommandCenterData })
         <p className="text-sm text-muted-foreground">
           Live-Überblick des UWE-Linux-Hosts: Uptime, Systemlast, Dienste und Sicherheit. Read-only,
           ohne geheime Werte. Aktualisiert sich alle 10&nbsp;Sekunden automatisch.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          <Link href="/system" className="underline decoration-dotted underline-offset-2">
+            System-Hub
+          </Link>
+          {" · "}
+          <Link href="/system/health" className="underline decoration-dotted underline-offset-2">
+            Health-Ampel
+          </Link>
+          {" · "}
+          <Link href="/system/host-control" className="underline decoration-dotted underline-offset-2">
+            Host Control
+          </Link>
+          {" · "}
+          <Link href="/system?tab=diagnose" className="underline decoration-dotted underline-offset-2">
+            Diagnose
+          </Link>
         </p>
       </header>
 
@@ -424,13 +486,35 @@ export function CommandCenterClient({ initial }: { initial: CommandCenterData })
         </span>
       </Alert>
 
-      <HostMetricsBlock host={data.host} history={history} throughput={throughput} />
-      <ServicesBlock services={data.host.services} />
-      <SecurityBlock checks={data.host.security} />
-      <OperationsBlock operations={data.operations} />
-      <OpenPortsPanel data={data.host.openPorts} />
-      <RecentErrorsPanel data={data.host.recentErrors} />
-      <FailedLoginsPanel data={data.host.failedLogins} />
+      <CollapsibleSection title="Live Host" defaultOpen>
+        <div className="flex flex-col gap-6">
+          <HostMetricsBlock host={data.host} history={history} throughput={throughput} />
+          <ServicesBlock services={data.host.services} />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Sicherheit"
+        summary={securityIssues ? "Hinweise vorhanden" : "Unauffällig"}
+        defaultOpen={securityIssues}
+      >
+        <div className="flex flex-col gap-6">
+          <SecurityBlock checks={data.host.security} />
+          <OperationsBlock operations={data.operations} />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Diagnose"
+        summary={`${data.host.openPorts.ports.length} Ports · ${data.host.recentErrors.entries.length} Journal · ${data.host.failedLogins.recent.length} Logins`}
+        defaultOpen={diagnosticIssues}
+      >
+        <div className="flex flex-col gap-6">
+          <OpenPortsPanel data={data.host.openPorts} />
+          <RecentErrorsPanel data={data.host.recentErrors} />
+          <FailedLoginsPanel data={data.host.failedLogins} />
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }

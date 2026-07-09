@@ -63,7 +63,7 @@ export function OwnerSetupSettingsTable({ settings }: OwnerSetupSettingsTablePro
       <table className="uwe-page-table">
         <thead>
           <tr>
-            <th>Einstellung</th>
+            <th>Prüfpunkt</th>
             <th>Status</th>
             <th>Wert</th>
             <th>Quelle</th>
